@@ -151,13 +151,34 @@ namespace PrincesPalace.PlayModeTests
             // baked "Gold: 0    Relics: 0" while HubController wrote
             // $"Gold: {g}    Relics: {r}" -- two hand-typed copies of a
             // four-space separator. One UiStrings entry serves both now.
-            yield return LoadHub();
+            // Hermetic: the hub now READS the save on enable, so without a
+            // throwaway root this asserts against whatever the developer's own
+            // slot 0 happens to hold.
+            string root = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+                "pp-hub-wiring-" + System.Guid.NewGuid().ToString("N"));
+            System.IO.Directory.CreateDirectory(root);
+            SaveSystem.RootOverride = root;
+            SaveSlotManager.CurrentSlot = 0;
+            SaveSlotManager.Forget();
 
-            var label = FindByName("CurrencyLabel").GetComponent<TMPro.TMP_Text>();
-            Assert.AreEqual("Gold: 0    Relics: 0", label.text);
+            try
+            {
+                yield return LoadHub();
 
-            Find<HubController>().RefreshCurrency(340, 2);
-            Assert.AreEqual("Gold: 340    Relics: 2", label.text);
+                var label = FindByName("CurrencyLabel").GetComponent<TMPro.TMP_Text>();
+                Assert.AreEqual("Gold: 0    Relics: 0    Embers: 0", label.text);
+
+                // Three currencies now. Embers is what talents actually cost and
+                // the hub never showed it.
+                Find<HubController>().RefreshCurrency(340, 2, 75);
+                Assert.AreEqual("Gold: 340    Relics: 2    Embers: 75", label.text);
+            }
+            finally
+            {
+                SaveSystem.RootOverride = null;
+                SaveSlotManager.Forget();
+                if (System.IO.Directory.Exists(root)) System.IO.Directory.Delete(root, recursive: true);
+            }
         }
 
         [UnityTest]
@@ -165,7 +186,9 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return LoadHub();
 
-            var background = FindByName("Background");
+            // HubBackground, not Background: the menu tree owns a node of that
+            // name too, and a name-based lookup across two trees is a coin flip.
+            var background = FindByName("HubBackground");
             Assert.IsNotNull(background);
             Assert.IsFalse(background.GetComponent<UnityEngine.UI.Image>().raycastTarget,
                 "the full-bleed background must never intercept a click meant for a building");

@@ -181,6 +181,11 @@ $PathAreas = @(
     # The UI construction layer lives in Domain (engine-free) so a screen can be
     # built, solved and audited from EditMode in under a second -- see
     # docs/REBUILD.md M4. Talents moves here for TalentLayout's sake.
+    # Hub geometry and the hub's own screen tree live under UiKit, so the
+    # generic row below would send a hub edit to the 'ui' suite only and never
+    # run the hub tests that exist to catch it. First match wins, so this sits
+    # above it deliberately.
+    @{ Pattern = '^Assets/_Project/Scripts/Domain/UiKit/(Hub|Constellation|Screens/Hub)'; Areas = @('hub', 'ui') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/UiKit/';     Areas = @('ui') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Talents/';   Areas = @('hub') }
     # Music/audio config. 'ui' rather than a new area of its own: every audio

@@ -21,10 +21,71 @@ namespace PrincesPalace
         [SerializeField] internal Button startRunButton;
         [SerializeField] internal Button mainMenuButton;
         [SerializeField] internal TMP_Text currencyLabel;
+        [SerializeField] internal TMP_Text startRunCaption;
+        [SerializeField] internal Button[] unbuiltButtons;
+
+        // OnEnable, not Start: the hub is returned to repeatedly -- from a
+        // finished fight, from an abandoned run -- and Start fires once. Gold
+        // banked during a descent has to be on the plate when the player gets
+        // back, not one scene load later.
+        private void OnEnable()
+        {
+            Refresh();
+        }
+
+        // What the screen says about the save. Everything here is read, never
+        // stored: a second copy of the wallet on this controller is a second
+        // thing that can be wrong.
+        public void Refresh()
+        {
+            var save = SaveSlotManager.CurrentSave;
+            if (save != null)
+            {
+                currencyLabel.Set(UiStrings.HubWallet, save.wallet.gold, save.wallet.relics, save.wallet.embers);
+            }
+
+            RefreshGateCaption();
+            DimTheUnbuilt();
+        }
+
+        // The gate knows whether you are starting or going back down. No new
+        // save field: RunManager already knows, and the floor is already stored.
+        private void RefreshGateCaption()
+        {
+            if (startRunCaption == null) return;
+
+            if (RunManager.HasRun) startRunCaption.Set(UiStrings.HubResumeFloor, RunManager.Run.floor);
+            else startRunCaption.Set(UiStrings.HubBeginDescent);
+        }
+
+        // Buildings whose screens do not exist yet hang dark and unpressable.
+        //
+        // Dimmed rather than hidden, and rather than a click that logs a
+        // refusal: v2 has no bark or sound machinery to make a refusal feel
+        // deliberate, so a press that produces nothing reads as a broken button.
+        // A dark, still building over the void reads as a place that is asleep,
+        // which is the mystery the design is after. The list shrinks as screens
+        // land.
+        private void DimTheUnbuilt()
+        {
+            if (unbuiltButtons == null) return;
+
+            foreach (var button in unbuiltButtons)
+            {
+                if (button == null) continue;
+
+                button.interactable = false;
+                if (button.targetGraphic is UnityEngine.UI.Image image)
+                {
+                    image.color = UnbuiltTint;
+                }
+            }
+        }
+
+        private static readonly Color UnbuiltTint = new Color(0.55f, 0.55f, 0.62f, 1f);
 
         private void Start()
         {
-            RefreshCurrency(0, 0);
 
             talentsButton.onClick.AddListener(() => Debug.Log("Talents"));
             principalityButton.onClick.AddListener(() => Debug.Log("Principality"));
@@ -37,9 +98,12 @@ namespace PrincesPalace
             mainMenuButton.onClick.AddListener(() => Navigation.Go(Navigation.MainMenu));
         }
 
-        public void RefreshCurrency(int gold, int relics)
+        // Kept for the tests and callers that set a wallet explicitly. Goes
+        // through the same three-currency line the save-backed path uses, so
+        // the two cannot disagree about the format.
+        public void RefreshCurrency(int gold, int relics, int embers = 0)
         {
-            currencyLabel.Set(UiStrings.WalletSummary, gold, relics);
+            currencyLabel.Set(UiStrings.HubWallet, gold, relics, embers);
         }
     
         // The gate both STARTS and RESUMES.

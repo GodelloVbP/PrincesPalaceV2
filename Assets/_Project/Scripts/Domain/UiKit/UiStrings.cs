@@ -21,6 +21,20 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("wallet_summary", "Gold: {0}    Relics: {1}", "Gold: 999999    Relics: 99");
 
         // --- main menu ------------------------------------------------------
+        // ---- the hub -------------------------------------------------------
+
+        // Three currencies, not two. Embers is what talents actually cost and
+        // the hub never showed it. WalletSummary is left alone -- other screens
+        // still use the two-currency line.
+        public static readonly UiString HubWallet =
+            UiString.Define("hub.wallet", "Gold: {0}    Relics: {1}    Embers: {2}",
+                "Gold: 999999    Relics: 99    Embers: 999");
+
+        public static readonly UiString HubBeginDescent =
+            UiString.Define("hub.begin_descent", "BEGIN DESCENT");
+        public static readonly UiString HubResumeFloor =
+            UiString.Define("hub.resume_floor", "RESUME - FLOOR {0}", "RESUME - FLOOR 99");
+
         // ---- descent map ----------------------------------------------------
 
         public static readonly UiString MapTitle = UiString.Define("map.title", "The Descent");
@@ -163,6 +177,7 @@ namespace PrincesPalace.Domain.UiKit
             DetailStatCost, DetailStatPower, DetailStatTarget, DetailStatEffect,
             TargetPrompt,
             MapTitle, MapDepth, MapGold, MapAbandon,
+            HubWallet, HubBeginDescent, HubResumeFloor,
         };
     }
 }

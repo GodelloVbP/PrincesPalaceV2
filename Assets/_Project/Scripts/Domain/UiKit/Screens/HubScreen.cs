@@ -20,12 +20,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // frame is referenced directly as a static sprite.
         private const string HubArtRoot = "Assets/_Project/Resources/Hub";
 
-        // The gate is 560 against the others' 360/340 — 56% bigger, so it reads
-        // unmistakably as the primary action. v1's own note records that 500
-        // was tried and lost the hierarchy.
-        private const float GateSize = 560f;
-        private const float BuildingSize = 360f;
-        private const float SmallBuildingSize = 340f;
+        // Sizes and positions now come from HubAnchors, which stages them at
+        // depth over the void rather than laying them out as a grid. The gate
+        // keeps its "unmistakably primary" job and gets bigger still: it is the
+        // one thing standing on solid ground.
 
         public UiNode Root;
 
@@ -36,29 +34,46 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef StartRunButton;
         public NodeRef MainMenuButton;
         public NodeRef CurrencyLabel;
+        public NodeRef StartRunCaption;
+        public NodeRef World;
+        public HubAmbience.Layer Ambience;
 
         public static HubScreen Build()
         {
             var screen = new HubScreen();
 
-            var talents = Building("TalentsBuilding", UiStrings.HubTalents, "talents", -620f, 200f, BuildingSize);
-            var principality = Building("PrincipalityBuilding", UiStrings.HubPrincipality, "principality", 620f, 200f, BuildingSize);
-            var characterSheet = Building("CharacterSheetBuilding", UiStrings.HubCharacterSheet, "character_sheet", -500f, -200f, SmallBuildingSize);
+            // Declared FAR TO NEAR: declaration order is painter's order, so a
+            // nearer building draws over a further one with nothing sorting
+            // anything -- the fight stage's rule, reused.
+            var relics = Staged("RelicsBuilding", UiStrings.HubRelics, "empty_plot", HubAnchors.Relics);
+            var talents = Staged("TalentsBuilding", UiStrings.HubTalents, "talents", HubAnchors.Talents);
+            var characterSheet = Staged("CharacterSheetBuilding", UiStrings.HubCharacterSheet, "character_sheet", HubAnchors.CharacterSheet);
+            var principality = Staged("PrincipalityBuilding", UiStrings.HubPrincipality, "principality", HubAnchors.Principality);
 
-            // Relics has no hub art of its own yet, so it borrows the reserved
-            // plot's. Deliberate: an Image with no sprite renders as a solid
-            // WHITE QUAD, not as nothing, which is a bug class this project has
-            // already shipped once.
-            var relics = Building("RelicsBuilding", UiStrings.HubRelics, "empty_plot", 500f, -200f, SmallBuildingSize);
-            var gate = Building("StartRunGate", UiStrings.HubStartRun, "gate", 0f, -170f, GateSize);
+            // The gate STANDS ON THE TERRACE, feet on the path, while everything
+            // else floats out over the drop. Its caption is a declared node of
+            // its own rather than the emitter's auto-label, because the
+            // controller swaps it between BEGIN DESCENT and RESUME -- and
+            // because the arch's centre is a swirling void the eye needs to read
+            // as an opening, so the words hang below the plinths.
+            var gateCaption = Ui.Label("StartRunGateCaption", UiString.Runtime, new UiVec(420f, 44f), 22,
+                    "#F2DB9E", Place.At(0f, HubAnchors.GateCaptionOffset))
+                .AllowOverflow("the gate's nameplate hangs below the plinths - inside the arch it would fill the void the eye needs to read as an opening");
+
+            var gate = Ui.Button("StartRunGate", UiString.Runtime,
+                new UiVec(HubAnchors.GateSize, HubAnchors.GateSize), 22,
+                Place.At(HubAnchors.Gate.X, HubAnchors.Gate.Y, new UiVec(0.5f, 0f)));
+            gate.SpriteKey = $"{HubArtRoot}/gate/f0.png";
+            gate.Children.Add(gateCaption);
 
             screen.TalentsButton = talents.Button;
             screen.PrincipalityButton = principality.Button;
             screen.CharacterSheetButton = characterSheet.Button;
             screen.RelicsButton = relics.Button;
-            screen.StartRunButton = gate.Button;
+            screen.StartRunButton = gate;
+            screen.StartRunCaption = gateCaption;
 
-            var currency = Ui.Label("CurrencyLabel", UiStrings.WalletSummary, new UiVec(360f, 80f), 22, "#F2DB9E",
+            var currency = Ui.Label("CurrencyLabel", UiStrings.HubWallet, new UiVec(500f, 80f), 20, "#F2DB9E",
                 Place.At(0f, 0f));
             screen.CurrencyLabel = currency;
 
@@ -66,8 +81,34 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 Place.At(-830f, 480f));
             screen.MainMenuButton = mainMenu;
 
+            var ambience = HubAmbience.Build();
+            screen.Ambience = ambience;
+
+            // The WORLD, wrapped. Everything staged lives in here so one handle
+            // can drift or settle the whole place; the chrome outside it stays
+            // put, which is the split MainMenu's SceneLayer already uses.
+            // A FIXED 1920x1080 stage, not a stretch.
+            //
+            // The composition is authored in reference coordinates, so the world
+            // has to keep them at every frame -- stretched to fit, a 900-tall
+            // window pushed the far buildings out of their own parent and the
+            // gate through the floor. Fixed, the place simply crops at other
+            // aspects, exactly as a full-bleed background does, and the audit
+            // measures the coordinates the design actually uses.
+            var world = Ui.Panel("HubWorld", Place.At(0f, 0f), UiSize.Fixed(1920f, 1080f),
+                Ui.Sprite("HubBackground", BackgroundKey, Place.Stretch(), UiSize.Fill).AsDecor(),
+                relics.Node, talents.Node, characterSheet.Node, principality.Node, gate,
+
+                // LAST inside the world, so every glow sits over the thing it
+                // lights rather than behind it.
+                ambience.Root)
+                .AllowOverlap("the world is a full-frame coordinate layer; the chrome siblings sit on top of it by design")
+                .AllowOverflow("the world is the 1920x1080 reference stage and crops at other aspects, exactly as its own full-bleed background does");
+
+            screen.World = world;
+
             screen.Root = Ui.Panel("HubPanel", UiSize.Fixed(1920f, 1080f),
-                Ui.Sprite("Background", BackgroundKey, Place.Stretch(), UiSize.Fill).AsDecor(),
+                world,
 
                 // Live text on top of painted ornament, never lettering baked
                 // into the background: the background stretches non-uniformly
@@ -81,17 +122,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // number until it passes.
                 Ui.Column("HubHeading", Place.At(0f, 445f), spacing: 4f, UiAlign.Centre,
                     Ui.Label("HubTitleLabel", UiStrings.HubTitle, new UiVec(1000f, 80f), 56, "#EDE6FF"),
-                    Ui.Label("HubSubtitleLabel", UiStrings.HubSubtitle, new UiVec(600f, 32f), 18, "#B8A8D9")),
-
-                talents.Node, principality.Node, characterSheet.Node, relics.Node, gate.Node,
+                    Ui.Label("HubSubtitleLabel", UiStrings.HubSubtitle, new UiVec(600f, 32f), 18, "#B8A8D9"))
+                    .AsDecor(),
 
                 // Lighter than it looks like it should be. v1's first pass made
                 // this near-identical to the background it sits on, so the plate
                 // vanished and the numbers read as text floating in space -
                 // found by rendering the panel and looking at it, which no test
                 // would have caught.
-                Ui.Panel("CurrencyPlate", Place.At(690f, 470f), UiSize.Fixed(380f, 90f), currency)
-                    .Coloured("#2C1C42E0"),
+                // Widened for a third currency: Embers is what talents actually
+                // cost and it was invisible here.
+                Ui.Panel("CurrencyPlate", Place.At(620f, 470f), UiSize.Fixed(520f, 90f), currency)
+                    .Coloured("#2C1C42E0").AsDecor(),
 
                 mainMenu);
 
@@ -105,13 +147,42 @@ namespace PrincesPalace.Domain.UiKit.Screens
             public BuildingNodes(UiNode node, NodeRef button) { Node = node; Button = button; }
         }
 
-        // A building is a button wearing its art: the sprite fills the button,
-        // the caption sits on top. Declared as one thing so the caption cannot
-        // drift away from the art it names.
-        private static BuildingNodes Building(string name, UiString caption, string art, float x, float y, float size)
+        // A building is a button wearing its art, staged at depth.
+        //
+        // Bottom-centre pivot, so it grows upward from wherever its plot puts
+        // it rather than about its own middle -- the fight stage's convention,
+        // and what makes a floating rock read as hanging rather than centred.
+        // The size is BAKED from the depth rather than applied as a transform
+        // scale, because the audit measures declared boxes and a full-size node
+        // scaled down would be reported as overlapping things it never touches.
+        private static BuildingNodes Staged(string name, UiString caption, string art, HubAnchors.Plot plot)
         {
-            var button = Ui.Button(name, caption, new UiVec(size, size), 22, Place.At(x, y));
+            var position = HubAnchors.PositionFor(plot);
+            float size = HubAnchors.SizeFor(plot);
+
+            // The button's own text is RUNTIME-EMPTY and the caption is a
+            // declared node BELOW the art.
+            //
+            // The emitter's auto-label centres on the button, which put
+            // "PRINCIPALITY" across the stall's awning and "TALENTS" through the
+            // trunk of the tree -- every building wearing its own name like a
+            // sticker. A staged object gets a nameplate under it, which is the
+            // same thing the fight stage does for its combatants and for the
+            // same reason.
+            var button = Ui.Button(name, UiString.Runtime, new UiVec(size, size), 22,
+                Place.At(position.X, position.Y, new UiVec(0.5f, 0f)));
             button.SpriteKey = $"{HubArtRoot}/{art}/f0.png";
+
+            // Scaled with the plot: a distant building's nameplate has to read
+            // as being at that distance too, or the depth staging is undone by
+            // the type.
+            float scale = HubAnchors.ScaleFor(plot);
+            var plate = Ui.Label($"{name}Caption", caption, new UiVec(size * 1.4f, 34f),
+                    (int)(20f * scale + 0.5f), "#EDE6FF",
+                    Place.At(0f, HubAnchors.CaptionOffsetFor(size)))
+                .AllowOverflow("a nameplate hangs BELOW the thing it names - inside the art it reads as a label printed on the building");
+
+            button.Children.Add(plate);
             return new BuildingNodes(button, button);
         }
     }

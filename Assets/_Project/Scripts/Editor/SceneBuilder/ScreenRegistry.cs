@@ -284,6 +284,18 @@ public static class ScreenRegistry
                 hub.startRunButton = result.Button(screen.StartRunButton);
                 hub.mainMenuButton = result.Button(screen.MainMenuButton);
                 hub.currencyLabel = result.Tmp(screen.CurrencyLabel);
+                DressHub(result, screen);
+                hub.startRunCaption = result.Tmp(screen.StartRunCaption);
+
+                // The four whose screens do not exist yet. This array is the
+                // one place that list lives, and it shrinks as they land.
+                hub.unbuiltButtons = new[]
+                {
+                    result.Button(screen.TalentsButton),
+                    result.Button(screen.PrincipalityButton),
+                    result.Button(screen.CharacterSheetButton),
+                    result.Button(screen.RelicsButton),
+                };
             },
         };
     }
@@ -472,5 +484,68 @@ public static class ScreenRegistry
                 map.abandonButton = result.Button(screen.AbandonButton);
             },
         };
+    }
+
+    // The hub's atmosphere. Same bounded hatch as DressAmbience: it ATTACHES
+    // components and never positions anything -- every coordinate came from
+    // HubAmbience, which the audit already checked.
+    private static void DressHub(UiEmitResult result, HubScreen screen)
+    {
+        var ambience = screen.Ambience;
+        if (ambience == null) return;
+
+        // The whole place breathes. One KenBurnsDrift on the world wrapper
+        // rather than one per element: the buildings are staged in the world's
+        // own coordinates, so scaling the world moves them together and the
+        // parallax stays correct for free.
+        var breath = result.Attach<KenBurnsDrift>(screen.World);
+        breath.MaxScale = 1.03f;
+        breath.ScalePeriodSeconds = 71f;
+        breath.PanAmplitude = new Vector2(10f, 6f);
+        breath.PanPeriodSeconds = 97f;
+
+        foreach (var star in ambience.Stars)
+        {
+            result.Attach<StarTwinkle>(star);
+        }
+
+        // Fire, on the two things that are actually burning.
+        foreach (var brazier in ambience.Braziers)
+        {
+            result.Attach<LanternFlicker>(brazier).BaseColor = result.Image(brazier).color;
+        }
+
+        // Everything else that glows is enchantment, so it pulses rather than
+        // flickers -- and each gets its own phase, or the whole hub throbs on
+        // one beat like a single machine driving all of it.
+        for (int i = 0; i < ambience.Pulses.Count; i++)
+        {
+            var pulse = result.Attach<BeaconPulse>(ambience.Pulses[i]);
+            pulse.BaseColor = result.Image(ambience.Pulses[i]).color;
+            pulse.PeriodSeconds = 3.4f + i % 3 * 0.7f;
+            pulse.PhaseSeconds = HubAmbience.Repeat01(i * HubAmbience.GoldenStride) * pulse.PeriodSeconds;
+            pulse.MinAlpha = 0.55f;
+            pulse.MaxAlpha = 1f;
+        }
+
+        for (int i = 0; i < ambience.Embers.Count; i++)
+        {
+            var origin = HubAmbience.EmberOrigins[i];
+            var ember = result.Attach<MoteDrift>(ambience.Embers[i]);
+            ember.BaseColor = result.Image(ambience.Embers[i]).color;
+            ember.TravelHeight = HubAmbience.EmberTravel(origin.Y);
+            ember.LifeSeconds = 13f + i % 5 * 1.6f;
+            ember.SwayAmplitude = 18f + i % 3 * 7f;
+            ember.StartProgress = HubAmbience.Repeat01(i * HubAmbience.GoldenStride);
+        }
+
+        for (int i = 0; i < ambience.Drifts.Count; i++)
+        {
+            var band = HubAmbience.VoidMist[i];
+            var drift = result.Attach<SlowDrift>(ambience.Drifts[i]);
+            drift.Amplitude = new Vector2(34f, 11f);
+            drift.PeriodSeconds = band.Period;
+            drift.PhaseSeconds = HubAmbience.Repeat01(i * HubAmbience.GoldenStride) * band.Period;
+        }
     }
 }
