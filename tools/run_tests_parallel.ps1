@@ -223,8 +223,37 @@ if ($BuildContent -or $BuildScenes) {
         }
 
         $jobs | Wait-Process -Timeout 900
+
+        # WHAT COUNTS AS SUCCESS IS THE SENTINEL, not the exit code.
+        #
+        # Unity exits non-zero on an untidy shutdown even when the method ran
+        # fine -- checking the code alone failed a perfectly good
+        # ProceduralSpriteBaker run the first time it was tried. Every builder
+        # logs "BUILD-COMPLETE: <name>" as its last act, so its ABSENCE is the
+        # honest signal that the method did not finish.
+        #
+        # This check did not exist at all before, and its absence was expensive:
+        # the pattern scan below looked only for "error CS" and ContentBuilder
+        # lines, so a -executeMethod that THREW -- BuildAllScenes failing an
+        # audit -- was invisible. The script printed nothing, called the suite
+        # green, and left every scene after the failing one stale on disk. A
+        # whole session of "why has the screenshot not changed" traces here.
         foreach ($runner in $Runners) {
-            $errors = Get-Content (Join-Path $runner.Path "gen.log") | Select-String -Pattern "error CS|\[ContentBuilder\]" | Select-Object -Unique -First 10
+            $log = Join-Path $runner.Path "gen.log"
+            $done = (Test-Path $log) -and (Select-String -Path $log -Pattern "BUILD-COMPLETE" -Quiet)
+            if (-not $done) {
+                Write-Host "$method did not finish in $($runner.Path). Tail of its log:"
+                if (Test-Path $log) { Get-Content $log -Tail 25 | ForEach-Object { Write-Host "  $_" } }
+                exit 1
+            }
+        }
+
+        foreach ($runner in $Runners) {
+            # Widened to catch a thrown generator as well as a compile error.
+            # "[SceneBuilder] FAILED" is what an audit refusal actually prints,
+            # and it was sailing straight through.
+            $pattern = "error CS|\[ContentBuilder\]|\[SceneBuilder\] FAILED|threw exception"
+            $errors = Get-Content (Join-Path $runner.Path "gen.log") | Select-String -Pattern $pattern | Select-Object -Unique -First 10
             if ($errors) {
                 Write-Host "$method FAILED in $($runner.Path):"
                 $errors | ForEach-Object { Write-Host "  $_" }

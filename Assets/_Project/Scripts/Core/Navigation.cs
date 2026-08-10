@@ -18,6 +18,7 @@ namespace PrincesPalace
         public const string Hub = "Hub";
         public const string Fight = "Fight";
         public const string Map = "Map";
+        public const string Talents = "Talents";
 
         // Overridable so a test can assert WHERE a button would go without
         // actually tearing down the scene it is running in -- loading a scene

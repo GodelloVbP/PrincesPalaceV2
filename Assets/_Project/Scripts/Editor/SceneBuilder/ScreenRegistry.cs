@@ -49,12 +49,14 @@ public static class ScreenRegistry
     public const string HubScene = SceneBuilder.ScenesDir + "/Hub.unity";
     public const string FightScene = SceneBuilder.ScenesDir + "/Fight.unity";
     public const string MapScene = SceneBuilder.ScenesDir + "/Map.unity";
+    public const string TalentScene = SceneBuilder.ScenesDir + "/Talents.unity";
 
     public static readonly List<ScreenDef> All = new List<ScreenDef>
     {
         MainMenu(),
         Hub(),
         Map(),
+        Talents(),
         Fight(),
     };
 
@@ -560,6 +562,65 @@ public static class ScreenRegistry
             drift.Amplitude = new Vector2(34f, 11f);
             drift.PeriodSeconds = band.Period;
             drift.PhaseSeconds = HubAmbience.Repeat01(i * HubAmbience.GoldenStride) * band.Period;
+        }
+    }
+
+    private static ScreenDef Talents()
+    {
+        TalentScreen screen = null;
+
+        return new ScreenDef
+        {
+            PanelName = "TalentPanel",
+            ScenePath = TalentScene,
+            BuildTree = () =>
+            {
+                screen = TalentScreen.Build();
+                return screen.Root;
+            },
+            Wire = result =>
+            {
+                var talents = result.Attach<TalentController>(screen.Root);
+                talents.sky = result.Rect(screen.Sky);
+                talents.orbs = screen.Orbs.Select(result.Button).ToArray();
+                talents.orbGlows = screen.OrbGlows.Select(result.Image).ToArray();
+                talents.characterName = result.Tmp(screen.CharacterName);
+                talents.pathName = result.Tmp(screen.PathName);
+                talents.emberCount = result.Tmp(screen.EmberCount);
+                talents.detailName = result.Tmp(screen.DetailName);
+                talents.detailBody = result.Tmp(screen.DetailBody);
+                talents.investLabel = result.Tmp(screen.InvestLabel);
+                talents.investButton = result.Button(screen.InvestButton);
+                talents.prevPathButton = result.Button(screen.PrevPathButton);
+                talents.nextPathButton = result.Button(screen.NextPathButton);
+                talents.prevCharacterButton = result.Button(screen.PrevCharacterButton);
+                talents.nextCharacterButton = result.Button(screen.NextCharacterButton);
+                talents.backButton = result.Button(screen.BackButton);
+
+                // The sky is a night sky: it gets the same twinkle the hub's
+                // does, so the constellations sit in something alive rather
+                // than on a flat plate.
+                DressTalentSky(result, screen);
+            },
+        };
+    }
+
+    // The animated backdrop. Reuses the hub's star data outright -- the
+    // constellations ARE the Divine Principality's sky, and giving them a
+    // second star field would be two skies for one place.
+    private static void DressTalentSky(UiEmitResult result, TalentScreen screen)
+    {
+        for (int i = 0; i < screen.OrbGlows.Count; i++)
+        {
+            // A slow pulse under every orb, phase-spread. Attached to all of
+            // them; the controller decides which are visible by alpha, so an
+            // unlit orb pulses at zero and costs nothing.
+            var pulse = result.Attach<BeaconPulse>(screen.OrbGlows[i]);
+            pulse.BaseColor = result.Image(screen.OrbGlows[i]).color;
+            pulse.PeriodSeconds = 3.8f + i % 4 * 0.6f;
+            pulse.PhaseSeconds = HubAmbience.Repeat01(i * HubAmbience.GoldenStride) * pulse.PeriodSeconds;
+            pulse.MinAlpha = 0.65f;
+            pulse.MaxAlpha = 1f;
         }
     }
 }

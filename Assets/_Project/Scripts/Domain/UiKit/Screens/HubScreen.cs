@@ -184,7 +184,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // as being at that distance too, or the depth staging is undone by
             // the type.
             float scale = HubAnchors.ScaleFor(plot);
-            var plate = Ui.Label($"{name}Caption", caption, new UiVec(size * 1.4f, 34f),
+            // Tall enough for TWO LINES. "CHARACTER SHEET" wraps at this width
+            // and needs 49px; a 34px plate failed E1 and took the whole scene
+            // build down with it.
+            var plate = Ui.Label($"{name}Caption", caption, new UiVec(size * 1.4f, 56f),
                     (int)(20f * scale + 0.5f), "#EDE6FF",
                     Place.At(0f, HubAnchors.CaptionOffsetFor(size, plot.ContentBottom)))
                 .AllowOverflow("a nameplate hangs BELOW the thing it names - inside the art it reads as a label printed on the building");

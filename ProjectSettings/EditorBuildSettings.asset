@@ -8,7 +8,6 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_Project/Scenes/MainMenu.unity
     guid: 7b19afea981636b4c94dc0689532e4d9
-    guid: 458c130272939f746b559c21f15097ff
   - enabled: 1
     path: Assets/_Project/Scenes/Hub.unity
     guid: fa83df6d04a158d4e9faa8a76f871a18
@@ -18,4 +17,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_Project/Scenes/Map.unity
     guid: c6ceb15621ea9c54a8f99d4781876762
+  - enabled: 1
+    path: Assets/_Project/Scenes/Talents.unity
+    guid: 7f9a96a6a5459084d823a3f2dfe860a5
   m_configObjects: {}

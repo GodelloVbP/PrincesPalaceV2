@@ -21,6 +21,20 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("wallet_summary", "Gold: {0}    Relics: {1}", "Gold: 999999    Relics: 99");
 
         // --- main menu ------------------------------------------------------
+        // ---- talents -------------------------------------------------------
+
+        public static readonly UiString TalentEmbers =
+            UiString.Define("talent.embers", "{0} EMBERS", "9999 EMBERS");
+        public static readonly UiString TalentInvest = UiString.Define("talent.invest", "KINDLE");
+        public static readonly UiString TalentTaken = UiString.Define("talent.taken", "KINDLED");
+        public static readonly UiString TalentLocked = UiString.Define("talent.locked", "LOCKED");
+        public static readonly UiString TalentNoEmbers = UiString.Define("talent.no_embers", "NO EMBERS");
+        public static readonly UiString TalentPrev = UiString.Define("talent.prev", "<");
+        public static readonly UiString TalentNext = UiString.Define("talent.next", ">");
+        public static readonly UiString TalentBack = UiString.Define("talent.back", "Back");
+        public static readonly UiString TalentPath =
+            UiString.Define("talent.path", "CONSTELLATION {0} OF {1}   -   {2} KINDLED", "CONSTELLATION 3 OF 3   -   21 KINDLED");
+
         // ---- the hub -------------------------------------------------------
 
         // Three currencies, not two. Embers is what talents actually cost and
@@ -178,6 +192,8 @@ namespace PrincesPalace.Domain.UiKit
             TargetPrompt,
             MapTitle, MapDepth, MapGold, MapAbandon,
             HubWallet, HubBeginDescent, HubResumeFloor,
+            TalentEmbers, TalentInvest, TalentTaken, TalentLocked, TalentNoEmbers,
+            TalentPrev, TalentNext, TalentBack, TalentPath,
         };
     }
 }
