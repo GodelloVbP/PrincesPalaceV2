@@ -1,0 +1,157 @@
+{
+  "_readme": "Armour sets. Each entry here is a GENERATOR, not an item: it names a material, the pieces that material comes in, and what each piece is worth at tier 0 and at maxTier. ContentBuilder expands that into one real item per TIER — three sets of five pieces at maxTier 10 is 165 items from 15 pieces of authoring. Edit this file, then run Prince's Palace > Build Default Content. TIER IS NOT PLUS. Tier is which coif this is (its art, its stats, its rarity band) and is baked here, one asset each. Plus is how honed one particular copy is, it lives on the InventoryEntry at runtime, and it only ever multiplies what the tier already grants (see Domain/Stats/ItemUpgrade.cs). That split is why this file generates 165 assets rather than 1,815. REQUIRED per set: id (goes into every generated item id, and item ids live in save files, so never rename it), displayName, and pieces. Optional: description, tierAdjectives (one word per tier, lowest first — 'Ragged' through 'Sovereign'; the last entry covers every tier past the end of a short list, and a set with none just keeps the bare piece name), maxTier (default 10), cost and costPerTier (gold for the tier-0 piece and per further tier), sortOrder. REQUIRED per piece: id (unique within its set only), displayName, slot (Head, Necklace, Torso, Legs, Shoes, Gloves, Weapon1, Weapon2, or the alias Weapon). Optional per piece: iconSheet, the folder of art that tools/slice_item_sheet.py wrote — 'Assets/_Project/Art/Items/armor_leather_sheet' and so on, holding level_1.png upward. A sheet holds TEN drawings and a maxTier-10 set has ELEVEN tiers, so levels are spread proportionally rather than mapped one to one: both ends get their own picture and tiers 5 and 6 share one in the middle. Plus never changes the art. Set iconLevels if a sheet holds some other number. A piece with no iconSheet shows no icon, which is a supported state rather than a hole. baseStats and topStats are lists of '<stat> <amount>' strings — for example 'dexterity 1' or 'physicalResistance 9'. Any ability score (strength, dexterity, constitution, wisdom, intelligence, charisma) or any stat (maxHealth, speed, attack, defense, manaRegen, physicalResistance, magicalResistance) may be named, case-insensitively; a stat named in one end but not the other simply starts or ends at zero, and negative amounts are fine (steel is slow on purpose). Everything between the two ends is interpolated and floored. Anchoring at both ends is what makes this safe to retune: raising maxTier stretches the curve instead of inflating the tiers that already exist, and a stat added to the game is authorable here the same day with no schema change. Resistance is in POINTS, not percent — see CombatMath.AfterResistance for the curve, which halves damage at 100 points and can never reach immunity.",
+  "sets": [
+    {
+      "id": "leather",
+      "displayName": "Leather",
+      "description": "Boiled hide, cut close. It does not stop much, but it never gets in the way.",
+      "tierAdjectives": [ "Ragged", "Worn", "Supple", "Cured", "Hardened", "Boiled", "Studded", "Wyrmhide", "Shadowsewn", "Heartleather", "Sovereign" ],
+      "maxTier": 10,
+      "cost": 30,
+      "costPerTier": 20,
+      "sortOrder": 0,
+      "pieces": [
+        {
+          "id": "coif",
+          "displayName": "Coif",
+          "slot": "Head",
+          "iconSheet": "Assets/_Project/Art/Items/headwear_leather_sheet",
+          "baseStats": [ "dexterity 1", "physicalResistance 2" ],
+          "topStats":  [ "dexterity 3", "physicalResistance 7" ]
+        },
+        {
+          "id": "torso",
+          "displayName": "Torso",
+          "slot": "Torso",
+          "iconSheet": "Assets/_Project/Art/Items/armor_leather_sheet",
+          "baseStats": [ "dexterity 1", "physicalResistance 5", "maxHealth 20" ],
+          "topStats":  [ "dexterity 3", "physicalResistance 14", "maxHealth 80" ]
+        },
+        {
+          "id": "leggings",
+          "displayName": "Leggings",
+          "slot": "Legs",
+          "iconSheet": "Assets/_Project/Art/Items/leggings_leather_sheet",
+          "baseStats": [ "dexterity 1", "physicalResistance 4" ],
+          "topStats":  [ "dexterity 3", "physicalResistance 11" ]
+        },
+        {
+          "id": "gloves",
+          "displayName": "Gloves",
+          "slot": "Gloves",
+          "iconSheet": "Assets/_Project/Art/Items/gloves_leather_sheet",
+          "baseStats": [ "dexterity 1", "attack 1" ],
+          "topStats":  [ "dexterity 3", "attack 3" ]
+        },
+        {
+          "id": "boots",
+          "displayName": "Boots",
+          "slot": "Shoes",
+          "baseStats": [ "dexterity 1", "speed 1" ],
+          "topStats":  [ "dexterity 3", "speed 3" ]
+        }
+      ]
+    },
+
+    {
+      "id": "steel",
+      "displayName": "Steel",
+      "description": "Plate, properly fitted. Heavy enough that you feel every step, and so does anything that hits you.",
+      "tierAdjectives": [ "Pitted", "Plain", "Forged", "Tempered", "Polished", "Knightly", "Runed", "Adamant", "Radiant", "Godsteel", "Sovereign" ],
+      "maxTier": 10,
+      "cost": 60,
+      "costPerTier": 40,
+      "sortOrder": 1,
+      "pieces": [
+        {
+          "id": "helmet",
+          "displayName": "Helmet",
+          "slot": "Head",
+          "iconSheet": "Assets/_Project/Art/Items/helmets_str",
+          "baseStats": [ "constitution 2", "physicalResistance 6" ],
+          "topStats":  [ "constitution 4", "physicalResistance 13" ]
+        },
+        {
+          "id": "platebody",
+          "displayName": "Platebody",
+          "slot": "Torso",
+          "baseStats": [ "constitution 4", "strength 1", "physicalResistance 10", "maxHealth 30" ],
+          "topStats":  [ "constitution 8", "strength 3", "physicalResistance 22", "maxHealth 120", "speed -2" ]
+        },
+        {
+          "id": "platelegs",
+          "displayName": "Platelegs",
+          "slot": "Legs",
+          "baseStats": [ "constitution 3", "strength 2", "physicalResistance 8" ],
+          "topStats":  [ "constitution 6", "strength 4", "physicalResistance 17" ]
+        },
+        {
+          "id": "gauntlets",
+          "displayName": "Gauntlets",
+          "slot": "Gloves",
+          "baseStats": [ "strength 2", "physicalResistance 4", "attack 1" ],
+          "topStats":  [ "strength 5", "physicalResistance 9", "attack 3" ]
+        },
+        {
+          "id": "greaves",
+          "displayName": "Greaves",
+          "slot": "Shoes",
+          "baseStats": [ "constitution 2", "physicalResistance 5" ],
+          "topStats":  [ "constitution 4", "physicalResistance 11", "speed -1" ]
+        }
+      ]
+    },
+
+    {
+      "id": "silk",
+      "displayName": "Silk",
+      "description": "Woven thin and stitched with something that hums. It turns spellwork aside and almost nothing else.",
+      "tierAdjectives": [ "Frayed", "Plain", "Woven", "Embroidered", "Silken", "Enchanted", "Arcane", "Starwoven", "Astral", "Empyrean", "Sovereign" ],
+      "maxTier": 10,
+      "cost": 55,
+      "costPerTier": 45,
+      "sortOrder": 2,
+      "pieces": [
+        {
+          "id": "pointed_hat",
+          "displayName": "Pointed Hat",
+          "slot": "Head",
+          "baseStats": [ "intelligence 2", "manaRegen 1", "physicalResistance 2", "magicalResistance 4" ],
+          "topStats":  [ "intelligence 6", "manaRegen 5", "physicalResistance 6", "magicalResistance 15" ]
+        },
+        {
+          "id": "robe_top",
+          "displayName": "Robe Top",
+          "slot": "Torso",
+          "iconSheet": "Assets/_Project/Art/Items/robe_top_silk_sheet",
+          "baseStats": [ "intelligence 2", "wisdom 2", "physicalResistance 3", "magicalResistance 6" ],
+          "topStats":  [ "intelligence 6", "wisdom 5", "physicalResistance 8", "magicalResistance 20" ]
+        },
+        {
+          "id": "robe_bottom",
+          "displayName": "Robe Bottom",
+          "slot": "Legs",
+          "iconSheet": "Assets/_Project/Art/Items/rob_bottom_silk_sheet",
+          "baseStats": [ "intelligence 1", "wisdom 1", "physicalResistance 2", "magicalResistance 5" ],
+          "topStats":  [ "intelligence 4", "wisdom 4", "physicalResistance 7", "magicalResistance 17" ]
+        },
+        {
+          "id": "gloves",
+          "displayName": "Gloves",
+          "slot": "Gloves",
+          "iconSheet": "Assets/_Project/Art/Items/gloves_silk_sheet",
+          "baseStats": [ "intelligence 1", "manaRegen 1", "magicalResistance 3" ],
+          "topStats":  [ "intelligence 4", "manaRegen 3", "magicalResistance 10" ]
+        },
+        {
+          "id": "boots",
+          "displayName": "Boots",
+          "slot": "Shoes",
+          "iconSheet": "Assets/_Project/Art/Items/boots_silk_sheet",
+          "baseStats": [ "dexterity 1", "speed 1", "magicalResistance 3" ],
+          "topStats":  [ "dexterity 2", "speed 2", "magicalResistance 10" ]
+        }
+      ]
+    }
+  ]
+}

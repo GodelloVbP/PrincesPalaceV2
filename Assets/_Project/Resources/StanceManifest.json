@@ -1,0 +1,55 @@
+{
+  "_comment": [
+    "WHERE AN ACTOR'S FEET ARE, AND HOW ITS ANIMATIONS ARE TIMED -- authored,",
+    "not guessed. Before this file the runtime inferred all three of those",
+    "numbers by scanning pixels and applying global constants, and every",
+    "inference was eventually wrong about something: the golem's ground slam",
+    "erupts an earth spike ~50px BELOW its feet and Shawn's idle plants a staff",
+    "~33px below his, so a scan for 'the lowest opaque pixel' read both as the",
+    "floor and hoisted the figures off the ground. See docs/ART_PIPELINE.md.",
+    "",
+    "groundLine: pixels from the sprite canvas's BOTTOM EDGE up to the surface",
+    "the figure stands on. One value per actor, not per stance, because a",
+    "character's feet do not move relative to their own art -- only the effects",
+    "drawn around them do. That is what stops a figure jumping between poses.",
+    "",
+    "stances: only poses with MORE THAN ONE FRAME need an entry, since timing",
+    "is meaningless for a still. StanceManifestValidationTests fails if a",
+    "multi-frame stance is missing one, so this cannot silently fall behind the",
+    "art. Single-frame poses take the defaults in StanceManifestResolver.",
+    "",
+    "Lives in Resources/ rather than ContentData/ because it is read at RUNTIME",
+    "rather than baked by ContentBuilder, and deliberately NOT under",
+    "Resources/Content/, which ContentBuilder deletes wholesale on every run."
+  ],
+
+  "actors": [
+    {
+      "spritePath": "Enemies/golem",
+      "groundLine": 69,
+      "stances": [
+        { "stance": "attack", "secondsPerFrame": 0.08, "impactFrame": 3, "soundFrame": 3 },
+        { "stance": "cast", "secondsPerFrame": 0.08, "impactFrame": 3, "soundFrame": 3 }
+      ]
+    },
+    {
+      "spritePath": "Enemies/rat",
+      "groundLine": 12,
+      "stances": [
+        { "stance": "attack", "secondsPerFrame": 0.08, "impactFrame": 3, "soundFrame": 3 }
+      ]
+    },
+    {
+      "spritePath": "Enemies/bog_witch",
+      "groundLine": 10.5,
+      "stances": []
+    },
+    {
+      "spritePath": "Characters/sheep",
+      "groundLine": 43,
+      "stances": [
+        { "stance": "attack", "secondsPerFrame": 0.08, "impactFrame": 3, "soundFrame": 3 }
+      ]
+    }
+  ]
+}

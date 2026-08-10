@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 78462e746feff2e4c945a0159eb6e76a, type: 3}
+  m_Name: sheep_ram_converge
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.TalentDefinition
+  id: sheep_ram_converge
+  displayName: Black Ram Mode
+  description: 'The three roots gather. Unlocks the transform: 7 wool for three turns
+    of splash, weight and speed, plus temporary health that leaves again when it
+    does. Free, but it wants 9 embers spent in this path first.'
+  characterId: sheep
+  column: 0
+  row: 10
+  prerequisites:
+  - {fileID: 11400000, guid: ab67996d7c0296941a82b53e0d7bc5e8, type: 2}
+  - {fileID: 11400000, guid: 39f0d4a8f1043a34c9b88bb81494fd6f, type: 2}
+  - {fileID: 11400000, guid: 2bc4789daaf3b734aa0738900d96810a, type: 2}
+  minSpent: 9
+  statBonus:
+    maxHealth: 0
+    speed: 0
+    attack: 0
+    defense: 0
+    manaRegen: 0
+    physicalResistance: 0
+    magicalResistance: 0
+  abilityScoreBonus:
+    strength: 0
+    dexterity: 0
+    constitution: 0
+    wisdom: 0
+    intelligence: 0
+    charisma: 0
+  grantsStartingItemId: 
+  maxManaBonus: 0
+  skillManaCostReduction: 0
+  signatureCapacityBonus: 0
+  signaturePerTurnBonus: 0
+  effects: []
+  grantsSkillId: black_ram_mode
+  iconPath: 

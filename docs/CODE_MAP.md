@@ -1,0 +1,470 @@
+# Code Map
+
+Screens/systems → files, so a change starts with "read this one file" instead
+of grepping a giant one. Written after Phases 3-4 of the workflow-standards
+restructure split `SceneBuilder.cs` and `FightController.cs` into
+per-topic partial-class files.
+
+**Update rule: adding a screen, system, or partial-class part file without
+touching this map is an incomplete change.** See `docs/WORKFLOW.md` §9's
+doc update-rules index.
+
+---
+
+## Screens → files
+
+Each screen is: a `SceneBuilder` part that builds it, a controller (+ its own
+parts, for Fight), its tests, and its content data (where applicable).
+
+| Screen | SceneBuilder part | Controller | Content |
+|---|---|---|---|
+| Main Menu / Save Slots / Character Select | `SceneBuilder/SceneBuilder.MainMenu.cs` + `.MainMenuAmbience.cs` | `MainMenuController.cs`, `SaveSlotController.cs`, `CharacterSelectController.cs`, `MenuIntroStagger.cs` | `characters.json` |
+| Run Map | `SceneBuilder/SceneBuilder.Map.cs` | `DescentMapView.cs`, `MapController` (see `GameplayManager.cs`) | `enemies.json` (room pools) |
+| Fight (combat) | `SceneBuilder/SceneBuilder.Fight.cs` + `.FightStage.cs` | `FightController.cs` (root) + its 7 parts, see below | `skills.json`, `spells.json`, `enemies.json`, `weapons.json` |
+| Item Choice ("pick 1 of 3") | `SceneBuilder/SceneBuilder.Rewards.cs` | `ItemChoiceController.cs` | `items.json`, `itemsets.json` |
+| Rewards ("The Reckoning") | `SceneBuilder/SceneBuilder.Rewards.cs` | `RewardsController.cs` | — |
+| Inventory | `SceneBuilder/SceneBuilder.Equipment.cs` (`BuildInventoryPanel`) | `InventoryController.cs` (legacy roster+weapon overlay) | — |
+| Equipment (bag + paperdoll) | `SceneBuilder/SceneBuilder.Equipment.cs` (`BuildEquipmentScreens`) | `EquipmentController.cs` | — |
+| Shop / Store | `SceneBuilder/SceneBuilder.Store.cs` | `StoreController.cs` | `items.json` (Upgrades/Consumables) |
+| Hub | `SceneBuilder/SceneBuilder.Hub.cs` | `HubController.cs` | — |
+| Talents | `SceneBuilder/SceneBuilder.Talents.cs` | `TalentController.cs` | `talents.json` |
+| Relics | `SceneBuilder/SceneBuilder.Relics.cs` | `RelicsController.cs` | `relics.json` |
+| Character Sheet | `SceneBuilder/SceneBuilder.CharacterSheet.cs` | `CharacterSheetController.cs` | `characters.json` |
+| Pause Menu | `SceneBuilder/SceneBuilder.Overlays.cs` (`BuildPauseMenu`/`BuildPauseLayer`) | `PauseMenuController.cs` | — |
+| Dialogue Bark (always-on layer) | `SceneBuilder/SceneBuilder.Overlays.cs` (`BuildBarkController`) | `BarkController.cs` | — |
+| Dialogue (full-screen) | `SceneBuilder/SceneBuilder.Dialogue.cs` | `DialogueController.cs` | — |
+
+Generic building-block primitives (`CreateButtonStrip`, `AssertColumnClears`,
+`CreateFramedPanel`, the `Hud*`/`Suite*` color palette, `CreateGearCell`/`Icon`/`Text`, etc.) live
+in `SceneBuilder/SceneBuilder.Widgets.cs` — check there before adding a new
+one, per `docs/CODE_STANDARDS.md` §2.
+
+## The UI construction layer
+
+v2 has no `SceneBuilder` partial-class family. v1's was 7,608 lines across 14
+parts, and all four of its documented failure modes came from layout arithmetic
+living at construction sites. There are no construction sites now.
+
+**`Domain/UiKit/` — engine-free, so screens are testable without a scene:**
+
+`UiVec` · `UiRect` · `Place` · `UiSize` · `UiPad` · `UiAlign` · `UiNode` ·
+`NodeRef` · `Ui` (the factories) · `UiString` · `UiStrings` · `UiSolver` ·
+`SolvedNode` · `UiAudit` · `UiAuditError` · `UiFrames` · `FightSubmenuLayout`
+
+Screens live in `Domain/UiKit/Screens/` — one class per screen returning a tree
+plus typed handles (`MainMenuScreen`, `MainMenuAmbience`).
+
+**`Editor/SceneBuilder/` — the only code that touches GameObjects:**
+
+`SceneBuilder.cs` (camera, global Volume, canvas, EventSystem, sprite loading,
+`BuildAllScenes`) · `UiEmitter.cs` · `UiEmitResult.cs` · `ScreenRegistry.cs` ·
+`UiTextFitAudit.cs` (E1) · `UiCountAudit.cs` (E4) · `UiWiringSweep.cs` (E3) ·
+`ScreenshotTool.cs` · `TmpBootstrap.cs`
+
+Plus `Editor/PipelineBuilder.cs`, which generates the URP asset, the Renderer 2D
+and the post-processing profile under `Assets/_Project/Rendering/`.
+
+**To add a screen:** write its tree in `Domain/UiKit/Screens/`, add a `ScreenDef`
+to `ScreenRegistry.All`. That one entry gives it scene building, build-time
+audits and screenshot support — there is no second list to update.
+
+## `FightController` — full part list
+
+Root stays at `Assets/_Project/Scripts/Core/FightController.cs` — this IS a
+MonoBehaviour the generated scene binds by this file's script GUID, so its
+name/path/`.meta` are frozen. Holds every `[SerializeField]` field, every
+const, all other runtime state, both menu enums (`MenuDepth`/`MenuBranch`),
+lifecycle (`Start`/`Update`/`OnEnable`), and all menu-input handling
+(`AddHover`/`OnSubmenuRowHovered`/`OpenBranch`/`GoBack`/`ResetMenu`/etc).
+Parts live beside it, same folder:
+
+| Part | Covers |
+|---|---|
+| `FightController.Encounter.cs` | `BuildEncounter`, `AddEnemyCombatant`, `WriteBackHealth` |
+| `.Actions.cs` | The player action-resolution path: `BeginTargetedAction` → `OnContinuePressed` — attack/skill/item/run resolution, both `AfterDefences` overloads, relic/role effects |
+| `.Turns.cs` | `AdvanceAfterAction`, signature/status/mana ticks, enemy AI turn resolution (`AutoResolveEnemyTurns`) |
+| `.Outcome.cs` | `EndFight`, victory/boss resolution, reward/drop rolls |
+| `.Hud.cs` | `RefreshUi` and the world-state half it drives — party plate, enemy plates, party stage, initiative tracker, `SetCombatantStance` |
+| `.HudMenu.cs` | The command-menu half: `RefreshCommandColumns`, submenu rows, the detail panel |
+| `.Beats.cs` | The `StageBeat` nested class, `PlaySpellEffects`/`TimeUntilImpact`/`ImpactFraction`, and the whole record/commit/playback beat system |
+| `.StageVisuals.cs` | Damage popups, lunges, stage-slot lookups, stance sprite loading/caching, grounding figures on the slot's ground line (from `StanceManifest`) |
+| `.Talents.cs` | Every talent-granted rule that happens at a MOMENT: wool owed at a turn start (all three engines), the defense shred, both splashes, Trample's extra action, entering/ticking/extending a transform, and Provoke. The PASSIVE half deliberately lives in `CombatMath` instead — see the part's own header |
+
+`namespace PrincesPalace { public partial class FightController }` (root adds
+`: MonoBehaviour`). Both asmdef-visible from `PrincesPalace.Core`.
+
+---
+
+## Domain map
+
+`Assets/_Project/Scripts/Domain/` (`PrincesPalace.Domain`, engine-free,
+EditMode-testable):
+
+| Folder | Covers |
+|---|---|
+| `Audio/` | Adaptive music: `MusicIntensity` (the four tiers), the `music_layers.json` raw shapes and `MusicLayerResolver`, the resolved `MusicLayerSet`/`MusicLayerLibrary`, and `MusicClock` (bar-boundary arithmetic) |
+| `Combat/` | `CombatMath`, `CombatEncounter`, `CombatantState`, damage/effectiveness formulas, plus the talent-rework additions: `TalentEffect` (the closed rule vocabulary a talent can grant), `TalentEffectSet` (a character's rules, flattened once per fight) and `Transformation`/`TransformGrant` (Black Ram Mode) |
+| `Content/` | Raw/resolved content shapes + `*EntryResolver`s (validation) for every JSON-authored content type, plus the content enums they parse (`CharacterRole`, `RelicEffect`) |
+| `Dungeon/` | `DifficultyCurve`, room/map generation logic |
+| `Economy/` | `Wallet`, `CurrencyType` |
+| `Equipment/` | `EquipmentSlot(s)`, `EquipmentLoadout` |
+| `Relics/` | `RelicLoadout` (party-wide relic ownership/assignment) |
+| `Rewards/` | `CombatReward`, `CharacterReward`, offer tables |
+| `Rng/` | `SeededRandom` (built, not yet wired — see `AUDIT.md`) |
+| `Stage/` | Stage-side/depth/layout pure geometry, `SpriteFacing`, `StanceManifest` (authored ground lines + stance timing) |
+| `Stats/` | `StatBlock`, `StatType`, `AbilityDerivation` |
+
+## Core map
+
+`Assets/_Project/Scripts/Core/` (`PrincesPalace.Core`) — 59 files. Beyond the
+per-screen controllers in the table above: `Content/` (the `*Definition`
+ScriptableObject types), `Data/` (`Character`, `SaveData`, `RunState`),
+`ContentDatabase.cs` (the single content lookup point — split into a root
+plus `.Validation.cs` (`ValidateContent`) and `.Effective.cs`
+(`EffectiveStats`/`EffectiveAbilityScores`/`ActiveLoadout`/etc, the "what
+does this character actually have right now" family), same
+`public static partial class ContentDatabase` in all three, no namespace-
+binding constraint since it's a static class, not a MonoBehaviour),
+`GameplayManager.cs` (run lifecycle, screen switching via `OverlayState`),
+`ItemIcons.cs` / `PortraitIcons.cs` (shared id→sprite lookup, see
+`docs/CODE_STANDARDS.md` §2), `RarityColors.cs`, `CharacterTabStrip.cs`
+(the character-switcher tab row shared by CharacterSheetController/
+RelicsController/TalentController), VFX primitives (`RadialGlowImage`,
+`BeaconPulse`, `SolidCircleImage`, `SpellVfxPlayer`), the ambient-motion
+primitives (`StarTwinkle`, `LanternFlicker`, `SlowDrift`, `MoteDrift`,
+`KenBurnsDrift` — see `docs/CODE_STANDARDS.md` §2), and
+`FrameSequenceLoader.cs` (the one f0..fN Resources probe behind
+`StanceAnimationLibrary`, `SpellVfxPlayer` and `HubBuildingAnimator`).
+
+Audio is the one family that does NOT go through `ContentDatabase`, because
+`MusicController` and `SoundController` self-bootstrap before any scene loads
+and therefore before it exists. Its two config tables are read by their own
+loaders instead, both the same shape (Resources path, `JsonUtility`, cache,
+`Reset()` seam, every failure degrading rather than throwing): `AudioLevels.cs`
+reads `audio_levels.json` (per-clip loudness correction) and `MusicLayers.cs`
+reads `music_layers.json` (which stems make up a floor's song, and which of
+them each intensity plays).
+
+## Editor & tools map
+
+`Assets/_Project/Scripts/Editor/` (`PrincesPalace.Editor`, one asmdef):
+`SceneBuilder.cs` + `SceneBuilder/` (above), `ContentBuilder.cs` (generates
+every ScriptableObject from `ContentData/*.json`), `ScreenshotTool.cs`
+(headless panel capture, `KnownPanels` table — keep `tools/screenshot.ps1`'s
+usage text in sync with it), `EnemySpriteImportPostprocessor.cs`,
+`StanceSpriteImporter.cs` (forces Sprite import under `Resources/Enemies`,
+`Resources/Characters` AND `Resources/Spells` — anything runtime-loaded as a
+Sprite must be listed there or it silently loads as null), `PanelPreview.cs`.
+
+`tools/` (all PowerShell/Python, see `docs/WORKFLOW.md` §7 for when to use
+which):
+- `run_tests.ps1` — original serial full-suite runner, still works
+- `run_tests_parallel.ps1` — the "before committing" runner (~90-100s), two
+  isolated copies in parallel, `-BuildContent`/`-BuildScenes`/`-SkipSync`,
+  the `Assert-GuidsMatch` hardening (see `AUDIT.md` #24), and a test-area
+  gate that refuses to run at all if a class matches no area or was never
+  discovered (see `test_areas.ps1` below)
+- `test.ps1` — the fast edit-run-edit loop (~12s for one class, more for a
+  broad area; `-Changed` maps uncommitted files to the areas/classes they
+  affect)
+- `test_areas.ps1` — single source of truth for test-class discovery and the
+  `combat`/`hub`/`content`/`run`/`ui`/`art`/`rng` area patterns, shared by
+  both scripts above
+- `screenshot.ps1` — headless screenshots. `-Panel`/`-All` capture the STATIC
+  scene as `SceneBuilder` authored it (Edit Mode, no `Update()`); `-Runtime`
+  captures the game ACTUALLY RUNNING by driving `RuntimeScreenshotTests`
+  through the PlayMode test runner, which is what finally makes the ambient
+  animators visible. All three omit `-nographics` — no device, no pixels
+- `key_green_screen.py` — multi-kit green-screen/black-FX art keyer, see
+  `docs/ART_PIPELINE.md`
+- `process_map_icons.py`, `remove_portrait_backgrounds.py`,
+  `slice_actor_sheet.py`, `slice_item_sheet.py`, `slice_spell_sheet.py` —
+  art-pipeline slicers/keyers, one per asset category. `slice_actor_sheet.py`
+  covers BOTH sides of the fight stage (`Resources/Enemies/<id>` and
+  `Resources/Characters/<id>`) from one `ACTORS` manifest, since both resolve
+  through one runtime path
+- `sheet_slicing.py` — cell-cutting geometry shared by the two grid slicers
+  (not run directly)
+- `actor_stance_qa.py` — visual QA contact sheets + onion skins for actor
+  stance art, rendered offline from the committed PNGs without booting Unity
+  (`screenshot.ps1 -Runtime` covers animation that only exists in-engine)
+- `trim_wav.py` — audio trimming utility
+
+---
+
+## Tests map
+
+`Assets/_Project/Scripts/Tests/EditMode/` — 39 test classes, Domain-only.
+`Assets/_Project/Scripts/Tests/PlayMode/` — 48 test classes (`GameplayTestBase.cs`
+is the shared base, not a suite itself). Core+Domain. Class counts are from
+`tools/test.ps1 -List`, the live, authoritative source — trust it over a
+file count, since a single file can hold more than one test fixture.
+
+
+## The Fight screen (v2)
+
+Rebuilt across steps 0–10 of the Fight-screen plan. The shape is the whole
+point, so it is worth stating once: **~34% of v1's `FightController` was never
+about Unity**, and all of it now lives in Domain where it is tested in
+milliseconds rather than by loading a scene.
+
+### Domain — `Domain/Combat/Session/`
+
+| File | What it owns |
+|---|---|
+| `FightSession.cs` | the session: kits, queries, the plain attack, the generic Skill verb, Hold Back |
+| `FightSession.Beats.cs` | beat RECORDING, the retro-attach rule (AUDIT #13), stance and voice capture |
+| `FightSession.Riders.cs` | Brave / Trample / Bloodlust, turn-start bookkeeping, victory resolution |
+| `FightSession.Enemies.cs` | intents, the telegraph, the two skip paths, taunt redirection, the status rider |
+| `FightSession.Skills.cs` | the fourteen-effect dispatch, role riders, the queue push |
+| `FightSession.Talents.cs` | wool engines, wards, Shatter, Gifts, splash, the transform, Provoke |
+| `DamagePipeline.cs` | the damage funnel, and the only place its composition order is stated |
+| `VictoryRewards.cs` | the payout arithmetic (elite × depth), drop rolls, who earns what |
+| `FightHudSpec.cs` | HUD capacities both the tree and the session read |
+| `FightTuning.cs` | balance constants, out of the controller |
+| `CombatBeat.cs` / `Vitals.cs` / `VoiceLine.cs` / `CombatantKit.cs` | the engine-free beat vocabulary |
+
+`Domain/Stage/FightStageAnchors.cs` holds the stage's pixel anchors, and
+**formally supersedes** `StageLayout`'s header note that anchors stay in
+SceneBuilder — that note predates screen trees living in Domain.
+
+### Domain — the screen tree
+
+`Domain/UiKit/Screens/FightScreen.cs` declares the whole screen: two mirrored
+stages, the initiative row, bark, enemy plates, party plate, three command
+columns, and the only two genuine `Ui.Pool` sites in the game (the spell VFX
+rect and the damage popups). `FightHudPalette.cs` holds the colours, which in
+v1 were Editor-assembly `Color` fields the runtime controller could not read
+and therefore restated.
+
+### Core
+
+`Core/FightController.cs` — references, the background swap, the static HUD
+paint, and `AnchorSubmenuRows`, which re-anchors an open submenu through the
+**same** `FightSubmenuLayout.RowY` the build used. v1 kept a second copy of
+those constants in Core and its design preview drew rows at 8-slot positions.
+
+### Tests
+
+`FightSessionTests`, `TurnRiderTests`, `EnemyAiTests`, `EnemyIntentTests`,
+`SkillDispatchTests`, `FightTalentTests`, `FightRewardsTests`,
+`DamagePipelineTests`, `CombatBeatTests`, `FightScreenTests`,
+`FightCapacityPinTests` — all EditMode, all sub-second.
+
+### The runtime view (steps 11-13)
+
+`FightMenuState` and `FightHudModel` are **Domain**, which is the one real
+departure from the plan and the reason it is worth naming. v1 kept both on the
+MonoBehaviour, so "does BACK out of a target land on the right depth" and "what
+does this row cost" could only be checked by loading a scene and clicking. They
+are plain logic; only the PAINTING needs Unity.
+
+| File | What it owns |
+|---|---|
+| `Domain/.../FightMenuState.cs` | the five menu edges, the selection, the mana preview |
+| `Domain/.../FightHudModel.cs` | submenu rows, the detail panel, the breadcrumb, the standing count |
+| `Core/FightController.Hud.cs` | painting, and nothing else |
+| `Core/FightController.Input.cs` | clicks in, session commands out; `CanAct` asked in ONE place |
+| `Core/FightBeatPlayer.cs` | playback, paint-first-then-move, `Flush` reclaims |
+| `Core/DamagePopup.cs` | the rise-and-fade, with `Reclaim` |
+| `Core/StageHitFlash.cs` | the white silhouette, over `Resources/Shaders/UIHitFlash.shader` |
+
+Two measurements the plan said to make rather than predict, both now made --
+and the first one found a defect that had made every previous visual judgement
+in this project worthless.
+
+**Post-processing was never running.** `ScriptableObject.CreateInstance<Renderer2DData>()`
+leaves `m_PostProcessData` null; only the Assets > Create path assigns the
+package default. A renderer with no post-processing shaders is a legitimate
+configuration, so URP warned about nothing -- it simply skipped bloom, vignette
+and colour grading. The symptom was indistinguishable from success: screenshots
+rendered, the Volume profile held the tuned values, and nothing looked broken.
+
+It was caught by a measurement designed so it *could* fail: capture the party
+plate with the Volume on and again with it off. The two came back byte-identical
+(contrast 10.45:1 both ways, 100% brightness retained), which is impossible if
+grading is running. `PipelineBuilder.EnsurePostProcessData` now assigns it, on
+both the fresh-build and already-exists paths.
+
+Worth naming as a method, not just a fix: **the earlier version of this
+measurement compared the party plate against mid-screen and reported the plate
+was darker.** That is true, and says nothing about the vignette, because those
+are different content. A dark plate on a bright forest is dark with no
+post-processing at all -- which is exactly the situation that turned out to be
+the case. Only same-pixels, one-variable-changed could have caught it.
+
+**Legibility survives, now that grading actually happens.** Measured on the
+party plate, ungraded against graded:
+
+| | ungraded | graded | |
+|---|---|---|---|
+| plate mean luminance | 0.1455 | 0.1190 | 81.8% retained |
+| HP readout contrast | 11.84:1 | 12.03:1 | WCAG AA is 4.5:1 |
+
+**No second root-level Overlay canvas is needed** -- the risky mitigation stays
+unbuilt. `PostProcessingLegibilityTests` pins both numbers, so a future vignette
+tweak that crosses either threshold fails rather than merely looking worse.
+
+**The hit-flash shader survives URP.** `HitFlashPixelTests` renders a
+deliberately dark half-opaque sprite through `CanvasCapture` and asserts white
+where the sprite is opaque and clear where it is not. It passes against a real
+graphics device, so the UIEffect fill-mode fallback is not needed.
+
+All three are graphics-gated and self-skip under the headless commit gate. Run
+them with `tools/graphics_tests.ps1`, which drives the isolated runner copy --
+and note it needs the Unity editor CLOSED, since the licensing client will not
+hand a second instance a token while the editor holds one.
+
+### The stage (`FightController.StageVisuals.cs`)
+
+Actors, poses and grounding. Ported with its two hard-won rules intact, both of
+which were playtest bugs that read as art problems:
+
+- **The ground line comes from the manifest, never from measuring alpha.**
+  Delivered art disagrees about where feet sit inside the canvas, per FRAME.
+  Pinning the raw canvas to the floor made the golem jump 52px going
+  idle -> attack -- the "golem flies upwards in its attack" report. The runtime
+  used to scan for the lowest opaque pixel, which found the golem's earth spike
+  and Shawn's staff instead of their feet and hoisted both into the air. One
+  authored value per actor; `StanceManifestValidationTests` fails if it stops
+  matching the pixels, which is the case a measurement can never report because
+  it just believes whatever it finds.
+- **The shadow's X is still measured, and only from the idle frame**, so a pose
+  that swings an arm out cannot drag the ring sideways. Horizontal centring has
+  never caused a bug -- an arm's width moves a ring a few pixels, where a
+  mistaken floor moves a whole creature off the stage.
+
+`FightBeatPlayer` drives it: each beat applies the poses the session recorded (to
+every combatant it names, not just the actor), lunges the actor unless the beat
+says it holds position, flashes the target if something landed, then returns
+everyone to idle so a pose belongs to the blow that caused it. The defeated stay
+defeated -- that is read from `IsAlive`, not from the beat.
+
+Party art is a **parallel map** (`BindPartyArt`), deliberately not part of
+`PlayerKit`. The kit is what combat needs and a sprite folder is not that; v1
+kept both in one `_playerOwners` dictionary, which is a large part of why its
+combat logic could not leave the controller.
+
+`FightStageVisualTests` covers the view side; the rules themselves already had
+EditMode tests.
+
+### Spell VFX (`SpellVfxPlayer` + `FightController.SpellVfx.cs`)
+
+One Image, re-pointed frame by frame. No Animator: that would put the timing in
+an asset instead of beside the spell that owns it, and `vfxSeconds` is authored
+in skills.json next to the damage, which is where someone tuning the spell is
+looking.
+
+Almost all of the controller half is one question -- **where is the bottom of
+the effect** -- and each answer came from an effect erupting somewhere
+anatomically wrong:
+
+1. **Aim at the SLOT, not the sprite Image.** The Image is the art's raw canvas
+   and its bottom edge is wherever the sheet was cut; the slot's bottom edge is
+   the stage's ground line. Reading the Image put a strike below the feet by
+   whatever padding the sheet carried -- and a *moving* amount, since the
+   grounding offset changes per frame.
+2. **Correct the letterbox.** The box is square and the art is not always;
+   `preserveAspect` fits art inside it, so a wide sheet floats with dead space
+   beneath. Shawn's spells are 512x512 and hid this completely. Boulder Slam is
+   598x433, renders 380x275 in a 380 box, and its ground spike erupted around the
+   target's midriff.
+3. **Correct the art's own bottom margin, at full extent.** The margin is
+   animation -- a bolt strikes to its canvas floor and its afterglow retracts
+   upward -- so the fix is not a per-frame correction (which would drag the effect
+   down the screen as it faded) but the MINIMUM margin across the sheet. A blank
+   wind-up frame reports "unmeasurable" rather than 0, because claiming the effect
+   reaches the floor before it has appeared is confidently wrong.
+
+**`PreSnapshot` finally does its job.** Playback now paints what stood BEFORE the
+blow when a beat opens, waits `VfxSeconds * ImpactFraction`, then lands the
+after-state, the flash and the floating number together. Zero delay for a plain
+swing, so all of it is invisible for the overwhelming majority of beats. Until
+now both snapshots existed and only one was ever painted, which showed a spell's
+damage before the bolt had left the ceiling.
+
+### Playable (`FightEncounterAdapter`, `FightBootstrap`, frame stepping)
+
+**The adapter is the seam the whole decomposition exists for.** Above it is
+engine-free Domain that knows nothing about ScriptableObjects; below it is Core
+reading Resources. `EnemyDefinition -> ResolvedEnemy` and
+`SkillDefinition -> ResolvedSkill` are both mechanical, field for field, because
+the Resolved types were designed as the shape the definitions already had.
+
+One rule worth naming, applied in both conversions: **`hasStatus` is the
+authoring gate, and it is not the same question as "is a status type set".**
+`appliesStatus` is a plain enum with a valid zero value, so every definition has
+one whether anyone meant it or not. Reading the flag is what stops every monster
+in the game inflicting the first entry.
+
+`FightBootstrap` starts a fight when the scene opens -- a placeholder for the
+descent, and it says so. It picks the first character and first three monsters
+**that have battle art**, not simply the first of each: most of the roster has no
+sheet authored, and this exists so the screen can be looked at. (Filtering on art
+also sidesteps `sortOrder` being unset across all of enemies.json, which would
+otherwise make "the first three" mean Resources.LoadAll's incidental order --
+CLAUDE.md gotcha 4.)
+
+**Frame stepping** closes the last gap. A beat now walks its actor through the
+sheet: frames `[0, impact)` before the blow, `[impact, count)` after, both at the
+sheet's own authored pace. The alternative -- stretching the remaining frames to
+fill the hold -- is what v1 did and is visibly wrong: the Giant Rat's six-frame
+swing ran its first three at 0.08s and its last three at 0.15s, one animation
+changing speed halfway through, which is the "feels a bit blocky" report.
+`ImpactFrame` is 1-based, matching the `vfxImpactFrame` convention the content
+files already use.
+
+`FightPlayableTests` opens the scene the way a player does and asserts a fight
+came out of authored content: real sprites rather than fallback plates, the
+manifest's ground line applied, a turn that can be taken end to end, and an actor
+that actually advances past frame 0 mid-swing (sampled DURING the beat -- the
+round ends back on idle at frame 0, so checking afterwards would pass either way).
+
+### The loop closes (outcome, navigation, the run, the map)
+
+**Outcome.** `VictoryRewards` and its 19 tests already existed; nothing called
+them. A payout now settles on every path a fight can end -- including the enemy
+loop's own exit, which is how a DEFEAT ends and never passes through the riders.
+Null until the fight is over, because "not settled yet" and "settled at nothing"
+are different answers.
+
+**Navigation** holds the scene names once. `LoadOverride` lets a test assert
+where a button *would* go without tearing down the scene its assertions are
+about -- four existing save-slot tests broke the moment picking a slot started
+loading the hub.
+
+**`RunManager`** is static, not a MonoBehaviour: a run outlives every scene it
+passes through, and the state lives in the SAVE, so this is a thin accessor
+rather than a second copy that could disagree with disk. The map is
+**regenerated from the seed**, never serialised -- a serialised map is a second
+representation that drifts from the generator that made it.
+
+The correction that mattered: **a leg is not a run.** A leg is 8 steps and bosses
+fall every 16, so leg 0 ends at an ELITE. Treating "no choices left" as the end
+of the run would have stopped every descent there.
+
+**The map screen** is the first real `Ui.Pool` outside the fight, sized from
+`MapLayout.Capacity` = columns x max width: every position a leg *could* use.
+Which are occupied is runtime; where they sit is not, so the pool gets real
+audited coordinates. The controller re-anchors each column to its true width
+through the same `MapLayout.RowY` the tree placed it with, so a two-room column
+sits centred rather than leaving a gap where the third would have been.
+
+The audit refused the first version with 232 problems across four frames, all
+legitimate: the pool container spans the panel, and the caption and you-are-here
+pip deliberately sit outside their node. Three `AllowOverlap`/`AllowOverflow`
+declarations with reasons, not a suppression.
+
+Playable end to end: **MainMenu -> slot -> Hub -> gate -> Map -> room -> Fight ->
+Continue -> Map**, with gold banked, rooms marked cleared, legs advancing, and a
+loss ending the run.
+
+### Still to come
+
+The five remaining hub screens (Talents, Store, Equipment, CharacterSheet,
+Relics) and the non-fight room types -- Treasure, Rest, Shop and Event are
+generated and reachable on the map, but entering one only marks it cleared,
+because the screens they need do not exist.
+
+Also open: experience is computed in the payout and never applied to characters
+(gold is banked, exp is not), sound, and `StageDeathFade`.

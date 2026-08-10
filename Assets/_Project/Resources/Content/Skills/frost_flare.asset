@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dace2591de5ca4247a661c0479d541c1, type: 3}
+  m_Name: frost_flare
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SkillDefinition
+  id: frost_flare
+  displayName: Frost Flare
+  description: Burns and freezes in the same breath. Something out there hates one
+    half of it.
+  characterId: sheep
+  unlockLevel: 999
+  effect: 0
+  targeting: 0
+  manaCost: 5
+  resourceCost: 0
+  spendsAllResource: 0
+  power: 0
+  flatAmount: 0
+  ignoresDefense: 0
+  damageInstances:
+  - type: 1
+    amount: 25
+  - type: 2
+    amount: 25
+  vfxPath: Spells/frost_flare
+  vfxSeconds: 0.6
+  vfxImpactFrame: 3
+  sfxPath: Audio/Sfx/frost_flare
+  appliesStatus: 0
+  hasStatus: 0
+  statusMagnitude: 0
+  statusDuration: 0
+  requirements:
+    strength: 0
+    dexterity: 0
+    constitution: 0
+    wisdom: 0
+    intelligence: 0
+    charisma: 0
+  scalingAxis: 0
+  queuePushSlots: 0
+  transform:
+    displayName: 
+    turns: 0
+    attackPercent: 0
+    speedPercent: 0
+    temporaryHealthPercent: 0
+    splashPercent: 0
+  sortOrder: 6

@@ -1,0 +1,424 @@
+using System.Collections.Generic;
+using System.Linq;
+using NUnit.Framework;
+using PrincesPalace.Domain.Combat;
+using PrincesPalace.Domain.Combat.Session;
+using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Rng;
+using PrincesPalace.Domain.Stats;
+
+namespace PrincesPalace.Domain.Tests
+{
+    // The command menu's five edges, and what the HUD reads off them.
+    //
+    // In v1 both lived on a MonoBehaviour, so the only way to check that BACK
+    // out of a target actually lands on the right depth was to load the scene
+    // and click. The state machine is small and the rules are all conditional,
+    // which is the worst possible combination to leave untested.
+    public class FightMenuStateTests
+    {
+        private static FightMenuState Menu() => new FightMenuState();
+
+        // ---- the graph ---------------------------------------------------------
+
+        [Test]
+        public void AFreshMenuIsClosedAtTheRoot()
+        {
+            var menu = Menu();
+
+            Assert.AreEqual(MenuDepth.Root, menu.Depth);
+            Assert.AreEqual(MenuBranch.None, menu.Branch);
+            Assert.IsFalse(menu.IsOpen);
+            Assert.IsFalse(menu.SubmenuOpen);
+            Assert.IsFalse(menu.DetailOpen);
+            Assert.AreEqual(-1, menu.ActiveVerbIndex);
+        }
+
+        [Test]
+        public void AttackSkipsTheSubmenuEntirely()
+        {
+            // It jumps straight to picking a mark: there is nothing to choose
+            // between, so a column with one row in it would be a step that only
+            // ever costs a click.
+            var menu = Menu();
+
+            menu.OpenAttack();
+
+            Assert.AreEqual(MenuDepth.Target, menu.Depth);
+            Assert.AreEqual(MenuBranch.Attack, menu.Branch);
+            Assert.IsFalse(menu.SubmenuOpen, "ATTACK has no list");
+            Assert.IsTrue(menu.DetailOpen, "but it still describes the swing it is about to take");
+        }
+
+        [Test]
+        public void ASkillBranchOpensItsColumn()
+        {
+            var menu = Menu();
+
+            menu.OpenBranch(MenuBranch.Skill);
+
+            Assert.AreEqual(MenuDepth.Sub, menu.Depth);
+            Assert.IsTrue(menu.SubmenuOpen);
+            Assert.AreEqual(1, menu.ActiveVerbIndex);
+        }
+
+        [Test]
+        public void TheColumnStaysUpWhileTargetingFromIt()
+        {
+            // Targeting from a skill does NOT close the list it was chosen from:
+            // the player can still see what they picked while they aim.
+            var menu = Menu();
+            menu.OpenBranch(MenuBranch.Skill);
+            menu.EnterTargeting();
+
+            Assert.AreEqual(MenuDepth.Target, menu.Depth);
+            Assert.IsTrue(menu.SubmenuOpen);
+        }
+
+        [Test]
+        public void BackFromTargetingLandsOnTheListItCameFrom()
+        {
+            var menu = Menu();
+            menu.OpenBranch(MenuBranch.Skill);
+            menu.EnterTargeting();
+
+            Assert.IsTrue(menu.Back());
+
+            Assert.AreEqual(MenuDepth.Sub, menu.Depth);
+            Assert.AreEqual(MenuBranch.Skill, menu.Branch, "still in the skill branch");
+        }
+
+        [Test]
+        public void BackFromAttacksTargetingGoesStraightToTheRoot()
+        {
+            // It skipped the submenu on the way in, so it skips it on the way
+            // out. Landing on an empty list would be a state the design has no
+            // drawing for.
+            var menu = Menu();
+            menu.OpenAttack();
+
+            Assert.IsTrue(menu.Back());
+
+            Assert.AreEqual(MenuDepth.Root, menu.Depth);
+            Assert.AreEqual(MenuBranch.None, menu.Branch);
+        }
+
+        [Test]
+        public void BackFromAListClosesTheBranch()
+        {
+            var menu = Menu();
+            menu.OpenBranch(MenuBranch.Item);
+
+            Assert.IsTrue(menu.Back());
+
+            Assert.AreEqual(MenuDepth.Root, menu.Depth);
+            Assert.AreEqual(MenuBranch.None, menu.Branch);
+            Assert.IsFalse(menu.IsOpen);
+        }
+
+        [Test]
+        public void BackAtTheRootIsNotConsumed()
+        {
+            // The caller uses the return value to decide whether ESC was theirs
+            // to handle -- at the root it belongs to the pause menu instead.
+            Assert.IsFalse(Menu().Back());
+        }
+
+        [Test]
+        public void TheGraphHasNoWayToReachAListlessSubDepth()
+        {
+            // Two steps back from anywhere reaches the root and stops. A stack
+            // would let it go further; three fields cannot.
+            var menu = Menu();
+            menu.OpenBranch(MenuBranch.Skill);
+            menu.EnterTargeting();
+
+            menu.Back();
+            menu.Back();
+
+            Assert.AreEqual(MenuDepth.Root, menu.Depth);
+            Assert.IsFalse(menu.Back());
+        }
+
+        // ---- selection ----------------------------------------------------------
+
+        [Test]
+        public void SelectingARowPreviewsItsCost()
+        {
+            var menu = Menu();
+            menu.OpenBranch(MenuBranch.Skill);
+
+            Assert.IsTrue(menu.Select(2, manaCost: 7));
+
+            Assert.AreEqual(2, menu.Selection);
+            Assert.AreEqual(7, menu.ManaPreview);
+        }
+
+        [Test]
+        public void ReselectingTheSameRowChangesNothing()
+        {
+            // Hovering across one row fires repeatedly; a redraw per mouse move
+            // is what the return value exists to avoid.
+            var menu = Menu();
+            menu.OpenBranch(MenuBranch.Skill);
+            menu.Select(2, 7);
+
+            Assert.IsFalse(menu.Select(2, 7));
+        }
+
+        [Test]
+        public void NothingIsSelectableOutsideAList()
+        {
+            var menu = Menu();
+            menu.OpenAttack();
+
+            Assert.IsFalse(menu.Select(0, 5), "ATTACK has no rows to hover");
+            Assert.AreEqual(-1, menu.Selection);
+        }
+
+        [Test]
+        public void OpeningABranchClearsWhateverWasSelectedBefore()
+        {
+            // Otherwise the detail column would open describing a row from the
+            // PREVIOUS branch, which is the wrong answer that looks right.
+            var menu = Menu();
+            menu.OpenBranch(MenuBranch.Skill);
+            menu.Select(3, 9);
+
+            menu.OpenBranch(MenuBranch.Item);
+
+            Assert.AreEqual(-1, menu.Selection);
+            Assert.AreEqual(0, menu.ManaPreview);
+        }
+
+        [Test]
+        public void ResolvingAnActionClosesEverything()
+        {
+            // Called on every resolution, which is what makes the branch
+            // trustworthy as the sole authority for "is the column up".
+            var menu = Menu();
+            menu.OpenBranch(MenuBranch.Skill);
+            menu.Select(1, 4);
+            menu.EnterTargeting();
+
+            menu.Reset();
+
+            Assert.AreEqual(MenuDepth.Root, menu.Depth);
+            Assert.AreEqual(MenuBranch.None, menu.Branch);
+            Assert.AreEqual(-1, menu.Selection);
+            Assert.AreEqual(0, menu.ManaPreview);
+        }
+
+        // ---- what the HUD reads -------------------------------------------------
+
+        [Test]
+        public void TheBreadcrumbNamesTheWayIn()
+        {
+            var menu = Menu();
+            Assert.AreEqual("C O M M A N D", FightHudModel.Breadcrumb(menu));
+
+            menu.OpenBranch(MenuBranch.Skill);
+            StringAssert.Contains("S K I L L", FightHudModel.Breadcrumb(menu));
+            StringAssert.DoesNotContain("T A R G E T", FightHudModel.Breadcrumb(menu));
+
+            menu.EnterTargeting();
+            StringAssert.Contains("T A R G E T", FightHudModel.Breadcrumb(menu));
+        }
+
+        [Test]
+        public void ExactlyOneVerbIsLit()
+        {
+            var menu = Menu();
+            menu.OpenBranch(MenuBranch.Item);
+
+            Assert.AreEqual(2, menu.ActiveVerbIndex);
+
+            menu.Back();
+            Assert.AreEqual(-1, menu.ActiveVerbIndex, "nothing is lit at the root");
+        }
+    }
+
+    // What the submenu and detail column actually say, derived from a session.
+    public class FightHudModelTests
+    {
+        private static ResolvedSkill Skill(string id, string name, int manaCost = 5,
+            SkillEffect effect = SkillEffect.DamageSingle, int power = 12,
+            DamageInstance[] packets = null) =>
+            new ResolvedSkill(id, name, "It does a thing.", "hero", 1, effect,
+                SkillTargeting.SingleEnemy, manaCost, 0, false, power, 0, false,
+                packets, "", 0.6f, 3, "", 0);
+
+        private static (FightSession session, CombatantState hero) Fight(params ResolvedSkill[] skills)
+        {
+            var hero = new CombatantState("Hero", true, 200, 30, 20, 0, 10);
+            var foe = new CombatantState("Foe", false, 1000, 10, 5, 0, 1);
+            var encounter = new CombatEncounter(new[] { hero }, new[] { foe });
+            var kit = new PlayerKit("hero", CharacterRole.Tank, skills, null, null,
+                new ResolvedSpellTier(1, "Spark", 6, 1.5f, 0));
+            var session = new FightSession(encounter, new List<PlayerKit> { kit }, null, new SeededRandom(1));
+            return (session, hero);
+        }
+
+        [Test]
+        public void TheBasicSpellGetsARowAfterTheAuthoredSkills()
+        {
+            // Every character has one and no character has it in their list, so
+            // its index is stated once rather than recomputed at each call site.
+            var (session, hero) = Fight(Skill("a", "Alpha"), Skill("b", "Beta"));
+
+            var rows = FightHudModel.SkillRows(session, hero);
+
+            Assert.AreEqual(3, rows.Count);
+            Assert.AreEqual(FightHudModel.BasicSpellRow(2), rows.Count - 1);
+            Assert.IsTrue(rows[2].IsBasicSpell);
+            Assert.AreEqual("Spark", rows[2].Name);
+        }
+
+        [Test]
+        public void TheBasicSpellsCostComesFromTheSameResolutionEveryOtherSkillUses()
+        {
+            // v1 hand-rolled a separate mana check for this one row. That is
+            // exactly the shape that drifts.
+            var (session, hero) = Fight();
+
+            var basic = FightHudModel.SkillRows(session, hero).Single();
+
+            Assert.AreEqual(session.BasicSpellManaCostFor(hero), basic.ManaCost);
+            Assert.AreEqual(session.CanAffordBasicSpell(hero), basic.CanPay);
+        }
+
+        [Test]
+        public void AnUnaffordableRowIsShownAndMarked_NeverDropped()
+        {
+            // The player should learn what their character has rather than watch
+            // the list change length as their mana moves.
+            var (session, hero) = Fight(Skill("cheap", "Cheap", manaCost: 1), Skill("dear", "Dear", manaCost: 999));
+            hero.CurrentMana = 5;
+
+            var rows = FightHudModel.SkillRows(session, hero);
+
+            Assert.AreEqual(3, rows.Count, "both authored skills plus the basic spell");
+            Assert.IsTrue(rows[0].Affordable);
+            Assert.IsFalse(rows[1].Affordable);
+        }
+
+        [Test]
+        public void NoMoneyAndNoRequirementAreSeparateFlags()
+        {
+            // They render identically today. The distinction has to already
+            // exist here for anything to ever say which it is.
+            var (session, hero) = Fight(Skill("dear", "Dear", manaCost: 999));
+            hero.CurrentMana = 0;
+
+            var row = FightHudModel.SkillRows(session, hero)[0];
+
+            Assert.IsFalse(row.CanPay);
+            Assert.IsTrue(row.MeetsRequirement, "the skill has no ability-score requirement authored");
+            Assert.IsFalse(row.Affordable);
+        }
+
+        [Test]
+        public void TheMetaLineIsGeneratedFromTheSkillsOwnFields()
+        {
+            // So it cannot drift from what the skill actually does.
+            var skill = Skill("x", "Firestorm", effect: SkillEffect.DamageAll);
+
+            StringAssert.Contains("DAMAGEALL", FightHudModel.MetaLine(skill));
+            StringAssert.Contains("SINGLE", FightHudModel.MetaLine(skill), "targeting is authored separately from the effect");
+        }
+
+        [Test]
+        public void APacketSpellShowsTheSumOfItsPacketsAsPower()
+        {
+            // Power is per-point-of-resource scaling, which never applies to a
+            // spell with authored packets and is never authored on one -- so
+            // showing it would print a confident 0.
+            var packets = new[]
+            {
+                new DamageInstance(DamageType.Fire, 30),
+                new DamageInstance(DamageType.Ice, 20),
+            };
+            var spell = Skill("bolt", "Prismatic Bolt", power: 0, packets: packets);
+
+            Assert.AreEqual("50", FightHudModel.PowerLabel(spell));
+        }
+
+        [Test]
+        public void AnOrdinarySkillShowsItsAuthoredPower()
+        {
+            Assert.AreEqual("12", FightHudModel.PowerLabel(Skill("a", "Alpha", power: 12)));
+        }
+
+        [Test]
+        public void AnEmptySatchelProducesNoRows()
+        {
+            CollectionAssert.IsEmpty(FightHudModel.ItemRows(new List<SatchelStack>()));
+            CollectionAssert.IsEmpty(FightHudModel.ItemRows(null));
+        }
+
+        [Test]
+        public void AnItemRowCountsRatherThanCosts()
+        {
+            var rows = FightHudModel.ItemRows(new List<SatchelStack>
+            {
+                new SatchelStack("potion", "Potion", 3, restoresMana: false),
+                new SatchelStack("ether", "Ether", 1, restoresMana: true),
+            });
+
+            Assert.AreEqual("x3", rows[0].Cost);
+            Assert.AreEqual(0, rows[0].ManaCost, "an item never previews on the mana bar");
+            StringAssert.Contains("HEALTH", rows[0].Meta);
+            StringAssert.Contains("MANA", rows[1].Meta);
+        }
+
+        [Test]
+        public void AttackGetsASyntheticDetailEntry()
+        {
+            // A verb that jumps straight to targeting would otherwise be the one
+            // command with nothing to read about it.
+            var (_, hero) = Fight();
+
+            var panel = FightHudModel.DetailForStrike(hero);
+
+            Assert.AreEqual("Strike", panel.Name);
+            Assert.AreEqual(4, panel.Stats.Count, "the column has four fixed rows");
+            Assert.AreEqual(hero.Attack.ToString(), panel.Stats[1].Value,
+                "it describes THIS actor's swing, not a generic one");
+        }
+
+        [Test]
+        public void ASkillsDetailPanelFillsAllFourStatRows()
+        {
+            var panel = FightHudModel.DetailForSkill(Skill("a", "Alpha", manaCost: 5, power: 12));
+
+            Assert.AreEqual("Alpha", panel.Name);
+            Assert.AreEqual(4, panel.Stats.Count);
+            CollectionAssert.AreEqual(new[] { "COST", "POWER", "TARGET", "EFFECT" },
+                panel.Stats.Select(s => s.Key).ToArray());
+        }
+
+        [Test]
+        public void TheStandingCountIgnoresTheFallen()
+        {
+            var (session, _) = Fight();
+            Assert.AreEqual(1, FightHudModel.StandingCount(session.Encounter));
+
+            session.Encounter.Enemies[0].CurrentHealth = 0;
+            Assert.AreEqual(0, FightHudModel.StandingCount(session.Encounter));
+        }
+
+        [Test]
+        public void AnActorWithNoKitGetsAnEmptyListRatherThanAThrow()
+        {
+            var (session, _) = Fight();
+            var stranger = new CombatantState("Stranger", true, 10, 10, 1, 0, 1);
+
+            var rows = FightHudModel.SkillRows(session, stranger);
+
+            // One row: the basic spell, which every combatant conceptually has
+            // even with no kit behind it. Graceful, not empty-and-confusing.
+            Assert.AreEqual(1, rows.Count);
+            Assert.IsTrue(rows[0].IsBasicSpell);
+        }
+    }
+}

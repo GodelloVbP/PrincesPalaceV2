@@ -1,0 +1,70 @@
+namespace PrincesPalace.Domain.UiKit
+{
+    // The battle HUD's colours, as hex.
+    //
+    // These were `private static readonly Color` fields in v1's
+    // SceneBuilder.Widgets.cs, which put them in the Editor assembly -- so the
+    // runtime controller, which recolours the same elements as state changes
+    // (a verb going active, a pip filling, a plate being targeted), could not
+    // read them and restated the ones it needed. Hex strings in Domain are
+    // reachable from both.
+    //
+    // Alpha is encoded in the eighth and last two digits, matching the rest of
+    // the DSL. v1 wrote it as a separate float argument; folding it in is what
+    // lets one constant be a complete colour rather than half of one.
+    public static class FightHudPalette
+    {
+        // --- panels -----------------------------------------------------------
+        public const string PanelViolet = "#1A1024E6";       // 0.90
+        public const string PanelVioletDeep = "#120A1AEB";   // 0.92
+        public const string PanelRed = "#1F0F14DE";          // 0.87
+        public const string PanelGold = "#241610E8";         // 0.91
+        public const string PanelPrimary = "#33190CE8";      // 0.91
+        public const string PanelActive = "#583216F2";       // 0.95
+        public const string RowQuiet = "#100918C7";          // 0.78
+        public const string SubmenuRowFill = "#120A1AD1";    // 0.82
+        public const string Track = "#0E070CD9";             // 0.85
+        public const string TrackMp = "#080A14D9";           // 0.85
+
+        // --- borders ----------------------------------------------------------
+        public const string Hairline = "#C8AAE638";          // 0.22
+        public const string BorderGold = "#E7B25CB3";        // 0.70
+        public const string BorderPartyGold = "#E7B25C6B";   // 0.42
+        public const string BorderEnemy = "#E0786E42";       // 0.26
+        public const string BorderQuiet = "#B496D233";       // 0.20
+        public const string BorderSub = "#C8AAE647";         // 0.28
+
+        // --- text -------------------------------------------------------------
+        public const string TextPrimary = "#F4EBFF";
+        public const string TextSecondary = "#BFB0D4";
+        public const string TextMuted = "#8A7AA0";
+        public const string TextDisabled = "#7F6F98";
+        public const string GoldLight = "#FFE0A8";
+        public const string GoldText = "#FFD9A2";
+        public const string TargetAmber = "#FFC45A";
+        public const string RowNameText = "#E9DFF8";
+        public const string PartyNameText = "#FFF3DE";
+        public const string PartyClassText = "#C8A879";
+        public const string BackRowText = "#A695BC";
+        public const string QuietHotkey = "#6D5F85";
+        public const string LoudHotkey = "#FFDCAA8C";        // 0.55
+
+        // --- resources --------------------------------------------------------
+        public const string HpBright = "#E07A62";
+        public const string HpDeep = "#8E3226";
+        public const string HpText = "#F0C8BC";
+        public const string MpBright = "#7EA8E6";
+        public const string MpDeep = "#3A5A9A";
+        public const string MpText = "#C4D8F2";
+        public const string MpPreview = "#C8E2FFE6";         // 0.90
+        public const string EnemyName = "#F0DCD8";
+        public const string EnemyHpText = "#E0A89C";
+        public const string PipFilled = "#E8E0F7";
+        public const string PipEmpty = "#0E0814B3";          // 0.70
+
+        // --- the fight's own panel art ----------------------------------------
+        public const string TargetPromptFill = "#26160AE6";   // 0.90
+        public const string TargetPromptBorder = "#FFC45A8C"; // 0.55
+        public const string DetailBorder = "#C8AAE642";       // 0.26
+    }
+}

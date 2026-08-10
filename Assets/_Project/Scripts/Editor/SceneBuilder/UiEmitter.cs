@@ -1,0 +1,252 @@
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+using PrincesPalace.Domain.UiKit;
+
+// THE only place in this project that calls new GameObject() to build UI.
+//
+// v1 had 86 such sites, each re-typing the same anchor/pivot/size/position
+// block, and a helper that covered 13 of them because it could not express
+// stretch or edge pins. Here the whole preamble exists once, and there is
+// nothing the DSL cannot say that would justify going around it -- which is
+// what makes UiKitLintTests' "only the emitter may create GameObjects" rule
+// enforceable rather than aspirational.
+//
+// A UiKitLintTests rule allows `new GameObject(` in this file by name.
+public static class UiEmitter
+{
+    public static UiEmitResult Emit(UiNode tree, Transform parent)
+    {
+        // Audit BEFORE emitting. A layout collision that throws during
+        // generation is free; one that ships is not.
+        var errors = UiAudit.RunAllFrames(tree);
+        if (errors.Count > 0)
+        {
+            throw new System.Exception(FormatAuditFailure(tree.Name, errors));
+        }
+
+        var solved = UiSolver.Solve(tree, UiFrames.Reference);
+        var result = new UiEmitResult();
+        EmitNode(solved, parent, parentRect: null, result, decorInherited: false);
+        return result;
+    }
+
+    private static string FormatAuditFailure(string screen, IReadOnlyList<UiAuditError> errors)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"[SceneBuilder] FAILED: '{screen}' has {errors.Count} layout problem(s):");
+
+        // Grouped so one mistake visible at four frames reads as one mistake.
+        foreach (var group in errors.GroupBy(e => e.Message))
+        {
+            var frames = string.Join(", ", group.Select(e => UiFrames.Describe(e.Frame)).Distinct());
+            sb.AppendLine($"  [{group.First().Check}] at {frames}");
+            sb.AppendLine($"    {group.Key}");
+        }
+
+        return sb.ToString();
+    }
+
+    private static void EmitNode(SolvedNode solved, Transform parent, UiRect? parentRect,
+                                 UiEmitResult result, bool decorInherited)
+    {
+        var node = solved.Source;
+        bool decor = decorInherited || node.Decor;
+
+        var go = new GameObject(solved.Name, typeof(RectTransform));
+        go.transform.SetParent(parent, worldPositionStays: false);
+        var rect = go.GetComponent<RectTransform>();
+
+        ApplyPlacement(rect, node, solved, parentRect);
+
+        switch (node.Kind)
+        {
+            case UiNodeKind.Label:
+                EmitLabel(go, node, decor);
+                break;
+            case UiNodeKind.Button:
+                EmitButton(go, node, solved);
+                break;
+            case UiNodeKind.Sprite:
+                EmitImage(go, SceneBuilder.LoadSpriteByKey(node.SpriteKey), node.ColorHex, decor);
+                break;
+            case UiNodeKind.Solid:
+                EmitImage(go, null, node.ColorHex ?? "#ffffff", decor);
+                break;
+            case UiNodeKind.NestedCanvas:
+                EmitNestedCanvas(go, node);
+                break;
+            case UiNodeKind.Panel:
+                // A Panel is normally an invisible grouping rect. Given a colour
+                // it becomes a drawn plate - the hub's currency backing, a
+                // framed card. Without this the colour was silently ignored and
+                // the plate simply did not appear.
+                if (!string.IsNullOrEmpty(node.ColorHex)) EmitImage(go, null, node.ColorHex, decor);
+                break;
+        }
+
+        if (node.Rotation != 0f) rect.localRotation = Quaternion.Euler(0f, 0f, node.Rotation);
+        if (!node.Scale.Equals(UiVec.One)) rect.localScale = new Vector3(node.Scale.X, node.Scale.Y, 1f);
+
+        result.Record(node, go);
+
+        foreach (var child in solved.Children)
+        {
+            EmitNode(child, go.transform, solved.Rect, result, decor);
+        }
+
+        // AFTER children, so a subtree that starts inactive is fully built first
+        // - Start() only runs on activation, and a half-built inactive tree is
+        // the sort of thing that fails much later and somewhere else.
+        if (node.StartInactive) go.SetActive(false);
+    }
+
+    // The rect preamble. Once.
+    private static void ApplyPlacement(RectTransform rect, UiNode node, SolvedNode solved, UiRect? parentRect)
+    {
+        var place = node.Place;
+
+        switch (place.Kind)
+        {
+            case PlaceKind.Stretch:
+            case PlaceKind.Frac:
+                // Emitted with REAL anchor semantics rather than baked
+                // coordinates, so the relationship survives at runtime on a
+                // canvas size the build never saw.
+                rect.anchorMin = new Vector2(place.AnchorMin.X, place.AnchorMin.Y);
+                rect.anchorMax = new Vector2(place.AnchorMax.X, place.AnchorMax.Y);
+                rect.pivot = new Vector2(place.Pivot.X, place.Pivot.Y);
+                rect.offsetMin = new Vector2(place.Left, place.Bottom);
+                rect.offsetMax = new Vector2(-place.Right, -place.Top);
+                return;
+
+            case PlaceKind.Pin:
+                rect.anchorMin = rect.anchorMax = new Vector2(place.AnchorMin.X, place.AnchorMin.Y);
+                rect.pivot = new Vector2(place.Pivot.X, place.Pivot.Y);
+                rect.sizeDelta = new Vector2(solved.Rect.Width, solved.Rect.Height);
+                rect.anchoredPosition = new Vector2(place.Offset.X, place.Offset.Y);
+                return;
+
+            default:
+            {
+                // Flow and At: centre-anchored absolute, v1's convention. The
+                // SOLVED rect is the authority here - for a flow child that is
+                // the entire point, and for At it is identical to the declared
+                // offset anyway.
+                rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.pivot = new Vector2(place.Pivot.X, place.Pivot.Y);
+                rect.sizeDelta = new Vector2(solved.Rect.Width, solved.Rect.Height);
+
+                var centre = parentRect.HasValue
+                    ? new Vector2(solved.Rect.Centre.X - parentRect.Value.Centre.X,
+                                  solved.Rect.Centre.Y - parentRect.Value.Centre.Y)
+                    : new Vector2(solved.Rect.Centre.X, solved.Rect.Centre.Y);
+
+                // anchoredPosition positions the PIVOT, so shift by however far
+                // the pivot sits from the centre.
+                rect.anchoredPosition = centre + new Vector2(
+                    (place.Pivot.X - 0.5f) * solved.Rect.Width,
+                    (place.Pivot.Y - 0.5f) * solved.Rect.Height);
+                return;
+            }
+        }
+    }
+
+    // What a label is BAKED with.
+    //
+    // A templated entry formatted with no arguments bakes its raw template -
+    // the hub's currency line read literally "Gold: {0}    Relics: {1}" until
+    // this existed. Baking the AuditSample instead means the Edit Mode
+    // screenshot shows the realistic WORST CASE, which is both a sensible
+    // placeholder and the same string E1 measures the box against. The
+    // controller overwrites it with real values on Start.
+    private static string BakedText(UiString text) =>
+        text.IsTemplated ? text.AuditSample : text.Format();
+
+    private static void EmitLabel(GameObject go, UiNode node, bool decor)
+    {
+        var text = go.AddComponent<TextMeshProUGUI>();
+        text.font = SceneBuilder.UiFont;
+        text.text = BakedText(node.Text);
+        text.fontSize = node.FontSize;
+        text.alignment = TextAlignmentOptions.Center;
+        text.color = SceneBuilder.ParseHex(node.ColorHex, Color.white);
+        text.raycastTarget = false; // a label is never the click target
+        if (decor) text.raycastTarget = false;
+    }
+
+    private static void EmitButton(GameObject go, UiNode node, SolvedNode solved)
+    {
+        var image = go.AddComponent<Image>();
+
+        // A button may wear its own art instead of the shared button frame -
+        // the hub buildings are buttons whose face is a painted building. Falls
+        // back to the shared sprite when no key is given.
+        var sprite = string.IsNullOrEmpty(node.SpriteKey)
+            ? SceneBuilder.ButtonSprite()
+            : SceneBuilder.LoadSpriteByKey(node.SpriteKey);
+        if (sprite != null)
+        {
+            image.sprite = sprite;
+            // Type.Simple, not Sliced. v1 shipped an invisible button on every
+            // screen through Sliced and never found a fix; whether it works at
+            // runtime is now actually testable via screenshot.ps1 -Runtime, but
+            // until someone checks, Simple is what is known to render.
+            image.type = Image.Type.Simple;
+            image.color = Color.white;
+        }
+        else
+        {
+            image.color = new Color(0.85f, 0.85f, 0.85f, 1f);
+        }
+
+        var button = go.AddComponent<Button>();
+        button.targetGraphic = image;
+
+        var labelGo = new GameObject(node.Name + "Label", typeof(RectTransform));
+        labelGo.transform.SetParent(go.transform, worldPositionStays: false);
+        var labelRect = labelGo.GetComponent<RectTransform>();
+        labelRect.anchorMin = Vector2.zero;
+        labelRect.anchorMax = Vector2.one;
+        labelRect.offsetMin = Vector2.zero;
+        labelRect.offsetMax = Vector2.zero;
+
+        var text = labelGo.AddComponent<TextMeshProUGUI>();
+        text.font = SceneBuilder.UiFont;
+        text.text = BakedText(node.Text);
+        text.fontSize = node.FontSize;
+        text.alignment = TextAlignmentOptions.Center;
+        text.color = sprite != null ? Color.white : Color.black;
+        text.raycastTarget = false;
+    }
+
+    private static void EmitImage(GameObject go, Sprite sprite, string colorHex, bool decor)
+    {
+        var image = go.AddComponent<Image>();
+        if (sprite != null) image.sprite = sprite;
+        image.color = SceneBuilder.ParseHex(colorHex, Color.white);
+
+        // Decoration can never take a click. In v1 this was a hand-written sweep
+        // over 110 ambient sprites, and one missed entry is an unclickable
+        // button with no visible cause.
+        if (decor) image.raycastTarget = false;
+    }
+
+    private static void EmitNestedCanvas(GameObject go, UiNode node)
+    {
+        var canvas = go.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+
+        // ALWAYS set, never optional. A nested Canvas ignores sortingOrder
+        // without it, which is why v1's BarkCanvas sat at an inert 500 and
+        // rendered on top only by call-order accident. Setting it here kills
+        // that bug as a category rather than as an instance.
+        canvas.overrideSorting = true;
+        canvas.sortingOrder = node.SortingOrder;
+
+        go.AddComponent<GraphicRaycaster>();
+    }
+}

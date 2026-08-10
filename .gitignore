@@ -1,0 +1,22 @@
+# Unity-generated, all reproducible from Assets/ + ProjectSettings/ + Packages/.
+Library/
+Temp/
+Obj/
+Build/
+Builds/
+Logs/
+UserSettings/
+MemoryCaptures/
+Recordings/
+
+# Test + tooling output.
+test-results*.xml
+tools/screenshots/
+
+# IDE
+.vs/
+.idea/
+.vscode/
+*.csproj
+*.sln
+*.user

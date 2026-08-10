@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 78462e746feff2e4c945a0159eb6e76a, type: 3}
+  m_Name: fly_endurance_converge
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.TalentDefinition
+  id: fly_endurance_converge
+  displayName: Bulwark
+  description: All three roots gather into one trunk. Requires 9 embers already invested.
+  characterId: fly
+  column: 0
+  row: 10
+  prerequisites:
+  - {fileID: 11400000, guid: 00fe0043a0861fe459658f794bafb23b, type: 2}
+  - {fileID: 11400000, guid: 322805bdef69e344e837c38b0373de9b, type: 2}
+  - {fileID: 11400000, guid: c982d7dc84726b64b92e60d31675c9e1, type: 2}
+  minSpent: 9
+  statBonus:
+    maxHealth: 0
+    speed: 0
+    attack: 0
+    defense: 10
+    manaRegen: 0
+    physicalResistance: 0
+    magicalResistance: 0
+  abilityScoreBonus:
+    strength: 0
+    dexterity: 0
+    constitution: 0
+    wisdom: 0
+    intelligence: 0
+    charisma: 0
+  grantsStartingItemId: 
+  maxManaBonus: 0
+  skillManaCostReduction: 0
+  signatureCapacityBonus: 0
+  signaturePerTurnBonus: 0
+  effects: []
+  grantsSkillId: 
+  iconPath: 

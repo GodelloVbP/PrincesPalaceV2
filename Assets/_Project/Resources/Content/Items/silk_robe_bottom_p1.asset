@@ -1,0 +1,66 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e3489eecf28b4d74aae851d312f450c0, type: 3}
+  m_Name: silk_robe_bottom_p1
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ItemDefinition
+  id: silk_robe_bottom_p1
+  displayName: Plain Silk Robe Bottom
+  description: Woven thin and stitched with something that hums. It turns spellwork
+    aside and almost nothing else.
+  kind: 2
+  effect: 0
+  amount: 20
+  attackBonus: 0
+  equipSlot: 3
+  statBonus:
+    maxHealth: 0
+    speed: 0
+    attack: 0
+    defense: 0
+    manaRegen: 0
+    physicalResistance: 2
+    magicalResistance: 6
+  abilityScoreBonus:
+    strength: 0
+    dexterity: 0
+    constitution: 0
+    wisdom: 1
+    intelligence: 1
+    charisma: 0
+  requirements:
+    strength: 0
+    dexterity: 0
+    constitution: 0
+    wisdom: 0
+    intelligence: 0
+    charisma: 0
+  scaling:
+    strength: 0
+    dexterity: 0
+    constitution: 0
+    wisdom: 0
+    intelligence: 0
+    charisma: 0
+  spellScaling:
+    strength: 0
+    dexterity: 0
+    constitution: 0
+    wisdom: 0
+    intelligence: 0
+    charisma: 0
+  startingStock: 0
+  iconPath: Assets/_Project/Art/Items/rob_bottom_silk_sheet/level_2.png
+  cost: 100
+  sortOrder: 120201
+  setId: silk
+  weaponFamilyId: 
+  tier: 1

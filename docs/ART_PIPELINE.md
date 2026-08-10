@@ -1,0 +1,369 @@
+# Art Pipeline
+
+How generated art gets from a raw AI output to a game-ready sprite in this
+project, and where each kit's pieces actually live.
+
+## 1. Kit registry
+
+| Kit | Source | Keying | Output | Status |
+|---|---|---|---|---|
+| Hub buildings | `Art/UI/Hub/` | grouped, green `#00FF00` | `Resources/Hub/<building>/f0.png..` | delivered |
+| Relic icons | `Art/Items/Relics/` | direct, green `#00FF00` | `Art/Items/Relics/Processed/` | delivered (3/3) |
+| Talent Tree kit | `Art/UI/TalentTree/` | direct, green `#00FF00` | `Art/UI/TalentTree/Processed/` | delivered, not yet wired (gated on Phase 7 design confirmation — see `docs/handoffs/talent_tree/`) |
+| Portraits | `Art/Portraits/<Character>/` | flood-fill from border (`tools/remove_portrait_backgrounds.py`, `PORTRAITS` manifest) | `Art/Portraits/<Character>/Processed/` | ongoing, per-character — **Sheep does not reproduce, see below** |
+| Enemy/item/spell sheets | raw sheet per type | grid slice (`slice_actor_sheet.py` / `slice_item_sheet.py` / `slice_spell_sheet.py`) | one PNG per frame/stance/level, or `{stance}/f0..fN` for an animated stance (see §4) | ongoing |
+| Backgrounds | `Art/Backgrounds/` | none — full-frame opaque | same folder | ongoing, one outstanding: `Relics.png` |
+| Map icons | raw | flood-fill (`process_map_icons.py`) | `Art/Backgrounds/Processed/` | delivered |
+
+## 2. Keying conventions
+
+Three distinct techniques, picked by what the asset actually is:
+
+- **Painted objects (icons, hub buildings, kit pieces): flat `#00FF00`
+  field, keyed on hue-dominance** (`tools/key_green_screen.py`). Brightness-
+  keying (generate on black, key alpha from luminance) is the obvious
+  alternative and is **wrong** here — it punches straight through any
+  legitimately dark shadow or void the object is supposed to have opaque.
+  Green appears nowhere in this project's palette, so keying on how much the
+  green channel *dominates* red/blue (not on raw brightness) removes exactly
+  the backdrop and nothing else.
+- **Pure light/glow effects with no opaque subject: solid black + screen-
+  blend at composite time**, no keying at all. A light source has no hard
+  edge to cut an alpha mask around; screen-blending a black-background image
+  achieves a cleaner result than alpha compositing would, and sidesteps the
+  whole keying question. (`activation_line.png` in the Talent Tree kit is
+  the example — see the composited previews referenced in
+  `docs/handoffs/talent_tree/`.)
+- **Full-frame backgrounds: opaque, no keying, no alpha.** 1672×941 is the
+  established delivery size for this project's screen backgrounds — match
+  existing files in `Art/Backgrounds/` rather than the engine's own
+  1920×1080 reference resolution.
+
+## 3. `key_green_screen.py` usage
+
+```
+py tools/key_green_screen.py
+```
+
+Processes every kit in `KITS` that has files present in its source folder;
+a kit with no source directory is skipped, not an error, so kits can be
+delivered incrementally.
+
+- **Grouped mode** (Hub only): sources named `name_1.png`, `name_2.png`,
+  `name_3.png` become one output with three animation frames
+  (`f0.png`, `f1.png`, `f2.png`), resampled to that kit's configured
+  delivery size. This is what lets `HubBuildingAnimator` find extra frames
+  to cycle at runtime.
+- **Direct mode** (everything else): one source file in, one keyed file of
+  the same name out, written to a `Processed/` sibling of the source
+  folder, **no resampling** — the source resolution IS the delivery
+  resolution, since these are baked into the scene once by `LoadSprite`
+  (editor-time), never `Resources.Load`ed at runtime the way animated Hub
+  buildings are.
+
+The tool also force-corrects each output PNG's `.meta` — `textureType: 8`
+(Sprite), `alphaIsTransparency: 1`. This isn't optional: a PNG Unity has
+never seen imports as a plain Texture by default, `Resources.Load<Sprite>`
+on a plain Texture silently returns `null`, and the affected slot just
+renders nothing with no error anywhere. Only a `.meta` that's actually wrong
+gets touched, so re-running the tool doesn't force a project-wide reimport.
+
+## 4. Animated actor stances (`{stance}/f0..fN`)
+
+A combat stance (`idle`, `attack`, `cast`, ...) is normally one flat file:
+`Resources/Enemies/<id>/<stance>.png`. It can instead be a folder of frames:
+
+```
+Resources/Enemies/<id>/<stance>/f0.png
+Resources/Enemies/<id>/<stance>/f1.png
+...
+```
+
+Unlike everything else in this document, this is **not** baked into a scene
+or a content asset at build time — `Core/StanceAnimationLibrary.cs` probes
+for it at RUNTIME, the same `f{i}`-until-null idiom `SpellVfxPlayer` and
+`HubBuildingAnimator` already use for spell VFX and Hub buildings. That means
+dropping a new frame in, or adding `f5.png` to a 5-frame stance, needs a
+content rebuild (so `ContentDatabase` knows about any new enemy) but **no
+scene rebuild** — the frame count is discovered fresh every time the
+Resources cache is cold, not fixed at scene-authoring time. A flat single
+PNG (today's default for every stance on every enemy) resolves to a
+1-frame animation automatically; nothing about an unanimated actor changes.
+
+### 4a. The stance manifest — where the feet are, how it is timed
+
+`Resources/StanceManifest.json` states, per actor, **where the figure's feet
+sit inside its own canvas** (`groundLine`, in pixels up from the canvas
+bottom), and per multi-frame stance, **how it is timed** (`secondsPerFrame`,
+`impactFrame`, `soundFrame`). `StanceManifestLoader` reads it once;
+`Domain/Stage/StanceManifest.cs` holds the parsing and defaults.
+
+It exists because all three numbers used to be **inferred at runtime** — the
+ground line by scanning alpha, the impact frame as `ceil(frames/2)`, the pace
+as one global constant — and five of the eight golem-family stage bugs were
+that inference being wrong. The whole frame's lowest opaque pixel is not the
+feet: the golem's slam erupts an earth spike ~50px *below* its own, and
+Shawn's idle plants a staff ~33px below his, so both were read as the floor
+and both figures floated.
+
+Rules worth knowing before you edit either the JSON or the art:
+
+- **`groundLine` is per ACTOR, never per stance.** A character's feet do not
+  move relative to their own art — only the effects drawn around them do.
+  One value per actor is what makes "the figure cannot jump between poses"
+  true by construction.
+- **Re-slicing a sheet can invalidate it.** `StanceManifestValidationTests`
+  re-measures the art and fails if an authored ground line has drifted more
+  than 8px from it, naming the actor and both numbers. That test is the
+  entire reason the manifest is an improvement rather than the same guess
+  written down somewhere else.
+- **Every multi-frame stance needs an entry.** A missing one silently falls
+  back to the old midpoint guess, so the validator refuses it. Single-frame
+  poses need nothing — timing is meaningless for a still.
+- **Effect timing lives elsewhere and must agree.** A monster's `vfxSeconds`
+  / `vfxImpactFrame` are in `ContentData/enemies.json`, and nothing derives
+  one from the other on purpose (which of the two should move is a
+  judgement). `EveryEnemyEffect_LandsWhenItsSwingLands` fails if they drift
+  apart, so the golem's rock cannot quietly stop matching its arm.
+
+The file lives in `Resources/` rather than `ContentData/` because it is read
+at runtime rather than baked — and deliberately **not** under
+`Resources/Content/`, which `ContentBuilder` deletes wholesale.
+
+Two rules the tooling doesn't enforce for you:
+
+- **Slice every stance of one actor — flat and animated, across every
+  source sheet it draws from — in a single tool invocation.** The slicer
+  sizes its shared canvas from whatever it's given in one pass; two
+  separate invocations (even for the same actor) produce two different
+  canvases, which makes the actor visibly resize/jump the moment that
+  stance shows. `ActorArtAssertions.AssertOneCanvasSize` checks this for
+  **every frame** of every stance an actor has authored — not just the four
+  combat-driven stances, and not just frame 0 — and both `EnemyStageTests`
+  and `PartyStageTests` run it over their own half of the roster.
+- **Impact/sound frame timing has no authoring channel yet.**
+  `StanceAnimationLibrary` computes a sensible midpoint default for both
+  (same fallback `ImpactFraction` already uses for a spell with no
+  authored frame). A future per-actor content field could override either
+  without any engine change — see `StanceAnimation`'s own header comment
+  for why that seam exists.
+
+### `slice_actor_sheet.py`'s `ACTORS` manifest
+
+Driven by a committed per-actor manifest (`ACTORS` in the script), not
+one-off shell commands typed at the terminal and never recorded anywhere.
+One actor entry lists every source sheet it draws from — each sheet's
+grid (or, for an irregularly-spaced sheet like the rat's attack sheet,
+explicit row `bands`), a row-major `names` list mapping grid cells to
+output subpaths (`"idle"` for a flat stance, `"attack/f0"` for one frame
+of an animated stance, `None` to skip a cell), and an `anchor` mode.
+Because every sheet an actor draws from lives in one manifest entry, the
+tool composites them together in a single pass — the "combine sheets into
+one virtual grid image before slicing" workaround this section used to
+describe is gone; the manifest *is* that combination.
+
+**"Actor", not "enemy": this covers both sides of the fight stage.** A
+party member's stance art (`Resources/Characters/<id>/`) and a monster's
+(`Resources/Enemies/<id>/`) are resolved by one runtime path and held to
+one set of invariants, so one tool produces both — an entry's `root`
+picks the output tree and `source_dir` picks where its sheets live.
+Before this, no committed tool wrote `Resources/Characters` at all, which
+made Shawn's six battle stances — the most-seen sprite in the game — the
+least reproducible art in the project.
+
+- **Never scales an individual pose.** Only one literal `scale` per SHEET
+  is allowed (always shrinking the larger sheet down — downsampling
+  preserves quality; scaling up doesn't). `sqrt(opaque pixel count)`, not
+  bbox height, is the pose-invariant proxy the tool measures by — see the
+  script's own module docstring for the full rationale (this replaced an
+  earlier pass that scaled by bbox height and made creatures visibly pulse
+  size between animation frames).
+- **`--suggest-scales <id>` measures and prints per-sheet mass ratios,
+  then stops.** Nothing is auto-applied — a human reads the number and
+  copies it into the manifest's `scale` field, where it shows up in a
+  normal diff. Writing is refused outright if two sheets of one creature
+  disagree >10% in measured mass and neither carries an explicit `scale`
+  (the guard that would have caught the rat's attack sheet being drawn
+  1.306x larger than its base sheet, had it existed at the time).
+- **`anchor: "ground_band"` vs `"centroid"`.** `ground_band` (largest
+  connected component, intersected with a thin band at the creature's own
+  ground line) is the default for new work — it ignores detached debris
+  (flying VFX) and raised limbs/tails that would otherwise drag a
+  whole-mass centroid sideways. `centroid` is a faithful port of the
+  tool's original behaviour, kept only where a creature's shipped art must
+  reproduce pixel-identical (bog_witch, the regression control — see the
+  comment beside its manifest entry before changing its anchor).
+- **Aliases belong in the manifest**, not as manual file copies —
+  `"aliases": {"attack": "cast"}` means the output is a byte-for-byte copy,
+  preserving whichever shape (flat file or animated frame folder) the
+  target has.
+- **Reproduce before you improve.** When bringing already-shipped art under
+  the manifest, the first run must regenerate it **byte-identical** — that
+  is the proof the entry describes what actually produced the art, rather
+  than something merely plausible. Accept ugliness to get there: `sheep`
+  deliberately uses a plain `grid` even though explicit `bands` would be
+  tidier, because a 4px sliver of keying noise at y=450..454 in
+  `shawn.png` is swept in by the even grid and is baked into the shipped
+  canvas height (366px, not 364px). Bands that exclude it give *better*
+  output that is *not what shipped*. Clean it up as a separate, visible
+  change if you want to — never as a silent side effect of adding an entry.
+- **Run:** `python tools/slice_actor_sheet.py <id> [<id> ...]` or `--all`.
+  Refuses to read from anywhere under `Assets/_Project/Resources/` (that
+  would compound resample loss against already-processed output — how the
+  original bad pass happened). Never adds or removes an output filename by
+  itself; `--prune` deletes stray files the manifest no longer produces,
+  otherwise they're only listed.
+
+### `slice_spell_sheet.py`'s `VFX` manifest
+
+Same idea as `ACTORS`, for spell/ability effects — and it exists because
+every parameter used to come from argv, including the frame names, so how
+the three shipped effects were cut survived nowhere. `frost_flare` and
+`lightning_bolt` are verified entries: re-running them regenerates the
+committed PNGs byte-identical.
+
+**A VFX is NOT held to the actor rules, and must not be.** Two of them
+invert:
+
+- **No draw-scale band.** An effect is *supposed* to grow and fade —
+  `frost_flare` legitimately spans 0.42×–1.44× of its own median mass.
+  Applying the actor rule here would be the same category error as the
+  bbox-height pass that broke the enemy art.
+- **No baseline re-anchoring.** Where the effect sits inside its cell *is*
+  the animation; a frame of sparks gathering at the top has no ground line
+  to align to. The slicer cuts a plain fixed grid and preserves each cell
+  as drawn.
+
+What does hold: every frame resolves, all frames share one canvas, and no
+frame is blank *after* the effect has started. A blank frame is legitimate
+only as a lead-in beat (the golem's boulder opens on one); a blank one
+mid-sequence means the luminance key ate a cell.
+
+`HAND_ASSEMBLED` records VFX the tool did **not** produce and cannot
+reproduce — `golem_boulder` is hand-built (`f2`==`f3` is a held peak,
+`f4`/`f5` are a stepped alpha fade-out). Recording "we don't know how this
+was made" is the point; a silent gap in the manifest reads as "nothing to
+see here." Running the tool against such an id refuses rather than
+overwriting.
+
+> **Anything under `Resources/` that is `Resources.Load<Sprite>`ed at
+> runtime must be covered by `StanceSpriteImporter`.** A PNG imported with
+> Unity's default `textureType` returns `null` from `Resources.Load<Sprite>`
+> — no error, no warning. `Resources/Spells/` was missing from that list
+> and the golem's Boulder Slam shipped playing *nothing at all* for weeks
+> (its frame probe broke on the first null). `Enemies/`, `Characters/` and
+> `Spells/` are covered now; `Hub/` is handled separately by
+> `key_green_screen.force_sprite_import`. A new runtime-loaded folder needs
+> one of the two.
+
+### Reproducibility is recorded, including where it fails
+
+Three of the art tools now carry a committed manifest (`ACTORS`, `VFX`,
+`PORTRAITS`) alongside `key_green_screen.py`'s `KITS` and
+`slice_item_sheet.py`'s `SHEETS`. Where an entry has been **verified** —
+re-running it regenerates the committed PNGs byte-identical — that is the
+proof the recipe is the real one rather than a plausible guess.
+
+Where it has *not*, that is recorded too rather than left blank, because a
+silent gap reads as "nothing to see here":
+
+- **`golem_boulder`** is in `slice_spell_sheet.py`'s `HAND_ASSEMBLED`. The
+  tool refuses to regenerate it.
+- **`Sheep`'s portraits** are marked `reproduces: False`. A fresh run
+  produces a 1122×1360 crop where the committed `Shawn_neutral.png` is
+  1122×1402 — so the shipped art came from different settings, an older
+  version of the tool, or a hand edit, and nobody recorded which. Running
+  the tool over that folder now **refuses** rather than silently replacing
+  all six; `--check` renders to scratch and reports what *would* change
+  without writing anything. That hazard was documented in the tool's own
+  docstring for months and enforced nowhere.
+
+### Visual QA before shipping an animation
+
+`ScreenshotTool` runs in Editor Edit Mode and cannot capture a stance mid-
+animation, so there was no way to actually *see* a new sheet-slicer output
+before it shipped. `tools/actor_stance_qa.py --report <Resources/Enemies|Resources/Characters>
+[--only <id>]` renders `tools/screenshots/actor_qa/<id>.png` (gitignored,
+never committed): every frame of every stance thumbnailed with its canvas,
+ground line, anchor line, and a `sqrt(area)/median` caption colour-coded
+against the same tolerance band `ActorArtAssertions.AssertOneDrawScale`
+asserts (shared by `EnemyStageTests` and `PartyStageTests`); the rightmost
+cell of each stance row is an onion-skin composite of all its frames —
+drift reads as a smear, a size pulse reads as concentric outlines. Its `--report` mode has no dependency on the slicer, so it can
+render today's *committed* art as a "before" picture, turning a re-slice
+into a demonstrable before/after rather than an assertion.
+
+## 5. Wiring checklist (new art → visible in-game)
+
+1. Drop raw source file(s) in the kit's source folder, run the keyer.
+2. Point the content JSON's `iconPath` (or equivalent field) at the
+   `Processed/` file.
+3. Rebuild content and/or scenes as needed:
+   `run_tests_parallel.ps1 -BuildContent -BuildScenes` — this is also what
+   syncs the regenerated `.meta`s back to main (see `docs/WORKFLOW.md` §8).
+4. Commit the `.png` **and** its `.meta` together.
+5. After a TestRunner build, double-check `Art/` actually diffed back to
+   main — `LoadSprite` flips a texture's importer settings and can generate
+   a fresh `.meta` for anything newly referenced, and if that diff doesn't
+   sync back, the committed scene ends up pointing at a Sprite sub-asset
+   that doesn't exist in main's copy of the file.
+
+## 6. Per-kit README index
+
+- `Assets/_Project/Art/UI/Hub/README.md`
+- `Assets/_Project/Art/Items/Relics/README.md`
+- `Assets/_Project/Art/UI/TalentTree/README.md`
+
+Each documents its kit's exact expected filenames and any kit-specific
+sizing/tiling requirements.
+
+## 7. Outstanding tracker
+
+- **`Relics.png`** — the Relic screen's background, 1672×941, opaque, no
+  keying needed. `SceneBuilder` already looks for this exact filename in
+  `Art/Backgrounds/`; dropping the file in is the entire remaining step.
+- ~~**Talent Tree kit wiring**~~ — done since Phase 7 (2026-08-01): the art
+  (`orb_lit`/`orb_unlit`, `branch_tile_set`, `activation_line`) is wired
+  into `SceneBuilder.Talents.cs`/`TalentController`. A later pass (the
+  full-bleed/tree-shape rework) added a root crest and angled limbs built
+  from the same kit; a dedicated `trunk_base.png`/`branch_fork.png` would
+  replace that placeholder without touching anything else, but nothing is
+  blocked on it.
+
+## 8. Model and tool licences — read before adding an AI step
+
+This is a **commercial** project, so a non-commercial model anywhere in the art
+pipeline is a real problem, not a technicality. The traps below are all cases
+where the obvious choice is the wrong one, usually because a permissive badge
+on the code repo hides restrictive terms on the *weights*.
+
+### Do NOT use
+
+| Item | Why |
+|---|---|
+| Depth Anything **V2 Base / Large / Giant** | Weights are **CC-BY-NC**. The GitHub repo is Apache-2.0, which misleads — and most tutorials and ComfyUI workflows default to Large. |
+| **BRIA RMBG-1.4 / 2.0**, including `rembg -m bria-rmbg` | **CC-BY-NC**; commercial use needs a paid agreement. `rembg` itself is MIT, but its licence does **not** propagate to the model weights it downloads. |
+| **FLUX.1 Fill [dev]** | Non-commercial licence. (`FLUX.1 schnell` is Apache-2.0; the *Fill* variant is not.) |
+| **3D Photo Inpainting** (vt-vl-lab) | MIT main code, but bundles EdgeConnect under **CC-BY-NC**. |
+| **Apple Depth Pro** | `apple-amlr`; commercial terms unresolved upstream. |
+| **Stable Video Diffusion**, **HunyuanVideo** | Revenue-threshold and geographic restrictions respectively. |
+| Any GitHub repo with **no LICENSE file** | All rights reserved by default. Several popular 2D-parallax Unity repos are in this state. |
+
+### Safe, and what to reach for
+
+- **Depth maps:** Depth Anything **3** (Apache-2.0), or Depth Anything V2
+  **Small** (Apache-2.0), or **Marigold** (Apache-2.0).
+- **Inpainting:** **LaMa** via **IOPaint** (both Apache-2.0). Better than SD
+  inpainting here because it extends existing texture rather than inventing a
+  new subject, which is what keeps a fill stylistically identical to painted art.
+- **Cut-out:** `rembg` (MIT) **pinned explicitly** to `birefnet-general` (MIT)
+  or `u2net` (Apache-2.0). Never leave the model unpinned.
+- **Upscale:** Real-ESRGAN (BSD-3). Prefer the `anime_6B` model for painterly
+  work — the default photo model de-noises brush texture away.
+- **Video:** Wan 2.2 or LTX (both Apache-2.0), plus FFmpeg to make a loop seamless.
+- **Audio:** Sonniss GDC bundle, Kenney (CC0), ChipTone (CC0 output).
+
+**GPL/AGPL authoring tools used offline** — Krita, GIMP, Blender, chaiNNer,
+Upscayl, ComfyUI, Audacity, FFmpeg — do not touch this game's licence. The
+copyleft attaches to the software, not to the images or audio it produces. Just
+never bundle or link their code into the shipped build.

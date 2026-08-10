@@ -1,0 +1,137 @@
+{
+  "_readme": "Weapon families. Each entry here is a GENERATOR over TWO axes: tier, and modifier. One authored 'Sword' with a Sturdy and a Nimble modifier at maxTier 10 becomes 22 real weapons - the same steel, differently balanced, wanting a different character to hold it. That second axis is the point: a run should be able to hand you a weapon that is wrong for you, so the one that is right feels like a find. Edit this file, then run Prince's Palace > Build Default Content. TIER IS NOT PLUS. Tier is which sword this is (its attack, its grades, its adjective, its rarity band) and is baked here. Plus is how honed one particular copy is, it rides on the InventoryEntry at runtime, and it scales the FLAT attack only - never the grades, because letting two axes move the same number is how a scaling system stops being readable. See Domain/Stats/ItemUpgrade.cs. REQUIRED per family: id (goes into every generated item id, and item ids live in save files, so never rename it), displayName (the noun in every name), and at least one modifier. Optional: description, maxTier (default 10), slot (default Weapon), attackAtZero / attackAtMax (default 3 and 18, interpolated between and floored - this is the FLAT half of a weapon's power), cost and costPerTier (default 0 and 0; weapons are loot, not Store stock, and FullRunTests asserts it), sortOrder, iconSheet and iconLevels (per-level art from tools/slice_item_sheet.py, shared by every modifier of the family), tierAdjectives (one word per tier, lowest first; the last one covers everything past the end of a short list). REQUIRED per modifier: id (unique within its family only), displayName (the adjective that leads the name), primary (an ability score), primaryAtZero and primaryAtMax (grades: S, A, B, C, D, E, or none). Optional per modifier: description, secondary / secondaryAtZero / secondaryAtMax (the stat it still works with, so a mismatched weapon is worse rather than dead), alsoScalesWith (flat '<score> <grade>' lines that do not move with tier). GRADES ARE ANCHORED AT BOTH ENDS and interpolated, exactly like a set piece's stats: 'C at tier 0, S at tier 10' is two words rather than eleven letters that drift, retuning is editing the two you have an opinion about, and raising maxTier stretches the curve instead of running out of ladder. A grade may not go DOWN as tier rises - a better sword must never scale worse, and that is rejected rather than generated. Names come out as '<modifier> <tier adjective> <family>': 'Nimble Keen Sword', with any plus appended at display time. Ten is the neutral ability score; every point above multiplies damage and every point below divides it - see ScalingProfile and Assets/_Project/Scripts/Domain/Stats/ScalingGrade.cs for what each grade is worth per point.",
+  "families": [
+    {
+      "id": "sword",
+      "displayName": "Sword",
+      "description": "Palace steel, straight and honest. What it becomes depends entirely on who picks it up.",
+      "maxTier": 10,
+      "slot": "Weapon",
+      "attackAtZero": 3,
+      "attackAtMax": 16,
+      "sortOrder": 0,
+      "iconSheet": "Assets/_Project/Art/Items/longswords",
+      "tierAdjectives": [ "Worn", "Plain", "Fine", "Keen", "Tempered", "Masterwork", "Runed", "Ancient", "Radiant", "Mythic", "Sovereign" ],
+      "modifiers": [
+        {
+          "id": "sturdy",
+          "displayName": "Sturdy",
+          "description": "Weighted toward the pommel, made to be swung by someone who can swing it.",
+          "primary": "strength",
+          "primaryAtZero": "C",
+          "primaryAtMax": "S",
+          "secondary": "dexterity",
+          "secondaryAtZero": "E",
+          "secondaryAtMax": "C"
+        },
+        {
+          "id": "nimble",
+          "displayName": "Nimble",
+          "description": "Ground thin and balanced at the guard. It rewards the wrist, not the shoulder.",
+          "primary": "dexterity",
+          "primaryAtZero": "C",
+          "primaryAtMax": "S",
+          "secondary": "strength",
+          "secondaryAtZero": "E",
+          "secondaryAtMax": "C"
+        },
+        {
+          "id": "hallowed",
+          "displayName": "Hallowed",
+          "description": "Someone said words over this one. It answers to conviction more than to muscle.",
+          "primary": "wisdom",
+          "primaryAtZero": "D",
+          "primaryAtMax": "A",
+          "secondary": "strength",
+          "secondaryAtZero": "D",
+          "secondaryAtMax": "B"
+        }
+      ]
+    },
+
+    {
+      "id": "staff",
+      "displayName": "Staff",
+      "description": "A length of something that grew, carrying something that did not.",
+      "maxTier": 10,
+      "slot": "Weapon",
+      "attackAtZero": 2,
+      "attackAtMax": 12,
+      "sortOrder": 1,
+      "iconSheet": "Assets/_Project/Art/Items/staff_sheet",
+      "tierAdjectives": [ "Crooked", "Carved", "Bound", "Budding", "Amber", "Gilded", "Sapphire", "Argent", "Reliquary", "Starbound", "Worldroot" ],
+      "modifiers": [
+        {
+          "id": "arcane",
+          "displayName": "Arcane",
+          "description": "Cut to conduct. It is a poor club and an excellent argument.",
+          "primary": "intelligence",
+          "primaryAtZero": "C",
+          "primaryAtMax": "S",
+          "secondary": "wisdom",
+          "secondaryAtZero": "E",
+          "secondaryAtMax": "C"
+        },
+        {
+          "id": "verdant",
+          "displayName": "Verdant",
+          "description": "Still growing, slowly, in the hand of anyone patient enough to notice.",
+          "primary": "wisdom",
+          "primaryAtZero": "C",
+          "primaryAtMax": "S",
+          "secondary": "intelligence",
+          "secondaryAtZero": "E",
+          "secondaryAtMax": "C"
+        },
+        {
+          "id": "heavy",
+          "displayName": "Heavy",
+          "description": "Iron-shod at both ends by someone who had given up on the subtle approach.",
+          "primary": "strength",
+          "primaryAtZero": "D",
+          "primaryAtMax": "A",
+          "secondary": "constitution",
+          "secondaryAtZero": "E",
+          "secondaryAtMax": "C"
+        }
+      ]
+    },
+
+    {
+      "id": "dagger",
+      "displayName": "Dagger",
+      "description": "Short, light, and quick to the point. A first real weapon, and a last resort.",
+      "maxTier": 10,
+      "slot": "Weapon",
+      "attackAtZero": 2,
+      "attackAtMax": 11,
+      "sortOrder": 2,
+      "iconSheet": "Assets/_Project/Art/Items/daggers",
+      "tierAdjectives": [ "Chipped", "Bronze", "Iron", "Honed", "Wicked", "Serpentine", "Whispering", "Nightglass", "Vesper", "Kingsbane", "Silent" ],
+      "modifiers": [
+        {
+          "id": "quick",
+          "displayName": "Quick",
+          "description": "Barely there. It asks only that your hand be faster than theirs.",
+          "primary": "dexterity",
+          "primaryAtZero": "B",
+          "primaryAtMax": "S",
+          "secondary": "strength",
+          "secondaryAtZero": "E",
+          "secondaryAtMax": "D"
+        },
+        {
+          "id": "cunning",
+          "displayName": "Cunning",
+          "description": "Balanced for the throw, and for the second one nobody expects.",
+          "primary": "intelligence",
+          "primaryAtZero": "D",
+          "primaryAtMax": "A",
+          "secondary": "dexterity",
+          "secondaryAtZero": "D",
+          "secondaryAtMax": "B"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet"><style>body{margin:0;background:#07040c;font-family:'Chakra Petch',system-ui,sans-serif}a{color:#e7b25c}a:hover{color:#ffd48a}@keyframes beacon{0%,100%{opacity:.35;transform:scale(1)}50%{opacity:.75;transform:scale(1.08)}}@keyframes flow{to{stroke-dashoffset:-30}}</style></helmet>
+
+<div style="padding:34px 40px 46px;max-width:2000px">
+<div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:18px">
+<h1 style="margin:0;font:600 19px/1.2 'Chakra Petch',sans-serif;color:#f3e9ff;letter-spacing:.02em">Talent menu — branching tree, hover-to-learn</h1>
+<span style="font:400 13px/1.4 'Chakra Petch',sans-serif;color:#8a7aa0">Replaces the flat 6-column button grid with a rooted, branching vine tree. Hover any node for what it does; click to invest. Point cost and invested-vs-locked state read at a glance.</span>
+</div>
+
+<div style="position:relative;width:1920px;height:1080px;overflow:hidden;background:#07040c;box-shadow:0 30px 90px rgba(0,0,0,.7);outline:1px solid rgba(200,160,255,.14)">
+
+  <div style="position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 100%,#241736 0%,#150d22 35%,#0a0612 60%,#07040c 90%)"></div>
+  <div style="position:absolute;left:50%;bottom:-10%;width:70%;height:90%;transform:translateX(-50%);background:radial-gradient(50% 50% at 50% 50%,rgba(231,178,92,.16),rgba(231,178,92,0) 70%);filter:blur(40px)"></div>
+  <div style="position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 30%,rgba(0,0,0,0) 45%,rgba(4,4,4,.7) 100%)"></div>
+
+  <div style="position:absolute;left:56px;top:34px;display:flex;gap:10px;z-index:4">
+    <sc-for list="{{ heroTabs }}" as="h" hint-placeholder-count="3">
+      <div onClick="{{ h.onClick }}" style="{{ h.style }}">{{ h.name }}</div>
+    </sc-for>
+  </div>
+
+  <div style="position:absolute;left:56px;top:78px;z-index:3">
+    <div style="font:700 30px/1 'Chakra Petch',sans-serif;letter-spacing:.06em;color:#f6ecff;text-shadow:0 0 24px {{ accentGlow }}">{{ heroName }}</div>
+    <div style="margin-top:8px;font:500 14px/1 'Chakra Petch',sans-serif;letter-spacing:.1em;color:#a48fbe">{{ statLine }}</div>
+  </div>
+
+  <div style="position:absolute;right:56px;top:70px;width:300px;padding:16px 20px;box-sizing:border-box;border:1px solid rgba(231,178,92,.4);border-radius:6px;background:linear-gradient(rgba(28,20,38,.86),rgba(14,10,20,.9));box-shadow:0 0 30px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,220,160,.14);z-index:3">
+    <div style="display:flex;align-items:baseline;justify-content:space-between">
+      <span style="font:500 12px/1 'Chakra Petch',sans-serif;letter-spacing:.14em;color:#a695bc">TALENT POINTS</span>
+      <span style="font:700 26px/1 'Chakra Petch',sans-serif;color:#ffe0a8">{{ pointsRemaining }}</span>
+    </div>
+    <div style="margin-top:8px;height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden">
+      <div style="{{ pointsBarStyle }}"></div>
+    </div>
+  </div>
+
+  <div ref="{{ treeRef }}" style="position:absolute;left:0;top:170px;width:1920px;height:760px">
+    <svg viewBox="0 0 1920 760" style="position:absolute;inset:0;width:100%;height:100%">
+      <sc-for list="{{ edges }}" as="e" hint-placeholder-count="0">
+        <path d="{{ e.d }}" fill="none" stroke="{{ e.strokeOuter }}" stroke-width="{{ e.widthOuter }}" stroke-linecap="round"></path>
+        <path d="{{ e.d }}" fill="none" stroke="{{ e.strokeInner }}" stroke-width="{{ e.widthInner }}" stroke-linecap="round" stroke-dasharray="{{ e.dash }}" style="{{ e.animStyle }}"></path>
+      </sc-for>
+    </svg>
+
+    <div style="{{ rootStyle }}" onMouseEnter="{{ onRootEnter }}" onMouseLeave="{{ onLeave }}">
+      <div style="{{ rootBeaconStyle }}"></div>
+      <div style="{{ rootInnerStyle }}">{{ heroInitial }}</div>
+    </div>
+
+    <sc-for list="{{ nodes }}" as="n" hint-placeholder-count="0">
+      <div style="{{ n.wrapStyle }}" onClick="{{ n.onClick }}" onMouseEnter="{{ n.onEnter }}" onMouseLeave="{{ onLeave }}">
+        <div style="{{ n.beaconStyle }}"></div>
+        <div style="{{ n.circleStyle }}">
+          <div style="{{ n.fillStyle }}"></div>
+          <sc-if value="{{ n.invested }}" hint-placeholder-val="{{ false }}">
+            <div style="{{ n.checkStyle }}">✓</div>
+          </sc-if>
+        </div>
+        <div style="{{ n.costBadgeStyle }}">{{ n.cost }}pt</div>
+        <div style="{{ n.labelStyle }}">{{ n.name }}</div>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="position:absolute;left:56px;bottom:96px;width:560px;min-height:150px;padding:20px 22px;box-sizing:border-box;border:1px solid rgba(180,150,210,.22);border-radius:6px;background:linear-gradient(rgba(24,16,32,.9),rgba(12,8,16,.92));box-shadow:0 0 30px rgba(0,0,0,.55);z-index:4">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="{{ infoCostChipStyle }}">{{ infoCost }}</div>
+      <div style="font:600 20px/1 'Chakra Petch',sans-serif;letter-spacing:.1em;color:#f2e6ff">{{ infoTitle }}</div>
+    </div>
+    <div style="margin-top:8px;font:600 13px/1 'Chakra Petch',sans-serif;letter-spacing:.08em;color:#e7b25c">{{ infoGrant }}</div>
+    <p style="margin:10px 0 0;font:400 14px/1.6 'Chakra Petch',sans-serif;color:#a695bc;text-wrap:pretty">{{ infoBody }}</p>
+  </div>
+
+  <div style="position:absolute;left:0;right:0;bottom:40px;display:flex;justify-content:center;gap:16px;z-index:4">
+    <div onClick="{{ respec }}" style="display:flex;align-items:center;justify-content:center;width:190px;height:52px;box-sizing:border-box;border:1px solid rgba(180,150,210,.35);border-radius:4px;background:rgba(20,14,26,.75);font:500 15px/1 'Chakra Petch',sans-serif;letter-spacing:.12em;color:#c8b8de;cursor:pointer;transition:transform .12s ease" style-hover="transform:scale(1.05);color:#e6d8ff">RESPEC</div>
+    <div style="display:flex;align-items:center;justify-content:center;width:190px;height:52px;box-sizing:border-box;border:1px solid rgba(231,178,92,.5);border-radius:4px;background:linear-gradient(rgba(58,32,20,.9),rgba(30,16,10,.95));font:600 16px/1 'Chakra Petch',sans-serif;letter-spacing:.14em;color:#ffd9a2;box-shadow:0 0 22px rgba(231,140,60,.2),inset 0 1px 0 rgba(255,220,170,.2);cursor:pointer;transition:transform .12s ease" style-hover="transform:scale(1.05)" style-active="transform:scale(.95)">BACK</div>
+  </div>
+
+</div>
+
+<div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:26px;max-width:1920px">
+  <div style="flex:1 1 440px;min-width:380px;padding:22px 24px;border:1px solid rgba(180,150,210,.18);border-radius:8px;background:#0f0a16">
+    <h2 style="margin:0 0 12px;font:600 14px/1 'Chakra Petch',sans-serif;letter-spacing:.1em;color:#e7b25c">WHAT CHANGED VS THE BUTTON GRID</h2>
+    <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font:400 13.5px/1.6 'Chakra Petch',sans-serif;color:#a695bc">
+      <li>Six flat columns of identical rectangles became a <strong style="color:#d9c8ef">rooted, branching vine tree</strong> — a hero crest at the root, six limbs fanning upward, each ending in a capstone keystone. Structure now teaches itself: bottom-up progression, top = payoff.</li>
+      <li><strong style="color:#d9c8ef">Hover any node</strong> to see its name, point cost, and effect in a dedicated info panel — nothing was previously explained without leaving the screen.</li>
+      <li>Point cost is a <strong style="color:#d9c8ef">visible badge on every node</strong> (1pt/2pt/3pt), and invested state is a filled gold medallion + checkmark instead of a colour you had to compare across 30 near-identical buttons.</li>
+      <li><strong style="color:#d9c8ef">Locked nodes are visibly dim and disconnected</strong> — the connecting vine only lights up gold once the prerequisite below it is invested, so "what do I need first" reads directly off the tree.</li>
+      <li>Added a <strong style="color:#d9c8ef">hero switcher</strong> (top-left tabs) so party members share one screen instead of needing a separate menu per hero.</li>
+    </ul>
+  </div>
+  <div style="flex:1 1 440px;min-width:380px;padding:22px 24px;border:1px solid rgba(180,150,210,.18);border-radius:8px;background:#0f0a16">
+    <h2 style="margin:0 0 12px;font:600 14px/1 'Chakra Petch',sans-serif;letter-spacing:.1em;color:#e7b25c">FOR THE ENGINE</h2>
+    <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font:400 13.5px/1.6 'Chakra Petch',sans-serif;color:#a695bc">
+      <li>Each branch is a strict chain: tier4 (bottom, cheapest) → tier0 (top, keystone, 3pt). A node is investable only once the node directly below it in its branch is invested; the root is always "invested."</li>
+      <li>Un-investing is only allowed on the topmost invested node per branch (nothing above it invested) — keeps the chain always valid, same rule Respec exploits (clears everything at once).</li>
+      <li>Cross-links between adjacent branches at the tier-2 row are decorative in this mock (no shared prerequisite) — flag if you want them to gate each other for real.</li>
+      <li>Node states: locked (grey, 55% opacity), available (dim gold outline, pulsing beacon), invested (full gold fill + purple rim + check). Vine segments switch from muted grey-purple to lit gold the moment their lower node is invested.</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:2000}}">
+const BX = [220, 516, 812, 1108, 1404, 1700];
+const TY = { 0: 90, 1: 230, 2: 370, 3: 510, 4: 650 };
+const ROOT = { x: 960, y: 700 };
+
+const HEROES = {
+  sheep: {
+    name: "Sheep", accent: "#e7b25c", glow: "rgba(231,178,92,.4)",
+    base: { hp: 320, spd: 8, atk: 5, def: 4, mpr: 0, pres: 0, mres: 0 },
+    invested: ["b0-1", "b3-2", "b4-2"],
+    branches: [
+      [{ n: "The Golden Fleece", c: 3, g: "+80 Max HP", d: "Keystone. The flock's oldest blessing — a thick, near-unbreakable hide." },
+       { n: "Matted Hide", c: 1, g: "+10 DEF", d: "Years of wear toughen the wool into natural armor." },
+       { n: "Deep Fleece", c: 1, g: "+40 HP", d: "Extra layers of wool cushion every blow." },
+       { n: "Winter Coat", c: 1, g: "+5 MRES", d: "Grown thick against the cold, and against curses too." },
+       { n: "Thick Wool", c: 1, g: "+15 HP", d: "The baseline every shepherd starts with." }],
+      [{ n: "Flock Leader", c: 3, g: "+3 SPD, allies +5% SPD", d: "Keystone. Sets the pace the whole party moves at." },
+       { n: "Bright Eyes", c: 1, g: "+8% Accuracy", d: "Sharp eyes rarely miss a step, or a strike." },
+       { n: "Quick Shear", c: 1, g: "+1 SPD", d: "Lighter on its hooves after a trim." },
+       { n: "Second Stomach", c: 1, g: "+10 HP regen/turn", d: "Grazing between fights keeps it steady." },
+       { n: "Green Thumb", c: 1, g: "+5% Item effect", d: "Knows which grass actually helps." }],
+      [{ n: "Nothing Bothers Shawn", c: 3, g: "+30 PRES", d: "Keystone. Total, unshakable calm under fire." },
+       { n: "Bramble Guard", c: 1, g: "+8 DEF vs bleed", d: "A hide full of old thorn-scars stops new ones." },
+       { n: "Ram's Temper", c: 1, g: "+10% Counter chance", d: "Push it too far and it pushes back." },
+       { n: "Sure Hooves", c: 1, g: "Immune to knockback", d: "Nothing moves this one that it doesn't choose to." },
+       { n: "Hard Head", c: 1, g: "+10 PRES", d: "Stubborn to the point of being useful." }],
+      [{ n: "Unbreakable", c: 3, g: "+15 DEF, immune to Sunder", d: "Keystone. Cannot be worn down, only outlasted." },
+       { n: "Ironhide", c: 1, g: "+6 DEF", d: "Wool gone stiff as plate at the shoulders." },
+       { n: "Stalwart", c: 2, g: "+12 DEF, -10% dmg taken", d: "Plants its hooves and simply refuses to fall." },
+       { n: "Hardy", c: 1, g: "+30 HP", d: "Built to take a hit that would drop most." },
+       { n: "Toughness", c: 1, g: "+4 DEF", d: "The unglamorous foundation of every tank build." }],
+      [{ n: "Deadly", c: 3, g: "+8 ATK, +15% Crit", d: "Keystone. Turns out sheep have horns for a reason." },
+       { n: "Swiftness", c: 1, g: "+1 ATK, +1 SPD", d: "Fast enough to strike before it's noticed." },
+       { n: "Keen Edge", c: 2, g: "+6 ATK, +10% Crit dmg", d: "Every strike aimed exactly where it hurts." },
+       { n: "Honed", c: 1, g: "+3 ATK", d: "Sharpened by every prior fight." },
+       { n: "Sharpened", c: 1, g: "+2 ATK", d: "The first lesson in landing a real hit." }],
+      [{ n: "Enlightened", c: 3, g: "+40 MPR, -20% MP cost", d: "Keystone. An unexpectedly deep well of will." },
+       { n: "Well Rounded", c: 1, g: "+2 all stats", d: "No weaknesses, no real specialty either." },
+       { n: "Efficient Casting", c: 1, g: "-10% MP cost", d: "Wastes nothing, least of all its own strength." },
+       { n: "Deep Reserves", c: 1, g: "+20 MP", d: "More in the tank than it lets on." },
+       { n: "Field Rations", c: 1, g: "+10% Item MP restore", d: "Always packed something for later." }]
+    ]
+  },
+  wolf: {
+    name: "Wolf", accent: "#e05a5a", glow: "rgba(224,90,90,.4)",
+    base: { hp: 260, spd: 12, atk: 9, def: 2, mpr: 0, pres: 0, mres: 0 },
+    invested: ["b4-1", "b4-2"],
+    branches: [
+      [{ n: "Alpha's Roar", c: 3, g: "+15% party ATK", d: "Keystone. Commands the whole pack forward." },
+       { n: "Thick Pelt", c: 1, g: "+8 DEF", d: "Winter coat, kept year-round." },
+       { n: "Den Instinct", c: 1, g: "+30 HP", d: "Learned to take a hit protecting the den." },
+       { n: "Steady Breath", c: 1, g: "+8 HP regen/turn", d: "Never winded, never rattled." },
+       { n: "Loyal Hide", c: 1, g: "+10 HP", d: "Tougher than it looks under the fur." }],
+      [{ n: "Pack Tactics", c: 3, g: "+2 SPD, first-strike vs isolated foes", d: "Keystone. Wolves don't fight fair, and don't need to." },
+       { n: "Night Eyes", c: 1, g: "+8% Accuracy", d: "Sees clean in the dark others stumble through." },
+       { n: "Silent Step", c: 1, g: "+1 SPD", d: "Closes distance before anyone notices." },
+       { n: "Keen Scent", c: 1, g: "+5% Crit vs wounded", d: "Smells weakness before it's shown." },
+       { n: "Quick Paws", c: 1, g: "+1 SPD", d: "The baseline every hunt starts with." }],
+      [{ n: "Unshaken", c: 3, g: "+25 PRES", d: "Keystone. Fear is something that happens to other animals." },
+       { n: "Bared Teeth", c: 1, g: "+8% Counter chance", d: "Answers a threat with a bigger one." },
+       { n: "Thick Skull", c: 1, g: "+8 PRES", d: "Doesn't spook easy." },
+       { n: "Cold Nerve", c: 1, g: "Immune to Fear", d: "Has already seen worse than whatever this is." },
+       { n: "Steady Growl", c: 1, g: "+6 PRES", d: "A low warning that rarely needs repeating." }],
+      [{ n: "Iron Jaw", c: 3, g: "+10 DEF, ignore 15% armor on hit", d: "Keystone. Bites through what it can't out-hit." },
+       { n: "Scarred Hide", c: 1, g: "+5 DEF", d: "Every scar a lesson learned the hard way." },
+       { n: "Bracing Stance", c: 2, g: "+10 DEF, -8% dmg taken", d: "Digs in before the impact lands." },
+       { n: "Rugged Frame", c: 1, g: "+25 HP", d: "Built lean, but not fragile." },
+       { n: "Firm Footing", c: 1, g: "+3 DEF", d: "Rarely caught off-balance." }],
+      [{ n: "Apex Predator", c: 3, g: "+12 ATK, +20% Crit", d: "Keystone. At the top of the food chain for a reason." },
+       { n: "Savage Bite", c: 1, g: "+2 ATK, bleed on crit", d: "Leaves a mark that keeps hurting." },
+       { n: "Killing Instinct", c: 2, g: "+8 ATK, +12% Crit dmg", d: "Finds the opening before it fully opens." },
+       { n: "Honed Claws", c: 1, g: "+4 ATK", d: "Sharpened on every prior kill." },
+       { n: "First Strike", c: 1, g: "+3 ATK", d: "Never the one waiting to react." }],
+      [{ n: "Feral Focus", c: 3, g: "+35 MPR, +10% Rage gain", d: "Keystone. Instinct sharpened into something like will." },
+       { n: "Balanced Hunter", c: 1, g: "+2 all stats", d: "Adaptable to whatever the hunt demands." },
+       { n: "Efficient Chase", c: 1, g: "-10% MP cost", d: "Never burns more than it needs to close in." },
+       { n: "Deep Wind", c: 1, g: "+15 MP", d: "Can run longer than it lets on." },
+       { n: "Scavenged Strength", c: 1, g: "+8% Item MP restore", d: "Makes the most of whatever it finds." }]
+    ]
+  },
+  owl: {
+    name: "Owl", accent: "#b48cff", glow: "rgba(180,140,255,.4)",
+    base: { hp: 210, spd: 10, atk: 4, def: 3, mpr: 60, pres: 0, mres: 0 },
+    invested: ["b5-1"],
+    branches: [
+      [{ n: "Silent Wings", c: 3, g: "+50 Max HP, +2 SPD", d: "Keystone. Moves like the fight already ended in its favour." },
+       { n: "Soft Down", c: 1, g: "+6 DEF", d: "Feathers that muffle more than sound." },
+       { n: "Roosted Calm", c: 1, g: "+30 HP", d: "Never rattled from its perch." },
+       { n: "Night Warmth", c: 1, g: "+4 MRES", d: "Comfortable in conditions that unsettle others." },
+       { n: "Light Frame", c: 1, g: "+12 HP", d: "Small, but not fragile." }],
+      [{ n: "Wind Rider", c: 3, g: "+3 SPD, +10% Evasion", d: "Keystone. Barely there before it's already gone." },
+       { n: "Farsight", c: 1, g: "+10% Accuracy", d: "Spots the opening from across the field." },
+       { n: "Updraft", c: 1, g: "+1 SPD", d: "Catches every advantage the air offers." },
+       { n: "Keen Hearing", c: 1, g: "+6% Evasion", d: "Reacts to what it hears before it's seen." },
+       { n: "Quick Wingbeat", c: 1, g: "+1 SPD", d: "The baseline every flight starts with." }],
+      [{ n: "Unblinking", c: 3, g: "+30 PRES", d: "Keystone. Watches without flinching, always." },
+       { n: "Still Perch", c: 1, g: "+8 PRES", d: "Rarely startled from its post." },
+       { n: "Patient Watch", c: 1, g: "+10% Crit vs first target", d: "Waits for exactly the right moment." },
+       { n: "Cold Focus", c: 1, g: "Immune to Confuse", d: "A mind too clear to be turned around." },
+       { n: "Level Gaze", c: 1, g: "+6 PRES", d: "Meets any threat dead-on." }],
+      [{ n: "Talon Guard", c: 3, g: "+8 DEF, riposte on block", d: "Keystone. Turns a dodge into a counter-strike." },
+       { n: "Feather Mail", c: 1, g: "+5 DEF", d: "Softer to look at than it is to hit." },
+       { n: "Braced Glide", c: 2, g: "+8 DEF, -8% dmg taken", d: "Absorbs impact mid-air, not on the ground." },
+       { n: "Sturdy Wing", c: 1, g: "+20 HP", d: "Rarely grounded for long." },
+       { n: "Firm Grip", c: 1, g: "+3 DEF", d: "Doesn't let go once it's decided not to." }],
+      [{ n: "Precision Strike", c: 3, g: "+10 ATK, +25% Crit", d: "Keystone. One dive, one hit, rarely a second needed." },
+       { n: "Diving Talons", c: 1, g: "+3 ATK", d: "Speed turned directly into damage." },
+       { n: "Marked Prey", c: 2, g: "+6 ATK, +15% Crit dmg vs marked", d: "Once seen, rarely gets away." },
+       { n: "Honed Beak", c: 1, g: "+3 ATK", d: "Sharpened on every prior hunt." },
+       { n: "Opening Strike", c: 1, g: "+2 ATK", d: "First hit of the fight, most of the time." }],
+      [{ n: "Arcane Sight", c: 3, g: "+60 MPR, +15% Spell dmg", d: "Keystone. Sees the shape of magic before it's cast." },
+       { n: "Balanced Mind", c: 1, g: "+2 all stats", d: "Steady across every discipline." },
+       { n: "Efficient Weave", c: 1, g: "-10% MP cost", d: "Never spends more will than the spell needs." },
+       { n: "Deep Well", c: 1, g: "+25 MP", d: "A reserve deeper than its small frame suggests." },
+       { n: "Scholar's Ration", c: 1, g: "+10% Item MP restore", d: "Studied exactly which herbs restore focus." }]
+    ]
+  }
+};
+
+const TOTAL_POINTS = { sheep: 14, wolf: 10, owl: 10 };
+
+function edgePath(x1, y1, x2, y2) {
+  const midY = (y1 + y2) / 2;
+  return `M${x1},${y1} C${x1},${midY} ${x2},${midY} ${x2},${y2}`;
+}
+
+class Component extends DCLogic {
+  state = {
+    heroKey: "sheep",
+    invested: { sheep: new Set(HEROES.sheep.invested), wolf: new Set(HEROES.wolf.invested), owl: new Set(HEROES.owl.invested) },
+    hover: null
+  };
+
+  costSpent(heroKey) {
+    const hero = HEROES[heroKey];
+    let spent = 0;
+    this.state.invested[heroKey].forEach((id) => {
+      const [, bi, ti] = id.match(/^b(\d+)-(\d+)$/) ? id.match(/b(\d+)-(\d+)/) : [];
+    });
+    hero.branches.forEach((branch, bi) => {
+      branch.forEach((node, i) => {
+        const tier = 4 - i;
+        if (this.state.invested[heroKey].has(`b${bi}-${tier}`)) spent += node.c;
+      });
+    });
+    return spent;
+  }
+
+  isInvested(heroKey, bi, tier) { return this.state.invested[heroKey].has(`b${bi}-${tier}`); }
+
+  prereqMet(heroKey, bi, tier) {
+    if (tier === 4) return true;
+    return this.isInvested(heroKey, bi, tier + 1);
+  }
+
+  canInvest(heroKey, bi, tier, cost) {
+    const remaining = TOTAL_POINTS[heroKey] - this.costSpent(heroKey);
+    return this.prereqMet(heroKey, bi, tier) && !this.isInvested(heroKey, bi, tier) && remaining >= cost;
+  }
+
+  canUninvest(heroKey, bi, tier) {
+    if (!this.isInvested(heroKey, bi, tier)) return false;
+    if (tier === 0) return true;
+    return !this.isInvested(heroKey, bi, tier - 1);
+  }
+
+  toggle(bi, tier, cost) {
+    const heroKey = this.state.heroKey;
+    if (this.canInvest(heroKey, bi, tier, cost)) {
+      this.setState((s) => {
+        const next = new Set(s.invested[heroKey]);
+        next.add(`b${bi}-${tier}`);
+        return { invested: { ...s.invested, [heroKey]: next } };
+      });
+    } else if (this.canUninvest(heroKey, bi, tier)) {
+      this.setState((s) => {
+        const next = new Set(s.invested[heroKey]);
+        next.delete(`b${bi}-${tier}`);
+        return { invested: { ...s.invested, [heroKey]: next } };
+      });
+    }
+  }
+
+  renderVals() {
+    const heroKey = this.state.heroKey;
+    const hero = HEROES[heroKey];
+    const spent = this.costSpent(heroKey);
+    const remaining = TOTAL_POINTS[heroKey] - spent;
+
+    const heroTabs = Object.keys(HEROES).map((k) => {
+      const active = k === heroKey;
+      return {
+        name: HEROES[k].name,
+        onClick: () => this.setState({ heroKey: k, hover: null }),
+        style: `padding:9px 20px;border-radius:4px;font:600 13px/1 'Chakra Petch',sans-serif;letter-spacing:.08em;cursor:pointer;border:1px solid ${active ? HEROES[k].accent : "rgba(180,150,210,.25)"};background:${active ? "linear-gradient(rgba(58,42,20,.9),rgba(30,20,10,.9))" : "rgba(20,14,26,.6)"};color:${active ? "#ffe0a8" : "#a695bc"};transition:transform .12s ease`
+      };
+    });
+
+    let bonus = { hp: 0, spd: 0, atk: 0, def: 0, mpr: 0, pres: 0, mres: 0 };
+    const parseGrant = (g) => {
+      const re = /\+(\d+)\s*(Max HP|HP|SPD|ATK|DEF|MPR|MP|PRES|MRES)/gi;
+      let m;
+      while ((m = re.exec(g))) {
+        const val = parseInt(m[1], 10);
+        const key = m[2].toLowerCase();
+        if (key.includes("hp")) bonus.hp += val;
+        else if (key === "spd") bonus.spd += val;
+        else if (key === "atk") bonus.atk += val;
+        else if (key === "def") bonus.def += val;
+        else if (key.includes("mp") || key === "mpr") bonus.mpr += val;
+        else if (key === "pres") bonus.pres += val;
+        else if (key === "mres") bonus.mres += val;
+      }
+    };
+    hero.branches.forEach((branch, bi) => branch.forEach((node, i) => { if (this.isInvested(heroKey, bi, 4 - i)) parseGrant(node.g); }));
+
+    const b = hero.base;
+    const statLine = `HP ${b.hp + bonus.hp}, SPD ${b.spd + bonus.spd}, ATK ${b.atk + bonus.atk}, DEF ${b.def + bonus.def}, MPR ${b.mpr + bonus.mpr}, PRES ${b.pres + bonus.pres}, MRES ${b.mres + bonus.mres}`;
+
+    const edges = [];
+    hero.branches.forEach((branch, bi) => {
+      const x = BX[bi];
+      edges.push({ d: edgePath(ROOT.x, ROOT.y, x, TY[4] + 30), strokeOuter: "#241830", widthOuter: 10, strokeInner: this.isInvested(heroKey, bi, 4) ? hero.accent : "#3a2c48", widthInner: 3, dash: this.isInvested(heroKey, bi, 4) ? "" : "2 8", animStyle: this.isInvested(heroKey, bi, 4) ? "" : "" });
+      for (let t = 4; t > 0; t--) {
+        const lit = this.isInvested(heroKey, bi, t);
+        edges.push({ d: edgePath(x, TY[t], x, TY[t - 1] + 40), strokeOuter: "#241830", widthOuter: 10, strokeInner: lit ? hero.accent : "#3a2c48", widthInner: 3, dash: lit ? "" : "2 8", animStyle: lit ? "animation:flow 1.6s linear infinite" : "" });
+      }
+      if (bi < 5) {
+        const x2 = BX[bi + 1];
+        edges.push({ d: edgePath(x + 20, TY[2] + 20, x2 - 20, TY[2] + 20), strokeOuter: "#1c1428", widthOuter: 5, strokeInner: "#4a3a5c", widthInner: 2, dash: "1 9", animStyle: "" });
+      }
+    });
+
+    const nodes = [];
+    hero.branches.forEach((branch, bi) => {
+      branch.forEach((node, i) => {
+        const tier = 4 - i;
+        const invested = this.isInvested(heroKey, bi, tier);
+        const met = this.prereqMet(heroKey, bi, tier);
+        const affordable = remaining >= node.c;
+        const clickable = (met && !invested && affordable) || this.canUninvest(heroKey, bi, tier);
+        const size = tier === 0 ? 96 : 76;
+        const x = BX[bi], y = TY[tier];
+        let fill, border, opacity = 1;
+        if (invested) { fill = `radial-gradient(circle at 35% 30%,${hero.accent},#5a3a18 75%)`; border = hero.accent; }
+        else if (met) { fill = "rgba(40,28,54,.9)"; border = affordable ? hero.accent : "#5a4c68"; opacity = affordable ? 1 : .75; }
+        else { fill = "rgba(24,18,30,.85)"; border = "rgba(150,130,170,.25)"; opacity = .5; }
+
+        nodes.push({
+          name: node.n, cost: node.c, invested,
+          wrapStyle: `position:absolute;left:${x - size / 2}px;top:${y - size / 2}px;width:${size}px;height:${size + 34}px;cursor:${clickable ? "pointer" : "default"};z-index:2`,
+          beaconStyle: met && !invested ? `position:absolute;left:50%;top:${size / 2}px;width:${size + 30}px;height:${size + 30}px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(50% 50% at 50% 50%,${hero.accent}33,${hero.accent}00 70%);animation:beacon 2.2s ease-in-out infinite;pointer-events:none` : "display:none",
+          circleStyle: `position:relative;width:${size}px;height:${size}px;border-radius:50%;box-sizing:border-box;border:${tier === 0 ? 3 : 2}px solid ${border};background:${fill};opacity:${opacity};box-shadow:${invested ? `0 0 22px ${hero.accent}77` : "none"};display:flex;align-items:center;justify-content:center;transition:transform .12s ease`,
+          fillStyle: "display:none",
+          checkStyle: `font:700 ${tier === 0 ? 26 : 20}px/1 'Chakra Petch',sans-serif;color:#2a1a0a;text-shadow:0 1px 0 rgba(255,255,255,.3)`,
+          costBadgeStyle: `position:absolute;left:50%;top:${size + 2}px;transform:translateX(-50%);font:600 10px/1 'Chakra Petch',sans-serif;letter-spacing:.06em;color:${invested ? hero.accent : "#8a7aa0"};background:rgba(10,6,16,.7);padding:2px 6px;border-radius:3px`,
+          labelStyle: `position:absolute;left:50%;top:${size + 18}px;width:150px;transform:translateX(-75px);text-align:center;font:${tier === 0 ? "600 13px" : "500 11px"}/1.25 'Chakra Petch',sans-serif;color:${invested ? "#ffe0a8" : met ? "#c8bcd8" : "rgba(150,140,165,.5)"}`,
+          onClick: () => this.toggle(bi, tier, node.c),
+          onEnter: () => this.setState({ hover: { bi, tier } })
+        });
+      });
+    });
+
+    const hv = this.state.hover;
+    const hvNode = hv ? hero.branches[hv.bi][4 - hv.tier] : null;
+    const infoTitle = hvNode ? hvNode.n : "Hero Crest";
+    const infoGrant = hvNode ? hvNode.g : `Root of ${hero.name}'s tree — always active.`;
+    const infoBody = hvNode ? hvNode.d : "Hover any talent above to see its cost and effect. Click to invest, or click the last talent in a branch to refund it.";
+    const infoCost = hvNode ? `${hvNode.c}pt` : "—";
+
+    return {
+      heroTabs, heroName: hero.name, heroInitial: hero.name[0], accentGlow: hero.glow, statLine,
+      pointsRemaining: remaining,
+      pointsBarStyle: `width:${Math.max(0, Math.min(100, (remaining / TOTAL_POINTS[heroKey]) * 100))}%;height:100%;background:linear-gradient(90deg,${hero.accent}55,${hero.accent});box-shadow:0 0 10px ${hero.accent}88`,
+      edges, nodes,
+      rootStyle: `position:absolute;left:${ROOT.x - 46}px;top:${ROOT.y - 46}px;width:92px;height:92px;cursor:default;z-index:2`,
+      rootBeaconStyle: `position:absolute;left:50%;top:50%;width:130px;height:130px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(50% 50% at 50% 50%,${hero.accent}44,${hero.accent}00 70%);animation:beacon 2.6s ease-in-out infinite;pointer-events:none`,
+      rootInnerStyle: `position:relative;width:100%;height:100%;border-radius:50%;box-sizing:border-box;border:3px solid ${hero.accent};background:radial-gradient(circle at 35% 30%,${hero.accent},#2a1a3c 75%);box-shadow:0 0 26px ${hero.accent}88;display:flex;align-items:center;justify-content:center;font:700 30px/1 'Chakra Petch',sans-serif;color:#1a0f0a`,
+      infoTitle, infoGrant, infoBody, infoCost,
+      infoCostChipStyle: `min-width:30px;height:30px;padding:0 8px;box-sizing:border-box;border-radius:15px;border:2px solid ${hero.accent};background:${hero.accent}22;display:flex;align-items:center;justify-content:center;font:700 13px/1 'Chakra Petch',sans-serif;color:${hero.accent}`,
+      treeRef: null,
+      onRootEnter: () => this.setState({ hover: null }),
+      onLeave: () => {},
+      respec: () => this.setState((s) => ({ invested: { ...s.invested, [heroKey]: new Set() } }))
+    };
+  }
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet"><style>body{margin:0;background:#07040c;font-family:'Chakra Petch',system-ui,sans-serif}a{color:#e7b25c}a:hover{color:#ffd48a}@keyframes pulse2{0%{box-shadow:0 0 0 rgba(231,178,92,.6)}60%{box-shadow:0 0 24px rgba(231,178,92,0)}100%{box-shadow:0 0 0 rgba(231,178,92,0)}}</style></helmet>
+
+<div style="padding:34px 40px 46px;max-width:2000px">
+<div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:18px">
+<h1 style="margin:0;font:600 19px/1.2 'Chakra Petch',sans-serif;color:#f3e9ff">Shop screen — upgrades &amp; consumables</h1>
+<span style="font:400 13px/1.4 'Chakra Petch',sans-serif;color:#8a7aa0">Same currency/card language as the rest of the suite. Owned upgrades lock out; consumables stay purchasable and grey out only when gold runs short.</span>
+</div>
+
+<div style="position:relative;width:1920px;height:1080px;overflow:hidden;background:#07040c;box-shadow:0 30px 90px rgba(0,0,0,.7);outline:1px solid rgba(200,160,255,.14)">
+  <div style="position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 0%,#241736 0%,#150d22 40%,#0a0612 65%,#07040c 90%)"></div>
+  <div style="position:absolute;left:50%;top:-6%;width:60%;height:70%;transform:translateX(-50%);background:radial-gradient(50% 50% at 50% 50%,rgba(231,178,92,.14),rgba(231,178,92,0) 70%);filter:blur(40px)"></div>
+
+  <div style="position:absolute;left:0;right:0;top:56px;display:flex;justify-content:center;gap:14px;z-index:3">
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 22px;border:1px solid rgba(231,178,92,.4);border-radius:6px;background:linear-gradient(rgba(24,32,20,.86),rgba(12,16,10,.9));box-shadow:0 0 22px rgba(0,0,0,.5)">
+      <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(#ffe6a0,#c08a2a);box-shadow:0 0 12px rgba(255,205,110,.6)"></div>
+      <span style="font:600 20px/1 'Chakra Petch',sans-serif;color:#ffe0a8">GOLD {{ gold }}</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 22px;border:1px solid rgba(180,140,255,.4);border-radius:6px;background:linear-gradient(rgba(26,18,34,.86),rgba(14,10,20,.9));box-shadow:0 0 22px rgba(0,0,0,.5)">
+      <div style="width:20px;height:20px;transform:rotate(45deg);background:linear-gradient(135deg,#d8bfff,#7a4cc0);box-shadow:0 0 12px rgba(180,140,255,.6)"></div>
+      <span style="font:600 20px/1 'Chakra Petch',sans-serif;color:#e6d8ff">RELICS {{ relics }}</span>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:0;right:0;top:200px;bottom:150px;display:flex;justify-content:center;gap:120px;padding:0 80px;z-index:3">
+    <div style="width:640px">
+      <div style="font:600 15px/1 'Chakra Petch',sans-serif;letter-spacing:.16em;color:#e7b25c;margin-bottom:18px">UPGRADES</div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <sc-for list="{{ upgrades }}" as="it" hint-placeholder-count="2">
+          <div onClick="{{ it.onClick }}" style="{{ it.rowStyle }}">
+            <span style="{{ it.nameStyle }}">{{ it.name }}</span>
+            <span style="{{ it.costStyle }}">{{ it.costLabel }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="width:640px">
+      <div style="font:600 15px/1 'Chakra Petch',sans-serif;letter-spacing:.16em;color:#e7b25c;margin-bottom:18px">ITEMS</div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <sc-for list="{{ items }}" as="it" hint-placeholder-count="2">
+          <div onClick="{{ it.onClick }}" style="{{ it.rowStyle }}">
+            <span style="{{ it.nameStyle }}">{{ it.name }}</span>
+            <span style="{{ it.costStyle }}">{{ it.costLabel }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:0;right:0;bottom:44px;display:flex;justify-content:center;z-index:3">
+    <div style="display:flex;align-items:center;justify-content:center;width:210px;height:52px;box-sizing:border-box;border:1px solid rgba(231,178,92,.5);border-radius:4px;background:linear-gradient(rgba(58,32,20,.9),rgba(30,16,10,.95));font:600 16px/1 'Chakra Petch',sans-serif;letter-spacing:.14em;color:#ffd9a2;box-shadow:0 0 22px rgba(231,140,60,.2),inset 0 1px 0 rgba(255,220,170,.2);cursor:pointer;transition:transform .12s ease" style-hover="transform:scale(1.05)" style-active="transform:scale(.95)">BACK</div>
+  </div>
+</div>
+
+<div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:26px;max-width:1920px">
+  <div style="flex:1 1 440px;min-width:380px;padding:22px 24px;border:1px solid rgba(180,150,210,.18);border-radius:8px;background:#0f0a16">
+    <h2 style="margin:0 0 12px;font:600 14px/1 'Chakra Petch',sans-serif;letter-spacing:.1em;color:#e7b25c">WHAT CHANGED</h2>
+    <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font:400 13.5px/1.6 'Chakra Petch',sans-serif;color:#a695bc">
+      <li>Currency HUD moved from plain top-centre text to the same gold/relic chip pairing used on the run map and hub — consistent iconography across every screen instead of a bare "Gold: 4 Relics: 1" line.</li>
+      <li>Rows keep the source's gold-rimmed-plate language but get a purchase pulse animation and immediate grey-out when unaffordable, rather than a flat disabled grey with no feedback.</li>
+      <li>Owned upgrades keep the green "Owned" treatment from the source, restyled to the game's success-state green rather than a plain outline.</li>
+    </ul>
+  </div>
+  <div style="flex:1 1 440px;min-width:380px;padding:22px 24px;border:1px solid rgba(180,150,210,.18);border-radius:8px;background:#0f0a16">
+    <h2 style="margin:0 0 12px;font:600 14px/1 'Chakra Petch',sans-serif;letter-spacing:.1em;color:#e7b25c">FOR THE ENGINE</h2>
+    <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font:400 13.5px/1.6 'Chakra Petch',sans-serif;color:#a695bc">
+      <li>Upgrades are one-time purchases: click deducts gold once, then the row becomes permanently "OWNED" (green, non-interactive) — matches the source's "Extra Recruit Slot (Owned)" behaviour.</li>
+      <li>Items are repeatable purchases: each click deducts gold and re-enables immediately, gated only by `gold >= cost` (row dims and un-clicks itself when unaffordable).</li>
+      <li>Relics currency is shown but not spendable in this mock — flag if any shop row should cost relics instead of/alongside gold.</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:2000}}">
+class Component extends DCLogic {
+  state = {
+    gold: 42, relics: 1,
+    owned: { recruit: true },
+    upgrades: [
+      { id: "recruit", name: "Extra Recruit Slot", cost: 0, oneTime: true },
+      { id: "startgold", name: "Starting Gold Boost", cost: 30, oneTime: true }
+    ],
+    items: [
+      { id: "hp", name: "Health Potion", cost: 15 },
+      { id: "mp", name: "Mana Potion", cost: 15 }
+    ]
+  };
+
+  buy(list, id) {
+    const def = this.state[list].find((i) => i.id === id);
+    if (!def) return;
+    if (def.oneTime && this.state.owned[id]) return;
+    if (this.state.gold < def.cost) return;
+    this.setState((s) => ({ gold: s.gold - def.cost, owned: def.oneTime ? { ...s.owned, [id]: true } : s.owned }));
+  }
+
+  row(def, list) {
+    const owned = def.oneTime && this.state.owned[def.id];
+    const affordable = this.state.gold >= def.cost;
+    const clickable = !owned && affordable;
+    const border = owned ? "#7fc25a" : affordable ? "rgba(231,178,92,.55)" : "rgba(150,130,110,.25)";
+    return {
+      name: def.name,
+      costLabel: owned ? "OWNED" : def.cost === 0 ? "FREE" : `${def.cost}`,
+      rowStyle: `display:flex;align-items:center;justify-content:space-between;padding:16px 22px;box-sizing:border-box;border:1px solid ${border};border-radius:5px;background:${owned ? "linear-gradient(rgba(20,32,16,.7),rgba(10,16,8,.85))" : "linear-gradient(rgba(30,20,14,.75),rgba(16,10,8,.88))"};cursor:${clickable ? "pointer" : "default"};opacity:${affordable || owned ? 1 : .55};transition:transform .1s ease`,
+      nameStyle: `font:500 15px/1 'Chakra Petch',sans-serif;letter-spacing:.03em;color:${owned ? "#bde8a8" : "#e6dcf0"}`,
+      costStyle: `font:700 13px/1 'Chakra Petch',sans-serif;letter-spacing:.08em;color:${owned ? "#7fc25a" : affordable ? "#ffd9a2" : "#8a7a70"}`,
+      onClick: clickable ? () => this.buy(list, def.id) : null
+    };
+  }
+
+  renderVals() {
+    return {
+      gold: this.state.gold, relics: this.state.relics,
+      upgrades: this.state.upgrades.map((d) => this.row(d, "upgrades")),
+      items: this.state.items.map((d) => this.row(d, "items"))
+    };
+  }
+}
+
+</script>
+</body>
+</html>

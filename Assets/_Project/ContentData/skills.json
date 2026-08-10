@@ -1,0 +1,381 @@
+{
+  "_readme": "Per-character combat skills, unlocked by levelling. Edit this file, then run Prince's Palace > Build Default Content. These are DIFFERENT from spells.json: that is one global power curve every character shares, which only changes the name and number of the single Skill button. These are a character's own kit, shown as their own row of buttons in a fight. id, displayName and characterId are always required. unlockLevel defaults to 1. effect is one of DamageSingle (default), DamageAll, HealSelf, HealParty, RestorePartyMana; targeting is inferred from the effect and rarely needs writing. Damage is (Attack, scaled by the caster's own weapon or spell scaling depending on scalingAxis, + flatAmount + power x (resource spent), minus the target's Defense unless ignoresDefense is set, floored at 1) x10 — health pools are on a x10 scale and stat-derived damage is scaled to match (CombatMath.DamageScale). damageInstances is the exception: a list of {type, amount} packets written directly on the final scale and NOT multiplied, each one checked against the target's weakness and resistance on its own, so one cast can land at +50% and -50% at the same time. Heals and mana restores are flatAmount + power x (resource spent). Costs: manaCost and/or resourceCost, and a skill must cost SOMETHING. resourceCost spends the owner's signature resource (Shawn's Wool); set spendsAllResource to take the lot, in which case resourceCost is the minimum needed to cast at all. power scales per point actually spent, so a skill with power but no resource cost is rejected rather than silently scaling by zero. Two skills for the same character MAY share an unlockLevel — Shawn opens with three. Presentation is authored here too and is entirely optional: vfxPath is a Resources folder of animation frames named f0..fN, vfxSeconds is how long the whole sequence takes, and sfxPath is a Resources path to the clip that plays when the skill lands. Any of them left out simply means no visual or no sound — never an error. scalingAxis is Auto (default, derives Weapon-vs-Spell from the caster's own attackType), Weapon, Spell, or None — override it when a skill's flavour does not match the caster's own type (a physical move authored on a Nature-typed caster, say). requires is a list of \"<ability score> <amount>\" lines (e.g. \"strength 15\") gating whether the skill can be cast at all, from base scores/talents/worn gear — empty means always castable once unlocked.",
+  "skills": [
+    {
+      "id": "shear",
+      "displayName": "Shear",
+      "description": "Cut the fleece loose and let it fly. Costs no mana at all, only wool.",
+      "characterId": "sheep",
+      "unlockLevel": 1,
+      "effect": "DamageSingle",
+      "resourceCost": 3,
+      "power": 2,
+      "manaCost": 0
+    },
+    {
+      "id": "woolgathering",
+      "displayName": "Woolgathering",
+      "description": "Chew, breathe, and let the fleece knit the day back together.",
+      "characterId": "sheep",
+      "unlockLevel": 2,
+      "effect": "HealSelf",
+      "resourceCost": 4,
+      "power": 30,
+      "flatAmount": 40,
+      "manaCost": 0
+    },
+    {
+      "id": "static_fleece",
+      "displayName": "Static Fleece",
+      "description": "All that wool has to discharge somewhere, and it is not fussy about where.",
+      "characterId": "sheep",
+      "unlockLevel": 4,
+      "effect": "DamageAll",
+      "resourceCost": 3,
+      "power": 1,
+      "manaCost": 6
+    },
+    {
+      "id": "battering_ram",
+      "displayName": "Battering Ram",
+      "description": "Head down. Armour is a suggestion.",
+      "characterId": "sheep",
+      "unlockLevel": 6,
+      "effect": "DamageSingle",
+      "resourceCost": 6,
+      "power": 2,
+      "ignoresDefense": true,
+      "manaCost": 0,
+      "scalingAxis": "Weapon"
+    },
+    {
+      "id": "golden_fleece",
+      "displayName": "Golden Fleece",
+      "description": "Everything he has been saving, spent at once, and it comes back to him.",
+      "characterId": "sheep",
+      "unlockLevel": 8,
+      "effect": "DamageSingle",
+      "resourceCost": 8,
+      "spendsAllResource": true,
+      "power": 3,
+      "ignoresDefense": true,
+      "manaCost": 12
+    },
+    {
+      "id": "lightning_bolt",
+      "displayName": "Lightning Bolt",
+      "description": "A single white line from the ceiling to whatever is standing under it.",
+      "characterId": "sheep",
+      "unlockLevel": 999,
+      "effect": "DamageSingle",
+      "manaCost": 5,
+      "damageInstances": [
+        {
+          "type": "Arcane",
+          "amount": 50
+        }
+      ],
+      "vfxPath": "Spells/lightning_bolt",
+      "vfxSeconds": 0.6,
+      "sfxPath": "Audio/Sfx/lightning_strike"
+    },
+    {
+      "id": "frost_flare",
+      "displayName": "Frost Flare",
+      "description": "Burns and freezes in the same breath. Something out there hates one half of it.",
+      "characterId": "sheep",
+      "unlockLevel": 999,
+      "effect": "DamageSingle",
+      "manaCost": 5,
+      "damageInstances": [
+        {
+          "type": "Fire",
+          "amount": 25
+        },
+        {
+          "type": "Frost",
+          "amount": 25
+        }
+      ],
+      "vfxPath": "Spells/frost_flare",
+      "vfxSeconds": 0.6,
+      "sfxPath": "Audio/Sfx/frost_flare"
+    },
+    {
+      "id": "second_wind",
+      "displayName": "Second Wind",
+      "description": "A bark and a shake, and the whole squad finds a little more in the tank.",
+      "characterId": "dog",
+      "unlockLevel": 1,
+      "effect": "RestorePartyMana",
+      "flatAmount": 15,
+      "manaCost": 5
+    },
+    {
+      "id": "snarl",
+      "displayName": "Snarl",
+      "description": "A warning bite, mostly.",
+      "characterId": "dog",
+      "unlockLevel": 1,
+      "effect": "DamageSingle",
+      "resourceCost": 3,
+      "power": 2,
+      "manaCost": 0
+    },
+    {
+      "id": "hamstring",
+      "displayName": "Hamstring",
+      "description": "Goes for the tendon. Armour has nothing to say about it, and neither does whatever it was about to do.",
+      "characterId": "dog",
+      "unlockLevel": 5,
+      "effect": "DamageSingle",
+      "resourceCost": 5,
+      "power": 2,
+      "ignoresDefense": true,
+      "manaCost": 0,
+      "appliesStatus": "Stun",
+      "statusMagnitude": 1,
+      "statusDuration": 1
+    },
+    {
+      "id": "alpha_howl",
+      "displayName": "Alpha Howl",
+      "description": "Calls the whole pack down on everything standing.",
+      "characterId": "dog",
+      "unlockLevel": 8,
+      "effect": "DamageAll",
+      "resourceCost": 6,
+      "spendsAllResource": true,
+      "power": 2,
+      "manaCost": 10
+    },
+    {
+      "id": "sting",
+      "displayName": "Sting",
+      "description": "Quick, and the venom does the rest of the work.",
+      "characterId": "fly",
+      "unlockLevel": 1,
+      "effect": "DamageSingle",
+      "resourceCost": 3,
+      "power": 3,
+      "manaCost": 0,
+      "appliesStatus": "Poison",
+      "statusMagnitude": 35,
+      "statusDuration": 3
+    },
+    {
+      "id": "paralytic_bite",
+      "displayName": "Paralytic Bite",
+      "description": "Enough venom in one bite that armour stops being relevant.",
+      "characterId": "fly",
+      "unlockLevel": 4,
+      "effect": "DamageSingle",
+      "resourceCost": 5,
+      "power": 2,
+      "ignoresDefense": true,
+      "manaCost": 0
+    },
+    {
+      "id": "death_sentence",
+      "displayName": "Death Sentence",
+      "description": "Everything in the sac, delivered at once.",
+      "characterId": "fly",
+      "unlockLevel": 7,
+      "effect": "DamageSingle",
+      "resourceCost": 6,
+      "spendsAllResource": true,
+      "power": 4,
+      "ignoresDefense": true,
+      "manaCost": 8
+    },
+    {
+      "id": "withdraw",
+      "displayName": "Withdraw",
+      "description": "Pull in, and let the shell do what it does.",
+      "characterId": "turtle",
+      "unlockLevel": 1,
+      "effect": "HealSelf",
+      "resourceCost": 4,
+      "power": 20,
+      "flatAmount": 20,
+      "manaCost": 0,
+      "appliesStatus": "Protect",
+      "statusMagnitude": 30,
+      "statusDuration": 3
+    },
+    {
+      "id": "shell_bash",
+      "displayName": "Shell Bash",
+      "description": "Slow to arrive. Nothing is standing where it lands.",
+      "characterId": "turtle",
+      "unlockLevel": 5,
+      "effect": "DamageSingle",
+      "resourceCost": 6,
+      "power": 2,
+      "ignoresDefense": true,
+      "manaCost": 0
+    },
+    {
+      "id": "fortress",
+      "displayName": "Fortress",
+      "description": "Every hit it has taken, given back to the whole squad as reason to keep standing.",
+      "characterId": "turtle",
+      "unlockLevel": 8,
+      "effect": "HealParty",
+      "resourceCost": 8,
+      "spendsAllResource": true,
+      "power": 25,
+      "flatAmount": 30,
+      "manaCost": 12,
+      "appliesStatus": "Regen",
+      "statusMagnitude": 25,
+      "statusDuration": 3
+    },
+    {
+      "id": "foresight",
+      "displayName": "Foresight",
+      "description": "Sees the opening before it closes, and leaves it wide for whoever swings next.",
+      "characterId": "owl",
+      "unlockLevel": 1,
+      "effect": "DamageSingle",
+      "resourceCost": 3,
+      "power": 3,
+      "manaCost": 0,
+      "appliesStatus": "Vulnerable",
+      "statusMagnitude": 25,
+      "statusDuration": 3
+    },
+    {
+      "id": "ward",
+      "displayName": "Ward",
+      "description": "Knows exactly what the squad is short on.",
+      "characterId": "owl",
+      "unlockLevel": 4,
+      "effect": "RestorePartyMana",
+      "resourceCost": 5,
+      "flatAmount": 20,
+      "manaCost": 4
+    },
+    {
+      "id": "providence",
+      "displayName": "Providence",
+      "description": "Everything it has seen coming, spent on making sure the squad is still there for it.",
+      "characterId": "owl",
+      "unlockLevel": 8,
+      "effect": "HealParty",
+      "resourceCost": 7,
+      "spendsAllResource": true,
+      "power": 20,
+      "flatAmount": 25,
+      "manaCost": 10
+    },
+    {
+      "id": "provoke",
+      "displayName": "Provoke",
+      "description": "Head down, eyes up. Whatever it was going to do, it is going to do it to you.",
+      "characterId": "sheep",
+      "unlockLevel": 999,
+      "effect": "Provoke",
+      "targeting": "SingleEnemy",
+      "manaCost": 0,
+      "resourceCost": 0
+    },
+    {
+      "id": "headbutt",
+      "displayName": "Headbutt",
+      "description": "Not elegant. Puts them at the back of the line thinking about it.",
+      "characterId": "sheep",
+      "unlockLevel": 999,
+      "effect": "DamageSingle",
+      "targeting": "SingleEnemy",
+      "manaCost": 0,
+      "resourceCost": 2,
+      "power": 2,
+      "queuePushSlots": 1,
+      "scalingAxis": "Weapon"
+    },
+    {
+      "id": "black_ram_mode",
+      "displayName": "Black Ram Mode",
+      "description": "Three turns of something the fleece was hiding.",
+      "characterId": "sheep",
+      "unlockLevel": 999,
+      "effect": "Transform",
+      "targeting": "Self",
+      "manaCost": 0,
+      "resourceCost": 7,
+      "transform": {
+        "displayName": "the Black Ram",
+        "turns": 3,
+        "attackPercent": 50,
+        "speedPercent": 30,
+        "temporaryHealthPercent": 25,
+        "splashPercent": 50
+      }
+    },
+    {
+      "id": "fleece_ward",
+      "displayName": "Ward",
+      "description": "A turn of the fleece, wrapped tight. The next blow finds wool before it finds her.",
+      "characterId": "sheep",
+      "unlockLevel": 999,
+      "effect": "Ward",
+      "targeting": "Self",
+      "manaCost": 0,
+      "resourceCost": 2
+    },
+    {
+      "id": "shatter",
+      "displayName": "Shatter",
+      "description": "Every ward she has out, broken at once, and every splinter goes somewhere.",
+      "characterId": "sheep",
+      "unlockLevel": 999,
+      "effect": "Shatter",
+      "manaCost": 0,
+      "resourceCost": 3
+    },
+    {
+      "id": "wail",
+      "displayName": "Wail",
+      "description": "A sound nothing in the room wants to swing through.",
+      "characterId": "sheep",
+      "unlockLevel": 999,
+      "effect": "BuffParty",
+      "manaCost": 0,
+      "resourceCost": 10,
+      "appliesStatus": "Protect",
+      "statusMagnitude": 50,
+      "statusDuration": 2
+    },
+    {
+      "id": "gift_mana",
+      "displayName": "Gift: Mana",
+      "description": "She has more wool than she has turns. Somebody else can have the difference.",
+      "characterId": "sheep",
+      "unlockLevel": 999,
+      "effect": "GiftMana",
+      "manaCost": 0,
+      "resourceCost": 2
+    },
+    {
+      "id": "gift_fury",
+      "displayName": "Gift: Fury",
+      "description": "Wound up like a spring, and pointed at something.",
+      "characterId": "sheep",
+      "unlockLevel": 999,
+      "effect": "GiftFury",
+      "manaCost": 0,
+      "resourceCost": 3
+    },
+    {
+      "id": "gift_haste",
+      "displayName": "Gift: Haste",
+      "description": "Go. Now. Do not wait for your turn.",
+      "characterId": "sheep",
+      "unlockLevel": 999,
+      "effect": "GiftHaste",
+      "manaCost": 0,
+      "resourceCost": 5
+    }
+  ]
+}

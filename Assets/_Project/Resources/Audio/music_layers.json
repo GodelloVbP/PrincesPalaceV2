@@ -1,0 +1,75 @@
+{
+  "_readme": [
+    "Adaptive music: one song per floor, exported as N separate stems that ALL",
+    "PLAY AT ONCE. Intensity is expressed by fading stems in and out, never by",
+    "starting or stopping them -- that is what makes drift impossible.",
+    "",
+    "ADDING A FLOOR is meant to be this file plus a folder, never code:",
+    "  1. Create Resources/Audio/Music/FloorN/ and drop the stems in it.",
+    "  2. Copy a `sets` block, change id/folder/bpm/stems.",
+    "  3. Add a line to `floors` pointing at it.",
+    "",
+    "`stems` ORDER IS THE MIX ORDER AND IS AUTHORITATIVE. Every tier's numbers",
+    "are indices into it, so reordering `stems` silently re-points all four",
+    "tiers. It is the one field to change carefully.",
+    "",
+    "NINE IS NOT A MAGIC NUMBER. Five stems works; twelve works. The code reads",
+    "the array length.",
+    "",
+    "`gain` IS PER SET, NEVER PER STEM. A quiet pad and a loud lead are quiet",
+    "and loud on purpose -- normalising each stem individually flattens the",
+    "arrangement. Do NOT add stems to audio_levels.json. Measure the set by",
+    "rendering every stem at unity and correcting THAT figure.",
+    "",
+    "All four tiers must be declared. An omitted one is refused at load rather",
+    "than inherited, because inheriting would silently play the wrong mix.",
+    "",
+    "`quantiseBars` is how many bars a layer change waits for before starting.",
+    "1 is responsive; 4 or 8 is more musical but can lag by up to ~20s at 96",
+    "BPM. Per set, because the right answer depends on the song.",
+    "",
+    "`stingPath` is an optional one-shot fired over the top when this set first",
+    "reaches its boss tier -- the layered replacement for the old boss intro.",
+    "",
+    "STATUS: no stems have been recorded yet. floor_1 below is the PILOT SPEC,",
+    "written so the composer knows the folder name, the stem names and the tier",
+    "split before recording. Until those nine files exist the game falls back to",
+    "the old MusicTrack beds automatically and sounds exactly as it did before.",
+    "Export requirements for whoever writes the music are in",
+    "docs/handoffs/adaptive_music/README.md section 6 -- identical length,",
+    "tempo and sample rate, no head trimming, master bus bypassed."
+  ],
+  "sets": [
+    {
+      "id": "floor_1",
+      "folder": "Audio/Music/Floor1",
+      "bpm": 96,
+      "beatsPerBar": 4,
+      "quantiseBars": 1,
+      "gain": 1.0,
+      "stingPath": "",
+      "stems": [
+        "01_pad",
+        "02_bass",
+        "03_kick",
+        "04_perc",
+        "05_arp",
+        "06_strings",
+        "07_brass",
+        "08_choir",
+        "09_lead"
+      ],
+      "tiers": [
+        { "tier": "ambient", "stems": [0, 1] },
+        { "tier": "fight", "stems": [0, 1, 2, 3, 4] },
+        { "tier": "elite", "stems": [0, 1, 2, 3, 4, 5, 6] },
+        { "tier": "boss", "stems": [0, 1, 2, 3, 4, 5, 6, 7, 8] }
+      ]
+    }
+  ],
+  "floors": [
+    { "floor": 1, "set": "floor_1" }
+  ],
+  "hub": "floor_1",
+  "fallbackSet": "floor_1"
+}

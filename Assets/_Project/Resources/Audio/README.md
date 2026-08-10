@@ -1,0 +1,182 @@
+# Audio
+
+Music and sound effects live here.
+
+## Why under `Resources/`
+
+Audio is triggered by things that happen — a button press, a hit landing, a
+floor changing — not baked into a scene at build time. That is the same reason
+`Cursors/`, `Characters/` and `Fonts/` are here: they are loaded by PATH at
+runtime rather than wired into a scene by `SceneBuilder`.
+
+It also matters for a project whose scenes are generated. `Art/` holds assets
+`SceneBuilder` resolves at edit time via `LoadSprite`, and every one of those
+references is rewritten on the next scene build. Audio referenced by path
+cannot be broken that way.
+
+Load with the path relative to `Resources`, and WITHOUT the extension:
+
+```csharp
+var clip = Resources.Load<AudioClip>("Audio/Sfx/button click");
+```
+
+## Layout
+
+    Music/       long-form loops and ambience
+    Sfx/         short one-shots the game itself makes
+    Sfx/<Name>/  one character's VOICE lines
+
+A character's folder is the one convention worth stating. `Sfx/Shawn/` holds
+what Shawn *says* -- grunts, a cry when he goes down -- as opposed to what the
+game does. Those are addressed through `CharacterVoice`, not the `Sound` enum,
+because a voice line is content: it belongs to a character, there are a lot of
+them, and several are interchangeable takes of one moment. Ten near-identical
+grunts folded into `Sound` would have buried `ButtonClick` for no benefit.
+
+## The game's own sounds
+
+Wired through the `Sound` enum and `SoundLibrary.PathOf`. A test walks the enum
+and asserts every value loads a real clip, so a typo'd path fails the suite
+rather than being silently inaudible.
+
+| File | Length | Note |
+|---|---|---|
+| `button click.wav` | 0.93s | Every button in the game, from one choke point. |
+| `press play.wav` | 4.48s | Now fires when a RUN starts, not on the Play button -- a fanfare for opening a menu landed too early. |
+| `start-up intro.wav` | 4.20s | Over the "Palazzo Games" splash, once per launch. |
+| `lightning_strike.mp3` | -- | Lightning Bolt, via the spell's own `sfxPath`. |
+| `frost_flare.mp3` | -- | Frost Flare, likewise. |
+| `Long synthy sine very magical.wav` | 3.38s | Unused. Despite the name, too short to loop as music -- reads as a sting. |
+| `very high dopamine sound needs cutoff at one and half sec.wav` | 4.16s | Unused. **Needs trimming to ~1.5s**, per its own filename. Trim the source rather than fading in code, so the clip's length stays honest everywhere. |
+| `shawn_hit_1..4.wav` | -- | Superseded by `Sfx/Shawn/damage_*`, and not referenced. Safe to delete once you are sure the new takes are the keepers. |
+
+Spell sounds are named by PATH in `skills.json` (`sfxPath`) rather than by an
+enum member, so adding a spell with its own sound is authoring rather than a
+code change.
+
+## The background music
+
+Wired through `MusicTrack`/`MusicLibrary.PathOf`, played by `MusicController`
+-- same self-bootstrapping, survives-scene-loads shape as `SoundController`,
+just two `AudioSource`s instead of one so a track change crossfades (1.5s)
+rather than cutting. `GameplayManager.ShowOverlay` is the one call site: Fight
+gets `MusicTrack.Battle`, everything else (including both scenes' own initial
+load) falls back to `MusicTrack.Ambient`.
+
+| File | Track | Note |
+|---|---|---|
+| `Music/Awakening of the Violet Flame.ogg` | Ambient | Every non-combat screen: both Main Menu and every Gameplay overlay except Fight. |
+| `Music/Battle_theme.ogg` | Battle | Fight only. Trimmed to the first 14s of a longer source, normalized to -16 LUFS, a touch of reverb added. |
+
+Only two tracks exist, so the mapping is a two-value switch on `OverlayState`
+rather than one entry per overlay -- adding a THIRD track (a title-screen
+theme, a boss sting) means widening `MusicTrack` and `MusicController`'s own
+overlay switch, not restructuring either.
+
+**This is now the FALLBACK path.** The primary one is adaptive layering, below.
+It stays correct because it is what the game actually plays today: no stems
+have been recorded yet.
+
+## Adaptive music: stems and layers
+
+One song per floor, exported as N separate **stems** that all play at once and
+never stop. Intensity is expressed by fading stems in and out -- the run map
+hears a minimal bed, a normal fight adds layers, a boss brings everything
+together. Keeping every stem running is what makes drift impossible: the moment
+tracks start and stop independently you inherit timing slop, and that slop is
+audible as phasing on anything percussive.
+
+    Music/Floor1/01_pad.ogg      one folder per set
+    Music/Floor1/02_bass.ogg     names are authored in the manifest
+    ...
+
+Authored in `music_layers.json` beside this file, and **nothing else**. Adding
+a floor's music is: create the folder, drop the stems in, copy a `sets` block,
+add one line to `floors`. No code change, ever. That file's own `_readme`
+carries the field-by-field rules; the three worth repeating here:
+
+- **`stems` order is the mix order and is authoritative.** Every tier's numbers
+  are indices into it, so reordering the array silently re-points all four
+  tiers.
+- **`gain` is per SET, never per stem.** See the warning below.
+- **Nine is not a magic number.** Five stems works; twelve works.
+
+### Do NOT add stems to `audio_levels.json`
+
+This is the one that would silently ruin the mix, so it gets its own heading.
+
+`AudioLevels.GainFor` normalises each clip **independently**, which is exactly
+right for unrelated one-shots and actively destructive for stems: a quiet pad
+and a loud lead are quiet and loud *on purpose*, and levelling them one by one
+flattens the arrangement the composer wrote. Stems get **one gain for the whole
+set**, from the manifest. Measure it by rendering every stem at unity and
+correcting *that* figure.
+
+### Import settings: stems are the exception
+
+The rule at the bottom of this file says long music should be **Streaming**.
+**For stems that guidance is wrong.** Streaming costs a decoder and a disk read
+*per source*, and a floor crossfade has two full sets live at once -- eighteen
+concurrent streams for a nine-stem set. That is a lot of simultaneous I/O and a
+plausible source of hitching on a slower drive.
+
+Use **Compressed In Memory (Vorbis)** for stems. Nine three-minute stereo stems
+come to roughly 25-30 MB per set and only two sets are ever resident; tens of
+MB of RAM to eliminate stream contention is the right trade on desktop.
+
+Unverified against a real set, because none exists yet. If memory turns out to
+be the tighter constraint, the fallback is to have the outgoing voice release
+its clips the moment a crossfade completes.
+
+### Export requirements
+
+Full list, with the reasoning, in
+`docs/handoffs/adaptive_music/README.md` section 6. The four that cannot be
+fixed in code afterwards:
+
+1. **Identical length, tempo, key and sample rate** across every stem in a set.
+   A test asserts the sample counts match, because unequal lengths are
+   inaudible for thirty seconds and unmistakable by the third minute.
+2. **No head trimming.** 40ms of silence removed from one stem and not the
+   others puts the set permanently out of phase.
+3. **Bypass the master bus when printing.** A compressor on the master applied
+   to each stem individually means the stems no longer sum to the mix you
+   wrote. This is the most common stem-export mistake.
+4. **Reverb and delay tails live inside the stem that caused them**, or muting
+   the lead leaves its reverb hanging in another layer.
+
+## Shawn's voice
+
+Sixteen takes in `Sfx/Shawn/`, all comfortably one-shot length -- the hurt
+takes run 0.20s to 0.74s, which is short enough to fire on every hit without
+stacking on itself.
+
+| Line | Takes | Fires when |
+|---|---|---|
+| Hurt | 10, picked at random | A hit lands on him, at the moment the flash and the number show -- not when the attack is chosen, so a spell's grunt waits for the bolt to arrive. |
+| LowHealth | 1 | A hit leaves him under 30% health. **Once per fight**: a character who announces he is nearly dead every turn stops being informative. |
+| Down | 1 | The hit that drops him. Outranks the other two -- he does not grunt and then die. |
+| Victory | 1 | He is still standing when the fight is won. |
+
+`shawn_hmmmm.wav` and `shawn_huh.wav` are imported but **not wired to
+anything** -- there is no moment in combat that obviously means "hmm". They are
+waiting for a trigger rather than being forgotten.
+
+A character with no recorded voice -- which is everyone except Shawn -- simply
+makes no sound. That is the same graceful-missing-content posture the rest of
+the project takes toward art, and it is asserted by a test rather than assumed.
+
+## Conventions when adding more
+
+- **Name for what it IS, not what it sounds like.** `button click` and
+  `press play` are fine. A name that encodes a to-do is a signal the file is
+  not finished yet.
+- **Trim silence at the head.** A one-shot with 200ms of lead-in reads as
+  input lag, and no amount of code can take it back out.
+- **Keep one-shots short.** Anything past a couple of seconds competes with
+  the next sound rather than layering under it.
+- **`.wav` for sound effects, so there is no decode cost on a sound that has
+  to land the same frame it is asked for.** Long music can be `.ogg`; set its
+  import mode to Streaming so it does not sit decompressed in memory --
+  **except for adaptive-music stems**, which are Compressed In Memory for the
+  reason given in that section above.

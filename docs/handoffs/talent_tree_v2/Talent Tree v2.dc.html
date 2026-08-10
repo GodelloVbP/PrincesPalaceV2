@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet"><style>body{margin:0;background:#07040c;font-family:'Chakra Petch',system-ui,sans-serif}a{color:#e7b25c}a:hover{color:#ffd48a}@keyframes beacon{0%,100%{opacity:.35;transform:scale(1)}50%{opacity:.75;transform:scale(1.08)}}@keyframes flow{to{stroke-dashoffset:-30}}</style></helmet>
+
+<div style="padding:34px 40px 46px;max-width:2000px">
+<div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:18px">
+<h1 style="margin:0;font:600 19px/1.2 'Chakra Petch',sans-serif;color:#f3e9ff;letter-spacing:.02em">Talent tree — three independent paths</h1>
+<span style="font:400 13px/1.4 'Chakra Petch',sans-serif;color:#8a7aa0">21 points per path, 63 total. Each path shares the same skeleton: a 3×3 root grid converges to one trunk, which branches into three limbs that converge again at the capstone. Orbs default to 1pt but can be set higher per orb. Click a lit orb to invest; click the topmost invested orb in a chain to refund it.</span>
+</div>
+
+<div style="position:relative;width:1920px;height:1080px;overflow:hidden;background:#07040c;box-shadow:0 30px 90px rgba(0,0,0,.7);outline:1px solid rgba(200,160,255,.14)">
+
+  <div style="position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 100%,#241736 0%,#150d22 35%,#0a0612 60%,#07040c 90%)"></div>
+  <div style="position:absolute;left:50%;bottom:-10%;width:70%;height:90%;transform:translateX(-50%);background:radial-gradient(50% 50% at 50% 50%,rgba(255,145,69,.14),rgba(255,145,69,0) 70%);filter:blur(40px)"></div>
+  <div style="position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 30%,rgba(0,0,0,0) 45%,rgba(4,4,4,.7) 100%)"></div>
+
+  <div onClick="{{ goBack }}" style="position:absolute;left:56px;top:28px;z-index:4;display:flex;align-items:center;gap:10px;cursor:pointer;transition:transform .12s ease" style-hover="transform:translateX(-3px)">
+    <div style="width:38px;height:38px;border-radius:50%;box-sizing:border-box;border:1px solid rgba(255,145,69,.5);background:linear-gradient(rgba(58,32,20,.9),rgba(30,16,10,.95));box-shadow:0 0 16px rgba(255,140,60,.2),inset 0 1px 0 rgba(255,220,170,.18);display:flex;align-items:center;justify-content:center;font:600 18px/1 'Chakra Petch',sans-serif;color:#ffd9a2">←</div>
+    <div style="font:600 13px/1 'Chakra Petch',sans-serif;letter-spacing:.14em;color:#c8b8de">BACK</div>
+  </div>
+
+  <div style="position:absolute;left:50%;top:28px;transform:translateX(-50%);z-index:4;text-align:center">
+    <div style="font:700 20px/1 'Chakra Petch',sans-serif;letter-spacing:.06em;color:#f6ecff;text-shadow:0 0 20px rgba(255,145,69,.35)">{{ midTitle }}</div>
+  </div>
+
+  <svg viewBox="0 0 1920 1080" style="position:absolute;inset:0;width:100%;height:100%;z-index:1">
+    <sc-for list="{{ edges }}" as="e" hint-placeholder-count="0">
+      <path d="{{ e.d }}" fill="none" stroke="{{ e.glowStroke }}" stroke-width="{{ e.glowWidth }}" stroke-linecap="round" opacity="{{ e.glowOpacity }}"></path>
+      <path d="{{ e.d }}" fill="none" stroke="{{ e.strokeOuter }}" stroke-width="{{ e.widthOuter }}" stroke-linecap="round"></path>
+      <path d="{{ e.d }}" fill="none" stroke="{{ e.strokeInner }}" stroke-width="{{ e.widthInner }}" stroke-linecap="round" stroke-dasharray="{{ e.dash }}" style="{{ e.animStyle }}"></path>
+    </sc-for>
+  </svg>
+
+  <sc-for list="{{ nodes }}" as="n" hint-placeholder-count="0">
+    <div style="{{ n.wrapStyle }}" onClick="{{ n.onClick }}" onMouseEnter="{{ n.onEnter }}" onMouseLeave="{{ onLeave }}">
+      <div style="{{ n.beaconStyle }}"></div>
+      <div style="{{ n.circleStyle }}">
+        <sc-if value="{{ n.invested }}" hint-placeholder-val="{{ false }}">
+          <div style="{{ n.checkStyle }}">✓</div>
+        </sc-if>
+      </div>
+      <div style="{{ n.labelStyle }}">{{ n.name }}</div>
+    </div>
+  </sc-for>
+
+  <div style="position:absolute;left:56px;right:280px;bottom:24px;height:88px;display:flex;align-items:center;gap:16px;padding:0 22px;box-sizing:border-box;border:1px solid rgba(180,150,210,.22);border-radius:6px;background:linear-gradient(rgba(24,16,32,.9),rgba(12,8,16,.92));box-shadow:0 0 30px rgba(0,0,0,.55);z-index:4">
+    <div style="{{ infoCostChipStyle }}">{{ infoCost }}</div>
+    <div style="flex:1;min-width:0">
+      <div style="font:600 16px/1.1 'Chakra Petch',sans-serif;color:#f2e6ff">{{ infoTitle }}<span style="margin-left:10px;font:600 12.5px/1 'Chakra Petch',sans-serif;color:#ff9d52">{{ infoGrant }}</span></div>
+      <div style="margin-top:5px;font:400 12.5px/1.4 'Chakra Petch',sans-serif;color:#a695bc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ infoBody }}</div>
+    </div>
+  </div>
+
+  <div style="position:absolute;right:56px;bottom:24px;width:210px;height:88px;display:flex;flex-direction:column;justify-content:center;gap:8px;z-index:4">
+    <div onClick="{{ respecAll }}" style="display:flex;align-items:center;justify-content:center;height:36px;box-sizing:border-box;border:1px solid rgba(180,150,210,.35);border-radius:4px;background:rgba(20,14,26,.75);font:500 13px/1 'Chakra Petch',sans-serif;letter-spacing:.1em;color:#c8b8de;cursor:pointer;transition:transform .12s ease" style-hover="transform:scale(1.04);color:#e6d8ff">RESPEC ALL</div>
+    <div style="display:flex;align-items:center;justify-content:center;height:40px;box-sizing:border-box;border:1px solid rgba(255,145,69,.5);border-radius:4px;background:linear-gradient(rgba(58,32,20,.9),rgba(30,16,10,.95));font:600 14px/1 'Chakra Petch',sans-serif;letter-spacing:.12em;color:#ffd9a2;box-shadow:0 0 20px rgba(255,140,60,.2),inset 0 1px 0 rgba(255,220,170,.2);cursor:pointer;transition:transform .12s ease" style-hover="transform:scale(1.04)" style-active="transform:scale(.96)">BACK</div>
+  </div>
+
+</div>
+
+<div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:26px;max-width:1920px">
+  <div style="flex:1 1 440px;min-width:380px;padding:22px 24px;border:1px solid rgba(180,150,210,.18);border-radius:8px;background:#0f0a16">
+    <h2 style="margin:0 0 12px;font:600 14px/1 'Chakra Petch',sans-serif;letter-spacing:.1em;color:#e7b25c">STRUCTURE</h2>
+    <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font:400 13.5px/1.6 'Chakra Petch',sans-serif;color:#a695bc">
+      <li>Three paths sit in their own column and never intertwine with each other. Each totals <strong style="color:#d9c8ef">21 points</strong> (63 total) — orbs default to 1pt each but can be set higher per orb, the system supports mixed costs. All three paths share the same skeleton, just with different names and stat grants.</li>
+      <li>Every path starts as a <strong style="color:#d9c8ef">3×3 root grid</strong> — three roots, each climbing three rings — and all nine feed into one <strong style="color:#d9c8ef">first convergence</strong> where the trunk becomes a single point. From there it branches into three limbs (left, center, right) that grow independently, and all three feed into a <strong style="color:#d9c8ef">second convergence at the capstone</strong> — any one limb you finish earns it.</li>
+      <li>The <strong style="color:#ff9d52">glowing orange line</strong> lights up orb-by-orb as you invest — at either convergence, only the road you actually took lights up.</li>
+      <li>Investing needs a prerequisite orb lit (either road, at a convergence) and a point remaining; refunding only works on the topmost invested orb in a chain, same rule Respec All exploits.</li>
+    </ul>
+  </div>
+  <div style="flex:1 1 440px;min-width:380px;padding:22px 24px;border:1px solid rgba(180,150,210,.18);border-radius:8px;background:#0f0a16">
+    <h2 style="margin:0 0 12px;font:600 14px/1 'Chakra Petch',sans-serif;letter-spacing:.1em;color:#e7b25c">FOR THE ENGINE</h2>
+    <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font:400 13.5px/1.6 'Chakra Petch',sans-serif;color:#a695bc">
+      <li>Orb cost is per-node and defaults to 1pt, but the field supports any value — set an individual orb's cost higher and spend/remaining totals adjust automatically.</li>
+      <li>Both convergence orbs — the mid-trunk one and the capstone — list multiple parent orbs ("any one of these"), not a strict single chain, so any completed root or any completed limb unlocks it. The mid-trunk convergence additionally requires 8 points already spent in the path; the capstone requires 20.</li>
+      <li>"Can this be un-invested" is still just "does nothing below it in the chain depend on it" — applied per orb, checked against every orb that lists it as a parent (including all parents of a convergence).</li>
+      <li>Node sizing marks role, not cost: capstone largest, convergence orbs slightly larger — sizing is independent of the orb's point cost.</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const COL_X = [340, 960, 1580];
+const GAP = 57, Y0 = 775;
+const y = (depth) => Y0 - depth * GAP;
+
+function node(id, prereq, dx, depth, kind, name, grant, desc, minSpent, cost) {
+  return { id, prereq, dx, y: y(depth), kind: kind || "normal", name, grant, desc, minSpent: minSpent || 0, cost: cost || 1 };
+}
+
+// ---- VIGOR: early 2-way fork+merge, then a bushy canopy with several short leaf offshoots ----
+const VIGOR = [
+  node("R0", null, 0, 0, "normal", "Hardened Skin", "+8 Max HP", "The trunk begins — three roots run up from here."),
+  node("G1L", "R0", -150, 1, "normal", "Iron Resolve", "+3 DEF", "Left root, first ring."),
+  node("G1C", "R0", 0, 1, "normal", "Stubborn Frame", "+15 HP", "Center root, first ring."),
+  node("G1R", "R0", 150, 1, "normal", "Thick Hide", "+18 HP", "Right root, first ring."),
+  node("G2L", "G1L", -150, 2, "normal", "Stone Ward", "+4 DEF vs bleed", "Left root, second ring."),
+  node("G2C", "G1C", 0, 2, "normal", "Deep Roots", "+15 HP", "Center root, second ring."),
+  node("G2R", "G1R", 150, 2, "normal", "Counterforce", "+8% Counter chance", "Right root, second ring."),
+  node("G3L", "G2L", -150, 3, "normal", "Undying", "+8 DEF", "Left root, third ring."),
+  node("G3C", "G2C", 0, 3, "normal", "Fortified", "+6 DEF", "Center root, third ring."),
+  node("G3R", "G2R", 150, 3, "normal", "Guardian's Will", "+15 HP", "Right root, third ring."),
+  node("CONVERGE", ["G3L", "G3C", "G3R"], 0, 4, "merge", "Bulwark", "+10 DEF, +25 HP", "All three roots gather into one trunk. Requires 8 points already invested.", 8),
+  node("C_L", "CONVERGE", -150, 5, "normal", "Colossus", "+30 HP", "The trunk branches out — left limb."),
+  node("C_C", "CONVERGE", 0, 5, "normal", "Unbroken", "+5 DEF", "The trunk branches out — center limb."),
+  node("C_R", "CONVERGE", 150, 5, "normal", "Juggernaut", "+35 HP", "The trunk branches out — right limb."),
+  node("D_L", "C_L", -200, 6, "normal", "Brace", "+5% dmg reduction", "The left limb climbs on."),
+  node("D_C", "C_C", 0, 6, "normal", "Unyielding", "+8 DEF, ignore 5% Sunder", "The center limb keeps climbing."),
+  node("D_R", "C_R", 200, 6, "normal", "Last Stand", "Immune to knockback", "The right limb climbs on."),
+  node("E_L", "D_L", -200, 7, "normal", "Steel Nerves", "+10% Resist stun", "The left limb nears the top."),
+  node("E_C", "D_C", 0, 7, "normal", "Adrenal Surge", "+8% Counter chance", "The center limb nears the top."),
+  node("E_R", "D_R", 200, 7, "normal", "Second Wind", "+12 HP", "The right limb nears the top."),
+  node("CAP", ["E_L", "E_C", "E_R"], 0, 8, "cap", "Immortal Frame", "+80 Max HP, immune to Sunder", "Capstone. All three limbs converge here. Requires 20 points already invested.", 20)
+];
+
+// ---- FEROCITY: asymmetric triple fork, two arms merge mid-tree, third rejoins later ----
+const FEROCITY = [
+  node("R0", null, 0, 0, "normal", "Sharpened Edge", "+1 ATK", "The trunk begins — three roots run up from here."),
+  node("G1L", "R0", -150, 1, "normal", "Killing Blow", "+2 ATK", "Left root, first ring."),
+  node("G1C", "R0", 0, 1, "normal", "Relentless", "+2 ATK, +3% Crit", "Center root, first ring."),
+  node("G1R", "R0", 150, 1, "normal", "War Fury", "+3% Crit damage", "Right root, first ring."),
+  node("G2L", "G1L", -150, 2, "normal", "Savage Strike", "+2 ATK, bleed chance", "Left root, second ring."),
+  node("G2C", "G1C", 0, 2, "normal", "Death's Edge", "+3 ATK", "Center root, second ring."),
+  node("G2R", "G1R", 150, 2, "normal", "Executioner", "+4 ATK, +5% Crit", "Right root, second ring."),
+  node("G3L", "G2L", -150, 3, "normal", "Bloodletter", "+2 ATK", "Left root, third ring."),
+  node("G3C", "G2C", 0, 3, "normal", "Rising Fury", "+5% Crit vs isolated", "Center root, third ring."),
+  node("G3R", "G2R", 150, 3, "normal", "Ravager", "+4 ATK", "Right root, third ring."),
+  node("CONVERGE", ["G3L", "G3C", "G3R"], 0, 4, "merge", "Bloodlust", "+6 ATK, +8% Crit damage", "All three roots gather into one trunk. Requires 8 points already invested.", 8),
+  node("C_L", "CONVERGE", -150, 5, "normal", "No Mercy", "+3 ATK", "The trunk branches out — left limb."),
+  node("C_C", "CONVERGE", 0, 5, "normal", "Vicious Cycle", "+2 ATK", "The trunk branches out — center limb."),
+  node("C_R", "CONVERGE", 150, 5, "normal", "Bloodrage", "+2 ATK below half HP", "The trunk branches out — right limb."),
+  node("D_L", "C_L", -200, 6, "normal", "Predator's Eye", "+4% Accuracy", "The left limb climbs on."),
+  node("D_C", "C_C", 0, 6, "normal", "Finishing Blow", "+4 ATK", "The center limb keeps climbing."),
+  node("D_R", "C_R", 200, 6, "normal", "Overkill", "+5% dmg vs low HP", "The right limb climbs on."),
+  node("E_L", "D_L", -200, 7, "normal", "Ravenous", "+3 ATK", "The left limb nears the top."),
+  node("E_C", "D_C", 0, 7, "normal", "Precision", "+6% Crit", "The center limb nears the top."),
+  node("E_R", "D_R", 200, 7, "normal", "Killer Instinct", "+5% Crit vs low HP", "The right limb nears the top."),
+  node("CAP", ["E_L", "E_C", "E_R"], 0, 8, "cap", "Reign of Blood", "+15 ATK, +20% Crit, executes below 15% HP", "Capstone. All three limbs converge here. Requires 20 points already invested.", 20)
+];
+
+// ---- CUNNING: two long parallel vines, one late merge, then a quick final fork+merge ----
+const CUNNING = [
+  node("R0", null, 0, 0, "normal", "Light Feet", "+1 SPD", "The trunk begins — three roots run up from here."),
+  node("G1L", "R0", -150, 1, "normal", "Evasive Step", "+3% Evasion", "Left root, first ring."),
+  node("G1C", "R0", 0, 1, "normal", "Quickstep", "+1 SPD", "Center root, first ring."),
+  node("G1R", "R0", 150, 1, "normal", "Shadow Step", "+4% Evasion", "Right root, first ring."),
+  node("G2L", "G1L", -150, 2, "normal", "Vanish", "Stealth on turn start", "Left root, second ring."),
+  node("G2C", "G1C", 0, 2, "normal", "Windwalk", "+1 SPD", "Center root, second ring."),
+  node("G2R", "G1R", 150, 2, "normal", "Nightglide", "+5% Evasion", "Right root, second ring."),
+  node("G3L", "G2L", -150, 3, "normal", "Perfect Timing", "+2 SPD", "Left root, third ring."),
+  node("G3C", "G2C", 0, 3, "normal", "Phantom Stride", "+1 SPD", "Center root, third ring."),
+  node("G3R", "G2R", 150, 3, "normal", "Trickster's Ward", "+8 MP", "Right root, third ring."),
+  node("CONVERGE", ["G3L", "G3C", "G3R"], 0, 4, "merge", "Shadow Bond", "+6% Evasion", "All three roots gather into one trunk. Requires 8 points already invested.", 8),
+  node("C_L", "CONVERGE", -150, 5, "normal", "Silver Tongue", "+5% Item effect", "The trunk branches out — left limb."),
+  node("C_C", "CONVERGE", 0, 5, "normal", "Fortune's Favor", "+5% crit item find", "The trunk branches out — center limb."),
+  node("C_R", "CONVERGE", 150, 5, "normal", "Fleet Mind", "-5% MP cost", "The trunk branches out — right limb."),
+  node("D_L", "C_L", -200, 6, "normal", "Sixth Sense", "+3% Evasion", "The left limb climbs on."),
+  node("D_C", "C_C", 0, 6, "normal", "Quick Hands", "-1 turn item cooldown", "The center limb keeps climbing."),
+  node("D_R", "C_R", 200, 6, "normal", "Lucky Break", "+10% Item MP restore", "The right limb climbs on."),
+  node("E_L", "D_L", -200, 7, "normal", "Opportunist", "+5% Crit vs first strike", "The left limb nears the top."),
+  node("E_C", "D_C", 0, 7, "normal", "Featherlight Step", "+1 SPD", "The center limb nears the top."),
+  node("E_R", "D_R", 200, 7, "normal", "Elusive", "+5% Evasion", "The right limb nears the top."),
+  node("CAP", ["E_L", "E_C", "E_R"], 0, 8, "cap", "Ghost Walk", "+3 SPD, first turn always yours, +12% Evasion", "Capstone. All three limbs converge here. Requires 20 points already invested.", 20)
+];
+
+const PATHS = [
+  { key: "path1", name: "Path 1", list: VIGOR },
+  { key: "path2", name: "Path 2", list: FEROCITY },
+  { key: "path3", name: "Path 3", list: CUNNING }
+];
+
+const TOTAL_PER_PATH = 21;
+const SIZE_BY_KIND = { cap: 40, merge: 34, leaf: 24, normal: 30 };
+
+function edgePath(x1, y1, x2, y2) {
+  const midY = (y1 + y2) / 2;
+  return `M${x1},${y1} C${x1},${midY} ${x2},${midY} ${x2},${y2}`;
+}
+
+class Component extends DCLogic {
+  state = {
+    invested: PATHS.map(() => new Set()),
+    hover: null
+  };
+
+  byId(pi) {
+    if (!this._maps) this._maps = PATHS.map((p) => { const m = {}; p.list.forEach((n) => { m[n.id] = n; }); return m; });
+    return this._maps[pi];
+  }
+  parents(pi, id) { const pr = this.byId(pi)[id].prereq; if (pr === null) return []; return Array.isArray(pr) ? pr : [pr]; }
+  spent(pi) { let s = 0; const map = this.byId(pi); this.state.invested[pi].forEach((id) => { s += map[id].cost; }); return s; }
+  isInvested(pi, id) { return this.state.invested[pi].has(id); }
+  prereqMet(pi, id) { const ps = this.parents(pi, id); return ps.length === 0 ? true : ps.some((p) => this.isInvested(pi, p)); }
+  minSpentMet(pi, id) { return this.spent(pi) >= (this.byId(pi)[id].minSpent || 0); }
+  children(pi, id) { return PATHS[pi].list.filter((n) => this.parents(pi, n.id).includes(id)).map((n) => n.id); }
+  canInvest(pi, id) { const cost = this.byId(pi)[id].cost; return this.prereqMet(pi, id) && this.minSpentMet(pi, id) && !this.isInvested(pi, id) && (TOTAL_PER_PATH - this.spent(pi)) >= cost; }
+  canUninvest(pi, id) { if (!this.isInvested(pi, id)) return false; return this.children(pi, id).every((c) => !this.isInvested(pi, c)); }
+  toggle(pi, id) {
+    if (this.canInvest(pi, id)) {
+      this.setState((s) => { const n = s.invested.map((set, i) => i === pi ? new Set(set) : set); n[pi].add(id); return { invested: n }; });
+    } else if (this.canUninvest(pi, id)) {
+      this.setState((s) => { const n = s.invested.map((set, i) => i === pi ? new Set(set) : set); n[pi].delete(id); return { invested: n }; });
+    }
+  }
+
+  renderVals() {
+    const spentByPath = PATHS.map((_, pi) => this.spent(pi));
+    const totalSpent = spentByPath.reduce((a, b) => a + b, 0);
+    const totalRemaining = 63 - totalSpent;
+
+    const edges = [];
+    const nodes = [];
+    PATHS.forEach((p, pi) => {
+      const cx = COL_X[pi];
+      const map = this.byId(pi);
+      p.list.forEach((nd) => {
+        const x = cx + nd.dx;
+        const invested = this.isInvested(pi, nd.id);
+        this.parents(pi, nd.id).forEach((parentId) => {
+          const parent = map[parentId];
+          const parentInvested = this.isInvested(pi, parentId);
+          const lit = invested && parentInvested;
+          const isMajor = nd.kind === "cap" || nd.kind === "merge";
+          edges.push({
+            d: edgePath(cx + parent.dx, parent.y, x, nd.y),
+            glowStroke: lit ? "#ff9145" : "transparent",
+            glowWidth: isMajor ? 16 : 10,
+            glowOpacity: lit ? (isMajor ? 0.4 : 0.22) : 0,
+            strokeOuter: "#241830", widthOuter: 7,
+            strokeInner: lit ? "#ff9145" : "#3a2c48",
+            widthInner: lit ? (isMajor ? 3.5 : 2.5) : 2,
+            dash: lit ? "" : "2 7",
+            animStyle: lit ? "animation:flow 1.6s linear infinite" : ""
+          });
+        });
+
+        const met = this.prereqMet(pi, nd.id) && this.minSpentMet(pi, nd.id);
+        const remaining = TOTAL_PER_PATH - spentByPath[pi];
+        const affordable = remaining >= nd.cost;
+        const clickable = (met && !invested && affordable) || this.canUninvest(pi, nd.id);
+        const size = SIZE_BY_KIND[nd.kind];
+        let fill, border, opacity = 1;
+        if (invested) { fill = "radial-gradient(circle at 35% 30%,#ff9145,#5a3a18 75%)"; border = "#ff9145"; }
+        else if (met) { fill = "rgba(40,28,54,.9)"; border = affordable ? "#ff9145" : "#5a4c68"; opacity = affordable ? 1 : .75; }
+        else { fill = "rgba(24,18,30,.85)"; border = "rgba(150,130,170,.25)"; opacity = .5; }
+
+        nodes.push({
+          name: nd.name, invested,
+          wrapStyle: `position:absolute;left:${x - size / 2}px;top:${nd.y - size / 2}px;width:${size}px;height:${size + 26}px;cursor:${clickable ? "pointer" : "default"};z-index:2`,
+          beaconStyle: met && !invested ? `position:absolute;left:50%;top:${size / 2}px;width:${size + 18}px;height:${size + 18}px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(50% 50% at 50% 50%,rgba(255,145,69,.25),rgba(255,145,69,0) 70%);animation:beacon 2.2s ease-in-out infinite;pointer-events:none` : "display:none",
+          circleStyle: `position:relative;width:${size}px;height:${size}px;border-radius:50%;box-sizing:border-box;border:${nd.kind === "cap" ? 2.5 : nd.kind === "merge" ? 2 : 1.5}px solid ${border};background:${fill};opacity:${opacity};box-shadow:${invested ? "0 0 14px rgba(255,145,69,.55)" : "none"};display:flex;align-items:center;justify-content:center;transition:transform .12s ease`,
+          checkStyle: `font:700 ${nd.kind === "cap" ? 15 : 11}px/1 'Chakra Petch',sans-serif;color:#2a1a0a;text-shadow:0 1px 0 rgba(255,255,255,.3)`,
+          labelStyle: `position:absolute;left:50%;top:${size + 4}px;width:100px;transform:translateX(-50px);text-align:center;font:${nd.kind === "cap" ? "600 10px" : "500 8.5px"}/1.15 'Chakra Petch',sans-serif;color:${invested ? "#ffe0a8" : met ? "#c8bcd8" : "rgba(150,140,165,.5)"}`,
+          onClick: () => this.toggle(pi, nd.id),
+          onEnter: () => this.setState({ hover: { pi, id: nd.id } })
+        });
+      });
+    });
+
+    const hv = this.state.hover;
+    const hvNode = hv ? this.byId(hv.pi)[hv.id] : null;
+    const infoTitle = hvNode ? hvNode.name : "Hover a talent";
+    const infoGrant = hvNode ? hvNode.grant : "";
+    const infoBody = hvNode ? hvNode.desc : "Click any lit orb to invest a point; the trunk line glows orange as each path fills in.";
+    const infoCost = hvNode ? `${hvNode.cost}pt` : "—";
+    const midTitle = hvNode ? hvNode.name : "TALENT TREE";
+
+    return {
+      totalRemaining,
+      midTitle,
+      totalBarStyle: `width:${Math.max(0, Math.min(100, (totalRemaining / 63) * 100))}%;height:100%;background:linear-gradient(90deg,#ff914555,#ff9145);box-shadow:0 0 10px rgba(255,145,69,.6)`,
+      edges, nodes,
+      infoTitle, infoGrant, infoBody, infoCost,
+      infoCostChipStyle: `min-width:30px;height:30px;padding:0 8px;box-sizing:border-box;border-radius:15px;border:2px solid #ff9145;background:rgba(255,145,69,.13);display:flex;align-items:center;justify-content:center;font:700 13px/1 'Chakra Petch',sans-serif;color:#ff9145;flex-shrink:0`,
+      onLeave: () => {},
+      goBack: () => {},
+      respecAll: () => this.setState({ invested: PATHS.map(() => new Set()) })
+    };
+  }
+}
+
+</script>
+</body>
+</html>

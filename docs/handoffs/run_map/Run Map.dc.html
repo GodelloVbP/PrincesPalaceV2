@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet"><style>body{margin:0;background:#07040c;font-family:'Chakra Petch',system-ui,sans-serif}a{color:#e7b25c}a:hover{color:#ffd48a}@keyframes beacon{0%,100%{opacity:.35;transform:scale(1)}50%{opacity:.85;transform:scale(1.1)}}@keyframes crawl{to{stroke-dashoffset:-40}}@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}[data-map-scroll]::-webkit-scrollbar{display:none}</style></helmet>
+
+<div style="padding:34px 40px 46px;max-width:2020px">
+<div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:18px">
+<span style="font:600 11px ui-monospace,Menlo,monospace;padding:4px 8px;background:#2a1a3c;color:#e8d9ff;border-radius:4px;letter-spacing:.06em">2b</span>
+<h1 style="margin:0;font:600 19px/1.2 'Chakra Petch',sans-serif;color:#f3e9ff;letter-spacing:.02em">Run map — forest floor, room images</h1>
+<span style="font:400 13px/1.4 'Chakra Petch',sans-serif;color:#8a7aa0">Nodes are painted clearings now, not blocks. Every clearing shares the same tree backdrop; a foreground creature or prop tells you the room type. Elite every 8 rooms, boss every 16 — floor loops forever.</span>
+</div>
+
+<div style="position:relative;width:1920px;height:1080px;overflow:hidden;background:#07040c;box-shadow:0 30px 90px rgba(0,0,0,.7);outline:1px solid rgba(200,160,255,.14)">
+
+  <div style="position:absolute;inset:0;background:radial-gradient(130% 100% at 8% 30%,#1e2f18 0%,#16241a 30%,#0d1712 55%,#07040c 90%)"></div>
+  <div style="position:absolute;left:-8%;top:-10%;width:60%;height:120%;background:radial-gradient(50% 50% at 50% 50%,rgba(90,140,60,.22),rgba(40,70,30,.1) 50%,rgba(10,14,8,0) 78%);filter:blur(46px)"></div>
+  <div style="position:absolute;right:-10%;top:20%;width:50%;height:80%;background:radial-gradient(50% 50% at 50% 50%,rgba(120,80,160,.22),rgba(48,16,74,0) 74%);filter:blur(34px)"></div>
+  <div style="position:absolute;inset:0;background:radial-gradient(120% 90% at 40% 50%,rgba(0,0,0,0) 40%,rgba(4,4,4,.72) 100%)"></div>
+
+  <div style="position:absolute;left:56px;top:44px;display:flex;align-items:center;gap:18px;z-index:3">
+    <div style="width:44px;height:44px;transform:rotate(45deg);background:linear-gradient(135deg,#c9e88a,#7fae3f 55%,#3f5f1c);box-shadow:0 0 26px rgba(170,220,110,.4)"></div>
+    <div>
+      <div style="font:700 34px/1 'Chakra Petch',sans-serif;letter-spacing:.1em;color:#f6ecff;text-shadow:0 0 26px rgba(150,200,110,.35)">THE HOLLOW WOOD</div>
+      <div style="margin-top:8px;white-space:nowrap;font:500 15px/1 'Chakra Petch',sans-serif;letter-spacing:.3em;color:#a48fbe">FLOOR 1 · ROOM {{ roomLabel }}</div>
+    </div>
+  </div>
+
+  <div style="position:absolute;right:40px;top:36px;width:380px;height:90px;display:flex;align-items:center;gap:14px;padding:0 20px;box-sizing:border-box;border:1px solid rgba(231,178,92,.4);border-radius:6px;background:linear-gradient(rgba(24,32,20,.86),rgba(12,16,10,.9));box-shadow:0 0 30px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,220,160,.16);z-index:3">
+    <div style="display:flex;align-items:center;gap:10px;flex:1">
+      <div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(#ffe6a0,#c08a2a);box-shadow:0 0 14px rgba(255,205,110,.6)"></div>
+      <span style="font:600 26px/1 'Chakra Petch',sans-serif;color:#ffe0a8">1,240</span>
+    </div>
+    <div style="width:1px;height:44px;background:rgba(231,178,92,.28)"></div>
+    <div style="display:flex;align-items:center;gap:10px;flex:1;justify-content:flex-end">
+      <div style="width:24px;height:24px;transform:rotate(45deg);background:linear-gradient(135deg,#ffb8e6,#a5299b);box-shadow:0 0 14px rgba(230,120,220,.55)"></div>
+      <span style="font:600 26px/1 'Chakra Petch',sans-serif;color:#f3c2ee">7</span>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:56px;top:150px;right:56px;height:3px;background:rgba(140,160,120,.14);z-index:3"></div>
+  <div style="position:absolute;left:56px;top:150px;height:3px;width:{{ progressWidth }};background:linear-gradient(90deg,rgba(231,178,92,.2),#e7b25c);box-shadow:0 0 12px rgba(231,178,92,.6);z-index:3"></div>
+
+  <div ref="{{ mapRef }}" data-map-scroll style="position:absolute;left:0;top:170px;width:1920px;height:820px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none">
+    <div style="position:relative;width:{{ canvasWidth }};height:820px">
+      <svg viewBox="0 0 {{ canvasWidthNum }} 820" style="position:absolute;inset:0;width:100%;height:100%">
+        <sc-for list="{{ edges }}" as="e" hint-placeholder-count="0">
+          <path d="{{ e.dOuter }}" fill="none" stroke="{{ e.strokeOuter }}" stroke-width="{{ e.widthOuter }}" stroke-linecap="round" opacity="{{ e.opacity }}"></path>
+          <path d="{{ e.dInner }}" fill="none" stroke="{{ e.strokeInner }}" stroke-width="{{ e.widthInner }}" stroke-linecap="round" stroke-dasharray="{{ e.dash }}" opacity="{{ e.opacityInner }}" style="{{ e.animStyle }}"></path>
+        </sc-for>
+      </svg>
+
+      <sc-for list="{{ nodes }}" as="n" hint-placeholder-count="0">
+        <div style="{{ n.wrapStyle }}" onClick="{{ n.onClick }}" onMouseEnter="{{ n.onEnter }}" onMouseLeave="{{ n.onLeave }}">
+          <div style="{{ n.beaconStyle }}"></div>
+          <div style="{{ n.filterStyle }}">
+            <div style="{{ n.glowStyle }}"></div>
+            <svg viewBox="0 0 120 150" style="position:relative;width:120px;height:150px;display:block">
+              <ellipse cx="20" cy="68" rx="22" ry="32" fill="#4c7a30"></ellipse>
+              <rect x="14" y="98" width="12" height="42" fill="#5a4022"></rect>
+              <ellipse cx="38" cy="96" rx="11" ry="14" fill="#5a8f38"></ellipse>
+              <rect x="34" y="112" width="8" height="28" fill="#5a4022"></rect>
+              <ellipse cx="56" cy="46" rx="20" ry="26" fill="#5a8f38"></ellipse>
+              <rect x="50" y="64" width="12" height="76" fill="#65481f"></rect>
+              <ellipse cx="96" cy="50" rx="24" ry="28" fill="#4c7a30"></ellipse>
+              <rect x="90" y="72" width="12" height="68" fill="#5a4022"></rect>
+              <ellipse cx="74" cy="106" rx="11" ry="13" fill="#5a8f38"></ellipse>
+              <rect x="70" y="118" width="8" height="22" fill="#5a4022"></rect>
+
+              <sc-if value="{{ n.isForest }}" hint-placeholder-val="{{ false }}">
+                <circle cx="44" cy="90" r="2" fill="#ffe9b0" opacity=".8"></circle>
+                <circle cx="94" cy="100" r="1.6" fill="#ffe9b0" opacity=".6"></circle>
+              </sc-if>
+
+              <sc-if value="{{ n.isMobTier }}" hint-placeholder-val="{{ false }}">
+                <circle cx="68" cy="112" r="{{ n.faceR }}" fill="{{ n.faceFill }}" stroke="{{ n.faceStroke }}" stroke-width="2.4"></circle>
+                <sc-if value="{{ n.spikes3 }}" hint-placeholder-val="{{ false }}">
+                  <polygon points="68,86 63,98 73,98" fill="{{ n.faceStroke }}"></polygon>
+                  <polygon points="50,94 46,104 56,104" fill="{{ n.faceStroke }}"></polygon>
+                  <polygon points="86,94 80,104 90,104" fill="{{ n.faceStroke }}"></polygon>
+                </sc-if>
+                <sc-if value="{{ n.spikes6 }}" hint-placeholder-val="{{ false }}">
+                  <polygon points="68,78 61,96 75,96" fill="{{ n.faceStroke }}"></polygon>
+                  <polygon points="40,104 36,114 46,114" fill="{{ n.faceStroke }}"></polygon>
+                  <polygon points="96,104 92,114 102,114" fill="{{ n.faceStroke }}"></polygon>
+                </sc-if>
+                <line x1="58" y1="110" x2="64" y2="115" stroke="#1a0a0a" stroke-width="2.4"></line>
+                <line x1="78" y1="110" x2="72" y2="115" stroke="#1a0a0a" stroke-width="2.4"></line>
+                <circle cx="63" cy="119" r="{{ n.eyeR }}" fill="{{ n.eyeFill }}"></circle>
+                <circle cx="73" cy="119" r="{{ n.eyeR }}" fill="{{ n.eyeFill }}"></circle>
+                <rect x="61" y="126" width="14" height="6" rx="2" fill="#1a0a0a"></rect>
+              </sc-if>
+
+              <sc-if value="{{ n.isRest }}" hint-placeholder-val="{{ false }}">
+                <circle cx="68" cy="112" r="30" fill="#7ce0d6" opacity=".16"></circle>
+                <rect x="54" y="128" width="28" height="6" rx="3" fill="#4a2e18" transform="rotate(-12 68 131)"></rect>
+                <rect x="54" y="128" width="28" height="6" rx="3" fill="#5a3a20" transform="rotate(14 68 131)"></rect>
+                <path d="M68 96 C60 108 58 120 68 124 C78 120 76 108 68 96 Z" fill="#ffb84a"></path>
+                <path d="M68 106 C64 112 64 118 68 120 C72 118 72 112 68 106 Z" fill="#fff1c4"></path>
+              </sc-if>
+
+              <sc-if value="{{ n.isShop }}" hint-placeholder-val="{{ false }}">
+                <circle cx="68" cy="112" r="30" fill="#e7b25c" opacity=".14"></circle>
+                <path d="M46 100 Q68 82 90 100 Z" fill="#7a4c28" stroke="#e7b25c" stroke-width="2"></path>
+                <rect x="48" y="100" width="40" height="26" rx="5" fill="#5a3a20" stroke="#e7b25c" stroke-width="2"></rect>
+                <circle cx="68" cy="104" r="4" fill="#ffd48a"></circle>
+              </sc-if>
+
+              <sc-if value="{{ n.isEvent }}" hint-placeholder-val="{{ false }}">
+                <circle cx="68" cy="112" r="32" fill="#b48cff" opacity=".18"></circle>
+                <circle cx="68" cy="112" r="20" fill="#3a1f5c" stroke="#b48cff" stroke-width="2"></circle>
+                <path d="M68 100 a12 12 0 1 1 -8 8" stroke="#d8bfff" stroke-width="2.4" fill="none" stroke-linecap="round"></path>
+              </sc-if>
+            </svg>
+          </div>
+          <div style="{{ n.labelStyle }}">{{ n.label }}</div>
+        </div>
+      </sc-for>
+
+      <sc-if value="{{ showFog }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;left:{{ fogX }};top:0;width:260px;height:820px;background:linear-gradient(90deg,rgba(7,4,12,0),rgba(7,4,12,.96));pointer-events:none"></div>
+        <div style="position:absolute;left:{{ fogTextX }};top:340px;width:220px;text-align:center;font:600 13px/1.5 'Chakra Petch',sans-serif;letter-spacing:.16em;color:#6a5c80">THE WOOD<br>CONTINUES</div>
+      </sc-if>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:56px;bottom:44px;width:520px;min-height:132px;padding:20px 22px;box-sizing:border-box;border:1px solid rgba(140,170,110,.22);border-radius:6px;background:linear-gradient(rgba(20,26,16,.9),rgba(10,14,8,.92));box-shadow:0 0 30px rgba(0,0,0,.55);z-index:3">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="{{ infoChipStyle }}"></div>
+      <div style="font:600 20px/1 'Chakra Petch',sans-serif;letter-spacing:.14em;color:#f2e6ff">{{ infoTitle }}</div>
+    </div>
+    <p style="margin:12px 0 0;font:400 14px/1.6 'Chakra Petch',sans-serif;color:#a695bc;text-wrap:pretty">{{ infoBody }}</p>
+  </div>
+
+  <div style="position:absolute;right:56px;bottom:44px;display:flex;flex-direction:column;align-items:flex-end;gap:16px;z-index:3">
+    <div style="display:flex;gap:20px;flex-wrap:wrap;justify-content:flex-end;max-width:740px">
+      <sc-for list="{{ legend }}" as="l" hint-placeholder-count="7">
+        <div style="display:flex;align-items:center;gap:9px">
+          <div style="{{ l.chip }}"></div>
+          <span style="font:500 12px/1 'Chakra Petch',sans-serif;letter-spacing:.14em;color:#8f7fa8">{{ l.name }}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;gap:14px;align-items:center">
+      <div onClick="{{ reset }}" style="display:flex;align-items:center;justify-content:center;width:150px;height:52px;box-sizing:border-box;border:1px solid rgba(180,150,210,.3);border-radius:4px;background:rgba(16,20,12,.7);font:500 15px/1 'Chakra Petch',sans-serif;letter-spacing:.12em;color:#a695bc;cursor:pointer;transition:transform .12s ease" style-hover="transform:scale(1.05);color:#e6d8ff">RESET</div>
+      <div style="display:flex;align-items:center;justify-content:center;width:210px;height:52px;box-sizing:border-box;border:1px solid rgba(231,178,92,.55);border-radius:4px;background:linear-gradient(rgba(78,42,22,.9),rgba(38,18,10,.95));font:600 16px/1 'Chakra Petch',sans-serif;letter-spacing:.14em;color:#ffd9a2;box-shadow:0 0 22px rgba(231,140,60,.24),inset 0 1px 0 rgba(255,220,170,.2);cursor:pointer;transition:transform .12s ease" style-hover="transform:scale(1.05)" style-active="transform:scale(.95)">RETREAT</div>
+    </div>
+  </div>
+
+</div>
+
+<div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:26px;max-width:1920px">
+  <div style="flex:1 1 440px;min-width:380px;padding:22px 24px;border:1px solid rgba(140,170,110,.18);border-radius:8px;background:#0f1410">
+    <h2 style="margin:0 0 12px;font:600 14px/1 'Chakra Petch',sans-serif;letter-spacing:.1em;color:#e7b25c">WHAT CHANGED VS THE BLOCK MAP</h2>
+    <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font:400 13.5px/1.6 'Chakra Petch',sans-serif;color:#a695bc">
+      <li>Every node is now the <strong style="color:#d9c8ef">same painted forest clearing</strong> — five trees, no colour block. Room type reads from a <strong style="color:#d9c8ef">foreground silhouette</strong>: nothing for a plain forest room, a snarling face for a fight, a campfire, a chest, a violet rune.</li>
+      <li>Threat scales the same face: bigger, spikier, angrier for <strong style="color:#d9c8ef">elite</strong>, and a full crown + aura for <strong style="color:#d9c8ef">boss</strong> — one asset family instead of five icons.</li>
+      <li>State (locked / reachable / walked / current) is a <strong style="color:#d9c8ef">CSS-filter tint on the whole tile</strong> — desaturated and dim when closed, full colour and beaconed when open, warm gold-current when you're standing on it. No separate art per state.</li>
+      <li>Edges are a <strong style="color:#d9c8ef">dirt trail</strong>, not a line: a wide brown tread with a lighter dashed centreline, gently curved. Walked = packed gold dirt, open = bright tan, ahead/closed fade into the underbrush.</li>
+      <li>Every 8th room caps the branch as <strong style="color:#d9c8ef">Elite</strong>, every 16th as <strong style="color:#d9c8ef">Boss</strong> — the floor loops; the right edge fades into fog to signal it keeps going.</li>
+    </ul>
+  </div>
+  <div style="flex:1 1 440px;min-width:380px;padding:22px 24px;border:1px solid rgba(140,170,110,.18);border-radius:8px;background:#0f1410">
+    <h2 style="margin:0 0 12px;font:600 14px/1 'Chakra Petch',sans-serif;letter-spacing:.1em;color:#e7b25c">FOR THE ENGINE</h2>
+    <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font:400 13.5px/1.6 'Chakra Petch',sans-serif;color:#a695bc">
+      <li>One backdrop sprite (<code style="color:#d9c8ef">clearing_forest</code>, 120×150) shared by every node. Foreground overlay is a second sprite from a small set: <code style="color:#d9c8ef">mob_face</code>, <code style="color:#d9c8ef">elite_face</code>, <code style="color:#d9c8ef">boss_face</code>, <code style="color:#d9c8ef">campfire</code>, <code style="color:#d9c8ef">chest</code>, <code style="color:#d9c8ef">rune</code>; plain forest rooms use none.</li>
+      <li>Room state is a material tint/desaturation pass on the whole node prefab, not separate art: closed ≈ 50% grey + 55% brightness, ahead ≈ 85% brightness, open = full colour + pulsing halo sprite, current = +20% brightness and gold rim glow.</li>
+      <li>Trail is a 9-sliced or spline-rendered ribbon (wide brown base + tan dashed tread strip) following the same control points as today's edge lines — swap the straight <code style="color:#d9c8ef">Image</code> quad for a <code style="color:#d9c8ef">LineRenderer</code>/spline with a dirt texture and it inherits all current state colouring.</li>
+      <li>Cadence rule: <code style="color:#d9c8ef">roomIndex % 16 === 0 → boss</code>, else <code style="color:#d9c8ef">roomIndex % 8 === 0 → elite</code>, else roll forest/mob/rest/shop/event. This map shows two cycles (rooms 1–16); the map generator repeats the pattern indefinitely and the view just scrolls.</li>
+    </ul>
+  </div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:2020}}">
+const TYPES = {
+  forest: { name: "FOREST GLADE", accent: "#7fc25a", desc: "Quiet passage. Nothing waits here — catch your breath." },
+  mob:    { name: "PROWLER",      accent: "#e0596a", desc: "A standard foe. Gold and a shot at a common relic." },
+  elite:  { name: "ELITE BEAST",  accent: "#ff6f4a", desc: "Named and nasty. Hits harder, drops a guaranteed relic." },
+  boss:   { name: "THE WARDEN",   accent: "#ff9a4a", desc: "The way on. Clearing it ends the floor and banks your haul." },
+  rest:   { name: "CAMPFIRE",     accent: "#7ce0d6", desc: "Heal, or forge a relic instead. You cannot do both." },
+  shop:   { name: "TRADER'S CHEST", accent: "#e7b25c", desc: "Spend gold mid-run. Stock rerolls once per visit." },
+  event:  { name: "OLD SHRINE",   accent: "#b48cff", desc: "A choice with no combat. Outcomes are not always kind." }
+};
+
+const CXf = (d) => 170 + d * 230;
+const CYf = (r) => 420 + r * 88;
+
+const GRAPH = {
+  a1: { d: 0, r: 0, t: "forest", to: ["b1", "b2", "b3"] },
+  b1: { d: 1, r: -2, t: "mob", to: ["c1", "c2"] },
+  b2: { d: 1, r: 0, t: "forest", to: ["c2", "c3"] },
+  b3: { d: 1, r: 2, t: "mob", to: ["c3", "c4"] },
+  c1: { d: 2, r: -3, t: "shop", to: ["d1"] },
+  c2: { d: 2, r: -1, t: "mob", to: ["d1", "d2"] },
+  c3: { d: 2, r: 1, t: "event", to: ["d2", "d3"] },
+  c4: { d: 2, r: 3, t: "rest", to: ["d3"] },
+  d1: { d: 3, r: -2, t: "mob", to: ["e1", "e2"] },
+  d2: { d: 3, r: 0, t: "rest", to: ["e2"] },
+  d3: { d: 3, r: 2, t: "forest", to: ["e2", "e3"] },
+  e1: { d: 4, r: -3, t: "event", to: ["f1"] },
+  e2: { d: 4, r: 0, t: "mob", to: ["f1", "f2"] },
+  e3: { d: 4, r: 2, t: "shop", to: ["f2"] },
+  f1: { d: 5, r: -1, t: "forest", to: ["cap1"] },
+  f2: { d: 5, r: 1, t: "mob", to: ["cap1"] },
+  cap1: { d: 6, r: 0, t: "elite", to: ["g1", "g2", "g3"] },
+  g1: { d: 7, r: -2, t: "mob", to: ["h1", "h2"] },
+  g2: { d: 7, r: 0, t: "forest", to: ["h2", "h3"] },
+  g3: { d: 7, r: 2, t: "rest", to: ["h3", "h4"] },
+  h1: { d: 8, r: -3, t: "shop", to: ["i1"] },
+  h2: { d: 8, r: -1, t: "mob", to: ["i1", "i2"] },
+  h3: { d: 8, r: 1, t: "event", to: ["i2", "i3"] },
+  h4: { d: 8, r: 3, t: "mob", to: ["i3"] },
+  i1: { d: 9, r: -2, t: "rest", to: ["j1", "j2"] },
+  i2: { d: 9, r: 0, t: "mob", to: ["j2"] },
+  i3: { d: 9, r: 2, t: "forest", to: ["j2", "j3"] },
+  j1: { d: 10, r: -3, t: "event", to: ["k1"] },
+  j2: { d: 10, r: 0, t: "mob", to: ["k1", "k2"] },
+  j3: { d: 10, r: 2, t: "shop", to: ["k2"] },
+  k1: { d: 11, r: -1, t: "forest", to: ["cap2"] },
+  k2: { d: 11, r: 1, t: "mob", to: ["cap2"] },
+  cap2: { d: 12, r: 0, t: "boss", to: [] }
+};
+
+const MAXD = 12;
+
+function edgePath(x1, y1, x2, y2, seed) {
+  const dx = x2 - x1;
+  const j = ((seed * 37) % 17) - 8;
+  return `M${x1},${y1} C${x1 + dx * 0.35},${y1 + j} ${x2 - dx * 0.35},${y2 - j} ${x2},${y2}`;
+}
+
+class Component extends DCLogic {
+  state = { path: ["a1"], hover: null };
+  mapRef = React.createRef();
+
+  move(id) {
+    const cur = this.state.path[this.state.path.length - 1];
+    if (!GRAPH[cur].to.includes(id)) return;
+    this.setState((s) => ({ path: s.path.concat([id]) }));
+  }
+
+  reach(from) {
+    const seen = new Set();
+    const stack = [...GRAPH[from].to];
+    while (stack.length) {
+      const id = stack.pop();
+      if (seen.has(id)) continue;
+      seen.add(id);
+      for (const nx of GRAPH[id].to) stack.push(nx);
+    }
+    return seen;
+  }
+
+  componentDidUpdate() {
+    const el = this.mapRef.current;
+    if (!el) return;
+    const cur = this.state.path[this.state.path.length - 1];
+    const x = CXf(GRAPH[cur].d);
+    el.scrollTo({ left: Math.max(0, x - 700), behavior: "smooth" });
+  }
+
+  renderVals() {
+    const path = this.state.path;
+    const cur = path[path.length - 1];
+    const walked = new Set(path);
+    const open = new Set(GRAPH[cur].to);
+    const ahead = this.reach(cur);
+    const stateOf = (id) =>
+      id === cur ? "current" : walked.has(id) ? "walked" : open.has(id) ? "open" : ahead.has(id) ? "ahead" : "closed";
+
+    const nodes = Object.keys(GRAPH).map((id) => {
+      const g = GRAPH[id];
+      const ty = TYPES[g.t];
+      const st = stateOf(id);
+      const clickable = st === "open";
+      const tier = g.t === "boss" ? "boss" : g.t === "elite" ? "elite" : g.t === "mob" ? "mob" : null;
+      const scale = tier === "boss" ? 1.4 : tier === "elite" ? 1.16 : 1;
+      const x = CXf(g.d) - 60 * scale;
+      const y = CYf(g.r) - 118 * scale;
+
+      let filter = "none", opacity = 1, ringGlow = "";
+      if (st === "current") { filter = "brightness(1.22) saturate(1.1)"; ringGlow = "drop-shadow(0 0 26px rgba(255,214,140,.85))"; }
+      else if (st === "walked") { filter = "brightness(.9) sepia(.22)"; opacity = .95; }
+      else if (st === "open") { filter = "none"; }
+      else if (st === "ahead") { filter = "grayscale(.25) brightness(.8)"; opacity = .8; }
+      else { filter = "grayscale(.6) brightness(.5)"; opacity = .55; }
+
+      return {
+        id,
+        label: ty.name + (id === "cap1" ? " · ROOM 8" : id === "cap2" ? " · ROOM 16" : ""),
+        isForest: g.t === "forest",
+        isMobTier: tier !== null,
+        isRest: g.t === "rest",
+        isShop: g.t === "shop",
+        isEvent: g.t === "event",
+        faceFill: tier === "boss" ? "#3a0f16" : tier === "elite" ? "#5a1420" : "#7a2230",
+        faceStroke: tier === "boss" ? "#ffb84a" : tier === "elite" ? "#ffd48a" : "#e7b25c",
+        faceR: tier === "boss" ? 24 : tier === "elite" ? 20 : 16,
+        eyeR: tier === "boss" ? 3.6 : tier === "elite" ? 3 : 2.6,
+        eyeFill: tier === "mob" ? "#1a0a0a" : "#ffd48a",
+        spikes3: tier === "elite",
+        spikes6: tier === "boss",
+        wrapStyle: `position:absolute;left:${x}px;top:${y}px;width:${120 * scale}px;height:${150 * scale}px;cursor:${clickable ? "pointer" : "default"};transition:transform .12s ease`,
+        beaconStyle: st === "open"
+          ? `position:absolute;left:50%;top:82%;width:${140 * scale}px;height:${100 * scale}px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(50% 50% at 50% 50%,${ty.accent}44,${ty.accent}00 68%);animation:beacon 2.4s ease-in-out infinite;pointer-events:none`
+          : "display:none",
+        filterStyle: `position:relative;width:100%;height:100%;filter:${filter} ${ringGlow};opacity:${opacity};transform:scale(${scale});transform-origin:bottom center`,
+        glowStyle: `position:absolute;left:50%;bottom:6px;width:92px;height:26px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(50% 50% at 50% 50%,${ty.accent}55,${ty.accent}00 72%)`,
+        labelStyle: `position:absolute;left:50%;bottom:-20px;transform:translateX(-50%);white-space:nowrap;font:500 11px/1 'Chakra Petch',sans-serif;letter-spacing:.14em;color:${st === "closed" ? "rgba(140,150,130,.35)" : st === "current" ? "#ffe0a8" : "rgba(200,214,190,.75)"}`,
+        onClick: clickable ? () => this.move(id) : null,
+        onEnter: () => this.setState({ hover: id }),
+        onLeave: () => this.setState({ hover: null })
+      };
+    });
+
+    const edges = [];
+    let seed = 0;
+    for (const from of Object.keys(GRAPH)) {
+      for (const to of GRAPH[from].to) {
+        seed++;
+        const i = path.indexOf(from);
+        const taken = i >= 0 && path[i + 1] === to;
+        const isOpen = from === cur;
+        const live = ahead.has(from);
+        const x1 = CXf(GRAPH[from].d), y1 = CYf(GRAPH[from].r) + 24;
+        const x2 = CXf(GRAPH[to].d), y2 = CYf(GRAPH[to].r) + 24;
+        let strokeOuter = "#241812", widthOuter = 6, strokeInner = "#000", widthInner = 0, dash = "", opacity = .3, opacityInner = 0, animStyle = "";
+        if (taken) { strokeOuter = "#4a2e18"; widthOuter = 16; strokeInner = "#e7b25c"; widthInner = 5; dash = "3 9"; opacity = 1; opacityInner = .9; }
+        else if (isOpen) { strokeOuter = "#5a3a22"; widthOuter = 14; strokeInner = "#f0dcae"; widthInner = 4; dash = "2 10"; opacity = .95; opacityInner = .85; animStyle = "animation:crawl 1.4s linear infinite"; }
+        else if (live) { strokeOuter = "#3a2416"; widthOuter = 10; strokeInner = "#8a6a48"; widthInner = 2; dash = "2 12"; opacity = .55; opacityInner = .5; }
+        edges.push({
+          dOuter: edgePath(x1, y1, x2, y2, seed),
+          dInner: edgePath(x1, y1, x2, y2, seed),
+          strokeOuter, widthOuter, strokeInner, widthInner, dash, opacity, opacityInner, animStyle
+        });
+      }
+    }
+
+    const infoId = this.state.hover || cur;
+    const ig = GRAPH[infoId];
+    const ity = TYPES[ig.t];
+    const ist = stateOf(infoId);
+    const prefix = ist === "current" ? "YOU ARE HERE · " : ist === "walked" ? "CLEARED · " : ist === "open" ? "" : ist === "ahead" ? "AHEAD · " : "UNREACHABLE · ";
+
+    return {
+      nodes,
+      edges,
+      canvasWidth: `${170 + MAXD * 230 + 500}px`,
+      canvasWidthNum: 170 + MAXD * 230 + 500,
+      roomLabel: `${GRAPH[cur].d + 1} / 16+`,
+      progressWidth: `${Math.round((Math.min(GRAPH[cur].d, MAXD) / MAXD) * 1808)}px`,
+      infoTitle: prefix + ity.name,
+      infoBody: ist === "closed" ? ity.desc + " You passed the fork that led here." : ity.desc,
+      infoChipStyle: `width:30px;height:30px;box-sizing:border-box;border:2px solid ${ity.accent};background:${ity.accent}22;box-shadow:0 0 18px ${ity.accent}55`,
+      legend: ["forest", "mob", "elite", "rest", "shop", "event", "boss"].map((k) => ({
+        name: TYPES[k].name,
+        chip: `width:14px;height:14px;border-radius:50%;box-sizing:border-box;border:2px solid ${TYPES[k].accent};background:${TYPES[k].accent}22`
+      })),
+      showFog: true,
+      fogX: `${170 + MAXD * 230 + 240}px`,
+      fogTextX: `${170 + MAXD * 230 + 260}px`,
+      mapRef: this.mapRef,
+      reset: () => this.setState({ path: ["a1"], hover: null })
+    };
+  }
+}
+
+</script>
+</body>
+</html>

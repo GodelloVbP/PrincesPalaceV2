@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dace2591de5ca4247a661c0479d541c1, type: 3}
+  m_Name: wail
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SkillDefinition
+  id: wail
+  displayName: Wail
+  description: A sound nothing in the room wants to swing through.
+  characterId: sheep
+  unlockLevel: 999
+  effect: 9
+  targeting: 3
+  manaCost: 0
+  resourceCost: 10
+  spendsAllResource: 0
+  power: 0
+  flatAmount: 0
+  ignoresDefense: 0
+  damageInstances: []
+  vfxPath: 
+  vfxSeconds: 0.6
+  vfxImpactFrame: 3
+  sfxPath: 
+  appliesStatus: 2
+  hasStatus: 1
+  statusMagnitude: 50
+  statusDuration: 2
+  requirements:
+    strength: 0
+    dexterity: 0
+    constitution: 0
+    wisdom: 0
+    intelligence: 0
+    charisma: 0
+  scalingAxis: 0
+  queuePushSlots: 0
+  transform:
+    displayName: 
+    turns: 0
+    attackPercent: 0
+    speedPercent: 0
+    temporaryHealthPercent: 0
+    splashPercent: 0
+  sortOrder: 25

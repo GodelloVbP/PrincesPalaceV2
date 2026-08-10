@@ -1,0 +1,4372 @@
+{
+  "talents": [
+    {
+      "id": "sheep_ram_root",
+      "characterId": "sheep",
+      "displayName": "The Black Ram",
+      "column": 0,
+      "row": 0,
+      "description": "Your allegiance. He gains wool from being hit, and gains it faster the worse the day is going. Free -- but you may swear to only one path's engine at a time, and respeccing is the only way to change your mind.",
+      "effects": [
+        {
+          "type": "WoolOnHitTaken",
+          "magnitude": 1
+        },
+        {
+          "type": "WoolPerTurnBelowHealth",
+          "magnitude": 2,
+          "threshold": 67
+        },
+        {
+          "type": "WoolPerTurnBelowHealth",
+          "magnitude": 3,
+          "threshold": 33
+        }
+      ]
+    },
+    {
+      "id": "sheep_ram_horns_1",
+      "characterId": "sheep",
+      "displayName": "Sharp Horns",
+      "column": 0,
+      "row": 1,
+      "description": "Attacks ignore a quarter of what the target is hiding behind.",
+      "prerequisites": [
+        "sheep_ram_root"
+      ],
+      "effects": [
+        {
+          "type": "IgnoreDefensePercent",
+          "magnitude": 25
+        }
+      ]
+    },
+    {
+      "id": "sheep_ram_horns_2",
+      "characterId": "sheep",
+      "displayName": "Honed Horns",
+      "column": 0,
+      "row": 4,
+      "description": "Half, now.",
+      "prerequisites": [
+        "sheep_ram_horns_1"
+      ],
+      "effects": [
+        {
+          "type": "IgnoreDefensePercent",
+          "magnitude": 50
+        }
+      ]
+    },
+    {
+      "id": "sheep_ram_horns_3",
+      "characterId": "sheep",
+      "displayName": "Splintering Charge",
+      "column": 0,
+      "row": 7,
+      "description": "Every hit takes a piece of their guard with it, for the rest of the fight, and it stacks. Soften the wall and the whole squad walks through it.",
+      "prerequisites": [
+        "sheep_ram_horns_2"
+      ],
+      "effects": [
+        {
+          "type": "ShredDefenseOnHit",
+          "magnitude": 2
+        }
+      ]
+    },
+    {
+      "id": "sheep_ram_provoke_1",
+      "characterId": "sheep",
+      "displayName": "Provoke",
+      "column": 0,
+      "row": 2,
+      "description": "Unlocks Provoke: one enemy can see nothing but you on its next turn.",
+      "prerequisites": [
+        "sheep_ram_root"
+      ],
+      "grantsSkillId": "provoke"
+    },
+    {
+      "id": "sheep_ram_provoke_2",
+      "characterId": "sheep",
+      "displayName": "Draw the Blow",
+      "column": 0,
+      "row": 5,
+      "description": "A goaded enemy swings wide. They hit you a fifth softer.",
+      "prerequisites": [
+        "sheep_ram_provoke_1"
+      ],
+      "effects": [
+        {
+          "type": "ProvokedDamageReductionPercent",
+          "magnitude": 20
+        }
+      ]
+    },
+    {
+      "id": "sheep_ram_provoke_3",
+      "characterId": "sheep",
+      "displayName": "All of You, Then",
+      "column": 0,
+      "row": 8,
+      "description": "Provoke takes the whole room, and every enemy fixed on you feeds the fleece. The engine comes fully online at about the moment the transform does.",
+      "prerequisites": [
+        "sheep_ram_provoke_2"
+      ],
+      "effects": [
+        {
+          "type": "ProvokeHitsEveryEnemy"
+        },
+        {
+          "type": "WoolPerProvokedEnemy",
+          "magnitude": 1
+        }
+      ]
+    },
+    {
+      "id": "sheep_ram_trample_1",
+      "characterId": "sheep",
+      "displayName": "Trample",
+      "column": 0,
+      "row": 3,
+      "description": "A quarter more damage into anything already on its way down.",
+      "prerequisites": [
+        "sheep_ram_root"
+      ],
+      "effects": [
+        {
+          "type": "ExecuteDamageBonusPercent",
+          "magnitude": 25,
+          "threshold": 30
+        }
+      ]
+    },
+    {
+      "id": "sheep_ram_trample_2",
+      "characterId": "sheep",
+      "displayName": "Wreckage",
+      "column": 0,
+      "row": 6,
+      "description": "A kill throws half your weight into whoever was standing next to it.",
+      "prerequisites": [
+        "sheep_ram_trample_1"
+      ],
+      "effects": [
+        {
+          "type": "KillSplashPercentOfAttack",
+          "magnitude": 50
+        }
+      ]
+    },
+    {
+      "id": "sheep_ram_trample_3",
+      "characterId": "sheep",
+      "displayName": "Momentum",
+      "column": 0,
+      "row": 9,
+      "description": "A kill does not cost you the turn. Once per turn -- he is heavy, not infinite.",
+      "prerequisites": [
+        "sheep_ram_trample_2"
+      ],
+      "effects": [
+        {
+          "type": "ExtraAttackOnKill",
+          "magnitude": 1
+        }
+      ]
+    },
+    {
+      "id": "sheep_ram_converge",
+      "characterId": "sheep",
+      "displayName": "Black Ram Mode",
+      "column": 0,
+      "row": 10,
+      "description": "The three roots gather. Unlocks the transform: 7 wool for three turns of splash, weight and speed, plus temporary health that leaves again when it does. Free, but it wants 9 embers spent in this path first.",
+      "prerequisites": [
+        "sheep_ram_horns_3",
+        "sheep_ram_provoke_3",
+        "sheep_ram_trample_3"
+      ],
+      "minSpent": 9,
+      "grantsSkillId": "black_ram_mode"
+    },
+    {
+      "id": "sheep_ram_wrath_1",
+      "characterId": "sheep",
+      "displayName": "Wrath",
+      "column": 0,
+      "row": 11,
+      "description": "Four turns of it instead of three.",
+      "prerequisites": [
+        "sheep_ram_converge"
+      ],
+      "effects": [
+        {
+          "type": "TransformDurationBonus",
+          "magnitude": 1
+        }
+      ]
+    },
+    {
+      "id": "sheep_ram_wrath_2",
+      "characterId": "sheep",
+      "displayName": "Fed on Blood",
+      "column": 0,
+      "row": 14,
+      "description": "Every kill buys another turn of it, up to three.",
+      "prerequisites": [
+        "sheep_ram_wrath_1"
+      ],
+      "effects": [
+        {
+          "type": "TransformExtendOnKill",
+          "magnitude": 1,
+          "threshold": 3
+        }
+      ]
+    },
+    {
+      "id": "sheep_ram_wrath_3",
+      "characterId": "sheep",
+      "displayName": "No Way Back",
+      "column": 0,
+      "row": 17,
+      "description": "Below a third health the timer simply stops running. Played right, the transform is no longer a timer at all.",
+      "prerequisites": [
+        "sheep_ram_wrath_2"
+      ],
+      "effects": [
+        {
+          "type": "TransformHoldsBelowHealth",
+          "threshold": 33
+        }
+      ]
+    },
+    {
+      "id": "sheep_ram_stand_1",
+      "characterId": "sheep",
+      "displayName": "Last Stand",
+      "column": 0,
+      "row": 12,
+      "description": "A quarter more armour once you are under half.",
+      "prerequisites": [
+        "sheep_ram_converge"
+      ],
+      "effects": [
+        {
+          "type": "DefenseBonusPercentBelowHealth",
+          "magnitude": 25,
+          "threshold": 50
+        }
+      ]
+    },
+    {
+      "id": "sheep_ram_stand_2",
+      "characterId": "sheep",
+      "displayName": "Unflinching",
+      "column": 0,
+      "row": 15,
+      "description": "Under a quarter health, nothing lands for more than a quarter of your maximum. No single blow ends it.",
+      "prerequisites": [
+        "sheep_ram_stand_1"
+      ],
+      "effects": [
+        {
+          "type": "DamageCapPercentBelowHealth",
+          "magnitude": 25,
+          "threshold": 25
+        }
+      ]
+    },
+    {
+      "id": "sheep_ram_stand_3",
+      "characterId": "sheep",
+      "displayName": "Not Yet",
+      "column": 0,
+      "row": 18,
+      "description": "Once a fight, the hit that would put him down leaves him standing on 1.",
+      "prerequisites": [
+        "sheep_ram_stand_2"
+      ],
+      "effects": [
+        {
+          "type": "CheatDeathOncePerFight"
+        }
+      ]
+    },
+    {
+      "id": "sheep_ram_charge_1",
+      "characterId": "sheep",
+      "displayName": "Charge",
+      "column": 0,
+      "row": 13,
+      "description": "Unlocks Headbutt: a swing that also knocks the target a place down the order.",
+      "prerequisites": [
+        "sheep_ram_converge"
+      ],
+      "grantsSkillId": "headbutt"
+    },
+    {
+      "id": "sheep_ram_charge_2",
+      "characterId": "sheep",
+      "displayName": "Concussive",
+      "column": 0,
+      "row": 16,
+      "description": "The shove does not delay what they were winding up. It takes it.",
+      "prerequisites": [
+        "sheep_ram_charge_1"
+      ],
+      "effects": [
+        {
+          "type": "HeadbuttCancelsIntent"
+        }
+      ]
+    },
+    {
+      "id": "sheep_ram_charge_3",
+      "characterId": "sheep",
+      "displayName": "Stampede",
+      "column": 0,
+      "row": 19,
+      "description": "Becoming the ram drives the entire enemy line back a place.",
+      "prerequisites": [
+        "sheep_ram_charge_2"
+      ],
+      "effects": [
+        {
+          "type": "TransformPushesEveryEnemy"
+        }
+      ]
+    },
+    {
+      "id": "sheep_ram_cap",
+      "characterId": "sheep",
+      "displayName": "What He Is Now",
+      "column": 0,
+      "row": 20,
+      "description": "Below a quarter health the transformation stops being a button. Free, gated at 20 embers spent in this path.",
+      "prerequisites": [
+        "sheep_ram_wrath_3",
+        "sheep_ram_stand_3",
+        "sheep_ram_charge_3"
+      ],
+      "minSpent": 20,
+      "effects": [
+        {
+          "type": "TransformPermanentBelowHealth",
+          "threshold": 25
+        }
+      ]
+    },
+    {
+      "id": "fly_endurance_r0",
+      "characterId": "fly",
+      "displayName": "Hardened Skin",
+      "column": 0,
+      "row": 0,
+      "description": "The trunk begins -- three roots run up from here.",
+      "statBonus": {
+        "maxHealth": 8
+      }
+    },
+    {
+      "id": "fly_endurance_g1l",
+      "characterId": "fly",
+      "displayName": "Iron Resolve",
+      "column": 0,
+      "row": 1,
+      "description": "Left root, first ring.",
+      "statBonus": {
+        "defense": 3
+      },
+      "prerequisites": [
+        "fly_endurance_r0"
+      ]
+    },
+    {
+      "id": "fly_endurance_g1c",
+      "characterId": "fly",
+      "displayName": "Stubborn Frame",
+      "column": 0,
+      "row": 2,
+      "description": "Center root, first ring.",
+      "statBonus": {
+        "maxHealth": 15
+      },
+      "prerequisites": [
+        "fly_endurance_r0"
+      ]
+    },
+    {
+      "id": "fly_endurance_g1r",
+      "characterId": "fly",
+      "displayName": "Thick Hide",
+      "column": 0,
+      "row": 3,
+      "description": "Right root, first ring.",
+      "statBonus": {
+        "maxHealth": 18
+      },
+      "prerequisites": [
+        "fly_endurance_r0"
+      ]
+    },
+    {
+      "id": "fly_endurance_g2l",
+      "characterId": "fly",
+      "displayName": "Stone Ward",
+      "column": 0,
+      "row": 4,
+      "description": "Left root, second ring.",
+      "statBonus": {
+        "defense": 4
+      },
+      "prerequisites": [
+        "fly_endurance_g1l"
+      ]
+    },
+    {
+      "id": "fly_endurance_g2c",
+      "characterId": "fly",
+      "displayName": "Deep Roots",
+      "column": 0,
+      "row": 5,
+      "description": "Center root, second ring.",
+      "statBonus": {
+        "maxHealth": 15
+      },
+      "abilityScoreBonus": {
+        "strength": 1
+      },
+      "prerequisites": [
+        "fly_endurance_g1c"
+      ]
+    },
+    {
+      "id": "fly_endurance_g2r",
+      "characterId": "fly",
+      "displayName": "Counterforce",
+      "column": 0,
+      "row": 6,
+      "description": "Right root, second ring.",
+      "statBonus": {
+        "defense": 2
+      },
+      "prerequisites": [
+        "fly_endurance_g1r"
+      ]
+    },
+    {
+      "id": "fly_endurance_g3l",
+      "characterId": "fly",
+      "displayName": "Undying",
+      "column": 0,
+      "row": 7,
+      "description": "Left root, third ring.",
+      "statBonus": {
+        "defense": 8
+      },
+      "prerequisites": [
+        "fly_endurance_g2l"
+      ]
+    },
+    {
+      "id": "fly_endurance_g3c",
+      "characterId": "fly",
+      "displayName": "Fortified",
+      "column": 0,
+      "row": 8,
+      "description": "Center root, third ring.",
+      "statBonus": {
+        "defense": 6
+      },
+      "prerequisites": [
+        "fly_endurance_g2c"
+      ]
+    },
+    {
+      "id": "fly_endurance_g3r",
+      "characterId": "fly",
+      "displayName": "Guardian's Will",
+      "column": 0,
+      "row": 9,
+      "description": "Right root, third ring.",
+      "statBonus": {
+        "maxHealth": 15
+      },
+      "prerequisites": [
+        "fly_endurance_g2r"
+      ]
+    },
+    {
+      "id": "fly_endurance_converge",
+      "characterId": "fly",
+      "displayName": "Bulwark",
+      "column": 0,
+      "row": 10,
+      "description": "All three roots gather into one trunk. Requires 9 embers already invested.",
+      "statBonus": {
+        "defense": 10
+      },
+      "prerequisites": [
+        "fly_endurance_g3l",
+        "fly_endurance_g3c",
+        "fly_endurance_g3r"
+      ],
+      "minSpent": 9
+    },
+    {
+      "id": "fly_endurance_c_l",
+      "characterId": "fly",
+      "displayName": "Colossus",
+      "column": 0,
+      "row": 11,
+      "description": "The trunk branches out -- left limb.",
+      "statBonus": {
+        "maxHealth": 30
+      },
+      "prerequisites": [
+        "fly_endurance_converge"
+      ]
+    },
+    {
+      "id": "fly_endurance_c_c",
+      "characterId": "fly",
+      "displayName": "Unbroken",
+      "column": 0,
+      "row": 12,
+      "description": "The trunk branches out -- center limb.",
+      "statBonus": {
+        "defense": 5
+      },
+      "prerequisites": [
+        "fly_endurance_converge"
+      ]
+    },
+    {
+      "id": "fly_endurance_c_r",
+      "characterId": "fly",
+      "displayName": "Juggernaut",
+      "column": 0,
+      "row": 13,
+      "description": "The trunk branches out -- right limb.",
+      "statBonus": {
+        "maxHealth": 35
+      },
+      "prerequisites": [
+        "fly_endurance_converge"
+      ]
+    },
+    {
+      "id": "fly_endurance_d_l",
+      "characterId": "fly",
+      "displayName": "Brace",
+      "column": 0,
+      "row": 14,
+      "description": "The left limb climbs on.",
+      "statBonus": {
+        "defense": 2
+      },
+      "prerequisites": [
+        "fly_endurance_c_l"
+      ]
+    },
+    {
+      "id": "fly_endurance_d_c",
+      "characterId": "fly",
+      "displayName": "Unyielding",
+      "column": 0,
+      "row": 15,
+      "description": "The center limb keeps climbing.",
+      "statBonus": {
+        "defense": 8
+      },
+      "prerequisites": [
+        "fly_endurance_c_c"
+      ]
+    },
+    {
+      "id": "fly_endurance_d_r",
+      "characterId": "fly",
+      "displayName": "Last Stand",
+      "column": 0,
+      "row": 16,
+      "description": "The right limb climbs on.",
+      "statBonus": {
+        "defense": 2
+      },
+      "prerequisites": [
+        "fly_endurance_c_r"
+      ]
+    },
+    {
+      "id": "fly_endurance_e_l",
+      "characterId": "fly",
+      "displayName": "Steel Nerves",
+      "column": 0,
+      "row": 17,
+      "description": "The left limb nears the top.",
+      "statBonus": {
+        "defense": 2
+      },
+      "prerequisites": [
+        "fly_endurance_d_l"
+      ]
+    },
+    {
+      "id": "fly_endurance_e_c",
+      "characterId": "fly",
+      "displayName": "Adrenal Surge",
+      "column": 0,
+      "row": 18,
+      "description": "The center limb nears the top.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "fly_endurance_d_c"
+      ]
+    },
+    {
+      "id": "fly_endurance_e_r",
+      "characterId": "fly",
+      "displayName": "Second Wind",
+      "column": 0,
+      "row": 19,
+      "description": "The right limb nears the top.",
+      "statBonus": {
+        "maxHealth": 12
+      },
+      "prerequisites": [
+        "fly_endurance_d_r"
+      ]
+    },
+    {
+      "id": "fly_endurance_cap",
+      "characterId": "fly",
+      "displayName": "Immortal Frame",
+      "column": 0,
+      "row": 20,
+      "description": "Capstone. All three limbs converge here. Requires 20 embers already invested.",
+      "statBonus": {
+        "maxHealth": 80
+      },
+      "prerequisites": [
+        "fly_endurance_e_l",
+        "fly_endurance_e_c",
+        "fly_endurance_e_r"
+      ],
+      "minSpent": 20
+    },
+    {
+      "id": "fly_aggression_r0",
+      "characterId": "fly",
+      "displayName": "Sharpened Edge",
+      "column": 1,
+      "row": 0,
+      "description": "The trunk begins -- three roots run up from here.",
+      "statBonus": {
+        "attack": 1
+      }
+    },
+    {
+      "id": "fly_aggression_g1l",
+      "characterId": "fly",
+      "displayName": "Killing Blow",
+      "column": 1,
+      "row": 1,
+      "description": "Left root, first ring.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "fly_aggression_r0"
+      ]
+    },
+    {
+      "id": "fly_aggression_g1c",
+      "characterId": "fly",
+      "displayName": "Relentless",
+      "column": 1,
+      "row": 2,
+      "description": "Center root, first ring.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "fly_aggression_r0"
+      ]
+    },
+    {
+      "id": "fly_aggression_g1r",
+      "characterId": "fly",
+      "displayName": "War Fury",
+      "column": 1,
+      "row": 3,
+      "description": "Right root, first ring.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "fly_aggression_r0"
+      ]
+    },
+    {
+      "id": "fly_aggression_g2l",
+      "characterId": "fly",
+      "displayName": "Savage Strike",
+      "column": 1,
+      "row": 4,
+      "description": "Left root, second ring.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "fly_aggression_g1l"
+      ]
+    },
+    {
+      "id": "fly_aggression_g2c",
+      "characterId": "fly",
+      "displayName": "Death's Edge",
+      "column": 1,
+      "row": 5,
+      "description": "Center root, second ring.",
+      "statBonus": {
+        "attack": 3
+      },
+      "prerequisites": [
+        "fly_aggression_g1c"
+      ]
+    },
+    {
+      "id": "fly_aggression_g2r",
+      "characterId": "fly",
+      "displayName": "Executioner",
+      "column": 1,
+      "row": 6,
+      "description": "Right root, second ring.",
+      "statBonus": {
+        "attack": 4
+      },
+      "prerequisites": [
+        "fly_aggression_g1r"
+      ]
+    },
+    {
+      "id": "fly_aggression_g3l",
+      "characterId": "fly",
+      "displayName": "Bloodletter",
+      "column": 1,
+      "row": 7,
+      "description": "Left root, third ring.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "fly_aggression_g2l"
+      ]
+    },
+    {
+      "id": "fly_aggression_g3c",
+      "characterId": "fly",
+      "displayName": "Rising Fury",
+      "column": 1,
+      "row": 8,
+      "description": "Center root, third ring.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "fly_aggression_g2c"
+      ]
+    },
+    {
+      "id": "fly_aggression_g3r",
+      "characterId": "fly",
+      "displayName": "Ravager",
+      "column": 1,
+      "row": 9,
+      "description": "Right root, third ring.",
+      "statBonus": {
+        "attack": 4
+      },
+      "prerequisites": [
+        "fly_aggression_g2r"
+      ]
+    },
+    {
+      "id": "fly_aggression_converge",
+      "characterId": "fly",
+      "displayName": "Bloodlust",
+      "column": 1,
+      "row": 10,
+      "description": "All three roots gather into one trunk. Requires 9 embers already invested.",
+      "statBonus": {
+        "attack": 6
+      },
+      "prerequisites": [
+        "fly_aggression_g3l",
+        "fly_aggression_g3c",
+        "fly_aggression_g3r"
+      ],
+      "minSpent": 9
+    },
+    {
+      "id": "fly_aggression_c_l",
+      "characterId": "fly",
+      "displayName": "No Mercy",
+      "column": 1,
+      "row": 11,
+      "description": "The trunk branches out -- left limb.",
+      "statBonus": {
+        "attack": 3
+      },
+      "prerequisites": [
+        "fly_aggression_converge"
+      ]
+    },
+    {
+      "id": "fly_aggression_c_c",
+      "characterId": "fly",
+      "displayName": "Vicious Cycle",
+      "column": 1,
+      "row": 12,
+      "description": "The trunk branches out -- center limb.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "fly_aggression_converge"
+      ]
+    },
+    {
+      "id": "fly_aggression_c_r",
+      "characterId": "fly",
+      "displayName": "Bloodrage",
+      "column": 1,
+      "row": 13,
+      "description": "The trunk branches out -- right limb.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "fly_aggression_converge"
+      ]
+    },
+    {
+      "id": "fly_aggression_d_l",
+      "characterId": "fly",
+      "displayName": "Predator's Eye",
+      "column": 1,
+      "row": 14,
+      "description": "The left limb climbs on.",
+      "statBonus": {
+        "attack": 1
+      },
+      "prerequisites": [
+        "fly_aggression_c_l"
+      ]
+    },
+    {
+      "id": "fly_aggression_d_c",
+      "characterId": "fly",
+      "displayName": "Finishing Blow",
+      "column": 1,
+      "row": 15,
+      "description": "The center limb keeps climbing.",
+      "statBonus": {
+        "attack": 4
+      },
+      "prerequisites": [
+        "fly_aggression_c_c"
+      ]
+    },
+    {
+      "id": "fly_aggression_d_r",
+      "characterId": "fly",
+      "displayName": "Overkill",
+      "column": 1,
+      "row": 16,
+      "description": "The right limb climbs on.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "fly_aggression_c_r"
+      ]
+    },
+    {
+      "id": "fly_aggression_e_l",
+      "characterId": "fly",
+      "displayName": "Ravenous",
+      "column": 1,
+      "row": 17,
+      "description": "The left limb nears the top.",
+      "statBonus": {
+        "attack": 3
+      },
+      "prerequisites": [
+        "fly_aggression_d_l"
+      ]
+    },
+    {
+      "id": "fly_aggression_e_c",
+      "characterId": "fly",
+      "displayName": "Precision",
+      "column": 1,
+      "row": 18,
+      "description": "The center limb nears the top.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "fly_aggression_d_c"
+      ]
+    },
+    {
+      "id": "fly_aggression_e_r",
+      "characterId": "fly",
+      "displayName": "Killer Instinct",
+      "column": 1,
+      "row": 19,
+      "description": "The right limb nears the top.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "fly_aggression_d_r"
+      ]
+    },
+    {
+      "id": "fly_aggression_cap",
+      "characterId": "fly",
+      "displayName": "Reign of Blood",
+      "column": 1,
+      "row": 20,
+      "description": "Capstone. All three limbs converge here. Requires 20 embers already invested.",
+      "statBonus": {
+        "attack": 15
+      },
+      "prerequisites": [
+        "fly_aggression_e_l",
+        "fly_aggression_e_c",
+        "fly_aggression_e_r"
+      ],
+      "minSpent": 20
+    },
+    {
+      "id": "fly_control_r0",
+      "characterId": "fly",
+      "displayName": "Light Feet",
+      "column": 2,
+      "row": 0,
+      "description": "The trunk begins -- three roots run up from here.",
+      "statBonus": {
+        "speed": 1
+      },
+      "maxManaBonus": 2,
+      "skillManaCostReduction": 1
+    },
+    {
+      "id": "fly_control_g1l",
+      "characterId": "fly",
+      "displayName": "Evasive Step",
+      "column": 2,
+      "row": 1,
+      "description": "Left root, first ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "fly_control_r0"
+      ]
+    },
+    {
+      "id": "fly_control_g1c",
+      "characterId": "fly",
+      "displayName": "Quickstep",
+      "column": 2,
+      "row": 2,
+      "description": "Center root, first ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "fly_control_r0"
+      ]
+    },
+    {
+      "id": "fly_control_g1r",
+      "characterId": "fly",
+      "displayName": "Shadow Step",
+      "column": 2,
+      "row": 3,
+      "description": "Right root, first ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "fly_control_r0"
+      ]
+    },
+    {
+      "id": "fly_control_g2l",
+      "characterId": "fly",
+      "displayName": "Vanish",
+      "column": 2,
+      "row": 4,
+      "description": "Left root, second ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "fly_control_g1l"
+      ]
+    },
+    {
+      "id": "fly_control_g2c",
+      "characterId": "fly",
+      "displayName": "Windwalk",
+      "column": 2,
+      "row": 5,
+      "description": "Center root, second ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "abilityScoreBonus": {
+        "dexterity": 2
+      },
+      "prerequisites": [
+        "fly_control_g1c"
+      ]
+    },
+    {
+      "id": "fly_control_g2r",
+      "characterId": "fly",
+      "displayName": "Nightglide",
+      "column": 2,
+      "row": 6,
+      "description": "Right root, second ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "signatureCapacityBonus": 1,
+      "prerequisites": [
+        "fly_control_g1r"
+      ]
+    },
+    {
+      "id": "fly_control_g3l",
+      "characterId": "fly",
+      "displayName": "Perfect Timing",
+      "column": 2,
+      "row": 7,
+      "description": "Left root, third ring.",
+      "statBonus": {
+        "speed": 2
+      },
+      "prerequisites": [
+        "fly_control_g2l"
+      ]
+    },
+    {
+      "id": "fly_control_g3c",
+      "characterId": "fly",
+      "displayName": "Phantom Stride",
+      "column": 2,
+      "row": 8,
+      "description": "Center root, third ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "fly_control_g2c"
+      ]
+    },
+    {
+      "id": "fly_control_g3r",
+      "characterId": "fly",
+      "displayName": "Trickster's Ward",
+      "column": 2,
+      "row": 9,
+      "description": "Right root, third ring.",
+      "maxManaBonus": 8,
+      "prerequisites": [
+        "fly_control_g2r"
+      ]
+    },
+    {
+      "id": "fly_control_converge",
+      "characterId": "fly",
+      "displayName": "Shadow Bond",
+      "column": 2,
+      "row": 10,
+      "description": "All three roots gather into one trunk. Requires 9 embers already invested.",
+      "statBonus": {
+        "speed": 2
+      },
+      "signatureCapacityBonus": 1,
+      "prerequisites": [
+        "fly_control_g3l",
+        "fly_control_g3c",
+        "fly_control_g3r"
+      ],
+      "minSpent": 9
+    },
+    {
+      "id": "fly_control_c_l",
+      "characterId": "fly",
+      "displayName": "Silver Tongue",
+      "column": 2,
+      "row": 11,
+      "description": "The trunk branches out -- left limb.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "fly_control_converge"
+      ]
+    },
+    {
+      "id": "fly_control_c_c",
+      "characterId": "fly",
+      "displayName": "Fortune's Favor",
+      "column": 2,
+      "row": 12,
+      "description": "The trunk branches out -- center limb.",
+      "statBonus": {
+        "attack": 1
+      },
+      "abilityScoreBonus": {
+        "dexterity": 2
+      },
+      "prerequisites": [
+        "fly_control_converge"
+      ]
+    },
+    {
+      "id": "fly_control_c_r",
+      "characterId": "fly",
+      "displayName": "Fleet Mind",
+      "column": 2,
+      "row": 13,
+      "description": "The trunk branches out -- right limb.",
+      "skillManaCostReduction": 1,
+      "prerequisites": [
+        "fly_control_converge"
+      ]
+    },
+    {
+      "id": "fly_control_d_l",
+      "characterId": "fly",
+      "displayName": "Sixth Sense",
+      "column": 2,
+      "row": 14,
+      "description": "The left limb climbs on.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "fly_control_c_l"
+      ]
+    },
+    {
+      "id": "fly_control_d_c",
+      "characterId": "fly",
+      "displayName": "Quick Hands",
+      "column": 2,
+      "row": 15,
+      "description": "The center limb keeps climbing.",
+      "statBonus": {
+        "speed": 1
+      },
+      "signaturePerTurnBonus": 1,
+      "prerequisites": [
+        "fly_control_c_c"
+      ]
+    },
+    {
+      "id": "fly_control_d_r",
+      "characterId": "fly",
+      "displayName": "Lucky Break",
+      "column": 2,
+      "row": 16,
+      "description": "The right limb climbs on.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "fly_control_c_r"
+      ]
+    },
+    {
+      "id": "fly_control_e_l",
+      "characterId": "fly",
+      "displayName": "Opportunist",
+      "column": 2,
+      "row": 17,
+      "description": "The left limb nears the top.",
+      "statBonus": {
+        "attack": 1
+      },
+      "prerequisites": [
+        "fly_control_d_l"
+      ]
+    },
+    {
+      "id": "fly_control_e_c",
+      "characterId": "fly",
+      "displayName": "Featherlight Step",
+      "column": 2,
+      "row": 18,
+      "description": "The center limb nears the top.",
+      "statBonus": {
+        "speed": 1
+      },
+      "signaturePerTurnBonus": 1,
+      "prerequisites": [
+        "fly_control_d_c"
+      ]
+    },
+    {
+      "id": "fly_control_e_r",
+      "characterId": "fly",
+      "displayName": "Elusive",
+      "column": 2,
+      "row": 19,
+      "description": "The right limb nears the top.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "fly_control_d_r"
+      ]
+    },
+    {
+      "id": "fly_control_cap",
+      "characterId": "fly",
+      "displayName": "Ghost Walk",
+      "column": 2,
+      "row": 20,
+      "description": "Capstone. All three limbs converge here. Requires 20 embers already invested.",
+      "statBonus": {
+        "speed": 3
+      },
+      "abilityScoreBonus": {
+        "dexterity": 2
+      },
+      "signatureCapacityBonus": 1,
+      "prerequisites": [
+        "fly_control_e_l",
+        "fly_control_e_c",
+        "fly_control_e_r"
+      ],
+      "minSpent": 20
+    },
+    {
+      "id": "dog_endurance_r0",
+      "characterId": "dog",
+      "displayName": "Hardened Skin",
+      "column": 0,
+      "row": 0,
+      "description": "The trunk begins -- three roots run up from here.",
+      "statBonus": {
+        "maxHealth": 8
+      }
+    },
+    {
+      "id": "dog_endurance_g1l",
+      "characterId": "dog",
+      "displayName": "Iron Resolve",
+      "column": 0,
+      "row": 1,
+      "description": "Left root, first ring.",
+      "statBonus": {
+        "defense": 3
+      },
+      "prerequisites": [
+        "dog_endurance_r0"
+      ]
+    },
+    {
+      "id": "dog_endurance_g1c",
+      "characterId": "dog",
+      "displayName": "Stubborn Frame",
+      "column": 0,
+      "row": 2,
+      "description": "Center root, first ring.",
+      "statBonus": {
+        "maxHealth": 15
+      },
+      "prerequisites": [
+        "dog_endurance_r0"
+      ]
+    },
+    {
+      "id": "dog_endurance_g1r",
+      "characterId": "dog",
+      "displayName": "Thick Hide",
+      "column": 0,
+      "row": 3,
+      "description": "Right root, first ring.",
+      "statBonus": {
+        "maxHealth": 18
+      },
+      "prerequisites": [
+        "dog_endurance_r0"
+      ]
+    },
+    {
+      "id": "dog_endurance_g2l",
+      "characterId": "dog",
+      "displayName": "Stone Ward",
+      "column": 0,
+      "row": 4,
+      "description": "Left root, second ring.",
+      "statBonus": {
+        "defense": 4
+      },
+      "prerequisites": [
+        "dog_endurance_g1l"
+      ]
+    },
+    {
+      "id": "dog_endurance_g2c",
+      "characterId": "dog",
+      "displayName": "Deep Roots",
+      "column": 0,
+      "row": 5,
+      "description": "Center root, second ring.",
+      "statBonus": {
+        "maxHealth": 15
+      },
+      "abilityScoreBonus": {
+        "strength": 1
+      },
+      "prerequisites": [
+        "dog_endurance_g1c"
+      ]
+    },
+    {
+      "id": "dog_endurance_g2r",
+      "characterId": "dog",
+      "displayName": "Counterforce",
+      "column": 0,
+      "row": 6,
+      "description": "Right root, second ring.",
+      "statBonus": {
+        "defense": 2
+      },
+      "prerequisites": [
+        "dog_endurance_g1r"
+      ]
+    },
+    {
+      "id": "dog_endurance_g3l",
+      "characterId": "dog",
+      "displayName": "Undying",
+      "column": 0,
+      "row": 7,
+      "description": "Left root, third ring.",
+      "statBonus": {
+        "defense": 8
+      },
+      "prerequisites": [
+        "dog_endurance_g2l"
+      ]
+    },
+    {
+      "id": "dog_endurance_g3c",
+      "characterId": "dog",
+      "displayName": "Fortified",
+      "column": 0,
+      "row": 8,
+      "description": "Center root, third ring.",
+      "statBonus": {
+        "defense": 6
+      },
+      "prerequisites": [
+        "dog_endurance_g2c"
+      ]
+    },
+    {
+      "id": "dog_endurance_g3r",
+      "characterId": "dog",
+      "displayName": "Guardian's Will",
+      "column": 0,
+      "row": 9,
+      "description": "Right root, third ring.",
+      "statBonus": {
+        "maxHealth": 15
+      },
+      "prerequisites": [
+        "dog_endurance_g2r"
+      ]
+    },
+    {
+      "id": "dog_endurance_converge",
+      "characterId": "dog",
+      "displayName": "Bulwark",
+      "column": 0,
+      "row": 10,
+      "description": "All three roots gather into one trunk. Requires 9 embers already invested.",
+      "statBonus": {
+        "defense": 10
+      },
+      "prerequisites": [
+        "dog_endurance_g3l",
+        "dog_endurance_g3c",
+        "dog_endurance_g3r"
+      ],
+      "minSpent": 9
+    },
+    {
+      "id": "dog_endurance_c_l",
+      "characterId": "dog",
+      "displayName": "Colossus",
+      "column": 0,
+      "row": 11,
+      "description": "The trunk branches out -- left limb.",
+      "statBonus": {
+        "maxHealth": 30
+      },
+      "prerequisites": [
+        "dog_endurance_converge"
+      ]
+    },
+    {
+      "id": "dog_endurance_c_c",
+      "characterId": "dog",
+      "displayName": "Unbroken",
+      "column": 0,
+      "row": 12,
+      "description": "The trunk branches out -- center limb.",
+      "statBonus": {
+        "defense": 5
+      },
+      "prerequisites": [
+        "dog_endurance_converge"
+      ]
+    },
+    {
+      "id": "dog_endurance_c_r",
+      "characterId": "dog",
+      "displayName": "Juggernaut",
+      "column": 0,
+      "row": 13,
+      "description": "The trunk branches out -- right limb.",
+      "statBonus": {
+        "maxHealth": 35
+      },
+      "prerequisites": [
+        "dog_endurance_converge"
+      ]
+    },
+    {
+      "id": "dog_endurance_d_l",
+      "characterId": "dog",
+      "displayName": "Brace",
+      "column": 0,
+      "row": 14,
+      "description": "The left limb climbs on.",
+      "statBonus": {
+        "defense": 2
+      },
+      "prerequisites": [
+        "dog_endurance_c_l"
+      ]
+    },
+    {
+      "id": "dog_endurance_d_c",
+      "characterId": "dog",
+      "displayName": "Unyielding",
+      "column": 0,
+      "row": 15,
+      "description": "The center limb keeps climbing.",
+      "statBonus": {
+        "defense": 8
+      },
+      "prerequisites": [
+        "dog_endurance_c_c"
+      ]
+    },
+    {
+      "id": "dog_endurance_d_r",
+      "characterId": "dog",
+      "displayName": "Last Stand",
+      "column": 0,
+      "row": 16,
+      "description": "The right limb climbs on.",
+      "statBonus": {
+        "defense": 2
+      },
+      "prerequisites": [
+        "dog_endurance_c_r"
+      ]
+    },
+    {
+      "id": "dog_endurance_e_l",
+      "characterId": "dog",
+      "displayName": "Steel Nerves",
+      "column": 0,
+      "row": 17,
+      "description": "The left limb nears the top.",
+      "statBonus": {
+        "defense": 2
+      },
+      "prerequisites": [
+        "dog_endurance_d_l"
+      ]
+    },
+    {
+      "id": "dog_endurance_e_c",
+      "characterId": "dog",
+      "displayName": "Adrenal Surge",
+      "column": 0,
+      "row": 18,
+      "description": "The center limb nears the top.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "dog_endurance_d_c"
+      ]
+    },
+    {
+      "id": "dog_endurance_e_r",
+      "characterId": "dog",
+      "displayName": "Second Wind",
+      "column": 0,
+      "row": 19,
+      "description": "The right limb nears the top.",
+      "statBonus": {
+        "maxHealth": 12
+      },
+      "prerequisites": [
+        "dog_endurance_d_r"
+      ]
+    },
+    {
+      "id": "dog_endurance_cap",
+      "characterId": "dog",
+      "displayName": "Immortal Frame",
+      "column": 0,
+      "row": 20,
+      "description": "Capstone. All three limbs converge here. Requires 20 embers already invested.",
+      "statBonus": {
+        "maxHealth": 80
+      },
+      "prerequisites": [
+        "dog_endurance_e_l",
+        "dog_endurance_e_c",
+        "dog_endurance_e_r"
+      ],
+      "minSpent": 20
+    },
+    {
+      "id": "dog_aggression_r0",
+      "characterId": "dog",
+      "displayName": "Sharpened Edge",
+      "column": 1,
+      "row": 0,
+      "description": "The trunk begins -- three roots run up from here.",
+      "statBonus": {
+        "attack": 1
+      }
+    },
+    {
+      "id": "dog_aggression_g1l",
+      "characterId": "dog",
+      "displayName": "Killing Blow",
+      "column": 1,
+      "row": 1,
+      "description": "Left root, first ring.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "dog_aggression_r0"
+      ]
+    },
+    {
+      "id": "dog_aggression_g1c",
+      "characterId": "dog",
+      "displayName": "Relentless",
+      "column": 1,
+      "row": 2,
+      "description": "Center root, first ring.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "dog_aggression_r0"
+      ]
+    },
+    {
+      "id": "dog_aggression_g1r",
+      "characterId": "dog",
+      "displayName": "War Fury",
+      "column": 1,
+      "row": 3,
+      "description": "Right root, first ring.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "dog_aggression_r0"
+      ]
+    },
+    {
+      "id": "dog_aggression_g2l",
+      "characterId": "dog",
+      "displayName": "Savage Strike",
+      "column": 1,
+      "row": 4,
+      "description": "Left root, second ring.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "dog_aggression_g1l"
+      ]
+    },
+    {
+      "id": "dog_aggression_g2c",
+      "characterId": "dog",
+      "displayName": "Death's Edge",
+      "column": 1,
+      "row": 5,
+      "description": "Center root, second ring.",
+      "statBonus": {
+        "attack": 3
+      },
+      "prerequisites": [
+        "dog_aggression_g1c"
+      ]
+    },
+    {
+      "id": "dog_aggression_g2r",
+      "characterId": "dog",
+      "displayName": "Executioner",
+      "column": 1,
+      "row": 6,
+      "description": "Right root, second ring.",
+      "statBonus": {
+        "attack": 4
+      },
+      "prerequisites": [
+        "dog_aggression_g1r"
+      ]
+    },
+    {
+      "id": "dog_aggression_g3l",
+      "characterId": "dog",
+      "displayName": "Bloodletter",
+      "column": 1,
+      "row": 7,
+      "description": "Left root, third ring.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "dog_aggression_g2l"
+      ]
+    },
+    {
+      "id": "dog_aggression_g3c",
+      "characterId": "dog",
+      "displayName": "Rising Fury",
+      "column": 1,
+      "row": 8,
+      "description": "Center root, third ring.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "dog_aggression_g2c"
+      ]
+    },
+    {
+      "id": "dog_aggression_g3r",
+      "characterId": "dog",
+      "displayName": "Ravager",
+      "column": 1,
+      "row": 9,
+      "description": "Right root, third ring.",
+      "statBonus": {
+        "attack": 4
+      },
+      "prerequisites": [
+        "dog_aggression_g2r"
+      ]
+    },
+    {
+      "id": "dog_aggression_converge",
+      "characterId": "dog",
+      "displayName": "Bloodlust",
+      "column": 1,
+      "row": 10,
+      "description": "All three roots gather into one trunk. Requires 9 embers already invested.",
+      "statBonus": {
+        "attack": 6
+      },
+      "prerequisites": [
+        "dog_aggression_g3l",
+        "dog_aggression_g3c",
+        "dog_aggression_g3r"
+      ],
+      "minSpent": 9
+    },
+    {
+      "id": "dog_aggression_c_l",
+      "characterId": "dog",
+      "displayName": "No Mercy",
+      "column": 1,
+      "row": 11,
+      "description": "The trunk branches out -- left limb.",
+      "statBonus": {
+        "attack": 3
+      },
+      "prerequisites": [
+        "dog_aggression_converge"
+      ]
+    },
+    {
+      "id": "dog_aggression_c_c",
+      "characterId": "dog",
+      "displayName": "Vicious Cycle",
+      "column": 1,
+      "row": 12,
+      "description": "The trunk branches out -- center limb.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "dog_aggression_converge"
+      ]
+    },
+    {
+      "id": "dog_aggression_c_r",
+      "characterId": "dog",
+      "displayName": "Bloodrage",
+      "column": 1,
+      "row": 13,
+      "description": "The trunk branches out -- right limb.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "dog_aggression_converge"
+      ]
+    },
+    {
+      "id": "dog_aggression_d_l",
+      "characterId": "dog",
+      "displayName": "Predator's Eye",
+      "column": 1,
+      "row": 14,
+      "description": "The left limb climbs on.",
+      "statBonus": {
+        "attack": 1
+      },
+      "prerequisites": [
+        "dog_aggression_c_l"
+      ]
+    },
+    {
+      "id": "dog_aggression_d_c",
+      "characterId": "dog",
+      "displayName": "Finishing Blow",
+      "column": 1,
+      "row": 15,
+      "description": "The center limb keeps climbing.",
+      "statBonus": {
+        "attack": 4
+      },
+      "prerequisites": [
+        "dog_aggression_c_c"
+      ]
+    },
+    {
+      "id": "dog_aggression_d_r",
+      "characterId": "dog",
+      "displayName": "Overkill",
+      "column": 1,
+      "row": 16,
+      "description": "The right limb climbs on.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "dog_aggression_c_r"
+      ]
+    },
+    {
+      "id": "dog_aggression_e_l",
+      "characterId": "dog",
+      "displayName": "Ravenous",
+      "column": 1,
+      "row": 17,
+      "description": "The left limb nears the top.",
+      "statBonus": {
+        "attack": 3
+      },
+      "prerequisites": [
+        "dog_aggression_d_l"
+      ]
+    },
+    {
+      "id": "dog_aggression_e_c",
+      "characterId": "dog",
+      "displayName": "Precision",
+      "column": 1,
+      "row": 18,
+      "description": "The center limb nears the top.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "dog_aggression_d_c"
+      ]
+    },
+    {
+      "id": "dog_aggression_e_r",
+      "characterId": "dog",
+      "displayName": "Killer Instinct",
+      "column": 1,
+      "row": 19,
+      "description": "The right limb nears the top.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "dog_aggression_d_r"
+      ]
+    },
+    {
+      "id": "dog_aggression_cap",
+      "characterId": "dog",
+      "displayName": "Reign of Blood",
+      "column": 1,
+      "row": 20,
+      "description": "Capstone. All three limbs converge here. Requires 20 embers already invested.",
+      "statBonus": {
+        "attack": 15
+      },
+      "prerequisites": [
+        "dog_aggression_e_l",
+        "dog_aggression_e_c",
+        "dog_aggression_e_r"
+      ],
+      "minSpent": 20
+    },
+    {
+      "id": "dog_control_r0",
+      "characterId": "dog",
+      "displayName": "Light Feet",
+      "column": 2,
+      "row": 0,
+      "description": "The trunk begins -- three roots run up from here.",
+      "statBonus": {
+        "speed": 1
+      },
+      "maxManaBonus": 2,
+      "skillManaCostReduction": 1
+    },
+    {
+      "id": "dog_control_g1l",
+      "characterId": "dog",
+      "displayName": "Evasive Step",
+      "column": 2,
+      "row": 1,
+      "description": "Left root, first ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "dog_control_r0"
+      ]
+    },
+    {
+      "id": "dog_control_g1c",
+      "characterId": "dog",
+      "displayName": "Quickstep",
+      "column": 2,
+      "row": 2,
+      "description": "Center root, first ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "dog_control_r0"
+      ]
+    },
+    {
+      "id": "dog_control_g1r",
+      "characterId": "dog",
+      "displayName": "Shadow Step",
+      "column": 2,
+      "row": 3,
+      "description": "Right root, first ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "dog_control_r0"
+      ]
+    },
+    {
+      "id": "dog_control_g2l",
+      "characterId": "dog",
+      "displayName": "Vanish",
+      "column": 2,
+      "row": 4,
+      "description": "Left root, second ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "dog_control_g1l"
+      ]
+    },
+    {
+      "id": "dog_control_g2c",
+      "characterId": "dog",
+      "displayName": "Windwalk",
+      "column": 2,
+      "row": 5,
+      "description": "Center root, second ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "abilityScoreBonus": {
+        "constitution": 2
+      },
+      "prerequisites": [
+        "dog_control_g1c"
+      ]
+    },
+    {
+      "id": "dog_control_g2r",
+      "characterId": "dog",
+      "displayName": "Nightglide",
+      "column": 2,
+      "row": 6,
+      "description": "Right root, second ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "signatureCapacityBonus": 1,
+      "prerequisites": [
+        "dog_control_g1r"
+      ]
+    },
+    {
+      "id": "dog_control_g3l",
+      "characterId": "dog",
+      "displayName": "Perfect Timing",
+      "column": 2,
+      "row": 7,
+      "description": "Left root, third ring.",
+      "statBonus": {
+        "speed": 2
+      },
+      "prerequisites": [
+        "dog_control_g2l"
+      ]
+    },
+    {
+      "id": "dog_control_g3c",
+      "characterId": "dog",
+      "displayName": "Phantom Stride",
+      "column": 2,
+      "row": 8,
+      "description": "Center root, third ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "dog_control_g2c"
+      ]
+    },
+    {
+      "id": "dog_control_g3r",
+      "characterId": "dog",
+      "displayName": "Trickster's Ward",
+      "column": 2,
+      "row": 9,
+      "description": "Right root, third ring.",
+      "maxManaBonus": 8,
+      "prerequisites": [
+        "dog_control_g2r"
+      ]
+    },
+    {
+      "id": "dog_control_converge",
+      "characterId": "dog",
+      "displayName": "Shadow Bond",
+      "column": 2,
+      "row": 10,
+      "description": "All three roots gather into one trunk. Requires 9 embers already invested.",
+      "statBonus": {
+        "speed": 2
+      },
+      "signatureCapacityBonus": 1,
+      "prerequisites": [
+        "dog_control_g3l",
+        "dog_control_g3c",
+        "dog_control_g3r"
+      ],
+      "minSpent": 9
+    },
+    {
+      "id": "dog_control_c_l",
+      "characterId": "dog",
+      "displayName": "Silver Tongue",
+      "column": 2,
+      "row": 11,
+      "description": "The trunk branches out -- left limb.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "dog_control_converge"
+      ]
+    },
+    {
+      "id": "dog_control_c_c",
+      "characterId": "dog",
+      "displayName": "Fortune's Favor",
+      "column": 2,
+      "row": 12,
+      "description": "The trunk branches out -- center limb.",
+      "statBonus": {
+        "attack": 1
+      },
+      "abilityScoreBonus": {
+        "constitution": 2
+      },
+      "prerequisites": [
+        "dog_control_converge"
+      ]
+    },
+    {
+      "id": "dog_control_c_r",
+      "characterId": "dog",
+      "displayName": "Fleet Mind",
+      "column": 2,
+      "row": 13,
+      "description": "The trunk branches out -- right limb.",
+      "skillManaCostReduction": 1,
+      "prerequisites": [
+        "dog_control_converge"
+      ]
+    },
+    {
+      "id": "dog_control_d_l",
+      "characterId": "dog",
+      "displayName": "Sixth Sense",
+      "column": 2,
+      "row": 14,
+      "description": "The left limb climbs on.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "dog_control_c_l"
+      ]
+    },
+    {
+      "id": "dog_control_d_c",
+      "characterId": "dog",
+      "displayName": "Quick Hands",
+      "column": 2,
+      "row": 15,
+      "description": "The center limb keeps climbing.",
+      "statBonus": {
+        "speed": 1
+      },
+      "signaturePerTurnBonus": 1,
+      "prerequisites": [
+        "dog_control_c_c"
+      ]
+    },
+    {
+      "id": "dog_control_d_r",
+      "characterId": "dog",
+      "displayName": "Lucky Break",
+      "column": 2,
+      "row": 16,
+      "description": "The right limb climbs on.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "dog_control_c_r"
+      ]
+    },
+    {
+      "id": "dog_control_e_l",
+      "characterId": "dog",
+      "displayName": "Opportunist",
+      "column": 2,
+      "row": 17,
+      "description": "The left limb nears the top.",
+      "statBonus": {
+        "attack": 1
+      },
+      "prerequisites": [
+        "dog_control_d_l"
+      ]
+    },
+    {
+      "id": "dog_control_e_c",
+      "characterId": "dog",
+      "displayName": "Featherlight Step",
+      "column": 2,
+      "row": 18,
+      "description": "The center limb nears the top.",
+      "statBonus": {
+        "speed": 1
+      },
+      "signaturePerTurnBonus": 1,
+      "prerequisites": [
+        "dog_control_d_c"
+      ]
+    },
+    {
+      "id": "dog_control_e_r",
+      "characterId": "dog",
+      "displayName": "Elusive",
+      "column": 2,
+      "row": 19,
+      "description": "The right limb nears the top.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "dog_control_d_r"
+      ]
+    },
+    {
+      "id": "dog_control_cap",
+      "characterId": "dog",
+      "displayName": "Ghost Walk",
+      "column": 2,
+      "row": 20,
+      "description": "Capstone. All three limbs converge here. Requires 20 embers already invested.",
+      "statBonus": {
+        "speed": 3
+      },
+      "abilityScoreBonus": {
+        "constitution": 2
+      },
+      "signatureCapacityBonus": 1,
+      "prerequisites": [
+        "dog_control_e_l",
+        "dog_control_e_c",
+        "dog_control_e_r"
+      ],
+      "minSpent": 20
+    },
+    {
+      "id": "turtle_endurance_r0",
+      "characterId": "turtle",
+      "displayName": "Hardened Skin",
+      "column": 0,
+      "row": 0,
+      "description": "The trunk begins -- three roots run up from here.",
+      "statBonus": {
+        "maxHealth": 8
+      },
+      "grantsStartingItemId": "health_potion"
+    },
+    {
+      "id": "turtle_endurance_g1l",
+      "characterId": "turtle",
+      "displayName": "Iron Resolve",
+      "column": 0,
+      "row": 1,
+      "description": "Left root, first ring.",
+      "statBonus": {
+        "defense": 3
+      },
+      "prerequisites": [
+        "turtle_endurance_r0"
+      ]
+    },
+    {
+      "id": "turtle_endurance_g1c",
+      "characterId": "turtle",
+      "displayName": "Stubborn Frame",
+      "column": 0,
+      "row": 2,
+      "description": "Center root, first ring.",
+      "statBonus": {
+        "maxHealth": 15
+      },
+      "prerequisites": [
+        "turtle_endurance_r0"
+      ]
+    },
+    {
+      "id": "turtle_endurance_g1r",
+      "characterId": "turtle",
+      "displayName": "Thick Hide",
+      "column": 0,
+      "row": 3,
+      "description": "Right root, first ring.",
+      "statBonus": {
+        "maxHealth": 18
+      },
+      "prerequisites": [
+        "turtle_endurance_r0"
+      ]
+    },
+    {
+      "id": "turtle_endurance_g2l",
+      "characterId": "turtle",
+      "displayName": "Stone Ward",
+      "column": 0,
+      "row": 4,
+      "description": "Left root, second ring.",
+      "statBonus": {
+        "defense": 4
+      },
+      "prerequisites": [
+        "turtle_endurance_g1l"
+      ]
+    },
+    {
+      "id": "turtle_endurance_g2c",
+      "characterId": "turtle",
+      "displayName": "Deep Roots",
+      "column": 0,
+      "row": 5,
+      "description": "Center root, second ring.",
+      "statBonus": {
+        "maxHealth": 15
+      },
+      "abilityScoreBonus": {
+        "strength": 1
+      },
+      "prerequisites": [
+        "turtle_endurance_g1c"
+      ]
+    },
+    {
+      "id": "turtle_endurance_g2r",
+      "characterId": "turtle",
+      "displayName": "Counterforce",
+      "column": 0,
+      "row": 6,
+      "description": "Right root, second ring.",
+      "statBonus": {
+        "defense": 2
+      },
+      "prerequisites": [
+        "turtle_endurance_g1r"
+      ]
+    },
+    {
+      "id": "turtle_endurance_g3l",
+      "characterId": "turtle",
+      "displayName": "Undying",
+      "column": 0,
+      "row": 7,
+      "description": "Left root, third ring.",
+      "statBonus": {
+        "defense": 8
+      },
+      "prerequisites": [
+        "turtle_endurance_g2l"
+      ]
+    },
+    {
+      "id": "turtle_endurance_g3c",
+      "characterId": "turtle",
+      "displayName": "Fortified",
+      "column": 0,
+      "row": 8,
+      "description": "Center root, third ring.",
+      "statBonus": {
+        "defense": 6
+      },
+      "prerequisites": [
+        "turtle_endurance_g2c"
+      ]
+    },
+    {
+      "id": "turtle_endurance_g3r",
+      "characterId": "turtle",
+      "displayName": "Guardian's Will",
+      "column": 0,
+      "row": 9,
+      "description": "Right root, third ring.",
+      "statBonus": {
+        "maxHealth": 15
+      },
+      "prerequisites": [
+        "turtle_endurance_g2r"
+      ]
+    },
+    {
+      "id": "turtle_endurance_converge",
+      "characterId": "turtle",
+      "displayName": "Bulwark",
+      "column": 0,
+      "row": 10,
+      "description": "All three roots gather into one trunk. Requires 9 embers already invested.",
+      "statBonus": {
+        "defense": 10
+      },
+      "prerequisites": [
+        "turtle_endurance_g3l",
+        "turtle_endurance_g3c",
+        "turtle_endurance_g3r"
+      ],
+      "minSpent": 9
+    },
+    {
+      "id": "turtle_endurance_c_l",
+      "characterId": "turtle",
+      "displayName": "Colossus",
+      "column": 0,
+      "row": 11,
+      "description": "The trunk branches out -- left limb.",
+      "statBonus": {
+        "maxHealth": 30
+      },
+      "prerequisites": [
+        "turtle_endurance_converge"
+      ]
+    },
+    {
+      "id": "turtle_endurance_c_c",
+      "characterId": "turtle",
+      "displayName": "Unbroken",
+      "column": 0,
+      "row": 12,
+      "description": "The trunk branches out -- center limb.",
+      "statBonus": {
+        "defense": 5
+      },
+      "prerequisites": [
+        "turtle_endurance_converge"
+      ]
+    },
+    {
+      "id": "turtle_endurance_c_r",
+      "characterId": "turtle",
+      "displayName": "Juggernaut",
+      "column": 0,
+      "row": 13,
+      "description": "The trunk branches out -- right limb.",
+      "statBonus": {
+        "maxHealth": 35
+      },
+      "prerequisites": [
+        "turtle_endurance_converge"
+      ]
+    },
+    {
+      "id": "turtle_endurance_d_l",
+      "characterId": "turtle",
+      "displayName": "Brace",
+      "column": 0,
+      "row": 14,
+      "description": "The left limb climbs on.",
+      "statBonus": {
+        "defense": 2
+      },
+      "prerequisites": [
+        "turtle_endurance_c_l"
+      ]
+    },
+    {
+      "id": "turtle_endurance_d_c",
+      "characterId": "turtle",
+      "displayName": "Unyielding",
+      "column": 0,
+      "row": 15,
+      "description": "The center limb keeps climbing.",
+      "statBonus": {
+        "defense": 8
+      },
+      "prerequisites": [
+        "turtle_endurance_c_c"
+      ]
+    },
+    {
+      "id": "turtle_endurance_d_r",
+      "characterId": "turtle",
+      "displayName": "Last Stand",
+      "column": 0,
+      "row": 16,
+      "description": "The right limb climbs on.",
+      "statBonus": {
+        "defense": 2
+      },
+      "prerequisites": [
+        "turtle_endurance_c_r"
+      ]
+    },
+    {
+      "id": "turtle_endurance_e_l",
+      "characterId": "turtle",
+      "displayName": "Steel Nerves",
+      "column": 0,
+      "row": 17,
+      "description": "The left limb nears the top.",
+      "statBonus": {
+        "defense": 2
+      },
+      "prerequisites": [
+        "turtle_endurance_d_l"
+      ]
+    },
+    {
+      "id": "turtle_endurance_e_c",
+      "characterId": "turtle",
+      "displayName": "Adrenal Surge",
+      "column": 0,
+      "row": 18,
+      "description": "The center limb nears the top.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "turtle_endurance_d_c"
+      ]
+    },
+    {
+      "id": "turtle_endurance_e_r",
+      "characterId": "turtle",
+      "displayName": "Second Wind",
+      "column": 0,
+      "row": 19,
+      "description": "The right limb nears the top.",
+      "statBonus": {
+        "maxHealth": 12
+      },
+      "prerequisites": [
+        "turtle_endurance_d_r"
+      ]
+    },
+    {
+      "id": "turtle_endurance_cap",
+      "characterId": "turtle",
+      "displayName": "Immortal Frame",
+      "column": 0,
+      "row": 20,
+      "description": "Capstone. All three limbs converge here. Requires 20 embers already invested.",
+      "statBonus": {
+        "maxHealth": 80
+      },
+      "prerequisites": [
+        "turtle_endurance_e_l",
+        "turtle_endurance_e_c",
+        "turtle_endurance_e_r"
+      ],
+      "minSpent": 20
+    },
+    {
+      "id": "turtle_aggression_r0",
+      "characterId": "turtle",
+      "displayName": "Sharpened Edge",
+      "column": 1,
+      "row": 0,
+      "description": "The trunk begins -- three roots run up from here.",
+      "statBonus": {
+        "attack": 1
+      }
+    },
+    {
+      "id": "turtle_aggression_g1l",
+      "characterId": "turtle",
+      "displayName": "Killing Blow",
+      "column": 1,
+      "row": 1,
+      "description": "Left root, first ring.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "turtle_aggression_r0"
+      ]
+    },
+    {
+      "id": "turtle_aggression_g1c",
+      "characterId": "turtle",
+      "displayName": "Relentless",
+      "column": 1,
+      "row": 2,
+      "description": "Center root, first ring.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "turtle_aggression_r0"
+      ]
+    },
+    {
+      "id": "turtle_aggression_g1r",
+      "characterId": "turtle",
+      "displayName": "War Fury",
+      "column": 1,
+      "row": 3,
+      "description": "Right root, first ring.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "turtle_aggression_r0"
+      ]
+    },
+    {
+      "id": "turtle_aggression_g2l",
+      "characterId": "turtle",
+      "displayName": "Savage Strike",
+      "column": 1,
+      "row": 4,
+      "description": "Left root, second ring.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "turtle_aggression_g1l"
+      ]
+    },
+    {
+      "id": "turtle_aggression_g2c",
+      "characterId": "turtle",
+      "displayName": "Death's Edge",
+      "column": 1,
+      "row": 5,
+      "description": "Center root, second ring.",
+      "statBonus": {
+        "attack": 3
+      },
+      "prerequisites": [
+        "turtle_aggression_g1c"
+      ]
+    },
+    {
+      "id": "turtle_aggression_g2r",
+      "characterId": "turtle",
+      "displayName": "Executioner",
+      "column": 1,
+      "row": 6,
+      "description": "Right root, second ring.",
+      "statBonus": {
+        "attack": 4
+      },
+      "prerequisites": [
+        "turtle_aggression_g1r"
+      ]
+    },
+    {
+      "id": "turtle_aggression_g3l",
+      "characterId": "turtle",
+      "displayName": "Bloodletter",
+      "column": 1,
+      "row": 7,
+      "description": "Left root, third ring.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "turtle_aggression_g2l"
+      ]
+    },
+    {
+      "id": "turtle_aggression_g3c",
+      "characterId": "turtle",
+      "displayName": "Rising Fury",
+      "column": 1,
+      "row": 8,
+      "description": "Center root, third ring.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "turtle_aggression_g2c"
+      ]
+    },
+    {
+      "id": "turtle_aggression_g3r",
+      "characterId": "turtle",
+      "displayName": "Ravager",
+      "column": 1,
+      "row": 9,
+      "description": "Right root, third ring.",
+      "statBonus": {
+        "attack": 4
+      },
+      "prerequisites": [
+        "turtle_aggression_g2r"
+      ]
+    },
+    {
+      "id": "turtle_aggression_converge",
+      "characterId": "turtle",
+      "displayName": "Bloodlust",
+      "column": 1,
+      "row": 10,
+      "description": "All three roots gather into one trunk. Requires 9 embers already invested.",
+      "statBonus": {
+        "attack": 6
+      },
+      "prerequisites": [
+        "turtle_aggression_g3l",
+        "turtle_aggression_g3c",
+        "turtle_aggression_g3r"
+      ],
+      "minSpent": 9
+    },
+    {
+      "id": "turtle_aggression_c_l",
+      "characterId": "turtle",
+      "displayName": "No Mercy",
+      "column": 1,
+      "row": 11,
+      "description": "The trunk branches out -- left limb.",
+      "statBonus": {
+        "attack": 3
+      },
+      "prerequisites": [
+        "turtle_aggression_converge"
+      ]
+    },
+    {
+      "id": "turtle_aggression_c_c",
+      "characterId": "turtle",
+      "displayName": "Vicious Cycle",
+      "column": 1,
+      "row": 12,
+      "description": "The trunk branches out -- center limb.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "turtle_aggression_converge"
+      ]
+    },
+    {
+      "id": "turtle_aggression_c_r",
+      "characterId": "turtle",
+      "displayName": "Bloodrage",
+      "column": 1,
+      "row": 13,
+      "description": "The trunk branches out -- right limb.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "turtle_aggression_converge"
+      ]
+    },
+    {
+      "id": "turtle_aggression_d_l",
+      "characterId": "turtle",
+      "displayName": "Predator's Eye",
+      "column": 1,
+      "row": 14,
+      "description": "The left limb climbs on.",
+      "statBonus": {
+        "attack": 1
+      },
+      "prerequisites": [
+        "turtle_aggression_c_l"
+      ]
+    },
+    {
+      "id": "turtle_aggression_d_c",
+      "characterId": "turtle",
+      "displayName": "Finishing Blow",
+      "column": 1,
+      "row": 15,
+      "description": "The center limb keeps climbing.",
+      "statBonus": {
+        "attack": 4
+      },
+      "prerequisites": [
+        "turtle_aggression_c_c"
+      ]
+    },
+    {
+      "id": "turtle_aggression_d_r",
+      "characterId": "turtle",
+      "displayName": "Overkill",
+      "column": 1,
+      "row": 16,
+      "description": "The right limb climbs on.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "turtle_aggression_c_r"
+      ]
+    },
+    {
+      "id": "turtle_aggression_e_l",
+      "characterId": "turtle",
+      "displayName": "Ravenous",
+      "column": 1,
+      "row": 17,
+      "description": "The left limb nears the top.",
+      "statBonus": {
+        "attack": 3
+      },
+      "prerequisites": [
+        "turtle_aggression_d_l"
+      ]
+    },
+    {
+      "id": "turtle_aggression_e_c",
+      "characterId": "turtle",
+      "displayName": "Precision",
+      "column": 1,
+      "row": 18,
+      "description": "The center limb nears the top.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "turtle_aggression_d_c"
+      ]
+    },
+    {
+      "id": "turtle_aggression_e_r",
+      "characterId": "turtle",
+      "displayName": "Killer Instinct",
+      "column": 1,
+      "row": 19,
+      "description": "The right limb nears the top.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "turtle_aggression_d_r"
+      ]
+    },
+    {
+      "id": "turtle_aggression_cap",
+      "characterId": "turtle",
+      "displayName": "Reign of Blood",
+      "column": 1,
+      "row": 20,
+      "description": "Capstone. All three limbs converge here. Requires 20 embers already invested.",
+      "statBonus": {
+        "attack": 15
+      },
+      "prerequisites": [
+        "turtle_aggression_e_l",
+        "turtle_aggression_e_c",
+        "turtle_aggression_e_r"
+      ],
+      "minSpent": 20
+    },
+    {
+      "id": "turtle_control_r0",
+      "characterId": "turtle",
+      "displayName": "Light Feet",
+      "column": 2,
+      "row": 0,
+      "description": "The trunk begins -- three roots run up from here.",
+      "statBonus": {
+        "speed": 1
+      },
+      "maxManaBonus": 2,
+      "skillManaCostReduction": 1
+    },
+    {
+      "id": "turtle_control_g1l",
+      "characterId": "turtle",
+      "displayName": "Evasive Step",
+      "column": 2,
+      "row": 1,
+      "description": "Left root, first ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "turtle_control_r0"
+      ]
+    },
+    {
+      "id": "turtle_control_g1c",
+      "characterId": "turtle",
+      "displayName": "Quickstep",
+      "column": 2,
+      "row": 2,
+      "description": "Center root, first ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "turtle_control_r0"
+      ]
+    },
+    {
+      "id": "turtle_control_g1r",
+      "characterId": "turtle",
+      "displayName": "Shadow Step",
+      "column": 2,
+      "row": 3,
+      "description": "Right root, first ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "turtle_control_r0"
+      ]
+    },
+    {
+      "id": "turtle_control_g2l",
+      "characterId": "turtle",
+      "displayName": "Vanish",
+      "column": 2,
+      "row": 4,
+      "description": "Left root, second ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "turtle_control_g1l"
+      ]
+    },
+    {
+      "id": "turtle_control_g2c",
+      "characterId": "turtle",
+      "displayName": "Windwalk",
+      "column": 2,
+      "row": 5,
+      "description": "Center root, second ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "abilityScoreBonus": {
+        "wisdom": 2
+      },
+      "prerequisites": [
+        "turtle_control_g1c"
+      ]
+    },
+    {
+      "id": "turtle_control_g2r",
+      "characterId": "turtle",
+      "displayName": "Nightglide",
+      "column": 2,
+      "row": 6,
+      "description": "Right root, second ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "signatureCapacityBonus": 1,
+      "prerequisites": [
+        "turtle_control_g1r"
+      ]
+    },
+    {
+      "id": "turtle_control_g3l",
+      "characterId": "turtle",
+      "displayName": "Perfect Timing",
+      "column": 2,
+      "row": 7,
+      "description": "Left root, third ring.",
+      "statBonus": {
+        "speed": 2
+      },
+      "prerequisites": [
+        "turtle_control_g2l"
+      ]
+    },
+    {
+      "id": "turtle_control_g3c",
+      "characterId": "turtle",
+      "displayName": "Phantom Stride",
+      "column": 2,
+      "row": 8,
+      "description": "Center root, third ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "turtle_control_g2c"
+      ]
+    },
+    {
+      "id": "turtle_control_g3r",
+      "characterId": "turtle",
+      "displayName": "Trickster's Ward",
+      "column": 2,
+      "row": 9,
+      "description": "Right root, third ring.",
+      "maxManaBonus": 8,
+      "prerequisites": [
+        "turtle_control_g2r"
+      ]
+    },
+    {
+      "id": "turtle_control_converge",
+      "characterId": "turtle",
+      "displayName": "Shadow Bond",
+      "column": 2,
+      "row": 10,
+      "description": "All three roots gather into one trunk. Requires 9 embers already invested.",
+      "statBonus": {
+        "speed": 2
+      },
+      "signatureCapacityBonus": 1,
+      "prerequisites": [
+        "turtle_control_g3l",
+        "turtle_control_g3c",
+        "turtle_control_g3r"
+      ],
+      "minSpent": 9
+    },
+    {
+      "id": "turtle_control_c_l",
+      "characterId": "turtle",
+      "displayName": "Silver Tongue",
+      "column": 2,
+      "row": 11,
+      "description": "The trunk branches out -- left limb.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "turtle_control_converge"
+      ]
+    },
+    {
+      "id": "turtle_control_c_c",
+      "characterId": "turtle",
+      "displayName": "Fortune's Favor",
+      "column": 2,
+      "row": 12,
+      "description": "The trunk branches out -- center limb.",
+      "statBonus": {
+        "attack": 1
+      },
+      "abilityScoreBonus": {
+        "wisdom": 2
+      },
+      "prerequisites": [
+        "turtle_control_converge"
+      ]
+    },
+    {
+      "id": "turtle_control_c_r",
+      "characterId": "turtle",
+      "displayName": "Fleet Mind",
+      "column": 2,
+      "row": 13,
+      "description": "The trunk branches out -- right limb.",
+      "skillManaCostReduction": 1,
+      "prerequisites": [
+        "turtle_control_converge"
+      ]
+    },
+    {
+      "id": "turtle_control_d_l",
+      "characterId": "turtle",
+      "displayName": "Sixth Sense",
+      "column": 2,
+      "row": 14,
+      "description": "The left limb climbs on.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "turtle_control_c_l"
+      ]
+    },
+    {
+      "id": "turtle_control_d_c",
+      "characterId": "turtle",
+      "displayName": "Quick Hands",
+      "column": 2,
+      "row": 15,
+      "description": "The center limb keeps climbing.",
+      "statBonus": {
+        "speed": 1
+      },
+      "signaturePerTurnBonus": 1,
+      "prerequisites": [
+        "turtle_control_c_c"
+      ]
+    },
+    {
+      "id": "turtle_control_d_r",
+      "characterId": "turtle",
+      "displayName": "Lucky Break",
+      "column": 2,
+      "row": 16,
+      "description": "The right limb climbs on.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "turtle_control_c_r"
+      ]
+    },
+    {
+      "id": "turtle_control_e_l",
+      "characterId": "turtle",
+      "displayName": "Opportunist",
+      "column": 2,
+      "row": 17,
+      "description": "The left limb nears the top.",
+      "statBonus": {
+        "attack": 1
+      },
+      "prerequisites": [
+        "turtle_control_d_l"
+      ]
+    },
+    {
+      "id": "turtle_control_e_c",
+      "characterId": "turtle",
+      "displayName": "Featherlight Step",
+      "column": 2,
+      "row": 18,
+      "description": "The center limb nears the top.",
+      "statBonus": {
+        "speed": 1
+      },
+      "signaturePerTurnBonus": 1,
+      "prerequisites": [
+        "turtle_control_d_c"
+      ]
+    },
+    {
+      "id": "turtle_control_e_r",
+      "characterId": "turtle",
+      "displayName": "Elusive",
+      "column": 2,
+      "row": 19,
+      "description": "The right limb nears the top.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "turtle_control_d_r"
+      ]
+    },
+    {
+      "id": "turtle_control_cap",
+      "characterId": "turtle",
+      "displayName": "Ghost Walk",
+      "column": 2,
+      "row": 20,
+      "description": "Capstone. All three limbs converge here. Requires 20 embers already invested.",
+      "statBonus": {
+        "speed": 3
+      },
+      "abilityScoreBonus": {
+        "wisdom": 2
+      },
+      "signatureCapacityBonus": 1,
+      "prerequisites": [
+        "turtle_control_e_l",
+        "turtle_control_e_c",
+        "turtle_control_e_r"
+      ],
+      "minSpent": 20
+    },
+    {
+      "id": "owl_endurance_r0",
+      "characterId": "owl",
+      "displayName": "Hardened Skin",
+      "column": 0,
+      "row": 0,
+      "description": "The trunk begins -- three roots run up from here.",
+      "statBonus": {
+        "maxHealth": 8
+      }
+    },
+    {
+      "id": "owl_endurance_g1l",
+      "characterId": "owl",
+      "displayName": "Iron Resolve",
+      "column": 0,
+      "row": 1,
+      "description": "Left root, first ring.",
+      "statBonus": {
+        "defense": 3
+      },
+      "prerequisites": [
+        "owl_endurance_r0"
+      ]
+    },
+    {
+      "id": "owl_endurance_g1c",
+      "characterId": "owl",
+      "displayName": "Stubborn Frame",
+      "column": 0,
+      "row": 2,
+      "description": "Center root, first ring.",
+      "statBonus": {
+        "maxHealth": 15
+      },
+      "prerequisites": [
+        "owl_endurance_r0"
+      ]
+    },
+    {
+      "id": "owl_endurance_g1r",
+      "characterId": "owl",
+      "displayName": "Thick Hide",
+      "column": 0,
+      "row": 3,
+      "description": "Right root, first ring.",
+      "statBonus": {
+        "maxHealth": 18
+      },
+      "prerequisites": [
+        "owl_endurance_r0"
+      ]
+    },
+    {
+      "id": "owl_endurance_g2l",
+      "characterId": "owl",
+      "displayName": "Stone Ward",
+      "column": 0,
+      "row": 4,
+      "description": "Left root, second ring.",
+      "statBonus": {
+        "defense": 4
+      },
+      "prerequisites": [
+        "owl_endurance_g1l"
+      ]
+    },
+    {
+      "id": "owl_endurance_g2c",
+      "characterId": "owl",
+      "displayName": "Deep Roots",
+      "column": 0,
+      "row": 5,
+      "description": "Center root, second ring.",
+      "statBonus": {
+        "maxHealth": 15
+      },
+      "abilityScoreBonus": {
+        "strength": 1
+      },
+      "prerequisites": [
+        "owl_endurance_g1c"
+      ]
+    },
+    {
+      "id": "owl_endurance_g2r",
+      "characterId": "owl",
+      "displayName": "Counterforce",
+      "column": 0,
+      "row": 6,
+      "description": "Right root, second ring.",
+      "statBonus": {
+        "defense": 2
+      },
+      "prerequisites": [
+        "owl_endurance_g1r"
+      ]
+    },
+    {
+      "id": "owl_endurance_g3l",
+      "characterId": "owl",
+      "displayName": "Undying",
+      "column": 0,
+      "row": 7,
+      "description": "Left root, third ring.",
+      "statBonus": {
+        "defense": 8
+      },
+      "prerequisites": [
+        "owl_endurance_g2l"
+      ]
+    },
+    {
+      "id": "owl_endurance_g3c",
+      "characterId": "owl",
+      "displayName": "Fortified",
+      "column": 0,
+      "row": 8,
+      "description": "Center root, third ring.",
+      "statBonus": {
+        "defense": 6
+      },
+      "prerequisites": [
+        "owl_endurance_g2c"
+      ]
+    },
+    {
+      "id": "owl_endurance_g3r",
+      "characterId": "owl",
+      "displayName": "Guardian's Will",
+      "column": 0,
+      "row": 9,
+      "description": "Right root, third ring.",
+      "statBonus": {
+        "maxHealth": 15
+      },
+      "prerequisites": [
+        "owl_endurance_g2r"
+      ]
+    },
+    {
+      "id": "owl_endurance_converge",
+      "characterId": "owl",
+      "displayName": "Bulwark",
+      "column": 0,
+      "row": 10,
+      "description": "All three roots gather into one trunk. Requires 9 embers already invested.",
+      "statBonus": {
+        "defense": 10
+      },
+      "prerequisites": [
+        "owl_endurance_g3l",
+        "owl_endurance_g3c",
+        "owl_endurance_g3r"
+      ],
+      "minSpent": 9
+    },
+    {
+      "id": "owl_endurance_c_l",
+      "characterId": "owl",
+      "displayName": "Colossus",
+      "column": 0,
+      "row": 11,
+      "description": "The trunk branches out -- left limb.",
+      "statBonus": {
+        "maxHealth": 30
+      },
+      "prerequisites": [
+        "owl_endurance_converge"
+      ]
+    },
+    {
+      "id": "owl_endurance_c_c",
+      "characterId": "owl",
+      "displayName": "Unbroken",
+      "column": 0,
+      "row": 12,
+      "description": "The trunk branches out -- center limb.",
+      "statBonus": {
+        "defense": 5
+      },
+      "prerequisites": [
+        "owl_endurance_converge"
+      ]
+    },
+    {
+      "id": "owl_endurance_c_r",
+      "characterId": "owl",
+      "displayName": "Juggernaut",
+      "column": 0,
+      "row": 13,
+      "description": "The trunk branches out -- right limb.",
+      "statBonus": {
+        "maxHealth": 35
+      },
+      "prerequisites": [
+        "owl_endurance_converge"
+      ]
+    },
+    {
+      "id": "owl_endurance_d_l",
+      "characterId": "owl",
+      "displayName": "Brace",
+      "column": 0,
+      "row": 14,
+      "description": "The left limb climbs on.",
+      "statBonus": {
+        "defense": 2
+      },
+      "prerequisites": [
+        "owl_endurance_c_l"
+      ]
+    },
+    {
+      "id": "owl_endurance_d_c",
+      "characterId": "owl",
+      "displayName": "Unyielding",
+      "column": 0,
+      "row": 15,
+      "description": "The center limb keeps climbing.",
+      "statBonus": {
+        "defense": 8
+      },
+      "prerequisites": [
+        "owl_endurance_c_c"
+      ]
+    },
+    {
+      "id": "owl_endurance_d_r",
+      "characterId": "owl",
+      "displayName": "Last Stand",
+      "column": 0,
+      "row": 16,
+      "description": "The right limb climbs on.",
+      "statBonus": {
+        "defense": 2
+      },
+      "prerequisites": [
+        "owl_endurance_c_r"
+      ]
+    },
+    {
+      "id": "owl_endurance_e_l",
+      "characterId": "owl",
+      "displayName": "Steel Nerves",
+      "column": 0,
+      "row": 17,
+      "description": "The left limb nears the top.",
+      "statBonus": {
+        "defense": 2
+      },
+      "prerequisites": [
+        "owl_endurance_d_l"
+      ]
+    },
+    {
+      "id": "owl_endurance_e_c",
+      "characterId": "owl",
+      "displayName": "Adrenal Surge",
+      "column": 0,
+      "row": 18,
+      "description": "The center limb nears the top.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "owl_endurance_d_c"
+      ]
+    },
+    {
+      "id": "owl_endurance_e_r",
+      "characterId": "owl",
+      "displayName": "Second Wind",
+      "column": 0,
+      "row": 19,
+      "description": "The right limb nears the top.",
+      "statBonus": {
+        "maxHealth": 12
+      },
+      "prerequisites": [
+        "owl_endurance_d_r"
+      ]
+    },
+    {
+      "id": "owl_endurance_cap",
+      "characterId": "owl",
+      "displayName": "Immortal Frame",
+      "column": 0,
+      "row": 20,
+      "description": "Capstone. All three limbs converge here. Requires 20 embers already invested.",
+      "statBonus": {
+        "maxHealth": 80
+      },
+      "prerequisites": [
+        "owl_endurance_e_l",
+        "owl_endurance_e_c",
+        "owl_endurance_e_r"
+      ],
+      "minSpent": 20
+    },
+    {
+      "id": "owl_aggression_r0",
+      "characterId": "owl",
+      "displayName": "Sharpened Edge",
+      "column": 1,
+      "row": 0,
+      "description": "The trunk begins -- three roots run up from here.",
+      "statBonus": {
+        "attack": 1
+      }
+    },
+    {
+      "id": "owl_aggression_g1l",
+      "characterId": "owl",
+      "displayName": "Killing Blow",
+      "column": 1,
+      "row": 1,
+      "description": "Left root, first ring.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "owl_aggression_r0"
+      ]
+    },
+    {
+      "id": "owl_aggression_g1c",
+      "characterId": "owl",
+      "displayName": "Relentless",
+      "column": 1,
+      "row": 2,
+      "description": "Center root, first ring.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "owl_aggression_r0"
+      ]
+    },
+    {
+      "id": "owl_aggression_g1r",
+      "characterId": "owl",
+      "displayName": "War Fury",
+      "column": 1,
+      "row": 3,
+      "description": "Right root, first ring.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "owl_aggression_r0"
+      ]
+    },
+    {
+      "id": "owl_aggression_g2l",
+      "characterId": "owl",
+      "displayName": "Savage Strike",
+      "column": 1,
+      "row": 4,
+      "description": "Left root, second ring.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "owl_aggression_g1l"
+      ]
+    },
+    {
+      "id": "owl_aggression_g2c",
+      "characterId": "owl",
+      "displayName": "Death's Edge",
+      "column": 1,
+      "row": 5,
+      "description": "Center root, second ring.",
+      "statBonus": {
+        "attack": 3
+      },
+      "prerequisites": [
+        "owl_aggression_g1c"
+      ]
+    },
+    {
+      "id": "owl_aggression_g2r",
+      "characterId": "owl",
+      "displayName": "Executioner",
+      "column": 1,
+      "row": 6,
+      "description": "Right root, second ring.",
+      "statBonus": {
+        "attack": 4
+      },
+      "prerequisites": [
+        "owl_aggression_g1r"
+      ]
+    },
+    {
+      "id": "owl_aggression_g3l",
+      "characterId": "owl",
+      "displayName": "Bloodletter",
+      "column": 1,
+      "row": 7,
+      "description": "Left root, third ring.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "owl_aggression_g2l"
+      ]
+    },
+    {
+      "id": "owl_aggression_g3c",
+      "characterId": "owl",
+      "displayName": "Rising Fury",
+      "column": 1,
+      "row": 8,
+      "description": "Center root, third ring.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "owl_aggression_g2c"
+      ]
+    },
+    {
+      "id": "owl_aggression_g3r",
+      "characterId": "owl",
+      "displayName": "Ravager",
+      "column": 1,
+      "row": 9,
+      "description": "Right root, third ring.",
+      "statBonus": {
+        "attack": 4
+      },
+      "prerequisites": [
+        "owl_aggression_g2r"
+      ]
+    },
+    {
+      "id": "owl_aggression_converge",
+      "characterId": "owl",
+      "displayName": "Bloodlust",
+      "column": 1,
+      "row": 10,
+      "description": "All three roots gather into one trunk. Requires 9 embers already invested.",
+      "statBonus": {
+        "attack": 6
+      },
+      "prerequisites": [
+        "owl_aggression_g3l",
+        "owl_aggression_g3c",
+        "owl_aggression_g3r"
+      ],
+      "minSpent": 9
+    },
+    {
+      "id": "owl_aggression_c_l",
+      "characterId": "owl",
+      "displayName": "No Mercy",
+      "column": 1,
+      "row": 11,
+      "description": "The trunk branches out -- left limb.",
+      "statBonus": {
+        "attack": 3
+      },
+      "prerequisites": [
+        "owl_aggression_converge"
+      ]
+    },
+    {
+      "id": "owl_aggression_c_c",
+      "characterId": "owl",
+      "displayName": "Vicious Cycle",
+      "column": 1,
+      "row": 12,
+      "description": "The trunk branches out -- center limb.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "owl_aggression_converge"
+      ]
+    },
+    {
+      "id": "owl_aggression_c_r",
+      "characterId": "owl",
+      "displayName": "Bloodrage",
+      "column": 1,
+      "row": 13,
+      "description": "The trunk branches out -- right limb.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "owl_aggression_converge"
+      ]
+    },
+    {
+      "id": "owl_aggression_d_l",
+      "characterId": "owl",
+      "displayName": "Predator's Eye",
+      "column": 1,
+      "row": 14,
+      "description": "The left limb climbs on.",
+      "statBonus": {
+        "attack": 1
+      },
+      "prerequisites": [
+        "owl_aggression_c_l"
+      ]
+    },
+    {
+      "id": "owl_aggression_d_c",
+      "characterId": "owl",
+      "displayName": "Finishing Blow",
+      "column": 1,
+      "row": 15,
+      "description": "The center limb keeps climbing.",
+      "statBonus": {
+        "attack": 4
+      },
+      "prerequisites": [
+        "owl_aggression_c_c"
+      ]
+    },
+    {
+      "id": "owl_aggression_d_r",
+      "characterId": "owl",
+      "displayName": "Overkill",
+      "column": 1,
+      "row": 16,
+      "description": "The right limb climbs on.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "owl_aggression_c_r"
+      ]
+    },
+    {
+      "id": "owl_aggression_e_l",
+      "characterId": "owl",
+      "displayName": "Ravenous",
+      "column": 1,
+      "row": 17,
+      "description": "The left limb nears the top.",
+      "statBonus": {
+        "attack": 3
+      },
+      "prerequisites": [
+        "owl_aggression_d_l"
+      ]
+    },
+    {
+      "id": "owl_aggression_e_c",
+      "characterId": "owl",
+      "displayName": "Precision",
+      "column": 1,
+      "row": 18,
+      "description": "The center limb nears the top.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "owl_aggression_d_c"
+      ]
+    },
+    {
+      "id": "owl_aggression_e_r",
+      "characterId": "owl",
+      "displayName": "Killer Instinct",
+      "column": 1,
+      "row": 19,
+      "description": "The right limb nears the top.",
+      "statBonus": {
+        "attack": 2
+      },
+      "prerequisites": [
+        "owl_aggression_d_r"
+      ]
+    },
+    {
+      "id": "owl_aggression_cap",
+      "characterId": "owl",
+      "displayName": "Reign of Blood",
+      "column": 1,
+      "row": 20,
+      "description": "Capstone. All three limbs converge here. Requires 20 embers already invested.",
+      "statBonus": {
+        "attack": 15
+      },
+      "prerequisites": [
+        "owl_aggression_e_l",
+        "owl_aggression_e_c",
+        "owl_aggression_e_r"
+      ],
+      "minSpent": 20
+    },
+    {
+      "id": "owl_control_r0",
+      "characterId": "owl",
+      "displayName": "Light Feet",
+      "column": 2,
+      "row": 0,
+      "description": "The trunk begins -- three roots run up from here.",
+      "statBonus": {
+        "speed": 1
+      },
+      "maxManaBonus": 2,
+      "skillManaCostReduction": 1
+    },
+    {
+      "id": "owl_control_g1l",
+      "characterId": "owl",
+      "displayName": "Evasive Step",
+      "column": 2,
+      "row": 1,
+      "description": "Left root, first ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "owl_control_r0"
+      ]
+    },
+    {
+      "id": "owl_control_g1c",
+      "characterId": "owl",
+      "displayName": "Quickstep",
+      "column": 2,
+      "row": 2,
+      "description": "Center root, first ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "owl_control_r0"
+      ]
+    },
+    {
+      "id": "owl_control_g1r",
+      "characterId": "owl",
+      "displayName": "Shadow Step",
+      "column": 2,
+      "row": 3,
+      "description": "Right root, first ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "owl_control_r0"
+      ]
+    },
+    {
+      "id": "owl_control_g2l",
+      "characterId": "owl",
+      "displayName": "Vanish",
+      "column": 2,
+      "row": 4,
+      "description": "Left root, second ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "owl_control_g1l"
+      ]
+    },
+    {
+      "id": "owl_control_g2c",
+      "characterId": "owl",
+      "displayName": "Windwalk",
+      "column": 2,
+      "row": 5,
+      "description": "Center root, second ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "abilityScoreBonus": {
+        "intelligence": 2
+      },
+      "prerequisites": [
+        "owl_control_g1c"
+      ]
+    },
+    {
+      "id": "owl_control_g2r",
+      "characterId": "owl",
+      "displayName": "Nightglide",
+      "column": 2,
+      "row": 6,
+      "description": "Right root, second ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "signatureCapacityBonus": 1,
+      "prerequisites": [
+        "owl_control_g1r"
+      ]
+    },
+    {
+      "id": "owl_control_g3l",
+      "characterId": "owl",
+      "displayName": "Perfect Timing",
+      "column": 2,
+      "row": 7,
+      "description": "Left root, third ring.",
+      "statBonus": {
+        "speed": 2
+      },
+      "prerequisites": [
+        "owl_control_g2l"
+      ]
+    },
+    {
+      "id": "owl_control_g3c",
+      "characterId": "owl",
+      "displayName": "Phantom Stride",
+      "column": 2,
+      "row": 8,
+      "description": "Center root, third ring.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "owl_control_g2c"
+      ]
+    },
+    {
+      "id": "owl_control_g3r",
+      "characterId": "owl",
+      "displayName": "Trickster's Ward",
+      "column": 2,
+      "row": 9,
+      "description": "Right root, third ring.",
+      "maxManaBonus": 8,
+      "prerequisites": [
+        "owl_control_g2r"
+      ]
+    },
+    {
+      "id": "owl_control_converge",
+      "characterId": "owl",
+      "displayName": "Shadow Bond",
+      "column": 2,
+      "row": 10,
+      "description": "All three roots gather into one trunk. Requires 9 embers already invested.",
+      "statBonus": {
+        "speed": 2
+      },
+      "signatureCapacityBonus": 1,
+      "prerequisites": [
+        "owl_control_g3l",
+        "owl_control_g3c",
+        "owl_control_g3r"
+      ],
+      "minSpent": 9
+    },
+    {
+      "id": "owl_control_c_l",
+      "characterId": "owl",
+      "displayName": "Silver Tongue",
+      "column": 2,
+      "row": 11,
+      "description": "The trunk branches out -- left limb.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "owl_control_converge"
+      ]
+    },
+    {
+      "id": "owl_control_c_c",
+      "characterId": "owl",
+      "displayName": "Fortune's Favor",
+      "column": 2,
+      "row": 12,
+      "description": "The trunk branches out -- center limb.",
+      "statBonus": {
+        "attack": 1
+      },
+      "abilityScoreBonus": {
+        "intelligence": 2
+      },
+      "prerequisites": [
+        "owl_control_converge"
+      ]
+    },
+    {
+      "id": "owl_control_c_r",
+      "characterId": "owl",
+      "displayName": "Fleet Mind",
+      "column": 2,
+      "row": 13,
+      "description": "The trunk branches out -- right limb.",
+      "skillManaCostReduction": 1,
+      "prerequisites": [
+        "owl_control_converge"
+      ]
+    },
+    {
+      "id": "owl_control_d_l",
+      "characterId": "owl",
+      "displayName": "Sixth Sense",
+      "column": 2,
+      "row": 14,
+      "description": "The left limb climbs on.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "owl_control_c_l"
+      ]
+    },
+    {
+      "id": "owl_control_d_c",
+      "characterId": "owl",
+      "displayName": "Quick Hands",
+      "column": 2,
+      "row": 15,
+      "description": "The center limb keeps climbing.",
+      "statBonus": {
+        "speed": 1
+      },
+      "signaturePerTurnBonus": 1,
+      "prerequisites": [
+        "owl_control_c_c"
+      ]
+    },
+    {
+      "id": "owl_control_d_r",
+      "characterId": "owl",
+      "displayName": "Lucky Break",
+      "column": 2,
+      "row": 16,
+      "description": "The right limb climbs on.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "owl_control_c_r"
+      ]
+    },
+    {
+      "id": "owl_control_e_l",
+      "characterId": "owl",
+      "displayName": "Opportunist",
+      "column": 2,
+      "row": 17,
+      "description": "The left limb nears the top.",
+      "statBonus": {
+        "attack": 1
+      },
+      "prerequisites": [
+        "owl_control_d_l"
+      ]
+    },
+    {
+      "id": "owl_control_e_c",
+      "characterId": "owl",
+      "displayName": "Featherlight Step",
+      "column": 2,
+      "row": 18,
+      "description": "The center limb nears the top.",
+      "statBonus": {
+        "speed": 1
+      },
+      "signaturePerTurnBonus": 1,
+      "prerequisites": [
+        "owl_control_d_c"
+      ]
+    },
+    {
+      "id": "owl_control_e_r",
+      "characterId": "owl",
+      "displayName": "Elusive",
+      "column": 2,
+      "row": 19,
+      "description": "The right limb nears the top.",
+      "statBonus": {
+        "speed": 1
+      },
+      "prerequisites": [
+        "owl_control_d_r"
+      ]
+    },
+    {
+      "id": "owl_control_cap",
+      "characterId": "owl",
+      "displayName": "Ghost Walk",
+      "column": 2,
+      "row": 20,
+      "description": "Capstone. All three limbs converge here. Requires 20 embers already invested.",
+      "statBonus": {
+        "speed": 3
+      },
+      "abilityScoreBonus": {
+        "intelligence": 2
+      },
+      "signatureCapacityBonus": 1,
+      "prerequisites": [
+        "owl_control_e_l",
+        "owl_control_e_c",
+        "owl_control_e_r"
+      ],
+      "minSpent": 20
+    },
+    {
+      "id": "sheep_lamb_root",
+      "characterId": "sheep",
+      "displayName": "The Fragile Lamb",
+      "column": 1,
+      "row": 0,
+      "description": "Your allegiance. Wool comes from wards being struck, not from being struck yourself -- you cover somebody, they take the hit, you get paid. Free, and you may swear to only one path's engine at a time.",
+      "effects": [
+        {
+          "type": "WoolWhenWardedAllyHit",
+          "magnitude": 2
+        }
+      ]
+    },
+    {
+      "id": "sheep_lamb_ward_1",
+      "characterId": "sheep",
+      "displayName": "Fleece Ward",
+      "column": 1,
+      "row": 1,
+      "description": "Unlocks Ward (2 wool): the next blow to land on you is 40% softer.",
+      "prerequisites": [
+        "sheep_lamb_root"
+      ],
+      "effects": [
+        {
+          "type": "WardReductionPercent",
+          "magnitude": 40
+        }
+      ],
+      "grantsSkillId": "fleece_ward"
+    },
+    {
+      "id": "sheep_lamb_ward_2",
+      "characterId": "sheep",
+      "displayName": "Thicker Fleece",
+      "column": 1,
+      "row": 4,
+      "description": "Sixty percent, now.",
+      "prerequisites": [
+        "sheep_lamb_ward_1"
+      ],
+      "effects": [
+        {
+          "type": "WardReductionPercent",
+          "magnitude": 60
+        }
+      ]
+    },
+    {
+      "id": "sheep_lamb_ward_3",
+      "characterId": "sheep",
+      "displayName": "Second Nature",
+      "column": 1,
+      "row": 7,
+      "description": "Warding stops costing the turn. She can cover herself AND do something with the day.",
+      "prerequisites": [
+        "sheep_lamb_ward_2"
+      ],
+      "effects": [
+        {
+          "type": "WardIsFreeAction"
+        }
+      ]
+    },
+    {
+      "id": "sheep_lamb_mend_1",
+      "characterId": "sheep",
+      "displayName": "Mending Fleece",
+      "column": 1,
+      "row": 2,
+      "description": "A ward also knits: 3% of the wearer's health back, each turn, for two.",
+      "prerequisites": [
+        "sheep_lamb_root"
+      ],
+      "effects": [
+        {
+          "type": "WardAlsoAppliesRegen",
+          "magnitude": 3,
+          "threshold": 2
+        }
+      ]
+    },
+    {
+      "id": "sheep_lamb_mend_2",
+      "characterId": "sheep",
+      "displayName": "Deep Mending",
+      "column": 1,
+      "row": 5,
+      "description": "Six percent a turn, for three.",
+      "prerequisites": [
+        "sheep_lamb_mend_1"
+      ],
+      "effects": [
+        {
+          "type": "WardAlsoAppliesRegen",
+          "magnitude": 6,
+          "threshold": 3
+        }
+      ]
+    },
+    {
+      "id": "sheep_lamb_mend_3",
+      "characterId": "sheep",
+      "displayName": "Parting Gift",
+      "column": 1,
+      "row": 8,
+      "description": "A ward breaking heals whoever was wearing it for a tenth of their health. Losing one stops being a loss.",
+      "prerequisites": [
+        "sheep_lamb_mend_2"
+      ],
+      "effects": [
+        {
+          "type": "WardHealsWhenSpent",
+          "magnitude": 10
+        }
+      ]
+    },
+    {
+      "id": "sheep_lamb_weight_1",
+      "characterId": "sheep",
+      "displayName": "Weight of Wool",
+      "column": 1,
+      "row": 3,
+      "description": "Every ward you are carrying makes you hit harder: a quarter more per warded ally, and double if the ward is on you.",
+      "prerequisites": [
+        "sheep_lamb_root"
+      ],
+      "effects": [
+        {
+          "type": "WardDamageBonusPerAlly",
+          "magnitude": 25
+        },
+        {
+          "type": "WardDamageBonusSelf",
+          "magnitude": 100
+        }
+      ]
+    },
+    {
+      "id": "sheep_lamb_weight_2",
+      "characterId": "sheep",
+      "displayName": "Heavier Still",
+      "column": 1,
+      "row": 6,
+      "description": "Half again per ally, and two and a half times on yourself.",
+      "prerequisites": [
+        "sheep_lamb_weight_1"
+      ],
+      "effects": [
+        {
+          "type": "WardDamageBonusPerAlly",
+          "magnitude": 50
+        },
+        {
+          "type": "WardDamageBonusSelf",
+          "magnitude": 150
+        }
+      ]
+    },
+    {
+      "id": "sheep_lamb_weight_3",
+      "characterId": "sheep",
+      "displayName": "Afterweight",
+      "column": 1,
+      "row": 9,
+      "description": "Triple on yourself -- and it does not vanish the instant the ward does. One turn of grace to make the loss count for something.",
+      "prerequisites": [
+        "sheep_lamb_weight_2"
+      ],
+      "effects": [
+        {
+          "type": "WardDamageBonusPerAlly",
+          "magnitude": 50
+        },
+        {
+          "type": "WardDamageBonusSelf",
+          "magnitude": 200
+        },
+        {
+          "type": "WardSelfBonusPersistsTurns",
+          "magnitude": 1
+        }
+      ]
+    },
+    {
+      "id": "sheep_lamb_converge",
+      "characterId": "sheep",
+      "displayName": "Wail",
+      "column": 1,
+      "row": 10,
+      "description": "The three strands gather. Unlocks Wail: 10 wool -- the whole meter -- and nothing in the room hits for more than half for two turns. Free, but it wants 9 embers spent in this path first.",
+      "prerequisites": [
+        "sheep_lamb_ward_3",
+        "sheep_lamb_mend_3",
+        "sheep_lamb_weight_3"
+      ],
+      "minSpent": 9,
+      "grantsSkillId": "wail"
+    },
+    {
+      "id": "sheep_lamb_flock_1",
+      "characterId": "sheep",
+      "displayName": "The Flock",
+      "column": 1,
+      "row": 11,
+      "description": "A ward also covers one other, at half strength.",
+      "prerequisites": [
+        "sheep_lamb_converge"
+      ],
+      "effects": [
+        {
+          "type": "WardSpreadsToAllies",
+          "magnitude": 50
+        }
+      ]
+    },
+    {
+      "id": "sheep_lamb_flock_2",
+      "characterId": "sheep",
+      "displayName": "The Whole Flock",
+      "column": 1,
+      "row": 14,
+      "description": "Everyone, at half strength.",
+      "prerequisites": [
+        "sheep_lamb_flock_1"
+      ],
+      "effects": [
+        {
+          "type": "WardSpreadsToAllies",
+          "magnitude": 50
+        },
+        {
+          "type": "WardSpreadsToWholeParty"
+        }
+      ]
+    },
+    {
+      "id": "sheep_lamb_flock_3",
+      "characterId": "sheep",
+      "displayName": "Nobody Left Out",
+      "column": 1,
+      "row": 17,
+      "description": "Everyone, at full strength, for the same two wool.",
+      "prerequisites": [
+        "sheep_lamb_flock_2"
+      ],
+      "effects": [
+        {
+          "type": "WardSpreadsToAllies",
+          "magnitude": 100
+        },
+        {
+          "type": "WardSpreadsToWholeParty"
+        }
+      ]
+    },
+    {
+      "id": "sheep_lamb_gift_1",
+      "characterId": "sheep",
+      "displayName": "Wool Gift",
+      "column": 1,
+      "row": 12,
+      "description": "Unlocks Gift: Mana (2 wool) -- a quarter of an ally's mana, back.",
+      "prerequisites": [
+        "sheep_lamb_converge"
+      ],
+      "effects": [
+        {
+          "type": "GiftManaPercent",
+          "magnitude": 25
+        }
+      ],
+      "grantsSkillId": "gift_mana"
+    },
+    {
+      "id": "sheep_lamb_gift_2",
+      "characterId": "sheep",
+      "displayName": "Gift of Fury",
+      "column": 1,
+      "row": 15,
+      "description": "Unlocks Gift: Fury (3 wool) -- an ally's next swing lands half again as hard.",
+      "prerequisites": [
+        "sheep_lamb_gift_1"
+      ],
+      "effects": [
+        {
+          "type": "GiftAttackBonusPercent",
+          "magnitude": 50
+        }
+      ],
+      "grantsSkillId": "gift_fury"
+    },
+    {
+      "id": "sheep_lamb_gift_3",
+      "characterId": "sheep",
+      "displayName": "Gift of Haste",
+      "column": 1,
+      "row": 18,
+      "description": "Unlocks Gift: Haste (5 wool) -- an ally goes next, whatever the queue thought.",
+      "prerequisites": [
+        "sheep_lamb_gift_2"
+      ],
+      "effects": [
+        {
+          "type": "GiftAppliesImmediateTurn"
+        }
+      ],
+      "grantsSkillId": "gift_haste"
+    },
+    {
+      "id": "sheep_lamb_shatter_1",
+      "characterId": "sheep",
+      "displayName": "Shatter",
+      "column": 1,
+      "row": 13,
+      "description": "Unlocks Shatter (3 wool): break every ward you have out. Each one throws your full weight at something.",
+      "prerequisites": [
+        "sheep_lamb_converge"
+      ],
+      "effects": [
+        {
+          "type": "ShatterDamagePercentOfAttack",
+          "magnitude": 100
+        }
+      ],
+      "grantsSkillId": "shatter"
+    },
+    {
+      "id": "sheep_lamb_shatter_2",
+      "characterId": "sheep",
+      "displayName": "Splintering",
+      "column": 1,
+      "row": 16,
+      "description": "Each one throws nearly double.",
+      "prerequisites": [
+        "sheep_lamb_shatter_1"
+      ],
+      "effects": [
+        {
+          "type": "ShatterDamagePercentOfAttack",
+          "magnitude": 175
+        }
+      ]
+    },
+    {
+      "id": "sheep_lamb_shatter_3",
+      "characterId": "sheep",
+      "displayName": "Sacrifice",
+      "column": 1,
+      "row": 19,
+      "description": "Breaking your OWN ward hits three times as hard and leaves the target open -- and leaves you with nothing between you and the room.",
+      "prerequisites": [
+        "sheep_lamb_shatter_2"
+      ],
+      "effects": [
+        {
+          "type": "ShatterSelfWardMultiplier",
+          "magnitude": 300
+        },
+        {
+          "type": "ShatterAppliesVulnerable"
+        }
+      ]
+    },
+    {
+      "id": "sheep_lamb_cap",
+      "characterId": "sheep",
+      "displayName": "The Golden Fleece",
+      "column": 1,
+      "row": 20,
+      "description": "Wards stop breaking. They last the fight. Free, gated at 20 embers spent in this path.",
+      "prerequisites": [
+        "sheep_lamb_flock_3",
+        "sheep_lamb_gift_3",
+        "sheep_lamb_shatter_3"
+      ],
+      "minSpent": 20,
+      "effects": [
+        {
+          "type": "WardsNeverExpire"
+        }
+      ]
+    }
+  ]
+}

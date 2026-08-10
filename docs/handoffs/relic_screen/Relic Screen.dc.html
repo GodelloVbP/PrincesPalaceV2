@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet"><style>body{margin:0;background:#07040c;font-family:'Chakra Petch',system-ui,sans-serif}a{color:#e7b25c}a:hover{color:#ffd48a}@keyframes beacon2{0%,100%{opacity:.3;transform:scale(1)}50%{opacity:.7;transform:scale(1.06)}}</style></helmet>
+
+<div style="padding:34px 40px 46px;max-width:2000px">
+<div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:18px">
+<h1 style="margin:0;font:600 19px/1.2 'Chakra Petch',sans-serif;color:#f3e9ff">Relic screen — per-hero equip, shared pool</h1>
+<span style="font:400 13px/1.4 'Chakra Petch',sans-serif;color:#8a7aa0">Same hero-switcher pattern as the talent tree. Relics belong to the party, not one hero — click any card to move it to whoever's selected.</span>
+</div>
+
+<div style="position:relative;width:1920px;height:1080px;overflow:hidden;background:#07040c;box-shadow:0 30px 90px rgba(0,0,0,.7);outline:1px solid rgba(200,160,255,.14)">
+  <div style="position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 0%,#241736 0%,#150d22 40%,#0a0612 65%,#07040c 90%)"></div>
+  <div style="position:absolute;left:50%;top:-6%;width:60%;height:70%;transform:translateX(-50%);background:radial-gradient(50% 50% at 50% 50%,rgba(231,178,92,.14),rgba(231,178,92,0) 70%);filter:blur(40px)"></div>
+
+  <div style="position:absolute;left:56px;top:44px;display:flex;gap:10px;z-index:3">
+    <sc-for list="{{ heroTabs }}" as="h" hint-placeholder-count="3">
+      <div onClick="{{ h.onClick }}" style="{{ h.style }}">{{ h.name }}</div>
+    </sc-for>
+  </div>
+
+  <div style="position:absolute;left:0;right:0;top:150px;text-align:center;z-index:3">
+    <div style="font:700 30px/1 'Chakra Petch',sans-serif;letter-spacing:.06em;color:#f6ecff;text-shadow:0 0 24px {{ accentGlow }}">{{ heroName }}</div>
+    <div style="margin-top:10px;font:500 15px/1 'Chakra Petch',sans-serif;letter-spacing:.08em;color:#a48fbe">{{ equippedLine }}</div>
+  </div>
+
+  <div style="position:absolute;left:0;right:0;top:320px;display:flex;justify-content:center;gap:36px;flex-wrap:wrap;padding:0 60px;z-index:3">
+    <sc-for list="{{ relics }}" as="r" hint-placeholder-count="4">
+      <div onClick="{{ r.onClick }}" style="{{ r.wrapStyle }}">
+        <div style="{{ r.beaconStyle }}"></div>
+        <div style="{{ r.badgeStyle }}">{{ r.badge }}</div>
+        <div style="{{ r.iconRing }}">
+          <svg viewBox="0 0 60 60" style="width:56px;height:56px">
+            <polygon points="30,6 46,20 40,54 20,54 14,20" fill="{{ r.iconFill }}" stroke="{{ r.accent }}" stroke-width="2.4"></polygon>
+            <circle cx="30" cy="26" r="7" fill="{{ r.accent }}" opacity=".8"></circle>
+          </svg>
+        </div>
+        <div style="{{ r.nameStyle }}">{{ r.name }}</div>
+        <p style="{{ r.descStyle }}">{{ r.desc }}</p>
+        <div style="{{ r.statusStyle }}">{{ r.status }}</div>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="position:absolute;left:0;right:0;bottom:44px;display:flex;justify-content:center;z-index:3">
+    <div style="display:flex;align-items:center;justify-content:center;width:210px;height:52px;box-sizing:border-box;border:1px solid rgba(231,178,92,.5);border-radius:4px;background:linear-gradient(rgba(58,32,20,.9),rgba(30,16,10,.95));font:600 16px/1 'Chakra Petch',sans-serif;letter-spacing:.14em;color:#ffd9a2;box-shadow:0 0 22px rgba(231,140,60,.2),inset 0 1px 0 rgba(255,220,170,.2);cursor:pointer;transition:transform .12s ease" style-hover="transform:scale(1.05)" style-active="transform:scale(.95)">BACK</div>
+  </div>
+</div>
+
+<div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:26px;max-width:1920px">
+  <div style="flex:1 1 440px;min-width:380px;padding:22px 24px;border:1px solid rgba(180,150,210,.18);border-radius:8px;background:#0f0a16">
+    <h2 style="margin:0 0 12px;font:600 14px/1 'Chakra Petch',sans-serif;letter-spacing:.1em;color:#e7b25c">WHAT CHANGED</h2>
+    <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font:400 13.5px/1.6 'Chakra Petch',sans-serif;color:#a695bc">
+      <li>Cards keep the source's 3-state colour language (equipped / held elsewhere / free) but restyled into the game's painterly gold-rim-on-dark language instead of flat green/red/gold boxes.</li>
+      <li>"Held by X" now reads as a small badge in the card corner instead of parenthetical text buried in the description — scannable at a glance across a full relic list.</li>
+      <li>Clicking a relic held by another hero <strong style="color:#d9c8ef">reassigns it</strong> to whoever's tab is active — no separate unequip step, matching the "one relic pool" rule.</li>
+      <li>Same hero-switcher component as the talent tree — the two screens should feel like one system.</li>
+    </ul>
+  </div>
+  <div style="flex:1 1 440px;min-width:380px;padding:22px 24px;border:1px solid rgba(180,150,210,.18);border-radius:8px;background:#0f0a16">
+    <h2 style="margin:0 0 12px;font:600 14px/1 'Chakra Petch',sans-serif;letter-spacing:.1em;color:#e7b25c">FOR THE ENGINE</h2>
+    <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font:400 13.5px/1.6 'Chakra Petch',sans-serif;color:#a695bc">
+      <li>Relic pool is shared across the party (data model: one owner field per relic, not one list per hero). Clicking a card owned by hero B while viewing hero A reassigns it — a relic can only ever have 0 or 1 owner.</li>
+      <li>Card states: equipped (green→gold accent, "EQUIPPED" badge), held elsewhere (muted accent, "HELD BY {name}" badge), unclaimed (neutral gold border, no badge).</li>
+      <li>Icon is a placeholder gem/shard shape — swap for real relic art per-item; the ring/glow wrapper is state-driven chrome, independent of the icon art.</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:2000}}">
+const HEROES = ["Sheep", "Fly", "Wolf"];
+const ACCENTS = { Sheep: "#e7b25c", Fly: "#e05a5a", Wolf: "#7fc25a" };
+
+const RELICS = [
+  { id: "dual", name: "Dual Wield", desc: "Whenever this character attacks, they strike the same target a second time.", owner: "Sheep" },
+  { id: "shield", name: "Magical Shield", desc: "After casting, the next hit this character takes is reduced by half.", owner: "Fly" },
+  { id: "blood", name: "Bloodlust", desc: "Killing an enemy grants this character another turn.", owner: null },
+  { id: "thorn", name: "Thornmail", desc: "Melee attackers take 20% of the damage they deal back as reflect.", owner: null }
+];
+
+class Component extends DCLogic {
+  state = { hero: "Sheep", owners: RELICS.reduce((a, r) => ({ ...a, [r.id]: r.owner }), {}) };
+
+  assign(id) {
+    this.setState((s) => ({ owners: { ...s.owners, [id]: s.owners[id] === s.hero ? null : s.hero } }));
+  }
+
+  renderVals() {
+    const hero = this.state.hero;
+    const accent = ACCENTS[hero];
+    const heroTabs = HEROES.map((h) => ({
+      name: h,
+      onClick: () => this.setState({ hero: h }),
+      style: `padding:9px 20px;border-radius:4px;font:600 13px/1 'Chakra Petch',sans-serif;letter-spacing:.08em;cursor:pointer;border:1px solid ${h === hero ? ACCENTS[h] : "rgba(180,150,210,.25)"};background:${h === hero ? "linear-gradient(rgba(58,42,20,.9),rgba(30,20,10,.9))" : "rgba(20,14,26,.6)"};color:${h === hero ? "#ffe0a8" : "#a695bc"};transition:transform .12s ease`
+    }));
+
+    const equipped = RELICS.find((r) => this.state.owners[r.id] === hero);
+
+    const relics = RELICS.map((r) => {
+      const owner = this.state.owners[r.id];
+      const isMine = owner === hero;
+      const heldElsewhere = owner && !isMine;
+      const cardAccent = isMine ? "#8fe07f" : heldElsewhere ? "#e0596a" : "#e7b25c";
+      return {
+        name: r.name, desc: r.desc,
+        wrapStyle: `position:relative;width:320px;min-height:200px;padding:26px 24px 22px;box-sizing:border-box;border-radius:8px;border:2px solid ${cardAccent};background:linear-gradient(rgba(20,14,26,.92),rgba(10,7,14,.95));box-shadow:0 0 26px ${cardAccent}33,inset 0 1px 0 rgba(255,255,255,.06);cursor:pointer;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;transition:transform .12s ease`,
+        beaconStyle: !owner ? `position:absolute;inset:-10px;border-radius:10px;background:radial-gradient(60% 60% at 50% 40%,${cardAccent}22,${cardAccent}00 70%);animation:beacon2 2.4s ease-in-out infinite;pointer-events:none` : "display:none",
+        badgeStyle: owner ? `position:absolute;top:-12px;left:50%;transform:translateX(-50%);padding:3px 12px;border-radius:10px;font:600 10px/1 'Chakra Petch',sans-serif;letter-spacing:.1em;color:#0d0a08;background:${cardAccent};box-shadow:0 0 12px ${cardAccent}88` : "display:none",
+        badge: isMine ? "EQUIPPED" : heldElsewhere ? `HELD BY ${owner.toUpperCase()}` : "",
+        iconRing: `width:76px;height:76px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.06),rgba(0,0,0,.3));border:1px solid ${cardAccent}55`,
+        iconFill: `${cardAccent}33`, accent: cardAccent,
+        nameStyle: `font:600 17px/1.2 'Chakra Petch',sans-serif;letter-spacing:.04em;color:#f2e6ff`,
+        descStyle: `margin:0;font:400 12.5px/1.55 'Chakra Petch',sans-serif;color:#a695bc;text-wrap:pretty`,
+        statusStyle: `margin-top:auto;font:600 11px/1 'Chakra Petch',sans-serif;letter-spacing:.1em;color:${cardAccent}`,
+        status: isMine ? "CLICK TO UNEQUIP" : "CLICK TO EQUIP",
+        onClick: () => this.assign(r.id)
+      };
+    });
+
+    return {
+      heroTabs, heroName: hero, accentGlow: `${accent}66`,
+      equippedLine: equipped ? `Equipped: ${equipped.name}` : "Equipped: None",
+      relics
+    };
+  }
+}
+
+</script>
+</body>
+</html>

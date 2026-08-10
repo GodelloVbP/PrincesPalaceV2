@@ -1,0 +1,187 @@
+using System.Collections;
+using System.Linq;
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.TestTools;
+using UnityEngine.UI;
+using PrincesPalace;
+
+namespace PrincesPalace.PlayModeTests
+{
+    // Proves the generated scene actually works when it runs.
+    //
+    // The build-time wiring sweep checks that no [SerializeField] reference is
+    // null. That is necessary and not sufficient: a field can be non-null and
+    // still point at the wrong object. These tests drive the real scene the way
+    // a player does -- through public API and scene state, never by reaching
+    // into controller internals, which is exactly why InternalsVisibleTo is
+    // granted to the Editor assembly and NOT to this one.
+    public class ScreenWiringTests
+    {
+        private static IEnumerator LoadMainMenu()
+        {
+            yield return SceneManager.LoadSceneAsync("MainMenu", LoadSceneMode.Single);
+            // Start() runs one frame after activation, not synchronously.
+            yield return null;
+            yield return null;
+        }
+
+        private static T Find<T>() where T : Object =>
+            Object.FindFirstObjectByType<T>(FindObjectsInactive.Include);
+
+        private static GameObject FindByName(string name) =>
+            Resources.FindObjectsOfTypeAll<GameObject>()
+                .FirstOrDefault(go => go.name == name && go.scene.IsValid());
+
+        [UnityTest]
+        public IEnumerator TheSceneBuildsWithItsControllersAttached()
+        {
+            yield return LoadMainMenu();
+
+            Assert.IsNotNull(Find<MainMenuController>(), "MainMenuController should be on the panel root");
+            Assert.IsNotNull(Find<SaveSlotController>());
+            Assert.IsNotNull(Find<ResetProgressController>());
+        }
+
+        [UnityTest]
+        public IEnumerator BothModalsStartHidden()
+        {
+            yield return LoadMainMenu();
+
+            Assert.IsFalse(FindByName("SaveSlotPanel").activeSelf, "the save slot modal should start closed");
+            Assert.IsFalse(FindByName("OptionsPanel").activeSelf, "the options modal should start closed");
+        }
+
+        [UnityTest]
+        public IEnumerator PlayOpensTheSaveSlotModal_AndCancelClosesIt()
+        {
+            yield return LoadMainMenu();
+
+            var panel = FindByName("SaveSlotPanel");
+            FindByName("PlayButton").GetComponent<Button>().onClick.Invoke();
+            Assert.IsTrue(panel.activeSelf, "Play should open the save slot modal");
+
+            FindByName("CloseSaveSlotButton").GetComponent<Button>().onClick.Invoke();
+            Assert.IsFalse(panel.activeSelf, "Cancel should close it again");
+        }
+
+        [UnityTest]
+        public IEnumerator OptionsTogglesItsModal()
+        {
+            yield return LoadMainMenu();
+
+            var panel = FindByName("OptionsPanel");
+            var options = FindByName("OptionsButton").GetComponent<Button>();
+
+            options.onClick.Invoke();
+            Assert.IsTrue(panel.activeSelf);
+            options.onClick.Invoke();
+            Assert.IsFalse(panel.activeSelf, "a second press should close it");
+        }
+
+        [UnityTest]
+        public IEnumerator EveryAmbientSpriteIsNonInteractive()
+        {
+            yield return LoadMainMenu();
+
+            // 110-odd decorative glows sit across the whole frame, the button
+            // column included. One left as a raycast target is an unclickable
+            // Play button with no visible cause. The emitter clears this across
+            // any Decor subtree; this asserts it actually happened.
+            var ambience = FindByName("Ambience");
+            Assert.IsNotNull(ambience);
+
+            var interactive = ambience.GetComponentsInChildren<Graphic>(true)
+                .Where(g => g.raycastTarget)
+                .Select(g => g.name)
+                .ToList();
+
+            CollectionAssert.IsEmpty(interactive, "decorative ambience must never be a raycast target");
+        }
+
+        [UnityTest]
+        public IEnumerator TheAmbientLayerIsFullyPopulated()
+        {
+            yield return LoadMainMenu();
+
+            var ambience = FindByName("Ambience");
+            var glows = ambience.GetComponentsInChildren<Image>(true);
+
+            // Pinned to the measured tables: 45 stars + 16 windows + 10 lanterns
+            // + 2 gazebo + 26 motes + 5 drift bands.
+            Assert.AreEqual(104, glows.Length, "the ambient layer lost or gained elements");
+            Assert.AreEqual(45, ambience.GetComponentsInChildren<StarTwinkle>(true).Length);
+            Assert.AreEqual(10, ambience.GetComponentsInChildren<LanternFlicker>(true).Length);
+            Assert.AreEqual(26, ambience.GetComponentsInChildren<MoteDrift>(true).Length);
+            Assert.AreEqual(5, ambience.GetComponentsInChildren<SlowDrift>(true).Length);
+        }
+
+        // --- Hub ------------------------------------------------------------
+
+        private static IEnumerator LoadHub()
+        {
+            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator HubBuildsWithAllSixDestinationsWired()
+        {
+            yield return LoadHub();
+
+            Assert.IsNotNull(Find<HubController>());
+            foreach (var name in new[]
+                     {
+                         "TalentsBuilding", "PrincipalityBuilding", "CharacterSheetBuilding",
+                         "RelicsBuilding", "StartRunGate", "MainMenuButton",
+                     })
+            {
+                var go = FindByName(name);
+                Assert.IsNotNull(go, $"{name} is missing from the Hub");
+                Assert.IsNotNull(go.GetComponent<UnityEngine.UI.Button>(), $"{name} is not clickable");
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator TheCurrencyLine_IsFormattedFromTheSameTemplateTheBuilderUsed()
+        {
+            // The v1 drift pair, closed and asserted at runtime: the builder
+            // baked "Gold: 0    Relics: 0" while HubController wrote
+            // $"Gold: {g}    Relics: {r}" -- two hand-typed copies of a
+            // four-space separator. One UiStrings entry serves both now.
+            yield return LoadHub();
+
+            var label = FindByName("CurrencyLabel").GetComponent<TMPro.TMP_Text>();
+            Assert.AreEqual("Gold: 0    Relics: 0", label.text);
+
+            Find<HubController>().RefreshCurrency(340, 2);
+            Assert.AreEqual("Gold: 340    Relics: 2", label.text);
+        }
+
+        [UnityTest]
+        public IEnumerator TheHubBackgroundIsNotAClickTarget()
+        {
+            yield return LoadHub();
+
+            var background = FindByName("Background");
+            Assert.IsNotNull(background);
+            Assert.IsFalse(background.GetComponent<UnityEngine.UI.Image>().raycastTarget,
+                "the full-bleed background must never intercept a click meant for a building");
+        }
+
+        [UnityTest]
+        public IEnumerator TheSceneLayerCarriesThePushIn_AndTheButtonsDoNot()
+        {
+            yield return LoadMainMenu();
+
+            // The push-in must be on the PARENT of the background and ambience,
+            // never the background alone, or every glow slides off its lantern.
+            Assert.IsNotNull(FindByName("SceneLayer").GetComponent<KenBurnsDrift>());
+            Assert.IsNull(FindByName("Background").GetComponent<KenBurnsDrift>());
+            Assert.IsNull(FindByName("MenuButtons").GetComponent<KenBurnsDrift>(),
+                "the UI must stay put while the painted world drifts");
+        }
+    }
+}

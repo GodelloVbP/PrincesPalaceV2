@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 429d83c7acd1e6546892363aadea2846, type: 3}
+  m_Name: rat
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.EnemyDefinition
+  id: rat
+  displayName: Giant Rat
+  baseStats:
+    maxHealth: 90
+    speed: 7
+    attack: 3
+    defense: 1
+    manaRegen: 0
+    physicalResistance: 0
+    magicalResistance: 0
+  expReward: 15
+  currencyReward: 8
+  isBoss: 0
+  weakness: 2
+  resistance: 4
+  breakShieldPoints: 2
+  spritePath: Enemies/rat
+  facing: 1
+  sortOrder: 0
+  skillName: 
+  skillPower: 1.5
+  skillChance: 0.35
+  vfxPath: 
+  vfxSeconds: 0.6
+  vfxImpactFrame: 3
+  sfxPath: 
+  appliesStatus: 0
+  hasStatus: 1
+  statusMagnitude: 15
+  statusDuration: 3
+  avoidsFrontSlot: 1
+  attackHoldsPosition: 0
