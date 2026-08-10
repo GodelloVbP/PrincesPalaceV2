@@ -38,6 +38,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef World;
         public HubAmbience.Layer Ambience;
 
+        // Node -> Resources folder, for the runtime frame looper. Recorded at
+        // build time from the same key the sprite was given, so an animation
+        // cannot end up playing a different building's frames.
+        public readonly List<(NodeRef Node, string Folder)> BuildingArt = new List<(NodeRef, string)>();
+
         public static HubScreen Build()
         {
             var screen = new HubScreen();
@@ -45,10 +50,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // Declared FAR TO NEAR: declaration order is painter's order, so a
             // nearer building draws over a further one with nothing sorting
             // anything -- the fight stage's rule, reused.
-            var relics = Staged("RelicsBuilding", UiStrings.HubRelics, "empty_plot", HubAnchors.Relics);
-            var talents = Staged("TalentsBuilding", UiStrings.HubTalents, "talents", HubAnchors.Talents);
-            var characterSheet = Staged("CharacterSheetBuilding", UiStrings.HubCharacterSheet, "character_sheet", HubAnchors.CharacterSheet);
-            var principality = Staged("PrincipalityBuilding", UiStrings.HubPrincipality, "principality", HubAnchors.Principality);
+            var relics = screen.Staged("RelicsBuilding", UiStrings.HubRelics, "empty_plot", HubAnchors.Relics);
+            var talents = screen.Staged("TalentsBuilding", UiStrings.HubTalents, "talents", HubAnchors.Talents);
+            var characterSheet = screen.Staged("CharacterSheetBuilding", UiStrings.HubCharacterSheet, "character_sheet", HubAnchors.CharacterSheet);
+            var principality = screen.Staged("PrincipalityBuilding", UiStrings.HubPrincipality, "principality", HubAnchors.Principality);
 
             // The gate STANDS ON THE TERRACE, feet on the path, while everything
             // else floats out over the drop. Its caption is a declared node of
@@ -64,6 +69,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 new UiVec(HubAnchors.GateSize, HubAnchors.GateSize), 22,
                 Place.At(HubAnchors.Gate.X, HubAnchors.Gate.Y, new UiVec(0.5f, 0f)));
             gate.SpriteKey = $"{HubArtRoot}/gate/f0.png";
+            screen.BuildingArt.Add((gate, "Hub/gate"));
             gate.Children.Add(gateCaption);
 
             screen.TalentsButton = talents.Button;
@@ -155,7 +161,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // The size is BAKED from the depth rather than applied as a transform
         // scale, because the audit measures declared boxes and a full-size node
         // scaled down would be reported as overlapping things it never touches.
-        private static BuildingNodes Staged(string name, UiString caption, string art, HubAnchors.Plot plot)
+        private BuildingNodes Staged(string name, UiString caption, string art, HubAnchors.Plot plot)
         {
             var position = HubAnchors.PositionFor(plot);
             float size = HubAnchors.SizeFor(plot);
@@ -172,6 +178,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var button = Ui.Button(name, UiString.Runtime, new UiVec(size, size), 22,
                 Place.At(position.X, position.Y, new UiVec(0.5f, 0f)));
             button.SpriteKey = $"{HubArtRoot}/{art}/f0.png";
+            BuildingArt.Add((button, $"Hub/{art}"));
 
             // Scaled with the plot: a distant building's nameplate has to read
             // as being at that distance too, or the depth staging is undone by

@@ -117,6 +117,27 @@ namespace PrincesPalace.Domain.Ambience
             return (1f - (float)Math.Cos((seconds + phaseSeconds) * (Tau / periodSeconds))) * 0.5f;
         }
 
+        // ---- frame loops ---------------------------------------------------
+
+        // Which frame of a looping sheet is showing.
+        //
+        // Here rather than on the component for the same reason everything else
+        // in this file is: Core is invisible to the EditMode suite, so a loop
+        // written over there is a loop nobody can test. That gap is what left
+        // six ambience curves unpinned for months, and it would have taken this
+        // one too.
+        public static int LoopFrameAt(float elapsed, int frameCount, float secondsPerFrame)
+        {
+            // One frame is a still image, not a broken animation -- and a zero
+            // frame time would divide into infinity and index an array with
+            // garbage, taking the whole screen down rather than showing one
+            // wrong frame.
+            if (frameCount <= 1 || secondsPerFrame <= 0f) return 0;
+
+            int index = (int)(elapsed / secondsPerFrame) % frameCount;
+            return index < 0 ? index + frameCount : index;
+        }
+
         // ---- shared --------------------------------------------------------
 
         public static float Clamp01(float value) => value < 0f ? 0f : value > 1f ? 1f : value;

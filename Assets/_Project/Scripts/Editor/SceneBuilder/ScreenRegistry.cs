@@ -539,6 +539,20 @@ public static class ScreenRegistry
             ember.StartProgress = HubAmbience.Repeat01(i * HubAmbience.GoldenStride);
         }
 
+        // Every building gets a looper. Four of the five have one frame and it
+        // silently does nothing for them -- which is the point: a per-building
+        // list would need updating every time a sheet gains a frame, and the
+        // talents tree's f1/f2 have been dead weight precisely because nobody
+        // updated one.
+        for (int i = 0; i < screen.BuildingArt.Count; i++)
+        {
+            var (node, folder) = screen.BuildingArt[i];
+            var looper = result.Attach<HubBuildingLooper>(node);
+            looper.FramesFolder = folder;
+            looper.SecondsPerFrame = 0.55f;
+            looper.PhaseSeconds = HubAmbience.Repeat01(i * HubAmbience.GoldenStride) * 1.65f;
+        }
+
         for (int i = 0; i < ambience.Drifts.Count; i++)
         {
             var band = HubAmbience.VoidMist[i];

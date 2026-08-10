@@ -459,12 +459,64 @@ Playable end to end: **MainMenu -> slot -> Hub -> gate -> Map -> room -> Fight -
 Continue -> Map**, with gold banked, rooms marked cleared, legs advancing, and a
 loss ending the run.
 
+### The Divine Principality (the hub)
+
+Five equal rectangles on a nebula became a staged place: the descent gate
+largest and centre on the ground, four annexes floating over the void at four
+depths, each smaller and higher than the last.
+
+| File | What it owns |
+|---|---|
+| `Domain/UiKit/HubAnchors.cs` | depth, lateral, size, and where each nameplate hangs |
+| `Domain/UiKit/Screens/HubScreen.cs` | the tree, with a `HubWorld` wrapper splitting world from chrome |
+| `Domain/UiKit/Screens/HubAmbience.cs` | where every light sits — **data, no new curves** |
+| `Core/HubController.cs` | the wallet, the gate caption, dimming the unbuilt |
+| `Core/HubBuildingLooper.cs` | revives the talents tree's f1/f2, dead since the art landed |
+
+Three decisions worth knowing:
+
+- **`HubAnchors` lives under `UiKit/`, not `Stage/`.** The `Stage/` path maps to
+  the combat and art test areas, so anchors there would run the wrong suites and
+  miss their own. A `$PathAreas` row now sends hub-tree edits to the hub suite.
+- **The world is a FIXED 1920×1080 stage, not a stretch.** The composition is
+  authored in reference coordinates; stretched to fit, a shorter window pushed
+  the far buildings out of their own parent. Fixed, it crops like its own
+  full-bleed background does.
+- **Nameplates are placed from MEASURED art bounds.** Every sheet pads
+  differently — 0.944 tree, 0.908 stall, 0.944 book, 0.916 plot, 0.885 gate —
+  so "half the box" put one caption under the book, one across the stall and one
+  above the shrine. The fraction rides on the `Plot` so a building cannot be
+  handed another's padding.
+
+The audit caught three real defects here: near buildings stealing far buildings'
+clicks (uGUI gives the later sibling the press), the world escaping its own
+frame, and the gate caption filling the arch's void.
+
+### Ambience curves are Domain now
+
+All six animators kept their components in Core and moved their *arithmetic* to
+`Domain/Ambience/` (`FlickerCurve`, `AmbienceCurves`). They were written as pure
+seams with comments saying a test could pin them — and the EditMode suite is
+Domain-only, so none ever could. 27 tests now cover them, including the ones
+that matter: Ken Burns never scaling below 1 (it would show bare camera colour
+down the sides), three curves degrading instead of dividing by a zero period,
+and mote alpha clamping rather than inverting a colour.
+
+`FlickerCurve` is data — a centre plus a list of `(amplitude, rate, phase)`
+terms — so retuning a flame is editing numbers, not arithmetic.
+
 ### Still to come
 
-The five remaining hub screens (Talents, Store, Equipment, CharacterSheet,
-Relics) and the non-fight room types -- Treasure, Rest, Shop and Event are
-generated and reachable on the map, but entering one only marks it cleared,
-because the screens they need do not exist.
+**The hub's look is unverified.** `tools/screenshots/HubPanel.png` has not
+changed across three revisions of the tree, including the nameplate fix. The
+built scene demonstrably contains `HubWorld`, `HubAmbience` and
+`StartRunGateCaption`, and the suite is green — so the tree is right, but the
+render is not showing it. Chase that before trusting anything visual here.
+`ScreenshotTool.Capture` rendering the first canvas rather than the named panel
+is one candidate.
 
-Also open: experience is computed in the payout and never applied to characters
-(gold is banked, exp is not), sound, and `StageDeathFade`.
+Also open: the forecourt painting (the hub still stands on the placeholder
+nebula), a real Relics building so `empty_plot` can go back to meaning "future
+construction", and the five sub-screens themselves — Talents, Store, Equipment,
+Character Sheet, Relics — which is why four of the hub's five buildings are
+dimmed and unpressable.
