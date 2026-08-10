@@ -179,7 +179,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             float scale = HubAnchors.ScaleFor(plot);
             var plate = Ui.Label($"{name}Caption", caption, new UiVec(size * 1.4f, 34f),
                     (int)(20f * scale + 0.5f), "#EDE6FF",
-                    Place.At(0f, HubAnchors.CaptionOffsetFor(size)))
+                    Place.At(0f, HubAnchors.CaptionOffsetFor(size, plot.ContentBottom)))
                 .AllowOverflow("a nameplate hangs BELOW the thing it names - inside the art it reads as a label printed on the building");
 
             button.Children.Add(plate);

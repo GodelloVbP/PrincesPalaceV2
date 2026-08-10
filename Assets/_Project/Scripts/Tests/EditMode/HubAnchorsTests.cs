@@ -116,8 +116,37 @@ namespace PrincesPalace.Domain.Tests
             // And it clears the art rather than merely being below centre --
             // the failure the first version shipped, where every nameplate
             // stayed printed across the building it named.
-            Assert.Less(HubAnchors.GateCaptionOffset, -HubAnchors.GateSize * 0.5f);
-            Assert.Less(HubAnchors.CaptionOffsetFor(300f), -150f);
+            // Below the ART, which is what the second wrong answer got wrong:
+            // half the box put one caption under the book, one across the stall
+            // and one above the shrine, because each sheet pads differently.
+            foreach (var plot in new[]
+            {
+                HubAnchors.Principality, HubAnchors.CharacterSheet,
+                HubAnchors.Talents, HubAnchors.Relics,
+            })
+            {
+                float size = HubAnchors.SizeFor(plot);
+                float caption = HubAnchors.CaptionOffsetFor(size, plot.ContentBottom);
+                float artBottom = size * (0.5f - plot.ContentBottom);
+
+                Assert.Less(caption, artBottom, "the plate must clear the art, not merely the centre");
+            }
+        }
+
+        [Test]
+        public void EveryPlotKnowsWhereItsOwnArtEnds()
+        {
+            // Measured off the PNGs, not guessed. A default 0.5 would put every
+            // caption back on the building.
+            foreach (var plot in new[]
+            {
+                HubAnchors.Principality, HubAnchors.CharacterSheet,
+                HubAnchors.Talents, HubAnchors.Relics,
+            })
+            {
+                Assert.Greater(plot.ContentBottom, 0.8f, "no sheet pads that heavily at the bottom");
+                Assert.LessOrEqual(plot.ContentBottom, 1f);
+            }
         }
 
         [Test]

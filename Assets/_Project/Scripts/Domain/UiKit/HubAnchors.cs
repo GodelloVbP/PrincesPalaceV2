@@ -48,19 +48,34 @@ namespace PrincesPalace.Domain.UiKit
 
         // The caption hangs below the plinths rather than across the arch, whose
         // centre is a swirling void the eye needs to read as an opening.
-        // A nameplate has to clear the SPRITE'S HALF-HEIGHT, not sit a fixed
-        // distance from its centre.
+        // A nameplate has to clear THE ART, which is not the same as clearing
+        // the box.
         //
-        // The first attempt used a flat -34, which on a 300px building is still
-        // squarely on the art -- the labels stayed printed across the awning and
-        // through the tree exactly as before, and only a screenshot showed it.
-        // Place.At is centre-relative whatever the pivot is, so the offset has
-        // to be derived from the thing's own size.
-        public const float CaptionGap = 16f;
+        // Two wrong answers came first. A flat -34 from centre did not move the
+        // labels off the buildings at all. Half the box did move them -- and
+        // landed one under the book, one across the stall and one above the
+        // shrine, because every sprite carries a different amount of transparent
+        // padding and the visible art sits at a different height inside each.
+        //
+        // MEASURED, not guessed: these are the lowest opaque row of each sheet
+        // as a fraction of its height, read off the actual PNGs. Same convention
+        // as the ambience positions and the stance manifest's ground lines --
+        // the art is the authority on where the art is.
+        public const float CaptionGap = 14f;
 
-        public static float CaptionOffsetFor(float size) => -(size * 0.5f) - CaptionGap;
+        public const float TalentsContentBottom = 0.9444f;
+        public const float PrincipalityContentBottom = 0.9083f;
+        public const float CharacterSheetContentBottom = 0.9441f;
+        public const float RelicsContentBottom = 0.9162f;
+        public const float GateContentBottom = 0.8848f;
 
-        public static float GateCaptionOffset => CaptionOffsetFor(GateSize);
+        // Node space is centre-origin with +y up, so the art's bottom edge sits
+        // at size * (0.5 - contentBottom) -- a negative number for any sheet
+        // whose content reaches past the middle, which is all of them.
+        public static float CaptionOffsetFor(float size, float contentBottom) =>
+            size * (0.5f - contentBottom) - CaptionGap;
+
+        public static float GateCaptionOffset => CaptionOffsetFor(GateSize, GateContentBottom);
 
         // One building's place in the composition: how far out over the void it
         // floats, and which side. Lateral is signed -- negative is left.
@@ -70,11 +85,17 @@ namespace PrincesPalace.Domain.UiKit
             public readonly float Lateral;
             public readonly float BaseSize;
 
-            public Plot(float depth, float lateral, float baseSize)
+            // Where this building's art actually ends inside its sheet. Carried
+            // on the plot so a nameplate cannot be handed another building's
+            // padding.
+            public readonly float ContentBottom;
+
+            public Plot(float depth, float lateral, float baseSize, float contentBottom)
             {
                 Depth = depth;
                 Lateral = lateral;
                 BaseSize = baseSize;
+                ContentBottom = contentBottom;
             }
         }
 
@@ -88,10 +109,10 @@ namespace PrincesPalace.Domain.UiKit
         // sibling the click. A distant building you can see and cannot press is
         // the exact bug the overlap check exists to catch, so these are tuned to
         // clear rather than exempted.
-        public static readonly Plot Principality = new Plot(0.06f, -1f, 360f);
-        public static readonly Plot CharacterSheet = new Plot(0.16f, 1f, 340f);
-        public static readonly Plot Talents = new Plot(0.78f, -1f, 360f);
-        public static readonly Plot Relics = new Plot(0.90f, 1f, 340f);
+        public static readonly Plot Principality = new Plot(0.06f, -1f, 360f, PrincipalityContentBottom);
+        public static readonly Plot CharacterSheet = new Plot(0.16f, 1f, 340f, CharacterSheetContentBottom);
+        public static readonly Plot Talents = new Plot(0.78f, -1f, 360f, TalentsContentBottom);
+        public static readonly Plot Relics = new Plot(0.90f, 1f, 340f, RelicsContentBottom);
 
         public static UiVec PositionFor(Plot plot) =>
             new UiVec(
