@@ -93,6 +93,25 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void EveryBuildingCarriesItsOwnNameplate()
+        {
+            // The emitter's auto-label centres on the button, which prints the
+            // name across the art. Each staged building declares a plate below
+            // itself instead -- and if that node is missing from the tree, the
+            // auto-label is what the player sees.
+            var root = HubScreen.Build().Root;
+
+            foreach (var name in new[]
+            {
+                "TalentsBuilding", "PrincipalityBuilding",
+                "CharacterSheetBuilding", "RelicsBuilding",
+            })
+            {
+                Assert.IsNotNull(Find(root, name + "Caption"), $"{name} has no nameplate node");
+            }
+        }
+
+        [Test]
         public void EveryBuildingHasArt()
         {
             // An Image with no sprite renders as a solid WHITE QUAD, not as
