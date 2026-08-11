@@ -35,6 +35,18 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString TalentPath =
             UiString.Define("talent.path", "CONSTELLATION {0} OF {1}   -   {2} KINDLED", "CONSTELLATION 3 OF 3   -   21 KINDLED");
 
+        // ---- the character overlay ------------------------------------------
+
+        public static readonly UiString OverlayCount =
+            UiString.Define("overlay.count", "x{0}", "x99");
+        public static readonly UiString OverlayPlus =
+            UiString.Define("overlay.plus", "+{0}", "+10");
+        public static readonly UiString OverlayPage =
+            UiString.Define("overlay.page", "PAGE {0} OF {1}", "PAGE 99 OF 99");
+        public static readonly UiString OverlayEquip = UiString.Define("overlay.equip", "EQUIP");
+        public static readonly UiString OverlayUnequip = UiString.Define("overlay.unequip", "UNEQUIP");
+        public static readonly UiString OverlayCannotWear = UiString.Define("overlay.cannot_wear", "CAN'T WEAR");
+
         // ---- the hub -------------------------------------------------------
 
         // Three currencies, not two. Embers is what talents actually cost and
@@ -192,6 +204,8 @@ namespace PrincesPalace.Domain.UiKit
             TargetPrompt,
             MapTitle, MapDepth, MapGold, MapAbandon,
             HubWallet, HubBeginDescent, HubResumeFloor,
+            OverlayCount, OverlayPlus, OverlayPage,
+            OverlayEquip, OverlayUnequip, OverlayCannotWear,
             TalentEmbers, TalentInvest, TalentTaken, TalentLocked, TalentNoEmbers,
             TalentPrev, TalentNext, TalentBack, TalentPath,
         };

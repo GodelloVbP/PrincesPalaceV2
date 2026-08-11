@@ -36,6 +36,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef CurrencyLabel;
         public NodeRef StartRunCaption;
         public NodeRef World;
+
+        // The character overlay lives in the hub permanently and hidden.
+        // Declared LAST so it draws over everything it dims.
+        public CharacterOverlayScreen Overlay;
         public HubAmbience.Layer Ambience;
 
         // Node -> Resources folder, for the runtime frame looper. Recorded at
@@ -113,6 +117,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             screen.World = world;
 
+            var overlay = CharacterOverlayScreen.Build();
+            screen.Overlay = overlay;
+
             screen.Root = Ui.Panel("HubPanel", UiSize.Fixed(1920f, 1080f),
                 world,
 
@@ -141,7 +148,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 Ui.Panel("CurrencyPlate", Place.At(620f, 470f), UiSize.Fixed(520f, 90f), currency)
                     .Coloured("#2C1C42E0").AsDecor(),
 
-                mainMenu);
+                mainMenu,
+                overlay.Root);
 
             return screen;
         }
