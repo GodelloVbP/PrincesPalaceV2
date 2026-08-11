@@ -300,6 +300,7 @@ public static class ScreenRegistry
                 };
 
                 WireCharacterOverlay(result, screen, hub);
+                WireDebugMenu(result, screen, hub);
             },
         };
     }
@@ -678,5 +679,26 @@ public static class ScreenRegistry
         controller.iconSprites = withArt.Select(i => SceneBuilder.LoadSpriteByKey(i.iconPath)).ToArray();
 
         hub.characterOverlayPanel = result.Go(overlay.Root);
+    }
+
+    private static void WireDebugMenu(UiEmitResult result, HubScreen screen, HubController hub)
+    {
+        var debug = screen.Debug;
+        var controller = result.Attach<DebugMenuController>(debug.Root);
+
+        controller.closeButton = result.Button(debug.CloseButton);
+        controller.giveGoldButton = result.Button(debug.GiveGoldButton);
+        controller.giveEmbersButton = result.Button(debug.GiveEmbersButton);
+        controller.giveOneEmberButton = result.Button(debug.GiveOneEmberButton);
+
+        controller.filterButtons = debug.FilterButtons.Select(result.Button).ToArray();
+        controller.rowButtons = debug.RowButtons.Select(result.Button).ToArray();
+        controller.rowLabels = debug.RowLabels.Select(result.Tmp).ToArray();
+
+        controller.pageLabel = result.Tmp(debug.PageLabel);
+        controller.prevPageButton = result.Button(debug.PrevPageButton);
+        controller.nextPageButton = result.Button(debug.NextPageButton);
+
+        hub.debugMenuPanel = result.Go(debug.Root);
     }
 }

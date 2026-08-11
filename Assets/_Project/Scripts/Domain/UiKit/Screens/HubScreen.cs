@@ -40,6 +40,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // The character overlay lives in the hub permanently and hidden.
         // Declared LAST so it draws over everything it dims.
         public CharacterOverlayScreen Overlay;
+
+        // Over even the overlay: a debug tool has to be reachable from
+        // whatever state the game is wedged in, and being covered by the very
+        // screen you are debugging is the one place it must not be.
+        public DebugMenuScreen Debug;
         public HubAmbience.Layer Ambience;
 
         // Node -> Resources folder, for the runtime frame looper. Recorded at
@@ -120,6 +125,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var overlay = CharacterOverlayScreen.Build();
             screen.Overlay = overlay;
 
+            var debug = DebugMenuScreen.Build();
+            screen.Debug = debug;
+
             screen.Root = Ui.Panel("HubPanel", UiSize.Fixed(1920f, 1080f),
                 world,
 
@@ -149,7 +157,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .Coloured("#2C1C42E0").AsDecor(),
 
                 mainMenu,
-                overlay.Root);
+                overlay.Root,
+                debug.Root);
 
             return screen;
         }

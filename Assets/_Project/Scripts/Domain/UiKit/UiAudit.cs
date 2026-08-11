@@ -111,6 +111,13 @@ namespace PrincesPalace.Domain.UiKit
         // A4 -----------------------------------------------------------------
         private static void CheckDuplicateNames(SolvedNode node, List<UiAuditError> errors, UiVec frame)
         {
+            // BEFORE the two-child early return below. A button with exactly
+            // ONE child is the commonest shape there is, and it is precisely
+            // the shape that collides -- gating this behind "has siblings"
+            // would have let the case that motivated the check walk straight
+            // through it.
+            CheckButtonLabelCollision(node, errors, frame);
+
             if (node.Children.Count < 2) return;
 
             var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -127,6 +134,46 @@ namespace PrincesPalace.Domain.UiKit
                         $"'{node.Path}' has two children named '{child.Name}'. Names are how tests, the wiring pass " +
                         $"and the screenshot tool find nodes, so a duplicate silently resolves to whichever comes " +
                         $"first. Fix by: suffixing with the index, as Ui.Each does automatically.",
+                });
+            }
+        }
+
+        // A4b ----------------------------------------------------------------
+        //
+        // A button's own caption is NOT a tree node. UiEmitter.EmitButton
+        // creates it during emission, named "<button>Label", so a tree child
+        // called exactly that produces two GameObjects with one name under one
+        // parent -- and this audit, which only ever sees the tree, is blind to
+        // it by construction.
+        //
+        // Found the hard way (2026-08-11): the debug menu declared a
+        // "DebugRow0Label" under a button named "DebugRow0". The wiring bound
+        // the tree's node and painted it correctly; every by-name lookup --
+        // tests, the screenshot tool -- resolved to the emitter's empty one
+        // instead. The audit passed at all four frames throughout.
+        //
+        // Checked here rather than in the emitter because a build failure that
+        // names the offending node costs one EditMode second, and the emitter
+        // discovering it costs a full scene build.
+        private static void CheckButtonLabelCollision(SolvedNode node, List<UiAuditError> errors, UiVec frame)
+        {
+            if (node.Source == null || node.Source.Kind != UiNodeKind.Button) return;
+
+            string reserved = node.Name + "Label";
+            foreach (var child in node.Children)
+            {
+                if (!string.Equals(child.Name, reserved, StringComparison.Ordinal)) continue;
+
+                errors.Add(new UiAuditError
+                {
+                    Check = UiAuditCheck.DuplicateName,
+                    Path = child.Path,
+                    Frame = frame,
+                    Message =
+                        $"'{child.Name}' collides with the caption UiEmitter generates for button '{node.Name}', " +
+                        $"which is always named '{reserved}' and never appears in this tree. Both end up under the " +
+                        $"same parent with the same name, and every lookup by name silently takes the emitter's " +
+                        $"one, which is empty. Fix by: naming the child anything else -- 'Name', 'Caption', 'Value'.",
                 });
             }
         }

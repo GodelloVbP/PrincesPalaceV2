@@ -85,6 +85,30 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString Close = UiString.Define("close", "Close");
         public static readonly UiString Cancel = UiString.Define("cancel", "Cancel");
 
+        // --- the debug menu ---------------------------------------------------
+        //
+        // Developer-facing, and still routed through the manifest rather than
+        // hand-typed at the call site: the E1 text-fit audit only measures what
+        // it can see, and a literal is invisible to it. A debug button whose
+        // label overflows its box is a small thing, but the exemption would be
+        // the first crack in "every user-facing string lives here".
+        public static readonly UiString DebugTitle = UiString.Define("debug.title", "DEBUG");
+        public static readonly UiString DebugGiveGold = UiString.Define("debug.gold", "+10,000 GOLD");
+        public static readonly UiString DebugGiveEmbers = UiString.Define("debug.embers", "+25 EMBERS");
+        // A tree is 21 slots x 3 constellations at 1 ember each, so +25 is the
+        // button you actually press. +1 exists only to sit on the
+        // NotEnoughEmbers boundary, which is the one case +25 can never test.
+        public static readonly UiString DebugGiveOneEmber = UiString.Define("debug.ember_one", "+1 EMBER");
+        public static readonly UiString DebugAdd = UiString.Define("debug.add", "ADD");
+        public static readonly UiString DebugFilterAll = UiString.Define("debug.filter_all", "ALL");
+        public static readonly UiString DebugFilterConsumable = UiString.Define("debug.filter_consumable", "POTIONS");
+        public static readonly UiString DebugFilterWeapon = UiString.Define("debug.filter_weapon", "WEAPONS");
+        public static readonly UiString DebugFilterEquipment = UiString.Define("debug.filter_equipment", "ARMOUR");
+        public static readonly UiString DebugRow =
+            UiString.Define("debug.row", "T{0}  {1}", "T10  Ceremonial Greatsword of the Undying");
+        public static readonly UiString DebugPage =
+            UiString.Define("debug.page", "PAGE {0} OF {1}", "PAGE 99 OF 99");
+
         // --- save slots -----------------------------------------------------
         public static readonly UiString SlotEmpty =
             UiString.Define("slot_empty", "Slot {0}: Empty", "Slot 5: Empty");
@@ -193,6 +217,9 @@ namespace PrincesPalace.Domain.UiKit
         {
             WalletSummary,
             Play, Options, Exit, OptionsTitle, Close, Cancel,
+            DebugTitle, DebugGiveGold, DebugGiveEmbers, DebugGiveOneEmber, DebugAdd,
+            DebugFilterAll, DebugFilterConsumable, DebugFilterWeapon, DebugFilterEquipment,
+            DebugRow, DebugPage,
             SlotEmpty, SlotFilled, SlotButton,
             ResetProgressHeader, Delete, ConfirmDelete,
             CommandTitle, Attack, Back,

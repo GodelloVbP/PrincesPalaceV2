@@ -103,7 +103,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var detailBody = Ui.Label("TalentDetailBody", UiString.Runtime, new UiVec(760f, 72f), 17,
                 "#B8A8D9", Place.At(0f, -22f));
 
-            var investLabel = Ui.Label("InvestButtonLabel", UiStrings.TalentInvest, new UiVec(260f, 40f), 20,
+            // "Caption", NOT "Label" -- UiEmitter names every button's own
+            // generated text "<button>Label", so this collided with the one it
+            // makes for InvestButton. The wiring bound this node and painted
+            // the refusal text onto it correctly; anything looking the node up
+            // by name got the emitter's empty one instead. See UiAudit A4b.
+            var investLabel = Ui.Label("InvestButtonCaption", UiStrings.TalentInvest, new UiVec(260f, 40f), 20,
                 "#F2DB9E", Place.At(0f, 0f));
             var invest = Ui.Button("InvestButton", UiString.Runtime, new UiVec(300f, 66f), 20,
                 Place.At(640f, -420f));

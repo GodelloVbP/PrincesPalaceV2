@@ -171,6 +171,7 @@ $PathAreas = @(
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Combat/';    Areas = @('combat') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Content/';   Areas = @('content') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Dungeon/';   Areas = @('run') }
+    @{ Pattern = '^Assets/_Project/Scripts/Domain/DebugMenu/'; Areas = @('ui', 'content') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Economy/';   Areas = @('run') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Equipment/'; Areas = @('content', 'ui') }
     # Inventory moved out of Data/ (Core) into Domain so its rules could be

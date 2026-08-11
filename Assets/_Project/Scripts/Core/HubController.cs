@@ -16,6 +16,7 @@ namespace PrincesPalace
     {
         [SerializeField] internal Button talentsButton;
         [SerializeField] internal GameObject characterOverlayPanel;
+        [SerializeField] internal GameObject debugMenuPanel;
         [SerializeField] internal Button principalityButton;
         [SerializeField] internal Button characterSheetButton;
         [SerializeField] internal Button relicsButton;
@@ -117,17 +118,34 @@ namespace PrincesPalace
         // be the thing that opens it.
         private void Update()
         {
+            // F1 for the debug menu, and ONLY in the editor or a development
+            // build. Debug.isDebugBuild is true for both and false in a release
+            // player, so a shipped build has no key that grants 10,000 gold.
+            //
+            // The gate is on the KEY, not on ToggleDebugMenu -- the methods stay
+            // callable so PlayMode can drive them, and PlayMode runs in the
+            // editor where this is true anyway.
+            if (Debug.isDebugBuild && Input.GetKeyDown(KeyCode.F1))
+            {
+                ToggleDebugMenu();
+                return;
+            }
+
             if (characterOverlayPanel == null) return;
 
             if (Input.GetKeyDown(KeyCode.C) || Input.GetKeyDown(KeyCode.I))
             {
                 ToggleCharacterOverlay();
             }
-            // Only swallowed while the overlay is up, so Escape stays free to
-            // mean something else on the hub itself later.
-            else if (Input.GetKeyDown(KeyCode.Escape) && characterOverlayPanel.activeSelf)
+            // Only swallowed while something is up, so Escape stays free to
+            // mean something else on the hub itself later. The debug menu is
+            // checked first because it draws over the overlay -- closing the
+            // thing underneath the thing you can see would be a nasty little
+            // surprise.
+            else if (Input.GetKeyDown(KeyCode.Escape))
             {
-                SetCharacterOverlay(false);
+                if (debugMenuPanel != null && debugMenuPanel.activeSelf) SetDebugMenu(false);
+                else if (characterOverlayPanel.activeSelf) SetCharacterOverlay(false);
             }
         }
 
@@ -153,6 +171,20 @@ namespace PrincesPalace
         {
             if (characterOverlayPanel == null) return;
             characterOverlayPanel.SetActive(open);
+        }
+
+        public bool DebugMenuIsOpen => debugMenuPanel != null && debugMenuPanel.activeSelf;
+
+        public void ToggleDebugMenu()
+        {
+            if (debugMenuPanel == null) return;
+            SetDebugMenu(!debugMenuPanel.activeSelf);
+        }
+
+        public void SetDebugMenu(bool open)
+        {
+            if (debugMenuPanel == null) return;
+            debugMenuPanel.SetActive(open);
         }
 
         // Kept for the tests and callers that set a wallet explicitly. Goes

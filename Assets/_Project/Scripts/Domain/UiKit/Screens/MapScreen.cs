@@ -72,7 +72,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // is in Domain rather than in the builder.
             var place = Place.At(MapLayout.ColumnX(depth), MapLayout.RowY(MapLayout.Rows, slot));
 
-            var label = Ui.Label($"MapNode{index}Label", UiString.Runtime, new UiVec(MapLayout.NodeSize, 28f), 13,
+            // "Name", NOT "Label". UiEmitter generates every button's own
+            // caption as "<button>Label", so "MapNode3Label" produced two
+            // GameObjects with that name under one parent -- the wiring bound
+            // this one and painted it, while every lookup by name silently took
+            // the emitter's empty one. Shipped undetected until UiAudit learned
+            // to check for it (A4b, 2026-08-11).
+            var label = Ui.Label($"MapNode{index}Name", UiString.Runtime, new UiVec(MapLayout.NodeSize, 28f), 13,
                     "#EDE6FF", Place.At(0f, -MapLayout.NodeSize * 0.5f - 16f))
                 .AllowOverflow("the caption sits BELOW its node deliberately - inside, it would cover the room icon it names");
 
