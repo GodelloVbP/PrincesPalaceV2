@@ -303,6 +303,7 @@ public static class ScreenRegistry
                 };
 
                 WireCharacterOverlay(result, screen, hub);
+                WireRelicDraft(result, screen, hub);
                 WireDebugMenu(result, screen, hub);
             },
         };
@@ -728,6 +729,34 @@ public static class ScreenRegistry
         controller.inspectButton = result.Button(screen.InspectButton);
 
         return controller;
+    }
+
+    private static void WireRelicDraft(UiEmitResult result, HubScreen screen, HubController hub)
+    {
+        var draft = screen.Draft;
+        var controller = result.Attach<RelicDraftController>(draft.Root);
+
+        controller.cards = draft.Cards.Select(result.Button).ToArray();
+        controller.cardSelections = draft.CardSelections.Select(result.Image).ToArray();
+        controller.cardIcons = draft.CardIcons.Select(result.Image).ToArray();
+        controller.cardNames = draft.CardNames.Select(result.Tmp).ToArray();
+        controller.cardRarities = draft.CardRarities.Select(result.Tmp).ToArray();
+        controller.cardBodies = draft.CardBodies.Select(result.Tmp).ToArray();
+
+        controller.emptyHint = result.Go(draft.EmptyHint);
+        controller.descendButton = result.Button(draft.DescendButton);
+
+        // Relic icons, baked as two parallel arrays. Resolved here rather than
+        // at runtime because Resources loading and AssetDatabase are different
+        // worlds and only the builder has the second one.
+        var withArt = ContentDatabase.Relics
+            .Where(r => r != null && !string.IsNullOrEmpty(r.iconPath))
+            .ToList();
+
+        controller.iconIds = withArt.Select(r => r.id).ToArray();
+        controller.iconSprites = withArt.Select(r => SceneBuilder.LoadSpriteByKey(r.iconPath)).ToArray();
+
+        hub.relicDraft = controller;
     }
 
     private static void WireDebugMenu(UiEmitResult result, HubScreen screen, HubController hub)

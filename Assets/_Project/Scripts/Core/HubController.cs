@@ -17,6 +17,7 @@ namespace PrincesPalace
         [SerializeField] internal Button talentsButton;
         [SerializeField] internal GameObject characterOverlayPanel;
         [SerializeField] internal GameObject debugMenuPanel;
+        [SerializeField] internal RelicDraftController relicDraft;
         [SerializeField] internal Button principalityButton;
         [SerializeField] internal Button characterSheetButton;
         [SerializeField] internal Button relicsButton;
@@ -210,6 +211,17 @@ namespace PrincesPalace
                 // reproduces on resume. Not Random: a run that reshuffled its
                 // own map when reloaded would make the map screen a lie.
                 RunManager.StartRun(RunManager.NewSeed());
+            }
+
+            // The relic draft stands between the gate and the map, and only on
+            // a run that has not drafted yet. RESUMING walks straight past it:
+            // the relic was chosen when this descent began, and offering again
+            // would let a player re-roll it by walking back to the hub.
+            if (relicDraft != null && RunManager.HasRun && !RunManager.Run.relicDrafted)
+            {
+                relicDraft.Finished = () => Navigation.Go(Navigation.Map);
+                relicDraft.Open(RunManager.Run.runSeed);
+                return;
             }
 
             // Into the MAP, not straight into a fight. Which room to enter is
