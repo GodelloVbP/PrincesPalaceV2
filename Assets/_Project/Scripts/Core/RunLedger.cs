@@ -87,6 +87,25 @@ namespace PrincesPalace
                    ?? new RunLedgerEntry { characterId = characterId };
         }
 
+        // Everything the party dealt in this run, off its own ledger.
+        //
+        // LONG, because a profile that plays for a while passes two billion and
+        // an int would wrap negative -- silently un-earning any achievement
+        // counting it. Written twice (Achievements and RunSettlement) before
+        // landing here, which is where the ledger already lives.
+        public static long TotalDamage(RunSnapshot run)
+        {
+            if (run?.ledger == null) return 0;
+
+            long total = 0;
+            foreach (var entry in run.ledger)
+            {
+                if (entry != null) total += entry.TotalDealt;
+            }
+
+            return total;
+        }
+
         private static RunLedgerEntry EntryFor(RunSnapshot run, string id)
         {
             var entry = run.ledger.FirstOrDefault(e => e.characterId == id);

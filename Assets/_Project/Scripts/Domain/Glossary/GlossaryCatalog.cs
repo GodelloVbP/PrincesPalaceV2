@@ -89,34 +89,14 @@ namespace PrincesPalace.Domain.Glossary
             }
         }
 
-        // An empty category is still ONE page, so the pager reads "PAGE 1 OF 1"
-        // rather than "PAGE 1 OF 0".
-        public static int PageCount(int count)
-        {
-            if (count <= 0) return 1;
-            return (count + RowsPerPage - 1) / RowsPerPage;
-        }
+        // Delegated to Paging, which is the single copy of this arithmetic and
+        // the single place its two off-by-one traps are guarded.
+        public static int PageCount(int count) => UiKit.Paging.PageCount(count, RowsPerPage);
 
-        public static int ClampPage(int page, int count)
-        {
-            int last = PageCount(count) - 1;
-            if (page < 0) return 0;
-            return page > last ? last : page;
-        }
+        public static int ClampPage(int page, int count) => UiKit.Paging.Clamp(page, count, RowsPerPage);
 
-        public static IReadOnlyList<GlossaryEntry> Page(IReadOnlyList<GlossaryEntry> all, int page)
-        {
-            var rows = new List<GlossaryEntry>();
-            if (all == null) return rows;
-
-            int start = ClampPage(page, all.Count) * RowsPerPage;
-            for (int i = start; i < all.Count && rows.Count < RowsPerPage; i++)
-            {
-                rows.Add(all[i]);
-            }
-
-            return rows;
-        }
+        public static IReadOnlyList<GlossaryEntry> Page(IReadOnlyList<GlossaryEntry> all, int page) =>
+            UiKit.Paging.Slice(all, page, RowsPerPage);
 
         // How much of a category the player has actually seen. Shown on the
         // rail, because "17 of 40" is the number that makes a glossary

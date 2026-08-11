@@ -16,16 +16,39 @@ namespace PrincesPalace
     // Core rather than Domain because every source is a ScriptableObject.
     public static class GlossaryEntries
     {
-        public static List<GlossaryEntry> For(GlossaryCategory category, SaveData save)
+        // EVERY category in one pass, with the achievement facts gathered
+        // ONCE.
+        //
+        // The controller needs all six regardless -- the rail shows an
+        // "unlocked of total" count per category -- and building them one at a
+        // time meant Relics and Deeds each re-derived the same AchievementFacts
+        // by sweeping the roster and the whole run ledger. Six calls, two full
+        // fact gathers, repeated on every category click.
+        public static List<List<GlossaryEntry>> All(SaveData save)
+        {
+            var facts = Achievements.FactsFor(save);
+            var earned = Achievements.EarnedIdsFrom(facts);
+
+            var byCategory = new List<List<GlossaryEntry>>();
+            foreach (var category in GlossaryCatalog.Categories)
+            {
+                byCategory.Add(For(category, earned, facts));
+            }
+
+            return byCategory;
+        }
+
+        private static List<GlossaryEntry> For(GlossaryCategory category,
+            HashSet<string> earned, AchievementFacts facts)
         {
             switch (category)
             {
-                case GlossaryCategory.Relics: return Relics(save);
+                case GlossaryCategory.Relics: return Relics(earned);
                 case GlossaryCategory.Monsters: return Monsters();
                 case GlossaryCategory.Spells: return Spells();
                 case GlossaryCategory.Items: return Items();
                 case GlossaryCategory.Talents: return Talents();
-                case GlossaryCategory.Achievements: return Deeds(save);
+                case GlossaryCategory.Achievements: return Deeds(facts);
                 default: return new List<GlossaryEntry>();
             }
         }
@@ -33,10 +56,8 @@ namespace PrincesPalace
         // Relics are the only category with a real lock today: one is gated on
         // an achievement, and the glossary is where a player finds out that the
         // gate exists at all.
-        private static List<GlossaryEntry> Relics(SaveData save)
+        private static List<GlossaryEntry> Relics(HashSet<string> earned)
         {
-            var earned = Achievements.EarnedIds(save);
-
             return ContentDatabase.Relics
                 .Where(r => r != null)
                 .Select(r =>
@@ -44,7 +65,7 @@ namespace PrincesPalace
                     bool locked = !r.IsUnlockedFromTheStart && !earned.Contains(r.unlockedBy);
                     return new GlossaryEntry(
                         r.id, r.displayName,
-                        RarityWord(r.rarity),
+                        RelicRarityNames.Of(r.rarity),
                         r.description,
                         locked,
                         locked ? AchievementName(r.unlockedBy) : "",
@@ -101,10 +122,8 @@ namespace PrincesPalace
         // Deeds are listed whether or not they are done, and the LOCK here
         // means "not achieved" rather than "hidden" -- a player has to be able
         // to read what is left to do.
-        private static List<GlossaryEntry> Deeds(SaveData save)
+        private static List<GlossaryEntry> Deeds(AchievementFacts facts)
         {
-            var facts = Achievements.FactsFor(save);
-
             return ContentDatabase.Achievements
                 .Where(a => a != null)
                 .Select(a =>
@@ -129,17 +148,5 @@ namespace PrincesPalace
             return definition == null ? achievementId : definition.displayName;
         }
 
-        private static string RarityWord(RelicRarity rarity)
-        {
-            switch (rarity)
-            {
-                case RelicRarity.Common: return "COMMON";
-                case RelicRarity.Uncommon: return "UNCOMMON";
-                case RelicRarity.Rare: return "RARE";
-                case RelicRarity.UltraRare: return "ULTRA-RARE";
-                case RelicRarity.Mythic: return "MYTHIC";
-                default: return "GODLIKE";
-            }
-        }
     }
 }

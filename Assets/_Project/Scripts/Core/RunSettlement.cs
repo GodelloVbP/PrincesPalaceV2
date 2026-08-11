@@ -34,23 +34,6 @@ namespace PrincesPalace
             public List<RunLedgerEntry> Ledger = new List<RunLedgerEntry>();
         }
 
-        // The run's total damage, summed off its own ledger. Long, because a
-        // profile that plays for a while will pass two billion and an int
-        // would wrap into a negative -- silently un-earning any achievement
-        // counting it.
-        private static long DamageIn(RunSnapshot run)
-        {
-            if (run?.ledger == null) return 0;
-
-            long total = 0;
-            foreach (var entry in run.ledger)
-            {
-                if (entry != null) total += entry.TotalDealt;
-            }
-
-            return total;
-        }
-
         public static Result Settle(SaveData save, RunSnapshot run)
         {
             var result = new Result();
@@ -74,7 +57,7 @@ namespace PrincesPalace
             // splitting that responsibility across two places is how one of
             // them ends up forgotten.
             save.lifetimeRoomsCleared += run.roomsCleared;
-            save.lifetimeDamageDealt += DamageIn(run);
+            save.lifetimeDamageDealt += RunLedger.TotalDamage(run);
             save.lifetimeRunsEnded++;
             if (run.deepestStep > save.lifetimeDeepestStep) save.lifetimeDeepestStep = run.deepestStep;
 

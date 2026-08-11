@@ -73,33 +73,16 @@ namespace PrincesPalace.Domain.Equipment
                 .ToList();
         }
 
-        // How many pages a bag of this size needs.
-        //
-        // An EMPTY bag is one page, not zero: the pager reads "PAGE 1 OF 1"
-        // over an empty grid, which is a state, where "PAGE 1 OF 0" is a bug
-        // report.
-        public static int PageCount(int itemCount)
-        {
-            if (itemCount <= CellCount) return 1;
-            return (itemCount + CellCount - 1) / CellCount;
-        }
+        // Delegated to Paging, the one copy of this arithmetic. An EMPTY bag
+        // is still one page ("PAGE 1 OF 0" is a bug report) and exactly
+        // CellCount items is one page, not two -- both guarded there.
+        public static int PageCount(int itemCount) => UiKit.Paging.PageCount(itemCount, CellCount);
 
-        public static int ClampPage(int page, int itemCount)
-        {
-            int last = PageCount(itemCount) - 1;
-            if (page < 0) return 0;
-            return page > last ? last : page;
-        }
+        public static int ClampPage(int page, int itemCount) => UiKit.Paging.Clamp(page, itemCount, CellCount);
 
-        // The slice of a sorted list that belongs on one page. Short on the
-        // last page rather than padded -- the screen hides the leftover cells,
-        // which is a different job from inventing empty rows here.
-        public static IReadOnlyList<BagItem> Page(IReadOnlyList<BagItem> sorted, int page)
-        {
-            if (sorted == null || sorted.Count == 0) return new List<BagItem>();
-
-            int start = ClampPage(page, sorted.Count) * CellCount;
-            return sorted.Skip(start).Take(CellCount).ToList();
-        }
+        // Short on the last page rather than padded -- the screen hides its
+        // leftover cells, which is a different job from inventing rows here.
+        public static IReadOnlyList<BagItem> Page(IReadOnlyList<BagItem> sorted, int page) =>
+            UiKit.Paging.Slice(sorted, page, CellCount);
     }
 }

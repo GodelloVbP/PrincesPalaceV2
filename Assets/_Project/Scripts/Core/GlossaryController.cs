@@ -51,6 +51,11 @@ namespace PrincesPalace
         private int _selectedRow = -1;
         private bool _wired;
 
+        // ALL SIX CATEGORIES, built once per open. Switching category is then
+        // pure indexing rather than six content sweeps and two full
+        // achievement-fact gathers per click.
+        private List<List<GlossaryEntry>> _byCategory = new List<List<GlossaryEntry>>();
+
         private List<GlossaryEntry> _entries = new List<GlossaryEntry>();
 
         private void Start()
@@ -90,7 +95,10 @@ namespace PrincesPalace
 
         private void SelectCategory(int index)
         {
-            if (index < 0 || index >= GlossaryCatalog.Categories.Count) return;
+            // Guarded against _byCategory, not against the enum. Wire() runs in
+            // Start and Refresh in OnEnable, and a click that arrived between
+            // them would index an empty list.
+            if (index < 0 || index >= _byCategory.Count) return;
 
             _category = index;
 
@@ -100,7 +108,12 @@ namespace PrincesPalace
             // be wrong rather than merely odd.
             _page = 0;
             _selectedRow = -1;
-            Refresh();
+
+            // Repaint, do not rebuild. Nothing about what is unlocked can have
+            // changed between two clicks on the same open screen.
+            _entries = _byCategory[_category];
+            PaintRail();
+            Paint();
         }
 
         private void SelectRow(int index)
@@ -119,24 +132,26 @@ namespace PrincesPalace
 
         public void Refresh()
         {
-            var save = SaveSlotManager.CurrentSave;
-            var category = GlossaryCatalog.Categories[_category];
-
-            _entries = GlossaryEntries.For(category, save);
+            _byCategory = GlossaryEntries.All(SaveSlotManager.CurrentSave);
+            _category = Mathf.Clamp(_category, 0, _byCategory.Count - 1);
+            _entries = _byCategory[_category];
             _page = GlossaryCatalog.ClampPage(_page, _entries.Count);
 
-            for (int i = 0; i < categoryButtons.Length && i < GlossaryCatalog.Categories.Count; i++)
-            {
-                var each = GlossaryCatalog.Categories[i];
-                var entries = i == _category ? _entries : GlossaryEntries.For(each, save);
+            PaintRail();
+            Paint();
+        }
 
-                categoryLabels[i].SetContent(GlossaryCatalog.DisplayName(each));
+        private void PaintRail()
+        {
+            for (int i = 0; i < categoryButtons.Length && i < _byCategory.Count; i++)
+            {
+                var entries = _byCategory[i];
+
+                categoryLabels[i].SetContent(GlossaryCatalog.DisplayName(GlossaryCatalog.Categories[i]));
                 categoryCounts[i].Set(UiStrings.GlossaryCount,
                     GlossaryCatalog.UnlockedCount(entries), entries.Count);
                 categoryMarkers[i].color = i == _category ? MarkerLit : MarkerDark;
             }
-
-            Paint();
         }
 
         private void Paint()

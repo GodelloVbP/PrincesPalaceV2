@@ -47,6 +47,10 @@ namespace PrincesPalace
 
             abandonButton.onClick.AddListener(() =>
             {
+                // EndRun settles the books itself. This call used to discard
+                // the run without paying it, so walking away from a descent
+                // threw away every ember its bosses had earned -- silently,
+                // because a discarded snapshot looks the same either way.
                 RunManager.EndRun();
                 Navigation.Go(Navigation.Hub);
             });

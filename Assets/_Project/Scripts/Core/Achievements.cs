@@ -49,28 +49,18 @@ namespace PrincesPalace
                 highestCharacterLevel: highestLevel,
                 roomsCleared: save.lifetimeRoomsCleared + (run?.roomsCleared ?? 0),
                 deepestStep: System.Math.Max(save.lifetimeDeepestStep, run?.deepestStep ?? 0),
-                totalDamageDealt: save.lifetimeDamageDealt + TotalDamage(run));
-        }
-
-        private static long TotalDamage(RunSnapshot run)
-        {
-            if (run?.ledger == null) return 0;
-
-            long total = 0;
-            foreach (var entry in run.ledger)
-            {
-                if (entry != null) total += entry.TotalDealt;
-            }
-
-            return total;
+                totalDamageDealt: save.lifetimeDamageDealt + RunLedger.TotalDamage(run));
         }
 
         // The ids this profile has earned. A HashSet because RelicPool asks it
         // "contains?" once per relic per draft.
-        public static HashSet<string> EarnedIds(SaveData save)
+        public static HashSet<string> EarnedIds(SaveData save) => EarnedIdsFrom(FactsFor(save));
+
+        // Takes facts already gathered, for callers that need both and would
+        // otherwise sweep the roster and the run ledger twice for one answer.
+        public static HashSet<string> EarnedIdsFrom(AchievementFacts facts)
         {
             var earned = new HashSet<string>();
-            var facts = FactsFor(save);
 
             foreach (var definition in ContentDatabase.Achievements)
             {

@@ -126,28 +126,12 @@ namespace PrincesPalace
                 var definition = ContentDatabase.Relics.FirstOrDefault(r => r != null && r.id == option.Id);
 
                 cardNames[i].SetContent(definition?.displayName ?? option.Id);
-                cardRarities[i].Set(UiStrings.DraftRarity, RarityWord(option.Rarity));
+                cardRarities[i].Set(UiStrings.DraftRarity, RelicRarityNames.Of(option.Rarity));
                 cardBodies[i].SetContent(definition?.description ?? "");
 
                 ItemIcons.Apply(cardIcons[i], iconIds, iconSprites, option.Id);
 
                 cardSelections[i].color = _selected == i ? RingLit : RingDark;
-            }
-        }
-
-        // Spelled out rather than ToString(): UltraRare has to read as
-        // "ULTRA-RARE", and a screen is not the place to discover that an enum
-        // name and a display name are different things.
-        private static string RarityWord(RelicRarity rarity)
-        {
-            switch (rarity)
-            {
-                case RelicRarity.Common: return "COMMON";
-                case RelicRarity.Uncommon: return "UNCOMMON";
-                case RelicRarity.Rare: return "RARE";
-                case RelicRarity.UltraRare: return "ULTRA-RARE";
-                case RelicRarity.Mythic: return "MYTHIC";
-                default: return "GODLIKE";
             }
         }
 

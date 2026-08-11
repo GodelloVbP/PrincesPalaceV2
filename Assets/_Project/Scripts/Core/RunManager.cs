@@ -103,14 +103,29 @@ namespace PrincesPalace
             Persist();
         }
 
-        public static void EndRun()
+        // Ends the run AND closes its books, in that order, in one call.
+        //
+        // Settling used to be the caller's job and there are two callers -- a
+        // defeat and an abandon from the map. Only the defeat did it, so
+        // walking away from a descent silently threw away every ember the
+        // bosses in it had earned and every room it had cleared. Nothing
+        // reported that, because discarding a snapshot looks exactly the same
+        // whether or not anybody read it first.
+        //
+        // Folded in here so the ordering cannot be got wrong again: the
+        // settlement is returned for whoever wants to describe it, and ignoring
+        // the return value costs nothing.
+        public static RunSettlement.Result EndRun()
         {
             var save = Save;
-            if (save == null) return;
+            if (save == null) return new RunSettlement.Result();
+
+            var settlement = RunSettlement.Settle(save, save.activeRun);
 
             save.activeRun = new RunSnapshot { hasRun = false };
             Forget();
             Persist();
+            return settlement;
         }
 
         // ---- moving through it ----------------------------------------------------

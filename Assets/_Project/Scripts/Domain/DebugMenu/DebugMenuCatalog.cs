@@ -65,33 +65,13 @@ namespace PrincesPalace.Domain.DebugMenu
                 .ToList();
         }
 
-        // An empty result is still ONE page, so the pager reads "PAGE 1 OF 1"
-        // rather than "PAGE 1 OF 0" -- the same rule BagView.PageCount holds.
-        public static int PageCount(int count)
-        {
-            if (count <= 0) return 1;
-            return (count + RowsPerPage - 1) / RowsPerPage;
-        }
+        // Delegated to Paging -- see GlossaryCatalog for why this stopped
+        // being written out three times.
+        public static int PageCount(int count) => UiKit.Paging.PageCount(count, RowsPerPage);
 
-        public static int ClampPage(int page, int count)
-        {
-            int last = PageCount(count) - 1;
-            if (page < 0) return 0;
-            return page > last ? last : page;
-        }
+        public static int ClampPage(int page, int count) => UiKit.Paging.Clamp(page, count, RowsPerPage);
 
-        public static IReadOnlyList<DebugItem> Page(IReadOnlyList<DebugItem> filtered, int page)
-        {
-            var rows = new List<DebugItem>();
-            if (filtered == null) return rows;
-
-            int start = ClampPage(page, filtered.Count) * RowsPerPage;
-            for (int i = start; i < filtered.Count && rows.Count < RowsPerPage; i++)
-            {
-                rows.Add(filtered[i]);
-            }
-
-            return rows;
-        }
+        public static IReadOnlyList<DebugItem> Page(IReadOnlyList<DebugItem> filtered, int page) =>
+            UiKit.Paging.Slice(filtered, page, RowsPerPage);
     }
 }

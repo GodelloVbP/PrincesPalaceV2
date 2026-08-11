@@ -169,11 +169,10 @@ namespace PrincesPalace
                 // let a player retry the same room until it went their way,
                 // which is the whole tension a roguelike is built on.
                 //
-                // Settled FIRST: EndRun discards the snapshot, taking the run's
-                // ledger and its boss list with it, so anything owed has to be
-                // paid before the evidence is thrown away.
-                LastSettlement = RunSettlement.Settle(SaveSlotManager.CurrentSave, run);
-                RunManager.EndRun();
+                // EndRun settles before it discards, and hands back what it
+                // paid -- which is the only surviving record of the run by the
+                // time the defeat screen draws.
+                LastSettlement = RunManager.EndRun();
                 return;
             }
 
