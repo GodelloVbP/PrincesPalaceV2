@@ -86,7 +86,30 @@ namespace PrincesPalace
             return state;
         }
 
-        private static CombatantState ToCombatant(CharacterDefinition definition)
+        // Turns the run's relic ids into the resolved shape combat reads.
+        // An id naming content that no longer exists is DROPPED rather than
+        // throwing -- a save referencing a deleted relic must still be
+        // playable, which is the house posture everywhere else.
+        private static List<ResolvedRelic> ResolveRelics(IReadOnlyList<string> relicIds)
+        {
+            var resolved = new List<ResolvedRelic>();
+            if (relicIds == null) return resolved;
+
+            foreach (string id in relicIds)
+            {
+                var definition = ContentDatabase.Relics.FirstOrDefault(r => r != null && r.id == id);
+                if (definition == null) continue;
+
+                resolved.Add(new ResolvedRelic(definition.id, definition.displayName, definition.description,
+                    definition.effect, definition.sortOrder, definition.iconPath,
+                    definition.rarity, definition.unlockedBy, definition.ToModifiers()));
+            }
+
+            return resolved;
+        }
+
+        private static CombatantState ToCombatant(CharacterDefinition definition,
+                                                  IReadOnlyList<RelicModifier> modifiers = null)
         {
             var stats = definition.baseStats;
             var scores = definition.baseAbilityScores;
@@ -97,11 +120,15 @@ namespace PrincesPalace
             int maxHealth = stats.maxHealth + AbilityDerivation.MaxHealthBonus(scores);
             int maxMana = GameplayConstants.DefaultMaxMana + AbilityDerivation.MaxManaBonus(scores);
 
+            // Relic modifiers land on the FINAL figures, after the ability
+            // scores have contributed -- a +15% attack relic is 15% of what the
+            // character actually swings with, not of a base nobody sees.
             var state = new CombatantState(definition.displayName, true,
-                maxHealth, maxMana,
-                stats.attack + AbilityDerivation.AttackBonus(scores),
-                stats.defense,
-                stats.speed + AbilityDerivation.SpeedBonus(scores));
+                RelicModifiers.Apply(maxHealth, RelicStat.MaxHealth, modifiers),
+                RelicModifiers.Apply(maxMana, RelicStat.MaxMana, modifiers),
+                RelicModifiers.Apply(stats.attack + AbilityDerivation.AttackBonus(scores), RelicStat.Attack, modifiers),
+                RelicModifiers.Apply(stats.defense, RelicStat.Defence, modifiers),
+                RelicModifiers.Apply(stats.speed + AbilityDerivation.SpeedBonus(scores), RelicStat.Speed, modifiers));
 
             state.ManaRegen = stats.manaRegen;
             state.AbilityScores = scores;
@@ -129,19 +156,31 @@ namespace PrincesPalace
             IReadOnlyList<string> enemyIds,
             SeededRandom rng,
             bool isBoss = false,
-            bool isElite = false)
+            bool isElite = false,
+            IReadOnlyList<string> relicIds = null)
         {
             var party = new List<CombatantState>();
             var kits = new List<PlayerKit>();
             var art = new List<string>();
+
+            // THE RUN'S RELICS, resolved once and given to the whole party.
+            //
+            // Party-wide rather than per-character because a relic is drafted
+            // for the DESCENT, not for a person -- see RelicDraftScreen. Until
+            // this existed, KitFor passed null and no relic had ever fired in
+            // an actual fight: the three effects were implemented in
+            // FightSession, covered by Domain tests that hand-build their own
+            // kits, and unreachable from play.
+            var relics = ResolveRelics(relicIds);
+            var modifiers = relics.SelectMany(r => r.Modifiers).ToList();
 
             foreach (string id in partyIds ?? new List<string>())
             {
                 var definition = ContentDatabase.Characters.FirstOrDefault(c => c.id == id);
                 if (definition == null) continue;
 
-                party.Add(ToCombatant(definition));
-                kits.Add(KitFor(definition));
+                party.Add(ToCombatant(definition, modifiers));
+                kits.Add(KitFor(definition, relics));
                 art.Add(definition.battleSpritePath);
             }
 
@@ -165,7 +204,7 @@ namespace PrincesPalace
             return new BuiltFight { Session = session, Party = party, PartyArt = art };
         }
 
-        private static PlayerKit KitFor(CharacterDefinition definition)
+        private static PlayerKit KitFor(CharacterDefinition definition, IReadOnlyList<ResolvedRelic> relics)
         {
             // The character's own strip, plus whichever basic spell tier their
             // level grants. Both are looked up here rather than carried on the
@@ -183,7 +222,7 @@ namespace PrincesPalace
                 .OrderByDescending(t => t.level)
                 .FirstOrDefault();
 
-            return new PlayerKit(definition.id, definition.role, skills, null,
+            return new PlayerKit(definition.id, definition.role, skills, relics,
                 definition.attackType, tier == null ? (ResolvedSpellTier?)null : SpellTierFor(tier));
         }
 

@@ -112,7 +112,11 @@ namespace PrincesPalace
 
             if (party.Count == 0 || enemies.Count == 0) return null;
 
-            return FightEncounterAdapter.Build(party, enemies, new SeededRandom((ulong)seed));
+            // The RUN'S relics, so the thing the player drafted at the gate
+            // actually reaches the fight. Without this the draft wrote to a
+            // field nothing read.
+            return FightEncounterAdapter.Build(party, enemies, new SeededRandom((ulong)seed),
+                relicIds: RunManager.HasRun ? RunManager.Run.relicIds : null);
         }
 
         private static bool HasArt(CharacterDefinition definition) =>

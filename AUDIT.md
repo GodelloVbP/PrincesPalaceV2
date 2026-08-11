@@ -783,6 +783,27 @@ EmbersNeverLandOnTheSharedWalletAgain` is what stops anything starting to write 
 meantime, because that regression would silently re-share embers and nothing else would
 notice.
 
+### ~~42. No relic had ever fired in an actual fight~~ — fixed in this pass, 2026-08-11
+`FightEncounterAdapter.KitFor` passed `null` for `PlayerKit`'s relic list, so `kit.Relics` was
+always empty and `FightSession.RelicEffectFor` never matched anything. Dual Wield, Magical
+Shield and Bloodlust were all implemented, all correct, and all unreachable from play.
+
+**The reason it survived is worth more than the fix.** Every relic test in the suite —
+including the flaky Bloodlust one that got four rounds of investigation under #24 — builds its
+own `PlayerKit` by hand and hands it straight to a `FightSession`. That is the right shape for
+testing a RULE, and it means the entire relic feature was covered by tests that could not
+observe the one thing that was broken: nothing anywhere asserted that the ADAPTER supplies what
+the session reads. #22's "untested critical paths" is exactly this category, and this is a
+worked example of the failure mode — a path can be surrounded by passing tests on both sides
+and still be severed in the middle.
+
+Two further consequences of the same gap, both fixed here: `run.relicIds` was written by the
+relic draft and read by nothing, so the draft screen was ceremony; and `RelicModifiers.Apply`
+had zero callers, so the numeric modifier table was unreachable the day it was written.
+
+Pinned by `RelicsReachCombatTests`, which was verified non-vacuous by reverting the null and
+watching it fail.
+
 ### 38. A wipe does not actually forfeit anything yet
 Follows from #37 and is the more urgent half. `CurrencyType` documents the forfeit rule, but
 the defeat path is unbuilt — the intended behaviour (2026-08-11) is that a defeat returns the
