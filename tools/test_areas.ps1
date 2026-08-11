@@ -207,6 +207,10 @@ $PathAreas = @(
     @{ Pattern = '^Assets/_Project/Scripts/Core/'; Areas = @('ui') }
     @{ Pattern = '^Assets/_Project/Scripts/Data/'; Areas = @('run') }
     @{ Pattern = '^Assets/_Project/Scripts/UI/';   Areas = @('ui') }
+    # Bakes the shapes a flat uGUI Image cannot draw (the glow, the disc, the
+    # armour stand) into committed PNGs. 'art' because it produces art, 'ui'
+    # because every consumer is a screen tree.
+    @{ Pattern = '^Assets/_Project/Scripts/Editor/ProceduralSpriteBaker'; Areas = @('art', 'ui') }
     @{ Pattern = '^Assets/_Project/Scripts/Editor/SceneBuilder'; Areas = @('ui', 'hub') }
     @{ Pattern = '^Assets/_Project/Scripts/Editor/ContentBuilder'; Areas = @('content') }
     @{ Pattern = '^Assets/_Project/ContentData/'; Areas = @('content') }

@@ -125,6 +125,101 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void TheDetailPlateStartsHidden()
+        {
+            // 1200x170 is the biggest object on the overlay, and
+            // nothing-selected is the state it OPENS in -- so the first thing
+            // the player saw was the screen's own empty furniture.
+            Assert.IsTrue(CharacterOverlayScreen.Build().DetailPlate.Node.StartInactive);
+        }
+
+        [Test]
+        public void TheEmptyBagHintExistsAndStartsHidden()
+        {
+            // Every bag cell hides itself when unused, so an empty bag drew a
+            // rectangle of nothing with "PAGE 1 OF 1" underneath it -- twenty
+            // things that failed to load, rather than a bag you have not
+            // filled. Hidden at build because the common case is a full bag.
+            var hint = CharacterOverlayScreen.Build().BagEmptyHint;
+
+            Assert.IsTrue(hint.IsValid);
+            Assert.IsTrue(hint.Node.StartInactive);
+        }
+
+        [Test]
+        public void TheSilhouettePointsAtArtThatActuallyExists()
+        {
+            // It pointed at a painted stand that had not been drawn yet, so
+            // LoadSpriteByKey warned, degraded, and left the paperdoll as eight
+            // boxes floating in a void -- every slot coordinate is placed
+            // against a BODY, and without one the pane reads as broken rather
+            // than as unfinished. A generated stand holds the place until the
+            // painted one lands.
+            Assert.AreEqual("proc:armour_stand", CharacterOverlayScreen.SilhouetteKey);
+
+            var node = CharacterOverlayScreen.Build().Silhouette.Node;
+            Assert.AreEqual(CharacterOverlayScreen.SilhouetteTint, node.ColorHex,
+                "the stand is white art tinted to the palette, not a white slab");
+            Assert.IsTrue(node.Decor, "it must not eat the clicks of the slots laid over it");
+        }
+
+        [Test]
+        public void TheDimmerIsOpaqueEnoughToSilenceTheHubBehindIt()
+        {
+            // At the 85% it started on, the hub's own headings came straight
+            // through: "DIVINE PRINCIPALITY" read louder than the character
+            // name on top of it, because a large light glyph survives a dim
+            // that a painted building does not.
+            // The colour lives on the dimmer Ui.Modal builds, not on the modal
+            // root itself -- the root is a transparent grouping node.
+            var dimmer = Walk(CharacterOverlayScreen.Build().Root)
+                .First(n => n.Name == "CharacterOverlayPanelDimmer");
+            string hex = dimmer.ColorHex;
+
+            Assert.IsNotNull(hex);
+            int alpha = System.Convert.ToInt32(hex.Substring(hex.Length - 2), 16);
+            Assert.GreaterOrEqual(alpha, 0xE6, $"dimmer alpha {hex} lets the hub compete");
+        }
+
+        [Test]
+        public void ThePaperdollClearsTheDetailPlate()
+        {
+            // The plate is .AsDecor(), and decor is EXEMPT from the sibling
+            // overlap check -- deliberately, because stacked cell layers need
+            // that exemption to exist at all. The cost is that this particular
+            // collision is invisible to UiAudit by construction, and it really
+            // happened: the boots and the bottom of the Shoes cell sat behind
+            // the plate, found only by compositing the layout as an image.
+            //
+            // So it is asserted directly. An exemption that buys something
+            // elsewhere still needs the thing it stops checking checked.
+            Assert.Greater(OverlayAnchors.PaperdollBottom, OverlayAnchors.DetailPlateTop,
+                $"the paperdoll reaches {OverlayAnchors.PaperdollBottom} and the plate's top edge " +
+                $"is {OverlayAnchors.DetailPlateTop} -- the stand is behind it");
+        }
+
+        [Test]
+        public void EverySlotSitsOnTheStandItIsPositionedAgainst()
+        {
+            // Each cell must fall inside the silhouette's box, horizontally or
+            // vertically, or it is a box floating in a void -- which is exactly
+            // how the pane read before the stand existed. The two weapon slots
+            // are excluded on purpose: they FLANK the body, which is the whole
+            // reason they are out there.
+            float top = OverlayAnchors.Silhouette.Y + OverlayAnchors.SilhouetteSize.Y * 0.5f;
+            float bottom = OverlayAnchors.Silhouette.Y - OverlayAnchors.SilhouetteSize.Y * 0.5f;
+
+            foreach (var slot in EquipmentSlots.All)
+            {
+                if (slot == EquipmentSlot.Weapon1 || slot == EquipmentSlot.Weapon2) continue;
+
+                var at = OverlayAnchors.PositionFor(slot);
+                Assert.LessOrEqual(at.Y, top, $"{slot} floats above the stand");
+                Assert.GreaterOrEqual(at.Y, bottom, $"{slot} floats below the stand");
+            }
+        }
+
+        [Test]
         public void EveryExemptionStatesARealReason()
         {
             foreach (var node in Walk(CharacterOverlayScreen.Build().Root))

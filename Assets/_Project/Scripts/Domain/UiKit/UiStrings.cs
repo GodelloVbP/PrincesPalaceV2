@@ -46,6 +46,11 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString OverlayEquip = UiString.Define("overlay.equip", "EQUIP");
         public static readonly UiString OverlayUnequip = UiString.Define("overlay.unequip", "UNEQUIP");
         public static readonly UiString OverlayCannotWear = UiString.Define("overlay.cannot_wear", "CAN'T WEAR");
+        // An empty bag has to SAY it is empty. Twenty hidden cells and a lone
+        // "PAGE 1 OF 1" floating over dead space reads as a grid that failed to
+        // load, not as a bag with nothing in it.
+        public static readonly UiString OverlayBagEmpty =
+            UiString.Define("overlay.bag_empty", "YOU ARE CARRYING NOTHING");
 
         // ---- the hub -------------------------------------------------------
 
@@ -205,7 +210,7 @@ namespace PrincesPalace.Domain.UiKit
             MapTitle, MapDepth, MapGold, MapAbandon,
             HubWallet, HubBeginDescent, HubResumeFloor,
             OverlayCount, OverlayPlus, OverlayPage,
-            OverlayEquip, OverlayUnequip, OverlayCannotWear,
+            OverlayEquip, OverlayUnequip, OverlayCannotWear, OverlayBagEmpty,
             TalentEmbers, TalentInvest, TalentTaken, TalentLocked, TalentNoEmbers,
             TalentPrev, TalentNext, TalentBack, TalentPath,
         };

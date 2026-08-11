@@ -17,7 +17,26 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // two systems meeting.
     public sealed class CharacterOverlayScreen
     {
-        public const string SilhouetteKey = "UI/CharacterOverlay/Processed/armour_stand.png";
+        // The generated stand, until the painted one lands.
+        //
+        // This pointed at "UI/CharacterOverlay/Processed/armour_stand.png" --
+        // art that does not exist yet, so LoadSpriteByKey warned and degraded
+        // and the paperdoll rendered as eight boxes floating in a void. Every
+        // slot coordinate is positioned against a BODY; without one the whole
+        // left pane reads as broken rather than as unfinished.
+        //
+        // Swapping to the painted version is this one string.
+        public const string SilhouetteKey = "proc:armour_stand";
+
+        // Matte violet, the stand's own rim ramp doing the modelling.
+        //
+        // Lighter than the #2E2244 the brief named, and deliberately: that
+        // value was chosen against the ART's own background, not against a 94%
+        // dimmer. Composited over the real backdrop it came out at roughly
+        // (46,34,68) on (16,11,30) -- a body you had to hunt for, which is
+        // worse than no body at all, because the slot cells then read as
+        // floating over nothing AND the pane looks broken.
+        public const string SilhouetteTint = "#564480";
         public const string CellFrameKey = "UI/Panels/gear_cell_frame.png";
 
         public UiNode Root;
@@ -31,7 +50,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef PageLabel;
         public NodeRef PrevPageButton;
         public NodeRef NextPageButton;
+        public NodeRef BagEmptyHint;
 
+        public NodeRef DetailPlate;
         public NodeRef DetailName;
         public NodeRef DetailBody;
         public NodeRef ActionButton;
@@ -60,6 +81,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var silhouette = Ui.Sprite("OverlaySilhouette", SilhouetteKey,
                     Place.At(OverlayAnchors.Silhouette.X, OverlayAnchors.Silhouette.Y),
                     UiSize.Fixed(OverlayAnchors.SilhouetteSize.X, OverlayAnchors.SilhouetteSize.Y))
+                .Coloured(SilhouetteTint)
                 .AsDecor();
             screen.Silhouette = silhouette;
 
@@ -82,10 +104,27 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 OverlayAnchors.BagGap,
                 bagCells);
 
-            var content = Ui.Panel("CharacterOverlayContent", Place.At(0f, 0f), UiSize.Fixed(1920f, 1080f),
-                BuildChrome(screen).Concat(paperdoll).Append(bag));
+            // Sits in the middle of where the grid would be. Every cell hides
+            // itself when unused, so an empty bag left a rectangle of nothing
+            // with a pager underneath it -- which reads as twenty things that
+            // failed to load rather than as a bag you have not filled yet.
+            var empty = Ui.Label("OverlayBagEmpty", UiStrings.OverlayBagEmpty, new UiVec(720f, 44f), 20,
+                    "#7E6E9E", Place.At(OverlayAnchors.Bag.X, OverlayAnchors.Bag.Y))
+                .AsDecor()
+                .Inactive();
+            screen.BagEmptyHint = empty;
 
-            screen.Root = Ui.Modal("CharacterOverlayPanel", "#000000D9", content).Inactive();
+            var content = Ui.Panel("CharacterOverlayContent", Place.At(0f, 0f), UiSize.Fixed(1920f, 1080f),
+                BuildChrome(screen).Concat(paperdoll).Append(bag).Append(empty));
+
+            // 94%, and tinted into the palette rather than pure black.
+            //
+            // At the 85% this started on, the hub's own headings came straight
+            // through -- "DIVINE PRINCIPALITY" read louder than the character
+            // name on top of it, because a large light glyph survives a dim that
+            // a painted building does not. The hub is still faintly there, which
+            // is the whole point of an overlay; it just stops competing.
+            screen.Root = Ui.Modal("CharacterOverlayPanel", "#0A0614F0", content).Inactive();
             return screen;
         }
 
@@ -124,12 +163,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.DetailName = detailName;
             screen.DetailBody = detailBody;
 
+            // Hidden until something is picked. A 1200x170 coloured slab with
+            // nothing written on it is the biggest object on the overlay, and
+            // nothing-selected is the state it OPENS in -- so the first thing
+            // the screen showed was its own empty furniture.
             var plate = Ui.Panel("OverlayDetailPlate",
                     Place.At(OverlayAnchors.DetailPlate.X, OverlayAnchors.DetailPlate.Y),
                     UiSize.Fixed(OverlayAnchors.DetailPlateSize.X, OverlayAnchors.DetailPlateSize.Y),
                     detailName, detailBody)
                 .Coloured("#2C1C42E0")
-                .AsDecor();
+                .AsDecor()
+                .Inactive();
+            screen.DetailPlate = plate;
 
             var actionLabel = Ui.Label("OverlayActionLabel", UiStrings.OverlayEquip, new UiVec(260f, 40f), 20,
                 "#F2DB9E", Place.At(0f, 0f));

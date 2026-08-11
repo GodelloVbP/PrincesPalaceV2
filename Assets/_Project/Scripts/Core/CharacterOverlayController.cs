@@ -35,6 +35,8 @@ namespace PrincesPalace
 
         [SerializeField] internal TMP_Text characterName;
         [SerializeField] internal TMP_Text pageLabel;
+        [SerializeField] internal GameObject bagEmptyHint;
+        [SerializeField] internal GameObject detailPlate;
         [SerializeField] internal TMP_Text detailName;
         [SerializeField] internal TMP_Text detailBody;
         [SerializeField] internal TMP_Text actionLabel;
@@ -213,6 +215,16 @@ namespace PrincesPalace
             characterName.SetContent(character.definitionId);
             pageLabel.Set(UiStrings.OverlayPage, _page + 1, BagView.PageCount(_sorted.Count));
 
+            // An empty bag says so, and takes its pager with it. The cells
+            // already hide themselves when unused, which on an empty bag left a
+            // blank rectangle sitting under "PAGE 1 OF 1" -- furniture for a
+            // thing that is not there.
+            bool carrying = _sorted.Count > 0;
+            if (bagEmptyHint != null) bagEmptyHint.SetActive(!carrying);
+            pageLabel.gameObject.SetActive(carrying);
+            prevPageButton.gameObject.SetActive(carrying);
+            nextPageButton.gameObject.SetActive(carrying);
+
             PaintSlots(character);
             PaintBag();
             PaintDetail(character);
@@ -308,10 +320,15 @@ namespace PrincesPalace
             {
                 detailName.SetContent("");
                 detailBody.SetContent("");
+                // The plate goes too. Blanking the labels and leaving the slab
+                // is how the overlay came to open onto its own empty furniture:
+                // the plate frames an answer, and nothing has been asked yet.
+                if (detailPlate != null) detailPlate.SetActive(false);
                 actionButton.gameObject.SetActive(false);
                 return;
             }
 
+            if (detailPlate != null) detailPlate.SetActive(true);
             actionButton.gameObject.SetActive(true);
             detailName.SetContent(RarityColors.NameOf(item, plusValue));
             detailBody.SetContent(Describe(item));

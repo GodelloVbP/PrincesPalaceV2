@@ -49,11 +49,138 @@ public static class ProceduralSpriteBaker
             return 1f - Smoothstep(Mathf.Clamp01(offset / halfWidth));
         });
 
+        BakeArmourStand();
+
         AssetDatabase.SaveAssets();
         Debug.Log("BUILD-COMPLETE: ProceduralSpriteBaker");
     }
 
+    // ---- the character overlay's armour stand ---------------------------------
+
+    // A headless stand, shoulders through boots, for the paperdoll to hang on.
+    //
+    // Every slot coordinate in OverlayAnchors was designed AROUND a body: the
+    // gloves sit 175px out to the side because that is where a hand is, and
+    // Legs->Shoes is 200px apart because that is a shin. With nothing behind
+    // them the eight cells read as boxes scattered in a void -- which is
+    // exactly how the overlay looked in its first screenshot.
+    //
+    // This is a PLACEHOLDER for the painted stand, and deliberately a generated
+    // one: the house rule is that art in this folder is produced by a tool you
+    // can re-run, never hand-authored. Swapping in the painted version is one
+    // string in CharacterOverlayScreen.SilhouetteKey.
+    //
+    // 256x384 rather than the 128 square the others use -- the stand renders at
+    // 520x780, and a square source stretched to 2:3 is visibly smeared.
+    private static void BakeArmourStand()
+    {
+        // Proportions in normalised space, y up, both axes -1..1. Read against
+        // OverlayAnchors.PositionFor: the neck stump ends where the Head cell
+        // sits, the hands end where the Gloves cell sits, and so on.
+        Bake2D("armour_stand", 256, 384, (nx, ny) =>
+        {
+            float body = SdBox(nx, ny - 0.86f, 0.11f, 0.11f);                       // neck stump
+            body = Math.Min(body, SdTaperedColumn(nx, ny, -0.02f, 0.76f, 0.40f, 0.22f));  // shoulders -> waist
+            body = Math.Min(body, SdTaperedColumn(nx, ny, -0.14f, 0.06f, 0.24f, 0.30f));  // waist -> hips
+
+            body = Math.Min(body, SdSegment(nx, ny, -0.34f, 0.68f, -0.66f, -0.12f, 0.095f)); // left arm
+            body = Math.Min(body, SdSegment(nx, ny, 0.34f, 0.68f, 0.66f, -0.12f, 0.095f));  // right arm
+
+            body = Math.Min(body, SdSegment(nx, ny, -0.16f, -0.02f, -0.16f, -0.84f, 0.125f)); // left leg
+            body = Math.Min(body, SdSegment(nx, ny, 0.16f, -0.02f, 0.16f, -0.84f, 0.125f));   // right leg
+
+            body = Math.Min(body, SdBox(nx + 0.17f, ny + 0.90f, 0.185f, 0.085f));   // left boot
+            body = Math.Min(body, SdBox(nx - 0.17f, ny + 0.90f, 0.185f, 0.085f));   // right boot
+
+            return body;
+        });
+    }
+
+    // Signed distance helpers. Negative inside, zero on the edge -- which is
+    // what lets one field produce BOTH the alpha cutout and the rim light,
+    // instead of the flat matte cutout a coverage-only bake would give.
+    private static float SdBox(float px, float py, float hw, float hh)
+    {
+        float dx = Math.Abs(px) - hw;
+        float dy = Math.Abs(py) - hh;
+        float outside = Mathf.Sqrt(Math.Max(dx, 0f) * Math.Max(dx, 0f) + Math.Max(dy, 0f) * Math.Max(dy, 0f));
+        return outside + Math.Min(Math.Max(dx, dy), 0f);
+    }
+
+    private static float SdSegment(float px, float py, float ax, float ay, float bx, float by, float radius)
+    {
+        float pax = px - ax, pay = py - ay;
+        float bax = bx - ax, bay = by - ay;
+        float denominator = bax * bax + bay * bay;
+        float t = denominator <= 0f ? 0f : Mathf.Clamp01((pax * bax + pay * bay) / denominator);
+        float dx = pax - bax * t, dy = pay - bay * t;
+        return Mathf.Sqrt(dx * dx + dy * dy) - radius;
+    }
+
+    // A trunk whose half-width changes with height: shoulders down to a waist,
+    // then a waist back out to hips. Two of these stacked are a torso.
+    private static float SdTaperedColumn(float px, float py, float bottom, float top,
+                                         float halfWidthTop, float halfWidthBottom)
+    {
+        float centre = (top + bottom) * 0.5f;
+        float halfHeight = (top - bottom) * 0.5f;
+        float t = halfHeight <= 0f ? 0f : Mathf.Clamp01((py - bottom) / (top - bottom));
+        float halfWidth = Mathf.Lerp(halfWidthBottom, halfWidthTop, t);
+        return SdBox(px, py - centre, halfWidth, halfHeight);
+    }
+
     private static float Smoothstep(float x) => x * x * (3f - 2f * x);
+
+    // Bakes a signed-distance field into alpha plus a rim.
+    //
+    // The RGB ramp is why this is not a flat cutout: full white within a hair
+    // of the silhouette edge, falling to 0.52 in the interior. Tinted through
+    // Image.color it reads as a matte body with a lit edge, which is the "faint
+    // edge modelling only" the design asked for -- and it costs one extra
+    // lookup per pixel at bake time and nothing at all at runtime.
+    private static void Bake2D(string name, int width, int height, Func<float, float, float> signedDistance)
+    {
+        string path = $"{GeneratedDir}/{name}.png";
+
+        var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        var pixels = new Color32[width * height];
+
+        // In pixels, so the softness of an edge does not depend on the aspect.
+        float edgeSoftness = 1.6f / height * 2f;
+
+        // A NARROW, SHALLOW rim. At 0.075 deep falling to 0.52 the ramp ate
+        // most of the limb and the stand read as a glowing outline rather than
+        // a matte body -- and since the whole sprite is then tinted, a dark
+        // interior compounds with a dark tint into something invisible.
+        const float RimDepth = 0.045f;
+        const float InteriorValue = 0.78f;
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                float nx = (x + 0.5f) / width * 2f - 1f;
+                float ny = (y + 0.5f) / height * 2f - 1f;
+
+                float distance = signedDistance(nx, ny);
+
+                float alpha = Mathf.Clamp01(0.5f - distance / edgeSoftness);
+                alpha = Smoothstep(Mathf.Clamp01(alpha));
+
+                // How far inside the edge this pixel is, 0 at the rim.
+                float depth = Mathf.Clamp01(-distance / RimDepth);
+                float value = Mathf.Lerp(1f, InteriorValue, Smoothstep(depth));
+                byte channel = (byte)Mathf.RoundToInt(Mathf.Clamp01(value) * 255f);
+
+                pixels[y * width + x] = new Color32(channel, channel, channel,
+                    (byte)Mathf.RoundToInt(alpha * 255f));
+            }
+        }
+
+        texture.SetPixels32(pixels);
+        texture.Apply();
+        WritePng(path, texture);
+    }
 
     private static void Bake(string name, Func<float, float> alphaAtDistance)
     {
@@ -73,7 +200,14 @@ public static class ProceduralSpriteBaker
         }
         texture.SetPixels32(pixels);
         texture.Apply();
+        WritePng(path, texture);
+    }
 
+    // Encode, compare, write, import. Shared by the radial bakes and the
+    // signed-distance one so there is a single place that knows the importer
+    // settings a Sprite needs.
+    private static void WritePng(string path, Texture2D texture)
+    {
         var png = texture.EncodeToPNG();
         UnityEngine.Object.DestroyImmediate(texture);
 

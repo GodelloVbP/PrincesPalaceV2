@@ -31,6 +31,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef NextCharacterButton;
         public NodeRef BackButton;
 
+        public NodeRef DetailPlate;
         public NodeRef DetailName;
         public NodeRef DetailBody;
         public NodeRef InvestButton;
@@ -117,10 +118,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 Place.At(-830f, 480f));
             screen.BackButton = back;
 
+            // Hidden until an orb is picked, rather than sitting there empty.
+            //
+            // A 880x150 coloured slab with nothing written on it is the single
+            // loudest thing on a screen whose whole subject is a dim sky, and it
+            // is the state the screen OPENS in. The plate is the frame for an
+            // answer; with no question asked there is nothing to frame.
             var detailPlate = Ui.Panel("TalentDetailPlate", Place.At(0f, -420f), UiSize.Fixed(880f, 150f),
                     detailName, detailBody)
                 .Coloured("#2C1C42E0")
-                .AsDecor();
+                .AsDecor()
+                .Inactive();
+            screen.DetailPlate = detailPlate;
 
             screen.Root = Ui.Panel("TalentPanel", UiSize.Fixed(1920f, 1080f),
                 Ui.Sprite("TalentBackground", BackgroundKey, Place.Stretch(), UiSize.Fill).AsDecor(),
@@ -181,7 +190,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     Place.At(at.X, at.Y))
                 .AllowOverlap("a constellation's stars share their light - the glows are 2.4x the orb and reaching a neighbour is the effect, not a collision")
                 .AllowOverflow("ConstellationLayout puts the first and last rows ON the sky's edges, so half an orb hangs over them by construction");
-            orb.SpriteKey = "proc:radial_glow";
+            // A DISC, not a glow.
+            //
+            // This read "proc:radial_glow" -- the same asset as its own glow
+            // child, untinted. So an orb had no body and no rim: it was a soft
+            // white smudge sitting inside a slightly larger soft white smudge,
+            // and a constellation of them read as smears rather than as stars
+            // you could aim at. solid_circle is what the baker made for exactly
+            // this, and it lets the three state colours below actually show.
+            orb.SpriteKey = "proc:solid_circle";
             orb.Children.Add(glow);
 
             Orbs.Add(orb);

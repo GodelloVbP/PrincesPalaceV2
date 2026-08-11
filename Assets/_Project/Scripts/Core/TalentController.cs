@@ -24,6 +24,7 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text characterName;
         [SerializeField] internal TMP_Text pathName;
         [SerializeField] internal TMP_Text emberCount;
+        [SerializeField] internal GameObject detailPlate;
         [SerializeField] internal TMP_Text detailName;
         [SerializeField] internal TMP_Text detailBody;
         [SerializeField] internal TMP_Text investLabel;
@@ -219,10 +220,16 @@ namespace PrincesPalace
             {
                 detailName.SetContent("");
                 detailBody.SetContent("");
+                // The plate goes with them. Blanking the text and leaving the
+                // slab behind is how the screen ended up opening onto an empty
+                // coloured rectangle -- the plate frames an answer, and with no
+                // orb picked there is no question.
+                if (detailPlate != null) detailPlate.SetActive(false);
                 investButton.gameObject.SetActive(false);
                 return;
             }
 
+            if (detailPlate != null) detailPlate.SetActive(true);
             investButton.gameObject.SetActive(true);
 
             var refusal = TalentPage.Evaluate(characterId, _path, _selectedSlot, unlocked, Embers);

@@ -589,6 +589,7 @@ public static class ScreenRegistry
                 talents.characterName = result.Tmp(screen.CharacterName);
                 talents.pathName = result.Tmp(screen.PathName);
                 talents.emberCount = result.Tmp(screen.EmberCount);
+                talents.detailPlate = result.Go(screen.DetailPlate);
                 talents.detailName = result.Tmp(screen.DetailName);
                 talents.detailBody = result.Tmp(screen.DetailBody);
                 talents.investLabel = result.Tmp(screen.InvestLabel);
@@ -652,6 +653,8 @@ public static class ScreenRegistry
 
         controller.characterName = result.Tmp(overlay.CharacterName);
         controller.pageLabel = result.Tmp(overlay.PageLabel);
+        controller.bagEmptyHint = result.Go(overlay.BagEmptyHint);
+        controller.detailPlate = result.Go(overlay.DetailPlate);
         controller.detailName = result.Tmp(overlay.DetailName);
         controller.detailBody = result.Tmp(overlay.DetailBody);
         controller.actionLabel = result.Tmp(overlay.ActionLabel);

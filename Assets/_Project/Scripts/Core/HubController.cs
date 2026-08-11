@@ -93,13 +93,66 @@ namespace PrincesPalace
             principalityButton.onClick.AddListener(() => Debug.Log("Principality"));
             // An overlay, not a scene load: it opens over the hub and the hub
             // is still standing behind it when it closes.
-            characterSheetButton.onClick.AddListener(() => characterOverlayPanel.SetActive(true));
+            characterSheetButton.onClick.AddListener(() => SetCharacterOverlay(true));
             relicsButton.onClick.AddListener(() => Debug.Log("Relics"));
             // The two that go somewhere. The other four are screens that do not
             // exist yet, and a button that logs is more honest than one that
             // loads an empty scene.
             startRunButton.onClick.AddListener(StartOrResumeRun);
             mainMenuButton.onClick.AddListener(() => Navigation.Go(Navigation.MainMenu));
+        }
+
+        // ---- keyboard ------------------------------------------------------------
+
+        // C and I open the character overlay; Escape closes it.
+        //
+        // Both keys land on the SAME overlay. v1 had two separate screens and a
+        // key each -- an inventory and a paperdoll that could only agree because
+        // both called the same service. v2 merged them, so honouring both keys
+        // costs nothing and spares anyone their muscle memory.
+        //
+        // This lives on the hub rather than on CharacterOverlayController
+        // because that component sits on the modal node, which is INACTIVE
+        // while the overlay is closed. An Update() on a disabled object cannot
+        // be the thing that opens it.
+        private void Update()
+        {
+            if (characterOverlayPanel == null) return;
+
+            if (Input.GetKeyDown(KeyCode.C) || Input.GetKeyDown(KeyCode.I))
+            {
+                ToggleCharacterOverlay();
+            }
+            // Only swallowed while the overlay is up, so Escape stays free to
+            // mean something else on the hub itself later.
+            else if (Input.GetKeyDown(KeyCode.Escape) && characterOverlayPanel.activeSelf)
+            {
+                SetCharacterOverlay(false);
+            }
+        }
+
+        // The key read above is deliberately separated from the action here:
+        // legacy Input cannot be simulated headlessly, so a test that had to
+        // press C could not exist. Tests drive these two directly -- and so
+        // does the Character Sheet building, which means the button and the
+        // key can never drift apart.
+        // Read-only, so callers outside Core can ask without being able to
+        // reach past the two methods that are allowed to answer. Null-tolerant
+        // for the same reason those are: a scene may mount this controller
+        // without an overlay.
+        public bool CharacterOverlayIsOpen =>
+            characterOverlayPanel != null && characterOverlayPanel.activeSelf;
+
+        public void ToggleCharacterOverlay()
+        {
+            if (characterOverlayPanel == null) return;
+            SetCharacterOverlay(!characterOverlayPanel.activeSelf);
+        }
+
+        public void SetCharacterOverlay(bool open)
+        {
+            if (characterOverlayPanel == null) return;
+            characterOverlayPanel.SetActive(open);
         }
 
         // Kept for the tests and callers that set a wallet explicitly. Goes

@@ -16,8 +16,16 @@ namespace PrincesPalace.Domain.UiKit
         // can neither eat a cell's click nor collide with the cells laid over
         // it -- the two things that would otherwise make a body-shaped
         // background a liability.
-        public static readonly UiVec Silhouette = new UiVec(-480f, 20f);
-        public static readonly UiVec SilhouetteSize = new UiVec(520f, 780f);
+        // Raised 58px and shortened 50px from where this started.
+        //
+        // At (-480, 20) x 780 the stand's boots -- and the bottom of the Shoes
+        // cell over them -- ran to y=-370, while the detail plate's top edge is
+        // at -335. The plate covered both. Nothing caught it: the plate is
+        // .AsDecor(), and decor is exempt from the sibling overlap check by
+        // design, so the audit was structurally incapable of seeing it. Found
+        // by compositing the layout, pinned by ThePaperdollClearsTheDetailPlate.
+        public static readonly UiVec Silhouette = new UiVec(-480f, 78f);
+        public static readonly UiVec SilhouetteSize = new UiVec(520f, 730f);
 
         public const float SlotCell = 96f;
 
@@ -28,20 +36,28 @@ namespace PrincesPalace.Domain.UiKit
         {
             switch (slot)
             {
-                case EquipmentSlot.Head: return new UiVec(-480f, 345f);
-                case EquipmentSlot.Necklace: return new UiVec(-480f, 235f);
-                case EquipmentSlot.Torso: return new UiVec(-480f, 110f);
-                case EquipmentSlot.Gloves: return new UiVec(-655f, -30f);
-                case EquipmentSlot.Legs: return new UiVec(-480f, -130f);
-                case EquipmentSlot.Shoes: return new UiVec(-480f, -330f);
+                case EquipmentSlot.Head: return new UiVec(-480f, 400f);
+                case EquipmentSlot.Necklace: return new UiVec(-480f, 290f);
+                case EquipmentSlot.Torso: return new UiVec(-480f, 165f);
+                case EquipmentSlot.Gloves: return new UiVec(-655f, 25f);
+                case EquipmentSlot.Legs: return new UiVec(-480f, -75f);
+                case EquipmentSlot.Shoes: return new UiVec(-480f, -262f);
 
                 // The hands flank the body rather than sitting on it: an arm is
                 // too thin a target at this size, and a weapon held out to the
                 // side reads as held.
-                case EquipmentSlot.Weapon1: return new UiVec(-790f, 110f);
-                default: return new UiVec(-170f, 110f);
+                case EquipmentSlot.Weapon1: return new UiVec(-790f, 165f);
+                default: return new UiVec(-170f, 165f);
             }
         }
+
+        // The lowest edge anything in the paperdoll reaches. Read by the test
+        // that keeps it off the detail plate, so the two cannot drift.
+        public static float PaperdollBottom =>
+            System.Math.Min(Silhouette.Y - SilhouetteSize.Y * 0.5f,
+                            PositionFor(EquipmentSlot.Shoes).Y - SlotCell * 0.5f);
+
+        public static float DetailPlateTop => DetailPlate.Y + DetailPlateSize.Y * 0.5f;
 
         // ---- the bag -----------------------------------------------------------
 
