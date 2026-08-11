@@ -16,38 +16,50 @@ namespace PrincesPalace.Domain.UiKit
         // can neither eat a cell's click nor collide with the cells laid over
         // it -- the two things that would otherwise make a body-shaped
         // background a liability.
-        // Raised 58px and shortened 50px from where this started.
+        // MEASURED off the keyed art, not estimated off the image.
         //
-        // At (-480, 20) x 780 the stand's boots -- and the bottom of the Shoes
-        // cell over them -- ran to y=-370, while the detail plate's top edge is
-        // at -335. The plate covered both. Nothing caught it: the plate is
-        // .AsDecor(), and decor is exempt from the sibling overlap check by
-        // design, so the audit was structurally incapable of seeing it. Found
-        // by compositing the layout, pinned by ThePaperdollClearsTheDetailPlate.
+        // The painted stand fills 81.7% of its 1024x1536 canvas (content box
+        // 883x1255 at y 133..1387), so the FIGURE inside this node is 596px
+        // tall centred at y=81 with a half-height of 298, and 448px wide
+        // centred on the node with a half-width of 224. Every number below is
+        // that mapping applied to a landmark read out of the alpha channel:
+        //
+        //   +0.93  neck post          -0.12  tunic hem
+        //   +0.52  arms leave torso   -0.36  legs separate
+        //   +0.04  hands end          -1.00  leg tips
+        //
+        // Three previous passes were tuned by eye off a pasted screenshot and
+        // were wrong every time -- most visibly the Gloves slot, which sat at
+        // nx -0.67 while the hands actually end at -0.93 and so hung in empty
+        // space beside the arm. tools measure_stand.py is how this was read.
         public static readonly UiVec Silhouette = new UiVec(-480f, 78f);
         public static readonly UiVec SilhouetteSize = new UiVec(520f, 730f);
 
         public const float SlotCell = 96f;
 
-        // Read down the body, then out to the hands. Nearest vertical pitch is
-        // 110px against a 96px cell, so slot-vs-slot clears the overlap audit
-        // by construction rather than by exemption.
+        // Read down the body, then out to the hands, then out again to the
+        // weapons. The centre column is spaced at 118-153px against a 96px
+        // cell, so slot-vs-slot clears the overlap audit by construction.
         public static UiVec PositionFor(EquipmentSlot slot)
         {
             switch (slot)
             {
-                case EquipmentSlot.Head: return new UiVec(-480f, 400f);
-                case EquipmentSlot.Necklace: return new UiVec(-480f, 290f);
-                case EquipmentSlot.Torso: return new UiVec(-480f, 165f);
-                case EquipmentSlot.Gloves: return new UiVec(-655f, 25f);
-                case EquipmentSlot.Legs: return new UiVec(-480f, -75f);
-                case EquipmentSlot.Shoes: return new UiVec(-480f, -262f);
+                case EquipmentSlot.Head: return new UiVec(-480f, 358f);
+                case EquipmentSlot.Necklace: return new UiVec(-480f, 240f);
+                case EquipmentSlot.Torso: return new UiVec(-480f, 110f);
+                case EquipmentSlot.Legs: return new UiVec(-480f, -40f);
+                case EquipmentSlot.Shoes: return new UiVec(-480f, -193f);
 
-                // The hands flank the body rather than sitting on it: an arm is
-                // too thin a target at this size, and a weapon held out to the
-                // side reads as held.
-                case EquipmentSlot.Weapon1: return new UiVec(-790f, 165f);
-                default: return new UiVec(-170f, 165f);
+                // ON THE HANDS. The A-pose puts them 208px out from the body
+                // centre at the height the arms end -- which is why this is no
+                // longer tucked in beside the hip.
+                case EquipmentSlot.Gloves: return new UiVec(-688f, 96f);
+
+                // Outside the hands again, so a weapon reads as HELD OUT
+                // rather than as a second glove. 130px clear of the Gloves
+                // cell, which is 34px of gap at a 96px cell.
+                case EquipmentSlot.Weapon1: return new UiVec(-818f, 110f);
+                default: return new UiVec(-142f, 110f);
             }
         }
 

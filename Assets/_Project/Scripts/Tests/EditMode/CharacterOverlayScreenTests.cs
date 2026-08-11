@@ -155,11 +155,18 @@ namespace PrincesPalace.Domain.Tests
             // against a BODY, and without one the pane reads as broken rather
             // than as unfinished. A generated stand holds the place until the
             // painted one lands.
-            Assert.AreEqual("proc:armour_stand", CharacterOverlayScreen.SilhouetteKey);
+            // The PAINTED stand now, keyed off its green screen. The
+            // procedural placeholder existed only until this art was drawn.
+            Assert.AreEqual("UI/CharacterOverlay/Processed/armour_stand.png",
+                CharacterOverlayScreen.SilhouetteKey);
 
             var node = CharacterOverlayScreen.Build().Silhouette.Node;
-            Assert.AreEqual(CharacterOverlayScreen.SilhouetteTint, node.ColorHex,
-                "the stand is white art tinted to the palette, not a white slab");
+
+            // WHITE, because a tint multiplies and this art carries its own
+            // colour. The violet that suited the white procedural stand would
+            // have crushed the painted one to near-black on a 94% dimmer.
+            Assert.AreEqual("#FFFFFF", node.ColorHex,
+                "a tint over painted art multiplies it darker");
             Assert.IsTrue(node.Decor, "it must not eat the clicks of the slots laid over it");
         }
 

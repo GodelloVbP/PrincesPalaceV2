@@ -17,26 +17,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // two systems meeting.
     public sealed class CharacterOverlayScreen
     {
-        // The generated stand, until the painted one lands.
+        // The painted stand, keyed off its green screen by tools/
+        // key_green_screen.py's character_overlay kit.
         //
-        // This pointed at "UI/CharacterOverlay/Processed/armour_stand.png" --
-        // art that does not exist yet, so LoadSpriteByKey warned and degraded
-        // and the paperdoll rendered as eight boxes floating in a void. Every
-        // slot coordinate is positioned against a BODY; without one the whole
-        // left pane reads as broken rather than as unfinished.
-        //
-        // Swapping to the painted version is this one string.
-        public const string SilhouetteKey = "proc:armour_stand";
+        // Replaced a procedurally baked placeholder that existed only because
+        // this art had not been drawn yet. Art/Generated/armour_stand.png and
+        // its baker case can go once nothing references them.
+        public const string SilhouetteKey = "UI/CharacterOverlay/Processed/armour_stand.png";
 
-        // Matte violet, the stand's own rim ramp doing the modelling.
-        //
-        // Lighter than the #2E2244 the brief named, and deliberately: that
-        // value was chosen against the ART's own background, not against a 94%
-        // dimmer. Composited over the real backdrop it came out at roughly
-        // (46,34,68) on (16,11,30) -- a body you had to hunt for, which is
-        // worse than no body at all, because the slot cells then read as
-        // floating over nothing AND the pane looks broken.
-        public const string SilhouetteTint = "#564480";
+        // WHITE. The stand is painted art carrying its own colour, and a tint
+        // multiplies -- the #564480 that suited the white procedural placeholder
+        // would have muddied this into near-black on a 94% dimmer.
+        public const string SilhouetteTint = "#FFFFFF";
+
         public const string CellFrameKey = "UI/Panels/gear_cell_frame.png";
 
         public UiNode Root;
