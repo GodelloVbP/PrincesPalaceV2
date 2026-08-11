@@ -16,6 +16,8 @@ MonoBehaviour:
   displayName: Dual Wield
   description: Whenever this character attacks, they strike the same target a second
     time.
-  effect: 0
+  effect: 1
+  rarity: 0
+  unlockedBy: 
   sortOrder: 0
   iconPath: Assets/_Project/Art/Items/Relics/Processed/dual_wield.png

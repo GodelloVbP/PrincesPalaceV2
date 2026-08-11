@@ -15,6 +15,24 @@ namespace PrincesPalace.Domain.Content
     // with, so RelicDefinition references it directly.
     public enum RelicEffect
     {
+        // NO MECHANIC. A relic that exists as a name, a rarity and an unlock
+        // condition, and does nothing in combat yet.
+        //
+        // This is what makes relics authorable without touching C#. Adding a
+        // relic used to require an enum value AND a branch in FightSession
+        // before content could so much as name it; with None, a relic is a line
+        // of JSON and stays one until somebody decides what it does.
+        //
+        // The one-relic-per-effect rule in RelicEntryResolver EXEMPTS this
+        // value, and has to -- it exists precisely so that many relics can
+        // share it. Every other value stays unique for the original reason:
+        // two relics with the same real mechanic make one of them a dead
+        // choice in a draft.
+        //
+        // Zero, so a relic entry with no `effect` field at all resolves here
+        // rather than accidentally becoming DualWield.
+        None = 0,
+
         // Whenever the character makes a plain Attack, it hits the same
         // target a second time.
         DualWield,

@@ -18,8 +18,17 @@ namespace PrincesPalace.Content
         [TextArea]
         public string description;
 
-        [Tooltip("What this relic actually does — one case in FightController per value.")]
+        [Tooltip("What this relic actually does — one case in FightSession per value. None means no mechanic yet.")]
         public RelicEffect effect;
+
+        [Tooltip("How rare the offer is. Authored, not derived — a relic has no tier to compute it from.")]
+        public RelicRarity rarity;
+
+        [Tooltip("Achievement id required before this relic can appear at all. Empty means available from the first run.")]
+        public string unlockedBy;
+
+        // Asked in one place rather than by every caller testing the string.
+        public bool IsUnlockedFromTheStart => string.IsNullOrEmpty(unlockedBy);
 
         // Resources.LoadAll returns assets in filename (alphabetical) order,
         // not authoring order — the same trap Characters/Enemies/Talents/

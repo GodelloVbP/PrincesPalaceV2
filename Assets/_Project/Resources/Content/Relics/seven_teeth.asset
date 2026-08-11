@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6da02db8c4530f747adcb0b4f87d4af4, type: 3}
-  m_Name: magical_shield
+  m_Name: seven_teeth
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
-  id: magical_shield
-  displayName: Magical Shield
-  description: After casting, the next hit this character takes is reduced by half.
-  effect: 2
+  id: seven_teeth
+  displayName: Seven Teeth
+  description: A jawbone worn smooth by counting. It has no power yet.
+  effect: 0
   rarity: 0
   unlockedBy: 
-  sortOrder: 1
-  iconPath: Assets/_Project/Art/Items/Relics/Processed/magical_shield.png
+  sortOrder: 3
+  iconPath: 

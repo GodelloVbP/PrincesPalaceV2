@@ -21,6 +21,21 @@ namespace PrincesPalace.Domain.Content
         // and RelicsController falls back to the flat accent-coloured circle
         // it already draws today.
         public string iconPath = "";
+
+        // How rare the OFFER is. Parsed against RelicRarity by name
+        // (case-insensitive); empty means Common. Changing a relic's band is
+        // exactly this one word and nothing else -- no code, no rebuild of
+        // anything but content.
+        public string rarity = "";
+
+        // The achievement that has to be earned before this relic can appear
+        // at all. Empty means available from the first run.
+        //
+        // A STRING rather than an enum so content can name an achievement the
+        // code has not implemented yet: AchievementIds validates it at build
+        // time, so a typo is a content-build failure rather than a relic that
+        // silently never unlocks.
+        public string unlockedBy = "";
     }
 
     // JsonUtility cannot deserialize a bare top-level array.

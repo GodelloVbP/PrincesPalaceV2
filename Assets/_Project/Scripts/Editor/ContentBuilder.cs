@@ -246,6 +246,8 @@ public static class ContentBuilder
             asset.effect = relic.Effect;
             asset.sortOrder = relic.SortOrder;
             asset.iconPath = relic.IconPath;
+            asset.rarity = relic.Rarity;
+            asset.unlockedBy = relic.UnlockedBy;
             AssetDatabase.CreateAsset(asset, $"{RelicsPath}/{relic.Id}.asset");
         }
     }
