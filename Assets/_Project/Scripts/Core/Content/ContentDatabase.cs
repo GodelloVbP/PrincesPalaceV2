@@ -29,6 +29,7 @@ namespace PrincesPalace.Content
         private const string SpellTierResourcePath = "Content/SpellTiers";
         private const string SkillResourcePath = "Content/Skills";
         private const string RelicResourcePath = "Content/Relics";
+        private const string AchievementResourcePath = "Content/Achievements";
 
         private static List<CharacterDefinition> _characters;
         private static List<TalentDefinition> _talents;
@@ -38,6 +39,7 @@ namespace PrincesPalace.Content
         private static List<SpellTierDefinition> _spellTiers;
         private static List<SkillDefinition> _skills;
         private static List<RelicDefinition> _relics;
+        private static List<AchievementDefinition> _achievements;
 
         // Characters in authored roster order.
         public static IReadOnlyList<CharacterDefinition> Characters
@@ -58,6 +60,11 @@ namespace PrincesPalace.Content
         public static IReadOnlyList<RelicDefinition> Relics
         {
             get { EnsureLoaded(); return _relics; }
+        }
+
+        public static IReadOnlyList<AchievementDefinition> Achievements
+        {
+            get { EnsureLoaded(); return _achievements; }
         }
 
         // The talents a given character can actually see and take: their own
@@ -263,6 +270,7 @@ namespace PrincesPalace.Content
             _spellTiers = null;
             _skills = null;
             _relics = null;
+            _achievements = null;
         }
 
         public static CharacterDefinition GetCharacter(string id)
@@ -637,6 +645,9 @@ namespace PrincesPalace.Content
                 .ToList();
             _skills = Resources.LoadAll<SkillDefinition>(SkillResourcePath)
                 .OrderBy(s => s.sortOrder)
+                .ToList();
+            _achievements = Resources.LoadAll<AchievementDefinition>(AchievementResourcePath)
+                .OrderBy(a => a.sortOrder)
                 .ToList();
             _relics = Resources.LoadAll<RelicDefinition>(RelicResourcePath)
                 .OrderBy(r => r.sortOrder)

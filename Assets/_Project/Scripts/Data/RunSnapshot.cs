@@ -97,5 +97,24 @@ namespace PrincesPalace
         public List<string> bossesKilled = new List<string>();
 
         public List<RunLedgerEntry> ledger = new List<RunLedgerEntry>();
+
+        // ---- relics ------------------------------------------------------------
+        //
+        // Drafted at the start of a descent and GONE when it ends -- which is
+        // why they live here rather than on SaveData. Nothing about a relic is
+        // permanent progression; what persists is the ACHIEVEMENT that unlocked
+        // it, on the save, and the pool re-offers it every run afterwards.
+        //
+        // A list rather than a single id, deliberately. Only one is drafted
+        // today, but the design is "infinite slots per run" -- mid-run relic
+        // rewards from elites or bosses drop straight in here with no shape
+        // change, which is the whole reason not to write `string relicId`.
+        public List<string> relicIds = new List<string>();
+
+        // Whether the start-of-run draft has been resolved. Not derivable from
+        // relicIds being empty: a player who is OFFERED three and somehow ends
+        // with none (a pool with nothing unlocked in it) must not be asked
+        // again every time they reload the hub.
+        public bool relicDrafted;
     }
 }

@@ -45,6 +45,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // whatever state the game is wedged in, and being covered by the very
         // screen you are debugging is the one place it must not be.
         public DebugMenuScreen Debug;
+
+        // The start-of-run relic draft. Mounted here rather than as its own
+        // scene because the hub is where a descent begins, and because the
+        // Descend button on it is the only way past -- a draft you can
+        // navigate around is not a draft.
+        public RelicDraftScreen Draft;
+
         public HubAmbience.Layer Ambience;
 
         // Node -> Resources folder, for the runtime frame looper. Recorded at
@@ -128,6 +135,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var debug = DebugMenuScreen.Build();
             screen.Debug = debug;
 
+            var draft = RelicDraftScreen.Build();
+            screen.Draft = draft;
+
             screen.Root = Ui.Panel("HubPanel", UiSize.Fixed(1920f, 1080f),
                 world,
 
@@ -158,7 +168,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
                 mainMenu,
                 overlay.Root,
-                debug.Root);
+                debug.Root,
+                draft.Root);
 
             return screen;
         }

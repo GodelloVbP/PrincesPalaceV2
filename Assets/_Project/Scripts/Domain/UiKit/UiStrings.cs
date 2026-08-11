@@ -164,6 +164,20 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString DebugPage =
             UiString.Define("debug.page", "PAGE {0} OF {1}", "PAGE 99 OF 99");
 
+        // --- the relic draft ---------------------------------------------------
+        public static readonly UiString DraftTitle = UiString.Define("draft.title", "TAKE ONE INTO THE DARK");
+        public static readonly UiString DraftSubtitle =
+            UiString.Define("draft.subtitle", "It is yours until the descent ends.");
+        public static readonly UiString DraftTake = UiString.Define("draft.take", "TAKE");
+        public static readonly UiString DraftNoRelics =
+            UiString.Define("draft.none", "NOTHING STIRS IN THE VAULT");
+        public static readonly UiString DraftDescend = UiString.Define("draft.descend", "Descend");
+        // Rarity is shown as a word rather than only as a colour: a band is a
+        // fact about the relic, and colour alone excludes anyone who cannot
+        // separate the six.
+        public static readonly UiString DraftRarity =
+            UiString.Define("draft.rarity", "{0}", "ULTRA-RARE");
+
         // --- save slots -----------------------------------------------------
         public static readonly UiString SlotEmpty =
             UiString.Define("slot_empty", "Slot {0}: Empty", "Slot 5: Empty");
@@ -277,6 +291,7 @@ namespace PrincesPalace.Domain.UiKit
             ReckoningOfferMeta, ReckoningTaken,
             DefeatTitle, DefeatLost, DefeatKept, DefeatGoldLost, DefeatEmbers, DefeatEmbersNone,
             DefeatDepth, DefeatExp, DefeatStatsHeading, DefeatStatLine, DefeatToHub, DefeatInspect,
+            DraftTitle, DraftSubtitle, DraftTake, DraftNoRelics, DraftDescend, DraftRarity,
             DebugTitle, DebugGiveGold, DebugGiveEmbers, DebugGiveOneEmber, DebugAdd,
             DebugFilterAll, DebugFilterConsumable, DebugFilterWeapon, DebugFilterEquipment,
             DebugRow, DebugPage,

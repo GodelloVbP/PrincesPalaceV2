@@ -84,6 +84,27 @@ KITS = [
         "default_delivery_size": None,
     },
     {
+        # The armour stand the character overlay hangs its eight slot cells
+        # on. One large figure rather than a sheet, so direct mode.
+        "name": "character_overlay",
+        "source": "Assets/_Project/Art/UI/CharacterOverlay",
+        "output": "Assets/_Project/Art/UI/CharacterOverlay/Processed",
+        "grouped": False,
+        "delivery_size": {},
+        "default_delivery_size": None,
+    },
+    {
+        # Consumable icons. Every other item icon comes off a sliced sheet;
+        # potions are authored one at a time because there are only two and
+        # they share no visual family with a weapon strip.
+        "name": "potions",
+        "source": "Assets/_Project/Art/Items/Potions",
+        "output": "Assets/_Project/Art/Items/Potions/Processed",
+        "grouped": False,
+        "delivery_size": {},
+        "default_delivery_size": None,
+    },
+    {
         # The two painted verb-button plaques (ATTACK / SKILL+ITEM tiers) --
         # generated with pointed diamond accents that stick out past a plain
         # rectangle, so unlike the Panels/ kit (opaque stretched rectangles,
