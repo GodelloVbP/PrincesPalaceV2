@@ -150,6 +150,8 @@ public static class ScreenRegistry
                 fight.targetPrompt = result.Go(screen.TargetPrompt);
                 fight.targetPromptLabel = result.Tmp(screen.TargetPromptLabel);
 
+                fight.reckoning = WireReckoning(result, screen.Reckoning);
+
                 fight.spellVfx = result.Image(screen.SpellVfx);
 
                 // The player lives on the VFX node itself, so disabling that
@@ -679,6 +681,32 @@ public static class ScreenRegistry
         controller.iconSprites = withArt.Select(i => SceneBuilder.LoadSpriteByKey(i.iconPath)).ToArray();
 
         hub.characterOverlayPanel = result.Go(overlay.Root);
+    }
+
+    // The controller sits on the MODAL NODE, not on the frame it scales -- so
+    // its OnEnable fires when the overlay opens, and the scaling is done to a
+    // child it holds a reference to rather than to itself.
+    private static ReckoningController WireReckoning(UiEmitResult result, ReckoningScreen screen)
+    {
+        var controller = result.Attach<ReckoningController>(screen.Root);
+
+        controller.frame = result.Rect(screen.Frame);
+        controller.goldLabel = result.Tmp(screen.GoldLabel);
+        controller.continueButton = result.Button(screen.ContinueButton);
+        controller.lootHeading = result.Go(screen.LootHeading);
+
+        controller.rowGroups = screen.RowGroups.Select(result.Go).ToArray();
+        controller.rowNames = screen.RowNames.Select(result.Tmp).ToArray();
+        controller.rowLevels = screen.RowLevels.Select(result.Tmp).ToArray();
+        controller.rowBarFills = screen.RowBarFills.Select(result.Image).ToArray();
+        controller.rowBarBefores = screen.RowBarBefores.Select(result.Image).ToArray();
+        controller.rowGains = screen.RowGains.Select(result.Tmp).ToArray();
+
+        controller.offerButtons = screen.OfferButtons.Select(result.Button).ToArray();
+        controller.offerNames = screen.OfferNames.Select(result.Tmp).ToArray();
+        controller.offerMetas = screen.OfferMetas.Select(result.Tmp).ToArray();
+
+        return controller;
     }
 
     private static void WireDebugMenu(UiEmitResult result, HubScreen screen, HubController hub)

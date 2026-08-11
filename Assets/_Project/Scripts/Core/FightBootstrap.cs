@@ -55,11 +55,21 @@ namespace PrincesPalace
             fight.ItemUsed += OnItemUsed;
             fight.BindPartyArt(built.Party, built.PartyArt);
 
-            // Banked when the player dismisses the fight, not when the last
-            // enemy falls: the payout is part of the outcome the player is
-            // reading, and crediting it before they have seen it makes the
-            // number on the next screen arrive from nowhere.
+            // Banked the moment the last beat has PLAYED, not when the player
+            // dismisses the screen.
+            //
+            // This used to wait for the dismissal, on the reasoning that
+            // crediting a payout before the player has seen it makes the number
+            // arrive from nowhere. The Reckoning inverts that: it is the thing
+            // that shows them the number, and it cannot show what has not been
+            // computed. The player still sees the credit and the screen at the
+            // same instant -- only the internal ordering moved.
             fight.FightEnded += OnFightEnded;
+
+            // Read straight AFTER OnFightEnded has run, which is what populates
+            // it. A Func rather than the value, because at subscription time
+            // the fight has not happened yet.
+            fight.RewardSource = () => LastReward;
         }
 
         internal FightEncounterAdapter.BuiltFight BuildOpeningFight()

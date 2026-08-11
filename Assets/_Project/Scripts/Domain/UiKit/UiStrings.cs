@@ -85,6 +85,31 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString Close = UiString.Define("close", "Close");
         public static readonly UiString Cancel = UiString.Define("cancel", "Cancel");
 
+        // --- the Reckoning ------------------------------------------------------
+        public static readonly UiString ReckoningTitle = UiString.Define("reckoning.title", "THE RECKONING");
+        public static readonly UiString ReckoningExperience =
+            UiString.Define("reckoning.experience", "EXPERIENCE");
+        public static readonly UiString ReckoningGold =
+            UiString.Define("reckoning.gold", "+{0} GOLD", "+99999 GOLD");
+        public static readonly UiString ReckoningChooseOne =
+            UiString.Define("reckoning.choose_one", "CHOOSE ONE");
+        public static readonly UiString ReckoningLevel =
+            UiString.Define("reckoning.level", "LEVEL {0}", "LEVEL 99");
+        // The level-up is called out in the level slot rather than as a fourth
+        // label, because it is the SAME fact -- what level they are now -- and
+        // a separate badge would need somewhere to live on every row that
+        // never earns one.
+        public static readonly UiString ReckoningLevelUp =
+            UiString.Define("reckoning.level_up", "LEVEL {0}  -  UP!", "LEVEL 99  -  UP!");
+        public static readonly UiString ReckoningExpGain =
+            UiString.Define("reckoning.exp_gain", "+{0} EXP", "+99999 EXP");
+        public static readonly UiString ReckoningDowned =
+            UiString.Define("reckoning.downed", "DID NOT FIGHT");
+        public static readonly UiString ReckoningOfferMeta =
+            UiString.Define("reckoning.offer_meta", "{0}  -  TIER {1}", "Legendary  -  TIER 10");
+        public static readonly UiString ReckoningTaken =
+            UiString.Define("reckoning.taken", "TAKEN");
+
         // --- the debug menu ---------------------------------------------------
         //
         // Developer-facing, and still routed through the manifest rather than
@@ -217,6 +242,9 @@ namespace PrincesPalace.Domain.UiKit
         {
             WalletSummary,
             Play, Options, Exit, OptionsTitle, Close, Cancel,
+            ReckoningTitle, ReckoningExperience, ReckoningGold, ReckoningChooseOne,
+            ReckoningLevel, ReckoningLevelUp, ReckoningExpGain, ReckoningDowned,
+            ReckoningOfferMeta, ReckoningTaken,
             DebugTitle, DebugGiveGold, DebugGiveEmbers, DebugGiveOneEmber, DebugAdd,
             DebugFilterAll, DebugFilterConsumable, DebugFilterWeapon, DebugFilterEquipment,
             DebugRow, DebugPage,

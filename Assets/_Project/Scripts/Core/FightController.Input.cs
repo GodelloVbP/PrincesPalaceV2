@@ -187,25 +187,83 @@ namespace PrincesPalace
         private void OnContinuePressed()
         {
             SetActive(continueButton.gameObject, false);
+            LeaveFight();
+        }
 
-            bool won = _session != null && _session.PlayerWon;
-
-            // The event first, so anything that wants to bank the payout gets it
-            // BEFORE the scene is torn down. Nothing subscribes yet -- the run
-            // that will is the next system -- but the ordering is the part that
-            // would be painful to discover later.
-            FightEnded?.Invoke(won);
-
-            // Back to the descent if one is still live, and to the hub if it is
-            // not -- which is what a defeat leaves behind, since losing ends the
-            // run rather than the room.
+        // Leaving the fight for good. Called by the fight's own Continue on a
+        // defeat, and by the Reckoning's on a victory -- ONE exit, so the two
+        // paths cannot drift into disagreeing about where a fight goes next.
+        //
+        // Back to the descent if one is still live, and to the hub if it is not
+        // -- which is what a defeat leaves behind, since losing ends the run
+        // rather than the room.
+        internal void LeaveFight()
+        {
             Navigation.Go(RunManager.HasRun ? Navigation.Map : Navigation.Hub);
         }
 
-        // Raised once, when the player dismisses the end-of-fight button. An
-        // event rather than a direct call into a run manager: the fight screen
-        // has no business knowing what comes after it.
+        // Raised once, the moment the last beat of a finished fight has played.
+        //
+        // MOVED here from the Continue press. The Reckoning has to show what
+        // the fight paid, and the payout does not exist until this fires --
+        // RewardApplier runs inside the subscriber. Raising it on dismissal
+        // meant the only screen that wants the numbers opened before they were
+        // computed.
+        //
+        // An event rather than a direct call into a run manager: the fight
+        // screen has no business knowing what comes after it.
         public System.Action<bool> FightEnded;
+
+        // Guards against a second playback pass on an already-finished fight
+        // raising it twice -- which would bank the same gold and award the same
+        // experience again.
+        private bool _endRaised;
+
+        // What the Reckoning needs, supplied from outside.
+        //
+        // A FUNC rather than the reward itself, because the payout does not
+        // exist until FightEnded has been handled and this is read immediately
+        // after. Left null by anything that has no reward screen -- a headless
+        // fixture, a preview -- in which case the plain Continue button stands
+        // in, which is exactly the pre-Reckoning behaviour.
+        internal System.Func<Domain.Rewards.CombatReward> RewardSource;
+
+        [SerializeField] internal ReckoningController reckoning;
+
+        // True when the Reckoning took over. False means the caller should fall
+        // back to the Continue button -- no controller wired, or no reward to
+        // show, both of which are states a test can legitimately be in.
+        private bool OpenReckoning()
+        {
+            if (reckoning == null) return false;
+
+            var reward = RewardSource?.Invoke();
+            if (reward == null) return false;
+
+            reckoning.Dismissed = LeaveFight;
+            reckoning.Show(reward, RollOffers());
+            return true;
+        }
+
+        // The loot on offer, rolled against how deep the run is and what class
+        // of thing was just killed.
+        //
+        // UnityEngine.Random rather than the session's seeded stream, and
+        // deliberately: the offer is not part of the fight's simulation and
+        // must not shift the beats a replay would produce. Domain takes the
+        // randomness as a Func for exactly this reason.
+        private System.Collections.Generic.List<Domain.Rewards.ItemOffer> RollOffers()
+        {
+            var encounter = _session != null && _session.IsEliteFight
+                ? Domain.Rewards.EncounterClass.Elite
+                : Domain.Rewards.EncounterClass.Normal;
+
+            int depth = _session?.DepthStep ?? 0;
+            // A lambda, not the method group: Random.Range is overloaded on
+            // (int,int) and (float,float), and the int overload is the
+            // upper-bound-EXCLUSIVE one both Domain tables expect.
+            return ItemOfferRoll.Roll(encounter, depth, n => UnityEngine.Random.Range(0, n));
+        }
 
         private void UseSatchelItem(int index)
         {
@@ -266,11 +324,28 @@ namespace PrincesPalace
             }
 
             bool over = _session != null && _session.IsOver;
-            SetActive(continueButton.gameObject, over);
 
-            // The verb column is fully HIDDEN when Continue is up, not merely
-            // dimmed -- the two swap footprints, which is why the tree declares
-            // them as a deliberate overlap.
+            if (over && !_endRaised)
+            {
+                _endRaised = true;
+                FightEnded?.Invoke(_session.PlayerWon);
+            }
+
+            // A won fight opens the Reckoning INSTEAD of the Continue button.
+            // Two dismissals to leave one fight -- Continue, then the reward
+            // screen's own button -- is one more than the moment deserves, and
+            // the expand reads better against the stage the last blow just
+            // landed on than against a screen the player already acknowledged.
+            //
+            // A defeat keeps the plain Continue: it has no payout to show and
+            // its own treatment is a later job.
+            bool reckoning = over && _session.PlayerWon && OpenReckoning();
+
+            SetActive(continueButton.gameObject, over && !reckoning);
+
+            // The verb column is fully HIDDEN when the fight is over, not
+            // merely dimmed -- it and Continue swap footprints, which is why
+            // the tree declares them as a deliberate overlap.
             foreach (var verb in verbButtons) SetActive(verb.gameObject, !over);
 
             RefreshUi();

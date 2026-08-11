@@ -100,6 +100,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef Breadcrumb;
         public NodeRef ContinueButton;
 
+        // The post-fight payout, mounted here rather than as its own scene so
+        // the stage is still standing behind it when it expands.
+        public ReckoningScreen Reckoning;
+
         public NodeRef SubmenuColumn;
         public NodeRef SubmenuTitle;
         public NodeRef SubmenuHint;
@@ -164,6 +168,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             children.Add(s.BuildTargetPrompt());
             children.Add(s.BuildSpellVfx());
             children.Add(s.BuildDamagePopups());
+
+            // LAST, so it draws over the whole stage it dims.
+            var reckoning = ReckoningScreen.Build();
+            s.Reckoning = reckoning;
+            children.Add(reckoning.Root);
 
             s.Root = Ui.Panel("FightPanel", UiSize.Fixed(1920f, 1080f), children);
             return s;
