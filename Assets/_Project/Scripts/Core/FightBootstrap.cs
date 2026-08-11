@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using PrincesPalace.Content;
+using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Dungeon;
 using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.Rng;
@@ -50,7 +51,8 @@ namespace PrincesPalace
             // to by the time it settles.
             built.Session.DepthStep = RunManager.HasRun ? RunManager.Run.step : 0;
 
-            fight.Bind(built.Session, EncounterFor(RunManager.CurrentNode));
+            fight.Bind(built.Session, EncounterFor(RunManager.CurrentNode), BuildSatchel());
+            fight.ItemUsed += OnItemUsed;
             fight.BindPartyArt(built.Party, built.PartyArt);
 
             // Banked when the player dismisses the fight, not when the last
@@ -176,6 +178,47 @@ namespace PrincesPalace
                 .Where(k => k != null)
                 .Select(k => k.Id)
                 .ToList();
+        }
+
+        // The satchel, from the stash.
+        //
+        // stockpiledItems is the single live inventory for now -- the same list
+        // the character overlay reads -- so a potion bought between runs is a
+        // potion available in the next fight, and using one is visible on both
+        // screens because there is only one list.
+        private static IReadOnlyList<SatchelStack> BuildSatchel()
+        {
+            var save = SaveSlotManager.CurrentSave;
+            if (save == null) return new List<SatchelStack>();
+
+            return save.stockpiledItems
+                .Where(e => e != null && e.count > 0)
+                .Select(e => new { Entry = e, Item = ContentDatabase.GetItem(e.itemId) })
+                .Where(x => x.Item != null && x.Item.kind == ItemKind.Consumable)
+                .Select(x => new SatchelStack(
+                    x.Item.id, x.Item.displayName, x.Entry.count,
+                    x.Item.effect == ItemEffect.RestoreMana))
+                .ToList();
+        }
+
+        // Resolving the effect is Core's job -- the session is told what
+        // happened, not what the item was, because ItemEffect is content and
+        // the session is Domain.
+        private void OnItemUsed(string itemId)
+        {
+            var save = SaveSlotManager.CurrentSave;
+            var item = ContentDatabase.GetItem(itemId);
+            if (save == null || item == null) return;
+
+            fight.Session?.UseConsumable(item.displayName, item.amount,
+                item.effect == ItemEffect.RestoreMana);
+
+            // Spent from the stash and written immediately, then the column is
+            // handed the new counts -- otherwise it keeps showing what the
+            // fight opened with.
+            InventoryOps.TryRemove(save.stockpiledItems, itemId);
+            SaveSlotManager.SaveCurrent();
+            fight.RefreshSatchel(BuildSatchel());
         }
 }
 }

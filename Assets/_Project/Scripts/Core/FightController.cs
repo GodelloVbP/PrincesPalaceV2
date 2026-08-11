@@ -125,6 +125,15 @@ namespace PrincesPalace
         // combat.
         private IReadOnlyList<SatchelStack> _satchel = new List<SatchelStack>();
 
+        // Handed a new satchel after one is spent. Set only in Bind until now,
+        // so a potion used mid-fight left the column showing the count it had
+        // when the fight started.
+        internal void RefreshSatchel(IReadOnlyList<SatchelStack> satchel)
+        {
+            _satchel = satchel ?? new List<SatchelStack>();
+            RefreshUi();
+        }
+
         // Where each party member's battle art lives, keyed by the combatant the
         // encounter is running.
         //
