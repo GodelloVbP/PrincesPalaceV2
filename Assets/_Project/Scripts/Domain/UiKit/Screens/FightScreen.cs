@@ -104,6 +104,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // the stage is still standing behind it when it expands.
         public ReckoningScreen Reckoning;
 
+        // Its twin, for the other outcome. Mounted after it so a defeat draws
+        // over a victory screen that could never be up at the same time -- the
+        // ordering costs nothing and removes the question.
+        public DefeatScreen Defeat;
+
         public NodeRef SubmenuColumn;
         public NodeRef SubmenuTitle;
         public NodeRef SubmenuHint;
@@ -169,10 +174,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             children.Add(s.BuildSpellVfx());
             children.Add(s.BuildDamagePopups());
 
-            // LAST, so it draws over the whole stage it dims.
+            // LAST, so they draw over the whole stage they dim.
             var reckoning = ReckoningScreen.Build();
             s.Reckoning = reckoning;
             children.Add(reckoning.Root);
+
+            var defeat = DefeatScreen.Build();
+            s.Defeat = defeat;
+            children.Add(defeat.Root);
 
             s.Root = Ui.Panel("FightPanel", UiSize.Fixed(1920f, 1080f), children);
             return s;

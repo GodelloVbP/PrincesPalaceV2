@@ -110,6 +110,36 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString ReckoningTaken =
             UiString.Define("reckoning.taken", "TAKEN");
 
+        // --- the defeat screen ---------------------------------------------------
+        //
+        // The Reckoning's twin. Same two-column shape, same 70% frame, opposite
+        // news -- which is why it reuses the strings above wherever the fact is
+        // the same and only defines what is genuinely different.
+        public static readonly UiString DefeatTitle = UiString.Define("defeat.title", "THE DESCENT ENDS");
+        public static readonly UiString DefeatLost = UiString.Define("defeat.lost", "LOST");
+        public static readonly UiString DefeatKept = UiString.Define("defeat.kept", "KEPT");
+        public static readonly UiString DefeatGoldLost =
+            UiString.Define("defeat.gold_lost", "{0} GOLD, UNBANKED", "99999 GOLD, UNBANKED");
+        public static readonly UiString DefeatEmbers =
+            UiString.Define("defeat.embers", "+{0} EMBERS", "+99 EMBERS");
+        public static readonly UiString DefeatEmbersNone =
+            UiString.Define("defeat.embers_none", "NO NEW BOSSES FELL");
+        public static readonly UiString DefeatDepth =
+            UiString.Define("defeat.depth", "DEPTH {0}   -   {1} ROOMS CLEARED", "DEPTH 999   -   999 ROOMS CLEARED");
+        public static readonly UiString DefeatExp =
+            UiString.Define("defeat.exp", "{0} EXPERIENCE, KEPT", "999999 EXPERIENCE, KEPT");
+        public static readonly UiString DefeatStatsHeading =
+            UiString.Define("defeat.stats_heading", "WHAT THEY DID");
+        // Dealt / taken / healed on one line per character. Four numbers rather
+        // than four labelled rows: the row is already narrow and the labels
+        // would outweigh the figures.
+        public static readonly UiString DefeatStatLine =
+            UiString.Define("defeat.stat_line",
+                "{0} dealt  ({1} phys / {2} other)      {3} taken      {4} healed",
+                "999999 dealt  (999999 phys / 999999 other)      999999 taken      999999 healed");
+        public static readonly UiString DefeatToHub = UiString.Define("defeat.to_hub", "Return");
+        public static readonly UiString DefeatInspect = UiString.Define("defeat.inspect", "Characters");
+
         // --- the debug menu ---------------------------------------------------
         //
         // Developer-facing, and still routed through the manifest rather than
@@ -245,6 +275,8 @@ namespace PrincesPalace.Domain.UiKit
             ReckoningTitle, ReckoningExperience, ReckoningGold, ReckoningChooseOne,
             ReckoningLevel, ReckoningLevelUp, ReckoningExpGain, ReckoningDowned,
             ReckoningOfferMeta, ReckoningTaken,
+            DefeatTitle, DefeatLost, DefeatKept, DefeatGoldLost, DefeatEmbers, DefeatEmbersNone,
+            DefeatDepth, DefeatExp, DefeatStatsHeading, DefeatStatLine, DefeatToHub, DefeatInspect,
             DebugTitle, DebugGiveGold, DebugGiveEmbers, DebugGiveOneEmber, DebugAdd,
             DebugFilterAll, DebugFilterConsumable, DebugFilterWeapon, DebugFilterEquipment,
             DebugRow, DebugPage,

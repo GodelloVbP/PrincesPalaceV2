@@ -228,7 +228,37 @@ namespace PrincesPalace
         // in, which is exactly the pre-Reckoning behaviour.
         internal System.Func<Domain.Rewards.CombatReward> RewardSource;
 
+        // What the run that just ended cost and paid. Same Func reasoning as
+        // RewardSource: the settlement does not exist until FightEnded has been
+        // handled, and it is read immediately after.
+        internal System.Func<RunSettlement.Result> SettlementSource;
+
         [SerializeField] internal ReckoningController reckoning;
+        [SerializeField] internal DefeatController defeat;
+
+        // True when the defeat screen took over. A run always ends on a loss,
+        // so there is no "keep playing" branch here -- the only choices are
+        // leave, or go and look at the roster that survived.
+        private bool OpenDefeat()
+        {
+            if (defeat == null) return false;
+
+            var settlement = SettlementSource?.Invoke();
+            if (settlement == null) return false;
+
+            defeat.Dismissed = LeaveFight;
+
+            // Straight to the hub, where the character overlay lives. The
+            // defeat screen cannot show it itself: the overlay is mounted in
+            // the hub's tree, not the fight's.
+            defeat.InspectRequested = () =>
+            {
+                Navigation.Go(Navigation.Hub);
+            };
+
+            defeat.Show(settlement);
+            return true;
+        }
 
         // True when the Reckoning took over. False means the caller should fall
         // back to the Continue button -- no controller wired, or no reward to
@@ -331,17 +361,17 @@ namespace PrincesPalace
                 FightEnded?.Invoke(_session.PlayerWon);
             }
 
-            // A won fight opens the Reckoning INSTEAD of the Continue button.
-            // Two dismissals to leave one fight -- Continue, then the reward
-            // screen's own button -- is one more than the moment deserves, and
-            // the expand reads better against the stage the last blow just
-            // landed on than against a screen the player already acknowledged.
+            // A finished fight opens ITS OWN screen instead of the Continue
+            // button -- the Reckoning on a win, the defeat screen on a loss.
+            // Two dismissals to leave one fight is one more than the moment
+            // deserves, and both expand better against the stage the last blow
+            // landed on than against a screen already acknowledged.
             //
-            // A defeat keeps the plain Continue: it has no payout to show and
-            // its own treatment is a later job.
-            bool reckoning = over && _session.PlayerWon && OpenReckoning();
+            // The Continue button survives as the fallback for anything with
+            // neither wired: a headless fixture, a preview.
+            bool tookOver = over && (_session.PlayerWon ? OpenReckoning() : OpenDefeat());
 
-            SetActive(continueButton.gameObject, over && !reckoning);
+            SetActive(continueButton.gameObject, over && !tookOver);
 
             // The verb column is fully HIDDEN when the fight is over, not
             // merely dimmed -- it and Continue swap footprints, which is why

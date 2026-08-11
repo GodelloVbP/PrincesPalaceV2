@@ -177,7 +177,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     BeginBeat(actor, actor, isCast: true);
                     RecordSpellPresentation(skill);
                     int amount = SkillResolution.Amount(skill.Effect, actor, actor, skill.Power, skill.FlatAmount, resourceSpent, false);
-                    CombatMath.Heal(actor, amount);
+                    HealAndCount(actor, amount);
                     RecordBeatAmount(amount, isHealing: true);
                     AppendMessage($"{actor.Name} uses {skill.DisplayName} and recovers {amount} HP.");
                     ApplySkillStatus(skill, actor, actor);
@@ -191,7 +191,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     int amount = SkillResolution.Amount(skill.Effect, actor, actor, skill.Power, skill.FlatAmount, resourceSpent, false);
                     foreach (var ally in _encounter.LivingPlayerParty.ToList())
                     {
-                        CombatMath.Heal(ally, amount);
+                        HealAndCount(ally, amount);
                         ApplySkillStatus(skill, ally, actor);
                     }
 
@@ -368,11 +368,15 @@ namespace PrincesPalace.Domain.Combat.Session
                     resolveWard: ResolveWard);
 
                 DepleteBreakShield(enemy, outcome.Effectiveness);
-                CombatMath.ApplyDamage(enemy, outcome.Damage);
+
+                // Counted with the CAST's type, not the caster's swing: a
+                // physical character throwing a fire skill dealt fire.
+                DealDamage(actor, enemy, outcome.Damage, castType);
 
                 // One beat shows one number, so an AOE reports its largest
                 // single hit rather than a total that matches no one enemy's HP
-                // drop.
+                // drop. The LEDGER takes the full amount per enemy, which is
+                // why it cannot be derived from the beats.
                 RecordBeatAmount(System.Math.Max(outcome.Damage, LargestAmountSoFar));
                 SetStance(enemy, enemy.IsAlive ? Stances.Hurt : Stances.Defeated);
                 summary.Append($" {enemy.Name} takes {outcome.Damage}{EffectivenessSuffix(outcome.Effectiveness)}");
@@ -381,6 +385,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 {
                     summary.Append($" {enemy.Name} is defeated!");
                     _killedThisAction = true;
+                    RecordKill(actor, enemy);
                 }
                 else
                 {
@@ -432,7 +437,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     int lifesteal = Rounding.AwayFromZero(damage * FightTuning.TankSkillLifestealFraction);
                     if (lifesteal > 0)
                     {
-                        CombatMath.Heal(actor, lifesteal);
+                        HealAndCount(actor, lifesteal);
                         AppendMessage($"{actor.Name} recovers {lifesteal} HP from the blow.");
                     }
                     break;
@@ -458,7 +463,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 case CharacterRole.Support:
                     foreach (var ally in _encounter.LivingPlayerParty.ToList())
                     {
-                        CombatMath.Heal(ally, FightTuning.SupportSkillPartyHealAmount);
+                        HealAndCount(ally, FightTuning.SupportSkillPartyHealAmount);
                     }
                     AppendMessage($"{actor.Name}'s Skill also mends the squad's wounds.");
                     break;

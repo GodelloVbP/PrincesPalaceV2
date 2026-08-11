@@ -70,6 +70,7 @@ namespace PrincesPalace
             // it. A Func rather than the value, because at subscription time
             // the fight has not happened yet.
             fight.RewardSource = () => LastReward;
+            fight.SettlementSource = () => LastSettlement;
         }
 
         internal FightEncounterAdapter.BuiltFight BuildOpeningFight()
@@ -139,16 +140,43 @@ namespace PrincesPalace
         {
             if (!RunManager.HasRun) return;
 
+            var run = RunManager.Run;
+            var session = fight.Session;
+
+            // FOLDED BEFORE THE WIN CHECK. What a character did in the fight
+            // that killed them is part of the run -- dropping it would make the
+            // death screen under-report the most dramatic fight in it, which is
+            // the one fight the player most wants described.
+            RunLedger.Fold(run, session?.Ledger);
+
+            var payout = won ? session?.Payout : null;
+            RunLedger.RecordRoom(run, won,
+                payout?.Gold ?? 0,
+                won ? (payout?.Experience ?? 0) : 0,
+                run?.step ?? 0);
+
+            // A boss goes on the run's list the moment it dies. Whether it PAYS
+            // is settled at the end of the run against the save's lifetime
+            // list, because only that knows whether this was the first time.
+            if (won && session != null && session.IsBossFight)
+            {
+                RunLedger.RecordBossKill(run, BossIdOf(session));
+            }
+
             if (!won)
             {
                 // A loss ends the RUN, not just the fight. Anything else would
                 // let a player retry the same room until it went their way,
                 // which is the whole tension a roguelike is built on.
+                //
+                // Settled FIRST: EndRun discards the snapshot, taking the run's
+                // ledger and its boss list with it, so anything owed has to be
+                // paid before the evidence is thrown away.
+                LastSettlement = RunSettlement.Settle(SaveSlotManager.CurrentSave, run);
                 RunManager.EndRun();
                 return;
             }
 
-            var payout = fight.Session?.Payout;
             if (payout.HasValue)
             {
                 // GOLD to the run, EXPERIENCE to the characters. Two different
@@ -175,6 +203,26 @@ namespace PrincesPalace
         // to read once it exists; until then the levels have still been applied,
         // which is the part that matters to the save.
         public static Domain.Rewards.CombatReward LastReward { get; private set; }
+
+        // What the run that just ended paid out and cost. Read by the defeat
+        // screen, which cannot compute it itself: EndRun has already discarded
+        // the snapshot by the time anything is drawn.
+        public static RunSettlement.Result LastSettlement { get; private set; }
+
+        // Which boss died. The run records the enemy it was sent to kill rather
+        // than whatever happened to be standing there, so a boss room with
+        // adds cannot pay out twice or pay for the wrong thing.
+        private static string BossIdOf(Domain.Combat.Session.FightSession session)
+        {
+            string declared = RunManager.Run?.bossEnemyId;
+            if (!string.IsNullOrEmpty(declared)) return declared;
+
+            // A boss fight with no declared id is a content gap, not a reason
+            // to lose the kill: fall back to the enemy that was actually there.
+            return session.Encounter.Enemies
+                .Select(session.SourceFor)
+                .FirstOrDefault(k => k?.Source != null && k.Source.IsBoss)?.Source.Id;
+        }
 
         // Who actually stood on the stage. A squad member left out of the
         // encounter (at 0 HP when it was built) is downed rather than absent.

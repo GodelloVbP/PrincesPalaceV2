@@ -76,6 +76,18 @@ namespace PrincesPalace
         public List<string> selectedCharacterIds = new List<string>();
         public List<string> purchasedUpgradeIds = new List<string>();
 
+        // Every boss this profile has ever put down, across all runs.
+        //
+        // THE ember source. Embers are paid per UNIQUE boss kill, so the answer
+        // to "does this kill pay" is "is it already in here" — which is why the
+        // list is lifetime and lives on the save rather than on the run. A run
+        // knows what it killed; only this knows what was new.
+        //
+        // Deliberately never cleared. Clearing it would silently re-open a
+        // payout the player has already banked and spent, which is the
+        // meta-progression equivalent of the infinite money printer.
+        public List<string> defeatedBossIds = new List<string>();
+
         // Which relic each character is carrying — RelicDefinition content
         // (a run-long combat effect), NOT the `Relics` currency above. Named
         // after its TYPE rather than the concept, unlike every other field

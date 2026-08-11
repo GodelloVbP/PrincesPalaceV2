@@ -246,7 +246,15 @@ namespace PrincesPalace.Domain.Combat.Session
                 RecordSpellPresentation(source.VfxPath, source.VfxSeconds, source.VfxImpactFrame, source.SfxPath);
             }
 
-            var landed = CombatMath.ApplyDamageDetailed(target, damage);
+            // Through the ledger's funnel, like every other damage path.
+            //
+            // This one was missed on the first pass: the enemy swing does its
+            // own ApplyDamageDetailed rather than going through
+            // ApplyFinalDamage, so "damage taken" read zero for the entire
+            // party while every other column was correct. An untyped monster
+            // swing counts as Physical, which is what AttackTypeOf already
+            // answers for anything without a player kit.
+            var landed = DealDamage(enemy, target, damage, AttackTypeOf(enemy));
 
             // A fleece thickens in a hard winter: being ground down is itself a
             // way to build. Granted per HIT rather than per point, so a swarm of

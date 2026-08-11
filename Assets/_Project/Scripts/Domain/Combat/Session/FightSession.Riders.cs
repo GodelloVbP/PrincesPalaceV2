@@ -266,11 +266,18 @@ namespace PrincesPalace.Domain.Combat.Session
             if (report.PoisonDamage > 0)
             {
                 AppendMessage($"{actor.Name} suffers {report.PoisonDamage} poison damage!");
+
+                // Counted as TAKEN and credited to nobody. The poison was
+                // applied turns ago by someone who may now be dead, and
+                // back-crediting it would put points in a column the player
+                // cannot account for against any blow they watched land.
+                RecordUnattributedDamage(actor, report.PoisonDamage);
             }
 
             if (report.RegenHealed > 0)
             {
                 AppendMessage($"{actor.Name} regenerates {report.RegenHealed} health.");
+                Ledger.Restored(LedgerIdOf(actor), report.RegenHealed);
             }
 
             foreach (var expired in report.Expired)

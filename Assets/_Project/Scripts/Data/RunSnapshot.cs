@@ -66,5 +66,36 @@ namespace PrincesPalace
 
         public List<InventoryEntry> inventory = new List<InventoryEntry>();
         public List<RunHealthEntry> currentHealth = new List<RunHealthEntry>();
+
+        // ---- the run's own history ------------------------------------------
+        //
+        // Stored HERE rather than accumulated in memory, and that is the whole
+        // point: a run survives quitting to the main menu and coming back, so
+        // anything the death screen wants to say about "this run" has to
+        // survive with it. Every field below is a running total written after
+        // each fight.
+        //
+        // Nothing here is read by combat. It exists so the run can be described
+        // afterwards, which is a thing the game previously could not do at all:
+        // experience is applied per fight and saved immediately, so there was
+        // no before-state left anywhere to diff against.
+
+        public int goldEarned;
+        public int expEarned;
+        public int roomsCleared;
+
+        // The furthest step reached, which is NOT `step` -- that is where the
+        // party currently stands, and a run that ends is a run that stopped
+        // moving. Kept separately so the summary can say how deep they got
+        // rather than where they happened to die.
+        public int deepestStep;
+
+        // Bosses put down during THIS run. Settled against the save's
+        // lifetime list when the run ends, which is what makes an ember payout
+        // per UNIQUE boss possible -- the run knows what it killed, the save
+        // knows what was already killed, and neither alone can answer it.
+        public List<string> bossesKilled = new List<string>();
+
+        public List<RunLedgerEntry> ledger = new List<RunLedgerEntry>();
     }
 }

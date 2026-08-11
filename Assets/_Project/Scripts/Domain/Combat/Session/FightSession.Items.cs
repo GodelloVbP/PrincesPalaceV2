@@ -31,8 +31,12 @@ namespace PrincesPalace.Domain.Combat.Session
             // the number that happened.
             int before = restoresMana ? actor.CurrentMana : actor.CurrentHealth;
 
+            // HealAndCount rather than CombatMath.Heal so a potion lands in the
+            // healing column. Mana deliberately does not: restoring mana is not
+            // healing, and folding the two would make a support character's
+            // headline number depend on which resource they topped up.
             if (restoresMana) CombatMath.RestoreMana(actor, amount);
-            else CombatMath.Heal(actor, amount);
+            else HealAndCount(actor, amount);
 
             int restored = (restoresMana ? actor.CurrentMana : actor.CurrentHealth) - before;
 

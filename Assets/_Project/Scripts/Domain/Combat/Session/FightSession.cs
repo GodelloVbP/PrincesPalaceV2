@@ -237,7 +237,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // and flag a kill.
         private void ApplyFinalDamage(CombatantState actor, CombatantState target, int damage)
         {
-            CombatMath.ApplyDamage(target, damage);
+            DealDamage(actor, target, damage, AttackTypeOf(actor));
             RecordBeatAmount(damage);
             SetStance(target, target.IsAlive ? Stances.Hurt : Stances.Defeated);
 
@@ -255,6 +255,7 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 AppendMessage($"{target.Name} is defeated!");
                 _killedThisAction = true;
+                RecordKill(actor, target);
 
                 // Everything the Black Ram gets FOR a kill, in the one place
                 // that knows a kill just happened on the player's action.

@@ -151,6 +151,7 @@ public static class ScreenRegistry
                 fight.targetPromptLabel = result.Tmp(screen.TargetPromptLabel);
 
                 fight.reckoning = WireReckoning(result, screen.Reckoning);
+                fight.defeat = WireDefeat(result, screen.Defeat);
 
                 fight.spellVfx = result.Image(screen.SpellVfx);
 
@@ -705,6 +706,26 @@ public static class ScreenRegistry
         controller.offerButtons = screen.OfferButtons.Select(result.Button).ToArray();
         controller.offerNames = screen.OfferNames.Select(result.Tmp).ToArray();
         controller.offerMetas = screen.OfferMetas.Select(result.Tmp).ToArray();
+
+        return controller;
+    }
+
+    private static DefeatController WireDefeat(UiEmitResult result, DefeatScreen screen)
+    {
+        var controller = result.Attach<DefeatController>(screen.Root);
+
+        controller.frame = result.Rect(screen.Frame);
+        controller.goldLostLabel = result.Tmp(screen.GoldLostLabel);
+        controller.embersLabel = result.Tmp(screen.EmbersLabel);
+        controller.depthLabel = result.Tmp(screen.DepthLabel);
+        controller.expLabel = result.Tmp(screen.ExpLabel);
+
+        controller.rowGroups = screen.RowGroups.Select(result.Go).ToArray();
+        controller.rowNames = screen.RowNames.Select(result.Tmp).ToArray();
+        controller.rowStats = screen.RowStats.Select(result.Tmp).ToArray();
+
+        controller.returnButton = result.Button(screen.ReturnButton);
+        controller.inspectButton = result.Button(screen.InspectButton);
 
         return controller;
     }

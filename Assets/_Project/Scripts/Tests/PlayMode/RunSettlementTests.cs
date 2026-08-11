@@ -1,0 +1,218 @@
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using NUnit.Framework;
+using PrincesPalace;
+using PrincesPalace.Domain.Combat;
+using PrincesPalace.Domain.Economy;
+using PrincesPalace.Domain.Stats;
+
+namespace PrincesPalace.PlayModeTests
+{
+    // Closing the books on a run.
+    //
+    // PlayMode because SaveData and SaveSlotManager are Core. The RULE it
+    // applies -- an ember per boss never killed before -- is Domain and covered
+    // without a scene by EmberPayoutTests; what is left here is that the
+    // payout reaches the wallet, that it is recorded in the same pass, and that
+    // the run's ledger survives long enough to be read.
+    public class RunSettlementTests
+    {
+        private string _root;
+
+        [SetUp]
+        public void UseAThrowawaySaveRoot()
+        {
+            _root = Path.Combine(Path.GetTempPath(), "pp-settle-" + System.Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(_root);
+            SaveSystem.RootOverride = _root;
+            SaveSlotManager.CurrentSlot = 0;
+            SaveSlotManager.Forget();
+        }
+
+        [TearDown]
+        public void Restore()
+        {
+            SaveSystem.RootOverride = null;
+            SaveSlotManager.Forget();
+            if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
+        }
+
+        private static SaveData Save => SaveSlotManager.CurrentSave;
+
+        private static RunSnapshot Run(int gold = 0, params string[] bosses)
+        {
+            var run = new RunSnapshot { hasRun = true, gold = gold };
+            run.bossesKilled.AddRange(bosses);
+            return run;
+        }
+
+        [Test]
+        public void AFirstBossKillPaysAnEmberOntoTheWallet()
+        {
+            int before = Save.wallet.Get(CurrencyType.Embers);
+
+            var result = RunSettlement.Settle(Save, Run(bosses: "warden"));
+
+            Assert.AreEqual(1, result.EmbersEarned);
+            Assert.AreEqual(before + 1, Save.wallet.Get(CurrencyType.Embers));
+            CollectionAssert.Contains(result.NewBosses, "warden");
+        }
+
+        [Test]
+        public void ThePayoutIsRecordedInTheSamePassThatPaidIt()
+        {
+            // Paying without recording would let the same boss pay again on the
+            // next run. This is the assertion that stops that.
+            RunSettlement.Settle(Save, Run(bosses: "warden"));
+
+            CollectionAssert.Contains(Save.defeatedBossIds, "warden");
+
+            int afterFirst = Save.wallet.Get(CurrencyType.Embers);
+            var second = RunSettlement.Settle(Save, Run(bosses: "warden"));
+
+            Assert.AreEqual(0, second.EmbersEarned, "the same boss paid twice");
+            Assert.AreEqual(afterFirst, Save.wallet.Get(CurrencyType.Embers));
+        }
+
+        [Test]
+        public void TheRecordSurvivesBeingWrittenToDisk()
+        {
+            RunSettlement.Settle(Save, Run(bosses: "warden"));
+
+            SaveSlotManager.Forget();
+
+            CollectionAssert.Contains(Save.defeatedBossIds, "warden",
+                "the lifetime boss list never reached the file, so it would pay again next session");
+        }
+
+        [Test]
+        public void UnbankedGoldIsReportedAsLost()
+        {
+            // The wager CurrencyType has always documented and nothing enforced.
+            var result = RunSettlement.Settle(Save, Run(gold: 240));
+
+            Assert.AreEqual(240, result.GoldLost);
+        }
+
+        [Test]
+        public void LostGoldNeverReachesTheBankedWallet()
+        {
+            // The whole point of the at-risk pile. If this ever fails, retreat
+            // and death have become the same decision.
+            int banked = Save.wallet.Get(CurrencyType.Gold);
+
+            RunSettlement.Settle(Save, Run(gold: 500));
+
+            Assert.AreEqual(banked, Save.wallet.Get(CurrencyType.Gold));
+        }
+
+        [Test]
+        public void TheRunsLedgerIsCarriedOutOfTheRunBeforeItIsDiscarded()
+        {
+            // EndRun replaces the snapshot wholesale, so anything the defeat
+            // screen wants has to leave in the settlement or not at all.
+            var run = Run();
+            run.roomsCleared = 7;
+            run.deepestStep = 12;
+            run.expEarned = 340;
+            run.ledger.Add(new RunLedgerEntry { characterId = "shawn", physicalDealt = 900, damageTaken = 210 });
+
+            var result = RunSettlement.Settle(Save, run);
+
+            Assert.AreEqual(7, result.RoomsCleared);
+            Assert.AreEqual(12, result.DeepestStep);
+            Assert.AreEqual(340, result.ExpEarned);
+            Assert.AreEqual(900, result.Ledger.Single(e => e.characterId == "shawn").physicalDealt);
+        }
+
+        [Test]
+        public void SettlingANullRunDegradesRatherThanThrowing()
+        {
+            RunSettlement.Result result = null;
+
+            Assert.DoesNotThrow(() => result = RunSettlement.Settle(Save, null));
+            Assert.AreEqual(0, result.EmbersEarned);
+            Assert.AreEqual(0, result.GoldLost);
+        }
+
+        [Test]
+        public void SettlingWithNoSaveStillReportsWhatWasLost()
+        {
+            // A screen has to be able to say "you lost 240" even if there is
+            // nothing to charge it against.
+            var result = RunSettlement.Settle(null, Run(gold: 240, bosses: "warden"));
+
+            Assert.AreEqual(240, result.GoldLost);
+            Assert.AreEqual(0, result.EmbersEarned, "nothing to pay it onto");
+        }
+
+        // ---- folding a fight into a run ------------------------------------------
+
+        [Test]
+        public void FoldingAFightAddsItsColumnsToTheRun()
+        {
+            var run = Run();
+            var fight = new CombatLedger();
+            fight.Dealt("shawn", DamageType.Physical, 120);
+            fight.Took("shawn", 40, shielded: 12);
+            fight.Restored("shawn", 15);
+            fight.ScoredKill("shawn");
+
+            RunLedger.Fold(run, fight);
+            RunLedger.Fold(run, fight);
+
+            var entry = RunLedger.For(run, "shawn");
+            Assert.AreEqual(240, entry.physicalDealt, "two identical fights sum rather than replace");
+            Assert.AreEqual(80, entry.damageTaken);
+            Assert.AreEqual(24, entry.shielded);
+            Assert.AreEqual(30, entry.healed);
+            Assert.AreEqual(2, entry.kills);
+        }
+
+        [Test]
+        public void ACharacterWithNoLineReadsAsZeroesRatherThanNull()
+        {
+            var entry = RunLedger.For(Run(), "never_fought");
+
+            Assert.IsNotNull(entry);
+            Assert.AreEqual(0, entry.TotalDealt);
+        }
+
+        [Test]
+        public void ALostRoomStillCountsWhatHappenedInItButDoesNotCountAsCleared()
+        {
+            // The fight you died in is part of the run. Dropping it would make
+            // the death screen under-report the most dramatic fight in it.
+            var run = Run();
+
+            RunLedger.RecordRoom(run, won: false, goldGained: 50, expGained: 0, step: 9);
+
+            Assert.AreEqual(0, run.roomsCleared, "a room you died in was not cleared");
+            Assert.AreEqual(0, run.goldEarned, "and it paid nothing");
+            Assert.AreEqual(9, run.deepestStep, "but you still got that deep");
+        }
+
+        [Test]
+        public void DeepestStepNeverGoesBackwards()
+        {
+            var run = Run();
+
+            RunLedger.RecordRoom(run, won: true, goldGained: 0, expGained: 0, step: 14);
+            RunLedger.RecordRoom(run, won: true, goldGained: 0, expGained: 0, step: 3);
+
+            Assert.AreEqual(14, run.deepestStep, "how deep they got, not where they stand");
+        }
+
+        [Test]
+        public void ABossIsRecordedOnceHoweverManyTimesItIsReported()
+        {
+            var run = Run();
+
+            RunLedger.RecordBossKill(run, "warden");
+            RunLedger.RecordBossKill(run, "warden");
+
+            Assert.AreEqual(1, run.bossesKilled.Count(b => b == "warden"));
+        }
+    }
+}

@@ -753,6 +753,21 @@ later stage synthesises.** The same blindness produced #40's sibling — the det
 and therefore exempt from the overlap check, which is why the boots-behind-the-plate collision needed
 a direct assertion. Any exemption or any generated node is a hole the audit will not report.
 
+### ~~40. Relics and Embers are two currencies with one source, and one of them does nothing~~ — recorded, not fixed, 2026-08-11
+`SaveData.Relics`' own comment says *"Awarded only for clearing a floor's boss, so it measures how
+deep a player has actually got."* `CurrencyType.cs:21-24` says the opposite: Relics are dormant,
+*"nothing awards them and nothing sells for them"*, and a boss drop *"was the old model and Embers
+replaced it."* Both comments are in the shipped codebase and they contradict each other.
+
+The 2026-08-11 design decision — **Embers are paid per unique boss kill** — re-instates exactly what
+`SaveData` claims Relics already are. So the game now displays three currencies on the hub plate, of
+which one (Relics) has no source, no sink, and a comment describing a mechanic that belongs to a
+different one.
+
+Not resolved here because it is the author's call whether Relics get a distinct purpose or get
+deleted. Whichever way it goes, `CurrencyType.IsSafe`, the hub currency line and `Wallet` all
+already handle three, so the cost of leaving it is display noise rather than breakage.
+
 ### 38. A wipe does not actually forfeit anything yet
 Follows from #37 and is the more urgent half. `CurrencyType` documents the forfeit rule, but
 the defeat path is unbuilt — the intended behaviour (2026-08-11) is that a defeat returns the

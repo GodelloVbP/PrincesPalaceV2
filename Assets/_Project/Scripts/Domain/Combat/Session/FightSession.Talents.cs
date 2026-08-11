@@ -308,7 +308,7 @@ namespace PrincesPalace.Domain.Combat.Session
                                                && ReferenceEquals(s.Source, caster));
 
                 int damage = CombatMath.Scale(caster.Attack * share / 100);
-                CombatMath.ApplyDamage(enemy, damage);
+                DealDamage(caster, enemy, damage, AttackTypeOf(caster));
                 RecordBeatAmount(System.Math.Max(damage, LargestAmountSoFar));
                 SetStance(enemy, enemy.IsAlive ? Stances.Hurt : Stances.Defeated);
                 summary.Append($" {enemy.Name} takes {damage}.");
@@ -317,6 +317,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 {
                     summary.Append($" {enemy.Name} is defeated!");
                     _killedThisAction = true;
+                    RecordKill(caster, enemy);
                 }
                 else if (appliesVulnerable)
                 {
@@ -435,7 +436,7 @@ namespace PrincesPalace.Domain.Combat.Session
             int percent = actor?.Talents.Best(TalentEffectType.KillSplashPercentOfAttack) ?? 0;
             if (percent <= 0) return;
 
-            SplashOntoNeighbours(victim, CombatMath.Scale(actor.Attack * percent / 100),
+            SplashOntoNeighbours(actor, victim, CombatMath.Scale(actor.Attack * percent / 100),
                 $"{victim.Name} goes down hard");
         }
 
@@ -452,7 +453,7 @@ namespace PrincesPalace.Domain.Combat.Session
             var transformation = actor?.Transformation;
             if (transformation == null || transformation.SplashPercent <= 0 || damage <= 0) return;
 
-            SplashOntoNeighbours(target, System.Math.Max(1, damage * transformation.SplashPercent / 100),
+            SplashOntoNeighbours(actor, target, System.Math.Max(1, damage * transformation.SplashPercent / 100),
                 $"{transformation.DisplayName} hits wider than it looks");
         }
 
@@ -468,7 +469,11 @@ namespace PrincesPalace.Domain.Combat.Session
         // in slot 1 does not make slots 0 and 2 adjacent to each other. Splash
         // never chains -- it is computed from the original hit, never recursively
         // from its own kills, or one blow would cascade down a whole row.
-        private void SplashOntoNeighbours(CombatantState epicentre, int splash, string cause)
+        // Takes the SOURCE as well as the epicentre, so the splash is credited
+        // to whoever caused it. Both callers already hold the actor; without it
+        // the two widest damage sources in the game would land in nobody's
+        // column and the ledger would quietly under-report every Black Ram.
+        private void SplashOntoNeighbours(CombatantState source, CombatantState epicentre, int splash, string cause)
         {
             if (epicentre == null || splash <= 0) return;
 
@@ -488,13 +493,14 @@ namespace PrincesPalace.Domain.Combat.Session
                 var bystander = enemies[neighbour];
                 if (bystander == null || !bystander.IsAlive) continue;
 
-                CombatMath.ApplyDamage(bystander, splash);
+                DealDamage(source, bystander, splash, AttackTypeOf(source));
                 SetStance(bystander, bystander.IsAlive ? Stances.Hurt : Stances.Defeated);
                 AppendMessage($"{cause} - {bystander.Name} takes {splash} from it!");
 
                 if (!bystander.IsAlive)
                 {
                     AppendMessage($"{bystander.Name} is defeated!");
+                    RecordKill(source, bystander);
                 }
             }
         }
