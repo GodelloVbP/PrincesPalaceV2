@@ -87,7 +87,8 @@ namespace PrincesPalace
         private void Start()
         {
 
-            talentsButton.onClick.AddListener(() => Debug.Log("Talents"));
+            // The first of the four annexes to actually lead somewhere.
+            talentsButton.onClick.AddListener(() => Navigation.Go(Navigation.Talents));
             principalityButton.onClick.AddListener(() => Debug.Log("Principality"));
             characterSheetButton.onClick.AddListener(() => Debug.Log("Character sheet"));
             relicsButton.onClick.AddListener(() => Debug.Log("Relics"));

@@ -289,11 +289,11 @@ public static class ScreenRegistry
                 DressHub(result, screen);
                 hub.startRunCaption = result.Tmp(screen.StartRunCaption);
 
-                // The four whose screens do not exist yet. This array is the
-                // one place that list lives, and it shrinks as they land.
+                // The three whose screens do not exist yet. This array is the
+                // one place that list lives, and it shrinks as they land --
+                // Talents just left it.
                 hub.unbuiltButtons = new[]
                 {
-                    result.Button(screen.TalentsButton),
                     result.Button(screen.PrincipalityButton),
                     result.Button(screen.CharacterSheetButton),
                     result.Button(screen.RelicsButton),
