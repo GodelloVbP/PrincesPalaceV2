@@ -173,6 +173,10 @@ $PathAreas = @(
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Dungeon/';   Areas = @('run') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Economy/';   Areas = @('run') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Equipment/'; Areas = @('content', 'ui') }
+    # Inventory moved out of Data/ (Core) into Domain so its rules could be
+    # EditMode-tested at all -- Data/ compiles into Core and the EditMode suite
+    # is Domain-only, so InventoryOps was unreachable by any test where it lived.
+    @{ Pattern = '^Assets/_Project/Scripts/Domain/Inventory/'; Areas = @('ui', 'run') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Relics/';    Areas = @('content') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Rewards/';   Areas = @('run', 'content') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Rng/';       Areas = @('rng') }
