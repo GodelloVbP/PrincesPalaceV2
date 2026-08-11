@@ -15,6 +15,7 @@ namespace PrincesPalace
     public class HubController : MonoBehaviour
     {
         [SerializeField] internal Button talentsButton;
+        [SerializeField] internal GameObject characterOverlayPanel;
         [SerializeField] internal Button principalityButton;
         [SerializeField] internal Button characterSheetButton;
         [SerializeField] internal Button relicsButton;
@@ -90,7 +91,9 @@ namespace PrincesPalace
             // The first of the four annexes to actually lead somewhere.
             talentsButton.onClick.AddListener(() => Navigation.Go(Navigation.Talents));
             principalityButton.onClick.AddListener(() => Debug.Log("Principality"));
-            characterSheetButton.onClick.AddListener(() => Debug.Log("Character sheet"));
+            // An overlay, not a scene load: it opens over the hub and the hub
+            // is still standing behind it when it closes.
+            characterSheetButton.onClick.AddListener(() => characterOverlayPanel.SetActive(true));
             relicsButton.onClick.AddListener(() => Debug.Log("Relics"));
             // The two that go somewhere. The other four are screens that do not
             // exist yet, and a button that logs is more honest than one that

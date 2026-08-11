@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using PrincesPalace;
+using PrincesPalace.Content;
 using PrincesPalace.Domain.UiKit;
 using PrincesPalace.Domain.UiKit.Screens;
 
@@ -289,15 +290,16 @@ public static class ScreenRegistry
                 DressHub(result, screen);
                 hub.startRunCaption = result.Tmp(screen.StartRunCaption);
 
-                // The three whose screens do not exist yet. This array is the
-                // one place that list lives, and it shrinks as they land --
-                // Talents just left it.
+                // The two whose screens do not exist yet. This array is the one
+                // place that list lives, and it shrinks as they land -- the
+                // character overlay just took CharacterSheet out of it.
                 hub.unbuiltButtons = new[]
                 {
                     result.Button(screen.PrincipalityButton),
-                    result.Button(screen.CharacterSheetButton),
                     result.Button(screen.RelicsButton),
                 };
+
+                WireCharacterOverlay(result, screen, hub);
             },
         };
     }
@@ -622,5 +624,56 @@ public static class ScreenRegistry
             pulse.MinAlpha = 0.65f;
             pulse.MaxAlpha = 1f;
         }
+    }
+
+    // The character overlay: a Modal living inside the hub's own tree.
+    //
+    // The controller is attached to the MODAL NODE, not to the hub root, so
+    // OnEnable fires every time the overlay is opened -- the same arrangement
+    // SaveSlotController uses, and the reason a refresh-on-open needs no
+    // explicit call from whoever opened it.
+    private static void WireCharacterOverlay(UiEmitResult result, HubScreen screen, HubController hub)
+    {
+        var overlay = screen.Overlay;
+        var controller = result.Attach<CharacterOverlayController>(overlay.Root);
+
+        controller.slotCells = overlay.SlotCells.Select(result.Button).ToArray();
+        controller.slotIcons = overlay.SlotIcons.Select(result.Image).ToArray();
+        controller.slotBackings = overlay.SlotBackings.Select(result.Image).ToArray();
+        controller.slotRarityEdges = overlay.SlotRarityEdges.Select(result.Image).ToArray();
+        controller.slotPlusLabels = overlay.SlotPlusLabels.Select(result.Tmp).ToArray();
+
+        controller.bagCells = overlay.BagCells.Select(result.Button).ToArray();
+        controller.bagIcons = overlay.BagIcons.Select(result.Image).ToArray();
+        controller.bagBackings = overlay.BagBackings.Select(result.Image).ToArray();
+        controller.bagRarityEdges = overlay.BagRarityEdges.Select(result.Image).ToArray();
+        controller.bagCountLabels = overlay.BagCountLabels.Select(result.Tmp).ToArray();
+        controller.bagPlusLabels = overlay.BagPlusLabels.Select(result.Tmp).ToArray();
+
+        controller.characterName = result.Tmp(overlay.CharacterName);
+        controller.pageLabel = result.Tmp(overlay.PageLabel);
+        controller.detailName = result.Tmp(overlay.DetailName);
+        controller.detailBody = result.Tmp(overlay.DetailBody);
+        controller.actionLabel = result.Tmp(overlay.ActionLabel);
+        controller.actionButton = result.Button(overlay.ActionButton);
+        controller.prevCharacterButton = result.Button(overlay.PrevCharacterButton);
+        controller.nextCharacterButton = result.Button(overlay.NextCharacterButton);
+        controller.prevPageButton = result.Button(overlay.PrevPageButton);
+        controller.nextPageButton = result.Button(overlay.NextPageButton);
+        controller.closeButton = result.Button(overlay.CloseButton);
+        controller.silhouette = result.Image(overlay.Silhouette);
+
+        // Every item that authored an icon, baked as two parallel arrays.
+        // Resolved here rather than at runtime because Resources loading and
+        // AssetDatabase are different worlds and only the builder has the
+        // second one.
+        var withArt = ContentDatabase.Items
+            .Where(i => !string.IsNullOrEmpty(i.iconPath))
+            .ToList();
+
+        controller.iconIds = withArt.Select(i => i.id).ToArray();
+        controller.iconSprites = withArt.Select(i => SceneBuilder.LoadSpriteByKey(i.iconPath)).ToArray();
+
+        hub.characterOverlayPanel = result.Go(overlay.Root);
     }
 }
