@@ -143,12 +143,14 @@ namespace PrincesPalace.PlayModeTests
             // quietly shrink back.
             yield return OpenTheMenu();
 
-            int before = Save.wallet.Get(CurrencyType.Embers);
+            // Per CHARACTER now, so the grant is checked on the roster rather
+            // than on a wallet nothing writes to any more.
+            int before = Save.roster[0].embers;
 
             Click("DebugGiveEmbersButton");
             yield return null;
 
-            Assert.AreEqual(before + DebugMenuController.EmberGrant, Save.wallet.Get(CurrencyType.Embers));
+            Assert.AreEqual(before + DebugMenuController.EmberGrant, Save.roster[0].embers);
             Assert.GreaterOrEqual(DebugMenuController.EmberGrant, 25);
         }
 
@@ -159,12 +161,12 @@ namespace PrincesPalace.PlayModeTests
             // the NotEnoughEmbers refusal needs to be testable by hand.
             yield return OpenTheMenu();
 
-            int before = Save.wallet.Get(CurrencyType.Embers);
+            int before = Save.roster[0].embers;
 
             Click("DebugGiveOneEmberButton");
             yield return null;
 
-            Assert.AreEqual(before + 1, Save.wallet.Get(CurrencyType.Embers));
+            Assert.AreEqual(before + 1, Save.roster[0].embers);
         }
 
         // ---- items --------------------------------------------------------------------

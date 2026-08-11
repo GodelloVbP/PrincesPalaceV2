@@ -32,20 +32,24 @@ namespace PrincesPalace
                 if (character != null && character.level > highestLevel) highestLevel = character.level;
             }
 
-            // Run totals come from the ACTIVE run only, because a finished run
-            // is discarded wholesale by EndRun. Lifetime counters across
-            // completed runs are a gap worth naming rather than papering over:
-            // "clear a hundred rooms" currently means a hundred in one descent,
-            // which no one will do. The fix is a lifetime tally on SaveData,
-            // and it belongs with the run-summary work rather than here.
+            // LIFETIME PLUS THE LIVE RUN.
+            //
+            // The lifetime halves are folded in by RunSettlement before EndRun
+            // discards the snapshot; the active run's contribution is added on
+            // top so a total ticks up DURING a descent rather than only when it
+            // ends. That cannot double-count: once settled, the run is gone, so
+            // its contribution is zero and only the fold remains.
+            //
+            // Deepest step is the exception -- it is a high-water mark, not a
+            // sum, so lifetime and current are compared rather than added.
             var run = save.activeRun;
 
             return new AchievementFacts(
                 defeatedBossIds: save.defeatedBossIds ?? new List<string>(),
                 highestCharacterLevel: highestLevel,
-                roomsCleared: run?.roomsCleared ?? 0,
-                deepestStep: run?.deepestStep ?? 0,
-                totalDamageDealt: TotalDamage(run));
+                roomsCleared: save.lifetimeRoomsCleared + (run?.roomsCleared ?? 0),
+                deepestStep: System.Math.Max(save.lifetimeDeepestStep, run?.deepestStep ?? 0),
+                totalDamageDealt: save.lifetimeDamageDealt + TotalDamage(run));
         }
 
         private static long TotalDamage(RunSnapshot run)

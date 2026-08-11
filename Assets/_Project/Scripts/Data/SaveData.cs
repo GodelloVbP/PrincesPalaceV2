@@ -24,7 +24,14 @@ namespace PrincesPalace
         // policy the comments below still describe and which still applies to
         // anything that is merely a new field. A change that INVALIDATES data
         // already on disk is the case that policy cannot cover.
-        public const int CurrentVersion = 2;
+        // 2 -> 3: Embers moved from the shared wallet onto the CHARACTER.
+        // A single pool meant a character you had never fielded could be
+        // kindled to the top of their tree out of embers someone else earned,
+        // which is the opposite of what per-character progression is for. The
+        // migration hands the whole old pool to the first roster member rather
+        // than splitting it, because splitting would silently reduce what any
+        // one character can afford and there is no record of who earned what.
+        public const int CurrentVersion = 3;
 
         // Meta-progression: the "extra_recruit_slot" Principality upgrade
         // raises this. Matches the id ContentBuilder authors it under —
@@ -78,6 +85,27 @@ namespace PrincesPalace
         // payout the player has already banked and spent, which is the
         // meta-progression equivalent of the infinite money printer.
         public List<string> defeatedBossIds = new List<string>();
+
+        // ---- lifetime totals, across every run ever ---------------------------
+        //
+        // EndRun replaces the run snapshot wholesale, so anything counted only
+        // there is gone the moment a descent ends. That made "clear a hundred
+        // rooms" mean a hundred in ONE descent, which nobody will ever do --
+        // the achievement was authored, listed, and unreachable.
+        //
+        // Folded in by RunSettlement, which already runs before EndRun for
+        // exactly this class of reason. Achievements read these PLUS the live
+        // run, so a total ticks up during a descent rather than only at its
+        // end, and cannot double-count once the run is settled and discarded.
+        public int lifetimeRoomsCleared;
+        public long lifetimeDamageDealt;
+        public int lifetimeRunsEnded;
+
+        // A HIGH-WATER MARK, not a sum -- how deep this profile has ever got.
+        // Compared against the live run rather than added to it, which is the
+        // one place the lifetime/active fold in Achievements.FactsFor differs
+        // per field.
+        public int lifetimeDeepestStep;
 
         // Which relic each character is carrying — RelicDefinition content
         // (a run-long combat effect), NOT the `Relics` currency above. Named
@@ -226,9 +254,31 @@ namespace PrincesPalace
                 ResetTalentProgress();
             }
 
+            if (version < 3)
+            {
+                MoveEmbersOntoTheRoster();
+            }
+
             version = CurrentVersion;
             Reconcile();
             return true;
+        }
+
+        // The whole old shared pool to the FIRST roster member, then cleared.
+        //
+        // Not split evenly: a split silently reduces what any single character
+        // can afford, and since nothing recorded who earned the embers there is
+        // no honest way to divide them. Giving them to one character is at
+        // least a decision somebody can see and undo.
+        private void MoveEmbersOntoTheRoster()
+        {
+            int pooled = wallet.embers;
+            if (pooled <= 0) return;
+
+            var first = roster?.FirstOrDefault(c => c != null);
+            if (first != null) first.embers += pooled;
+
+            wallet.embers = 0;
         }
 
         // Locks every orb and zeroes every unspent point.

@@ -93,7 +93,10 @@ namespace PrincesPalace
         private HashSet<string> Unlocked =>
             new HashSet<string>(Current?.unlockedTalentIds ?? new List<string>());
 
-        private int Embers => SaveSlotManager.CurrentSave?.wallet.embers ?? 0;
+        // THE SELECTED CHARACTER'S embers, not the profile's. Reading a shared
+        // pool here is what let a character you never fielded be kindled to the
+        // top of their tree out of someone else's earnings.
+        private int Embers => Current?.embers ?? 0;
 
         // ---- input -----------------------------------------------------------
 
@@ -153,7 +156,7 @@ namespace PrincesPalace
 
             character.unlockedTalentIds.Add(
                 TalentPage.SlotId(character.definitionId, _path, _selectedSlot));
-            save.wallet.embers -= TalentPage.EmberCost;
+            character.embers -= TalentPage.EmberCost;
 
             // Written immediately. A talent tree that loses a kindled orb to a
             // crash is the single least forgivable thing this screen could do.

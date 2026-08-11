@@ -81,8 +81,8 @@ namespace PrincesPalace
             closeButton.onClick.AddListener(() => gameObject.SetActive(false));
 
             giveGoldButton.onClick.AddListener(() => Give(CurrencyType.Gold, GoldGrant));
-            giveEmbersButton.onClick.AddListener(() => Give(CurrencyType.Embers, EmberGrant));
-            giveOneEmberButton.onClick.AddListener(() => Give(CurrencyType.Embers, 1));
+            giveEmbersButton.onClick.AddListener(() => GiveEmbers(EmberGrant));
+            giveOneEmberButton.onClick.AddListener(() => GiveEmbers(1));
 
             for (int i = 0; i < filterButtons.Length; i++)
             {
@@ -116,6 +116,23 @@ namespace PrincesPalace
             if (save?.wallet == null) return;
 
             save.wallet.Add(currency, amount);
+            SaveSlotManager.SaveCurrent();
+            Refresh();
+        }
+
+        // Embers are per CHARACTER, so a debug grant has to say to whom. The
+        // whole roster, not the squad: the point of the button is to be able to
+        // test any character's tree without first fielding them.
+        private void GiveEmbers(int amount)
+        {
+            var save = Save;
+            if (save?.roster == null) return;
+
+            foreach (var character in save.roster)
+            {
+                if (character != null) character.embers += amount;
+            }
+
             SaveSlotManager.SaveCurrent();
             Refresh();
         }

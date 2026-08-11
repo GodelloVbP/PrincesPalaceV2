@@ -34,6 +34,23 @@ namespace PrincesPalace
             public List<RunLedgerEntry> Ledger = new List<RunLedgerEntry>();
         }
 
+        // The run's total damage, summed off its own ledger. Long, because a
+        // profile that plays for a while will pass two billion and an int
+        // would wrap into a negative -- silently un-earning any achievement
+        // counting it.
+        private static long DamageIn(RunSnapshot run)
+        {
+            if (run?.ledger == null) return 0;
+
+            long total = 0;
+            foreach (var entry in run.ledger)
+            {
+                if (entry != null) total += entry.TotalDealt;
+            }
+
+            return total;
+        }
+
         public static Result Settle(SaveData save, RunSnapshot run)
         {
             var result = new Result();
@@ -51,6 +68,16 @@ namespace PrincesPalace
 
             if (save == null) return result;
 
+            // FOLDED INTO THE LIFETIME TOTALS before the run is discarded.
+            // Runs here rather than in EndRun because this is already the
+            // "close the books before the evidence is thrown away" pass, and
+            // splitting that responsibility across two places is how one of
+            // them ends up forgotten.
+            save.lifetimeRoomsCleared += run.roomsCleared;
+            save.lifetimeDamageDealt += DamageIn(run);
+            save.lifetimeRunsEnded++;
+            if (run.deepestStep > save.lifetimeDeepestStep) save.lifetimeDeepestStep = run.deepestStep;
+
             save.defeatedBossIds ??= new List<string>();
 
             // ONE ember per boss never killed before. The run knows what it
@@ -59,9 +86,19 @@ namespace PrincesPalace
             result.NewBosses.AddRange(fresh);
             result.EmbersEarned = EmberPayout.EmbersFor(fresh.Count);
 
+            // PAID TO THE SQUAD THAT RAN, one each, not into a shared pool.
+            //
+            // Each member gets the full amount rather than a split: the payout
+            // is per unique boss and the point is that the characters you
+            // actually field progress. Splitting would make bringing a second
+            // character a tax on the first, which is the opposite of the
+            // intent, and a character left in the hub still earns nothing.
             if (result.EmbersEarned > 0)
             {
-                save.wallet.Add(CurrencyType.Embers, result.EmbersEarned);
+                foreach (var character in save.ActiveSquad())
+                {
+                    if (character != null) character.embers += result.EmbersEarned;
+                }
             }
 
             // Recorded in the SAME pass that paid for them. Paying without

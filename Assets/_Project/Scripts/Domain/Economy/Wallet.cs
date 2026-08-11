@@ -19,6 +19,11 @@ namespace PrincesPalace.Domain.Economy
     public class Wallet
     {
         public int gold;
+        // LEGACY, migration source only. Embers live on the CHARACTER now --
+        // see Character.embers and SaveData's 2 -> 3 step. Kept as a field
+        // rather than deleted because deleting it makes JsonUtility drop the
+        // value on load, which would silently rob every pre-v3 save of
+        // everything it had banked. Nothing live reads it.
         public int embers;
 
         public int Get(CurrencyType type)

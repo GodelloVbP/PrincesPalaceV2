@@ -768,6 +768,21 @@ Not resolved here because it is the author's call whether Relics get a distinct 
 deleted. Whichever way it goes, `CurrencyType.IsSafe`, the hub currency line and `Wallet` all
 already handle three, so the cost of leaving it is display noise rather than breakage.
 
+### 41. `CurrencyType.Embers` and `Wallet.embers` survive with no live reader
+Embers moved onto `Character.embers` (2026-08-11) so progression reflects who you actually
+field. The wallet field and the enum value are both KEPT, deliberately: deleting the field
+makes JsonUtility drop the value on load, which would silently rob every pre-v3 save of
+everything it had banked, and `SaveData.MoveEmbersOntoTheRoster` is the only thing that reads
+it. `Currencies.IsPersistent` still walks the enum, so removing the member would also change
+what `WalletTests.ThereIsExactlyOneCurrencyARunCanCostYou` counts.
+
+This is the exact shape of #40 — a currency member with no live use — and it is recorded
+here rather than left to be rediscovered. The difference is that this one has a stated
+expiry: once no save older than v3 can plausibly exist, both can go. `EmberOwnershipTests.
+EmbersNeverLandOnTheSharedWalletAgain` is what stops anything starting to write to it in the
+meantime, because that regression would silently re-share embers and nothing else would
+notice.
+
 ### 38. A wipe does not actually forfeit anything yet
 Follows from #37 and is the more urgent half. `CurrencyType` documents the forfeit rule, but
 the defeat path is unbuilt — the intended behaviour (2026-08-11) is that a defeat returns the

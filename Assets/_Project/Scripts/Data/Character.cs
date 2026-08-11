@@ -72,6 +72,19 @@ namespace PrincesPalace
         public int level = 1;
         public int exp;
 
+        // THIS CHARACTER'S embers, not the profile's.
+        //
+        // They were a single wallet figure, which meant investing in whoever
+        // you actually play starved everyone else -- and worse, the reverse:
+        // a character you have never fielded could be kindled to the top of
+        // their tree out of a pool someone else earned. Progression is supposed
+        // to reflect who you played.
+        //
+        // Purely additive, so CurrentVersion does not move: an older save has
+        // no such field, JsonUtility leaves it at zero, and SaveData.Migrate
+        // moves whatever was in the shared wallet onto the roster.
+        public int embers;
+
         // Unspent points from levelling, one per level. Spent into
         // investedAbilityScores below, which is what turns a level into a
         // build decision rather than an automatic stat bump.

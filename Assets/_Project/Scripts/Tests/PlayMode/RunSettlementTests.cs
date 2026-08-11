@@ -48,14 +48,16 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [Test]
-        public void AFirstBossKillPaysAnEmberOntoTheWallet()
+        public void AFirstBossKillPaysAnEmberToTheSquad()
         {
-            int before = Save.wallet.Get(CurrencyType.Embers);
+            // Onto the CHARACTERS who ran, not a shared wallet -- see
+            // EmberOwnershipTests for the ownership rule itself.
+            int before = Save.ActiveSquad().First().embers;
 
             var result = RunSettlement.Settle(Save, Run(bosses: "warden"));
 
             Assert.AreEqual(1, result.EmbersEarned);
-            Assert.AreEqual(before + 1, Save.wallet.Get(CurrencyType.Embers));
+            Assert.AreEqual(before + 1, Save.ActiveSquad().First().embers);
             CollectionAssert.Contains(result.NewBosses, "warden");
         }
 
@@ -68,11 +70,11 @@ namespace PrincesPalace.PlayModeTests
 
             CollectionAssert.Contains(Save.defeatedBossIds, "warden");
 
-            int afterFirst = Save.wallet.Get(CurrencyType.Embers);
+            int afterFirst = Save.ActiveSquad().First().embers;
             var second = RunSettlement.Settle(Save, Run(bosses: "warden"));
 
             Assert.AreEqual(0, second.EmbersEarned, "the same boss paid twice");
-            Assert.AreEqual(afterFirst, Save.wallet.Get(CurrencyType.Embers));
+            Assert.AreEqual(afterFirst, Save.ActiveSquad().First().embers);
         }
 
         [Test]
