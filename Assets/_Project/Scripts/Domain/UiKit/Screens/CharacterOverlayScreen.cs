@@ -228,7 +228,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor();
 
             NodeRef countRef = default;
-            var children = new List<UiNode> { backing, edge, icon, frame, plus };
+            // FRAME BEFORE ICON. Declaration order is painter's order, and the
+            // frame sprite is a filled panel rather than a hollow ring -- put
+            // it last and it covers the very art the cell exists to show. The
+            // sprites were bound correctly the whole time and simply painted
+            // underneath it.
+            var children = new List<UiNode> { backing, edge, frame, icon, plus };
 
             if (withCount)
             {

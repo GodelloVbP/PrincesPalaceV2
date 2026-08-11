@@ -58,7 +58,7 @@ MonoBehaviour:
     intelligence: 0
     charisma: 0
   startingStock: 1
-  iconPath: 
+  iconPath: Assets/_Project/Art/Items/gloves_leather_sheet/level_1.png
   cost: 0
   sortOrder: 2
   setId: 

@@ -1,14 +1,96 @@
 {
-  "_readme": "Every ONE-OFF item in the game — potions and the six starting-kit pieces. Two sister files generate the rest and both are preferred to authoring by hand here: itemsets.json expands an armour material into one item per plus level, and weapons.json expands a weapon family into one item per MODIFIER per plus level (a Sturdy sword that rewards Strength and a Nimble one that rewards Dexterity, from the same authored steel). Weapons in particular belong there rather than here, because a weapon authored here carries no scaling grades and is therefore strictly worse than a generated one at the same Attack. See each file's own _readme. Edit this file, then run Prince's Palace > Build Default Content. id and displayName are always required. kind is 'Consumable' (default), 'Weapon', or 'Equipment'. Consumables are spent in combat for a one-off effect: effect is 'Heal' (default) or 'RestoreMana', amount defaults to 20, cost defaults to 15. Weapons and Equipment are worn on the [C] Equipment screen and grant their bonus for as long as they are equipped. Weapons: attackBonus is REQUIRED, slot defaults to Weapon1 and may only be a hand; cost defaults to 0 and weapons are never sold in the Store — they only drop as loot. Equipment: slot is REQUIRED (Head, Necklace, Torso, Legs, Shoes, Gloves, Weapon1, Weapon2, or the alias Weapon) and it must grant something, via statBonus (maxHealth/speed/attack/defense) or abilityScoreBonus (strength/dexterity/constitution/wisdom/intelligence/charisma) or both. A Weapon1 item also fits Weapon2, so dual-wielding needs no second entry. Mixing field sets — a Weapon with an amount, a Consumable with an attackBonus, Equipment using attackBonus instead of statBonus.attack — is rejected rather than silently ignored. Set startingStock to true to put one in a brand new profile's stash; granted once at profile creation, never on load, so it is a starting kit and not an income. Weapon drops are tiered automatically by attackBonus: see FightController.RollWeaponDrop — Elite rooms drop from the weaker half of the list, Boss rooms from the stronger half, so no dropTier field is needed here.",
+  "_readme": "Every ONE-OFF item in the game \u2014 potions and the six starting-kit pieces. Two sister files generate the rest and both are preferred to authoring by hand here: itemsets.json expands an armour material into one item per plus level, and weapons.json expands a weapon family into one item per MODIFIER per plus level (a Sturdy sword that rewards Strength and a Nimble one that rewards Dexterity, from the same authored steel). Weapons in particular belong there rather than here, because a weapon authored here carries no scaling grades and is therefore strictly worse than a generated one at the same Attack. See each file's own _readme. Edit this file, then run Prince's Palace > Build Default Content. id and displayName are always required. kind is 'Consumable' (default), 'Weapon', or 'Equipment'. Consumables are spent in combat for a one-off effect: effect is 'Heal' (default) or 'RestoreMana', amount defaults to 20, cost defaults to 15. Weapons and Equipment are worn on the [C] Equipment screen and grant their bonus for as long as they are equipped. Weapons: attackBonus is REQUIRED, slot defaults to Weapon1 and may only be a hand; cost defaults to 0 and weapons are never sold in the Store \u2014 they only drop as loot. Equipment: slot is REQUIRED (Head, Necklace, Torso, Legs, Shoes, Gloves, Weapon1, Weapon2, or the alias Weapon) and it must grant something, via statBonus (maxHealth/speed/attack/defense) or abilityScoreBonus (strength/dexterity/constitution/wisdom/intelligence/charisma) or both. A Weapon1 item also fits Weapon2, so dual-wielding needs no second entry. Mixing field sets \u2014 a Weapon with an amount, a Consumable with an attackBonus, Equipment using attackBonus instead of statBonus.attack \u2014 is rejected rather than silently ignored. Set startingStock to true to put one in a brand new profile's stash; granted once at profile creation, never on load, so it is a starting kit and not an income. Weapon drops are tiered automatically by attackBonus: see FightController.RollWeaponDrop \u2014 Elite rooms drop from the weaker half of the list, Boss rooms from the stronger half, so no dropTier field is needed here.",
   "items": [
-    { "id": "health_potion", "displayName": "Health Potion", "description": "Restores a modest amount of health when used in a fight.", "effect": "Heal", "amount": 200, "cost": 15 },
-    { "id": "mana_potion", "displayName": "Mana Potion", "description": "Restores a modest amount of mana when used in a fight.", "effect": "RestoreMana", "amount": 15, "cost": 15 },
-
-    { "id": "gloves_of_strength", "displayName": "Gloves of Strength", "description": "Stiff leather gauntlets that make your own grip feel like someone else's.", "kind": "Equipment", "slot": "Gloves", "abilityScoreBonus": { "strength": 1 }, "startingStock": true },
-    { "id": "iron_helm", "displayName": "Iron Helm", "description": "Dented in three places, all of them on the outside.", "kind": "Equipment", "slot": "Head", "statBonus": { "maxHealth": 50, "defense": 1 }, "startingStock": true },
-    { "id": "amulet_of_wisdom", "displayName": "Amulet of Wisdom", "description": "Cool against the skin, and it hums faintly just before you are about to be wrong.", "kind": "Equipment", "slot": "Necklace", "abilityScoreBonus": { "wisdom": 1 }, "startingStock": true },
-    { "id": "leather_cuirass", "displayName": "Leather Cuirass", "description": "Boiled, moulded, and worn by someone who did not need it a second time.", "kind": "Equipment", "slot": "Torso", "statBonus": { "defense": 3 }, "startingStock": true },
-    { "id": "padded_greaves", "displayName": "Padded Greaves", "description": "Quilted shin guards. Unglamorous, and the reason you still have shins.", "kind": "Equipment", "slot": "Legs", "statBonus": { "defense": 2 }, "startingStock": true },
-    { "id": "swift_boots", "displayName": "Swift Boots", "description": "Worn thin at the heel by whoever got out of here first.", "kind": "Equipment", "slot": "Shoes", "statBonus": { "speed": 2 }, "abilityScoreBonus": { "dexterity": 1 }, "startingStock": true }
+    {
+      "id": "health_potion",
+      "displayName": "Health Potion",
+      "description": "Restores a modest amount of health when used in a fight.",
+      "effect": "Heal",
+      "amount": 200,
+      "cost": 15
+    },
+    {
+      "id": "mana_potion",
+      "displayName": "Mana Potion",
+      "description": "Restores a modest amount of mana when used in a fight.",
+      "effect": "RestoreMana",
+      "amount": 15,
+      "cost": 15
+    },
+    {
+      "id": "gloves_of_strength",
+      "displayName": "Gloves of Strength",
+      "description": "Stiff leather gauntlets that make your own grip feel like someone else's.",
+      "kind": "Equipment",
+      "slot": "Gloves",
+      "abilityScoreBonus": {
+        "strength": 1
+      },
+      "startingStock": true,
+      "iconPath": "Assets/_Project/Art/Items/gloves_leather_sheet/level_1.png"
+    },
+    {
+      "id": "iron_helm",
+      "displayName": "Iron Helm",
+      "description": "Dented in three places, all of them on the outside.",
+      "kind": "Equipment",
+      "slot": "Head",
+      "statBonus": {
+        "maxHealth": 50,
+        "defense": 1
+      },
+      "startingStock": true,
+      "iconPath": "Assets/_Project/Art/Items/helmets_str/level_1.png"
+    },
+    {
+      "id": "amulet_of_wisdom",
+      "displayName": "Amulet of Wisdom",
+      "description": "Cool against the skin, and it hums faintly just before you are about to be wrong.",
+      "kind": "Equipment",
+      "slot": "Necklace",
+      "abilityScoreBonus": {
+        "wisdom": 1
+      },
+      "startingStock": true
+    },
+    {
+      "id": "leather_cuirass",
+      "displayName": "Leather Cuirass",
+      "description": "Boiled, moulded, and worn by someone who did not need it a second time.",
+      "kind": "Equipment",
+      "slot": "Torso",
+      "statBonus": {
+        "defense": 3
+      },
+      "startingStock": true,
+      "iconPath": "Assets/_Project/Art/Items/armor_leather_sheet/level_1.png"
+    },
+    {
+      "id": "padded_greaves",
+      "displayName": "Padded Greaves",
+      "description": "Quilted shin guards. Unglamorous, and the reason you still have shins.",
+      "kind": "Equipment",
+      "slot": "Legs",
+      "statBonus": {
+        "defense": 2
+      },
+      "startingStock": true,
+      "iconPath": "Assets/_Project/Art/Items/leggings_leather_sheet/level_1.png"
+    },
+    {
+      "id": "swift_boots",
+      "displayName": "Swift Boots",
+      "description": "Worn thin at the heel by whoever got out of here first.",
+      "kind": "Equipment",
+      "slot": "Shoes",
+      "statBonus": {
+        "speed": 2
+      },
+      "abilityScoreBonus": {
+        "dexterity": 1
+      },
+      "startingStock": true,
+      "iconPath": "Assets/_Project/Art/Items/boots_silk_sheet/level_1.png"
+    }
   ]
 }
