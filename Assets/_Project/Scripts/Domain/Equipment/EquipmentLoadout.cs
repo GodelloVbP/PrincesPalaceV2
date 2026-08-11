@@ -221,11 +221,40 @@ namespace PrincesPalace.Domain.Equipment
             return result;
         }
 
-        // Drops every worn id the caller rejects, and returns them. Used by
-        // SaveData.Reconcile to strip references to content that no longer
-        // exists — same tolerant posture as the rest of Reconcile, and the
-        // returned ids are what the caller hands back to the player's bag so
-        // a renamed item is not silently deleted.
+        // Drops every worn id the caller rejects and returns the WHOLE ENTRY --
+        // id and plus together.
+        //
+        // The ids-only overload below loses the plus, and SaveData.Reconcile
+        // used it: a +5 orphan came back to the stash as a +0. Exactly the
+        // item-destroying bug class EquipMove reads the displaced plus to
+        // avoid, sitting in the one path nobody looks at because it only fires
+        // when content has been renamed.
+        public List<EquipmentSlotEntry> RemoveEntriesWhere(Func<string, bool> shouldRemove)
+        {
+            var removed = new List<EquipmentSlotEntry>();
+
+            for (int i = slots.Count - 1; i >= 0; i--)
+            {
+                var entry = slots[i];
+                if (entry == null || string.IsNullOrEmpty(entry.itemId))
+                {
+                    slots.RemoveAt(i);
+                    continue;
+                }
+
+                if (shouldRemove(entry.itemId))
+                {
+                    removed.Add(entry);
+                    slots.RemoveAt(i);
+                }
+            }
+
+            removed.Reverse();
+            return removed;
+        }
+
+        // Ids only. Kept because it has its own callers and its own tests;
+        // anything that hands an orphan back to a bag wants the overload above.
         public List<string> RemoveWhere(Func<string, bool> shouldRemove)
         {
             var removed = new List<string>();

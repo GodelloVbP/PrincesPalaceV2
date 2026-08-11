@@ -248,5 +248,37 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(original.IsEmpty(EquipmentSlot.Head),
                 "Adding a slot to the clone must not add it to the original");
         }
-    }
+    
+        [Test]
+        public void RemoveEntriesWhere_HandsBackThePlusAsWellAsTheId()
+        {
+            // SaveData.Reconcile used the ids-only overload and re-added every
+            // orphan at the default plus, so a renamed content id quietly
+            // turned a +5 heirloom into a plain one -- with the item count
+            // still correct, which is why nothing ever caught it.
+            var loadout = new EquipmentLoadout();
+            loadout.Set(EquipmentSlot.Torso, "cuirass", 5);
+            loadout.Set(EquipmentSlot.Head, "helm", 0);
+
+            var removed = loadout.RemoveEntriesWhere(id => id == "cuirass");
+
+            Assert.AreEqual(1, removed.Count);
+            Assert.AreEqual("cuirass", removed[0].itemId);
+            Assert.AreEqual(5, removed[0].plus, "the honing has to survive being handed back");
+            Assert.AreEqual("helm", loadout.Get(EquipmentSlot.Head), "and nothing else moved");
+        }
+
+        [Test]
+        public void RemoveEntriesWhere_StillSweepsTombstones()
+        {
+            // Same tolerant posture as the ids-only overload it sits beside.
+            var loadout = new EquipmentLoadout();
+            loadout.Set(EquipmentSlot.Torso, "cuirass");
+            loadout.slots.Add(new EquipmentSlotEntry(EquipmentSlot.Head, "", 0));
+
+            loadout.RemoveEntriesWhere(id => false);
+
+            Assert.AreEqual(1, loadout.slots.Count, "the empty entry was swept even though nothing was rejected");
+        }
+}
 }

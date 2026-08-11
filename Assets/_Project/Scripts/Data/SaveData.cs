@@ -344,12 +344,17 @@ namespace PrincesPalace
                 // BACK to the stash rather than deleted, because a slot
                 // holding a real item the player earned should not be
                 // silently emptied by an authoring change.
-                foreach (string orphan in character.equipment.RemoveWhere(
+                // AT THE PLUS IT LEFT WITH. This used to take the ids-only
+                // overload and re-add at the default plus 0, so a renamed
+                // content id quietly turned a +5 heirloom into a plain one --
+                // with the item count still correct, which is why nothing
+                // caught it.
+                foreach (var orphan in character.equipment.RemoveEntriesWhere(
                              id => ContentDatabase.GetItem(id)?.IsEquippable != true))
                 {
-                    if (ContentDatabase.GetItem(orphan) != null)
+                    if (ContentDatabase.GetItem(orphan.itemId) != null)
                     {
-                        InventoryOps.Add(stockpiledItems, orphan);
+                        InventoryOps.Add(stockpiledItems, orphan.itemId, 1, orphan.plus);
                     }
                 }
 
