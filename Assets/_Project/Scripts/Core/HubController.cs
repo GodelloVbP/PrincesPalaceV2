@@ -18,6 +18,7 @@ namespace PrincesPalace
         [SerializeField] internal GameObject characterOverlayPanel;
         [SerializeField] internal GameObject debugMenuPanel;
         [SerializeField] internal RelicDraftController relicDraft;
+        [SerializeField] internal GameObject glossaryPanel;
         [SerializeField] internal Button principalityButton;
         [SerializeField] internal Button characterSheetButton;
         [SerializeField] internal Button relicsButton;
@@ -96,7 +97,11 @@ namespace PrincesPalace
             // An overlay, not a scene load: it opens over the hub and the hub
             // is still standing behind it when it closes.
             characterSheetButton.onClick.AddListener(() => SetCharacterOverlay(true));
-            relicsButton.onClick.AddListener(() => Debug.Log("Relics"));
+            // The Relics building opens the RECORD, not a relic screen.
+            // Relics stopped being permanent progression, so a screen about
+            // owning them had nothing to show; a record of every relic,
+            // monster, spell, item, talent and deed does.
+            relicsButton.onClick.AddListener(() => SetGlossary(true));
             // The two that go somewhere. The other four are screens that do not
             // exist yet, and a button that logs is more honest than one that
             // loads an empty scene.
@@ -146,6 +151,7 @@ namespace PrincesPalace
             else if (Input.GetKeyDown(KeyCode.Escape))
             {
                 if (debugMenuPanel != null && debugMenuPanel.activeSelf) SetDebugMenu(false);
+                else if (glossaryPanel != null && glossaryPanel.activeSelf) SetGlossary(false);
                 else if (characterOverlayPanel.activeSelf) SetCharacterOverlay(false);
             }
         }
@@ -172,6 +178,14 @@ namespace PrincesPalace
         {
             if (characterOverlayPanel == null) return;
             characterOverlayPanel.SetActive(open);
+        }
+
+        public bool GlossaryIsOpen => glossaryPanel != null && glossaryPanel.activeSelf;
+
+        public void SetGlossary(bool open)
+        {
+            if (glossaryPanel == null) return;
+            glossaryPanel.SetActive(open);
         }
 
         public bool DebugMenuIsOpen => debugMenuPanel != null && debugMenuPanel.activeSelf;

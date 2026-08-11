@@ -52,6 +52,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // navigate around is not a draft.
         public RelicDraftScreen Draft;
 
+        // What the Relics building opens now. That building has been dimmed
+        // and unpressable since the hub was built, because relics were never
+        // a screen's worth of thing on their own -- a record of ALL content is.
+        public GlossaryScreen Glossary;
+
         public HubAmbience.Layer Ambience;
 
         // Node -> Resources folder, for the runtime frame looper. Recorded at
@@ -138,6 +143,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var draft = RelicDraftScreen.Build();
             screen.Draft = draft;
 
+            var glossary = GlossaryScreen.Build();
+            screen.Glossary = glossary;
+
             screen.Root = Ui.Panel("HubPanel", UiSize.Fixed(1920f, 1080f),
                 world,
 
@@ -169,7 +177,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 mainMenu,
                 overlay.Root,
                 debug.Root,
-                draft.Root);
+                draft.Root,
+                glossary.Root);
 
             return screen;
         }

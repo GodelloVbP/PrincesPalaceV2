@@ -293,17 +293,18 @@ public static class ScreenRegistry
                 DressHub(result, screen);
                 hub.startRunCaption = result.Tmp(screen.StartRunCaption);
 
-                // The two whose screens do not exist yet. This array is the one
+                // The ONE whose screen does not exist yet. This array is the one
                 // place that list lives, and it shrinks as they land -- the
-                // character overlay just took CharacterSheet out of it.
+                // character overlay took CharacterSheet out of it, and the
+                // glossary has now taken Relics.
                 hub.unbuiltButtons = new[]
                 {
                     result.Button(screen.PrincipalityButton),
-                    result.Button(screen.RelicsButton),
                 };
 
                 WireCharacterOverlay(result, screen, hub);
                 WireRelicDraft(result, screen, hub);
+                WireGlossary(result, screen, hub);
                 WireDebugMenu(result, screen, hub);
             },
         };
@@ -729,6 +730,52 @@ public static class ScreenRegistry
         controller.inspectButton = result.Button(screen.InspectButton);
 
         return controller;
+    }
+
+    private static void WireGlossary(UiEmitResult result, HubScreen screen, HubController hub)
+    {
+        var glossary = screen.Glossary;
+        var controller = result.Attach<GlossaryController>(glossary.Root);
+
+        controller.categoryButtons = glossary.CategoryButtons.Select(result.Button).ToArray();
+        controller.categoryMarkers = glossary.CategoryMarkers.Select(result.Image).ToArray();
+        controller.categoryLabels = glossary.CategoryLabels.Select(result.Tmp).ToArray();
+        controller.categoryCounts = glossary.CategoryCounts.Select(result.Tmp).ToArray();
+
+        controller.rows = glossary.Rows.Select(result.Button).ToArray();
+        controller.rowMarkers = glossary.RowMarkers.Select(result.Image).ToArray();
+        controller.rowNames = glossary.RowNames.Select(result.Tmp).ToArray();
+        controller.rowMetas = glossary.RowMetas.Select(result.Tmp).ToArray();
+
+        controller.emptyHint = result.Go(glossary.EmptyHint);
+        controller.pageLabel = result.Tmp(glossary.PageLabel);
+        controller.prevPageButton = result.Button(glossary.PrevPageButton);
+        controller.nextPageButton = result.Button(glossary.NextPageButton);
+
+        controller.detailIcon = result.Image(glossary.DetailIcon);
+        controller.detailName = result.Tmp(glossary.DetailName);
+        controller.detailMeta = result.Tmp(glossary.DetailMeta);
+        controller.detailBody = result.Tmp(glossary.DetailBody);
+        controller.detailLockedBy = result.Go(glossary.DetailLockedBy);
+        controller.detailLockedByLabel = result.Tmp(glossary.DetailLockedBy);
+        controller.closeButton = result.Button(glossary.CloseButton);
+
+        // Icons for EVERY category at once, in two parallel arrays. Items and
+        // relics are the only two with art today; the rest resolve to nothing
+        // and ItemIcons disables the Image, which is the same graceful posture
+        // the character overlay already takes.
+        var withArt = ContentDatabase.Items
+            .Where(i => i != null && !string.IsNullOrEmpty(i.iconPath))
+            .Select(i => (i.id, i.iconPath))
+            .Concat(ContentDatabase.Relics
+                .Where(r => r != null && !string.IsNullOrEmpty(r.iconPath))
+                .Select(r => (r.id, r.iconPath)))
+            .ToList();
+
+        controller.iconIds = withArt.Select(a => a.Item1).ToArray();
+        controller.iconSprites = withArt.Select(a => SceneBuilder.LoadSpriteByKey(a.Item2)).ToArray();
+
+        hub.glossaryPanel = result.Go(glossary.Root);
     }
 
     private static void WireRelicDraft(UiEmitResult result, HubScreen screen, HubController hub)

@@ -178,6 +178,23 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString DraftRarity =
             UiString.Define("draft.rarity", "{0}", "ULTRA-RARE");
 
+        // --- the glossary --------------------------------------------------------
+        public static readonly UiString GlossaryTitle = UiString.Define("glossary.title", "THE RECORD");
+        public static readonly UiString GlossaryCount =
+            UiString.Define("glossary.count", "{0} / {1}", "999 / 999");
+        public static readonly UiString GlossaryPage =
+            UiString.Define("glossary.page", "PAGE {0} OF {1}", "PAGE 99 OF 99");
+        public static readonly UiString GlossaryEmpty =
+            UiString.Define("glossary.empty", "NOTHING RECORDED HERE YET");
+        // Locked rows are LISTED, not hidden -- a glossary that hides what you
+        // have not found cannot tell you what there is to find. The name shows
+        // and the body is replaced by this.
+        public static readonly UiString GlossaryLocked = UiString.Define("glossary.locked", "NOT YET FOUND");
+        public static readonly UiString GlossaryLockedBy =
+            UiString.Define("glossary.locked_by", "Unlocked by: {0}", "Unlocked by: Clear a hundred rooms");
+        public static readonly UiString GlossaryPick =
+            UiString.Define("glossary.pick", "CHOOSE AN ENTRY");
+
         // --- save slots -----------------------------------------------------
         public static readonly UiString SlotEmpty =
             UiString.Define("slot_empty", "Slot {0}: Empty", "Slot 5: Empty");
@@ -292,6 +309,8 @@ namespace PrincesPalace.Domain.UiKit
             DefeatTitle, DefeatLost, DefeatKept, DefeatGoldLost, DefeatEmbers, DefeatEmbersNone,
             DefeatDepth, DefeatExp, DefeatStatsHeading, DefeatStatLine, DefeatToHub, DefeatInspect,
             DraftTitle, DraftSubtitle, DraftTake, DraftNoRelics, DraftDescend, DraftRarity,
+            GlossaryTitle, GlossaryCount, GlossaryPage, GlossaryEmpty,
+            GlossaryLocked, GlossaryLockedBy, GlossaryPick,
             DebugTitle, DebugGiveGold, DebugGiveEmbers, DebugGiveOneEmber, DebugAdd,
             DebugFilterAll, DebugFilterConsumable, DebugFilterWeapon, DebugFilterEquipment,
             DebugRow, DebugPage,
