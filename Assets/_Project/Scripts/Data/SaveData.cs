@@ -61,15 +61,6 @@ namespace PrincesPalace
             set => wallet.Set(CurrencyType.Gold, value);
         }
 
-        // Awarded only for clearing a floor's boss, so it measures how deep a
-        // player has actually got. Nothing sells for Relics yet — they are
-        // tracked and displayed so the sink can be designed against a real
-        // balance instead of a guess.
-        public int Relics
-        {
-            get => wallet.relics;
-            set => wallet.Set(CurrencyType.Relics, value);
-        }
 
         public int exp;
         public List<Character> roster = new List<Character>();

@@ -49,10 +49,10 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AGatedRelicIsHiddenUntilItsAchievementIsEarned()
         {
-            var all = new[] { Open("dual_wield"), Locked("wardens_tooth", AchievementIds.FirstForestBoss) };
+            var all = new[] { Open("dual_wield"), Locked("wardens_tooth", "first_forest_boss") };
 
             var before = RelicPool.Available(all, new HashSet<string>());
-            var after = RelicPool.Available(all, new HashSet<string> { AchievementIds.FirstForestBoss });
+            var after = RelicPool.Available(all, new HashSet<string> { "first_forest_boss" });
 
             CollectionAssert.AreEquivalent(new[] { "dual_wield" }, before.Select(r => r.Id));
             CollectionAssert.AreEquivalent(new[] { "dual_wield", "wardens_tooth" }, after.Select(r => r.Id));
@@ -61,9 +61,9 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AnUnrelatedAchievementDoesNotUnlockAGatedRelic()
         {
-            var all = new[] { Locked("wardens_tooth", AchievementIds.FirstForestBoss) };
+            var all = new[] { Locked("wardens_tooth", "first_forest_boss") };
 
-            var available = RelicPool.Available(all, new HashSet<string> { AchievementIds.CharacterLevel30 });
+            var available = RelicPool.Available(all, new HashSet<string> { "character_level_30" });
 
             CollectionAssert.IsEmpty(available);
         }
@@ -74,7 +74,7 @@ namespace PrincesPalace.Domain.Tests
             // A brand new profile passes null or empty here, and it must mean
             // "nothing gated is available" rather than throwing or -- worse --
             // unlocking everything.
-            var all = new[] { Open("dual_wield"), Locked("wardens_tooth", AchievementIds.FirstForestBoss) };
+            var all = new[] { Open("dual_wield"), Locked("wardens_tooth", "first_forest_boss") };
 
             Assert.AreEqual(1, RelicPool.Available(all, null).Count);
         }
@@ -201,23 +201,5 @@ namespace PrincesPalace.Domain.Tests
                 "a Godlike should occupy exactly its own weight's worth of the range");
         }
 
-        // ---- the shape of the authored pool ------------------------------------------
-
-        [Test]
-        public void EveryKnownAchievementIdIsDistinct()
-        {
-            // These end up in save data. A duplicate would make two different
-            // accomplishments indistinguishable forever.
-            CollectionAssert.AllItemsAreUnique(AchievementIds.All.ToList());
-        }
-
-        [Test]
-        public void AnUnknownAchievementIsNotTreatedAsKnown()
-        {
-            Assert.IsFalse(AchievementIds.IsKnown("nonsense"));
-            Assert.IsFalse(AchievementIds.IsKnown(""));
-            Assert.IsFalse(AchievementIds.IsKnown(null));
-            Assert.IsTrue(AchievementIds.IsKnown(AchievementIds.FirstForestBoss));
-        }
     }
 }

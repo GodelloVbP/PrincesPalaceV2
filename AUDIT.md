@@ -753,7 +753,7 @@ later stage synthesises.** The same blindness produced #40's sibling — the det
 and therefore exempt from the overlap check, which is why the boots-behind-the-plate collision needed
 a direct assertion. Any exemption or any generated node is a hole the audit will not report.
 
-### ~~40. Relics and Embers are two currencies with one source, and one of them does nothing~~ — recorded, not fixed, 2026-08-11
+### ~~40. Relics and Embers are two currencies with one source, and one of them does nothing~~ — **FIXED 2026-08-11.** Decided by the author the same day it was raised: Relics are not a resource at all. `CurrencyType.Relics`, `Wallet.relics` and `SaveData.Relics` are gone, the hub wallet line is two entries, and relics became a per-run draft with an authored rarity band instead. The original finding is kept below because the *reasoning* — two currencies sharing one source means one of them is dead — is what settled it
 `SaveData.Relics`' own comment says *"Awarded only for clearing a floor's boss, so it measures how
 deep a player has actually got."* `CurrencyType.cs:21-24` says the opposite: Relics are dormant,
 *"nothing awards them and nothing sells for them"*, and a boss drop *"was the old model and Embers

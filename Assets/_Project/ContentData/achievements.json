@@ -1,0 +1,12 @@
+{
+  "_readme": "Every achievement in the game. Edit this file, then run Prince's Palace > Build Default Content. id and displayName are always required, and `condition` must name a PrincesPalace.Domain.Content.AchievementCondition value (case-insensitive). THIS FILE IS THE ONLY SOURCE OF TRUTH for what achievements exist -- relics.json's `unlockedBy` is validated against the ids here at content-build time, so a relic can never be gated on an achievement that does not exist. `threshold` is what the condition compares against and its meaning depends on the condition (a level, a room count, a depth, a damage total); a counting condition with threshold 0 is rejected, because it would be earned by every brand-new profile the instant it loaded. `parameter` is the condition's subject when it has one -- today only DefeatSpecificBoss uses it, naming a boss enemy id. Achievement ids end up in save data the moment one is earned, so NEVER RENAME ONE after a save exists: the player loses whatever it gated.",
+
+  "achievements": [
+    { "id": "first_forest_boss", "displayName": "The Wood Yields", "description": "Put down the thing that guards the first forest.", "condition": "DefeatSpecificBoss", "parameter": "forest_warden" },
+    { "id": "three_bosses", "displayName": "Three Crowns", "description": "Defeat three different bosses.", "condition": "DefeatDistinctBosses", "threshold": 3 },
+    { "id": "character_level_30", "displayName": "Long Service", "description": "Bring a character to level 30.", "condition": "ReachCharacterLevel", "threshold": 30 },
+    { "id": "hundred_rooms", "displayName": "Well Travelled", "description": "Clear a hundred rooms.", "condition": "ClearRooms", "threshold": 100 },
+    { "id": "depth_forty", "displayName": "Deep Water", "description": "Reach step forty of a single descent.", "condition": "ReachDepth", "threshold": 40 },
+    { "id": "million_damage", "displayName": "Attrition", "description": "Deal a million damage across every run.", "condition": "DealTotalDamage", "threshold": 1000000 }
+  ]
+}

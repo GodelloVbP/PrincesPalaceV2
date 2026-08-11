@@ -27,7 +27,7 @@ namespace PrincesPalace
         {
             return data == null
                 ? Empty(slotIndex)
-                : UiStrings.SlotFilled.Format(slotIndex + 1, data.Gold, data.Relics);
+                : UiStrings.SlotFilled.Format(slotIndex + 1, data.Gold);
         }
 
         public static string Empty(int slotIndex)

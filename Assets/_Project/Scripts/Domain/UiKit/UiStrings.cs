@@ -58,8 +58,8 @@ namespace PrincesPalace.Domain.UiKit
         // the hub never showed it. WalletSummary is left alone -- other screens
         // still use the two-currency line.
         public static readonly UiString HubWallet =
-            UiString.Define("hub.wallet", "Gold: {0}    Relics: {1}    Embers: {2}",
-                "Gold: 999999    Relics: 99    Embers: 999");
+            UiString.Define("hub.wallet", "Gold: {0}    Embers: {1}",
+                "Gold: 999999    Embers: 999");
 
         public static readonly UiString HubBeginDescent =
             UiString.Define("hub.begin_descent", "BEGIN DESCENT");
@@ -174,7 +174,7 @@ namespace PrincesPalace.Domain.UiKit
         // Play screen and the Options screen drifted into describing the same
         // slot differently.
         public static readonly UiString SlotFilled =
-            UiString.Define("slot_filled", "Slot {0}: {1} gold, {2} relics", "Slot 5: 999999 gold, 99 relics");
+            UiString.Define("slot_filled", "Slot {0}: {1} gold", "Slot 5: 999999 gold");
 
         public static readonly UiString SlotButton =
             UiString.Define("slot_button", "Slot {0}", "Slot 5");

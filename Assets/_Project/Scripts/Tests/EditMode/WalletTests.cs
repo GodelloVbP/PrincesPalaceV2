@@ -38,7 +38,6 @@ namespace PrincesPalace.Domain.Tests
             wallet.Add(CurrencyType.Gold, 10);
 
             Assert.AreEqual(10, wallet.Get(CurrencyType.Gold));
-            Assert.AreEqual(0, wallet.Get(CurrencyType.Relics));
             Assert.AreEqual(0, wallet.Get(CurrencyType.Embers));
         }
 
@@ -94,11 +93,11 @@ namespace PrincesPalace.Domain.Tests
         public void CanAfford_MatchesWhatTrySpendWillDo()
         {
             var wallet = new Wallet();
-            wallet.Add(CurrencyType.Relics, 3);
+            wallet.Add(CurrencyType.Embers, 3);
 
-            Assert.IsTrue(wallet.CanAfford(CurrencyType.Relics, 3));
-            Assert.IsFalse(wallet.CanAfford(CurrencyType.Relics, 4));
-            Assert.IsFalse(wallet.CanAfford(CurrencyType.Relics, -1));
+            Assert.IsTrue(wallet.CanAfford(CurrencyType.Embers, 3));
+            Assert.IsFalse(wallet.CanAfford(CurrencyType.Embers, 4));
+            Assert.IsFalse(wallet.CanAfford(CurrencyType.Embers, -1));
         }
 
         // Banking is between two wallets because that is the real shape of it:
@@ -161,8 +160,6 @@ namespace PrincesPalace.Domain.Tests
                 "A run's Gold is forfeited on defeat, which is what makes retreating a decision.");
             Assert.IsTrue(Currencies.IsPersistent(CurrencyType.Embers),
                 "Embers go straight onto the save the moment a boss pays them and are never at risk.");
-            Assert.IsTrue(Currencies.IsPersistent(CurrencyType.Relics),
-                "Relics are dormant, but nothing about a run touches them either.");
         }
 
         [Test]
@@ -175,7 +172,10 @@ namespace PrincesPalace.Domain.Tests
                 if (Currencies.IsPersistent(type)) { safe++; } else { atRisk++; }
             }
 
-            Assert.AreEqual(2, safe, "Embers and Relics survive a run");
+            // Walked from the enum rather than hard-counted against a list,
+            // so removing Relics as a currency showed up here immediately
+            // instead of leaving a stale number nobody re-read.
+            Assert.AreEqual(1, safe, "Embers survive a run");
             Assert.AreEqual(1, atRisk, "Only the run's Gold is a wager");
         }
     }

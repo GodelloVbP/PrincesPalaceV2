@@ -29,7 +29,6 @@ namespace PrincesPalace.Domain.Economy
     public enum CurrencyType
     {
         Gold,
-        Relics,
         Embers,
     }
 
@@ -51,7 +50,6 @@ namespace PrincesPalace.Domain.Economy
             switch (type)
             {
                 case CurrencyType.Gold: return "Gold";
-                case CurrencyType.Relics: return "Relics";
                 case CurrencyType.Embers: return "Embers";
                 default: return type.ToString();
             }

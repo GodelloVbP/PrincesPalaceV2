@@ -22,7 +22,7 @@ namespace PrincesPalace.Domain.Tests
         public void TemplatedEntries_PinTheirRenderedForm()
         {
             Assert.AreEqual("Slot 1: Empty", UiStrings.SlotEmpty.Format(1));
-            Assert.AreEqual("Slot 3: 42 gold, 2 relics", UiStrings.SlotFilled.Format(3, 42, 2));
+            Assert.AreEqual("Slot 3: 42 gold", UiStrings.SlotFilled.Format(3, 42));
             Assert.AreEqual("Delete slot 2? This cannot be undone.", UiStrings.ConfirmDelete.Format(2));
         }
 

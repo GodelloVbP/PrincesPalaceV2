@@ -43,7 +43,7 @@ namespace PrincesPalace
             var save = SaveSlotManager.CurrentSave;
             if (save != null)
             {
-                currencyLabel.Set(UiStrings.HubWallet, save.wallet.gold, save.wallet.relics, save.wallet.embers);
+                currencyLabel.Set(UiStrings.HubWallet, save.wallet.gold, save.wallet.embers);
             }
 
             RefreshGateCaption();
@@ -190,9 +190,9 @@ namespace PrincesPalace
         // Kept for the tests and callers that set a wallet explicitly. Goes
         // through the same three-currency line the save-backed path uses, so
         // the two cannot disagree about the format.
-        public void RefreshCurrency(int gold, int relics, int embers = 0)
+        public void RefreshCurrency(int gold, int embers = 0)
         {
-            currencyLabel.Set(UiStrings.HubWallet, gold, relics, embers);
+            currencyLabel.Set(UiStrings.HubWallet, gold, embers);
         }
     
         // The gate both STARTS and RESUMES.

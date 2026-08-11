@@ -12,6 +12,13 @@ namespace PrincesPalace.Domain.Content
         public readonly string IconPath;
         public readonly RelicRarity Rarity;
         public readonly string UnlockedBy;
+        public readonly System.Collections.Generic.IReadOnlyList<RelicModifier> Modifiers;
+
+        // A relic has to DO something, one way or the other, to be worth
+        // offering. Asked here so the draft and the glossary can both tell a
+        // real relic from a placeholder without re-deriving the rule.
+        public bool HasBehaviour =>
+            Effect != RelicEffect.None || (Modifiers != null && Modifiers.Count > 0);
 
         // Empty UnlockedBy means available from the first run. Expressed as a
         // property rather than left for each caller to test the string, so
@@ -19,10 +26,12 @@ namespace PrincesPalace.Domain.Content
         public bool IsUnlockedFromTheStart => string.IsNullOrEmpty(UnlockedBy);
 
         public ResolvedRelic(string id, string displayName, string description, RelicEffect effect, int sortOrder,
-                             string iconPath = "", RelicRarity rarity = RelicRarity.Common, string unlockedBy = "")
+                             string iconPath = "", RelicRarity rarity = RelicRarity.Common, string unlockedBy = "",
+                             System.Collections.Generic.IReadOnlyList<RelicModifier> modifiers = null)
         {
             Rarity = rarity;
             UnlockedBy = unlockedBy ?? "";
+            Modifiers = modifiers ?? System.Array.Empty<RelicModifier>();
             Id = id;
             DisplayName = displayName;
             Description = description;

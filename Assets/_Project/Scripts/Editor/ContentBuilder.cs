@@ -22,6 +22,7 @@ public static class ContentBuilder
     private const string SpellTiersPath = ContentRoot + "/SpellTiers";
     private const string SkillsPath = ContentRoot + "/Skills";
     private const string RelicsPath = ContentRoot + "/Relics";
+    private const string AchievementsPath = ContentRoot + "/Achievements";
 
     // The talent grid's shape is no longer declared here: it is derived
     // from talents.json by ContentDatabase.TalentColumns/TalentRows, and the
@@ -40,6 +41,7 @@ public static class ContentBuilder
         EnsureFolder(SpellTiersPath);
         EnsureFolder(SkillsPath);
         EnsureFolder(RelicsPath);
+        EnsureFolder(AchievementsPath);
 
         BuildCharacters();
         BuildTalents();
@@ -48,7 +50,13 @@ public static class ContentBuilder
         BuildItems();
         BuildSpellTiers();
         BuildSkills();
-        BuildRelics();
+
+        // ACHIEVEMENTS BEFORE RELICS, and the order is load-bearing: relics
+        // are validated against the achievement ids this returns, so building
+        // them the other way round would validate against nothing and let a
+        // typo'd gate through.
+        var achievementIds = BuildAchievements();
+        BuildRelics(achievementIds);
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -220,7 +228,7 @@ public static class ContentBuilder
     // One pass, unlike BuildTalents — a relic has no cross-references to
     // wire up in a second pass; RelicEntryResolver validates everything
     // (a known id, a known effect, no two relics sharing an effect) up front.
-    private static void BuildRelics()
+    private static void BuildRelics(System.Collections.Generic.IReadOnlyCollection<string> achievementIds)
     {
         const string jsonPath = "Assets/_Project/ContentData/relics.json";
         if (!File.Exists(jsonPath))
@@ -230,7 +238,7 @@ public static class ContentBuilder
         }
 
         var file = JsonUtility.FromJson<RawRelicFile>(File.ReadAllText(jsonPath));
-        if (!RelicEntryResolver.TryResolveAll(file.relics, out var resolved, out var errors))
+        if (!RelicEntryResolver.TryResolveAll(file.relics, achievementIds, out var resolved, out var errors))
         {
             Debug.LogError($"BuildRelics: {jsonPath} has {errors.Count} problem(s) — no relics were created:\n" +
                             string.Join("\n", errors));
@@ -248,8 +256,47 @@ public static class ContentBuilder
             asset.iconPath = relic.IconPath;
             asset.rarity = relic.Rarity;
             asset.unlockedBy = relic.UnlockedBy;
+            asset.modifiers = relic.Modifiers
+                .Select(m => new RelicModifierEntry { type = m.Type, amount = m.Amount })
+                .ToArray();
             AssetDatabase.CreateAsset(asset, $"{RelicsPath}/{relic.Id}.asset");
         }
+    }
+
+    // Returns the ids it created, because BuildRelics validates against them.
+    private static System.Collections.Generic.IReadOnlyCollection<string> BuildAchievements()
+    {
+        const string jsonPath = "Assets/_Project/ContentData/achievements.json";
+        if (!File.Exists(jsonPath))
+        {
+            Debug.LogError($"BuildAchievements: no file at '{jsonPath}' -- no achievements were created.");
+            return new string[0];
+        }
+
+        var file = JsonUtility.FromJson<RawAchievementFile>(File.ReadAllText(jsonPath));
+        if (!AchievementEntryResolver.TryResolveAll(file.achievements, out var resolved, out var errors))
+        {
+            Debug.LogError($"BuildAchievements: {jsonPath} has {errors.Count} problem(s) -- no achievements were created:\n" +
+                           string.Join("\n", errors));
+            return new string[0];
+        }
+
+        var ids = new System.Collections.Generic.List<string>();
+        foreach (var achievement in resolved)
+        {
+            var asset = ScriptableObject.CreateInstance<AchievementDefinition>();
+            asset.id = achievement.Id;
+            asset.displayName = achievement.DisplayName;
+            asset.description = achievement.Description;
+            asset.condition = achievement.Condition;
+            asset.threshold = achievement.Threshold;
+            asset.parameter = achievement.Parameter;
+            asset.sortOrder = achievement.SortOrder;
+            AssetDatabase.CreateAsset(asset, $"{AchievementsPath}/{achievement.Id}.asset");
+            ids.Add(achievement.Id);
+        }
+
+        return ids;
     }
 
     private static void BuildUpgrades()

@@ -27,8 +27,24 @@ namespace PrincesPalace.Content
         [Tooltip("Achievement id required before this relic can appear at all. Empty means available from the first run.")]
         public string unlockedBy;
 
+        [Tooltip("Numeric changes. Authored in JSON; no C# needed. A relic may carry these AND an effect.")]
+        public RelicModifierEntry[] modifiers = System.Array.Empty<RelicModifierEntry>();
+
         // Asked in one place rather than by every caller testing the string.
         public bool IsUnlockedFromTheStart => string.IsNullOrEmpty(unlockedBy);
+
+        public System.Collections.Generic.List<RelicModifier> ToModifiers()
+        {
+            var list = new System.Collections.Generic.List<RelicModifier>();
+            if (modifiers == null) return list;
+
+            foreach (var entry in modifiers)
+            {
+                if (entry != null) list.Add(new RelicModifier(entry.type, entry.amount));
+            }
+
+            return list;
+        }
 
         // Resources.LoadAll returns assets in filename (alphabetical) order,
         // not authoring order — the same trap Characters/Enemies/Talents/
@@ -37,5 +53,15 @@ namespace PrincesPalace.Content
 
         [Tooltip("Editor-time path under Assets/_Project/Art/Items/Relics/Processed/, loaded by SceneBuilder. Empty until the art lands.")]
         public string iconPath;
+    }
+
+    // A serializable pair, because Unity cannot serialize a readonly struct
+    // into an inspector array. The Domain RelicModifier stays the shape
+    // everything reasons about; this is only its on-disk form.
+    [System.Serializable]
+    public class RelicModifierEntry
+    {
+        public RelicModifierType type;
+        public int amount;
     }
 }

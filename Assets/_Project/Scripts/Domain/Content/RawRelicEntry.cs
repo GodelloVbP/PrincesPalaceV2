@@ -36,6 +36,11 @@ namespace PrincesPalace.Domain.Content
         // time, so a typo is a content-build failure rather than a relic that
         // silently never unlocks.
         public string unlockedBy = "";
+
+        // Numeric changes this relic makes. Empty for a relic whose whole
+        // behaviour is a RelicEffect, and populated for one that is just a
+        // number -- which is most of them, and none of which should cost C#.
+        public RawRelicModifier[] modifiers = System.Array.Empty<RawRelicModifier>();
     }
 
     // JsonUtility cannot deserialize a bare top-level array.

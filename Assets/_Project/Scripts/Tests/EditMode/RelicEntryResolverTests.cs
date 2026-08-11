@@ -6,6 +6,13 @@ namespace PrincesPalace.Domain.Tests
 {
     public class RelicEntryResolverTests
     {
+        // The achievement ids these tests validate `unlockedBy` against. A
+        // field rather than a defaulting overload on the resolver itself: a
+        // resolver that quietly accepts "no achievements known" would validate
+        // nothing and let a typo'd gate through, which is the exact failure the
+        // parameter was added to prevent.
+        private static readonly string[] KnownAchievements = { "first_forest_boss", "character_level_30" };
+
         private static RawRelicEntry Relic(string id = "dual_wield", string effect = "DualWield")
         {
             return new RawRelicEntry { id = id, displayName = "Dual Wield", effect = effect };
@@ -14,7 +21,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AMinimalRelic_ResolvesWithItsEffect()
         {
-            bool ok = RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { Relic() }, out var resolved, out var errors);
+            bool ok = RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { Relic() }, KnownAchievements, out var resolved, out var errors);
 
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
             Assert.AreEqual("dual_wield", resolved[0].Id);
@@ -24,7 +31,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void IconPath_IsOptionalAndDefaultsEmpty()
         {
-            bool ok = RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { Relic() }, out var resolved, out var errors);
+            bool ok = RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { Relic() }, KnownAchievements, out var resolved, out var errors);
 
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
             Assert.AreEqual("", resolved[0].IconPath);
@@ -36,7 +43,7 @@ namespace PrincesPalace.Domain.Tests
             var raw = Relic();
             raw.iconPath = "Assets/_Project/Art/Items/Relics/Processed/relic_dualwield.png";
 
-            bool ok = RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { raw }, out var resolved, out var errors);
+            bool ok = RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { raw }, KnownAchievements, out var resolved, out var errors);
 
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
             Assert.AreEqual("Assets/_Project/Art/Items/Relics/Processed/relic_dualwield.png", resolved[0].IconPath);
@@ -46,7 +53,7 @@ namespace PrincesPalace.Domain.Tests
         public void EffectParsing_IsCaseInsensitive()
         {
             bool ok = RelicEntryResolver.TryResolveAll(
-                new List<RawRelicEntry> { Relic(effect: "dualwield") }, out var resolved, out var errors);
+                new List<RawRelicEntry> { Relic(effect: "dualwield") }, KnownAchievements, out var resolved, out var errors);
 
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
             Assert.AreEqual(RelicEffect.DualWield, resolved[0].Effect);
@@ -56,7 +63,7 @@ namespace PrincesPalace.Domain.Tests
         public void MissingId_IsRejected()
         {
             bool ok = RelicEntryResolver.TryResolveAll(
-                new List<RawRelicEntry> { Relic(id: "") }, out _, out var errors);
+                new List<RawRelicEntry> { Relic(id: "") }, KnownAchievements, out _, out var errors);
 
             Assert.IsFalse(ok);
             StringAssert.Contains("id is required", errors[0]);
@@ -68,7 +75,7 @@ namespace PrincesPalace.Domain.Tests
             var raw = Relic();
             raw.displayName = "";
 
-            bool ok = RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { raw }, out _, out var errors);
+            bool ok = RelicEntryResolver.TryResolveAll(new List<RawRelicEntry> { raw }, KnownAchievements, out _, out var errors);
 
             Assert.IsFalse(ok);
             StringAssert.Contains("displayName is required", errors[0]);
@@ -78,7 +85,7 @@ namespace PrincesPalace.Domain.Tests
         public void UnknownEffectName_IsRejected()
         {
             bool ok = RelicEntryResolver.TryResolveAll(
-                new List<RawRelicEntry> { Relic(effect: "NotARealEffect") }, out _, out var errors);
+                new List<RawRelicEntry> { Relic(effect: "NotARealEffect") }, KnownAchievements, out _, out var errors);
 
             Assert.IsFalse(ok);
             StringAssert.Contains("not a known RelicEffect", errors[0]);
@@ -88,7 +95,7 @@ namespace PrincesPalace.Domain.Tests
         public void DuplicateIds_AreRejected()
         {
             bool ok = RelicEntryResolver.TryResolveAll(
-                new List<RawRelicEntry> { Relic(id: "x"), Relic(id: "x", effect: "Bloodlust") }, out _, out var errors);
+                new List<RawRelicEntry> { Relic(id: "x"), Relic(id: "x", effect: "Bloodlust") }, KnownAchievements, out _, out var errors);
 
             Assert.IsFalse(ok);
             StringAssert.Contains("Duplicate relic id", errors[0]);
@@ -101,7 +108,7 @@ namespace PrincesPalace.Domain.Tests
         public void DuplicateEffects_AreRejected()
         {
             bool ok = RelicEntryResolver.TryResolveAll(
-                new List<RawRelicEntry> { Relic(id: "a"), Relic(id: "b") }, out _, out var errors);
+                new List<RawRelicEntry> { Relic(id: "a"), Relic(id: "b") }, KnownAchievements, out _, out var errors);
 
             Assert.IsFalse(ok);
             StringAssert.Contains("one relic per effect", errors[0]);
@@ -120,7 +127,7 @@ namespace PrincesPalace.Domain.Tests
                 new RawRelicEntry { id = "bloodlust", displayName = "Bloodlust", effect = "Bloodlust" },
             };
 
-            bool ok = RelicEntryResolver.TryResolveAll(entries, out var resolved, out var errors);
+            bool ok = RelicEntryResolver.TryResolveAll(entries, KnownAchievements, out var resolved, out var errors);
 
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
             Assert.AreEqual(3, resolved.Count);

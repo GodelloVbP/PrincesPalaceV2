@@ -149,6 +149,8 @@ namespace PrincesPalace.PlayModeTests
         {
             // The v1 drift pair, closed and asserted at runtime: the builder
             // baked "Gold: 0    Relics: 0" while HubController wrote
+            // its own copy. Relics stopped being a currency entirely, which is
+            // why the line is two entries now and not three.
             // $"Gold: {g}    Relics: {r}" -- two hand-typed copies of a
             // four-space separator. One UiStrings entry serves both now.
             // Hermetic: the hub now READS the save on enable, so without a
@@ -166,12 +168,12 @@ namespace PrincesPalace.PlayModeTests
                 yield return LoadHub();
 
                 var label = FindByName("CurrencyLabel").GetComponent<TMPro.TMP_Text>();
-                Assert.AreEqual("Gold: 0    Relics: 0    Embers: 0", label.text);
+                Assert.AreEqual("Gold: 0    Embers: 0", label.text);
 
                 // Three currencies now. Embers is what talents actually cost and
                 // the hub never showed it.
-                Find<HubController>().RefreshCurrency(340, 2, 75);
-                Assert.AreEqual("Gold: 340    Relics: 2    Embers: 75", label.text);
+                Find<HubController>().RefreshCurrency(340, 75);
+                Assert.AreEqual("Gold: 340    Embers: 75", label.text);
             }
             finally
             {

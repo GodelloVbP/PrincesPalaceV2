@@ -7,14 +7,22 @@ namespace PrincesPalace.Domain.Content
     // other resolvers.
     public static class RelicEntryResolver
     {
-        public static bool TryResolveAll(IReadOnlyList<RawRelicEntry> entries, out List<ResolvedRelic> resolved, out List<string> errors)
+        // Takes the known achievement ids rather than reading a hard-coded
+        // whitelist. That whitelist was the weak point: a constant in Domain
+        // that content had to match by hand is just a second place to get the
+        // same string wrong. ContentBuilder resolves achievements.json FIRST
+        // and hands the real ids down, so the only source of truth for what
+        // achievements exist is the file that defines them.
+        public static bool TryResolveAll(IReadOnlyList<RawRelicEntry> entries,
+            IReadOnlyCollection<string> knownAchievementIds,
+            out List<ResolvedRelic> resolved, out List<string> errors)
         {
             resolved = new List<ResolvedRelic>();
             errors = new List<string>();
 
             for (int i = 0; i < entries.Count; i++)
             {
-                if (TryResolveOne(entries[i], i, resolved.Count, out var single, out string error))
+                if (TryResolveOne(entries[i], i, resolved.Count, knownAchievementIds, out var single, out string error))
                 {
                     resolved.Add(single);
                 }
@@ -56,7 +64,8 @@ namespace PrincesPalace.Domain.Content
             return true;
         }
 
-        private static bool TryResolveOne(RawRelicEntry raw, int index, int sortOrder, out ResolvedRelic resolvedRelic, out string error)
+        private static bool TryResolveOne(RawRelicEntry raw, int index, int sortOrder,
+            IReadOnlyCollection<string> knownAchievementIds, out ResolvedRelic resolvedRelic, out string error)
         {
             resolvedRelic = default;
             string label = string.IsNullOrEmpty(raw.id) ? $"relics.json entry #{index + 1}" : $"relic '{raw.id}'";
@@ -98,15 +107,45 @@ namespace PrincesPalace.Domain.Content
             // in a draft and nothing anywhere says why. Caught at build time
             // instead.
             string unlockedBy = raw.unlockedBy ?? "";
-            if (!string.IsNullOrWhiteSpace(unlockedBy) && !AchievementIds.IsKnown(unlockedBy))
+            if (!string.IsNullOrWhiteSpace(unlockedBy)
+                && (knownAchievementIds == null || !knownAchievementIds.Contains(unlockedBy)))
             {
-                error = $"{label}: unlockedBy '{unlockedBy}' is not a known achievement " +
-                        $"({string.Join(", ", AchievementIds.All)}).";
+                error = $"{label}: unlockedBy '{unlockedBy}' is not an achievement in achievements.json " +
+                        $"({(knownAchievementIds == null || knownAchievementIds.Count == 0 ? "none defined" : string.Join(", ", knownAchievementIds))}).";
                 return false;
             }
 
+            // Numeric modifiers. An unknown type is a build failure for the
+            // same reason an unknown effect is: it produces a relic that is
+            // authored, offered, and quietly does nothing.
+            var modifiers = new List<RelicModifier>();
+            if (raw.modifiers != null)
+            {
+                foreach (var rawModifier in raw.modifiers)
+                {
+                    if (rawModifier == null) continue;
+
+                    if (!System.Enum.TryParse<RelicModifierType>(rawModifier.type, ignoreCase: true, out var type)
+                        || type == RelicModifierType.None)
+                    {
+                        error = $"{label}: modifier type '{rawModifier.type}' is not a known RelicModifierType.";
+                        return false;
+                    }
+
+                    // A modifier of zero is a line of content that changes
+                    // nothing, which is indistinguishable from a typo'd amount.
+                    if (rawModifier.amount == 0)
+                    {
+                        error = $"{label}: modifier '{rawModifier.type}' has an amount of 0 and would do nothing.";
+                        return false;
+                    }
+
+                    modifiers.Add(new RelicModifier(type, rawModifier.amount));
+                }
+            }
+
             resolvedRelic = new ResolvedRelic(raw.id, raw.displayName, raw.description ?? "", effect, sortOrder,
-                raw.iconPath ?? "", rarity, unlockedBy);
+                raw.iconPath ?? "", rarity, unlockedBy, modifiers);
             error = null;
             return true;
         }

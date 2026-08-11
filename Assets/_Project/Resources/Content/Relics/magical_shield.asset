@@ -18,5 +18,6 @@ MonoBehaviour:
   effect: 2
   rarity: 0
   unlockedBy: 
+  modifiers: []
   sortOrder: 1
   iconPath: Assets/_Project/Art/Items/Relics/Processed/magical_shield.png

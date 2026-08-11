@@ -18,5 +18,6 @@ MonoBehaviour:
   effect: 0
   rarity: 0
   unlockedBy: 
+  modifiers: []
   sortOrder: 6
   iconPath: 

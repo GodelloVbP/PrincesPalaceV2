@@ -19,7 +19,6 @@ namespace PrincesPalace.Domain.Economy
     public class Wallet
     {
         public int gold;
-        public int relics;
         public int embers;
 
         public int Get(CurrencyType type)
@@ -27,7 +26,6 @@ namespace PrincesPalace.Domain.Economy
             switch (type)
             {
                 case CurrencyType.Gold: return gold;
-                case CurrencyType.Relics: return relics;
                 case CurrencyType.Embers: return embers;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, "Wallet has no field for this currency.");
@@ -40,7 +38,6 @@ namespace PrincesPalace.Domain.Economy
             switch (type)
             {
                 case CurrencyType.Gold: gold = clamped; break;
-                case CurrencyType.Relics: relics = clamped; break;
                 case CurrencyType.Embers: embers = clamped; break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, "Wallet has no field for this currency.");

@@ -16,6 +16,9 @@
     { "id": "long_count", "displayName": "The Long Count", "description": "It has been counting since before you found it. It has no power yet.", "rarity": "common" },
     { "id": "drowned_lantern", "displayName": "Drowned Lantern", "description": "Still lit, which is the troubling part. It has no power yet.", "rarity": "common" },
 
-    { "id": "forest_wardens_tooth", "displayName": "The Warden's Tooth", "description": "Taken from the thing that guards the first wood. It has no power yet.", "rarity": "uncommon", "unlockedBy": "first_forest_boss" }
+    { "id": "forest_wardens_tooth", "displayName": "The Warden's Tooth", "description": "Taken from the thing that guards the first wood. It has no power yet.", "rarity": "uncommon", "unlockedBy": "first_forest_boss" },
+
+    { "id": "whetstone_heart", "displayName": "Whetstone Heart", "description": "Strikes 20% harder, and bruises just as easily.", "rarity": "uncommon", "modifiers": [ { "type": "AttackPercent", "amount": 20 }, { "type": "DefencePercent", "amount": -10 } ] },
+    { "id": "thick_hide", "displayName": "Thick Hide", "description": "Forty more health, carried slowly.", "rarity": "common", "modifiers": [ { "type": "MaxHealthFlat", "amount": 40 }, { "type": "SpeedPercent", "amount": -5 } ] }
   ]
 }
