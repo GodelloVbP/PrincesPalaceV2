@@ -14,6 +14,7 @@ painted panel itself and fails outside the band between those two mistakes.
     python tools/measure_bar.py
 """
 import math
+import re
 import sys
 from pathlib import Path
 
@@ -26,15 +27,30 @@ ROOT = Path(__file__).resolve().parent.parent
 TRACK = ROOT / "Assets/_Project/Art/Generated/bar_track.png"
 FILL = ROOT / "Assets/_Project/Art/Generated/bar_fill.png"
 FRAME = ROOT / "Assets/_Project/Art/UI/Reckoning/Processed/reckoning_frame.png"
+RECKONING = ROOT / "Assets/_Project/Scripts/Domain/UiKit/Screens/ReckoningScreen.cs"
 
-# Kept in step with ReckoningScreen.BarTrackTint by this script failing loudly
-# if the two ever disagree about what the bar looks like.
-TINT = (0x33, 0x22, 0x4F)
+
+def tint(name):
+    """Read a tint out of ReckoningScreen rather than keeping a copy of it.
+
+    The first version of this file hardcoded all three, which lasted exactly
+    until the fill changed from #FFE9A8 to an amber -- at which point the tool
+    would have gone on cheerfully measuring a colour the game no longer used.
+    """
+    source = RECKONING.read_text(encoding="utf-8", errors="replace")
+    match = re.search(name + r'\s*=\s*"#([0-9A-Fa-f]{6})', source)
+    if not match:
+        sys.exit(f"could not read {name} from ReckoningScreen - has it been renamed?")
+    hexa = match.group(1)
+    return tuple(int(hexa[i:i + 2], 16) for i in (0, 2, 4))
+
+
+TINT = tint("BarTrackTint")
 
 # The two tints the SAME baked fill wears: the resting violet for what was
-# already earned, and the bright gold for what this fight paid.
-BEFORE_TINT = (0x6B, 0x58, 0xA8)
-EARNED_TINT = (0xFF, 0xE9, 0xA8)
+# already earned, and the amber for what this fight paid.
+BEFORE_TINT = tint("BarBeforeTint")
+EARNED_TINT = tint("BarFillTint")
 
 # The whole reason CharacterReward carries a before as well as an after is that
 # the player can see what THIS fight was worth. Both segments therefore have to

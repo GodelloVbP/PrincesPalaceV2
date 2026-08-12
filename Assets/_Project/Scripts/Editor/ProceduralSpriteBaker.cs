@@ -52,6 +52,7 @@ public static class ProceduralSpriteBaker
         BakeRarityBurst();
         BakeBar();
         BakeScrim();
+        BakeEmber();
 
         AssetDatabase.SaveAssets();
         Debug.Log("BUILD-COMPLETE: ProceduralSpriteBaker");
@@ -157,6 +158,27 @@ public static class ProceduralSpriteBaker
             return (Mathf.Clamp01(value + lip * 0.42f), 1f);
         });
 
+        // The light the fill throws onto the panel around it.
+        //
+        // HOLLOW THROUGH THE MIDDLE, which is the whole trick. This is drawn as
+        // a child of the fill and therefore ON TOP of it, so any alpha across
+        // the bar itself would wash out the thing it is supposed to be lit by.
+        // Zero for the width the fill occupies, rising just outside it, gone by
+        // the edge -- a halo, not an overlay.
+        //
+        // The node is inset 12 beyond a 32-tall track, so the fill occupies the
+        // middle 32/56 of this texture: everything inside d 0.57 must stay
+        // empty, and 0.50 leaves margin for filtering.
+        BakeGradient("bar_bloom", 96, y =>
+        {
+            float d = Mathf.Abs(y - 0.5f) * 2f;                  // 0 centre, 1 edge
+            if (d <= 0.5f) return (1f, 0f);
+
+            float t = Mathf.Clamp01((d - 0.5f) / 0.5f);
+            float alpha = Smoothstep(Mathf.Clamp01(t / 0.2f)) * Mathf.Pow(1f - t, 1.8f);
+            return (1f, alpha);
+        });
+
         // The fill. White so it can be tinted twice from one asset -- once for
         // what was already earned and once, brighter, for what this fight paid.
         BakeGradient("bar_fill", 64, y =>
@@ -215,6 +237,95 @@ public static class ProceduralSpriteBaker
             float down = Mathf.Clamp01(1f - y);
             return (1f, Smoothstep(down * down));
         });
+    }
+
+    // The heat under the Continue arrow.
+    //
+    // THIS ONE BAKES ITS OWN COLOUR, and that is a departure from the rule the
+    // scrim states two methods up -- there, colour is a layout decision and
+    // belongs in the tree. Fire is not one colour. A flame is white-hot at the
+    // core, orange through the body and deep red at the edge, and no single
+    // Image tint can produce that from a greyscale ramp: multiplying white by
+    // red gives red everywhere, with a brighter red where the core should be
+    // white. The hue ramp is intrinsic to the thing being drawn. Intensity is
+    // still the tree's: the node tints alpha and leaves the hues alone.
+    //
+    // NOT AN ELLIPSE. The brief was "not square or rectangular, it should feel
+    // flowing and alive", so the radius is modulated by two out-of-phase sine
+    // terms in the angle. Enough to break the silhouette; not so much that it
+    // reads as a shape with lobes.
+    private static void BakeEmber()
+    {
+        const int Width = 512;
+        const int Height = 128;
+        string path = $"{GeneratedDir}/arrow_ember.png";
+
+        var texture = new Texture2D(Width, Height, TextureFormat.RGBA32, false);
+        var pixels = new Color32[Width * Height];
+
+        // The core sits at the sprite's own centre, which the node then places
+        // at the arrow's POINT -- so what is visible is heat coming off the tip
+        // rather than a lozenge the arrow happens to sit on. Everything left of
+        // the core is behind the opaque arrow and never seen.
+        //
+        // Arrived at by compositing against the real arrow and frame, not by
+        // reasoning: the first attempt put the core under the arrow's head and
+        // produced a smudge, and a longer, narrower tail after that read as jet
+        // exhaust. Proportions come off the brief's own sketch -- roughly one
+        // arrow-length overall, overhanging the point by about a third.
+        const float CoreX = 0.0f;
+
+        // Asymmetric on purpose: the tail runs further right than left, and the
+        // vertical spread is wider than either, which is what keeps it a
+        // rounded flame instead of a needle.
+        const float SpreadRight = 1.00f;
+        const float SpreadLeft = 0.75f;
+        const float SpreadY = 1.25f;
+
+        for (int y = 0; y < Height; y++)
+        {
+            for (int x = 0; x < Width; x++)
+            {
+                float nx = (x + 0.5f) / Width * 2f - 1f;
+                float ny = (y + 0.5f) / Height * 2f - 1f;
+
+                float dx = (nx - CoreX) / (nx >= CoreX ? SpreadRight : SpreadLeft);
+                float dy = ny / SpreadY;
+
+                float r = Mathf.Sqrt(dx * dx + dy * dy);
+                float angle = Mathf.Atan2(dy, dx);
+                float wobble = 1f
+                    + 0.13f * Mathf.Sin(angle * 3f + 1.1f)
+                    + 0.07f * Mathf.Sin(angle * 5f - 0.4f);
+                r /= Mathf.Max(0.35f, wobble);
+
+                float falloff = 1f - Smoothstep(Mathf.Clamp01(r));
+
+                // 1.3 rather than squared. Squared held the core tight and cost
+                // the tail everything: composited against the arrow it was a
+                // dot with nothing coming off it.
+                float alpha = Mathf.Pow(falloff, 1.3f);
+
+                // White-hot core -> orange -> deep red, keyed off the same
+                // falloff so the hottest pixel is also the brightest.
+                float hot = Mathf.Clamp01((falloff - 0.55f) / 0.45f);
+                float mid = Mathf.Clamp01(falloff / 0.55f);
+
+                float red = Mathf.Lerp(0.77f, 1f, mid);
+                float green = Mathf.Lerp(0.12f, 0.48f, mid) + hot * 0.46f;
+                float blue = Mathf.Lerp(0.03f, 0.12f, mid) + hot * 0.62f;
+
+                pixels[y * Width + x] = new Color32(
+                    (byte)Mathf.RoundToInt(Mathf.Clamp01(red) * 255f),
+                    (byte)Mathf.RoundToInt(Mathf.Clamp01(green) * 255f),
+                    (byte)Mathf.RoundToInt(Mathf.Clamp01(blue) * 255f),
+                    (byte)Mathf.RoundToInt(Mathf.Clamp01(alpha) * 255f));
+            }
+        }
+
+        texture.SetPixels32(pixels);
+        texture.Apply();
+        WritePng(path, texture);
     }
 
     // A bar-shaped sprite that varies only with height. `shade` returns

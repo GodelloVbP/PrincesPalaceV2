@@ -69,6 +69,25 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const string BarTrackKey = "proc:bar_track";
         public const string BarFillKey = "proc:bar_fill";
 
+        // The light the earned segment throws onto the panel. Hollow through
+        // the middle, so it lights the bar's surroundings rather than painting
+        // over the bar.
+        public const string BarBloomKey = "proc:bar_bloom";
+
+        // Fire, and it carries its own hues -- see ProceduralSpriteBaker.
+        // BakeEmber for why this one is not a greyscale ramp with a tint.
+        public const string EmberKey = "proc:arrow_ember";
+
+        // White and fully opaque, so the baked fire colours pass through
+        // untouched. The shaping is all in the sprite's own alpha, which falls
+        // to nothing well inside its box; holding this back as well only made
+        // the glow harder to see without making it softer.
+        //
+        // Left as a tint rather than folded into the bake because this is the
+        // one dial worth having if the glow ever reads as too much on a real
+        // screen: drop the last byte and nothing else has to move.
+        public const string EmberTint = "#FFFFFFFF";
+
         // Fixed at build time, so it must cover the largest party the save can
         // field. Base squad is 1 today and the design's stated target is 3;
         // four leaves headroom without costing anything, since unused rows are
@@ -123,6 +142,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         public NodeRef GoldLabel;
         public NodeRef ContinueButton;
+        public NodeRef ContinueGlow;
         public NodeRef LootHeading;
 
         public List<NodeRef> RowGroups = new List<NodeRef>();
@@ -162,6 +182,27 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // centred at -14, so 32 puts its top at 2 with the name's baseline box
         // starting at 4. One more pixel and they touch.
         private const float BarHeight = 32f;
+
+        // What this fight paid. A saturated amber rather than the old #FFE9A8
+        // cream: against a violet panel a desaturated yellow has nothing to
+        // push against and reads as beige, and this is the one element on the
+        // screen that is meant to look like a reward.
+        //
+        // Still in the gold family the rest of the screen speaks -- the plaque,
+        // the title and the tabs are all #F2DB9E -- rather than a new hue, so
+        // it reads as that light turned up rather than as a second accent.
+        public const string BarFillTint = "#FFC24A";
+
+        // Where the bar already stood. The resting violet, named here rather
+        // than written at the construction site so tools/measure_bar.py can
+        // read all three tints out of one place instead of carrying copies.
+        public const string BarBeforeTint = "#6B58A8";
+
+        // The bloom runs HOTTER than the fill it comes off, which is what stops
+        // it reading as a blurred copy of the bar: light spilling onto a
+        // surface keeps the source's colour and loses its detail, so a slightly
+        // oranger low-alpha wash is right where a duplicate would look wrong.
+        public const string BarBloomTint = "#FFA23C8C";
 
         // Barely moved from #2A1C46, and that is the answer rather than a
         // hedge. The bar read as a hole because TWO darknesses compounded: a
@@ -230,6 +271,27 @@ namespace PrincesPalace.Domain.UiKit.Screens
             summaryChildren.Add(screen.BuildSpoilsPage());
             summaryChildren.Add(screen.BuildRelicsPage());
             summaryChildren.Add(screen.BuildTallyPage());
+
+            // The heat behind the arrow. DECLARED FIRST, so it draws UNDER the
+            // button rather than over it -- a child of the button would paint
+            // on top of the gold and bury it, because uGUI draws children after
+            // their parent's own graphic.
+            //
+            // Offset RIGHT of the button's centre and wider than it: the arrow
+            // tapers to its point across the last fifth of its art, and the
+            // glow is light thrown past that point rather than a backing plate
+            // the arrow sits on.
+            //
+            // 88 tall is a ceiling, not a taste. The button's centre is -272 and
+            // ContentBottom is -317, so anything taller than 90 puts glow on the
+            // frame's painted bottom ornament -- which is exactly what
+            // NothingSitsOnThePaintedBorder exists to refuse.
+            var continueGlow = Ui.Sprite("ReckoningContinueGlow", EmberKey,
+                    Place.At(130f, -272f), UiSize.Fixed(480f, 88f))
+                .Coloured(EmberTint)
+                .AsDecor();
+            screen.ContinueGlow = continueGlow;
+            summaryChildren.Add(continueGlow);
 
             // ONLY on the summary phase. Phase one has no way out but the
             // choice itself -- you always take something.
@@ -485,12 +547,33 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // be a second thing to keep in step with the first.
             var before = Ui.Sprite($"ReckoningRow{index}BarBefore", BarFillKey,
                     Place.Frac(new UiVec(0f, 0f), new UiVec(1f, 1f)), UiSize.Fill)
-                .Coloured("#6B58A8")
+                .Coloured(BarBeforeTint)
                 .AsDecor();
+            // WAS #FFE9A8, a pale cream that read as washed-out rather than as
+            // earned. On a violet panel a desaturated yellow has nothing to
+            // push against; this is the same hue family with the saturation put
+            // back, so it reads as light rather than as beige.
             var fill = Ui.Sprite($"ReckoningRow{index}BarFill", BarFillKey,
                     Place.Frac(new UiVec(0f, 0f), new UiVec(1f, 1f)), UiSize.Fill)
-                .Coloured("#FFE9A8")
+                .Coloured(BarFillTint)
                 .AsDecor();
+
+            // The bloom rides the fill as a CHILD, which is what makes it
+            // follow the animation for free: the controller's SetSpan moves the
+            // fill's anchors, and a stretched child goes with it. Spanning it
+            // from the controller as well would be a second copy of the same
+            // number, updated in a second place.
+            //
+            // Inset NEGATIVELY, so it reaches 12 past the track on both sides
+            // and lights the panel; the sprite is hollow across the fill's own
+            // height so the bar underneath is not painted over.
+            var bloom = Ui.Sprite($"ReckoningRow{index}BarBloom", BarBloomKey,
+                    Place.Frac(new UiVec(0f, 0f), new UiVec(1f, 1f), top: -12f, bottom: -12f),
+                    UiSize.Fill)
+                .Coloured(BarBloomTint)
+                .AsDecor()
+                .AllowOverflow("a bloom that stopped at the bar's edge would not be one - reaching past the track IS the effect");
+            fill.Children.Add(bloom);
 
             var track = Ui.Sprite($"ReckoningRow{index}BarTrack", BarTrackKey, Place.At(0f, -14f),
                     UiSize.Fixed(BarWidth, BarHeight))
