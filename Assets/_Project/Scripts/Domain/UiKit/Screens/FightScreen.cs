@@ -146,6 +146,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             s.Background = background;
             children.Add(background);
 
+            // BETWEEN the backdrop and the stages, which is the entire point:
+            // declared after the background and before the actors, so it knocks
+            // the painting down without touching the figures standing on it.
+            children.AddRange(s.BuildScrim());
+
             // Party stage FIRST so enemies, built after and therefore later
             // siblings, paint over it where the two halves meet near the shared
             // vanishing point at centre.
@@ -185,6 +190,75 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             s.Root = Ui.Panel("FightPanel", UiSize.Fixed(1920f, 1080f), children);
             return s;
+        }
+
+        // ---- the scrim ---------------------------------------------------------
+        //
+        // Three darkening layers between the painting and the figures.
+        //
+        // THE PROBLEM IS NOT THE BACKDROP'S QUALITY. The actors are
+        // hard-outlined, flat-shaded cel art; the backdrops are soft, line-free
+        // atmospheric painting. Two incompatible drawing languages, so the
+        // figures land as stickers on a photograph however well either half is
+        // made. Moving the art toward the actors is the real fix and belongs in
+        // the prompts; this is what the layout can do about it meanwhile.
+        //
+        // Each layer answers a measured fault rather than a taste:
+        //   band   detail frequency in the actor band matched sprite frequency,
+        //          so the figures had nothing quiet to sit against
+        //   centre the composition's brightest region was dead centre, which is
+        //          the EMPTY GAP between the two armies - the eye was being
+        //          pulled to the one place nothing happens
+        //   floor  the back rows stood in the frame's only light source
+        //
+        // TUNED TO A TARGET LUMINANCE, not to maximum separation, and that
+        // distinction is load-bearing. v1's first attempt scored better on
+        // every readability metric it had and turned the painting into a black
+        // rectangle: separation is monotonic in "make it darker", so optimising
+        // it optimises the backdrop out of existence. tools/measure_scrim.py
+        // reports what actually lands behind the slots and fails outside L
+        // 30-50.
+        private const string ScrimBandKey = "proc:scrim_band";
+        private const string ScrimFloorKey = "proc:scrim_floor";
+
+        // A knock-down and a bloom are the same shape; only the colour differs,
+        // so the centre layer borrows the glow the foot rings already use.
+        private const string ScrimCentreKey = "proc:radial_glow";
+
+        // Alphas are v1's tuned 0.32 / 0.38 / 0.50 as 8-bit: 52, 61, 80. The
+        // colour is the palette's near-black violet rather than pure black --
+        // a neutral scrim over a violet painting greys it, which reads as fog
+        // rather than as shadow.
+        private const string ScrimBandColour = "#0B071852";
+        private const string ScrimCentreColour = "#0B071861";
+        private const string ScrimFloorColour = "#0B071880";
+
+        private IEnumerable<UiNode> BuildScrim()
+        {
+            // Across the actor rows. 480 tall centred at -60 spans -300..180,
+            // which brackets every ground line (-228..-68) and every head the
+            // manifest can produce (to 106), with the soft 30% edges landing
+            // outside the figures rather than across them.
+            yield return Ui.Sprite("ScrimBand", ScrimBandKey, Place.At(0f, -60f),
+                    UiSize.Fixed(1920f, 480f))
+                .Coloured(ScrimBandColour)
+                .AsDecor();
+
+            // Over the gap. The nearest slots sit at x +/-470, so a 1000-wide
+            // knock-down centred on 0 covers the dead middle and falls off
+            // before it reaches anybody.
+            yield return Ui.Sprite("ScrimCentre", ScrimCentreKey, Place.At(0f, -60f),
+                    UiSize.Fixed(1000f, 600f))
+                .Coloured(ScrimCentreColour)
+                .AsDecor();
+
+            // Under the command columns, weighted to the very bottom so the
+            // verb column and the party plate sit on something darker than they
+            // do; the gradient is squared, so it is nearly gone by mid-frame.
+            yield return Ui.Sprite("ScrimFloor", ScrimFloorKey, Place.At(0f, -320f),
+                    UiSize.Fixed(1920f, 440f))
+                .Coloured(ScrimFloorColour)
+                .AsDecor();
         }
 
         // ---- the 2.5D stage --------------------------------------------------

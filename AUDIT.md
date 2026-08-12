@@ -891,6 +891,28 @@ the EXPERIENCE heading), or the gain moves onto the top line beside the level, o
 declared intentional and the label is styled to read as riding the bar. That is the author's call,
 not a silent fix.
 
+### 45. The detail column still covers the front enemy's feet while a submenu is open
+`FightScreen.BuildDetailColumn` places a 340x300 panel at `(478, CommandBottom + 150)`, so it
+spans y -486..-186 across x 308..648. The front enemy slot stands at x 470 with its ground line at
+-228, which is inside that box — so whenever the player opens SKILL or ITEM, the nearest enemy's
+contact ring, ground shadow and feet are behind the panel.
+
+**Not fixed with the anchors, and the reason is arithmetic rather than preference.** Clearing the
+detail column needs `Near.Y >= -166` (its top -186, plus the ring's 8, plus 12 of daylight). The
+tallest actor needs 300 units above the ground line at the front slot's 0.78, so its head would
+then reach 134, which pushes the enemy plate stack to `PlateFirstY` 430 and the ENEMIES heading to
+within 24px of the canvas edge. That trades a conditional occlusion for a permanently cramped
+top-right corner.
+
+The rule applied instead is the one the handover states: clear every **always-visible** panel.
+`FightScreenTests.NoAlwaysVisiblePanelStandsInFrontOfAFigureSFeet` enforces exactly that and
+deliberately does not descend into subtrees that start inactive.
+
+Three ways out, none of them free, all of them the author's call: shorten the detail column to 238
+so its top clears the ground line (it currently holds a name, a kind, a 76px body, a divider and
+four stat rows, so something has to give); move it out from over the stage, which the enemy plates
+at x 520..920 leave no room for; or accept it and let the front enemy be occluded during selection.
+
 ---
 
 ## Open investigations

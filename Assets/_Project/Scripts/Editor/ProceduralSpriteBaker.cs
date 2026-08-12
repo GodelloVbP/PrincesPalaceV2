@@ -51,6 +51,7 @@ public static class ProceduralSpriteBaker
 
         BakeRarityBurst();
         BakeBar();
+        BakeScrim();
 
         AssetDatabase.SaveAssets();
         Debug.Log("BUILD-COMPLETE: ProceduralSpriteBaker");
@@ -181,6 +182,38 @@ public static class ProceduralSpriteBaker
             float edge = Mathf.Clamp01(Mathf.Min(y, 1f - y) / 0.10f);
 
             return (Mathf.Clamp01(body + bloom * 0.62f), edge);
+        });
+    }
+
+    // The stage scrim: two of its three layers. The third is `radial_glow`,
+    // already baked above and simply tinted dark -- a knock-down and a bloom
+    // are the same shape, and only the colour differs.
+    //
+    // BOTH BAKED WHITE, with all the shaping in ALPHA. The scrim's colour is a
+    // layout decision and belongs in the screen tree where it can be read next
+    // to the palette it has to sit against; baking a dark pixel here would put
+    // half the decision in an Editor script and make the tint a multiplier on
+    // a number nobody can see.
+    private static void BakeScrim()
+    {
+        // A band across the actor rows. Soft at BOTH edges over a wide
+        // falloff: a scrim whose own boundary is visible has become a shape on
+        // the screen, which is the one thing it must never be. 0.30 either side
+        // leaves a flat 40% core doing the actual separating.
+        BakeGradient("scrim_band", 128, y =>
+        {
+            float edge = Mathf.Clamp01(Mathf.Min(y, 1f - y) / 0.30f);
+            return (1f, Smoothstep(edge));
+        });
+
+        // Weighted to the bottom of the screen, under the command columns.
+        // Squared rather than linear so it stays out of the way through the
+        // middle of the frame and only bites where the HUD actually is --
+        // a linear ramp put visible grey halfway up the backdrop.
+        BakeGradient("scrim_floor", 128, y =>
+        {
+            float down = Mathf.Clamp01(1f - y);
+            return (1f, Smoothstep(down * down));
         });
     }
 

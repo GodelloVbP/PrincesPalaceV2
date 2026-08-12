@@ -20,3 +20,7 @@ tools/screenshots/
 *.csproj
 *.sln
 *.user
+
+# Python bytecode from the tools/ measurement scripts, which import each other
+# rather than each carrying its own copy of the constants they parse.
+tools/__pycache__/
