@@ -233,6 +233,57 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
+        public IEnumerator TheContinueGlowIsAliveRatherThanADecal()
+        {
+            // A baked sprite holding perfectly still reads as a decal stuck on
+            // the panel however well it is drawn. Nothing else on this screen
+            // would fail if the flare stopped ticking -- the tree would still
+            // audit, the sprite would still be there, and the screen would
+            // simply go dead.
+            yield return OpenIt(Offers());
+            Click("ReckoningOffer0");
+            yield return new WaitForSecondsRealtime(0.7f);
+
+            var glow = Named("ReckoningContinueGlow").GetComponent<RectTransform>();
+            var image = glow.GetComponent<Image>();
+
+            float xMin = glow.anchoredPosition.x, xMax = xMin;
+            float sxMin = glow.localScale.x, sxMax = sxMin;
+            float syMin = glow.localScale.y, syMax = syMin;
+            float aMin = image.color.a, aMax = aMin;
+
+            // Long enough for the slowest term in FlickerCurve.Ember (1.31
+            // rad/s) to travel, and for the drift, which is slower still.
+            for (float t = 0f; t < 1.6f; t += Time.unscaledDeltaTime)
+            {
+                xMin = Mathf.Min(xMin, glow.anchoredPosition.x);
+                xMax = Mathf.Max(xMax, glow.anchoredPosition.x);
+                sxMin = Mathf.Min(sxMin, glow.localScale.x);
+                sxMax = Mathf.Max(sxMax, glow.localScale.x);
+                syMin = Mathf.Min(syMin, glow.localScale.y);
+                syMax = Mathf.Max(syMax, glow.localScale.y);
+                aMin = Mathf.Min(aMin, image.color.a);
+                aMax = Mathf.Max(aMax, image.color.a);
+                yield return null;
+            }
+
+            Assert.Greater(xMax - xMin, 1f, "the glow never drifted");
+            Assert.Greater(sxMax - sxMin, 0.01f, "the glow never flared");
+            Assert.Greater(aMax - aMin, 0.01f, "the glow never changed brightness");
+
+            // WIDER than it is tall, which is the difference between flaring
+            // out along the arrow and simply pulsing. It is also the constraint
+            // the layout imposes: the box is 88 tall against 90 of headroom
+            // before the frame's painted bottom ornament.
+            Assert.Greater(sxMax - sxMin, syMax - syMin,
+                "the flare is pulsing evenly rather than reaching along the arrow");
+
+            // And it stays SUBTLE. Past about 10% it stops reading as light on
+            // the arrow and starts reading as the arrow being inflated.
+            Assert.Less(sxMax - sxMin, 0.20f, "the flare has grown into a pulse you cannot ignore");
+        }
+
+        [UnityTest]
         public IEnumerator TheDropGlowFadesUpBehindTheFrame()
         {
             yield return OpenIt(Offers());

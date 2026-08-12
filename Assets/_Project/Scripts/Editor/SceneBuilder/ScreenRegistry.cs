@@ -699,6 +699,12 @@ public static class ScreenRegistry
         // around it, and a reference it does not hold cannot be squashed by
         // accident a second time.
         controller.frameWipe = result.Rect(screen.FrameWipe);
+
+        // The Continue arrow's heat, animated. Attached rather than wired into
+        // the controller: it needs no state from the Reckoning, and a screen
+        // controller that also owns an ambient loop is the shape every other
+        // ambience component here was pulled OUT of.
+        result.Attach<EmberFlare>(screen.ContinueGlow);
         controller.goldLabel = result.Tmp(screen.GoldLabel);
         controller.continueButton = result.Button(screen.ContinueButton);
 

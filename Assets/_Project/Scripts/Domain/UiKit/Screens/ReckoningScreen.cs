@@ -286,8 +286,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // ContentBottom is -317, so anything taller than 90 puts glow on the
             // frame's painted bottom ornament -- which is exactly what
             // NothingSitsOnThePaintedBorder exists to refuse.
+            // 720 wide at x 160, so the box spans -200 to 520: it EMBRACES the
+            // button, whose own left edge is at -170, rather than starting
+            // where the art stops. The sprite's core is offset back inside its
+            // own texture, which lands it under the arrowhead — see
+            // ProceduralSpriteBaker.BakeEmber for why that is what makes the
+            // glow surround the arrow instead of pointing away from it.
+            //
+            // 520 is the right-hand limit worth knowing: ContentHalfWidth is
+            // 540, so this is 20px off the painted border.
             var continueGlow = Ui.Sprite("ReckoningContinueGlow", EmberKey,
-                    Place.At(130f, -272f), UiSize.Fixed(480f, 88f))
+                    Place.At(160f, -272f), UiSize.Fixed(720f, 88f))
                 .Coloured(EmberTint)
                 .AsDecor();
             screen.ContinueGlow = continueGlow;

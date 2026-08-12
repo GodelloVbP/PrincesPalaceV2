@@ -263,24 +263,33 @@ public static class ProceduralSpriteBaker
         var texture = new Texture2D(Width, Height, TextureFormat.RGBA32, false);
         var pixels = new Color32[Width * Height];
 
-        // The core sits at the sprite's own centre, which the node then places
-        // at the arrow's POINT -- so what is visible is heat coming off the tip
-        // rather than a lozenge the arrow happens to sit on. Everything left of
-        // the core is behind the opaque arrow and never seen.
+        // The core sits BACK ON THE ARROWHEAD, not at the point, and the whole
+        // character of the effect turns on that one number.
         //
-        // Arrived at by compositing against the real arrow and frame, not by
-        // reasoning: the first attempt put the core under the arrow's head and
-        // produced a smudge, and a longer, narrower tail after that read as jet
-        // exhaust. Proportions come off the brief's own sketch -- roughly one
-        // arrow-length overall, overhanging the point by about a third.
-        const float CoreX = 0.0f;
+        // A core at the point can only ever produce a tail: the arrow is
+        // opaque, so nothing behind it shows, and the glow starts where the art
+        // stops. Pulled back to -0.18 the core is hidden under the head and
+        // what remains visible is the halo AROUND it -- heat running the length
+        // of the arrow, top and bottom, brightest at the head and trailing off
+        // to the right. That is what makes it embrace the button instead of
+        // pointing away from it.
+        //
+        // Every one of these was settled by compositing against the real arrow
+        // and frame rather than reasoned about: a core at the point, a core
+        // under the head with a tight vertical spread (a smudge), and a long
+        // narrow version that read as jet exhaust, before this.
+        const float CoreX = -0.18f;
 
-        // Asymmetric on purpose: the tail runs further right than left, and the
-        // vertical spread is wider than either, which is what keeps it a
-        // rounded flame instead of a needle.
-        const float SpreadRight = 1.00f;
-        const float SpreadLeft = 0.75f;
-        const float SpreadY = 1.25f;
+        // Asymmetric on purpose: the tail runs further right than left.
+        const float SpreadRight = 1.10f;
+        const float SpreadLeft = 1.00f;
+
+        // WIDE, and this is the other half of the embrace. At 1.25 the glow
+        // fell off before it cleared the arrow's own silhouette, so it could
+        // never be seen alongside the art -- only past the end of it. At 1.90
+        // the falloff is gentle enough that the band of heat is still alive
+        // where the arrow's top and bottom edges are.
+        const float SpreadY = 1.90f;
 
         for (int y = 0; y < Height; y++)
         {
@@ -301,10 +310,11 @@ public static class ProceduralSpriteBaker
 
                 float falloff = 1f - Smoothstep(Mathf.Clamp01(r));
 
-                // 1.3 rather than squared. Squared held the core tight and cost
-                // the tail everything: composited against the arrow it was a
-                // dot with nothing coming off it.
-                float alpha = Mathf.Pow(falloff, 1.3f);
+                // 1.1, down from a squared falloff and then from 1.3. Each drop
+                // buys tail: squared was a dot with nothing coming off it, and
+                // anything above about 1.2 loses the far end of the band that
+                // now runs alongside the arrow.
+                float alpha = Mathf.Pow(falloff, 1.1f);
 
                 // White-hot core -> orange -> deep red, keyed off the same
                 // falloff so the hottest pixel is also the brightest.
