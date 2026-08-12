@@ -25,14 +25,25 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const float PanelWidth = 1344f;
         public const float PanelHeight = 896f;
 
-        // Where the painted border stops and content may begin.
+        // Where the ORNAMENT stops -- not where the art stops.
         //
-        // Measured off the keyed art: the plain interior is 91.9% of the
-        // canvas wide and 90.3% tall, so roughly 9% of each edge is frame.
-        // Every coordinate below is inside this box, and ContentHalfWidth is
-        // what the test asserts against rather than the panel's own half-size.
-        public const float ContentHalfWidth = PanelWidth * 0.5f * 0.919f - 12f;
-        public const float ContentHalfHeight = PanelHeight * 0.5f * 0.903f - 12f;
+        // The first pass measured the keyed alpha box (91.9% x 90.3%) and was
+        // wrong in the one direction that mattered: that says where the image
+        // ends, while the top edge carries a CREST reaching 16.7% down the
+        // canvas against the 12.8% of the flat border beside it. The title sat
+        // 60px inside the crest and collided with it on screen while every
+        // test passed.
+        //
+        // Scanned inward per edge until the gold gives way to plain interior
+        // (tools measure_frame.py): top 16.7%, bottom 14.6%, sides 9.8%.
+        // ASYMMETRIC VERTICALLY, deliberately -- the crest is deeper than the
+        // bottom ornament and pretending otherwise would waste 19px.
+        public const float ContentHalfWidth = PanelWidth * 0.5f - PanelWidth * 0.098f;
+        public const float ContentTop = PanelHeight * 0.5f - PanelHeight * 0.167f;
+        public const float ContentBottom = -(PanelHeight * 0.5f - PanelHeight * 0.146f);
+
+        // Kept for the containment test, which asks one question of both axes.
+        public const float ContentHalfHeight = PanelHeight * 0.5f - PanelHeight * 0.167f;
 
         public const string FrameKey = "UI/Reckoning/Processed/reckoning_frame.png";
         public const string TabKey = "UI/Buttons/Processed/tab_plate.png";
@@ -56,6 +67,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // expand rather than snapping on -- a dim that arrives in one frame
         // reads as a scene cut, which is the one thing this overlay is not.
         public NodeRef Dimmer;
+
+        // TWO PHASES in one container: pick your spoils, then read what the
+        // fight was worth. Separate from the three TABS, which belong to the
+        // second phase only -- a tab strip over an item choice would offer to
+        // navigate away from the one decision the screen is asking for.
+        public NodeRef FrameGlow;
+        public NodeRef OfferPhase;
+        public NodeRef SummaryPhase;
 
         public List<NodeRef> TabButtons = new List<NodeRef>();
         public List<NodeRef> TabMarkers = new List<NodeRef>();
@@ -103,9 +122,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // for a name line, a bar and a gain line without the last of the three
         // hanging out of the box. The first attempt was 80 on 92 and the gain
         // label escaped by exactly 8px at every frame.
-        private const float RowHeight = 88f;
-        private const float RowPitch = 96f;
-        private const float BarWidth = 480f;
+        private const float RowHeight = 68f;
+        private const float RowPitch = 76f;
+        private const float BarWidth = 900f;
         private const float BarHeight = 18f;
 
         // How many relics one page of the RELICS tab shows. The design says
@@ -113,60 +132,85 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // controller says so out loud when a run holds more.
         public const int RelicRowCount = 6;
 
-        private const float TabY = 272f;
+        private const float TabY = 178f;
         private const float TabPitch = 250f;
 
         public static ReckoningScreen Build()
         {
             var screen = new ReckoningScreen();
 
-            var inside = new List<UiNode>
+            // ---- phase one: the choice ---------------------------------
+            // Captured as LootHeading: it is the same node it always was, just
+            // moved onto the phase that owns the choice.
+            var lootHeading = Ui.Label("ReckoningOfferHeading", UiStrings.ReckoningChooseOne,
+                    new UiVec(700f, 44f), 26, "#F2DB9E", Place.At(0f, 250f))
+                .AsDecor();
+            screen.LootHeading = lootHeading;
+
+            var offerChildren = new List<UiNode> { lootHeading };
+
+            for (int i = 0; i < ItemOfferTable.OfferCount; i++)
             {
-                Ui.Label("ReckoningTitle", UiStrings.ReckoningTitle, new UiVec(700f, 56f), 34, "#F2DB9E",
-                    Place.At(0f, 330f)).AsDecor(),
+                offerChildren.Add(screen.BuildOffer(i));
+            }
+
+            var offerPhase = Ui.Panel("ReckoningOfferPhase", Place.Stretch(), UiSize.Fill, offerChildren)
+                .AllowOverlap("the two phases share one coordinate frame and exactly one is ever active");
+            screen.OfferPhase = offerPhase;
+
+            // ---- phase two: what it was worth --------------------------
+            var summaryChildren = new List<UiNode>
+            {
+                Ui.Label("ReckoningTitle", UiStrings.ReckoningTitle, new UiVec(700f, 50f), 32, "#F2DB9E",
+                    Place.At(0f, 250f)).AsDecor(),
             };
 
             for (int i = 0; i < TabStrings.Length; i++)
             {
-                inside.Add(screen.BuildTab(i));
+                summaryChildren.Add(screen.BuildTab(i));
             }
 
-            inside.Add(screen.BuildSpoilsPage());
-            inside.Add(screen.BuildRelicsPage());
-            inside.Add(screen.BuildTallyPage());
+            summaryChildren.Add(screen.BuildSpoilsPage());
+            summaryChildren.Add(screen.BuildRelicsPage());
+            summaryChildren.Add(screen.BuildTallyPage());
 
-            // The pointed banner. Its caption sits LEFT of centre because the
-            // right third of the sprite is the arrowhead -- text centred on the
-            // node would print over the point.
+            // ONLY on the summary phase. Phase one has no way out but the
+            // choice itself -- you always take something.
             var continueButton = Ui.Button("ReckoningContinueButton", UiStrings.Continue,
-                new UiVec(340f, 100f), 22, Place.At(0f, -340f));
+                new UiVec(340f, 92f), 22, Place.At(0f, -266f));
             continueButton.SpriteKey = ContinueKey;
             screen.ContinueButton = continueButton;
-            inside.Add(continueButton);
+            summaryChildren.Add(continueButton);
 
-            // The frame is a CHILD of the content panel rather than the modal
-            // root, because the controller scales AND lifts this transform, and
-            // a scaled dimmer would shrink the dim along with it.
-            // A PAINTED frame, not a flat plate. Ui.Sprite rather than a
-            // coloured Panel, because the border and the interior texture are
-            // one image -- which is also why nothing below may sit outside
-            // ContentHalfWidth/Height.
+            var summaryPhase = Ui.Panel("ReckoningSummaryPhase", Place.Stretch(), UiSize.Fill, summaryChildren)
+                .AllowOverlap("the two phases share one coordinate frame and exactly one is ever active")
+                .Inactive();
+            screen.SummaryPhase = summaryPhase;
+
+            // ---- the container -----------------------------------------
             var frame = Ui.Sprite("ReckoningFrame", FrameKey, Place.At(0f, 0f),
                 UiSize.Fixed(PanelWidth, PanelHeight));
-            foreach (var child in inside) frame.Children.Add(child);
+            frame.Children.Add(offerPhase);
+            frame.Children.Add(summaryPhase);
             screen.Frame = frame;
 
-            var content = Ui.Panel("ReckoningContent", Place.At(0f, 0f), UiSize.Fixed(1920f, 1080f), frame);
+            // A soft drop behind the frame. Sits BEHIND it in declaration
+            // order and is deliberately larger, so it reads as the panel
+            // casting light and shadow onto the fight rather than as a
+            // second rectangle.
+            var glow = Ui.Sprite("ReckoningFrameGlow", BurstKey, Place.At(0f, 0f),
+                    UiSize.Fixed(PanelWidth * 1.35f, PanelHeight * 1.45f))
+                .Coloured("#2A1A4A00")
+                .AsDecor()
+                .AllowOverflow("the glow is deliberately larger than the frame it sits behind - that bleed IS the drop")
+                .AllowOverlap("a drop shadow covers the thing casting it by definition");
+            screen.FrameGlow = glow;
 
-            // 65%, not the 94% the character overlay uses. The fight is still
-            // standing behind this and the expand plays against it; dimming to
-            // near-black would make the overlay a screen with extra steps.
+            var content = Ui.Panel("ReckoningContent", Place.At(0f, 0f), UiSize.Fixed(1920f, 1080f),
+                    glow, frame)
+                .AllowOverlap("the glow sits under the frame by design");
+
             var root = Ui.Modal("ReckoningPanel", "#0A0614A6", content).Inactive();
-
-            // Ui.Modal builds its dimmer as the first child. Grabbed rather
-            // than rebuilt, so the gloom can fade UP with the expand instead of
-            // snapping on -- a dim that arrives in one frame reads as a scene
-            // cut, which is the one thing this overlay is not.
             screen.Dimmer = root.Children[0];
             screen.Root = root;
             return screen;
@@ -204,32 +248,22 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         private UiNode BuildSpoilsPage()
         {
+            // WIDE, not two columns. The offers moved to their own phase, so
+            // the right half emptied out -- a party of one under an EXPERIENCE
+            // heading beside a hole is worse than either half alone.
             var children = new List<UiNode>
             {
-                Ui.Label("ReckoningExpHeading", UiStrings.ReckoningExperience, new UiVec(560f, 34f), 20,
-                    "#B8A8D9", Place.At(-ColumnX, 196f)).AsDecor(),
+                Ui.Label("ReckoningGoldLabel", UiStrings.ReckoningGold, new UiVec(700f, 56f), 32,
+                    "#F2DB9E", Place.At(0f, 96f)).AsDecor(),
+                Ui.Label("ReckoningExpHeading", UiStrings.ReckoningExperience, new UiVec(700f, 34f), 20,
+                    "#B8A8D9", Place.At(0f, 34f)).AsDecor(),
             };
+
+            GoldLabel = children[0];
 
             for (int i = 0; i < RowCount; i++)
             {
                 children.Add(BuildRow(i));
-            }
-
-            var gold = Ui.Label("ReckoningGoldLabel", UiStrings.ReckoningGold, new UiVec(600f, 52f), 30,
-                    "#F2DB9E", Place.At(ColumnX, 200f))
-                .AsDecor();
-            GoldLabel = gold;
-            children.Add(gold);
-
-            var lootHeading = Ui.Label("ReckoningLootHeading", UiStrings.ReckoningChooseOne, new UiVec(600f, 34f), 20,
-                    "#B8A8D9", Place.At(ColumnX, 134f))
-                .AsDecor();
-            LootHeading = lootHeading;
-            children.Add(lootHeading);
-
-            for (int i = 0; i < ItemOfferTable.OfferCount; i++)
-            {
-                children.Add(BuildOffer(i));
             }
 
             var page = Ui.Panel("ReckoningSpoilsPage", Place.Stretch(), UiSize.Fill, children)
@@ -245,24 +279,24 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var children = new List<UiNode>
             {
                 Ui.Label("ReckoningRelicHeading", UiStrings.ReckoningRelicHeld, new UiVec(700f, 34f), 20,
-                    "#B8A8D9", Place.At(0f, 196f)).AsDecor(),
+                    "#B8A8D9", Place.At(0f, 110f)).AsDecor(),
             };
 
             for (int i = 0; i < RelicRowCount; i++)
             {
-                float y = 130f - i * 74f;
+                float y = 40f - i * 60f;
 
                 var name = Ui.Label("ReckoningRelic" + i + "Name", UiString.Runtime, new UiVec(420f, 30f), 21,
-                        "#EDE6FF", Place.At(-320f, 14f))
+                        "#EDE6FF", Place.At(-280f, 12f))
                     .AsDecor();
                 var meta = Ui.Label("ReckoningRelic" + i + "Meta", UiString.Runtime, new UiVec(420f, 24f), 14,
-                        "#B8A8D9", Place.At(-320f, -16f))
+                        "#B8A8D9", Place.At(-280f, -14f))
                     .AsDecor();
-                var body = Ui.Label("ReckoningRelic" + i + "Body", UiString.Runtime, new UiVec(600f, 52f), 15,
+                var body = Ui.Label("ReckoningRelic" + i + "Body", UiString.Runtime, new UiVec(520f, 44f), 14,
                         "#9C8FC4", Place.At(240f, 0f))
                     .AsDecor();
 
-                var row = Ui.Panel("ReckoningRelic" + i, Place.At(0f, y), UiSize.Fixed(1160f, 66f),
+                var row = Ui.Panel("ReckoningRelic" + i, Place.At(0f, y), UiSize.Fixed(1040f, 56f),
                         name, meta, body)
                     .Inactive();
 
@@ -274,7 +308,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             }
 
             var empty = Ui.Label("ReckoningRelicEmpty", UiStrings.ReckoningNoRelics, new UiVec(900f, 44f), 20,
-                    "#7E6E9E", Place.At(0f, 40f))
+                    "#7E6E9E", Place.At(0f, -40f))
                 .AsDecor()
                 .Inactive();
             RelicEmptyHint = empty;
@@ -294,24 +328,24 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var children = new List<UiNode>
             {
                 Ui.Label("ReckoningTallyHeading", UiStrings.ReckoningTallyHeading, new UiVec(800f, 34f), 20,
-                    "#B8A8D9", Place.At(0f, 196f)).AsDecor(),
+                    "#B8A8D9", Place.At(0f, 110f)).AsDecor(),
             };
 
             for (int i = 0; i < RowCount; i++)
             {
-                float y = 120f - i * 96f;
+                float y = 10f - i * 88f;
 
-                var name = Ui.Label("ReckoningTally" + i + "Name", UiString.Runtime, new UiVec(420f, 30f), 21,
-                        "#EDE6FF", Place.At(-350f, 22f))
+                var name = Ui.Label("ReckoningTally" + i + "Name", UiString.Runtime, new UiVec(380f, 30f), 20,
+                        "#EDE6FF", Place.At(-300f, 20f))
                     .AsDecor();
-                var kills = Ui.Label("ReckoningTally" + i + "Kills", UiStrings.ReckoningKills, new UiVec(300f, 26f), 15,
-                        "#F2DB9E", Place.At(360f, 22f))
+                var kills = Ui.Label("ReckoningTally" + i + "Kills", UiStrings.ReckoningKills, new UiVec(280f, 26f), 15,
+                        "#F2DB9E", Place.At(320f, 20f))
                     .AsDecor();
-                var stats = Ui.Label("ReckoningTally" + i + "Stats", UiString.Runtime, new UiVec(1100f, 26f), 14,
-                        "#9C8FC4", Place.At(0f, -20f))
+                var stats = Ui.Label("ReckoningTally" + i + "Stats", UiString.Runtime, new UiVec(1000f, 26f), 14,
+                        "#9C8FC4", Place.At(0f, -18f))
                     .AsDecor();
 
-                var row = Ui.Panel("ReckoningTally" + i, Place.At(0f, y), UiSize.Fixed(1180f, 84f),
+                var row = Ui.Panel("ReckoningTally" + i, Place.At(0f, y), UiSize.Fixed(1040f, 78f),
                         name, kills, stats)
                     .Inactive();
 
@@ -333,16 +367,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // fight was worth against what they had already.
         private UiNode BuildRow(int index)
         {
-            float y = 108f - index * RowPitch;
+            float y = -24f - index * RowPitch;
 
-            var name = Ui.Label($"ReckoningRow{index}Name", UiString.Runtime, new UiVec(300f, 30f), 22,
-                    "#EDE6FF", Place.At(-100f, 27f))
+            var name = Ui.Label($"ReckoningRow{index}Name", UiString.Runtime, new UiVec(300f, 28f), 21,
+                    "#EDE6FF", Place.At(-330f, 18f))
                 .AsDecor();
-            var level = Ui.Label($"ReckoningRow{index}Level", UiString.Runtime, new UiVec(200f, 30f), 18,
-                    "#B8A8D9", Place.At(150f, 27f))
+            var level = Ui.Label($"ReckoningRow{index}Level", UiString.Runtime, new UiVec(220f, 28f), 17,
+                    "#B8A8D9", Place.At(280f, 18f))
                 .AsDecor();
-            var gain = Ui.Label($"ReckoningRow{index}Gain", UiString.Runtime, new UiVec(200f, 22f), 16,
-                    "#9C8FC4", Place.At(150f, -30f))
+            var gain = Ui.Label($"ReckoningRow{index}Gain", UiString.Runtime, new UiVec(200f, 22f), 15,
+                    "#9C8FC4", Place.At(370f, -21f))
                 .AsDecor();
 
             // Two fills on one track. The dim one is where the bar stood before
@@ -357,14 +391,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     Place.Frac(new UiVec(0f, 0f), new UiVec(1f, 1f)), UiSize.Fill)
                 .AsDecor();
 
-            var track = Ui.Panel($"ReckoningRow{index}BarTrack", Place.At(0f, -6f),
+            var track = Ui.Panel($"ReckoningRow{index}BarTrack", Place.At(0f, -14f),
                     UiSize.Fixed(BarWidth, BarHeight), before, fill)
                 .Coloured("#140C24")
                 .AsDecor()
                 .AllowOverlap("the earned segment is drawn ON TOP of the before segment - one track, two fills, by design");
 
-            var group = Ui.Panel($"ReckoningRow{index}", Place.At(-ColumnX, y),
-                    UiSize.Fixed(ColumnWidth, RowHeight), name, level, track, gain)
+            var group = Ui.Panel($"ReckoningRow{index}", Place.At(0f, y),
+                    UiSize.Fixed(1000f, RowHeight), name, level, track, gain)
                 .Inactive();
 
             RowGroups.Add(group);
@@ -378,38 +412,37 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // One of the three items on offer. A button, because picking one is
         // the only decision this screen asks the player to make.
+        // One of the three, as a CARD across the width rather than a row in a
+        // list. The offers used to share the panel with the experience bar and
+        // had to be small; alone on their own phase they can be the thing the
+        // screen is about.
         private UiNode BuildOffer(int index)
         {
-            float y = 44f - index * 122f;
+            const float CardWidth = 340f;
+            const float CardGap = 30f;
+            float x = (index - (ItemOfferTable.OfferCount - 1) * 0.5f) * (CardWidth + CardGap);
 
-            // NO VISIBLE BUTTON. The click target stays -- picking one is the
-            // only decision this screen asks for -- but the chrome goes, so
-            // what the player sees is the ITEM rather than a plate with a name
-            // written on it.
-            //
-            // The burst spins behind the icon, tinted by rarity from the same
-            // RarityColors table the item names and the overlay's cell edges
-            // read. One white asset, six colours, no set of painted variants
-            // to drift out of sync with a table that already exists.
+            // The burst spins behind the icon, tinted per rarity from the same
+            // RarityColors table the name below it reads.
             var burst = Ui.Sprite($"ReckoningOffer{index}Burst", BurstKey,
-                    Place.At(-200f, 0f), UiSize.Fixed(150f, 150f))
+                    Place.At(0f, 78f), UiSize.Fixed(250f, 250f))
                 .Coloured("#FFFFFF00")
                 .AsDecor()
                 .AllowOverflow("the burst is deliberately larger than the icon it sits behind - that bleed IS the rarity signal");
 
             var icon = Ui.Sprite($"ReckoningOffer{index}Icon", null,
-                    Place.At(-200f, 0f), UiSize.Fixed(84f, 84f))
+                    Place.At(0f, 78f), UiSize.Fixed(132f, 132f))
                 .AsDecor();
 
-            var name = Ui.Label($"ReckoningOffer{index}Name", UiString.Runtime, new UiVec(340f, 34f), 20,
-                    "#EDE6FF", Place.At(60f, 18f))
+            var name = Ui.Label($"ReckoningOffer{index}Name", UiString.Runtime, new UiVec(320f, 70f), 21,
+                    "#EDE6FF", Place.At(0f, -80f))
                 .AsDecor();
-            var meta = Ui.Label($"ReckoningOffer{index}Meta", UiString.Runtime, new UiVec(340f, 28f), 15,
-                    "#B8A8D9", Place.At(60f, -18f))
+            var meta = Ui.Label($"ReckoningOffer{index}Meta", UiString.Runtime, new UiVec(320f, 28f), 15,
+                    "#B8A8D9", Place.At(0f, -140f))
                 .AsDecor();
 
             var button = Ui.Button($"ReckoningOffer{index}", UiString.Runtime,
-                new UiVec(ColumnWidth, 106f), 14, Place.At(ColumnX, y));
+                new UiVec(CardWidth, 400f), 14, Place.At(x, 0f));
 
             button.Children.Add(burst);
             button.Children.Add(icon);

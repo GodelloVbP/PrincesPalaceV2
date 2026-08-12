@@ -222,16 +222,22 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator AFightWithNoOffersHidesTheWholeLootColumn()
+        public IEnumerator AFightWithNoOffersSkipsStraightToTheSummary()
         {
             // Reachable: ItemOfferTable returns fewer than three when the
             // candidate pool is genuinely smaller, and zero if content has no
-            // equippables at all. A "CHOOSE ONE" heading over nothing is worse
-            // than no heading.
+            // equippables at all.
+            //
+            // Now that the choice is its OWN phase and there is no skip on it,
+            // an empty offer list would be a phase with no way out at all --
+            // so it is bypassed rather than shown empty. Stronger than the old
+            // assertion, which only checked that a heading was hidden.
             yield return ShowIt(Reward(rows: Row("shawn", "Shawn")), new List<ItemOffer>());
 
-            Assert.IsFalse(Named("ReckoningLootHeading").activeSelf);
-            Assert.IsFalse(Named("ReckoningOffer0").activeSelf);
+            Assert.IsFalse(Named("ReckoningOfferPhase").activeSelf,
+                "an offer phase with nothing on it has no way out");
+            Assert.IsTrue(Named("ReckoningSummaryPhase").activeSelf,
+                "the screen has to land somewhere");
         }
 
         [UnityTest]

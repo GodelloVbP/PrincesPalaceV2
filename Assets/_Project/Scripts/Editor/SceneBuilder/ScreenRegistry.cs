@@ -719,6 +719,9 @@ public static class ScreenRegistry
         // The modal's own dimmer, so the gloom can be faded up rather than
         // snapped on. Ui.Modal builds it; the screen holds the ref.
         controller.dimmer = result.Image(screen.Dimmer);
+        controller.frameGlow = result.Image(screen.FrameGlow);
+        controller.offerPhase = result.Rect(screen.OfferPhase);
+        controller.summaryPhase = result.Rect(screen.SummaryPhase);
 
         controller.relicEmptyHint = result.Go(screen.RelicEmptyHint);
         controller.relicRows = screen.RelicRows.Select(result.Go).ToArray();

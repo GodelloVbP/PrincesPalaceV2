@@ -54,6 +54,10 @@ namespace PrincesPalace
         [SerializeField] internal GameObject[] pages;
 
         [SerializeField] internal Image dimmer;
+        [SerializeField] internal Image frameGlow;
+
+        [SerializeField] internal RectTransform offerPhase;
+        [SerializeField] internal RectTransform summaryPhase;
 
         [SerializeField] internal GameObject relicEmptyHint;
         [SerializeField] internal GameObject[] relicRows;
@@ -74,10 +78,17 @@ namespace PrincesPalace
         // sequence behind it.
         private const float FlashSeconds = 0.09f;
 
-        // Where the expand starts. Not zero: a panel growing from nothing reads
-        // as a popup, while one growing from most of its size reads as the
-        // screen settling into place.
-        private const float ExpandFrom = 0.82f;
+        // A HORIZONTAL WIPE, not a scale-pop. Full height from the first
+        // frame, zero width, opening outward -- so it reads as the panel being
+        // drawn across the fight rather than as a dialog appearing on top of
+        // it. The scale-from-0.82 version was a popup and looked like one.
+        private const float WipeSeconds = 0.34f;
+
+        // The phase change sweeps RIGHTWARD: the choice leaves to the right
+        // and the summary follows it in from the left, both travelling the
+        // same way, so it reads as moving forward rather than as two
+        // unrelated slides.
+        private const float SweepSeconds = 0.3f;
 
         // The LIFT. The frame rises this far as it expands, so the screen
         // arrives from the fight rather than appearing at rest on top of it.
@@ -94,6 +105,7 @@ namespace PrincesPalace
         private static readonly Color MarkerDark = new Color(0.95f, 0.86f, 0.62f, 0f);
 
         private int _tab;
+        private bool _choosing;
 
         // Degrees per second. Slow: this is a glow behind an object, and a
         // burst spinning fast enough to notice as MOTION reads as a loading
@@ -157,15 +169,37 @@ namespace PrincesPalace
             // Only animate when the object is actually live in the hierarchy.
             // StartCoroutine on an inactive object throws, and a headless test
             // that never activates the canvas should still get correct numbers.
-            // ALWAYS back to the payout. Reopening on whichever tab was last
-            // read would bury the gold and the loot behind a click.
+            // OPENS ON THE CHOICE. You always take something, so the item
+            // phase is where the screen begins and the only way past it is to
+            // pick -- there is no skip and no Continue on it.
+            //
+            // A fight that offers nothing goes straight to the summary rather
+            // than showing an empty choice with no way out.
+            bool choosing = _offers.Count > 0;
+
+            offerPhase.gameObject.SetActive(choosing);
+            offerPhase.anchoredPosition = Vector2.zero;
+            summaryPhase.gameObject.SetActive(!choosing);
+            summaryPhase.anchoredPosition = Vector2.zero;
+            _choosing = choosing;
+
             _tab = 0;
             PaintTabs();
             PaintRelics();
             PaintTally();
 
-            if (isActiveAndEnabled) _animation = StartCoroutine(PlayIn());
-            else SettleImmediately();
+            if (isActiveAndEnabled)
+            {
+                _animation = StartCoroutine(PlayIn());
+
+                // Straight to the summary means the bars start with it; the
+                // choosing path starts them when the sweep lands.
+                if (!choosing) StartBars();
+            }
+            else
+            {
+                SettleImmediately();
+            }
         }
 
         // ---- painting -------------------------------------------------------------
@@ -290,6 +324,24 @@ namespace PrincesPalace
 
             offerNames[index].Set(UiStrings.ReckoningTaken);
             PaintOffers();
+
+            // The choice IS the transition. Nothing else on this phase leads
+            // anywhere, which is what "you always take something" means.
+            if (_choosing)
+            {
+                _choosing = false;
+
+                if (isActiveAndEnabled)
+                {
+                    if (_animation != null) StopCoroutine(_animation);
+                    _animation = StartCoroutine(SweepToSummary());
+                }
+                else
+                {
+                    offerPhase.gameObject.SetActive(false);
+                    summaryPhase.gameObject.SetActive(true);
+                }
+            }
         }
 
         public bool HasTakenAnItem => _taken;
@@ -410,41 +462,72 @@ namespace PrincesPalace
 
         private IEnumerator PlayIn()
         {
-            frame.localScale = Vector3.one * ExpandFrom;
+            // Full height, no width. The lift and the glow ride the same
+            // clock: the panel rises the last few pixels as it finishes
+            // opening, and the drop behind it fades up with the gloom.
+            frame.localScale = new Vector3(0f, 1f, 1f);
             frame.anchoredPosition = new Vector2(frame.anchoredPosition.x, LiftFrom);
 
-            // The gloom runs on its OWN clock, slightly longer than the expand,
-            // so the fight is still readable for the first frames the panel is
-            // growing over it. Both start together; the dim finishes last.
             float gloomTarget = dimmer != null ? dimmer.color.a : 0f;
-            if (dimmer != null) SetDimmerAlpha(0f);
+            float glowTarget = frameGlow != null ? GlowAlpha : 0f;
+            if (dimmer != null) SetAlpha(dimmer, 0f);
+            if (frameGlow != null) SetAlpha(frameGlow, 0f);
 
             float elapsed = 0f;
-            float longest = Mathf.Max(ExpandSeconds, GloomSeconds);
+            float longest = Mathf.Max(WipeSeconds, GloomSeconds);
 
             while (elapsed < longest)
             {
                 elapsed += Time.unscaledDeltaTime;
 
-                float k = Smooth(Mathf.Clamp01(elapsed / ExpandSeconds));
-                frame.localScale = Vector3.one * Mathf.Lerp(ExpandFrom, 1f, k);
+                float k = Smooth(Mathf.Clamp01(elapsed / WipeSeconds));
+                frame.localScale = new Vector3(k, 1f, 1f);
                 frame.anchoredPosition = new Vector2(frame.anchoredPosition.x, Mathf.Lerp(LiftFrom, 0f, k));
 
-                if (dimmer != null)
-                {
-                    SetDimmerAlpha(gloomTarget * Smooth(Mathf.Clamp01(elapsed / GloomSeconds)));
-                }
+                float g = Smooth(Mathf.Clamp01(elapsed / GloomSeconds));
+                if (dimmer != null) SetAlpha(dimmer, gloomTarget * g);
+                if (frameGlow != null) SetAlpha(frameGlow, glowTarget * g);
 
                 yield return null;
             }
 
             frame.localScale = Vector3.one;
             frame.anchoredPosition = new Vector2(frame.anchoredPosition.x, 0f);
-            if (dimmer != null) SetDimmerAlpha(gloomTarget);
+            if (dimmer != null) SetAlpha(dimmer, gloomTarget);
+            if (frameGlow != null) SetAlpha(frameGlow, glowTarget);
 
-            // THEN the bars, staggered down the party. Sequenced after the
-            // expand rather than during it, because a bar filling inside a
-            // panel that is still growing reads as one confused motion.
+            _animation = null;
+        }
+
+        // The choice leaves, the summary arrives, both moving right.
+        private IEnumerator SweepToSummary()
+        {
+            float width = ReckoningScreen.PanelWidth;
+
+            summaryPhase.gameObject.SetActive(true);
+            summaryPhase.anchoredPosition = new Vector2(-width, 0f);
+
+            for (float t = 0f; t < SweepSeconds; t += Time.unscaledDeltaTime)
+            {
+                float k = Smooth(Mathf.Clamp01(t / SweepSeconds));
+                offerPhase.anchoredPosition = new Vector2(Mathf.Lerp(0f, width, k), 0f);
+                summaryPhase.anchoredPosition = new Vector2(Mathf.Lerp(-width, 0f, k), 0f);
+                yield return null;
+            }
+
+            offerPhase.anchoredPosition = new Vector2(width, 0f);
+            summaryPhase.anchoredPosition = Vector2.zero;
+            offerPhase.gameObject.SetActive(false);
+
+            // The bars only start once the summary has arrived. Filling them
+            // mid-sweep means watching a number climb on something still
+            // sliding, and neither gets read.
+            StartBars();
+            _animation = null;
+        }
+
+        private void StartBars()
+        {
             var characters = _reward?.Characters ?? new List<CharacterReward>();
 
             for (int i = 0; i < characters.Count && i < rowBarFills.Length; i++)
@@ -452,8 +535,6 @@ namespace PrincesPalace
                 if (characters[i].IsDowned) continue;
                 StartCoroutine(FillBar(i, characters[i], i * BarStagger));
             }
-
-            _animation = null;
         }
 
         private IEnumerator FillBar(int index, CharacterReward row, float delay)
@@ -537,11 +618,15 @@ namespace PrincesPalace
         // everybody feels.
         private static float Smooth(float k) => k * k * (3f - 2f * k);
 
-        private void SetDimmerAlpha(float alpha)
+        // Held well under half: it is a drop behind a panel, and a glow you
+        // can point at has stopped being one.
+        private const float GlowAlpha = 0.38f;
+
+        private static void SetAlpha(Image image, float alpha)
         {
-            var colour = dimmer.color;
+            var colour = image.color;
             colour.a = alpha;
-            dimmer.color = colour;
+            image.color = colour;
         }
 
         private void CountGain(int index, int amount)
@@ -559,6 +644,9 @@ namespace PrincesPalace
                 frame.localScale = Vector3.one;
                 frame.anchoredPosition = new Vector2(frame.anchoredPosition.x, 0f);
             }
+
+            if (dimmer != null) SetAlpha(dimmer, dimmer.color.a);
+            if (frameGlow != null) SetAlpha(frameGlow, GlowAlpha);
 
             var characters = _reward?.Characters ?? new List<CharacterReward>();
             for (int i = 0; i < characters.Count && i < rowBarFills.Length; i++)

@@ -73,15 +73,28 @@ namespace PrincesPalace.Domain.Tests
                     offenders.Add($"{node.Name} runs to x {System.Math.Abs(node.Place.Offset.X) + halfWidth:0}");
                 }
 
-                if (System.Math.Abs(node.Place.Offset.Y) + halfHeight > ReckoningScreen.ContentHalfHeight + 1f)
+                // TOP AND BOTTOM SEPARATELY. The crest reaches 16.7% down and
+                // the bottom ornament only 14.6%, so one symmetric bound would
+                // either allow a collision at the top or waste 19px at the
+                // bottom.
+                float top = node.Place.Offset.Y + halfHeight;
+                float bottom = node.Place.Offset.Y - halfHeight;
+
+                if (top > ReckoningScreen.ContentTop + 1f)
                 {
-                    offenders.Add($"{node.Name} runs to y {System.Math.Abs(node.Place.Offset.Y) + halfHeight:0}");
+                    offenders.Add($"{node.Name} reaches y {top:0} into the crest");
+                }
+
+                if (bottom < ReckoningScreen.ContentBottom - 1f)
+                {
+                    offenders.Add($"{node.Name} reaches y {bottom:0} into the bottom border");
                 }
             }
 
             CollectionAssert.IsEmpty(offenders,
-                $"content is over the frame's border (usable {ReckoningScreen.ContentHalfWidth:0} x " +
-                $"{ReckoningScreen.ContentHalfHeight:0}): " + string.Join(" | ", offenders));
+                $"content is over the painted border (usable x +/-{ReckoningScreen.ContentHalfWidth:0}, " +
+                $"y {ReckoningScreen.ContentBottom:0}..{ReckoningScreen.ContentTop:0}): " +
+                string.Join(" | ", offenders));
         }
 
         [Test]
