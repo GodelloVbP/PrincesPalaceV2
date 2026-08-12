@@ -32,6 +32,11 @@ param(
 # wrote nothing, listed the stale five and exited 0. Ignoring the exit code is
 # still right for the documented reason; checking a different file than the one
 # requested was never part of that trade.
+#
+# -All is checked the same way and by NAME, against ScreenRegistry. Clearing the
+# directory first only rules out leftovers: four files out of five registered
+# screens is still a non-zero count, and the screen that stopped rendering is the
+# one thing this tool exists to catch.
 
 if (-not $Panel -and -not $All -and -not $Runtime) {
     Write-Host "Usage: tools/screenshot.ps1 -All  OR  -Panel <PanelName>  OR  -Runtime"
@@ -181,22 +186,50 @@ if (-not $proc.WaitForExit($TimeoutSeconds * 1000)) {
     exit 1
 }
 
-# THE FILE THAT WAS ASKED FOR. Scanning the whole directory here is what let a
-# capture that never happened pass: -All clears the directory first so "any png"
-# is a fair question for it, but for a single panel the only honest question is
-# whether that panel's png is now on disk.
+# EVERY FILE THAT WAS ASKED FOR, checked by NAME.
+#
+# Counting pngs in the directory is what let a capture that never happened pass.
+# Clearing the directory first fixes only the stale-leftover case: with five
+# screens registered and one of them silently failing to render, four files is
+# still a non-zero count and still read as success. A screen that quietly stops
+# rendering is precisely what this tool exists to notice, so the question has to
+# be "is each expected file here", not "is anything here".
 if ($All) {
-    $produced = @(Get-ChildItem $OutDir -Filter *.png -ErrorAction SilentlyContinue)
+    $expected = @(Get-KnownPanelNames -ProjectRoot $SourceProject)
 } else {
-    $produced = @(Get-ChildItem $outPath -ErrorAction SilentlyContinue)
+    $expected = @($Panel)
 }
 
-if ($produced.Count -eq 0) {
-    if ($All) {
-        Write-Host "No screenshots were produced."
-    } else {
-        Write-Host "No screenshot was produced - $outPath does not exist."
+$produced = @()
+$missing = @()
+
+if ($expected.Count -eq 0) {
+    # -All, and ScreenRegistry could not be parsed: the same refactor case the
+    # pre-check defers on, and the same reasoning. Naming what is missing is not
+    # available, so fall back to the weaker question rather than inventing an
+    # expectation - it still fails the run that produced nothing.
+    $produced = @(Get-ChildItem $OutDir -Filter *.png -ErrorAction SilentlyContinue)
+    if ($produced.Count -eq 0) {
+        $missing = @("every screen (could not read ScreenRegistry to say which)")
     }
+} else {
+    foreach ($name in $expected) {
+        $path = Join-Path $OutDir "$name.png"
+        if (Test-Path $path) {
+            $produced += Get-Item $path
+        } else {
+            $missing += $name
+        }
+    }
+}
+
+if ($missing.Count -gt 0) {
+    if ($expected.Count -gt 0) {
+        Write-Host "Missing $($missing.Count) of $($expected.Count) expected capture(s):"
+    } else {
+        Write-Host "No captures were produced:"
+    }
+    foreach ($name in $missing) { Write-Host "  $name" }
 
     # ScreenshotTool's own verdict FIRST. It names the unknown panel and lists
     # every valid one, which is the answer; 40 lines of Unity boot noise with

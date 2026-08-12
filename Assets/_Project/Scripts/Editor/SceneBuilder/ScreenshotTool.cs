@@ -49,35 +49,58 @@ public static class ScreenshotTool
                 return;
             }
 
-            Capture(def, Path.Combine(outDir, panel + ".png"));
+            if (!Capture(def, Path.Combine(outDir, panel + ".png")))
+            {
+                EditorApplication.Exit(1);
+                return;
+            }
+
             Debug.Log($"[ScreenshotTool] wrote 1 screenshot to {outDir}");
         }
         else
         {
             int written = CaptureAllTo(outDir);
-            Debug.Log($"[ScreenshotTool] wrote {written} screenshot(s) to {outDir}");
+            int expected = ScreenRegistry.All.Count;
+            Debug.Log($"[ScreenshotTool] wrote {written} of {expected} screenshot(s) to {outDir}");
+
+            // An unknown panel already exits 1 above; a screen that failed to
+            // render is no less a failure, and saying so here is what makes the
+            // exit code mean one thing rather than two.
+            if (written < expected)
+            {
+                Debug.LogError($"[ScreenshotTool] {expected - written} screen(s) did not render.");
+                EditorApplication.Exit(1);
+                return;
+            }
         }
 
         EditorApplication.Exit(0);
     }
 
+    // Counts what was WRITTEN, not what was attempted.
+    //
+    // This used to increment once per registered screen regardless, so a
+    // Capture that bailed early -- no graphics device, a scene with no Canvas --
+    // still reported "wrote 5 screenshot(s)" having written four. The wrapper
+    // now checks for each expected file by name and would catch it anyway, but
+    // a success count that is known to overstate is worse than no count: it is
+    // the same class of bug as the one screenshot.ps1 just had, one layer down.
     private static int CaptureAllTo(string outDir)
     {
         int written = 0;
         foreach (var def in ScreenRegistry.All)
         {
-            Capture(def, Path.Combine(outDir, def.PanelName + ".png"));
-            written++;
+            if (Capture(def, Path.Combine(outDir, def.PanelName + ".png"))) written++;
         }
         return written;
     }
 
-    private static void Capture(ScreenDef def, string outputPath)
+    private static bool Capture(ScreenDef def, string outputPath)
     {
         if (!CanvasCapture.IsSupported)
         {
             Debug.LogError("[ScreenshotTool] no graphics device - run without -nographics.");
-            return;
+            return false;
         }
 
         EditorSceneManager.OpenScene(def.ScenePath, OpenSceneMode.Single);
@@ -86,7 +109,7 @@ public static class ScreenshotTool
         if (canvas == null)
         {
             Debug.LogError($"[ScreenshotTool] {def.ScenePath} has no Canvas.");
-            return;
+            return false;
         }
 
         // Shows the scene exactly as SceneBuilder authored it: Edit Mode never
@@ -94,6 +117,14 @@ public static class ScreenshotTool
         // here. For anything that MOVES, use screenshot.ps1 -Runtime, which
         // drives a PlayMode test instead.
         CanvasCapture.RenderToFile(canvas, outputPath);
+
+        // The file, not the call. RenderToFile returning without throwing is not
+        // evidence that a png landed, and this counter's whole job is now to be
+        // trusted about that.
+        if (File.Exists(outputPath)) return true;
+
+        Debug.LogError($"[ScreenshotTool] {def.PanelName} rendered but no file appeared at {outputPath}.");
+        return false;
     }
 
     private static Dictionary<string, string> ParseArgs()

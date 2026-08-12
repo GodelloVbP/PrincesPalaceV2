@@ -851,11 +851,19 @@ case-sensitive, because `ScreenshotTool` compares `PanelName` with `==` and `mai
 is not a screen. If the pattern ever matches nothing — a refactor, not an unknown panel — the check
 **defers to Unity** instead of rejecting every name it can no longer recognise.
 
-*And correctly, at the end*: the success check now asks whether **the requested file** exists.
-`-All` clears the directory first, so "any png" is a fair question for it; for a single panel it
-never was. On failure the log is filtered to `[ScreenshotTool]` lines, so its verdict — which names
-the unknown panel and lists every valid one — is what gets printed rather than being the sixteenth
-line of a 40-line Unity tail.
+*And correctly, at the end*: the success check now asks whether **each expected file** exists, by
+name. For a single panel that is the requested one. For `-All` it is every name in the registry —
+clearing the directory first only rules out leftovers, and four files against five registered
+screens is still a non-zero count, so the screen that quietly stopped rendering is exactly what the
+old check could not see. On failure the log is filtered to `[ScreenshotTool]` lines, so its verdict
+— which names the unknown panel and lists every valid one — is what gets printed rather than being
+the sixteenth line of a 40-line Unity tail.
+
+*And the same bug one layer down*: `CaptureAllTo` incremented its counter once per registered
+screen regardless of outcome, so a `Capture` that bailed early (no graphics device, a scene with no
+Canvas) still logged "wrote 5 screenshot(s)" having written four. It now counts what was written,
+confirmed by `File.Exists` rather than by `RenderToFile` not throwing, and reports "wrote N of M".
+A failed render exits 1, matching the unknown-panel path, so the exit code means one thing.
 
 Ignoring `$proc.ExitCode` is **kept**. That was always right for the documented reason; checking a
 different file than the one requested was never part of that trade.
