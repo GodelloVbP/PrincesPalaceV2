@@ -268,6 +268,46 @@ build time — and it still cannot see this. The narrower exemption is to allow
 overlap of the stage frame while still asserting that no always-visible HUD panel
 covers the bottom 40 units of a populated slot.
 
+### ~~The port, in order~~ — all four steps DONE, `a8738e7` and `678cba9`
+
+> **Outcome.** Anchors re-derived to `Near = (470, -228)`, `Far = (250, -68)`;
+> `PlateFirstY` 332 → 392; a three-layer scrim; and the backdrops judged and
+> accepted. Gate green at 1342 EditMode, 251 PlayMode.
+>
+> **v1's numbers did not survive contact**, exactly as this section warned. -170
+> puts the golem's head at 130, well inside the bottom enemy plate. The floor
+> here is the topmost always-visible verb row (-248) plus the ring's 8 plus 12
+> of daylight.
+>
+> **The plate move is 392, not v1's 380**, and the extra 12 is the one thing
+> hand-arithmetic got wrong. By hand only the front slot appeared to reach the
+> plates in x; slot ONE reaches x 522 against a plate edge at 520, so a 2px
+> overlap — invisible to inspection — left its head clearing by 7px instead of
+> 12. `tools/measure_stage.py` caught it.
+>
+> **The audit blindness is now covered** by
+> `FightScreenTests.NoAlwaysVisiblePanelStandsInFrontOfAFigureSFeet`, and the
+> over-broad exemption is kept with its text amended to say what it does not
+> cover. Confirmed non-vacuous by restoring -300: it fails naming `PartyPlate`
+> (127x24) and `Verb3` (91x40).
+>
+> **The backdrops are fine for v2** — and the deciding measurement was made on a
+> rendered `FightPanel`, not computed. v2's ground lines sit at 71%, 64% and 56%
+> from the top against a painted horizon at roughly 45%, so all three rows stand
+> on floor. The rule stated below (lower is fine, higher is not) held: v2's rows
+> are lower than v1's 66/58/51. An automated horizon detector put the transition
+> at 68% and was wrong — it had found the ground's own midtone shift.
+>
+> **Still open**: the three repainted PNGs are sitting UNCOMMITTED in this tree,
+> placed by another session, and are deliberately not staged here. AUDIT #45
+> records the detail column, which still covers the front enemy's feet while a
+> submenu is open.
+>
+> `tools/preview_fight.py` was not ported as such. Its measurement half is
+> `measure_stage.py` (art versus HUD) and `measure_scrim.py` (backdrop luminance
+> behind the slots); both read their constants out of the C# rather than
+> restating them, which was the property worth keeping.
+
 ### The port, in order
 
 1. **Fix the anchors.** In v1 this became `Near = (470, -170)`, `Far = (250, -10)`,
