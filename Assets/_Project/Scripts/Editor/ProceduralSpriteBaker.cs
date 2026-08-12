@@ -136,13 +136,24 @@ public static class ProceduralSpriteBaker
     {
         // The channel. Dark, with the light caught along its top lip so it
         // reads as cut into the panel rather than drawn on top of it.
+        //
+        // The body used to run 0.10..0.22, which is nearly black BEFORE the
+        // Reckoning multiplies it by a dark violet tint -- the two darknesses
+        // compounded to roughly #08060E and the bar read as a hole punched in
+        // the panel rather than as a groove cut into it. Raised so the tint has
+        // something to colour: the shading still does the recessing, but the
+        // result stays recognisably a surface.
         BakeGradient("bar_track", 64, y =>
         {
-            float top = Mathf.Clamp01(1f - y / 0.22f);            // inner shadow under the lip
+            // Light bouncing off the floor of the groove, and the highlight
+            // caught on its top lip. Keeping BOTH is what stops a raised level
+            // reading as a flat plate: bright, dip, bright is a section through
+            // a channel, and a single ramp is not.
+            float floorBounce = Mathf.Clamp01(1f - y / 0.22f);
             float lip = Mathf.Exp(-Mathf.Pow((y - 0.94f) / 0.05f, 2f));
 
-            float value = Mathf.Lerp(0.10f, 0.22f, y) + top * 0.10f;
-            return (Mathf.Clamp01(value + lip * 0.35f), 1f);
+            float value = Mathf.Lerp(0.30f, 0.46f, y) + floorBounce * 0.10f;
+            return (Mathf.Clamp01(value + lip * 0.42f), 1f);
         });
 
         // The fill. White so it can be tinted twice from one asset -- once for
@@ -151,14 +162,25 @@ public static class ProceduralSpriteBaker
         {
             // Brightest just under the top edge, falling away downward: a bar
             // lit from above rather than a flat block of colour.
-            float bloom = Mathf.Exp(-Mathf.Pow((y - 0.78f) / 0.30f, 2f));
-            float body = Mathf.Lerp(0.55f, 0.95f, y);
+            //
+            // The old numbers said bloom and drew a flat white strip. body ran
+            // 0.55..0.95 and the bloom added up to 0.55 on top, so everything
+            // above y 0.45 clamped to 1 -- five eighths of the bar was one
+            // saturated value and the gradient was invisible. A bloom is a
+            // bright CORE against something less bright; without the contrast
+            // there is nothing to read as light.
+            //
+            // Lowered and narrowed so the core saturates over roughly a fifth
+            // of the height and falls off on both sides of it.
+            float bloom = Mathf.Exp(-Mathf.Pow((y - 0.80f) / 0.26f, 2f));
+            float body = Mathf.Lerp(0.34f, 0.62f, y);
 
             // Softened at both edges so it never shows a hard line against the
-            // channel it sits in.
-            float edge = Mathf.Clamp01(Mathf.Min(y, 1f - y) / 0.06f);
+            // channel it sits in -- and widened with the channel, since a
+            // lighter track shows a hard fill edge that a near-black one hid.
+            float edge = Mathf.Clamp01(Mathf.Min(y, 1f - y) / 0.10f);
 
-            return (Mathf.Clamp01(body + bloom * 0.55f), edge);
+            return (Mathf.Clamp01(body + bloom * 0.62f), edge);
         });
     }
 

@@ -316,12 +316,22 @@ namespace PrincesPalace.PlayModeTests
             // a permanently undersized panel.
             yield return ShowIt(Reward(rows: Row("shawn", "Shawn")));
 
+            var wipe = Named("ReckoningFrameWipe").GetComponent<RectTransform>();
             var frame = Named("ReckoningFrame").GetComponent<RectTransform>();
 
             for (float t = 0f; t < 1f; t += Time.unscaledDeltaTime) yield return null;
 
-            Assert.AreEqual(1f, frame.localScale.x, 0.001f);
-            Assert.AreEqual(1f, frame.localScale.y, 0.001f);
+            Assert.AreEqual(PrincesPalace.Domain.UiKit.Screens.ReckoningScreen.PanelWidth,
+                wipe.rect.width, 0.5f, "the panel is permanently narrower than it should be");
+            Assert.AreEqual(PrincesPalace.Domain.UiKit.Screens.ReckoningScreen.PanelHeight,
+                wipe.rect.height, 0.5f);
+
+            // The frame is revealed, never resized -- so full size here is not
+            // a thing the animation had to arrive at, it is a thing nothing was
+            // ever allowed to change.
+            Assert.AreEqual(PrincesPalace.Domain.UiKit.Screens.ReckoningScreen.PanelWidth,
+                frame.rect.width, 0.5f);
+            Assert.AreEqual(Vector3.one, frame.localScale);
         }
     }
 }

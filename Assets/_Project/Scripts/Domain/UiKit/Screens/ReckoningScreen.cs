@@ -45,6 +45,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // Kept for the containment test, which asks one question of both axes.
         public const float ContentHalfHeight = PanelHeight * 0.5f - PanelHeight * 0.167f;
 
+        // How far the painted border reaches in from each side, derived from
+        // ContentHalfWidth rather than restating 9.8%. The phase clip and
+        // NothingSitsOnThePaintedBorder then cannot drift apart: the box the
+        // sweep is clipped to IS the box content is asserted to stay inside.
+        public const float BorderInsetX = PanelWidth * 0.5f - ContentHalfWidth;
+
         public const string FrameKey = "UI/Reckoning/Processed/reckoning_frame.png";
         public const string TabKey = "UI/Buttons/Processed/tab_plate.png";
         public const string ContinueKey = "UI/Buttons/Processed/continue_arrow.png";
@@ -71,10 +77,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         public UiNode Root;
 
-        // The thing that actually scales. The dimmer must NOT scale with it --
-        // a dimmer growing from a point would let the fight flash at full
-        // brightness for the first frames of the expand.
+        // The painted frame itself. FIXED, and it stays fixed: it is revealed
+        // by the wipe below rather than animated, which is the whole point.
         public NodeRef Frame;
+
+        // The thing that actually moves. A mask whose WIDTH the controller
+        // opens from 0, uncovering a frame that never changes size.
+        //
+        // The dimmer must NOT travel with it -- a dimmer growing from a point
+        // would let the fight flash at full brightness for the first frames of
+        // the expand.
+        public NodeRef FrameWipe;
 
         // The dimmer Ui.Modal builds. Held so the gloom can FADE UP with the
         // expand rather than snapping on -- a dim that arrives in one frame
@@ -138,7 +151,33 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float RowHeight = 64f;
         private const float RowPitch = 72f;
         private const float BarWidth = 900f;
-        private const float BarHeight = 26f;
+
+        // 26 read as a flat black gap rather than a channel: on a 1344-wide
+        // frame that is a 1:35 slot, and at that ratio the eye takes it for a
+        // hole punched in the panel. Six more pixels and a lighter tint below
+        // are what turn it back into something cut INTO the violet.
+        //
+        // 32 is the ceiling, not a preference. The row is 64 tall and carries a
+        // name line above the track and the gain line below it; the track is
+        // centred at -14, so 32 puts its top at 2 with the name's baseline box
+        // starting at 4. One more pixel and they touch.
+        private const float BarHeight = 32f;
+
+        // Barely moved from #2A1C46, and that is the answer rather than a
+        // hedge. The bar read as a hole because TWO darknesses compounded: a
+        // baked shading whose body ran 0.10..0.22 multiplied by a tint at
+        // luminance 0.13, landing on screen at #07040B against a panel of
+        // #261433 -- a fifth of the surface it was cut into.
+        //
+        // The baked shading is where that was fixed (ProceduralSpriteBaker,
+        // body raised to 0.30..0.46). Lifting the tint as well overshot badly:
+        // measured at 0.85x the panel, the channel disappeared INTO the panel,
+        // which is a different failure and not obviously a better one.
+        //
+        // 0.16 luminance puts the body at 0.6x the panel and the lit lip at
+        // 1.36x it -- darker than the surface, with a bright edge where it is
+        // cut. Measured, not judged: tools/measure_bar.py.
+        private const string BarTrackTint = "#33224F";
 
         // How many relics one page of the RELICS tab shows. The design says
         // "infinite slots per run"; six is what fits without paging, and the
@@ -208,9 +247,47 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // ---- the container -----------------------------------------
             var frame = Ui.Sprite("ReckoningFrame", FrameKey, Place.At(0f, 0f),
                 UiSize.Fixed(PanelWidth, PanelHeight));
-            frame.Children.Add(offerPhase);
-            frame.Children.Add(summaryPhase);
+
+            // The phases hang inside a CLIP inset to the painted border rather
+            // than off the frame directly.
+            //
+            // SweepToSummary sends the outgoing cards a full panel width
+            // sideways. With nothing bounding them they crossed the gold border
+            // and floated over the battlefield before disappearing. Clipped
+            // here they slide UNDER the border, which is what a frame around a
+            // window is for.
+            //
+            // Inset horizontally ONLY, and symmetrically, so the clip's centre
+            // is still exactly the frame's centre. Every child inside is placed
+            // relative to that centre, so an asymmetric inset -- and the
+            // vertical border IS asymmetric, the crest being deeper than the
+            // bottom ornament -- would silently move all of them. The sweep is
+            // horizontal, so the top and bottom edges have nothing to clip
+            // anyway.
+            var phaseClip = Ui.Panel("ReckoningPhaseClip",
+                    Place.Stretch(left: BorderInsetX, right: BorderInsetX), UiSize.Fill,
+                    offerPhase, summaryPhase)
+                .Clipping();
+
+            frame.Children.Add(phaseClip);
             screen.Frame = frame;
+
+            // The WIPE, and the reason it exists as a node at all.
+            //
+            // The open used to animate frame.localScale.x from 0. localScale
+            // scales CHILDREN, so the border's corner ornaments, the three
+            // cards and every label compressed horizontally and sprang out to
+            // full width. That rubbery stretch was the single biggest reason
+            // the screen read cheap, and no amount of easing fixes it -- a
+            // squash is not a wipe.
+            //
+            // A mask whose WIDTH opens reveals a frame that never deforms.
+            // Centred, and grown symmetrically about that centre, so the fixed
+            // frame inside it does not drift while it is being uncovered.
+            var wipe = Ui.Panel("ReckoningFrameWipe", Place.At(0f, 0f),
+                    UiSize.Fixed(PanelWidth, PanelHeight), frame)
+                .Clipping();
+            screen.FrameWipe = wipe;
 
             // A soft drop behind the frame. Sits BEHIND it in declaration
             // order and is deliberately larger, so it reads as the panel
@@ -225,7 +302,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.FrameGlow = glow;
 
             var content = Ui.Panel("ReckoningContent", Place.At(0f, 0f), UiSize.Fixed(1920f, 1080f),
-                    glow, frame)
+                    glow, wipe)
                 .AllowOverlap("the glow sits under the frame by design");
 
             var root = Ui.Modal("ReckoningPanel", "#0A0614A6", content).Inactive();
@@ -417,7 +494,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var track = Ui.Sprite($"ReckoningRow{index}BarTrack", BarTrackKey, Place.At(0f, -14f),
                     UiSize.Fixed(BarWidth, BarHeight))
-                .Coloured("#2A1C46")
+                .Coloured(BarTrackTint)
                 .AsDecor()
                 .AllowOverlap("the earned segment is drawn ON TOP of the before segment - one track, two fills, by design");
 
@@ -468,8 +545,23 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     "#B8A8D9", Place.At(0f, -140f))
                 .AsDecor();
 
+            // NO PLATE. The card is its burst, its icon and its two lines --
+            // the item is the object, and a gold button frame behind it turned
+            // three treasures into three menu entries.
+            //
+            // Chromeless rather than an empty SpriteKey, which the emitter
+            // reads as "use the shared button frame" and is exactly how this
+            // survived being called fixed twice: BuildOffer removed the
+            // declared children and the plate came straight back from the
+            // fallback.
+            //
+            // The three cards run to x 540 against a clip half-width of 540.3.
+            // That is deliberate -- the offers are sized to use the full
+            // interior -- but it means widening a card by even a pixel now
+            // fails A2 rather than quietly touching the paint.
             var button = Ui.Button($"ReckoningOffer{index}", UiString.Runtime,
-                new UiVec(CardWidth, 400f), 14, Place.At(x, 0f));
+                    new UiVec(CardWidth, 400f), 14, Place.At(x, 0f))
+                .NoChrome();
 
             button.Children.Add(burst);
             button.Children.Add(icon);

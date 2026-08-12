@@ -199,6 +199,103 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void TheFrameIsRevealedByAMaskRatherThanScaled()
+        {
+            // The open drove frame.localScale.x from 0 for as long as the
+            // screen existed. localScale scales CHILDREN, so the border's
+            // corner ornaments, the three cards and every label compressed to
+            // nothing and sprang out to full width -- the single biggest reason
+            // the screen read cheap.
+            //
+            // The structural half of the fix, asserted here because the
+            // animation half is only correct if this shape holds: a clipping
+            // mask the same size as the frame, with the frame inside it.
+            var screen = ReckoningScreen.Build();
+            var wipe = screen.FrameWipe.Node;
+
+            Assert.IsTrue(wipe.Masks,
+                "the wipe does not clip, so opening its width would reveal nothing and hide nothing");
+
+            Assert.AreEqual(ReckoningScreen.PanelWidth, wipe.Size.X, 0.5f);
+            Assert.AreEqual(ReckoningScreen.PanelHeight, wipe.Size.Y, 0.5f);
+
+            CollectionAssert.Contains(wipe.Children, screen.Frame.Node,
+                "the frame is not inside the mask that is supposed to reveal it");
+
+            // At rest the mask is exactly the frame, so a fully open panel is
+            // not clipped at all. A mask even a pixel smaller would shave the
+            // painted border permanently.
+            Assert.AreEqual(wipe.Size.X, screen.Frame.Node.Size.X, 0.5f);
+            Assert.AreEqual(wipe.Size.Y, screen.Frame.Node.Size.Y, 0.5f);
+        }
+
+        [Test]
+        public void TheSweepIsClippedToThePaintedInteriorRatherThanThePanelEdge()
+        {
+            // The phase change sends the outgoing cards a full width sideways.
+            // Nothing bounded them, so they crossed the gold border and floated
+            // over the battlefield before disappearing.
+            //
+            // Clipped to the INTERIOR, not to the panel: a card has to vanish
+            // behind the border, which is the only reading under which a
+            // painted frame is a frame rather than a picture of one.
+            var clip = Walk(Tree()).Single(n => n.Name == "ReckoningPhaseClip");
+
+            Assert.IsTrue(clip.Masks, "the phases are unbounded again");
+            Assert.AreEqual(ReckoningScreen.BorderInsetX, clip.Place.Left, 0.5f);
+            Assert.AreEqual(ReckoningScreen.BorderInsetX, clip.Place.Right, 0.5f);
+
+            // SYMMETRIC, and that is load-bearing rather than tidy. Every child
+            // of a phase is placed relative to the phase's centre, so insetting
+            // by the true vertical border -- 16.7% at the crest against 14.6%
+            // at the foot -- would move all of them 9px up.
+            Assert.AreEqual(0f, clip.Place.Top, 0.01f,
+                "an asymmetric inset shifts every child of both phases");
+            Assert.AreEqual(0f, clip.Place.Bottom, 0.01f,
+                "an asymmetric inset shifts every child of both phases");
+        }
+
+        [Test]
+        public void TheOffersWearNoButtonChrome()
+        {
+            // Called fixed twice, and was not. BuildOffer removed the declared
+            // children, but UiEmitter falls back to the shared button sprite
+            // for any Ui.Button that does not name one -- so "no SpriteKey"
+            // means "the default plate", and the three offers stayed big gold
+            // plates behind their own art.
+            var screen = ReckoningScreen.Build();
+
+            foreach (var offer in screen.OfferButtons)
+            {
+                Assert.IsTrue(offer.Node.Chromeless,
+                    $"{offer.Node.Name} is back to wearing the shared button plate");
+                Assert.IsNull(offer.Node.SpriteKey,
+                    $"{offer.Node.Name} names a sprite as well as asking for no chrome - one of the two is a mistake");
+            }
+        }
+
+        [Test]
+        public void TheExpTrackIsDeepEnoughToReadAsAChannel()
+        {
+            // 26px read as a flat black gap. Only the HEIGHT is asserted here,
+            // and the omission is deliberate.
+            //
+            // The bar's brightness is the product of two numbers this test
+            // cannot both see: ProceduralSpriteBaker's baked shading and the
+            // tint over it. Asserting the tint alone is measuring the wrong
+            // quantity, and doing exactly that is how the first attempt at this
+            // fix passed while overshooting to 0.85x the panel's luminance --
+            // the channel vanishing into the panel rather than reading as cut
+            // into it. tools/measure_bar.py composites the two against the
+            // painted frame and is the check that caught it.
+            var track = Walk(Tree()).First(n => n.Name == "ReckoningRow0BarTrack");
+
+            Assert.GreaterOrEqual(track.Size.Y, 30f, "the track is back to reading as a slot");
+            Assert.LessOrEqual(track.Size.Y, 32f,
+                "the row is 64 tall and the name line above the track starts at y 4 - taller than this and they touch");
+        }
+
+        [Test]
         public void NoOfferChildCollidesWithItsButtonsGeneratedCaption()
         {
             // UiEmitter names a button's caption "<button>Label" and it never

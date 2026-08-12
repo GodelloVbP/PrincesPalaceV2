@@ -686,14 +686,19 @@ public static class ScreenRegistry
         hub.characterOverlayPanel = result.Go(overlay.Root);
     }
 
-    // The controller sits on the MODAL NODE, not on the frame it scales -- so
-    // its OnEnable fires when the overlay opens, and the scaling is done to a
+    // The controller sits on the MODAL NODE, not on the thing it opens -- so
+    // its OnEnable fires when the overlay opens, and the animation is done to a
     // child it holds a reference to rather than to itself.
     private static ReckoningController WireReckoning(UiEmitResult result, ReckoningScreen screen)
     {
         var controller = result.Attach<ReckoningController>(screen.Root);
 
-        controller.frame = result.Rect(screen.Frame);
+        // The WIPE MASK, deliberately, and the painted frame is not bound at
+        // all. The controller has no business reaching the frame: everything it
+        // used to do to it -- scale it, lift it -- is now done to the mask
+        // around it, and a reference it does not hold cannot be squashed by
+        // accident a second time.
+        controller.frameWipe = result.Rect(screen.FrameWipe);
         controller.goldLabel = result.Tmp(screen.GoldLabel);
         controller.continueButton = result.Button(screen.ContinueButton);
 

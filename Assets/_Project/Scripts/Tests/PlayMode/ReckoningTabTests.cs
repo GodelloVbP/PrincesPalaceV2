@@ -258,10 +258,14 @@ namespace PrincesPalace.PlayModeTests
 
             yield return new WaitForSecondsRealtime(1.4f);
 
-            var frame = Named("ReckoningFrame").GetComponent<RectTransform>();
+            // The MASK carries both the lift and the open, so that the frame it
+            // clips travels with it -- lifting the frame alone would slide it
+            // out from under its own clip and crop the border.
+            var wipe = Named("ReckoningFrameWipe").GetComponent<RectTransform>();
 
-            Assert.AreEqual(0f, frame.anchoredPosition.y, 0.01f, "the frame never finished lifting");
-            Assert.AreEqual(1f, frame.localScale.x, 0.01f, "the frame never finished expanding");
+            Assert.AreEqual(0f, wipe.anchoredPosition.y, 0.01f, "the frame never finished lifting");
+            Assert.AreEqual(PrincesPalace.Domain.UiKit.Screens.ReckoningScreen.PanelWidth,
+                wipe.rect.width, 1f, "the frame never finished expanding");
         }
 
         [UnityTest]

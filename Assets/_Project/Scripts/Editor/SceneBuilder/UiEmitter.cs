@@ -88,6 +88,12 @@ public static class UiEmitter
                 break;
         }
 
+        // BEFORE children, because a RectMask2D has to exist by the time the
+        // things it clips are parented under it - Unity rebuilds the clip set
+        // from the hierarchy, and a mask that arrives after its content leaves
+        // the first frame unclipped.
+        if (node.Masks) go.AddComponent<RectMask2D>();
+
         if (node.Rotation != 0f) rect.localRotation = Quaternion.Euler(0f, 0f, node.Rotation);
         if (!node.Scale.Equals(UiVec.One)) rect.localScale = new Vector3(node.Scale.X, node.Scale.Y, 1f);
 
@@ -185,10 +191,24 @@ public static class UiEmitter
         // A button may wear its own art instead of the shared button frame -
         // the hub buildings are buttons whose face is a painted building. Falls
         // back to the shared sprite when no key is given.
-        var sprite = string.IsNullOrEmpty(node.SpriteKey)
-            ? SceneBuilder.ButtonSprite()
-            : SceneBuilder.LoadSpriteByKey(node.SpriteKey);
-        if (sprite != null)
+        //
+        // Chromeless is the third case and it is NOT expressible as an empty
+        // SpriteKey, which selects the fallback above. The Image stays: a
+        // Button needs a targetGraphic, and Image raycasts against its RECT
+        // rather than its alpha, so a fully transparent one takes the click
+        // exactly as a painted plate would. Dropping the Image instead would
+        // make the offer cards unclickable.
+        var sprite = node.Chromeless
+            ? null
+            : string.IsNullOrEmpty(node.SpriteKey)
+                ? SceneBuilder.ButtonSprite()
+                : SceneBuilder.LoadSpriteByKey(node.SpriteKey);
+
+        if (node.Chromeless)
+        {
+            image.color = new Color(1f, 1f, 1f, 0f);
+        }
+        else if (sprite != null)
         {
             image.sprite = sprite;
             // Type.Simple, not Sliced. v1 shipped an invisible button on every
@@ -219,7 +239,12 @@ public static class UiEmitter
         text.text = BakedText(node.Text);
         text.fontSize = node.FontSize;
         text.alignment = TextAlignmentOptions.Center;
-        text.color = sprite != null ? Color.white : Color.black;
+
+        // Black ONLY for the missing-art fallback, which draws a light grey
+        // plate. A chromeless button has no plate at all, so its caption sits
+        // on whatever is behind it - here that is the painted violet panel, and
+        // black on violet is unreadable.
+        text.color = sprite == null && !node.Chromeless ? Color.black : Color.white;
         text.raycastTarget = false;
     }
 

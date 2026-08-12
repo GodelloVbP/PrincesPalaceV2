@@ -9,6 +9,7 @@ using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
 using PrincesPalace.Domain.Rewards;
+using PrincesPalace.Domain.UiKit.Screens;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -157,15 +158,78 @@ namespace PrincesPalace.PlayModeTests
             // drawn across the fight.
             yield return OpenIt(Offers());
 
+            var wipe = Named("ReckoningFrameWipe").GetComponent<RectTransform>();
             var frame = Named("ReckoningFrame").GetComponent<RectTransform>();
 
-            // One frame in, it is part-open and already full height.
-            Assert.AreEqual(1f, frame.localScale.y, 0.01f, "the wipe is scaling vertically too");
+            // One frame in: part-open, and already full height. Sampled a
+            // single frame after Show, so this only mis-reads if one frame took
+            // longer than the whole 0.34s wipe.
+            Assert.Less(wipe.rect.width, ReckoningScreen.PanelWidth,
+                "the wipe was already fully open on its first frame");
+            Assert.AreEqual(ReckoningScreen.PanelHeight, wipe.rect.height, 0.5f,
+                "the wipe is opening vertically too");
+
+            // AND THE FRAME ITSELF IS NEVER TOUCHED. This is the pair of
+            // assertions that would have caught the squash: the old animation
+            // drove frame.localScale.x, and localScale scales CHILDREN, so the
+            // border ornaments, the three cards and every label compressed with
+            // it. Checked mid-animation as well as at rest, because a scale
+            // that settles back to 1 leaves no trace at the end.
+            Assert.AreEqual(Vector3.one, frame.localScale,
+                "the frame is being scaled again - everything inside it squashes too");
+            Assert.AreEqual(ReckoningScreen.PanelWidth, frame.rect.width, 0.5f,
+                "the frame is being resized rather than revealed by the mask");
 
             yield return new WaitForSecondsRealtime(0.8f);
 
-            Assert.AreEqual(1f, frame.localScale.x, 0.01f, "the wipe never finished opening");
-            Assert.AreEqual(0f, frame.anchoredPosition.y, 1f, "the lift never settled");
+            Assert.AreEqual(ReckoningScreen.PanelWidth, wipe.rect.width, 1f,
+                "the wipe never finished opening");
+            Assert.AreEqual(0f, wipe.anchoredPosition.y, 1f, "the lift never settled");
+            Assert.AreEqual(Vector3.one, frame.localScale, "the frame ended up scaled");
+        }
+
+        [UnityTest]
+        public IEnumerator TheWipeAndTheSweepAreBothActuallyMasked()
+        {
+            // The animations are only half the fix. Without the two
+            // RectMask2Ds the open still deforms nothing but reveals nothing
+            // either -- a zero-width unmasked rect shows its children in full
+            // -- and the outgoing cards still sail over the battlefield.
+            yield return OpenIt(Offers());
+
+            Assert.IsNotNull(Named("ReckoningFrameWipe").GetComponent<RectMask2D>(),
+                "the wipe has no mask, so opening its width hides nothing");
+
+            var clip = Named("ReckoningPhaseClip");
+            Assert.IsNotNull(clip.GetComponent<RectMask2D>(),
+                "the phases are unbounded again - the sweep will leave the frame");
+
+            // Inset to the painted border, not to the panel edge: a card has to
+            // vanish BEHIND the gold, not at the outside of it.
+            Assert.AreEqual(ReckoningScreen.ContentHalfWidth * 2f,
+                clip.GetComponent<RectTransform>().rect.width, 1f,
+                "the clip no longer matches the frame's painted interior");
+        }
+
+        [UnityTest]
+        public IEnumerator TheOfferCardsCarryNoButtonPlate()
+        {
+            // Reported fixed twice and never was: BuildOffer dropped the
+            // declared children, but UiEmitter applies the shared button sprite
+            // to any Ui.Button that does not name one, so the gold plates came
+            // straight back from the fallback.
+            yield return OpenIt(Offers());
+
+            var plate = Named("ReckoningOffer0").GetComponent<Image>();
+
+            Assert.IsNull(plate.sprite, "the offer is wearing button chrome again");
+            Assert.AreEqual(0f, plate.color.a, 0.001f, "the offer's plate is still drawn");
+
+            // And it is still the click target. A transparent Image raycasts on
+            // its rect rather than its alpha, which is the only reason removing
+            // the chrome does not also remove the one decision this screen asks
+            // for.
+            Assert.IsTrue(plate.raycastTarget, "the offer can no longer be clicked");
         }
 
         [UnityTest]

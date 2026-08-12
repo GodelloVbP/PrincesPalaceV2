@@ -24,7 +24,11 @@ namespace PrincesPalace
     // arrive instantly.
     public class ReckoningController : MonoBehaviour
     {
-        [SerializeField] internal RectTransform frame;
+        // The MASK, not the frame. Opening this uncovers a painted panel that
+        // never changes size; the frame itself is deliberately not held here,
+        // because anything with a reference to it is one edit away from
+        // scaling it again.
+        [SerializeField] internal RectTransform frameWipe;
         [SerializeField] internal TMP_Text goldLabel;
         [SerializeField] internal Button continueButton;
         [SerializeField] internal GameObject lootHeading;
@@ -82,6 +86,14 @@ namespace PrincesPalace
         // frame, zero width, opening outward -- so it reads as the panel being
         // drawn across the fight rather than as a dialog appearing on top of
         // it. The scale-from-0.82 version was a popup and looked like one.
+        //
+        // And a MASK, not a scale, which is a second and separate correction.
+        // Driving frame.localScale.x got the timing right and the substance
+        // wrong: localScale scales CHILDREN, so the border's corner ornaments,
+        // the three item cards and every label compressed to nothing and sprang
+        // back out. That is a squash, and it is what made the screen read
+        // cheap. Opening a RectMask2D's WIDTH reveals fixed-size content
+        // instead of deforming it.
         private const float WipeSeconds = 0.34f;
 
         // The phase change sweeps RIGHTWARD: the choice leaves to the right
@@ -465,8 +477,12 @@ namespace PrincesPalace
             // Full height, no width. The lift and the glow ride the same
             // clock: the panel rises the last few pixels as it finishes
             // opening, and the drop behind it fades up with the gloom.
-            frame.localScale = new Vector3(0f, 1f, 1f);
-            frame.anchoredPosition = new Vector2(frame.anchoredPosition.x, LiftFrom);
+            //
+            // The LIFT moves the mask rather than the frame inside it, so the
+            // two travel together -- lifting the frame alone would slide it out
+            // from under its own clip and crop the bottom 46px of the border.
+            SetWipeWidth(0f);
+            frameWipe.anchoredPosition = new Vector2(frameWipe.anchoredPosition.x, LiftFrom);
 
             float gloomTarget = dimmer != null ? dimmer.color.a : 0f;
             float glowTarget = frameGlow != null ? GlowAlpha : 0f;
@@ -481,8 +497,9 @@ namespace PrincesPalace
                 elapsed += Time.unscaledDeltaTime;
 
                 float k = Smooth(Mathf.Clamp01(elapsed / WipeSeconds));
-                frame.localScale = new Vector3(k, 1f, 1f);
-                frame.anchoredPosition = new Vector2(frame.anchoredPosition.x, Mathf.Lerp(LiftFrom, 0f, k));
+                SetWipeWidth(ReckoningScreen.PanelWidth * k);
+                frameWipe.anchoredPosition =
+                    new Vector2(frameWipe.anchoredPosition.x, Mathf.Lerp(LiftFrom, 0f, k));
 
                 float g = Smooth(Mathf.Clamp01(elapsed / GloomSeconds));
                 if (dimmer != null) SetAlpha(dimmer, gloomTarget * g);
@@ -491,18 +508,38 @@ namespace PrincesPalace
                 yield return null;
             }
 
-            frame.localScale = Vector3.one;
-            frame.anchoredPosition = new Vector2(frame.anchoredPosition.x, 0f);
+            SetWipeWidth(ReckoningScreen.PanelWidth);
+            frameWipe.anchoredPosition = new Vector2(frameWipe.anchoredPosition.x, 0f);
             if (dimmer != null) SetAlpha(dimmer, gloomTarget);
             if (frameGlow != null) SetAlpha(frameGlow, glowTarget);
 
             _animation = null;
         }
 
+        // How much of the panel is uncovered.
+        //
+        // sizeDelta, and the mask's pivot is centred, so the width opens
+        // symmetrically about a point that does not move -- the frame inside
+        // is anchored to that same centre and therefore sits still while it is
+        // revealed. Height is restated rather than left alone because a
+        // Vector2 assignment is the only way to set one axis, and reading the
+        // live value back would let a stray edit anywhere else persist.
+        private void SetWipeWidth(float width)
+        {
+            if (frameWipe == null) return;
+            frameWipe.sizeDelta = new Vector2(width, ReckoningScreen.PanelHeight);
+        }
+
         // The choice leaves, the summary arrives, both moving right.
         private IEnumerator SweepToSummary()
         {
-            float width = ReckoningScreen.PanelWidth;
+            // A phase travels exactly its OWN width, which is the clip's, not
+            // the panel's. Both phases now live inside a RectMask2D inset to
+            // the painted border, so a card is gone the moment it has moved one
+            // clip-width -- and it disappears BEHIND the border rather than
+            // sailing on over the battlefield, which is what it used to do with
+            // nothing bounding it at all.
+            float width = ReckoningScreen.ContentHalfWidth * 2f;
 
             summaryPhase.gameObject.SetActive(true);
             summaryPhase.anchoredPosition = new Vector2(-width, 0f);
@@ -639,10 +676,10 @@ namespace PrincesPalace
         // there is no live hierarchy to animate in.
         private void SettleImmediately()
         {
-            if (frame != null)
+            if (frameWipe != null)
             {
-                frame.localScale = Vector3.one;
-                frame.anchoredPosition = new Vector2(frame.anchoredPosition.x, 0f);
+                SetWipeWidth(ReckoningScreen.PanelWidth);
+                frameWipe.anchoredPosition = new Vector2(frameWipe.anchoredPosition.x, 0f);
             }
 
             if (dimmer != null) SetAlpha(dimmer, dimmer.color.a);

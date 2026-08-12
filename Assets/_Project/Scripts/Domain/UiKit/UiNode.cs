@@ -62,6 +62,27 @@ namespace PrincesPalace.Domain.UiKit
         // button with no visible cause.
         public bool Decor;
 
+        // Clips descendants to this node's rect (a RectMask2D).
+        //
+        // The DSL had no way to say this at all, and the absence showed: the
+        // Reckoning's open animation drove localScale because a mask was not
+        // available, which squashed every child horizontally instead of
+        // revealing them, and its phase sweep sent cards out over the
+        // battlefield because nothing bounded them.
+        //
+        // Note what this does NOT do: the audit still measures declared rects,
+        // so a mask is not a licence to overflow. Anything that genuinely
+        // hangs past its parent still has to say AllowOverflow and why.
+        public bool Masks;
+
+        // A button with no plate: no sprite, nothing drawn, still clickable.
+        //
+        // NOT the same as leaving SpriteKey empty, which means "use the shared
+        // button frame" and is the emitter's fallback. There was no way to say
+        // "no chrome at all", so the Reckoning's three item offers wore a gold
+        // plate each behind their art for as long as the screen existed.
+        public bool Chromeless;
+
         // Escape hatches. Both REQUIRE a reason, so every exemption is greppable
         // and reviewable -- in v1 everything was an escape hatch and none of them
         // were enumerable.
@@ -77,6 +98,8 @@ namespace PrincesPalace.Domain.UiKit
         public UiNode WithScale(UiVec scale) { Scale = scale; return this; }
         public UiNode Inactive() { StartInactive = true; return this; }
         public UiNode AsDecor() { Decor = true; return this; }
+        public UiNode Clipping() { Masks = true; return this; }
+        public UiNode NoChrome() { Chromeless = true; return this; }
         public UiNode Padded(UiPad pad) { Pad = pad; return this; }
 
         // Containers default to FromChildren, which is right almost always. A
