@@ -49,12 +49,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const string TabKey = "UI/Buttons/Processed/tab_plate.png";
         public const string ContinueKey = "UI/Buttons/Processed/continue_arrow.png";
         public const string BurstKey = "UI/Effects/Processed/rarity_burst.png";
+        public const string PlaqueKey = "UI/Reckoning/Processed/title_plaque.png";
 
         // Fixed at build time, so it must cover the largest party the save can
         // field. Base squad is 1 today and the design's stated target is 3;
         // four leaves headroom without costing anything, since unused rows are
         // hidden. Pinned against EffectiveMaxSquadSize by ReckoningTests.
-        public const int RowCount = 4;
+        public const int RowCount = 3;
 
         public UiNode Root;
 
@@ -122,17 +123,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // for a name line, a bar and a gain line without the last of the three
         // hanging out of the box. The first attempt was 80 on 92 and the gain
         // label escaped by exactly 8px at every frame.
-        private const float RowHeight = 68f;
-        private const float RowPitch = 76f;
+        private const float RowHeight = 64f;
+        private const float RowPitch = 72f;
         private const float BarWidth = 900f;
         private const float BarHeight = 18f;
 
         // How many relics one page of the RELICS tab shows. The design says
         // "infinite slots per run"; six is what fits without paging, and the
         // controller says so out loud when a run holds more.
-        public const int RelicRowCount = 6;
+        public const int RelicRowCount = 5;
 
-        private const float TabY = 178f;
+        private const float TabY = 100f;
         private const float TabPitch = 250f;
 
         public static ReckoningScreen Build()
@@ -143,7 +144,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // Captured as LootHeading: it is the same node it always was, just
             // moved onto the phase that owns the choice.
             var lootHeading = Ui.Label("ReckoningOfferHeading", UiStrings.ReckoningChooseOne,
-                    new UiVec(700f, 44f), 26, "#F2DB9E", Place.At(0f, 250f))
+                    new UiVec(700f, 44f), 26, "#F2DB9E", Place.At(0f, 248f))
                 .AsDecor();
             screen.LootHeading = lootHeading;
 
@@ -161,8 +162,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // ---- phase two: what it was worth --------------------------
             var summaryChildren = new List<UiNode>
             {
-                Ui.Label("ReckoningTitle", UiStrings.ReckoningTitle, new UiVec(700f, 50f), 32, "#F2DB9E",
-                    Place.At(0f, 250f)).AsDecor(),
+                // The plaque FIRST, so the title draws over it. Sized to the
+                // keyed art's own 3.05 aspect -- the border ornament tapers to
+                // points at both ends and stretching it bends them.
+                Ui.Sprite("ReckoningTitlePlaque", PlaqueKey, Place.At(0f, 218f),
+                    UiSize.Fixed(480f, 157f)).AsDecor(),
+                Ui.Label("ReckoningTitle", UiStrings.ReckoningTitle, new UiVec(400f, 46f), 26, "#F2DB9E",
+                    Place.At(0f, 218f)).AsDecor(),
             };
 
             for (int i = 0; i < TabStrings.Length; i++)
@@ -177,7 +183,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // ONLY on the summary phase. Phase one has no way out but the
             // choice itself -- you always take something.
             var continueButton = Ui.Button("ReckoningContinueButton", UiStrings.Continue,
-                new UiVec(340f, 92f), 22, Place.At(0f, -266f));
+                new UiVec(340f, 84f), 22, Place.At(0f, -272f));
             continueButton.SpriteKey = ContinueKey;
             screen.ContinueButton = continueButton;
             summaryChildren.Add(continueButton);
@@ -253,10 +259,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // heading beside a hole is worse than either half alone.
             var children = new List<UiNode>
             {
-                Ui.Label("ReckoningGoldLabel", UiStrings.ReckoningGold, new UiVec(700f, 56f), 32,
-                    "#F2DB9E", Place.At(0f, 96f)).AsDecor(),
-                Ui.Label("ReckoningExpHeading", UiStrings.ReckoningExperience, new UiVec(700f, 34f), 20,
-                    "#B8A8D9", Place.At(0f, 34f)).AsDecor(),
+                Ui.Label("ReckoningGoldLabel", UiStrings.ReckoningGold, new UiVec(700f, 54f), 32,
+                    "#F2DB9E", Place.At(0f, 30f)).AsDecor(),
+                Ui.Label("ReckoningExpHeading", UiStrings.ReckoningExperience, new UiVec(700f, 32f), 20,
+                    "#B8A8D9", Place.At(0f, -20f)).AsDecor(),
             };
 
             GoldLabel = children[0];
@@ -279,12 +285,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var children = new List<UiNode>
             {
                 Ui.Label("ReckoningRelicHeading", UiStrings.ReckoningRelicHeld, new UiVec(700f, 34f), 20,
-                    "#B8A8D9", Place.At(0f, 110f)).AsDecor(),
+                    "#B8A8D9", Place.At(0f, 40f)).AsDecor(),
             };
 
             for (int i = 0; i < RelicRowCount; i++)
             {
-                float y = 40f - i * 60f;
+                float y = -20f - i * 60f;
 
                 var name = Ui.Label("ReckoningRelic" + i + "Name", UiString.Runtime, new UiVec(420f, 30f), 21,
                         "#EDE6FF", Place.At(-280f, 12f))
@@ -308,7 +314,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             }
 
             var empty = Ui.Label("ReckoningRelicEmpty", UiStrings.ReckoningNoRelics, new UiVec(900f, 44f), 20,
-                    "#7E6E9E", Place.At(0f, -40f))
+                    "#7E6E9E", Place.At(0f, -100f))
                 .AsDecor()
                 .Inactive();
             RelicEmptyHint = empty;
@@ -328,12 +334,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var children = new List<UiNode>
             {
                 Ui.Label("ReckoningTallyHeading", UiStrings.ReckoningTallyHeading, new UiVec(800f, 34f), 20,
-                    "#B8A8D9", Place.At(0f, 110f)).AsDecor(),
+                    "#B8A8D9", Place.At(0f, 40f)).AsDecor(),
             };
 
             for (int i = 0; i < RowCount; i++)
             {
-                float y = 10f - i * 88f;
+                float y = -30f - i * 88f;
 
                 var name = Ui.Label("ReckoningTally" + i + "Name", UiString.Runtime, new UiVec(380f, 30f), 20,
                         "#EDE6FF", Place.At(-300f, 20f))
@@ -367,7 +373,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // fight was worth against what they had already.
         private UiNode BuildRow(int index)
         {
-            float y = -24f - index * RowPitch;
+            float y = -70f - index * RowPitch;
 
             var name = Ui.Label($"ReckoningRow{index}Name", UiString.Runtime, new UiVec(300f, 28f), 21,
                     "#EDE6FF", Place.At(-330f, 18f))
