@@ -18,10 +18,13 @@
 Working tree is clean at `7d43f79`. Full gate green: **1337 EditMode, 249 PlayMode**
 (9 skipped, all pre-existing `Assert.Ignore` content guards).
 
-Two sessions wrote this file. The Reckoning half below is the one to start on.
-The second half — "The session that happened in v1 by mistake" — is a different
-session's work that landed in the wrong tree; the only thing in it you need is
-three repainted battle backdrops, and it says which.
+Two sessions wrote this file. With the Reckoning findings now closed, the live
+work is **"The session that happened in v1 by mistake"** below. Short version:
+another session spent a day fixing the battle screen in the wrong tree, and v2
+turns out to have the identical bug with the identical constants — front-row
+figures standing shin-deep in the HUD, which `UiAudit` cannot see because of an
+over-broad `AllowOverlap` on the stage frame. That section has the numbers, the
+port order, and three repainted backdrops worth taking.
 
 ---
 
@@ -219,23 +222,89 @@ generations, the other two landed first try. The prompt shape changes — drop m
 of the style clause, and add an explicit "DO NOT copy its subject, this is a
 different location", which is the new failure mode a reference introduces.
 
-### Leave this: none of the code ports
+### v2 has the same bug, and here are the numbers
 
-Checked by grep against v2 — zero hits for all of it:
+I first wrote here that none of the code ports. That was a grep for v1's symbol
+names, and it was wrong in the way that matters: v2 renamed the concepts, it did
+not drop them. `FightStageAnchors` is v1's `StageNearAnchor`/`StageFarAnchor`, and
+both trees share the same `Domain/Stage/StageLayout`.
 
-- `StageNearAnchor` / `StageSpriteScale` — v1's stage anchors, raised so front-row
-  feet cleared the HUD.
-- `BuildStageScrim` — three darkening layers between backdrop and stage.
-- `FightCompositionTests` — a PlayMode gate proving no HUD panel covers a figure's
-  feet or head.
-- `tools/preview_fight.py` — composites the fight screen from constants parsed out
-  of the C#, and reports silhouette separation, edge energy and collisions.
+The values in `Domain/Stage/FightStageAnchors.cs` are **v1's, before the fix**:
 
-v2 runs `Domain/UiKit/Screens/FightScreen.cs`; v1 runs `SceneBuilder.FightStage.cs`.
-Different architecture. The *ideas* are portable — a scrim between backdrop and
-actors, and an offline compositor that reads layout from source rather than
-restating it, are both worth rebuilding on UiKit if v2 turns out to have the same
-readability problem. The implementations are not.
+```
+Near = (470, -300)      Far = (250, -140)      SpriteScale = 0.78
+```
+
+And the HUD around them is identical too — `FightSubmenuLayout.CommandBottom` is
+`-486`, the verb column is `x -286, w 300, h 52, pitch 62`, the party plate is at
+`(-694, -392)` sized `452x216`, the plates are `PlateX 720, PlateW 400,
+PlateH 104, PlateFirstY 332`.
+
+Run the same arithmetic v1 needed:
+
+| | |
+|---|---|
+| Front-row ground line | **-300** |
+| Party plate top edge | **-284** |
+| Topmost *visible* verb row (RUN, i=3) | **-248** |
+
+So the front row stands 52 units below the party plate's top edge and 16 below the
+verb column's, with the foot ring hanging 8 lower still. **Every front-row figure
+in v2 is standing shin-deep in the HUD**, exactly as v1 was, and the whole
+ground-contact system is drawn underneath an opaque panel. That is the single
+biggest reason the battle screen reads pasted-together, and it is a layout bug
+that presents as an art bug.
+
+**`UiAudit` cannot catch it**, which is worth understanding before trusting the
+build gate here. `FightScreen.cs:284` carries:
+
+> `.AllowOverlap("the party and enemy stages share one centred frame, and the HUD is drawn over both - a stage is a transparent coordinate frame, never a surface")`
+
+That reasoning is right about the frame and too broad about the consequence. A
+stage node is indeed a transparent coordinate frame, but the exemption is written
+on the frame and so covers every *figure* standing in it. The audit is otherwise
+stronger than the PlayMode test I wrote in v1 — it re-solves at four aspects at
+build time — and it still cannot see this. The narrower exemption is to allow
+overlap of the stage frame while still asserting that no always-visible HUD panel
+covers the bottom 40 units of a populated slot.
+
+### The port, in order
+
+1. **Fix the anchors.** In v1 this became `Near = (470, -170)`, `Far = (250, -10)`,
+   `SpriteScale` unchanged, plus `PlateFirstY 332 → 380` so front-row heads still
+   cleared the bottom plate, and the detail column shortened by 20. Do not paste
+   those numbers — re-derive them, because the binding constraint is whichever v2
+   panel tops out highest, and v2's detail column may not be v1's 300 tall. The
+   method: ground line must clear the highest always-visible panel top by the foot
+   ring's 8 units plus margin; head must stay under the bottom enemy plate.
+2. **Size it off the real art, not the sprite canvas.** The mistake that cost the
+   most in v1: the golem's canvas is 461 tall but its opaque art above its own
+   ground line is 258. Sizing to the canvas said the frame was over-subscribed by
+   165 units and implied shrinking every actor 15%. Measuring the opaque bbox —
+   and the per-actor `groundLine` in `Resources/StanceManifest.json`, which v2 also
+   has — showed the real budget was fine and the fix was three constants.
+3. **Add a scrim.** v2 has none (`Scrim` — zero hits). Three layers between
+   backdrop and stage: a vertical soft-edged band through the actor rows, a radial
+   knock-down over the centre gap, a bottom-focused gradient under the command
+   columns. v1's tuned alphas were `0.32 / 0.38 / 0.50`; the first attempt at
+   `0.45 / 0.40 / 0.55` scored better on every readability metric and turned the
+   painting into a black rectangle, so tune to a target backdrop luminance
+   (L 30–50 behind the slots) rather than to maximum separation.
+4. **Then judge the backdrops**, not before — art assessed against a broken stage
+   tells you nothing.
+
+`tools/preview_fight.py` needs a new parser for `FightStageAnchors.cs` and the
+UiKit tree, but its math and its metrics transfer whole: it mirrors `StageLayout`,
+which both trees share.
+
+### What genuinely does not port
+
+The emission layer. v1 builds rects imperatively in `SceneBuilder.FightStage.cs`;
+v2 declares a tree and lets `UiEmitter` emit it. The scrim in particular is three
+`Ui.Sprite` nodes here, not three hand-built `Image` components — and it needs
+procedural sprite keys for a soft-edged stripe, a radial glow and a bottom-focused
+gradient, which v1 had in `ProceduralSprites` and v2 will need in whatever the
+`proc:` key namespace provides.
 
 ## Loose ends
 
