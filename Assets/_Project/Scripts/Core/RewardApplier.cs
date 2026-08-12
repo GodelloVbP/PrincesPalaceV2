@@ -65,7 +65,10 @@ namespace PrincesPalace
                     Character.ExpToNextLevel(character.level),
                     gained,
                     slot,
-                    isDowned));
+                    isDowned,
+                    // The START level's requirement, captured before
+                    // AddExperience moved the level underneath it.
+                    Character.ExpToNextLevel(levelBefore)));
             }
 
             SaveSlotManager.SaveCurrent();

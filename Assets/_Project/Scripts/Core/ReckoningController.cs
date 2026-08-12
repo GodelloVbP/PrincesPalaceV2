@@ -70,6 +70,10 @@ namespace PrincesPalace
         private const float BarSeconds = 0.55f;
         private const float BarStagger = 0.12f;
 
+        // Long enough to register as a beat, short enough not to stall the
+        // sequence behind it.
+        private const float FlashSeconds = 0.09f;
+
         // Where the expand starts. Not zero: a panel growing from nothing reads
         // as a popup, while one growing from most of its size reads as the
         // screen settling into place.
@@ -456,24 +460,76 @@ namespace PrincesPalace
         {
             if (delay > 0f) yield return new WaitForSecondsRealtime(delay);
 
-            float from = row.BarFillBefore01();
-            float to = row.BarFill01();
-
-            for (float t = 0f; t < BarSeconds; t += Time.unscaledDeltaTime)
+            // NO LEVEL-UP: one fill, start to finish.
+            if (!row.LevelledUp)
             {
-                float k = Smooth(Mathf.Clamp01(t / BarSeconds));
-                SetSpan(rowBarFills[index], from, Mathf.Lerp(from, to, k));
+                yield return Sweep(index, row, row.BarFillBefore01(), row.BarFill01(), 0f, 1f);
+                CountGain(index, row.ExpGained);
+                yield break;
+            }
 
-                // The NUMBER climbs with the bar. Two readouts of one fact
-                // moving together, rather than a bar that fills beside a total
-                // that was already sitting there -- which is the version that
-                // makes the bar look decorative.
-                CountGain(index, Mathf.RoundToInt(row.ExpGained * k));
+            // A LEVEL-UP SWEEPS THE BAR TO FULL, flashes, and starts again.
+            //
+            // Without this the biggest experience event the game has produced
+            // the emptiest bar it can draw: the level reset the track, so what
+            // remains is a handful of points measured against the NEW level's
+            // larger requirement, and 75 experience and a level rendered as a
+            // sliver. The arithmetic was right and the reading was backwards.
+            int sweeps = row.LevelsGained;
+
+            // The counter runs across the WHOLE sequence rather than resetting
+            // per level -- it is reporting one number, however many times the
+            // bar happens to refill behind it.
+            float progressPerSweep = 1f / (sweeps + 1);
+
+            // First: from wherever they actually were, up to full.
+            yield return Sweep(index, row, row.SweepStart01(), 1f, 0f, progressPerSweep);
+            yield return Flash(index);
+
+            // Any further levels crossed in one fight: empty to full each.
+            for (int i = 1; i < sweeps; i++)
+            {
+                float from = i * progressPerSweep;
+                yield return Sweep(index, row, 0f, 1f, from, from + progressPerSweep);
+                yield return Flash(index);
+            }
+
+            // Then the remainder on the new level's scale, which is where the
+            // bar actually stands now.
+            yield return Sweep(index, row, 0f, row.BarFill01(), sweeps * progressPerSweep, 1f);
+            CountGain(index, row.ExpGained);
+        }
+
+        // One pass of the bar, carrying its share of the counter with it.
+        private IEnumerator Sweep(int index, CharacterReward row, float from, float to,
+                                  float countFrom, float countTo)
+        {
+            // Each pass gets an equal share of the budget, so a two-level fight
+            // is not three times as long to watch as a one-level fight.
+            float seconds = BarSeconds * (countTo - countFrom);
+
+            for (float t = 0f; t < seconds; t += Time.unscaledDeltaTime)
+            {
+                float k = Smooth(Mathf.Clamp01(t / seconds));
+                SetSpan(rowBarFills[index], from, Mathf.Lerp(from, to, k));
+                CountGain(index, Mathf.RoundToInt(row.ExpGained * Mathf.Lerp(countFrom, countTo, k)));
                 yield return null;
             }
 
             SetSpan(rowBarFills[index], from, to);
-            CountGain(index, row.ExpGained);
+        }
+
+        // The moment the level lands. A brief white-out of the fill, because
+        // the bar going from full to empty with no punctuation reads as the
+        // animation glitching rather than as something being earned.
+        private IEnumerator Flash(int index)
+        {
+            var fill = rowBarFills[index];
+            var resting = fill.color;
+
+            fill.color = Color.white;
+            yield return new WaitForSecondsRealtime(FlashSeconds);
+            fill.color = resting;
         }
 
         // Smoothstep. One definition, because three animations easing

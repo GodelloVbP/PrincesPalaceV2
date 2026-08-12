@@ -47,14 +47,37 @@ namespace PrincesPalace.Domain.Rewards
         // What the bar fills toward at the END level, which is not the same
         // as at the start level once a level-up happened mid-fight.
         public readonly int ExpToNextAfter;
+
+        // What the bar filled toward at the START level.
+        //
+        // Needed only by the level-up sweep, and it cannot be derived from the
+        // fields above: after a level-up ExpToNextAfter describes the NEW
+        // level's larger requirement, so measuring ExpBefore against it would
+        // put the sweep's starting point somewhere the bar never was.
+        public readonly int ExpToNextBefore;
+
         public readonly int ExpGained;
 
         public bool LevelledUp => LevelAfter > LevelBefore;
 
+        public int LevelsGained => LevelAfter > LevelBefore ? LevelAfter - LevelBefore : 0;
+
+        // Where the bar STOOD when the fight began, on the start level's own
+        // scale. BarFillBefore01 deliberately answers 0 after a level-up
+        // (the level reset the bar, so every point now showing was earned
+        // here) -- which is right for the resting display and useless as the
+        // first frame of a sweep that has to start where the player left it.
+        public float SweepStart01()
+        {
+            if (!LevelledUp) return BarFillBefore01();
+            return Clamp01(ExpToNextBefore <= 0 ? 0f : ExpBefore / (float)ExpToNextBefore);
+        }
+
         public CharacterReward(string characterId, string displayName,
             int levelBefore, int expBefore, int levelAfter, int expAfter, int expToNextAfter, int expGained,
-            int slotIndex = 0, bool isDowned = false)
+            int slotIndex = 0, bool isDowned = false, int expToNextBefore = 0)
         {
+            ExpToNextBefore = expToNextBefore;
             CharacterId = characterId;
             DisplayName = displayName;
             SlotIndex = slotIndex;

@@ -72,15 +72,29 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void ThePayoutIsSaidOutLoud()
+        public void TheVictoryIsSaidOutLoudButThePayoutIsNot()
         {
+            // The bark used to read "20 experience, 14 gold." and the Reckoning
+            // now expands seconds later saying exactly that, larger, with a
+            // bar -- while the bark sits ABOVE the panel, where it is the first
+            // thing the eye lands on. Two readouts of one fact, smaller one
+            // first.
+            //
+            // What the log still owes the player is that they WON, which the
+            // Reckoning never says. And the payout itself still has to be
+            // computed and carried, which is what the second half asserts --
+            // deleting the line must not quietly delete the number.
             var (session, _, foe) = Fight();
 
             session.ExecuteAttack(foe);
 
             var lines = Lines(session).ToList();
             Assert.IsTrue(lines.Any(m => m.Contains("Victory!")));
-            Assert.IsTrue(lines.Any(m => m.Contains("20 experience")));
+            Assert.IsFalse(lines.Any(m => m.Contains("experience")),
+                "the bark is duplicating the Reckoning again");
+
+            Assert.IsTrue(session.Payout.HasValue, "the payout still has to exist for the screen to show");
+            Assert.AreEqual(20, session.Payout.Value.Experience);
         }
 
         [Test]

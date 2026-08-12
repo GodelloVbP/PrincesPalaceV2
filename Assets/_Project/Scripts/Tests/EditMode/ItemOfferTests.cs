@@ -242,5 +242,75 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(1f, reward.BarFill01(), 0.0001f);
             Assert.AreEqual(1f, reward.BarFillBefore01(), 0.0001f);
         }
+
+        // ---- the level-up sweep ------------------------------------------------
+
+        [Test]
+        public void SweepStartIsWhereTheBarActuallyWasBeforeTheFight()
+        {
+            // BarFillBefore01 answers 0 after a level-up, deliberately -- the
+            // level reset the track. That is right for the resting display and
+            // wrong as the first frame of a sweep, which has to start where the
+            // player left the bar.
+            var levelled = new CharacterReward("a", "A",
+                levelBefore: 1, expBefore: 60,
+                levelAfter: 2, expAfter: 35,
+                expToNextAfter: 200, expGained: 175,
+                expToNextBefore: 100);
+
+            Assert.AreEqual(0f, levelled.BarFillBefore01(), 0.001f, "the resting display still resets");
+            Assert.AreEqual(0.6f, levelled.SweepStart01(), 0.001f, "60 of 100 on the START level");
+        }
+
+        [Test]
+        public void WithoutALevelUpTheSweepStartsWhereTheRestingBarDoes()
+        {
+            var flat = new CharacterReward("a", "A",
+                levelBefore: 2, expBefore: 40,
+                levelAfter: 2, expAfter: 90,
+                expToNextAfter: 200, expGained: 50,
+                expToNextBefore: 200);
+
+            Assert.AreEqual(flat.BarFillBefore01(), flat.SweepStart01(), 0.001f);
+        }
+
+        [Test]
+        public void LevelsGainedCountsTheCrossingsTheSweepHasToPlay()
+        {
+            var one = new CharacterReward("a", "A", 1, 0, 2, 0, 200, 100, expToNextBefore: 100);
+            var three = new CharacterReward("a", "A", 1, 0, 4, 0, 400, 900, expToNextBefore: 100);
+            var none = new CharacterReward("a", "A", 2, 0, 2, 50, 200, 50, expToNextBefore: 200);
+
+            Assert.AreEqual(1, one.LevelsGained);
+            Assert.AreEqual(3, three.LevelsGained);
+            Assert.AreEqual(0, none.LevelsGained);
+        }
+
+        [Test]
+        public void AMissingStartRequirementDegradesToZeroRatherThanDividingByIt()
+        {
+            // A reward built by an older caller has no expToNextBefore. The
+            // sweep then starts empty, which is merely less pretty -- not a
+            // division by zero on the results screen.
+            var legacy = new CharacterReward("a", "A", 1, 60, 2, 35, 200, 175);
+
+            Assert.AreEqual(0f, legacy.SweepStart01(), 0.001f);
+        }
+
+        [Test]
+        public void TheSweepStartIsClampedForASaveWithMoreExpThanItsLevelNeeded()
+        {
+            // Reachable through a content change to the level curve: a save
+            // written under a cheaper curve can hold more exp than its level
+            // now requires. A bar filling past its own track would draw
+            // outside the frame.
+            var overfull = new CharacterReward("a", "A",
+                levelBefore: 1, expBefore: 500,
+                levelAfter: 2, expAfter: 0,
+                expToNextAfter: 200, expGained: 100,
+                expToNextBefore: 100);
+
+            Assert.AreEqual(1f, overfull.SweepStart01(), 0.001f);
+        }
     }
 }

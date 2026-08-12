@@ -33,10 +33,14 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 Payout = VictoryRewards.For(_enemyKits.Values, IsEliteFight, DepthStep);
 
-                // Retro-attached, like every other line a turn decides after its
-                // beat closed -- so the numbers arrive with the killing blow
-                // rather than a beat later.
-                AppendMessage($"{Payout.Value.Experience} experience, {Payout.Value.Gold} gold.");
+                // NO NUMBERS HERE. The Reckoning expands seconds later saying
+                // exactly this experience and exactly this gold, in larger
+                // type, with a bar -- and the bark sits above the panel where
+                // it is the first thing the eye lands on. Two readouts of one
+                // fact, and the smaller one arrives first.
+                //
+                // "Victory!" stays: that is the fight announcing its outcome,
+                // which the Reckoning never says.
                 return;
             }
 
