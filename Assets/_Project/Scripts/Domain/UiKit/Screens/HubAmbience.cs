@@ -29,7 +29,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public readonly struct Light
         {
             public readonly float X, Y, Size;
-            public Light(float x, float y, float size) { X = x; Y = y; Size = size; }
+
+            // Empty means "use the layer's default". The braziers and the
+            // keystone still do; the buildings no longer can, because they are
+            // not all lit the same colour.
+            public readonly string Colour;
+
+            public Light(float x, float y, float size, string colour = "")
+            {
+                X = x;
+                Y = y;
+                Size = size;
+                Colour = colour ?? "";
+            }
         }
 
         public readonly struct Band
@@ -90,10 +102,28 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public static readonly IReadOnlyDictionary<string, Light> BuildingGlows =
             new Dictionary<string, Light>
             {
-                ["PrincipalityBuilding"] = new Light(0f, 40f, 190f),
-                ["CharacterSheetBuilding"] = new Light(0f, 30f, 170f),
-                ["TalentsBuilding"] = new Light(0f, 60f, 200f),
-                ["RelicsBuilding"] = new Light(0f, 30f, 150f),
+                // BELOW CENTRE, and each in its own colour.
+                //
+                // These sat at +30..+60 -- above the middle of the building,
+                // where the structure is -- while every one of these paintings
+                // is lit from UNDERNEATH: the tree burns at its roots, the
+                // spire and the lectern are underlit by their platforms. A glow
+                // over the structure lights the one part that is already
+                // opaque, and reads as haze rather than as the building
+                // casting light into the void it hangs over.
+                //
+                // The single warm #FFCE8C was worse than the position. Four
+                // buildings painted orange, violet, blue and amber all wearing
+                // one gold wash fights every one of them; the wash reads as
+                // fog because it agrees with nothing underneath it.
+                //
+                // Y and Size are in BASE units -- the caller multiplies both by
+                // the plot's depth scale, so a far building gets a smaller,
+                // closer-in light without a second set of numbers.
+                ["PrincipalityBuilding"] = new Light(0f, -125f, 265f, "#FFC98C4D"),
+                ["CharacterSheetBuilding"] = new Light(0f, -115f, 245f, "#7FB4FF4D"),
+                ["TalentsBuilding"] = new Light(0f, -130f, 275f, "#FFA24B55"),
+                ["RelicsBuilding"] = new Light(0f, -110f, 235f, "#9C7BFF4D"),
             };
 
         // The gate's own two flames, in the gate's local space rather than art
@@ -125,6 +155,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // SOURCE alpha to be lower.
         public const string BrazierColor = "#FFD79B99";     // nearest -- on the terrace
         public const string KeystoneColor = "#C9A6FF66";    // enchantment, not fire
+        // The FALLBACK only. Every building names its own colour now -- see
+        // BuildingGlows -- because one warm wash over four differently-lit
+        // paintings agreed with none of them.
         public const string BuildingColor = "#FFCE8C55";    // out over the void
         public const string EmberColor = "#FFDCA680";
         public const string MistColor = "#8E7BD614";
@@ -200,7 +233,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 float size = light.Size * HubAnchors.ScaleFor(plot);
 
                 layer.Pulses.Add(Glow($"{pair.Key}Glow",
-                    at.X + light.X, at.Y + light.Y * HubAnchors.ScaleFor(plot), size, size, BuildingColor));
+                    at.X + light.X, at.Y + light.Y * HubAnchors.ScaleFor(plot), size, size,
+                    string.IsNullOrEmpty(light.Colour) ? BuildingColor : light.Colour));
             }
 
             for (int i = 0; i < EmberOrigins.Length; i++)
