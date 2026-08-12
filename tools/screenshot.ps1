@@ -22,9 +22,16 @@ param(
 #
 # Does NOT pass -nographics: a screenshot needs a real graphics device.
 #
-# Success is checked by whether the PNGs exist, NOT by $proc.ExitCode - that
-# property is unreliable through this Start-Process -PassThru -NoNewWindow
+# Success is checked by whether the EXPECTED PNG exists, NOT by $proc.ExitCode -
+# that property is unreliable through this Start-Process -PassThru -NoNewWindow
 # pattern and has come back empty on runs that demonstrably succeeded.
+#
+# "Expected", emphatically, and that word is the whole of AUDIT #43. This used to
+# ask whether the output directory contained ANY png, so five leftovers from an
+# earlier -All run satisfied it: `-Panel ReckoningPanel` announced the capture,
+# wrote nothing, listed the stale five and exited 0. Ignoring the exit code is
+# still right for the documented reason; checking a different file than the one
+# requested was never part of that trade.
 
 if (-not $Panel -and -not $All -and -not $Runtime) {
     Write-Host "Usage: tools/screenshot.ps1 -All  OR  -Panel <PanelName>  OR  -Runtime"
@@ -35,6 +42,26 @@ if (-not $Panel -and -not $All -and -not $Runtime) {
     exit 1
 }
 
+# The valid panel names, DERIVED from ScreenRegistry rather than restated here.
+#
+# A second copy of this list is the one thing this file must not grow: v1 kept
+# one here AND one in ScreenshotTool, with a documented "nothing keeps these in
+# sync" hazard. Reading the registry's own source is not a copy - add a screen
+# there and it is valid here on the same edit, with nothing to remember.
+function Get-KnownPanelNames {
+    param([string]$ProjectRoot)
+
+    $registry = Join-Path $ProjectRoot "Assets\_Project\Scripts\Editor\SceneBuilder\ScreenRegistry.cs"
+    if (-not (Test-Path $registry)) { return @() }
+
+    $names = @()
+    $found = Select-String -Path $registry -Pattern 'PanelName\s*=\s*"([^"]+)"' -AllMatches
+    foreach ($line in $found) {
+        foreach ($match in $line.Matches) { $names += $match.Groups[1].Value }
+    }
+    return $names
+}
+
 # Derived, never hardcoded - see run_tests_parallel.ps1 for what the hardcoded
 # form did when this project was copied from v1.
 $SourceProject = Split-Path $PSScriptRoot -Parent
@@ -43,6 +70,34 @@ $ProjectParent = Split-Path $SourceProject -Parent
 $TestProject = Join-Path $ProjectParent "$ProjectLeaf-TestRunner"
 . (Join-Path $PSScriptRoot "unity_path.ps1")
 $UnityExe = Get-UnityExe
+
+# BEFORE the sync and before Unity boots. ScreenshotTool already rejects an
+# unknown panel properly - it names every valid one and exits 1 - but that
+# verdict arrives about half a minute later, after a full /MIR robocopy, and
+# then only inside a Unity log this script was throwing away.
+#
+# Case-sensitive on purpose: ScreenshotTool matches PanelName with ==, so
+# 'mainmenupanel' is genuinely not a screen and saying so here beats letting it
+# look accepted and fail later.
+if ($Panel) {
+    $known = Get-KnownPanelNames -ProjectRoot $SourceProject
+
+    # An empty list means the pattern found nothing - ScreenRegistry has been
+    # refactored, not that every panel is suddenly unknown. Fall through and let
+    # Unity be the authority rather than rejecting names this script can no
+    # longer recognise. The output check at the bottom still catches it.
+    if ($known.Count -gt 0 -and $known -cnotcontains $Panel) {
+        Write-Host "Unknown panel '$Panel'."
+        Write-Host ""
+        Write-Host "Known panels, from ScreenRegistry.All:"
+        foreach ($name in $known) { Write-Host "  $name" }
+        Write-Host ""
+        Write-Host "Only TOP-LEVEL panels are capturable this way. A screen built inside"
+        Write-Host "another screen's tree - the Reckoning, the character overlay - has no"
+        Write-Host "entry of its own and cannot be rendered on its own. Use -Runtime."
+        exit 1
+    }
+}
 
 if (-not $OutDir) { $OutDir = Join-Path $SourceProject "tools\screenshots" }
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
@@ -126,10 +181,33 @@ if (-not $proc.WaitForExit($TimeoutSeconds * 1000)) {
     exit 1
 }
 
-$produced = Get-ChildItem $OutDir -Filter *.png -ErrorAction SilentlyContinue
-if (-not $produced -or $produced.Count -eq 0) {
-    Write-Host "No screenshots were produced. Tail of log:"
-    Get-Content $logPath -Tail 40 | ForEach-Object { Write-Host $_ }
+# THE FILE THAT WAS ASKED FOR. Scanning the whole directory here is what let a
+# capture that never happened pass: -All clears the directory first so "any png"
+# is a fair question for it, but for a single panel the only honest question is
+# whether that panel's png is now on disk.
+if ($All) {
+    $produced = @(Get-ChildItem $OutDir -Filter *.png -ErrorAction SilentlyContinue)
+} else {
+    $produced = @(Get-ChildItem $outPath -ErrorAction SilentlyContinue)
+}
+
+if ($produced.Count -eq 0) {
+    if ($All) {
+        Write-Host "No screenshots were produced."
+    } else {
+        Write-Host "No screenshot was produced - $outPath does not exist."
+    }
+
+    # ScreenshotTool's own verdict FIRST. It names the unknown panel and lists
+    # every valid one, which is the answer; 40 lines of Unity boot noise with
+    # that sentence somewhere inside it is not.
+    $reasons = @(Select-String -Path $logPath -Pattern '\[ScreenshotTool\]' -ErrorAction SilentlyContinue)
+    if ($reasons.Count -gt 0) {
+        foreach ($reason in $reasons) { Write-Host "  $($reason.Line.Trim())" }
+    } else {
+        Write-Host "Nothing from ScreenshotTool in the log. Tail:"
+        Get-Content $logPath -Tail 40 | ForEach-Object { Write-Host $_ }
+    }
     exit 1
 }
 

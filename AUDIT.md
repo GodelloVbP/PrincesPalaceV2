@@ -816,7 +816,7 @@ fails if it stops happening.
 
 ## Findings from the Reckoning polish pass, 2026-08-12
 
-### 43. `screenshot.ps1` reports success for a panel it never captured
+### ~~43. `screenshot.ps1` reports success for a panel it never captured~~ — **FIXED 2026-08-12**, both halves, in the commit that struck this
 Asked for `-Panel ReckoningPanel`, the tool printed "Capturing ReckoningPanel to
 …\ReckoningPanel.png", then listed the five PNGs already on disk from a previous run and exited
 0. `ReckoningPanel.png` was never written and nothing said so.
@@ -837,8 +837,33 @@ Two separate defects, worth fixing separately: **an unknown panel name should fa
 whatever is in the directory. The second is the one that generalises — it will silently pass on a
 legitimate panel whose capture fails too.
 
-Not fixed here because it is a tooling change sitting outside the Reckoning work, and because the
-verification it was wanted for was done another way (`tools/measure_bar.py`).
+~~Not fixed here because it is a tooling change sitting outside the Reckoning work, and because the
+verification it was wanted for was done another way (`tools/measure_bar.py`).~~
+
+**How it was fixed.** Both halves, because they are each other's backstop rather than two
+independent tidy-ups.
+
+*Loudly, and early*: `-Panel` is now validated before the robocopy and before Unity boots, against
+names **parsed out of `ScreenRegistry.cs`** rather than restated in the script. That distinction is
+the whole reason the list was absent in the first place, and it is preserved: deriving is not
+copying, so adding a screen to the registry makes it valid to the tool on the same edit. Matching is
+case-sensitive, because `ScreenshotTool` compares `PanelName` with `==` and `mainmenupanel` really
+is not a screen. If the pattern ever matches nothing — a refactor, not an unknown panel — the check
+**defers to Unity** instead of rejecting every name it can no longer recognise.
+
+*And correctly, at the end*: the success check now asks whether **the requested file** exists.
+`-All` clears the directory first, so "any png" is a fair question for it; for a single panel it
+never was. On failure the log is filtered to `[ScreenshotTool]` lines, so its verdict — which names
+the unknown panel and lists every valid one — is what gets printed rather than being the sixteenth
+line of a 40-line Unity tail.
+
+Ignoring `$proc.ExitCode` is **kept**. That was always right for the documented reason; checking a
+different file than the one requested was never part of that trade.
+
+Verified on all four paths: the original failing invocation now exits 1 without booting Unity, a
+case-mismatched name is rejected, a valid panel still captures and now lists only the file it
+actually wrote, and the end-of-run backstop reports the missing file plus ScreenshotTool's own
+verdict.
 
 ### 44. The Reckoning's gain label sits on top of the bar it annotates
 `ReckoningScreen.BuildRow`: the row is 64 tall, the name/level line occupies y 4..32, the track
