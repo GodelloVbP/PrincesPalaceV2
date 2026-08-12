@@ -1,5 +1,20 @@
 # Handover — 2026-08-12
 
+> **Update, later the same day (`96e115f`).** All four Reckoning findings below
+> are **fixed** and struck through; read them for the reasoning, not as work
+> outstanding. Gate green at **1341 EditMode, 251 PlayMode** (9 skipped, the same
+> pre-existing `Assert.Ignore` content guards).
+>
+> Two things came out of that pass and are recorded in `AUDIT.md`, not here:
+> **#43**, `screenshot.ps1` reporting success for a panel it never captured —
+> which is why the fix was verified by compositing instead; and **#44**, the
+> Reckoning row's gain label sitting on top of the bar it annotates, which needs
+> a design call rather than a patch.
+>
+> What is still open in this file: everything from "The session that happened in
+> v1 by mistake" onward, including the three repainted backdrops and the
+> Loose ends.
+
 Working tree is clean at `7d43f79`. Full gate green: **1337 EditMode, 249 PlayMode**
 (9 skipped, all pre-existing `Assert.Ignore` content guards).
 
@@ -10,13 +25,29 @@ three repainted battle backdrops, and it says which.
 
 ---
 
-## Start here: the Reckoning feels cheap, and I know why
+## ~~Start here: the Reckoning feels cheap, and I know why~~ — all four FIXED in `96e115f`
 
 Diagnosed from a screen recording (`C:\Games\Recordings video\2026-08-12 15-22-07.mp4`)
 by extracting frames with ffmpeg and reading them one at a time. Four findings, two
-sharing a root cause. **None of these are fixed.**
+sharing a root cause. ~~**None of these are fixed.**~~
 
-### 1 & 2. The frame has no mask — this is the big one
+**How they were fixed**, since the shape differs from what was proposed below:
+`UiNode` grew a `Masks` flag and `UiEmitter` emits a `RectMask2D` for it, as
+predicted — but the screen needs **two** masks, not one. `ReckoningFrameWipe` is
+panel-sized and its *width* is what the controller opens; `ReckoningPhaseClip` is
+inset to the painted interior so a sweeping card vanishes behind the gold rather
+than at the panel's outside edge. The inset is horizontal and symmetric on
+purpose: every child of a phase is placed relative to its centre, and insetting
+by the true vertical border (16.7% crest against 14.6% foot) would have moved all
+of them 9px. The lift moved onto the mask too — lifting the frame alone would now
+slide it out from under its own clip.
+
+Chrome came off with a `Chromeless` flag rather than an empty `SpriteKey`; the
+warning below was right, and the reason is better than expected. The `Image` has
+to stay, because a `Button` needs a `targetGraphic` — but `Image` raycasts on its
+**rect**, not its alpha, so a fully transparent one still takes the click.
+
+### ~~1 & 2. The frame has no mask — this is the big one~~
 
 **The "wipe" is a horizontal squash.** `ReckoningController.PlayIn` animates
 `frame.localScale.x` from 0 to 1. `localScale` scales CHILDREN, so during the
@@ -41,7 +72,7 @@ The fix is a UiKit change, not a controller tweak:
 - Watch out: `NothingSitsOnThePaintedBorder` measures declared node sizes, not live
   rects, so it will keep passing regardless. It does not cover this.
 
-### 3. The item offers still wear button chrome
+### ~~3. The item offers still wear button chrome~~
 
 I told the user twice I had stripped it. I had not. `BuildOffer` removes the
 declared children but `UiEmitter` applies its default `SceneBuilder.ButtonSprite()`
@@ -51,11 +82,30 @@ Continue. So the three offers are still big gold plates.
 One-line fix, but decide what "no chrome" means: an empty `SpriteKey` may make the
 button non-raycastable. Check `UiEmitter.EmitButton` before assuming.
 
-### 4. The exp track reads as a flat black gap
+### ~~4. The exp track reads as a flat black gap~~
 
 `BarTrackKey` (`proc:bar_track`) is applied and tinted `#2A1C46`, but at 26px tall
 on a 1344-wide frame against a violet panel it looks like a hole rather than a
 recessed channel. Wants to be taller and lighter, and the fill wants more bloom.
+
+**"Lighter" was half right and doing it to both halves overshot.** What reaches
+the screen is the *product* of `ProceduralSpriteBaker`'s baked shading and the
+tint over it, and both were dark: a 0.10..0.22 body times a tint at luminance
+0.13 landed at `#07040B` on a `#261433` panel — a fifth of the surface it was
+supposedly cut into. Raising both put it at **0.85x** the panel, where the
+channel disappears *into* the panel instead. That is a different failure, not a
+better one.
+
+So the baked shading carries the fix (body 0.30..0.46) and the tint barely moves
+(`#2A1C46` → `#33224F`). Height 26 → 32, which is a ceiling rather than a
+preference: the row is 64 tall and the name line starts at y 4.
+
+**No test could have caught either miss** — the audit knows a node's box, not its
+colour, and asserting the tint alone measures the wrong quantity.
+`tools/measure_bar.py` composites the two against the painted frame and fails
+outside a band; it is what caught the overshoot. Now 0.59x the panel with a lit
+lip at 1.34x, both fill segments legible inside it. This is the same
+"compositing beats reasoning" lesson in Traps below, and it held again.
 
 ---
 

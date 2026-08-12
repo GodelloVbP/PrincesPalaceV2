@@ -814,6 +814,52 @@ fails if it stops happening.
 
 ---
 
+## Findings from the Reckoning polish pass, 2026-08-12
+
+### 43. `screenshot.ps1` reports success for a panel it never captured
+Asked for `-Panel ReckoningPanel`, the tool printed "Capturing ReckoningPanel to
+…\ReckoningPanel.png", then listed the five PNGs already on disk from a previous run and exited
+0. `ReckoningPanel.png` was never written and nothing said so.
+
+The cause is stated in the script's own header and is reasonable on its face: "Success is
+checked by whether the PNGs exist, **NOT** by `$proc.ExitCode`" — because that exit code came
+back empty on runs that demonstrably succeeded. The check it fell back to is existence of *some*
+output rather than of *the requested* output, so a stale file from any earlier run satisfies it.
+
+`ReckoningPanel` could never have worked: `ScreenRegistry.All` holds five entries, all top-level
+panels (`FightPanel`, `HubPanel`, `MainMenuPanel`, `MapPanel`, `TalentPanel`), and the Reckoning
+is a sub-panel inside the fight. So the correct behaviour is to reject the name up front against
+that list — the script already documents `ScreenRegistry` as the single source of truth for panel
+names and deliberately keeps no second copy, which is right; it just never consults it.
+
+Two separate defects, worth fixing separately: **an unknown panel name should fail loudly**, and
+**success should be checked against the file that was asked for, and its timestamp**, not against
+whatever is in the directory. The second is the one that generalises — it will silently pass on a
+legitimate panel whose capture fails too.
+
+Not fixed here because it is a tooling change sitting outside the Reckoning work, and because the
+verification it was wanted for was done another way (`tools/measure_bar.py`).
+
+### 44. The Reckoning's gain label sits on top of the bar it annotates
+`ReckoningScreen.BuildRow`: the row is 64 tall, the name/level line occupies y 4..32, the track
+is centred at -14, and the gain label (`ReckoningRow{i}Gain`, 200x22 at x 370, y -21) spans
+y -32..-10 and x 270..470. The track spans x ±450, so the label overlaps the bar's right-hand end
+by 20px vertically and across its whole width horizontally.
+
+**A1 cannot see it**: both nodes are `.AsDecor()`, and the overlap check skips decoration on
+purpose, because ambient art overlaps constantly by design.
+
+It was already true before this pass and got marginally worse — the track grew 26 → 32 to stop
+reading as a hole, which is finding 4 of the 2026-08-12 handover. Left alone rather than
+half-solved: there is no vertical budget in the row, since a name line, a bar and a gain line want
+84px in 64, and every alternative moves something the design settled deliberately. Either the row
+pitch grows (which pushes three rows down toward the painted bottom border, and the top row into
+the EXPERIENCE heading), or the gain moves onto the top line beside the level, or the overlap is
+declared intentional and the label is styled to read as riding the bar. That is the author's call,
+not a silent fix.
+
+---
+
 ## Open investigations
 
 ### ~~24. `BloodlustRelic_GrantsAnImmediateExtraTurnAfterAKillingBlow` flakes on fresh content/scene builds — root cause not found~~ — **ROOT CAUSE FOUND, 2026-08-04.** It is a symptom of #13, and fixing that fixed this. Reproduced 2 times in 8 runs before, then 0 in 12 after
