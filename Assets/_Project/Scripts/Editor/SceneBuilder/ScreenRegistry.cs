@@ -696,6 +696,25 @@ public static class ScreenRegistry
         controller.frame = result.Rect(screen.Frame);
         controller.goldLabel = result.Tmp(screen.GoldLabel);
         controller.continueButton = result.Button(screen.ContinueButton);
+
+        controller.tabButtons = screen.TabButtons.Select(result.Button).ToArray();
+        controller.tabMarkers = screen.TabMarkers.Select(result.Image).ToArray();
+        controller.pages = screen.Pages.Select(result.Go).ToArray();
+
+        // The modal's own dimmer, so the gloom can be faded up rather than
+        // snapped on. Ui.Modal builds it; the screen holds the ref.
+        controller.dimmer = result.Image(screen.Dimmer);
+
+        controller.relicEmptyHint = result.Go(screen.RelicEmptyHint);
+        controller.relicRows = screen.RelicRows.Select(result.Go).ToArray();
+        controller.relicNames = screen.RelicNames.Select(result.Tmp).ToArray();
+        controller.relicMetas = screen.RelicMetas.Select(result.Tmp).ToArray();
+        controller.relicBodies = screen.RelicBodies.Select(result.Tmp).ToArray();
+
+        controller.tallyRows = screen.TallyRows.Select(result.Go).ToArray();
+        controller.tallyNames = screen.TallyNames.Select(result.Tmp).ToArray();
+        controller.tallyStats = screen.TallyStats.Select(result.Tmp).ToArray();
+        controller.tallyKills = screen.TallyKills.Select(result.Tmp).ToArray();
         controller.lootHeading = result.Go(screen.LootHeading);
 
         controller.rowGroups = screen.RowGroups.Select(result.Go).ToArray();

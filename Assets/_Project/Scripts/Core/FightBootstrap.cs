@@ -187,6 +187,12 @@ namespace PrincesPalace
                 // inside the run and lost with it, while a level survives.
                 RunManager.BankPayout(payout.Value.Gold);
                 LastReward = RewardApplier.Apply(payout.Value, FieldedIds());
+
+                // The fight's own counters, carried onto the reward so the
+                // Reckoning's tally tab has something to read. Without this the
+                // ledger existed, was folded into the run, and was visible only
+                // after you died.
+                if (session?.Ledger != null) LastReward.Ledger = session.Ledger;
             }
 
             RunManager.ClearCurrentRoom();

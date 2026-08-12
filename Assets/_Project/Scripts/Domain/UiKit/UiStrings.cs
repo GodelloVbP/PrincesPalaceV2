@@ -110,6 +110,28 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString ReckoningTaken =
             UiString.Define("reckoning.taken", "TAKEN");
 
+        // The three tabs. Named for what they hold rather than numbered, and
+        // spelled out here rather than derived from an enum name -- "TALLY"
+        // is not what any reasonable enum member would be called.
+        public static readonly UiString ReckoningTabSpoils = UiString.Define("reckoning.tab_spoils", "SPOILS");
+        public static readonly UiString ReckoningTabRelics = UiString.Define("reckoning.tab_relics", "RELICS");
+        public static readonly UiString ReckoningTabTally = UiString.Define("reckoning.tab_tally", "TALLY");
+
+        public static readonly UiString ReckoningNoRelics =
+            UiString.Define("reckoning.no_relics", "YOU CARRY NOTHING INTO THE DARK");
+        public static readonly UiString ReckoningRelicHeld =
+            UiString.Define("reckoning.relic_held", "HELD FOR THIS DESCENT");
+        public static readonly UiString ReckoningTallyHeading =
+            UiString.Define("reckoning.tally_heading", "WHAT THEY DID, THIS FIGHT");
+        // Reuses the defeat screen's shape on purpose: the same four numbers
+        // about the same people should read identically wherever they appear.
+        public static readonly UiString ReckoningTallyLine =
+            UiString.Define("reckoning.tally_line",
+                "{0} dealt  ({1} phys / {2} other)      {3} taken      {4} healed",
+                "999999 dealt  (999999 phys / 999999 other)      999999 taken      999999 healed");
+        public static readonly UiString ReckoningKills =
+            UiString.Define("reckoning.kills", "{0} felled", "999 felled");
+
         // --- the defeat screen ---------------------------------------------------
         //
         // The Reckoning's twin. Same two-column shape, same 70% frame, opposite
@@ -306,6 +328,9 @@ namespace PrincesPalace.Domain.UiKit
             ReckoningTitle, ReckoningExperience, ReckoningGold, ReckoningChooseOne,
             ReckoningLevel, ReckoningLevelUp, ReckoningExpGain, ReckoningDowned,
             ReckoningOfferMeta, ReckoningTaken,
+            ReckoningTabSpoils, ReckoningTabRelics, ReckoningTabTally,
+            ReckoningNoRelics, ReckoningRelicHeld, ReckoningTallyHeading,
+            ReckoningTallyLine, ReckoningKills,
             DefeatTitle, DefeatLost, DefeatKept, DefeatGoldLost, DefeatEmbers, DefeatEmbersNone,
             DefeatDepth, DefeatExp, DefeatStatsHeading, DefeatStatLine, DefeatToHub, DefeatInspect,
             DraftTitle, DraftSubtitle, DraftTake, DraftNoRelics, DraftDescend, DraftRarity,

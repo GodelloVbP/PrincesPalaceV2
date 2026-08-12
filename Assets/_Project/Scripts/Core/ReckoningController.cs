@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -39,6 +40,23 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text[] offerNames;
         [SerializeField] internal TMP_Text[] offerMetas;
 
+        [SerializeField] internal Button[] tabButtons;
+        [SerializeField] internal Image[] tabMarkers;
+        [SerializeField] internal GameObject[] pages;
+
+        [SerializeField] internal Image dimmer;
+
+        [SerializeField] internal GameObject relicEmptyHint;
+        [SerializeField] internal GameObject[] relicRows;
+        [SerializeField] internal TMP_Text[] relicNames;
+        [SerializeField] internal TMP_Text[] relicMetas;
+        [SerializeField] internal TMP_Text[] relicBodies;
+
+        [SerializeField] internal GameObject[] tallyRows;
+        [SerializeField] internal TMP_Text[] tallyNames;
+        [SerializeField] internal TMP_Text[] tallyStats;
+        [SerializeField] internal TMP_Text[] tallyKills;
+
         private const float ExpandSeconds = 0.28f;
         private const float BarSeconds = 0.55f;
         private const float BarStagger = 0.12f;
@@ -47,6 +65,22 @@ namespace PrincesPalace
         // as a popup, while one growing from most of its size reads as the
         // screen settling into place.
         private const float ExpandFrom = 0.82f;
+
+        // The LIFT. The frame rises this far as it expands, so the screen
+        // arrives from the fight rather than appearing at rest on top of it.
+        // Small on purpose -- past about 60px it reads as a slide-in and the
+        // expand stops being the thing you notice.
+        private const float LiftFrom = -46f;
+
+        // The gloom fades UP over the same beat instead of snapping on. A dim
+        // that arrives in one frame is a scene cut, which is the one thing an
+        // overlay is not supposed to be.
+        private const float GloomSeconds = 0.34f;
+
+        private static readonly Color MarkerLit = new Color(0.95f, 0.86f, 0.62f, 1f);
+        private static readonly Color MarkerDark = new Color(0.95f, 0.86f, 0.62f, 0f);
+
+        private int _tab;
 
         private CombatReward _reward;
         private List<ItemOffer> _offers = new List<ItemOffer>();
@@ -68,6 +102,12 @@ namespace PrincesPalace
         {
             if (_wired) return;
             _wired = true;
+
+            for (int i = 0; i < tabButtons.Length; i++)
+            {
+                int index = i;
+                tabButtons[i].onClick.AddListener(() => SelectTab(index));
+            }
 
             continueButton.onClick.AddListener(() => Dismissed?.Invoke());
 
@@ -99,6 +139,13 @@ namespace PrincesPalace
             // Only animate when the object is actually live in the hierarchy.
             // StartCoroutine on an inactive object throws, and a headless test
             // that never activates the canvas should still get correct numbers.
+            // ALWAYS back to the payout. Reopening on whichever tab was last
+            // read would bury the gold and the loot behind a click.
+            _tab = 0;
+            PaintTabs();
+            PaintRelics();
+            PaintTally();
+
             if (isActiveAndEnabled) _animation = StartCoroutine(PlayIn());
             else SettleImmediately();
         }
@@ -218,20 +265,138 @@ namespace PrincesPalace
 
         public bool HasTakenAnItem => _taken;
 
+        // ---- tabs ---------------------------------------------------------------------
+
+        private void SelectTab(int index)
+        {
+            if (pages == null || index < 0 || index >= pages.Length) return;
+
+            _tab = index;
+            PaintTabs();
+        }
+
+        private void PaintTabs()
+        {
+            for (int i = 0; i < pages.Length; i++)
+            {
+                if (pages[i] != null) pages[i].SetActive(i == _tab);
+                if (i < tabMarkers.Length && tabMarkers[i] != null)
+                {
+                    tabMarkers[i].color = i == _tab ? MarkerLit : MarkerDark;
+                }
+            }
+        }
+
+        // ---- what the descent is carrying ----------------------------------------------
+
+        private void PaintRelics()
+        {
+            // The RUN'S relics, read straight off the snapshot. The Reckoning
+            // is the only screen a player sees between fights, so it is where
+            // "what am I actually carrying" belongs.
+            var held = RunManager.HasRun
+                ? RunManager.Run.relicIds ?? new List<string>()
+                : new List<string>();
+
+            if (relicEmptyHint != null) relicEmptyHint.SetActive(held.Count == 0);
+
+            for (int i = 0; i < relicRows.Length; i++)
+            {
+                bool present = i < held.Count;
+                relicRows[i].SetActive(present);
+                if (!present) continue;
+
+                var definition = ContentDatabase.Relics.FirstOrDefault(r => r != null && r.id == held[i]);
+
+                // A relic id naming content that is gone still gets a row: the
+                // player is carrying SOMETHING and a silently shorter list
+                // would be worse than an honest unknown.
+                relicNames[i].SetContent(definition?.displayName ?? held[i]);
+                relicMetas[i].SetContent(definition == null ? "" : RarityWord(definition.rarity));
+                relicBodies[i].SetContent(definition?.description ?? "");
+            }
+        }
+
+        private static string RarityWord(Domain.Content.RelicRarity rarity)
+        {
+            switch (rarity)
+            {
+                case Domain.Content.RelicRarity.Common: return "COMMON";
+                case Domain.Content.RelicRarity.Uncommon: return "UNCOMMON";
+                case Domain.Content.RelicRarity.Rare: return "RARE";
+                case Domain.Content.RelicRarity.UltraRare: return "ULTRA-RARE";
+                case Domain.Content.RelicRarity.Mythic: return "MYTHIC";
+                default: return "GODLIKE";
+            }
+        }
+
+        // ---- what everyone did ----------------------------------------------------------
+
+        private void PaintTally()
+        {
+            var characters = _reward?.Characters ?? new List<CharacterReward>();
+            var ledger = _reward?.Ledger;
+
+            for (int i = 0; i < tallyRows.Length; i++)
+            {
+                bool present = i < characters.Count;
+                tallyRows[i].SetActive(present);
+                if (!present) continue;
+
+                var character = characters[i];
+                var line = ledger?.For(character.CharacterId);
+
+                tallyNames[i].SetContent(character.DisplayName);
+                tallyKills[i].Set(UiStrings.ReckoningKills, line?.Kills ?? 0);
+
+                // A character who was benched reads as zeroes rather than
+                // vanishing -- "you did nothing" is a true and useful thing to
+                // be told, and a missing row is a bug the player has to guess
+                // at. Same rule the defeat screen holds.
+                tallyStats[i].Set(UiStrings.ReckoningTallyLine,
+                    line?.TotalDealt ?? 0,
+                    line?.PhysicalDealt ?? 0,
+                    line?.OtherDealt ?? 0,
+                    line?.DamageTaken ?? 0,
+                    line?.Healed ?? 0);
+            }
+        }
+
         // ---- animation ---------------------------------------------------------------
 
         private IEnumerator PlayIn()
         {
             frame.localScale = Vector3.one * ExpandFrom;
+            frame.anchoredPosition = new Vector2(frame.anchoredPosition.x, LiftFrom);
 
-            for (float t = 0f; t < ExpandSeconds; t += Time.unscaledDeltaTime)
+            // The gloom runs on its OWN clock, slightly longer than the expand,
+            // so the fight is still readable for the first frames the panel is
+            // growing over it. Both start together; the dim finishes last.
+            float gloomTarget = dimmer != null ? dimmer.color.a : 0f;
+            if (dimmer != null) SetDimmerAlpha(0f);
+
+            float elapsed = 0f;
+            float longest = Mathf.Max(ExpandSeconds, GloomSeconds);
+
+            while (elapsed < longest)
             {
-                float k = Mathf.Clamp01(t / ExpandSeconds);
-                frame.localScale = Vector3.one * Mathf.Lerp(ExpandFrom, 1f, k * k * (3f - 2f * k));
+                elapsed += Time.unscaledDeltaTime;
+
+                float k = Smooth(Mathf.Clamp01(elapsed / ExpandSeconds));
+                frame.localScale = Vector3.one * Mathf.Lerp(ExpandFrom, 1f, k);
+                frame.anchoredPosition = new Vector2(frame.anchoredPosition.x, Mathf.Lerp(LiftFrom, 0f, k));
+
+                if (dimmer != null)
+                {
+                    SetDimmerAlpha(gloomTarget * Smooth(Mathf.Clamp01(elapsed / GloomSeconds)));
+                }
+
                 yield return null;
             }
 
             frame.localScale = Vector3.one;
+            frame.anchoredPosition = new Vector2(frame.anchoredPosition.x, 0f);
+            if (dimmer != null) SetDimmerAlpha(gloomTarget);
 
             // THEN the bars, staggered down the party. Sequenced after the
             // expand rather than during it, because a bar filling inside a
@@ -256,24 +421,54 @@ namespace PrincesPalace
 
             for (float t = 0f; t < BarSeconds; t += Time.unscaledDeltaTime)
             {
-                float k = Mathf.Clamp01(t / BarSeconds);
-                SetSpan(rowBarFills[index], from, Mathf.Lerp(from, to, k * k * (3f - 2f * k)));
+                float k = Smooth(Mathf.Clamp01(t / BarSeconds));
+                SetSpan(rowBarFills[index], from, Mathf.Lerp(from, to, k));
+
+                // The NUMBER climbs with the bar. Two readouts of one fact
+                // moving together, rather than a bar that fills beside a total
+                // that was already sitting there -- which is the version that
+                // makes the bar look decorative.
+                CountGain(index, Mathf.RoundToInt(row.ExpGained * k));
                 yield return null;
             }
 
             SetSpan(rowBarFills[index], from, to);
+            CountGain(index, row.ExpGained);
+        }
+
+        // Smoothstep. One definition, because three animations easing
+        // differently by accident is the sort of thing nobody can name but
+        // everybody feels.
+        private static float Smooth(float k) => k * k * (3f - 2f * k);
+
+        private void SetDimmerAlpha(float alpha)
+        {
+            var colour = dimmer.color;
+            colour.a = alpha;
+            dimmer.color = colour;
+        }
+
+        private void CountGain(int index, int amount)
+        {
+            if (index < 0 || index >= rowGains.Length || rowGains[index] == null) return;
+            rowGains[index].Set(UiStrings.ReckoningExpGain, amount);
         }
 
         // Everything the animation would have arrived at, at once. Used when
         // there is no live hierarchy to animate in.
         private void SettleImmediately()
         {
-            if (frame != null) frame.localScale = Vector3.one;
+            if (frame != null)
+            {
+                frame.localScale = Vector3.one;
+                frame.anchoredPosition = new Vector2(frame.anchoredPosition.x, 0f);
+            }
 
             var characters = _reward?.Characters ?? new List<CharacterReward>();
             for (int i = 0; i < characters.Count && i < rowBarFills.Length; i++)
             {
                 SetSpan(rowBarFills[i], characters[i].BarFillBefore01(), characters[i].BarFill01());
+                CountGain(i, characters[i].ExpGained);
             }
         }
 

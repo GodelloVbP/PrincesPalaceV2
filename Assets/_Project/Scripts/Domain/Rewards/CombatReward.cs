@@ -121,5 +121,15 @@ namespace PrincesPalace.Domain.Rewards
         public string ChosenItemName = "";
 
         public bool HasItem => !string.IsNullOrEmpty(ChosenItemId);
+
+        // What everyone actually DID in the fight that just ended.
+        //
+        // THIS fight's counters, not the run's: the Reckoning is a post-fight
+        // screen and "what did I just do" is the question it is answering. The
+        // run's running totals belong to the defeat screen, which is the one
+        // describing a whole descent.
+        //
+        // Never null, so the tally tab needs no guard.
+        public Combat.CombatLedger Ledger = new Combat.CombatLedger();
     }
 }
