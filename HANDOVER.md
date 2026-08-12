@@ -298,10 +298,15 @@ covers the bottom 40 units of a populated slot.
 > are lower than v1's 66/58/51. An automated horizon detector put the transition
 > at 68% and was wrong — it had found the ground's own midtone shift.
 >
-> **Still open**: the three repainted PNGs are sitting UNCOMMITTED in this tree,
-> placed by another session, and are deliberately not staged here. AUDIT #45
-> records the detail column, which still covers the front enemy's feet while a
-> submenu is open.
+> **The three repainted PNGs are in**, `5d35216`. They were sitting uncommitted
+> in this tree, placed by the session that painted them in v1; committed on the
+> author's instruction once the geometry checked out. Same GUIDs, no `.meta`
+> moved. Every slot on every one of the three sits between L 33 and L 40 under
+> the scrim — the boss map is the darkest at 33 and has the least headroom left
+> if the scrim is ever tuned darker.
+>
+> **Still open**: AUDIT #45, the detail column, which covers the front enemy's
+> feet while a submenu is open.
 >
 > `tools/preview_fight.py` was not ported as such. Its measurement half is
 > `measure_stage.py` (art versus HUD) and `measure_scrim.py` (backdrop luminance
