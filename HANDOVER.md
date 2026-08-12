@@ -3,6 +3,11 @@
 Working tree is clean at `7d43f79`. Full gate green: **1337 EditMode, 249 PlayMode**
 (9 skipped, all pre-existing `Assert.Ignore` content guards).
 
+Two sessions wrote this file. The Reckoning half below is the one to start on.
+The second half — "The session that happened in v1 by mistake" — is a different
+session's work that landed in the wrong tree; the only thing in it you need is
+three repainted battle backdrops, and it says which.
+
 ---
 
 ## Start here: the Reckoning feels cheap, and I know why
@@ -99,9 +104,88 @@ defeat path did it. Moved inside `RunManager.EndRun`.
 - **A button child named `<button>Label` collides** with the emitter's generated
   caption. A4 catches it; name them `Caption`.
 - Art keeps landing in **v1** (`C:\Games\Prince's Palace`) rather than v2. Check there
-  before believing a file is missing.
+  before believing a file is missing. **This got much worse the same day** — a whole
+  session's work went into v1. Confirm which tree you are in before the first edit:
+  v2 has `Assets/_Project/Scripts/Domain/UiKit/` and this file; v1 has neither.
 
 ---
+
+---
+
+## The session that happened in v1 by mistake
+
+A parallel session spent a full day on the battle backdrops in
+`C:\Games\Prince's Palace` — **v1** — believing it was this project. Four commits,
+`cd07515`..`372b87f` on `wip/intent-speed`. It only surfaced when that session was
+handed this file and could not find `HANDOVER.md`, `2d5eca6`, `UiKit` or
+`UiEmitter` anywhere on disk.
+
+Nothing inside v1 signals that it is stale. Its own `CLAUDE.md` opens with "This
+project is standalone. It has no relationship to any other game in `C:\Games\`"
+and never mentions v2. The note in "Traps" above about art landing in v1 is the
+same hazard, one order of magnitude larger.
+
+### Take this: three repainted battle backdrops
+
+v2's `Fight.png` is still the original 3344x1882 atmospheric painting. v1 now has
+replacements at `C:\Games\Prince's Palace\Assets\_Project\Art\Backgrounds\`, all
+1672x941 and delivery-ready:
+
+- `Fight.png` — ordinary fight, forest clearing (took three generations)
+- `forest_mob_elite_fight.png` — ruined arch (one generation)
+- `forest_mob_boss_fight.png` — dead-tree swamp (one generation)
+
+**Do not copy them in blind.** They were composed against v1's stage geometry —
+ground lines at 51%, 58% and 66% of frame height, which set a hard requirement
+that the painted floor's horizon sit at or above 45%. v2's `FightScreen` is a
+different layout and will have different numbers. Measure v2's actor positions
+first, then decide; if v2's rows sit lower, the art still works, and if they sit
+higher it does not.
+
+### Take this too: the finding, which is architecture-independent
+
+The backdrops did not read wrong because they were badly painted. They read wrong
+because **the actors are hard-outlined, flat-shaded cel art and the backdrops were
+soft, line-free, atmospheric painting.** Two incompatible drawing languages — the
+figures land as stickers on a photograph regardless of composition. Every previous
+brief had asked for "the painterly look of Hades" and never applied that
+constraint to the actor sheets.
+
+The fix was to move the backdrops toward the actors: flat shape masses, committed
+hard edges, a five-or-six colour palette, hand-inked structure. That holds for any
+art this project generates, v1 or v2.
+
+Four measurable faults sat on top of it, all worth re-checking against v2's own
+backdrops: the composition's brightest region was dead centre, which is the empty
+gap between the two armies; detail frequency in the actor band matched sprite
+frequency; the back rows stood in the frame's only light source; and the boss map
+was so uniformly dark that 100% of its pixels above L 90 fell inside the actor
+band. Full write-up with measurements and the prompt set that fixed it:
+`docs/handoffs/battlefield_art/` in v1 (`README.md`, `PROMPTS.md`).
+
+One technique from it is worth stealing outright: **once one backdrop in a floor is
+right, attach it as a style reference for the rest.** The first took three
+generations, the other two landed first try. The prompt shape changes — drop most
+of the style clause, and add an explicit "DO NOT copy its subject, this is a
+different location", which is the new failure mode a reference introduces.
+
+### Leave this: none of the code ports
+
+Checked by grep against v2 — zero hits for all of it:
+
+- `StageNearAnchor` / `StageSpriteScale` — v1's stage anchors, raised so front-row
+  feet cleared the HUD.
+- `BuildStageScrim` — three darkening layers between backdrop and stage.
+- `FightCompositionTests` — a PlayMode gate proving no HUD panel covers a figure's
+  feet or head.
+- `tools/preview_fight.py` — composites the fight screen from constants parsed out
+  of the C#, and reports silhouette separation, edge energy and collisions.
+
+v2 runs `Domain/UiKit/Screens/FightScreen.cs`; v1 runs `SceneBuilder.FightStage.cs`.
+Different architecture. The *ideas* are portable — a scrim between backdrop and
+actors, and an offline compositor that reads layout from source rather than
+restating it, are both worth rebuilding on UiKit if v2 turns out to have the same
+readability problem. The implementations are not.
 
 ## Loose ends
 
