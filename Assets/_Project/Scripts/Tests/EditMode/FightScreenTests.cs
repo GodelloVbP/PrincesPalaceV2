@@ -198,7 +198,14 @@ namespace PrincesPalace.Domain.Tests
             float second = RectOf("EnemyPlate1").Centre.Y;
             float third = RectOf("EnemyPlate2").Centre.Y;
 
-            Assert.AreEqual(332f, first, 0.01f);
+            // 392, up from 332 when the stage came out of the HUD. The plates
+            // are the stage's ceiling: the tallest actor needs 300 above the
+            // front slot's ground line, so its head reaches 72, and the middle
+            // slot's reaches 89 while still just crossing the plates in x.
+            // This stack's lowest edge (first - 284) has to clear both.
+            Assert.AreEqual(392f, first, 0.01f);
+            Assert.Greater(first - 284f, 89f + 12f,
+                "the bottom plate has dropped back onto an actor's head - see tools/measure_stage.py");
             Assert.AreEqual(116f, first - second, 0.01f, "plate height plus a 12px gutter");
             Assert.AreEqual(first - second, second - third, 0.01f, "and the same step again");
             Assert.AreEqual(720f, RectOf("EnemyPlate0").Centre.X, 0.01f);
@@ -376,6 +383,143 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsEmpty(suspicious,
                 "these labels carry authored copy outside UiStrings:\n  " + string.Join("\n  ", suspicious));
+        }
+
+        // ---- the thing the audit structurally cannot see ------------------------------
+
+        // How much of a slot, measured up from its own ground line, has to stay
+        // clear of the HUD. The contact ring straddles the line (8 below it),
+        // the bloom sits under that, and a figure's feet and lower legs occupy
+        // the rest -- so a panel crossing this band stands in front of the very
+        // thing that makes an actor read as touching the floor.
+        private const float FootBand = 40f;
+        private const float RingDrop = 8f;
+
+        [Test]
+        public void NoAlwaysVisiblePanelStandsInFrontOfAFigureSFeet()
+        {
+            // A1 CANNOT DO THIS ONE, and saying why matters because the build
+            // gate looks green either way.
+            //
+            // The stage frame carries an AllowOverlap, correctly -- it really
+            // does overlap the other stage and every panel. But A1 skips a pair
+            // the moment EITHER side carries a reason, so one exemption written
+            // on the frame silenced every actor-versus-panel pair on the
+            // screen. v2 shipped with Near.Y at -300, standing all three
+            // front-row figures shin-deep in the HUD, and nothing failed.
+            //
+            // Declared geometry only, like the rest of the audit. A slot's
+            // 320x200 is a placeholder the runtime swaps for the real sprite
+            // canvas, which is WIDER for every actor in the manifest (the
+            // golem's is 525), so this under-reports rather than over-, and
+            // tools/measure_stage.py is what checks against the art itself.
+            var root = Solve();
+            var occluders = PanelsDrawnOverTheStage(root).ToList();
+
+            Assert.IsNotEmpty(occluders,
+                "no HUD panels were collected at all - this test would pass vacuously");
+
+            var offenders = new List<string>();
+
+            foreach (bool mirrored in new[] { true, false })
+            {
+                for (int slot = 0; slot < FightHudSpec.StageSlotsPerSide; slot++)
+                {
+                    var band = FootBandOf(slot, mirrored);
+
+                    foreach (var panel in occluders)
+                    {
+                        if (!panel.Footprint.Overlaps(band)) continue;
+
+                        var over = panel.Footprint.OverlapExtent(band);
+                        offenders.Add(
+                            $"{(mirrored ? "Party" : "Enemy")} slot {slot}'s feet are behind " +
+                            $"'{panel.Path}' by {over.X:0}x{over.Y:0}px");
+                    }
+                }
+            }
+
+            CollectionAssert.IsEmpty(offenders,
+                "the ground-contact band is drawn under the HUD - raise FightStageAnchors.Near/Far, " +
+                "or lower the panel:\n  " + string.Join("\n  ", offenders));
+        }
+
+        // The band a slot's ground contact occupies, in canvas coordinates.
+        private static UiRect FootBandOf(int slot, bool mirrored)
+        {
+            var offset = FightStageAnchors.SlotOffset(slot, FightHudSpec.StageSlotsPerSide, mirrored);
+            float scale = FightStageAnchors.SlotScale(slot, FightHudSpec.StageSlotsPerSide);
+
+            // 320 is the slot's declared placeholder width; scale is the depth
+            // curve times the global shrink, exactly as the emitter applies it.
+            float width = 320f * scale;
+            float height = FootBand + RingDrop;
+
+            // The slot's pivot is (0.5, 0), so offset.Y IS the ground line: the
+            // band runs from RingDrop below it to FootBand above.
+            return new UiRect(
+                new UiVec(offset.X, offset.Y + FootBand * 0.5f - RingDrop * 0.5f),
+                new UiVec(width, height));
+        }
+
+        // Everything that DRAWS, is visible from the first frame, and is
+        // declared AFTER both stages -- which is what "in front of" means in
+        // uGUI, where sibling order is the only stacking rule.
+        private static IEnumerable<SolvedNode> PanelsDrawnOverTheStage(SolvedNode root)
+        {
+            int lastStage = -1;
+            for (int i = 0; i < root.Children.Count; i++)
+            {
+                if (root.Children[i].Name.EndsWith("Stage")) lastStage = i;
+            }
+
+            Assert.Greater(lastStage, -1, "no stage found in the fight tree");
+
+            for (int i = lastStage + 1; i < root.Children.Count; i++)
+            {
+                foreach (var node in DrawnAndVisible(root.Children[i]))
+                {
+                    yield return node;
+                }
+            }
+        }
+
+        // A subtree that starts inactive contributes nothing: it is not on
+        // screen until something turns it on, and the submenu, the detail
+        // column, Continue, the Reckoning and the defeat screen are all in that
+        // category. Descending into one would assert against a layout that
+        // never coexists with the stage it is being compared to.
+        private static IEnumerable<SolvedNode> DrawnAndVisible(SolvedNode node)
+        {
+            if (node.Source != null && node.Source.StartInactive) yield break;
+
+            if (Draws(node)) yield return node;
+
+            foreach (var child in node.Children)
+            {
+                foreach (var deeper in DrawnAndVisible(child)) yield return deeper;
+            }
+        }
+
+        // A Panel is an invisible grouping rect UNLESS it was given a colour,
+        // which is the same rule UiEmitter follows when deciding whether to add
+        // an Image. Labels are excluded deliberately: text over a foot is
+        // untidy, but it is not the opaque plate this test exists to find.
+        private static bool Draws(SolvedNode node)
+        {
+            if (node.Source == null) return false;
+
+            switch (node.Kind)
+            {
+                case UiNodeKind.Sprite:
+                case UiNodeKind.Solid:
+                case UiNodeKind.Button:
+                    return true;
+                case UiNodeKind.Panel:
+                    return !string.IsNullOrEmpty(node.Source.ColorHex);
+                default:
+                    return false;
+            }
         }
 
         // ---- helpers -----------------------------------------------------------------

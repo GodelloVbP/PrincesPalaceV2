@@ -281,7 +281,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // different heights.
             return Ui.Panel($"{prefix}Stage", Place.At(0f, 0f),
                     UiSize.Fixed(FightStageAnchors.StageSize.X, FightStageAnchors.StageSize.Y), children)
-                .AllowOverlap("the party and enemy stages share one centred frame, and the HUD is drawn over both - a stage is a transparent coordinate frame, never a surface");
+                // The exemption is on the FRAME and says nothing about the
+                // figures standing in it, which is exactly how the front row
+                // came to be standing inside the HUD with a clean build gate.
+                // The reasoning was right -- a stage really is a transparent
+                // coordinate frame -- and the consequence drawn from it was too
+                // broad: A1 skips a pair if EITHER carries a reason, so writing
+                // one here silenced every actor-versus-panel pair on the screen.
+                //
+                // It is still the correct exemption; the frame genuinely
+                // overlaps the other stage and every panel. What was missing is
+                // a check of the thing the exemption was never entitled to
+                // cover, and FightScreenTests.NoAlwaysVisiblePanelStandsInFront-
+                // OfAFigureSFeet is now that check.
+                .AllowOverlap("the party and enemy stages share one centred frame, and the HUD is drawn over both - a stage is a transparent coordinate frame, never a surface. This covers the FRAME only: figures standing in it are checked by NoAlwaysVisiblePanelStandsInFrontOfAFigureSFeet, because A1 cannot tell the two apart");
         }
 
         // ---- initiative -------------------------------------------------------
@@ -362,7 +375,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float PlateW = 400f;
         private const float PlateH = 104f;
         private const float PlatePitch = PlateH + 12f;
-        private const float PlateFirstY = 332f;
+        // 332 until the stage came up out of the HUD. The anchors' ceiling is
+        // this plate stack: the tallest actor needs 300 units above the front
+        // slot's ground line, so at Near.Y -228 its head reaches 72, and this
+        // stack's lower edge (PlateFirstY - 284) has to stay above that.
+        //
+        // 392 RATHER THAN 380, and the extra 12 is the interesting part. By
+        // hand it looked like only the front slot could ever reach the plates
+        // in x, which made 380 ample. tools/measure_stage.py disagreed: slot
+        // ONE reaches x 522 against the plates' left edge at 520, so it
+        // collides too, and at 380 its head cleared by 7px rather than the 12
+        // the rest of this layout is toleranced to. The 2px x-overlap is what
+        // made it invisible to inspection.
+        private const float PlateFirstY = 392f;
 
         private IEnumerable<UiNode> BuildEnemiesHeading()
         {

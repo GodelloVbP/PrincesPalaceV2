@@ -19,8 +19,43 @@ namespace PrincesPalace.Domain.Stage
     {
         // The nearest slot's offset from stage centre, and the farthest slot's.
         // Everything between is interpolated by depth.
-        public static readonly UiVec Near = new UiVec(470f, -300f);
-        public static readonly UiVec Far = new UiVec(250f, -140f);
+        //
+        // Y WAS -300/-140, INHERITED FROM v1 FROM BEFORE v1 FIXED IT. At -300
+        // every front-row figure stood shin-deep in the HUD: a slot's pivot is
+        // (0.5, 0), so Near.Y IS the ground line, and it sat 16 below the party
+        // plate's top edge (-284) and 52 below the verb column's (-248), with
+        // the contact ring hanging 8 lower still. The whole ground-contact
+        // system -- ring, bloom, shadow -- was drawn underneath opaque panels.
+        // It reads as an art problem and is a layout one.
+        //
+        // RE-DERIVED for v2 rather than pasted from v1, because the binding
+        // constraint is whichever panel tops out highest HERE -- and v1's own
+        // numbers do not close on v2's geometry: -170 puts the golem's head at
+        // 130, well inside the bottom enemy plate.
+        //
+        // The band, measured rather than argued (tools/measure_stage.py):
+        //
+        //   floor    verb column top -248, +8 for the ring, +12 so it reads as
+        //            clearance rather than as touching     -> Near.Y >= -228
+        //   ceiling  the golem is the tallest actor at 384px above its own
+        //            manifest ground line, so at the near slot's 0.78 it needs
+        //            300 and its head lands at 72 -- which is why the bottom
+        //            enemy plate had to rise with it (PlateFirstY 332 -> 380,
+        //            putting that plate's lower edge at 96)
+        //
+        // Far moves by the same +72, so the depth spread is untouched. These
+        // are the endpoints StageLayout interpolates between; changing their
+        // separation would quietly re-tune the perspective while claiming to
+        // fix an occlusion.
+        //
+        // KNOWN AND DELIBERATE: the detail column (top -186, x 308..648) still
+        // covers the front enemy's feet while a submenu is open. Clearing that
+        // too needs Near.Y >= -166, which does not fit -- the golem would then
+        // need the plates at 430 and the ENEMIES heading 24px from the canvas
+        // edge. The rule applied here is the one the handover states: clear
+        // every ALWAYS-visible panel. Recorded as AUDIT #45.
+        public static readonly UiVec Near = new UiVec(470f, -228f);
+        public static readonly UiVec Far = new UiVec(250f, -68f);
 
         // Applied on top of StageLayout.ScaleForDepth. The art is authored
         // larger than it is shown, so this is the one global shrink.
