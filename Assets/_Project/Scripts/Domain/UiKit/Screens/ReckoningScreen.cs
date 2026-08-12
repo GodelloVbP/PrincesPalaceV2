@@ -48,8 +48,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const string FrameKey = "UI/Reckoning/Processed/reckoning_frame.png";
         public const string TabKey = "UI/Buttons/Processed/tab_plate.png";
         public const string ContinueKey = "UI/Buttons/Processed/continue_arrow.png";
-        public const string BurstKey = "UI/Effects/Processed/rarity_burst.png";
+        // BAKED, not painted. The painted attempt came back as a stubby star:
+        // short rays, a hard silhouette, and it read as a spiky blob rather
+        // than as light. The generated one holds all three things the brief
+        // actually needed -- feathered tips, a fade well inside the canvas so
+        // rotation cannot clip a ray, and true radial symmetry so a spin does
+        // not wobble. Compared side by side before switching.
+        public const string BurstKey = "proc:rarity_burst";
         public const string PlaqueKey = "UI/Reckoning/Processed/title_plaque.png";
+
+        // Both uniform along their length, so stretching the fill to any
+        // fraction of the track cannot distort it -- all the shaping is
+        // vertical.
+        public const string BarTrackKey = "proc:bar_track";
+        public const string BarFillKey = "proc:bar_fill";
 
         // Fixed at build time, so it must cover the largest party the save can
         // field. Base squad is 1 today and the design's stated target is 3;
@@ -126,7 +138,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float RowHeight = 64f;
         private const float RowPitch = 72f;
         private const float BarWidth = 900f;
-        private const float BarHeight = 18f;
+        private const float BarHeight = 26f;
 
         // How many relics one page of the RELICS tab shows. The design says
         // "infinite slots per run"; six is what fits without paging, and the
@@ -390,18 +402,27 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // player reads THIS FIGHT'S worth rather than only where they ended
             // up -- which is the entire reason CharacterReward carries a before
             // as well as an after.
-            var before = Ui.Solid($"ReckoningRow{index}BarBefore", "#5A4A8C",
+            // Both wear the SAME baked fill, tinted differently: the resting
+            // violet for what was already earned, and the bright gold for what
+            // this fight paid. One asset, two colours -- a second sprite would
+            // be a second thing to keep in step with the first.
+            var before = Ui.Sprite($"ReckoningRow{index}BarBefore", BarFillKey,
                     Place.Frac(new UiVec(0f, 0f), new UiVec(1f, 1f)), UiSize.Fill)
+                .Coloured("#6B58A8")
                 .AsDecor();
-            var fill = Ui.Solid($"ReckoningRow{index}BarFill", "#F2DB9E",
+            var fill = Ui.Sprite($"ReckoningRow{index}BarFill", BarFillKey,
                     Place.Frac(new UiVec(0f, 0f), new UiVec(1f, 1f)), UiSize.Fill)
+                .Coloured("#FFE9A8")
                 .AsDecor();
 
-            var track = Ui.Panel($"ReckoningRow{index}BarTrack", Place.At(0f, -14f),
-                    UiSize.Fixed(BarWidth, BarHeight), before, fill)
-                .Coloured("#140C24")
+            var track = Ui.Sprite($"ReckoningRow{index}BarTrack", BarTrackKey, Place.At(0f, -14f),
+                    UiSize.Fixed(BarWidth, BarHeight))
+                .Coloured("#2A1C46")
                 .AsDecor()
                 .AllowOverlap("the earned segment is drawn ON TOP of the before segment - one track, two fills, by design");
+
+            track.Children.Add(before);
+            track.Children.Add(fill);
 
             var group = Ui.Panel($"ReckoningRow{index}", Place.At(0f, y),
                     UiSize.Fixed(1000f, RowHeight), name, level, track, gain)

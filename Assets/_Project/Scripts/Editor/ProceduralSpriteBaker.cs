@@ -49,8 +49,171 @@ public static class ProceduralSpriteBaker
             return 1f - Smoothstep(Mathf.Clamp01(offset / halfWidth));
         });
 
+        BakeRarityBurst();
+        BakeBar();
+
         AssetDatabase.SaveAssets();
         Debug.Log("BUILD-COMPLETE: ProceduralSpriteBaker");
+    }
+
+    // The glow that spins behind an offered item, tinted per rarity.
+    //
+    // GENERATED rather than painted, and here that is the better tool rather
+    // than a placeholder standing in for one. The brief asks for three things
+    // at once: rays that feather with no hard edge anywhere, a fade to nothing
+    // WELL INSIDE the canvas so rotation cannot clip a ray at the diagonals,
+    // and radial symmetry good enough that a spin does not wobble. A diffusion
+    // model holds those by luck; arithmetic holds them by construction.
+    //
+    // White, so RarityColors tints one asset six ways.
+    private static void BakeRarityBurst()
+    {
+        const int Rays = 29;              // prime, so no ray sits opposite another
+        const float CoreRadius = 0.13f;   // the diffuse bloom in the middle
+        const float FadeBy = 0.78f;       // gone by here, clear of every corner
+
+        // Deterministic from the index. The baker must produce the same bytes
+        // every run or WritePng's compare-before-write is defeated and every
+        // build churns the file.
+        var angle = new float[Rays];
+        var width = new float[Rays];
+        var reach = new float[Rays];
+
+        for (int i = 0; i < Rays; i++)
+        {
+            // Evenly spaced then nudged, so the spacing reads as light rather
+            // than as a cog.
+            angle[i] = i / (float)Rays * Mathf.PI * 2f + Mathf.Sin(i * 12.9898f) * 0.06f;
+
+            // Alternating thick and thin is what makes a burst read as light
+            // instead of as a star polygon.
+            width[i] = Mathf.Lerp(0.020f, 0.055f, Frac(i * 0.7548f));
+
+            // UNEVEN LENGTHS. With every ray the same, a spin has nothing to
+            // announce itself with and the whole thing looks static.
+            reach[i] = Mathf.Lerp(0.42f, FadeBy, Frac(i * 0.3247f));
+        }
+
+        BakeGlow("rarity_burst", 1024, (nx, ny) =>
+        {
+            float radius = Mathf.Sqrt(nx * nx + ny * ny);
+            if (radius >= FadeBy) return 0f;
+
+            float theta = Mathf.Atan2(ny, nx);
+
+            // The core: a bloom with no edge of its own.
+            float value = Mathf.Exp(-(radius * radius) / (CoreRadius * CoreRadius)) * 0.9f;
+
+            for (int i = 0; i < Rays; i++)
+            {
+                float delta = Mathf.Abs(Mathf.DeltaAngle(theta * Mathf.Rad2Deg, angle[i] * Mathf.Rad2Deg))
+                              * Mathf.Deg2Rad;
+
+                // Gaussian across the ray, so it has no sides.
+                float across = Mathf.Exp(-(delta * delta) / (width[i] * width[i]));
+                if (across < 0.004f) continue;
+
+                // And squared along it, so the tip dissolves rather than stops.
+                float along = Mathf.Clamp01(1f - radius / reach[i]);
+                value += across * along * along * 0.85f;
+            }
+
+            return Mathf.Clamp01(value);
+        });
+    }
+
+    private static float Frac(float value) => value - Mathf.Floor(value);
+
+    // The experience bar: a recessed channel and the light that fills it.
+    //
+    // UNIFORM ALONG X, both of them, and that is the whole design decision.
+    // The fill is stretched to whatever fraction of the track has been earned,
+    // so anything that varies horizontally -- a rounded cap, a highlight at one
+    // end -- distorts as the bar grows and, worse, distorts DIFFERENTLY every
+    // frame while it animates. All the shaping is vertical; the ends are square
+    // and the track's own art supplies the enclosure.
+    private static void BakeBar()
+    {
+        // The channel. Dark, with the light caught along its top lip so it
+        // reads as cut into the panel rather than drawn on top of it.
+        BakeGradient("bar_track", 64, y =>
+        {
+            float top = Mathf.Clamp01(1f - y / 0.22f);            // inner shadow under the lip
+            float lip = Mathf.Exp(-Mathf.Pow((y - 0.94f) / 0.05f, 2f));
+
+            float value = Mathf.Lerp(0.10f, 0.22f, y) + top * 0.10f;
+            return (Mathf.Clamp01(value + lip * 0.35f), 1f);
+        });
+
+        // The fill. White so it can be tinted twice from one asset -- once for
+        // what was already earned and once, brighter, for what this fight paid.
+        BakeGradient("bar_fill", 64, y =>
+        {
+            // Brightest just under the top edge, falling away downward: a bar
+            // lit from above rather than a flat block of colour.
+            float bloom = Mathf.Exp(-Mathf.Pow((y - 0.78f) / 0.30f, 2f));
+            float body = Mathf.Lerp(0.55f, 0.95f, y);
+
+            // Softened at both edges so it never shows a hard line against the
+            // channel it sits in.
+            float edge = Mathf.Clamp01(Mathf.Min(y, 1f - y) / 0.06f);
+
+            return (Mathf.Clamp01(body + bloom * 0.55f), edge);
+        });
+    }
+
+    // A bar-shaped sprite that varies only with height. `shade` returns
+    // (brightness, alpha) for a normalised y, 0 at the bottom.
+    private static void BakeGradient(string name, int height, Func<float, (float value, float alpha)> shade)
+    {
+        const int Width = 16;   // uniform across, so this only has to be wide
+                                // enough to survive filtering
+        string path = $"{GeneratedDir}/{name}.png";
+
+        var texture = new Texture2D(Width, height, TextureFormat.RGBA32, false);
+        var pixels = new Color32[Width * height];
+
+        for (int y = 0; y < height; y++)
+        {
+            var (value, alpha) = shade((y + 0.5f) / height);
+            byte channel = (byte)Mathf.RoundToInt(Mathf.Clamp01(value) * 255f);
+            byte a = (byte)Mathf.RoundToInt(Mathf.Clamp01(alpha) * 255f);
+
+            for (int x = 0; x < Width; x++)
+            {
+                pixels[y * Width + x] = new Color32(channel, channel, channel, a);
+            }
+        }
+
+        texture.SetPixels32(pixels);
+        texture.Apply();
+        WritePng(path, texture);
+    }
+
+    // White pixels whose ALPHA is the intensity. No rim and no signed
+    // distance: a glow is a field, not a shape with an edge.
+    private static void BakeGlow(string name, int size, Func<float, float, float> intensityAt)
+    {
+        string path = $"{GeneratedDir}/{name}.png";
+
+        var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        var pixels = new Color32[size * size];
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float nx = (x + 0.5f) / size * 2f - 1f;
+                float ny = (y + 0.5f) / size * 2f - 1f;
+
+                float alpha = Mathf.Clamp01(intensityAt(nx, ny));
+                pixels[y * size + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(alpha * 255f));
+            }
+        }
+
+        texture.SetPixels32(pixels);
+        texture.Apply();
+        WritePng(path, texture);
     }
 
     private static float Smoothstep(float x) => x * x * (3f - 2f * x);
