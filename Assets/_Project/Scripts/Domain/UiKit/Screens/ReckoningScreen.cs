@@ -16,9 +16,28 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // would not fit four party rows and three offers.
     public sealed class ReckoningScreen
     {
-        // 70% of 1920x1080.
+        // 3:2, MATCHING THE PAINTED FRAME'S OWN ASPECT (1536x1024).
+        //
+        // Was 1344x756 (16:9), which would have stretched the border 18% and
+        // distorted every corner ornament on it. 70% of the width and 83% of
+        // the height instead -- and the extra 140px of height is what the left
+        // column was short of when a party of one left three hidden rows.
         public const float PanelWidth = 1344f;
-        public const float PanelHeight = 756f;
+        public const float PanelHeight = 896f;
+
+        // Where the painted border stops and content may begin.
+        //
+        // Measured off the keyed art: the plain interior is 91.9% of the
+        // canvas wide and 90.3% tall, so roughly 9% of each edge is frame.
+        // Every coordinate below is inside this box, and ContentHalfWidth is
+        // what the test asserts against rather than the panel's own half-size.
+        public const float ContentHalfWidth = PanelWidth * 0.5f * 0.919f - 12f;
+        public const float ContentHalfHeight = PanelHeight * 0.5f * 0.903f - 12f;
+
+        public const string FrameKey = "UI/Reckoning/Processed/reckoning_frame.png";
+        public const string TabKey = "UI/Buttons/Processed/tab_plate.png";
+        public const string ContinueKey = "UI/Buttons/Processed/continue_arrow.png";
+        public const string BurstKey = "UI/Effects/Processed/rarity_burst.png";
 
         // Fixed at build time, so it must cover the largest party the save can
         // field. Base squad is 1 today and the design's stated target is 3;
@@ -69,10 +88,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> RowGains = new List<NodeRef>();
 
         public List<NodeRef> OfferButtons = new List<NodeRef>();
+        public List<NodeRef> OfferBursts = new List<NodeRef>();
+        public List<NodeRef> OfferIcons = new List<NodeRef>();
         public List<NodeRef> OfferNames = new List<NodeRef>();
         public List<NodeRef> OfferMetas = new List<NodeRef>();
 
-        private const float ColumnX = 336f;
+        // Pulled in from 336 so a 520-wide column clears the painted border:
+        // 280 +/- 260 lands at 540, inside ContentHalfWidth. At the old width
+        // the rows ran to 636 and would have sat on the frame's gold edge.
+        private const float ColumnX = 280f;
+        private const float ColumnWidth = 520f;
 
         // 88 tall on a 96 pitch: an 8px gutter between rows, and enough height
         // for a name line, a bar and a gain line without the last of the three
@@ -80,7 +105,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // label escaped by exactly 8px at every frame.
         private const float RowHeight = 88f;
         private const float RowPitch = 96f;
-        private const float BarWidth = 560f;
+        private const float BarWidth = 480f;
         private const float BarHeight = 18f;
 
         // How many relics one page of the RELICS tab shows. The design says
@@ -110,17 +135,25 @@ namespace PrincesPalace.Domain.UiKit.Screens
             inside.Add(screen.BuildRelicsPage());
             inside.Add(screen.BuildTallyPage());
 
+            // The pointed banner. Its caption sits LEFT of centre because the
+            // right third of the sprite is the arrowhead -- text centred on the
+            // node would print over the point.
             var continueButton = Ui.Button("ReckoningContinueButton", UiStrings.Continue,
-                new UiVec(300f, 60f), 22, Place.At(0f, -330f));
+                new UiVec(340f, 100f), 22, Place.At(0f, -340f));
+            continueButton.SpriteKey = ContinueKey;
             screen.ContinueButton = continueButton;
             inside.Add(continueButton);
 
             // The frame is a CHILD of the content panel rather than the modal
             // root, because the controller scales AND lifts this transform, and
             // a scaled dimmer would shrink the dim along with it.
-            var frame = Ui.Panel("ReckoningFrame", Place.At(0f, 0f),
-                    UiSize.Fixed(PanelWidth, PanelHeight), inside)
-                .Coloured("#221338F5");
+            // A PAINTED frame, not a flat plate. Ui.Sprite rather than a
+            // coloured Panel, because the border and the interior texture are
+            // one image -- which is also why nothing below may sit outside
+            // ContentHalfWidth/Height.
+            var frame = Ui.Sprite("ReckoningFrame", FrameKey, Place.At(0f, 0f),
+                UiSize.Fixed(PanelWidth, PanelHeight));
+            foreach (var child in inside) frame.Children.Add(child);
             screen.Frame = frame;
 
             var content = Ui.Panel("ReckoningContent", Place.At(0f, 0f), UiSize.Fixed(1920f, 1080f), frame);
@@ -158,7 +191,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor();
 
             var tab = Ui.Button("ReckoningTab" + index, TabStrings[index],
-                new UiVec(230f, 48f), 19, Place.At(x, TabY));
+                new UiVec(230f, 52f), 19, Place.At(x, TabY));
+            tab.SpriteKey = TabKey;
             tab.Children.Add(marker);
 
             TabButtons.Add(tab);
@@ -301,14 +335,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         {
             float y = 108f - index * RowPitch;
 
-            var name = Ui.Label($"ReckoningRow{index}Name", UiString.Runtime, new UiVec(360f, 30f), 22,
+            var name = Ui.Label($"ReckoningRow{index}Name", UiString.Runtime, new UiVec(300f, 30f), 22,
                     "#EDE6FF", Place.At(-100f, 27f))
                 .AsDecor();
             var level = Ui.Label($"ReckoningRow{index}Level", UiString.Runtime, new UiVec(200f, 30f), 18,
-                    "#B8A8D9", Place.At(180f, 27f))
+                    "#B8A8D9", Place.At(150f, 27f))
                 .AsDecor();
             var gain = Ui.Label($"ReckoningRow{index}Gain", UiString.Runtime, new UiVec(200f, 22f), 16,
-                    "#9C8FC4", Place.At(180f, -30f))
+                    "#9C8FC4", Place.At(150f, -30f))
                 .AsDecor();
 
             // Two fills on one track. The dim one is where the bar stood before
@@ -330,7 +364,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AllowOverlap("the earned segment is drawn ON TOP of the before segment - one track, two fills, by design");
 
             var group = Ui.Panel($"ReckoningRow{index}", Place.At(-ColumnX, y),
-                    UiSize.Fixed(600f, RowHeight), name, level, track, gain)
+                    UiSize.Fixed(ColumnWidth, RowHeight), name, level, track, gain)
                 .Inactive();
 
             RowGroups.Add(group);
@@ -346,24 +380,45 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // the only decision this screen asks the player to make.
         private UiNode BuildOffer(int index)
         {
-            float y = 44f - index * 112f;
+            float y = 44f - index * 122f;
 
-            // NOT "...Label" -- UiEmitter names a button's generated caption
-            // "<button>Label" and the collision is invisible to every by-name
-            // lookup. See UiAudit A4b.
-            var name = Ui.Label($"ReckoningOffer{index}Name", UiString.Runtime, new UiVec(540f, 34f), 20,
-                    "#EDE6FF", Place.At(0f, 18f))
-                .AsDecor();
-            var meta = Ui.Label($"ReckoningOffer{index}Meta", UiString.Runtime, new UiVec(540f, 28f), 15,
-                    "#B8A8D9", Place.At(0f, -18f))
+            // NO VISIBLE BUTTON. The click target stays -- picking one is the
+            // only decision this screen asks for -- but the chrome goes, so
+            // what the player sees is the ITEM rather than a plate with a name
+            // written on it.
+            //
+            // The burst spins behind the icon, tinted by rarity from the same
+            // RarityColors table the item names and the overlay's cell edges
+            // read. One white asset, six colours, no set of painted variants
+            // to drift out of sync with a table that already exists.
+            var burst = Ui.Sprite($"ReckoningOffer{index}Burst", BurstKey,
+                    Place.At(-200f, 0f), UiSize.Fixed(150f, 150f))
+                .Coloured("#FFFFFF00")
+                .AsDecor()
+                .AllowOverflow("the burst is deliberately larger than the icon it sits behind - that bleed IS the rarity signal");
+
+            var icon = Ui.Sprite($"ReckoningOffer{index}Icon", null,
+                    Place.At(-200f, 0f), UiSize.Fixed(84f, 84f))
                 .AsDecor();
 
-            var button = Ui.Button($"ReckoningOffer{index}", UiString.Runtime, new UiVec(600f, 96f), 14,
-                Place.At(ColumnX, y));
+            var name = Ui.Label($"ReckoningOffer{index}Name", UiString.Runtime, new UiVec(340f, 34f), 20,
+                    "#EDE6FF", Place.At(60f, 18f))
+                .AsDecor();
+            var meta = Ui.Label($"ReckoningOffer{index}Meta", UiString.Runtime, new UiVec(340f, 28f), 15,
+                    "#B8A8D9", Place.At(60f, -18f))
+                .AsDecor();
+
+            var button = Ui.Button($"ReckoningOffer{index}", UiString.Runtime,
+                new UiVec(ColumnWidth, 106f), 14, Place.At(ColumnX, y));
+
+            button.Children.Add(burst);
+            button.Children.Add(icon);
             button.Children.Add(name);
             button.Children.Add(meta);
 
             OfferButtons.Add(button);
+            OfferBursts.Add(burst);
+            OfferIcons.Add(icon);
             OfferNames.Add(name);
             OfferMetas.Add(meta);
             return button;

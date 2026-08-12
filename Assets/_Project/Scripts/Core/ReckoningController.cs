@@ -40,6 +40,15 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text[] offerNames;
         [SerializeField] internal TMP_Text[] offerMetas;
 
+        [SerializeField] internal Image[] offerBursts;
+        [SerializeField] internal Image[] offerIcons;
+        [SerializeField] internal RectTransform[] offerBurstRects;
+
+        // Item art, as two parallel arrays -- a scene serialises arrays and
+        // does not serialise dictionaries. Same shape the overlay uses.
+        [SerializeField] internal string[] iconIds;
+        [SerializeField] internal Sprite[] iconSprites;
+
         [SerializeField] internal Button[] tabButtons;
         [SerializeField] internal Image[] tabMarkers;
         [SerializeField] internal GameObject[] pages;
@@ -81,6 +90,11 @@ namespace PrincesPalace
         private static readonly Color MarkerDark = new Color(0.95f, 0.86f, 0.62f, 0f);
 
         private int _tab;
+
+        // Degrees per second. Slow: this is a glow behind an object, and a
+        // burst spinning fast enough to notice as MOTION reads as a loading
+        // spinner rather than as something precious sitting on a plinth.
+        private const float BurstDegreesPerSecond = 9f;
 
         private CombatReward _reward;
         private List<ItemOffer> _offers = new List<ItemOffer>();
@@ -227,6 +241,17 @@ namespace PrincesPalace
                 offerMetas[i].Set(UiStrings.ReckoningOfferMeta,
                     item == null ? "?" : item.Rarity.ToString(), offer.Tier);
 
+                ItemIcons.Apply(offerIcons[i], iconIds, iconSprites, item?.id);
+
+                // The burst wears the item's RARITY COLOUR, from the same table
+                // the name above it and the character overlay's cell edges read.
+                // Held well under full alpha: it is a glow behind an object, and
+                // at full strength it competes with the object it exists to
+                // frame.
+                var glow = item == null ? Color.white : RarityColors.For(item);
+                glow.a = _taken ? 0.18f : 0.42f;
+                offerBursts[i].color = glow;
+
                 // Every offer stays visible after one is taken, and all of them
                 // stop responding. Hiding the two not chosen would erase the
                 // decision the player just made from the screen that asked for
@@ -264,6 +289,21 @@ namespace PrincesPalace
         }
 
         public bool HasTakenAnItem => _taken;
+
+        private void Update()
+        {
+            if (offerBurstRects == null) return;
+
+            float step = BurstDegreesPerSecond * Time.unscaledDeltaTime;
+
+            for (int i = 0; i < offerBurstRects.Length; i++)
+            {
+                var rect = offerBurstRects[i];
+                if (rect == null || !rect.gameObject.activeInHierarchy) continue;
+
+                rect.localRotation = Quaternion.Euler(0f, 0f, rect.localEulerAngles.z + step);
+            }
+        }
 
         // ---- tabs ---------------------------------------------------------------------
 

@@ -42,12 +42,88 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void NothingSitsOnThePaintedBorder()
+        {
+            // THE AUDIT CANNOT SEE PAINT. A1 knows the frame node is
+            // 1344x896 and will happily let a label sit at its very edge --
+            // where the art has a gold border, not a background. Asserted
+            // directly, against bounds measured off the keyed image (the
+            // plain interior is 91.9% wide and 90.3% tall).
+            var screen = ReckoningScreen.Build();
+            var offenders = new List<string>();
+
+            foreach (var node in Walk(screen.Frame.Node))
+            {
+                if (ReferenceEquals(node, screen.Frame.Node)) continue;
+
+                // Pages stretch to fill the frame by design; their CHILDREN
+                // are what has to stay inside, and those are walked too.
+                if (node.Place.Kind != PlaceKind.At) continue;
+
+                // Only FIXED nodes carry a size worth measuring; anything
+                // sized from its children or filling its parent is bounded by
+                // something this walk already checked.
+                if (node.Size.ModeX != UiSizeMode.Fixed || node.Size.ModeY != UiSizeMode.Fixed) continue;
+
+                float halfWidth = node.Size.X * 0.5f;
+                float halfHeight = node.Size.Y * 0.5f;
+
+                if (System.Math.Abs(node.Place.Offset.X) + halfWidth > ReckoningScreen.ContentHalfWidth + 1f)
+                {
+                    offenders.Add($"{node.Name} runs to x {System.Math.Abs(node.Place.Offset.X) + halfWidth:0}");
+                }
+
+                if (System.Math.Abs(node.Place.Offset.Y) + halfHeight > ReckoningScreen.ContentHalfHeight + 1f)
+                {
+                    offenders.Add($"{node.Name} runs to y {System.Math.Abs(node.Place.Offset.Y) + halfHeight:0}");
+                }
+            }
+
+            CollectionAssert.IsEmpty(offenders,
+                $"content is over the frame's border (usable {ReckoningScreen.ContentHalfWidth:0} x " +
+                $"{ReckoningScreen.ContentHalfHeight:0}): " + string.Join(" | ", offenders));
+        }
+
+        [Test]
+        public void TheFrameWearsItsPaintedArtRatherThanAFlatColour()
+        {
+            var frame = ReckoningScreen.Build().Frame.Node;
+
+            Assert.AreEqual(ReckoningScreen.FrameKey, frame.SpriteKey,
+                "the violet blob is back");
+        }
+
+        [Test]
+        public void EveryOfferHasABurstThatStartsInvisible()
+        {
+            // The burst is tinted per rarity at paint time and spun by the
+            // controller. Visible at build would put a white starburst behind
+            // three empty rows on every fight that offers nothing.
+            var screen = ReckoningScreen.Build();
+
+            Assert.AreEqual(screen.OfferButtons.Count, screen.OfferBursts.Count);
+            Assert.AreEqual(screen.OfferButtons.Count, screen.OfferIcons.Count);
+
+            foreach (var burst in screen.OfferBursts)
+            {
+                StringAssert.EndsWith("00", burst.Node.ColorHex, "alpha 00 until a rarity says otherwise");
+            }
+        }
+
+        [Test]
         public void TheFrameIsSeventyPercentOfTheReferenceFrame()
         {
-            // The design's number, stated once and asserted rather than
-            // trusted -- everything in the layout is budgeted against it.
+            // 70% of the WIDTH, and 3:2 rather than 16:9.
+            //
+            // The height stopped being 70% when the painted frame landed: that
+            // art is 1536x1024, and holding 756 would have stretched its border
+            // 18% and distorted every corner ornament on it. Matching the art's
+            // own aspect is worth more than matching one number in two
+            // directions -- and the extra 140px is exactly what the left column
+            // was short of when a party of one left three rows hidden.
             Assert.AreEqual(1920f * 0.7f, ReckoningScreen.PanelWidth, 0.5f);
-            Assert.AreEqual(1080f * 0.7f, ReckoningScreen.PanelHeight, 0.5f);
+            Assert.AreEqual(ReckoningScreen.PanelWidth / 1.5f, ReckoningScreen.PanelHeight, 0.5f,
+                "the panel no longer matches the frame art's 3:2, so its border will distort");
         }
 
         [Test]

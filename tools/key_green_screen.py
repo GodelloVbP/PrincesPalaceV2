@@ -84,6 +84,41 @@ KITS = [
         "default_delivery_size": None,
     },
     {
+        # The Reckoning's painted container. Its OWN folder rather than
+        # Art/UI/Panels, because that kit is deliberately absent from this list
+        # -- those panels are opaque stretched rectangles that need no keying,
+        # and adding them here would mint six Processed/ duplicates nothing
+        # references.
+        "name": "reckoning",
+        "source": "Assets/_Project/Art/UI/Reckoning",
+        "output": "Assets/_Project/Art/UI/Reckoning/Processed",
+        "grouped": False,
+        "delivery_size": {},
+        "default_delivery_size": None,
+    },
+    {
+        # The painted buttons: the pointed Continue banner and the sleek tab
+        # plate. Both are shapes with real alpha at their edges, unlike the
+        # rectangles in Panels/.
+        "name": "ui_buttons",
+        "source": "Assets/_Project/Art/UI/Buttons",
+        "output": "Assets/_Project/Art/UI/Buttons/Processed",
+        "grouped": False,
+        "delivery_size": {},
+        "default_delivery_size": None,
+    },
+    {
+        # The rarity burst. White-on-green, so the keyer's greenness measure
+        # (g - max(r, b)) reads a white ray as fully opaque and the backdrop as
+        # fully transparent -- which is exactly the case it was built for.
+        "name": "ui_effects",
+        "source": "Assets/_Project/Art/UI/Effects",
+        "output": "Assets/_Project/Art/UI/Effects/Processed",
+        "grouped": False,
+        "delivery_size": {},
+        "default_delivery_size": None,
+    },
+    {
         # The armour stand the character overlay hangs its eight slot cells
         # on. One large figure rather than a sheet, so direct mode.
         "name": "character_overlay",

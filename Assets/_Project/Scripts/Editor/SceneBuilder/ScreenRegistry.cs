@@ -697,6 +697,21 @@ public static class ScreenRegistry
         controller.goldLabel = result.Tmp(screen.GoldLabel);
         controller.continueButton = result.Button(screen.ContinueButton);
 
+        controller.offerBursts = screen.OfferBursts.Select(result.Image).ToArray();
+        controller.offerBurstRects = screen.OfferBursts.Select(result.Rect).ToArray();
+        controller.offerIcons = screen.OfferIcons.Select(result.Image).ToArray();
+
+        // Every item that authored an icon, baked as two parallel arrays.
+        // Resolved here rather than at runtime because Resources loading and
+        // AssetDatabase are different worlds and only the builder has the
+        // second one.
+        var offerArt = ContentDatabase.Items
+            .Where(i => i != null && !string.IsNullOrEmpty(i.iconPath))
+            .ToList();
+
+        controller.iconIds = offerArt.Select(i => i.id).ToArray();
+        controller.iconSprites = offerArt.Select(i => SceneBuilder.LoadSpriteByKey(i.iconPath)).ToArray();
+
         controller.tabButtons = screen.TabButtons.Select(result.Button).ToArray();
         controller.tabMarkers = screen.TabMarkers.Select(result.Image).ToArray();
         controller.pages = screen.Pages.Select(result.Go).ToArray();
