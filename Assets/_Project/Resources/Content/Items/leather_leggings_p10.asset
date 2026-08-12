@@ -31,7 +31,7 @@ MonoBehaviour:
     magicalResistance: 0
   abilityScoreBonus:
     strength: 0
-    dexterity: 3
+    dexterity: 39
     constitution: 0
     wisdom: 0
     intelligence: 0

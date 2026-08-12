@@ -31,10 +31,10 @@ MonoBehaviour:
     magicalResistance: 3
   abilityScoreBonus:
     strength: 0
-    dexterity: 1
+    dexterity: 0
     constitution: 0
     wisdom: 0
-    intelligence: 0
+    intelligence: 4
     charisma: 0
   requirements:
     strength: 0

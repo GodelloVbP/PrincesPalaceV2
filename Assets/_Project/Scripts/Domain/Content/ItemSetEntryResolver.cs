@@ -158,6 +158,15 @@ namespace PrincesPalace.Domain.Content
             int costPerTier = raw.costPerTier >= 0 ? raw.costPerTier : DefaultCostPerTier;
             int setOrder = raw.sortOrder >= 0 ? raw.sortOrder : index;
 
+            // The style's weights, in hundredths. Empty is legal and means
+            // this set is hand-authored the old way.
+            bool derives = raw.styleWeights != null && raw.styleWeights.Length > 0;
+            var weights = default(AbilityScoreBlock);
+            if (derives && !AbilityScoreLineParser.TryParse(raw.styleWeights, $"{label} styleWeights", out weights, errors))
+            {
+                return;
+            }
+
             var seenPieceIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             for (int p = 0; p < raw.pieces.Length; p++)
@@ -200,6 +209,32 @@ namespace PrincesPalace.Domain.Content
                     // non-shortcircuiting |) so one edit shows every bad
                     // stat name at once rather than one per rebuild.
                     continue;
+                }
+
+                // A set that declares what it is FOR owns its ability scores,
+                // and a piece may not also hand-author them.
+                //
+                // Rejected rather than merged, because a merge has no honest
+                // answer: an AbilityScoreBlock cannot tell "authored as zero"
+                // from "not authored", so a piece writing "strength 0" would
+                // either be ignored or would silently delete the style's own
+                // weighting, and which of those happened would depend on a
+                // field nobody can see. Non-ability stats — resistances,
+                // health, the speed penalty — stay authorable either way,
+                // because those are what a material says beyond its weights.
+                if (derives && (!IsEmpty(baseScore) || !IsEmpty(topScore)))
+                {
+                    errors.Add($"{pieceLabel}: names an ability score in baseStats/topStats, but its set already " +
+                               $"declares styleWeights. Two sources for the same number is exactly what styleWeights " +
+                               $"exists to end — move the intent into the set's weights, or drop the set's weights " +
+                               $"and author every piece by hand.");
+                    continue;
+                }
+
+                if (derives)
+                {
+                    baseScore = DeriveScores(weights, slot, maxTier, atTop: false);
+                    topScore = DeriveScores(weights, slot, maxTier, atTop: true);
                 }
 
                 if (IsEmpty(baseStat) && IsEmpty(baseScore) && IsEmpty(topStat) && IsEmpty(topScore))
@@ -262,11 +297,22 @@ namespace PrincesPalace.Domain.Content
         // The interpolation, and the one piece of arithmetic in this file
         // worth pinning.
         //
-        // Straight-line between the two authored ends, FLOORED. C# integer
-        // division truncates toward zero, which would round a descending stat
-        // the opposite way from an ascending one and put a quiet asymmetry
-        // into every set that ever carries a penalty — the same trap
-        // AbilityDerivation.FloorDiv2 exists to avoid.
+        // GEOMETRIC between the two authored ends, not straight-line. The
+        // shape lives in GearScaling.CurveFraction and the reasoning with it:
+        // a linear ramp cannot make the last floor feel wild, it can only be
+        // uniformly steeper, so the curve accelerates instead.
+        //
+        // Both ENDS are untouched by that change — f(0) is 0 and f(maxTier)
+        // is 1 — so a set's authored numbers still mean exactly what they say
+        // and raising maxTier still stretches the curve rather than inflating
+        // the tiers that already exist.
+        //
+        // FLOORED, and via Math.Floor rather than integer division. C#
+        // integer division truncates toward zero, which would round a
+        // descending stat the opposite way from an ascending one and put a
+        // quiet asymmetry into every set that carries a penalty — the same
+        // trap AbilityDerivation.FloorDiv2 exists to avoid, and steel's
+        // negative speed is a live instance of it.
         public static int ValueAt(int atZero, int atMax, int tier, int maxTier)
         {
             if (maxTier <= 0 || tier <= 0)
@@ -280,9 +326,36 @@ namespace PrincesPalace.Domain.Content
             }
 
             int span = atMax - atZero;
-            int scaled = span * tier;
-            int step = scaled >= 0 ? scaled / maxTier : (scaled - maxTier + 1) / maxTier;
-            return atZero + step;
+            double moved = span * GearScaling.CurveFraction(tier, maxTier);
+            return atZero + (int)Math.Floor(moved);
+        }
+
+        // One end of a derived piece: every ability score the style weights,
+        // scaled by the slot and the global base.
+        //
+        // Weights arrive in hundredths, which is how the file authors them —
+        // "strength 40" is 0.40 — so they are divided here rather than at the
+        // parse, where dividing would throw away the precision that makes 0.85
+        // and 0.90 different slots.
+        private static AbilityScoreBlock DeriveScores(AbilityScoreBlock weights, EquipmentSlot slot,
+                                                      int maxTier, bool atTop)
+        {
+            int Value(int hundredths)
+            {
+                if (hundredths == 0) return 0;
+                double weight = hundredths / 100.0;
+                return atTop
+                    ? GearScaling.AtTopTier(slot, weight, maxTier)
+                    : GearScaling.AtBaseTier(slot, weight);
+            }
+
+            return new AbilityScoreBlock(
+                Value(weights.strength),
+                Value(weights.dexterity),
+                Value(weights.constitution),
+                Value(weights.wisdom),
+                Value(weights.intelligence),
+                Value(weights.charisma));
         }
 
         private static StatBlock InterpolateStats(StatBlock atZero, StatBlock atMax, int tier, int maxTier)

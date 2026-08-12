@@ -27,12 +27,12 @@ MonoBehaviour:
     attack: 1
     defense: 0
     manaRegen: 0
-    physicalResistance: 6
+    physicalResistance: 4
     magicalResistance: 0
   abilityScoreBonus:
     strength: 3
     dexterity: 0
-    constitution: 0
+    constitution: 5
     wisdom: 0
     intelligence: 0
     charisma: 0

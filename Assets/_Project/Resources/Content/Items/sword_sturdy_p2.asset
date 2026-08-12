@@ -19,7 +19,7 @@ MonoBehaviour:
   kind: 1
   effect: 0
   amount: 20
-  attackBonus: 5
+  attackBonus: 3
   equipSlot: 6
   statBonus:
     maxHealth: 0

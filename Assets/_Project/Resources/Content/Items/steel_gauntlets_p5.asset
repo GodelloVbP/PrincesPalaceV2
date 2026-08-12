@@ -24,15 +24,15 @@ MonoBehaviour:
   statBonus:
     maxHealth: 0
     speed: 0
-    attack: 2
+    attack: 1
     defense: 0
     manaRegen: 0
-    physicalResistance: 6
+    physicalResistance: 5
     magicalResistance: 0
   abilityScoreBonus:
     strength: 3
     dexterity: 0
-    constitution: 0
+    constitution: 6
     wisdom: 0
     intelligence: 0
     charisma: 0

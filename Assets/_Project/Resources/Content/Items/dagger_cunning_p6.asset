@@ -18,7 +18,7 @@ MonoBehaviour:
   kind: 1
   effect: 0
   amount: 20
-  attackBonus: 7
+  attackBonus: 5
   equipSlot: 6
   statBonus:
     maxHealth: 0
@@ -44,7 +44,7 @@ MonoBehaviour:
     charisma: 0
   scaling:
     strength: 0
-    dexterity: 3
+    dexterity: 2
     constitution: 0
     wisdom: 0
     intelligence: 3

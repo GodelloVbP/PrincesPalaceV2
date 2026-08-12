@@ -30,9 +30,9 @@ MonoBehaviour:
     physicalResistance: 6
     magicalResistance: 0
   abilityScoreBonus:
-    strength: 0
+    strength: 2
     dexterity: 0
-    constitution: 2
+    constitution: 3
     wisdom: 0
     intelligence: 0
     charisma: 0

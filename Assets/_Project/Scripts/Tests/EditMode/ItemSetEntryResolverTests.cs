@@ -44,15 +44,27 @@ namespace PrincesPalace.Domain.Tests
         // ValueAt to build its own expected value (CLAUDE.md gotcha #5,
         // AUDIT.md #18).
 
+        // GEOMETRIC now, not a straight line. GearScaling.TierGrowth is 1.25 a
+        // tier, so the ladder accelerates and the last floor is the wild one.
+        //
+        // The flat start is the visible cost of that, and is asserted on
+        // purpose rather than worked around. Across a span of four nothing
+        // moves until tier 6, because the curve has only spent a third of its
+        // travel by then. That is fine for the ability scores this exists to
+        // carry, whose spans run 3 to 37 — and it is why a small secondary
+        // stat (leather's speed, 1 to 3) sits still for most of the ladder. If
+        // that ever reads as broken, the fix is a wider span on that stat, not
+        // a gentler curve.
         [TestCase(0, 2)]
         [TestCase(1, 2)]
-        [TestCase(2, 2)]
-        [TestCase(3, 3)]
-        [TestCase(5, 4)]
-        [TestCase(7, 4)]
-        [TestCase(8, 5)]
+        [TestCase(3, 2)]
+        [TestCase(5, 2)]
+        [TestCase(6, 3)]
+        [TestCase(7, 3)]
+        [TestCase(8, 4)]
+        [TestCase(9, 5)]
         [TestCase(10, 6)]
-        public void ValueAt_WalksAStraightLineBetweenTheTwoAuthoredEnds(int plus, int expected)
+        public void ValueAt_AcceleratesBetweenTheTwoAuthoredEnds(int plus, int expected)
         {
             // 2 at plus 0, 6 at plus 10.
             Assert.AreEqual(expected, ItemSetEntryResolver.ValueAt(2, 6, plus, 10));

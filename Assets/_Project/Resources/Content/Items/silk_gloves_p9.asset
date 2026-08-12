@@ -28,13 +28,13 @@ MonoBehaviour:
     defense: 0
     manaRegen: 2
     physicalResistance: 0
-    magicalResistance: 9
+    magicalResistance: 8
   abilityScoreBonus:
     strength: 0
     dexterity: 0
     constitution: 0
     wisdom: 0
-    intelligence: 3
+    intelligence: 25
     charisma: 0
   requirements:
     strength: 0

@@ -50,6 +50,25 @@ namespace PrincesPalace.Domain.Content
 
         public int sortOrder = -1;
 
+        // WHAT THIS MATERIAL IS FOR, as a share per ability score, and the
+        // thing that turns a set from fifteen hand-typed numbers into one
+        // authored idea.
+        //
+        // Lines read "<score> <hundredths>": "strength 40" is a weight of
+        // 0.40. Hundredths rather than decimals so this file stays
+        // integer-parsed like every other stat line in it.
+        //
+        // GearScaling turns them into real numbers — the weight times the
+        // slot's share times the global base, then up the tier curve — so a
+        // piece needs no baseStats or topStats at all unless it wants to say
+        // something the formula cannot.
+        //
+        // The SUM is the set's budget, and the one number to watch when
+        // balancing: 1.00 is point-neutral against a pure single-stat style,
+        // and the dual sets deliberately run at 1.10, because breadth is worth
+        // less than reaching a threshold.
+        public string[] styleWeights = Array.Empty<string>();
+
         public RawSetPiece[] pieces = Array.Empty<RawSetPiece>();
     }
 

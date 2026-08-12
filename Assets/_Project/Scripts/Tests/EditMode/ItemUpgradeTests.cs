@@ -11,10 +11,10 @@ namespace PrincesPalace.Domain.Tests
         // that the CURVE is the one that was designed, and a retune has to
         // come here and say so.
         [TestCase(0, 1.00f)]
-        [TestCase(1, 1.04f)]
-        [TestCase(5, 1.20f)]
-        [TestCase(10, 1.40f)]
-        public void MultiplierFor_WalksFourPercentPerPlus(int plus, float expected)
+        [TestCase(1, 1.15f)]
+        [TestCase(5, 1.75f)]
+        [TestCase(10, 2.50f)]
+        public void MultiplierFor_WalksFifteenPercentPerPlus(int plus, float expected)
         {
             Assert.AreEqual(expected, ItemUpgrade.MultiplierFor(plus), 0.0001f);
         }
@@ -37,10 +37,10 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, ItemUpgrade.Apply(0, 7));
         }
 
-        // 20 * 1.40 = 28 exactly; 17 * 1.20 = 20.4 floors to 20.
-        [TestCase(20, 10, 28)]
-        [TestCase(17, 5, 20)]
-        [TestCase(1, 10, 1)]
+        // 20 * 2.50 = 50 exactly; 17 * 1.75 = 29.75 floors to 29.
+        [TestCase(20, 10, 50)]
+        [TestCase(17, 5, 29)]
+        [TestCase(1, 10, 2)]
         public void Apply_ScalesAndFloors(int amount, int plus, int expected)
         {
             Assert.AreEqual(expected, ItemUpgrade.Apply(amount, plus));
@@ -53,10 +53,10 @@ namespace PrincesPalace.Domain.Tests
         // place to be one short. CLAUDE.md gotcha 5, on the other side of the
         // fence: not a test recomputing a formula, but a formula that could
         // not survive being computed in float32.
-        [TestCase(20, 10, 28)]
-        [TestCase(50, 10, 70)]
-        [TestCase(25, 5, 30)]
-        [TestCase(100, 10, 140)]
+        [TestCase(20, 10, 50)]
+        [TestCase(50, 10, 125)]
+        [TestCase(25, 5, 43)]
+        [TestCase(100, 10, 250)]
         public void Apply_IsExactWhereTheArithmeticIsExact(int amount, int plus, int expected)
         {
             Assert.AreEqual(expected, ItemUpgrade.Apply(amount, plus),
@@ -68,8 +68,8 @@ namespace PrincesPalace.Domain.Tests
         // cast truncates toward zero, which would quietly make honing a
         // steel platebody reduce its own speed penalty. Same asymmetry
         // ItemSetEntryResolver.ValueAt and AbilityDerivation.FloorDiv2 guard.
-        [TestCase(-2, 5, -3)]
-        [TestCase(-10, 10, -14)]
+        [TestCase(-2, 5, -4)]
+        [TestCase(-10, 10, -25)]
         public void Apply_FloorsAPenaltyDownwardsToo(int amount, int plus, int expected)
         {
             Assert.AreEqual(expected, ItemUpgrade.Apply(amount, plus));
@@ -95,9 +95,9 @@ namespace PrincesPalace.Domain.Tests
         // early drop is worth investing in. If plus were worth much more than
         // this, tier — and with it the rarity bands — would stop mattering.
         [Test]
-        public void AFullyHonedItem_IsWorthFortyPercentMore_AndNoMore()
+        public void AFullyHonedItem_IsWorthTwoAndAHalfTimesItsTier_AndNoMore()
         {
-            Assert.AreEqual(1.40f, ItemUpgrade.MultiplierFor(ItemUpgrade.MaxPlus), 0.0001f);
+            Assert.AreEqual(2.50f, ItemUpgrade.MultiplierFor(ItemUpgrade.MaxPlus), 0.0001f);
             Assert.AreEqual(10, ItemUpgrade.MaxPlus, "The two axes are the same length by design");
         }
     }

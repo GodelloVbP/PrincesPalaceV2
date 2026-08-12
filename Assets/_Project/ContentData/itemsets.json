@@ -1,155 +1,940 @@
 {
-  "_readme": "Armour sets. Each entry here is a GENERATOR, not an item: it names a material, the pieces that material comes in, and what each piece is worth at tier 0 and at maxTier. ContentBuilder expands that into one real item per TIER — three sets of five pieces at maxTier 10 is 165 items from 15 pieces of authoring. Edit this file, then run Prince's Palace > Build Default Content. TIER IS NOT PLUS. Tier is which coif this is (its art, its stats, its rarity band) and is baked here, one asset each. Plus is how honed one particular copy is, it lives on the InventoryEntry at runtime, and it only ever multiplies what the tier already grants (see Domain/Stats/ItemUpgrade.cs). That split is why this file generates 165 assets rather than 1,815. REQUIRED per set: id (goes into every generated item id, and item ids live in save files, so never rename it), displayName, and pieces. Optional: description, tierAdjectives (one word per tier, lowest first — 'Ragged' through 'Sovereign'; the last entry covers every tier past the end of a short list, and a set with none just keeps the bare piece name), maxTier (default 10), cost and costPerTier (gold for the tier-0 piece and per further tier), sortOrder. REQUIRED per piece: id (unique within its set only), displayName, slot (Head, Necklace, Torso, Legs, Shoes, Gloves, Weapon1, Weapon2, or the alias Weapon). Optional per piece: iconSheet, the folder of art that tools/slice_item_sheet.py wrote — 'Assets/_Project/Art/Items/armor_leather_sheet' and so on, holding level_1.png upward. A sheet holds TEN drawings and a maxTier-10 set has ELEVEN tiers, so levels are spread proportionally rather than mapped one to one: both ends get their own picture and tiers 5 and 6 share one in the middle. Plus never changes the art. Set iconLevels if a sheet holds some other number. A piece with no iconSheet shows no icon, which is a supported state rather than a hole. baseStats and topStats are lists of '<stat> <amount>' strings — for example 'dexterity 1' or 'physicalResistance 9'. Any ability score (strength, dexterity, constitution, wisdom, intelligence, charisma) or any stat (maxHealth, speed, attack, defense, manaRegen, physicalResistance, magicalResistance) may be named, case-insensitively; a stat named in one end but not the other simply starts or ends at zero, and negative amounts are fine (steel is slow on purpose). Everything between the two ends is interpolated and floored. Anchoring at both ends is what makes this safe to retune: raising maxTier stretches the curve instead of inflating the tiers that already exist, and a stat added to the game is authorable here the same day with no schema change. Resistance is in POINTS, not percent — see CombatMath.AfterResistance for the curve, which halves damage at 100 points and can never reach immunity.",
+  "_readme": "Armour sets. Each entry here is a GENERATOR, not an item: it names a material, the pieces that material comes in, and what each piece is worth at tier 0 and at maxTier. ContentBuilder expands that into one real item per TIER — three sets of five pieces at maxTier 10 is 165 items from 15 pieces of authoring. Edit this file, then run Prince's Palace > Build Default Content. TIER IS NOT PLUS. Tier is which coif this is (its art, its stats, its rarity band) and is baked here, one asset each. Plus is how honed one particular copy is, it lives on the InventoryEntry at runtime, and it only ever multiplies what the tier already grants (see Domain/Stats/ItemUpgrade.cs). That split is why this file generates 165 assets rather than 1,815. REQUIRED per set: id (goes into every generated item id, and item ids live in save files, so never rename it), displayName, and pieces. Optional: description, tierAdjectives (one word per tier, lowest first — 'Ragged' through 'Sovereign'; the last entry covers every tier past the end of a short list, and a set with none just keeps the bare piece name), maxTier (default 10), cost and costPerTier (gold for the tier-0 piece and per further tier), sortOrder. REQUIRED per piece: id (unique within its set only), displayName, slot (Head, Necklace, Torso, Legs, Shoes, Gloves, Weapon1, Weapon2, or the alias Weapon). Optional per piece: iconSheet, the folder of art that tools/slice_item_sheet.py wrote — 'Assets/_Project/Art/Items/armor_leather_sheet' and so on, holding level_1.png upward. A sheet holds TEN drawings and a maxTier-10 set has ELEVEN tiers, so levels are spread proportionally rather than mapped one to one: both ends get their own picture and tiers 5 and 6 share one in the middle. Plus never changes the art. Set iconLevels if a sheet holds some other number. A piece with no iconSheet shows no icon, which is a supported state rather than a hole. baseStats and topStats are lists of '<stat> <amount>' strings — for example 'dexterity 1' or 'physicalResistance 9'. Any ability score (strength, dexterity, constitution, wisdom, intelligence, charisma) or any stat (maxHealth, speed, attack, defense, manaRegen, physicalResistance, magicalResistance) may be named, case-insensitively; a stat named in one end but not the other simply starts or ends at zero, and negative amounts are fine (steel is slow on purpose). Everything between the two ends is interpolated and floored. Anchoring at both ends is what makes this safe to retune: raising maxTier stretches the curve instead of inflating the tiers that already exist, and a stat added to the game is authorable here the same day with no schema change. Resistance is in POINTS, not percent — see CombatMath.AfterResistance for the curve, which halves damage at 100 points and can never reach immunity. STYLE WEIGHTS, and the reason most pieces here author almost nothing. A set may declare styleWeights -- lines like 'strength 40', in HUNDREDTHS, so 40 is a weight of 0.40 -- which says what the material is FOR. GearScaling turns that into real numbers: weight x the slot's share of a set (torso 1.25 down to gloves 0.85, summing to 5.0) x a global base, then up a GEOMETRIC tier curve of 1.25 a tier, so tier 10 is 9.3x tier 0. A set that declares weights must NOT also name an ability score in a piece's baseStats/topStats; that is rejected rather than merged, because an AbilityScoreBlock cannot tell 'authored as zero' from 'not authored'. Non-ability stats -- resistances, maxHealth, speed, attack, manaRegen -- stay hand-authored either way, and are what a material says BEYOND its weights. The SUM of a set's weights is its budget: 1.00 is point-neutral against a pure single-stat style, and the dual sets run at 1.10 on purpose, because breadth is worth less than reaching a threshold. Retuning the whole economy is one number in GearScaling; retuning one material is one line here.",
   "sets": [
     {
       "id": "leather",
       "displayName": "Leather",
       "description": "Boiled hide, cut close. It does not stop much, but it never gets in the way.",
-      "tierAdjectives": [ "Ragged", "Worn", "Supple", "Cured", "Hardened", "Boiled", "Studded", "Wyrmhide", "Shadowsewn", "Heartleather", "Sovereign" ],
+      "tierAdjectives": [
+        "Ragged",
+        "Worn",
+        "Supple",
+        "Cured",
+        "Hardened",
+        "Boiled",
+        "Studded",
+        "Wyrmhide",
+        "Shadowsewn",
+        "Heartleather",
+        "Sovereign"
+      ],
       "maxTier": 10,
       "cost": 30,
       "costPerTier": 20,
       "sortOrder": 0,
+      "styleWeights": [
+        "dexterity 100"
+      ],
       "pieces": [
         {
           "id": "coif",
           "displayName": "Coif",
           "slot": "Head",
           "iconSheet": "Assets/_Project/Art/Items/headwear_leather_sheet",
-          "baseStats": [ "dexterity 1", "physicalResistance 2" ],
-          "topStats":  [ "dexterity 3", "physicalResistance 7" ]
+          "baseStats": [
+            "physicalResistance 2"
+          ],
+          "topStats": [
+            "physicalResistance 7"
+          ]
         },
         {
           "id": "torso",
           "displayName": "Torso",
           "slot": "Torso",
           "iconSheet": "Assets/_Project/Art/Items/armor_leather_sheet",
-          "baseStats": [ "dexterity 1", "physicalResistance 5", "maxHealth 20" ],
-          "topStats":  [ "dexterity 3", "physicalResistance 14", "maxHealth 80" ]
+          "baseStats": [
+            "physicalResistance 5",
+            "maxHealth 20"
+          ],
+          "topStats": [
+            "physicalResistance 14",
+            "maxHealth 80"
+          ]
         },
         {
           "id": "leggings",
           "displayName": "Leggings",
           "slot": "Legs",
           "iconSheet": "Assets/_Project/Art/Items/leggings_leather_sheet",
-          "baseStats": [ "dexterity 1", "physicalResistance 4" ],
-          "topStats":  [ "dexterity 3", "physicalResistance 11" ]
+          "baseStats": [
+            "physicalResistance 4"
+          ],
+          "topStats": [
+            "physicalResistance 11"
+          ]
         },
         {
           "id": "gloves",
           "displayName": "Gloves",
           "slot": "Gloves",
           "iconSheet": "Assets/_Project/Art/Items/gloves_leather_sheet",
-          "baseStats": [ "dexterity 1", "attack 1" ],
-          "topStats":  [ "dexterity 3", "attack 3" ]
+          "baseStats": [
+            "attack 1"
+          ],
+          "topStats": [
+            "attack 3"
+          ]
         },
         {
           "id": "boots",
           "displayName": "Boots",
           "slot": "Shoes",
-          "baseStats": [ "dexterity 1", "speed 1" ],
-          "topStats":  [ "dexterity 3", "speed 3" ]
+          "baseStats": [
+            "speed 1"
+          ],
+          "topStats": [
+            "speed 3"
+          ]
         }
       ]
     },
-
     {
       "id": "steel",
       "displayName": "Steel",
       "description": "Plate, properly fitted. Heavy enough that you feel every step, and so does anything that hits you.",
-      "tierAdjectives": [ "Pitted", "Plain", "Forged", "Tempered", "Polished", "Knightly", "Runed", "Adamant", "Radiant", "Godsteel", "Sovereign" ],
+      "tierAdjectives": [
+        "Pitted",
+        "Plain",
+        "Forged",
+        "Tempered",
+        "Polished",
+        "Knightly",
+        "Runed",
+        "Adamant",
+        "Radiant",
+        "Godsteel",
+        "Sovereign"
+      ],
       "maxTier": 10,
       "cost": 60,
       "costPerTier": 40,
       "sortOrder": 1,
+      "styleWeights": [
+        "strength 40",
+        "constitution 70"
+      ],
       "pieces": [
         {
           "id": "helmet",
           "displayName": "Helmet",
           "slot": "Head",
           "iconSheet": "Assets/_Project/Art/Items/helmets_str",
-          "baseStats": [ "constitution 2", "physicalResistance 6" ],
-          "topStats":  [ "constitution 4", "physicalResistance 13" ]
+          "baseStats": [
+            "physicalResistance 6"
+          ],
+          "topStats": [
+            "physicalResistance 13"
+          ]
         },
         {
           "id": "platebody",
           "displayName": "Platebody",
           "slot": "Torso",
-          "baseStats": [ "constitution 4", "strength 1", "physicalResistance 10", "maxHealth 30" ],
-          "topStats":  [ "constitution 8", "strength 3", "physicalResistance 22", "maxHealth 120", "speed -2" ]
+          "baseStats": [
+            "physicalResistance 10",
+            "maxHealth 30"
+          ],
+          "topStats": [
+            "physicalResistance 22",
+            "maxHealth 120",
+            "speed -2"
+          ]
         },
         {
           "id": "platelegs",
           "displayName": "Platelegs",
           "slot": "Legs",
-          "baseStats": [ "constitution 3", "strength 2", "physicalResistance 8" ],
-          "topStats":  [ "constitution 6", "strength 4", "physicalResistance 17" ]
+          "baseStats": [
+            "physicalResistance 8"
+          ],
+          "topStats": [
+            "physicalResistance 17"
+          ]
         },
         {
           "id": "gauntlets",
           "displayName": "Gauntlets",
           "slot": "Gloves",
-          "baseStats": [ "strength 2", "physicalResistance 4", "attack 1" ],
-          "topStats":  [ "strength 5", "physicalResistance 9", "attack 3" ]
+          "baseStats": [
+            "physicalResistance 4",
+            "attack 1"
+          ],
+          "topStats": [
+            "physicalResistance 9",
+            "attack 3"
+          ]
         },
         {
           "id": "greaves",
           "displayName": "Greaves",
           "slot": "Shoes",
-          "baseStats": [ "constitution 2", "physicalResistance 5" ],
-          "topStats":  [ "constitution 4", "physicalResistance 11", "speed -1" ]
+          "baseStats": [
+            "physicalResistance 5"
+          ],
+          "topStats": [
+            "physicalResistance 11",
+            "speed -1"
+          ]
         }
       ]
     },
-
     {
       "id": "silk",
       "displayName": "Silk",
       "description": "Woven thin and stitched with something that hums. It turns spellwork aside and almost nothing else.",
-      "tierAdjectives": [ "Frayed", "Plain", "Woven", "Embroidered", "Silken", "Enchanted", "Arcane", "Starwoven", "Astral", "Empyrean", "Sovereign" ],
+      "tierAdjectives": [
+        "Frayed",
+        "Plain",
+        "Woven",
+        "Embroidered",
+        "Silken",
+        "Enchanted",
+        "Arcane",
+        "Starwoven",
+        "Astral",
+        "Empyrean",
+        "Sovereign"
+      ],
       "maxTier": 10,
       "cost": 55,
       "costPerTier": 45,
       "sortOrder": 2,
+      "styleWeights": [
+        "intelligence 100"
+      ],
       "pieces": [
         {
           "id": "pointed_hat",
           "displayName": "Pointed Hat",
           "slot": "Head",
-          "baseStats": [ "intelligence 2", "manaRegen 1", "physicalResistance 2", "magicalResistance 4" ],
-          "topStats":  [ "intelligence 6", "manaRegen 5", "physicalResistance 6", "magicalResistance 15" ]
+          "baseStats": [
+            "manaRegen 1",
+            "physicalResistance 2",
+            "magicalResistance 4"
+          ],
+          "topStats": [
+            "manaRegen 5",
+            "physicalResistance 6",
+            "magicalResistance 15"
+          ]
         },
         {
           "id": "robe_top",
           "displayName": "Robe Top",
           "slot": "Torso",
           "iconSheet": "Assets/_Project/Art/Items/robe_top_silk_sheet",
-          "baseStats": [ "intelligence 2", "wisdom 2", "physicalResistance 3", "magicalResistance 6" ],
-          "topStats":  [ "intelligence 6", "wisdom 5", "physicalResistance 8", "magicalResistance 20" ]
+          "baseStats": [
+            "physicalResistance 3",
+            "magicalResistance 6"
+          ],
+          "topStats": [
+            "physicalResistance 8",
+            "magicalResistance 20"
+          ]
         },
         {
           "id": "robe_bottom",
           "displayName": "Robe Bottom",
           "slot": "Legs",
           "iconSheet": "Assets/_Project/Art/Items/rob_bottom_silk_sheet",
-          "baseStats": [ "intelligence 1", "wisdom 1", "physicalResistance 2", "magicalResistance 5" ],
-          "topStats":  [ "intelligence 4", "wisdom 4", "physicalResistance 7", "magicalResistance 17" ]
+          "baseStats": [
+            "physicalResistance 2",
+            "magicalResistance 5"
+          ],
+          "topStats": [
+            "physicalResistance 7",
+            "magicalResistance 17"
+          ]
         },
         {
           "id": "gloves",
           "displayName": "Gloves",
           "slot": "Gloves",
           "iconSheet": "Assets/_Project/Art/Items/gloves_silk_sheet",
-          "baseStats": [ "intelligence 1", "manaRegen 1", "magicalResistance 3" ],
-          "topStats":  [ "intelligence 4", "manaRegen 3", "magicalResistance 10" ]
+          "baseStats": [
+            "manaRegen 1",
+            "magicalResistance 3"
+          ],
+          "topStats": [
+            "manaRegen 3",
+            "magicalResistance 10"
+          ]
         },
         {
           "id": "boots",
           "displayName": "Boots",
           "slot": "Shoes",
           "iconSheet": "Assets/_Project/Art/Items/boots_silk_sheet",
-          "baseStats": [ "dexterity 1", "speed 1", "magicalResistance 3" ],
-          "topStats":  [ "dexterity 2", "speed 2", "magicalResistance 10" ]
+          "baseStats": [
+            "speed 1",
+            "magicalResistance 3"
+          ],
+          "topStats": [
+            "speed 2",
+            "magicalResistance 10"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "harness",
+      "displayName": "Harness",
+      "description": "Straps, rings and weighted bracers. It protects nothing and it was never meant to.",
+      "tierAdjectives": [
+        "Scavenged",
+        "Bound",
+        "Studded",
+        "Scarred",
+        "Brutal",
+        "Savage",
+        "Merciless",
+        "Warlord's",
+        "Butcher's",
+        "Titan's",
+        "Worldrender"
+      ],
+      "maxTier": 10,
+      "cost": 40,
+      "costPerTier": 30,
+      "sortOrder": 3,
+      "styleWeights": [
+        "strength 100"
+      ],
+      "pieces": [
+        {
+          "id": "warmask",
+          "displayName": "Warmask",
+          "slot": "Head",
+          "baseStats": [
+            "attack 1"
+          ],
+          "topStats": [
+            "attack 4"
+          ]
+        },
+        {
+          "id": "harness",
+          "displayName": "Chest Straps",
+          "slot": "Torso",
+          "baseStats": [
+            "attack 3"
+          ],
+          "topStats": [
+            "attack 9"
+          ]
+        },
+        {
+          "id": "warskirt",
+          "displayName": "War Kilt",
+          "slot": "Legs",
+          "baseStats": [
+            "attack 2"
+          ],
+          "topStats": [
+            "attack 6"
+          ]
+        },
+        {
+          "id": "bracers",
+          "displayName": "Spiked Bracers",
+          "slot": "Gloves",
+          "baseStats": [
+            "attack 1"
+          ],
+          "topStats": [
+            "attack 4"
+          ]
+        },
+        {
+          "id": "treads",
+          "displayName": "Heavy Treads",
+          "slot": "Shoes",
+          "baseStats": [
+            "attack 1"
+          ],
+          "topStats": [
+            "attack 2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bulwark",
+      "displayName": "Bulwark",
+      "description": "No joints, no give, no hands free. You do not fight in this; you refuse to move.",
+      "tierAdjectives": [
+        "Cracked",
+        "Slab",
+        "Ironbound",
+        "Weighted",
+        "Immovable",
+        "Anchored",
+        "Adamant",
+        "Mountain's",
+        "Bastion",
+        "Unyielding",
+        "Worldroot"
+      ],
+      "maxTier": 10,
+      "cost": 70,
+      "costPerTier": 45,
+      "sortOrder": 4,
+      "styleWeights": [
+        "constitution 100"
+      ],
+      "pieces": [
+        {
+          "id": "greathelm",
+          "displayName": "Great Helm",
+          "slot": "Head",
+          "baseStats": [
+            "physicalResistance 8"
+          ],
+          "topStats": [
+            "physicalResistance 18"
+          ]
+        },
+        {
+          "id": "bulwark",
+          "displayName": "Cuirass",
+          "slot": "Torso",
+          "baseStats": [
+            "physicalResistance 14"
+          ],
+          "topStats": [
+            "physicalResistance 30"
+          ]
+        },
+        {
+          "id": "tassets",
+          "displayName": "Tassets",
+          "slot": "Legs",
+          "baseStats": [
+            "physicalResistance 11"
+          ],
+          "topStats": [
+            "physicalResistance 24"
+          ]
+        },
+        {
+          "id": "vambraces",
+          "displayName": "Vambraces",
+          "slot": "Gloves",
+          "baseStats": [
+            "physicalResistance 6"
+          ],
+          "topStats": [
+            "physicalResistance 12"
+          ]
+        },
+        {
+          "id": "sabatons",
+          "displayName": "Sabatons",
+          "slot": "Shoes",
+          "baseStats": [
+            "physicalResistance 7"
+          ],
+          "topStats": [
+            "physicalResistance 15"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "brigandine",
+      "displayName": "Brigandine",
+      "description": "Leather with plates riveted inside it. Quiet enough to move in, hard enough to matter.",
+      "tierAdjectives": [
+        "Patched",
+        "Riveted",
+        "Studded",
+        "Fitted",
+        "Tempered",
+        "Silent",
+        "Duellist's",
+        "Bladedancer's",
+        "Phantom",
+        "Peerless",
+        "Ghoststep"
+      ],
+      "maxTier": 10,
+      "cost": 50,
+      "costPerTier": 35,
+      "sortOrder": 5,
+      "styleWeights": [
+        "dexterity 60",
+        "strength 50"
+      ],
+      "pieces": [
+        {
+          "id": "cap",
+          "displayName": "Studded Cap",
+          "slot": "Head",
+          "baseStats": [
+            "physicalResistance 4"
+          ],
+          "topStats": [
+            "physicalResistance 8"
+          ]
+        },
+        {
+          "id": "brigandine",
+          "displayName": "Jack",
+          "slot": "Torso",
+          "baseStats": [
+            "physicalResistance 6"
+          ],
+          "topStats": [
+            "physicalResistance 14"
+          ]
+        },
+        {
+          "id": "chausses",
+          "displayName": "Chausses",
+          "slot": "Legs",
+          "baseStats": [
+            "physicalResistance 5"
+          ],
+          "topStats": [
+            "physicalResistance 11"
+          ]
+        },
+        {
+          "id": "gloves",
+          "displayName": "Gloves",
+          "slot": "Gloves",
+          "baseStats": [
+            "attack 1"
+          ],
+          "topStats": [
+            "attack 2"
+          ]
+        },
+        {
+          "id": "boots",
+          "displayName": "Boots",
+          "slot": "Shoes",
+          "baseStats": [
+            "speed 1"
+          ],
+          "topStats": [
+            "speed 2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "runeplate",
+      "displayName": "Runeplate",
+      "description": "Half-plate cut with channels, and something lit moving along them.",
+      "tierAdjectives": [
+        "Chalked",
+        "Etched",
+        "Inscribed",
+        "Runed",
+        "Humming",
+        "Singing",
+        "Resonant",
+        "Archmagus's",
+        "Starbound",
+        "Worldbreaker",
+        "Firstword"
+      ],
+      "maxTier": 10,
+      "cost": 75,
+      "costPerTier": 50,
+      "sortOrder": 6,
+      "styleWeights": [
+        "strength 60",
+        "intelligence 50"
+      ],
+      "pieces": [
+        {
+          "id": "runehelm",
+          "displayName": "Helm",
+          "slot": "Head",
+          "baseStats": [
+            "magicalResistance 3"
+          ],
+          "topStats": [
+            "magicalResistance 7"
+          ]
+        },
+        {
+          "id": "runeplate",
+          "displayName": "Cuirass",
+          "slot": "Torso",
+          "baseStats": [
+            "physicalResistance 8"
+          ],
+          "topStats": [
+            "physicalResistance 18"
+          ]
+        },
+        {
+          "id": "runelegs",
+          "displayName": "Legguards",
+          "slot": "Legs",
+          "baseStats": [
+            "physicalResistance 6"
+          ],
+          "topStats": [
+            "physicalResistance 14"
+          ]
+        },
+        {
+          "id": "runefists",
+          "displayName": "Gauntlets",
+          "slot": "Gloves",
+          "baseStats": [
+            "manaRegen 1"
+          ],
+          "topStats": [
+            "manaRegen 2"
+          ]
+        },
+        {
+          "id": "runeshod",
+          "displayName": "Sabatons",
+          "slot": "Shoes",
+          "baseStats": [
+            "magicalResistance 2"
+          ],
+          "topStats": [
+            "magicalResistance 6"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "vellum",
+      "displayName": "Vellum",
+      "description": "Parchment strips, ink still wet in places, and a great deal of somebody else's certainty.",
+      "tierAdjectives": [
+        "Blank",
+        "Annotated",
+        "Margined",
+        "Illuminated",
+        "Gilded",
+        "Canonical",
+        "Apocryphal",
+        "Oracle's",
+        "Prophet's",
+        "First Draft",
+        "Unwritten"
+      ],
+      "maxTier": 10,
+      "cost": 55,
+      "costPerTier": 45,
+      "sortOrder": 7,
+      "styleWeights": [
+        "intelligence 60",
+        "wisdom 50"
+      ],
+      "pieces": [
+        {
+          "id": "hood",
+          "displayName": "Scribe's Hood",
+          "slot": "Head",
+          "baseStats": [
+            "manaRegen 2"
+          ],
+          "topStats": [
+            "manaRegen 5"
+          ]
+        },
+        {
+          "id": "mantle",
+          "displayName": "Mantle",
+          "slot": "Torso",
+          "baseStats": [
+            "magicalResistance 7"
+          ],
+          "topStats": [
+            "magicalResistance 20"
+          ]
+        },
+        {
+          "id": "wrap",
+          "displayName": "Wrap",
+          "slot": "Legs",
+          "baseStats": [
+            "magicalResistance 6"
+          ],
+          "topStats": [
+            "magicalResistance 16"
+          ]
+        },
+        {
+          "id": "gloves",
+          "displayName": "Ink-stained Gloves",
+          "slot": "Gloves",
+          "baseStats": [
+            "manaRegen 1"
+          ],
+          "topStats": [
+            "manaRegen 3"
+          ]
+        },
+        {
+          "id": "shoes",
+          "displayName": "Scholar's Shoes",
+          "slot": "Shoes",
+          "baseStats": [
+            "magicalResistance 4"
+          ],
+          "topStats": [
+            "magicalResistance 10"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "regalia",
+      "displayName": "Regalia",
+      "description": "Bells to call with and cords to bind with. Nothing here is for hitting anyone yourself.",
+      "tierAdjectives": [
+        "Borrowed",
+        "Painted",
+        "Beaded",
+        "Gilded",
+        "Ceremonial",
+        "Anointed",
+        "Consecrated",
+        "Hierarch's",
+        "Choirmaster's",
+        "Undeniable",
+        "Godcaller"
+      ],
+      "maxTier": 10,
+      "cost": 65,
+      "costPerTier": 45,
+      "sortOrder": 8,
+      "styleWeights": [
+        "charisma 60",
+        "wisdom 50"
+      ],
+      "pieces": [
+        {
+          "id": "mask",
+          "displayName": "Summoner's Mask",
+          "slot": "Head",
+          "baseStats": [
+            "magicalResistance 4"
+          ],
+          "topStats": [
+            "magicalResistance 10"
+          ]
+        },
+        {
+          "id": "mantle",
+          "displayName": "Regal Mantle",
+          "slot": "Torso",
+          "baseStats": [
+            "magicalResistance 6"
+          ],
+          "topStats": [
+            "magicalResistance 16"
+          ]
+        },
+        {
+          "id": "skirt",
+          "displayName": "Ceremonial Skirt",
+          "slot": "Legs",
+          "baseStats": [
+            "magicalResistance 5"
+          ],
+          "topStats": [
+            "magicalResistance 13"
+          ]
+        },
+        {
+          "id": "gloves",
+          "displayName": "Belled Gloves",
+          "slot": "Gloves",
+          "baseStats": [
+            "manaRegen 1"
+          ],
+          "topStats": [
+            "manaRegen 2"
+          ]
+        },
+        {
+          "id": "slippers",
+          "displayName": "Ritual Slippers",
+          "slot": "Shoes",
+          "baseStats": [
+            "magicalResistance 3"
+          ],
+          "topStats": [
+            "magicalResistance 8"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "court",
+      "displayName": "Court",
+      "description": "Velvet, brocade and gold thread. Impractical on purpose: the point is that someone else fights.",
+      "tierAdjectives": [
+        "Threadbare",
+        "Plain",
+        "Tailored",
+        "Brocaded",
+        "Courtly",
+        "Noble",
+        "Ducal",
+        "Princely",
+        "Sovereign's",
+        "Peerless",
+        "Unquestioned"
+      ],
+      "maxTier": 10,
+      "cost": 80,
+      "costPerTier": 50,
+      "sortOrder": 9,
+      "styleWeights": [
+        "charisma 100"
+      ],
+      "pieces": [
+        {
+          "id": "coronet",
+          "displayName": "Coronet",
+          "slot": "Head",
+          "baseStats": [
+            "magicalResistance 2"
+          ],
+          "topStats": [
+            "magicalResistance 7"
+          ]
+        },
+        {
+          "id": "doublet",
+          "displayName": "Doublet",
+          "slot": "Torso",
+          "baseStats": [
+            "magicalResistance 4"
+          ],
+          "topStats": [
+            "magicalResistance 12"
+          ]
+        },
+        {
+          "id": "hose",
+          "displayName": "Hose",
+          "slot": "Legs",
+          "baseStats": [
+            "magicalResistance 3"
+          ],
+          "topStats": [
+            "magicalResistance 10"
+          ]
+        },
+        {
+          "id": "gloves",
+          "displayName": "Silk Gloves",
+          "slot": "Gloves",
+          "baseStats": [
+            "magicalResistance 2"
+          ],
+          "topStats": [
+            "magicalResistance 5"
+          ]
+        },
+        {
+          "id": "shoes",
+          "displayName": "Shoes",
+          "slot": "Shoes",
+          "baseStats": [
+            "speed 1"
+          ],
+          "topStats": [
+            "speed 2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "wool",
+      "displayName": "Wool",
+      "description": "Undyed, soft, and entirely without edges. It would look wrong holding a weapon, which is the idea.",
+      "tierAdjectives": [
+        "Matted",
+        "Carded",
+        "Spun",
+        "Combed",
+        "Lambswool",
+        "Fine",
+        "Shepherd's",
+        "Blessed",
+        "Golden",
+        "First Fleece",
+        "Ram's"
+      ],
+      "maxTier": 10,
+      "cost": 45,
+      "costPerTier": 35,
+      "sortOrder": 10,
+      "styleWeights": [
+        "wisdom 80",
+        "constitution 30"
+      ],
+      "pieces": [
+        {
+          "id": "hood",
+          "displayName": "Hood",
+          "slot": "Head",
+          "baseStats": [
+            "maxHealth 11"
+          ],
+          "topStats": [
+            "maxHealth 42"
+          ]
+        },
+        {
+          "id": "jumper",
+          "displayName": "Jumper",
+          "slot": "Torso",
+          "baseStats": [
+            "maxHealth 18"
+          ],
+          "topStats": [
+            "maxHealth 70"
+          ]
+        },
+        {
+          "id": "leggings",
+          "displayName": "Leggings",
+          "slot": "Legs",
+          "baseStats": [
+            "maxHealth 14"
+          ],
+          "topStats": [
+            "maxHealth 56"
+          ]
+        },
+        {
+          "id": "mittens",
+          "displayName": "Mittens",
+          "slot": "Gloves",
+          "baseStats": [
+            "manaRegen 1"
+          ],
+          "topStats": [
+            "manaRegen 2"
+          ]
+        },
+        {
+          "id": "booties",
+          "displayName": "Booties",
+          "slot": "Shoes",
+          "baseStats": [
+            "maxHealth 9"
+          ],
+          "topStats": [
+            "maxHealth 35"
+          ]
         }
       ]
     }

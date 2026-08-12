@@ -1,0 +1,66 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e3489eecf28b4d74aae851d312f450c0, type: 3}
+  m_Name: court_hose_p5
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ItemDefinition
+  id: court_hose_p5
+  displayName: Noble Court Hose
+  description: 'Velvet, brocade and gold thread. Impractical on purpose: the point
+    is that someone else fights.'
+  kind: 2
+  effect: 0
+  amount: 20
+  attackBonus: 0
+  equipSlot: 3
+  statBonus:
+    maxHealth: 0
+    speed: 0
+    attack: 0
+    defense: 0
+    manaRegen: 0
+    physicalResistance: 0
+    magicalResistance: 4
+  abilityScoreBonus:
+    strength: 0
+    dexterity: 0
+    constitution: 0
+    wisdom: 0
+    intelligence: 0
+    charisma: 12
+  requirements:
+    strength: 0
+    dexterity: 0
+    constitution: 0
+    wisdom: 0
+    intelligence: 0
+    charisma: 0
+  scaling:
+    strength: 0
+    dexterity: 0
+    constitution: 0
+    wisdom: 0
+    intelligence: 0
+    charisma: 0
+  spellScaling:
+    strength: 0
+    dexterity: 0
+    constitution: 0
+    wisdom: 0
+    intelligence: 0
+    charisma: 0
+  startingStock: 0
+  iconPath: 
+  cost: 330
+  sortOrder: 190205
+  setId: court
+  weaponFamilyId: 
+  tier: 5

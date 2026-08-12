@@ -26,11 +26,20 @@ namespace PrincesPalace.Domain.Stats
 
         // 4% per plus, so a fully honed item is worth 1.40x its tier.
         //
-        // Chosen against the tier curve rather than in the abstract: one tier
-        // is worth roughly 10% of a piece's total, so ten plus levels being
-        // worth 40% means plus is a real but secondary axis. Tuning this
-        // above ~10 would make plus dominate tier and turn the rarity bands
-        // into decoration.
+        // WAS 4%, and 4% was right for the curve it was written against: tier
+        // was a straight line worth about 10% a step, so a 40% plus sat neatly
+        // underneath it as a secondary axis.
+        //
+        // That curve is gone. Tier is geometric now (GearScaling.TierGrowth,
+        // 1.25 a floor, 9.3x across the ladder), and against 9.3x a 1.4x plus
+        // is not secondary, it is invisible -- a fully honed piece would be
+        // worth less than one and a half tiers, and honing would never be the
+        // interesting choice.
+        //
+        // At 2.5x a +10 is worth about five tiers: a real prize, and still
+        // clearly beaten by descending five more floors. The old warning holds
+        // in its new form -- the two axes are 2.5x and 9.3x, and closing that
+        // gap is what would turn the rarity bands back into decoration.
         //
         // Held as an INTEGER PERCENT because Apply must not go through
         // float32. 1.4f is really 1.39999997615814208984375, so a float
@@ -38,7 +47,7 @@ namespace PrincesPalace.Domain.Stats
         // same precision trap CLAUDE.md gotcha 5 records, and one that would
         // have silently cost a point off honed gear at exactly the round
         // numbers a player is most likely to check.
-        public const int PercentPerPlus = 4;
+        public const int PercentPerPlus = 15;
 
         // The same rate as a multiplier, for callers that want the factor
         // rather than a scaled amount. Derived from PercentPerPlus rather

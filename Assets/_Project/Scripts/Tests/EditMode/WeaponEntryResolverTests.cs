@@ -81,15 +81,20 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(expected, weapon.DisplayName);
         }
 
-        // C at the bottom, S at the top, and a straight line between. Pinned
+        // C at the bottom, S at the top, on the same GEOMETRIC ladder every
+        // tiered thing in the game now walks (GearScaling.TierGrowth). Pinned
         // so a coefficient change cannot quietly reshape the whole curve.
-        // Primary C -> S and secondary E -> C over eleven levels lands as
-        // C C C C B B B A A A S and E E E E E D D D D D C.
+        //
+        // Primary C -> S and secondary E -> C over eleven tiers lands as
+        // C C C C C C B B B A S and E E E E E E E E D D C. The grades hold
+        // longer and then jump, which is the curve doing what it was changed
+        // to do: a weapon's character is stable through the early floors and
+        // the last two are where it transforms.
         [TestCase(0, ScalingGrade.C, ScalingGrade.E)]
         [TestCase(3, ScalingGrade.C, ScalingGrade.E)]
-        [TestCase(4, ScalingGrade.B, ScalingGrade.E)]
-        [TestCase(5, ScalingGrade.B, ScalingGrade.D)]
-        [TestCase(7, ScalingGrade.A, ScalingGrade.D)]
+        [TestCase(5, ScalingGrade.C, ScalingGrade.E)]
+        [TestCase(6, ScalingGrade.B, ScalingGrade.E)]
+        [TestCase(8, ScalingGrade.B, ScalingGrade.D)]
         [TestCase(9, ScalingGrade.A, ScalingGrade.D)]
         [TestCase(10, ScalingGrade.S, ScalingGrade.C)]
         public void GradesClimbWithPlus_BetweenTheTwoAuthoredEnds(int plus, ScalingGrade primary, ScalingGrade secondary)
@@ -333,8 +338,13 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(5, weapons.Single(w => w.Tier == 0).Requirements.strength);
             Assert.AreEqual(15, weapons.Single(w => w.Tier == 10).Requirements.strength);
-            // Halfway through a straight-line 5->15 over 10 tiers lands on 10.
-            Assert.AreEqual(10, weapons.Single(w => w.Tier == 5).Requirements.strength);
+            // Halfway along the LADDER is not halfway up the CURVE: the tier
+            // scale is geometric, so tier 5 has spent under a quarter of its
+            // travel and a 5->15 requirement sits at 7. Requirements gating
+            // late rather than evenly is the intended consequence — a mid-tier
+            // weapon stays wearable by a mid-tier character, and the demanding
+            // ones are the last two floors.
+            Assert.AreEqual(7, weapons.Single(w => w.Tier == 5).Requirements.strength);
         }
 
         [Test]
