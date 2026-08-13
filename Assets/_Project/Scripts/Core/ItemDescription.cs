@@ -128,24 +128,14 @@ namespace PrincesPalace
                 candidate.StatBonusAt(candidatePlus),
                 candidate.abilityScoreBonus,
                 ScalingDescription(candidate),
-                CurvedRequirements(candidate),
+                // Through RequirementCurve, so the line names what the CURRENT
+                // difficulty knob demands rather than the raw authored number
+                // -- the same value the resolver gates on. Its own block
+                // overload, not six calls to the int one: this had grown a
+                // hand-written copy of a method that already existed.
+                RequirementCurve.Apply(candidate.requirements),
                 ContentDatabase.EffectiveAbilityScores(character),
                 comparison);
-        }
-
-        // Through RequirementCurve, so the line names what the CURRENT
-        // difficulty knob demands rather than the raw authored number -- the
-        // same value the resolver gates on.
-        private static AbilityScoreBlock CurvedRequirements(ItemDefinition item)
-        {
-            var raw = item.requirements;
-            return new AbilityScoreBlock(
-                RequirementCurve.Apply(raw.strength),
-                RequirementCurve.Apply(raw.dexterity),
-                RequirementCurve.Apply(raw.constitution),
-                RequirementCurve.Apply(raw.wisdom),
-                RequirementCurve.Apply(raw.intelligence),
-                RequirementCurve.Apply(raw.charisma));
         }
     }
 }

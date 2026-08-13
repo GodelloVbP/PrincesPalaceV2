@@ -42,7 +42,7 @@ MonoBehaviour:
     constitution: 0
     wisdom: 0
     intelligence: 0
-    charisma: 0
+    charisma: 15
   scaling:
     strength: 0
     dexterity: 0

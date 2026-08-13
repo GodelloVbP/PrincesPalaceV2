@@ -114,6 +114,39 @@ namespace PrincesPalace.Domain.Content
             return Round(Base * SlotWeight(slot) * weight * TopMultiplier(maxTier));
         }
 
+        // What a piece DEMANDS, as against what it grants.
+        //
+        // A flat baseline distributed by the style's own weights, so a
+        // material gates on exactly the scores it is for: a pure style asks 10
+        // of its one stat, and a dual asks 4 and 7 rather than 10 and 10. The
+        // set that makes you strong is the set that expects you to be.
+        //
+        // NO SLOT WEIGHT, deliberately, where the granted stats have one. Gate
+        // on the MATERIAL and every piece of a set becomes wearable at the same
+        // moment; gate per piece and gloves would be free while the torso stays
+        // locked, which fragments a set into five separate decisions and makes
+        // the lightest slot the one nobody thinks about.
+        public const double RequirementBaseline = 10.0;
+
+        public static int RequirementAtBaseTier(double weight)
+        {
+            return Round(RequirementBaseline * weight);
+        }
+
+        // Up the same curve as everything else, so the gate keeps pace with
+        // what the gear is worth rather than falling behind it.
+        //
+        // Reachable by construction: at tier 10 a pure style asks 93 of its own
+        // stat, and three other pieces of that same style supply about 100
+        // before base scores are counted. What it refuses is wearing one piece
+        // of a material you have not otherwise committed to -- which is the
+        // whole point of a requirement, and it is what makes the cascade in
+        // ItemComparison something a player can actually meet.
+        public static int RequirementAtTopTier(double weight, int maxTier)
+        {
+            return Round(RequirementBaseline * weight * TopMultiplier(maxTier));
+        }
+
         // Away from zero, explicitly.
         //
         // Math.Round defaults to banker's rounding and Mathf.RoundToInt is the

@@ -37,7 +37,7 @@ MonoBehaviour:
     intelligence: 0
     charisma: 0
   requirements:
-    strength: 0
+    strength: 24
     dexterity: 0
     constitution: 0
     wisdom: 0

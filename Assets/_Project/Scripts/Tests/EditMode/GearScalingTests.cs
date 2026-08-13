@@ -1,6 +1,9 @@
+using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Equipment;
+using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Tests
 {
@@ -125,6 +128,92 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(27, GearScaling.AtTopTier(EquipmentSlot.Shoes, 0.8, 10),
                 "the top was scaled from a rounded base");
         }
+
+        // ---- what a piece demands ------------------------------------------
+
+        [TestCase(1.0, 10, 93)]   // a pure style asks 10 of its one stat, 93 at the top
+        [TestCase(0.7, 7, 65)]    // steel's constitution
+        [TestCase(0.4, 4, 37)]    // steel's strength
+        [TestCase(0.8, 8, 75)]    // wool's wisdom
+        [TestCase(0.3, 3, 28)]    // wool's constitution
+        public void ARequirementIsTheBaselineSplitByTheStylesOwnWeights(
+            double weight, int atBase, int atTop)
+        {
+            Assert.AreEqual(atBase, GearScaling.RequirementAtBaseTier(weight));
+            Assert.AreEqual(atTop, GearScaling.RequirementAtTopTier(weight, 10));
+        }
+
+        // Granted stats carry a slot weight and demands do not, so a set
+        // unlocks all at once rather than gloves-first. That is enforced by
+        // RequirementAtBaseTier taking no slot argument at all -- there was a
+        // test here asserting it and it was a tautology, comparing one call to
+        // an identical one.
+
+        [Test]
+        public void AFullSetIsWearable_ButOnePieceOfItAloneIsNot()
+        {
+            // THE CASE THAT WOULD BREAK THE GAME, and it cannot be reasoned
+            // about from the numbers alone -- it depends on the resolver being
+            // a GREATEST fixpoint. Starting from everything active and shrinking
+            // means five pieces vouch for each other; starting from nothing and
+            // growing would leave a full top-tier set entirely inert, because
+            // no single piece qualifies on base scores.
+            const double Weight = 1.0;
+            const int MaxTier = 10;
+
+            var slots = new[]
+            {
+                EquipmentSlot.Torso, EquipmentSlot.Legs, EquipmentSlot.Head,
+                EquipmentSlot.Shoes, EquipmentSlot.Gloves,
+            };
+
+            int demand = GearScaling.RequirementAtTopTier(Weight, MaxTier);
+            var candidates = slots.Select(slot => new RequirementCandidate(
+                slot,
+                Con(GearScaling.AtTopTier(slot, Weight, MaxTier)),
+                Con(demand))).ToList();
+
+            // A character with nothing invested: Shawn's authored Constitution.
+            var floor = new AbilityScoreBlock(10, 10, 16, 10, 10, 10);
+
+            var whole = RequirementResolver.Resolve(floor, candidates);
+            CollectionAssert.IsEmpty(whole.InertSlots,
+                $"a complete top-tier set demanding {demand} each went inert");
+
+            var alone = RequirementResolver.Resolve(floor, new[] { candidates[0] });
+            Assert.AreEqual(1, alone.InertSlots.Count,
+                "one piece with nothing behind it should not qualify on base scores");
+        }
+
+        [Test]
+        public void WearingTheWrongMaterialDoesNotMeetTheGate()
+        {
+            // Four pieces of a style that barely touches Constitution cannot
+            // carry a Constitution-gated torso. This is the requirement doing
+            // its job: committing to a material, not collecting the best
+            // individual pieces.
+            const int MaxTier = 10;
+
+            var wool = new[] { EquipmentSlot.Legs, EquipmentSlot.Head, EquipmentSlot.Shoes, EquipmentSlot.Gloves }
+                .Select(slot => new RequirementCandidate(
+                    slot,
+                    Con(GearScaling.AtTopTier(slot, 0.3, MaxTier)),
+                    Con(GearScaling.RequirementAtTopTier(0.3, MaxTier))))
+                .ToList();
+
+            var bulwarkTorso = new RequirementCandidate(
+                EquipmentSlot.Torso,
+                Con(GearScaling.AtTopTier(EquipmentSlot.Torso, 1.0, MaxTier)),
+                Con(GearScaling.RequirementAtTopTier(1.0, MaxTier)));
+
+            var mixed = wool.Concat(new[] { bulwarkTorso }).ToList();
+            var settled = RequirementResolver.Resolve(new AbilityScoreBlock(10, 10, 16, 10, 10, 10), mixed);
+
+            CollectionAssert.Contains(settled.InertSlots, EquipmentSlot.Torso);
+        }
+
+        private static AbilityScoreBlock Con(int amount) =>
+            new AbilityScoreBlock(0, 0, amount, 0, 0, 0);
 
         [Test]
         public void RoundingGoesAwayFromZeroRatherThanToEven()

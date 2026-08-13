@@ -237,6 +237,21 @@ namespace PrincesPalace.Domain.Content
                     topScore = DeriveScores(weights, slot, maxTier, atTop: true);
                 }
 
+                // Requirements derive too, unless the piece states its own.
+                //
+                // AUTHORED WINS HERE, where an authored ability score in
+                // baseStats is REJECTED above, and the difference is not
+                // inconsistency. requiresAtZero is its own string[]: empty
+                // means "said nothing" and is distinguishable from "asked for
+                // zero". baseStats is a mixed list where an ability score
+                // lands in a block that cannot tell those two apart, which is
+                // why that one has to refuse rather than guess.
+                if (derives && piece.requiresAtZero.Length == 0 && piece.requiresAtMax.Length == 0)
+                {
+                    reqAtZero = DeriveRequirements(weights, maxTier, atTop: false);
+                    reqAtMax = DeriveRequirements(weights, maxTier, atTop: true);
+                }
+
                 if (IsEmpty(baseStat) && IsEmpty(baseScore) && IsEmpty(topStat) && IsEmpty(topScore))
                 {
                     errors.Add($"{pieceLabel}: grants nothing at either end, so every tier of it would be a blank item.");
@@ -347,6 +362,28 @@ namespace PrincesPalace.Domain.Content
                 return atTop
                     ? GearScaling.AtTopTier(slot, weight, maxTier)
                     : GearScaling.AtBaseTier(slot, weight);
+            }
+
+            return new AbilityScoreBlock(
+                Value(weights.strength),
+                Value(weights.dexterity),
+                Value(weights.constitution),
+                Value(weights.wisdom),
+                Value(weights.intelligence),
+                Value(weights.charisma));
+        }
+
+        // What the material demands, from the same weights that say what it
+        // grants. No slot term -- see GearScaling.RequirementAtBaseTier.
+        private static AbilityScoreBlock DeriveRequirements(AbilityScoreBlock weights, int maxTier, bool atTop)
+        {
+            int Value(int hundredths)
+            {
+                if (hundredths == 0) return 0;
+                double weight = hundredths / 100.0;
+                return atTop
+                    ? GearScaling.RequirementAtTopTier(weight, maxTier)
+                    : GearScaling.RequirementAtBaseTier(weight);
             }
 
             return new AbilityScoreBlock(
