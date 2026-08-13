@@ -257,7 +257,12 @@ public static class ProceduralSpriteBaker
     private static void BakeEmber()
     {
         const int Width = 512;
-        const int Height = 128;
+
+        // 256 rather than 128. The vertical edge fade below spans a third of
+        // the height and is then squeezed into an 88px box on screen, so the
+        // ramp has about 29 screen pixels to happen in; at 128 rows it was
+        // being reconstructed from 42 texture rows and banded visibly.
+        const int Height = 256;
         string path = $"{GeneratedDir}/arrow_ember.png";
 
         var texture = new Texture2D(Width, Height, TextureFormat.RGBA32, false);
@@ -316,7 +321,7 @@ public static class ProceduralSpriteBaker
                 // now runs alongside the arrow.
                 float alpha = Mathf.Pow(falloff, 1.1f);
 
-                // FADE THE OUTER TENTH TO NOTHING, and this is a fix rather
+                // FADE THE OUTER THIRD TO NOTHING, and this is a fix rather
                 // than a flourish. SpreadY is 1.90, which means the radial
                 // falloff is nowhere near zero by the time it reaches the top
                 // and bottom of the texture -- it was still at alpha 64 and 81
@@ -325,11 +330,29 @@ public static class ProceduralSpriteBaker
                 // the panel. Widening the spread to wrap the arrow is what
                 // caused it; the spread is right and the cut was the bug.
                 //
-                // Applied on both axes for the same reason, even though only
-                // the vertical one was visibly wrong: the next change to a
-                // spread should not be able to reintroduce this.
-                alpha *= Smoothstep(Mathf.Clamp01((1f - Mathf.Abs(ny)) / 0.10f));
-                alpha *= Smoothstep(Mathf.Clamp01((1f - Mathf.Abs(nx)) / 0.06f));
+                // 0.34, up from a first attempt at 0.10. A tenth was not a
+                // gradient: it took alpha from 81 to 1 in six texture rows,
+                // which is four pixels once this is squeezed into an 88px box,
+                // and four pixels of ramp is still an edge. The fade has to
+                // start where the glow is still strong to read as a fade at
+                // all.
+                //
+                // It cannot start much earlier than this without eating the
+                // band alongside the arrow that the whole widening was for --
+                // the arrow's own silhouette reaches about |ny| 0.68, so the
+                // fade begins just outside it.
+                //
+                // SQUARED, so the ramp leaves the full-strength region gently
+                // and arrives at zero steeply. A plain smoothstep put its
+                // steepest part in the middle of the ramp, which is exactly
+                // where the eye reads a line.
+                //
+                // Applied on both axes, even though only the vertical one was
+                // visibly wrong: the next change to a spread should not be able
+                // to reintroduce this.
+                float fadeY = Smoothstep(Mathf.Clamp01((1f - Mathf.Abs(ny)) / 0.34f));
+                float fadeX = Smoothstep(Mathf.Clamp01((1f - Mathf.Abs(nx)) / 0.10f));
+                alpha *= fadeY * fadeY * fadeX;
 
                 // White-hot core -> orange -> deep red, keyed off the same
                 // falloff so the hottest pixel is also the brightest.
