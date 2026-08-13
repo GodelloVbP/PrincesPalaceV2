@@ -9,6 +9,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
+using PrincesPalace.Content;
 using PrincesPalace.Domain.Equipment;
 
 namespace PrincesPalace.PlayModeTests
@@ -58,6 +59,62 @@ namespace PrincesPalace.PlayModeTests
 
         private static SaveData Save => SaveSlotManager.CurrentSave;
         private static Character Hero => Save.roster[0];
+
+        // ---- comparing must never be a move ---------------------------------
+
+        [UnityTest]
+        public IEnumerator ComparingAnItemLeavesTheRealCharacterUntouched()
+        {
+            // ItemDescription.Compare works by SIMULATING the equip: it clones
+            // the character, places the candidate, and re-reads the resolver.
+            // If that clone were ever shallow, merely LOOKING at an item in the
+            // bag would rewrite the save -- and the symptom would be gear
+            // moving on its own with nothing in the log to explain it.
+            //
+            // Cheap to assert and impossible to spot by reading, because a
+            // shallow copy looks exactly like a deep one at the call site.
+            yield return OpenTheHub();
+
+            var hero = Hero;
+            var candidate = ContentDatabase.Equippables.FirstOrDefault();
+            Assert.IsNotNull(candidate, "no equippable item in the content set");
+
+            var before = hero.equipment.Clone();
+
+            ItemDescription.Compare(hero, candidate, candidatePlus: 3);
+
+            foreach (EquipmentSlot slot in System.Enum.GetValues(typeof(EquipmentSlot)))
+            {
+                Assert.AreEqual(before.Get(slot), hero.equipment.Get(slot),
+                    $"comparing moved what was worn in {slot}");
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator ComparingAgainstAnEmptySlotReportsTheItemsWholeValue()
+        {
+            // With nothing worn the delta IS the item. That is the case a
+            // player meets first, and the one a subtract-the-blocks
+            // implementation would get right by accident -- so it is here to
+            // pin the simulation against the obvious answer at least once.
+            yield return OpenTheHub();
+
+            var hero = Hero;
+            foreach (EquipmentSlot slot in System.Enum.GetValues(typeof(EquipmentSlot)))
+            {
+                hero.equipment.Clear(slot);
+            }
+
+            var candidate = ContentDatabase.Equippables
+                .FirstOrDefault(i => !ItemDescription.CardSummary(i).Equals(""));
+            Assert.IsNotNull(candidate, "no equippable item grants anything at all");
+
+            var comparison = ItemDescription.Compare(hero, candidate);
+
+            Assert.IsFalse(comparison.IsEmpty, "equipping into an empty slot changed nothing");
+            Assert.IsTrue(comparison.CandidateIsLive,
+                "nothing is worn and no content requires anything, so it cannot be inert");
+        }
 
         private IEnumerator OpenTheHub()
         {

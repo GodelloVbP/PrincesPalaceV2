@@ -331,7 +331,7 @@ namespace PrincesPalace
             if (detailPlate != null) detailPlate.SetActive(true);
             actionButton.gameObject.SetActive(true);
             detailName.SetContent(RarityColors.NameOf(item, plusValue));
-            detailBody.SetContent(Describe(item));
+            detailBody.SetContent(Describe(character, item, plusValue));
 
             if (_selectedSlot.HasValue)
             {
@@ -375,7 +375,12 @@ namespace PrincesPalace
             return _selectedBag < page.Count ? page[_selectedBag] : (BagItem?)null;
         }
 
-        private static string Describe(ItemDefinition item)
+        // The plate printed a slot name and the flavour text and stopped there,
+        // which made the one screen for deciding what to wear the one screen
+        // that never said what anything did. It now leads with that header and
+        // hands over to ItemDescription for the numbers, the requirement, and
+        // what the swap would cost elsewhere.
+        private static string Describe(Character character, ItemDefinition item, int plus)
         {
             if (!item.IsEquippable)
             {
@@ -383,7 +388,14 @@ namespace PrincesPalace
             }
 
             string slot = EquipmentSlots.DisplayName(item.equipSlot);
-            return string.IsNullOrEmpty(item.description) ? slot : $"{slot}  ·  {item.description}";
+            string header = string.IsNullOrEmpty(item.description) ? slot : $"{slot}  ·  {item.description}";
+
+            // Against the character this overlay is actually showing. Comparing
+            // against whoever happens to be first in the roster would be worse
+            // than comparing against nothing, because it would look right.
+            string body = ItemDescription.ComparisonBody(character, item, plus);
+
+            return body.Length == 0 ? header : $"{header}\n\n{body}";
         }
     }
 }
