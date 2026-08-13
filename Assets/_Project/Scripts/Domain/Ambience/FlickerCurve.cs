@@ -91,5 +91,25 @@ namespace PrincesPalace.Domain.Ambience
         public static readonly FlickerCurve Ember = new FlickerCurve(0.55f,
             new FlickerTerm(0.22f, 1.31f),
             new FlickerTerm(0.10f, 3.77f, 0.9f));
+
+        // The heat under the Reckoning's Continue arrow: something actively
+        // burning, seen close up, on a screen where nothing else is moving.
+        //
+        // Ember was tried there first and was the wrong tool. Its terms sum to
+        // 0.32, so it only ever travels 0.24..0.85 of its own range — a
+        // consumer mapping it onto a scale swing gets two thirds of what it
+        // asked for, and the arrow read as a static asset in the running game
+        // even though a PlayMode test could see it moving. This reaches
+        // 0.08..0.98.
+        //
+        // A BIG SLOW TERM to be watched rather than noticed, one medium term so
+        // it never resolves into a plain sine, and a little fast shimmer for
+        // the impression of something combusting. The three rates share no
+        // common factor, which is what stops them landing back in step and
+        // turning the whole thing into one machine ticking.
+        public static readonly FlickerCurve Forge = new FlickerCurve(0.52f,
+            new FlickerTerm(0.30f, 1.07f),
+            new FlickerTerm(0.13f, 2.63f, 1.4f),
+            new FlickerTerm(0.05f, 6.91f, 3.2f));
     }
 }

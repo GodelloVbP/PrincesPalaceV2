@@ -78,15 +78,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // BakeEmber for why this one is not a greyscale ramp with a tint.
         public const string EmberKey = "proc:arrow_ember";
 
-        // White and fully opaque, so the baked fire colours pass through
-        // untouched. The shaping is all in the sprite's own alpha, which falls
-        // to nothing well inside its box; holding this back as well only made
-        // the glow harder to see without making it softer.
+        // White, so the baked fire colours pass through unchanged, and the
+        // alpha is the one dial this holds.
         //
-        // Left as a tint rather than folded into the bake because this is the
-        // one dial worth having if the glow ever reads as too much on a real
-        // screen: drop the last byte and nothing else has to move.
-        public const string EmberTint = "#FFFFFFFF";
+        // 0xB4 is 71%, down from fully opaque. At FF the glow was too hot
+        // against the frame's violet — seen in the running game, which is the
+        // only place it could be seen, since the Reckoning is a sub-panel and
+        // ScreenshotTool only knows top-level ones. The flare's own curve then
+        // swings this further down again, so the peak is what is being set
+        // here rather than the average.
+        public const string EmberTint = "#FFFFFFB4";
 
         // Fixed at build time, so it must cover the largest party the save can
         // field. Base squad is 1 today and the design's stated target is 3;

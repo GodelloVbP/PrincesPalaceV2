@@ -316,6 +316,21 @@ public static class ProceduralSpriteBaker
                 // now runs alongside the arrow.
                 float alpha = Mathf.Pow(falloff, 1.1f);
 
+                // FADE THE OUTER TENTH TO NOTHING, and this is a fix rather
+                // than a flourish. SpreadY is 1.90, which means the radial
+                // falloff is nowhere near zero by the time it reaches the top
+                // and bottom of the texture -- it was still at alpha 64 and 81
+                // of 255 at the two edges, so the sprite ended in a hard
+                // horizontal line and the glow read as a rectangle laid over
+                // the panel. Widening the spread to wrap the arrow is what
+                // caused it; the spread is right and the cut was the bug.
+                //
+                // Applied on both axes for the same reason, even though only
+                // the vertical one was visibly wrong: the next change to a
+                // spread should not be able to reintroduce this.
+                alpha *= Smoothstep(Mathf.Clamp01((1f - Mathf.Abs(ny)) / 0.10f));
+                alpha *= Smoothstep(Mathf.Clamp01((1f - Mathf.Abs(nx)) / 0.06f));
+
                 // White-hot core -> orange -> deep red, keyed off the same
                 // falloff so the hottest pixel is also the brightest.
                 float hot = Mathf.Clamp01((falloff - 0.55f) / 0.45f);

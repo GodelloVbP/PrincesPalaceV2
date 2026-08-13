@@ -267,9 +267,9 @@ namespace PrincesPalace.PlayModeTests
                 yield return null;
             }
 
-            Assert.Greater(xMax - xMin, 1f, "the glow never drifted");
-            Assert.Greater(sxMax - sxMin, 0.01f, "the glow never flared");
-            Assert.Greater(aMax - aMin, 0.01f, "the glow never changed brightness");
+            Assert.Greater(xMax - xMin, 2f, "the glow never drifted");
+            Assert.Greater(sxMax - sxMin, 0.02f, "the glow never flared");
+            Assert.Greater(aMax - aMin, 0.02f, "the glow never changed brightness");
 
             // WIDER than it is tall, which is the difference between flaring
             // out along the arrow and simply pulsing. It is also the constraint
@@ -278,9 +278,30 @@ namespace PrincesPalace.PlayModeTests
             Assert.Greater(sxMax - sxMin, syMax - syMin,
                 "the flare is pulsing evenly rather than reaching along the arrow");
 
-            // And it stays SUBTLE. Past about 10% it stops reading as light on
+            // AND THE CONFIGURED SWING, which is the assertion that was missing
+            // and the reason this test was worthless the first time.
+            //
+            // Sampling alone only ever proves the numbers are not constant. The
+            // first version of this effect swung x by 0.11 on a curve that
+            // travels two thirds of its range, so a 1.6s window saw about a
+            // hundredth of a scale unit change -- comfortably over the old
+            // 0.01 floor, and completely invisible in the running game. A test
+            // that passes while a player says "it doesn't move" is measuring
+            // the wrong thing.
+            //
+            // This one is phase-independent: it asks what the effect was
+            // CONFIGURED to do, not what a short sample happened to catch.
+            var flare = glow.GetComponent<EmberFlare>();
+            Assert.IsNotNull(flare, "the glow has no flare component at all");
+            Assert.GreaterOrEqual(flare.MaxScaleX - flare.MinScaleX, 0.25f,
+                "the flare is configured too tightly to be seen, whatever a sample says");
+            Assert.GreaterOrEqual(flare.MaxAlpha - flare.MinAlpha, 0.35f,
+                "brightness is what reads as fire; this is barely a change");
+
+            // Still bounded. Past about a third it stops reading as light on
             // the arrow and starts reading as the arrow being inflated.
-            Assert.Less(sxMax - sxMin, 0.20f, "the flare has grown into a pulse you cannot ignore");
+            Assert.Less(flare.MaxScaleX - flare.MinScaleX, 0.45f,
+                "the flare has grown into a pulse you cannot ignore");
         }
 
         [UnityTest]

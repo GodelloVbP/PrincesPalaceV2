@@ -24,24 +24,32 @@ namespace PrincesPalace
     [RequireComponent(typeof(Image))]
     public class EmberFlare : MonoBehaviour
     {
-        // ALL SUBTLE ON PURPOSE. The brief was "a little, so it doesn't feel
-        // like a static asset" -- past roughly 1.10 the arrow starts to look
-        // like it is being inflated rather than lit.
+        // TURNED UP after the first pass was invisible in the running game.
         //
-        // X swings further than Y, which is what makes it read as flaring OUT
-        // along the arrow rather than as a pulse. Y is held tighter for a
-        // second reason: the box is 88 tall against 90 of headroom before the
-        // frame's painted bottom ornament, so there is nowhere for it to go.
-        public float MinScaleX = 0.96f;
-        public float MaxScaleX = 1.07f;
-        public float MinScaleY = 0.98f;
-        public float MaxScaleY = 1.02f;
+        // It was 0.96..1.07 on x with 7px of drift, on FlickerCurve.Ember, and
+        // the PlayMode test watching it passed the whole time — because the
+        // test asked whether anything changed at all, and something did, by
+        // about a hundredth of a scale unit. "Moving" and "reading as alive"
+        // turned out to be different assertions, and only the first one was
+        // being made.
+        //
+        // X swings much further than Y, which is what makes it read as flaring
+        // OUT along the arrow rather than as a pulse. Y is held tighter for a
+        // hard reason as well as a taste one: the box is 88 tall against 90 of
+        // headroom before the frame's painted bottom ornament, so at 1.07 it is
+        // already using all of it.
+        public float MinScaleX = 0.88f;
+        public float MaxScaleX = 1.18f;
+        public float MinScaleY = 0.94f;
+        public float MaxScaleY = 1.07f;
 
-        public float MinAlpha = 0.80f;
+        // The widest swing here, because BRIGHTNESS is what actually reads as
+        // fire at a glance. Scale is the reach; this is the burn.
+        public float MinAlpha = 0.45f;
         public float MaxAlpha = 1.00f;
 
         // How far it wanders along its own axis, in canvas pixels.
-        public float DriftX = 7f;
+        public float DriftX = 16f;
 
         // Deliberately NOT a whole fraction of any rate in the curve. Two
         // cycles that share a period land back together every loop and the
@@ -49,7 +57,11 @@ namespace PrincesPalace
         // rates never quite repeat, which is most of what "alive" means here.
         public float DriftRate = 0.83f;
 
-        public FlickerCurve Curve = FlickerCurve.Ember;
+        // Forge, not Ember. Ember's terms sum to 0.32, so it only travels
+        // 0.24..0.85 of its own range and hands back two thirds of whatever
+        // swing is asked of it -- which is half of why the first pass could not
+        // be seen. Forge reaches 0.08..0.98.
+        public FlickerCurve Curve = FlickerCurve.Forge;
 
         private Image _image;
         private RectTransform _rect;
