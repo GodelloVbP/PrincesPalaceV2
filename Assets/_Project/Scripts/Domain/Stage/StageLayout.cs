@@ -22,12 +22,22 @@ namespace PrincesPalace.Domain.Stage
     // That direction is the convention every method here assumes.
     public static class StageLayout
     {
-        // A far enemy draws at 58% of a near one. Chosen to read clearly as
-        // distance at a glance without shrinking the back row into
-        // illegibility — the sprites are ~330-440px tall at full size, so
-        // the back row still lands around 190-250px.
+        // A far enemy draws at 74% of a near one.
+        //
+        // WAS 58%, and this is the price paid for the formation change in
+        // FightStageAnchors: legibility bought with perspective. At 58% the
+        // back row drew at 45% of full size once the global shrink was applied
+        // — small enough that a golem standing at the back read as a smaller
+        // monster rather than a distant one, and that is the row a player
+        // targets last and therefore has to identify most.
+        //
+        // The drop across three slots is now 26% rather than 42%. That IS less
+        // depth and the loss is real; compositing the alternatives against the
+        // real sheets made the trade look worth taking, because a legible
+        // figure at a slightly wrong size beats a correctly sized one nobody
+        // can identify.
         public const float NearScale = 1f;
-        public const float FarScale = 0.58f;
+        public const float FarScale = 0.74f;
 
         // Depth of a slot within a row of `slotCount` slots. Slot 0 is
         // always nearest. A single-slot row sits fully forward rather than

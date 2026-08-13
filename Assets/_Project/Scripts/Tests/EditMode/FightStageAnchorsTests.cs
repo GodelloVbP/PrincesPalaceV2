@@ -11,41 +11,43 @@ namespace PrincesPalace.Domain.Tests
     // StageLayout's own lerp would happily agree with a stage that had silently
     // moved.
     //
-    // NO LONGER v1-PARITY on Y, and the class used to say it was. The inherited
-    // -300/-140 were v1's numbers from BEFORE v1 fixed them, and they put every
-    // front-row figure's feet behind the HUD. The Y pins below are v2's own
-    // derivation; X, the scales and the sizes are still v1's.
+    // NOTHING HERE IS v1-PARITY ANY MORE, and this class has twice claimed to
+    // be. First Y went, because the inherited -300/-140 were v1's numbers from
+    // BEFORE v1 fixed them and they put every front row's feet behind the HUD.
+    // Then X, the scales and the frame size went with the formation change:
+    // depth now recedes OUTWARD rather than in, so the back rank is the one
+    // furthest from the enemy instead of the one nearest it.
     public class FightStageAnchorsTests
     {
         [Test]
         public void TheAnchorsThemselvesAreWhereTheDerivationPutThem()
         {
-            Assert.AreEqual(470f, FightStageAnchors.Near.X, 0.001f);
-            Assert.AreEqual(-228f, FightStageAnchors.Near.Y, 0.001f);
-            Assert.AreEqual(250f, FightStageAnchors.Far.X, 0.001f);
-            Assert.AreEqual(-68f, FightStageAnchors.Far.Y, 0.001f);
-            Assert.AreEqual(0.78f, FightStageAnchors.SpriteScale, 0.001f);
+            Assert.AreEqual(300f, FightStageAnchors.Near.X, 0.001f);
+            Assert.AreEqual(-218f, FightStageAnchors.Near.Y, 0.001f);
+            Assert.AreEqual(565f, FightStageAnchors.Far.X, 0.001f);
+            Assert.AreEqual(-125f, FightStageAnchors.Far.Y, 0.001f);
+            Assert.AreEqual(0.76f, FightStageAnchors.SpriteScale, 0.001f);
             Assert.AreEqual(-34f, FightStageAnchors.NameplateOffset, 0.001f);
-            Assert.AreEqual(1000f, FightStageAnchors.StageSize.X, 0.001f);
+            Assert.AreEqual(1200f, FightStageAnchors.StageSize.X, 0.001f);
             Assert.AreEqual(600f, FightStageAnchors.StageSize.Y, 0.001f);
         }
 
         [Test]
         public void ThreeSlots_LandOnTheNearAnchor_TheMidpoint_AndTheFarAnchor()
         {
-            // Depths 0, 0.5, 1 across three slots; x lerps 470 -> 250 and
-            // y lerps -228 -> -68.
+            // Depths 0, 0.5, 1 across three slots; x lerps 300 -> 565, OUTWARD
+            // with depth, and y lerps -218 -> -125.
             var near = FightStageAnchors.SlotOffset(0, 3, mirrored: false);
-            Assert.AreEqual(470f, near.X, 0.001f);
-            Assert.AreEqual(-228f, near.Y, 0.001f);
+            Assert.AreEqual(300f, near.X, 0.001f);
+            Assert.AreEqual(-218f, near.Y, 0.001f);
 
             var mid = FightStageAnchors.SlotOffset(1, 3, mirrored: false);
-            Assert.AreEqual(360f, mid.X, 0.001f);
-            Assert.AreEqual(-148f, mid.Y, 0.001f);
+            Assert.AreEqual(432.5f, mid.X, 0.001f);
+            Assert.AreEqual(-171.5f, mid.Y, 0.001f);
 
             var far = FightStageAnchors.SlotOffset(2, 3, mirrored: false);
-            Assert.AreEqual(250f, far.X, 0.001f);
-            Assert.AreEqual(-68f, far.Y, 0.001f);
+            Assert.AreEqual(565f, far.X, 0.001f);
+            Assert.AreEqual(-125f, far.Y, 0.001f);
         }
 
         [Test]
@@ -61,10 +63,10 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void SlotScale_ComposesTheDepthCurveWithTheGlobalShrink()
         {
-            // ScaleForDepth lerps 1 -> 0.58, then everything is shrunk by 0.78.
-            Assert.AreEqual(0.78f, FightStageAnchors.SlotScale(0, 3), 0.0001f);
-            Assert.AreEqual(0.6162f, FightStageAnchors.SlotScale(1, 3), 0.0001f);
-            Assert.AreEqual(0.4524f, FightStageAnchors.SlotScale(2, 3), 0.0001f);
+            // ScaleForDepth lerps 1 -> 0.74, then everything is shrunk by 0.76.
+            Assert.AreEqual(0.76f, FightStageAnchors.SlotScale(0, 3), 0.0001f);
+            Assert.AreEqual(0.6612f, FightStageAnchors.SlotScale(1, 3), 0.0001f);
+            Assert.AreEqual(0.5624f, FightStageAnchors.SlotScale(2, 3), 0.0001f);
         }
 
         [Test]
@@ -73,18 +75,22 @@ namespace PrincesPalace.Domain.Tests
             // A single-slot row does not split the difference - a lone boss
             // should dominate the stage rather than hover at mid-depth.
             var only = FightStageAnchors.SlotOffset(0, 1, mirrored: false);
-            Assert.AreEqual(470f, only.X, 0.001f);
-            Assert.AreEqual(-228f, only.Y, 0.001f);
-            Assert.AreEqual(0.78f, FightStageAnchors.SlotScale(0, 1), 0.0001f);
+            Assert.AreEqual(300f, only.X, 0.001f);
+            Assert.AreEqual(-218f, only.Y, 0.001f);
+            Assert.AreEqual(0.76f, FightStageAnchors.SlotScale(0, 1), 0.0001f);
         }
 
         [Test]
         public void EveryStageSlotFitsInsideTheStageRect()
         {
-            // The anchors and the stage size were tuned separately in v1. If a
-            // future anchor tweak pushes a slot outside the 1000x600 rect, the
-            // screen tree's containment audit would fail at build time - this
-            // says so a step earlier, in Domain, where it costs a second.
+            // The anchors and the stage size are tuned separately, so an anchor
+            // tweak can push a slot outside the frame it is declared in — the
+            // screen tree's containment audit would fail at build time, and
+            // this says so a step earlier, in Domain, where it costs a second.
+            //
+            // It has already earned that: moving the far anchor out to 565 put
+            // the outermost slot 65px beyond the old 1000-wide frame, and this
+            // is the test that said so.
             float halfW = FightStageAnchors.StageSize.X / 2f;
             float halfH = FightStageAnchors.StageSize.Y / 2f;
 

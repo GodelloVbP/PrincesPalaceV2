@@ -43,28 +43,65 @@ namespace PrincesPalace.Domain.Stage
         //            enemy plate had to rise with it (PlateFirstY 332 -> 380,
         //            putting that plate's lower edge at 96)
         //
-        // Far moves by the same +72, so the depth spread is untouched. These
-        // are the endpoints StageLayout interpolates between; changing their
-        // separation would quietly re-tune the perspective while claiming to
-        // fix an occlusion.
+        // X NOW RUNS OUTWARD WITH DEPTH, 300 -> 565, where it used to run
+        // inward, 470 -> 250. Two things were wrong with running inward and
+        // only one of them was the obvious one.
+        //
+        // The obvious one: both armies receded toward a shared vanishing point
+        // at screen centre, so "further back" meant "further in" and the two
+        // back ranks stood 500 apart while the two front ranks stood 940
+        // apart. Whatever a back row is, it was the closest thing to the enemy.
+        //
+        // The one that actually mattered: OCCLUSION. Measured against the real
+        // sheets, the middle enemy was 45% visible -- the golem is 525px wide
+        // and swallowed the rat standing behind it -- while the back enemy was
+        // fully visible. That reads as one monster being half-hidden for no
+        // reason rather than as depth. Running the line outward instead
+        // separates the three laterally and takes the worst case from 45% to
+        // 67% (tools/measure_stage.py, and scratchpad mockups against the real
+        // backdrop before any of this was written).
+        //
+        // Four formations were composited before this one: the original, a
+        // straight reversal, a tight two-rank stagger, and this. The two-rank
+        // version was my own suggestion and measured WORST of the four at 28%,
+        // because ranking figures up stacks them almost exactly on top of each
+        // other. Rendering it was cheaper than arguing about it.
+        //
+        // Y still rises with depth and still respects the same band:
+        //
+        //   floor    verb column top -248, +8 for the ring, +12 so it reads as
+        //            clearance rather than as touching    -> Near.Y >= -228
+        //   ceiling  the tallest actor is 384px above its own manifest ground
+        //            line, and the bottom enemy plate's lower edge is at 108
+        //
+        // At -218/-125 the front ring sits at -226 and the highest head at 90,
+        // so both ends have more room than before rather than less.
         //
         // KNOWN AND DELIBERATE: the detail column (top -186, x 308..648) still
-        // covers the front enemy's feet while a submenu is open. Clearing that
-        // too needs Near.Y >= -166, which does not fit -- the golem would then
-        // need the plates at 430 and the ENEMIES heading 24px from the canvas
-        // edge. The rule applied here is the one the handover states: clear
-        // every ALWAYS-visible panel. Recorded as AUDIT #45.
-        public static readonly UiVec Near = new UiVec(470f, -228f);
-        public static readonly UiVec Far = new UiVec(250f, -68f);
+        // covers a front enemy's feet while a submenu is open. Clearing it
+        // needs Near.Y >= -166, which does not fit. The rule applied here is
+        // the one the handover states: clear every ALWAYS-visible panel.
+        // Recorded as AUDIT #45.
+        public static readonly UiVec Near = new UiVec(300f, -218f);
+        public static readonly UiVec Far = new UiVec(565f, -125f);
 
         // Applied on top of StageLayout.ScaleForDepth. The art is authored
         // larger than it is shown, so this is the one global shrink.
-        public const float SpriteScale = 0.78f;
+        //
+        // 0.76, a hair down from 0.78, because the formation is wider now and
+        // the outer slot has further to reach before it meets the enemy plates.
+        public const float SpriteScale = 0.76f;
 
         // How far below a slot's own origin its nameplate hangs.
         public const float NameplateOffset = -34f;
 
-        public static readonly UiVec StageSize = new UiVec(1000f, 600f);
+        // 1200 WIDE, up from 1000. The far anchor is at 565 and this frame is
+        // measured from its centre, so a 1000-wide frame put the outermost slot
+        // 65px outside the box it is declared in -- which
+        // FightStageAnchorsTests.EveryStageSlotFitsInsideTheStageRect exists to
+        // refuse. Widening the frame is free: it draws nothing and takes no
+        // clicks, it is a coordinate frame and not a surface.
+        public static readonly UiVec StageSize = new UiVec(1200f, 600f);
 
         public const float InitiativeIconSize = 74f;
         public const float InitiativeIconGap = 8f;
