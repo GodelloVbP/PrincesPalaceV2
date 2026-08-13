@@ -154,5 +154,75 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(120, AbilityDerivation.MaxHealthBonus(shawn), "CON 16: his defining stat");
             Assert.AreEqual(10, AbilityDerivation.MaxManaBonus(shawn), "WIS 15: shepherd's patience");
         }
+
+        // ---- what gear does, out past where a character can reach ----------
+
+        // A full tier-10 set of a pure single-stat style grants 187 points of
+        // that stat: GearScaling's five slots sum to 5.0, base 4, times the
+        // 9.31 tier multiplier. That is the input every number below is for.
+        //
+        // PINNED LITERALS, like the rest of this file. Nothing here recomputes
+        // the curve to produce its own expected value — these are the figures
+        // the rebalance was designed to land on, so moving any of them has to
+        // be a decision taken here.
+        private const int GearedScore = AbilityDerivation.NeutralScore + 187;
+
+        [Test]
+        public void AFullTierTenSet_LandsThePoolsWhereTheDesignAsked()
+        {
+            var geared = Scores(str: GearedScore, con: GearedScore, wis: GearedScore);
+
+            // Damage is (attack - defense) x CombatMath.DamageScale(10), so
+            // 2,746 Attack is about a 27,000 swing — and the heaviest skill in
+            // skills.json is power 4, putting an ultimate just past 100,000.
+            Assert.AreEqual(2746, AbilityDerivation.AttackBonus(geared));
+            Assert.AreEqual(37794, AbilityDerivation.MaxHealthBonus(geared));
+            Assert.AreEqual(1586, AbilityDerivation.MaxManaBonus(geared));
+        }
+
+        [Test]
+        public void TheRatesStayBoundedWhereThePoolsDoNot()
+        {
+            // The two-family split in one assertion. Given the SAME 187
+            // points, a pool reaches five figures and a rate reaches double
+            // digits — because Speed is how often you act and a signature
+            // gauge holds 10, and neither means anything at 37,000.
+            var geared = Scores(dex: GearedScore, cha: GearedScore);
+
+            Assert.AreEqual(18, AbilityDerivation.SpeedBonus(geared));
+            Assert.AreEqual(6, AbilityDerivation.SignatureGainBonus(geared));
+
+            // Speed specifically has to stay under the tick-rate clamp, which
+            // SpeedScale reaches at 62.5. The old linear curve granted +93
+            // here, saturating it with three floors of the ladder still to go
+            // and making Dexterity gear worthless for all of them.
+            Assert.Less(AbilityDerivation.NeutralScore + AbilityDerivation.SpeedBonus(geared), 62,
+                "Dexterity has gone back to saturating the tick-rate clamp before the last tier");
+        }
+
+        [Test]
+        public void TheSeamIsFlatRatherThanAStep()
+        {
+            // Two curves meeting at CharacterBand could easily jump. One point
+            // either side has to differ by about one point's worth, not by a
+            // cliff — otherwise score 20 and score 21 are a different game.
+            Assert.AreEqual(200, AbilityDerivation.MaxHealthBonus(Scores(con: 20)));
+            Assert.AreEqual(201, AbilityDerivation.MaxHealthBonus(Scores(con: 21)));
+            Assert.AreEqual(204, AbilityDerivation.MaxHealthBonus(Scores(con: 22)));
+        }
+
+        [Test]
+        public void APenaltyStillMirrorsABonusOutsideTheBandToo()
+        {
+            // The asymmetry FloorDiv2 exists to prevent, checked on the new
+            // segment. Generalising that floor division by hand got it wrong
+            // once already: DEX 9 derived 0 where it has to derive -1, and only
+            // ShawnsSpread caught it.
+            Assert.AreEqual(-AbilityDerivation.MaxHealthBonus(Scores(con: 60)),
+                AbilityDerivation.MaxHealthBonus(Scores(con: -40)),
+                "a 50-point deficit must cost exactly what a 50-point surplus pays");
+            Assert.AreEqual(-1, AbilityDerivation.SpeedBonus(Scores(dex: 9)));
+            Assert.AreEqual(-1, AbilityDerivation.AttackBonus(Scores(str: 8)));
+        }
     }
 }
