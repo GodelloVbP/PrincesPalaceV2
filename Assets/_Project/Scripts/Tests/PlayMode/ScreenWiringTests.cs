@@ -27,8 +27,12 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
         }
 
+        // ANY, not first. Every T this is asked for is a controller with
+        // exactly one instance in the scene, so "first" was only ever a more
+        // expensive way of saying "the one" -- and it ordered by instance ID,
+        // which is the ordering Unity deprecated it for relying on.
         private static T Find<T>() where T : Object =>
-            Object.FindFirstObjectByType<T>(FindObjectsInactive.Include);
+            Object.FindAnyObjectByType<T>(FindObjectsInactive.Include);
 
         private static GameObject FindByName(string name) =>
             Resources.FindObjectsOfTypeAll<GameObject>()

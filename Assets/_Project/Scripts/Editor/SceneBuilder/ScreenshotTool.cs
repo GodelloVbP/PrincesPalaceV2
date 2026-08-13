@@ -105,7 +105,20 @@ public static class ScreenshotTool
 
         EditorSceneManager.OpenScene(def.ScenePath, OpenSceneMode.Single);
 
-        var canvas = Object.FindFirstObjectByType<Canvas>();
+        // THE ROOT canvas, not the first one and not any one.
+        //
+        // FindFirstObjectByType is deprecated in this Unity -- it ordered by
+        // instance ID, which was never a real ordering -- and the obvious
+        // swap to FindAnyObjectByType would have been a latent bug rather
+        // than a fix. UiEmitter.EmitNestedCanvas gives a node its own Canvas
+        // for sort-order control, so a scene may hold several; "any" of them
+        // would eventually be a bark banner, and the screenshot would come
+        // back as one panel on a black field with nothing to explain it.
+        //
+        // Today every built scene has exactly one, which is precisely why
+        // this needed deciding now instead of being found later.
+        var canvas = Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None)
+            .FirstOrDefault(c => c.isRootCanvas);
         if (canvas == null)
         {
             Debug.LogError($"[ScreenshotTool] {def.ScenePath} has no Canvas.");

@@ -1,5 +1,6 @@
 using System.Collections;
 using System.IO;
+using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -54,8 +55,13 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             yield return null;
 
-            var canvas = Object.FindFirstObjectByType<Canvas>();
-            Assert.IsNotNull(canvas, "MainMenu should have a Canvas");
+            // The ROOT canvas -- same reasoning as ScreenshotTool.Capture. A
+            // node can be given its own nested Canvas for sort-order control,
+            // so "any" of them would eventually be a sub-panel, and the
+            // failure would present as an art bug rather than a lookup one.
+            var canvas = Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None)
+                .FirstOrDefault(c => c.isRootCanvas);
+            Assert.IsNotNull(canvas, "MainMenu should have a root Canvas");
 
             Directory.CreateDirectory(OutputDir);
             Time.captureFramerate = CaptureFps;
