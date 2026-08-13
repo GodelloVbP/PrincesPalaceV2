@@ -30,7 +30,7 @@ $Areas = @{
     content = "Content|ItemSet|Item|Resolver|AbilityScore|StatBlock|StatPoint|Invest|Character|Enemy|Scaling|Requirement|Rounding|AbilityDerivation|Weapon|Relic|Rarity|Achievement"
     run     = "Dungeon|Map|FullRun|RunState|Currency|MetaProgression|Save|ActiveSquad|Run|Resume|Snapshot|Seed|Descent|Depth|Difficulty|Wallet|Reward|Reckoning|Ember|Ledger|Settlement"
     ui      = "Button|Audio|Splash|PauseMenu|DebugMenu|MainMenu|Cursor|Dialogue|Bark|Inventory|Equipment|Music|Screen|UiKit|Flicker|Ambience|Overlay"
-    art     = "Stance|Shadow|WhiteQuad|SpriteFacing|BattleBackground|ItemArt|TalentArt|Flash|Legibility|PostProcessing"
+    art     = "Stance|FrameHold|Shadow|WhiteQuad|SpriteFacing|BattleBackground|ItemArt|TalentArt|Flash|Legibility|PostProcessing"
     rng     = "Rng|SeededRandom|Seed"
 }
 

@@ -33,8 +33,26 @@ namespace PrincesPalace
         internal const float LungeSeconds = 0.055f;
         private const float ReturnSeconds = 0.16f;
 
+        // How far the figure stretches along its travel, at the fastest point
+        // of each leg. The strike gets nearly three times the recovery's,
+        // because that is the half being emphasised — the same asymmetry the
+        // two easing curves below already express.
+        //
+        // 0.11 is where it stopped reading as weight and started reading as a
+        // wobble. Six frames of drawing cannot show acceleration; this can, and
+        // it is the difference between a figure that lunges and one that slides.
+        private const float OutStretch = 0.11f;
+        private const float BackStretch = 0.04f;
+
+        // How much of the horizontal stretch comes back out of the height.
+        // Not 1.0 — true volume conservation on a 2D silhouette overshoots,
+        // because the art is not a rubber ball and the eye reads the vertical
+        // loss twice as strongly as the horizontal gain.
+        private const float VolumeRatio = 0.55f;
+
         private RectTransform _rect;
         private Vector2 _home;
+        private Vector3 _baseScale;
         private Coroutine _running;
 
         public Vector2 Home => _home;
@@ -46,6 +64,11 @@ namespace PrincesPalace
             // returns here rather than accumulating offsets — otherwise a
             // fight's worth of lunges would walk the figure off its mark.
             _home = _rect.anchoredPosition;
+
+            // And the depth scale FightStageAnchors gave this slot, for the
+            // same reason. The stretch multiplies onto it; a back-row figure
+            // must come back to 0.56, not to 1.
+            _baseScale = _rect.localScale;
         }
 
         // Convenience overload for a pure sideways move (recoils, and any
@@ -73,6 +96,7 @@ namespace PrincesPalace
                 // drag the figure across the field.
                 StopCoroutine(_running);
                 _rect.anchoredPosition = _home;
+                ApplyStretch(0f);
             }
 
             _running = StartCoroutine(PlayRoutine(offset, holdSeconds));
@@ -92,6 +116,12 @@ namespace PrincesPalace
             if (_rect != null)
             {
                 _rect.anchoredPosition = _home;
+
+                // The stretch too. A coroutine stopped mid-arc leaves the
+                // figure deformed, and unlike a position offset that is not
+                // self-correcting -- nothing else writes localScale, so it
+                // would simply stay squashed for the rest of the fight.
+                ApplyStretch(0f);
             }
         }
 
@@ -126,10 +156,12 @@ namespace PrincesPalace
                 float n = t / seconds;
                 float k = 1f - (1f - n) * (1f - n);
                 _rect.anchoredPosition = Vector2.Lerp(from, to, k);
+                ApplyStretch(OutStretch * Arc(n));
                 yield return null;
             }
 
             _rect.anchoredPosition = to;
+            ApplyStretch(0f);
         }
 
         // The recovery keeps the old symmetrical ease: nothing is being
@@ -139,12 +171,47 @@ namespace PrincesPalace
         {
             for (float t = 0f; t < seconds; t += Time.deltaTime)
             {
-                float k = Mathf.SmoothStep(0f, 1f, t / seconds);
-                _rect.anchoredPosition = Vector2.Lerp(from, to, k);
+                float n = t / seconds;
+                _rect.anchoredPosition = Vector2.Lerp(from, to, Mathf.SmoothStep(0f, 1f, n));
+                ApplyStretch(BackStretch * Arc(n));
                 yield return null;
             }
 
             _rect.anchoredPosition = to;
+            ApplyStretch(0f);
+        }
+
+        // Zero at both ends, one in the middle. The stretch belongs to the
+        // TRAVEL, so a figure standing still — at either end of the move — is
+        // never caught mid-deformation, which is what would show up as a
+        // permanently squashed actor if a coroutine were ever interrupted.
+        private static float Arc(float n)
+        {
+            return Mathf.Sin(Mathf.Clamp01(n) * Mathf.PI);
+        }
+
+        // SQUASH AND STRETCH, and the only reason it can be this simple is that
+        // a slot's pivot is (0.5, 0) — its own ground line. Scaling about that
+        // point keeps the feet planted by construction, so none of this can
+        // lift a figure off the floor. Scaling the SPRITE instead would have
+        // needed the ground offset recomputing every frame, against the
+        // offsetMin/offsetMax that GroundTheFigure owns.
+        //
+        // Volume is roughly conserved — wider is shorter — because a figure
+        // that only gets bigger reads as zooming rather than as moving.
+        //
+        // Multiplied onto the CAPTURED base scale, never assigned outright: the
+        // slot already carries its depth scale from FightStageAnchors, and
+        // writing an absolute value here would flatten the back row to the size
+        // of the front one on the first swing.
+        private void ApplyStretch(float amount)
+        {
+            if (_rect == null) return;
+
+            _rect.localScale = new Vector3(
+                _baseScale.x * (1f + amount),
+                _baseScale.y * (1f - amount * VolumeRatio),
+                _baseScale.z);
         }
     }
 }

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
+using PrincesPalace.Domain.Stage;
 
 namespace PrincesPalace
 {
@@ -327,7 +328,16 @@ namespace PrincesPalace
             for (int frame = from; frame < to && frame < animation.FrameCount; frame++)
             {
                 SetFrame(actor, frame);
-                yield return new WaitForSeconds(Scaled(animation.SecondsPerFrame));
+
+                // NOT a flat SecondsPerFrame any more. The sheet's pace is
+                // still the budget -- FrameHoldCurve normalises to exactly
+                // SecondsPerFrame x FrameCount, which the `remaining`
+                // arithmetic above depends on -- but it is now SPENT unevenly:
+                // a long hold on the wind-up, a snap through the blow, a long
+                // settle after it. Even timing is what made six frames read as
+                // a slideshow.
+                yield return new WaitForSeconds(Scaled(FrameHoldCurve.HoldFor(
+                    frame, animation.FrameCount, animation.ImpactFrame, animation.SecondsPerFrame)));
             }
         }
 
