@@ -6,63 +6,96 @@ namespace PrincesPalace.Domain.Tests
     public class DifficultyCurveTests
     {
         // PINNED LITERALS. The curve is the design decision; recomputing
-        // 1 + 0.055 * step here would assert only that the method is
-        // deterministic (CLAUDE.md gotcha 5, AUDIT.md #18).
+        // 1.077^step here would assert only that the method is deterministic
+        // (CLAUDE.md gotcha 5, AUDIT.md #18).
+        //
+        // Step 8 is one tier, 80 is the whole gear ladder.
         [TestCase(0, 1.000f)]
-        [TestCase(1, 1.055f)]
-        [TestCase(8, 1.440f)]
-        [TestCase(16, 1.880f)]
-        [TestCase(40, 3.200f)]
-        [TestCase(80, 5.400f)]
-        public void EnemyMultiplier_ClimbsInAStraightLine(int step, float expected)
+        [TestCase(8, 1.810f)]
+        [TestCase(16, 3.277f)]
+        [TestCase(40, 19.437f)]
+        [TestCase(80, 377.795f)]
+        public void HealthMultiplier_TracksThePlayersDamage(int step, float expected)
         {
-            Assert.AreEqual(expected, DifficultyCurve.EnemyMultiplier(step), 0.0001f);
+            Assert.AreEqual(expected, DifficultyCurve.HealthMultiplier(step), expected * 0.001f);
         }
 
-        // LINEAR, not geometric, and this is the assertion that says so.
-        //
-        // At 5.5% compounding, step 80 would be about 72x — far past
-        // anything the item ladder can answer, since a fully honed top-tier
-        // set is worth roughly 4x a starting one. Linear keeps the player's
-        // power and the dungeon's climbing at comparable rates.
-        [Test]
-        public void TheCurveIsLinear_NotCompounding()
+        [TestCase(0, 1.000f)]
+        [TestCase(8, 1.500f)]
+        [TestCase(16, 2.250f)]
+        [TestCase(80, 57.711f)]
+        public void AttackMultiplier_TracksThePlayersHealth(int step, float expected)
         {
-            float atForty = DifficultyCurve.EnemyMultiplier(40) - 1f;
-            float atEighty = DifficultyCurve.EnemyMultiplier(80) - 1f;
+            Assert.AreEqual(expected, DifficultyCurve.AttackMultiplier(step), expected * 0.001f);
+        }
 
-            Assert.AreEqual(2f * atForty, atEighty, 0.0001f,
-                "Twice the depth should be twice the climb, not the square of it");
+        // GEOMETRIC, and this replaces an assertion that said the opposite.
+        //
+        // It used to read "TheCurveIsLinear_NotCompounding", and it was right
+        // for the game it was written in: a fully honed top-tier set was worth
+        // about 4x a starting one, so a compounding dungeon outran the player.
+        // GearScaling and AbilityDerivation together now put a geared
+        // character's damage at 374x across the ladder. A straight line
+        // reaching 5.4x is no longer a difficulty curve.
+        [Test]
+        public void TheCurveCompounds_RatherThanClimbingInAStraightLine()
+        {
+            float atForty = DifficultyCurve.HealthMultiplier(40);
+            float atEighty = DifficultyCurve.HealthMultiplier(80);
+
+            Assert.AreEqual(atForty * atForty, atEighty, atEighty * 0.001f,
+                "twice the depth should be the SQUARE of the climb, not twice it");
+        }
+
+        // THE TWO RATES ARE DIFFERENT, and that is the substance of the retune.
+        // A single multiplier cannot keep both halves of a fight honest,
+        // because the player's own two axes grow at very different speeds.
+        [Test]
+        public void HealthClimbsFasterThanAttack()
+        {
+            Assert.Greater(DifficultyCurve.HealthMultiplier(80), DifficultyCurve.AttackMultiplier(80) * 5f,
+                "enemy health has to track the player's damage, which outruns their health by a long way");
         }
 
         [Test]
         public void StepZero_ChangesNothing()
         {
-            Assert.AreEqual(1f, DifficultyCurve.EnemyMultiplier(0), 0.0001f);
-            Assert.AreEqual(37, DifficultyCurve.Scale(37, 0));
-            Assert.AreEqual(37, DifficultyCurve.Scale(37, -12), "A negative step is the surface, not a discount");
+            Assert.AreEqual(1f, DifficultyCurve.HealthMultiplier(0), 0.0001f);
+            Assert.AreEqual(1f, DifficultyCurve.AttackMultiplier(0), 0.0001f);
+            Assert.AreEqual(37, DifficultyCurve.ScaleHealth(37, 0));
+            Assert.AreEqual(37, DifficultyCurve.ScaleAttack(37, 0));
+            Assert.AreEqual(37, DifficultyCurve.ScaleHealth(37, -12), "A negative step is the surface, not a discount");
         }
 
-        // Integer arithmetic throughout, so exact-looking cases stay exact —
-        // the same float32 trap ItemUpgrade hit, where 20 * 1.4f floors to
-        // 27 rather than 28.
-        [TestCase(100, 8, 144)]
-        [TestCase(200, 16, 376)]
-        [TestCase(1000, 40, 3200)]
-        public void Scale_IsExactWhereTheArithmeticIsExact(int amount, int step, int expected)
+        [TestCase(100, 8, 181)]
+        [TestCase(90, 80, 34001)]
+        [TestCase(350, 80, 132228)]
+        public void ScaleHealth_LandsWhereTheCurveSays(int amount, int step, int expected)
         {
-            Assert.AreEqual(expected, DifficultyCurve.Scale(amount, step));
+            Assert.AreEqual(expected, DifficultyCurve.ScaleHealth(amount, step));
+        }
+
+        [TestCase(3, 80, 173)]
+        [TestCase(9, 80, 519)]
+        [TestCase(10, 8, 15)]
+        public void ScaleAttack_LandsWhereTheCurveSays(int amount, int step, int expected)
+        {
+            Assert.AreEqual(expected, DifficultyCurve.ScaleAttack(amount, step));
         }
 
         [Test]
-        public void Scale_NeverRegressesAsTheRunGoesDeeper()
+        public void Scaling_NeverRegressesAsTheRunGoesDeeper()
         {
             foreach (int amount in new[] { 1, 12, 240, 3000 })
             {
                 for (int step = 1; step <= 120; step++)
                 {
-                    Assert.GreaterOrEqual(DifficultyCurve.Scale(amount, step), DifficultyCurve.Scale(amount, step - 1),
-                        $"{amount} got weaker between step {step - 1} and {step}");
+                    Assert.GreaterOrEqual(DifficultyCurve.ScaleHealth(amount, step),
+                        DifficultyCurve.ScaleHealth(amount, step - 1),
+                        $"{amount} health got weaker between step {step - 1} and {step}");
+                    Assert.GreaterOrEqual(DifficultyCurve.ScaleAttack(amount, step),
+                        DifficultyCurve.ScaleAttack(amount, step - 1),
+                        $"{amount} attack got weaker between step {step - 1} and {step}");
                 }
             }
         }
@@ -70,15 +103,17 @@ namespace PrincesPalace.Domain.Tests
         // `step` comes off a save and nothing else bounds it. An unclamped
         // multiplication would overflow into a NEGATIVE enemy — one with
         // negative health, which every combat check would read as already
-        // dead.
+        // dead. Compounding reaches that far sooner than a straight line did:
+        // 7.7% a step passes two billion around step 300.
         [Test]
         public void AnAbsurdStep_IsClampedRatherThanOverflowing()
         {
-            int atCeiling = DifficultyCurve.Scale(1000, DifficultyCurve.MaxScaledStep);
+            int atCeiling = DifficultyCurve.ScaleHealth(1000, DifficultyCurve.MaxScaledStep);
 
             Assert.Greater(atCeiling, 0);
-            Assert.AreEqual(atCeiling, DifficultyCurve.Scale(1000, 999999));
-            Assert.Greater(DifficultyCurve.Scale(int.MaxValue / 100000, 999999), 0);
+            Assert.AreEqual(atCeiling, DifficultyCurve.ScaleHealth(1000, 999999));
+            Assert.Greater(DifficultyCurve.ScaleHealth(int.MaxValue / 1000, 999999), 0);
+            Assert.Greater(DifficultyCurve.ScaleAttack(int.MaxValue / 1000, 999999), 0);
         }
 
         // Reward and threat ride the SAME curve. If pay lagged difficulty,
@@ -89,22 +124,40 @@ namespace PrincesPalace.Domain.Tests
         {
             foreach (int step in new[] { 0, 8, 16, 40, 100 })
             {
-                Assert.AreEqual(DifficultyCurve.Scale(250, step), DifficultyCurve.ScaleReward(250, step),
+                Assert.AreEqual(DifficultyCurve.ScaleHealth(250, step), DifficultyCurve.ScaleReward(250, step),
                     $"pay and threat disagree at step {step}");
             }
         }
 
-        // The shape the whole phase exists to create: a fight deep in a run
-        // has to be meaningfully harder than one at the surface. Before this,
-        // a floor-9 fight was statistically identical to a floor-1 fight.
+        // THE INVARIANT THE WHOLE RETUNE EXISTS FOR, stated in the terms it
+        // was designed in: a fight should take about as many swings deep as it
+        // does at the surface. The rates were measured off AbilityDerivation
+        // to make this true, so if either drifts this is what says so.
+        //
+        // A golem holds 350 and defends at 8. A fully-geared character's ATTACK
+        // is 16 at tier 0 and 2,646 at tier 10 — base 7 plus the figures
+        // AbilityDerivationTests pins, not recomputed here. Damage is
+        // (attack - defense) x CombatMath.DamageScale.
         [Test]
-        public void ADeepFight_IsSubstantiallyHarderThanASurfaceOne()
+        public void AGolemTakesAboutTheSameNumberOfSwingsAtEveryDepth()
         {
-            int surface = DifficultyCurve.Scale(100, 1);
-            int deep = DifficultyCurve.Scale(100, 40);
+            const int GolemHealth = 350;
+            const int GolemDefense = 8;
+            const int PlayerAttackAtTierZero = 16;
+            const int PlayerAttackAtTierTen = 2753;
 
-            Assert.Greater(deep, surface * 2,
-                "Forty steps down should be more than twice the fight, or descending means nothing");
+            float atSurface = Swings(GolemHealth, GolemDefense, PlayerAttackAtTierZero, 0);
+            float atDepth = Swings(GolemHealth, GolemDefense, PlayerAttackAtTierTen, 80);
+
+            Assert.AreEqual(atSurface, atDepth, atSurface * 0.6f,
+                $"a golem takes {atSurface:0.0} swings at the surface and {atDepth:0.0} at step 80 - " +
+                $"one of the two rates in DifficultyCurve is wrong");
+        }
+
+        private static float Swings(int health, int defense, int playerAttack, int step)
+        {
+            int hit = System.Math.Max(1, playerAttack - DifficultyCurve.ScaleAttack(defense, step)) * 10;
+            return DifficultyCurve.ScaleHealth(health, step) / (float)hit;
         }
     }
 }

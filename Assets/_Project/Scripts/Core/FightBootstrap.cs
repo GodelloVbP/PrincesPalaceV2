@@ -115,8 +115,16 @@ namespace PrincesPalace
             // The RUN'S relics, so the thing the player drafted at the gate
             // actually reaches the fight. Without this the draft wrote to a
             // field nothing read.
+            // DEPTH GOES IN AT BUILD TIME, not after it.
+            //
+            // Session.DepthStep is assigned by the caller once the fight
+            // exists, which is soon enough for the payout and far too late for
+            // the enemies — they are fully constructed by then. That gap is
+            // how DifficultyCurve came to be scaling rewards and nothing else
+            // while its own header claimed it scaled enemy stats.
             return FightEncounterAdapter.Build(party, enemies, new SeededRandom((ulong)seed),
-                relicIds: RunManager.HasRun ? RunManager.Run.relicIds : null);
+                relicIds: RunManager.HasRun ? RunManager.Run.relicIds : null,
+                depthStep: RunManager.HasRun ? RunManager.Run.step : 0);
         }
 
         private static bool HasArt(CharacterDefinition definition) =>

@@ -1,3 +1,4 @@
+using PrincesPalace.Domain.Dungeon;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -66,7 +67,17 @@ namespace PrincesPalace
                 attackHoldsPosition: definition.attackHoldsPosition);
         }
 
-        private static CombatantState ToCombatant(EnemyDefinition definition)
+        // DEPTH IS APPLIED HERE, and this is the only place it is applied.
+        //
+        // DifficultyCurve was written to scale enemies and then called by
+        // nothing but VictoryRewards, so every fight at every depth used the
+        // authored baseStats verbatim -- the "infinite corridor of trivial
+        // fights" that file exists to prevent is what shipped. This line is
+        // the fix; the curve itself only needed retuning.
+        //
+        // Health and attack take DIFFERENT rates because the player's own two
+        // axes grow at different speeds. See DifficultyCurve.
+        private static CombatantState ToCombatant(EnemyDefinition definition, int depthStep)
         {
             var stats = definition.baseStats;
 
@@ -74,13 +85,21 @@ namespace PrincesPalace
             // for a character, and monsters have none. They get the default pool
             // so a monster skill that costs mana can still be paid for, rather
             // than a zero that would silently make every such skill unusable.
+            // Speed is NOT scaled. It is a rate, feeding a scheduler that
+            // clamps at 2.5x anyway, and the same reasoning AbilityDerivation
+            // applies to the player's Dexterity applies to a monster: an enemy
+            // at 40,000 Speed does not act more often, it acts always.
             var state = new CombatantState(definition.displayName, false,
-                stats.maxHealth, GameplayConstants.DefaultMaxMana,
-                stats.attack, stats.defense, stats.speed);
+                DifficultyCurve.ScaleHealth(stats.maxHealth, depthStep),
+                GameplayConstants.DefaultMaxMana,
+                DifficultyCurve.ScaleAttack(stats.attack, depthStep),
+                DifficultyCurve.ScaleAttack(stats.defense, depthStep),
+                stats.speed);
 
             if (definition.breakShieldPoints > 0)
             {
-                state.BreakShield = new BreakShield(definition.breakShieldPoints);
+                state.BreakShield = new BreakShield(
+                    DifficultyCurve.ScaleShield(definition.breakShieldPoints, depthStep));
             }
 
             return state;
@@ -157,7 +176,8 @@ namespace PrincesPalace
             SeededRandom rng,
             bool isBoss = false,
             bool isElite = false,
-            IReadOnlyList<string> relicIds = null)
+            IReadOnlyList<string> relicIds = null,
+            int depthStep = 0)
         {
             var party = new List<CombatantState>();
             var kits = new List<PlayerKit>();
@@ -192,7 +212,7 @@ namespace PrincesPalace
                 var definition = ContentDatabase.Enemies.FirstOrDefault(e => e.id == id);
                 if (definition == null) continue;
 
-                enemies.Add(ToCombatant(definition));
+                enemies.Add(ToCombatant(definition, depthStep));
                 enemyKits.Add(new EnemyKit(Resolve(definition), isElite));
             }
 
