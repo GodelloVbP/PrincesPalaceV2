@@ -57,6 +57,36 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void NoDrawingIsEverShownTooBrieflyToRegister()
+        {
+            // Why there is a floor at all, found by playing it. Without one the
+            // two frames either side of the blow held for 35 and 38ms -- about
+            // two display frames at 60Hz, which is not long enough for a pose
+            // to register as a pose. The emphasis was real and what it
+            // emphasised was invisible.
+            for (int i = 0; i < 6; i++)
+            {
+                Assert.GreaterOrEqual(FrameHoldCurve.HoldFor(i, 6, 3, Pace),
+                    FrameHoldCurve.MinimumHoldSeconds - 0.0001f,
+                    $"frame {i} flashes past");
+            }
+        }
+
+        [Test]
+        public void ASheetAuthoredFasterThanTheFloorKeepsItsOwnPace()
+        {
+            // A 30ms sheet cannot have every frame raised to 55 without the
+            // stance running nearly twice as long. It asked to be fast, so the
+            // floor yields rather than the total -- which is the invariant the
+            // beat budget actually depends on.
+            const float Fast = 0.03f;
+            float total = 0f;
+            for (int i = 0; i < 6; i++) total += FrameHoldCurve.HoldFor(i, 6, 3, Fast);
+
+            Assert.AreEqual(Fast * 6, total, 0.0001f);
+        }
+
+        [Test]
         public void TheCurveActuallyDoesSomething()
         {
             // A guard against tuning the constants until they are all 1.0 and
@@ -70,8 +100,14 @@ namespace PrincesPalace.Domain.Tests
                 if (hold > longest) longest = hold;
             }
 
-            Assert.Greater(longest / shortest, 2f,
-                "the slowest frame should hold at least twice the fastest, or this is a slideshow again");
+            // 1.7, down from 2.0 when the floor went in, and the two are in
+            // DIRECT TENSION: every millisecond the floor gives the snap frames
+            // is a millisecond of contrast the curve loses. The floor wins,
+            // because a frame nobody can see is worse than a frame held a
+            // little too long -- but if this ratio keeps falling, the floor has
+            // eaten the shape and the timing is back to flat.
+            Assert.Greater(longest / shortest, 1.7f,
+                "the floor has flattened the curve back into a slideshow");
         }
 
         // ---- the degenerate cases ------------------------------------------

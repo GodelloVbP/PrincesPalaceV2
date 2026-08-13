@@ -64,23 +64,85 @@ namespace PrincesPalace.Domain.Stage
             return Lerp(FollowStart, FollowEnd, EaseOut(q));
         }
 
+        // The shortest a drawing is ever shown for.
+        //
+        // ADDED AFTER PLAYING IT. The first pass had no floor and put the two
+        // frames either side of the blow at 35 and 38ms, which is barely two
+        // display frames at 60Hz -- short enough that a pose does not register
+        // as a pose at all. It reads as a flicker between the drawings either
+        // side of it, which is worse than not having drawn it: the emphasis
+        // was there, and what it emphasised was invisible.
+        //
+        // 55ms is a bit over three frames at 60Hz. Fast enough to still be the
+        // snap, long enough to be seen.
+        public const float MinimumHoldSeconds = 0.055f;
+
         // How long to hold frame `index`, in seconds.
         public static float HoldFor(int index, int frameCount, int impactFrame, float secondsPerFrame)
         {
             if (frameCount <= 1 || secondsPerFrame <= 0f) return Math.Max(0f, secondsPerFrame);
 
-            float total = 0f;
-            for (int i = 0; i < frameCount; i++)
+            var holds = Holds(frameCount, impactFrame, secondsPerFrame);
+            return holds[index < 0 ? 0 : index >= frameCount ? frameCount - 1 : index];
+        }
+
+        // Every frame's hold, which is the only honest way to apply the floor:
+        // raising one frame has to take the time from the others, so no frame
+        // can be computed alone.
+        public static float[] Holds(int frameCount, int impactFrame, float secondsPerFrame)
+        {
+            var holds = new float[Math.Max(0, frameCount)];
+            if (frameCount <= 0) return holds;
+
+            float total = secondsPerFrame * frameCount;
+            if (frameCount == 1 || secondsPerFrame <= 0f)
             {
-                total += RawWeight(i, frameCount, impactFrame);
+                for (int i = 0; i < frameCount; i++) holds[i] = Math.Max(0f, secondsPerFrame);
+                return holds;
             }
 
-            if (total <= 0f) return secondsPerFrame;
+            float weightSum = 0f;
+            for (int i = 0; i < frameCount; i++) weightSum += RawWeight(i, frameCount, impactFrame);
+            if (weightSum <= 0f)
+            {
+                for (int i = 0; i < frameCount; i++) holds[i] = secondsPerFrame;
+                return holds;
+            }
 
-            // Normalised against the frame count, so the sum of every hold is
-            // secondsPerFrame x frameCount to the last float.
-            float weight = RawWeight(index, frameCount, impactFrame) * frameCount / total;
-            return secondsPerFrame * weight;
+            // Normalised against the frame count, so the holds sum to
+            // secondsPerFrame x frameCount -- which FightBeatPlayer's beat
+            // budget depends on.
+            for (int i = 0; i < frameCount; i++)
+            {
+                holds[i] = secondsPerFrame * RawWeight(i, frameCount, impactFrame) * frameCount / weightSum;
+            }
+
+            // The floor cannot exceed the average, or holding every frame to it
+            // would change the total. A sheet authored faster than the floor
+            // keeps its own pace and simply gets no emphasis, which is the
+            // right answer: it asked to be fast.
+            float floor = Math.Min(MinimumHoldSeconds, total / frameCount);
+
+            float deficit = 0f;
+            float surplus = 0f;
+            for (int i = 0; i < frameCount; i++)
+            {
+                if (holds[i] < floor) deficit += floor - holds[i];
+                else surplus += holds[i] - floor;
+            }
+
+            if (deficit <= 0f || surplus <= 0f) return holds;
+
+            // What the short frames gain, the long frames pay, in proportion to
+            // how far above the floor they were. The shape survives; only its
+            // contrast is reduced.
+            float keep = 1f - deficit / surplus;
+            for (int i = 0; i < frameCount; i++)
+            {
+                holds[i] = holds[i] < floor ? floor : floor + (holds[i] - floor) * keep;
+            }
+
+            return holds;
         }
 
         private static float EaseIn(float t) => t * t;
