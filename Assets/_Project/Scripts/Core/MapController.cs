@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using PrincesPalace.Domain.Dungeon;
 using PrincesPalace.Domain.UiKit;
+using PrincesPalace.Domain.UiKit.Screens;
 
 namespace PrincesPalace
 {
@@ -18,6 +19,7 @@ namespace PrincesPalace
         [SerializeField] internal Button[] nodeButtons;
         [SerializeField] internal TMP_Text[] nodeLabels;
         [SerializeField] internal Image[] nodeMarkers;
+        [SerializeField] internal Image[] trailSegments;
         [SerializeField] internal TMP_Text depthLabel;
         [SerializeField] internal TMP_Text goldLabel;
         [SerializeField] internal Button abandonButton;
@@ -25,6 +27,21 @@ namespace PrincesPalace
         private static readonly Color Reachable = new Color(0.85f, 0.76f, 0.55f, 1f);
         private static readonly Color Cleared = new Color(0.34f, 0.30f, 0.42f, 1f);
         private static readonly Color Distant = new Color(0.22f, 0.19f, 0.29f, 1f);
+
+        // Parsed from the SCREEN's own constants rather than restated here, so
+        // the declared tree and the runtime cannot disagree about what a walked
+        // path looks like.
+        //
+        // ColorUtility, not SceneBuilder.ParseHex: that one lives in the Editor
+        // assembly and this is Core, which cannot see it. Unity's own parser
+        // takes the same "#RRGGBBAA" the DSL writes.
+        private static readonly Color TrailTaken = Hex(MapScreen.TrailTakenHex);
+        private static readonly Color TrailOpen = Hex(MapScreen.TrailOpenHex);
+        private static readonly Color TrailAhead = Hex(MapScreen.TrailAheadHex);
+        private static readonly Color TrailClosed = Hex(MapScreen.TrailClosedHex);
+
+        private static Color Hex(string hex) =>
+            ColorUtility.TryParseHtmlString(hex, out var colour) ? colour : Color.white;
 
         private bool _wired;
 
@@ -66,6 +83,7 @@ namespace PrincesPalace
             if (map == null || current == null)
             {
                 foreach (var button in nodeButtons) SetActive(button.gameObject, false);
+                HideTrails(0);
                 return;
             }
 
@@ -101,6 +119,97 @@ namespace PrincesPalace
             for (int i = 0; i < nodeButtons.Length; i++)
             {
                 if (!occupied.Contains(i)) SetActive(nodeButtons[i].gameObject, false);
+            }
+
+            PaintTrails(map, current.Id, cleared, reachable);
+        }
+
+        // The paths between rooms, which is what makes this a map rather than a
+        // grid of buttons. Without them nothing on screen says which room leads
+        // to which, and a fork is indistinguishable from two unrelated rooms
+        // that happen to sit in the same column.
+        private void PaintTrails(DescentMap map, int currentId, HashSet<int> cleared, HashSet<int> reachable)
+        {
+            if (trailSegments == null || trailSegments.Length == 0) return;
+
+            var positions = NodePositions(map);
+            int segment = 0;
+            int seed = 0;
+
+            foreach (var node in map.Nodes)
+            {
+                if (!positions.TryGetValue(node.Id, out var from)) continue;
+
+                foreach (int nextId in node.Next)
+                {
+                    seed++;
+                    if (!positions.TryGetValue(nextId, out var to)) continue;
+
+                    // The pool is sized to the worst case a leg can generate,
+                    // so running out means the generator changed shape rather
+                    // than that this needs a bigger number. Stop rather than
+                    // draw half a trail.
+                    if (segment + MapLayout.SegmentsPerLink > trailSegments.Length) break;
+
+                    // WALKED means both ends are behind you. Colouring a trail
+                    // by its destination alone would light up every path INTO a
+                    // cleared room, including ones never taken.
+                    bool taken = cleared.Contains(node.Id) && cleared.Contains(nextId);
+                    bool fromHere = node.Id == currentId;
+
+                    Color colour;
+                    float width;
+                    if (taken) { colour = TrailTaken; width = MapScreen.TrailWidthTaken; }
+                    else if (fromHere) { colour = TrailOpen; width = MapScreen.TrailWidthOpen; }
+                    else if (reachable.Contains(node.Id) || cleared.Contains(node.Id))
+                    { colour = TrailAhead; width = MapScreen.TrailWidthAhead; }
+                    else { colour = TrailClosed; width = MapScreen.TrailWidthClosed; }
+
+                    for (int i = 0; i < MapLayout.SegmentsPerLink; i++)
+                    {
+                        var piece = MapLayout.SegmentAt(from, to, seed, i);
+                        var image = trailSegments[segment++];
+
+                        SetActive(image.gameObject, true);
+                        image.color = colour;
+
+                        var rect = image.rectTransform;
+                        rect.sizeDelta = new Vector2(piece.Length, width);
+                        rect.anchoredPosition = new Vector2(piece.Centre.X, piece.Centre.Y);
+                        rect.localRotation = Quaternion.Euler(0f, 0f, piece.AngleDegrees);
+                    }
+                }
+            }
+
+            HideTrails(segment);
+        }
+
+        // Where every room in this leg actually sits, by the same MapLayout the
+        // nodes were placed with -- so a trail can never land somewhere its
+        // room is not.
+        private static Dictionary<int, UiVec> NodePositions(DescentMap map)
+        {
+            var positions = new Dictionary<int, UiVec>();
+
+            for (int depth = 0; depth < MapLayout.Columns; depth++)
+            {
+                var column = map.AtDepth(depth).ToList();
+                for (int slot = 0; slot < column.Count && slot < MapLayout.Rows; slot++)
+                {
+                    positions[column[slot].Id] =
+                        new UiVec(MapLayout.ColumnX(depth), MapLayout.RowY(column.Count, slot));
+                }
+            }
+
+            return positions;
+        }
+
+        private void HideTrails(int from)
+        {
+            if (trailSegments == null) return;
+            for (int i = from; i < trailSegments.Length; i++)
+            {
+                if (trailSegments[i] != null) SetActive(trailSegments[i].gameObject, false);
             }
         }
 

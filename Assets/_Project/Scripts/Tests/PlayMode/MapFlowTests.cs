@@ -81,6 +81,44 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
+        public IEnumerator TheRoomsAreJoinedByTrails()
+        {
+            // What makes this a map rather than a grid of buttons. Without the
+            // trails nothing on screen says which room leads to which, and a
+            // fork is indistinguishable from two unrelated rooms that happen to
+            // share a column.
+            yield return OpenTheMap();
+
+            // Found by name rather than off the field: MapController's arrays
+            // are internal and InternalsVisibleTo names only the Editor
+            // assembly, which is why every other test in this file walks the
+            // hierarchy too.
+            var live = _map.GetComponentsInChildren<Image>(includeInactive: true)
+                .Where(i => i.name.StartsWith("MapTrail") && i.gameObject.activeSelf)
+                .ToList();
+            Assert.IsNotEmpty(live, "no trail was drawn between any two rooms");
+
+            // Every drawn piece has real geometry. One left at its placeholder
+            // 8x8 is a segment the layout never reached, and it would sit on
+            // the map as a stray dot.
+            foreach (var piece in live)
+            {
+                Assert.Greater(piece.rectTransform.sizeDelta.x, 8f,
+                    $"{piece.name} kept its placeholder length");
+            }
+
+            // And they are actually turned. Six quads all at zero degrees is a
+            // straight line drawn the expensive way, which is exactly what a
+            // broken bezier would look like.
+            Assert.IsTrue(live.Any(p =>
+                {
+                    float z = p.rectTransform.localEulerAngles.z;
+                    return Mathf.Abs(z) > 0.5f && Mathf.Abs(z - 360f) > 0.5f;
+                }),
+                "every trail piece is perfectly horizontal, so the curve is not curving");
+        }
+
+        [UnityTest]
         public IEnumerator WithNoRunNothingIsOffered()
         {
             yield return OpenTheMap(withRun: false);

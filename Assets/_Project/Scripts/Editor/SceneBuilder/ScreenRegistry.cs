@@ -489,6 +489,7 @@ public static class ScreenRegistry
                 map.nodeButtons = screen.NodeButtons.Select(result.Button).ToArray();
                 map.nodeLabels = screen.NodeLabels.Select(result.Tmp).ToArray();
                 map.nodeMarkers = screen.NodeMarkers.Select(result.Image).ToArray();
+                map.trailSegments = screen.TrailSegments.Select(result.Image).ToArray();
                 map.depthLabel = result.Tmp(screen.DepthLabel);
                 map.goldLabel = result.Tmp(screen.GoldLabel);
                 map.abandonButton = result.Button(screen.AbandonButton);
