@@ -44,11 +44,21 @@ mechanism, and no amount of documentation inside either of them could address
 it. This is the pattern the rest of this file keeps arriving at: a rule that
 can only be read after the mistake has been made is not a control.
 
-A related piece of debris from the same era, left in place and worth
-recognising if it turns up again: `C:\Games\Prince's` is a 2.4 KB truncated
-Unity batchmode log, not a directory. Something redirected output to a path
-under `C:\Games\Prince's Palace\` without quoting it, so the shell split the
-argument at the space and created a file named after the first half.
+A related piece of debris from the same era, deleted on 2026-08-15:
+`C:\Games\Prince's` was a 2.4 KB truncated Unity batchmode log — a file, not a
+directory. Something redirected output to a path under
+`C:\Games\Prince's Palace\` without quoting it, so the shell split the argument
+at the space and wrote to a file named after the first half. It sat unnoticed
+from 2026-07-27, looking like a third checkout in a directory whose whole
+problem was too many similar names.
+
+Worth generalising, because the cause is permanent and still live: **every path
+in this project contains both a space and an apostrophe.** Any unquoted path in
+a script or shell command silently splits, and single-quoting is not available
+as the escape. The same hazard has a second face inside the repo — asset names
+like `ChakraPetch-Regular SDF.asset` are why `tools/githooks/pre-commit` splits
+`git diff --name-status` output on tab rather than on whitespace. Quote every
+path; split on tab, never on space.
 
 The tooling has been bitten by the same confusion: `run_tests_parallel.ps1` once
 named v1's TestRunner directories, which meant a v2 test run built into and
