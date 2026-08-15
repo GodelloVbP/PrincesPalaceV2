@@ -20,7 +20,7 @@ namespace PrincesPalace
     // itself come out of MapLayout, which is the same arithmetic the declared
     // tree was built from -- so a room, its trail and the clearing it stands in
     // cannot disagree.
-    public class MapController : MonoBehaviour
+    public partial class MapController : MonoBehaviour
     {
         // The scrolling half. `viewport` is the fixed masked window; `content`
         // is the wide rect that slides under it.
@@ -28,6 +28,9 @@ namespace PrincesPalace
         [SerializeField] internal RectTransform content;
         [SerializeField] internal Image[] backdrops;
         [SerializeField] internal RectTransform fog;
+
+        // The party's figure. See MapController.Walk.cs for everything it does.
+        [SerializeField] internal Image walker;
 
         [SerializeField] internal Button[] nodeButtons;
         [SerializeField] internal Image[] nodeIcons;
@@ -128,6 +131,7 @@ namespace PrincesPalace
                 HideTrails(0);
                 HideBackdrops(0);
                 SetActive(fog.gameObject, false);
+                SetActive(walker.gameObject, false);
                 return;
             }
 
@@ -168,7 +172,14 @@ namespace PrincesPalace
 
             PaintTrails(map, current.Id, cleared, reachable);
 
-            FollowCurrent(MapLayout.ColumnX(current.Depth));
+            // Not while a walk is in flight: the walk owns both the figure and
+            // the camera until it arrives, and a refresh from anything else
+            // would snap them to a room the party has not reached yet.
+            if (!IsWalking)
+            {
+                PlaceWalker(current);
+                FollowCurrent(MapLayout.ColumnX(current.Depth));
+            }
         }
 
         // Which of the five a room is in. Order matters: a cleared room the
@@ -235,8 +246,8 @@ namespace PrincesPalace
             if (trailSegments == null || trailSegments.Length == 0) return;
 
             var positions = NodePositions(map);
+            var seeds = LinkSeeds(map);
             int segment = 0;
-            int seed = 0;
 
             foreach (var node in map.Nodes)
             {
@@ -244,8 +255,14 @@ namespace PrincesPalace
 
                 foreach (int nextId in node.Next)
                 {
-                    seed++;
                     if (!positions.TryGetValue(nextId, out var to)) continue;
+
+                    // LOOKED UP, not counted. This used to be a counter
+                    // incremented per link, which the walk then had to
+                    // reproduce exactly -- including that a node with no
+                    // position skips its links WITHOUT advancing the count.
+                    // Two loops agreeing by coincidence is not agreement.
+                    int seed = seeds.TryGetValue(LinkKey(node.Id, nextId), out var s) ? s : 1;
 
                     // The pool is sized to the worst case a leg can generate,
                     // so running out means the generator changed shape rather
@@ -433,24 +450,24 @@ namespace PrincesPalace
             var map = RunManager.Map;
             if (map == null) return;
 
+            // One walk at a time. A second click mid-walk would otherwise start
+            // a step from a room the party is halfway out of, and the two
+            // coroutines would fight over the same figure.
+            if (IsWalking) return;
+
             int depth = index / MapLayout.Rows;
             int slot = index % MapLayout.Rows;
             var node = map.AtDepth(depth).ElementAtOrDefault(slot);
             if (node == null) return;
 
-            if (!RunManager.MoveTo(node.Id)) return;
+            // Legality is checked BEFORE the walk rather than by MoveTo after
+            // it. MoveTo is still the authority and still refuses -- but a
+            // rejected move used to cost nothing, and now it would cost a walk
+            // to a room the party is not allowed to enter, followed by a
+            // silent refusal on arrival.
+            if (!RunManager.Choices().Any(choice => choice.Id == node.Id)) return;
 
-            // Only rooms that are FIGHTS lead anywhere yet. The rest are screens
-            // that do not exist, so the party arrives and the map redraws rather
-            // than loading an empty scene.
-            if (IsFight(node.Type))
-            {
-                Navigation.Go(Navigation.Fight);
-                return;
-            }
-
-            RunManager.ClearCurrentRoom();
-            Refresh();
+            _walk = StartCoroutine(WalkAndArrive(node));
         }
 
         private static bool IsFight(RoomType type) =>

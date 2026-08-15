@@ -233,8 +233,92 @@ namespace PrincesPalace.PlayModeTests
             int slot = column.FindIndex(n => n.Id == fight.Id);
             Named($"MapNode{MapLayout.IndexFor(fight.Depth, slot)}").GetComponent<Button>().onClick.Invoke();
 
+            // THE ROOM FIRES ON ARRIVAL, not on the click. This used to assert
+            // on the same frame the button was pressed, and that it now cannot
+            // is the point of the change rather than a wrinkle in the test: the
+            // party walks there first.
+            Assert.IsTrue(_map.IsWalking, "clicking a room starts a walk to it");
+            CollectionAssert.IsEmpty(_navigated, "and nothing loads while they are still walking");
+
+            yield return WaitForTheWalk();
+
             CollectionAssert.Contains(_navigated, Navigation.Fight);
             Assert.AreEqual(fight.Id, RunManager.CurrentNode.Id, "the party moved before the scene changed");
+        }
+
+        // Bounded rather than "yield until", so a walk that never finishes
+        // fails this test instead of hanging the whole PlayMode run.
+        private IEnumerator WaitForTheWalk()
+        {
+            for (float waited = 0f; waited < 5f && _map.IsWalking; waited += Time.deltaTime)
+            {
+                yield return null;
+            }
+
+            Assert.IsFalse(_map.IsWalking, "the walk should have finished well inside 5 seconds");
+        }
+
+        [UnityTest]
+        public IEnumerator TheFigureWalksTheTrailAndArrivesStandingInTheRoom()
+        {
+            yield return OpenTheMap();
+
+            // A room that leads nowhere else, so the arrival redraws the map
+            // rather than loading a fight scene out from under the assertions.
+            var quiet = RunManager.Choices().FirstOrDefault(n =>
+                n.Type != RoomType.Fight && n.Type != RoomType.EliteFight && n.Type != RoomType.Boss);
+
+            if (quiet == null)
+            {
+                Assert.Ignore("this leg offers only fights from the entry");
+                yield break;
+            }
+
+            var walker = (RectTransform)Named("MapWalker").transform;
+            var startedAt = walker.anchoredPosition;
+
+            var column = RunManager.Map.AtDepth(quiet.Depth).ToList();
+            int slot = column.FindIndex(n => n.Id == quiet.Id);
+            Named($"MapNode{MapLayout.IndexFor(quiet.Depth, slot)}").GetComponent<Button>().onClick.Invoke();
+
+            // Mid-walk: off the room it left, and not yet at the one it is
+            // going to. Asserted because "moves" is the whole feature and a
+            // figure that teleports on arrival would pass every other check
+            // here.
+            yield return null;
+            yield return null;
+            Assert.AreNotEqual(startedAt.x, walker.anchoredPosition.x, "the figure should be under way");
+
+            yield return WaitForTheWalk();
+
+            var expected = MapWalk.Standing(new UiVec(MapLayout.ColumnX(quiet.Depth), MapLayout.RowY(slot)));
+            Assert.AreEqual(expected.X, walker.anchoredPosition.x, 0.01f, "arrived at the wrong room");
+            Assert.AreEqual(expected.Y, walker.anchoredPosition.y, 0.01f, "arrived at the wrong height");
+            Assert.AreEqual(quiet.Id, RunManager.CurrentNode.Id, "arriving is what moves the party");
+        }
+
+        [UnityTest]
+        public IEnumerator AnUnreachableRoomIsNotWalkedTo()
+        {
+            yield return OpenTheMap();
+
+            var reachable = new HashSet<int>(RunManager.Choices().Select(n => n.Id));
+            var distant = RunManager.Map.Nodes.FirstOrDefault(n =>
+                !reachable.Contains(n.Id) && n.Id != RunManager.CurrentNode.Id);
+
+            Assert.IsNotNull(distant, "a nine-column leg has rooms the entry cannot reach");
+
+            var column = RunManager.Map.AtDepth(distant.Depth).ToList();
+            int slot = column.FindIndex(n => n.Id == distant.Id);
+            Named($"MapNode{MapLayout.IndexFor(distant.Depth, slot)}").GetComponent<Button>().onClick.Invoke();
+
+            yield return null;
+
+            // Legality is checked BEFORE the walk. Without that the figure
+            // would walk all the way to a room MoveTo then refuses to enter,
+            // and the refusal would be invisible.
+            Assert.IsFalse(_map.IsWalking, "an unreachable room must not start a walk");
+            Assert.AreNotEqual(distant.Id, RunManager.CurrentNode.Id);
         }
 
         [UnityTest]

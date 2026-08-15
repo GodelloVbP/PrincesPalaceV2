@@ -48,6 +48,24 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const string EventIconKey = "Assets/_Project/Art/Backgrounds/Processed/map_forest_event.png";
         public const string TreasureIconKey = "Assets/_Project/Art/Backgrounds/Processed/forest_map_chest.png";
 
+        // The party's figure. Declared with Shawn because he is the only
+        // character with actor art, and REPLACED at runtime from whoever is
+        // leading the squad -- the controller resolves
+        // CharacterDefinition.battleSpritePath through the same
+        // StanceAnimationLibrary the fight stage uses, so a second character
+        // needs a content entry and no code.
+        //
+        // His idle, specifically: there is no walk cycle in this project's art
+        // for anybody. See MapWalk for what stands in for one.
+        public const string WalkerKey = "Assets/_Project/Resources/Characters/sheep/idle.png";
+
+        // Shawn's idle is 540x370. Only the DECLARED box needs this -- the
+        // controller measures whatever sprite it actually resolves -- but a
+        // declared box has to be some real shape for the audit to check, and
+        // the wrong one would have the build checking a figure the game never
+        // draws.
+        private const float ShawnAspect = 540f / 370f;
+
         // The one place a room type maps to painted art. Null for anything not
         // painted yet -- Shop, Entry, ItemSpawn and Unknown show a bare tree,
         // which is the house's graceful-degradation posture rather than a
@@ -108,6 +126,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // array would only make the index arithmetic worse.
         public List<NodeRef> TrailSegments = new List<NodeRef>();
 
+        public NodeRef Walker;
+
         public NodeRef TitleLabel;
         public NodeRef DepthLabel;
         public NodeRef GoldLabel;
@@ -153,17 +173,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var nodes = Ui.Pool("MapNodes", MapLayout.Capacity, i => screen.BuildNode(i))
                 .AllowOverlap("an invisible pool container spans the panel by construction and has no graphic to intercept anything");
 
+            var walker = screen.BuildWalker();
             var fog = screen.BuildFog();
 
-            // BACKDROP, then TRAILS, then NODES, then FOG. uGUI paints siblings
-            // in order and this is the whole back-to-front stack: a path
-            // crossing over the room it leads to would read as the rooms being
-            // behind the map rather than on it, and the fog has to cover the
-            // forest it is fading out.
+            // BACKDROP, then TRAILS, then NODES, then the WALKER, then FOG.
+            // uGUI paints siblings in order and this is the whole back-to-front
+            // stack: a path crossing over the room it leads to would read as
+            // the rooms being behind the map rather than on it, the figure
+            // walks IN FRONT of the wood it is walking through, and the fog has
+            // to cover the forest it is fading out.
             var content = Ui.Panel("MapContent",
                     Place.Pin(ContentEdge, ContentEdge, UiVec.Zero),
                     UiSize.Fixed(MapLayout.ContentWidth(MapLayout.Columns, 1920f), 1080f),
-                    backdrops, trails, nodes, fog)
+                    backdrops, trails, nodes, walker, fog)
                 .AllowOverflow("the content rect is deliberately wider than the window it sits in - that overflow IS the scroll, and MapViewport clips it");
 
             screen.Content = content;
@@ -202,6 +224,25 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // so it cannot be the normal state of this one.
             Backdrops.Add(tile);
             return tile;
+        }
+
+        // The party, standing in the wood. Declared at the entrance's own
+        // standing spot and moved from there; sized off Shawn's 540x370 idle,
+        // with the controller re-deriving the width from whatever art the
+        // actual squad leader turns out to have.
+        private UiNode BuildWalker()
+        {
+            var entrance = MapWalk.Standing(new UiVec(MapLayout.ColumnX(0), MapLayout.RowY(0)));
+
+            var walker = Ui.Sprite("MapWalker", WalkerKey,
+                    OnContent(entrance.X, entrance.Y),
+                    UiSize.Fixed(MapWalk.FigureHeight * ShawnAspect, MapWalk.FigureHeight))
+                .AsDecor()
+                .AllowOverflow("the figure stands at the clearing's edge and overhangs the canopy on purpose - so do the trails it walks along, and there is no room inside a 155-wide clearing for a figure half again as wide as it is tall")
+                .Inactive();
+
+            Walker = walker;
+            return walker;
         }
 
         // The fade at the end of the wood. Declared where a full-length leg

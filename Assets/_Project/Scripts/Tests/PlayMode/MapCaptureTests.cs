@@ -1,5 +1,6 @@
 using System.Collections;
 using System.IO;
+using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -45,8 +46,39 @@ namespace PrincesPalace.PlayModeTests
 
             var dir = Path.Combine(Application.dataPath, "..", "tools", "screenshots", "runtime");
             Directory.CreateDirectory(dir);
-            CanvasCapture.RenderToFile(Object.FindAnyObjectByType<Canvas>(),
-                Path.Combine(dir, "MapWithALeg.png"), 1920, 1080);
+            var canvas = Object.FindAnyObjectByType<Canvas>();
+
+            CanvasCapture.RenderToFile(canvas, Path.Combine(dir, "MapWithALeg.png"), 1920, 1080);
+
+            // And again MID-WALK, which is the only moment the figure is
+            // anywhere the standing shot cannot show it: on the trail, between
+            // two clearings, with the camera moving under it.
+            var map = Object.FindAnyObjectByType<MapController>();
+            var quiet = RunManager.Choices().FirstOrDefault(n =>
+                n.Type != PrincesPalace.Domain.Dungeon.RoomType.Fight
+                && n.Type != PrincesPalace.Domain.Dungeon.RoomType.EliteFight
+                && n.Type != PrincesPalace.Domain.Dungeon.RoomType.Boss)
+                ?? RunManager.Choices().FirstOrDefault();
+
+            if (quiet != null)
+            {
+                var column = RunManager.Map.AtDepth(quiet.Depth).ToList();
+                int slot = column.FindIndex(n => n.Id == quiet.Id);
+                var button = map.GetComponentsInChildren<Transform>(true)
+                    .First(t => t.name == $"MapNode{PrincesPalace.Domain.UiKit.MapLayout.IndexFor(quiet.Depth, slot)}")
+                    .GetComponent<UnityEngine.UI.Button>();
+
+                button.onClick.Invoke();
+
+                // Roughly half way through a step, so the figure is clear of
+                // both clearings rather than one pixel off either.
+                for (float waited = 0f; waited < 0.35f && map.IsWalking; waited += Time.deltaTime)
+                {
+                    yield return null;
+                }
+
+                CanvasCapture.RenderToFile(canvas, Path.Combine(dir, "MapMidWalk.png"), 1920, 1080);
+            }
 
             SaveSystem.RootOverride = null;
             SaveSlotManager.Forget();

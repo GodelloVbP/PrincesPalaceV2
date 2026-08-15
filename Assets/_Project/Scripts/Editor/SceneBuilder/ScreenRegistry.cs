@@ -490,6 +490,7 @@ public static class ScreenRegistry
                 map.content = result.Rect(screen.Content);
                 map.backdrops = screen.Backdrops.Select(result.Image).ToArray();
                 map.fog = result.Rect(screen.Fog);
+                map.walker = result.Image(screen.Walker);
                 map.nodeButtons = screen.NodeButtons.Select(result.Button).ToArray();
                 map.nodeIcons = screen.NodeIcons.Select(result.Image).ToArray();
                 map.nodeLabels = screen.NodeLabels.Select(result.Tmp).ToArray();
