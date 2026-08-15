@@ -11,24 +11,29 @@ namespace PrincesPalace
 {
     // Starts a fight when the Fight scene opens.
     //
-    // A PLACEHOLDER FOR THE RUN, and it says so rather than pretending
-    // otherwise. Once a descent exists it will hand the room's roster over and
-    // this picks nothing; until then, opening the scene has to produce a
-    // playable fight or the screen cannot be looked at at all.
+    // TWO PATHS, and which one runs depends on whether a descent is happening.
     //
-    // The ids are read from content rather than hardcoded, so adding a monster
-    // to enemies.json is enough to see it on the stage.
+    // With a run, the room decides: RunEncounter fields the whole surviving
+    // squad against enemies rolled from the fight stream for this node. That
+    // is the real game, and it is what the header below used to promise.
+    //
+    // Without one, the placeholder still stands -- opening the Fight scene
+    // directly has to produce a playable, LOOK-THE-SAME-EVERY-TIME fight or
+    // screenshot.ps1 cannot verify this screen and PlayMode tests have no
+    // stage to assert against. That is why the fixed seed survives: it is the
+    // tooling's fight, not the game's.
     public class FightBootstrap : MonoBehaviour
     {
         [SerializeField] internal FightController fight;
 
         // Fixed by default. A fight that reshuffles every time the scene
         // reloads cannot be compared against the last screenshot, and this
-        // screen is verified by looking at it.
+        // screen is verified by looking at it. Used by the NO-RUN path only.
         [SerializeField] internal int seed = 20260810;
 
         // How many monsters to field. Three is the stage's own capacity
         // (FightHudSpec.StageSlotsPerSide) and shows every slot at once.
+        // No-run path only; in a run the count comes from the room.
         [SerializeField] internal int enemyCount = 3;
 
         private void Start()
@@ -73,7 +78,58 @@ namespace PrincesPalace
             fight.SettlementSource = () => LastSettlement;
         }
 
-        internal FightEncounterAdapter.BuiltFight BuildOpeningFight()
+        internal FightEncounterAdapter.BuiltFight BuildOpeningFight() =>
+            RunManager.HasRun ? BuildRoomFight() : BuildPlaceholderFight();
+
+        // The real thing: this room, this squad, this run's seed.
+        private FightEncounterAdapter.BuiltFight BuildRoomFight()
+        {
+            var run = RunManager.Run;
+
+            // Entry is the only non-fight room that can reach this path, and
+            // only via a direct scene load. Treating an unknown room as a
+            // normal fight beats refusing to build one, for the same reason the
+            // no-content case degrades rather than throwing.
+            var roomType = RunManager.CurrentNode?.Type ?? RoomType.Fight;
+
+            var roster = RunEncounter.For(SaveSlotManager.CurrentSave, run, roomType);
+            if (roster.IsEmpty)
+            {
+                // An empty party here is a squad wipe that should have ended
+                // the run before the map ever offered this room. Saying so is
+                // worth more than an empty stage that looks like a render bug.
+                Debug.LogWarning(
+                    $"[FightBootstrap] Room {roomType} fielded {roster.PartyIds?.Count ?? 0} party " +
+                    $"and {roster.EnemyIds?.Count ?? 0} enemies; the stage stays empty.");
+                return null;
+            }
+
+            // isBoss/isElite ACTUALLY PASSED, which they were not before.
+            // FightSession took its defaults, so IsBossFight was false in every
+            // fight the game could reach -- and OnFightEnded gates
+            // RecordBossKill on it, so no boss kill was ever recorded and the
+            // run settled without paying for any of them. EnemyKit took the
+            // same false for isElite, so elite rooms fielded ordinary kits.
+            var built = FightEncounterAdapter.Build(
+                roster.PartyIds, roster.EnemyIds, roster.Rng,
+                isBoss: roster.IsBoss,
+                isElite: roster.IsElite,
+                relicIds: run.relicIds,
+                depthStep: run.step);
+
+            if (built == null) return null;
+
+            // Damage taken in earlier rooms, carried in. Applied after the
+            // build because the adapter constructs from definitions and knows
+            // nothing about a descent.
+            RunEncounter.ApplyStartingHealth(built.Party, roster.PartyIds, roster.StartingHealth);
+            return built;
+        }
+
+        // The tooling's fight. Unchanged, and deliberately still art-filtered:
+        // its whole purpose is a stage that can be LOOKED at, which a party of
+        // fallback plates defeats.
+        private FightEncounterAdapter.BuiltFight BuildPlaceholderFight()
         {
             // The first character WITH BATTLE ART, not simply the first. Most of
             // the roster has no sprite authored yet, and this bootstrap exists so
@@ -122,9 +178,13 @@ namespace PrincesPalace
             // the enemies — they are fully constructed by then. That gap is
             // how DifficultyCurve came to be scaling rewards and nothing else
             // while its own header claimed it scaled enemy stats.
+            // No relics and no depth: this path only runs when there is no run
+            // to have drafted any or to be at a depth. Those two arguments used
+            // to read the run defensively, which read as though a run could
+            // reach here -- one can't, and BuildRoomFight is where it goes.
             return FightEncounterAdapter.Build(party, enemies, new SeededRandom((ulong)seed),
-                relicIds: RunManager.HasRun ? RunManager.Run.relicIds : null,
-                depthStep: RunManager.HasRun ? RunManager.Run.step : 0);
+                relicIds: null,
+                depthStep: 0);
         }
 
         private static bool HasArt(CharacterDefinition definition) =>
@@ -160,6 +220,18 @@ namespace PrincesPalace
             // death screen under-report the most dramatic fight in it, which is
             // the one fight the player most wants described.
             RunLedger.Fold(run, session?.Ledger);
+
+            // HP CARRIED FORWARD, also before the win check, and for a related
+            // reason: a loss ends the run through EndRun below, and the defeat
+            // screen reports on the squad that just died. Writing health back
+            // only on a win would leave that screen reading whatever the party
+            // had walked IN with.
+            //
+            // This is the other half of ApplyStartingHealth. Nothing in v2
+            // wrote party health back before it, so every room opened at full
+            // regardless of what the last one cost -- which also left Rest
+            // rooms with nothing to restore even once they resolve again.
+            RunEncounter.WriteBackHealth(run, session);
 
             var payout = won ? session?.Payout : null;
             RunLedger.RecordRoom(run, won,
