@@ -83,6 +83,32 @@ namespace PrincesPalace.Domain.UiKit
         // peek at rooms that do not exist yet.
         public static readonly UiString MapFog = UiString.Define("map.fog", "THE WOOD\nCONTINUES");
 
+        // What the room the party just walked into did.
+        //
+        // Every non-fight room says something, INCLUDING the ones with no
+        // content behind them yet. That is v1's rule and it is worth restating:
+        // a room that does nothing without explaining itself reads as a bug,
+        // and v2 had regressed to exactly that -- entering a treasure room
+        // cleared it in silence.
+        //
+        // "Gold", not v1's "Embers". v1's treasure text said Embers while
+        // crediting run gold; in v2 those are two different currencies (gold
+        // is spent inside a descent, embers survive it), so the old copy would
+        // now name the wrong one.
+        public static readonly UiString MapRoomTreasure =
+            UiString.Define("map.room.treasure", "You found a stash of {0} Gold.",
+                "You found a stash of 999 Gold.");
+        public static readonly UiString MapRoomRest =
+            UiString.Define("map.room.rest", "The squad rests, and recovers to full health.");
+        public static readonly UiString MapRoomShop =
+            UiString.Define("map.room.shop", "A trader waits here. (In-run shops are not built yet.)");
+        public static readonly UiString MapRoomEvent =
+            UiString.Define("map.room.event", "Something stirs here. (Events are not built yet.)");
+        public static readonly UiString MapRoomItem =
+            UiString.Define("map.room.item", "Something glints here. (Item rooms are not built yet.)");
+        public static readonly UiString MapRoomEmpty =
+            UiString.Define("map.room.empty", "The room is empty.");
+
         public static readonly UiString Play = UiString.Define("play", "Play");
         public static readonly UiString Options = UiString.Define("options", "Options");
         public static readonly UiString Exit = UiString.Define("exit", "Exit");
@@ -359,6 +385,8 @@ namespace PrincesPalace.Domain.UiKit
             DetailStatCost, DetailStatPower, DetailStatTarget, DetailStatEffect,
             TargetPrompt,
             MapTitle, MapDepth, MapGold, MapAbandon, MapFog,
+            MapRoomTreasure, MapRoomRest, MapRoomShop, MapRoomEvent,
+            MapRoomItem, MapRoomEmpty,
             HubWallet, HubBeginDescent, HubResumeFloor,
             OverlayCount, OverlayPlus, OverlayPage,
             OverlayEquip, OverlayUnequip, OverlayCannotWear, OverlayBagEmpty,

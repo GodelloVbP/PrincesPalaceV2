@@ -397,13 +397,51 @@ authoring gate, and it is not the same question as "is a status type set".**
 one whether anyone meant it or not. Reading the flag is what stops every monster
 in the game inflicting the first entry.
 
-`FightBootstrap` starts a fight when the scene opens -- a placeholder for the
-descent, and it says so. It picks the first character and first three monsters
-**that have battle art**, not simply the first of each: most of the roster has no
-sheet authored, and this exists so the screen can be looked at. (Filtering on art
-also sidesteps `sortOrder` being unset across all of enemies.json, which would
-otherwise make "the first three" mean Resources.LoadAll's incidental order --
-CLAUDE.md gotcha 4.)
+`FightBootstrap` starts a fight when the scene opens, and takes **one of two
+paths** depending on whether a descent is happening.
+
+*In a run*, `BuildRoomFight` asks `RunEncounter` what this room contains: the
+whole surviving squad (`EncounterRoll.FieldableParty`, which drops anyone
+recorded at 0 HP) against enemies rolled by `EncounterRoll.Roll` from a stream
+keyed to `(runSeed, Fight, step, currentNodeId)`. Position keys the stream, not
+a fight counter, so the same room fields the same monsters across a quit and
+reload rather than rerolling for an easier draw. Boss rooms field the run's
+declared `bossEnemyId`; elite rooms field two; ordinary rooms one or two from
+the non-boss pool.
+
+*With no run*, `BuildPlaceholderFight` still picks the first character and first
+three monsters **that have battle art**. That path is the tooling's, not the
+game's: opening the Fight scene directly has to produce a stage that looks the
+same every time or `screenshot.ps1` cannot compare captures. (Filtering on art
+also sidesteps `sortOrder` being unset across all of enemies.json -- CLAUDE.md
+gotcha 4. The in-run path deliberately does **not** filter on art, or
+enemies.json would decide the encounter table by which sheets were finished.)
+
+### Rooms that are not fights (`RoomResolution`, `RoomResolver`)
+
+`MapController.Walk.cs`'s `Arrive` sends fight rooms to the Fight scene and
+hands everything else to `RoomResolver.Resolve`, which applies what
+`RoomResolution.Resolve` decided: treasure pays 15-30 gold from a `Treasure`
+stream keyed to the node (so re-entering finds the same stash), rest restores
+the whole squad to `EffectiveStats().maxHealth`, and Shop/Event/ItemSpawn/
+Unknown clear while **saying** they are unbuilt.
+
+That last part is a rule, not a courtesy: a room that does nothing without
+explaining itself reads as a bug, and v2 had regressed to exactly that. The map
+shows the line through `MapRoomMessageLabel`, and `RoomResolver.TryMessage`
+hands back a `UiString` plus args rather than finished text because
+`UiKitLintTests` fails the build on a direct `.text` assignment.
+
+Party HP persists in `RunSnapshot.currentHealth`, written by
+`RunEncounter.WriteBackHealth` on the way out of every fight and read by
+`ApplyStartingHealth` on the way into the next. Nothing wrote it before; every
+room opened at full health, which also left Rest with nothing to restore.
+
+> The screen table at the top of this file still names v1's
+> `SceneBuilder.Map.cs`, `DescentMapView.cs` and `GameplayManager.cs`, none of
+> which exist in v2 -- screens are declared in `Domain/UiKit/Screens/` and wired
+> in `ScreenRegistry.cs`. Recorded rather than rewritten here because it is a
+> whole-table job, not a line.
 
 **Frame stepping** closes the last gap. A beat now walks its actor through the
 sheet: frames `[0, impact)` before the blow, `[impact, count)` after, both at the

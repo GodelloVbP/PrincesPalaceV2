@@ -165,14 +165,24 @@ namespace PrincesPalace
         {
             if (!RunManager.MoveTo(target.Id)) return;
 
-            // Only rooms that are FIGHTS lead anywhere yet. The rest are screens
-            // that do not exist, so the party arrives and the map redraws rather
-            // than loading an empty scene.
+            // A fight IS a screen, so it is the one room that leads somewhere.
+            // It clears itself on the way out, through the reward path.
+            //
+            // The message is cleared FIRST: the fight scene loads over this one
+            // and the map is rebuilt on return, so a stash line left standing
+            // would reappear under whatever room came next.
             if (IsFight(target.Type))
             {
+                RoomResolver.Reset();
                 Navigation.Go(Navigation.Fight);
                 return;
             }
+
+            // Everything else resolves HERE and the map redraws, which is where
+            // the next choice lives anyway. This used to be a bare
+            // ClearCurrentRoom: treasure paid nothing, rest healed nobody, and
+            // the room cleared without saying anything had happened.
+            RoomResolver.Resolve(RunManager.Run, target.Type);
 
             RunManager.ClearCurrentRoom();
             Refresh();

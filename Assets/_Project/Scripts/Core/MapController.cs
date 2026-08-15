@@ -39,6 +39,10 @@ namespace PrincesPalace
         [SerializeField] internal Image[] trailSegments;
         [SerializeField] internal TMP_Text depthLabel;
         [SerializeField] internal TMP_Text goldLabel;
+
+        // What the room the party just walked into did. Empty between rooms,
+        // rather than left showing the last one's result under a new heading.
+        [SerializeField] internal TMP_Text roomMessageLabel;
         [SerializeField] internal Button abandonButton;
 
         // The painted room icons. Bound by the wiring step rather than loaded
@@ -140,6 +144,21 @@ namespace PrincesPalace
 
             depthLabel.Set(UiStrings.MapDepth, RunManager.Run.step, RunManager.Run.floor);
             goldLabel.Set(UiStrings.MapGold, RunManager.Run.gold);
+
+            // Painted from the LAST resolved room, which Arrive has already
+            // written by the time this runs. A fight clears it on the way out,
+            // so a stash line cannot survive under a room that did not pay it.
+            //
+            // Hidden rather than blanked when there is nothing to say: an empty
+            // label is still a box the text-fit audit has to reason about, and
+            // a stale-looking gap under the depth line reads as a missing
+            // string rather than as a room that had nothing to report.
+            if (roomMessageLabel != null)
+            {
+                bool hasMessage = RoomResolver.TryMessage(RoomResolver.Last, out var message, out var args);
+                SetActive(roomMessageLabel.gameObject, hasMessage);
+                if (hasMessage) roomMessageLabel.Set(message, args);
+            }
 
             LayoutWood(map.DepthCount);
 

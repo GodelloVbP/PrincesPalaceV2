@@ -132,6 +132,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef DepthLabel;
         public NodeRef GoldLabel;
         public NodeRef AbandonButton;
+        public NodeRef RoomMessageLabel;
 
         // Anchored to the content rect's LEFT edge, which is the origin every
         // MapLayout x is measured from. Declared once here so no construction
@@ -155,10 +156,25 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var abandon = Ui.Button("AbandonRunButton", UiStrings.MapAbandon, new UiVec(240f, 60f), 16,
                 Place.At(-800f, 452f));
 
+            // What the room the party just walked into did.
+            //
+            // Sits UNDER the depth line rather than over the wood, because it
+            // is a heading about the descent's state and not a label on
+            // anything in the scene. 900 wide at y 364 clears depth's band
+            // (387-421) with room to spare; the treasure template's worst-case
+            // sample is what E1 measures the box against.
+            //
+            // Sized for the longest line any room can produce -- the unbuilt
+            // shop's apology -- so a placeholder message cannot overflow a box
+            // fitted to the short ones.
+            var roomMessage = Ui.Label("MapRoomMessageLabel", UiStrings.MapRoomShop,
+                new UiVec(900f, 32f), 18, "#C8BBE4", Place.At(0f, 364f));
+
             screen.TitleLabel = title;
             screen.DepthLabel = depth;
             screen.GoldLabel = gold;
             screen.AbandonButton = abandon;
+            screen.RoomMessageLabel = roomMessage;
 
             // The painted forest, repeated. Tiles are 1920 wide and repeat
             // every 1726, so consecutive tiles overlap by 194 -- the art's own
@@ -201,7 +217,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // Viewport FIRST so the headings and the abandon button draw over
             // the scrolling wood rather than under it.
             screen.Root = Ui.Panel("MapPanel", UiSize.Fixed(1920f, 1080f),
-                viewport, title, depth, gold, abandon);
+                viewport, title, depth, gold, abandon, roomMessage);
 
             return screen;
         }

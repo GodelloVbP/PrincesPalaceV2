@@ -498,6 +498,7 @@ public static class ScreenRegistry
                 map.trailSegments = screen.TrailSegments.Select(result.Image).ToArray();
                 map.depthLabel = result.Tmp(screen.DepthLabel);
                 map.goldLabel = result.Tmp(screen.GoldLabel);
+                map.roomMessageLabel = result.Tmp(screen.RoomMessageLabel);
                 map.abandonButton = result.Button(screen.AbandonButton);
 
                 // The painted room icons. Bound here rather than in the
