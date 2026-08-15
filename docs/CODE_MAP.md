@@ -6,7 +6,7 @@ restructure split `SceneBuilder.cs` and `FightController.cs` into
 per-topic partial-class files.
 
 **Update rule: adding a screen, system, or partial-class part file without
-touching this map is an incomplete change.** See `docs/WORKFLOW.md` §9's
+touching this map is an incomplete change.** See `docs/WORKFLOW.md` §11's
 doc update-rules index.
 
 ---
@@ -156,7 +156,7 @@ usage text in sync with it), `EnemySpriteImportPostprocessor.cs`,
 `Resources/Characters` AND `Resources/Spells` — anything runtime-loaded as a
 Sprite must be listed there or it silently loads as null), `PanelPreview.cs`.
 
-`tools/` (all PowerShell/Python, see `docs/WORKFLOW.md` §7 for when to use
+`tools/` (all PowerShell/Python, see `docs/WORKFLOW.md` §8 for when to use
 which):
 - `run_tests.ps1` — original serial full-suite runner, still works
 - `run_tests_parallel.ps1` — the "before committing" runner (~90-100s), two

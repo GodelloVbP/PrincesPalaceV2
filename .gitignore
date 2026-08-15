@@ -9,9 +9,14 @@ UserSettings/
 MemoryCaptures/
 Recordings/
 
-# Test + tooling output.
+# Test + tooling output. The bare *.log catches the batchmode transcripts that
+# land at the repo root (test-run.log, scene-build.log, content-build.log and
+# the ad-hoc e1/m5/tmp-bootstrap ones) - nine of them had accumulated untracked,
+# which is exactly the debris a banned `git add -A` would have swept into a
+# commit. Nothing tracked matches, so this hides no history.
 test-results*.xml
 tools/screenshots/
+*.log
 
 # IDE
 .vs/

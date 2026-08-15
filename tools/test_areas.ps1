@@ -151,7 +151,13 @@ function Get-AreaOrphans {
 # guessing -- see Resolve-ChangedPaths. Silently running a subset because a
 # source file had no mapping is exactly the "suite that quietly tests less
 # than it claims" failure this whole file exists to prevent.
-$ChangedIgnore = '^(docs/|\.claude/|\.gitignore$|.*\.md$|.*\.meta$|tools/timings\.json$)'
+# tools/githooks/ is listed here rather than falling through to the tools/ rule
+# below, and it is the one exception to "anything under tools/ forces the full
+# suite". Those scripts are git plumbing -- a pre-commit gate and a PreToolUse
+# staging guard. They are not on any path Unity compiles, loads or executes, so
+# no arrangement of them can change a test result. The tools/ rule exists for
+# scripts that drive the suite itself, which these do not.
+$ChangedIgnore = '^(docs/|\.claude/|\.gitignore$|\.gitattributes$|tools/githooks/|.*\.md$|.*\.meta$|tools/timings\.json$)'
 $ChangedFullSuite = '^(tools/|Packages/|ProjectSettings/|Assets/_Project/Scripts/[^/]+\.asmdef$|Assets/_Project/Scenes/)'
 
 # An ORDERED array, not a hashtable -- @{} enumerates in arbitrary order in
@@ -222,6 +228,13 @@ $PathAreas = @(
     @{ Pattern = '^Assets/_Project/Resources/Audio/';   Areas = @('ui') }
     @{ Pattern = '^Assets/_Project/Resources/Content/'; Areas = @('content') }
     @{ Pattern = '^Assets/_Project/Art/';         Areas = @('art') }
+    # TMP font assets. 'ui' rather than 'art': the thing that breaks when one
+    # of these changes is text metrics -- a re-baked atlas shifts glyph
+    # advances, so a label that fitted its box stops fitting -- and it is
+    # UiAudit's overflow check in the ui suite that catches it, not anything
+    # in art. Was UNMAPPED, which failed -Changed loudly the moment the
+    # ChakraPetch SDF asset was touched.
+    @{ Pattern = '^Assets/_Project/Fonts/';       Areas = @('ui') }
 )
 
 # Every changed file (tracked modifications against HEAD, plus untracked

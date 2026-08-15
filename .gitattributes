@@ -1,0 +1,59 @@
+# Line endings and binary classification.
+#
+# Why this file exists: without it, how every text file in this repo is stored
+# and checked out depends on each machine's `core.autocrlf`, which is a local
+# setting nothing in the repo controls. Two checkouts with different values
+# produce whole-file diffs against each other for reasons that have nothing to
+# do with the content.
+#
+# `text=auto` pins the behaviour this repo already has: git normalises to LF in
+# the object store and restores the platform's endings on checkout. Unity on
+# Windows writes CRLF for scenes, ScriptableObjects and .meta, and every file in
+# the working tree is CRLF today, so this is a no-op on the current tree - it
+# just stops being a no-op that happens to be true by accident.
+#
+# Deliberately NOT `eol=lf`. Forcing LF into the working tree would flip every
+# file once, Unity would rewrite them to CRLF on the next import, and the repo
+# would churn forever. The one-time cost is not the problem; the permanent
+# rewrite loop is.
+#
+# Note this does not explain the huge scene diffs. Those are real: a full
+# SceneBuilder regeneration reassigns every fileID, which rewrites most lines of
+# the YAML. See CLAUDE.md, "scenes are generated".
+* text=auto
+
+# Shell scripts are the one place eol=lf is mandatory rather than harmful. A
+# CRLF checkout makes the shebang read as `/bin/sh\r`, and the script dies with
+# "bad interpreter" naming an interpreter that does not exist. Nothing rewrites
+# these files afterwards, so pinning them costs nothing - unlike the Unity YAML
+# above, which Unity would immediately convert back.
+tools/githooks/* text eol=lf
+*.sh            text eol=lf
+
+# Unity YAML. Explicit so a future `eol` rule can never catch them by accident.
+*.unity   text
+*.prefab  text
+*.asset   text
+*.meta    text
+*.mat     text
+*.anim    text
+*.controller text
+
+# Binaries: never diffed, never converted. Git guesses right on these today;
+# saying so removes the guess.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.psd  binary
+*.tga  binary
+*.gif  binary
+*.ico  binary
+*.wav  binary
+*.mp3  binary
+*.ogg  binary
+*.ttf  binary
+*.otf  binary
+*.fbx  binary
+*.dll  binary
+*.pdb  binary
+*.unitypackage binary

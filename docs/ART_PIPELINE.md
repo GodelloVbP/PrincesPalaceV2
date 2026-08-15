@@ -300,7 +300,7 @@ into a demonstrable before/after rather than an assertion.
    `Processed/` file.
 3. Rebuild content and/or scenes as needed:
    `run_tests_parallel.ps1 -BuildContent -BuildScenes` — this is also what
-   syncs the regenerated `.meta`s back to main (see `docs/WORKFLOW.md` §8).
+   syncs the regenerated `.meta`s back to main (see `docs/WORKFLOW.md` §9).
 4. Commit the `.png` **and** its `.meta` together.
 5. After a TestRunner build, double-check `Art/` actually diffed back to
    main — `LoadSprite` flips a texture's importer settings and can generate
