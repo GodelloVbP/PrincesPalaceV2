@@ -163,9 +163,11 @@ purpose — several findings are design decisions that belong to the author.
 
 ## Conventions
 
-- **State the intent before non-trivial work**: what changes, what must not
-  change, and how we will know it worked. Three lines, cheap to veto. See
-  `docs/WORKFLOW.md` §2.
+- **Challenge the ask, then state the intent.** First: does this actually help?
+  Say the concern in a sentence and keep building — the rule fires the moment
+  you notice something is wrong and are about to conclude it is fine. Then
+  three lines, cheap to veto: what changes, what must not change, and how we
+  will know it worked. See `docs/WORKFLOW.md` §2.
 - Commit messages explain *reasoning and tradeoffs*, not just the change — the
   git log is the real history of this project, deliberately, because chat
   context does not survive. Match that standard.

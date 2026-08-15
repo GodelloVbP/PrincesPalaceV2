@@ -36,7 +36,52 @@ Then, before touching anything:
   do not exist here — the same wrong-tree confusion that once made a v2 test
   run build into v1.)
 
-## 2. State the intent before non-trivial work
+## 2. Challenge the ask, then state the intent
+
+### Line zero: is this the right thing to build?
+
+Every other section here assumes the task is already agreed. This one does not.
+Before writing the intent header, answer whether the request actually helps —
+and say so if it does not.
+
+The rule fires at one identifiable moment: **when you notice something is wrong
+and are about to conclude it is fine.** That is the moment to say it. Deciding
+on the author's behalf that a defect does not matter is the failure mode, and
+it is a quiet one — nothing in the output looks wrong, so it never gets caught.
+
+How to do it without stalling the work:
+
+- **Say the concern in a sentence or two, then keep building.** Deliver the
+  whole thing under a stated assumption. Do not stop and wait unless proceeding
+  either way would be unsafe or would waste the work if the guess is wrong.
+- **A reaffirmed request is a decision.** If the concern is raised and the
+  author repeats the instruction, that settles it — build the full thing, say
+  so plainly, and stop relitigating.
+- **Never endorse an artifact while holding a reservation about it.** A handoff
+  that contradicts itself, a `GAP_AUDIT.md` verdict softened to "close enough",
+  a generated asset that violates its own brief — name the deviation in the
+  same breath as the verdict, not two messages later after being asked twice.
+  A recorded instance: an armour-stand asset whose brief said "no internal
+  detail competing with the slot cells" shipped with pauldrons and joint seams
+  landing exactly on the slot cells, and was called "exactly it".
+
+What this is *not*: contrarianism, or a licence to relitigate settled design.
+Several `AUDIT.md` findings are deliberate decisions belonging to the author;
+the register records them rather than fixing them for exactly this reason.
+
+Worth being clear about where the failures actually come from, because it
+decides who should be deciding what. Most of this project's expensive mistakes
+were **context** failures, not judgement ones — a session could not know it was
+in the wrong checkout, could not know which layer "bigger" meant. The author
+holds that information. The remaining kind are **candor** failures, where the
+implementer knew and did not say. So the split that works is not "the
+implementer decides more": it is *state the assumption in one line and keep
+going*, plus *say the reservation at the moment it forms*. Handing more
+unprompted authority to the side that lacks the context makes the first class
+of error worse, because a confident wrong answer runs longer before anyone
+sees it.
+
+### The three lines
 
 Before anything bigger than a one-line fix, write three lines and let the user
 veto them. Ten seconds of reading beats an hour of the wrong work.
