@@ -1,21 +1,23 @@
 # Prince's Palace — v2. THIS is the live project.
 
-> ## Before your first edit: confirm which tree you are in
+> ## One Prince's Palace under `C:\Games\`, and this is it
 >
-> | | |
-> |---|---|
-> | `C:\Games\Prince's Palace-v2` | **live. Work here.** |
-> | `C:\Games\Prince's Palace` | v1. Abandoned. Read for history, never edit. |
+> v1 was moved out on 2026-08-15, to
+> `C:\Games\Backup Princes palace\Prince's Palace` along with its two
+> TestRunner copies. Tab-completing `Prince` under `C:\Games\` can now only
+> reach this tree. That move is the actual fix; the warnings that used to fill
+> this box were compensating for the two trees being siblings, and could only
+> ever be read *after* the wrong one had already been opened.
+>
+> If you are ever in a Prince's Palace tree and unsure which:
 >
 > ```bash
 > test -d Assets/_Project/Scripts/Domain/UiKit && echo "v2 - correct" || echo "STOP: this is v1"
 > ```
 >
-> Nothing inside v1 tells you it is stale — its own `CLAUDE.md` reads as
-> authoritative from the inside. A full session has already been lost to this,
-> and a session has opened in v1 *after* both banners went up: see
-> `docs/INCIDENTS.md`. If your working directory is v1, stop and say so rather
-> than working around it.
+> v1 is kept for reading history and migration only — never edit it. Nothing
+> inside it says it is stale, which cost a full session once and nearly cost
+> another even after both trees carried warnings. See `docs/INCIDENTS.md`.
 
 Unity 6 (6000.5.7f1) on URP with a Renderer 2D, C#, turn-based roguelike
 dungeon crawler. uGUI with **TextMeshPro** (`TMP_Text`/`Button`/`Image`).

@@ -30,10 +30,25 @@ What made it possible is that **nothing inside v1 says it is stale**. Its own
 one and never mentioned v2, so from the inside it read as authoritative. Both
 files now carry a banner naming the other tree.
 
-The banners are a partial fix and worth being honest about: they are read
+The banners were a partial fix and worth being honest about: they are read
 *after* the working directory has already been chosen. On 2026-08-15 a session
 opened in v1 again, three days later, with the banner in place. What caught it
 that time was the memory index, not the banner.
+
+**Resolved, mechanically, later that same day.** v1 was moved out of
+`C:\Games\` to `C:\Games\Backup Princes palace\Prince's Palace`, together with
+its `-TestRunner` and `-TestRunner2` copies. `C:\Games\` now holds exactly one
+Prince's Palace, so tab-completing the shorter name cannot land in the wrong
+tree — the two checkouts being siblings under one parent was the whole
+mechanism, and no amount of documentation inside either of them could address
+it. This is the pattern the rest of this file keeps arriving at: a rule that
+can only be read after the mistake has been made is not a control.
+
+A related piece of debris from the same era, left in place and worth
+recognising if it turns up again: `C:\Games\Prince's` is a 2.4 KB truncated
+Unity batchmode log, not a directory. Something redirected output to a path
+under `C:\Games\Prince's Palace\` without quoting it, so the shell split the
+argument at the space and created a file named after the first half.
 
 The tooling has been bitten by the same confusion: `run_tests_parallel.ps1` once
 named v1's TestRunner directories, which meant a v2 test run built into and
