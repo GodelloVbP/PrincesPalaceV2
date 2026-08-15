@@ -153,26 +153,54 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator AColumnIsCentredOnItsRealWidth()
+        public IEnumerator EveryRoomStandsInAPaintedClearing()
         {
-            // The tree placed every node at the position a FULL column would put
-            // it in; the controller re-anchors through the same MapLayout.RowY.
-            // A two-room column has to sit centred rather than leaving a gap
-            // where the third would have been.
+            // REVERSES what this test used to assert. It previously required a
+            // short column to sit CENTRED, which was right while the backdrop
+            // was being stretched flat behind an evenly-divided track and has
+            // been wrong since it started tiling: the canopy has holes punched
+            // in it at three fixed heights, and a centred column of one would
+            // stand between two of them.
             yield return OpenTheMap();
 
             var descent = RunManager.Map;
-            var narrow = Enumerable.Range(0, MapLayout.Columns)
-                .Select(d => descent.AtDepth(d).ToList())
-                .FirstOrDefault(c => c.Count == 1);
 
-            Assert.IsNotNull(narrow, "every leg has at least one single-room column");
+            for (int depth = 0; depth < MapLayout.Columns; depth++)
+            {
+                var column = descent.AtDepth(depth).ToList();
+                for (int slot = 0; slot < column.Count && slot < MapLayout.Rows; slot++)
+                {
+                    var rect = (RectTransform)Named($"MapNode{MapLayout.IndexFor(depth, slot)}").transform;
 
-            var node = narrow[0];
-            var rect = (RectTransform)Named($"MapNode{MapLayout.IndexFor(node.Depth, 0)}").transform;
+                    Assert.AreEqual(MapLayout.ClearingRowY[slot], rect.anchoredPosition.y, 0.01f,
+                        $"depth {depth} slot {slot} is not standing in its clearing");
+                    Assert.AreEqual(MapLayout.ColumnX(depth), rect.anchoredPosition.x, 0.01f,
+                        $"depth {depth} slot {slot} is not in its column");
+                }
+            }
+        }
 
-            Assert.AreEqual(0f, rect.anchoredPosition.y, 0.01f,
-                "a column of one sits on the spine");
+        [UnityTest]
+        public IEnumerator TheWoodScrollsSoTheCurrentRoomSitsOnTheLeftClearing()
+        {
+            // The "everything squished onto one page" fix, asserted where it is
+            // actually observable: against the REAL viewport width, which an
+            // EditMode solve does not have. Nine columns at the art's own pitch
+            // is ~7400 units of content, so the screen is a window over it
+            // rather than a track scaled down to fit.
+            yield return OpenTheMap();
+
+            var content = (RectTransform)Named("MapContent").transform;
+            var viewport = (RectTransform)Named("MapViewport").transform;
+
+            Assert.Greater(content.sizeDelta.x, viewport.rect.width * 2f,
+                "the leg is meant to be wider than the window, not squeezed into it");
+
+            var current = RunManager.CurrentNode;
+            float onScreen = MapLayout.ColumnX(current.Depth) + content.anchoredPosition.x;
+
+            Assert.AreEqual(MapLayout.FollowOffset, onScreen, 0.01f,
+                "the party's own room has to land on the left painted clearing");
         }
 
         [UnityTest]

@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using System.Linq;
+using PrincesPalace.Domain.Dungeon;
 using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.Domain.UiKit.Screens
@@ -12,6 +12,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // every position a leg could possibly use. That is why the pool has real
     // audited coordinates rather than the kind-based exemption: the positions
     // ARE computable, only which of them are occupied is not.
+    //
+    // It is also the one screen WIDER THAN THE CANVAS. Nine columns at the
+    // background's own clearing pitch is ~7400 units behind a 1920 window, so
+    // the shape here is viewport -> content -> everything, with the content
+    // rect sliding under a mask and the camera pinning the current room to the
+    // left painted clearing. See MapLayout for why every x is content-local.
     public sealed class MapScreen
     {
         // A FOREST FLOOR, not a nebula.
@@ -22,11 +28,78 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // top-down canopy with clearings punched through it, one per room, laid
         // out in columns. The nebula is a fine backdrop for somewhere; the
         // descent is through a wood.
+        //
+        // TILED, not stretched. It paints one pair of clearing columns, so it
+        // repeats every MapLayout.BackgroundPeriod and scrolls with the leg.
+        // Stretching it flat -- which is what this screen did until now -- put
+        // the clearings wherever the aspect happened to land them and every
+        // room stood on canopy.
         public const string BackgroundKey = "Assets/_Project/Art/Backgrounds/forest_map_background.png";
+
+        // The room tile itself: one painted tree, shared by every room, with
+        // the type icon standing in the clearing beneath its canopy. Six of the
+        // seven were committed with the backdrop and referenced by nothing for
+        // as long as this screen existed in v2.
+        public const string TreeKey = "Assets/_Project/Art/Backgrounds/Processed/map_forest_room.png";
+        public const string FightIconKey = "Assets/_Project/Art/Backgrounds/Processed/map_forest_mob.png";
+        public const string EliteIconKey = "Assets/_Project/Art/Backgrounds/Processed/map_forest_mob_elite.png";
+        public const string BossIconKey = "Assets/_Project/Art/Backgrounds/Processed/map_forest_mob_boss.png";
+        public const string RestIconKey = "Assets/_Project/Art/Backgrounds/Processed/map_forest_rest.png";
+        public const string EventIconKey = "Assets/_Project/Art/Backgrounds/Processed/map_forest_event.png";
+        public const string TreasureIconKey = "Assets/_Project/Art/Backgrounds/Processed/forest_map_chest.png";
+
+        // The one place a room type maps to painted art. Null for anything not
+        // painted yet -- Shop, Entry, ItemSpawn and Unknown show a bare tree,
+        // which is the house's graceful-degradation posture rather than a
+        // missing-sprite magenta quad.
+        public static string IconKeyFor(RoomType type)
+        {
+            switch (type)
+            {
+                case RoomType.Fight: return FightIconKey;
+                case RoomType.EliteFight: return EliteIconKey;
+                case RoomType.Boss: return BossIconKey;
+                case RoomType.Rest: return RestIconKey;
+                case RoomType.Event: return EventIconKey;
+                case RoomType.Treasure: return TreasureIconKey;
+                default: return null;
+            }
+        }
+
+        // How much of a tile's width the icon takes. Bigger rooms get a
+        // proportionally bigger icon rather than a fixed one, so an elite reads
+        // as more than a fight at a glance and not merely as a wider tree.
+        public static float IconFractionFor(RoomType type)
+        {
+            switch (type)
+            {
+                case RoomType.Boss: return 0.62f;
+                case RoomType.EliteFight: return 0.56f;
+                default: return 0.48f;
+            }
+        }
+
+        public static float TileWidthFor(RoomType type)
+        {
+            switch (type)
+            {
+                case RoomType.Boss: return MapLayout.BossTileWidth;
+                case RoomType.EliteFight: return MapLayout.EliteTileWidth;
+                default: return MapLayout.TileWidth;
+            }
+        }
 
         public UiNode Root;
 
+        // The scrolling half. The viewport is the fixed window and does the
+        // clipping; the content is the wide rect that slides under it.
+        public NodeRef Viewport;
+        public NodeRef Content;
+        public List<NodeRef> Backdrops = new List<NodeRef>();
+        public NodeRef Fog;
+
         public List<NodeRef> NodeButtons = new List<NodeRef>();
+        public List<NodeRef> NodeIcons = new List<NodeRef>();
         public List<NodeRef> NodeLabels = new List<NodeRef>();
         public List<NodeRef> NodeMarkers = new List<NodeRef>();
 
@@ -39,6 +112,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef DepthLabel;
         public NodeRef GoldLabel;
         public NodeRef AbandonButton;
+
+        // Anchored to the content rect's LEFT edge, which is the origin every
+        // MapLayout x is measured from. Declared once here so no construction
+        // site restates it and drifts.
+        private static readonly UiVec ContentEdge = new UiVec(0f, 0.5f);
+
+        private static Place OnContent(float x, float y) =>
+            Place.Pin(ContentEdge, UiVec.Centre, new UiVec(x, y));
 
         public static MapScreen Build()
         {
@@ -59,37 +140,97 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.GoldLabel = gold;
             screen.AbandonButton = abandon;
 
-            // The pool is a full-bleed CONTAINER with no graphic of its own -- it
-            // is where the nodes live, not something drawn -- so it necessarily
-            // spans the headings it shares the panel with. It cannot take their
-            // clicks because it has nothing to raycast against.
+            // The painted forest, repeated. Tiles are 1920 wide and repeat
+            // every 1726, so consecutive tiles overlap by 194 -- the art's own
+            // clearing pair is what has to line up end to end, not its canvas.
+            var backdrops = Ui.Pool("MapBackdrops", MapLayout.MaxBackgroundTiles, i => screen.BuildBackdrop(i))
+                .AsDecor()
+                .AllowOverlap("the forest tile is 1920 wide but repeats every 1726, so neighbouring tiles overlap by design - the clearings are what tile, not the canvas");
+
             var trails = Ui.Pool("MapTrails", MapLayout.SegmentCapacity, i => screen.BuildTrailSegment(i))
                 .AllowOverlap("a pool's own rect is the whole canvas because its members are placed at runtime; it draws nothing itself and takes no clicks");
 
             var nodes = Ui.Pool("MapNodes", MapLayout.Capacity, i => screen.BuildNode(i))
                 .AllowOverlap("an invisible pool container spans the panel by construction and has no graphic to intercept anything");
 
-            // TRAILS BEFORE NODES, which is the whole of their draw order: uGUI
-            // paints later siblings on top, and a path crossing over the room
-            // it leads to would read as the rooms being behind the map rather
-            // than on it.
+            var fog = screen.BuildFog();
+
+            // BACKDROP, then TRAILS, then NODES, then FOG. uGUI paints siblings
+            // in order and this is the whole back-to-front stack: a path
+            // crossing over the room it leads to would read as the rooms being
+            // behind the map rather than on it, and the fog has to cover the
+            // forest it is fading out.
+            var content = Ui.Panel("MapContent",
+                    Place.Pin(ContentEdge, ContentEdge, UiVec.Zero),
+                    UiSize.Fixed(MapLayout.ContentWidth(MapLayout.Columns, 1920f), 1080f),
+                    backdrops, trails, nodes, fog)
+                .AllowOverflow("the content rect is deliberately wider than the window it sits in - that overflow IS the scroll, and MapViewport clips it");
+
+            screen.Content = content;
+
+            // The window. Full-bleed and clipping, with no graphic of its own:
+            // it is a coordinate frame and a mask, never a surface.
+            var viewport = Ui.Panel("MapViewport", Place.Stretch(), UiSize.Fill, content)
+                .Clipping()
+                .AllowOverlap("a full-bleed viewport spans the headings it shares the panel with; it draws nothing and has no graphic to intercept a click");
+
+            screen.Viewport = viewport;
+
+            // Viewport FIRST so the headings and the abandon button draw over
+            // the scrolling wood rather than under it.
             screen.Root = Ui.Panel("MapPanel", UiSize.Fixed(1920f, 1080f),
-                Ui.Sprite("MapBackground", BackgroundKey, Place.Stretch(), UiSize.Fill).AsDecor(),
-                title, depth, gold, abandon,
-                trails, nodes);
+                viewport, title, depth, gold, abandon);
 
             return screen;
         }
 
-        // One quad of one trail. Declared at the origin with a placeholder size
-        // because a segment's real position, length and rotation all depend on
-        // which two rooms a leg happened to generate -- the same arrangement
-        // the fight screen's VFX and damage-popup pools use, and the reason the
-        // pool rather than the member carries the audit exemption.
+        // One repeat of the painted forest, pinned by its own LEFT edge so tile
+        // i starts exactly where the clearing grid says it should.
+        private UiNode BuildBackdrop(int index)
+        {
+            var tile = Ui.Sprite($"MapBackdrop{index}", BackgroundKey,
+                    Place.Pin(ContentEdge, ContentEdge, new UiVec(MapLayout.BackgroundTileX(index), 0f)),
+                    UiSize.Fixed(1920f, 1080f))
+                .AsDecor()
+                .AllowOverflow("the last tile deliberately overhangs the content it fills - a forest that stopped exactly at the content edge would show a hard cut");
+
+            // Declared ACTIVE, unlike every other pool member here, and the
+            // controller only ever hides the surplus. A wood that had to wait
+            // for a run to exist before it drew anything left the resting
+            // screenshot a black rectangle -- and a screen that renders as
+            // nothing at rest is exactly what the capture tool exists to catch,
+            // so it cannot be the normal state of this one.
+            Backdrops.Add(tile);
+            return tile;
+        }
+
+        // The fade at the end of the wood. Declared where a full-length leg
+        // puts it; the controller moves it if a leg is shorter.
+        private UiNode BuildFog()
+        {
+            var label = Ui.Label("MapFogLabel", UiStrings.MapFog, new UiVec(220f, 80f), 15, "#6B6180",
+                Place.At(60f, 0f));
+
+            var fog = Ui.Solid("MapFog", "#040503EB",
+                    OnContent(MapLayout.FogX(MapLayout.Columns) + MapLayout.FogWidth * 0.5f, 0f),
+                    UiSize.Fixed(MapLayout.FogWidth, 680f));
+
+            fog.Children.Add(label);
+
+            Fog = fog;
+            return fog;
+        }
+
+        // One straight piece of one trail. Declared at the origin with a
+        // placeholder size because a segment's real position, length and
+        // rotation all depend on which two rooms a leg happened to generate --
+        // the same arrangement the fight screen's VFX and damage-popup pools
+        // use, and the reason the pool rather than the member carries the audit
+        // exemption.
         private UiNode BuildTrailSegment(int index)
         {
             var segment = Ui.Solid($"MapTrail{index}", TrailAheadHex,
-                    new UiVec(8f, 8f), Place.At(0f, 0f))
+                    new UiVec(8f, 8f), OnContent(0f, 0f))
                 .AsDecor()
                 .Inactive();
 
@@ -111,16 +252,28 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const float TrailWidthAhead = 7f;
         public const float TrailWidthClosed = 4f;
 
+        // The per-state tile tints live in MapController, not here, and
+        // deliberately break the convention the trail colours above follow.
+        // Nothing in this tree declares a tile's resting colour -- every tile
+        // is painted by state on the first Refresh -- and "current" has to be
+        // brighter than the sprite's own colour, which a hex string cannot say
+        // and a Color above 1.0 can.
+
         private UiNode BuildNode(int index)
         {
             int depth = index / MapLayout.Rows;
             int slot = index % MapLayout.Rows;
 
-            // Built at the position a FULL column would put it in. The
-            // controller re-anchors to the real column width at runtime through
-            // the same MapLayout.RowY, which is the whole reason that function
-            // is in Domain rather than in the builder.
-            var place = Place.At(MapLayout.ColumnX(depth), MapLayout.RowY(MapLayout.Rows, slot));
+            // The REAL position, not an approximation the controller corrects.
+            // Rows snap to painted clearings by slot, so a node's coordinates no
+            // longer depend on how many rooms its column turned out to hold and
+            // there is nothing left to re-anchor at runtime.
+            var place = OnContent(MapLayout.ColumnX(depth), MapLayout.RowY(slot));
+
+            // Declared at the WIDEST a tile can be, because which slot holds the
+            // boss is a runtime fact. The controller shrinks it per type; the
+            // audit therefore checks a box at least as big as the real one.
+            var size = new UiVec(MapLayout.MaxTileWidth, MapLayout.MaxTileHeight);
 
             // "Name", NOT "Label". UiEmitter generates every button's own
             // caption as "<button>Label", so "MapNode3Label" produced two
@@ -128,26 +281,46 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // this one and painted it, while every lookup by name silently took
             // the emitter's empty one. Shipped undetected until UiAudit learned
             // to check for it (A4b, 2026-08-11).
-            var label = Ui.Label($"MapNode{index}Name", UiString.Runtime, new UiVec(MapLayout.NodeSize, 28f), 13,
-                    "#EDE6FF", Place.At(0f, -MapLayout.NodeSize * 0.5f - 16f))
+            var label = Ui.Label($"MapNode{index}Name", UiString.Runtime, new UiVec(MapLayout.MaxTileWidth, 28f), 13,
+                    "#EDE6FF", Place.At(0f, -size.Y * 0.5f - 16f))
                 .AllowOverflow("the caption sits BELOW its node deliberately - inside, it would cover the room icon it names");
+
+            // The type icon, standing in the clearing under the tree's canopy
+            // rather than dead centre of it -- the branches close in overhead
+            // and an icon at true centre fights them.
+            //
+            // Declared with the fight icon and swapped at runtime: which room a
+            // slot holds is exactly what the build cannot know, and a Sprite
+            // with no key at all emits an Image with no sprite, which draws as
+            // a white quad the moment anything activates it.
+            var icon = Ui.Sprite($"MapNode{index}Icon", FightIconKey,
+                    Place.At(0f, -size.Y * 0.08f),
+                    UiSize.Fixed(MapLayout.MaxTileWidth * 0.62f, MapLayout.MaxTileWidth * 0.62f))
+                .AsDecor()
+                .Inactive();
 
             // The "you are here" pip. Its own node rather than a tint on the
             // button, so the button keeps saying what KIND of room it is while
             // this says where the party is -- two facts that have to be readable
             // at once.
             var marker = Ui.Solid($"MapNode{index}Marker", "#F2DB9E",
-                    Place.At(0f, MapLayout.NodeSize * 0.5f + 14f), UiSize.Fixed(18f, 18f))
+                    Place.At(0f, size.Y * 0.5f + 14f), UiSize.Fixed(18f, 18f))
                 .AllowOverflow("the you-are-here pip sits ABOVE its node so the node keeps saying what KIND of room it is")
                 .Inactive();
 
-            var button = Ui.Button($"MapNode{index}", UiString.Runtime,
-                new UiVec(MapLayout.NodeSize, MapLayout.NodeSize), 12, place);
+            var button = Ui.Button($"MapNode{index}", UiString.Runtime, size, 12, place);
 
+            // The painted tree IS the button's plate, so the tile the player
+            // clicks and the tile they see are one graphic. Without this the
+            // emitter would put its shared gold button frame behind every room.
+            button.SpriteKey = TreeKey;
+
+            button.Children.Add(icon);
             button.Children.Add(label);
             button.Children.Add(marker);
 
             NodeButtons.Add(button);
+            NodeIcons.Add(icon);
             NodeLabels.Add(label);
             NodeMarkers.Add(marker);
 

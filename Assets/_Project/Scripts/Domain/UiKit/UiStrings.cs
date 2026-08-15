@@ -77,6 +77,11 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString MapGold =
             UiString.Define("map.gold", "{0} GOLD", "99999 GOLD");
         public static readonly UiString MapAbandon = UiString.Define("map.abandon", "Abandon Run");
+        // The hint at the fog, past the last generated column. A leg is rolled
+        // whole and nothing exists beyond it until the party reaches the
+        // boundary, so this is an honest "there is more" rather than a false
+        // peek at rooms that do not exist yet.
+        public static readonly UiString MapFog = UiString.Define("map.fog", "THE WOOD\nCONTINUES");
 
         public static readonly UiString Play = UiString.Define("play", "Play");
         public static readonly UiString Options = UiString.Define("options", "Options");
@@ -353,7 +358,7 @@ namespace PrincesPalace.Domain.UiKit
             DetailKindSkill, DetailKindItem,
             DetailStatCost, DetailStatPower, DetailStatTarget, DetailStatEffect,
             TargetPrompt,
-            MapTitle, MapDepth, MapGold, MapAbandon,
+            MapTitle, MapDepth, MapGold, MapAbandon, MapFog,
             HubWallet, HubBeginDescent, HubResumeFloor,
             OverlayCount, OverlayPlus, OverlayPage,
             OverlayEquip, OverlayUnequip, OverlayCannotWear, OverlayBagEmpty,

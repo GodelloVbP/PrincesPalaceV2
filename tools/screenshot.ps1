@@ -4,7 +4,17 @@ param(
     [switch]$Runtime,
     [switch]$SkipSync,
     [string]$OutDir,
-    [int]$TimeoutSeconds = 300
+    [int]$TimeoutSeconds = 300,
+
+    # Which PlayMode capture class -Runtime drives. Defaults to the general
+    # runtime shots; pass a class name to drive one of the screen-specific
+    # capture tests instead, e.g. -RuntimeFilter MapCaptureTests.
+    #
+    # Those classes existed before this parameter did and nothing could reach
+    # them: the filter below was a hardcoded single class, so a capture test
+    # written for one screen could only be run by hand-assembling the Unity
+    # command line. A test nothing can run is a test nobody runs.
+    [string]$RuntimeFilter = "RuntimeScreenshotTests"
 )
 
 # Headless visual QA: renders screens from the SceneBuilder-generated scenes to
@@ -137,7 +147,7 @@ if ($Runtime) {
         "-batchmode", "-silent-crashes",
         "-projectPath", "`"$TestProject`"",
         "-runTests", "-testPlatform", "PlayMode",
-        "-testFilter", "PrincesPalace.PlayModeTests.RuntimeScreenshotTests",
+        "-testFilter", "PrincesPalace.PlayModeTests.$RuntimeFilter",
         "-testResults", "`"$resultsPath`"",
         "-logFile", "`"$logPath`"",
         "-buildTarget", "StandaloneWindows64"

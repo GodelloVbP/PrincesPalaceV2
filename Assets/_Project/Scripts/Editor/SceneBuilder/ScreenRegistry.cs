@@ -486,13 +486,28 @@ public static class ScreenRegistry
             Wire = result =>
             {
                 var map = result.Attach<MapController>(screen.Root);
+                map.viewport = result.Rect(screen.Viewport);
+                map.content = result.Rect(screen.Content);
+                map.backdrops = screen.Backdrops.Select(result.Image).ToArray();
+                map.fog = result.Rect(screen.Fog);
                 map.nodeButtons = screen.NodeButtons.Select(result.Button).ToArray();
+                map.nodeIcons = screen.NodeIcons.Select(result.Image).ToArray();
                 map.nodeLabels = screen.NodeLabels.Select(result.Tmp).ToArray();
                 map.nodeMarkers = screen.NodeMarkers.Select(result.Image).ToArray();
                 map.trailSegments = screen.TrailSegments.Select(result.Image).ToArray();
                 map.depthLabel = result.Tmp(screen.DepthLabel);
                 map.goldLabel = result.Tmp(screen.GoldLabel);
                 map.abandonButton = result.Button(screen.AbandonButton);
+
+                // The painted room icons. Bound here rather than in the
+                // controller because "Assets/..." is an editor-only address and
+                // MapController lives in Core.
+                map.fightIcon = SceneBuilder.LoadSpriteByKey(MapScreen.FightIconKey);
+                map.eliteIcon = SceneBuilder.LoadSpriteByKey(MapScreen.EliteIconKey);
+                map.bossIcon = SceneBuilder.LoadSpriteByKey(MapScreen.BossIconKey);
+                map.restIcon = SceneBuilder.LoadSpriteByKey(MapScreen.RestIconKey);
+                map.eventIcon = SceneBuilder.LoadSpriteByKey(MapScreen.EventIconKey);
+                map.treasureIcon = SceneBuilder.LoadSpriteByKey(MapScreen.TreasureIconKey);
             },
         };
     }

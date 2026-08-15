@@ -6,21 +6,51 @@ namespace PrincesPalace.Domain.UiKit
     //
     // Pure arithmetic over (depth, slot), in Domain for the same reason
     // FightSubmenuLayout is: the SCREEN TREE places the node pool at build time
-    // and the CONTROLLER re-anchors it per leg at runtime, and those two must be
-    // the same function or the map drifts from what it claims.
+    // and the CONTROLLER reads the same numbers at runtime, and those two must
+    // be the same function or the map drifts from what it claims.
     //
     // A leg is DefaultDepth columns of at most MaxColumnWidth rows, so the pool
     // is that product and every position is computable without a map in hand --
     // which is what lets the tree be built and audited before any run exists.
+    //
+    // EVERY x HERE IS CONTENT-LOCAL, measured from the scrolling content rect's
+    // own LEFT edge, not from the panel's centre like the rest of the game's
+    // screens. The map is the one screen wider than the canvas: nine columns at
+    // a fixed pitch is ~7400 units of content behind a 1920 window, and a
+    // centre-relative coordinate would have to know the leg's length to mean
+    // anything. Nodes are pinned to that left edge (Place.Pin at anchor 0,0.5)
+    // so a column's position is the same number whatever the leg does.
     public static class MapLayout
     {
-        public const float NodeSize = 92f;
+        // THE PAINTED CLEARINGS, measured off forest_map_background.png rather
+        // than chosen -- the art is a top-down canopy with holes punched
+        // through it, and a room has to stand in a hole. Two clearing columns
+        // and three clearing rows per tile of background; the tile repeats
+        // every BackgroundPeriod, which is what carries the grid past column 1.
+        //
+        // This is why the backdrop and the scrolling are one change and not
+        // two: the camera pins the current room at ClearingColumnX[0] (see
+        // FollowOffset), which is the ONLY reason rooms land on clearings at
+        // all. Stretch the art flat behind a centred track, as this screen did
+        // until now, and every room stands on canopy.
+        public static readonly float[] ClearingColumnX = { 520f, 1383f };
+        public static readonly float[] ClearingRowY = { 322f, 11f, -302f };
 
-        // Column pitch is derived from the width the leg has to fit into rather
-        // than authored, so a change to DefaultLegLength cannot silently push
-        // the last column off the screen.
-        public const float TrackWidth = 1500f;
-        public const float TrackHeight = 460f;
+        public static float ColumnGap => ClearingColumnX[1] - ClearingColumnX[0];
+
+        // A room tile is the painted tree plus its icon. Portrait, not square:
+        // trees read taller than wide, so the bonus is height only and the
+        // three widths stay widths.
+        public const float TileWidth = 100f;
+        public const float EliteTileWidth = 118f;
+        public const float BossTileWidth = 142f;
+        public const float TileHeightBonus = 30f;
+
+        // The widest a tile can be, which is what the declared pool has to
+        // reserve: the tree is built before any run exists and cannot know
+        // which slot the boss will land in.
+        public const float MaxTileWidth = BossTileWidth;
+        public const float MaxTileHeight = BossTileWidth + TileHeightBonus;
 
         public static int Columns => DescentMapGenerator.DefaultDepth;
         public static int Rows => DescentMapGenerator.MaxColumnWidth;
@@ -33,23 +63,101 @@ namespace PrincesPalace.Domain.UiKit
         // a range rather than a scan.
         public static int IndexFor(int depth, int slot) => depth * Rows + slot;
 
-        public static float ColumnX(int depth)
+        public static float ColumnX(int depth) => ClearingColumnX[0] + depth * ColumnGap;
+
+        // Rows SNAP to a painted clearing by slot index -- they are not spread
+        // evenly, and a short column is not centred.
+        //
+        // This reverses what this file did before, and the reason is the art:
+        // MaxColumnWidth is exactly 3 and there are exactly 3 clearing rows, so
+        // slot 0/1/2 IS the clearing to stand in. A centred two-room column
+        // would sit at two positions the canopy has no holes at -- which is the
+        // failure the old comment here ("centring is what makes a fork read as
+        // a fork") could not see, because it was written against a backdrop
+        // that was being stretched flat and had no clearings to miss.
+        //
+        // A column of two therefore leaves its unused clearing empty, including
+        // the middle one, with no special case for it.
+        public static float RowY(int slot)
         {
-            if (Columns <= 1) return 0f;
-            return -TrackWidth * 0.5f + TrackWidth * depth / (Columns - 1);
+            if (slot < 0) return ClearingRowY[0];
+            return slot < ClearingRowY.Length ? ClearingRowY[slot] : ClearingRowY[ClearingRowY.Length - 1];
         }
 
-        // Rows are CENTRED on the track, so a column of one sits on the spine
-        // and a column of three spreads either side of it. Centring per column
-        // rather than top-aligning is what makes a fork read as a fork rather
-        // than as a branch hanging off the main line.
-        public static float RowY(int slotCount, int slot)
-        {
-            if (slotCount <= 1) return 0f;
+        // ---- the scrolling window ----------------------------------------
 
-            float pitch = TrackHeight / (Rows - 1);
-            float span = pitch * (slotCount - 1);
-            return span * 0.5f - pitch * slot;
+        // Where the CURRENT room sits, measured from the viewport's own left
+        // edge, once the camera has caught up to it.
+        //
+        // Tied to the left clearing rather than chosen: Scroll() pins the
+        // current room to this exact screen offset whatever its depth, so for
+        // it to land ON the left painted clearing -- and, by the same fixed
+        // ColumnGap stride, for the column it is choosing into to land on the
+        // right one -- this has to be the left clearing's own x. Any other
+        // value reintroduces the rooms-versus-clearings mismatch.
+        public static float FollowOffset => ClearingColumnX[0];
+
+        // The background art paints ONE pair of clearings, so it repeats every
+        // two columns. Tiling rather than stretching wider art is what lets a
+        // leg of any length stay aligned without needing bigger source art.
+        public static float BackgroundPeriod => ColumnGap * 2f;
+
+        // Ceiling rather than an exact fit, so a longer leg (a test-only leg
+        // length) warns instead of silently running out of forest.
+        public const int MaxBackgroundTiles = 8;
+
+        public static int BackgroundTilesFor(int depthCount) =>
+            depthCount <= 0 ? 0 : (depthCount + 1) / 2;
+
+        public static float BackgroundTileX(int index) => index * BackgroundPeriod;
+
+        // How far past the last column the "the wood continues" fade sits.
+        public const float FogMargin = 340f;
+
+        // The fog's own width, and the gap it leaves after the last tile.
+        public const float FogWidth = 520f;
+
+        // RE-DERIVED, not ported. v1 put the fog's left edge at
+        // (depthCount - 1) * ColumnGap + TileSize / 2 -- which is measured from
+        // the content's left edge while the last COLUMN is at
+        // ClearingColumnX[0] + that same span. The fog therefore started 470
+        // units short of the boss and, being 520 wide and opaque, covered it.
+        // The last column's own right edge is what "just past the last column"
+        // has to mean.
+        public static float FogX(int depthCount)
+        {
+            int last = depthCount <= 0 ? 0 : depthCount - 1;
+            return ColumnX(last) + MaxTileWidth * 0.5f + FogMargin;
+        }
+
+        // Content has to be wide enough that Scroll() can carry the LAST column
+        // all the way to FollowOffset -- not merely far enough to cover the fog
+        // sitting past it. Undershooting clamps the auto-scroll short and
+        // leaves the deepest rooms parked off the right edge, unclickable and
+        // reading as "the map breaks past this point".
+        public static float ContentWidth(int depthCount, float viewportWidth)
+        {
+            // Scrolling the last column to FollowOffset means a scroll of
+            // exactly legSpan (ColumnX(last) - FollowOffset), and the clamp in
+            // Scroll() allows at most contentWidth - viewportWidth.
+            float legSpan = depthCount <= 0 ? 0f : (depthCount - 1) * ColumnGap;
+            float toReachLastColumn = legSpan + viewportWidth;
+            float toHoldTheFog = FogX(depthCount) + FogWidth;
+
+            float width = toReachLastColumn > toHoldTheFog ? toReachLastColumn : toHoldTheFog;
+            return width > viewportWidth ? width : viewportWidth;
+        }
+
+        // Auto-scroll, as a CONTENT OFFSET: what to add to content's x so the
+        // current room sits FollowOffset in from the viewport's left edge.
+        // Clamped at both ends so the camera never scrolls off its own content.
+        public static float Scroll(float currentX, float contentWidth, float viewportWidth)
+        {
+            float maxScroll = System.Math.Max(0f, contentWidth - viewportWidth);
+            float target = currentX - FollowOffset;
+            if (target < 0f) target = 0f;
+            if (target > maxScroll) target = maxScroll;
+            return -target;
         }
 
         // ---- the trails between rooms ------------------------------------
