@@ -181,5 +181,36 @@ namespace PrincesPalace.Domain.Tests
                 ConstellationLayout.SlideOffset(1, 2, 0f),
                 0.01f);
         }
+
+        // The guarantee that used to be a runtime guard.
+        //
+        // SlideProgress divided by SlideSeconds behind an `if (SlideSeconds <=
+        // 0f)` check that the compiler folded away, because the constant is
+        // positive -- CS0162, unreachable code. A guard that cannot fire is
+        // noise that hides the next real one, so it was removed and the
+        // condition it protected moved here.
+        //
+        // It protected something real: at zero the division of a zero elapsed
+        // is NaN, every comparison in the method is false against NaN, and the
+        // slide returns NaN instead of a progress. Failing here is how that
+        // stays impossible.
+        [Test]
+        public void TheSlideHasAPositiveDuration()
+        {
+            Assert.Greater(ConstellationLayout.SlideSeconds, 0f,
+                "SlideProgress divides by this -- at zero it returns NaN for a zero elapsed");
+        }
+
+        [Test]
+        public void SlideProgressStaysWithinItsRangeAndIsNeverNaN()
+        {
+            foreach (float elapsed in new[] { -1f, 0f, 0.01f, 0.21f, 0.41f, ConstellationLayout.SlideSeconds, 99f })
+            {
+                float p = ConstellationLayout.SlideProgress(elapsed);
+
+                Assert.IsFalse(float.IsNaN(p), $"NaN progress at elapsed {elapsed}");
+                Assert.That(p, Is.InRange(0f, 1f), $"out of range at elapsed {elapsed}");
+            }
+        }
     }
 }

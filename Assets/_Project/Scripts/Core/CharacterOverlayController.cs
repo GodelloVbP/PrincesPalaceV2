@@ -373,7 +373,17 @@ namespace PrincesPalace
             if (isBagCell)
             {
                 var page = BagView.Page(_sorted, _page);
-                if (index < 0 || index >= page.Count) { HideCompare(); return; }
+
+                // Bounds-checked against the CELL ARRAY as well as the page.
+                // Guarding on one collection and indexing another is how a
+                // strip sized from one list and filled from another shipped
+                // once already -- the bug UiCountAudit exists to prevent at
+                // build time, and this is its runtime twin.
+                if (index < 0 || index >= page.Count || index >= bagCells.Length)
+                {
+                    HideCompare();
+                    return;
+                }
 
                 item = ContentDatabase.GetItem(page[index].Id);
                 plusValue = page[index].Plus;
@@ -381,7 +391,11 @@ namespace PrincesPalace
             }
             else
             {
-                if (index < 0 || index >= EquipmentSlots.All.Length) { HideCompare(); return; }
+                if (index < 0 || index >= EquipmentSlots.All.Length || index >= slotCells.Length)
+                {
+                    HideCompare();
+                    return;
+                }
 
                 var slot = EquipmentSlots.All[index];
                 string id = character.equipment.Get(slot);

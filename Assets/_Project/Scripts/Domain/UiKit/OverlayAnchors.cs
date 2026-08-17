@@ -134,7 +134,6 @@ namespace PrincesPalace.Domain.UiKit
         // The name sits left in the row, the value right, as two labels rather
         // than one padded string: a proportional font makes column alignment by
         // spaces a guess that is wrong at every other value.
-        public const float StatValueInset = 8f;
 
         // ---- the two panes -----------------------------------------------------
 

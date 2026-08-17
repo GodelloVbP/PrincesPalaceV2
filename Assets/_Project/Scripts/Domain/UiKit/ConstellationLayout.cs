@@ -55,9 +55,19 @@ namespace PrincesPalace.Domain.UiKit
         // coroutine and no frame.
         public const float SlideSeconds = 0.42f;
 
+        // No divide-by-zero guard here, deliberately. SlideSeconds is a const,
+        // so the compiler folded that branch away and warned it was
+        // unreachable (CS0162) -- a guard that cannot fire is not protection,
+        // it is noise that hides the next real unreachable-code warning.
+        //
+        // What it was guarding against is real, though: at SlideSeconds 0 and
+        // elapsed 0 the division is NaN, every comparison below is false, and
+        // this returns NaN rather than a progress. So the guarantee moved to
+        // where it can actually hold -- ConstellationLayoutTests asserts the
+        // constant is positive, which fails at test time instead of producing
+        // a NaN slide at play time.
         public static float SlideProgress(float elapsed)
         {
-            if (SlideSeconds <= 0f) return 1f;
             float t = elapsed / SlideSeconds;
             if (t <= 0f) return 0f;
             if (t >= 1f) return 1f;

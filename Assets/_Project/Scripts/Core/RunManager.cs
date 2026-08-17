@@ -82,6 +82,13 @@ namespace PrincesPalace
             var save = Save;
             if (save == null) return;
 
+            // The last run's last room has nothing to say about this one. Only
+            // entering a fight cleared this before, so a descent abandoned in a
+            // treasure room opened its replacement still announcing the stash
+            // from the run before it -- credited to a room the player had not
+            // walked into yet.
+            RoomResolver.Reset();
+
             save.activeRun = new RunSnapshot
             {
                 hasRun = true,

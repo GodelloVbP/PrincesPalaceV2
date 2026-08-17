@@ -117,7 +117,7 @@ public static class ScreenshotTool
         //
         // Today every built scene has exactly one, which is precisely why
         // this needed deciding now instead of being found later.
-        var canvas = Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None)
+        var canvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)
             .FirstOrDefault(c => c.isRootCanvas);
         if (canvas == null)
         {

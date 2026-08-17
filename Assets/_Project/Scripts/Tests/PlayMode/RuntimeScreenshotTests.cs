@@ -59,7 +59,7 @@ namespace PrincesPalace.PlayModeTests
             // node can be given its own nested Canvas for sort-order control,
             // so "any" of them would eventually be a sub-panel, and the
             // failure would present as an art bug rather than a lookup one.
-            var canvas = Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None)
+            var canvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)
                 .FirstOrDefault(c => c.isRootCanvas);
             Assert.IsNotNull(canvas, "MainMenu should have a root Canvas");
 

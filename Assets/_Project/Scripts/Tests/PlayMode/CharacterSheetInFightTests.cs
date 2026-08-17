@@ -45,7 +45,7 @@ namespace PrincesPalace.PlayModeTests
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
         }
 
-        private static CharacterOverlayController SheetIn(string scene)
+        private static CharacterOverlayController Sheet()
         {
             return Object.FindObjectsByType<CharacterOverlayController>(
                     FindObjectsInactive.Include, FindObjectsSortMode.None)
@@ -59,7 +59,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             yield return null;
 
-            var sheet = SheetIn("Fight");
+            var sheet = Sheet();
 
             Assert.IsNotNull(sheet,
                 "the character sheet is not reachable during a fight -- it was never mounted in the scene");
@@ -101,7 +101,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             var fight = Object.FindAnyObjectByType<FightController>(FindObjectsInactive.Include);
-            var sheet = SheetIn("Fight");
+            var sheet = Sheet();
 
             fight.ToggleCharacterSheet(inventory: false);
             yield return null;
@@ -123,7 +123,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             yield return null;
 
-            var sheet = SheetIn("Hub");
+            var sheet = Sheet();
 
             Assert.IsNotNull(sheet, "the hub lost its character sheet");
             Assert.IsFalse(sheet.EquipLocked,
