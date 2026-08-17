@@ -37,12 +37,19 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text[] nodeLabels;
         [SerializeField] internal Image[] nodeMarkers;
         [SerializeField] internal Image[] trailSegments;
+        [SerializeField] internal Image[] trailCores;
         [SerializeField] internal TMP_Text depthLabel;
         [SerializeField] internal TMP_Text goldLabel;
 
         // What the room the party just walked into did. Empty between rooms,
         // rather than left showing the last one's result under a new heading.
         [SerializeField] internal TMP_Text roomMessageLabel;
+
+        // The character sheet, mounted here too. UNLOCKED: the map between two
+        // rooms is exactly where changing gear is supposed to happen, and
+        // walking back to the hub to swap a breastplate was what made having it
+        // in the fight only half an answer.
+        [SerializeField] internal GameObject characterSheetPanel;
         [SerializeField] internal Button abandonButton;
 
         // The painted room icons. Bound by the wiring step rather than loaded
@@ -89,6 +96,13 @@ namespace PrincesPalace
         private static readonly Color TrailAhead = Hex(MapScreen.TrailAheadHex);
         private static readonly Color TrailClosed = Hex(MapScreen.TrailClosedHex);
 
+        // The track half of each road, parsed from the screen's constants for
+        // the same reason the verge half is.
+        private static readonly Color CoreTaken = Hex(MapScreen.TrailCoreTakenHex);
+        private static readonly Color CoreOpen = Hex(MapScreen.TrailCoreOpenHex);
+        private static readonly Color CoreAhead = Hex(MapScreen.TrailCoreAheadHex);
+        private static readonly Color CoreClosed = Hex(MapScreen.TrailCoreClosedHex);
+
         private static Color Hex(string hex) =>
             ColorUtility.TryParseHtmlString(hex, out var colour) ? colour : Color.white;
 
@@ -121,6 +135,33 @@ namespace PrincesPalace
                 Navigation.Go(Navigation.Hub);
             });
         }
+
+        // ---- the character sheet, between rooms --------------------------------
+
+        // The same two keys as the hub and the fight, so "what am I wearing" is
+        // one gesture wherever the player is standing.
+        private void Update()
+        {
+            if (characterSheetPanel == null) return;
+
+            if (Input.GetKeyDown(KeyCode.C)) ToggleCharacterSheet(inventory: false);
+            else if (Input.GetKeyDown(KeyCode.I)) ToggleCharacterSheet(inventory: true);
+            else if (Input.GetKeyDown(KeyCode.Escape) && characterSheetPanel.activeSelf)
+            {
+                SetCharacterSheet(false);
+            }
+        }
+
+        // Separated from the key for the reason HubController documents:
+        // legacy Input cannot be simulated headlessly, so a test that had to
+        // press C could not exist. Tests drive these directly.
+        public bool CharacterSheetIsOpen => SheetPanel.IsOpen(characterSheetPanel);
+
+        public void ToggleCharacterSheet(bool inventory = false) =>
+            SheetPanel.Toggle(characterSheetPanel, inventory);
+
+        public void SetCharacterSheet(bool open, bool inventory = false) =>
+            SheetPanel.Set(characterSheetPanel, open, inventory);
 
         public void Refresh()
         {
@@ -296,12 +337,16 @@ namespace PrincesPalace
                     bool fromHere = node.Id == currentId;
 
                     Color colour;
+                    Color core;
                     float width;
-                    if (taken) { colour = TrailTaken; width = MapScreen.TrailWidthTaken; }
-                    else if (fromHere) { colour = TrailOpen; width = MapScreen.TrailWidthOpen; }
+                    if (taken)
+                    { colour = TrailTaken; core = CoreTaken; width = MapScreen.TrailWidthTaken; }
+                    else if (fromHere)
+                    { colour = TrailOpen; core = CoreOpen; width = MapScreen.TrailWidthOpen; }
                     else if (reachable.Contains(node.Id) || cleared.Contains(node.Id))
-                    { colour = TrailAhead; width = MapScreen.TrailWidthAhead; }
-                    else { colour = TrailClosed; width = MapScreen.TrailWidthClosed; }
+                    { colour = TrailAhead; core = CoreAhead; width = MapScreen.TrailWidthAhead; }
+                    else
+                    { colour = TrailClosed; core = CoreClosed; width = MapScreen.TrailWidthClosed; }
 
                     for (int i = 0; i < MapLayout.SegmentsPerLink; i++)
                     {
@@ -310,6 +355,14 @@ namespace PrincesPalace
 
                         SetActive(image.gameObject, true);
                         image.color = colour;
+
+                        // Indexed off the SAME counter as its verge, so the two
+                        // halves of one road can never describe two different
+                        // states.
+                        if (trailCores != null && segment - 1 < trailCores.Length)
+                        {
+                            trailCores[segment - 1].color = core;
+                        }
 
                         var rect = image.rectTransform;
                         rect.sizeDelta = new Vector2(piece.Length, width);

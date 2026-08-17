@@ -21,6 +21,10 @@ namespace PrincesPalace
     // for a frame, which reads as a hit landing early.
     public class FightBeatPlayer : MonoBehaviour
     {
+        // Clear of the figure's crown, so the punch does not start inside the
+        // sprite's own outline.
+        private const float PopupHeadroom = 18f;
+
         [SerializeField] internal DamagePopup[] popups;
 
         // How long a beat holds, and the gap between beats.
@@ -234,8 +238,26 @@ namespace PrincesPalace
             var popup = FreePopup();
             if (popup == null) return;   // every one still in flight; the number is dropped, not queued
 
+            // ABOVE THE FIGURE, not on it.
+            //
+            // This used to spawn at the slot's own centre, which is the middle
+            // of the combatant -- so the number rose out from behind the sprite
+            // it was describing and spent its first frames, the opaque ones,
+            // hidden by it. Starting a head above means the whole punch is
+            // visible and the rise carries it clear rather than into view.
+            //
+            // Measured off the slot rather than a constant: enemy and party
+            // slots are not the same height, and a fixed offset would sit on
+            // one and float over the other.
             var slot = SlotFor?.Invoke(beat.Target);
-            var at = slot != null ? slot.anchoredPosition : Vector2.zero;
+            var at = Vector2.zero;
+
+            if (slot != null)
+            {
+                at = slot.anchoredPosition
+                     + new Vector2(0f, slot.rect.height * 0.5f + PopupHeadroom);
+            }
+
             popup.Play(at, beat.Amount, beat.IsHealing);
         }
 

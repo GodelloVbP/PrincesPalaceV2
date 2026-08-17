@@ -501,10 +501,16 @@ public static class ScreenRegistry
                 map.nodeLabels = screen.NodeLabels.Select(result.Tmp).ToArray();
                 map.nodeMarkers = screen.NodeMarkers.Select(result.Image).ToArray();
                 map.trailSegments = screen.TrailSegments.Select(result.Image).ToArray();
+                map.trailCores = screen.TrailCores.Select(result.Image).ToArray();
                 map.depthLabel = result.Tmp(screen.DepthLabel);
                 map.goldLabel = result.Tmp(screen.GoldLabel);
                 map.roomMessageLabel = result.Tmp(screen.RoomMessageLabel);
                 map.abandonButton = result.Button(screen.AbandonButton);
+
+                // Unlocked, unlike the fight's copy: the map is where
+                // changing gear between rooms is supposed to happen.
+                WireOverlay(result, screen.Sheet, lockedForFight: false);
+                map.characterSheetPanel = result.Go(screen.Sheet.Root);
 
                 // The painted room icons. Bound here rather than in the
                 // controller because "Assets/..." is an editor-only address and

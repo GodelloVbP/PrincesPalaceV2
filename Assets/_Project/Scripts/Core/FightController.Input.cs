@@ -425,40 +425,12 @@ namespace PrincesPalace
         // Separated from the key for the same reason HubController separates
         // its own: legacy Input cannot be simulated headlessly, so a test that
         // had to press C could not exist. Tests drive these directly.
-        public bool CharacterSheetIsOpen =>
-            characterSheetPanel != null && characterSheetPanel.activeSelf;
+        public bool CharacterSheetIsOpen => SheetPanel.IsOpen(characterSheetPanel);
 
-        public void ToggleCharacterSheet(bool inventory = false)
-        {
-            if (characterSheetPanel == null) return;
+        public void ToggleCharacterSheet(bool inventory = false) =>
+            SheetPanel.Toggle(characterSheetPanel, inventory);
 
-            var sheet = characterSheetPanel.GetComponent<CharacterOverlayController>();
-
-            // Pressing the other pane's key while open switches rather than
-            // closing -- the reader wanted the other half, not the fight back.
-            if (characterSheetPanel.activeSelf && sheet != null
-                && sheet.ShowingInventory != inventory)
-            {
-                sheet.OpenOn(inventory);
-                return;
-            }
-
-            SetCharacterSheet(!characterSheetPanel.activeSelf, inventory);
-        }
-
-        public void SetCharacterSheet(bool open, bool inventory = false)
-        {
-            if (characterSheetPanel == null) return;
-
-            if (!open)
-            {
-                characterSheetPanel.SetActive(false);
-                return;
-            }
-
-            var sheet = characterSheetPanel.GetComponent<CharacterOverlayController>();
-            if (sheet != null) sheet.OpenOn(inventory);
-            else characterSheetPanel.SetActive(true);
-        }
+        public void SetCharacterSheet(bool open, bool inventory = false) =>
+            SheetPanel.Set(characterSheetPanel, open, inventory);
     }
 }

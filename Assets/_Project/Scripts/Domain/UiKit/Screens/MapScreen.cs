@@ -126,6 +126,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // array would only make the index arithmetic worse.
         public List<NodeRef> TrailSegments = new List<NodeRef>();
 
+        // The lighter inner track of each segment, one per TrailSegments entry
+        // and in the same order. Tinted alongside its verge, so a road cannot
+        // end up with a walked surface inside an unreachable edge.
+        public List<NodeRef> TrailCores = new List<NodeRef>();
+
         public NodeRef Walker;
 
         public NodeRef TitleLabel;
@@ -133,6 +138,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef GoldLabel;
         public NodeRef AbandonButton;
         public NodeRef RoomMessageLabel;
+
+        // The same overlay the hub and the fight mount. Live here:
+        // between rooms is when gear is meant to change.
+        public CharacterOverlayScreen Sheet;
 
         // Anchored to the content rect's LEFT edge, which is the origin every
         // MapLayout x is measured from. Declared once here so no construction
@@ -214,10 +223,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             screen.Viewport = viewport;
 
+            // The character sheet, reachable between rooms.
+            //
+            // NOT locked here, unlike the fight's copy: the map is exactly
+            // where changing your gear is supposed to happen. Walking back to
+            // the hub to swap a breastplate between two rooms was the thing
+            // that made having it in the fight only half an answer.
+            var sheet = CharacterOverlayScreen.Build();
+            screen.Sheet = sheet;
+
             // Viewport FIRST so the headings and the abandon button draw over
-            // the scrolling wood rather than under it.
+            // the scrolling wood rather than under it. The sheet is LAST, so
+            // the modal dims the map and everything on it.
             screen.Root = Ui.Panel("MapPanel", UiSize.Fixed(1920f, 1080f),
-                viewport, title, depth, gold, abandon, roomMessage);
+                viewport, title, depth, gold, abandon, roomMessage, sheet.Root);
 
             return screen;
         }
@@ -284,14 +303,40 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // the same arrangement the fight screen's VFX and damage-popup pools
         // use, and the reason the pool rather than the member carries the audit
         // exemption.
+        // A ROAD, not a line.
+        //
+        // Each piece is two layers: the outer rect is the VERGE, the churned
+        // dark earth a path pushes aside, and the inner one is the TRACK, the
+        // dust actually walked on. One flat brown rectangle reads as a diagram
+        // connecting two icons; a lighter core inside a darker edge reads as
+        // something with a surface, and it costs one extra decor node per
+        // segment.
+        //
+        // The core is placed FRACTIONALLY, not with a pixel inset. Segment
+        // thickness is set at runtime and ranges from 6 to 22 depending on the
+        // trail's state, so a fixed inset would leave the closed trails with no
+        // verge at all and the walked ones with a hairline of one.
         private UiNode BuildTrailSegment(int index)
         {
+            // NAMED OFF THE PREFIX ON PURPOSE. MapFlowTests finds every drawn
+            // piece by the "MapTrail" prefix and asserts each has real geometry
+            // -- and this one has none, because it is placed fractionally
+            // inside its parent rather than sized. Calling it MapTrail...Core
+            // swept it into that filter and failed the test, correctly: it is
+            // not a segment, it is a layer of one.
+            var core = Ui.Solid($"MapTrack{index}", TrailCoreAheadHex,
+                    Place.Frac(new UiVec(0f, 0.24f), new UiVec(1f, 0.76f)), UiSize.Fill)
+                .AsDecor();
+
             var segment = Ui.Solid($"MapTrail{index}", TrailAheadHex,
                     new UiVec(8f, 8f), OnContent(0f, 0f))
                 .AsDecor()
                 .Inactive();
 
+            segment.Children.Add(core);
+
             TrailSegments.Add(segment);
+            TrailCores.Add(core);
             return segment;
         }
 
@@ -299,15 +344,29 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // than one tint at four alphas: a walked path and an unreachable one
         // differ in what they MEAN, and the eye separates hue faster than it
         // separates opacity.
-        public const string TrailTakenHex = "#4A2E17";
-        public const string TrailOpenHex = "#5A3B21F2";
-        public const string TrailAheadHex = "#3B24148C";
-        public const string TrailClosedHex = "#2417124D";
+        //
+        // The verge half, which is the darker outer edge.
+        public const string TrailTakenHex = "#3A2312";
+        public const string TrailOpenHex = "#462D19F2";
+        public const string TrailAheadHex = "#2E1C108C";
+        public const string TrailClosedHex = "#1C110D4D";
 
-        public const float TrailWidthTaken = 15f;
-        public const float TrailWidthOpen = 12f;
-        public const float TrailWidthAhead = 7f;
-        public const float TrailWidthClosed = 4f;
+        // The track half: sunlit dust on a forest floor, warmer and lighter
+        // than the earth around it. Each keeps its state's own alpha, so a
+        // closed road is still faint all the way through rather than a bright
+        // core inside a ghost.
+        public const string TrailCoreTakenHex = "#9A7748";
+        public const string TrailCoreOpenHex = "#B98F55F2";
+        public const string TrailCoreAheadHex = "#6E5537A0";
+        public const string TrailCoreClosedHex = "#3F332552";
+
+        // Wider than the lines they replace. A road has to be thick enough for
+        // the verge to read AS a verge -- at the old 7px an "ahead" trail would
+        // have had two pixels of edge and two of core.
+        public const float TrailWidthTaken = 24f;
+        public const float TrailWidthOpen = 20f;
+        public const float TrailWidthAhead = 12f;
+        public const float TrailWidthClosed = 7f;
 
         // The per-state tile tints live in MapController, not here, and
         // deliberately break the convention the trail colours above follow.

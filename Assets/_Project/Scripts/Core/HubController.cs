@@ -193,36 +193,11 @@ namespace PrincesPalace
         // the sheet rather than closing the overlay, which is what a reader
         // reaching for the other half actually means. Pressing the key for the
         // pane already showing closes it.
-        public void ToggleCharacterOverlay(bool inventory = false)
-        {
-            if (characterOverlayPanel == null) return;
+        public void ToggleCharacterOverlay(bool inventory = false) =>
+            SheetPanel.Toggle(characterOverlayPanel, inventory);
 
-            var overlay = characterOverlayPanel.GetComponent<CharacterOverlayController>();
-
-            if (characterOverlayPanel.activeSelf && overlay != null
-                && overlay.ShowingInventory != inventory)
-            {
-                overlay.OpenOn(inventory);
-                return;
-            }
-
-            SetCharacterOverlay(!characterOverlayPanel.activeSelf, inventory);
-        }
-
-        public void SetCharacterOverlay(bool open, bool inventory = false)
-        {
-            if (characterOverlayPanel == null) return;
-
-            if (!open)
-            {
-                characterOverlayPanel.SetActive(false);
-                return;
-            }
-
-            var overlay = characterOverlayPanel.GetComponent<CharacterOverlayController>();
-            if (overlay != null) overlay.OpenOn(inventory);
-            else characterOverlayPanel.SetActive(true);
-        }
+        public void SetCharacterOverlay(bool open, bool inventory = false) =>
+            SheetPanel.Set(characterOverlayPanel, open, inventory);
 
         public bool GlossaryIsOpen => glossaryPanel != null && glossaryPanel.activeSelf;
 
