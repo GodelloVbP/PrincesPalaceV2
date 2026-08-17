@@ -127,6 +127,58 @@ namespace PrincesPalace
             return resolved;
         }
 
+        // The IN-RUN party member: what they actually walk into the room with.
+        //
+        // THIS IS WHERE EQUIPMENT REACHES COMBAT, and until it existed nothing
+        // did. The definition-based overload below reads baseStats, so a
+        // character in full plate swung exactly as hard as one in nothing --
+        // every item, every talent and every upgrade level was inert in a
+        // fight. ContentDatabase.Effective.cs had thirteen accessors for this
+        // and combat called none of them; only relics got through, because
+        // relics were wired deliberately and the rest was assumed.
+        //
+        // The effective figures are used RAW. EffectiveStats already ends with
+        // `total += AbilityDerivation.DerivedStats(loadout.Scores)` and
+        // EffectiveMaxMana already adds MaxManaBonus, so re-applying the
+        // derivation here -- as the definition overload legitimately must --
+        // would silently double a character's health and attack.
+        private static CombatantState ToCombatant(Character character,
+                                                  CharacterDefinition definition,
+                                                  IReadOnlyList<RelicModifier> modifiers = null)
+        {
+            var stats = ContentDatabase.EffectiveStats(character);
+            var scores = ContentDatabase.EffectiveAbilityScores(character);
+
+            var state = new CombatantState(definition.displayName, true,
+                RelicModifiers.Apply(stats.maxHealth, RelicStat.MaxHealth, modifiers),
+                RelicModifiers.Apply(ContentDatabase.EffectiveMaxMana(character), RelicStat.MaxMana, modifiers),
+                RelicModifiers.Apply(stats.attack, RelicStat.Attack, modifiers),
+                RelicModifiers.Apply(stats.defense, RelicStat.Defence, modifiers),
+                RelicModifiers.Apply(stats.speed, RelicStat.Speed, modifiers));
+
+            state.ManaRegen = stats.manaRegen;
+            state.AbilityScores = scores;
+
+            // Set by neither path before this. A resistance rolled onto a
+            // breastplate was written to the save, shown on the sheet, folded
+            // into EffectiveStats -- and then dropped on the way into the one
+            // system it exists for.
+            state.PhysicalResistance = stats.physicalResistance;
+            state.MagicalResistance = stats.magicalResistance;
+
+            // Built from the CHARACTER, so a signature whose capacity a talent
+            // widened arrives at that width. Its single call site until now was
+            // its own definition.
+            state.Signature = ContentDatabase.BuildSignatureResource(character);
+
+            return state;
+        }
+
+        // The TOOLING party member, built from content alone.
+        //
+        // Still needed: opening the Fight scene directly has no save to read a
+        // loadout from, and screenshot comparison depends on that path
+        // producing the same stage every time.
         private static CombatantState ToCombatant(CharacterDefinition definition,
                                                   IReadOnlyList<RelicModifier> modifiers = null)
         {
@@ -177,7 +229,15 @@ namespace PrincesPalace
             bool isBoss = false,
             bool isElite = false,
             IReadOnlyList<string> relicIds = null,
-            int depthStep = 0)
+            int depthStep = 0,
+            // The save's own party members, matched to partyIds by
+            // definitionId. Supplied by the run; null on the tooling path,
+            // which has no save to read a loadout from.
+            //
+            // When present, every party member is built from their EFFECTIVE
+            // figures -- equipment, talents, upgrade levels and all -- instead
+            // of from the bare content definition.
+            IReadOnlyList<Character> partyCharacters = null)
         {
             var party = new List<CombatantState>();
             var kits = new List<PlayerKit>();
@@ -199,8 +259,23 @@ namespace PrincesPalace
                 var definition = ContentDatabase.Characters.FirstOrDefault(c => c.id == id);
                 if (definition == null) continue;
 
-                party.Add(ToCombatant(definition, modifiers));
-                kits.Add(KitFor(definition, relics));
+                // Matched by definitionId rather than by position, so a party
+                // list and a squad list that disagree on order cannot hand one
+                // character another's loadout.
+                var character = partyCharacters?.FirstOrDefault(
+                    c => c != null && c.definitionId == id);
+
+                if (character != null)
+                {
+                    party.Add(ToCombatant(character, definition, modifiers));
+                    kits.Add(KitFor(character, definition, relics));
+                }
+                else
+                {
+                    party.Add(ToCombatant(definition, modifiers));
+                    kits.Add(KitFor(definition, relics));
+                }
+
                 art.Add(definition.battleSpritePath);
             }
 
@@ -224,7 +299,9 @@ namespace PrincesPalace
             return new BuiltFight { Session = session, Party = party, PartyArt = art };
         }
 
-        private static PlayerKit KitFor(CharacterDefinition definition, IReadOnlyList<ResolvedRelic> relics)
+        private static PlayerKit KitFor(CharacterDefinition definition,
+                                        IReadOnlyList<ResolvedRelic> relics,
+                                        int level = 1)
         {
             // The character's own strip, plus whichever basic spell tier their
             // level grants. Both are looked up here rather than carried on the
@@ -237,14 +314,60 @@ namespace PrincesPalace
 
             // Spell tiers are keyed by LEVEL alone, not by character -- the
             // basic spell is the same ladder for everyone and only its tier
-            // differs. Highest available wins.
-            var tier = ContentDatabase.SpellTiers
-                .OrderByDescending(t => t.level)
-                .FirstOrDefault();
+            // differs. Highest available AT OR BELOW the character's level.
+            //
+            // The level filter is the fix: this read "highest available wins"
+            // and took the top of the ladder unconditionally, so a level 1
+            // character cast the endgame tier. With no character to ask, level
+            // 1 is the honest floor rather than the top.
+            var tier = TierAtLevel(level);
 
             return new PlayerKit(definition.id, definition.role, skills, relics,
-                definition.attackType, tier == null ? (ResolvedSpellTier?)null : SpellTierFor(tier));
+                definition.attackType,
+                tier == null ? (ResolvedSpellTier?)null : SpellTierFor(tier),
+                level);
         }
+
+        // The IN-RUN kit: the character's own strip PLUS whatever their tree
+        // granted them, at their real level.
+        //
+        // TalentGrantedSkillsFor had no call site at all before this, so a
+        // talent that granted a skill wrote it nowhere the fight could see.
+        private static PlayerKit KitFor(Character character, CharacterDefinition definition,
+                                        IReadOnlyList<ResolvedRelic> relics)
+        {
+            var skills = ContentDatabase.Skills
+                .Where(s => s.characterId == definition.id)
+                .OrderBy(s => s.sortOrder)
+                .Select(Resolve)
+                .ToList();
+
+            // Appended, not merged by id: a granted skill the strip already
+            // holds would otherwise appear twice in the submenu.
+            var granted = ContentDatabase.TalentGrantedSkillsFor(character);
+            foreach (var extra in granted)
+            {
+                if (extra == null) continue;
+                if (skills.Any(s => s.Id == extra.id)) continue;
+                skills.Add(Resolve(extra));
+            }
+
+            var tier = TierAtLevel(character.level);
+
+            return new PlayerKit(definition.id, definition.role, skills, relics,
+                definition.attackType,
+                tier == null ? (ResolvedSpellTier?)null : SpellTierFor(tier),
+                character.level);
+        }
+
+        // The highest tier a character of this level has actually reached.
+        // Null when the ladder starts above them, which PlayerKit already
+        // treats as "no basic spell yet".
+        private static SpellTierDefinition TierAtLevel(int level) =>
+            ContentDatabase.SpellTiers
+                .Where(t => t != null && t.level <= level)
+                .OrderByDescending(t => t.level)
+                .FirstOrDefault();
 
         private static ResolvedSpellTier SpellTierFor(SpellTierDefinition tier) =>
             new ResolvedSpellTier(tier.level, tier.displayName, tier.manaCost, tier.powerMultiplier, tier.sortOrder);

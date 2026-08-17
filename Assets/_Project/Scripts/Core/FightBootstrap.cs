@@ -115,7 +115,13 @@ namespace PrincesPalace
                 isBoss: roster.IsBoss,
                 isElite: roster.IsElite,
                 relicIds: run.relicIds,
-                depthStep: run.step);
+                depthStep: run.step,
+                // What they are WEARING, which is the difference between a
+                // character built from their save and one built from the
+                // content that named them. Without this the roster was right
+                // and every one of them fought at base stats -- full plate and
+                // nothing swung identically.
+                partyCharacters: SaveSlotManager.CurrentSave?.ActiveSquad());
 
             if (built == null) return null;
 
