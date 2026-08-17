@@ -96,6 +96,22 @@ namespace PrincesPalace.Domain.Content
                 return;
             }
 
+            // Both are Assets-relative, and BOTH are checked rather than only
+            // whichever IconFor happens to pick: iconSheet wins when it is set,
+            // so a wrongly-written iconPath sitting behind a working sheet is
+            // invisible until the sheet is removed.
+            if (!ArtPathConvention.Check(label, "iconSheet", raw.iconSheet, out string sheetError))
+            {
+                errors.Add(sheetError);
+                return;
+            }
+
+            if (!ArtPathConvention.Check(label, "iconPath", raw.iconPath, out string iconError))
+            {
+                errors.Add(iconError);
+                return;
+            }
+
             if (slot != EquipmentSlot.Weapon1 && slot != EquipmentSlot.Weapon2)
             {
                 errors.Add($"{label}: slot '{raw.slot}' is not a hand. A weapon has to be holdable.");

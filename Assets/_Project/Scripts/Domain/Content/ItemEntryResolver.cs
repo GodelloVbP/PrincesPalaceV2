@@ -221,6 +221,8 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            if (!ArtPathConvention.Check(label, "iconPath", raw.iconPath, out error)) return false;
+
             resolvedItem = new ResolvedItem(raw.id, raw.displayName, raw.description ?? "", kind, effect,
                 amount, attackBonus, slot, raw.statBonus, raw.abilityScoreBonus, raw.startingStock,
                 cost, raw.iconPath ?? "", sortOrder, requirements);

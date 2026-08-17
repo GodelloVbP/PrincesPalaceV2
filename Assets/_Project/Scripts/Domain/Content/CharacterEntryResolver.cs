@@ -136,22 +136,15 @@ namespace PrincesPalace.Domain.Content
             // interchangeable: portraitPath is baked into a scene at build
             // time by AssetDatabase (Assets-relative), battleSpritePath is
             // Resources.Load'ed at runtime (Resources-relative, no extension).
-            // Swapping them fails SILENTLY — the loader just returns null —
-            // so it is worth catching here.
-            if (!string.IsNullOrWhiteSpace(raw.portraitPath) && !raw.portraitPath.StartsWith("Assets/"))
-            {
-                error = $"{label}: portraitPath '{raw.portraitPath}' should be Assets-relative (it is baked into " +
-                        "the scene at build time), e.g. 'Assets/_Project/Art/Portraits/...'.";
-                return false;
-            }
-
-            if (!string.IsNullOrWhiteSpace(raw.battleSpritePath) && raw.battleSpritePath.StartsWith("Assets/"))
-            {
-                error = $"{label}: battleSpritePath '{raw.battleSpritePath}' should be RESOURCES-relative (it is " +
-                        "loaded at runtime), e.g. 'Characters/sheep' — not an Assets/ path. Resources.Load would " +
-                        "silently return null and the stage would show a plain plate.";
-                return false;
-            }
+            // Swapping them fails SILENTLY — the loader just returns null.
+            //
+            // These two checks used to be written out here, and were the ONLY
+            // ones in the codebase: the other seven art fields across six
+            // resolvers accepted either convention in any field. The rule moved
+            // to ArtPathConvention so there is one statement of it rather than
+            // one per resolver that remembered.
+            if (!ArtPathConvention.Check(label, "portraitPath", raw.portraitPath, out error)) return false;
+            if (!ArtPathConvention.Check(label, "battleSpritePath", raw.battleSpritePath, out error)) return false;
 
             bool hasSignature = !string.IsNullOrWhiteSpace(raw.signatureId);
             if (hasSignature)

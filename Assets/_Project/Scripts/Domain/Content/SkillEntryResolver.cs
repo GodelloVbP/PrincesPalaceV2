@@ -213,6 +213,12 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            // Both Resources-relative. A wrong convention here costs the skill
+            // its animation and its sound with no error anywhere — the hit just
+            // lands silently.
+            if (!ArtPathConvention.Check(label, "vfxPath", raw.vfxPath, out error)) return false;
+            if (!ArtPathConvention.Check(label, "sfxPath", raw.sfxPath, out error)) return false;
+
             resolvedSkill = new ResolvedSkill(raw.id, raw.displayName, raw.description ?? "", raw.characterId.Trim(),
                 unlockLevel, effect, targeting, manaCost, resourceCost, raw.spendsAllResource,
                 power, flatAmount, raw.ignoresDefense, instances,

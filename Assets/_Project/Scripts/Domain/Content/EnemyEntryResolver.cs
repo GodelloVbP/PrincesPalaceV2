@@ -168,6 +168,14 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            // All three are Resources-relative and load at runtime. Checked
+            // because the wrong convention returns null rather than throwing,
+            // so the enemy just fights as a blank plate with no VFX and nothing
+            // anywhere says why.
+            if (!ArtPathConvention.Check(label, "spritePath", raw.spritePath, out error)) return false;
+            if (!ArtPathConvention.Check(label, "vfxPath", raw.vfxPath, out error)) return false;
+            if (!ArtPathConvention.Check(label, "sfxPath", raw.sfxPath, out error)) return false;
+
             var baseStats = new StatBlock(raw.maxHealth, speed, attack, defense);
             resolvedEnemy = new ResolvedEnemy(raw.id, raw.displayName, baseStats, expReward, currencyReward, raw.isBoss, weakness, resistance, sortOrder,
                 (raw.spritePath ?? string.Empty).Trim(), facing, raw.active,

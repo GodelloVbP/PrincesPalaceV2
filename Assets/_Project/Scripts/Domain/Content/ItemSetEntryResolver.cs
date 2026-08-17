@@ -200,6 +200,15 @@ namespace PrincesPalace.Domain.Content
                     continue;
                 }
 
+                // Assets-relative, and the FOLDER rather than a file —
+                // IconPathFor appends '/level_N.png'. A Resources-style value
+                // here generates eleven paths that all resolve to nothing.
+                if (!ArtPathConvention.Check(pieceLabel, "iconSheet", piece.iconSheet, out string sheetError))
+                {
+                    errors.Add(sheetError);
+                    continue;
+                }
+
                 if (!TryParseStats(piece.baseStats, pieceLabel, "base", out var baseStat, out var baseScore, errors)
                     | !TryParseStats(piece.topStats, pieceLabel, "top", out var topStat, out var topScore, errors)
                     | !AbilityScoreLineParser.TryParse(piece.requiresAtZero, pieceLabel, out var reqAtZero, errors)
