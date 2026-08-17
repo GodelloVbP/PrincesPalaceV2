@@ -96,15 +96,19 @@ namespace PrincesPalace.Domain.Combat.Session
             var rows = new List<SubmenuRow>();
             if (session == null || actor == null) return rows;
 
+            string resourceName = actor.Signature?.DisplayName;
+
             foreach (var option in session.SkillOptionsFor(actor))
             {
                 var skill = option.Skill;
+                bool meets = actor.AbilityScores.Meets(RequirementCurve.Apply(skill.Requirements));
+
                 rows.Add(new SubmenuRow(
                     skill.DisplayName,
-                    MetaLine(skill),
-                    CostLabel(skill),
+                    meets ? MetaLine(skill) : LockedPrefix + MetaLine(skill),
+                    CostLabel(skill, resourceName),
                     option.Affordable,
-                    actor.AbilityScores.Meets(RequirementCurve.Apply(skill.Requirements)),
+                    meets,
                     skill.ManaCost));
             }
 
@@ -146,24 +150,83 @@ namespace PrincesPalace.Domain.Combat.Session
             return rows;
         }
 
-        // "DamageSingle" + SingleEnemy -> "DAMAGESINGLE  ·  SINGLE".
+        // "DamageSingle" + SingleEnemy -> "DAMAGE  ·  SINGLE".
         //
         // Generated from the skill's own fields rather than authored, so it
         // cannot drift from what the skill actually does -- the same rule the
         // item cards and the equipment summary already follow.
+        //
+        // WHAT it does and WHO it reaches are two facts, and the enum name
+        // conflates them. Printing the enum put "DAMAGESINGLE  ·  SINGLE" on
+        // screen: a word no player uses, saying "single" twice. The effect now
+        // contributes only the verb and the targeting contributes only the
+        // reach, so the two halves stop repeating each other.
         public static string MetaLine(ResolvedSkill skill)
         {
             string reach = skill.Targeting == SkillTargeting.SingleEnemy ? "SINGLE"
                 : skill.Targeting == SkillTargeting.Self ? "SELF"
                 : "GROUP";
-            return skill.Effect.ToString().ToUpperInvariant() + "  ·  " + reach;
+            return VerbFor(skill.Effect) + "  ·  " + reach;
         }
 
-        public static string CostLabel(ResolvedSkill skill)
+        // What a submenu describes when it is OPEN but nothing is chosen yet.
+        //
+        // The panel used to fall back to DetailForStrike here, so opening SKILL
+        // and choosing nothing described the ATTACK verb -- name, body and all.
+        // Not a stale panel: a wrong one, confidently rendered, while the
+        // breadcrumb overhead read COMMAND > SKILL.
+        public static DetailPanel DetailForNoSelection(MenuBranch branch)
         {
-            if (skill.ResourceCost > 0 && skill.ManaCost > 0) return $"{skill.ManaCost} MP + {skill.ResourceCost}";
-            if (skill.ResourceCost > 0) return skill.ResourceCost.ToString();
-            return skill.ManaCost + " MP";
+            return new DetailPanel
+            {
+                Name = branch == MenuBranch.Item ? "Items" : "Skills",
+                Kind = branch == MenuBranch.Item ? "SATCHEL" : "REPERTOIRE",
+                Body = branch == MenuBranch.Item
+                    ? "Choose something to use."
+                    : "Choose a skill to see what it does.",
+            };
+        }
+
+        private static string VerbFor(SkillEffect effect)
+        {
+            switch (effect)
+            {
+                case SkillEffect.DamageSingle:
+                case SkillEffect.DamageAll: return "DAMAGE";
+                case SkillEffect.HealSelf:
+                case SkillEffect.HealParty: return "HEAL";
+                case SkillEffect.RestorePartyMana: return "RESTORE";
+                case SkillEffect.Provoke: return "TAUNT";
+                default: return effect.ToString().ToUpperInvariant();
+            }
+        }
+
+        // Marks a row the character is not yet ALLOWED to use, as opposed to one
+        // they merely cannot pay for right now.
+        //
+        // Both dim, and before this nothing told them apart: five greyed skills
+        // above a full mana bar read as a bug. Affordability is already carried
+        // by the cost's own colour, so the word only has to cover the other one.
+        public const string LockedPrefix = "LOCKED  ·  ";
+
+        // Both halves ALWAYS carry their unit.
+        //
+        // The column read "3", "4", "6 MP + 3", "5 MP", "0 MP" down a single
+        // list -- three different grammars, and a bare number that silently
+        // meant a different resource than the one beside it. A skill costing
+        // nothing says so in words rather than showing "0 MP", which reads as a
+        // missing value.
+        public static string CostLabel(ResolvedSkill skill, string resourceName)
+        {
+            string resource = string.IsNullOrWhiteSpace(resourceName) ? "" : " " + resourceName.ToUpperInvariant();
+
+            if (skill.ResourceCost > 0 && skill.ManaCost > 0)
+            {
+                return $"{skill.ManaCost} MP + {skill.ResourceCost}{resource}";
+            }
+
+            if (skill.ResourceCost > 0) return $"{skill.ResourceCost}{resource}";
+            return skill.ManaCost > 0 ? skill.ManaCost + " MP" : "FREE";
         }
 
         // What the POWER stat shows.
@@ -182,7 +245,7 @@ namespace PrincesPalace.Domain.Combat.Session
             return total.ToString();
         }
 
-        public static DetailPanel DetailForSkill(ResolvedSkill skill)
+        public static DetailPanel DetailForSkill(ResolvedSkill skill, string resourceName = null)
         {
             var panel = new DetailPanel
             {
@@ -190,11 +253,26 @@ namespace PrincesPalace.Domain.Combat.Session
                 Kind = "SKILL",
                 Body = skill.Description ?? "",
             };
-            panel.Stats.Add(("COST", CostLabel(skill)));
+            panel.Stats.Add(("COST", CostLabel(skill, resourceName)));
             panel.Stats.Add(("POWER", PowerLabel(skill)));
-            panel.Stats.Add(("TARGET", skill.Targeting.ToString().ToUpperInvariant()));
-            panel.Stats.Add(("EFFECT", skill.Effect.ToString().ToUpperInvariant()));
+
+            // Both of these printed the enum: "SINGLEENEMY" and "DAMAGESINGLE".
+            // Same fix as the row's meta line, and it has to be the same words
+            // or the panel and the row it describes disagree in front of the
+            // player.
+            panel.Stats.Add(("TARGET", ReachFor(skill.Targeting)));
+            panel.Stats.Add(("EFFECT", VerbFor(skill.Effect)));
             return panel;
+        }
+
+        private static string ReachFor(SkillTargeting targeting)
+        {
+            switch (targeting)
+            {
+                case SkillTargeting.SingleEnemy: return "ONE ENEMY";
+                case SkillTargeting.Self: return "SELF";
+                default: return "GROUP";
+            }
         }
 
         // The synthetic entry for ATTACK, which has no authored skill behind it.

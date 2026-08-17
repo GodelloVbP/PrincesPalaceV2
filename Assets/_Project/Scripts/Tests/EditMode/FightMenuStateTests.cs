@@ -321,10 +321,44 @@ namespace PrincesPalace.Domain.Tests
         public void TheMetaLineIsGeneratedFromTheSkillsOwnFields()
         {
             // So it cannot drift from what the skill actually does.
+            //
+            // The effect contributes the VERB only. It used to contribute the
+            // enum name, which put "DAMAGEALL  ·  SINGLE" on screen: a word no
+            // player uses, and -- on a single-target skill -- one that flatly
+            // contradicted the reach printed next to it. Targeting is authored
+            // separately and is the only thing entitled to say who is hit.
             var skill = Skill("x", "Firestorm", effect: SkillEffect.DamageAll);
 
-            StringAssert.Contains("DAMAGEALL", FightHudModel.MetaLine(skill));
+            StringAssert.Contains("DAMAGE", FightHudModel.MetaLine(skill));
+            StringAssert.DoesNotContain("DAMAGEALL", FightHudModel.MetaLine(skill),
+                "the enum name is not a word, and it duplicates the reach beside it");
             StringAssert.Contains("SINGLE", FightHudModel.MetaLine(skill), "targeting is authored separately from the effect");
+        }
+
+        [Test]
+        public void ASkillTheCharacterMayNotYetUseSaysSoRatherThanJustGoingGrey()
+        {
+            // Two different dims looked identical: cannot afford it right now,
+            // and not allowed to use it at all. Five greyed skills above a FULL
+            // mana bar read as a bug rather than as a requirement.
+            var skill = Skill("x", "Firestorm", effect: SkillEffect.DamageAll);
+            string meta = FightHudModel.LockedPrefix + FightHudModel.MetaLine(skill);
+
+            StringAssert.StartsWith("LOCKED", meta);
+        }
+
+        [Test]
+        public void EveryCostCarriesItsUnit_AndFreeSaysSo()
+        {
+            // The column read "3", "4", "6 MP + 3", "0 MP" down one list: three
+            // grammars, and a bare number silently meaning a different resource
+            // than the one above it.
+            var manaOnly = Skill("a", "Bolt", manaCost: 5);
+            var free = Skill("b", "Shout", manaCost: 0);
+
+            Assert.AreEqual("5 MP", FightHudModel.CostLabel(manaOnly, "Wool"));
+            Assert.AreEqual("FREE", FightHudModel.CostLabel(free, "Wool"),
+                "a skill that costs nothing says so - '0 MP' reads as a missing value");
         }
 
         [Test]

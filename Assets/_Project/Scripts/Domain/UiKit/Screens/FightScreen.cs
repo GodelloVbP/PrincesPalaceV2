@@ -845,14 +845,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
                 // 20 tall, not v1's 24: at 24 this box reached y -2 and the meta
                 // line's box below it reaches -4.
-                var name = Ui.Label($"CharacterSkill{i}Name", UiString.Runtime, new UiVec(240f, 20f), 18,
+                // 190, down from 240, to pay for the cost box beside them. The
+                // longest authored name is well inside this; the cost is the
+                // half that was actually starved.
+                var name = Ui.Label($"CharacterSkill{i}Name", UiString.Runtime, new UiVec(190f, 20f), 18,
                     FightHudPalette.RowNameText, Place.At(-136f, 10f, new UiVec(0f, 0.5f)));
-                var meta = Ui.Label($"CharacterSkill{i}Meta", UiString.Runtime, new UiVec(240f, 20f), 11,
+                var meta = Ui.Label($"CharacterSkill{i}Meta", UiString.Runtime, new UiVec(190f, 20f), 11,
                     FightHudPalette.TextMuted, Place.At(-136f, -14f, new UiVec(0f, 0.5f)));
 
-                // 80 wide, not v1's 120: at 120 this box began at x 66 while the
-                // name and meta boxes both reach 104.
-                var cost = Ui.Label($"CharacterSkill{i}Cost", UiStrings.SignatureValue, new UiVec(80f, 22f), 14,
+                // 128, up from 80. 80 was sized for "5 MP" and the moment costs
+                // started naming their resource -- "12 MP + 8 WOOL" -- the label
+                // wrapped onto a second line and hung out over the battlefield.
+                // The name and meta boxes gave up the width, since 240 was more
+                // than any authored name uses and the cost had none to spare.
+                var cost = Ui.Label($"CharacterSkill{i}Cost", UiStrings.SignatureValue, new UiVec(128f, 22f), 14,
                     FightHudPalette.GoldLight, Place.At(186f, 0f, new UiVec(1f, 0.5f)));
 
                 // 1.02, the gentler of the two: a submenu row is 404 wide with

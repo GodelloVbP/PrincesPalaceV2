@@ -104,6 +104,13 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text detailBody;
         [SerializeField] internal TMP_Text[] detailStatValues;
 
+        // The KEYS as well, so a row with nothing to say can take its label with
+        // it. Declared in the tree since the panel was built and never wired, so
+        // "COST / POWER / TARGET / EFFECT" sat over four blank values whenever
+        // the panel had no selection to describe -- which reads as a panel that
+        // failed to populate rather than one with nothing to populate.
+        [SerializeField] internal TMP_Text[] detailStatKeys;
+
         [SerializeField] internal GameObject targetPrompt;
         [SerializeField] internal TMP_Text targetPromptLabel;
 
@@ -193,6 +200,11 @@ namespace PrincesPalace
             _satchel = satchel ?? new List<SatchelStack>();
             _menu.Reset();
             _log.Clear();
+
+            // Clearing the log leaves the BANNER, so hide it too -- otherwise
+            // every fight opens with an empty painted strip across the top of
+            // the screen and only fills it once somebody speaks.
+            ShowBark(false);
 
             ApplyBackground(encounterClass);
             WireInput();

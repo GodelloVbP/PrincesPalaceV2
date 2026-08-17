@@ -150,6 +150,7 @@ public static class ScreenRegistry
                 fight.detailKind = result.Tmp(screen.DetailKind);
                 fight.detailBody = result.Tmp(screen.DetailBody);
                 fight.detailStatValues = screen.DetailStatValues.Select(result.Tmp).ToArray();
+                fight.detailStatKeys = screen.DetailStatKeys.Select(result.Tmp).ToArray();
 
                 fight.targetPrompt = result.Go(screen.TargetPrompt);
                 fight.targetPromptLabel = result.Tmp(screen.TargetPromptLabel);

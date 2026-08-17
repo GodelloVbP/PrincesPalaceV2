@@ -403,6 +403,24 @@ namespace PrincesPalace
             _log.Add(line);
             TrimLog();
             barkLabel.SetContent(string.Join("\n", _log));
+            ShowBark(true);
+        }
+
+        // The banner is HIDDEN until it has something to say.
+        //
+        // It is an 840x104 painted strip across the top centre of the screen and
+        // it was drawn from the first frame of every fight, empty -- the single
+        // largest piece of furniture on the screen, reserved for nothing. A
+        // speech banner with no speech in it does not read as "nothing has been
+        // said yet", it reads as a panel that failed to load.
+        //
+        // Toggled on the PANEL rather than by clearing the label, because an
+        // empty label leaves the frame behind, which is the state being fixed.
+        private void ShowBark(bool visible)
+        {
+            if (barkLabel == null) return;
+            var panel = barkLabel.transform.parent;
+            if (panel != null) SetActive(panel.gameObject, visible);
         }
 
         // ---- the character sheet, mid-fight -----------------------------------

@@ -102,7 +102,22 @@ namespace PrincesPalace
             submenuTitle.Set(_menu.Branch == MenuBranch.Item
                 ? UiStrings.SubmenuItemsTitle
                 : UiStrings.SubmenuSkillsTitle);
-            submenuHint.Set(UiStrings.SubmenuHint);
+            // The truncation is reported HERE, beside the list it truncates,
+            // rather than into the combat log. It used to AppendMessage on every
+            // refresh, so the bark spent the fight repeating "9 more entr(y/ies)
+            // than the column can show" over whatever the fight was actually
+            // saying. The warning was right and the channel was wrong: a fact
+            // about the menu does not belong in the narration of the battle, and
+            // a line re-sent every frame stops being read at all.
+            int hidden = CurrentRows().Count - submenuRows.Length;
+            if (hidden > 0)
+            {
+                submenuHint.SetContent($"SHOWING {submenuRows.Length} OF {CurrentRows().Count}");
+            }
+            else
+            {
+                submenuHint.Set(UiStrings.SubmenuHint);
+            }
 
             // Through the SAME layout function the build used, which is the
             // whole reason FightSubmenuLayout exists in Domain.
@@ -128,13 +143,8 @@ namespace PrincesPalace
                 SetAlpha(submenuMetas[i], alpha);
             }
 
-            // Never a silent truncation: a kit that quietly stops showing its
-            // last entry reads as a skill that was taken away.
-            if (rows.Count > submenuRows.Length && _session != null)
-            {
-                _session.AppendMessage(
-                    $"{rows.Count - submenuRows.Length} more entr(y/ies) than the column can show.");
-            }
+            // Still never a silent truncation -- the count moved to the hint
+            // above, where it sits beside the list it is about.
         }
 
         // Column C. Describes whatever the submenu has selected, or the
@@ -151,7 +161,15 @@ namespace PrincesPalace
 
             for (int i = 0; i < detailStatValues.Length; i++)
             {
-                detailStatValues[i].SetContent(i < panel.Stats.Count ? panel.Stats[i].Value : "");
+                bool has = i < panel.Stats.Count;
+                detailStatValues[i].SetContent(has ? panel.Stats[i].Value : "");
+
+                // The key goes with it. A stat row is a pair, and half a pair is
+                // a label pointing at nothing.
+                if (detailStatKeys != null && i < detailStatKeys.Length && detailStatKeys[i] != null)
+                {
+                    SetActive(detailStatKeys[i].gameObject, has);
+                }
             }
         }
 
@@ -298,12 +316,21 @@ namespace PrincesPalace
 
             var rows = CurrentRows();
             int index = _menu.Selection;
-            if (index < 0 || index >= rows.Count) return FightHudModel.DetailForStrike(actor);
+
+            // NOT DetailForStrike. Falling back to it here described the ATTACK
+            // verb -- "Strike", "A plain swing at one enemy in reach" -- while
+            // the SKILL list was open above it and the breadcrumb read
+            // COMMAND > SKILL. A panel that is merely empty is honest; one that
+            // confidently describes a different command is not.
+            if (index < 0 || index >= rows.Count) return FightHudModel.DetailForNoSelection(_menu.Branch);
 
             if (_menu.Branch == MenuBranch.Item) return FightHudModel.DetailForItem(_satchel[index]);
 
             var kit = _session?.KitFor(actor);
-            if (kit != null && index < kit.Skills.Count) return FightHudModel.DetailForSkill(kit.Skills[index]);
+            if (kit != null && index < kit.Skills.Count)
+            {
+                return FightHudModel.DetailForSkill(kit.Skills[index], actor?.Signature?.DisplayName);
+            }
 
             // The basic spell's row, which has no ResolvedSkill behind it.
             var panel = new DetailPanel
