@@ -30,20 +30,48 @@ enough that the recorded fix would have been the wrong one. Two long-standing it
 resolved by finding out *why* rather than by patching what was described: **#24's root cause is
 #13** (see both), and **#30 was a real gap, not dead code**.
 
+> ## READ THIS BEFORE ACTING ON ANY FINDING BELOW #37
+>
+> **This register spans two codebases.** Everything above, and every finding from #1 to
+> #36, was written against **v1** — the audit's own base commit `6fb70d0` is not in this
+> repository, and neither are the files those findings name. Verified 2026-08-17 by
+> `git log --all` over the whole history: `GameplayManager.cs`, `StoreController.cs`,
+> `DungeonController.cs`, `SceneBuilder.Widgets.cs` and `FightControllerTests.cs` are all
+> **NEVER PRESENT** here. v1 now lives at `C:\Games\Backup Princes palace\Prince's Palace`.
+>
+> This tree's history begins at `1bd5999`, 2026-08-10, *"Start keeping the rebuild's
+> history"*. So the dividing line is a date, and it is sharp:
+>
+> | Findings | Written against | Status |
+> |---|---|---|
+> | #1–#36, and the 08-02 / 08-03 / 08-04 passes | v1 | **Each needs re-verifying against v2 before it means anything.** Some describe code that no longer exists; some describe a design v2 kept and therefore still bite (#32 was re-confirmed live on 2026-08-17, at `EnemyEntryResolver.cs:173`). |
+> | #37–#45 (2026-08-11, 08-12) | v2 | Current. These reference `UiEmitter`, `ScreenRegistry`, `ReckoningScreen`, `Domain/Economy/` — all v2 files. |
+>
+> **The failure mode this box exists to stop** is the one that produced this note: reading a
+> v1 finding as a live v2 defect and planning work against it. That happened on 2026-08-17
+> and got as far as a recommendation before the file list was checked. A v1 finding is not
+> wrong and not stale — it is *about somewhere else*, which is worse, because everything
+> about its wording says otherwise.
+>
+> **Carrying a v1 finding across takes evidence, not judgement**: name the v2 file:line that
+> still exhibits it, or strike it as obsoleted. The table below has NOT been re-counted since
+> the rebuild and describes v1 — treat its numbers as history.
+
 | Section | Open | Struck |
 |---|---|---|
 | P0 — Live bugs, player-visible | 2 | 6 |
 | P1 — Correctness and robustness | **0** | 8 |
-| P2 — Tests that give false confidence | 4 | 3 |
+| P2 — Tests that give false confidence | 3 | 4 |
 | Systems worth building | 3 | 2 |
-| Cleanup-pass findings (2026-08-02) | 5 | 0 |
+| Cleanup-pass findings (2026-08-02) | 4 | 1 |
 | Actor frame-animation findings | 1 | 1 |
-| Pipeline-generalisation findings | 5 | 0 |
+| Pipeline-generalisation findings | 4 | 1 |
 | Open investigations | 0 | 1 |
 
 **P1 is now empty** — every correctness-and-robustness finding the original audit raised is
-struck. The two remaining P0s and the four remaining P2s are listed below as design calls or
-as work deliberately scoped out, not as unexamined items.
+struck. The two remaining P0s and the three remaining P2s are listed below as design calls or
+as work deliberately scoped out, not as unexamined items. (Written 2026-08-04, about v1. The
+2026-08-17 strikes of #19 and #29 are reflected in the counts above; nothing else here is.)
 
 Still open by DESIGN, not by neglect: **#2** (the economy — numbers re-measured below and now
 much worse than recorded, but retuning three interacting dials is the author's call), **#7**
@@ -301,8 +329,18 @@ loudly. The comment says so.
 
 ### ~~18. Elite scaling test is a tautology~~ — fixed in `8f7ab4d`: expectations are pinned literals in a dictionary (golem 350→546, bog_witch 160→250, rat 90→140) with a completeness guard that fails if any non-boss enemy lacks an entry, so adding an enemy cannot silently escape the check. The method under test is now `StatBlock.ScaledForElite`, which also picked up direct EditMode coverage. Worth keeping the commit's own warning in view: the literals are **measured, not arithmetic** — this finding's suggested value for the golem (46 at 1.3×) was itself wrong, the real answer was 45
 
-### 19. `Assert.Ignore` randomly skips the entire victory-reward path
-`FightControllerTests.cs:339-343` bails out when the randomised fight is lost, skipping currency
+### ~~19. `Assert.Ignore` randomly skips the entire victory-reward path~~ — **OBSOLETED BY THE REBUILD**, struck 2026-08-17. The instance is gone; a different-mechanism residue is refiled as #46
+This is a **v1** finding — see the box at the top. `FightControllerTests.cs` has **never existed
+in this repository** (`git log --all`), so the specific `Assert.Ignore` at `:339-343`, the losing
+draw that tripped it, and the unseeded `UnityEngine.Random` behind it are all v1. v2 seeds its
+combat draws independently — `VictoryRewards.RollConsumableDrops` takes a `SeededRandom` and
+rolls in roster order specifically so a seeded run reproduces its own loot.
+
+**What did carry across is the *shape*, not the cause,** and it is different enough to deserve its
+own number rather than a strikethrough that quietly widens: v2 has 20 `Assert.Ignore` calls, and
+none of them are RNG. Refiled as **#46**.
+
+**Original finding, kept:** `FightControllerTests.cs:339-343` bails out when the randomised fight is lost, skipping currency
 gain, EXP gain, the victory bark, and the return-to-Dungeon assertions. Its justification
 ("covered by the defeat-path assertions elsewhere") is **false — there are none**; nothing covers
 `EndFight`'s defeat branch or `OnContinuePressed`'s `EndRun(false)`. And losing draws are common
@@ -570,7 +608,24 @@ both now larger than anything the original finding named. Still not split: every
 pass touched `FightController`, and a pure-move split landing in the middle of that would have
 made every other diff unreadable for no behavioural gain.
 
-### 29. 94 `new GameObject(...)` call sites across `Editor/` share the same 5-6 line rect preamble — partially addressed in `3d79d73`
+### ~~29. 94 `new GameObject(...)` call sites across `Editor/` share the same 5-6 line rect preamble~~ — **OBSOLETED BY THE REBUILD**, struck 2026-08-17. Not fixed: v2 never had this shape
+This is a **v1** finding — see the box at the top. The migration it describes cannot be finished
+because the thing being migrated is not here. The 13 files it names as remaining
+(`SceneBuilder.Fight.cs`, `.FightStage.cs`, `.Overlays.cs`, `.MainMenu.cs`, `.Map.cs`,
+`.Widgets.cs`) have **never existed in this repository**, confirmed by `git log --all`.
+
+What v2 has instead reaches the same end by a different route, which is why the count collapsed
+rather than shrank: layout is a declared tree in `Domain/UiKit/Screens/` and `UiEmitter` is the
+only thing that turns a node into a GameObject. The rect preamble is therefore written **once**,
+in the emitter, instead of 86 times across 14 files. `Editor/SceneBuilder/` now holds nine files
+and not one of them lays out a screen — `new GameObject(` appears **9 times in all of `Editor/`**
+(`SceneBuilder.cs` 4, `UiEmitter.cs` 4, `ScreenshotTool.cs` 1), against the 86 this finding
+last counted.
+
+One trap worth leaving marked: **`NewUiRect` still exists in v2 and is not the same thing.** The
+Editor helper this finding is about is gone; the four surviving matches are `Domain/UiKit/Place.cs`,
+`UiSize.cs` and two UiKit test files — a Domain-layer concept wearing the same name. Grepping for
+the identifier and finding hits is not evidence that the helper survived.
 `SetParent` → centre-anchor → pivot → `sizeDelta` → `anchoredPosition`, repeated at every site
 that builds a UI element. `SceneBuilder.Widgets.cs` alone had 26. New `NewUiRect` helper (two
 overloads: default `(0.5,0.5)` pivot, and an explicit-pivot overload for the
@@ -657,8 +712,58 @@ Surfaced while extending the enemy-sprite pattern (committed manifest + visual Q
 invariants over all content + resolve-once caching) to the rest of the game. Recorded
 rather than silently fixed, per this register's convention.
 
-### 32. Two art-path conventions coexist in content JSON, distinguished only by field name
-`iconPath` is **`Assets/`-relative** (baked into a scene at build time by
+### ~~32. Two art-path conventions coexist in content JSON, distinguished only by field name~~ — **FIXED 2026-08-17.** A v1 finding, re-verified live against v2 first, then closed as a class rather than field by field
+**Re-verified before being touched**, per the box at the top: this one carried across the rebuild
+intact. `EnemyEntryResolver.cs:173` was still `(raw.spritePath ?? string.Empty).Trim()` with no
+convention check, and `CharacterEntryResolver` was still the only guarded type — so the finding's
+count had actually got worse, not better: **nine path fields across seven resolvers**, of which two
+were checked.
+
+The conventions were confirmed from the shipped data rather than from the comments, by sweeping
+every path value in `ContentData/*.json`: nine `Assets/`-relative values (`iconPath`,
+`portraitPath`, `iconSheet`) against nine Resources-relative ones (`spritePath`,
+`battleSpritePath`, `vfxPath`, `sfxPath`). Clean split, no exceptions, so the rule is a lookup on
+field name.
+
+**The fix is one table, not one guard per field.** New `Domain/Content/ArtPathConvention.cs` holds
+the field→convention map and the error text; the seven resolvers each call `Check`. The two
+hand-written checks in `CharacterEntryResolver` were **replaced** by calls rather than left in
+place — two statements of one rule is #34's shape, and the copy that does not get updated is the
+one that matters.
+
+**Two things the finding did not name, both found by doing it:**
+
+- **`iconSheet` is a path field whose name does not end in `Path`.** `RawWeaponEntry` and
+  `RawSetPiece` both carry it, it is `Assets/`-relative, and `ItemSetEntryResolver.IconPathFor`
+  appends `/level_N.png` to it — so a Resources-style value there generates up to eleven paths that
+  all resolve to nothing. Any sweep keyed on the suffix `Path` alone would have missed it, which is
+  why the test matches both spellings and asserts it specifically.
+- **A Resources-relative path with a file extension is the second silent failure**, not just an
+  `Assets/` prefix. `Resources.Load` takes the path *without* an extension and returns null with
+  one. Checked against a list of known extensions rather than "contains a dot", so a folder name
+  with a dot in it is not falsely rejected.
+
+Also worth recording: `WeaponEntryResolver` checks **both** `iconSheet` and `iconPath` even though
+`IconFor` prefers the sheet whenever it is set. Checking only the one in use would leave a
+wrongly-written `iconPath` sitting invisible behind a working sheet until the sheet was removed —
+at which point the art would vanish for a reason introduced months earlier.
+
+**What stops it reopening.** #20's closing note is the relevant lesson — *"a rule that has to be
+re-applied by hand to every new content type ... will reopen again on the next type added. A canary
+generated per type, rather than written per type, is the version of this that would actually stay
+closed."* So the durable half here is not the guards: it is
+`ArtPathConventionTests.EveryPathShapedFieldOnEveryRawEntryIsClassified`, which reflects over every
+`Raw*Entry` and fails on any path-shaped field the table does not classify. A new content type
+cannot quietly arrive unchecked.
+
+Non-vacuity **proved, not asserted**: unclassifying `iconSheet` and re-running produced exactly the
+two real sites — *"RawSetPiece.iconSheet, RawWeaponEntry.iconSheet"* — with the message telling the
+reader where to add them. The resolver-level tests are self-proving in the same way: each asserts a
+bad path FAILS to resolve, so an unwired guard fails the test rather than passing it. That
+distinction is finding #42's whole lesson, and the tests are written to respect it — the rule is
+tested, and separately the wiring is tested.
+
+**Original finding, kept:** `iconPath` is **`Assets/`-relative** (baked into a scene at build time by
 `SceneBuilder.LoadSprite` → `AssetDatabase`) while `spritePath`, `vfxPath`, `sfxPath` and
 `battleSpritePath` are **`Resources/`-relative** (loaded at runtime, no extension). Nothing
 tells you which a given field wants, and getting it wrong fails SILENTLY — the loader returns
@@ -804,8 +909,35 @@ had zero callers, so the numeric modifier table was unreachable the day it was w
 Pinned by `RelicsReachCombatTests`, which was verified non-vacuous by reverting the null and
 watching it fail.
 
-### 38. A wipe does not actually forfeit anything yet
-Follows from #37 and is the more urgent half. `CurrencyType` documents the forfeit rule, but
+### ~~38. A wipe does not actually forfeit anything yet~~ — **FIXED**, in `76a4dd1` and `2814cec`; struck 2026-08-17 on re-verification, having been built and never struck
+The forfeit is enforced by **structure rather than by a clearing step**, which is why nothing
+here looks like the "explicitly clears the at-risk Gold" this finding asked for. Run gold lives
+only on `RunSnapshot`; `RunManager.EndRun` (`RunManager.cs:132`) replaces that snapshot with
+`new RunSnapshot { hasRun = false }`, so the gold is destroyed with the run it was staked on.
+There is no path that moves it to `SaveData`'s wallet, which is the invariant stated as "Gold is
+a wager until it is banked".
+
+`RunSettlement.Settle` runs **first**, and the ordering is load-bearing — its own header says so:
+it reports `GoldLost` (`RunSettlement.cs:50`) and pays the ember/lifetime side while the evidence
+still exists, because `EndRun` is about to throw it away. `76a4dd1` built that, plus
+`DefeatController` and `DefeatScreen` — so the "returns the player to the hub with a defeat
+animation" half landed too. `2814cec` then folded `Settle` INTO `EndRun`, because settling had
+been the caller's job and only the defeat path did it: abandoning a descent from the map silently
+binned every ember its bosses had earned, and discarding a snapshot looks identical whether or not
+anyone read it first.
+
+The test this finding explicitly asked for — one that fails if the forfeit stops happening —
+exists twice over, and both assert the *negative* rather than just the report:
+`RunEndingTests.TheRunsUnbankedGoldIsForfeited` (`RunEndingTests.cs:104`, "forfeited gold reached
+the banked wallet") and `RunSettlementTests.LostGoldNeverReachesTheBankedWallet`
+(`RunSettlementTests.cs:101`). `DefeatScreenWiringTests.cs:109` pins that the number reaches the
+screen rather than dying in the settlement object.
+
+Follows from #37, which stays open: the *comments* still describe a voluntary-retreat flow the
+game does not have, and the checkpoint design that would replace them is unsettled. Enforcing the
+forfeit did not resolve that, and should not be read as having done so.
+
+**Original finding, kept:** Follows from #37 and is the more urgent half. `CurrencyType` documents the forfeit rule, but
 the defeat path is unbuilt — the intended behaviour (2026-08-11) is that a defeat returns the
 player to the hub with a defeat animation. Until something explicitly clears the at-risk Gold
 on a wipe, the documented stake is not enforced by any code, and the "Gold is a wager"
@@ -912,6 +1044,49 @@ Three ways out, none of them free, all of them the author's call: shorten the de
 so its top clears the ground line (it currently holds a name, a kind, a 76px body, a divider and
 four stat rows, so something has to give); move it out from over the stage, which the enemy plates
 at x 520..920 leave no room for; or accept it and let the front enemy be occluded during selection.
+
+---
+
+## Findings from the register re-triage, 2026-08-17
+
+The pass that established the v1/v2 split documented at the top. It struck #38 (built, never
+struck), #29 and #19 (both obsoleted by the rebuild), and refiled the one piece of #19 that
+genuinely carries across.
+
+### 46. Twelve `Assert.Ignore`s skip on CONTENT shape, and three of them guard the regression #42 describes
+v2 has 20 `Assert.Ignore` calls across 11 PlayMode files. **Eight are legitimate and should stay** —
+they gate on `CanvasCapture.IsSupported` because `camera.Render()` is a no-op under `-nographics`
+(`HitFlashPixelTests.cs:109`, `PostProcessingLegibilityTests.cs:178`/`:208`/`:243`,
+`CharacterOverlayCaptureTests.cs:25`, `FightPlayableTests.cs:209`, `MapCaptureTests.cs:30`,
+`RuntimeScreenshotTests.cs:51`). A pixel test with no pixels has nothing to assert.
+
+The other **twelve skip because content or a generated map did not happen to contain what the test
+wanted**, and those quietly stop testing as content drifts:
+
+- `RelicsReachCombatTests.cs:106`, `:129`, `:135` — "content has only one character", "no relic in
+  content carries a numeric modifier yet", "that relic does not touch attack"
+- `CharacterOverlayTests.cs:230`, `:243`, `:265`, `:314` — "no wearable item in the starting kit",
+  "the starting kit holds no consumable on the first page"
+- `MapFlowTests.cs:228`, `:273` — "this leg offers no fight from the entry", "only fights"
+- `EquipmentReachesCombatTests.cs:187`, `GlossaryTests.cs:167`, `FightPlayableTests.cs:172`
+
+**`RelicsReachCombatTests` is the sharp end, and the reason this is filed rather than tidied.**
+That file exists *because of #42*: relics were implemented, correct, and unreachable from actual
+play for their entire life, and every relic test passed the whole time because each built its own
+`PlayerKit` by hand. It is the guard against that recurring — and it can currently skip itself on
+three separate content conditions without failing anything. A guard that silently declines to run
+is indistinguishable from a guard that passes.
+
+**This is NOT #19 wearing new clothes, and the difference decides the fix.** #19's skip was driven
+by unseeded combat RNG, so seeding fixed it. These are driven by content shape and generated map
+shape; seeding does not help, because the draw is not the problem — the *fixture* is. The remedy
+is the one #24's fix already established as the house pattern: state the precondition rather than
+hope for it. Either assert the content invariant loudly (`"content no longer has a relic with a
+numeric modifier — this test has stopped covering #42"`), or build the fixture that guarantees it.
+For the two `MapFlowTests` cases there is a third option the others lack: the map is seeded and
+reproducible, so a seed known to offer both a fight and a quiet room can be pinned instead.
+
+Cheap to fix, and worth doing before the next content change rather than after.
 
 ---
 
