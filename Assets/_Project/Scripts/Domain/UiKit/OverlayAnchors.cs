@@ -37,29 +37,64 @@ namespace PrincesPalace.Domain.UiKit
 
         public const float SlotCell = 96f;
 
-        // Read down the body, then out to the hands, then out again to the
-        // weapons. The centre column is spaced at 118-153px against a 96px
-        // cell, so slot-vs-slot clears the overlap audit by construction.
+        // ---- where the cells go, and why they left the body --------------------
+        //
+        // TWO COLUMNS FLANKING THE FIGURE, not a column down its front.
+        //
+        // The previous arrangement put every armour cell on the silhouette's
+        // own centre line and the hand/weapon cells on the arms, each position
+        // measured off a landmark in the painted stand. The measurements were
+        // right and the idea was wrong: five opaque 96px cells stacked down the
+        // torso cover the figure they are supposed to be describing, so the
+        // paperdoll reads as a stack of boxes with a purple shape behind it
+        // rather than as a body wearing things.
+        //
+        // This is the same defect the armour-stand art brief already named --
+        // "no internal detail competing with the slot cells" -- arriving from
+        // the other side. The art was corrected to stay quiet; the cells then
+        // took the space anyway.
+        //
+        // So the figure gets its own space back and the cells take the gutters
+        // either side. Reading order is top-down in each column: worn armour on
+        // the left, hands and held things on the right.
+        //
+        // Geometry, all of it derived rather than eyeballed:
+        //   silhouette spans x -740..-220 (centre -480, width 520)
+        //   left column   x -820  -> cell spans -868..-772, 32px clear of the figure
+        //   right column  x -140  -> cell spans -188..-92,  32px clear of the figure
+        //   rows 300/160/20/-120 -> 140px pitch against a 96px cell, 44px of gap
+        //
+        // The 32px gutters and 44px row gaps are what make slot-vs-slot and
+        // slot-vs-silhouette clear the overlap audit by construction rather
+        // than by exemption.
+        public const float SlotColumnLeftX = -820f;
+        public const float SlotColumnRightX = -140f;
+
+        private const float SlotRow0 = 300f;
+        private const float SlotRow1 = 160f;
+        private const float SlotRow2 = 20f;
+        private const float SlotRow3 = -120f;
+
         public static UiVec PositionFor(EquipmentSlot slot)
         {
             switch (slot)
             {
-                case EquipmentSlot.Head: return new UiVec(-480f, 358f);
-                case EquipmentSlot.Necklace: return new UiVec(-480f, 240f);
-                case EquipmentSlot.Torso: return new UiVec(-480f, 110f);
-                case EquipmentSlot.Legs: return new UiVec(-480f, -40f);
-                case EquipmentSlot.Shoes: return new UiVec(-480f, -193f);
+                // Worn armour, head to legs.
+                case EquipmentSlot.Head: return new UiVec(SlotColumnLeftX, SlotRow0);
+                case EquipmentSlot.Necklace: return new UiVec(SlotColumnLeftX, SlotRow1);
+                case EquipmentSlot.Torso: return new UiVec(SlotColumnLeftX, SlotRow2);
+                case EquipmentSlot.Legs: return new UiVec(SlotColumnLeftX, SlotRow3);
 
-                // ON THE HANDS. The A-pose puts them 208px out from the body
-                // centre at the height the arms end -- which is why this is no
-                // longer tucked in beside the hip.
-                case EquipmentSlot.Gloves: return new UiVec(-688f, 96f);
+                // Hands and what they hold. Shoes join this column rather than
+                // extending the left one to five: a fifth row would push the
+                // paperdoll down onto the detail plate, and an even 4+4 is
+                // what keeps both columns inside the figure's own height.
+                case EquipmentSlot.Gloves: return new UiVec(SlotColumnRightX, SlotRow0);
+                case EquipmentSlot.Weapon1: return new UiVec(SlotColumnRightX, SlotRow1);
+                case EquipmentSlot.Weapon2: return new UiVec(SlotColumnRightX, SlotRow2);
+                case EquipmentSlot.Shoes: return new UiVec(SlotColumnRightX, SlotRow3);
 
-                // Outside the hands again, so a weapon reads as HELD OUT
-                // rather than as a second glove. 130px clear of the Gloves
-                // cell, which is 34px of gap at a 96px cell.
-                case EquipmentSlot.Weapon1: return new UiVec(-818f, 110f);
-                default: return new UiVec(-142f, 110f);
+                default: return new UiVec(SlotColumnRightX, SlotRow3);
             }
         }
 

@@ -251,5 +251,73 @@ namespace PrincesPalace.Domain.Tests
                 foreach (var found in Walk(child)) yield return found;
             }
         }
+
+        // No slot cell may sit on the figure.
+        //
+        // The silhouette is decor, so UiAudit's overlap check ignores it by
+        // design -- which is exactly how five opaque cells came to be stacked
+        // down the stand's torso with a green build. The paperdoll read as a
+        // column of boxes with a purple shape behind them.
+        //
+        // This is the rule that was only ever written in a comment. Cells live
+        // in the gutters either side of the figure; anything that puts one back
+        // on the body fails here rather than shipping and being noticed in a
+        // screenshot weeks later.
+        [Test]
+        public void NoSlotCellOverlapsTheSilhouette()
+        {
+            float figureLeft = OverlayAnchors.Silhouette.X - OverlayAnchors.SilhouetteSize.X * 0.5f;
+            float figureRight = OverlayAnchors.Silhouette.X + OverlayAnchors.SilhouetteSize.X * 0.5f;
+            float figureBottom = OverlayAnchors.Silhouette.Y - OverlayAnchors.SilhouetteSize.Y * 0.5f;
+            float figureTop = OverlayAnchors.Silhouette.Y + OverlayAnchors.SilhouetteSize.Y * 0.5f;
+
+            float half = OverlayAnchors.SlotCell * 0.5f;
+
+            foreach (EquipmentSlot slot in System.Enum.GetValues(typeof(EquipmentSlot)))
+            {
+                var at = OverlayAnchors.PositionFor(slot);
+
+                bool clearsHorizontally =
+                    at.X + half <= figureLeft || at.X - half >= figureRight;
+                bool clearsVertically =
+                    at.Y + half <= figureBottom || at.Y - half >= figureTop;
+
+                Assert.IsTrue(clearsHorizontally || clearsVertically,
+                    $"the {slot} cell sits on the silhouette -- cells belong in the "
+                    + "gutters beside the figure, not over it");
+            }
+        }
+
+        // The two columns must stay clear of the figure rather than merely
+        // outside it by a pixel: a cell touching the outline reads as attached
+        // to the body and reintroduces the same crowding at a smaller scale.
+        [Test]
+        public void TheSlotColumnsKeepARealGutter()
+        {
+            float figureLeft = OverlayAnchors.Silhouette.X - OverlayAnchors.SilhouetteSize.X * 0.5f;
+            float figureRight = OverlayAnchors.Silhouette.X + OverlayAnchors.SilhouetteSize.X * 0.5f;
+            float half = OverlayAnchors.SlotCell * 0.5f;
+
+            Assert.GreaterOrEqual(figureLeft - (OverlayAnchors.SlotColumnLeftX + half), 24f,
+                "the left column is crowding the figure");
+            Assert.GreaterOrEqual(OverlayAnchors.SlotColumnRightX - half - figureRight, 24f,
+                "the right column is crowding the figure");
+        }
+
+        // Every slot has somewhere of its own to be. A slot falling through to
+        // the default branch would silently stack on another one.
+        [Test]
+        public void EverySlotHasItsOwnCell()
+        {
+            var seen = new List<UiVec>();
+
+            foreach (EquipmentSlot slot in System.Enum.GetValues(typeof(EquipmentSlot)))
+            {
+                var at = OverlayAnchors.PositionFor(slot);
+                Assert.IsFalse(seen.Any(p => p.X == at.X && p.Y == at.Y),
+                    $"{slot} shares a position with another slot");
+                seen.Add(at);
+            }
+        }
     }
 }
