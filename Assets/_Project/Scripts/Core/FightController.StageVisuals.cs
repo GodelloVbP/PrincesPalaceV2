@@ -26,6 +26,7 @@ namespace PrincesPalace
         // ground line -- see RefreshCombatantSprite. Cached because it opens a
         // sprite's pixels, which is far too expensive to do per repaint.
         private static readonly Dictionary<string, float> ContentCentreCache = new Dictionary<string, float>();
+        private static readonly Dictionary<string, float> ContentTopCache = new Dictionary<string, float>();
 
         // ---- the whole stage --------------------------------------------------
 
@@ -34,6 +35,8 @@ namespace PrincesPalace
             if (_session == null) return;
 
             var enemies = _session.Encounter.Enemies;
+            AnchorStageSlots(enemySlots, enemies.Count, mirrored: false);
+
             for (int i = 0; i < enemySprites.Length; i++)
             {
                 var enemy = i < enemies.Count ? enemies[i] : null;
@@ -44,7 +47,11 @@ namespace PrincesPalace
                 RefreshNameplate(enemyNameplates[i], enemy);
             }
 
+            RefreshIntentIcons();
+
             var party = _session.Encounter.PlayerParty;
+            AnchorStageSlots(partySlots, party.Count, mirrored: true);
+
             for (int i = 0; i < partySprites.Length; i++)
             {
                 var member = i < party.Count ? party[i] : null;
@@ -74,10 +81,213 @@ namespace PrincesPalace
             return _stance.TryGetValue(combatant, out var stance) ? stance : FightSession.Stances.Idle;
         }
 
+        // Spreads however many actors are ACTUALLY on this side across the whole
+        // depth range, instead of filling the first N of three fixed slots.
+        //
+        // The bug this fixes, measured rather than eyeballed: two Giant Rats sat
+        // in slots 0 and 1 of a three-slot formation, 132px apart, while slot 2
+        // -- the widest position, 265px out -- stood empty. The rat sheet is
+        // 675px wide, so the back one was 78% hidden behind the front one and
+        // read as one monster with a spare tail. Spreading the pair to the two
+        // ENDS of the same range takes that to 48% with no change to the anchors
+        // themselves, which are load-bearing for panel clearance and were
+        // derived against the tallest actor (see FightStageAnchors).
+        //
+        // Runtime rather than build-time for the same reason the submenu rows
+        // are: how many monsters a room fields is not known until it is entered.
+        // It goes through the SAME FightStageAnchors functions the builder used,
+        // so the two can never disagree about what "slot 1 of 2" means.
+        //
+        // Applies to the PARTY too. A squad of two had exactly the same problem
+        // and nobody had noticed, because two sheep overlapping reads as two
+        // sheep standing close together rather than as a layout fault.
+        private static void AnchorStageSlots(RectTransform[] slots, int liveCount, bool mirrored)
+        {
+            if (slots == null || liveCount <= 0) return;
+
+            int shown = liveCount > slots.Length ? slots.Length : liveCount;
+            for (int i = 0; i < shown; i++)
+            {
+                if (slots[i] == null) continue;
+
+                var offset = FightStageAnchors.SlotOffset(i, shown, mirrored);
+                slots[i].anchoredPosition = new Vector2(offset.X, offset.Y);
+
+                float scale = FightStageAnchors.SlotScale(i, shown);
+                slots[i].localScale = new Vector3(scale, scale, 1f);
+            }
+        }
+
         private void RefreshNameplate(TMPro.TMP_Text plate, CombatantState combatant)
         {
             if (plate == null) return;
             plate.SetContent(combatant.Name);
+        }
+
+        // ---- enemy intent icons -------------------------------------------------
+
+        private TMPro.TMP_Text[] _intentGlyphs;
+        private Image[] _intentImages;
+
+        // Resources.Load every frame would be wasteful and, worse, hides a
+        // missing file behind a per-frame retry. Resolved once per kind, and a
+        // null stays null so the text fallback takes over permanently rather
+        // than flickering.
+        private static readonly Dictionary<EnemyIntentKind, Sprite> IntentSprites =
+            new Dictionary<EnemyIntentKind, Sprite>();
+
+        private static Sprite IntentSpriteFor(EnemyIntentKind kind)
+        {
+            if (IntentSprites.TryGetValue(kind, out var cached)) return cached;
+
+            var loaded = Resources.Load<Sprite>(Domain.Combat.Session.EnemyIntentIcons.ResourceFor(kind));
+            IntentSprites[kind] = loaded;
+            return loaded;
+        }
+
+        // Called once, from Start. The caption of a button is a child the
+        // emitter synthesises and holds no NodeRef for, so it is found here
+        // rather than wired -- see the field's own comment.
+        private void WireIntentIcons()
+        {
+            if (enemyIntentIcons == null) return;
+
+            _intentGlyphs = new TMPro.TMP_Text[enemyIntentIcons.Length];
+            _intentImages = new Image[enemyIntentIcons.Length];
+            for (int i = 0; i < enemyIntentIcons.Length; i++)
+            {
+                var icon = enemyIntentIcons[i];
+                if (icon == null) continue;
+
+                _intentGlyphs[i] = icon.GetComponentInChildren<TMPro.TMP_Text>(includeInactive: true);
+                _intentImages[i] = icon.GetComponent<Image>();
+
+                var hover = icon.GetComponent<IntentHover>();
+                if (hover == null) hover = icon.AddComponent<IntentHover>();
+                hover.Index = i;
+                hover.Changed = OnIntentHover;
+            }
+
+            SetActive(intentTooltip, false);
+        }
+
+        // Shown ONLY while the player's turn is the one on screen, which is the
+        // same rule TelegraphSuffix documents and for the same reason: once a
+        // round is resolving, the committed intent already belongs to the NEXT
+        // turn, so drawing it during playback telegraphs the wrong turn.
+        private void RefreshIntentIcons()
+        {
+            if (enemyIntentIcons == null || _session == null) return;
+
+            // Bind() runs before Start() when the adapter builds the fight, so
+            // the first paint arrived with the glyph refs still unresolved and
+            // every icon switched on carrying no character at all. Resolving on
+            // demand makes the two call orders commutative, which is the same
+            // fix RefreshStage's own comment describes for the party art map.
+            if (_intentGlyphs == null) WireIntentIcons();
+
+            var enemies = _session.Encounter.Enemies;
+            bool readable = _session.IsPlayerTurn && !_isBusy && !_session.IsOver;
+
+            for (int i = 0; i < enemyIntentIcons.Length; i++)
+            {
+                var enemy = i < enemies.Count ? enemies[i] : null;
+                var intent = enemy != null && enemy.IsAlive && readable
+                    ? _session.IntentDetailFor(enemy)
+                    : null;
+
+                SetActive(enemyIntentIcons[i], intent.HasValue);
+                if (!intent.HasValue) continue;
+
+                var kind = intent.Value.Kind;
+                var art = IntentSpriteFor(kind);
+
+                PlaceIntentBadge(enemyIntentIcons[i], enemy);
+
+                if (_intentImages != null && _intentImages[i] != null)
+                {
+                    _intentImages[i].sprite = art;
+                    _intentImages[i].color = Hex(Domain.Combat.Session.EnemyIntentIcons.TintFor(kind));
+                    // Nothing to draw is worse than a plain plate: an Image with
+                    // no sprite paints a filled RECTANGLE, which is the white
+                    // quad this project has hunted eleven times.
+                    _intentImages[i].enabled = art != null;
+                }
+
+                // The three-letter word only when the art did not load, so the
+                // badge degrades to something readable instead of to nothing.
+                if (_intentGlyphs != null && _intentGlyphs[i] != null)
+                {
+                    _intentGlyphs[i].SetContent(art == null
+                        ? Domain.Combat.Session.EnemyIntentIcons.For(kind)
+                        : "");
+                }
+            }
+        }
+
+        // Sits the badge just above the monster's ACTUAL head.
+        //
+        // The build pins it to the slot's top edge, which is the sprite FRAME's
+        // top -- fine for the rat, whose frame hugs its pose, and badly wrong for
+        // the golem, whose frame is cut for a taller pose and left its badge
+        // floating in open sky. Measured content beats declared canvas, the same
+        // conclusion the foot shadow reached for X.
+        //
+        // Slot-local y = 0 IS the ground line: the slot's pivot is bottom-centre
+        // and GroundTheFigure nudges the sprite down by the authored drop, so the
+        // two coincide by construction.
+        private void PlaceIntentBadge(GameObject badge, CombatantState enemy)
+        {
+            if (badge == null) return;
+
+            string folder = SpriteFolderFor(enemy);
+            if (string.IsNullOrWhiteSpace(folder)) return;
+
+            float top = ContentTopForActor(folder);
+            if (top <= 0f) return;
+
+            float drop = StanceManifestLoader.Manifest.GroundLineFor(folder);
+            var rect = (RectTransform)badge.transform;
+
+            // Anchored to the slot's own centre so this y is measured from the
+            // ground line, not from whichever edge the build happened to pin to.
+            rect.anchorMin = new Vector2(0.5f, 0f);
+            rect.anchorMax = new Vector2(0.5f, 0f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            // The badge's BOTTOM edge clears the head, not its centre -- half the
+            // icon is added on top of the gap. Measured headroom differs wildly
+            // between actors (17px on the rat's frame, 123 on the golem's), so
+            // getting this half-height wrong is invisible on a tight frame and
+            // parks the badge on a golem's shoulder.
+            rect.anchoredPosition = new Vector2(0f,
+                top - drop + FightStageAnchors.IntentIconOffset + FightStageAnchors.IntentIconSize * 0.5f);
+        }
+
+        private void OnIntentHover(int index, bool entered)
+        {
+            if (intentTooltip == null) return;
+
+            if (!entered)
+            {
+                SetActive(intentTooltip, false);
+                return;
+            }
+
+            var enemies = _session?.Encounter.Enemies;
+            var enemy = enemies != null && index < enemies.Count ? enemies[index] : null;
+            var intent = enemy == null ? null : _session.IntentDetailFor(enemy);
+            if (!intent.HasValue)
+            {
+                SetActive(intentTooltip, false);
+                return;
+            }
+
+            if (intentTooltipText != null)
+            {
+                intentTooltipText.SetContent(FightHudModel.IntentTooltip(enemy.Name, intent.Value));
+            }
+
+            SetActive(intentTooltip, true);
         }
 
         // ---- one combatant ----------------------------------------------------
@@ -374,6 +584,53 @@ namespace PrincesPalace
             float centre = idle.IsEmpty ? 0f : ContentCentreFraction(idle.FrameAt(0));
             ContentCentreCache[folder] = centre;
             return centre;
+        }
+
+        // How far the topmost opaque pixel of the IDLE pose sits above the frame's
+        // bottom, in frame pixels. Cached per actor.
+        //
+        // This exists because a slot is sized to the sprite's FRAME, and a frame
+        // is cut to fit the tallest pose on the sheet -- so an idle golem leaves
+        // a great deal of empty canvas above its head. Pinning the intent badge
+        // to the frame's top put the golem's badge 106px above it, floating in
+        // open sky next to somebody else's HP plate, while the rat's and the
+        // witch's looked fine. It read as a bug in the badge rather than as the
+        // frame being taller than the pose.
+        //
+        // Measured rather than authored, and from the IDLE frame only, for the
+        // same reasons ContentCentreFraction is: a pose that raises an arm must
+        // not drag the badge up with it, and one more authored number per actor
+        // is a number that can rot. The ground line stays authored -- that one is
+        // load-bearing enough to be worth the manifest.
+        private static float ContentTopForActor(string folder)
+        {
+            if (string.IsNullOrWhiteSpace(folder)) return 0f;
+            if (ContentTopCache.TryGetValue(folder, out var cached)) return cached;
+
+            var idle = StanceAnimationLibrary.Resolve(folder, FightSession.Stances.Idle);
+            float top = idle.IsEmpty ? 0f : ContentTop(idle.FrameAt(0));
+            ContentTopCache[folder] = top;
+            return top;
+        }
+
+        private static float ContentTop(Sprite sprite)
+        {
+            if (sprite == null || sprite.texture == null || !sprite.texture.isReadable) return 0f;
+
+            var rect = sprite.textureRect;
+            var pixels = sprite.texture.GetPixels((int)rect.x, (int)rect.y, (int)rect.width, (int)rect.height);
+
+            // GetPixels is bottom-up, so walking down from the last row finds the
+            // visual TOP on the first opaque hit.
+            for (int y = (int)rect.height - 1; y >= 0; y--)
+            {
+                for (int x = 0; x < (int)rect.width; x++)
+                {
+                    if (pixels[y * (int)rect.width + x].a > 0.02f) return y + 1;
+                }
+            }
+
+            return 0f;
         }
 
         // How far the opaque pixels' horizontal midpoint sits from the canvas's,

@@ -62,6 +62,25 @@ namespace PrincesPalace.Domain.UiKit
         public const string PipFilled = "#E8E0F7";
         public const string PipEmpty = "#0E0814B3";          // 0.70
 
+        // --- enemy intent badges ----------------------------------------------
+        //
+        // The icons ship as WHITE silhouettes and are tinted here, which is the
+        // whole reason a silhouette set was chosen over painted illustrations:
+        // at badge size over a painted battlefield, colour has to carry the
+        // meaning, and a fixed illustration cannot be recoloured to say
+        // "this one heals" without repainting it.
+        //
+        // Deliberately borrowing the HUD's OWN reds and blues rather than a new
+        // palette -- a badge that says damage should be the same red the HP bar
+        // already uses, or the player has two colour languages to learn.
+        public const string IntentAttack = "#FFC45A";        // TargetAmber: the ordinary threat
+        public const string IntentPoison = "#8FD46A";
+        public const string IntentStun = "#FFE98A";
+        public const string IntentWeaken = "#E07A62";        // HpBright: it is coming off your health
+        public const string IntentHeal = "#7FE0A0";
+        public const string IntentShield = "#7EA8E6";        // MpBright: defensive, matches the mana blue
+        public const string IntentSkill = "#C79BEE";
+
         // --- the fight's own panel art ----------------------------------------
         public const string TargetPromptFill = "#26160AE6";   // 0.90
         public const string TargetPromptBorder = "#FFC45A8C"; // 0.55

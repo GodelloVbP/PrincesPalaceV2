@@ -80,6 +80,14 @@ namespace PrincesPalace
         // edits.
         [SerializeField] internal GameObject characterSheetPanel;
 
+        // One per enemy stage slot. The TMP inside each is resolved at Start
+        // rather than wired: the emitter synthesises a button's caption as a
+        // child it has no NodeRef for, and inventing one here would be a second
+        // way to name the same object (AUDIT.md #39's exact shape).
+        [SerializeField] internal GameObject[] enemyIntentIcons;
+        [SerializeField] internal GameObject intentTooltip;
+        [SerializeField] internal TMP_Text intentTooltipText;
+
         [SerializeField] internal GameObject submenuColumn;
         [SerializeField] internal TMP_Text submenuTitle;
         [SerializeField] internal TMP_Text submenuHint;
@@ -198,6 +206,23 @@ namespace PrincesPalace
 
             foreach (var line in _session.DrainImmediateMessages()) PushLogLine(line);
 
+            // The FIRST turn's intents, which nothing else commits.
+            //
+            // FightSession.Begin() is where this belongs and it has NO
+            // production caller -- FightEncounterAdapter constructs the session
+            // and hands it straight over, so the opening sequence never runs.
+            // The other commit point (AfterResolution) only fires once the
+            // player has already acted, so turn one had no telegraph at all.
+            // That was invisible before the icons existed, because the nameplate
+            // telegraph shows nothing for a plain attack anyway.
+            //
+            // Called here rather than fixing Begin's wiring on purpose: Begin
+            // also grants a turn start and auto-resolves enemy turns, so calling
+            // it would change turn order and per-turn regen in every fight in
+            // the game. That is a real bug and it is recorded in AUDIT.md rather
+            // than fixed inside a UI change.
+            if (!_session.IsOver && _session.IsPlayerTurn) _session.PrepareEnemyIntents();
+
             RefreshCommandColumn();
             RefreshUi();
         }
@@ -208,6 +233,10 @@ namespace PrincesPalace
             // the static half of the HUD (verb captions, breadcrumb, submenu
             // chrome) comes straight from the manifest and needs no session.
             RefreshCommandColumn();
+
+            // Once, here rather than per refresh: attaching a hover handler
+            // every frame would stack them.
+            WireIntentIcons();
         }
 
         private void WirePlayback()
@@ -326,18 +355,36 @@ namespace PrincesPalace
         {
             if (submenuRowRects == null) return;
 
+            // CLAMPED, because a character can offer more rows than the pool
+            // holds. Passing the raw count laid the column out for 17 rows and
+            // pushed every rect that exists off the top of the screen.
+            int shown = FightSubmenuLayout.VisibleCount(count);
+
             for (int i = 0; i < submenuRowRects.Length; i++)
             {
                 var rect = submenuRowRects[i];
                 if (rect == null) continue;
 
-                bool visible = i < count;
+                bool visible = i < shown;
                 rect.gameObject.SetActive(visible);
                 if (!visible) continue;
 
                 var position = rect.anchoredPosition;
-                rect.anchoredPosition = new Vector2(position.x, FightSubmenuLayout.RowY(count, i));
+                rect.anchoredPosition = new Vector2(position.x, FightSubmenuLayout.RowY(shown, i));
             }
+
+            // The header rides the top of the list rather than the top of the
+            // pool, so a short list keeps its own label attached to it.
+            float headerY = FightSubmenuLayout.HeaderY(shown);
+            MoveToY(submenuTitle, headerY);
+            MoveToY(submenuHint, headerY);
+        }
+
+        private static void MoveToY(TMP_Text text, float y)
+        {
+            if (text == null) return;
+            var rect = text.rectTransform;
+            rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, y);
         }
 
         // ---- queries the view asks of the session --------------------------------

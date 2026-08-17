@@ -83,6 +83,34 @@ namespace PrincesPalace.Domain.UiKit
         // plate each behind their art for as long as the screen existed.
         public bool Chromeless;
 
+        // ---- motion (all three migrated from v1, which lost them in the
+        // rebuild along with every other button animation) --------------------
+
+        // A WIDE row or plate: hover-scales by this factor and does NOT get the
+        // press "pop".
+        //
+        // Zero means "use the default press animator". The two are mutually
+        // exclusive by construction in the emitter, because both drive
+        // localScale and would fight over it every frame. The reason a wide row
+        // wants the gentler one is legibility, not taste: the press animator's
+        // 1.05/0.95 visibly shifts a long caption sideways, which reads as the
+        // text wobbling rather than the row responding.
+        public float HoverScale;
+
+        // Slides in and fades up when shown (ColumnOpenAnimator).
+        //
+        // Only meaningful on a node the runtime drives with SetActive, since
+        // the animation is triggered by OnEnable -- "just activated" IS "just
+        // opened". Adds a CanvasGroup, which the animator requires.
+        public bool OpensOnShow;
+
+        // Suppresses the shared click sound on a button whose own controller
+        // plays a flourish on the same click. Without it the two sound at once.
+        // Nothing in v2 needs this yet -- v1 needed it for the save slots --
+        // but the flag is what makes the "every button has a click sound" test
+        // able to state an exception rather than be weakened.
+        public bool SilentClick;
+
         // Escape hatches. Both REQUIRE a reason, so every exemption is greppable
         // and reviewable -- in v1 everything was an escape hatch and none of them
         // were enumerable.
@@ -100,6 +128,9 @@ namespace PrincesPalace.Domain.UiKit
         public UiNode AsDecor() { Decor = true; return this; }
         public UiNode Clipping() { Masks = true; return this; }
         public UiNode NoChrome() { Chromeless = true; return this; }
+        public UiNode Hovers(float scale = 1.02f) { HoverScale = scale; return this; }
+        public UiNode Opening() { OpensOnShow = true; return this; }
+        public UiNode Quiet() { SilentClick = true; return this; }
         public UiNode Padded(UiPad pad) { Pad = pad; return this; }
 
         // Containers default to FromChildren, which is right almost always. A

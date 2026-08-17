@@ -131,6 +131,10 @@ public static class ScreenRegistry
                 fight.breadcrumb = result.Tmp(screen.Breadcrumb);
                 fight.continueButton = result.Button(screen.ContinueButton);
 
+                fight.enemyIntentIcons = screen.EnemyIntentIcons.Select(result.Go).ToArray();
+                fight.intentTooltip = result.Go(screen.IntentTooltip);
+                fight.intentTooltipText = result.Tmp(screen.IntentTooltipText);
+
                 fight.submenuColumn = result.Go(screen.SubmenuColumn);
                 fight.submenuTitle = result.Tmp(screen.SubmenuTitle);
                 fight.submenuHint = result.Tmp(screen.SubmenuHint);

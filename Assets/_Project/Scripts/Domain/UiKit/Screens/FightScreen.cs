@@ -33,6 +33,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const string BossBackgroundKey = "Assets/_Project/Art/Backgrounds/forest_mob_boss_fight.png";
 
         private const string PanelViolet = "Assets/_Project/Art/UI/Panels/panel_violet.png";
+
+        // Under Resources/ so the SAME file serves both the build-time bake
+        // (this Assets-relative path) and the runtime swap (Resources.Load on
+        // "Intent/<slug>"). One file, two loaders, no second copy to drift.
+        private const string IntentDefaultIcon = "Assets/_Project/Resources/Intent/attack.png";
         private const string BannerViolet = "Assets/_Project/Art/UI/Panels/banner_violet.png";
         private const string PanelCrimson = "Assets/_Project/Art/UI/Panels/panel_crimson.png";
 
@@ -62,6 +67,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> EnemySprites = new List<NodeRef>();
         public List<NodeRef> EnemyHitFlashes = new List<NodeRef>();
         public List<NodeRef> EnemyNameplates = new List<NodeRef>();
+
+        // One per enemy STAGE slot (not per plate): the icon that says what this
+        // monster has committed to doing next, and the hover target for the
+        // detail behind it.
+        public List<NodeRef> EnemyIntentIcons = new List<NodeRef>();
         public List<NodeRef> EnemyFootShadows = new List<NodeRef>();
         public List<NodeRef> PartySlots = new List<NodeRef>();
         public List<NodeRef> PartySprites = new List<NodeRef>();
@@ -130,6 +140,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> DetailStatValues = new List<NodeRef>();
 
         public NodeRef TargetPrompt;
+        public NodeRef IntentTooltip;
+        public NodeRef IntentTooltipText;
         public NodeRef TargetPromptLabel;
 
         public NodeRef SpellVfxPool;
@@ -162,7 +174,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 s.PartyNameplates, s.PartyFootShadows);
             var enemyStage = s.BuildStage("Enemy", mirrored: false,
                 FightStageAnchors.EnemyShadowColor, s.EnemySlots, s.EnemySprites, s.EnemyHitFlashes,
-                s.EnemyNameplates, s.EnemyFootShadows);
+                s.EnemyNameplates, s.EnemyFootShadows, s.EnemyIntentIcons);
             s.PartyStage = partyStage;
             s.EnemyStage = enemyStage;
             children.Add(partyStage);
@@ -179,6 +191,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             children.Add(s.BuildSubmenuColumn());
             children.Add(s.BuildDetailColumn());
             children.Add(s.BuildTargetPrompt());
+            children.Add(s.BuildIntentTooltip());
             children.Add(s.BuildSpellVfx());
             children.Add(s.BuildDamagePopups());
 
@@ -288,7 +301,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // what the controller and every test index by.
         private UiNode BuildStage(string prefix, bool mirrored, string shadowHex,
                                   List<NodeRef> slots, List<NodeRef> sprites, List<NodeRef> flashes,
-                                  List<NodeRef> nameplates, List<NodeRef> shadows)
+                                  List<NodeRef> nameplates, List<NodeRef> shadows,
+                                  List<NodeRef> intentIcons = null)
         {
             int count = FightHudSpec.StageSlotsPerSide;
             for (int i = 0; i < count; i++)
@@ -298,6 +312,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 flashes.Add(default);
                 nameplates.Add(default);
                 shadows.Add(default);
+                intentIcons?.Add(default);
             }
 
             var children = new List<UiNode>();
@@ -347,10 +362,48 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .Inactive()
                     .AllowOverflow("the nameplate hangs BELOW the feet - outside the slot is where it belongs");
 
+                // ENEMIES ONLY. The player already knows what their own party is
+                // about to do -- they are about to decide it.
+                //
+                // A Button rather than a Label because it has to be hoverable:
+                // the glyph alone says "something nasty is coming", and the
+                // detail (who, and roughly how hard) is what the player opens on
+                // demand rather than reading five of at once.
+                UiNode intent = null;
+                if (!mirrored)
+                {
+                    intent = Ui.Button($"EnemyIntent{slot}", UiString.Runtime,
+                            new UiVec(FightStageAnchors.IntentIconSize, FightStageAnchors.IntentIconSize), 17,
+                            Place.Pin(new UiVec(0.5f, 1f), UiVec.Centre,
+                                new UiVec(0f, FightStageAnchors.IntentIconOffset)))
+                        .Inactive()
+                        .Hovers(1.18f)
+                        .AllowOverflow("the intent icon floats ABOVE the slot on purpose - it marks the monster without standing on it");
+
+                    // The default badge, so the Image exists and is correctly
+                    // configured at build time. The runtime swaps both the
+                    // sprite and its tint as the committed intent changes -- one
+                    // of seven, which is why they load from Resources rather
+                    // than being baked one per kind.
+                    intent.SpriteKey = IntentDefaultIcon;
+
+                    // BY SLOT, never Add(). This loop walks FAR TO NEAR for the
+                    // painter's order, so appending builds the list backwards --
+                    // which is exactly what happened: badge 0 ended up parented
+                    // to Enemy2Slot. At three monsters the COUNT still matched,
+                    // so it looked correct and every badge described the wrong
+                    // monster; at two, the badge for the front rat was parented
+                    // to an unused slot and vanished. The header above this
+                    // method already says the ref lists stay indexed by slot.
+                    intentIcons[slot] = intent;
+                }
+
                 var slotNode = Ui.Panel($"{prefix}{slot}Slot",
                         Place.At(offset.X, offset.Y, new UiVec(0.5f, 0f)),
                         UiSize.Fixed(320f, 200f),
-                        shadow, sprite, flash, nameplate)
+                        intent == null
+                            ? new[] { shadow, sprite, flash, nameplate }
+                            : new[] { shadow, sprite, flash, nameplate, intent })
                     .WithScale(new UiVec(scale, scale))
                     .AllowOverlap("depth-stacked actors standing on one receding floor overlap by construction - that IS the perspective")
                     .AllowOverflow("320x200 is a placeholder resized to the real sprite at runtime; the stage is a coordinate frame, not a clip region");
@@ -530,8 +583,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 EnemyPlateTags.Add(tags);
                 EnemyPlateReticles.Add(reticle);
 
+                // 1.03 hover, no press pop: the plate is 400+ wide and carries
+                // four labels, so the press animator's 1.05/0.95 would swing
+                // the name and HP text sideways under the cursor. v1 made the
+                // same call at the same number.
                 var plate = Ui.Button($"EnemyPlate{i}", UiString.Runtime, new UiVec(PlateW, PlateH), 1,
-                    Place.At(PlateX, PlateFirstY - i * PlatePitch));
+                    Place.At(PlateX, PlateFirstY - i * PlatePitch)).Hovers(1.03f);
                 plate.SpriteKey = PanelCrimson;
                 plate.Children.Add(name);
                 plate.Children.Add(hp);
@@ -798,9 +855,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 var cost = Ui.Label($"CharacterSkill{i}Cost", UiStrings.SignatureValue, new UiVec(80f, 22f), 14,
                     FightHudPalette.GoldLight, Place.At(186f, 0f, new UiVec(1f, 0.5f)));
 
+                // 1.02, the gentler of the two: a submenu row is 404 wide with
+                // four columns of text in it, so the press pop would shift all
+                // four. Same split v1 used -- verb rows pop, submenu rows hover.
                 var row = Ui.Button($"CharacterSkill{i}", UiString.Runtime,
                     new UiVec(SubmenuRowW, FightSubmenuLayout.RowHeight), 1,
-                    Place.At(SubmenuX, FightSubmenuLayout.RowY(count, i)));
+                    Place.At(SubmenuX, FightSubmenuLayout.RowY(count, i))).Hovers(1.02f);
                 row.Children.Add(mark);
                 row.Children.Add(name);
                 row.Children.Add(meta);
@@ -816,7 +876,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // 170 wide each, not v1's 220: at 220 the left-aligned title reached
             // x 104 and the right-aligned hint began at 68.
-            float headerY = FightSubmenuLayout.RowsBottom + count * FightSubmenuLayout.RowPitch + 10f;
+            float headerY = FightSubmenuLayout.HeaderY(count);
             var title = Ui.Label("SubmenuTitle", UiStrings.SubmenuSkillsTitle, new UiVec(170f, 20f), 11,
                 FightHudPalette.GoldLight,
                 Place.At(SubmenuX - SubmenuRowW * 0.5f, headerY, new UiVec(0f, 0.5f)));
@@ -833,6 +893,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var column = Ui.Panel("SubmenuColumn", Place.Stretch(), UiSize.Fill, children)
                 .Inactive()
+                .Opening()
                 .AllowOverlap("a full-screen transparent group toggled as one unit; it deliberately draws over the stage, and its own rows are audited against each other normally");
             SubmenuColumn = column;
             return column;
@@ -894,8 +955,36 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 Place.At(DetailX, CommandBottom + DetailH * 0.5f), UiSize.Fixed(DetailW, DetailH));
             foreach (var child in children) column.Children.Add(child);
             column.Inactive();
+            column.Opening();
             DetailColumn = column;
             return column;
+        }
+
+        // ---- the intent tooltip --------------------------------------------------------
+
+        // What the icon above a monster's head means, on demand.
+        //
+        // Deliberately ONE runtime label rather than a row per field: the three
+        // lines are written together by FightHudModel, so splitting them across
+        // three nodes would put the sentence's grammar in the view and the words
+        // in Domain.
+        //
+        // AsDecor because a tooltip that swallows a click on the enemy behind it
+        // would make the icon actively worse than no icon.
+        private UiNode BuildIntentTooltip()
+        {
+            var label = Ui.Label("IntentTooltipText", UiString.Runtime, new UiVec(400f, 120f), 17,
+                FightHudPalette.GoldText, Place.At(0f, 0f));
+            IntentTooltipText = label;
+
+            var panel = Ui.Sprite("IntentTooltip", PanelViolet, Place.At(-330f, 250f),
+                    UiSize.Fixed(420f, 140f))
+                .Inactive()
+                .AsDecor()
+                .AllowOverlap("a hover tooltip floats over whatever it has to - it is transient and takes no clicks");
+            panel.Children.Add(label);
+            IntentTooltip = panel;
+            return panel;
         }
 
         // ---- the target prompt ---------------------------------------------------------
@@ -916,6 +1005,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             prompt.Children.Add(diamond);
             prompt.Children.Add(label);
             prompt.Inactive();
+            prompt.Opening();
             prompt.AsDecor();
             prompt.AllowOverlap("the prompt sits over the submenu at target depth on purpose - it is the more urgent of the two, and it takes no clicks");
             TargetPrompt = prompt;

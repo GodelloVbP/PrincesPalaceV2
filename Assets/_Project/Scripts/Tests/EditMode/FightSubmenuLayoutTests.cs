@@ -3,58 +3,90 @@ using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // v1-parity, pinned to literals. These numbers are what v1's two
-    // hand-mirrored copies of the constants produced; if this file and the
-    // shipped game ever disagree, a ported combat screen moves.
+    // The submenu's placement arithmetic, pinned after it shipped a menu torn
+    // in half down the screen.
+    //
+    // The bug it exists to prevent: RowY was handed the TRUE row count (17 for
+    // a level 4 Shawn) while the rect pool holds 8. It sized the column for 17
+    // rows, so the eight rects that exist landed at y 777..259 -- above the top
+    // of a 1080 canvas, over the bark banner -- while BACK stayed at -464. The
+    // header sat at the 8-row height above a 5-row list, stranded mid-screen.
+    //
+    // Everything here is a literal, deliberately. Recomputing RowY's formula to
+    // build the expected value is the tautology CLAUDE.md's fifth gotcha bans,
+    // and it would have passed against the broken version too.
     public class FightSubmenuLayoutTests
     {
-        [Test]
-        public void RowY_MatchesV1_AtTheFullEightSlotReservation()
+        // The canvas is 1080 tall, so a row centre above +540 is off-screen and
+        // one below -540 is too. This is the invariant the shipped bug broke.
+        private const float CanvasHalfHeight = 540f;
+
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(5)]
+        [TestCase(8)]
+        [TestCase(17)]
+        [TestCase(200)]
+        public void NoRowIsEverPlacedOffTheCanvas(int requested)
         {
-            // RowsBottom -440, pitch 74, half-height 33.
-            Assert.AreEqual(111f, FightSubmenuLayout.RowY(8, 0), 0.001f);
-            Assert.AreEqual(37f, FightSubmenuLayout.RowY(8, 1), 0.001f);
-            Assert.AreEqual(-407f, FightSubmenuLayout.RowY(8, 7), 0.001f);
+            int shown = FightSubmenuLayout.VisibleCount(requested);
+
+            for (int i = 0; i < shown; i++)
+            {
+                float y = FightSubmenuLayout.RowY(shown, i);
+                float top = y + FightSubmenuLayout.RowHeight * 0.5f;
+                float bottom = y - FightSubmenuLayout.RowHeight * 0.5f;
+
+                Assert.Less(top, CanvasHalfHeight,
+                    $"row {i} of {requested} requested runs off the TOP of the canvas at y={y}");
+                Assert.Greater(bottom, -CanvasHalfHeight,
+                    $"row {i} of {requested} requested runs off the BOTTOM of the canvas at y={y}");
+            }
         }
 
         [Test]
-        public void TheLastVisibleRow_LandsOnTheSameSlot_WhateverTheCount()
+        public void AskingForMoreRowsThanThePoolHoldsIsClampedRatherThanHonoured()
         {
-            // The whole point of the runtime re-anchor, and the behaviour a
-            // playtest asked for: a two-skill list sits just above BACK rather
-            // than floating at the top of an eight-slot reservation.
-            Assert.AreEqual(-407f, FightSubmenuLayout.RowY(1, 0), 0.001f);
-            Assert.AreEqual(-407f, FightSubmenuLayout.RowY(2, 1), 0.001f);
-            Assert.AreEqual(-407f, FightSubmenuLayout.RowY(5, 4), 0.001f);
-            Assert.AreEqual(-407f, FightSubmenuLayout.RowY(8, 7), 0.001f);
+            Assert.AreEqual(8, FightSubmenuLayout.VisibleCount(17));
+            Assert.AreEqual(8, FightSubmenuLayout.VisibleCount(FightSubmenuLayout.MaxRows));
+            Assert.AreEqual(5, FightSubmenuLayout.VisibleCount(5));
+            Assert.AreEqual(0, FightSubmenuLayout.VisibleCount(0));
+            Assert.AreEqual(0, FightSubmenuLayout.VisibleCount(-3), "a negative count must not become a negative layout");
+        }
+
+        // The exact number the shipped bug produced, kept as a literal so this
+        // fails loudly if the clamp is ever removed.
+        [Test]
+        public void TheShippedBug_SeventeenRowsPlacingTheTopRowAt777_CannotRecur()
+        {
+            Assert.AreEqual(777f, FightSubmenuLayout.RowY(17, 0), 0.01f,
+                "unclamped, RowY still produces the off-screen position - this documents the input, not the behaviour");
+
+            int shown = FightSubmenuLayout.VisibleCount(17);
+            Assert.AreEqual(111f, FightSubmenuLayout.RowY(shown, 0), 0.01f,
+                "clamped, the top row must sit at the 8-row height and stay on screen");
+        }
+
+        // The header belongs to the LIST, not to the pool. A five-skill actor
+        // whose title sits at the eight-row height has a label floating over
+        // the battlefield with nothing beneath it.
+        [Test]
+        public void TheHeaderSitsJustAboveTheTopRowOfTheListActuallyShown()
+        {
+            float fiveRowTop = FightSubmenuLayout.RowY(5, 0) + FightSubmenuLayout.RowHeight * 0.5f;
+            float header = FightSubmenuLayout.HeaderY(5);
+
+            Assert.Greater(header, fiveRowTop, "the header must clear the top row");
+            Assert.Less(header - fiveRowTop, FightSubmenuLayout.RowPitch,
+                "the header drifted more than a row's pitch above the list it labels");
         }
 
         [Test]
-        public void RowsAreSpacedByExactlyOnePitch()
+        public void TheHeaderIsClampedTheSameWayTheRowsAre()
         {
-            Assert.AreEqual(74f, FightSubmenuLayout.RowY(4, 0) - FightSubmenuLayout.RowY(4, 1), 0.001f);
-            Assert.AreEqual(74f, FightSubmenuLayout.RowY(4, 1) - FightSubmenuLayout.RowY(4, 2), 0.001f);
-        }
-
-        [Test]
-        public void ColumnHeight_CountsGapsBetweenRowsOnly()
-        {
-            Assert.AreEqual(0f, FightSubmenuLayout.ColumnHeight(0), 0.001f);
-            Assert.AreEqual(66f, FightSubmenuLayout.ColumnHeight(1), 0.001f);
-            Assert.AreEqual(140f, FightSubmenuLayout.ColumnHeight(2), 0.001f);
-            // 8 rows of 66 plus 7 gaps of 8.
-            Assert.AreEqual(584f, FightSubmenuLayout.ColumnHeight(8), 0.001f);
-        }
-
-        [Test]
-        public void ConstantsMatchV1Exactly()
-        {
-            // Pinned so a "tidy-up" of these numbers has to be a deliberate,
-            // visible change rather than a silent drift away from shipped art.
-            Assert.AreEqual(66f, FightSubmenuLayout.RowHeight, 0.001f);
-            Assert.AreEqual(74f, FightSubmenuLayout.RowPitch, 0.001f);
-            Assert.AreEqual(-440f, FightSubmenuLayout.RowsBottom, 0.001f);
-            Assert.AreEqual(8, FightSubmenuLayout.MaxRows);
+            Assert.AreEqual(FightSubmenuLayout.HeaderY(FightSubmenuLayout.MaxRows),
+                FightSubmenuLayout.HeaderY(17), 0.01f,
+                "a 17-row request must place the header exactly where an 8-row one does");
         }
     }
 }

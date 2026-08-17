@@ -248,5 +248,25 @@ namespace PrincesPalace.Domain.Combat.Session
         // How many enemies are still up, for the hint above the plates.
         public static int StandingCount(CombatEncounter encounter) =>
             encounter == null ? 0 : encounter.LivingEnemies.Count();
+
+        // ---- enemy intent -------------------------------------------------------
+
+        // The sentence behind an intent icon.
+        //
+        // Written HERE, whole, rather than assembled from three labels in the
+        // view: the phrasing is content, and splitting it across nodes would put
+        // the grammar in the layout. "about" is load-bearing -- the figure
+        // excludes variance and any ward the target still holds, so promising an
+        // exact number would be a lie the player could catch in one hit.
+        public static string IntentTooltip(string enemyName, EnemyIntent intent)
+        {
+            string verb = intent.IsAttack ? "attack" : intent.Label;
+            string who = string.IsNullOrEmpty(intent.TargetName) ? "someone" : intent.TargetName;
+
+            string line = $"{enemyName} will {verb} {who}";
+            return intent.ExpectedDamage > 0
+                ? line + $"\nfor about {intent.ExpectedDamage} damage"
+                : line;
+        }
     }
 }

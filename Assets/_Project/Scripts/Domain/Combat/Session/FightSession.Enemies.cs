@@ -19,10 +19,18 @@ namespace PrincesPalace.Domain.Combat.Session
         // a label.
         public const string IntentAttack = "Attack";
 
-        private readonly Dictionary<CombatantState, string> _intents = new Dictionary<CombatantState, string>();
+        private readonly Dictionary<CombatantState, EnemyIntent> _intents = new Dictionary<CombatantState, EnemyIntent>();
 
         // Called whenever it becomes the player's turn, so every living enemy
         // has a declared action for the player to read and plan around.
+        //
+        // The TARGET is committed here too, which is a deliberate change of
+        // when the draw happens: it used to be rolled at resolution time, so
+        // nothing could be shown about who was in danger. Rolling it here is
+        // what lets the icon say "and it is coming for Shawn". The draw COUNT
+        // per enemy turn is unchanged; only its position in the stream moved,
+        // so seeded runs stay reproducible but do not reproduce the same fights
+        // they did before this.
         public void PrepareEnemyIntents()
         {
             foreach (var enemy in _encounter.LivingEnemies)
@@ -35,12 +43,52 @@ namespace PrincesPalace.Domain.Combat.Session
                                 && source.Value.HasSkill
                                 && (_rng?.NextFloat() ?? 1f) < source.Value.SkillChance;
 
-                _intents[enemy] = useSkill ? source.Value.SkillName : IntentAttack;
+                var target = PickRandomLivingPlayerTarget();
+                _intents[enemy] = BuildIntent(enemy, target, useSkill, source);
             }
         }
 
+        private EnemyIntent BuildIntent(CombatantState enemy, CombatantState target, bool useSkill, ResolvedEnemy? source)
+        {
+            string label = useSkill && source.HasValue ? source.Value.SkillName : IntentAttack;
+            var kind = EnemyIntentIcons.KindFor(
+                useSkill,
+                source.HasValue ? source.Value.AppliesStatus : null,
+                source.HasValue && source.Value.HasStatus);
+
+            return new EnemyIntent(label, kind, target, PreviewDamage(enemy, target, useSkill, source));
+        }
+
+        // What the blow would land for, with NOTHING that mutates and NOTHING
+        // that draws from the run's generator.
+        //
+        // Variance, the ward and the Provoke multiplier are all deliberately
+        // left out: the first two would consume a draw and spend a shield the
+        // player still has, and the third depends on a taunt that may not exist
+        // yet when the icon is drawn. The number is therefore a centre, not a
+        // promise, and the tooltip says "about" for that reason.
+        private static int PreviewDamage(CombatantState enemy, CombatantState target, bool useSkill, ResolvedEnemy? source)
+        {
+            if (enemy == null || target == null) return 0;
+
+            int damage = CombatMath.ComputeAttackDamage(enemy, target);
+            if (useSkill && source.HasValue)
+            {
+                damage = System.Math.Max(1, Rounding.AwayFromZero(damage * source.Value.SkillPower));
+            }
+
+            return DamagePipeline.AfterDefences(
+                damage, enemy, target,
+                attackType: null, weakness: null, resistance: null,
+                varianceRange: 0f, rng: null, resolveWard: null).Damage;
+        }
+
         public string IntentFor(CombatantState enemy) =>
-            enemy != null && _intents.TryGetValue(enemy, out var intent) ? intent : null;
+            enemy != null && _intents.TryGetValue(enemy, out var intent) ? intent.Label : null;
+
+        // The whole commitment, for the icon above the monster's head.
+        public EnemyIntent? IntentDetailFor(CombatantState enemy) =>
+            enemy != null && _intents.TryGetValue(enemy, out var intent) ? intent : (EnemyIntent?)null;
 
         // The nameplate's third line, or "" for the overwhelming majority of
         // turns. Two deliberate restrictions, both ported intact:
@@ -167,8 +215,18 @@ namespace PrincesPalace.Domain.Combat.Session
             // redirected turn, and spending it on a turn the enemy never got to
             // take (it died to a poison tick first) would be a rule the player
             // cannot see working.
+            // Precedence, and each step is load-bearing:
+            //
+            //   a taunt   -- the player OVERRODE the declared plan, which is the
+            //                one thing allowed to change a telegraphed target
+            //   committed -- what the icon promised, honoured
+            //   a re-pick -- only if the promised target died in the meantime,
+            //                which is the player having removed it
             var forced = ForcedTargetFor(enemy);
-            var target = forced ?? PickRandomLivingPlayerTarget();
+            var promised = IntentDetailFor(enemy)?.Target;
+            if (promised != null && !promised.IsAlive) promised = null;
+
+            var target = forced ?? promised ?? PickRandomLivingPlayerTarget();
             if (target == null) return;
 
             BeginBeat(enemy, target);

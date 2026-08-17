@@ -95,6 +95,26 @@ namespace PrincesPalace.Domain.Stage
         // How far below a slot's own origin its nameplate hangs.
         public const float NameplateOffset = -34f;
 
+        // The intent icon hangs ABOVE the slot, mirroring the nameplate below
+        // it. Anchored to the slot's TOP for the same reason the nameplate is
+        // anchored to its bottom: it must not depend on how tall a given
+        // monster's sprite happens to be, and monsters differ by a lot.
+        // Must exceed HALF the icon's height, or the icon hangs back down into
+        // the slot: it is pinned to the slot's top edge by its own CENTRE. At 18
+        // against a 46px icon it overlapped the sprite by exactly 5px, and
+        // because the icon is a Button declared after the sprite it would have
+        // taken the clicks along that strip. 30 - 23 leaves 7px of daylight.
+        public const float IntentIconSize = 46f;
+
+        // 48, not 30. At build time this is measured from the slot's top edge;
+        // at RUNTIME PlaceIntentBadge re-measures from the actor's own opaque
+        // top, which is a very different distance -- the golem's idle frame
+        // carries 123px of empty headroom where the rat's carries 17. 30 left
+        // the golem's badge resting on its shoulder while the other two looked
+        // right, which is the shape of every bug on this stage: correct for the
+        // actor it was eyeballed against.
+        public const float IntentIconOffset = 48f;
+
         // 1200 WIDE, up from 1000. The far anchor is at 565 and this frame is
         // measured from its centre, so a 1000-wide frame put the outermost slot
         // 65px outside the box it is declared in -- which

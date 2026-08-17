@@ -4,6 +4,7 @@ using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using PrincesPalace;
 using PrincesPalace.Domain.UiKit;
 
 // THE only place in this project that calls new GameObject() to build UI.
@@ -93,6 +94,17 @@ public static class UiEmitter
         // from the hierarchy, and a mask that arrives after its content leaves
         // the first frame unclipped.
         if (node.Masks) go.AddComponent<RectMask2D>();
+
+        // The open animation needs its CanvasGroup to exist before it does
+        // ([RequireComponent] would add one, but adding it here keeps the two
+        // in one visible place). Also before children, for the same reason the
+        // mask is: the group has to be in the hierarchy the first frame the
+        // subtree draws, or the column's first open flashes at full alpha.
+        if (node.OpensOnShow)
+        {
+            go.AddComponent<CanvasGroup>();
+            go.AddComponent<ColumnOpenAnimator>();
+        }
 
         if (node.Rotation != 0f) rect.localRotation = Quaternion.Euler(0f, 0f, node.Rotation);
         if (!node.Scale.Equals(UiVec.One)) rect.localScale = new Vector3(node.Scale.X, node.Scale.Y, 1f);
@@ -225,6 +237,29 @@ public static class UiEmitter
 
         var button = go.AddComponent<Button>();
         button.targetGraphic = image;
+
+        // EVERY button gets its motion from here, which is the whole point --
+        // v1 attached these per-call-site across several CreateButton variants
+        // and this is one function, so "a button with no press animation" is
+        // not a state that can be reached by forgetting.
+        //
+        // The two are mutually exclusive: both drive localScale, and a node
+        // carrying both would have them fight every frame. A wide row asks for
+        // the gentler one with Hovers(); everything else pops.
+        //
+        // Note the sound follows the press animator, which is v1's behaviour
+        // reproduced deliberately rather than by omission: a hover-scaled wide
+        // row (submenu row, enemy plate) clicks SILENTLY there too. Worth
+        // knowing it is a choice, since it is easy to read as a bug.
+        if (node.HoverScale > 0f)
+        {
+            go.AddComponent<SubtleHoverScale>().HoverScale = node.HoverScale;
+        }
+        else
+        {
+            var press = go.AddComponent<ButtonPressAnimator>();
+            if (node.SilentClick) press.clickSound = Sound.None;
+        }
 
         var labelGo = new GameObject(node.Name + "Label", typeof(RectTransform));
         labelGo.transform.SetParent(go.transform, worldPositionStays: false);

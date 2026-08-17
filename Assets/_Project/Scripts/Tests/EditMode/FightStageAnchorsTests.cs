@@ -101,5 +101,59 @@ namespace PrincesPalace.Domain.Tests
                 Assert.LessOrEqual(System.Math.Abs(offset.Y), halfH, $"slot {i} y");
             }
         }
+
+        // ---- the formation adapts to how many actors are actually there ------
+
+        // The shipped bug: a room fielding TWO monsters put them in slots 0 and
+        // 1 of a three-slot formation and left slot 2 -- the widest position --
+        // empty. They stood 132 apart against a 675px-wide rat sheet, so the
+        // back one was 78% hidden and the pair read as a single monster.
+        //
+        // Literals, not a re-derivation: 300 and 565 are Near.X and Far.X, and
+        // the point of the test is that a PAIR reaches both ends of that range.
+        [Test]
+        public void TwoActorsStandAtBothEndsOfTheRange_NotBunchedAtTheNearEnd()
+        {
+            var front = FightStageAnchors.SlotOffset(0, 2, mirrored: false);
+            var back = FightStageAnchors.SlotOffset(1, 2, mirrored: false);
+
+            Assert.AreEqual(300f, front.X, 0.01f, "the front of a pair should sit at the near anchor");
+            Assert.AreEqual(565f, back.X, 0.01f, "the back of a pair should reach the FAR anchor, not the midpoint");
+            Assert.AreEqual(265f, back.X - front.X, 0.01f,
+                "a pair separated by less than the full range is the bunching this test exists to catch");
+        }
+
+        [Test]
+        public void ASoloActorStandsAtTheFront()
+        {
+            var only = FightStageAnchors.SlotOffset(0, 1, mirrored: false);
+
+            Assert.AreEqual(300f, only.X, 0.01f);
+            Assert.AreEqual(-218f, only.Y, 0.01f, "a lone monster belongs at the near ground line, not floating mid-stage");
+        }
+
+        // Whatever the count, the outermost actor must still land at the far
+        // anchor -- that is what "spread across the range" means, and it is the
+        // property that stops a party of two bunching the same way.
+        [TestCase(2)]
+        [TestCase(3)]
+        public void TheLastActorAlwaysReachesTheFarAnchor(int count)
+        {
+            var last = FightStageAnchors.SlotOffset(count - 1, count, mirrored: false);
+
+            Assert.AreEqual(565f, last.X, 0.01f, $"with {count} actors the back one stops short of the far anchor");
+        }
+
+        // Mirroring is the party side, and it must mirror the SPREAD too rather
+        // than only the endpoints.
+        [Test]
+        public void ThePartySideMirrorsTheSameSpread()
+        {
+            var front = FightStageAnchors.SlotOffset(0, 2, mirrored: true);
+            var back = FightStageAnchors.SlotOffset(1, 2, mirrored: true);
+
+            Assert.AreEqual(-300f, front.X, 0.01f);
+            Assert.AreEqual(-565f, back.X, 0.01f);
+        }
     }
 }
