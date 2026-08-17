@@ -75,6 +75,11 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text breadcrumb;
         [SerializeField] internal Button continueButton;
 
+        // The character sheet, mounted in this scene so it is reachable
+        // mid-fight. Wired with lockedForFight set, so it reads and never
+        // edits.
+        [SerializeField] internal GameObject characterSheetPanel;
+
         [SerializeField] internal GameObject submenuColumn;
         [SerializeField] internal TMP_Text submenuTitle;
         [SerializeField] internal TMP_Text submenuHint;

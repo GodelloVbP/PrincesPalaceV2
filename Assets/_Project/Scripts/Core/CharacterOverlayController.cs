@@ -152,6 +152,30 @@ namespace PrincesPalace
 
         // ---- panes ----------------------------------------------------------------
 
+        // Which half is up, for whoever owns the key that opened it.
+        public bool ShowingInventory => _showingInventory;
+
+        // Read-only, like the hub's own open/closed accessor: callers outside
+        // Core can ask whether this copy is the live one without being able to
+        // flip it. Which scene got which is decided once, at build time.
+        public bool EquipLocked => lockedForFight;
+
+        // Opened onto a named pane, so C lands on the character and I on the
+        // bag rather than both landing on whichever was up last. Called by
+        // whoever owns the key -- the hub in the hub, the fight in the fight.
+        public void OpenOn(bool inventory)
+        {
+            _showingInventory = inventory;
+            ClearSelection();
+            HideCompare();
+
+            // SetActive AFTER the pane is chosen: OnEnable calls Refresh, and
+            // refreshing into the pane the player is leaving would paint one
+            // frame of the wrong half.
+            gameObject.SetActive(true);
+            if (isActiveAndEnabled) Refresh();
+        }
+
         // The character sheet does not show the bag, and the bag does not show
         // the paperdoll. One surface carrying both is what left eight slot
         // cells with nowhere to sit but on top of the figure they describe.

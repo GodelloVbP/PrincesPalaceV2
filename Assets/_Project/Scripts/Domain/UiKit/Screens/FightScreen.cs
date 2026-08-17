@@ -109,6 +109,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // ordering costs nothing and removes the question.
         public DefeatScreen Defeat;
 
+        // The same tree the hub mounts, wired read-only here.
+        public CharacterOverlayScreen Sheet;
+
         public NodeRef SubmenuColumn;
         public NodeRef SubmenuTitle;
         public NodeRef SubmenuHint;
@@ -178,6 +181,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
             children.Add(s.BuildTargetPrompt());
             children.Add(s.BuildSpellVfx());
             children.Add(s.BuildDamagePopups());
+
+            // The character sheet, reachable mid-fight.
+            //
+            // Readable, never editable: ScreenRegistry sets lockedForFight on
+            // this copy, so a player can check what they are wearing against
+            // what is hitting them without being able to re-plate between
+            // swings. Declared BEFORE the reckoning and the defeat screen, so
+            // an end-of-fight modal still draws over it.
+            var sheet = CharacterOverlayScreen.Build();
+            s.Sheet = sheet;
+            children.Add(sheet.Root);
 
             // LAST, so they draw over the whole stage they dim.
             var reckoning = ReckoningScreen.Build();

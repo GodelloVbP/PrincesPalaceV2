@@ -153,6 +153,11 @@ public static class ScreenRegistry
                 fight.reckoning = WireReckoning(result, screen.Reckoning);
                 fight.defeat = WireDefeat(result, screen.Defeat);
 
+                // Readable mid-fight, inert mid-fight. Same tree as the hub's,
+                // built with the lock on.
+                WireOverlay(result, screen.Sheet, lockedForFight: true);
+                fight.characterSheetPanel = result.Go(screen.Sheet.Root);
+
                 fight.spellVfx = result.Image(screen.SpellVfx);
 
                 // The player lives on the VFX node itself, so disabling that
@@ -659,8 +664,20 @@ public static class ScreenRegistry
     // explicit call from whoever opened it.
     private static void WireCharacterOverlay(UiEmitResult result, HubScreen screen, HubController hub)
     {
-        var overlay = screen.Overlay;
+        WireOverlay(result, screen.Overlay, lockedForFight: false);
+        hub.characterOverlayPanel = result.Go(screen.Overlay.Root);
+    }
+
+    // The overlay's wiring, shared by the hub's copy and the fight's.
+    //
+    // lockedForFight is the ONLY difference between them, and it is decided
+    // here at build time rather than sniffed at runtime -- the fight's copy is
+    // readable and inert, the hub's is live.
+    private static CharacterOverlayController WireOverlay(
+        UiEmitResult result, CharacterOverlayScreen overlay, bool lockedForFight)
+    {
         var controller = result.Attach<CharacterOverlayController>(overlay.Root);
+        controller.lockedForFight = lockedForFight;
 
         controller.slotCells = overlay.SlotCells.Select(result.Button).ToArray();
         controller.slotIcons = overlay.SlotIcons.Select(result.Image).ToArray();
@@ -732,7 +749,7 @@ public static class ScreenRegistry
         controller.iconIds = withArt.Select(i => i.id).ToArray();
         controller.iconSprites = withArt.Select(i => SceneBuilder.LoadSpriteByKey(i.iconPath)).ToArray();
 
-        hub.characterOverlayPanel = result.Go(overlay.Root);
+        return controller;
     }
 
     // The controller sits on the MODAL NODE, not on the thing it opens -- so

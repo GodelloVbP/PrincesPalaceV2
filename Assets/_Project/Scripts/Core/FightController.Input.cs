@@ -404,5 +404,61 @@ namespace PrincesPalace
             TrimLog();
             barkLabel.SetContent(string.Join("\n", _log));
         }
+
+        // ---- the character sheet, mid-fight -----------------------------------
+
+        // Same two keys as the hub, so "what am I wearing" is one gesture
+        // wherever the player is standing. The sheet is wired read-only in
+        // this scene, so opening it cannot change the fight it is describing.
+        private void Update()
+        {
+            if (characterSheetPanel == null) return;
+
+            if (Input.GetKeyDown(KeyCode.C)) ToggleCharacterSheet(inventory: false);
+            else if (Input.GetKeyDown(KeyCode.I)) ToggleCharacterSheet(inventory: true);
+            else if (Input.GetKeyDown(KeyCode.Escape) && characterSheetPanel.activeSelf)
+            {
+                SetCharacterSheet(false);
+            }
+        }
+
+        // Separated from the key for the same reason HubController separates
+        // its own: legacy Input cannot be simulated headlessly, so a test that
+        // had to press C could not exist. Tests drive these directly.
+        public bool CharacterSheetIsOpen =>
+            characterSheetPanel != null && characterSheetPanel.activeSelf;
+
+        public void ToggleCharacterSheet(bool inventory = false)
+        {
+            if (characterSheetPanel == null) return;
+
+            var sheet = characterSheetPanel.GetComponent<CharacterOverlayController>();
+
+            // Pressing the other pane's key while open switches rather than
+            // closing -- the reader wanted the other half, not the fight back.
+            if (characterSheetPanel.activeSelf && sheet != null
+                && sheet.ShowingInventory != inventory)
+            {
+                sheet.OpenOn(inventory);
+                return;
+            }
+
+            SetCharacterSheet(!characterSheetPanel.activeSelf, inventory);
+        }
+
+        public void SetCharacterSheet(bool open, bool inventory = false)
+        {
+            if (characterSheetPanel == null) return;
+
+            if (!open)
+            {
+                characterSheetPanel.SetActive(false);
+                return;
+            }
+
+            var sheet = characterSheetPanel.GetComponent<CharacterOverlayController>();
+            if (sheet != null) sheet.OpenOn(inventory);
+            else characterSheetPanel.SetActive(true);
+        }
     }
 }

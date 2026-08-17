@@ -153,9 +153,16 @@ namespace PrincesPalace
 
             if (characterOverlayPanel == null) return;
 
-            if (Input.GetKeyDown(KeyCode.C) || Input.GetKeyDown(KeyCode.I))
+            // C is the sheet and I is the bag, now that they are two panes.
+            // Both used to open whichever pane happened to be up last, which
+            // made I a second key for the same thing.
+            if (Input.GetKeyDown(KeyCode.C))
             {
-                ToggleCharacterOverlay();
+                ToggleCharacterOverlay(inventory: false);
+            }
+            else if (Input.GetKeyDown(KeyCode.I))
+            {
+                ToggleCharacterOverlay(inventory: true);
             }
             // Only swallowed while something is up, so Escape stays free to
             // mean something else on the hub itself later. The debug menu is
@@ -182,16 +189,39 @@ namespace PrincesPalace
         public bool CharacterOverlayIsOpen =>
             characterOverlayPanel != null && characterOverlayPanel.activeSelf;
 
-        public void ToggleCharacterOverlay()
+        // Toggling to a named pane: pressing C while the bag is up switches to
+        // the sheet rather than closing the overlay, which is what a reader
+        // reaching for the other half actually means. Pressing the key for the
+        // pane already showing closes it.
+        public void ToggleCharacterOverlay(bool inventory = false)
         {
             if (characterOverlayPanel == null) return;
-            SetCharacterOverlay(!characterOverlayPanel.activeSelf);
+
+            var overlay = characterOverlayPanel.GetComponent<CharacterOverlayController>();
+
+            if (characterOverlayPanel.activeSelf && overlay != null
+                && overlay.ShowingInventory != inventory)
+            {
+                overlay.OpenOn(inventory);
+                return;
+            }
+
+            SetCharacterOverlay(!characterOverlayPanel.activeSelf, inventory);
         }
 
-        public void SetCharacterOverlay(bool open)
+        public void SetCharacterOverlay(bool open, bool inventory = false)
         {
             if (characterOverlayPanel == null) return;
-            characterOverlayPanel.SetActive(open);
+
+            if (!open)
+            {
+                characterOverlayPanel.SetActive(false);
+                return;
+            }
+
+            var overlay = characterOverlayPanel.GetComponent<CharacterOverlayController>();
+            if (overlay != null) overlay.OpenOn(inventory);
+            else characterOverlayPanel.SetActive(true);
         }
 
         public bool GlossaryIsOpen => glossaryPanel != null && glossaryPanel.activeSelf;
