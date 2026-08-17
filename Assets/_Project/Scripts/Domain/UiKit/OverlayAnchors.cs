@@ -116,6 +116,45 @@ namespace PrincesPalace.Domain.UiKit
         // Below the grid, clear of its last row.
         public static readonly UiVec Pager = new UiVec(430f, -270f);
 
+        // ---- the stat block ----------------------------------------------------
+
+        // Sits where the bag used to, on the character pane. The two panes are
+        // never visible together, so the same real estate carries the bag grid
+        // on one and the numbers on the other.
+        //
+        // Two columns: the six a player spends points on, then what those turn
+        // into once gear and talents are folded in. 46px pitch against a 30px
+        // row leaves 16px of gap, and the taller column's seven rows end at
+        // y=24 -- clear of the pager row and well clear of the detail plate.
+        public static readonly UiVec StatColumnAbilities = new UiVec(300f, 300f);
+        public static readonly UiVec StatColumnDerived = new UiVec(660f, 300f);
+        public const float StatRowPitch = 46f;
+        public static readonly UiVec StatRowSize = new UiVec(300f, 30f);
+
+        // The name sits left in the row, the value right, as two labels rather
+        // than one padded string: a proportional font makes column alignment by
+        // spaces a guess that is wrong at every other value.
+        public const float StatValueInset = 8f;
+
+        // ---- the two panes -----------------------------------------------------
+
+        // Tabs above both panes. The sheet showing a paperdoll AND a bag grid
+        // is what crowded the slot cells in the first place, so the bag moved
+        // behind a tab rather than being deleted -- deleting it would have left
+        // no way to equip anything at all.
+        public static readonly UiVec TabRow = new UiVec(0f, 372f);
+        public const float TabGap = 200f;
+        public static readonly UiVec TabSize = new UiVec(190f, 52f);
+
+        // ---- the compare box ---------------------------------------------------
+
+        // Appears NEXT TO the hovered cell, not in a fixed corner: the whole
+        // point is reading it against the thing under the cursor without
+        // looking away. Offset to the right of the cell, nudged up so the
+        // cursor never covers the first line.
+        public static readonly UiVec CompareSize = new UiVec(420f, 240f);
+        public const float CompareGap = 18f;
+
         // ---- chrome -------------------------------------------------------------
 
         public static readonly UiVec CharacterName = new UiVec(0f, 452f);

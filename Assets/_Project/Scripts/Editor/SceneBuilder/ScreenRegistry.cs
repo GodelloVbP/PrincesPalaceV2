@@ -675,6 +675,37 @@ public static class ScreenRegistry
         controller.bagCountLabels = overlay.BagCountLabels.Select(result.Tmp).ToArray();
         controller.bagPlusLabels = overlay.BagPlusLabels.Select(result.Tmp).ToArray();
 
+        controller.characterPane = result.Go(overlay.CharacterPane);
+        controller.inventoryPane = result.Go(overlay.InventoryPane);
+        controller.characterTab = result.Button(overlay.CharacterTab);
+        controller.inventoryTab = result.Button(overlay.InventoryTab);
+        controller.characterTabMarker = result.Image(overlay.CharacterTabMarker);
+        controller.inventoryTabMarker = result.Image(overlay.InventoryTabMarker);
+
+        controller.statValues = overlay.StatValueLabels.Select(result.Tmp).ToArray();
+
+        controller.comparePlate = result.Rect(overlay.ComparePlate);
+        controller.compareName = result.Tmp(overlay.CompareName);
+        controller.compareBody = result.Tmp(overlay.CompareBody);
+
+        // Hover and double-click, one per cell. Attached rather than wired:
+        // the component finds its controller up the tree at runtime, because a
+        // delegate assigned in this build-time step would not survive into the
+        // scene.
+        for (int i = 0; i < overlay.SlotCells.Count; i++)
+        {
+            var pointer = result.Attach<CellPointer>(overlay.SlotCells[i]);
+            pointer.index = i;
+            pointer.isBagCell = false;
+        }
+
+        for (int i = 0; i < overlay.BagCells.Count; i++)
+        {
+            var pointer = result.Attach<CellPointer>(overlay.BagCells[i]);
+            pointer.index = i;
+            pointer.isBagCell = true;
+        }
+
         controller.characterName = result.Tmp(overlay.CharacterName);
         controller.pageLabel = result.Tmp(overlay.PageLabel);
         controller.bagEmptyHint = result.Go(overlay.BagEmptyHint);

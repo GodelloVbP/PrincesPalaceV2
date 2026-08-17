@@ -52,6 +52,31 @@ namespace PrincesPalace
         // 520x780 that is the largest one this project could produce.
         [SerializeField] internal Image silhouette;
 
+        // The two panes and their tabs.
+        [SerializeField] internal GameObject characterPane;
+        [SerializeField] internal GameObject inventoryPane;
+        [SerializeField] internal Button characterTab;
+        [SerializeField] internal Button inventoryTab;
+        [SerializeField] internal Image characterTabMarker;
+        [SerializeField] internal Image inventoryTabMarker;
+
+        // Flat, in SheetStats.All order. Only the values are bound: the names
+        // are static labels the builder already wrote.
+        [SerializeField] internal TMP_Text[] statValues;
+
+        // The hover box.
+        [SerializeField] internal RectTransform comparePlate;
+        [SerializeField] internal TMP_Text compareName;
+        [SerializeField] internal TMP_Text compareBody;
+
+        // Set at BUILD time, per scene, rather than detected at runtime.
+        //
+        // The hub's copy is free and the fight's copy is locked. Deciding this
+        // from a serialized bool means no static "is a fight happening" flag to
+        // leak between tests (AUDIT #23) and no FindFirstObjectByType, which
+        // this project retired.
+        [SerializeField] internal bool lockedForFight;
+
         // Art, as two parallel arrays: a scene serialises arrays and does not
         // serialise dictionaries.
         [SerializeField] internal string[] iconIds;
@@ -72,6 +97,13 @@ namespace PrincesPalace
 
         private bool _wired;
         private IReadOnlyList<BagItem> _sorted = new List<BagItem>();
+
+        // Which pane is up. The sheet opens on the character, because that is
+        // what "open my character sheet" means -- the bag is a second thought.
+        private bool _showingInventory;
+
+        private static readonly Color TabLive = new Color(0.949f, 0.859f, 0.620f, 1f);
+        private static readonly Color TabIdle = new Color(0.949f, 0.859f, 0.620f, 0f);
 
         private void Start()
         {
@@ -113,6 +145,37 @@ namespace PrincesPalace
             nextPageButton.onClick.AddListener(() => StepPage(1));
             actionButton.onClick.AddListener(Commit);
             closeButton.onClick.AddListener(() => gameObject.SetActive(false));
+
+            if (characterTab != null) characterTab.onClick.AddListener(() => ShowPane(inventory: false));
+            if (inventoryTab != null) inventoryTab.onClick.AddListener(() => ShowPane(inventory: true));
+        }
+
+        // ---- panes ----------------------------------------------------------------
+
+        // The character sheet does not show the bag, and the bag does not show
+        // the paperdoll. One surface carrying both is what left eight slot
+        // cells with nowhere to sit but on top of the figure they describe.
+        private void ShowPane(bool inventory)
+        {
+            _showingInventory = inventory;
+
+            // A selection cannot survive the switch: the action button would
+            // otherwise still be offering to equip something the player can no
+            // longer see.
+            ClearSelection();
+            HideCompare();
+            Refresh();
+        }
+
+        private void PaintPanes()
+        {
+            if (characterPane != null) characterPane.SetActive(!_showingInventory);
+            if (inventoryPane != null) inventoryPane.SetActive(_showingInventory);
+
+            if (characterTabMarker != null)
+                characterTabMarker.color = _showingInventory ? TabIdle : TabLive;
+            if (inventoryTabMarker != null)
+                inventoryTabMarker.color = _showingInventory ? TabLive : TabIdle;
         }
 
         // ---- what it reads ------------------------------------------------------
@@ -175,6 +238,15 @@ namespace PrincesPalace
 
         private void Commit()
         {
+            // Gear is locked for the duration of a battle. The sheet stays
+            // fully readable -- which is the point of it being reachable at all
+            // mid-fight -- but nothing moves in or out of a slot.
+            //
+            // Checked HERE rather than only on the button, because the double
+            // click reaches this by another road and a rule enforced at one of
+            // two entrances is not enforced.
+            if (lockedForFight) return;
+
             var character = Current;
             if (character?.equipment == null || Save == null) return;
 
@@ -225,12 +297,138 @@ namespace PrincesPalace
             prevPageButton.gameObject.SetActive(carrying);
             nextPageButton.gameObject.SetActive(carrying);
 
+            PaintPanes();
             PaintSlots(character);
             PaintBag();
+            PaintStats(character);
             PaintDetail(character);
 
             prevCharacterButton.interactable = Roster.Count > 1;
             nextCharacterButton.interactable = Roster.Count > 1;
+        }
+
+        // The thirteen numbers, from the SAME EffectiveStats the fight now
+        // reads. Before this the sheet showed no numbers at all -- the one
+        // screen for deciding what to wear never said what wearing it did.
+        private void PaintStats(Character character)
+        {
+            if (statValues == null) return;
+
+            var stats = ContentDatabase.EffectiveStats(character);
+            var scores = ContentDatabase.EffectiveAbilityScores(character);
+
+            for (int i = 0; i < statValues.Length && i < SheetStats.All.Length; i++)
+            {
+                if (statValues[i] == null) continue;
+                statValues[i].Set(UiStrings.SheetStatValue,
+                    SheetStats.ValueOf(SheetStats.All[i], stats, scores));
+            }
+        }
+
+        // ---- hover and double click -------------------------------------------------
+
+        // Called by CellPointer, which is attached to every cell at build time.
+        // The controller is found by walking up the tree rather than wired
+        // through a delegate, because this Wire step runs at BUILD time and
+        // delegates do not serialise into a scene.
+        internal void HoverCell(int index, bool isBagCell, bool entered)
+        {
+            if (!entered)
+            {
+                HideCompare();
+                return;
+            }
+
+            var character = Current;
+            if (character == null || comparePlate == null) return;
+
+            ItemDefinition item;
+            int plusValue;
+            Button cell;
+
+            if (isBagCell)
+            {
+                var page = BagView.Page(_sorted, _page);
+                if (index < 0 || index >= page.Count) { HideCompare(); return; }
+
+                item = ContentDatabase.GetItem(page[index].Id);
+                plusValue = page[index].Plus;
+                cell = bagCells[index];
+            }
+            else
+            {
+                if (index < 0 || index >= EquipmentSlots.All.Length) { HideCompare(); return; }
+
+                var slot = EquipmentSlots.All[index];
+                string id = character.equipment.Get(slot);
+                if (string.IsNullOrEmpty(id)) { HideCompare(); return; }
+
+                item = ContentDatabase.GetItem(id);
+                plusValue = character.equipment.GetPlus(slot);
+                cell = slotCells[index];
+            }
+
+            if (item == null) { HideCompare(); return; }
+
+            compareName.SetContent(RarityColors.NameOf(item, plusValue));
+
+            // The same comparison the detail plate uses, so hovering and
+            // selecting can never tell the player two different things.
+            string body = ItemDescription.ComparisonBody(character, item, plusValue);
+            if (lockedForFight)
+            {
+                body = body.Length == 0
+                    ? UiStrings.OverlayLockedInFight.Format()
+                    : body + "\n\n" + UiStrings.OverlayLockedInFight.Format();
+            }
+
+            compareBody.SetContent(body);
+            comparePlate.gameObject.SetActive(true);
+            PlaceCompareBeside(cell);
+        }
+
+        // Beside the cell, flipping to its other side rather than running off
+        // the panel. A box that leaves the screen is the same as no box.
+        private void PlaceCompareBeside(Button cell)
+        {
+            var cellRect = cell.transform as RectTransform;
+            var parent = comparePlate.parent as RectTransform;
+            if (cellRect == null || parent == null) return;
+
+            Vector3 centre = parent.InverseTransformPoint(cellRect.TransformPoint(Vector3.zero));
+
+            float halfCell = cellRect.rect.width * 0.5f;
+            float halfBox = comparePlate.rect.width * 0.5f;
+            float x = centre.x + halfCell + OverlayAnchors.CompareGap + halfBox;
+
+            float limit = parent.rect.width * 0.5f;
+            if (x + halfBox > limit)
+            {
+                x = centre.x - halfCell - OverlayAnchors.CompareGap - halfBox;
+            }
+
+            // Kept inside vertically too, so a cell on the bottom row does not
+            // push half the box under the detail plate.
+            float halfHeight = comparePlate.rect.height * 0.5f;
+            float y = Mathf.Clamp(centre.y, -parent.rect.height * 0.5f + halfHeight,
+                                            parent.rect.height * 0.5f - halfHeight);
+
+            comparePlate.anchoredPosition = new Vector2(x, y);
+        }
+
+        private void HideCompare()
+        {
+            if (comparePlate != null) comparePlate.gameObject.SetActive(false);
+        }
+
+        // A double click does what the action button would have done, so the
+        // gesture and the button can never disagree -- both land on Commit.
+        internal void ActivateCell(int index, bool isBagCell)
+        {
+            if (isBagCell) SelectBag(index);
+            else SelectSlot(index);
+
+            Commit();
         }
 
         private BagItem ToBagItem(InventoryEntry entry)
@@ -332,6 +530,16 @@ namespace PrincesPalace
             actionButton.gameObject.SetActive(true);
             detailName.SetContent(RarityColors.NameOf(item, plusValue));
             detailBody.SetContent(Describe(character, item, plusValue));
+
+            // In a fight the button says why it will not work rather than
+            // simply refusing the press. A dead control that looks alive is
+            // the thing this screen has been bitten by before.
+            if (lockedForFight)
+            {
+                actionLabel.Set(UiStrings.OverlayLockedInFight);
+                actionButton.interactable = false;
+                return;
+            }
 
             if (_selectedSlot.HasValue)
             {

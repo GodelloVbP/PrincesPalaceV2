@@ -319,5 +319,102 @@ namespace PrincesPalace.Domain.Tests
                 seen.Add(at);
             }
         }
+
+        // ---- the two panes ---------------------------------------------------
+
+        // The rule the split exists for: the character sheet does not show the
+        // inventory. A paperdoll and a twenty-cell grid on one surface is what
+        // left the slot cells with nowhere to sit but on top of the figure.
+        [Test]
+        public void TheCharacterPaneCarriesNoBagCell()
+        {
+            var screen = CharacterOverlayScreen.Build();
+            var pane = Find(screen.Root, "CharacterPane");
+            Assert.IsNotNull(pane, "the character pane is gone");
+
+            var names = Descendants(pane).Select(n => n.Name).ToList();
+
+            CollectionAssert.IsEmpty(names.Where(n => n.StartsWith("BagCell")).ToList(),
+                "a bag cell is on the character sheet");
+            CollectionAssert.DoesNotContain(names, "BagGrid");
+            CollectionAssert.DoesNotContain(names, "OverlayPageLabel");
+        }
+
+        // And the reverse, so the split cannot rot into one pane holding
+        // everything while the other holds a subset.
+        [Test]
+        public void TheInventoryPaneCarriesNoSlotCellOrFigure()
+        {
+            var screen = CharacterOverlayScreen.Build();
+            var pane = Find(screen.Root, "InventoryPane");
+            Assert.IsNotNull(pane, "the inventory pane is gone");
+
+            var names = Descendants(pane).Select(n => n.Name).ToList();
+
+            CollectionAssert.IsEmpty(names.Where(n => n.StartsWith("Slot")).ToList(),
+                "an equipment slot is on the inventory pane");
+            CollectionAssert.DoesNotContain(names, "OverlaySilhouette");
+        }
+
+        // The silhouette survived the split. Removing the bag was the ask;
+        // removing the figure with it would have been a different screen.
+        [Test]
+        public void TheCharacterPaneStillShowsTheFigureAndEverySlot()
+        {
+            var screen = CharacterOverlayScreen.Build();
+            var names = Descendants(Find(screen.Root, "CharacterPane")).Select(n => n.Name).ToList();
+
+            CollectionAssert.Contains(names, "OverlaySilhouette");
+
+            foreach (EquipmentSlot slot in System.Enum.GetValues(typeof(EquipmentSlot)))
+            {
+                CollectionAssert.Contains(names, $"Slot{slot}");
+            }
+        }
+
+        // Thirteen rows, on the sheet rather than anywhere else.
+        [Test]
+        public void EveryStatRowIsOnTheCharacterPane()
+        {
+            var screen = CharacterOverlayScreen.Build();
+            var names = Descendants(Find(screen.Root, "CharacterPane")).Select(n => n.Name).ToList();
+
+            foreach (var stat in SheetStats.All)
+            {
+                CollectionAssert.Contains(names, $"Stat{stat}Name");
+                CollectionAssert.Contains(names, $"Stat{stat}Value");
+            }
+
+            Assert.AreEqual(SheetStats.All.Length, screen.StatValueLabels.Count,
+                "the bound value labels and the laid-out rows disagree in count");
+        }
+
+        // The pane opens on the character, because that is what opening a
+        // character sheet means.
+        [Test]
+        public void TheInventoryPaneStartsHidden()
+        {
+            var screen = CharacterOverlayScreen.Build();
+
+            Assert.IsTrue(Find(screen.Root, "InventoryPane").StartInactive,
+                "the overlay opens on the bag rather than on the character");
+            Assert.IsFalse(Find(screen.Root, "CharacterPane").StartInactive);
+        }
+
+        private static UiNode Find(UiNode root, string name)
+        {
+            if (root.Name == name) return root;
+            return root.Children.Select(c => Find(c, name)).FirstOrDefault(f => f != null);
+        }
+
+        private static IEnumerable<UiNode> Descendants(UiNode root)
+        {
+            if (root == null) yield break;
+            yield return root;
+            foreach (var child in root.Children)
+            {
+                foreach (var node in Descendants(child)) yield return node;
+            }
+        }
     }
 }

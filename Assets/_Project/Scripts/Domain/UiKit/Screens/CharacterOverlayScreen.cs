@@ -51,6 +51,27 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef ActionButton;
         public NodeRef ActionLabel;
 
+        // The two panes and the tabs that swap them. The sheet does not show
+        // the bag: a paperdoll and a twenty-cell grid on one surface is what
+        // left the slot cells with nowhere to go but on top of the figure.
+        public NodeRef CharacterPane;
+        public NodeRef InventoryPane;
+        public NodeRef CharacterTab;
+        public NodeRef InventoryTab;
+        public NodeRef CharacterTabMarker;
+        public NodeRef InventoryTabMarker;
+
+        // Flat, in SheetStats.All order -- abilities then derived, which is
+        // also the order the two columns are laid out in.
+        public List<NodeRef> StatNameLabels = new List<NodeRef>();
+        public List<NodeRef> StatValueLabels = new List<NodeRef>();
+
+        // The hover box. Moved to the cell under the cursor at runtime, which
+        // is why its Place here is only a starting point.
+        public NodeRef ComparePlate;
+        public NodeRef CompareName;
+        public NodeRef CompareBody;
+
         // Indexed by EquipmentSlot ordinal — declaration order IS enum order,
         // so slot i is EquipmentSlots.All[i] with no lookup table to drift.
         public List<NodeRef> SlotCells = new List<NodeRef>();
@@ -85,6 +106,24 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // cannot be clicked because the picture behind it took the press.
             var paperdoll = new List<UiNode> { silhouette };
             paperdoll.AddRange(EquipmentSlots.All.Select(screen.BuildSlotCell));
+            paperdoll.AddRange(screen.BuildStatRows());
+
+            // The character pane. Holds the figure, its slots and its numbers,
+            // and NOTHING carrying an inventory -- which is the whole point of
+            // the split.
+            //
+            // DECOR, and it matters. A full-bleed pane is a sibling of every
+            // chrome button, so without this the audit correctly refuses the
+            // tree: uGUI draws the later sibling on top, and a pane declared
+            // after the tabs would have taken every click meant for them. The
+            // tabs would have been dead on arrival and nothing would have
+            // looked wrong. Decor clears the raycast and takes the pane out of
+            // the sibling overlap check, which is what a pure container wants
+            // -- the same treatment the silhouette gets underneath the slots.
+            var characterPane = Ui.Panel("CharacterPane", Place.At(0f, 0f),
+                    UiSize.Fixed(1920f, 1080f), paperdoll)
+                .AsDecor();
+            screen.CharacterPane = characterPane;
 
             var bagCells = Ui.Each(
                 Enumerable.Range(0, BagView.CellCount).ToList(),
@@ -107,8 +146,26 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Inactive();
             screen.BagEmptyHint = empty;
 
+            // The inventory pane, with its own pager: the page controls belong
+            // to the grid they page, and left in the shared chrome they sat
+            // under a character sheet that has nothing to page.
+            var inventoryPane = Ui.Panel("InventoryPane", Place.At(0f, 0f),
+                    UiSize.Fixed(1920f, 1080f),
+                    new List<UiNode> { bag, empty }.Concat(BuildPager(screen)))
+                .AsDecor()
+                .Inactive();
+            screen.InventoryPane = inventoryPane;
+
+            // PANES FIRST, then chrome, then the hover box.
+            //
+            // Declaration order is painter's order: the panes are the surface,
+            // the chrome sits on it, and the compare box floats over both --
+            // it follows the cursor across the bag grid, so anything drawn
+            // after it would cut a hole in it.
             var content = Ui.Panel("CharacterOverlayContent", Place.At(0f, 0f), UiSize.Fixed(1920f, 1080f),
-                BuildChrome(screen).Concat(paperdoll).Append(bag).Append(empty));
+                new List<UiNode> { characterPane, inventoryPane }
+                    .Concat(BuildChrome(screen))
+                    .Append(BuildCompareBox(screen)));
 
             // 94%, and tinted into the palette rather than pure black.
             //
@@ -134,17 +191,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 Place.At(OverlayAnchors.CharacterArrowX, OverlayAnchors.CharacterName.Y));
             screen.PrevCharacterButton = prevCharacter;
             screen.NextCharacterButton = nextCharacter;
-
-            var page = Ui.Label("OverlayPageLabel", UiStrings.OverlayPage, new UiVec(320f, 40f), 18,
-                    "#B8A8D9", Place.At(OverlayAnchors.Pager.X, OverlayAnchors.Pager.Y))
-                .AsDecor();
-            var prevPage = Ui.Button("OverlayPrevPage", UiStrings.TalentPrev, new UiVec(56f, 48f), 22,
-                Place.At(OverlayAnchors.Pager.X - 260f, OverlayAnchors.Pager.Y));
-            var nextPage = Ui.Button("OverlayNextPage", UiStrings.TalentNext, new UiVec(56f, 48f), 22,
-                Place.At(OverlayAnchors.Pager.X + 260f, OverlayAnchors.Pager.Y));
-            screen.PageLabel = page;
-            screen.PrevPageButton = prevPage;
-            screen.NextPageButton = nextPage;
 
             // Plate-local coordinates: these are its children, so a screen-space
             // y would put them a third of a screen below the plate meant to
@@ -182,9 +228,131 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 Place.At(OverlayAnchors.CloseButton.X, OverlayAnchors.CloseButton.Y));
             screen.CloseButton = close;
 
+            // The tabs. A marker strip under the live one rather than a colour
+            // swap on the button itself: the same reasoning the cell frames
+            // follow, where one layer says one thing.
+            var characterTab = Ui.Button("OverlayCharacterTab", UiStrings.SheetTabCharacter,
+                new UiVec(OverlayAnchors.TabSize.X, OverlayAnchors.TabSize.Y), 18,
+                Place.At(-OverlayAnchors.TabGap, OverlayAnchors.TabRow.Y));
+            var inventoryTab = Ui.Button("OverlayInventoryTab", UiStrings.SheetTabInventory,
+                new UiVec(OverlayAnchors.TabSize.X, OverlayAnchors.TabSize.Y), 18,
+                Place.At(OverlayAnchors.TabGap, OverlayAnchors.TabRow.Y));
+
+            var characterMarker = Ui.Solid("OverlayCharacterTabMarker", "#F2DB9E",
+                    Place.Frac(new UiVec(0f, 0f), new UiVec(1f, 0f), top: -3f), UiSize.Fill)
+                .AsDecor();
+            var inventoryMarker = Ui.Solid("OverlayInventoryTabMarker", "#F2DB9E00",
+                    Place.Frac(new UiVec(0f, 0f), new UiVec(1f, 0f), top: -3f), UiSize.Fill)
+                .AsDecor();
+            characterTab.Children.Add(characterMarker);
+            inventoryTab.Children.Add(inventoryMarker);
+
+            screen.CharacterTab = characterTab;
+            screen.InventoryTab = inventoryTab;
+            screen.CharacterTabMarker = characterMarker;
+            screen.InventoryTabMarker = inventoryMarker;
+
             // The plate is declared before the action button so the button
             // draws over it where they meet.
-            return new[] { name, prevCharacter, nextCharacter, page, prevPage, nextPage, plate, action, close };
+            return new[]
+            {
+                name, prevCharacter, nextCharacter,
+                characterTab, inventoryTab,
+                plate, action, close,
+            };
+        }
+
+        // The bag's own page controls, which live with the bag rather than in
+        // the shared chrome.
+        private static IEnumerable<UiNode> BuildPager(CharacterOverlayScreen screen)
+        {
+            var page = Ui.Label("OverlayPageLabel", UiStrings.OverlayPage, new UiVec(320f, 40f), 18,
+                    "#B8A8D9", Place.At(OverlayAnchors.Pager.X, OverlayAnchors.Pager.Y))
+                .AsDecor();
+            var prevPage = Ui.Button("OverlayPrevPage", UiStrings.TalentPrev, new UiVec(56f, 48f), 22,
+                Place.At(OverlayAnchors.Pager.X - 260f, OverlayAnchors.Pager.Y));
+            var nextPage = Ui.Button("OverlayNextPage", UiStrings.TalentNext, new UiVec(56f, 48f), 22,
+                Place.At(OverlayAnchors.Pager.X + 260f, OverlayAnchors.Pager.Y));
+
+            screen.PageLabel = page;
+            screen.PrevPageButton = prevPage;
+            screen.NextPageButton = nextPage;
+
+            return new[] { page, prevPage, nextPage };
+        }
+
+        // Thirteen rows in two columns, each a name and a value.
+        //
+        // Two labels per row rather than one padded string: the font is
+        // proportional, so aligning a value column with spaces is a guess that
+        // is wrong at every other number.
+        private IEnumerable<UiNode> BuildStatRows()
+        {
+            var nodes = new List<UiNode>();
+
+            for (int i = 0; i < SheetStats.Abilities.Length; i++)
+            {
+                nodes.AddRange(BuildStatRow(SheetStats.Abilities[i],
+                    OverlayAnchors.StatColumnAbilities, i));
+            }
+
+            for (int i = 0; i < SheetStats.Derived.Length; i++)
+            {
+                nodes.AddRange(BuildStatRow(SheetStats.Derived[i],
+                    OverlayAnchors.StatColumnDerived, i));
+            }
+
+            return nodes;
+        }
+
+        private IEnumerable<UiNode> BuildStatRow(SheetStat stat, UiVec column, int row)
+        {
+            float y = column.Y - row * OverlayAnchors.StatRowPitch;
+            float half = OverlayAnchors.StatRowSize.X * 0.5f;
+
+            var name = Ui.Label($"Stat{stat}Name", SheetStats.LabelFor(stat),
+                    new UiVec(OverlayAnchors.StatRowSize.X * 0.6f, OverlayAnchors.StatRowSize.Y), 19,
+                    "#B8A8D9",
+                    Place.At(column.X - half * 0.4f, y))
+                .AsDecor();
+
+            var value = Ui.Label($"Stat{stat}Value", UiStrings.SheetStatValue,
+                    new UiVec(OverlayAnchors.StatRowSize.X * 0.35f, OverlayAnchors.StatRowSize.Y), 19,
+                    "#EDE6FF",
+                    Place.At(column.X + half * 0.6f, y))
+                .AsDecor();
+
+            StatNameLabels.Add(name);
+            StatValueLabels.Add(value);
+
+            return new[] { name, value };
+        }
+
+        // The hover box. Decor and inactive: it never takes a click, and it
+        // only exists while the cursor is on a cell.
+        private static UiNode BuildCompareBox(CharacterOverlayScreen screen)
+        {
+            var name = Ui.Label("OverlayCompareName", UiString.Runtime,
+                    new UiVec(OverlayAnchors.CompareSize.X - 28f, 34f), 20, "#EDE6FF",
+                    Place.At(0f, OverlayAnchors.CompareSize.Y * 0.5f - 30f))
+                .AsDecor();
+            var body = Ui.Label("OverlayCompareBody", UiString.Runtime,
+                    new UiVec(OverlayAnchors.CompareSize.X - 28f, OverlayAnchors.CompareSize.Y - 76f),
+                    16, "#B8A8D9",
+                    Place.At(0f, -18f))
+                .AsDecor();
+
+            var plate = Ui.Panel("OverlayComparePlate", Place.At(0f, 0f),
+                    UiSize.Fixed(OverlayAnchors.CompareSize.X, OverlayAnchors.CompareSize.Y),
+                    name, body)
+                .Coloured("#150C24F2")
+                .AsDecor()
+                .Inactive();
+
+            screen.ComparePlate = plate;
+            screen.CompareName = name;
+            screen.CompareBody = body;
+            return plate;
         }
 
         private UiNode BuildSlotCell(EquipmentSlot slot)

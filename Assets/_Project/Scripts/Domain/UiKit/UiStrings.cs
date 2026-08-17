@@ -109,6 +109,47 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString MapRoomEmpty =
             UiString.Define("map.room.empty", "The room is empty.");
 
+        // ---- character sheet ---------------------------------------------------
+
+        // The two panes. The sheet deliberately does NOT show the bag: a
+        // paperdoll and a twenty-cell grid on one surface is what left the
+        // slot cells fighting the figure for space.
+        public static readonly UiString SheetTabCharacter =
+            UiString.Define("sheet.tab.character", "Character");
+        public static readonly UiString SheetTabInventory =
+            UiString.Define("sheet.tab.inventory", "Inventory");
+
+        // Worst-case sample is four digits: resistances are small today but a
+        // late-run stack of gear is what the box has to still fit.
+        public static readonly UiString SheetStatValue =
+            UiString.Define("sheet.stat.value", "{0}", "9999");
+
+        // Short names, because the value beside them is what is being read.
+        // Spelled out where the abbreviation would be a guess (Speed, Attack).
+        public static readonly UiString StatStrength = UiString.Define("stat.str", "STR");
+        public static readonly UiString StatDexterity = UiString.Define("stat.dex", "DEX");
+        public static readonly UiString StatConstitution = UiString.Define("stat.con", "CON");
+        public static readonly UiString StatWisdom = UiString.Define("stat.wis", "WIS");
+        public static readonly UiString StatIntelligence = UiString.Define("stat.int", "INT");
+        public static readonly UiString StatCharisma = UiString.Define("stat.cha", "CHA");
+
+        public static readonly UiString StatMaxHealth = UiString.Define("stat.health", "Health");
+        public static readonly UiString StatAttack = UiString.Define("stat.attack", "Attack");
+        public static readonly UiString StatDefence = UiString.Define("stat.defence", "Defence");
+        public static readonly UiString StatSpeed = UiString.Define("stat.speed", "Speed");
+        public static readonly UiString StatManaRegen = UiString.Define("stat.manaregen", "Mana Regen");
+        public static readonly UiString StatPhysicalResistance =
+            UiString.Define("stat.physres", "Physical DEF");
+        public static readonly UiString StatMagicalResistance =
+            UiString.Define("stat.magres", "Magical DEF");
+
+        // Shown on the action button, and on the compare box, when a fight is
+        // in progress. Gear is locked for the duration of a battle -- being
+        // able to re-plate mid-swing would make every fight a loadout puzzle
+        // rather than a fight.
+        public static readonly UiString OverlayLockedInFight =
+            UiString.Define("overlay.locked", "Locked in battle");
+
         public static readonly UiString Play = UiString.Define("play", "Play");
         public static readonly UiString Options = UiString.Define("options", "Options");
         public static readonly UiString Exit = UiString.Define("exit", "Exit");
@@ -387,6 +428,11 @@ namespace PrincesPalace.Domain.UiKit
             MapTitle, MapDepth, MapGold, MapAbandon, MapFog,
             MapRoomTreasure, MapRoomRest, MapRoomShop, MapRoomEvent,
             MapRoomItem, MapRoomEmpty,
+            SheetTabCharacter, SheetTabInventory, SheetStatValue, OverlayLockedInFight,
+            StatStrength, StatDexterity, StatConstitution, StatWisdom,
+            StatIntelligence, StatCharisma,
+            StatMaxHealth, StatAttack, StatDefence, StatSpeed, StatManaRegen,
+            StatPhysicalResistance, StatMagicalResistance,
             HubWallet, HubBeginDescent, HubResumeFloor,
             OverlayCount, OverlayPlus, OverlayPage,
             OverlayEquip, OverlayUnequip, OverlayCannotWear, OverlayBagEmpty,
