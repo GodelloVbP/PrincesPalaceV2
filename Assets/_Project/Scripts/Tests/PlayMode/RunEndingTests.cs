@@ -144,5 +144,89 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(6, Save.lifetimeRoomsCleared, "the fold never reached the file");
             CollectionAssert.Contains(Save.defeatedBossIds, "forest_warden");
         }
+
+        // ---- abandoning starts the NEXT run from scratch -----------------------
+
+        // "I keep popping in at floor 1 path 3": abandoning a descent and
+        // starting another put the party somewhere down the map instead of at
+        // its entry, and skipped the relic draft.
+        //
+        // Driven through RunManager, which is the door both the abandon button
+        // and the hub gate go through, so a pass here means the MODEL is clean
+        // and anything still wrong is the view.
+        [Test]
+        public void AbandoningAndStartingAgainBeginsAtTheEntryWithNothingCarriedOver()
+        {
+            RunManager.StartRun(12345);
+            var first = RunManager.Run;
+
+            // Get the run somewhere: move along the map, bank gold, draft a
+            // relic, clear a room.
+            var choices = RunManager.Choices();
+            Assert.IsNotEmpty(choices, "a fresh run should offer somewhere to go");
+            RunManager.MoveTo(choices[0].Id);
+            RunManager.ClearCurrentRoom();
+            RunManager.BankPayout(140);
+            first.relicDrafted = true;
+            first.relicIds.Add("dual_wield");
+            int wanderedTo = first.currentNodeId;
+            int wanderedStep = first.step;
+
+            RunManager.EndRun();
+            Assert.IsFalse(RunManager.HasRun, "abandoning must leave no run behind");
+
+            RunManager.StartRun(67890);
+            var second = RunManager.Run;
+
+            Assert.AreEqual(0, second.step, "a new descent starts at step 0");
+            Assert.AreEqual(0, second.legStartStep, "a new descent starts on the first leg");
+            Assert.AreEqual(1, second.floor, "a new descent starts on floor 1");
+            Assert.AreEqual(RunManager.Map.Entry.Id, second.currentNodeId,
+                "the party must stand at the map's ENTRY, not wherever the last run wandered to");
+            Assert.AreNotEqual(wanderedTo, second.currentNodeId,
+                "the new run inherited the abandoned run's position");
+            Assert.IsFalse(second.relicDrafted,
+                "a new descent drafts a new relic - carrying the flag over skips the draft entirely");
+            CollectionAssert.IsEmpty(second.relicIds, "relics do not survive an abandoned run");
+            Assert.AreEqual(0, second.gold, "unbanked gold is forfeited, not carried into the next run");
+            CollectionAssert.IsEmpty(second.clearedNodeIds, "the new map starts unexplored");
+        }
+
+
+        // The same thing again, but ACROSS A RELOAD.
+        //
+        // The test above drives the in-memory save, which is not the path the
+        // game takes: abandoning returns to the hub through a scene load, and
+        // the hub gate reads whatever survived. RunSnapshot round-trips through
+        // JsonUtility, and hasRun is an in-band flag precisely because a null
+        // activeRun is never null again after one trip -- so "did the abandon
+        // actually stick" is a question only a reload can answer.
+        [Test]
+        public void AnAbandonedRunIsStillAbandonedAfterAReload()
+        {
+            RunManager.StartRun(4242);
+            var choices = RunManager.Choices();
+            RunManager.MoveTo(choices[0].Id);
+            RunManager.Run.relicDrafted = true;
+            int wanderedStep = RunManager.Run.step;
+            Assert.Greater(wanderedStep, 0, "the fixture needs the run to have moved off the entry");
+
+            RunManager.EndRun();
+
+            // Drop the cache so the next read comes off DISK, which is what a
+            // scene load does.
+            SaveSlotManager.Forget();
+            RunManager.ResetForTests();
+
+            Assert.IsFalse(RunManager.HasRun,
+                "the abandoned run came back after a reload - the hub gate would RESUME it, which " +
+                "skips the relic draft and drops the party wherever the last run stopped");
+
+            RunManager.StartRun(9999);
+            Assert.AreEqual(0, RunManager.Run.step, "the run after a reload must still start at step 0");
+            Assert.AreEqual(RunManager.Map.Entry.Id, RunManager.Run.currentNodeId);
+            Assert.IsFalse(RunManager.Run.relicDrafted, "a new descent drafts again");
+        }
+
     }
 }
