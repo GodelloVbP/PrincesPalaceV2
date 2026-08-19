@@ -111,12 +111,21 @@ namespace PrincesPalace
             if (panes == null || panes.Length == 0) return;
 
             _chosen = true;
-            _selected = index < 0 ? 0 : index >= panes.Length ? panes.Length - 1 : index;
+            _selected = index < 0 ? 0 : index >= SystemMenuTabs.Count ? SystemMenuTabs.Count - 1 : index;
+
+            // The PANE index is not the tab index: Inventory shows Character's
+            // pane, so two tabs map to one pane and the underline still has to
+            // follow the tab that was actually clicked.
+            int pane = SystemMenuTabs.PaneIndexFor(_selected);
 
             for (int i = 0; i < panes.Length; i++)
             {
-                SetActive(panes[i], i == _selected);
-                if (tabUnderlines != null && i < tabUnderlines.Length)
+                SetActive(panes[i], i == pane);
+            }
+
+            if (tabUnderlines != null)
+            {
+                for (int i = 0; i < tabUnderlines.Length; i++)
                 {
                     SetActive(tabUnderlines[i], i == _selected);
                 }

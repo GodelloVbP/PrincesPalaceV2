@@ -1,0 +1,554 @@
+using System.Collections.Generic;
+using System.Linq;
+using PrincesPalace.Domain.Equipment;
+
+namespace PrincesPalace.Domain.UiKit.Screens
+{
+    // The character sheet, rebuilt to the "Dossier" handover: identity and pack
+    // on the left, a mannequin with its slots in the middle, the numbers on the
+    // right.
+    //
+    // REPLACES CharacterOverlayScreen, and lives inside the system menu's
+    // Character and Inventory panes rather than being its own modal -- the two
+    // tabs are two doors into this one screen, exactly as C and I are today.
+    //
+    // Authored at DossierLayout's 1360x766 and centred in the menu's 1600x804
+    // content pane, so it never scales and the handover's rule about uniform
+    // scale is satisfied by never needing it.
+    //
+    // WHAT IS NOT HERE, and why: the handover's Dodge, Carried, Shop prices and
+    // Party morale rows are gone. None of them exists in this game -- there is
+    // no dodge, no carry weight, no price modifier and no morale -- and printing
+    // four numbers with no source would be four lies a player cannot check. The
+    // stat list is built from SheetStats.Derived instead, so it is exactly the
+    // stats that are real, and adding one later is one entry there.
+    public sealed class CharacterDossierScreen
+    {
+        public const string PortraitKey = "UI/CharacterOverlay/Processed/armour_stand.png";
+        public const string MannequinKey = "UI/CharacterOverlay/Processed/armour_stand.png";
+
+        // ---- tokens, from the handover's table ----------------------------------
+
+        public const string Rule = "#C8B4DE29";          // rgba(200,180,222,.16)
+        public const string RuleSoft = "#C8B4DE12";      // rgba(200,180,222,.07)
+        public const string TextHi = "#F4EEFA";
+        public const string Text = "#F0E8F8";
+        public const string TextDim = "#D6C8E86B";       // rgba(214,200,232,.42)
+        public const string TextFaint = "#D6C8E852";     // rgba(214,200,232,.32)
+        public const string Accent = "#B9A2D6";
+        public const string AccentHi = "#D8C2F0";
+        public const string SlotBorder = "#BEA8D652";
+        public const string SlotEmptyBorder = "#C8B4DE1F";
+        public const string PackGround = "#160E1E";
+        public const string Ground = "#120A18FA";
+
+        public UiNode Root;
+
+        public NodeRef Portrait;
+        public NodeRef CharacterName;
+        public NodeRef SubLine;
+        public NodeRef XpFill;
+        public NodeRef XpRemaining;
+        public NodeRef PrevCharacterButton;
+        public NodeRef NextCharacterButton;
+
+        public NodeRef SkillsRow;
+        public NodeRef SkillsCount;
+        public NodeRef PackRow;
+        public NodeRef PackChevron;
+
+        public NodeRef PackPanel;
+        public NodeRef PackCloseButton;
+        public List<NodeRef> PackFilterTabs = new List<NodeRef>();
+        public List<NodeRef> PackCells = new List<NodeRef>();
+        public List<NodeRef> PackIcons = new List<NodeRef>();
+        public List<NodeRef> PackCounts = new List<NodeRef>();
+        public List<NodeRef> PackRarityTicks = new List<NodeRef>();
+        public NodeRef CarriedValue;
+
+        // Indexed by EquipmentSlots.All.
+        public List<NodeRef> SlotCells = new List<NodeRef>();
+        public List<NodeRef> SlotIcons = new List<NodeRef>();
+        public List<NodeRef> SlotLabels = new List<NodeRef>();
+        public List<NodeRef> SlotRarityTicks = new List<NodeRef>();
+        public List<NodeRef> SlotBlockedCaptions = new List<NodeRef>();
+
+        // Six cells, filled highest-first at runtime -- which attribute lands
+        // in which cell is a per-character question, so the nodes stay generic.
+        public List<NodeRef> AttributeCells = new List<NodeRef>();
+        public List<NodeRef> AttributeValues = new List<NodeRef>();
+        public List<NodeRef> AttributeKeys = new List<NodeRef>();
+
+        // Indexed by SheetStats.Derived.
+        public List<NodeRef> StatRows = new List<NodeRef>();
+        public List<NodeRef> StatNames = new List<NodeRef>();
+        public List<NodeRef> StatValues = new List<NodeRef>();
+        public List<NodeRef> StatPreviews = new List<NodeRef>();
+        public List<NodeRef> StatHighlights = new List<NodeRef>();
+
+        public NodeRef Tooltip;
+        public NodeRef TooltipTitle;
+        public NodeRef TooltipBody;
+
+        public static CharacterDossierScreen Build()
+        {
+            var screen = new CharacterDossierScreen();
+
+            // The stat list is generated from SheetStats, so it can outgrow its
+            // column the moment somebody adds a row. Same guard, same reasoning
+            // as the system menu's tab bar.
+            int statCount = SheetStats.Derived.Length;
+            if (!DossierLayout.StatListFits(statCount))
+            {
+                throw new System.InvalidOperationException(
+                    $"The dossier has {statCount} stat rows but column C holds {DossierLayout.MaxStatRows()} " +
+                    $"at {DossierLayout.StatRowHeight}px. Shorten the rows, lengthen the panel, or the list " +
+                    "needs to scroll - it cannot simply be given another entry.");
+            }
+
+            var children = new List<UiNode>();
+
+            // ITS OWN GROUND. The handover gives this panel #120a18, and it
+            // needs one for a reason beyond taste: it opens over the hub and the
+            // fight, and a transparent sheet let a painted background read
+            // straight through the numerals.
+            children.Add(Ui.Solid("DossierGround", Ground,
+                    new UiVec(DossierLayout.Width, DossierLayout.Height), Place.At(0f, 0f))
+                .AsDecor()
+                .AllowOverlap("the ground is what everything else on this screen stands on"));
+
+            children.AddRange(screen.BuildColumnA());
+            children.AddRange(screen.BuildColumnB());
+            children.AddRange(screen.BuildColumnC());
+
+            // The two column dividers.
+            children.Add(Ui.Solid("DossierDividerAB", Rule,
+                new UiVec(1f, DossierLayout.Height - DossierLayout.PadY * 2f),
+                Place.At(DossierLayout.DividerAtoB, 0f)).AsDecor());
+            children.Add(Ui.Solid("DossierDividerBC", Rule,
+                new UiVec(1f, DossierLayout.Height - DossierLayout.PadY * 2f),
+                Place.At(DossierLayout.DividerBtoC, 0f)).AsDecor());
+
+            // The pack covers column A entirely, so it is declared AFTER it.
+            children.Add(screen.BuildPackPanel());
+
+            // And the tooltip over everything.
+            children.Add(screen.BuildTooltip());
+
+            screen.Root = Ui.Panel("CharacterDossier", Place.At(0f, 0f),
+                UiSize.Fixed(DossierLayout.Width, DossierLayout.Height), children);
+            return screen;
+        }
+
+        // ---- column A: identity ---------------------------------------------------
+
+        private IEnumerable<UiNode> BuildColumnA()
+        {
+            float cx = DossierLayout.ColumnACentreX;
+
+            var portrait = Ui.Sprite("DossierPortrait", PortraitKey,
+                    Place.At(cx, DossierLayout.PortraitCentreY),
+                    UiSize.Fixed(DossierLayout.ContentAWidth, DossierLayout.PortraitHeight))
+                .Coloured("#6640884D")
+                .AsDecor();
+            Portrait = portrait;
+            yield return portrait;
+
+            var name = Ui.Label("DossierName", UiString.Runtime,
+                new UiVec(DossierLayout.ContentAWidth - 76f, 42f), 34, TextHi,
+                Place.At(cx, DossierLayout.NameCentreY));
+            CharacterName = name;
+            yield return name;
+
+            // The roster arrows the old sheet had. The handover does not show
+            // them -- it draws one character -- but the game has five and no
+            // other way to reach them from here, so dropping them would be a
+            // capability regression dressed as a redesign.
+            var prev = Ui.Button("DossierPrevCharacter", UiStrings.OverlayPrev, new UiVec(34f, 34f), 18,
+                Place.At(cx - DossierLayout.ContentAWidth * 0.5f + 17f, DossierLayout.NameCentreY)).NoChrome();
+            var next = Ui.Button("DossierNextCharacter", UiStrings.OverlayNext, new UiVec(34f, 34f), 18,
+                Place.At(cx + DossierLayout.ContentAWidth * 0.5f - 17f, DossierLayout.NameCentreY)).NoChrome();
+            PrevCharacterButton = prev;
+            NextCharacterButton = next;
+            yield return prev;
+            yield return next;
+
+            var sub = Ui.Label("DossierSubLine", UiString.Runtime,
+                new UiVec(DossierLayout.ContentAWidth, 24f), 14, Accent,
+                Place.At(cx, DossierLayout.SubLineCentreY));
+            SubLine = sub;
+            yield return sub;
+
+            // XP: label, a 3px track with its fill, and what is left.
+            yield return Ui.Label("DossierXpLabel", UiStrings.OverlayXp, new UiVec(30f, 16f), 10, TextDim,
+                Place.At(cx - DossierLayout.ContentAWidth * 0.5f + 15f, DossierLayout.XpRowCentreY)).AsDecor();
+
+            float trackWidth = DossierLayout.ContentAWidth - 30f - 10f - 70f;
+            float trackLeft = cx - DossierLayout.ContentAWidth * 0.5f + 40f;
+            yield return Ui.Solid("DossierXpTrack", "#C8B4DE24",
+                new UiVec(trackWidth, 3f),
+                Place.At(trackLeft + trackWidth * 0.5f, DossierLayout.XpRowCentreY)).AsDecor();
+
+            var fill = Ui.Solid("DossierXpFill", Accent, new UiVec(trackWidth, 3f),
+                    Place.At(trackLeft, DossierLayout.XpRowCentreY, new UiVec(0f, 0.5f)))
+                .AsDecor()
+                .AllowOverlap("the fill sits on its own track by construction");
+            XpFill = fill;
+            yield return fill;
+
+            var left = Ui.Label("DossierXpRemaining", UiString.Runtime, new UiVec(70f, 16f), 11, TextDim,
+                Place.At(cx + DossierLayout.ContentAWidth * 0.5f - 35f, DossierLayout.XpRowCentreY));
+            XpRemaining = left;
+            yield return left;
+
+            // The two nav rows. BuildNavRow assigns its own refs -- an iterator
+            // cannot carry `out` parameters, and threading them back through the
+            // caller bought nothing.
+            yield return BuildNavRow("Skills", UiStrings.OverlaySkills, DossierLayout.SkillsRowCentreY);
+            yield return BuildNavRow("Pack", UiStrings.OverlayPack, DossierLayout.PackRowCentreY);
+        }
+
+        private UiNode BuildNavRow(string key, UiString label, float centreY)
+        {
+            float cx = DossierLayout.ColumnACentreX;
+
+            var button = Ui.Button($"Dossier{key}Row", UiString.Runtime,
+                    new UiVec(DossierLayout.ContentAWidth, DossierLayout.NavRowHeight), 1,
+                    Place.At(cx, centreY))
+                .NoChrome();
+
+            button.Children.Add(Ui.Solid($"Dossier{key}RowRule", Rule,
+                new UiVec(DossierLayout.ContentAWidth, 1f),
+                Place.At(0f, DossierLayout.NavRowHeight * 0.5f - 0.5f)).AsDecor());
+
+            // ...RowName, NOT ...RowLabel. UiEmitter names a button's own
+            // caption "<button>Label", so a child called that collides with an
+            // object the tree never declares and every lookup by name silently
+            // takes the emitter's empty one -- AUDIT #39, caught here by the
+            // check that finding added.
+            button.Children.Add(Ui.Label($"Dossier{key}RowName", label,
+                new UiVec(160f, 24f), 17, Text,
+                Place.At(-DossierLayout.ContentAWidth * 0.5f + 82f, 0f)).AsDecor());
+
+            var countLabel = Ui.Label($"Dossier{key}RowCount", UiString.Runtime,
+                new UiVec(90f, 20f), 12, TextDim,
+                Place.At(DossierLayout.ContentAWidth * 0.5f - 66f, 0f)).AsDecor();
+            button.Children.Add(countLabel);
+
+            var chev = Ui.Label($"Dossier{key}RowChevron", UiString.Runtime,
+                new UiVec(20f, 24f), 16, Accent,
+                Place.At(DossierLayout.ContentAWidth * 0.5f - 12f, 0f)).AsDecor();
+            button.Children.Add(chev);
+
+            // Assigned here rather than returned, so the two call sites stay
+            // one line each.
+            if (key == "Skills") { SkillsRow = button; SkillsCount = countLabel; }
+            else { PackRow = button; PackChevron = chev; }
+
+            return button;
+        }
+
+        // ---- column A, covered: the pack -------------------------------------------
+
+        private UiNode BuildPackPanel()
+        {
+            // ZERO, not the column centre. These are children OF the pack
+            // panel, and the panel is itself placed at column A -- expressing
+            // them in dossier coordinates offset every one of them twice, which
+            // the child-containment audit caught as a 339px escape rather than
+            // letting it ship as a pack drawn off the side of the screen.
+            const float cx = 0f;
+            var children = new List<UiNode>();
+
+            children.Add(Ui.Label("DossierPackTitle", UiStrings.OverlayPackTitle,
+                new UiVec(150f, 20f), 10, TextFaint,
+                Place.At(cx - DossierLayout.ContentAWidth * 0.5f + 75f, DossierLayout.ColumnATop - 10f)).AsDecor());
+
+            var close = Ui.Button("DossierPackClose", UiStrings.OverlayPackClose, new UiVec(90f, 24f), 11,
+                    Place.At(cx + DossierLayout.ContentAWidth * 0.5f - 45f, DossierLayout.ColumnATop - 10f))
+                .NoChrome();
+            PackCloseButton = close;
+            children.Add(close);
+
+            children.Add(Ui.Solid("DossierPackHeaderRule", Rule,
+                new UiVec(DossierLayout.ContentAWidth, 1f),
+                Place.At(cx, DossierLayout.ColumnATop - 26f)).AsDecor());
+
+            // Filter tabs, from one list so a new category is one entry.
+            float tabY = DossierLayout.ColumnATop - 48f;
+            float tabX = cx - DossierLayout.ContentAWidth * 0.5f + 30f;
+            for (int i = 0; i < PackFilters.All.Length; i++)
+            {
+                var tab = Ui.Button($"DossierPackFilter{i}", PackFilters.All[i], new UiVec(60f, 24f), 12,
+                        Place.At(tabX + i * 66f, tabY))
+                    .NoChrome();
+                PackFilterTabs.Add(tab);
+                children.Add(tab);
+            }
+
+            // 24 cells, always rendered: the grid IS the capacity.
+            const int columns = 4;
+            float cell = (DossierLayout.ContentAWidth - 8f * (columns - 1)) / columns;
+            float gridTop = tabY - 28f;
+
+            for (int i = 0; i < PackCapacity; i++)
+            {
+                int col = i % columns;
+                int rowIndex = i / columns;
+                float x = cx - DossierLayout.ContentAWidth * 0.5f + cell * 0.5f + col * (cell + 8f);
+                float y = gridTop - cell * 0.5f - rowIndex * (cell + 8f);
+
+                var icon = Ui.Sprite($"DossierPackIcon{i}", null, new UiVec(cell - 14f, cell - 14f),
+                    Place.At(0f, 0f)).Inactive().AsDecor();
+                var tick = Ui.Solid($"DossierPackTick{i}", "#7F8EA3", new UiVec(8f, 8f),
+                    Place.At(-cell * 0.5f + 5f, cell * 0.5f - 5f)).Inactive().AsDecor();
+                var count = Ui.Label($"DossierPackCount{i}", UiString.Runtime, new UiVec(30f, 14f), 10,
+                    "#E6DCF0BF", Place.At(cell * 0.5f - 17f, -cell * 0.5f + 8f)).Inactive().AsDecor();
+
+                var button = Ui.Button($"DossierPackCell{i}", UiString.Runtime, new UiVec(cell, cell), 1,
+                        Place.At(x, y))
+                    .NoChrome()
+                    .Hovers(1.04f);
+                button.Children.Add(icon);
+                button.Children.Add(tick);
+                button.Children.Add(count);
+
+                PackCells.Add(button);
+                PackIcons.Add(icon);
+                PackRarityTicks.Add(tick);
+                PackCounts.Add(count);
+                children.Add(button);
+            }
+
+            float footerY = -DossierLayout.HalfHeight + DossierLayout.PadY + 16f;
+            children.Add(Ui.Solid("DossierPackFooterRule", Rule,
+                new UiVec(DossierLayout.ContentAWidth, 1f), Place.At(cx, footerY + 18f)).AsDecor());
+            children.Add(Ui.Label("DossierCarriedLabel", UiStrings.OverlayCarried, new UiVec(110f, 20f), 13,
+                TextDim, Place.At(cx - DossierLayout.ContentAWidth * 0.5f + 55f, footerY)).AsDecor());
+
+            var carried = Ui.Label("DossierCarriedValue", UiString.Runtime, new UiVec(110f, 20f), 14, Text,
+                Place.At(cx + DossierLayout.ContentAWidth * 0.5f - 55f, footerY));
+            CarriedValue = carried;
+            children.Add(carried);
+
+            // The PANEL sits over column A; its CHILDREN are relative to the
+            // panel, hence cx = 0 above. Collapsing both onto one variable put
+            // the whole pack in the middle of the screen, over the loadout.
+            var panel = Ui.Sprite("DossierPackPanel", null,
+                    Place.At(DossierLayout.ColumnACentreX, 0f),
+                    UiSize.Fixed(DossierLayout.ColumnAWidth, DossierLayout.Height))
+                .Coloured(PackGround)
+                .Inactive()
+                .AllowOverlap("the pack covers column A entirely - that IS the interaction");
+
+            foreach (var child in children) panel.Children.Add(child);
+            PackPanel = panel;
+            return panel;
+        }
+
+        public const int PackCapacity = 24;
+
+        // ---- column B: the loadout --------------------------------------------------
+
+        private IEnumerable<UiNode> BuildColumnB()
+        {
+            yield return Ui.Label("DossierLoadoutLabel", UiStrings.OverlayLoadout,
+                new UiVec(160f, 20f), 10, TextFaint,
+                Place.At(DossierLayout.ColumnBCentreX - DossierLayout.StageWidth * 0.5f + 80f,
+                         DossierLayout.HalfHeight - DossierLayout.PadY - 10f)).AsDecor();
+
+            var mannequinAt = DossierLayout.FromStage(DossierLayout.MannequinLeft, DossierLayout.MannequinTop,
+                DossierLayout.MannequinWidth, DossierLayout.MannequinHeight);
+
+            yield return Ui.Sprite("DossierMannequin", MannequinKey,
+                    Place.At(mannequinAt.X, mannequinAt.Y),
+                    UiSize.Fixed(DossierLayout.MannequinWidth, DossierLayout.MannequinHeight))
+                .Coloured("#B9A2D612")
+                .AsDecor()
+                .AllowOverlap("the slots and their leaders sit over the mannequin by construction");
+
+            foreach (var slot in EquipmentSlots.All)
+            {
+                foreach (var node in BuildSlot(slot)) yield return node;
+            }
+        }
+
+        private IEnumerable<UiNode> BuildSlot(EquipmentSlot slot)
+        {
+            string key = EquipmentSlots.DisplayName(slot).Replace(" ", "");
+            var at = DossierLayout.SlotAt(slot);
+
+            var leaderAt = DossierLayout.LeaderAt(slot, out float leaderWidth);
+            yield return Ui.Solid($"DossierLeader{key}", "#C8B4DE2E",
+                new UiVec(leaderWidth, 1f), Place.At(leaderAt.X, leaderAt.Y)).AsDecor();
+
+            var icon = Ui.Sprite($"DossierSlotIcon{key}", null,
+                new UiVec(DossierLayout.SlotSize - 12f, DossierLayout.SlotSize - 12f),
+                Place.At(0f, 0f)).Inactive().AsDecor();
+
+            var tick = Ui.Solid($"DossierSlotTick{key}", "#7F8EA3", new UiVec(8f, 8f),
+                Place.At(-DossierLayout.SlotSize * 0.5f + 5f, DossierLayout.SlotSize * 0.5f - 5f))
+                .Inactive().AsDecor();
+
+            // The blocked caption. A two-handed weapon must never leave the off
+            // hand looking merely empty -- the player has to see WHY.
+            var blocked = Ui.Label($"DossierSlotBlocked{key}", UiStrings.OverlayTwoHanded,
+                new UiVec(DossierLayout.SlotSize - 8f, 26f), 9, TextDim, Place.At(0f, 0f))
+                .Inactive().AsDecor();
+
+            var cell = Ui.Button($"DossierSlot{key}", UiString.Runtime,
+                    new UiVec(DossierLayout.SlotSize, DossierLayout.SlotSize), 1,
+                    Place.At(at.X, at.Y))
+                .NoChrome()
+                .Hovers(1.05f)
+                .AllowOverlap("a slot stands on the mannequin and its own leader line");
+            cell.Children.Add(icon);
+            cell.Children.Add(tick);
+            cell.Children.Add(blocked);
+
+            var label = Ui.Label($"DossierSlotLabel{key}", UiString.Runtime,
+                new UiVec(DossierLayout.SlotSize + 26f, 16f), 9, TextDim,
+                Place.At(at.X, at.Y - DossierLayout.SlotSize * 0.5f - 11f)).AsDecor();
+
+            SlotCells.Add(cell);
+            SlotIcons.Add(icon);
+            SlotRarityTicks.Add(tick);
+            SlotBlockedCaptions.Add(blocked);
+            SlotLabels.Add(label);
+
+            yield return cell;
+            yield return label;
+        }
+
+        // ---- column C: the numbers ---------------------------------------------------
+
+        private IEnumerable<UiNode> BuildColumnC()
+        {
+            float cx = DossierLayout.ColumnCCentreX;
+
+            yield return Ui.Label("DossierAttributesLabel", UiStrings.OverlayAttributes,
+                new UiVec(160f, 20f), 10, TextFaint,
+                Place.At(cx - DossierLayout.ContentCWidth * 0.5f + 80f,
+                         DossierLayout.ColumnCTop - 10f)).AsDecor();
+
+            yield return Ui.Solid("DossierAttributesRule", Rule,
+                new UiVec(DossierLayout.ContentCWidth, 1f),
+                Place.At(cx, DossierLayout.ColumnCTop - 24f)).AsDecor();
+
+            // Six generic cells. Which attribute lands where is decided per
+            // character at runtime -- the handover wants them highest-first so
+            // the shape of the build reads off the first row.
+            for (int i = 0; i < SheetStats.Abilities.Length; i++)
+            {
+                int row = i / 3;
+                int column = i % 3;
+                float x = DossierLayout.AttributeCellCentreX(column);
+                float y = DossierLayout.AttributeCellCentreY(row);
+
+                var value = Ui.Label($"DossierAttrValue{i}", UiString.Runtime, new UiVec(90f, 36f), 30, Text,
+                    Place.At(0f, 10f)).AsDecor();
+                var keyLabel = Ui.Label($"DossierAttrKey{i}", UiString.Runtime, new UiVec(90f, 16f), 10, TextDim,
+                    Place.At(0f, -18f)).AsDecor();
+
+                var cell = Ui.Button($"DossierAttrCell{i}", UiString.Runtime,
+                        // MINUS 2, because cells tiled edge to edge share a
+                        // boundary and the overlap check reads a shared edge as
+                        // an overlap -- rightly, since the later sibling would
+                        // take clicks along it.
+                        new UiVec(DossierLayout.AttributeCellWidth - 2f, DossierLayout.AttributeCellHeight - 2f), 1,
+                        Place.At(x, y))
+                    .NoChrome();
+                cell.Children.Add(value);
+                cell.Children.Add(keyLabel);
+
+                AttributeCells.Add(cell);
+                AttributeValues.Add(value);
+                AttributeKeys.Add(keyLabel);
+                yield return cell;
+            }
+
+            yield return Ui.Solid("DossierStatListRule", Rule,
+                new UiVec(DossierLayout.ContentCWidth, 1f),
+                Place.At(cx, DossierLayout.StatListTop)).AsDecor();
+
+            // ONE ROW PER SheetStats.Derived ENTRY. This is the dynamic list:
+            // adding a stat there adds a row here, and the guard in Build
+            // refuses a list that no longer fits.
+            for (int i = 0; i < SheetStats.Derived.Length; i++)
+            {
+                var stat = SheetStats.Derived[i];
+                float y = DossierLayout.StatRowCentreY(i);
+
+                // The highlight bar for the attribute-hover link. Inactive by
+                // default; the controller raises the rows the hovered attribute
+                // actually feeds.
+                var highlight = Ui.Solid($"DossierStatHighlight{i}", "#B9A2D61F",
+                        new UiVec(DossierLayout.ContentCWidth, DossierLayout.StatRowHeight - 2f),
+                        Place.At(cx, y))
+                    .Inactive().AsDecor()
+                    .AllowOverlap("the highlight sits under the row it marks");
+
+                var name = Ui.Label($"DossierStatName{i}", SheetStats.LabelFor(stat),
+                    new UiVec(170f, 22f), 15, Text,
+                    Place.At(cx - DossierLayout.ContentCWidth * 0.5f + 85f, y)).AsDecor();
+
+                var preview = Ui.Label($"DossierStatPreview{i}", UiString.Runtime, new UiVec(84f, 20f), 13,
+                    TextDim, Place.At(cx + DossierLayout.ContentCWidth * 0.5f - 130f, y)).AsDecor();
+
+                var value = Ui.Label($"DossierStatValue{i}", UiString.Runtime, new UiVec(76f, 22f), 15, Text,
+                    Place.At(cx + DossierLayout.ContentCWidth * 0.5f - 40f, y)).AsDecor();
+
+                var rule = Ui.Solid($"DossierStatRule{i}", RuleSoft,
+                    new UiVec(DossierLayout.ContentCWidth, 1f),
+                    Place.At(cx, y - DossierLayout.StatRowHeight * 0.5f)).AsDecor();
+
+                StatHighlights.Add(highlight);
+                StatRows.Add(highlight);
+                StatNames.Add(name);
+                StatValues.Add(value);
+                StatPreviews.Add(preview);
+
+                yield return highlight;
+                yield return name;
+                yield return preview;
+                yield return value;
+                yield return rule;
+            }
+        }
+
+        // ---- the shared tooltip --------------------------------------------------------
+
+        private UiNode BuildTooltip()
+        {
+            var title = Ui.Label("DossierTooltipTitle", UiString.Runtime, new UiVec(270f, 26f), 18, AccentHi,
+                Place.At(0f, 44f)).AsDecor();
+            var body = Ui.Label("DossierTooltipBody", UiString.Runtime, new UiVec(270f, 84f), 13, TextDim,
+                Place.At(0f, -14f)).AsDecor();
+
+            TooltipTitle = title;
+            TooltipBody = body;
+
+            var panel = Ui.Sprite("DossierTooltip", null, Place.At(0f, 0f), UiSize.Fixed(290f, 130f))
+                .Coloured("#1D1226F2")
+                .Inactive()
+                .AsDecor()
+                .AllowOverlap("a tooltip floats over whatever it has to - it is transient and takes no clicks");
+            panel.Children.Add(title);
+            panel.Children.Add(body);
+            Tooltip = panel;
+            return panel;
+        }
+    }
+
+    // The pack's filter tabs, in one list so a new category is one entry.
+    public static class PackFilters
+    {
+        public static readonly UiString[] All =
+        {
+            UiStrings.PackFilterAll,
+            UiStrings.PackFilterArmour,
+            UiStrings.PackFilterWeapons,
+            UiStrings.PackFilterSalves,
+        };
+    }
+}

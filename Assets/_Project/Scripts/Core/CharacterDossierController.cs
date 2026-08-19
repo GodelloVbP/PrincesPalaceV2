@@ -1,0 +1,669 @@
+using System.Collections.Generic;
+using System.Linq;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+using PrincesPalace.Content;
+using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Equipment;
+using PrincesPalace.Domain.Stats;
+using PrincesPalace.Domain.UiKit;
+
+namespace PrincesPalace
+{
+    // Fills the character dossier, and drives the one mechanic it is built
+    // around: hover an attribute, see what it is actually doing for you.
+    //
+    // The numbers come from the SAME ContentDatabase.Effective* calls the fight
+    // uses, never from a second computation -- a sheet that recomputed its own
+    // figures would eventually disagree with the battle, and the player would be
+    // right either way.
+    public class CharacterDossierController : MonoBehaviour
+    {
+        [SerializeField] internal TMP_Text characterName;
+        [SerializeField] internal TMP_Text subLine;
+        [SerializeField] internal RectTransform xpFill;
+        [SerializeField] internal TMP_Text xpRemaining;
+        [SerializeField] internal Button prevCharacterButton;
+        [SerializeField] internal Button nextCharacterButton;
+
+        [SerializeField] internal TMP_Text skillsCount;
+        [SerializeField] internal Button packRow;
+        [SerializeField] internal TMP_Text packChevron;
+        [SerializeField] internal GameObject packPanel;
+        [SerializeField] internal Button packCloseButton;
+
+        [SerializeField] internal Button[] slotCells;
+        [SerializeField] internal Image[] slotIcons;
+        [SerializeField] internal TMP_Text[] slotLabels;
+        [SerializeField] internal GameObject[] slotBlockedCaptions;
+
+        [SerializeField] internal Button[] attributeCells;
+        [SerializeField] internal TMP_Text[] attributeValues;
+        [SerializeField] internal TMP_Text[] attributeKeys;
+
+        [SerializeField] internal Image[] slotRarityTicks;
+
+        [SerializeField] internal Button[] packCells;
+        [SerializeField] internal Image[] packIcons;
+        [SerializeField] internal Image[] packRarityTicks;
+        [SerializeField] internal TMP_Text[] packCounts;
+        [SerializeField] internal TMP_Text carriedValue;
+
+        [SerializeField] internal GameObject tooltip;
+        [SerializeField] internal TMP_Text tooltipTitle;
+        [SerializeField] internal TMP_Text tooltipBody;
+
+        [SerializeField] internal TMP_Text[] statValues;
+        [SerializeField] internal TMP_Text[] statPreviews;
+        [SerializeField] internal GameObject[] statHighlights;
+
+        // Item art, bound at build time from every ItemDefinition with an icon.
+        [SerializeField] internal string[] iconIds;
+        [SerializeField] internal Sprite[] iconSprites;
+
+        private static readonly Color Neutral = Hex(Domain.UiKit.Screens.CharacterDossierScreen.Text);
+        private static readonly Color Dim = Hex(Domain.UiKit.Screens.CharacterDossierScreen.TextDim);
+        private static readonly Color Accent = Hex(Domain.UiKit.Screens.CharacterDossierScreen.Accent);
+        private static readonly Color Good = Hex("#8FB37A");
+        private static readonly Color Bad = Hex("#D99A8C");
+        private static readonly Color AccentHi = Hex(Domain.UiKit.Screens.CharacterDossierScreen.AccentHi);
+
+        private bool _wired;
+        private int _index;
+
+        // Which attribute sits in which cell. Rebuilt per character because the
+        // handover wants the grid ordered highest-first, so the shape of a build
+        // reads off the top row -- which means cell 0 is not always Strength.
+        private readonly List<AbilityScore> _cellOrder = new List<AbilityScore>();
+
+        // Held so the tooltip can measure the NEXT point from what the
+        // character actually has, rather than from a neutral block.
+        private AbilityScoreBlock _scores;
+        private AbilityScoreBlock _previewScores;
+
+        private void OnEnable()
+        {
+            Wire();
+            Refresh();
+        }
+
+        private void Wire()
+        {
+            if (_wired) return;
+            _wired = true;
+
+            if (prevCharacterButton != null) prevCharacterButton.onClick.AddListener(() => Step(-1));
+            if (nextCharacterButton != null) nextCharacterButton.onClick.AddListener(() => Step(1));
+            if (packRow != null) packRow.onClick.AddListener(TogglePack);
+            if (packCloseButton != null) packCloseButton.onClick.AddListener(() => ShowPack(false));
+
+            // The attribute link, driven from hover AND from the button itself,
+            // so a controller player reaches it too -- the handover asks for
+            // that explicitly and it is one line here.
+            if (attributeCells != null)
+            {
+                for (int i = 0; i < attributeCells.Length; i++)
+                {
+                    if (attributeCells[i] == null) continue;
+
+                    int cell = i;
+                    var hover = attributeCells[i].gameObject.AddComponent<HoverIndex>();
+                    hover.Index = cell;
+                    hover.Changed = OnAttributeHover;
+                }
+            }
+
+            AttachHovers(slotCells, OnSlotHover);
+            AttachHovers(packCells, OnPackHover);
+
+            // Clicking equips; clicking a worn slot takes it off. A screen that
+            // could only put gear ON would be a trap, so both gestures exist --
+            // the same pair the old sheet had.
+            for (int i = 0; i < packCells.Length; i++)
+            {
+                if (packCells[i] == null) continue;
+                int index = i;
+                packCells[i].onClick.AddListener(() => EquipFromPack(index));
+            }
+
+            for (int i = 0; i < slotCells.Length; i++)
+            {
+                if (slotCells[i] == null) continue;
+                int index = i;
+                slotCells[i].onClick.AddListener(() => UnequipSlot(index));
+            }
+        }
+
+        private static void AttachHovers(Button[] buttons, System.Action<int, bool> changed)
+        {
+            if (buttons == null) return;
+
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                if (buttons[i] == null) continue;
+
+                int index = i;
+                var hover = buttons[i].gameObject.AddComponent<HoverIndex>();
+                hover.Index = index;
+                hover.Changed = changed;
+            }
+        }
+
+        public void ShowPack(bool open)
+        {
+            SetActive(packPanel, open);
+            if (packChevron != null) packChevron.SetContent(open ? "<" : ">");
+        }
+
+        private void TogglePack() => ShowPack(packPanel != null && !packPanel.activeSelf);
+
+        private void Step(int by)
+        {
+            var squad = Squad();
+            if (squad.Count == 0) return;
+
+            _index = (_index + by + squad.Count) % squad.Count;
+            Refresh();
+        }
+
+        private static List<Character> Squad()
+        {
+            var save = SaveSlotManager.CurrentSave;
+            return save == null ? new List<Character>() : save.ActiveSquad().Where(c => c != null).ToList();
+        }
+
+        public void Refresh()
+        {
+            var squad = Squad();
+            if (squad.Count == 0) return;
+
+            if (_index >= squad.Count) _index = 0;
+            var character = squad[_index];
+
+            var stats = ContentDatabase.EffectiveStats(character);
+            var scores = ContentDatabase.EffectiveAbilityScores(character);
+
+            RefreshIdentity(character);
+            _scores = scores;
+            RefreshAttributes(scores);
+            RefreshStats(character, stats, scores);
+            RefreshSlots(character);
+            RefreshPack();
+        }
+
+        // The bag, through the SAME BagView the old sheet sorted with -- the
+        // ordering rules are not worth a second opinion.
+        private IReadOnlyList<BagItem> _bag = new List<BagItem>();
+
+        private void RefreshPack()
+        {
+            var save = SaveSlotManager.CurrentSave;
+            var entries = save?.stockpiledItems ?? new List<InventoryEntry>();
+            _bag = BagView.Sorted(entries.Select(ToBagItem).Where(i => i.Count > 0));
+
+            for (int i = 0; i < packCells.Length; i++)
+            {
+                var item = i < _bag.Count ? _bag[i] : (BagItem?)null;
+
+                if (packIcons != null && i < packIcons.Length)
+                {
+                    bool shown = item.HasValue &&
+                        ItemIcons.Apply(packIcons[i], iconIds, iconSprites, item.Value.Id);
+                    SetActive(packIcons[i].gameObject, shown);
+                }
+
+                // The rarity TICK, not a border or a glow -- an 8px corner mark,
+                // which is the handover's rule and the one that survives an icon
+                // being busy.
+                if (packRarityTicks != null && i < packRarityTicks.Length)
+                {
+                    SetActive(packRarityTicks[i].gameObject, item.HasValue);
+                    if (item.HasValue) packRarityTicks[i].color = TierColour(item.Value.Tier);
+                }
+
+                // A count only where there is more than one, so a single item
+                // does not carry a redundant "1".
+                if (packCounts != null && i < packCounts.Length)
+                {
+                    bool stacked = item.HasValue && item.Value.Count > 1;
+                    SetActive(packCounts[i].gameObject, stacked);
+                    if (stacked) packCounts[i].SetContent(item.Value.Count.ToString());
+                }
+            }
+
+            // CAPACITY, not weight. The handover's "62 / 85" is a carry-weight
+            // system this game does not have; what it does have is a fixed
+            // number of cells, so the footer counts those instead of inventing
+            // a second resource.
+            // NEVER SILENTLY. The grid is 24 cells and a save can hold more
+            // than that -- this one holds 27 -- so the footer says how many are
+            // carried and, when some do not fit, that they are not all shown.
+            // "27 / 24" read as a capacity that had been exceeded, which is not
+            // a thing this game has. Paging is the real fix and is not built.
+            if (carriedValue != null)
+            {
+                carriedValue.SetContent(_bag.Count > packCells.Length
+                    ? $"{packCells.Length} of {_bag.Count}"
+                    : _bag.Count.ToString());
+            }
+        }
+
+        private static BagItem ToBagItem(InventoryEntry entry)
+        {
+            var item = ContentDatabase.GetItem(entry.itemId);
+            if (item == null)
+            {
+                // A save naming content that no longer exists is shown as itself
+                // rather than dropped, so the player sees what happened instead
+                // of watching the bag quietly shrink.
+                return new BagItem(entry.itemId, entry.itemId, 0, EquipmentSlot.Weapon1,
+                    0, entry.plus, entry.count, "", false);
+            }
+
+            return new BagItem(item.id, RarityColors.NameOf(item, entry.plus), (int)item.kind,
+                item.equipSlot, item.tier, entry.plus, entry.count, item.iconPath, item.IsEquippable);
+        }
+
+        private static Color TierColour(int tier) => Hex(RarityBands.HexColorForTier(tier));
+
+        private void RefreshIdentity(Character character)
+        {
+            var definition = ContentDatabase.GetCharacter(character.definitionId);
+            string name = definition == null || string.IsNullOrWhiteSpace(definition.displayName)
+                ? character.definitionId
+                : definition.displayName;
+
+            if (characterName != null) characterName.SetContent(name);
+            if (subLine != null) subLine.SetContent($"Level {character.level}");
+
+            int next = Character.ExpToNextLevel(character.level);
+            if (xpFill != null)
+            {
+                float fraction = next <= 0 ? 0f : Mathf.Clamp01((float)character.exp / next);
+                xpFill.anchorMax = new Vector2(fraction, xpFill.anchorMax.y);
+                xpFill.sizeDelta = new Vector2(0f, xpFill.sizeDelta.y);
+            }
+
+            if (xpRemaining != null) xpRemaining.SetContent(Mathf.Max(0, next - character.exp) + " left");
+            if (skillsCount != null)
+            {
+                // Talent-granted only, which is what this screen can actually
+                // count without a fight session in hand.
+                skillsCount.SetContent(ContentDatabase.TalentGrantedSkillsFor(character).Count + " known");
+            }
+        }
+
+        // Highest first, so the top row IS the build.
+        private void RefreshAttributes(AbilityScoreBlock scores)
+        {
+            _cellOrder.Clear();
+            _cellOrder.AddRange(AbilityScores.All
+                .OrderByDescending(s => ValueOf(scores, s))
+                .ThenBy(s => (int)s));
+
+            // ONE tint, never two. A tie goes to the first declared, because two
+            // highlighted attributes stop being a cue at all.
+            AbilityScore dominant = _cellOrder[0];
+
+            for (int i = 0; i < attributeCells.Length && i < _cellOrder.Count; i++)
+            {
+                var score = _cellOrder[i];
+                bool isDominant = score == dominant;
+
+                if (attributeValues[i] != null)
+                {
+                    attributeValues[i].SetContent(ValueOf(scores, score).ToString());
+                    attributeValues[i].color = isDominant ? AccentHi : Neutral;
+                }
+
+                if (attributeKeys[i] != null)
+                {
+                    attributeKeys[i].SetContent(AbilityScores.ShortName(score));
+                    attributeKeys[i].color = isDominant ? Accent : Dim;
+                }
+            }
+        }
+
+        private static int ValueOf(AbilityScoreBlock scores, AbilityScore score) => scores[score];
+
+        private void RefreshStats(Character character, StatBlock stats, AbilityScoreBlock scores)
+        {
+            for (int i = 0; i < SheetStats.Derived.Length && i < statValues.Length; i++)
+            {
+                var stat = SheetStats.Derived[i];
+                if (statValues[i] == null) continue;
+
+                statValues[i].SetContent(DisplayValue(character, stat, stats, scores));
+                SetActive(statHighlights[i], false);
+            }
+        }
+
+        // Two rows do not live on StatBlock -- SheetStats.ValueOf returns 0 for
+        // them by design rather than inventing a number, so they are resolved
+        // here where the Character is in hand.
+        private static string DisplayValue(Character character, SheetStat stat,
+                                           StatBlock stats, AbilityScoreBlock scores)
+        {
+            if (stat == SheetStat.MaxMana) return ContentDatabase.EffectiveMaxMana(character).ToString();
+            if (stat == SheetStat.SignatureGain)
+            {
+                var signature = ContentDatabase.BuildSignatureResource(character);
+                return signature == null ? "-" : signature.GainPerTurn.ToString();
+            }
+
+            return SheetStats.ValueOf(stat, stats, scores).ToString();
+        }
+
+        // THE mechanic: light the rows this attribute actually feeds, and dim
+        // the rest so the answer is unmissable.
+        private void LightRowsFor(int cell, bool entered)
+        {
+            if (statHighlights == null || cell < 0 || cell >= _cellOrder.Count) return;
+
+            var fed = entered
+                ? new HashSet<SheetStat>(SheetStats.Feeds(_cellOrder[cell]))
+                : new HashSet<SheetStat>();
+
+            for (int i = 0; i < SheetStats.Derived.Length && i < statHighlights.Length; i++)
+            {
+                bool lit = fed.Contains(SheetStats.Derived[i]);
+                SetActive(statHighlights[i], lit);
+
+                if (statValues[i] != null)
+                {
+                    statValues[i].color = !entered || lit ? Neutral : Dim;
+                }
+            }
+        }
+
+        private void RefreshSlots(Character character)
+        {
+            var loadout = ContentDatabase.ActiveLoadout(character);
+
+            for (int i = 0; i < EquipmentSlots.All.Length && i < slotCells.Length; i++)
+            {
+                var slot = EquipmentSlots.All[i];
+
+                if (slotLabels[i] != null)
+                {
+                    slotLabels[i].SetContent(EquipmentSlots.DisplayName(slot).ToUpperInvariant());
+                }
+
+                string itemId = character.equipment == null ? null : character.equipment.Get(slot);
+                var item = string.IsNullOrEmpty(itemId) ? null : ContentDatabase.GetItem(itemId);
+
+                // ACTIVATE the icon object, not just its Image. The node is
+                // declared Inactive so an empty slot draws nothing, and
+                // ItemIcons.Apply only sets `enabled` -- on an inactive
+                // GameObject that is invisible either way, which is why the
+                // slots came up bare with items equipped.
+                bool hasArt = ItemIcons.Apply(slotIcons[i], iconIds, iconSprites, item?.id);
+                SetActive(slotIcons[i].gameObject, hasArt);
+
+                if (slotRarityTicks != null && i < slotRarityTicks.Length)
+                {
+                    SetActive(slotRarityTicks[i].gameObject, item != null);
+                    if (item != null) slotRarityTicks[i].color = TierColour(item.tier);
+                }
+
+                // A slot a two-hander has taken must never read as merely empty
+                // -- the player has to see WHY it cannot be used.
+                // INERT, not empty. A slot a two-hander has taken carries an
+                // entry that is not live, which is exactly the case the player
+                // must be shown a reason for rather than a blank square.
+                bool blocked = item == null
+                    && loadout.InertEntries != null
+                    && loadout.InertEntries.Any(e => e.Entry.slot == slot);
+                SetActive(slotBlockedCaptions[i], blocked);
+            }
+        }
+
+        // ---- putting gear on and taking it off -----------------------------------
+        //
+        // Every RULE about what can be worn lives in EquipMove; this only picks
+        // which item and then writes the save. Re-implementing the rules here is
+        // how a screen ends up disagreeing with the one that already had them.
+
+        private void EquipFromPack(int index)
+        {
+            var squad = Squad();
+            if (squad.Count == 0 || index >= _bag.Count) return;
+
+            var character = squad[_index];
+            var save = SaveSlotManager.CurrentSave;
+            if (character?.equipment == null || save == null) return;
+
+            var item = _bag[index];
+            if (!EquipMove.TryEquip(character.equipment, save.stockpiledItems, item.Id, item.Slot,
+                                    item.IsEquippable, plus: item.Plus))
+            {
+                return;
+            }
+
+            // WRITTEN IMMEDIATELY. Gear that vanishes because the game closed
+            // between an equip and a save is the least forgivable thing this
+            // screen could do -- the old sheet said so and it still holds.
+            SaveSlotManager.SaveCurrent();
+            Refresh();
+
+            // The pointer has not moved, but what is under it HAS: the item just
+            // equipped left the pack and everything after it shifted up. Leaving
+            // the tooltip alone left it naming an item that was no longer there,
+            // beside a preview of a swap that had already happened. Re-asking
+            // the hover handler for this cell is the whole fix -- it either
+            // describes the new occupant or clears itself if the pack ran out.
+            OnPackHover(index, entered: true);
+        }
+
+        private void UnequipSlot(int index)
+        {
+            var squad = Squad();
+            if (squad.Count == 0 || index >= EquipmentSlots.All.Length) return;
+
+            var character = squad[_index];
+            var save = SaveSlotManager.CurrentSave;
+            if (character?.equipment == null || save == null) return;
+
+            if (!EquipMove.TryUnequip(character.equipment, save.stockpiledItems, EquipmentSlots.All[index]))
+            {
+                return;
+            }
+
+            SaveSlotManager.SaveCurrent();
+            ClearPreview();
+            HideTooltip();
+            Refresh();
+        }
+
+        // ---- the equip preview ------------------------------------------------------
+        //
+        // Hovering a pack item writes the value each stat WOULD take beside it.
+        // Computed by the same hypothetical-equip pass the Reckoning uses --
+        // ItemDescription.Compare clones the character, equips the candidate and
+        // re-resolves -- so the two screens cannot disagree about an item.
+
+        private void ShowPreviewFor(BagItem entry)
+        {
+            var squad = Squad();
+            var item = ContentDatabase.GetItem(entry.Id);
+            if (squad.Count == 0 || item == null) { ClearPreview(); return; }
+
+            var comparison = ItemDescription.Compare(squad[_index], item, entry.Plus);
+            _previewScores = _scores + comparison.ScoreDelta;
+
+            for (int i = 0; i < SheetStats.Derived.Length && i < statPreviews.Length; i++)
+            {
+                int delta = DeltaFor(SheetStats.Derived[i], comparison);
+
+                // ONLY the stats that actually move. A column of arrows against
+                // unchanged numbers buries the two rows that did change.
+                if (delta == 0)
+                {
+                    if (statPreviews[i] != null) statPreviews[i].SetContent("");
+                    if (statValues[i] != null) statValues[i].color = Neutral;
+                    continue;
+                }
+
+                int now = int.TryParse(statValues[i].text, out var parsed) ? parsed : 0;
+                statPreviews[i].SetContent("> " + (now + delta));
+                statPreviews[i].color = delta > 0 ? Good : Bad;
+
+                // The current figure steps back so the new one leads.
+                statValues[i].color = Dim;
+            }
+        }
+
+        private void ClearPreview()
+        {
+            if (statPreviews == null) return;
+
+            for (int i = 0; i < statPreviews.Length; i++)
+            {
+                if (statPreviews[i] != null) statPreviews[i].SetContent("");
+                if (statValues != null && i < statValues.Length && statValues[i] != null)
+                {
+                    statValues[i].color = Neutral;
+                }
+            }
+        }
+
+        private int DeltaFor(SheetStat stat, ItemComparison comparison)
+        {
+            switch (stat)
+            {
+                case SheetStat.MaxHealth: return comparison.StatDelta.maxHealth;
+                case SheetStat.Attack: return comparison.StatDelta.attack;
+                case SheetStat.Defence: return comparison.StatDelta.defense;
+                case SheetStat.Speed: return comparison.StatDelta.speed;
+                case SheetStat.ManaRegen: return comparison.StatDelta.manaRegen;
+                case SheetStat.PhysicalResistance: return comparison.StatDelta.physicalResistance;
+                case SheetStat.MagicalResistance: return comparison.StatDelta.magicalResistance;
+
+                // These two are derived from WISDOM and CHARISMA, so an item
+                // that shifts an ability score shifts them as well -- which a
+                // StatDelta alone would miss entirely.
+                case SheetStat.MaxMana:
+                    return AbilityDerivation.MaxManaBonus(_previewScores)
+                         - AbilityDerivation.MaxManaBonus(_scores);
+                case SheetStat.SignatureGain:
+                    return AbilityDerivation.SignatureGainBonus(_previewScores)
+                         - AbilityDerivation.SignatureGainBonus(_scores);
+                default: return 0;
+            }
+        }
+
+        // ---- the shared tooltip -------------------------------------------------
+        //
+        // ONE instance for the whole screen, as the handover specifies. The
+        // DERIVATION lives here rather than on the row: printing "396 from CON"
+        // beside every stat would double the width of column C to say something
+        // the player only wants once.
+
+        private void OnAttributeHover(int cell, bool entered)
+        {
+            LightRowsFor(cell, entered);
+
+            if (!entered || cell >= _cellOrder.Count) { HideTooltip(); return; }
+
+            var score = _cellOrder[cell];
+            ShowTooltip(AbilityScores.ShortName(score), SheetStats.PerPointSummary(_scores, score),
+                       RectOf(attributeCells, cell));
+        }
+
+        private void OnSlotHover(int index, bool entered)
+        {
+            if (!entered || index >= EquipmentSlots.All.Length) { HideTooltip(); return; }
+
+            var squad = Squad();
+            if (squad.Count == 0) { HideTooltip(); return; }
+
+            var slot = EquipmentSlots.All[index];
+            var character = squad[_index];
+            string itemId = character.equipment?.Get(slot);
+            var item = string.IsNullOrEmpty(itemId) ? null : ContentDatabase.GetItem(itemId);
+
+            if (item == null)
+            {
+                ShowTooltip(EquipmentSlots.DisplayName(slot), "Nothing equipped.", RectOf(slotCells, index));
+                return;
+            }
+
+            ShowTooltip(RarityColors.NameOf(item), ItemDescription.CardSummary(item), RectOf(slotCells, index));
+        }
+
+        private void OnPackHover(int index, bool entered)
+        {
+            if (!entered || index >= _bag.Count) { HideTooltip(); ClearPreview(); return; }
+
+            var entry = _bag[index];
+            var item = ContentDatabase.GetItem(entry.Id);
+            ShowTooltip(entry.Name, item == null ? "" : ItemDescription.CardSummary(item, entry.Plus),
+                       RectOf(packCells, index));
+            ShowPreviewFor(entry);
+        }
+
+        private void ShowTooltip(string title, string body, RectTransform near)
+        {
+            if (tooltip == null) return;
+
+            if (tooltipTitle != null) tooltipTitle.SetContent(title ?? "");
+            if (tooltipBody != null) tooltipBody.SetContent(body ?? "");
+            PlaceTooltip(near);
+            SetActive(tooltip, true);
+        }
+
+        // The tooltip follows what it describes.
+        //
+        // It was authored at a FIXED position -- the dossier's own centre --
+        // which put it squarely over the mannequin for every hover. That is the
+        // worst possible place for it: the whole point of hovering a pack item
+        // is to weigh it against what is currently worn, and the box answering
+        // the question was covering the evidence. It also hid the Weapon 1 slot
+        // exactly when an equip landed there.
+        //
+        // Beside the cell if there is room on the right, flipped to the left if
+        // there is not, and clamped so it never leaves the panel.
+        private void PlaceTooltip(RectTransform near)
+        {
+            var self = tooltip == null ? null : tooltip.transform as RectTransform;
+            var parent = self == null ? null : self.parent as RectTransform;
+            if (self == null || parent == null || near == null) return;
+
+            // Through world space, because the pack cells live inside the pack
+            // panel and the tooltip does not; their local coordinates are not
+            // the same space and treating them as one is how the pack children
+            // ended up 339px off the panel they belong to.
+            Vector2 local = parent.InverseTransformPoint(near.TransformPoint(Vector3.zero));
+
+            float halfW = self.sizeDelta.x * 0.5f;
+            float halfH = self.sizeDelta.y * 0.5f;
+            float gap = 14f + near.rect.width * 0.5f;
+
+            float x = local.x + gap + halfW;
+            if (x + halfW > DossierLayout.HalfWidth - 8f) x = local.x - gap - halfW;
+
+            float y = Mathf.Clamp(local.y,
+                                  -DossierLayout.HalfHeight + halfH + 8f,
+                                  DossierLayout.HalfHeight - halfH - 8f);
+
+            self.anchoredPosition = new Vector2(x, y);
+        }
+
+        private static RectTransform RectOf(Button[] cells, int index)
+        {
+            if (cells == null || index < 0 || index >= cells.Length || cells[index] == null) return null;
+            return cells[index].transform as RectTransform;
+        }
+
+        private void HideTooltip() => SetActive(tooltip, false);
+
+        private static Color Hex(string hex) =>
+            ColorUtility.TryParseHtmlString(hex, out var color) ? color : Color.white;
+
+        private static void SetActive(GameObject go, bool active)
+        {
+            if (go != null && go.activeSelf != active) go.SetActive(active);
+        }
+    }
+}

@@ -28,6 +28,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // A UiNode, not a NodeRef: the scenes that embed this menu pass it
         // straight in as a child, and the implicit conversion only runs the
         // other way.
+        public CharacterDossierScreen Dossier;
+
         public UiNode Root;
         public NodeRef Bar;
         public NodeRef Content;
@@ -105,19 +107,34 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // One pane per tab, all stacked in the same box and all but one
             // switched off. Empty by design.
             var paneChildren = new List<UiNode>();
-            for (int i = 0; i < tabs.Count; i++)
+            var owners = SystemMenuTabs.PaneOwners;
+            for (int i = 0; i < owners.Count; i++)
             {
-                var def = tabs[i];
+                var def = owners[i];
 
                 var placeholder = Ui.Label($"SystemPane{def.Key}Placeholder",
                         UiStrings.SystemPlaceholder, new UiVec(800f, 40f), 18, "#8C7FA8",
                         Place.At(0f, 0f))
                     .AsDecor();
 
+                var contents = new List<UiNode> { placeholder };
+
+                // The Character pane is the one with real content: the dossier,
+                // which replaced CharacterOverlayScreen. Its placeholder stays
+                // declared but switched off, so the pane still has something to
+                // show if the dossier is ever pulled.
+                if (def.Tab == SystemMenuTab.Character)
+                {
+                    var dossier = CharacterDossierScreen.Build();
+                    screen.Dossier = dossier;
+                    contents.Add(dossier.Root);
+                    placeholder.Inactive();
+                }
+
                 var pane = Ui.Panel($"SystemPane{def.Key}",
                         Place.At(0f, 0f),
-                        UiSize.Fixed(SystemMenuLayout.PanelWidth - 80f, SystemMenuLayout.ContentHeight - 60f),
-                        placeholder)
+                        UiSize.Fixed(SystemMenuLayout.PanelWidth - 40f, SystemMenuLayout.ContentHeight - 20f),
+                        contents)
                     .Inactive()
                     .AllowOverlap("every pane shares one box and all but the selected one is switched off");
 

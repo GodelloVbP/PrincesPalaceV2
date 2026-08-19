@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace PrincesPalace.Domain.UiKit
 {
@@ -32,11 +33,23 @@ namespace PrincesPalace.Domain.UiKit
 
         public readonly UiString Label;
 
-        public SystemMenuTabDef(SystemMenuTab tab, string key, UiString label)
+        // Which tab's PANE this one shows.
+        //
+        // Character and Inventory are two doors into ONE screen -- the dossier
+        // carries its own pack, exactly as the old sheet carried its own
+        // inventory tab and exactly as C and I behave today. Giving Inventory a
+        // second pane would mean two copies of the same screen, so it borrows
+        // Character's and opens the pack instead.
+        public readonly SystemMenuTab PaneOwner;
+
+        public bool OwnsPane => PaneOwner == Tab;
+
+        public SystemMenuTabDef(SystemMenuTab tab, string key, UiString label, SystemMenuTab? paneOwner = null)
         {
             Tab = tab;
             Key = key;
             Label = label;
+            PaneOwner = paneOwner ?? tab;
         }
     }
 
@@ -45,12 +58,33 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly IReadOnlyList<SystemMenuTabDef> All = new[]
         {
             new SystemMenuTabDef(SystemMenuTab.Character, "Character", UiStrings.SystemTabCharacter),
-            new SystemMenuTabDef(SystemMenuTab.Inventory, "Inventory", UiStrings.SystemTabInventory),
+            new SystemMenuTabDef(SystemMenuTab.Inventory, "Inventory", UiStrings.SystemTabInventory,
+                paneOwner: SystemMenuTab.Character),
             new SystemMenuTabDef(SystemMenuTab.Options,   "Options",   UiStrings.SystemTabOptions),
             new SystemMenuTabDef(SystemMenuTab.MainMenu,  "MainMenu",  UiStrings.SystemTabMainMenu),
         };
 
         public static int Count => All.Count;
+
+        // The tabs that actually get a pane built for them.
+        public static IReadOnlyList<SystemMenuTabDef> PaneOwners =>
+            All.Where(t => t.OwnsPane).ToList();
+
+        // Which PANE a tab index shows. Not the identity function: Inventory
+        // shows Character's.
+        public static int PaneIndexFor(int tabIndex)
+        {
+            if (tabIndex < 0 || tabIndex >= All.Count) return 0;
+
+            var owner = All[tabIndex].PaneOwner;
+            var owners = PaneOwners;
+            for (int i = 0; i < owners.Count; i++)
+            {
+                if (owners[i].Tab == owner) return i;
+            }
+
+            return 0;
+        }
 
         public static int IndexOf(SystemMenuTab tab)
         {

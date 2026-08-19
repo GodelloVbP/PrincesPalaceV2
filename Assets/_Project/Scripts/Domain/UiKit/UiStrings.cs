@@ -137,6 +137,9 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString StatAttack = UiString.Define("stat.attack", "Attack");
         public static readonly UiString StatDefence = UiString.Define("stat.defence", "Defence");
         public static readonly UiString StatSpeed = UiString.Define("stat.speed", "Speed");
+        public static readonly UiString StatMaxMana = UiString.Define("stat.maxmana", "Max Mana");
+        public static readonly UiString StatSignatureGain =
+            UiString.Define("stat.signaturegain", "Focus / turn");
         public static readonly UiString StatManaRegen = UiString.Define("stat.manaregen", "Mana Regen");
         public static readonly UiString StatPhysicalResistance =
             UiString.Define("stat.physres", "Physical DEF");
@@ -411,6 +414,23 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString SystemPlaceholder =
             UiString.Define("system.placeholder", "CONTENT TO COME");
 
+        // ---- the character dossier -----------------------------------------
+        public static readonly UiString OverlayLoadout = UiString.Define("dossier.loadout", "LOADOUT");
+        public static readonly UiString OverlayAttributes = UiString.Define("dossier.attributes", "ATTRIBUTES");
+        public static readonly UiString OverlayXp = UiString.Define("dossier.xp", "XP");
+        public static readonly UiString OverlaySkills = UiString.Define("dossier.skills", "Skills");
+        public static readonly UiString OverlayPack = UiString.Define("dossier.pack", "The Pack");
+        public static readonly UiString OverlayPackTitle = UiString.Define("dossier.pack_title", "THE PACK");
+        public static readonly UiString OverlayPackClose = UiString.Define("dossier.pack_close", "CLOSE");
+        public static readonly UiString OverlayCarried = UiString.Define("dossier.carried", "Carried");
+        public static readonly UiString OverlayPrev = UiString.Define("dossier.prev", "<");
+        public static readonly UiString OverlayNext = UiString.Define("dossier.next", ">");
+        public static readonly UiString OverlayTwoHanded = UiString.Define("dossier.two_handed", "TWO-HANDED");
+        public static readonly UiString PackFilterAll = UiString.Define("dossier.filter_all", "All");
+        public static readonly UiString PackFilterArmour = UiString.Define("dossier.filter_armour", "Armour");
+        public static readonly UiString PackFilterWeapons = UiString.Define("dossier.filter_weapons", "Weapons");
+        public static readonly UiString PackFilterSalves = UiString.Define("dossier.filter_salves", "Salves");
+
         // Every entry declared above, for the manifest tests to sweep. Kept
         // beside the entries deliberately: a new string that someone forgets to
         // add here is invisible to the AuditSample check, so the test that walks
@@ -418,6 +438,9 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString[] All =
         {
             WalletSummary,
+            OverlayLoadout, OverlayAttributes, OverlayXp, OverlaySkills, OverlayPack,
+            OverlayPackTitle, OverlayPackClose, OverlayCarried, OverlayPrev, OverlayNext,
+            OverlayTwoHanded, PackFilterAll, PackFilterArmour, PackFilterWeapons, PackFilterSalves,
             SystemTabCharacter, SystemTabInventory, SystemTabOptions, SystemTabMainMenu,
             SystemPlaceholder,
             Play, Options, Exit, OptionsTitle, Close, Cancel,
@@ -456,7 +479,7 @@ namespace PrincesPalace.Domain.UiKit
             StatStrength, StatDexterity, StatConstitution, StatWisdom,
             StatIntelligence, StatCharisma,
             StatMaxHealth, StatAttack, StatDefence, StatSpeed, StatManaRegen,
-            StatPhysicalResistance, StatMagicalResistance,
+            StatPhysicalResistance, StatMagicalResistance, StatMaxMana, StatSignatureGain,
             HubWallet, HubBeginDescent, HubResumeFloor,
             OverlayCount, OverlayPlus, OverlayPage,
             OverlayEquip, OverlayUnequip, OverlayCannotWear, OverlayBagEmpty,

@@ -69,7 +69,7 @@ namespace PrincesPalace.PlayModeTests
             var panes = Panes();
             var underlines = Underlines();
 
-            Assert.AreEqual(SystemMenuTabs.Count, panes.Length, "a tab has no pane");
+            Assert.AreEqual(SystemMenuTabs.PaneOwners.Count, panes.Length, "a pane owner has no pane");
             Assert.AreEqual(SystemMenuTabs.Count, underlines.Length, "a tab has no underline");
 
             for (int i = 0; i < SystemMenuTabs.Count; i++)
@@ -77,16 +77,22 @@ namespace PrincesPalace.PlayModeTests
                 _menu.Select(i);
                 yield return null;
 
-                string key = SystemMenuTabs.All[i].Key;
+                var def = SystemMenuTabs.All[i];
+
+                // The pane belongs to the tab's OWNER, which for Inventory is
+                // Character -- two doors, one screen.
+                string paneKey = SystemMenuTabs.All[SystemMenuTabs.IndexOf(def.PaneOwner)].Key;
 
                 var livePanes = panes.Where(p => p.activeSelf).Select(p => p.name).ToList();
-                CollectionAssert.AreEqual(new[] { $"SystemPane{key}" }, livePanes,
-                    $"selecting tab {i} ({key}) should leave exactly its own pane showing");
+                CollectionAssert.AreEqual(new[] { $"SystemPane{paneKey}" }, livePanes,
+                    $"selecting tab {i} ({def.Key}) should leave exactly pane '{paneKey}' showing");
 
+                // The UNDERLINE still follows the tab that was clicked, not the
+                // pane it opened -- otherwise clicking Inventory would light
+                // Character and the player could not tell which door they used.
                 var liveMarks = underlines.Where(u => u.activeSelf).Select(u => u.name).ToList();
-                CollectionAssert.AreEqual(new[] { $"SystemTab{key}Underline" }, liveMarks,
-                    $"selecting tab {i} ({key}) highlighted a different tab than the pane it opened - " +
-                    "the underline and the pane disagree about which tab is selected");
+                CollectionAssert.AreEqual(new[] { $"SystemTab{def.Key}Underline" }, liveMarks,
+                    $"selecting tab {i} ({def.Key}) underlined a different tab");
             }
         }
 

@@ -707,6 +707,64 @@ public static class ScreenRegistry
         controller.panes = menu.Panes.Select(result.Go).ToArray();
         controller.escapeConsumers = escapeConsumers.Select(result.Go).ToArray();
 
+        if (menu.Dossier != null) WireDossier(result, menu.Dossier);
+
+        return controller;
+    }
+
+    // The character dossier, inside the system menu's Character pane.
+    //
+    // Bound with the SAME icon arrays every other item surface uses, from every
+    // ItemDefinition with an authored iconPath -- an item whose art is missing
+    // disables its Image rather than painting a white quad.
+    private static CharacterDossierController WireDossier(UiEmitResult result, CharacterDossierScreen dossier)
+    {
+        var controller = result.Attach<CharacterDossierController>(dossier.Root);
+
+        controller.characterName = result.Tmp(dossier.CharacterName);
+        controller.subLine = result.Tmp(dossier.SubLine);
+        controller.xpFill = result.Rect(dossier.XpFill);
+        controller.xpRemaining = result.Tmp(dossier.XpRemaining);
+        controller.prevCharacterButton = result.Button(dossier.PrevCharacterButton);
+        controller.nextCharacterButton = result.Button(dossier.NextCharacterButton);
+
+        controller.skillsCount = result.Tmp(dossier.SkillsCount);
+        controller.packRow = result.Button(dossier.PackRow);
+        controller.packChevron = result.Tmp(dossier.PackChevron);
+        controller.packPanel = result.Go(dossier.PackPanel);
+        controller.packCloseButton = result.Button(dossier.PackCloseButton);
+
+        controller.slotCells = dossier.SlotCells.Select(result.Button).ToArray();
+        controller.slotIcons = dossier.SlotIcons.Select(result.Image).ToArray();
+        controller.slotLabels = dossier.SlotLabels.Select(result.Tmp).ToArray();
+        controller.slotBlockedCaptions = dossier.SlotBlockedCaptions.Select(result.Go).ToArray();
+
+        controller.attributeCells = dossier.AttributeCells.Select(result.Button).ToArray();
+        controller.attributeValues = dossier.AttributeValues.Select(result.Tmp).ToArray();
+        controller.attributeKeys = dossier.AttributeKeys.Select(result.Tmp).ToArray();
+
+        controller.slotRarityTicks = dossier.SlotRarityTicks.Select(result.Image).ToArray();
+
+        controller.packCells = dossier.PackCells.Select(result.Button).ToArray();
+        controller.packIcons = dossier.PackIcons.Select(result.Image).ToArray();
+        controller.packRarityTicks = dossier.PackRarityTicks.Select(result.Image).ToArray();
+        controller.packCounts = dossier.PackCounts.Select(result.Tmp).ToArray();
+        controller.carriedValue = result.Tmp(dossier.CarriedValue);
+
+        controller.tooltip = result.Go(dossier.Tooltip);
+        controller.tooltipTitle = result.Tmp(dossier.TooltipTitle);
+        controller.tooltipBody = result.Tmp(dossier.TooltipBody);
+
+        controller.statValues = dossier.StatValues.Select(result.Tmp).ToArray();
+        controller.statPreviews = dossier.StatPreviews.Select(result.Tmp).ToArray();
+        controller.statHighlights = dossier.StatHighlights.Select(result.Go).ToArray();
+
+        var withArt = ContentDatabase.Items
+            .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
+            .ToList();
+        controller.iconIds = withArt.Select(i => i.id).ToArray();
+        controller.iconSprites = withArt.Select(i => SceneBuilder.LoadSpriteByKey(i.iconPath)).ToArray();
+
         return controller;
     }
 

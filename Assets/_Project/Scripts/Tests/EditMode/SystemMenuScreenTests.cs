@@ -106,13 +106,44 @@ namespace PrincesPalace.Domain.Tests
         // ---- the tree matches the table ---------------------------------------
 
         [Test]
-        public void EveryTabGetsAButtonAnUnderlineAndAPane()
+        public void EveryTabGetsAButtonAndAnUnderline()
         {
             var screen = SystemMenuScreen.Build();
 
             Assert.AreEqual(SystemMenuTabs.Count, screen.TabButtons.Count, "a tab is missing its button");
             Assert.AreEqual(SystemMenuTabs.Count, screen.TabUnderlines.Count, "a tab is missing its underline");
-            Assert.AreEqual(SystemMenuTabs.Count, screen.Panes.Count, "a tab is missing its content pane");
+        }
+
+        // NOT one pane per tab. Inventory shows Character's, because the dossier
+        // carries its own pack and two panes would be two copies of one screen.
+        [Test]
+        public void OnlyPaneOwnersGetAPane()
+        {
+            var screen = SystemMenuScreen.Build();
+
+            Assert.AreEqual(SystemMenuTabs.PaneOwners.Count, screen.Panes.Count,
+                "the pane count no longer matches the tabs that own one");
+            Assert.Less(screen.Panes.Count, SystemMenuTabs.Count,
+                "every tab owns a pane again - Inventory should be sharing Character's");
+        }
+
+        [Test]
+        public void InventoryOpensTheSamePaneAsCharacter()
+        {
+            int character = SystemMenuTabs.IndexOf(SystemMenuTab.Character);
+            int inventory = SystemMenuTabs.IndexOf(SystemMenuTab.Inventory);
+
+            Assert.AreEqual(SystemMenuTabs.PaneIndexFor(character), SystemMenuTabs.PaneIndexFor(inventory),
+                "Inventory and Character must land on one pane - they are two doors into the same screen");
+        }
+
+        [Test]
+        public void TheCharacterPaneCarriesTheDossier()
+        {
+            var screen = SystemMenuScreen.Build();
+
+            Assert.IsNotNull(screen.Dossier, "the Character pane has no dossier in it");
+            Assert.IsNotNull(screen.Dossier.Root);
         }
 
         // The one that catches a half-added tab: the pane and the button have to
@@ -125,9 +156,13 @@ namespace PrincesPalace.Domain.Tests
 
             for (int i = 0; i < SystemMenuTabs.Count; i++)
             {
-                string key = SystemMenuTabs.All[i].Key;
-                Assert.AreEqual($"SystemTab{key}", screen.TabButtons[i].Node.Name);
-                Assert.AreEqual($"SystemPane{key}", screen.Panes[i].Node.Name);
+                Assert.AreEqual($"SystemTab{SystemMenuTabs.All[i].Key}", screen.TabButtons[i].Node.Name);
+            }
+
+            var owners = SystemMenuTabs.PaneOwners;
+            for (int i = 0; i < owners.Count; i++)
+            {
+                Assert.AreEqual($"SystemPane{owners[i].Key}", screen.Panes[i].Node.Name);
             }
         }
 
