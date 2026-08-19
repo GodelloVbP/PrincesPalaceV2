@@ -16,11 +16,17 @@ namespace PrincesPalace.Domain.Dungeon
         public readonly bool IsBoss;
         public readonly bool AvoidsFrontSlot;
 
-        public EnemyCandidate(string id, bool isBoss = false, bool avoidsFrontSlot = false)
+        // See RawEnemyEntry.minFloor. Carried here rather than filtered by the
+        // caller so the rule lives with the roll it constrains -- every path
+        // into a room goes through Roll, and only one of them builds the pool.
+        public readonly int MinFloor;
+
+        public EnemyCandidate(string id, bool isBoss = false, bool avoidsFrontSlot = false, int minFloor = 1)
         {
             Id = id;
             IsBoss = isBoss;
             AvoidsFrontSlot = avoidsFrontSlot;
+            MinFloor = minFloor < 1 ? 1 : minFloor;
         }
     }
 
@@ -60,11 +66,15 @@ namespace PrincesPalace.Domain.Dungeon
         // was sent to kill. Preferred over a fresh roll so the boss the map
         // promised is the boss that appears, and so RecordBossKill credits the
         // thing the run was actually about.
+        // `floor` is the shallowest-first depth band -- see EnemyCandidate.
+        // Defaulted to a depth that admits everything, so the existing tests and
+        // any caller that does not care about banding read exactly as before.
         public static Result Roll(
             RoomType roomType,
             IReadOnlyList<EnemyCandidate> pool,
             SeededRandom rng,
-            string declaredBossId = null)
+            string declaredBossId = null,
+            int floor = int.MaxValue)
         {
             if (pool == null || pool.Count == 0 || rng == null)
             {
@@ -77,7 +87,22 @@ namespace PrincesPalace.Domain.Dungeon
             foreach (var candidate in pool)
             {
                 if (string.IsNullOrEmpty(candidate.Id)) continue;
+                if (candidate.MinFloor > floor) continue;
                 (candidate.IsBoss ? bosses : regulars).Add(candidate);
+            }
+
+            // NOTHING IN BAND IS NOT AN EMPTY ROOM. A content set whose
+            // shallowest enemy starts at floor 3 would otherwise field an empty
+            // stage on floors 1 and 2, and an empty stage is a soft lock rather
+            // than an easy fight. Falling back to the whole pool is the same
+            // graceful-degradation posture the boss fallback below takes.
+            if (bosses.Count == 0 && regulars.Count == 0)
+            {
+                foreach (var candidate in pool)
+                {
+                    if (string.IsNullOrEmpty(candidate.Id)) continue;
+                    (candidate.IsBoss ? bosses : regulars).Add(candidate);
+                }
             }
 
             if (roomType == RoomType.Boss && bosses.Count > 0)

@@ -68,7 +68,11 @@ namespace PrincesPalace
                 ? RngStreams.Open(run.runSeed, RngStreams.Fight, run.step, run.currentNodeId)
                 : null;
 
-            var roll = EncounterRoll.Roll(roomType, Pool(), rng, run?.bossEnemyId);
+            // BANDED BY DEPTH. Without the floor the pool is every non-boss
+            // enemy at every depth, so a floor-1 room could field a golem --
+            // twelve rounds against a starting party, next to a rat's one.
+            var roll = EncounterRoll.Roll(roomType, Pool(), rng, run?.bossEnemyId,
+                RunDepth.FloorFor(run?.legStartStep ?? 0));
 
             return new Roster
             {
@@ -91,7 +95,7 @@ namespace PrincesPalace
         private static IReadOnlyList<EnemyCandidate> Pool() =>
             ContentDatabase.Enemies
                 .Where(e => e != null && !string.IsNullOrEmpty(e.id))
-                .Select(e => new EnemyCandidate(e.id, e.isBoss, e.avoidsFrontSlot))
+                .Select(e => new EnemyCandidate(e.id, e.isBoss, e.avoidsFrontSlot, e.minFloor))
                 .ToList();
 
         private static Dictionary<string, int> HealthByCharacter(RunSnapshot run)

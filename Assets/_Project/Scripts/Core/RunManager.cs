@@ -232,6 +232,13 @@ namespace PrincesPalace
 
             run.legStartStep += DescentMapGenerator.DefaultLegLength;
             run.step = run.legStartStep;
+
+            // The floor field was written once, as 1, when the run began, and
+            // never again -- so every lintel, every reward line and every enemy
+            // band that read it saw floor 1 for the whole descent. Derived from
+            // the leg boundary rather than incremented here, so the two cannot
+            // drift apart the next time one of them moves.
+            run.floor = RunDepth.FloorFor(run.legStartStep);
             run.currentNodeId = -1;
             run.clearedNodeIds.Clear();
 

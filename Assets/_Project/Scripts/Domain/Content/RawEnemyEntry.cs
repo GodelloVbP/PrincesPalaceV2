@@ -21,6 +21,33 @@ namespace PrincesPalace.Domain.Content
         public int expReward = -1;
         public int currencyReward = -1;
         public bool isBoss;
+
+        // The shallowest floor this enemy may be drawn on.
+        //
+        // A MINIMUM, not a band: floor 5 still rolls rats, and the difficulty
+        // curve is what keeps them dangerous there -- 7.7% health a step means
+        // a step-80 rat holds about 33,000. What this stops is the opposite,
+        // floor 1 drawing a golem, which it could, because the pool was every
+        // non-boss enemy at every depth.
+        //
+        // Worth measuring rather than arguing about. Against the starting party
+        // with no gear, one floor-1 room ranged from ONE round (rat, imp,
+        // spider, bat, moth, wisp) to TWELVE (golem) -- and a normal room
+        // fields one or two, so a double golem was twenty-four rounds at the
+        // same depth as a one-round rat. Bosses spread wider still: four rounds
+        // for the hollow choir against thirty-two for the throne colossus.
+        //
+        // The cause underneath is that Defense is SUBTRACTIVE against Attack
+        // values of 4-9, so once an enemy's Defense reaches the party's Attack
+        // every swing floors at max(1, ...) and the fight stops being about
+        // numbers. The golem's Defense 8 puts two of the three starting
+        // characters on that floor. Banding the pool is the first half of the
+        // answer; the subtractive floor itself is the second, and is not
+        // addressed here.
+        //
+        // 0 or absent means floor 1, so an unbanded enemy is available from the
+        // start rather than never -- content should degrade into the game.
+        public int minFloor;
         public string weakness = "";
         public string resistance = "";
 

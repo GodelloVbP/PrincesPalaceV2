@@ -25,6 +25,7 @@ MonoBehaviour:
   expReward: 15
   currencyReward: 8
   isBoss: 0
+  minFloor: 1
   weakness: 2
   resistance: 4
   breakShieldPoints: 2

@@ -187,7 +187,8 @@ namespace PrincesPalace.Domain.Content
                 raw.vfxSeconds >= 0f ? raw.vfxSeconds : DefaultVfxSeconds,
                 raw.vfxImpactFrame >= 1 ? raw.vfxImpactFrame : DefaultVfxImpactFrame,
                 (raw.sfxPath ?? string.Empty).Trim(),
-                appliesStatus, statusMagnitude, statusDuration, raw.avoidsFrontSlot, raw.attackHoldsPosition);
+                appliesStatus, statusMagnitude, statusDuration, raw.avoidsFrontSlot, raw.attackHoldsPosition,
+                raw.minFloor);
             error = null;
             return true;
         }

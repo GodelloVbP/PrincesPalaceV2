@@ -380,6 +380,7 @@ public static class ContentBuilder
             asset.expReward = enemy.ExpReward;
             asset.currencyReward = enemy.CurrencyReward;
             asset.isBoss = enemy.IsBoss;
+            asset.minFloor = enemy.MinFloor;
             asset.weakness = enemy.Weakness;
             asset.resistance = enemy.Resistance;
             asset.spritePath = enemy.SpritePath;

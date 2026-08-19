@@ -63,13 +63,17 @@ namespace PrincesPalace.Domain.Content
         // See RawEnemyEntry.attackHoldsPosition.
         public readonly bool AttackHoldsPosition;
 
+        // See RawEnemyEntry.minFloor.
+        public readonly int MinFloor;
+
         public ResolvedEnemy(string id, string displayName, StatBlock baseStats, int expReward, int currencyReward,
             bool isBoss, DamageType weakness, DamageType resistance, int sortOrder, string spritePath = "",
             PrincesPalace.Domain.Stage.SpriteFacing facing = PrincesPalace.Domain.Stage.SpriteFacing.Right,
             bool active = true, string skillName = "", float skillPower = 1.5f, float skillChance = 0f,
             int breakShieldPoints = 0, string vfxPath = "", float vfxSeconds = 0.6f, int vfxImpactFrame = 3,
             string sfxPath = "", StatusEffectType? appliesStatus = null, int statusMagnitude = 0,
-            int statusDuration = 0, bool avoidsFrontSlot = false, bool attackHoldsPosition = false)
+            int statusDuration = 0, bool avoidsFrontSlot = false, bool attackHoldsPosition = false,
+            int minFloor = 1)
         {
             SkillName = skillName ?? string.Empty;
             SkillPower = skillPower;
@@ -82,6 +86,11 @@ namespace PrincesPalace.Domain.Content
             ExpReward = expReward;
             CurrencyReward = currencyReward;
             IsBoss = isBoss;
+
+            // Clamped up, not trusted: 0 from an unbanded entry means the
+            // first floor, and a negative would let a filter of the form
+            // `minFloor <= floor` pass everything forever.
+            MinFloor = minFloor < 1 ? 1 : minFloor;
             Weakness = weakness;
             Resistance = resistance;
             SortOrder = sortOrder;

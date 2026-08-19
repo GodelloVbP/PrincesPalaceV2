@@ -26,6 +26,9 @@ namespace PrincesPalace.Content
         [Tooltip("Boss-tier enemies are only picked for the dungeon's final room, and never as a regular or Elite encounter.")]
         public bool isBoss;
 
+        // See RawEnemyEntry.minFloor.
+        public int minFloor = 1;
+
         [Tooltip("A player attack of this type deals double damage to this enemy.")]
         public DamageType weakness = DamageType.Fire;
 
