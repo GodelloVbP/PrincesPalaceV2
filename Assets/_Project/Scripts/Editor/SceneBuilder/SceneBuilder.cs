@@ -58,6 +58,7 @@ public static class SceneBuilder
 
         _uiFont = null;
         _buttonSpriteLoaded = false;
+        _spriteCache.Clear();
 
         Directory.CreateDirectory(ScenesDir);
 
@@ -210,6 +211,10 @@ public static class SceneBuilder
     // file is not there yet, matching the project's graceful-degradation posture
     // - a blank slot is a visible, fixable problem; a build that refuses to run
     // over one missing PNG is not.
+    // Per-build, cleared by BuildAllScenes. Static because LoadSpriteByKey is,
+    // and the build is a single synchronous pass.
+    private static readonly Dictionary<string, Sprite> _spriteCache = new Dictionary<string, Sprite>();
+
     public static Sprite LoadSpriteByKey(string key)
     {
         if (string.IsNullOrEmpty(key)) return null;
@@ -221,17 +226,51 @@ public static class SceneBuilder
             key.StartsWith("proc:") ? $"{ProceduralSpriteBaker.GeneratedDir}/{key.Substring(5)}.png"
             : key.StartsWith("Assets/") ? key
             : $"{ArtRoot}/{key}";
+        // Distinct keys are a small fraction of the ~6100 calls -- the same
+        // button, panel and frame art is referenced by nearly every screen --
+        // so the second and later asks are answered without touching the asset
+        // database at all. Nulls are cached too, so a missing file warns once
+        // rather than once per reference.
+        if (_spriteCache.TryGetValue(assetPath, out var cached)) return cached;
+
         if (!File.Exists(assetPath))
         {
             Debug.LogWarning($"[SceneBuilder] Art asset not found at '{assetPath}' - leaving this slot blank.");
+            _spriteCache[assetPath] = null;
             return null;
         }
 
-        AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
+        // ONLY when Unity has never seen this file.
+        //
+        // ForceSynchronousImport was unconditional here, and it was the single
+        // most expensive thing the whole build did. Every call opens and closes
+        // an asset-import scope, and CLOSING one runs a full asset pipeline
+        // refresh whether or not anything actually needed importing --
+        // StopAssetImportingV2 in the editor log. This method is called about
+        // 6100 times per build (every image node in every screen, plus every
+        // iconSprites array over the whole item, relic and talent tables), so
+        // that was 6100 refresh cycles at roughly 50ms each: 320 of the build's
+        // 343 seconds, spent re-importing multi-megabyte PNGs that had not
+        // changed. Long enough that the author was killing the build rather
+        // than waiting for it, which is how it was found.
+        //
+        // An asset already in the database needs none of it -- LoadAssetAtPath
+        // reads it straight out. An unknown path means a file that was dropped
+        // in without the editor noticing, and that one genuinely does need a
+        // synchronous import before it can be loaded.
+        if (string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(assetPath)))
+        {
+            AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
+        }
 
         // A PNG Unity has never seen imports as a plain Texture, and
         // LoadAssetAtPath<Sprite> on a plain Texture silently returns null. In
         // v1 that shipped a spell playing nothing at all for weeks.
+        //
+        // Kept exactly as it was: this is the check that has to stay honest.
+        // It costs a reimport only on the FIRST build after new art lands,
+        // because the flipped setting is then written into the .meta and
+        // synced back to main -- which is what gotcha #3 in CLAUDE.md is about.
         var importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
         if (importer != null && importer.textureType != TextureImporterType.Sprite)
         {
@@ -241,6 +280,8 @@ public static class SceneBuilder
             importer.SaveAndReimport();
         }
 
-        return AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        _spriteCache[assetPath] = sprite;
+        return sprite;
     }
 }

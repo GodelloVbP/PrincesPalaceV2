@@ -37,6 +37,23 @@ $Runners = @(
     @{ Platform = "PlayMode"; Path = "$ProjectParent\$ProjectLeaf-TestRunner2"; Product = "${ProductLeaf}TestRunner2" }
 )
 
+# Elapsed-time stamps on every phase.
+#
+# Added because "the build is slow" could not be acted on: the generation
+# phase was the obvious suspect and turned out not to be the cost at all.
+# Every phase boundary prints its own duration now, so the next person with a
+# slow run reads the answer instead of bisecting for it.
+$Watch = [Diagnostics.Stopwatch]::StartNew()
+$LastStamp = [TimeSpan]::Zero
+
+function Stamp {
+    param($What)
+    $now = $Watch.Elapsed
+    $delta = $now - $script:LastStamp
+    $script:LastStamp = $now
+    Write-Host ("  [{0,6:N1}s  +{1,5:N1}s] {2}" -f $now.TotalSeconds, $delta.TotalSeconds, $What)
+}
+
 function Repair-Metas {
     param($DestAssets)
 
@@ -175,7 +192,7 @@ if ($orphans.Count -gt 0) {
 
 if (-not $SkipSync) {
     Write-Host "Syncing into $($Runners.Count) isolated test copies..."
-    foreach ($runner in $Runners) { Sync-Runner -Runner $runner }
+    foreach ($runner in $Runners) { Sync-Runner -Runner $runner; Stamp "sync -> $($runner.Platform)" }
 
     # Verified, not assumed. A sync that silently leaves an old scene behind
     # produces dozens of NullReferenceExceptions from serialized fields that
@@ -196,69 +213,121 @@ if (-not $SkipSync) {
     }
 }
 
-# Content and scene generation are Editor-only menu methods and have to run
-# BEFORE the test processes, in whichever copy will read the result. Both
-# copies need it, so both are built - in parallel with each other.
+# Content and scene generation are Editor-only methods and have to run BEFORE
+# the test processes, in whichever copy will read the result.
+#
+# TWO BATCHMODE BOOTS, IN THE PRIMARY COPY ONLY. It used to be one boot per
+# method per copy -- ten cold Unity starts, about three minutes before a test
+# ran, which is long enough that the author was killing the run instead of
+# waiting for it. A harness nobody is willing to wait for is not a harness.
+#
+# Both economies are safe for reasons worth stating, because both look
+# dangerous:
+#
+#  - ONE COPY, not both. The secondary's generated output never survived
+#    anyway: the sync-back below re-mirrors main over every secondary copy so
+#    that all copies agree on asset GUIDs, and that mirror lands AFTER
+#    generation. The secondary was building assets it was about to have
+#    overwritten.
+#
+#  - FOUR METHODS IN ONE PROCESS. Nothing required separate ones; each builder
+#    is a static method leaving results on disk. GenerationRun.RunAll refreshes
+#    the AssetDatabase between them, which a process boundary used to do
+#    implicitly.
+#
+# TmpBootstrap is the exception and stays its own boot: TMP_Settings.instance
+# is a cached Resources.Load that stays null for the rest of the process that
+# imported it, so a scene built in the same run dies inside
+# TMP_FontAsset.CreateFontAsset with a bare NullReferenceException. Its own
+# header records that; do not fold it in.
 if ($BuildContent -or $BuildScenes) {
-    $methods = @()
-    # Order matters. The sprite baker and the pipeline write ASSETS the scene
-    # build then references by GUID, and TMP's bootstrap has to have run before
-    # any label is emitted.
-    $methods += "ProceduralSpriteBaker.BakeAll"
-    $methods += "PipelineBuilder.BuildRenderPipeline"
-    $methods += "TmpBootstrap.Bootstrap"
-    if ($BuildContent) { $methods += "ContentBuilder.BuildDefaultContent" }
-    if ($BuildScenes)  { $methods += "SceneBuilder.BuildAllScenes" }
+    $primaryRunner = $Runners[0]
 
-    foreach ($method in $methods) {
-        Write-Host "Running $method in both copies..."
-        $jobs = foreach ($runner in $Runners) {
-            Start-Process -FilePath $UnityExe -ArgumentList @(
-                "-batchmode", "-nographics", "-silent-crashes",
-                "-projectPath", "`"$($runner.Path)`"",
-                "-executeMethod", $method,
-                "-logFile", "`"$(Join-Path $runner.Path 'gen.log')`"",
-                "-quit"
-            ) -PassThru -NoNewWindow
-        }
+    $steps = @()
+    if ($BuildContent) { $steps += "content" }
+    if ($BuildScenes)  { $steps += "scenes" }
 
-        $jobs | Wait-Process -Timeout 900
+    # Each phase is a name, the method to run, the extra args it needs, and the
+    # sentinels its log must contain. Gating on the SENTINEL rather than the
+    # exit code is deliberate and long-standing: Unity exits non-zero on an
+    # untidy shutdown even when the method ran fine, which failed a perfectly
+    # good ProceduralSpriteBaker run the first time exit codes were trusted.
+    # Every builder logs "BUILD-COMPLETE: <name>" as its last act, so its
+    # ABSENCE is the honest signal that the method did not finish.
+    $expected = @("ProceduralSpriteBaker", "PipelineBuilder")
+    if ($BuildContent) { $expected += "ContentBuilder" }
+    if ($BuildScenes)  { $expected += "SceneBuilder" }
+    $expected += "GenerationRun"
 
-        # WHAT COUNTS AS SUCCESS IS THE SENTINEL, not the exit code.
-        #
-        # Unity exits non-zero on an untidy shutdown even when the method ran
-        # fine -- checking the code alone failed a perfectly good
-        # ProceduralSpriteBaker run the first time it was tried. Every builder
-        # logs "BUILD-COMPLETE: <name>" as its last act, so its ABSENCE is the
-        # honest signal that the method did not finish.
-        #
-        # This check did not exist at all before, and its absence was expensive:
-        # the pattern scan below looked only for "error CS" and ContentBuilder
-        # lines, so a -executeMethod that THREW -- BuildAllScenes failing an
-        # audit -- was invisible. The script printed nothing, called the suite
-        # green, and left every scene after the failing one stale on disk. A
-        # whole session of "why has the screenshot not changed" traces here.
-        foreach ($runner in $Runners) {
-            $log = Join-Path $runner.Path "gen.log"
-            $done = (Test-Path $log) -and (Select-String -Path $log -Pattern "BUILD-COMPLETE" -Quiet)
-            if (-not $done) {
-                Write-Host "$method did not finish in $($runner.Path). Tail of its log:"
-                if (Test-Path $log) { Get-Content $log -Tail 25 | ForEach-Object { Write-Host "  $_" } }
+    # TmpBootstrap is checked here rather than run as its own Unity boot.
+    #
+    # It reads as a generator and is not one: it creates nothing, and its whole
+    # body is "return if TMP_Settings.instance is already there, return if these
+    # two files are on disk, otherwise throw with the fix". Both files have been
+    # committed since 1bd5999, so every run of it since has been a ten-second
+    # Unity start to confirm two files exist. PowerShell can confirm that in a
+    # millisecond, and the guidance it printed is reproduced below verbatim.
+    #
+    # The safety net does not depend on this check: SceneBuilder.BuildAllScenes
+    # opens by testing TMP_Settings.instance itself and refuses with the same
+    # advice, so a genuinely missing bootstrap still fails loudly and early.
+    $tmpFiles = @(
+        "Assets\TextMesh Pro\Resources\TMP Settings.asset",
+        "Assets\TextMesh Pro\Shaders\TMP_SDF.shader"
+    )
+    $missing = $tmpFiles | Where-Object { -not (Test-Path (Join-Path $primaryRunner.Path $_)) }
+    if ($missing) {
+        Write-Host "TextMeshPro's essential resources are missing, so no font asset can be built:"
+        $missing | ForEach-Object { Write-Host "  $_" }
+        Write-Host "  Fix by running: python tools/extract_tmp_essentials.py"
+        exit 1
+    }
+
+    $phases = @(
+        @{ Name = "GenerationRun"; Method = "GenerationRun.RunAll"; Extra = @("-ppSteps", ($steps -join ",")); Sentinels = $expected }
+    )
+
+    foreach ($phase in $phases) {
+        Write-Host "Running $($phase.Method) in $($primaryRunner.Path)..."
+        $log = Join-Path $primaryRunner.Path "gen.log"
+        if (Test-Path $log) { Remove-Item $log -Force }
+
+        # NOT $args -- that is an automatic variable, and assigning to it at
+        # script scope quietly clobbers the script's own argument array.
+        $unityArgs = @(
+            "-batchmode", "-nographics", "-silent-crashes",
+            "-projectPath", "`"$($primaryRunner.Path)`"",
+            "-executeMethod", $phase.Method,
+            "-logFile", "`"$log`""
+        ) + $phase.Extra + @("-quit")
+
+        $proc = Start-Process -FilePath $UnityExe -ArgumentList $unityArgs -PassThru -NoNewWindow
+        $proc | Wait-Process -Timeout 900
+        Stamp "unity boot: $($phase.Method)"
+
+        # Every sentinel, not just the last one. Sharing a process means a
+        # generator that threw halfway leaves the EARLIER generators' sentinels
+        # in the log, so checking only for the final one would call a partial
+        # run complete -- the same blind spot that once left stale scenes on
+        # disk and a green suite testing them.
+        $body = if (Test-Path $log) { Get-Content $log } else { @() }
+        foreach ($sentinel in $phase.Sentinels) {
+            if (-not ($body | Select-String -Pattern "BUILD-COMPLETE: $sentinel" -Quiet)) {
+                Write-Host "$($phase.Method) did not reach BUILD-COMPLETE: $sentinel. Tail of its log:"
+                $body | Select-Object -Last 25 | ForEach-Object { Write-Host "  $_" }
                 exit 1
             }
         }
 
-        foreach ($runner in $Runners) {
-            # Widened to catch a thrown generator as well as a compile error.
-            # "[SceneBuilder] FAILED" is what an audit refusal actually prints,
-            # and it was sailing straight through.
-            $pattern = "error CS|\[ContentBuilder\]|\[SceneBuilder\] FAILED|threw exception"
-            $errors = Get-Content (Join-Path $runner.Path "gen.log") | Select-String -Pattern $pattern | Select-Object -Unique -First 10
-            if ($errors) {
-                Write-Host "$method FAILED in $($runner.Path):"
-                $errors | ForEach-Object { Write-Host "  $_" }
-                exit 1
-            }
+        # Widened to catch a thrown generator as well as a compile error.
+        # "[SceneBuilder] FAILED" is what an audit refusal actually prints, and
+        # it was sailing straight through.
+        $pattern = "error CS|\[ContentBuilder\]|\[SceneBuilder\] FAILED|threw exception"
+        $errors = $body | Select-String -Pattern $pattern | Select-Object -Unique -First 10
+        if ($errors) {
+            Write-Host "$($phase.Method) FAILED in $($primaryRunner.Path):"
+            $errors | ForEach-Object { Write-Host "  $_" }
+            exit 1
         }
     }
 
@@ -270,6 +339,7 @@ if ($BuildContent -or $BuildScenes) {
     # main OVER the copies, silently reverting everything that was just built.
     # Doing it here rather than by hand is the difference between "the suite is
     # green" and "the suite tested a stale scene".
+    Stamp "generation done"
     Write-Host "Syncing generated content and scenes back to main..."
     $primary = $Runners[0].Path
     robocopy "$primary\Assets\_Project\Resources\Content" "$SourceProject\Assets\_Project\Resources\Content" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
@@ -342,14 +412,19 @@ if ($BuildContent -or $BuildScenes) {
     # Sync-Runner uses — this robocopy hits the exact same same-size/
     # different-GUID blind spot Repair-Metas exists for, just for freshly
     # GENERATED content assets instead of freshly imported scripts.
+    Stamp "sync generated assets back to main"
     foreach ($runner in $Runners | Select-Object -Skip 1) {
         robocopy "$SourceProject\Assets" "$($runner.Path)\Assets" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
+        Stamp "re-mirror main -> $($runner.Platform)"
         Repair-Metas -DestAssets "$($runner.Path)\Assets"
+        Stamp "Repair-Metas $($runner.Platform)"
         Assert-GuidsMatch -Runner $runner
+        Stamp "Assert-GuidsMatch $($runner.Platform)"
     }
 }
 
 Write-Host "`nRunning EditMode and PlayMode concurrently..."
+$script:LastStamp = $Watch.Elapsed
 $procs = @{}
 foreach ($runner in $Runners) {
     $resultsPath = Join-Path $runner.Path "test-results-$($runner.Platform).xml"
