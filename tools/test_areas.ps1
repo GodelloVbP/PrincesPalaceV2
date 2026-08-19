@@ -29,7 +29,7 @@ $Areas = @{
     hub     = "Hub|Talent|Principality|CharacterSheet|SheetStat|Store|Constellation|Glossary"
     content = "Content|ItemSet|Item|Resolver|ArtPath|AbilityScore|StatBlock|StatPoint|Invest|Character|Enemy|Scaling|Requirement|Rounding|AbilityDerivation|Weapon|Relic|Rarity|Achievement"
     run     = "Dungeon|Map|FullRun|RunState|Currency|MetaProgression|Save|ActiveSquad|Run|Resume|Snapshot|Seed|Descent|Depth|Difficulty|Wallet|Reward|Reckoning|Ember|Ledger|Settlement|Encounter|Room"
-    ui      = "Button|Audio|Splash|PauseMenu|DebugMenu|MainMenu|SystemMenu|Cursor|Dialogue|Bark|Inventory|Equipment|Dossier|Music|Screen|UiKit|Flicker|Ambience|Overlay"
+    ui      = "Button|Audio|Splash|PauseMenu|DebugMenu|MainMenu|SystemMenu|Cursor|Dialogue|Bark|Inventory|Equipment|Dossier|Options|Music|Screen|UiKit|Flicker|Ambience|Overlay"
     art     = "Stance|FrameHold|Shadow|WhiteQuad|SpriteFacing|BattleBackground|ItemArt|TalentArt|ArtPath|Flash|Legibility|PostProcessing"
     rng     = "Rng|SeededRandom|Seed"
 }

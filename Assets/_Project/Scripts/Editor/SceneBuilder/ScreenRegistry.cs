@@ -716,6 +716,35 @@ public static class ScreenRegistry
         controller.closeButton = result.Button(menu.CloseButton);
 
         if (menu.Dossier != null) WireDossier(result, menu.Dossier, lockedForFight);
+        if (menu.Options != null) WireOptions(result, menu.Options);
+
+        return controller;
+    }
+
+    // The Options pane, inside the system menu.
+    //
+    // Sliders and steppers are wired as two DENSE sets, each carrying the
+    // setting key its controls belong to. The first attempt padded one set of
+    // arrays with nulls to keep every index matching OptionRows.AllRows, and
+    // UiWiringSweep refused it -- correctly, because a null element is
+    // indistinguishable from a reference somebody forgot.
+    private static OptionsController WireOptions(UiEmitResult result, OptionsScreen options)
+    {
+        var controller = result.Attach<OptionsController>(options.Root);
+
+        controller.rowHovers = options.RowHovers.Select(result.Go).ToArray();
+
+        controller.sliderKeys = options.SliderKeys.ToArray();
+        controller.sliderTracks = options.SliderTracks.Select(result.Image).ToArray();
+        controller.sliderFills = options.SliderFills.Select(result.Rect).ToArray();
+        controller.sliderValues = options.SliderValues.Select(result.Tmp).ToArray();
+
+        controller.stepperKeys = options.StepperKeys.ToArray();
+        controller.stepPrev = options.StepPrev.Select(result.Button).ToArray();
+        controller.stepNext = options.StepNext.Select(result.Button).ToArray();
+        controller.stepperValues = options.StepperValues.Select(result.Tmp).ToArray();
+
+        controller.restoreDefaults = result.Button(options.RestoreDefaults);
 
         return controller;
     }

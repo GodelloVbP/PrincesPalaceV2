@@ -68,11 +68,19 @@ namespace PrincesPalace
 
         public static readonly int[] FpsLimits = { 30, 60, 120, 144, 240 };
 
-        public static float MusicVolume { get; private set; } = 0.8f;
-        public static float SoundVolume { get; private set; } = 0.8f;
+        // NAMED ONCE. These were literals in three places -- the property
+        // initialisers, Load's PlayerPrefs fallbacks, and nowhere else that
+        // needed them until Options grew a Restore Defaults button. A fourth
+        // copy is how a "restore" quietly restores something else.
+        public const float DefaultVolume = 0.8f;
+        public const int DefaultWindowModeIndex = 1;   // Borderless Windowed
+        public const int DefaultFpsLimitIndex = 1;     // 60
+
+        public static float MusicVolume { get; private set; } = DefaultVolume;
+        public static float SoundVolume { get; private set; } = DefaultVolume;
         public static int ResolutionIndex { get; private set; }
-        public static int WindowModeIndex { get; private set; } = 1; // Borderless Windowed
-        public static int FpsLimitIndex { get; private set; } = 1;   // 60
+        public static int WindowModeIndex { get; private set; } = DefaultWindowModeIndex;
+        public static int FpsLimitIndex { get; private set; } = DefaultFpsLimitIndex;
 
         // Applies stored settings before the first scene loads, same
         // self-bootstrapping pattern as CursorController/LoadingScreen-
@@ -87,11 +95,12 @@ namespace PrincesPalace
 
         public static void Load()
         {
-            MusicVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(MusicVolumeKey, 0.8f));
-            SoundVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(SoundVolumeKey, 0.8f));
-            ResolutionIndex = ClampIndex(PlayerPrefs.GetInt(ResolutionIndexKey, DefaultResolutionIndex()), Resolutions.Length);
-            WindowModeIndex = ClampIndex(PlayerPrefs.GetInt(WindowModeIndexKey, 1), WindowModes.Length);
-            FpsLimitIndex = ClampIndex(PlayerPrefs.GetInt(FpsLimitIndexKey, 1), FpsLimits.Length);
+            MusicVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(MusicVolumeKey, DefaultVolume));
+            SoundVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(SoundVolumeKey, DefaultVolume));
+            ResolutionIndex = ClampIndex(
+                PlayerPrefs.GetInt(ResolutionIndexKey, DefaultResolutionIndexForDisplay()), Resolutions.Length);
+            WindowModeIndex = ClampIndex(PlayerPrefs.GetInt(WindowModeIndexKey, DefaultWindowModeIndex), WindowModes.Length);
+            FpsLimitIndex = ClampIndex(PlayerPrefs.GetInt(FpsLimitIndexKey, DefaultFpsLimitIndex), FpsLimits.Length);
         }
 
         public static void Save()
@@ -170,7 +179,7 @@ namespace PrincesPalace
         // actual display, so a 1366x768 laptop doesn't open on a 4K default
         // it can't show. Falls back to the largest entry when the display is
         // bigger than everything listed.
-        private static int DefaultResolutionIndex()
+        public static int DefaultResolutionIndexForDisplay()
         {
             int displayWidth = Screen.currentResolution.width;
             int best = 0;

@@ -430,6 +430,24 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString SystemClose =
             UiString.Define("system.close", "X");
 
+        // ---- the Options pane ----------------------------------------------
+        public static readonly UiString OptionsAudio = UiString.Define("options.audio", "AUDIO");
+        public static readonly UiString OptionsSound = UiString.Define("options.sound", "Sound");
+        public static readonly UiString OptionsMusic = UiString.Define("options.music", "Music");
+        // The label says what the setting does, which right now is "is stored".
+        // GameSettings' own header asks for exactly this rather than a control
+        // that looks live and is not.
+        public static readonly UiString OptionsMusicNote =
+            UiString.Define("options.music.note", "Stored - no music yet");
+        public static readonly UiString OptionsDisplay = UiString.Define("options.display", "DISPLAY");
+        public static readonly UiString OptionsResolution = UiString.Define("options.resolution", "Resolution");
+        public static readonly UiString OptionsWindow = UiString.Define("options.window", "Window");
+        public static readonly UiString OptionsFrameLimit = UiString.Define("options.frame_limit", "Frame limit");
+        public static readonly UiString OptionsRestoreDefaults =
+            UiString.Define("options.restore_defaults", "RESTORE DEFAULTS");
+        public static readonly UiString OptionsAppliesImmediately =
+            UiString.Define("options.applies", "Changes apply immediately.");
+
         // ---- the character dossier -----------------------------------------
         public static readonly UiString OverlayLoadout = UiString.Define("dossier.loadout", "LOADOUT");
         public static readonly UiString OverlayAttributes = UiString.Define("dossier.attributes", "ATTRIBUTES");
@@ -461,6 +479,9 @@ namespace PrincesPalace.Domain.UiKit
             SystemTabOptions, SystemTabMainMenu,
             SystemPlaceholder, SystemEscHint, SystemClose,
             SystemMenuTitle, SystemBetweenDescents,
+            OptionsAudio, OptionsSound, OptionsMusic, OptionsMusicNote,
+            OptionsDisplay, OptionsResolution, OptionsWindow, OptionsFrameLimit,
+            OptionsRestoreDefaults, OptionsAppliesImmediately,
             Play, Options, Exit, OptionsTitle, Close, Cancel,
             ReckoningTitle, ReckoningExperience, ReckoningGold, ReckoningChooseOne,
             ReckoningLevel, ReckoningLevelUp, ReckoningExpGain, ReckoningDowned,

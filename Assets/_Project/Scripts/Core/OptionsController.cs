@@ -1,0 +1,221 @@
+using System;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+using PrincesPalace.Domain.UiKit;
+
+namespace PrincesPalace
+{
+    // Binds the Options pane to GameSettings.
+    //
+    // EVERY CONTROL WRITES THROUGH IMMEDIATELY. That is the design's rule --
+    // no confirm, no apply button -- and GameSettings already worked that way:
+    // its setters save to PlayerPrefs and push at the device on the spot. So
+    // this holds no pending state of its own, which is also why there is
+    // nothing here to lose if the menu is closed mid-change.
+    //
+    // Rows are addressed BY KEY, matching OptionRows.AllRows by index. A switch
+    // on the key rather than on the index means adding a row to that table
+    // cannot silently bind the wrong control to the wrong setting -- it lands
+    // on the default and throws instead.
+    public class OptionsController : MonoBehaviour
+    {
+        [SerializeField] internal GameObject[] rowHovers;
+
+        // Two dense sets, each carrying the GameSettings key its controls drive.
+        // Keyed rather than positional because the rows are heterogeneous, and
+        // the padded-with-nulls alternative is what UiWiringSweep refused.
+        [SerializeField] internal string[] sliderKeys;
+        [SerializeField] internal Image[] sliderTracks;
+        [SerializeField] internal RectTransform[] sliderFills;
+        [SerializeField] internal TMP_Text[] sliderValues;
+
+        [SerializeField] internal string[] stepperKeys;
+        [SerializeField] internal Button[] stepPrev;
+        [SerializeField] internal Button[] stepNext;
+        [SerializeField] internal TMP_Text[] stepperValues;
+
+        [SerializeField] internal Button restoreDefaults;
+
+        private bool _wired;
+
+        private void OnEnable()
+        {
+            Wire();
+            Refresh();
+        }
+
+        private void Wire()
+        {
+            if (_wired) return;
+            _wired = true;
+
+            for (int i = 0; i < rowHovers.Length; i++)
+            {
+                if (rowHovers[i] == null) continue;
+
+                // The hover plate is the thing that covers the whole row, so it
+                // is what listens -- the track and the stepper buttons each
+                // cover only part of it, and a row that only lights under its
+                // control is worse than one that never lights at all.
+                var hover = rowHovers[i].AddComponent<HoverIndex>();
+                hover.Index = i;
+                hover.Changed = OnRowHover;
+
+                // Emitted at its tint and faded to nothing, so raising it is an
+                // alpha change. The design's States table asks for a row TINT,
+                // and a plate that switches on and off cannot be given a fade
+                // later without rewriting this.
+                rowHovers[i].SetActive(true);
+                Fade(rowHovers[i], 0f);
+            }
+
+            for (int i = 0; i < sliderTracks.Length; i++)
+            {
+                if (sliderTracks[i] == null) continue;
+                string key = sliderKeys[i];
+                var bar = sliderTracks[i].gameObject.AddComponent<BarSlider>();
+                bar.Changed = value => SetSlider(key, value);
+            }
+
+            for (int i = 0; i < stepPrev.Length; i++)
+            {
+                string key = stepperKeys[i];
+                if (stepPrev[i] != null) stepPrev[i].onClick.AddListener(() => Step(key, -1));
+                if (stepNext[i] != null) stepNext[i].onClick.AddListener(() => Step(key, +1));
+            }
+
+            if (restoreDefaults != null) restoreDefaults.onClick.AddListener(RestoreDefaults);
+        }
+
+        private void OnRowHover(int index, bool entered)
+        {
+            if (rowHovers == null || index < 0 || index >= rowHovers.Length) return;
+            Fade(rowHovers[index], entered ? HoverAlpha : 0f);
+        }
+
+        // The design's row tint, #C8AAE60D, is 5% -- so this is the alpha the
+        // tree already declared, restored rather than invented.
+        private const float HoverAlpha = 0.05f;
+
+        private static void Fade(GameObject go, float alpha)
+        {
+            var image = go == null ? null : go.GetComponent<Image>();
+            if (image == null) return;
+
+            var colour = image.color;
+            image.color = new Color(colour.r, colour.g, colour.b, alpha);
+        }
+
+        public void Refresh()
+        {
+            for (int i = 0; sliderValues != null && i < sliderValues.Length; i++)
+            {
+                float value = SliderValue(sliderKeys[i]);
+
+                if (sliderValues[i] != null)
+                {
+                    sliderValues[i].SetContent(Mathf.RoundToInt(value * 100f) + "%");
+                }
+
+                if (sliderFills != null && i < sliderFills.Length && sliderFills[i] != null)
+                {
+                    // WIDTH, not anchors. The fill is pivoted at the track's
+                    // left edge, so growing its width extends it rightwards and
+                    // nothing else has to be consistent for that to hold.
+                    // Anchoring 0..value looked equivalent and was not: anchors
+                    // are relative to the PARENT, so the bar spanned that
+                    // fraction of the whole card and struck through its own row.
+                    var fill = sliderFills[i];
+                    fill.sizeDelta = new Vector2(
+                        OptionsLayout.TrackWidth * Mathf.Clamp01(value), fill.sizeDelta.y);
+                }
+            }
+
+            for (int i = 0; stepperValues != null && i < stepperValues.Length; i++)
+            {
+                if (stepperValues[i] != null) stepperValues[i].SetContent(StepperLabel(stepperKeys[i]));
+            }
+        }
+
+        // ---- the bindings -------------------------------------------------------
+
+        private static float SliderValue(string key)
+        {
+            switch (key)
+            {
+                case "sound": return GameSettings.SoundVolume;
+                case "music": return GameSettings.MusicVolume;
+                default: throw new ArgumentOutOfRangeException(nameof(key), key,
+                    "an Options slider has no GameSettings value behind it");
+            }
+        }
+
+        private void SetSlider(string key, float value)
+        {
+            switch (key)
+            {
+                case "sound": GameSettings.SetSoundVolume(value); break;
+                case "music": GameSettings.SetMusicVolume(value); break;
+                default: throw new ArgumentOutOfRangeException(nameof(key), key,
+                    "an Options slider has no GameSettings setter behind it");
+            }
+
+            Refresh();
+        }
+
+        private static string StepperLabel(string key)
+        {
+            switch (key)
+            {
+                case "resolution": return GameSettings.Resolutions[GameSettings.ResolutionIndex].Label;
+                case "window": return GameSettings.WindowModeLabels[GameSettings.WindowModeIndex];
+                case "fps": return GameSettings.FpsLimits[GameSettings.FpsLimitIndex] + " fps";
+                default: throw new ArgumentOutOfRangeException(nameof(key), key,
+                    "an Options stepper has no GameSettings value behind it");
+            }
+        }
+
+        // CLAMPED, not wrapped. Wrapping a resolution list means one click past
+        // 4K silently drops the player to 1280x720, which on a stepper they are
+        // holding down is a nasty surprise; the ends of these lists are ends.
+        private void Step(string key, int delta)
+        {
+            switch (key)
+            {
+                case "resolution":
+                    GameSettings.SetResolutionIndex(
+                        Clamp(GameSettings.ResolutionIndex + delta, GameSettings.Resolutions.Length));
+                    break;
+                case "window":
+                    GameSettings.SetWindowModeIndex(
+                        Clamp(GameSettings.WindowModeIndex + delta, GameSettings.WindowModeLabels.Length));
+                    break;
+                case "fps":
+                    GameSettings.SetFpsLimitIndex(
+                        Clamp(GameSettings.FpsLimitIndex + delta, GameSettings.FpsLimits.Length));
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(key), key,
+                        "an Options stepper has no GameSettings setter behind it");
+            }
+
+            Refresh();
+        }
+
+        private static int Clamp(int index, int length) =>
+            length == 0 ? 0 : Mathf.Clamp(index, 0, length - 1);
+
+        // The same defaults GameSettings itself starts from. Not a separate
+        // table: a second list of defaults is a second thing to forget.
+        public void RestoreDefaults()
+        {
+            GameSettings.SetSoundVolume(GameSettings.DefaultVolume);
+            GameSettings.SetMusicVolume(GameSettings.DefaultVolume);
+            GameSettings.SetWindowModeIndex(GameSettings.DefaultWindowModeIndex);
+            GameSettings.SetFpsLimitIndex(GameSettings.DefaultFpsLimitIndex);
+            GameSettings.SetResolutionIndex(GameSettings.DefaultResolutionIndexForDisplay());
+            Refresh();
+        }
+    }
+}

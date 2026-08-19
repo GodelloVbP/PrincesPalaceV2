@@ -39,6 +39,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const string TabHover = "#C8AAE60F";
 
         public CharacterDossierScreen Dossier;
+        public OptionsScreen Options;
 
         public UiNode Root;
         public NodeRef Bar;
@@ -195,6 +196,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     var dossier = CharacterDossierScreen.Build();
                     screen.Dossier = dossier;
                     contents.Add(dossier.Root);
+                    placeholder.Inactive();
+                }
+                else if (def.Tab == SystemMenuTab.Options)
+                {
+                    var options = OptionsScreen.Build();
+                    screen.Options = options;
+                    contents.Add(options.Root);
                     placeholder.Inactive();
                 }
 

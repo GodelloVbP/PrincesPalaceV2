@@ -9,6 +9,7 @@ using UnityEngine.UI;
 using UnityEngine.TestTools;
 using PrincesPalace;
 using PrincesPalace.Domain.Equipment;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -132,6 +133,16 @@ namespace PrincesPalace.PlayModeTests
             CanvasCapture.RenderToFile(canvas, equipPath);
             Assert.IsTrue(File.Exists(equipPath));
             Debug.Log($"[SystemMenuCapture] wrote {equipPath}");
+
+            // And the Options pane, which is the other half of what this menu
+            // now carries.
+            menu.Select(SystemMenuTab.Options);
+            yield return new WaitForSecondsRealtime(0.3f);
+
+            string optionsPath = Path.Combine(OutputDir, "SystemMenu_options.png");
+            CanvasCapture.RenderToFile(canvas, optionsPath);
+            Assert.IsTrue(File.Exists(optionsPath));
+            Debug.Log($"[SystemMenuCapture] wrote {optionsPath}");
 
             if (backup != null) File.WriteAllText(savePath, backup);
             else if (File.Exists(savePath)) File.Delete(savePath);

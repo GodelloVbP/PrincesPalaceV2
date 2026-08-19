@@ -33,24 +33,49 @@ tokens* sections:
 - Dossier hosted at 1360×766 in the 1600×804 pane: 120 clear each side, 19 top
   and bottom, no scaling.
 
+## Options — built, and four of its six groups cut
+
+Layout `2a`, two columns, no scrolling, applies immediately, `RESTORE DEFAULTS`.
+`GameSettings` had been fully implemented for a while with **no UI at all**;
+this is the first screen that reaches it.
+
+**Two groups survived, because `GameSettings` holds five values and nothing
+else exists to bind to.** The design's own rule for Run statistics — every row
+binds to a tracked field or gets cut — is what decided it: a control that
+stores nothing is worse than an absent one, because the player moves it,
+believes something changed, and is wrong.
+
+| Group | Rows | Status |
+|---|---|---|
+| Audio | Sound, Music | Built. **Two sliders, not three** — there are two channels; `AudioLevels` is a per-sound gain table, not a third bus. Music is labelled "Stored - no music yet", which `GameSettings`' own header asks for. |
+| Display | Resolution, Window, Frame limit | Built. **Frame limit replaces v-sync**, which is not stored; the frame limit is the real setting sitting next to it. |
+| Readability | text size, tooltip delay | **Cut.** Neither value exists anywhere. |
+| Gameplay | battle speed, show tooltips | **Cut.** Neither value exists anywhere. |
+| Keybinds | rebind door, conflict count | **Cut.** No rebind screen and no keybind storage; the design lists that screen as still open, so this would be a door to a room and a number counting nothing. |
+| Language | stepper | **Cut.** No localisation table — `UiString`'s key is described in its own header as "the seam a localisation table would key on later". A stepper with one entry is not a choice. |
+
+Consequence worth seeing rather than reading: **the pane is half empty.**
+Two cards in a 1600×804 pane leaves the bottom two thirds bare. That is the
+honest state of the settings this game has, not a layout problem — but if the
+answer is "add the settings", each cut row above is a small feature rather than
+a UI job, and `battle speed` is the one with a consumer already waiting
+(`SystemMenuController.Resume` restores the previous `timeScale` specifically so
+a speed setting would survive the menu).
+
+Also not carried over: the design's **gamepad prompt strip** for this pane.
+Printing `LB / RB` prompts before any gamepad input is wired would be the same
+failure as a control that stores nothing.
+
 ## Not built — content panes
 
-Every pane except Character & Inventory is a named container with a placeholder.
-Each of these is its own piece of work, roughly in the order they earn their
-keep:
-
-1. **Options (`2a`)** — six groups in two columns: Audio, Display, Readability,
-   Gameplay, Keybinds, Language, plus `RESTORE DEFAULTS`. Applies immediately,
-   no confirm step. **`2a` is the choice**; `2b` was the alternative and is not
-   being built. No autosave control — autosave is the only save mode.
-2. **Main menu** — three exits: back to title, quit to desktop (saves first),
+1. **Main menu** — three exits: back to title, quit to desktop (saves first),
    abandon the descent. Abandon is framed in red behind a **1.2s hold** with the
    fill drawn in the button. Nothing here fires on a single press.
-3. **Run statistics** — eighteen figures in three groups (Battle, The Fold,
+2. **Run statistics** — eighteen figures in three groups (Battle, The Fold,
    Spoils) under a floor/room, elapsed, days, turns header. No charts.
    **Every row binds to a tracked field or gets cut** — same rule the dossier's
    Dodge/Carried/Shop-price/Morale rows were held to.
-4. **Floor map** — hosts the existing Run Map screen read-only, viewport
+3. **Floor map** — hosts the existing Run Map screen read-only, viewport
    narrowed by 320 and clipped 16px, keeping its own mossy ground. Its pinned
    header and gold HUD drop, because the lintel already carries all of it.
 
@@ -59,7 +84,9 @@ keep:
 - **Open/close animation.** None. `ReckoningController.PlayIn` is the reference.
   The design's one ask: lintel and panel arrive together, and the pause takes
   effect on the animation's **first** frame, not its last.
-- **Sound.** Open, close, tab change, slider tick — none wired.
+- **Sound.** Open, close, tab change, slider tick — none wired. The Options
+  sliders now change `GameSettings.SoundVolume` live, so a tick would have
+  something to be audible against.
 - **Rebind screen.** Options shows the door; the room does not exist.
 - **Gamepad and keyboard navigation.** LB/RB to cycle tabs, A to activate, B to
   close, focus per pane restored on re-entry, and the focus ring
@@ -96,6 +123,21 @@ keep:
 - **`Time.timeScale = 0` is the pause.** It is the whole mechanism. Nothing has
   been checked for coroutines that assume time advances, and the fight is the
   place that would bite.
+
+## Known gaps in the Options pane
+
+- **No keyboard or gamepad path.** `BarSlider` handles click and drag only.
+  Deliberately not `UnityEngine.UI.Slider`: that brings a handle, fill rect,
+  interactable and navigation model to do what twenty lines do, and what it
+  would buy is focus handling that is not wired anywhere yet. When it is, that
+  is the moment to reconsider.
+- **Card headings are centred**, because `Ui.Label` centres and there is no
+  left-aligned label helper. Reads slightly odd above left-aligned rows.
+- **`Screen.SetResolution` is never exercised by a test.** `GameSettings.Apply`
+  skips device application in batch mode on purpose — it once capped the
+  headless runner at 60fps and tripled the PlayMode suite's runtime. So the
+  tests prove which value is stored and surfaced, never the OS-level call. That
+  last hop needs a real windowed build.
 
 ## Carried over from before this design pass
 
