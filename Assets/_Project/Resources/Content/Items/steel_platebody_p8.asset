@@ -58,7 +58,7 @@ MonoBehaviour:
     intelligence: 0
     charisma: 0
   startingStock: 0
-  iconPath: 
+  iconPath: Assets/_Project/Art/Items/steel_platebody_sheet/level_8.png
   cost: 380
   sortOrder: 110108
   setId: steel

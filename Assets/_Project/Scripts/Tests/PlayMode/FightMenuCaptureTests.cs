@@ -148,8 +148,8 @@ namespace PrincesPalace.PlayModeTests
             Click("Verb0");
             yield return null;
 
-            var hover = _fight.GetComponentsInChildren<IntentHover>(includeInactive: true).FirstOrDefault();
-            Assert.IsNotNull(hover, "no IntentHover was attached to any enemy intent icon");
+            var hover = _fight.GetComponentsInChildren<HoverIndex>(includeInactive: true).FirstOrDefault();
+            Assert.IsNotNull(hover, "no HoverIndex was attached to any enemy intent icon");
             hover.OnPointerEnter(null);
             yield return Shoot("5_intent_hover");
         }

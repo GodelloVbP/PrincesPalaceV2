@@ -57,7 +57,7 @@ MonoBehaviour:
     intelligence: 0
     charisma: 0
   startingStock: 0
-  iconPath: 
+  iconPath: Assets/_Project/Art/Items/arcane_boots_sheet/level_2.png
   cost: 125
   sortOrder: 160401
   setId: runeplate

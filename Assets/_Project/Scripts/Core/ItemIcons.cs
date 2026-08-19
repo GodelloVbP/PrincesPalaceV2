@@ -40,6 +40,19 @@ namespace PrincesPalace
             var sprite = Find(ids, sprites, itemId);
             image.sprite = sprite;
             image.enabled = sprite != null;
+
+            // ASPECT IS PRESERVED, and it has to be done here rather than per
+            // screen. The sliced item sheets are not square -- slice_item_sheet
+            // composites every level of a sheet onto one shared canvas, and
+            // those come out around 260x384 -- while the slots that show them
+            // are whatever shape their screen wanted. An Image stretches its
+            // sprite to fill by default, so a tall dagger dropped into a square
+            // cell came out squat and wrong, and the wrongness read as bad art
+            // rather than as a layout property.
+            //
+            // Every item icon in the game goes through here, so this is the one
+            // place it cannot be forgotten for a new screen.
+            image.preserveAspect = true;
             return sprite != null;
         }
     }

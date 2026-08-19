@@ -120,6 +120,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public DefeatScreen Defeat;
 
         // The same tree the hub mounts, wired read-only here.
+        public SystemMenuScreen SystemMenu;
         public CharacterOverlayScreen Sheet;
 
         public NodeRef SubmenuColumn;
@@ -202,6 +203,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // what is hitting them without being able to re-plate between
             // swings. Declared BEFORE the reckoning and the defeat screen, so
             // an end-of-fight modal still draws over it.
+            // The overarching menu, LAST in this scene's children so it draws
+            // over everything it can be opened on top of.
+            var systemMenu = SystemMenuScreen.Build();
+            s.SystemMenu = systemMenu;
+
             var sheet = CharacterOverlayScreen.Build();
             s.Sheet = sheet;
             children.Add(sheet.Root);
@@ -214,6 +220,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var defeat = DefeatScreen.Build();
             s.Defeat = defeat;
             children.Add(defeat.Root);
+
+            // The overarching menu is the LAST child of all: it can be opened
+            // on top of the reckoning and the defeat screen, so it has to draw
+            // over them too.
+            children.Add(systemMenu.Root);
 
             s.Root = Ui.Panel("FightPanel", UiSize.Fixed(1920f, 1080f), children);
             return s;

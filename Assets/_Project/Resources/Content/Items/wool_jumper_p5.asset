@@ -58,7 +58,7 @@ MonoBehaviour:
     intelligence: 0
     charisma: 0
   startingStock: 0
-  iconPath: 
+  iconPath: Assets/_Project/Art/Items/wool_robes_sheet/level_6.png
   cost: 220
   sortOrder: 200105
   setId: wool

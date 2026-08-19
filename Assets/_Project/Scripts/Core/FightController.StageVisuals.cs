@@ -162,10 +162,10 @@ namespace PrincesPalace
                 _intentGlyphs[i] = icon.GetComponentInChildren<TMPro.TMP_Text>(includeInactive: true);
                 _intentImages[i] = icon.GetComponent<Image>();
 
-                var hover = icon.GetComponent<IntentHover>();
-                if (hover == null) hover = icon.AddComponent<IntentHover>();
+                var hover = icon.GetComponent<HoverIndex>();
+                if (hover == null) hover = icon.AddComponent<HoverIndex>();
                 hover.Index = i;
-                hover.Changed = OnIntentHover;
+                hover.Changed = OnHoverIndex;
             }
 
             SetActive(intentTooltip, false);
@@ -263,7 +263,7 @@ namespace PrincesPalace
                 top - drop + FightStageAnchors.IntentIconOffset + FightStageAnchors.IntentIconSize * 0.5f);
         }
 
-        private void OnIntentHover(int index, bool entered)
+        private void OnHoverIndex(int index, bool entered)
         {
             if (intentTooltip == null) return;
 

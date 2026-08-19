@@ -39,6 +39,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // The character overlay lives in the hub permanently and hidden.
         // Declared LAST so it draws over everything it dims.
+        public SystemMenuScreen SystemMenu;
         public CharacterOverlayScreen Overlay;
 
         // Over even the overlay: a debug tool has to be reachable from
@@ -134,6 +135,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             screen.World = world;
 
+            // The overarching menu, LAST in this scene's children so it draws
+            // over everything it can be opened on top of.
+            var systemMenu = SystemMenuScreen.Build();
+            screen.SystemMenu = systemMenu;
+
             var overlay = CharacterOverlayScreen.Build();
             screen.Overlay = overlay;
 
@@ -178,7 +184,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 overlay.Root,
                 debug.Root,
                 draft.Root,
-                glossary.Root);
+                glossary.Root,
+
+                // LAST of all: the overarching menu opens on top of everything
+                // else the hub can be showing.
+                systemMenu.Root);
 
             return screen;
         }

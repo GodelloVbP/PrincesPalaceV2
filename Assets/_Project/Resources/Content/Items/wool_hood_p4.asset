@@ -58,7 +58,7 @@ MonoBehaviour:
     intelligence: 0
     charisma: 0
   startingStock: 0
-  iconPath: 
+  iconPath: Assets/_Project/Art/Items/wool_hood_sheet/level_5.png
   cost: 185
   sortOrder: 200004
   setId: wool

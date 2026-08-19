@@ -58,7 +58,7 @@ MonoBehaviour:
     intelligence: 0
     charisma: 0
   startingStock: 0
-  iconPath: 
+  iconPath: Assets/_Project/Art/Items/steel_legs_sheet/level_5.png
   cost: 220
   sortOrder: 110204
   setId: steel

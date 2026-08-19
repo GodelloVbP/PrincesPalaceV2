@@ -58,7 +58,7 @@ MonoBehaviour:
     intelligence: 0
     charisma: 0
   startingStock: 0
-  iconPath: 
+  iconPath: Assets/_Project/Art/Items/siege_cuirass_sheet/level_10.png
   cost: 520
   sortOrder: 140110
   setId: bulwark

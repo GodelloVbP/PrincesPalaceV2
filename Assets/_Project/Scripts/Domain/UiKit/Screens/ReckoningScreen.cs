@@ -154,6 +154,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> RowGains = new List<NodeRef>();
 
         public List<NodeRef> OfferButtons = new List<NodeRef>();
+        public NodeRef OfferTooltip;
+        public NodeRef OfferTooltipText;
+        public List<NodeRef> OfferHalos = new List<NodeRef>();
         public List<NodeRef> OfferBursts = new List<NodeRef>();
         public List<NodeRef> OfferIcons = new List<NodeRef>();
         public List<NodeRef> OfferNames = new List<NodeRef>();
@@ -247,6 +250,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             {
                 offerChildren.Add(screen.BuildOffer(i));
             }
+
+            offerChildren.Add(screen.BuildOfferTooltip());
 
             var offerPhase = Ui.Panel("ReckoningOfferPhase", Place.Stretch(), UiSize.Fill, offerChildren)
                 .AllowOverlap("the two phases share one coordinate frame and exactly one is ever active");
@@ -365,9 +370,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // order and is deliberately larger, so it reads as the panel
             // casting light and shadow onto the fight rather than as a
             // second rectangle.
-            var glow = Ui.Sprite("ReckoningFrameGlow", BurstKey, Place.At(0f, 0f),
-                    UiSize.Fixed(PanelWidth * 1.35f, PanelHeight * 1.45f))
-                .Coloured("#2A1A4A00")
+            // RADIAL, NOT THE BURST. This used the rayed rarity_burst sprite,
+            // which has spokes -- a container does not throw spokes, and at
+            // #2A1A4A (near-black violet) over an already dark fight it was
+            // invisible at any alpha. A soft falloff in a LIGHTER violet reads
+            // as the panel lighting the room behind it, which is what the
+            // "soft glow around the container" was asking for.
+            var glow = Ui.Sprite("ReckoningFrameGlow", "proc:radial_glow", Place.At(0f, 0f),
+                    UiSize.Fixed(PanelWidth * 1.5f, PanelHeight * 1.6f))
+                .Coloured("#8A63D800")
                 .AsDecor()
                 .AllowOverflow("the glow is deliberately larger than the frame it sits behind - that bleed IS the drop")
                 .AllowOverlap("a drop shadow covers the thing casting it by definition");
@@ -607,6 +618,37 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return group;
         }
 
+        // What a hovered offer would actually DO, per squad member.
+        //
+        // Under the cards rather than beside one: the prize goes to the
+        // stockpile, so the comparison is about the whole squad and belongs
+        // somewhere the eye can hold all three cards and the numbers at once.
+        // A per-card popup would also have to dodge the panel edge on the
+        // outer two, which is a lot of arithmetic for no gain.
+        //
+        // Decor, so the emitter clears raycastTarget across the subtree -- a
+        // tooltip that ate the click meant for the card underneath it would be
+        // a cruel bug on a screen whose only job is taking one click.
+        private UiNode BuildOfferTooltip()
+        {
+            var label = Ui.Label("ReckoningOfferTooltipText", UiString.Runtime, new UiVec(880f, 116f), 15,
+                "#D9CCF2", Place.At(0f, 0f));
+            OfferTooltipText = label;
+
+            // y -247, NOT further down. The usable interior stops at -317
+            // (A5, the painted-border check), and a 136-tall box centred any
+            // lower reaches into the frame's bottom ornament -- which the audit
+            // caught at -354 rather than a playtest catching it later.
+            var panel = Ui.Sprite("ReckoningOfferTooltip", TabKey, Place.At(0f, -247f),
+                    UiSize.Fixed(920f, 136f))
+                .Inactive()
+                .AsDecor()
+                .AllowOverlap("a hover tooltip floats over whatever it has to - it is transient and takes no clicks");
+            panel.Children.Add(label);
+            OfferTooltip = panel;
+            return panel;
+        }
+
         // One of the three items on offer. A button, because picking one is
         // the only decision this screen asks the player to make.
         // One of the three, as a CARD across the width rather than a row in a
@@ -619,23 +661,51 @@ namespace PrincesPalace.Domain.UiKit.Screens
             const float CardGap = 30f;
             float x = (index - (ItemOfferTable.OfferCount - 1) * 0.5f) * (CardWidth + CardGap);
 
-            // The burst spins behind the icon, tinted per rarity from the same
-            // RarityColors table the name below it reads.
-            var burst = Ui.Sprite($"ReckoningOffer{index}Burst", BurstKey,
-                    Place.At(0f, 78f), UiSize.Fixed(250f, 250f))
+            // THE ITEM IS THE CARD, so it gets the room. 132x132 was a square
+            // slot holding sheets that are about 260x384, and with aspect now
+            // preserved (ItemIcons.Apply) a square box would simply letterbox
+            // them small. 200x250 is the shape the art actually is, so a dagger
+            // fills the height instead of sitting stubby in the middle of it.
+            const float IconTop = 185f;
+            const float IconBottom = -65f;
+            const float IconCentre = (IconTop + IconBottom) * 0.5f;
+
+            // TWO layers behind the icon, because one was not readable.
+            //
+            // The halo is the soft mass: a plain radial falloff, wider than the
+            // icon, carrying the rarity colour where the eye actually looks.
+            // The burst is the rayed sprite, and its rays are the only part of
+            // it that ever cleared the icon -- behind a solid object a starburst
+            // shows as a few spikes and nothing else, which is why the rarity
+            // read as "small and hidden behind the sprite".
+            var halo = Ui.Sprite($"ReckoningOffer{index}Halo", "proc:radial_glow",
+                    Place.At(0f, IconCentre), UiSize.Fixed(330f, 330f))
                 .Coloured("#FFFFFF00")
                 .AsDecor()
-                .AllowOverflow("the burst is deliberately larger than the icon it sits behind - that bleed IS the rarity signal");
+                .AllowOverflow("the halo is deliberately larger than the icon it sits behind - that bleed IS the rarity signal")
+                .AllowOverlap("the burst and the icon sit on top of the halo by construction");
+
+            var burst = Ui.Sprite($"ReckoningOffer{index}Burst", BurstKey,
+                    Place.At(0f, IconCentre), UiSize.Fixed(340f, 340f))
+                .Coloured("#FFFFFF00")
+                .AsDecor()
+                .AllowOverflow("the burst is deliberately larger than the icon it sits behind - that bleed IS the rarity signal")
+                .AllowOverlap("the rays are meant to read THROUGH and around the icon");
 
             var icon = Ui.Sprite($"ReckoningOffer{index}Icon", null,
-                    Place.At(0f, 78f), UiSize.Fixed(132f, 132f))
-                .AsDecor();
+                    Place.At(0f, IconCentre), UiSize.Fixed(200f, IconTop - IconBottom))
+                .AsDecor()
+                .AllowOverlap("the icon stands on its own glow - covering the middle of it is the point");
 
-            var name = Ui.Label($"ReckoningOffer{index}Name", UiString.Runtime, new UiVec(320f, 70f), 21,
-                    "#EDE6FF", Place.At(0f, -80f))
+            // THE NAME BELONGS TO THE ITEM, so it sits directly under it. It
+            // used to float 57px below the icon with nothing in the gap, which
+            // reads as two unrelated things rather than as a labelled object.
+            // 6px is enough to separate them and little enough to bind them.
+            var name = Ui.Label($"ReckoningOffer{index}Name", UiString.Runtime, new UiVec(320f, 66f), 21,
+                    "#EDE6FF", Place.At(0f, IconBottom - 6f - 33f))
                 .AsDecor();
-            var meta = Ui.Label($"ReckoningOffer{index}Meta", UiString.Runtime, new UiVec(320f, 28f), 15,
-                    "#B8A8D9", Place.At(0f, -140f))
+            var meta = Ui.Label($"ReckoningOffer{index}Meta", UiString.Runtime, new UiVec(320f, 26f), 15,
+                    "#B8A8D9", Place.At(0f, IconBottom - 6f - 66f - 4f - 13f))
                 .AsDecor();
 
             // NO PLATE. The card is its burst, its icon and its two lines --
@@ -656,12 +726,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     new UiVec(CardWidth, 400f), 14, Place.At(x, 0f))
                 .NoChrome();
 
+            button.Children.Add(halo);
             button.Children.Add(burst);
             button.Children.Add(icon);
             button.Children.Add(name);
             button.Children.Add(meta);
 
             OfferButtons.Add(button);
+            OfferHalos.Add(halo);
             OfferBursts.Add(burst);
             OfferIcons.Add(icon);
             OfferNames.Add(name);

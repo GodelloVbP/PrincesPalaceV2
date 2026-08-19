@@ -58,7 +58,7 @@ MonoBehaviour:
     intelligence: 0
     charisma: 0
   startingStock: 0
-  iconPath: 
+  iconPath: Assets/_Project/Art/Items/silk_hats_sheet/level_3.png
   cost: 145
   sortOrder: 120002
   setId: silk

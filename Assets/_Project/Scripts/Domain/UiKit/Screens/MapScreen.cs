@@ -141,6 +141,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // The same overlay the hub and the fight mount. Live here:
         // between rooms is when gear is meant to change.
+        public SystemMenuScreen SystemMenu;
         public CharacterOverlayScreen Sheet;
 
         // Anchored to the content rect's LEFT edge, which is the origin every
@@ -229,6 +230,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // where changing your gear is supposed to happen. Walking back to
             // the hub to swap a breastplate between two rooms was the thing
             // that made having it in the fight only half an answer.
+            // The overarching menu, LAST in this scene's children so it draws
+            // over everything it can be opened on top of.
+            var systemMenu = SystemMenuScreen.Build();
+            screen.SystemMenu = systemMenu;
+
             var sheet = CharacterOverlayScreen.Build();
             screen.Sheet = sheet;
 
@@ -236,7 +242,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // the scrolling wood rather than under it. The sheet is LAST, so
             // the modal dims the map and everything on it.
             screen.Root = Ui.Panel("MapPanel", UiSize.Fixed(1920f, 1080f),
-                viewport, title, depth, gold, abandon, roomMessage, sheet.Root);
+                viewport, title, depth, gold, abandon, roomMessage, sheet.Root, systemMenu.Root);
 
             return screen;
         }

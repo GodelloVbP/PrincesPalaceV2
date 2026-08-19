@@ -58,7 +58,7 @@ MonoBehaviour:
     intelligence: 0
     charisma: 0
   startingStock: 0
-  iconPath: 
+  iconPath: Assets/_Project/Art/Items/court_gloves_sheet/level_6.png
   cost: 380
   sortOrder: 190306
   setId: court

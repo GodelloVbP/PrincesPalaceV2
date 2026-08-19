@@ -389,6 +389,28 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString TargetPrompt =
             UiString.Define("target_prompt", "Choose a target for {0}.", "Choose a target for Boulder Slam.");
 
+        // ---- the overarching menu ------------------------------------------
+        //
+        // Labels only. What each tab CONTAINS is a design job; these exist so
+        // the bar can be built and measured before any of it lands.
+        public static readonly UiString SystemTabCharacter =
+            UiString.Define("system.tab.character", "CHARACTER");
+        public static readonly UiString SystemTabInventory =
+            UiString.Define("system.tab.inventory", "INVENTORY");
+        public static readonly UiString SystemTabOptions =
+            UiString.Define("system.tab.options", "OPTIONS");
+        public static readonly UiString SystemTabMainMenu =
+            UiString.Define("system.tab.main_menu", "MAIN MENU");
+        // NOT parameterised. It was "{0} - content to come" with the tab name
+        // as the argument, and nothing ever supplied one -- so every pane
+        // rendered the manifest's SAMPLE text and all four read "OPTIONS -
+        // content to come" whichever tab was open. A screenshot caught it; the
+        // behaviour tests could not, because they assert which pane is showing
+        // and not what it says. The bar overhead already names the tab, so the
+        // pane never needed to.
+        public static readonly UiString SystemPlaceholder =
+            UiString.Define("system.placeholder", "CONTENT TO COME");
+
         // Every entry declared above, for the manifest tests to sweep. Kept
         // beside the entries deliberately: a new string that someone forgets to
         // add here is invisible to the AuditSample check, so the test that walks
@@ -396,6 +418,8 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString[] All =
         {
             WalletSummary,
+            SystemTabCharacter, SystemTabInventory, SystemTabOptions, SystemTabMainMenu,
+            SystemPlaceholder,
             Play, Options, Exit, OptionsTitle, Close, Cancel,
             ReckoningTitle, ReckoningExperience, ReckoningGold, ReckoningChooseOne,
             ReckoningLevel, ReckoningLevelUp, ReckoningExpGain, ReckoningDowned,

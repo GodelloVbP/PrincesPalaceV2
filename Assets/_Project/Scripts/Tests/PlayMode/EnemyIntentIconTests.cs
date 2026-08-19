@@ -84,7 +84,7 @@ namespace PrincesPalace.PlayModeTests
         // component that only the badge itself carries.
         private GameObject[] Icons() =>
             _fight.GetComponentsInChildren<Transform>(includeInactive: true)
-                  .Where(t => t.name.StartsWith("EnemyIntent") && t.GetComponent<IntentHover>() != null)
+                  .Where(t => t.name.StartsWith("EnemyIntent") && t.GetComponent<HoverIndex>() != null)
                   .Select(t => t.gameObject)
                   .ToArray();
 

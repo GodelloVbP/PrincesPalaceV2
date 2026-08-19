@@ -57,7 +57,7 @@ MonoBehaviour:
     intelligence: 0
     charisma: 0
   startingStock: 0
-  iconPath: 
+  iconPath: Assets/_Project/Art/Items/arcane_cuirass_sheet/level_5.png
   cost: 275
   sortOrder: 160104
   setId: runeplate

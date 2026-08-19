@@ -44,6 +44,9 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text[] offerNames;
         [SerializeField] internal TMP_Text[] offerMetas;
 
+        [SerializeField] internal GameObject offerTooltip;
+        [SerializeField] internal TMP_Text offerTooltipText;
+        [SerializeField] internal Image[] offerHalos;
         [SerializeField] internal Image[] offerBursts;
         [SerializeField] internal Image[] offerIcons;
         [SerializeField] internal RectTransform[] offerBurstRects;
@@ -157,6 +160,14 @@ namespace PrincesPalace
             {
                 int index = i;
                 offerButtons[i].onClick.AddListener(() => Take(index));
+
+                // The comparison hover. Attached here rather than baked,
+                // because HoverIndex carries a delegate and an index and a
+                // scene serialises neither usefully -- same reason the fight
+                // attaches it to its intent badges.
+                var hover = offerButtons[i].gameObject.AddComponent<HoverIndex>();
+                hover.Index = index;
+                hover.Changed = OnOfferHover;
             }
         }
 
@@ -166,6 +177,45 @@ namespace PrincesPalace
         // FightBootstrap.LastReward itself would tie this screen to the one
         // bootstrap that happens to own it today, and the Reckoning is the sort
         // of thing a test wants to drive with a fixture.
+        private static void SetActive(GameObject go, bool active)
+        {
+            if (go != null && go.activeSelf != active) go.SetActive(active);
+        }
+
+        // What this offer would do to every member of the squad.
+        //
+        // Rebuilt on each hover rather than cached: it runs the real
+        // clone-and-resolve Compare, and the squad's gear can change between
+        // one Reckoning and the next.
+        private void OnOfferHover(int index, bool entered)
+        {
+            if (offerTooltip == null) return;
+
+            if (!entered || _taken || index < 0 || index >= _offers.Count)
+            {
+                SetActive(offerTooltip, false);
+                return;
+            }
+
+            var item = ContentDatabase.GetItem(_offers[index].ItemId);
+            var save = SaveSlotManager.CurrentSave;
+            if (item == null || save == null)
+            {
+                SetActive(offerTooltip, false);
+                return;
+            }
+
+            string body = ItemDescription.SquadComparisonBody(save.ActiveSquad(), item, _offers[index].Plus);
+            if (string.IsNullOrEmpty(body))
+            {
+                SetActive(offerTooltip, false);
+                return;
+            }
+
+            if (offerTooltipText != null) offerTooltipText.SetContent(body);
+            SetActive(offerTooltip, true);
+        }
+
         public void Show(CombatReward reward, List<ItemOffer> offers)
         {
             _reward = reward;
@@ -301,6 +351,17 @@ namespace PrincesPalace
                 var glow = item == null ? Color.white : RarityColors.For(item);
                 glow.a = _taken ? 0.18f : 0.42f;
                 offerBursts[i].color = glow;
+
+                // The halo carries the SAME colour at lower alpha. It is the
+                // part that survives being stood on: the burst's rays clear the
+                // icon, but its core is hidden behind the item, so on its own
+                // the rarity read as a few spikes rather than as a colour.
+                if (offerHalos != null && i < offerHalos.Length && offerHalos[i] != null)
+                {
+                    var soft = glow;
+                    soft.a = _taken ? 0.12f : 0.30f;
+                    offerHalos[i].color = soft;
+                }
 
                 // Every offer stays visible after one is taken, and all of them
                 // stop responding. Hiding the two not chosen would erase the

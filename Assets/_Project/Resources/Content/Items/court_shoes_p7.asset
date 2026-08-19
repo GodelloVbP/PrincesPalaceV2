@@ -58,7 +58,7 @@ MonoBehaviour:
     intelligence: 0
     charisma: 0
   startingStock: 0
-  iconPath: 
+  iconPath: Assets/_Project/Art/Items/court_boots_sheet/level_7.png
   cost: 430
   sortOrder: 190407
   setId: court

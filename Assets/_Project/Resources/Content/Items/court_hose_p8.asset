@@ -58,7 +58,7 @@ MonoBehaviour:
     intelligence: 0
     charisma: 0
   startingStock: 0
-  iconPath: 
+  iconPath: Assets/_Project/Art/Items/court_pantalon_sheets/level_8.png
   cost: 480
   sortOrder: 190208
   setId: court

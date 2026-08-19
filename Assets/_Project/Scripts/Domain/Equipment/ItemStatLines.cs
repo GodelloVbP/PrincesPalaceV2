@@ -93,6 +93,55 @@ namespace PrincesPalace.Domain.Equipment
             return lines;
         }
 
+        // ONE BLOCK PER SQUAD MEMBER, for a reward the whole squad shares.
+        //
+        // The Reckoning hands its prize to the STOCKPILE, not to a character,
+        // so there is no single "currently equipped" to diff against -- which
+        // is why the comparison the character sheet has could not simply be
+        // pointed at this screen. Every member gets their own line, because
+        // "+4 Attack for Shawn, nothing for Wool" is the decision the player is
+        // actually being asked to make.
+        //
+        // A member with no movement still gets a line saying so. Dropping them
+        // would make the box change height per hover and, worse, read as though
+        // that character had not been considered.
+        public static string SquadBody(IReadOnlyList<(string Name, ItemComparison Comparison)> squad)
+        {
+            if (squad == null || squad.Count == 0) return "";
+
+            var blocks = new List<string>();
+            foreach (var member in squad)
+            {
+                blocks.Add($"{member.Name}\n   {LineFor(member.Comparison)}");
+            }
+
+            return string.Join("\n", blocks);
+        }
+
+        // ONE line describing what the swap does to this member.
+        //
+        // "no change" and "cannot equip" are DIFFERENT ANSWERS and collapsing
+        // them is the trap: an item whose requirements a character does not
+        // meet is inert, so every delta is legitimately zero -- and reporting
+        // that as "no change" tells the player the item is useless to them when
+        // the truth is that it is useless to them YET. CandidateIsLive is the
+        // only thing that can tell those two apart.
+        private static string LineFor(in ItemComparison comparison)
+        {
+            if (!comparison.CandidateIsLive) return "cannot equip yet";
+
+            var deltas = DeltaLines(comparison);
+            string body = deltas.Count == 0 ? "no change" : string.Join("   ", deltas);
+
+            // A swap that knocks another slot dormant is the one consequence a
+            // list of deltas hides: the numbers above already include the loss,
+            // so without this the player sees a drop with no cause.
+            int inert = comparison.NewlyInertSlots?.Count ?? 0;
+            if (inert > 0) body += $"   ({inert} other slot{(inert == 1 ? "" : "s")} goes inert)";
+
+            return body;
+        }
+
         // "Requires STR 15", green once met and red with the shortfall named
         // once not.
         //

@@ -58,7 +58,7 @@ MonoBehaviour:
     intelligence: 0
     charisma: 0
   startingStock: 0
-  iconPath: 
+  iconPath: Assets/_Project/Art/Items/steel_boots_sheet/level_3.png
   cost: 140
   sortOrder: 110402
   setId: steel

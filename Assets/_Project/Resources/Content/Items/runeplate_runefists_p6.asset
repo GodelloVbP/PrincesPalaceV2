@@ -57,7 +57,7 @@ MonoBehaviour:
     intelligence: 0
     charisma: 0
   startingStock: 0
-  iconPath: 
+  iconPath: Assets/_Project/Art/Items/arcane_gauntlets_sheet/level_6.png
   cost: 375
   sortOrder: 160306
   setId: runeplate

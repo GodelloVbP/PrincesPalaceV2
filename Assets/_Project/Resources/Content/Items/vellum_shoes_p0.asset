@@ -58,7 +58,7 @@ MonoBehaviour:
     intelligence: 0
     charisma: 0
   startingStock: 0
-  iconPath: 
+  iconPath: Assets/_Project/Art/Items/vellum_slippers_sheet/level_1.png
   cost: 55
   sortOrder: 170400
   setId: vellum

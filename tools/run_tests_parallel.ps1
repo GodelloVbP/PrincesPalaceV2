@@ -295,7 +295,25 @@ if ($BuildContent -or $BuildScenes) {
     robocopy "$primary\ProjectSettings" "$SourceProject\ProjectSettings" EditorBuildSettings.asset /NFL /NDL /NJH /NJS /NP | Out-Null
     # Art too: LoadSprite silently flips a texture's importer settings and
     # writes a fresh .meta for anything newly referenced (gotcha #3).
-    robocopy "$primary\Assets\_Project\Art" "$SourceProject\Assets\_Project\Art" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
+    #
+    # /E, NOT /MIR, AND THAT DISTINCTION HAS ALREADY DESTROYED WORK.
+    #
+    # Every other folder above is GENERATED, so mirroring is right for them: an
+    # asset the builder stopped emitting should disappear from main too. Art is
+    # the one folder here that is HAND-AUTHORED, and the runner only ever ADDS
+    # to it (importer settings, fresh .meta). It never legitimately deletes.
+    #
+    # With /MIR the deletion half was live anyway, against a snapshot of main
+    # taken at the START of the run. So any art added to main WHILE a build was
+    # running -- a download finishing, a file dropped into Art/Items -- was
+    # absent from the runner and got mirrored out of existence at the end.
+    # robocopy deletes permanently; it does not use the Recycle Bin. Fifteen
+    # generated sheets went that way on 2026-08-18 and were only recoverable
+    # because they still existed in the tool that made them.
+    #
+    # /E copies new and updated files and deletes nothing, which is the whole
+    # of what this line was ever for.
+    robocopy "$primary\Assets\_Project\Art" "$SourceProject\Assets\_Project\Art" /E /NFL /NDL /NJH /NJS /NP | Out-Null
     # New scripts' .meta files, so a GUID cannot regenerate later and orphan
     # every asset referencing it (gotcha #2). Only files main does not have.
     robocopy "$primary\Assets\_Project\Scripts" "$SourceProject\Assets\_Project\Scripts" *.meta /S /XC /XN /XO /NFL /NDL /NJH /NJS /NP | Out-Null

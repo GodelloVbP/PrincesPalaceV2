@@ -58,7 +58,7 @@ MonoBehaviour:
     intelligence: 0
     charisma: 0
   startingStock: 0
-  iconPath: 
+  iconPath: Assets/_Project/Art/Items/vellum_gloves_sheet/level_4.png
   cost: 190
   sortOrder: 170303
   setId: vellum

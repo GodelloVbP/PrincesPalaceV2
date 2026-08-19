@@ -58,7 +58,7 @@ MonoBehaviour:
     intelligence: 0
     charisma: 0
   startingStock: 0
-  iconPath: 
+  iconPath: Assets/_Project/Art/Items/regalia_gloves_sheet/level_5.png
   cost: 245
   sortOrder: 180304
   setId: regalia

@@ -57,7 +57,7 @@ MonoBehaviour:
     intelligence: 0
     charisma: 0
   startingStock: 0
-  iconPath: 
+  iconPath: Assets/_Project/Art/Items/arcane_sabatons_sheet/level_4.png
   cost: 225
   sortOrder: 160203
   setId: runeplate

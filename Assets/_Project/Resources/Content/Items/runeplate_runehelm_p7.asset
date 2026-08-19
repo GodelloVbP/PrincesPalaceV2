@@ -57,7 +57,7 @@ MonoBehaviour:
     intelligence: 0
     charisma: 0
   startingStock: 0
-  iconPath: 
+  iconPath: Assets/_Project/Art/Items/arcane_helmet_sheet/level_7.png
   cost: 425
   sortOrder: 160007
   setId: runeplate

@@ -58,7 +58,7 @@ MonoBehaviour:
     intelligence: 0
     charisma: 0
   startingStock: 0
-  iconPath: 
+  iconPath: Assets/_Project/Art/Items/regalia_skirt_sheet/level_10.png
   cost: 515
   sortOrder: 180210
   setId: regalia

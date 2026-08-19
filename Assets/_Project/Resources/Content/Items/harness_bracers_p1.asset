@@ -58,7 +58,7 @@ MonoBehaviour:
     intelligence: 0
     charisma: 0
   startingStock: 0
-  iconPath: 
+  iconPath: Assets/_Project/Art/Items/harness_bracers_sheet/level_2.png
   cost: 70
   sortOrder: 130301
   setId: harness

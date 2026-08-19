@@ -58,7 +58,7 @@ MonoBehaviour:
     intelligence: 0
     charisma: 0
   startingStock: 0
-  iconPath: 
+  iconPath: Assets/_Project/Art/Items/brigandine_body_sheet/level_5.png
   cost: 190
   sortOrder: 150104
   setId: brigandine

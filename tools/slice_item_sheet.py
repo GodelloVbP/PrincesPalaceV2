@@ -82,6 +82,60 @@ SHEETS = {
     "robe_top_silk_sheet": (2, 5),
     "daggers": (2, 5),
     "longswords": (2, 5),
+    # --- generated 2026-08-18, one sheet per set/slot -------------------------
+    # Every one is 2x5. Named <set>_<piece>_sheet so the folder the slicer
+    # creates is what itemsets.json's iconSheet points at.
+    "steel_platebody_sheet": (2, 5),
+    "steel_legs_sheet": (2, 5),
+    "steel_gloves_sheet": (2, 5),
+    "steel_boots_sheet": (2, 5),
+    "leather_boots_sheet": (2, 5),
+    "silk_hats_sheet": (2, 5),
+    "brigandine_body_sheet": (2, 5),
+    "brigandine_helmet_sheet": (2, 5),
+    "brigandine_legs_sheet": (2, 5),
+    "brigandine_gloves_sheet": (2, 5),
+    "brigandine_boots_sheet": (2, 5),
+    "harness_body_sheet": (2, 5),
+    "harness_warmask_sheet": (2, 5),
+    "harness_kilt_sheet": (2, 5),
+    "harness_bracers_sheet": (2, 5),
+    "harness_boots_sheet": (2, 5),
+    # bulwark (siege_*) and runeplate (arcane_*), 2026-08-18. NOTE the arcane
+    # filenames are misleading: "sabatons" is the LEG piece and "boots" is the
+    # foot piece. Verified against the art, not the names.
+    "siege_cuirass_helmet": (2, 5),
+    "siege_cuirass_sheet": (2, 5),
+    "siege_tassets_sheet": (2, 5),
+    "siege_gloves_sheets": (2, 5),
+    "siege_sabatons_sheet": (2, 5),
+    "arcane_helmet_sheet": (2, 5),
+    "arcane_cuirass_sheet": (2, 5),
+    "arcane_sabatons_sheet": (2, 5),
+    "arcane_gauntlets_sheet": (2, 5),
+    "arcane_boots_sheet": (2, 5),
+    # court, regalia, vellum and wool, 2026-08-18. Slot mapping verified
+    # against the ART rather than the filenames -- see the arcane_* note above.
+    "court_coronet_sheet": (2, 5),
+    "court_doublet_sheet": (2, 5),
+    "court_pantalon_sheets": (2, 5),
+    "court_gloves_sheet": (2, 5),
+    "court_boots_sheet": (2, 5),
+    "regalia_ritualmask_sheet": (2, 5),
+    "regalia_robes_sheet": (2, 5),
+    "regalia_skirt_sheet": (2, 5),
+    "regalia_gloves_sheet": (2, 5),
+    "regalia_slippers_sheet": (2, 5),
+    "vellum_hood_sheet": (2, 5),
+    "vellum_robe_sheet": (2, 5),
+    "vellum_skirts_sheet": (2, 5),
+    "vellum_gloves_sheet": (2, 5),
+    "vellum_slippers_sheet": (2, 5),
+    "wool_hood_sheet": (2, 5),
+    "wool_robes_sheet": (2, 5),
+    "wool_pants_sheet": (2, 5),
+    "wool_gloves_sheet": (2, 5),
+    "wool_booties_sheet": (2, 5),
 }
 
 # Longest edge of a delivered icon. The sources are ~300x500 per cell, far more

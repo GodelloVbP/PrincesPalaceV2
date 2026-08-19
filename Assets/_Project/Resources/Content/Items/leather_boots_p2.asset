@@ -58,7 +58,7 @@ MonoBehaviour:
     intelligence: 0
     charisma: 0
   startingStock: 0
-  iconPath: 
+  iconPath: Assets/_Project/Art/Items/leather_boots_sheet/level_3.png
   cost: 70
   sortOrder: 100402
   setId: leather

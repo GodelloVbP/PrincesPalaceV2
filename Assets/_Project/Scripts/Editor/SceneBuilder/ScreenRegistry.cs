@@ -132,6 +132,8 @@ public static class ScreenRegistry
                 fight.continueButton = result.Button(screen.ContinueButton);
 
                 fight.enemyIntentIcons = screen.EnemyIntentIcons.Select(result.Go).ToArray();
+                WireSystemMenu(result, screen.SystemMenu, screen.Sheet.Root);
+
                 fight.intentTooltip = result.Go(screen.IntentTooltip);
                 fight.intentTooltipText = result.Tmp(screen.IntentTooltipText);
 
@@ -517,6 +519,8 @@ public static class ScreenRegistry
                 WireOverlay(result, screen.Sheet, lockedForFight: false);
                 map.characterSheetPanel = result.Go(screen.Sheet.Root);
 
+                WireSystemMenu(result, screen.SystemMenu, screen.Sheet.Root);
+
                 // The painted room icons. Bound here rather than in the
                 // controller because "Assets/..." is an editor-only address and
                 // MapController lives in Core.
@@ -677,6 +681,33 @@ public static class ScreenRegistry
     {
         WireOverlay(result, screen.Overlay, lockedForFight: false);
         hub.characterOverlayPanel = result.Go(screen.Overlay.Root);
+
+        // The hub's overlay, its glossary and its relic draft all sit on
+        // Escape-ish paths already, so each is declared as owning Escape ahead
+        // of the overarching menu.
+        WireSystemMenu(result, screen.SystemMenu,
+            screen.Overlay.Root, screen.Glossary.Root, screen.Draft.Root);
+    }
+
+    // The overarching menu's wiring, shared by every scene that carries one.
+    //
+    // `escapeConsumers` is the only per-scene difference: the fight and the map
+    // already put the character sheet on Escape, and this menu must not open on
+    // top of a sheet the player is trying to close. Passed in rather than found
+    // by name, so a scene that grows another Escape-owning panel declares it
+    // here instead of the menu guessing.
+    private static SystemMenuController WireSystemMenu(
+        UiEmitResult result, SystemMenuScreen menu, params NodeRef[] escapeConsumers)
+    {
+        var controller = result.Attach<SystemMenuController>(menu.Root);
+
+        controller.panel = result.Go(menu.Root);
+        controller.tabButtons = menu.TabButtons.Select(result.Button).ToArray();
+        controller.tabUnderlines = menu.TabUnderlines.Select(result.Go).ToArray();
+        controller.panes = menu.Panes.Select(result.Go).ToArray();
+        controller.escapeConsumers = escapeConsumers.Select(result.Go).ToArray();
+
+        return controller;
     }
 
     // The overlay's wiring, shared by the hub's copy and the fight's.
@@ -785,6 +816,9 @@ public static class ScreenRegistry
         controller.goldLabel = result.Tmp(screen.GoldLabel);
         controller.continueButton = result.Button(screen.ContinueButton);
 
+        controller.offerTooltip = result.Go(screen.OfferTooltip);
+        controller.offerTooltipText = result.Tmp(screen.OfferTooltipText);
+        controller.offerHalos = screen.OfferHalos.Select(result.Image).ToArray();
         controller.offerBursts = screen.OfferBursts.Select(result.Image).ToArray();
         controller.offerBurstRects = screen.OfferBursts.Select(result.Rect).ToArray();
         controller.offerIcons = screen.OfferIcons.Select(result.Image).ToArray();
