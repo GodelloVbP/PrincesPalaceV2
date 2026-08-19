@@ -203,18 +203,62 @@ namespace PrincesPalace.PlayModeTests
         // The fallback only helps if it is drawable, and this font is a static
         // atlas that silently renders unknown characters as nothing -- which is
         // how the first version of this feature shipped invisible.
-        [Test]
-        public void TheTextFallbackUsesCharactersTheFontActuallyHas()
+        [UnityTest]
+        public IEnumerator TheTextFallbackUsesCharactersTheFontActuallyHas()
         {
-            var font = Resources.FindObjectsOfTypeAll<TMP_FontAsset>().FirstOrDefault();
-            if (font == null) Assert.Ignore("no TMP font asset loaded in this context");
+            // THE FONT A LABEL IS ACTUALLY WEARING, taken off a live scene.
+            //
+            // This asked Resources.FindObjectsOfTypeAll<TMP_FontAsset>() for the
+            // FIRST font asset it happened to find, which is the same incidental
+            // -order trap as CLAUDE.md's gotcha #4. Three font assets are loaded
+            // here: the project's Chakra Petch, TMP's LiberationSans, and
+            // "LiberationSans SDF - Fallback" -- and that last one is a nearly
+            // EMPTY atlas. The day the enumeration order put it first, the test
+            // reported that the game's font could not draw the letter F.
+            //
+            // It was also passing for the wrong reason before that: any font
+            // with a Latin alphabet satisfies an all-ASCII fallback table, so
+            // the check only ever meant something by luck. Reading the font off
+            // a real TMP_Text is the only version that answers the question the
+            // header claims it answers.
+            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
+            yield return null;
+
+            var label = Object.FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                .FirstOrDefault(t => t.font != null);
+            Assert.IsNotNull(label, "the fight scene has no TMP_Text carrying a font");
+
+            var font = label.font;
+
+            // THE CHECK'S OWN PREMISE, pinned first.
+            //
+            // With tryAddCharacter the assertion below only means something if
+            // there is still something it would refuse. U+2694 CROSSED SWORDS is
+            // the exact character the intent badges first shipped with, drawn as
+            // nothing at all because no atlas had it -- so if Chakra Petch ever
+            // gains an emoji block, this line fails and says the check below has
+            // gone toothless, rather than the check quietly passing forever.
+            Assert.IsFalse(font.HasCharacter('⚔', searchFallbacks: true, tryAddCharacter: true),
+                $"'{font.name}' can now draw U+2694, so the assertion below no longer proves anything. " +
+                "Pick a character this typeface genuinely lacks, or drop this guard deliberately.");
 
             foreach (EnemyIntentKind kind in System.Enum.GetValues(typeof(EnemyIntentKind)))
             {
                 foreach (char c in EnemyIntentIcons.For(kind))
                 {
-                    Assert.IsTrue(font.HasCharacter(c),
-                        $"the fallback for {kind} uses '{c}' (U+{(int)c:X4}), which this font cannot draw");
+                    // tryAddCharacter, because this atlas is DYNAMIC.
+                    //
+                    // The one-argument HasCharacter answers "is this glyph in
+                    // the atlas right now", and on a dynamic font that is a
+                    // question about what has been drawn so far, not about what
+                    // the font contains -- it reported that Chakra Petch could
+                    // not draw a capital F, on a screen full of capital Fs. The
+                    // three-argument form asks the typeface, adding the glyph if
+                    // it is there, which is exactly what TMP does at draw time.
+                    // An emoji the TTF genuinely lacks still comes back false,
+                    // so the trap this test exists for is still caught.
+                    Assert.IsTrue(font.HasCharacter(c, searchFallbacks: true, tryAddCharacter: true),
+                        $"the fallback for {kind} uses '{c}' (U+{(int)c:X4}), which '{font.name}' cannot draw");
                 }
             }
         }
