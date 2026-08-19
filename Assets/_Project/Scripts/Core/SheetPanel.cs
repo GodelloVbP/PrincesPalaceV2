@@ -27,15 +27,18 @@ namespace PrincesPalace
     {
         public static bool IsOpen(GameObject panel) => panel != null && panel.activeSelf;
 
-        // C means Character and I means Inventory, which on the dossier are two
-        // tabs onto ONE pane rather than two panes. The tab still has to follow
-        // the key that was pressed, so this maps the key's meaning and lets
-        // SystemMenuTabs decide which pane that tab shows.
+        // BOTH KEYS LAND ON ONE TAB now. The design pass merged Character and
+        // Inventory into a single tab, because the dossier was always both --
+        // it carries its own pack -- and a second tab onto the same pane was a
+        // second door onto one room.
+        //
+        // So the switch-vs-close rule below has nothing left to switch between
+        // and collapses to a plain toggle. The `inventory` argument stays in the
+        // signature: three controllers pass it, the dossier could yet open with
+        // its pack already up, and removing it would be a rewiring of every
+        // caller to say the same thing.
         private static SystemMenuTab TabFor(bool inventory) =>
-            inventory ? SystemMenuTab.Inventory : SystemMenuTab.Character;
-
-        private static bool ShowingInventory(SystemMenuController menu) =>
-            menu.SelectedIndex == SystemMenuTabs.IndexOf(SystemMenuTab.Inventory);
+            SystemMenuTab.CharacterInventory;
 
         // Pressing the key for the pane already showing closes the sheet.
         // Pressing the OTHER pane's key while it is open switches to that pane
@@ -44,14 +47,6 @@ namespace PrincesPalace
         public static void Toggle(GameObject panel, bool inventory)
         {
             if (panel == null) return;
-
-            var menu = panel.GetComponent<SystemMenuController>();
-
-            if (panel.activeSelf && menu != null && ShowingInventory(menu) != inventory)
-            {
-                menu.Select(TabFor(inventory));
-                return;
-            }
 
             Set(panel, !panel.activeSelf, inventory);
         }

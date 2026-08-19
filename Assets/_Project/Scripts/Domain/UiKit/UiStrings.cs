@@ -396,10 +396,18 @@ namespace PrincesPalace.Domain.UiKit
         //
         // Labels only. What each tab CONTAINS is a design job; these exist so
         // the bar can be built and measured before any of it lands.
-        public static readonly UiString SystemTabCharacter =
-            UiString.Define("system.tab.character", "CHARACTER");
-        public static readonly UiString SystemTabInventory =
-            UiString.Define("system.tab.inventory", "INVENTORY");
+        // ONE label where there were two. The dossier was always both halves,
+        // so a separate Inventory tab was a second door onto the same room.
+        public static readonly UiString SystemTabCharacterInventory =
+            UiString.Define("system.tab.character_inventory", "CHARACTER & INVENTORY");
+        // The design's overflow fallback, used before the bar is allowed to
+        // wrap or scroll: shorten this tab rather than re-laying the row.
+        public static readonly UiString SystemTabCharacterShort =
+            UiString.Define("system.tab.character_short", "CHARACTER");
+        public static readonly UiString SystemTabFloorMap =
+            UiString.Define("system.tab.floor_map", "FLOOR MAP");
+        public static readonly UiString SystemTabRunStats =
+            UiString.Define("system.tab.run_stats", "RUN STATISTICS");
         public static readonly UiString SystemTabOptions =
             UiString.Define("system.tab.options", "OPTIONS");
         public static readonly UiString SystemTabMainMenu =
@@ -413,6 +421,14 @@ namespace PrincesPalace.Domain.UiKit
         // pane never needed to.
         public static readonly UiString SystemPlaceholder =
             UiString.Define("system.placeholder", "CONTENT TO COME");
+        public static readonly UiString SystemMenuTitle =
+            UiString.Define("system.title", "DIVINE PRINCIPALITY");
+        public static readonly UiString SystemBetweenDescents =
+            UiString.Define("system.between_descents", "BETWEEN DESCENTS");
+        public static readonly UiString SystemEscHint =
+            UiString.Define("system.esc_hint", "ESC");
+        public static readonly UiString SystemClose =
+            UiString.Define("system.close", "X");
 
         // ---- the character dossier -----------------------------------------
         public static readonly UiString OverlayLoadout = UiString.Define("dossier.loadout", "LOADOUT");
@@ -441,8 +457,10 @@ namespace PrincesPalace.Domain.UiKit
             OverlayLoadout, OverlayAttributes, OverlayXp, OverlaySkills, OverlayPack,
             OverlayPackTitle, OverlayPackClose, OverlayCarried, OverlayPrev, OverlayNext,
             OverlayTwoHanded, PackFilterAll, PackFilterArmour, PackFilterWeapons, PackFilterSalves,
-            SystemTabCharacter, SystemTabInventory, SystemTabOptions, SystemTabMainMenu,
-            SystemPlaceholder,
+            SystemTabCharacterInventory, SystemTabCharacterShort, SystemTabFloorMap, SystemTabRunStats,
+            SystemTabOptions, SystemTabMainMenu,
+            SystemPlaceholder, SystemEscHint, SystemClose,
+            SystemMenuTitle, SystemBetweenDescents,
             Play, Options, Exit, OptionsTitle, Close, Cancel,
             ReckoningTitle, ReckoningExperience, ReckoningGold, ReckoningChooseOne,
             ReckoningLevel, ReckoningLevelUp, ReckoningExpGain, ReckoningDowned,

@@ -163,6 +163,22 @@ namespace PrincesPalace
         // Ids that no longer resolve are dropped rather than throwing — a save
         // written before a character was renamed stays loadable, matching
         // Reconcile's posture everywhere else.
+        // Embers are held PER CHARACTER, not in the wallet -- wallet.embers is
+        // a migration source and nothing live reads it. So "how many embers do
+        // I have" is a sum over the roster, and it lives here rather than in
+        // whichever screen asked first: the hub had it as a private static, and
+        // the system menu's lintel needed the same number.
+        public int EmberTotal()
+        {
+            int total = 0;
+            foreach (var character in roster ?? new List<Character>())
+            {
+                if (character != null) total += character.embers;
+            }
+
+            return total;
+        }
+
         public List<Character> ActiveSquad()
         {
             var selected = selectedCharacterIds

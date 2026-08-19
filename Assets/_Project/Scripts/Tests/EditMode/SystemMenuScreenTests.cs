@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using PrincesPalace.Domain.UiKit;
@@ -5,136 +6,194 @@ using PrincesPalace.Domain.UiKit.Screens;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // The overarching menu's skeleton.
+    // The overarching menu's bar and panes.
     //
-    // The brief for this screen was "make the top bar relative so we can add
-    // more options easily", so that is what these test: not that the bar looks
-    // a particular way, but that ADDING A TAB is a one-line change which cannot
-    // silently break the layout. Every assertion here is about the arithmetic
-    // and the pairing, because the content is a design job that has not
-    // happened yet.
+    // The brief was "make the top bar relative so we can add more options
+    // easily", so that is what these test: not that the bar looks a particular
+    // way, but that changing the tab table is a one-line change which cannot
+    // silently break the layout.
+    //
+    // THE THREE-TAB LAYOUT IS ONLY EVER CHECKED HERE. The scene on disk carries
+    // the five-tab bar, because that is the set with the most parts and a scene
+    // is generated once; the three-tab layout is applied at runtime by
+    // SystemMenuController. So UiAudit -- which re-solves what was emitted --
+    // cannot see it, and these tests stand in for that: same overlap, inset and
+    // flush-right checks, done against the arithmetic instead of the tree.
     public class SystemMenuScreenTests
     {
-        // ---- the bar is relative, not hand-placed ------------------------------
+        private static IReadOnlyList<SystemMenuTabDef> OutOfRun => SystemMenuTabs.Visible(inRun: false);
+        private static IReadOnlyList<SystemMenuTabDef> InRun => SystemMenuTabs.Visible(inRun: true);
 
-        // The property the whole design rests on: tab N+1 sits exactly one
-        // pitch right of tab N, whatever N is. A bar with hand-placed x values
-        // passes every other test in this file and still has to be re-authored
-        // to add an entry.
-        [Test]
-        public void EveryTabSitsOnePitchRightOfTheOneBeforeIt()
+        // ---- both modes lay out legally ----------------------------------------
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void NoTwoTabsOverlap(bool inRun)
         {
-            float pitch = SystemMenuLayout.TabWidth + SystemMenuLayout.TabGap;
+            var tabs = SystemMenuTabs.Visible(inRun);
+            var lefts = SystemMenuLayout.TabLefts(tabs);
+            var widths = SystemMenuLayout.TabWidths(tabs);
 
-            for (int i = 1; i < 8; i++)
+            for (int i = 0; i < tabs.Count - 1; i++)
             {
-                Assert.AreEqual(pitch,
-                    SystemMenuLayout.TabCentreX(i) - SystemMenuLayout.TabCentreX(i - 1), 0.01f,
-                    $"tab {i} is not one pitch from tab {i - 1} - the strip is not relative");
+                Assert.LessOrEqual(lefts[i] + widths[i], lefts[i + 1],
+                    $"tab {i} ({tabs[i].Key}) runs into tab {i + 1} ({tabs[i + 1].Key})");
             }
         }
 
-        [Test]
-        public void TheFirstTabStartsAtTheDeclaredInset()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void TheRowStartsAtTheInsetAndEndsFlush(bool inRun)
         {
-            float leftEdge = SystemMenuLayout.TabCentreX(0) - SystemMenuLayout.TabWidth * 0.5f;
+            var tabs = SystemMenuTabs.Visible(inRun);
+            var lefts = SystemMenuLayout.TabLefts(tabs);
+            var widths = SystemMenuLayout.TabWidths(tabs);
 
-            Assert.AreEqual(-SystemMenuLayout.HalfWidth + SystemMenuLayout.BarInsetLeft, leftEdge, 0.01f,
-                "the strip does not begin at the bar's left inset");
+            Assert.AreEqual(SystemMenuLayout.BarInsetLeft, lefts[0], 0.01f,
+                "the first tab does not start at the declared inset");
+
+            float right = lefts[tabs.Count - 1] + widths[tabs.Count - 1];
+            Assert.AreEqual(SystemMenuLayout.BarInsetLeft + SystemMenuLayout.RowWidth, right, 0.01f,
+                "the row does not end flush against the right inset - the gaps are not sharing out the " +
+                "remainder, so the bar will look left-heavy");
         }
 
-        // A divider belongs to the GAP, not to a tab. If it drifted onto a tab's
-        // edge it would read as a border on the tab rather than a separator
-        // between two.
-        [Test]
-        public void EachDividerSitsInTheMiddleOfItsGap()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void EveryDividerSitsInTheMiddleOfItsGap(bool inRun)
         {
-            for (int i = 0; i < 4; i++)
-            {
-                float rightOfThis = SystemMenuLayout.TabCentreX(i) + SystemMenuLayout.TabWidth * 0.5f;
-                float leftOfNext = SystemMenuLayout.TabCentreX(i + 1) - SystemMenuLayout.TabWidth * 0.5f;
+            var tabs = SystemMenuTabs.Visible(inRun);
+            var lefts = SystemMenuLayout.TabLefts(tabs);
+            var widths = SystemMenuLayout.TabWidths(tabs);
 
-                Assert.AreEqual((rightOfThis + leftOfNext) * 0.5f,
-                    SystemMenuLayout.DividerCentreX(i), 0.01f,
-                    $"divider {i} is not centred between tabs {i} and {i + 1}");
+            for (int i = 0; i < tabs.Count - 1; i++)
+            {
+                float expected = -SystemMenuLayout.HalfWidth
+                                 + (lefts[i] + widths[i] + lefts[i + 1]) * 0.5f;
+
+                Assert.AreEqual(expected, SystemMenuLayout.DividerCentreX(tabs, i), 0.01f,
+                    $"divider {i} is not centred in its gap");
             }
         }
 
-        // ---- and it refuses to overflow rather than doing it quietly ----------
-
-        // AUDIT #6 and #7 are both the same bug: a strip sized from a count that
-        // grew, running into something, found by a player. This screen exists to
-        // be added to, so it gets the check up front.
+        // The design states these outright, so they are pinned as literals
+        // rather than recomputed -- a test that re-derives the formula only
+        // proves the formula equals itself.
         [Test]
-        public void TheCurrentTabsFitTheBar()
+        public void TheThreeTabRowMatchesTheDesignsNumbers()
         {
-            Assert.IsTrue(SystemMenuLayout.StripFits(SystemMenuTabs.Count),
-                $"{SystemMenuTabs.Count} tabs do not fit a bar that holds {SystemMenuLayout.MaxTabs()}");
+            var lefts = SystemMenuLayout.TabLefts(OutOfRun);
+            var widths = SystemMenuLayout.TabWidths(OutOfRun);
 
-            Assert.LessOrEqual(SystemMenuLayout.StripRightEdge(SystemMenuTabs.Count),
-                SystemMenuLayout.HalfWidth - SystemMenuLayout.BarInsetRight + 0.01f,
-                "the strip reaches past the bar's right inset");
+            Assert.AreEqual(3, OutOfRun.Count, "out of a run the menu should have three tabs");
+            CollectionAssert.AreEqual(new[] { 40f, 590f, 1140f }, lefts.Select(l => (float)l).ToArray());
+            Assert.That(widths, Is.All.EqualTo(420f));
         }
 
-        // MaxTabs has to be honest in both directions, or the guard is decoration.
         [Test]
-        public void MaxTabsIsTheLastCountThatActuallyFits()
+        public void TheFiveTabRowMatchesTheDesignsNumbers()
         {
-            int max = SystemMenuLayout.MaxTabs();
+            var lefts = SystemMenuLayout.TabLefts(InRun);
+            var widths = SystemMenuLayout.TabWidths(InRun);
 
-            Assert.LessOrEqual(SystemMenuLayout.StripRightEdge(max),
-                SystemMenuLayout.HalfWidth - SystemMenuLayout.BarInsetRight + 0.01f,
-                $"MaxTabs says {max} fits, but that strip already overflows");
+            Assert.AreEqual(5, InRun.Count, "in a run the menu should have five tabs");
+            CollectionAssert.AreEqual(new[] { 320f, 168f, 216f, 140f, 168f }, widths);
+            CollectionAssert.AreEqual(new[] { 40f, 487f, 782f, 1125f, 1392f }, lefts);
+            Assert.AreEqual(127f, SystemMenuLayout.GapFor(InRun), 0.01f);
+        }
 
-            Assert.Greater(SystemMenuLayout.StripRightEdge(max + 1),
-                SystemMenuLayout.HalfWidth - SystemMenuLayout.BarInsetRight,
-                $"MaxTabs says {max}, but {max + 1} would still fit - the bar is under-reporting");
+        // The underline marks the WORD, not the box. In the three-tab mode the
+        // boxes are 420 wide and the words are not, so an underline sized to
+        // the box reads as a second divider.
+        [Test]
+        public void TheUnderlineIsTheLabelsWidthNotTheBoxs()
+        {
+            var tabs = OutOfRun;
+            var widths = SystemMenuLayout.TabWidths(tabs);
 
-            Assert.IsFalse(SystemMenuLayout.StripFits(max + 1));
+            for (int i = 0; i < tabs.Count; i++)
+            {
+                Assert.AreEqual(tabs[i].LabelWidth + SystemMenuLayout.UnderlineOverhang,
+                    SystemMenuLayout.UnderlineWidth(tabs[i]), 0.01f);
+                Assert.Less(SystemMenuLayout.UnderlineWidth(tabs[i]), widths[i],
+                    $"{tabs[i].Key}'s underline is as wide as its box");
+            }
+        }
+
+        // ---- the capacity guard -------------------------------------------------
+
+        [Test]
+        public void TheCurrentTabsFit()
+        {
+            Assert.IsTrue(SystemMenuLayout.StripFits(InRun),
+                $"the five-tab bar needs {SystemMenuLayout.StripWidth(InRun)}px of a " +
+                $"{SystemMenuLayout.RowWidth}px row");
+        }
+
+        // The guard is ARITHMETIC, not a count, and this is what that buys: the
+        // same number of tabs with longer labels must be refused. A count-based
+        // limit would call this fine and ship a bar running off its own panel.
+        [Test]
+        public void TheGuardRefusesTabsThatAreTooWordyRatherThanTooMany()
+        {
+            var wordy = SystemMenuTabs.All
+                .Select(t => new SystemMenuTabDef(t.Tab, t.Key, t.Label, labelWidth: 400f, runOnly: t.RunOnly))
+                .ToList();
+
+            Assert.AreEqual(SystemMenuTabs.Count, wordy.Count, "the count is unchanged");
+            Assert.IsFalse(SystemMenuLayout.StripFits(wordy),
+                "five 448px boxes need 2336px in a 1520px row and the guard let them through");
         }
 
         [Test]
         public void ThereIsRoomToGrow()
         {
-            // Not a layout rule, a DESIGN one: the stated purpose of this bar is
-            // that more options get added to it. Shipping it already full would
-            // meet every other assertion here and defeat the point.
-            Assert.Greater(SystemMenuLayout.MaxTabs(), SystemMenuTabs.Count,
-                "the bar is already at capacity, so the next tab cannot simply be added");
+            var plusOne = InRun.Concat(new[]
+            {
+                new SystemMenuTabDef(SystemMenuTab.Options, "Spare", UiStrings.SystemTabOptions, labelWidth: 92f),
+            }).ToList();
+
+            Assert.IsTrue(SystemMenuLayout.StripFits(plusOne),
+                "a sixth tab no longer fits, so the bar is full at five");
         }
 
-        // ---- the tree matches the table ---------------------------------------
+        // ---- the tree matches the table ----------------------------------------
 
         [Test]
-        public void EveryTabGetsAButtonAndAnUnderline()
+        public void EveryTabGetsAButtonAnUnderlineAndAHoverPlate()
         {
             var screen = SystemMenuScreen.Build();
 
             Assert.AreEqual(SystemMenuTabs.Count, screen.TabButtons.Count, "a tab is missing its button");
             Assert.AreEqual(SystemMenuTabs.Count, screen.TabUnderlines.Count, "a tab is missing its underline");
+            Assert.AreEqual(SystemMenuTabs.Count, screen.TabHovers.Count, "a tab is missing its hover plate");
         }
 
-        // NOT one pane per tab. Inventory shows Character's, because the dossier
-        // carries its own pack and two panes would be two copies of one screen.
+        // EVERY tab gets a pane now. Character and Inventory used to share one;
+        // the design merged them into a single tab instead, which is the same
+        // decision expressed once rather than twice.
         [Test]
-        public void OnlyPaneOwnersGetAPane()
+        public void EveryTabOwnsItsOwnPane()
         {
             var screen = SystemMenuScreen.Build();
 
-            Assert.AreEqual(SystemMenuTabs.PaneOwners.Count, screen.Panes.Count,
-                "the pane count no longer matches the tabs that own one");
-            Assert.Less(screen.Panes.Count, SystemMenuTabs.Count,
-                "every tab owns a pane again - Inventory should be sharing Character's");
+            Assert.AreEqual(SystemMenuTabs.Count, screen.Panes.Count,
+                "the pane count no longer matches the tab count");
+
+            for (int i = 0; i < SystemMenuTabs.Count; i++)
+            {
+                Assert.AreEqual(i, SystemMenuTabs.PaneIndexFor(i),
+                    "a tab is borrowing another's pane again - the controller and this table disagree");
+            }
         }
 
         [Test]
-        public void InventoryOpensTheSamePaneAsCharacter()
+        public void OneBarHoldsEnoughDividersForTheWidestSet()
         {
-            int character = SystemMenuTabs.IndexOf(SystemMenuTab.Character);
-            int inventory = SystemMenuTabs.IndexOf(SystemMenuTab.Inventory);
+            var screen = SystemMenuScreen.Build();
 
-            Assert.AreEqual(SystemMenuTabs.PaneIndexFor(character), SystemMenuTabs.PaneIndexFor(inventory),
-                "Inventory and Character must land on one pane - they are two doors into the same screen");
+            Assert.AreEqual(SystemMenuTabs.Count - 1, screen.TabDividers.Count,
+                "the bar cannot draw a divider for every gap the five-tab set has");
         }
 
         [Test]
@@ -142,7 +201,7 @@ namespace PrincesPalace.Domain.Tests
         {
             var screen = SystemMenuScreen.Build();
 
-            Assert.IsNotNull(screen.Dossier, "the Character pane has no dossier in it");
+            Assert.IsNotNull(screen.Dossier, "the Character & Inventory pane has no dossier in it");
             Assert.IsNotNull(screen.Dossier.Root);
         }
 
@@ -157,12 +216,7 @@ namespace PrincesPalace.Domain.Tests
             for (int i = 0; i < SystemMenuTabs.Count; i++)
             {
                 Assert.AreEqual($"SystemTab{SystemMenuTabs.All[i].Key}", screen.TabButtons[i].Node.Name);
-            }
-
-            var owners = SystemMenuTabs.PaneOwners;
-            for (int i = 0; i < owners.Count; i++)
-            {
-                Assert.AreEqual($"SystemPane{owners[i].Key}", screen.Panes[i].Node.Name);
+                Assert.AreEqual($"SystemPane{SystemMenuTabs.All[i].Key}", screen.Panes[i].Node.Name);
             }
         }
 
@@ -188,10 +242,41 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TabsHaveDistinctKeys()
         {
-            var keys = SystemMenuTabs.All.Select(t => t.Key).ToList();
-
-            CollectionAssert.AllItemsAreUnique(keys,
+            CollectionAssert.AllItemsAreUnique(SystemMenuTabs.All.Select(t => t.Key).ToList(),
                 "two tabs share a key, so their nodes would collide by name");
+        }
+
+        // ---- the context rule ---------------------------------------------------
+
+        [Test]
+        public void TheRunOnlyTabsAreAbsentBetweenRuns()
+        {
+            var out_ = OutOfRun.Select(t => t.Tab).ToList();
+
+            CollectionAssert.DoesNotContain(out_, SystemMenuTab.FloorMap);
+            CollectionAssert.DoesNotContain(out_, SystemMenuTab.RunStats);
+            CollectionAssert.Contains(out_, SystemMenuTab.CharacterInventory);
+        }
+
+        // Relative order has to survive the filter, or the bar reshuffles as a
+        // run starts and the tab a player was aiming at moves under the cursor.
+        [Test]
+        public void FilteringKeepsTheTabsInTheSameOrder()
+        {
+            var full = InRun.Select(t => t.Tab).ToList();
+            var filtered = OutOfRun.Select(t => t.Tab).ToList();
+
+            CollectionAssert.AreEqual(full.Where(filtered.Contains).ToList(), filtered,
+                "the out-of-run tabs are not in the order the in-run bar puts them");
+        }
+
+        [Test]
+        public void TheDefaultTabSuitsTheContext()
+        {
+            Assert.AreEqual(SystemMenuTab.CharacterInventory, SystemMenuTabs.DefaultFor(inRun: false),
+                "opened in the hub, the menu should land on the squad");
+            Assert.AreEqual(SystemMenuTab.FloorMap, SystemMenuTabs.DefaultFor(inRun: true),
+                "opened during a run, the menu should land on where the player is");
         }
     }
 }

@@ -30,6 +30,93 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(_menu, "the hub has no SystemMenuController");
         }
 
+        // ---- the context rule ---------------------------------------------------
+        //
+        // The tab SET is decided at runtime, and the three-tab layout exists
+        // ONLY at runtime -- the scene on disk carries the five-tab bar. So
+        // nothing in the build can catch a three-tab bar that lays out wrong,
+        // and these are the only things standing between that and a player.
+
+        [UnityTest]
+        public IEnumerator BetweenRunsTheBarHasThreeTabs()
+        {
+            yield return OpenTheHub();
+
+            SaveSlotManager.CurrentSave.activeRun.hasRun = false;
+            _menu.Open();
+            yield return null;
+
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    SystemMenuTabs.IndexOf(SystemMenuTab.CharacterInventory),
+                    SystemMenuTabs.IndexOf(SystemMenuTab.Options),
+                    SystemMenuTabs.IndexOf(SystemMenuTab.MainMenu),
+                },
+                _menu.VisibleTabs.ToArray(),
+                "out of a run the bar should carry exactly the three tabs that have something to show");
+        }
+
+        [UnityTest]
+        public IEnumerator DuringARunTheBarGainsTheTwoRunTabs()
+        {
+            yield return OpenTheHub();
+
+            SaveSlotManager.CurrentSave.activeRun.hasRun = true;
+            _menu.Open();
+            yield return null;
+
+            Assert.AreEqual(SystemMenuTabs.Count, _menu.VisibleTabs.Count,
+                "in a run every tab should be present");
+        }
+
+        // The tabs that are not in this context must be SWITCHED OFF, not merely
+        // left out of the list. A hidden tab that is still active is still
+        // clickable, and it sits under the five-tab position nobody moved it
+        // away from -- which is a button in dead space that opens a pane the
+        // player was told does not exist.
+        [UnityTest]
+        public IEnumerator TheAbsentTabsAreActuallySwitchedOff()
+        {
+            yield return OpenTheHub();
+
+            SaveSlotManager.CurrentSave.activeRun.hasRun = false;
+            _menu.Open();
+            yield return null;
+
+            var buttons = (UnityEngine.UI.Button[])typeof(SystemMenuController)
+                .GetField("tabButtons", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                .GetValue(_menu);
+
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                bool shouldShow = _menu.VisibleTabs.Contains(i);
+                Assert.AreEqual(shouldShow, buttons[i].gameObject.activeSelf,
+                    $"tab {i} ({SystemMenuTabs.All[i].Key}) is " +
+                    (shouldShow ? "missing from" : "still live in") + " a run-less bar");
+            }
+        }
+
+        // Opening pauses. Stated by the design and easy to get wrong in the
+        // direction that matters: a menu that pauses and never resumes looks
+        // exactly like a hang.
+        [UnityTest]
+        public IEnumerator OpeningPausesAndClosingResumes()
+        {
+            yield return OpenTheHub();
+
+            float before = Time.timeScale;
+
+            _menu.Open();
+            yield return null;
+            Assert.AreEqual(0f, Time.timeScale, "opening the menu did not pause the game");
+
+            _menu.Close();
+            yield return null;
+            Assert.AreEqual(before, Time.timeScale, 0.0001f,
+                "closing the menu did not put the clock back where it found it");
+        }
+
         private GameObject[] Panes() =>
             (GameObject[])typeof(SystemMenuController)
                 .GetField("panes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
@@ -79,9 +166,9 @@ namespace PrincesPalace.PlayModeTests
 
                 var def = SystemMenuTabs.All[i];
 
-                // The pane belongs to the tab's OWNER, which for Inventory is
-                // Character -- two doors, one screen.
-                string paneKey = SystemMenuTabs.All[SystemMenuTabs.IndexOf(def.PaneOwner)].Key;
+                // One pane per tab, now that Character and Inventory are one tab
+                // rather than two doors onto one pane.
+                string paneKey = SystemMenuTabs.All[SystemMenuTabs.PaneIndexFor(i)].Key;
 
                 var livePanes = panes.Where(p => p.activeSelf).Select(p => p.name).ToList();
                 CollectionAssert.AreEqual(new[] { $"SystemPane{paneKey}" }, livePanes,

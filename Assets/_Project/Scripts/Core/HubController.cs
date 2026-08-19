@@ -48,7 +48,7 @@ namespace PrincesPalace
                 // Embers are per CHARACTER now, so the hub shows the roster's total --
                 // an "unspent somewhere" figure. The per-character breakdown is
                 // the talent screen's job, which is where they are spent.
-                currencyLabel.Set(UiStrings.HubWallet, save.wallet.gold, EmberTotal(save));
+                currencyLabel.Set(UiStrings.HubWallet, save.wallet.gold, save.EmberTotal());
             }
 
             RefreshGateCaption();
@@ -89,16 +89,7 @@ namespace PrincesPalace
             }
         }
 
-        private static int EmberTotal(SaveData save)
-        {
-            int total = 0;
-            foreach (var character in save.roster ?? new System.Collections.Generic.List<Character>())
-            {
-                if (character != null) total += character.embers;
-            }
 
-            return total;
-        }
 
         private static readonly Color UnbuiltTint = new Color(0.55f, 0.55f, 0.62f, 1f);
 

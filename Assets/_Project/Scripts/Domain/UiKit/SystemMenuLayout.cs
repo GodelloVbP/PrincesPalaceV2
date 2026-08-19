@@ -1,15 +1,16 @@
+using System.Collections.Generic;
+
 namespace PrincesPalace.Domain.UiKit
 {
     // Where the overarching menu's parts sit, as pure arithmetic.
     //
-    // The whole point of this type is that the TAB BAR IS RELATIVE: every tab's
-    // position is computed from its index and the count, so adding one to
-    // SystemMenuTabs.All moves the rest along on its own. Nothing here is a
-    // hand-placed x.
+    // The whole point of this type is that the TAB BAR IS RELATIVE: every
+    // position is computed from the tab table, so changing that table moves the
+    // rest along on its own. Nothing here is a hand-placed x.
     //
     // It lives in Domain, beside FightSubmenuLayout and for the same reason:
-    // the builder places the tabs and the controller has to know where they are,
-    // and two hand-mirrored copies of the same constants is the drift that
+    // the builder places the tabs and the controller has to know where they
+    // are, and two hand-mirrored copies of the same constants is the drift that
     // FightSubmenuLayout's own header exists to record.
     public static class SystemMenuLayout
     {
@@ -20,14 +21,11 @@ namespace PrincesPalace.Domain.UiKit
 
         public const float BarHeight = 96f;
 
-        // How far the first tab starts from the panel's left edge, and how much
-        // clear space the strip must leave at the right.
+        // How far the strip stays clear of the panel's edges.
         public const float BarInsetLeft = 40f;
         public const float BarInsetRight = 40f;
 
-        public const float TabWidth = 210f;
         public const float TabHeight = 56f;
-        public const float TabGap = 26f;
 
         // The hairline between two tabs, centred in the gap.
         public const float DividerWidth = 2f;
@@ -45,50 +43,178 @@ namespace PrincesPalace.Domain.UiKit
 
         public static float ContentCentreY => HalfHeight - BarHeight - ContentHeight * 0.5f;
 
-        // Tab `index` of `count`, measured from the panel centre.
+        // The row the tabs live in, inside the insets.
+        public const float RowWidth = PanelWidth - BarInsetLeft - BarInsetRight;   // 1520
+
+        // ---- the two modes ------------------------------------------------------
         //
-        // Left-aligned rather than distributed across the full width: a strip
-        // that spread four tabs edge to edge would re-space every one of them
-        // the moment a fifth arrived, which is exactly the kind of silent
-        // re-layout that makes a screenshot from last week a lie.
-        public static float TabCentreX(int index)
+        // ONE COMPONENT, TWO RULES, and the split is forced rather than chosen.
+        //
+        // Merging Character and Inventory produced a label no uniform box could
+        // hold, and the in-run set is five tabs, which no uniform width fits --
+        // five boxes wide enough for "CHARACTER & INVENTORY" need 2100px in a
+        // 1520px row. So a small set gets even, generous boxes, and a large set
+        // sizes each box to its own label and shares out what is left.
+        //
+        // The threshold is a count, not a measurement, because the design
+        // states it as one: three or fewer is Mode A.
+        public const int UniformModeMaxTabs = 3;
+
+        // Mode A: the gap is fixed and the width is what remains.
+        public const float UniformGap = 130f;
+
+        // Mode B: each box is its label plus this much padding on each side,
+        // rounded so the row does not land on half pixels.
+        public const float MeasuredPadX = 24f;
+        public const float MeasuredRounding = 4f;
+
+        // The smallest gap Mode B will accept before the bar is overfull.
+        public const float MinimumGap = 24f;
+
+        // The underline is the label plus a little, NOT the box: a rule as wide
+        // as a generous Mode A box reads as a second divider rather than as a
+        // marker for the word above it.
+        public const float UnderlineOverhang = 24f;
+        public const float UnderlineHeight = 3f;
+
+        // Distance below the bar's centre line to the underline, from the
+        // design's panel-space y 81 against a bar spanning panel y 0..96.
+        public const float UnderlineOffsetY = -33f;
+
+        public static bool IsUniformMode(int count) => count <= UniformModeMaxTabs;
+
+        // Box width for each visible tab, in order.
+        public static float[] TabWidths(IReadOnlyList<SystemMenuTabDef> tabs)
         {
-            return -HalfWidth + BarInsetLeft + TabWidth * 0.5f + index * (TabWidth + TabGap);
+            var widths = new float[tabs.Count];
+            if (tabs.Count == 0) return widths;
+
+            if (IsUniformMode(tabs.Count))
+            {
+                float uniform = (RowWidth - UniformGap * (tabs.Count - 1)) / tabs.Count;
+                for (int i = 0; i < tabs.Count; i++) widths[i] = uniform;
+                return widths;
+            }
+
+            for (int i = 0; i < tabs.Count; i++)
+            {
+                float wanted = tabs[i].LabelWidth + MeasuredPadX * 2f;
+                // System.Math, not Mathf: this assembly deliberately does not
+                // reference UnityEngine, which is what keeps the layout
+                // arithmetic testable without a player loop. AwayFromZero
+                // because "nearest" is what the design says, and Math.Round's
+                // default is banker's rounding.
+                widths[i] = (float)System.Math.Round(
+                    wanted / MeasuredRounding, System.MidpointRounding.AwayFromZero) * MeasuredRounding;
+            }
+
+            return widths;
+        }
+
+        // The gap between boxes. Uniform mode fixes it; measured mode shares
+        // out whatever the boxes did not use, so the row always ends flush
+        // against the right inset.
+        public static float GapFor(IReadOnlyList<SystemMenuTabDef> tabs)
+        {
+            if (tabs.Count <= 1) return 0f;
+            if (IsUniformMode(tabs.Count)) return UniformGap;
+
+            float used = 0f;
+            foreach (float w in TabWidths(tabs)) used += w;
+            return (RowWidth - used) / (tabs.Count - 1);
+        }
+
+        // Left edge of each box, in panel space (0 at the panel's left edge).
+        public static float[] TabLefts(IReadOnlyList<SystemMenuTabDef> tabs)
+        {
+            var widths = TabWidths(tabs);
+            float gap = GapFor(tabs);
+            var lefts = new float[tabs.Count];
+
+            float x = BarInsetLeft;
+            for (int i = 0; i < tabs.Count; i++)
+            {
+                lefts[i] = x;
+                x += widths[i] + gap;
+            }
+
+            return lefts;
+        }
+
+        // Centre x of each box, measured from the PANEL CENTRE, which is the
+        // space every node in this project is placed in.
+        public static float[] TabCentresX(IReadOnlyList<SystemMenuTabDef> tabs)
+        {
+            var widths = TabWidths(tabs);
+            var lefts = TabLefts(tabs);
+            var centres = new float[tabs.Count];
+
+            for (int i = 0; i < tabs.Count; i++)
+            {
+                centres[i] = -HalfWidth + lefts[i] + widths[i] * 0.5f;
+            }
+
+            return centres;
         }
 
         // The divider that follows tab `index`, centred in the gap after it.
-        public static float DividerCentreX(int index)
+        public static float DividerCentreX(IReadOnlyList<SystemMenuTabDef> tabs, int index)
         {
-            return TabCentreX(index) + TabWidth * 0.5f + TabGap * 0.5f;
+            var widths = TabWidths(tabs);
+            var lefts = TabLefts(tabs);
+
+            float rightOfThis = lefts[index] + widths[index];
+            float leftOfNext = lefts[index + 1];
+            return -HalfWidth + (rightOfThis + leftOfNext) * 0.5f;
         }
 
-        // How wide the whole strip is at this count.
-        public static float StripWidth(int count)
-        {
-            if (count <= 0) return 0f;
-            return count * TabWidth + (count - 1) * TabGap;
-        }
+        public static float UnderlineWidth(SystemMenuTabDef tab) =>
+            tab.LabelWidth + UnderlineOverhang;
 
-        // The x the strip's right edge reaches at this count.
-        public static float StripRightEdge(int count)
-        {
-            return -HalfWidth + BarInsetLeft + StripWidth(count);
-        }
-
-        // The most tabs the bar can hold before the strip runs into the panel's
-        // right edge.
+        // ---- the title lintel ---------------------------------------------------
         //
-        // Stated as a FUNCTION rather than a constant so it cannot go stale
-        // when a width changes, and asserted at build time -- this is the
-        // count-versus-footprint failure that AUDIT #6 and #7 both record, and
-        // the design brief for this bar is literally "so we can add more
-        // options easily", which is the exact motion that trips it.
-        public static int MaxTabs()
+        // ABOVE the panel, in the 90px of screen the panel does not use. It is
+        // not panel chrome: it carries the run's identity and the currency,
+        // which belong to the run rather than to whichever tab is open, and
+        // putting it inside the panel would have cost the content pane 52px for
+        // something that never changes with the tab.
+        public const float LintelWidth = PanelWidth;
+        public const float LintelHeight = 52f;
+
+        // Screen y 34..86 against a 1080 stage, converted once here rather than
+        // at each call site.
+        // The reference stage the lintel and the panel are both placed on.
+        public const float StageWidth = 1920f;
+        public const float StageHeight = 1080f;
+        public const float StageHalfHeight = StageHeight * 0.5f;
+        public const float LintelTopScreenY = 34f;
+        public const float LintelCentreY = StageHalfHeight - LintelTopScreenY - LintelHeight * 0.5f;
+
+        // The gold rule under the lintel, at screen y 86 -- flush against the
+        // panel's own top edge at screen y 90.
+        public const float GoldRuleScreenY = 86f;
+        public const float GoldRuleCentreY = StageHalfHeight - GoldRuleScreenY;
+
+        public const float LintelPadX = 24f;
+        public const float CloseButtonSize = 34f;
+
+        // ---- capacity -----------------------------------------------------------
+        //
+        // ARITHMETIC, not a fixed count, and that is the design's explicit ask.
+        // A count-based guard was honest while every box was 210px wide; once
+        // boxes are sized to their own labels, "how many fit" is a question
+        // about the words, and a localisation that doubles a label's length
+        // overflows a bar that still has the same number of tabs.
+        public static float StripWidth(IReadOnlyList<SystemMenuTabDef> tabs)
         {
-            float usable = PanelWidth - BarInsetLeft - BarInsetRight;
-            return (int)((usable + TabGap) / (TabWidth + TabGap));
+            if (tabs.Count == 0) return 0f;
+
+            float used = 0f;
+            foreach (float w in TabWidths(tabs)) used += w;
+            return used + MinimumGap * (tabs.Count - 1);
         }
 
-        public static bool StripFits(int count) => count <= MaxTabs();
+        public static bool StripFits(IReadOnlyList<SystemMenuTabDef> tabs) =>
+            tabs.Count <= 1 || StripWidth(tabs) <= RowWidth;
     }
 }

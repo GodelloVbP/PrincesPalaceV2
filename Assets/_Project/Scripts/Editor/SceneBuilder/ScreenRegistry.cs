@@ -703,9 +703,17 @@ public static class ScreenRegistry
 
         controller.panel = result.Go(menu.Root);
         controller.tabButtons = menu.TabButtons.Select(result.Button).ToArray();
+        controller.tabHovers = menu.TabHovers.Select(result.Go).ToArray();
         controller.tabUnderlines = menu.TabUnderlines.Select(result.Go).ToArray();
+        controller.tabDividers = menu.TabDividers.Select(result.Go).ToArray();
         controller.panes = menu.Panes.Select(result.Go).ToArray();
         controller.escapeConsumers = escapeConsumers.Select(result.Go).ToArray();
+
+        controller.runTitle = result.Tmp(menu.RunTitle);
+        controller.contextLine = result.Tmp(menu.ContextLine);
+        controller.goldValue = result.Tmp(menu.GoldValue);
+        controller.embersValue = result.Tmp(menu.EmbersValue);
+        controller.closeButton = result.Button(menu.CloseButton);
 
         if (menu.Dossier != null) WireDossier(result, menu.Dossier, lockedForFight);
 

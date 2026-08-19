@@ -56,14 +56,6 @@ namespace PrincesPalace.PlayModeTests
                 .FirstOrDefault();
         }
 
-        // Which half is showing is the MENU's business now -- Character and
-        // Inventory are two tabs onto one pane rather than two panes.
-        private static bool ShowingInventory()
-        {
-            var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
-            return menu != null
-                && menu.SelectedIndex == SystemMenuTabs.IndexOf(SystemMenuTab.Inventory);
-        }
 
         [UnityTest]
         public IEnumerator TheFightSceneCarriesASheetAndItIsLocked()
@@ -104,25 +96,36 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(fight.CharacterSheetIsOpen, "pressing the same key again did not close it");
         }
 
-        // Pressing the other pane's key while open switches panes rather than
-        // closing: the reader wanted the other half, not the fight back.
+        // The test that used to sit here pinned "pressing the other pane's key
+        // switches panes rather than closing". The design pass merged Character
+        // and Inventory into ONE tab, so there is no other pane to switch to
+        // and both keys are now the same gesture. Deleted rather than rewritten
+        // to assert nothing, and recorded here so its absence reads as a
+        // decision instead of an oversight.
+
         [UnityTest]
-        public IEnumerator TheOtherKeySwitchesPanesRatherThanClosing()
+        public IEnumerator BothKeysDriveTheSameScreen()
         {
             yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
             yield return null;
             yield return null;
 
             var fight = Object.FindAnyObjectByType<FightController>(FindObjectsInactive.Include);
+
             fight.ToggleCharacterSheet(inventory: false);
             yield return null;
-            Assert.IsFalse(ShowingInventory(), "C opened the bag rather than the character");
+            Assert.IsTrue(fight.CharacterSheetIsOpen, "C did not open the character screen");
 
+            // AND I CLOSES IT. That is a real behaviour change and it is the
+            // design's, not an oversight: Character and Inventory used to be two
+            // panes and the other key switched between them, so it had somewhere
+            // else to go. They are one tab now -- the dossier was always both
+            // halves -- so both keys are the same gesture and the second press
+            // is a second press.
             fight.ToggleCharacterSheet(inventory: true);
             yield return null;
-
-            Assert.IsTrue(fight.CharacterSheetIsOpen, "I closed the sheet instead of switching to the bag");
-            Assert.IsTrue(ShowingInventory(), "I did not switch to the bag");
+            Assert.IsFalse(fight.CharacterSheetIsOpen,
+                "I left the screen open, so the two keys are still behaving as two doors");
         }
 
         // The hub's copy is the live one. Same tree, opposite setting, and the
