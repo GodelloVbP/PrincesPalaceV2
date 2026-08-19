@@ -75,7 +75,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Coloured("#241736F5");
             screen.Frame = frame;
 
-            var content = Ui.Panel("DraftContent", Place.At(0f, 0f), UiSize.Fixed(1920f, 1080f), frame);
+            var content = Ui.Panel("DraftContent", Place.At(0f, 0f), UiSize.Fill, frame);
             screen.Root = Ui.Modal("RelicDraftPanel", "#0A0614F0", content).Inactive();
             return screen;
         }

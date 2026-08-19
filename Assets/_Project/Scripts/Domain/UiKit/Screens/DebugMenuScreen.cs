@@ -132,7 +132,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.CloseButton = close;
             chrome.Add(close);
 
-            var content = Ui.Panel("DebugMenuContent", Place.At(0f, 0f), UiSize.Fixed(1920f, 1080f), chrome);
+            var content = Ui.Panel("DebugMenuContent", Place.At(0f, 0f), UiSize.Fill, chrome);
 
             // Near-opaque. Unlike the character overlay, there is nothing behind
             // this worth seeing -- it is a tool, not part of the fiction, and

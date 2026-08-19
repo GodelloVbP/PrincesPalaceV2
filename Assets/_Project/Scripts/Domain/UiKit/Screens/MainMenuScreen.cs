@@ -154,7 +154,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Inactive();
             screen.ResetConfirmPanel = confirmModal;
 
-            screen.Root = Ui.Panel("MainMenuPanel", UiSize.Fixed(1920f, 1080f),
+            screen.Root = Ui.Panel("MainMenuPanel", UiSize.Fill,
                 sceneLayer, menuColumn, saveSlotModal, optionsModal, confirmModal);
 
             return screen;

@@ -384,7 +384,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AllowOverlap("a drop shadow covers the thing casting it by definition");
             screen.FrameGlow = glow;
 
-            var content = Ui.Panel("ReckoningContent", Place.At(0f, 0f), UiSize.Fixed(1920f, 1080f),
+            var content = Ui.Panel("ReckoningContent", Place.At(0f, 0f), UiSize.Fill,
                     glow, wipe)
                 .AllowOverlap("the glow sits under the frame by design");
 

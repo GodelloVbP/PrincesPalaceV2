@@ -249,8 +249,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 UiSize.Fixed(SystemMenuLayout.PanelWidth, SystemMenuLayout.PanelHeight),
                 frameChildren);
 
-            var stage = Ui.Panel("SystemMenuStage", Place.At(0f, 0f),
-                UiSize.Fixed(SystemMenuLayout.StageWidth, SystemMenuLayout.StageHeight),
+            // FILL, not the reference frame's literal size. The lintel sits
+            // above the panel rather than inside it, so the two need a common
+            // parent, and that parent has no business being 1920 wide on a
+            // canvas that is allowed to be narrower.
+            var stage = Ui.Panel("SystemMenuStage", Place.At(0f, 0f), UiSize.Fill,
                 BuildLintel(screen), frame);
 
             // A modal, so it dims whatever it is standing over -- this menu can

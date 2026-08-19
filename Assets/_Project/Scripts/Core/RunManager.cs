@@ -33,6 +33,30 @@ namespace PrincesPalace
 
         public static bool HasRun => Save != null && Save.activeRun != null && Save.activeRun.hasRun;
 
+        // A RUN DOES NOT SURVIVE THE PROCESS.
+        //
+        // "Leaving a descent, or anything that does not continue the run, kills
+        // the run -- no exceptions." Every deliberate exit calls EndRun on its
+        // way out: the map's abandon button, defeat, the hub's title button and
+        // the main menu's quit. A crash, an alt-F4 and a power cut call
+        // nothing, and those are the exceptions the rule says do not exist.
+        //
+        // So a run found in the save at startup belonged to a session that is
+        // over, and it is SETTLED rather than discarded -- EndRun is what pays
+        // out what the run earned, and a player whose game crashed should keep
+        // the embers their bosses paid for even though the descent is gone.
+        //
+        // Deliberately not a resume. Resuming is the other reading of the same
+        // rule and it is not the one the author asked for.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void SettleAnyRunAPreviousSessionLeftBehind()
+        {
+            // Before any scene, so nothing can read a run that is about to be
+            // settled and act on it -- the same self-bootstrapping shape
+            // GameSettings uses.
+            if (HasRun) EndRun();
+        }
+
         public static RunSnapshot Run => Save?.activeRun;
 
         private static SaveData Save => SaveSlotManager.CurrentSave;

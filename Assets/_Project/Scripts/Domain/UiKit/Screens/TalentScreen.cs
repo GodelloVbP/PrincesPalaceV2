@@ -136,7 +136,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Inactive();
             screen.DetailPlate = detailPlate;
 
-            screen.Root = Ui.Panel("TalentPanel", UiSize.Fixed(1920f, 1080f),
+            screen.Root = Ui.Panel("TalentPanel", UiSize.Fill,
                 Ui.Sprite("TalentBackground", BackgroundKey, Place.Stretch(), UiSize.Fill).AsDecor(),
                 sky,
                 Ui.Column("TalentHeading", Place.At(0f, 431f), spacing: 0f, UiAlign.Centre).AsDecor(),

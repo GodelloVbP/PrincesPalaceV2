@@ -226,7 +226,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // over them too.
             children.Add(systemMenu.Root);
 
-            s.Root = Ui.Panel("FightPanel", UiSize.Fixed(1920f, 1080f), children);
+            s.Root = Ui.Panel("FightPanel", UiSize.Fill, children);
             return s;
         }
 
@@ -278,7 +278,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // manifest can produce (to 106), with the soft 30% edges landing
             // outside the figures rather than across them.
             yield return Ui.Sprite("ScrimBand", ScrimBandKey, Place.At(0f, -60f),
-                    UiSize.Fixed(1920f, 480f))
+                    UiSize.FillWidth(480f))
                 .Coloured(ScrimBandColour)
                 .AsDecor();
 
@@ -294,7 +294,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // verb column and the party plate sit on something darker than they
             // do; the gradient is squared, so it is nearly gone by mid-frame.
             yield return Ui.Sprite("ScrimFloor", ScrimFloorKey, Place.At(0f, -320f),
-                    UiSize.Fixed(1920f, 440f))
+                    UiSize.FillWidth(440f))
                 .Coloured(ScrimFloorColour)
                 .AsDecor();
         }

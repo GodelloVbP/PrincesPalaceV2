@@ -111,7 +111,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Coloured("#2A1230F5");
             screen.Frame = frame;
 
-            var content = Ui.Panel("DefeatContent", Place.At(0f, 0f), UiSize.Fixed(1920f, 1080f), frame);
+            var content = Ui.Panel("DefeatContent", Place.At(0f, 0f), UiSize.Fill, frame);
 
             // Darker than the Reckoning's 65%. The stage behind a victory is
             // worth keeping; the stage behind a defeat is your own party lying

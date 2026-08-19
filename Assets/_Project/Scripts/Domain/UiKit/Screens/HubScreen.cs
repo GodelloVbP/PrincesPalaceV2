@@ -122,7 +122,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // gate through the floor. Fixed, the place simply crops at other
             // aspects, exactly as a full-bleed background does, and the audit
             // measures the coordinates the design actually uses.
-            var world = Ui.Panel("HubWorld", Place.At(0f, 0f), UiSize.Fixed(1920f, 1080f),
+            var world = Ui.Panel("HubWorld", Place.At(0f, 0f), UiSize.Fill,
                 Ui.Sprite("HubBackground", BackgroundKey, Place.Stretch(), UiSize.Fill).AsDecor(),
                 relics.Node, talents.Node, characterSheet.Node, principality.Node, gate,
 
@@ -153,7 +153,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var glossary = GlossaryScreen.Build();
             screen.Glossary = glossary;
 
-            screen.Root = Ui.Panel("HubPanel", UiSize.Fixed(1920f, 1080f),
+            screen.Root = Ui.Panel("HubPanel", UiSize.Fill,
                 world,
 
                 // Live text on top of painted ornament, never lettering baked

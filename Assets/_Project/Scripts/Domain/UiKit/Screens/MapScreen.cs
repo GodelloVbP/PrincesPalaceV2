@@ -242,7 +242,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // Viewport FIRST so the headings and the abandon button draw over
             // the scrolling wood rather than under it. The sheet is LAST, so
             // the modal dims the map and everything on it.
-            screen.Root = Ui.Panel("MapPanel", UiSize.Fixed(1920f, 1080f),
+            screen.Root = Ui.Panel("MapPanel", UiSize.Fill,
                 viewport, title, depth, gold, abandon, roomMessage, systemMenu.Root);
 
             return screen;
@@ -254,7 +254,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         {
             var tile = Ui.Sprite($"MapBackdrop{index}", BackgroundKey,
                     Place.Pin(ContentEdge, ContentEdge, new UiVec(MapLayout.BackgroundTileX(index), 0f)),
-                    UiSize.Fixed(1920f, 1080f))
+                    UiSize.Fill)
                 .AsDecor()
                 .AllowOverflow("the last tile deliberately overhangs the content it fills - a forest that stopped exactly at the content edge would show a hard cut");
 
