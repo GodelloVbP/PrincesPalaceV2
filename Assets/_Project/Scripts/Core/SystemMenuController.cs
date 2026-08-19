@@ -111,18 +111,40 @@ namespace PrincesPalace
 
         private void Update()
         {
-            if (!Input.GetKeyDown(KeyCode.Escape)) return;
+            if (Input.GetKeyDown(KeyCode.Escape)) HandleEscape();
+        }
 
+        // SPLIT FROM THE KEY READ so it can be tested.
+        //
+        // Legacy Input cannot be pressed headlessly, which is exactly how the
+        // bug this fixes stayed invisible for a whole design pass. Everything
+        // below is reachable from a test; only the one line above is not.
+        public void HandleEscape()
+        {
             // Closing beats opening: if this menu is already up, Escape is
             // unambiguously about it.
             if (IsOpen)
             {
                 Close();
+                EscapeKey.Consume();
                 return;
             }
 
+            // Somebody else already acted on this press.
+            //
+            // Not the same question as SomethingElseOwnsEscape below, and both
+            // are needed. That one asks whether a panel is up RIGHT NOW; this
+            // one asks whether one was up a moment ago and has just been closed
+            // by its own handler earlier in the same frame. Without it, Escape
+            // over an open glossary would close the glossary and open this menu
+            // on top of it -- or not, depending on Update order, which is the
+            // worst kind of bug to be handed.
+            if (EscapeKey.ConsumedThisFrame) return;
+
             if (SomethingElseOwnsEscape()) return;
+
             Open();
+            EscapeKey.Consume();
         }
 
         private bool SomethingElseOwnsEscape()

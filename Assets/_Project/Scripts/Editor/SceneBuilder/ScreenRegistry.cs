@@ -135,7 +135,7 @@ public static class ScreenRegistry
                 // The reward screen owns Escape while it is up: opening this
                 // menu over a reckoning the player is trying to dismiss is the
                 // same wrong-thing-on-Escape the consumer list exists to stop.
-                WireSystemMenu(result, screen.SystemMenu, lockedForFight: true, screen.Reckoning.Root);
+                WireSystemMenu(result, screen.Root, screen.SystemMenu, lockedForFight: true, screen.Reckoning.Root);
 
                 fight.intentTooltip = result.Go(screen.IntentTooltip);
                 fight.intentTooltipText = result.Tmp(screen.IntentTooltipText);
@@ -520,7 +520,7 @@ public static class ScreenRegistry
                 // changing gear between rooms is supposed to happen.
                 map.characterSheetPanel = result.Go(screen.SystemMenu.Root);
 
-                WireSystemMenu(result, screen.SystemMenu, lockedForFight: false);
+                WireSystemMenu(result, screen.Root, screen.SystemMenu, lockedForFight: false);
 
                 // The painted room icons. Bound here rather than in the
                 // controller because "Assets/..." is an editor-only address and
@@ -685,7 +685,7 @@ public static class ScreenRegistry
         // The hub's overlay, its glossary and its relic draft all sit on
         // Escape-ish paths already, so each is declared as owning Escape ahead
         // of the overarching menu.
-        WireSystemMenu(result, screen.SystemMenu, lockedForFight: false,
+        WireSystemMenu(result, screen.Root, screen.SystemMenu, lockedForFight: false,
             screen.Glossary.Root, screen.Draft.Root);
     }
 
@@ -697,9 +697,23 @@ public static class ScreenRegistry
     // by name, so a scene that grows another Escape-owning panel declares it
     // here instead of the menu guessing.
     private static SystemMenuController WireSystemMenu(
-        UiEmitResult result, SystemMenuScreen menu, bool lockedForFight, params NodeRef[] escapeConsumers)
+        UiEmitResult result, NodeRef host, SystemMenuScreen menu, bool lockedForFight,
+        params NodeRef[] escapeConsumers)
     {
-        var controller = result.Attach<SystemMenuController>(menu.Root);
+        // ATTACHED TO THE SCENE ROOT, not to the menu it drives.
+        //
+        // It was on the menu's own modal, which is Inactive until the menu
+        // opens -- so its Update() did not run while the menu was closed, and
+        // the Escape that is supposed to OPEN it could never fire. Escape only
+        // ever closed a menu that something else had already opened.
+        //
+        // That is why it survived a design pass that lists "Escape opens the
+        // menu" as built: every screenshot and every test opens it by calling
+        // Open() directly, and legacy Input cannot be pressed headlessly, so
+        // nothing that runs in CI was ever in a position to notice.
+        //
+        // SystemMenuTests.TheMenuIsListeningWhileItIsClosed pins it now.
+        var controller = result.Attach<SystemMenuController>(host);
 
         controller.panel = result.Go(menu.Root);
         controller.tabButtons = menu.TabButtons.Select(result.Button).ToArray();

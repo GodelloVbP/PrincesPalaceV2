@@ -50,7 +50,7 @@ namespace PrincesPalace
             if (_wired) return;
             _wired = true;
 
-            for (int i = 0; i < rowHovers.Length; i++)
+            for (int i = 0; rowHovers != null && i < rowHovers.Length; i++)
             {
                 if (rowHovers[i] == null) continue;
 
@@ -66,20 +66,24 @@ namespace PrincesPalace
                 // alpha change. The design's States table asks for a row TINT,
                 // and a plate that switches on and off cannot be given a fade
                 // later without rewriting this.
+                //
+                // An alpha-0 Image still raycasts, which is what keeps the row
+                // hoverable while it is invisible.
                 rowHovers[i].SetActive(true);
                 Fade(rowHovers[i], 0f);
             }
 
-            for (int i = 0; i < sliderTracks.Length; i++)
+            for (int i = 0; sliderTracks != null && i < sliderTracks.Length; i++)
             {
-                if (sliderTracks[i] == null) continue;
+                if (sliderTracks[i] == null || sliderKeys == null || i >= sliderKeys.Length) continue;
                 string key = sliderKeys[i];
                 var bar = sliderTracks[i].gameObject.AddComponent<BarSlider>();
                 bar.Changed = value => SetSlider(key, value);
             }
 
-            for (int i = 0; i < stepPrev.Length; i++)
+            for (int i = 0; stepPrev != null && i < stepPrev.Length; i++)
             {
+                if (stepperKeys == null || i >= stepperKeys.Length) continue;
                 string key = stepperKeys[i];
                 if (stepPrev[i] != null) stepPrev[i].onClick.AddListener(() => Step(key, -1));
                 if (stepNext[i] != null) stepNext[i].onClick.AddListener(() => Step(key, +1));
@@ -111,6 +115,7 @@ namespace PrincesPalace
         {
             for (int i = 0; sliderValues != null && i < sliderValues.Length; i++)
             {
+                if (sliderKeys == null || i >= sliderKeys.Length) continue;
                 float value = SliderValue(sliderKeys[i]);
 
                 if (sliderValues[i] != null)
@@ -134,7 +139,8 @@ namespace PrincesPalace
 
             for (int i = 0; stepperValues != null && i < stepperValues.Length; i++)
             {
-                if (stepperValues[i] != null) stepperValues[i].SetContent(StepperLabel(stepperKeys[i]));
+                if (stepperKeys == null || i >= stepperKeys.Length || stepperValues[i] == null) continue;
+                stepperValues[i].SetContent(StepperLabel(stepperKeys[i]));
             }
         }
 

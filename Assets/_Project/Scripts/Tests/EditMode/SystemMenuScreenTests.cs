@@ -275,8 +275,25 @@ namespace PrincesPalace.Domain.Tests
         {
             Assert.AreEqual(SystemMenuTab.CharacterInventory, SystemMenuTabs.DefaultFor(inRun: false),
                 "opened in the hub, the menu should land on the squad");
-            Assert.AreEqual(SystemMenuTab.FloorMap, SystemMenuTabs.DefaultFor(inRun: true),
-                "opened during a run, the menu should land on where the player is");
+
+            // The design's rule is that a player opening this mid-run is asking
+            // about the run, so Floor map is where it should land -- but only
+            // once that pane has something in it. Landing there today would
+            // open the menu on the words "CONTENT TO COME" every time, which
+            // reads as a broken screen rather than as an unfinished one.
+            //
+            // Written against Built rather than pinned to today's answer, so
+            // filling that pane makes the design's rule take effect and this
+            // test follow it, with no edit here. That is the whole reason the
+            // flag exists rather than a comment saying "change this later".
+            var floorMap = SystemMenuTabs.All[SystemMenuTabs.IndexOf(SystemMenuTab.FloorMap)];
+            var expected = floorMap.Built ? SystemMenuTab.FloorMap : SystemMenuTab.CharacterInventory;
+
+            Assert.AreEqual(expected, SystemMenuTabs.DefaultFor(inRun: true),
+                floorMap.Built
+                    ? "opened during a run, the menu should land on where the player is"
+                    : "Floor map is still a placeholder, so the mid-run default has to fall back "
+                      + "to the dossier rather than open on 'CONTENT TO COME'");
         }
     }
 }

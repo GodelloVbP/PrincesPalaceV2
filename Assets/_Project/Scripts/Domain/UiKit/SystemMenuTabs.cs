@@ -44,6 +44,15 @@ namespace PrincesPalace.Domain.UiKit
         // Only shown while a run is in progress.
         public readonly bool RunOnly;
 
+        // Whether this tab's pane has real content yet, as opposed to a
+        // placeholder.
+        //
+        // Only DefaultFor reads it, and only so the menu cannot open itself
+        // onto the words "CONTENT TO COME". An unbuilt tab is still listed and
+        // still selectable: a placeholder somebody chose to look at is honest,
+        // whereas one the menu picked for them looks like a broken screen.
+        public readonly bool Built;
+
         // The rendered width of Label, in pixels, at 18px Chakra Petch 500 with
         // .14em letter-spacing.
         //
@@ -59,13 +68,14 @@ namespace PrincesPalace.Domain.UiKit
         public readonly float LabelWidth;
 
         public SystemMenuTabDef(SystemMenuTab tab, string key, UiString label,
-                                float labelWidth, bool runOnly = false)
+                                float labelWidth, bool runOnly = false, bool built = false)
         {
             Tab = tab;
             Key = key;
             Label = label;
             LabelWidth = labelWidth;
             RunOnly = runOnly;
+            Built = built;
         }
     }
 
@@ -77,13 +87,13 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly IReadOnlyList<SystemMenuTabDef> All = new[]
         {
             new SystemMenuTabDef(SystemMenuTab.CharacterInventory, "CharacterInventory",
-                UiStrings.SystemTabCharacterInventory, labelWidth: 272f),
+                UiStrings.SystemTabCharacterInventory, labelWidth: 272f, built: true),
             new SystemMenuTabDef(SystemMenuTab.FloorMap, "FloorMap",
                 UiStrings.SystemTabFloorMap, labelWidth: 120f, runOnly: true),
             new SystemMenuTabDef(SystemMenuTab.RunStats, "RunStats",
                 UiStrings.SystemTabRunStats, labelWidth: 168f, runOnly: true),
             new SystemMenuTabDef(SystemMenuTab.Options, "Options",
-                UiStrings.SystemTabOptions, labelWidth: 92f),
+                UiStrings.SystemTabOptions, labelWidth: 92f, built: true),
             new SystemMenuTabDef(SystemMenuTab.MainMenu, "MainMenu",
                 UiStrings.SystemTabMainMenu, labelWidth: 119f),
         };
@@ -106,6 +116,14 @@ namespace PrincesPalace.Domain.UiKit
         public static int PaneIndexFor(int tabIndex) =>
             tabIndex < 0 || tabIndex >= All.Count ? 0 : tabIndex;
 
+        // THROWS rather than falling back to 0.
+        //
+        // It used to return 0 for a tab it could not find, which is a silently
+        // wrong answer dressed as a safe one: every miss became "Character &
+        // Inventory", so a caller asking for a tab that no longer existed got a
+        // real screen back and no hint that it had asked for the wrong thing.
+        // Every value of the enum is in All, so this cannot fire without a
+        // genuine bug behind it.
         public static int IndexOf(SystemMenuTab tab)
         {
             for (int i = 0; i < All.Count; i++)
@@ -113,7 +131,8 @@ namespace PrincesPalace.Domain.UiKit
                 if (All[i].Tab == tab) return i;
             }
 
-            return 0;
+            throw new System.ArgumentOutOfRangeException(
+                nameof(tab), tab, "no such tab in SystemMenuTabs.All");
         }
 
         // The tabs shown in this context, as indices into All.
@@ -140,7 +159,20 @@ namespace PrincesPalace.Domain.UiKit
         // map the player is asking about the run, and opened in the hub they
         // are asking about their squad. An explicit tab from the caller still
         // wins over this.
-        public static SystemMenuTab DefaultFor(bool inRun) =>
-            inRun ? SystemMenuTab.FloorMap : SystemMenuTab.CharacterInventory;
+        public static SystemMenuTab DefaultFor(bool inRun)
+        {
+            var preferred = inRun ? SystemMenuTab.FloorMap : SystemMenuTab.CharacterInventory;
+
+            // NEVER ONTO A PLACEHOLDER.
+            //
+            // The design's rule is that a player opening this over a fight or
+            // the map is asking about the run, and Floor map is where that
+            // lands. But that pane is still empty, so obeying the rule today
+            // means every mid-run Escape opens the menu on "CONTENT TO COME".
+            // Delete this fallback the moment that pane is built.
+            if (All[IndexOf(preferred)].Built) return preferred;
+
+            return SystemMenuTab.CharacterInventory;
+        }
     }
 }

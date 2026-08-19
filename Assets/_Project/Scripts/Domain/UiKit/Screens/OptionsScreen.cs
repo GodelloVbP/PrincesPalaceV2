@@ -22,11 +22,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const string RowHover = "#C8AAE60D";
         private const string Track = "#0E070CD9";
         private const string TrackFill = "#FFE0A8";
-        private const string StepRim = "#B496D23D";
 
         public UiNode Root;
 
-        // One per row, in OptionRows.AllRows order.
+        // The row containers, in OptionRows.AllRows order. Each one IS the
+        // tint plate as well as the parent of its label and controls.
         public List<NodeRef> RowHovers = new List<NodeRef>();
 
         // DENSE, and keyed rather than index-aligned with AllRows.
@@ -126,107 +126,118 @@ namespace PrincesPalace.Domain.UiKit.Screens
             for (int i = 0; i < rows; i++)
             {
                 float y = OptionsLayout.RowCentreY(rows, i);
-                foreach (var node in BuildRow(screen, group.Rows[i], y)) cardChildren.Add(node);
+                cardChildren.Add(BuildRow(screen, group.Rows[i], y));
             }
 
             return Ui.Panel($"OptionsCard{group.Key}", Place.At(OptionsLayout.ColumnCentreX(group.Column), centreY),
                 UiSize.Fixed(width, height), cardChildren);
         }
 
-        private static IEnumerable<UiNode> BuildRow(OptionsScreen screen, OptionRowDef row, float y)
+        // A row is a CONTAINER, not a stack of siblings.
+        //
+        // The first version laid the tint plate down as a sibling under the
+        // label and controls and hung the hover off that, which could not work
+        // twice over. AsDecor sets raycastTarget false, so the plate received
+        // no pointer events at all -- and even raycastable, a sibling is not in
+        // the control's parent chain, so reaching for the slider would have
+        // fired exit on the plate and dropped the tint exactly when the player
+        // was about to use the row.
+        //
+        // As the row's PARENT it gets both: enter and exit bubble up from
+        // whichever child the pointer is actually over, so the whole row lights
+        // as one thing.
+        private static UiNode BuildRow(OptionsScreen screen, OptionRowDef row, float y)
         {
             string key = row.Key;
-
-            var hover = Ui.Solid($"OptionsRow{key}Hover", RowHover,
-                    new UiVec(OptionsLayout.CardContentWidth, OptionsLayout.RowHeight - 8f), Place.At(0f, y))
-                .Inactive()
-                .AsDecor()
-                .AllowOverlap("the hover plate sits under its own row by construction");
-            screen.RowHovers.Add(hover);
-            yield return hover;
+            var children = new List<UiNode>();
 
             // The label sits a little high when there is a note under it, so the
             // pair reads as one block rather than as two rows.
-            float labelY = row.HasNote ? y + 9f : y;
+            float labelY = row.HasNote ? 9f : 0f;
 
-            yield return Ui.Label($"OptionsRow{key}Label", row.Label,
+            children.Add(Ui.Label($"OptionsRow{key}Label", row.Label,
                     new UiVec(OptionsLayout.LabelWidth, 20f), 15, Value,
                     Place.At(OptionsLayout.LabelCentreX, labelY))
-                .AsDecor()
-                .AllowOverlap("the label sits over its own row's hover plate by construction");
+                .AsDecor());
 
             if (row.HasNote)
             {
-                yield return Ui.Label($"OptionsRow{key}Note", row.Note,
+                children.Add(Ui.Label($"OptionsRow{key}Note", row.Note,
                         new UiVec(OptionsLayout.LabelWidth, 16f), 12, Body,
-                        Place.At(OptionsLayout.LabelCentreX, y - 11f))
-                    .AsDecor()
-                    .AllowOverlap("the note sits over its own row's hover plate by construction");
+                        Place.At(OptionsLayout.LabelCentreX, -11f))
+                    .AsDecor());
             }
 
             if (row.Kind == OptionKind.Slider)
             {
                 var track = Ui.Solid($"OptionsRow{key}Track", Track,
-                        new UiVec(OptionsLayout.TrackWidth, OptionsLayout.TrackHeight),
-                        Place.At(OptionsLayout.TrackCentreX, y))
-                    .AllowOverlap("the track sits over its own row's hover plate by construction");
+                    new UiVec(OptionsLayout.TrackWidth, OptionsLayout.TrackHeight),
+                    Place.At(OptionsLayout.TrackCentreX, 0f));
 
                 // PIVOTED LEFT, at the track's left edge, so the controller can
-                // grow it by width and it extends rightwards. A centred fill
-                // grows from the middle outwards, which is not what a volume bar
-                // means -- and anchoring it 0..value instead is worse still,
-                // because anchors are relative to the PARENT: the first version
-                // did that and the fill spanned 80% of the whole card, straight
-                // through the row's own label.
+                // grow it by width and it extends rightwards. Anchoring it
+                // 0..value instead is worse than it looks: anchors are relative
+                // to the PARENT, and the first version did exactly that and
+                // spanned that fraction of the whole card, drawing a gold line
+                // straight through the row's own label.
                 var fill = Ui.Solid($"OptionsRow{key}Fill", TrackFill,
                         new UiVec(OptionsLayout.TrackWidth, OptionsLayout.TrackHeight),
-                        Place.At(OptionsLayout.TrackLeft, y, new UiVec(0f, 0.5f)))
+                        Place.At(OptionsLayout.TrackLeft, 0f, new UiVec(0f, 0.5f)))
                     .AsDecor()
                     .AllowOverlap("the fill sits inside its own track by construction");
+
+                var value = Ui.Label($"OptionsRow{key}Value", UiString.Runtime,
+                        new UiVec(OptionsLayout.ValueWidth, 20f), 14, Value,
+                        Place.At(OptionsLayout.SliderValueCentreX, 0f))
+                    .AsDecor();
 
                 screen.SliderKeys.Add(key);
                 screen.SliderTracks.Add(track);
                 screen.SliderFills.Add(fill);
-
-                var value = Ui.Label($"OptionsRow{key}Value", UiString.Runtime,
-                        new UiVec(OptionsLayout.ValueWidth, 20f), 14, Value,
-                        Place.At(OptionsLayout.SliderValueCentreX, y))
-                    .AsDecor()
-                    .AllowOverlap("the value sits over its own row's hover plate by construction");
                 screen.SliderValues.Add(value);
 
-                yield return track;
-                yield return fill;
-                yield return value;
-                yield break;
+                children.Add(track);
+                children.Add(fill);
+                children.Add(value);
+            }
+            else
+            {
+                var prev = Ui.Button($"OptionsRow{key}Prev", UiStrings.OverlayPrev,
+                        new UiVec(OptionsLayout.StepButtonSize, OptionsLayout.StepButtonSize), 14,
+                        Place.At(OptionsLayout.StepPrevCentreX, 0f))
+                    .NoChrome();
+
+                var next = Ui.Button($"OptionsRow{key}Next", UiStrings.OverlayNext,
+                        new UiVec(OptionsLayout.StepButtonSize, OptionsLayout.StepButtonSize), 14,
+                        Place.At(OptionsLayout.StepNextCentreX, 0f))
+                    .NoChrome();
+
+                var stepValue = Ui.Label($"OptionsRow{key}Value", UiString.Runtime,
+                        new UiVec(OptionsLayout.StepValueWidth, 20f), 14, Value,
+                        Place.At(OptionsLayout.StepValueCentreX, 0f))
+                    .AsDecor();
+
+                screen.StepperKeys.Add(key);
+                screen.StepPrev.Add(prev);
+                screen.StepNext.Add(next);
+                screen.StepperValues.Add(stepValue);
+
+                children.Add(prev);
+                children.Add(stepValue);
+                children.Add(next);
             }
 
-            var prev = Ui.Button($"OptionsRow{key}Prev", UiStrings.OverlayPrev,
-                    new UiVec(OptionsLayout.StepButtonSize, OptionsLayout.StepButtonSize), 14,
-                    Place.At(OptionsLayout.StepPrevCentreX, y))
-                .NoChrome()
-                .AllowOverlap("the stepper sits over its own row's hover plate by construction");
+            // Coloured, and deliberately NOT AsDecor: it needs an Image to tint
+            // and a live raycast target to be hovered at all. The controller
+            // fades it to nothing on wiring and back up on enter.
+            var rowNode = Ui.Panel($"OptionsRow{key}",
+                    Place.At(0f, y),
+                    UiSize.Fixed(OptionsLayout.CardContentWidth, OptionsLayout.RowHeight - 8f),
+                    children)
+                .Coloured(RowHover);
 
-            var next = Ui.Button($"OptionsRow{key}Next", UiStrings.OverlayNext,
-                    new UiVec(OptionsLayout.StepButtonSize, OptionsLayout.StepButtonSize), 14,
-                    Place.At(OptionsLayout.StepNextCentreX, y))
-                .NoChrome()
-                .AllowOverlap("the stepper sits over its own row's hover plate by construction");
-
-            var stepValue = Ui.Label($"OptionsRow{key}Value", UiString.Runtime,
-                    new UiVec(OptionsLayout.StepValueWidth, 20f), 14, Value,
-                    Place.At(OptionsLayout.StepValueCentreX, y))
-                .AsDecor()
-                .AllowOverlap("the value sits over its own row's hover plate by construction");
-
-            screen.StepperKeys.Add(key);
-            screen.StepPrev.Add(prev);
-            screen.StepNext.Add(next);
-            screen.StepperValues.Add(stepValue);
-
-            yield return prev;
-            yield return stepValue;
-            yield return next;
+            screen.RowHovers.Add(rowNode);
+            return rowNode;
         }
 
         private static IEnumerable<UiNode> Rim(string stem, float w, float h)

@@ -20,6 +20,179 @@ namespace PrincesPalace.PlayModeTests
     {
         private SystemMenuController _menu;
 
+        // THE BUG THIS EXISTS FOR: the controller used to be attached to the
+        // menu's own modal, which is inactive until the menu opens. So its
+        // Update() did not run while it was closed, and the Escape that is
+        // supposed to OPEN the menu could never fire -- Escape only ever closed
+        // one that something else had already opened.
+        //
+        // It survived a whole design pass listing "Escape opens the menu" as
+        // built, because every test and every screenshot calls Open() directly
+        // and legacy Input cannot be pressed headlessly. Nothing in CI was in a
+        // position to notice, so this checks the PRECONDITION instead: the
+        // thing that listens for Escape has to be running while the menu is
+        // shut.
+        [UnityTest]
+        public IEnumerator TheMenuIsListeningWhileItIsClosed()
+        {
+            yield return OpenTheHub();
+
+            Assert.IsFalse(_menu.IsOpen, "the menu should start closed");
+            Assert.IsTrue(_menu.isActiveAndEnabled,
+                "SystemMenuController is not running while the menu is closed, so its Update never " +
+                "polls Escape and nothing can open the menu with the keyboard");
+        }
+
+        // Same precondition, in the two scenes where the menu opens over
+        // something that is already using Escape.
+        [UnityTest]
+        public IEnumerator TheMenuIsListeningInEverySceneThatCarriesIt()
+        {
+            foreach (string scene in new[] { "Map", "Fight" })
+            {
+                yield return SceneManager.LoadSceneAsync(scene, LoadSceneMode.Single);
+                yield return null;
+                yield return null;
+
+                var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+                Assert.IsNotNull(menu, $"{scene} has no SystemMenuController");
+                Assert.IsTrue(menu.isActiveAndEnabled,
+                    $"the system menu in {scene} is not listening while closed, so Escape cannot open it");
+            }
+        }
+
+        // ESCAPE, WITH SOMETHING ELSE ALREADY UP.
+        //
+        // The hub closes its glossary on Escape and this menu opens on Escape,
+        // and since the fix that made the menu listen while closed they sit on
+        // the SAME GameObject -- so Unity's Update order between them is
+        // whatever serialization order happens to be. Driven in BOTH orders
+        // here, because "it works" in one order is exactly what this class of
+        // bug looks like right up until it does not.
+        //
+        // Both handlers are split from their key reads precisely so this test
+        // can exist: legacy Input cannot be pressed headlessly.
+        [UnityTest]
+        public IEnumerator EscapeOverTheGlossaryDoesNotAlsoOpenTheMenu()
+        {
+            yield return OpenTheHub();
+
+            var hub = Object.FindAnyObjectByType<HubController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(hub, "the hub has no HubController");
+
+            // Hub first.
+            EscapeKey.Reset();
+            hub.SetGlossary(true);
+            Assert.IsFalse(_menu.IsOpen);
+
+            hub.HandleEscape();
+            _menu.HandleEscape();
+
+            Assert.IsFalse(_menu.IsOpen,
+                "Escape closed the glossary and opened the system menu on top of it");
+
+            // Menu first, same press.
+            EscapeKey.Reset();
+            hub.SetGlossary(true);
+
+            _menu.HandleEscape();
+            hub.HandleEscape();
+
+            Assert.IsFalse(_menu.IsOpen,
+                "the system menu opened on an Escape that belonged to the glossary");
+
+            yield return null;
+        }
+
+        // The other half: with nothing else up, Escape must still open it.
+        // A guard that fixed the race by never opening would pass the test
+        // above and be useless.
+        [UnityTest]
+        public IEnumerator EscapeWithNothingElseUpOpensTheMenu()
+        {
+            yield return OpenTheHub();
+            EscapeKey.Reset();
+
+            Assert.IsFalse(_menu.IsOpen);
+            _menu.HandleEscape();
+            Assert.IsTrue(_menu.IsOpen, "Escape did not open the menu when nothing else owned the key");
+
+            // And closes it again on the next press.
+            EscapeKey.Reset();
+            _menu.HandleEscape();
+            Assert.IsFalse(_menu.IsOpen, "Escape did not close the menu it had just opened");
+
+            yield return null;
+        }
+
+        // Opening the menu pauses; closing puts the clock back where it was
+        // rather than assuming 1, so a slow-motion or fast-forward the game set
+        // for its own reasons survives a visit to the menu.
+        [UnityTest]
+        public IEnumerator ClosingRestoresTheClockItFound()
+        {
+            yield return OpenTheHub();
+
+            Time.timeScale = 0.5f;
+            try
+            {
+                _menu.Open();
+                Assert.AreEqual(0f, Time.timeScale, "opening the menu did not pause");
+
+                _menu.Close();
+                Assert.AreEqual(0.5f, Time.timeScale, 0.0001f,
+                    "closing the menu reset the clock to 1 instead of what it found");
+            }
+            finally
+            {
+                Time.timeScale = 1f;
+            }
+
+            yield return null;
+        }
+
+        // A menu that opens itself onto "CONTENT TO COME" reads as broken. The
+        // design wants Floor map during a run; that pane is a placeholder, so
+        // the default has to fall back until it is built.
+        [Test]
+        public void TheDefaultTabIsNeverAPlaceholder()
+        {
+            foreach (bool inRun in new[] { false, true })
+            {
+                var tab = SystemMenuTabs.DefaultFor(inRun);
+                var def = SystemMenuTabs.All[SystemMenuTabs.IndexOf(tab)];
+
+                Assert.IsTrue(def.Built,
+                    $"the menu opens on '{def.Key}' when inRun={inRun}, and that pane is still a placeholder");
+            }
+        }
+
+        // The default also has to be a tab the context actually shows -- opening
+        // onto a pane whose tab is hidden leaves no way back to it.
+        [Test]
+        public void TheDefaultTabIsVisibleInItsOwnContext()
+        {
+            foreach (bool inRun in new[] { false, true })
+            {
+                int index = SystemMenuTabs.IndexOf(SystemMenuTabs.DefaultFor(inRun));
+
+                CollectionAssert.Contains(SystemMenuTabs.VisibleIndices(inRun).ToList(), index,
+                    $"the default tab for inRun={inRun} is not among the tabs that context shows");
+            }
+        }
+
+        // Silent-wrong-answer guard. IndexOf used to return 0 for anything it
+        // could not find, so every miss came back as Character & Inventory.
+        [Test]
+        public void EveryTabInTheEnumIsInTheTable()
+        {
+            foreach (SystemMenuTab tab in System.Enum.GetValues(typeof(SystemMenuTab)))
+            {
+                Assert.DoesNotThrow(() => SystemMenuTabs.IndexOf(tab),
+                    $"{tab} is in the enum but not in SystemMenuTabs.All");
+            }
+        }
+
         private IEnumerator OpenTheHub()
         {
             yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);

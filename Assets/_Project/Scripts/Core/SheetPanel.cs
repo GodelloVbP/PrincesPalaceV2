@@ -40,10 +40,12 @@ namespace PrincesPalace
         private static SystemMenuTab TabFor(bool inventory) =>
             SystemMenuTab.CharacterInventory;
 
-        // Pressing the key for the pane already showing closes the sheet.
-        // Pressing the OTHER pane's key while it is open switches to that pane
-        // rather than closing -- a reader reaching for the other half wants the
-        // other half, not the screen behind it.
+        // A PLAIN TOGGLE now that both keys mean one tab.
+        //
+        // This used to carry a switch-vs-close rule: pressing the other pane's
+        // key while open switched panes rather than closing. There is nothing
+        // left to switch between, and leaving the comment would have described
+        // behaviour the code no longer has.
         public static void Toggle(GameObject panel, bool inventory)
         {
             if (panel == null) return;

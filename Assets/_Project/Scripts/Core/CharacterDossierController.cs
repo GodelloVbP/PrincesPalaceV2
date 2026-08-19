@@ -399,16 +399,39 @@ namespace PrincesPalace
         // them by design rather than inventing a number, so they are resolved
         // here where the Character is in hand.
         private static string DisplayValue(Character character, SheetStat stat,
-                                           StatBlock stats, AbilityScoreBlock scores)
+                                           StatBlock stats, AbilityScoreBlock scores) =>
+            TryCurrentValue(character, stat, stats, scores, out int value) ? value.ToString() : "-";
+
+        // What a stat reads as RIGHT NOW, from the model.
+        //
+        // The equip preview needs the same number the row is showing, and it
+        // used to get it by int.TryParse-ing the label's rendered text. That
+        // works only for as long as every stat renders as a bare integer: the
+        // moment one gains a separator, a unit or a percent sign the parse
+        // fails silently, falls back to 0, and the preview prints a confident
+        // wrong total. Signature gain ALREADY renders as "-" when a character
+        // has no signature resource, so the failure case was live.
+        //
+        // False means there is no number to show, which is a different thing
+        // from zero and the reason this is not just an int.
+        private static bool TryCurrentValue(Character character, SheetStat stat,
+                                            StatBlock stats, AbilityScoreBlock scores, out int value)
         {
-            if (stat == SheetStat.MaxMana) return ContentDatabase.EffectiveMaxMana(character).ToString();
+            if (stat == SheetStat.MaxMana)
+            {
+                value = ContentDatabase.EffectiveMaxMana(character);
+                return true;
+            }
+
             if (stat == SheetStat.SignatureGain)
             {
                 var signature = ContentDatabase.BuildSignatureResource(character);
-                return signature == null ? "-" : signature.GainPerTurn.ToString();
+                value = signature?.GainPerTurn ?? 0;
+                return signature != null;
             }
 
-            return SheetStats.ValueOf(stat, stats, scores).ToString();
+            value = SheetStats.ValueOf(stat, stats, scores);
+            return true;
         }
 
         // THE mechanic: light the rows this attribute actually feeds, and dim
@@ -545,28 +568,41 @@ namespace PrincesPalace
             var item = ContentDatabase.GetItem(entry.Id);
             if (squad.Count == 0 || item == null) { ClearPreview(); return; }
 
-            var comparison = ItemDescription.Compare(squad[_index], item, entry.Plus);
+            var character = squad[_index];
+            var comparison = ItemDescription.Compare(character, item, entry.Plus);
             _previewScores = _scores + comparison.ScoreDelta;
 
-            for (int i = 0; i < SheetStats.Derived.Length && i < statPreviews.Length; i++)
-            {
-                int delta = DeltaFor(SheetStats.Derived[i], comparison);
+            var stats = ContentDatabase.EffectiveStats(character);
 
-                // ONLY the stats that actually move. A column of arrows against
-                // unchanged numbers buries the two rows that did change.
-                if (delta == 0)
+            // Bounded by BOTH arrays, not just one. They are built together and
+            // are the same length, but half a guard is the shape of an
+            // IndexOutOfRange that only shows up once somebody adds a stat.
+            int count = System.Math.Min(SheetStats.Derived.Length,
+                System.Math.Min(statPreviews.Length, statValues.Length));
+
+            for (int i = 0; i < count; i++)
+            {
+                var stat = SheetStats.Derived[i];
+                int delta = DeltaFor(stat, comparison);
+
+                // ONLY the stats that actually move, and only those that have a
+                // number to move. A column of arrows against unchanged numbers
+                // buries the two rows that did change.
+                if (delta == 0 || !TryCurrentValue(character, stat, stats, _scores, out int now))
                 {
                     if (statPreviews[i] != null) statPreviews[i].SetContent("");
                     if (statValues[i] != null) statValues[i].color = Neutral;
                     continue;
                 }
 
-                int now = int.TryParse(statValues[i].text, out var parsed) ? parsed : 0;
-                statPreviews[i].SetContent("> " + (now + delta));
-                statPreviews[i].color = delta > 0 ? Good : Bad;
+                if (statPreviews[i] != null)
+                {
+                    statPreviews[i].SetContent("> " + (now + delta));
+                    statPreviews[i].color = delta > 0 ? Good : Bad;
+                }
 
                 // The current figure steps back so the new one leads.
-                statValues[i].color = Dim;
+                if (statValues[i] != null) statValues[i].color = Dim;
             }
         }
 

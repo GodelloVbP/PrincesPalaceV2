@@ -162,11 +162,29 @@ namespace PrincesPalace
             // surprise.
             else if (Input.GetKeyDown(KeyCode.Escape))
             {
-                if (debugMenuPanel != null && debugMenuPanel.activeSelf) SetDebugMenu(false);
-                else if (glossaryPanel != null && glossaryPanel.activeSelf) SetGlossary(false);
-                // NOT the character screen: that panel is the system menu now,
-                // and its own handler owns Escape. Closing it here too would
-                // race with that handler and could reopen it the same frame.
+                HandleEscape();
+            }
+        }
+
+        // Split from the key read so it can be tested, and so the system menu
+        // can be told that this press is already spoken for.
+        //
+        // NOT the character screen: that panel is the system menu now, and its
+        // own handler owns Escape. Closing it here as well would race with that
+        // handler and could reopen it the same frame.
+        public void HandleEscape()
+        {
+            if (debugMenuPanel != null && debugMenuPanel.activeSelf)
+            {
+                SetDebugMenu(false);
+                EscapeKey.Consume();
+                return;
+            }
+
+            if (glossaryPanel != null && glossaryPanel.activeSelf)
+            {
+                SetGlossary(false);
+                EscapeKey.Consume();
             }
         }
 
