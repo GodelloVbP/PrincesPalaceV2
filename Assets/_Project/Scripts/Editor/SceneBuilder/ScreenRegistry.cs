@@ -132,7 +132,10 @@ public static class ScreenRegistry
                 fight.continueButton = result.Button(screen.ContinueButton);
 
                 fight.enemyIntentIcons = screen.EnemyIntentIcons.Select(result.Go).ToArray();
-                WireSystemMenu(result, screen.SystemMenu, screen.Sheet.Root);
+                // The reward screen owns Escape while it is up: opening this
+                // menu over a reckoning the player is trying to dismiss is the
+                // same wrong-thing-on-Escape the consumer list exists to stop.
+                WireSystemMenu(result, screen.SystemMenu, lockedForFight: true, screen.Reckoning.Root);
 
                 fight.intentTooltip = result.Go(screen.IntentTooltip);
                 fight.intentTooltipText = result.Tmp(screen.IntentTooltipText);
@@ -162,8 +165,7 @@ public static class ScreenRegistry
 
                 // Readable mid-fight, inert mid-fight. Same tree as the hub's,
                 // built with the lock on.
-                WireOverlay(result, screen.Sheet, lockedForFight: true);
-                fight.characterSheetPanel = result.Go(screen.Sheet.Root);
+                fight.characterSheetPanel = result.Go(screen.SystemMenu.Root);
 
                 fight.spellVfx = result.Image(screen.SpellVfx);
 
@@ -516,10 +518,9 @@ public static class ScreenRegistry
 
                 // Unlocked, unlike the fight's copy: the map is where
                 // changing gear between rooms is supposed to happen.
-                WireOverlay(result, screen.Sheet, lockedForFight: false);
-                map.characterSheetPanel = result.Go(screen.Sheet.Root);
+                map.characterSheetPanel = result.Go(screen.SystemMenu.Root);
 
-                WireSystemMenu(result, screen.SystemMenu, screen.Sheet.Root);
+                WireSystemMenu(result, screen.SystemMenu, lockedForFight: false);
 
                 // The painted room icons. Bound here rather than in the
                 // controller because "Assets/..." is an editor-only address and
@@ -679,14 +680,13 @@ public static class ScreenRegistry
     // explicit call from whoever opened it.
     private static void WireCharacterOverlay(UiEmitResult result, HubScreen screen, HubController hub)
     {
-        WireOverlay(result, screen.Overlay, lockedForFight: false);
-        hub.characterOverlayPanel = result.Go(screen.Overlay.Root);
+        hub.characterOverlayPanel = result.Go(screen.SystemMenu.Root);
 
         // The hub's overlay, its glossary and its relic draft all sit on
         // Escape-ish paths already, so each is declared as owning Escape ahead
         // of the overarching menu.
-        WireSystemMenu(result, screen.SystemMenu,
-            screen.Overlay.Root, screen.Glossary.Root, screen.Draft.Root);
+        WireSystemMenu(result, screen.SystemMenu, lockedForFight: false,
+            screen.Glossary.Root, screen.Draft.Root);
     }
 
     // The overarching menu's wiring, shared by every scene that carries one.
@@ -697,7 +697,7 @@ public static class ScreenRegistry
     // by name, so a scene that grows another Escape-owning panel declares it
     // here instead of the menu guessing.
     private static SystemMenuController WireSystemMenu(
-        UiEmitResult result, SystemMenuScreen menu, params NodeRef[] escapeConsumers)
+        UiEmitResult result, SystemMenuScreen menu, bool lockedForFight, params NodeRef[] escapeConsumers)
     {
         var controller = result.Attach<SystemMenuController>(menu.Root);
 
@@ -707,7 +707,7 @@ public static class ScreenRegistry
         controller.panes = menu.Panes.Select(result.Go).ToArray();
         controller.escapeConsumers = escapeConsumers.Select(result.Go).ToArray();
 
-        if (menu.Dossier != null) WireDossier(result, menu.Dossier);
+        if (menu.Dossier != null) WireDossier(result, menu.Dossier, lockedForFight);
 
         return controller;
     }
@@ -717,9 +717,11 @@ public static class ScreenRegistry
     // Bound with the SAME icon arrays every other item surface uses, from every
     // ItemDefinition with an authored iconPath -- an item whose art is missing
     // disables its Image rather than painting a white quad.
-    private static CharacterDossierController WireDossier(UiEmitResult result, CharacterDossierScreen dossier)
+    private static CharacterDossierController WireDossier(
+        UiEmitResult result, CharacterDossierScreen dossier, bool lockedForFight)
     {
         var controller = result.Attach<CharacterDossierController>(dossier.Root);
+        controller.lockedForFight = lockedForFight;
 
         controller.characterName = result.Tmp(dossier.CharacterName);
         controller.subLine = result.Tmp(dossier.SubLine);
@@ -762,90 +764,6 @@ public static class ScreenRegistry
         var withArt = ContentDatabase.Items
             .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
             .ToList();
-        controller.iconIds = withArt.Select(i => i.id).ToArray();
-        controller.iconSprites = withArt.Select(i => SceneBuilder.LoadSpriteByKey(i.iconPath)).ToArray();
-
-        return controller;
-    }
-
-    // The overlay's wiring, shared by the hub's copy and the fight's.
-    //
-    // lockedForFight is the ONLY difference between them, and it is decided
-    // here at build time rather than sniffed at runtime -- the fight's copy is
-    // readable and inert, the hub's is live.
-    private static CharacterOverlayController WireOverlay(
-        UiEmitResult result, CharacterOverlayScreen overlay, bool lockedForFight)
-    {
-        var controller = result.Attach<CharacterOverlayController>(overlay.Root);
-        controller.lockedForFight = lockedForFight;
-
-        controller.slotCells = overlay.SlotCells.Select(result.Button).ToArray();
-        controller.slotIcons = overlay.SlotIcons.Select(result.Image).ToArray();
-        controller.slotBackings = overlay.SlotBackings.Select(result.Image).ToArray();
-        controller.slotRarityEdges = overlay.SlotRarityEdges.Select(result.Image).ToArray();
-        controller.slotPlusLabels = overlay.SlotPlusLabels.Select(result.Tmp).ToArray();
-
-        controller.bagCells = overlay.BagCells.Select(result.Button).ToArray();
-        controller.bagIcons = overlay.BagIcons.Select(result.Image).ToArray();
-        controller.bagBackings = overlay.BagBackings.Select(result.Image).ToArray();
-        controller.bagRarityEdges = overlay.BagRarityEdges.Select(result.Image).ToArray();
-        controller.bagCountLabels = overlay.BagCountLabels.Select(result.Tmp).ToArray();
-        controller.bagPlusLabels = overlay.BagPlusLabels.Select(result.Tmp).ToArray();
-
-        controller.characterPane = result.Go(overlay.CharacterPane);
-        controller.inventoryPane = result.Go(overlay.InventoryPane);
-        controller.characterTab = result.Button(overlay.CharacterTab);
-        controller.inventoryTab = result.Button(overlay.InventoryTab);
-        controller.characterTabMarker = result.Image(overlay.CharacterTabMarker);
-        controller.inventoryTabMarker = result.Image(overlay.InventoryTabMarker);
-
-        controller.statValues = overlay.StatValueLabels.Select(result.Tmp).ToArray();
-
-        controller.comparePlate = result.Rect(overlay.ComparePlate);
-        controller.compareName = result.Tmp(overlay.CompareName);
-        controller.compareBody = result.Tmp(overlay.CompareBody);
-
-        // Hover and double-click, one per cell. Attached rather than wired:
-        // the component finds its controller up the tree at runtime, because a
-        // delegate assigned in this build-time step would not survive into the
-        // scene.
-        for (int i = 0; i < overlay.SlotCells.Count; i++)
-        {
-            var pointer = result.Attach<CellPointer>(overlay.SlotCells[i]);
-            pointer.index = i;
-            pointer.isBagCell = false;
-        }
-
-        for (int i = 0; i < overlay.BagCells.Count; i++)
-        {
-            var pointer = result.Attach<CellPointer>(overlay.BagCells[i]);
-            pointer.index = i;
-            pointer.isBagCell = true;
-        }
-
-        controller.characterName = result.Tmp(overlay.CharacterName);
-        controller.pageLabel = result.Tmp(overlay.PageLabel);
-        controller.bagEmptyHint = result.Go(overlay.BagEmptyHint);
-        controller.detailPlate = result.Go(overlay.DetailPlate);
-        controller.detailName = result.Tmp(overlay.DetailName);
-        controller.detailBody = result.Tmp(overlay.DetailBody);
-        controller.actionLabel = result.Tmp(overlay.ActionLabel);
-        controller.actionButton = result.Button(overlay.ActionButton);
-        controller.prevCharacterButton = result.Button(overlay.PrevCharacterButton);
-        controller.nextCharacterButton = result.Button(overlay.NextCharacterButton);
-        controller.prevPageButton = result.Button(overlay.PrevPageButton);
-        controller.nextPageButton = result.Button(overlay.NextPageButton);
-        controller.closeButton = result.Button(overlay.CloseButton);
-        controller.silhouette = result.Image(overlay.Silhouette);
-
-        // Every item that authored an icon, baked as two parallel arrays.
-        // Resolved here rather than at runtime because Resources loading and
-        // AssetDatabase are different worlds and only the builder has the
-        // second one.
-        var withArt = ContentDatabase.Items
-            .Where(i => !string.IsNullOrEmpty(i.iconPath))
-            .ToList();
-
         controller.iconIds = withArt.Select(i => i.id).ToArray();
         controller.iconSprites = withArt.Select(i => SceneBuilder.LoadSpriteByKey(i.iconPath)).ToArray();
 

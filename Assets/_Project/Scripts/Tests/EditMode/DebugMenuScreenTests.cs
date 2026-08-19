@@ -70,21 +70,25 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void TheDebugMenuDrawsOverTheCharacterOverlay()
+        public void TheDebugMenuDrawsOverTheCharacterScreen()
         {
             // Declaration order is painter's order. A debug tool covered by the
             // very screen you opened it to debug is the one stacking mistake
             // that makes it useless -- and both are modals over the same hub,
             // so nothing else decides this.
+            //
+            // The character screen is the system menu now; it used to be
+            // CharacterOverlayPanel. The rule is unchanged and so is the reason
+            // -- only which modal has to stay underneath.
             var root = HubScreen.Build().Root;
             var names = root.Children.Select(c => c.Name).ToList();
 
-            int overlay = names.IndexOf("CharacterOverlayPanel");
+            int character = names.IndexOf("SystemMenuPanel");
             int debug = names.IndexOf("DebugMenuPanel");
 
-            Assert.Greater(overlay, -1, "the overlay is not a direct child of HubPanel any more");
+            Assert.Greater(character, -1, "the system menu is not a direct child of HubPanel any more");
             Assert.Greater(debug, -1, "the debug menu is not a direct child of HubPanel any more");
-            Assert.Greater(debug, overlay, "the debug menu must be declared after the overlay");
+            Assert.Greater(debug, character, "the debug menu must be declared after the system menu");
         }
 
         [Test]

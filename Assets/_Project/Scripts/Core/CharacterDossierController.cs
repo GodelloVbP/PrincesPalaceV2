@@ -33,6 +33,22 @@ namespace PrincesPalace
         [SerializeField] internal GameObject packPanel;
         [SerializeField] internal Button packCloseButton;
 
+        // The fight's copy is readable and inert; every other copy is live.
+        //
+        // Decided at BUILD time rather than sniffed at runtime, which is the
+        // arrangement CharacterOverlayController already used for exactly this
+        // -- gear is locked for the duration of a battle, and the sheet the
+        // fight shows must not be able to change the fight it is describing.
+        // Putting C and I on this menu made that invariant this screen's
+        // problem: before, those keys reached a panel that had already been
+        // wired inert.
+        [SerializeField] internal bool lockedForFight;
+
+        // Public because the serialized field is internal and the PlayMode test
+        // assembly cannot see internals. Same name the overlay exposed, so the
+        // test that pins "the fight's copy is inert" reads unchanged.
+        public bool EquipLocked => lockedForFight;
+
         [SerializeField] internal Button[] slotCells;
         [SerializeField] internal Image[] slotIcons;
         [SerializeField] internal TMP_Text[] slotLabels;
@@ -120,6 +136,12 @@ namespace PrincesPalace
             // Clicking equips; clicking a worn slot takes it off. A screen that
             // could only put gear ON would be a trap, so both gestures exist --
             // the same pair the old sheet had.
+            //
+            // Not attached at all in a fight, rather than attached and refused:
+            // a button that visibly does nothing invites the player to press it
+            // again, and there is nowhere on this screen to explain why.
+            if (lockedForFight) return;
+
             for (int i = 0; i < packCells.Length; i++)
             {
                 if (packCells[i] == null) continue;

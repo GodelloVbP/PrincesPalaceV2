@@ -142,7 +142,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // The same overlay the hub and the fight mount. Live here:
         // between rooms is when gear is meant to change.
         public SystemMenuScreen SystemMenu;
-        public CharacterOverlayScreen Sheet;
 
         // Anchored to the content rect's LEFT edge, which is the origin every
         // MapLayout x is measured from. Declared once here so no construction
@@ -235,14 +234,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var systemMenu = SystemMenuScreen.Build();
             screen.SystemMenu = systemMenu;
 
-            var sheet = CharacterOverlayScreen.Build();
-            screen.Sheet = sheet;
+            // The old paperdoll is gone; the system menu's Character pane is
+            // the character screen now. SheetPanel opens the menu instead, so
+            // every caller -- C, I, Escape, the hub's building -- reaches the
+            // dossier without any of them knowing the screen changed.
 
             // Viewport FIRST so the headings and the abandon button draw over
             // the scrolling wood rather than under it. The sheet is LAST, so
             // the modal dims the map and everything on it.
             screen.Root = Ui.Panel("MapPanel", UiSize.Fixed(1920f, 1080f),
-                viewport, title, depth, gold, abandon, roomMessage, sheet.Root, systemMenu.Root);
+                viewport, title, depth, gold, abandon, roomMessage, systemMenu.Root);
 
             return screen;
         }

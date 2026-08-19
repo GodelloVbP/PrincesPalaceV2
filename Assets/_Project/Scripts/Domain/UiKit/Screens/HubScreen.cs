@@ -40,7 +40,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // The character overlay lives in the hub permanently and hidden.
         // Declared LAST so it draws over everything it dims.
         public SystemMenuScreen SystemMenu;
-        public CharacterOverlayScreen Overlay;
 
         // Over even the overlay: a debug tool has to be reachable from
         // whatever state the game is wedged in, and being covered by the very
@@ -140,8 +139,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var systemMenu = SystemMenuScreen.Build();
             screen.SystemMenu = systemMenu;
 
-            var overlay = CharacterOverlayScreen.Build();
-            screen.Overlay = overlay;
+            // The old paperdoll is gone; the system menu's Character pane is
+            // the character screen now. SheetPanel opens the menu instead, so
+            // every caller -- C, I, Escape, the hub's building -- reaches the
+            // dossier without any of them knowing the screen changed.
 
             var debug = DebugMenuScreen.Build();
             screen.Debug = debug;
@@ -181,14 +182,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .Coloured("#2C1C42E0").AsDecor(),
 
                 mainMenu,
-                overlay.Root,
-                debug.Root,
                 draft.Root,
                 glossary.Root,
 
-                // LAST of all: the overarching menu opens on top of everything
-                // else the hub can be showing.
-                systemMenu.Root);
+                // The overarching menu opens on top of everything the hub can
+                // be showing...
+                systemMenu.Root,
+
+                // ...except the debug menu, which is LAST because it is a tool
+                // for inspecting the rest. A debug overlay covered by the very
+                // screen you opened it to look at is the one stacking mistake
+                // that makes it useless, and the system menu moving to the top
+                // of the hub is exactly what had buried it.
+                debug.Root);
 
             return screen;
         }

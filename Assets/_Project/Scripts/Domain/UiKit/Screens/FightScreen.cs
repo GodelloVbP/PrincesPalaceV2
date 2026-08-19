@@ -121,7 +121,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // The same tree the hub mounts, wired read-only here.
         public SystemMenuScreen SystemMenu;
-        public CharacterOverlayScreen Sheet;
 
         public NodeRef SubmenuColumn;
         public NodeRef SubmenuTitle;
@@ -208,9 +207,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var systemMenu = SystemMenuScreen.Build();
             s.SystemMenu = systemMenu;
 
-            var sheet = CharacterOverlayScreen.Build();
-            s.Sheet = sheet;
-            children.Add(sheet.Root);
+            // The old paperdoll is gone; the system menu's Character pane is
+            // the character screen now. SheetPanel opens the menu instead, so
+            // every caller -- C, I, Escape, the hub's building -- reaches the
+            // dossier without any of them knowing the screen changed.
 
             // LAST, so they draw over the whole stage they dim.
             var reckoning = ReckoningScreen.Build();

@@ -1,4 +1,5 @@
 using System.Collections;
+using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
@@ -7,6 +8,7 @@ using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
 using PrincesPalace.Domain.Equipment;
+using PrincesPalace.Content;
 
 namespace PrincesPalace.Tests.PlayMode
 {
@@ -19,6 +21,35 @@ namespace PrincesPalace.Tests.PlayMode
     // the loadout says which.
     public class DossierEquipTests
     {
+        private string _root;
+
+        // Its own save root, seeded with a known wearable item.
+        //
+        // Without this the test read whatever save the runner happened to be
+        // carrying, which is order-dependent: it passed for as long as some
+        // earlier test left 27 items lying around and failed the moment the
+        // ordering changed, with "nothing in the pack to equip" -- a message
+        // about the fixture wearing the costume of a product bug.
+        [SetUp]
+        public void UseAThrowawaySaveRoot()
+        {
+            _root = Path.Combine(Path.GetTempPath(), "pp-dossier-" + System.Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(_root);
+            SaveSystem.RootOverride = _root;
+            SaveSlotManager.CurrentSlot = 0;
+            SaveSlotManager.Forget();
+            Navigation.LoadOverride = _ => { };
+        }
+
+        [TearDown]
+        public void Restore()
+        {
+            Navigation.Reset();
+            SaveSystem.RootOverride = null;
+            SaveSlotManager.Forget();
+            if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
+        }
+
         [UnityTest]
         public IEnumerator ClickingAPackItemEquipsIt()
         {
@@ -47,10 +78,21 @@ namespace PrincesPalace.Tests.PlayMode
                 .FirstOrDefault(b => b.name == "DossierPackCell0");
             Assert.IsNotNull(cell, "the pack drew no cell named DossierPackCell0");
 
+            // Seeded here rather than assumed: the first equippable item the
+            // content database has, put in the pack, so the cell the test
+            // clicks is known to be wearable.
+            var wearable = ContentDatabase.Equippables.FirstOrDefault();
+            Assert.IsNotNull(wearable, "the content database has no equippable item to test with");
+
+            InventoryOps.Add(save.stockpiledItems, wearable.id);
+            SaveSlotManager.SaveCurrent();
+            dossier.Refresh();
+            yield return null;
+
             // The WHOLE loadout, not one named slot: which slot an item lands in
             // is ResolveTargetSlot's business, and a test that guesses the slot
             // would fail for a correct equip into the other weapon hand.
-            var before = EquipmentSlots.All.ToDictionary(s => s, s => character.equipment.Get(s));
+            var before = EquipmentSlots.All.ToDictionary(sl => sl, sl => character.equipment.Get(sl));
             int carriedBefore = save.stockpiledItems.Sum(e => e.count);
             Assert.Greater(carriedBefore, 0, "nothing in the pack to equip");
 

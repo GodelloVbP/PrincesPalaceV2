@@ -1,4 +1,5 @@
 using UnityEngine;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
 {
@@ -14,9 +15,27 @@ namespace PrincesPalace
     // hub controller, a fight controller and a map controller with nothing else
     // in common, and inheritance for one shared behaviour would be the wrong
     // shape entirely.
+    //
+    // It opens the system menu's dossier, which replaced the paperdoll this
+    // used to raise. That swap was the whole of the migration: the three owners
+    // still call the same two methods with the same arguments, and only what
+    // their panel field points at changed. Rewiring C, I, Escape and the hub's
+    // building to address the menu directly was the first attempt, and it was
+    // strictly more work for the same result -- it dragged three controllers
+    // and their tests along to reach a screen this seam already reached.
     internal static class SheetPanel
     {
         public static bool IsOpen(GameObject panel) => panel != null && panel.activeSelf;
+
+        // C means Character and I means Inventory, which on the dossier are two
+        // tabs onto ONE pane rather than two panes. The tab still has to follow
+        // the key that was pressed, so this maps the key's meaning and lets
+        // SystemMenuTabs decide which pane that tab shows.
+        private static SystemMenuTab TabFor(bool inventory) =>
+            inventory ? SystemMenuTab.Inventory : SystemMenuTab.Character;
+
+        private static bool ShowingInventory(SystemMenuController menu) =>
+            menu.SelectedIndex == SystemMenuTabs.IndexOf(SystemMenuTab.Inventory);
 
         // Pressing the key for the pane already showing closes the sheet.
         // Pressing the OTHER pane's key while it is open switches to that pane
@@ -26,11 +45,11 @@ namespace PrincesPalace
         {
             if (panel == null) return;
 
-            var overlay = panel.GetComponent<CharacterOverlayController>();
+            var menu = panel.GetComponent<SystemMenuController>();
 
-            if (panel.activeSelf && overlay != null && overlay.ShowingInventory != inventory)
+            if (panel.activeSelf && menu != null && ShowingInventory(menu) != inventory)
             {
-                overlay.OpenOn(inventory);
+                menu.Select(TabFor(inventory));
                 return;
             }
 
@@ -47,12 +66,19 @@ namespace PrincesPalace
                 return;
             }
 
-            // Through OpenOn so the pane is chosen BEFORE the object activates:
-            // OnEnable refreshes, and refreshing into the pane being left would
-            // paint one frame of the wrong half.
-            var overlay = panel.GetComponent<CharacterOverlayController>();
-            if (overlay != null) overlay.OpenOn(inventory);
-            else panel.SetActive(true);
+            var menu = panel.GetComponent<SystemMenuController>();
+            if (menu != null)
+            {
+                // Open THEN Select, and the order matters: Select records a
+                // deliberate choice that the menu's own Start() must not
+                // overwrite, and Start() does not run until the frame after
+                // Open() activates the object.
+                menu.Open();
+                menu.Select(TabFor(inventory));
+                return;
+            }
+
+            panel.SetActive(true);
         }
     }
 }

@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using PrincesPalace;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -45,11 +46,23 @@ namespace PrincesPalace.PlayModeTests
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
         }
 
-        private static CharacterOverlayController Sheet()
+        // The dossier inside the system menu, which replaced the paperdoll
+        // this used to find. The rule it pins did not change: the fight's copy
+        // must exist and must be inert.
+        private static CharacterDossierController Sheet()
         {
-            return Object.FindObjectsByType<CharacterOverlayController>(
+            return Object.FindObjectsByType<CharacterDossierController>(
                     FindObjectsInactive.Include, FindObjectsSortMode.None)
                 .FirstOrDefault();
+        }
+
+        // Which half is showing is the MENU's business now -- Character and
+        // Inventory are two tabs onto one pane rather than two panes.
+        private static bool ShowingInventory()
+        {
+            var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            return menu != null
+                && menu.SelectedIndex == SystemMenuTabs.IndexOf(SystemMenuTab.Inventory);
         }
 
         [UnityTest]
@@ -101,17 +114,15 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             var fight = Object.FindAnyObjectByType<FightController>(FindObjectsInactive.Include);
-            var sheet = Sheet();
-
             fight.ToggleCharacterSheet(inventory: false);
             yield return null;
-            Assert.IsFalse(sheet.ShowingInventory, "C opened the bag rather than the character");
+            Assert.IsFalse(ShowingInventory(), "C opened the bag rather than the character");
 
             fight.ToggleCharacterSheet(inventory: true);
             yield return null;
 
             Assert.IsTrue(fight.CharacterSheetIsOpen, "I closed the sheet instead of switching to the bag");
-            Assert.IsTrue(sheet.ShowingInventory, "I did not switch to the bag");
+            Assert.IsTrue(ShowingInventory(), "I did not switch to the bag");
         }
 
         // The hub's copy is the live one. Same tree, opposite setting, and the

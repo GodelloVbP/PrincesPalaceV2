@@ -146,10 +146,11 @@ namespace PrincesPalace
 
             if (Input.GetKeyDown(KeyCode.C)) ToggleCharacterSheet(inventory: false);
             else if (Input.GetKeyDown(KeyCode.I)) ToggleCharacterSheet(inventory: true);
-            else if (Input.GetKeyDown(KeyCode.Escape) && characterSheetPanel.activeSelf)
-            {
-                SetCharacterSheet(false);
-            }
+            // Escape belongs to SystemMenuController now, because this panel IS
+            // that menu. Closing it here as well would race: Unity does not
+            // order Update between components, so the menu's own handler could
+            // run after this one, see a closed menu and nothing owning Escape,
+            // and reopen it in the same frame the player closed it.
         }
 
         // Separated from the key for the reason HubController documents:

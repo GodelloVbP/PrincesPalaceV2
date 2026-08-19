@@ -173,7 +173,9 @@ namespace PrincesPalace
             {
                 if (debugMenuPanel != null && debugMenuPanel.activeSelf) SetDebugMenu(false);
                 else if (glossaryPanel != null && glossaryPanel.activeSelf) SetGlossary(false);
-                else if (characterOverlayPanel.activeSelf) SetCharacterOverlay(false);
+                // NOT the character screen: that panel is the system menu now,
+                // and its own handler owns Escape. Closing it here too would
+                // race with that handler and could reopen it the same frame.
             }
         }
 

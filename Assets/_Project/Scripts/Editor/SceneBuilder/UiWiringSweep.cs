@@ -1,7 +1,9 @@
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 using UnityEditor;
 using UnityEngine;
+using PrincesPalace;
 
 // E3: every [SerializeField] reference on every attached controller is non-null.
 //
@@ -53,7 +55,10 @@ public static class UiWiringSweep
                         }
                     }
 
-                    if (property.arraySize == 0)
+                    // Empty is a failure UNLESS the field says otherwise. Null
+                    // elements above are checked regardless, so a [UiOptional]
+                    // array may be empty but never half-wired.
+                    if (property.arraySize == 0 && !IsOptional(controller, property.propertyPath))
                     {
                         problems.Add($"  {controller.GetType().Name}.{property.propertyPath} is an empty array");
                     }
@@ -69,5 +74,15 @@ public static class UiWiringSweep
         sb.AppendLine("  Fix by: assigning it in this screen's Wire step; or, if it is genuinely optional, ");
         sb.AppendLine("  dropping the [SerializeField] so nothing claims it will be there.");
         throw new System.Exception(sb.ToString());
+    }
+
+    // propertyPath is the field name for a top-level field, which is the only
+    // shape this sweep walks.
+    private static bool IsOptional(Component controller, string fieldName)
+    {
+        var field = controller.GetType().GetField(
+            fieldName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+
+        return field != null && field.IsDefined(typeof(UiOptionalAttribute), inherit: true);
     }
 }

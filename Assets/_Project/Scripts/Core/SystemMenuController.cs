@@ -25,6 +25,8 @@ namespace PrincesPalace
         // opened this menu on top of a sheet the player was trying to close
         // would be a bug the player reports as "Escape does the wrong thing".
         // Empty in scenes that have no such panel.
+        [UiOptional("the map has no other Escape-owning panel; the hub has a glossary " +
+                    "and a relic draft, and the fight has its reward screen")]
         [SerializeField] internal GameObject[] escapeConsumers;
 
         private bool _wired;
