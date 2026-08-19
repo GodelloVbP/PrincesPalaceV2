@@ -761,6 +761,18 @@ public static class ScreenRegistry
         controller.statPreviews = dossier.StatPreviews.Select(result.Tmp).ToArray();
         controller.statHighlights = dossier.StatHighlights.Select(result.Go).ToArray();
 
+        controller.portrait = result.Image(dossier.Portrait);
+
+        // Every character with an authored portrait. portraitPath is
+        // Assets-relative by convention (ArtPathConvention), which is exactly
+        // what LoadSpriteByKey takes, so these bake into the scene like every
+        // other piece of menu art rather than loading at runtime.
+        var faces = ContentDatabase.Characters
+            .Where(c => c != null && !string.IsNullOrWhiteSpace(c.portraitPath))
+            .ToList();
+        controller.portraitIds = faces.Select(c => c.id).ToArray();
+        controller.portraitSprites = faces.Select(c => SceneBuilder.LoadSpriteByKey(c.portraitPath)).ToArray();
+
         var withArt = ContentDatabase.Items
             .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
             .ToList();

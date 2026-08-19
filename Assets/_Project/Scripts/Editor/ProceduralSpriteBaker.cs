@@ -228,6 +228,25 @@ public static class ProceduralSpriteBaker
             return (1f, Smoothstep(edge));
         });
 
+        // The dossier's own wash, brightest along the top edge.
+        //
+        // A flat ground gave that screen no hierarchy at all: three columns of
+        // equal weight on one even field, and nothing telling the eye where to
+        // start. Light falling from above is the cheapest fix that is also
+        // true to the rest of the game's art -- every portrait and actor in
+        // this project is lit from above, so a panel lit the same way sits in
+        // the same world rather than looking like a web page behind them.
+        //
+        // Cubed falloff, not linear. Linear reads as a grey haze over the whole
+        // panel; cubed keeps the bottom two thirds honest black and puts the
+        // whole of the lift in the top third, where the portrait and the column
+        // headings are.
+        BakeGradient("dossier_veil", 128, y =>
+        {
+            float up = Mathf.Clamp01(y);
+            return (1f, Smoothstep(up * up * up));
+        });
+
         // Weighted to the bottom of the screen, under the command columns.
         // Squared rather than linear so it stays out of the way through the
         // middle of the frame and only bites where the HUD actually is --

@@ -75,6 +75,16 @@ namespace PrincesPalace
         [SerializeField] internal GameObject[] statHighlights;
 
         // Item art, bound at build time from every ItemDefinition with an icon.
+        // The portrait, keyed by character id rather than by roster position.
+        //
+        // The squad is a SUBSET of the roster in save order, so indexing these
+        // by the dossier's own _index would put the wrong face on the wrong
+        // sheet the moment a squad is anything other than the first N
+        // characters. Same id-paired shape the item icons below use.
+        [SerializeField] internal Image portrait;
+        [SerializeField] internal string[] portraitIds;
+        [SerializeField] internal Sprite[] portraitSprites;
+
         [SerializeField] internal string[] iconIds;
         [SerializeField] internal Sprite[] iconSprites;
 
@@ -298,6 +308,30 @@ namespace PrincesPalace
 
             if (characterName != null) characterName.SetContent(name);
             if (subLine != null) subLine.SetContent($"Level {character.level}");
+
+            // The face, not a mannequin.
+            //
+            // NOT through ItemIcons.Apply, which is right for item cells and
+            // wrong here: it DISABLES the Image when there is no art, and the
+            // tree has already put an armour stand in this slot as the
+            // placeholder. Applying would blank a character without a portrait
+            // instead of leaving them the stand, turning graceful degradation
+            // into a hole in the layout.
+            var face = ItemIcons.Find(portraitIds, portraitSprites, character.definitionId);
+            if (portrait != null && face != null)
+            {
+                portrait.sprite = face;
+                portrait.enabled = true;
+                portrait.preserveAspect = true;
+
+                // AND THE TINT COMES OFF. The tree dims this slot to a faint
+                // violet so the armour-stand placeholder recedes, and an Image
+                // tint MULTIPLIES -- so that same dimming was landing on the
+                // painted portrait, which arrived grey-pink at a third opacity
+                // and read as a bad illustration rather than as a tint that was
+                // never meant for it.
+                portrait.color = Color.white;
+            }
 
             int next = Character.ExpToNextLevel(character.level);
             if (xpFill != null)
