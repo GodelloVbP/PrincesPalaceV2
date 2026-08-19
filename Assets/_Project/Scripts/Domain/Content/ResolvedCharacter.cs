@@ -24,6 +24,7 @@ namespace PrincesPalace.Domain.Content
         public readonly int SignatureGainOnAttack;
         public readonly int SignatureGainOnDamageTaken;
         public readonly bool SignatureAbsorbsDamage;
+        public readonly int PrincesFavor;
         public readonly int SortOrder;
 
         public ResolvedCharacter(
@@ -32,7 +33,7 @@ namespace PrincesPalace.Domain.Content
             string portraitPath, string battleSpritePath, SpriteFacing battleSpriteFacing,
             DamageType attackType, string signatureId, string signatureDisplayName,
             int signatureCapacity, int signatureGainPerTurn, int signatureGainOnAttack,
-            int signatureGainOnDamageTaken, bool signatureAbsorbsDamage, int sortOrder)
+            int signatureGainOnDamageTaken, bool signatureAbsorbsDamage, int princesFavor, int sortOrder)
         {
             Id = id;
             DisplayName = displayName;
@@ -50,6 +51,7 @@ namespace PrincesPalace.Domain.Content
             SignatureGainOnAttack = signatureGainOnAttack;
             SignatureGainOnDamageTaken = signatureGainOnDamageTaken;
             SignatureAbsorbsDamage = signatureAbsorbsDamage;
+            PrincesFavor = princesFavor;
             SortOrder = sortOrder;
         }
 

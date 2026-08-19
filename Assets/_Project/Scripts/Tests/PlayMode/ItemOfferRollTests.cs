@@ -56,7 +56,7 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void ARollProducesTheOfferCountTheScreenBuildsFor()
         {
-            var offers = ItemOfferRoll.Roll(EncounterClass.Normal, 8, First);
+            var offers = ItemOfferRoll.Roll(EncounterClass.Normal, 8, 0, First);
 
             Assert.AreEqual(ItemOfferTable.OfferCount, offers.Count);
         }
@@ -67,7 +67,7 @@ namespace PrincesPalace.PlayModeTests
             // Three of the same sword is one choice wearing three hats.
             for (int depth = 0; depth < 40; depth += 7)
             {
-                var offers = ItemOfferRoll.Roll(EncounterClass.Elite, depth, First);
+                var offers = ItemOfferRoll.Roll(EncounterClass.Elite, depth, 0, First);
                 var ids = offers.Select(o => o.ItemId).ToList();
 
                 CollectionAssert.AllItemsAreUnique(ids, $"at depth {depth}");
@@ -77,7 +77,7 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void EveryOfferNamesRealContent()
         {
-            var offers = ItemOfferRoll.Roll(EncounterClass.Boss, 24, First);
+            var offers = ItemOfferRoll.Roll(EncounterClass.Boss, 24, 0, First);
 
             foreach (var offer in offers)
             {
@@ -97,13 +97,13 @@ namespace PrincesPalace.PlayModeTests
 
             for (int depth = 0; depth < 30; depth += 3)
             {
-                foreach (var offer in ItemOfferRoll.Roll(EncounterClass.Boss, depth, First))
+                foreach (var offer in ItemOfferRoll.Roll(EncounterClass.Boss, depth, 0, First))
                 {
                     // ItemOfferTable widens its band when the pool is thin, so
                     // the assertion is on the TIER THE TABLE TARGETED, which is
                     // what the floor governs.
                     Assert.GreaterOrEqual(
-                        RarityTable.RollTier(EncounterClass.Boss, depth, ItemOfferRoll.MaxTier, First),
+                        RarityTable.RollTier(EncounterClass.Boss, depth, ItemOfferRoll.MaxTier, 0, First),
                         floor, $"at depth {depth}");
                 }
             }
@@ -112,8 +112,8 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void ANullRandomSourceDegradesRatherThanThrowing()
         {
-            Assert.DoesNotThrow(() => ItemOfferRoll.Roll(EncounterClass.Normal, 4, null));
-            CollectionAssert.IsEmpty(ItemOfferRoll.Roll(EncounterClass.Normal, 4, null));
+            Assert.DoesNotThrow(() => ItemOfferRoll.Roll(EncounterClass.Normal, 4, 0, null));
+            CollectionAssert.IsEmpty(ItemOfferRoll.Roll(EncounterClass.Normal, 4, 0, null));
         }
 
         [Test]
@@ -130,7 +130,7 @@ namespace PrincesPalace.PlayModeTests
             // per-item roll and a per-set roll produce visibly different data.
             System.Func<int, int> walking = bound => (calls++) % System.Math.Max(1, bound);
 
-            foreach (var offer in ItemOfferRoll.Roll(EncounterClass.Boss, 30, walking))
+            foreach (var offer in ItemOfferRoll.Roll(EncounterClass.Boss, 30, 0, walking))
             {
                 seen.Add(offer.Plus);
             }

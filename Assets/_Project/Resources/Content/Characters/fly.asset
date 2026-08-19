@@ -41,4 +41,5 @@ MonoBehaviour:
   signatureGainOnAttack: 4
   signatureGainOnDamageTaken: 0
   signatureAbsorbsDamage: 0
+  princesFavor: 2
   sortOrder: 1

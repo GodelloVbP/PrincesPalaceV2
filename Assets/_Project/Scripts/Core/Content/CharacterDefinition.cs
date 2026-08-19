@@ -66,6 +66,9 @@ namespace PrincesPalace.Content
         // characters land in the default squad. ContentDatabase sorts by
         // this explicit field instead, same pattern as
         // UpgradeDefinition.sortOrder.
+        [Tooltip("Prince's Favor: this character's luck. The squad's HIGHEST value drives loot rolls - it never compounds across members.")]
+        public int princesFavor;
+
         public int sortOrder;
     }
 }

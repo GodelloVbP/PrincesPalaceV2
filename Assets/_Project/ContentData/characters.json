@@ -4,6 +4,7 @@
     {
       "id": "sheep",
       "displayName": "Shawn",
+      "princesFavor": 4,
       "role": "Utility",
       "attackType": "Nature",
       "maxHealth": 200,
@@ -30,6 +31,7 @@
     {
       "id": "fly",
       "displayName": "Fly",
+      "princesFavor": 2,
       "role": "Assassin",
       "attackType": "Poison",
       "maxHealth": 140,
@@ -46,6 +48,7 @@
     {
       "id": "dog",
       "displayName": "Dog",
+      "princesFavor": 6,
       "role": "CrowdControl",
       "attackType": "Physical",
       "maxHealth": 320,
@@ -62,6 +65,7 @@
     {
       "id": "turtle",
       "displayName": "Turtle",
+      "princesFavor": 1,
       "role": "Tank",
       "attackType": "Ice",
       "maxHealth": 400,
@@ -78,6 +82,7 @@
     {
       "id": "owl",
       "displayName": "Owl",
+      "princesFavor": 10,
       "role": "Support",
       "attackType": "Arcane",
       "maxHealth": 180,

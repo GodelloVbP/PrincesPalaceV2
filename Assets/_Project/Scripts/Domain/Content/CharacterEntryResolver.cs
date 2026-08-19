@@ -189,6 +189,7 @@ namespace PrincesPalace.Domain.Content
                 hasSignature ? raw.signatureGainOnAttack : 0,
                 hasSignature ? raw.signatureGainOnDamageTaken : 0,
                 hasSignature && raw.signatureAbsorbsDamage,
+                raw.princesFavor < 0 ? 0 : raw.princesFavor,
                 sortOrder);
             error = null;
             return true;

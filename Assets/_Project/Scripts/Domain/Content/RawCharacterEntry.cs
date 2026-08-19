@@ -46,6 +46,14 @@ namespace PrincesPalace.Domain.Content
         // purpose and the resolver checks each against its own — see
         // docs/ART_PIPELINE.md. Empty means no art yet, which degrades to a
         // blank portrait slot and a plain stage plate respectively.
+        // PRINCE'S FAVOR: this character's luck.
+        //
+        // Not an ability score, deliberately. The six scores spend a fixed
+        // budget against each other, so adding a seventh would silently
+        // rebalance every authored character; Favor is its own axis and its
+        // own decision. 0 is the honest default -- an unfavoured character.
+        public int princesFavor;
+
         public string portraitPath = "";
         public string battleSpritePath = "";
 

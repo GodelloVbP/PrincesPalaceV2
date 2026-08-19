@@ -144,6 +144,7 @@ public static class ContentBuilder
             asset.signatureGainOnAttack = character.SignatureGainOnAttack;
             asset.signatureGainOnDamageTaken = character.SignatureGainOnDamageTaken;
             asset.signatureAbsorbsDamage = character.SignatureAbsorbsDamage;
+            asset.princesFavor = character.PrincesFavor;
             asset.sortOrder = character.SortOrder;
             AssetDatabase.CreateAsset(asset, $"{CharactersPath}/{character.Id}.asset");
         }

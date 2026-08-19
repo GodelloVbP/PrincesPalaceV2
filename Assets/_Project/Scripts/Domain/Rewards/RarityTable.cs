@@ -76,46 +76,28 @@ namespace PrincesPalace.Domain.Rewards
         // +5 at 5% is the "real chance of a big jump" the design asks for,
         // and it is the only entry in this file that can move a run's power
         // level in one payout.
-        private static readonly int[] NormalOffsets = { -3, -2, -1, 0, 1 };
-        private static readonly int[] NormalWeights = { 8, 17, 30, 30, 15 };
-
-        private static readonly int[] EliteOffsets = { -1, 0, 1, 2 };
-        private static readonly int[] EliteWeights = { 15, 35, 32, 18 };
-
-        private static readonly int[] BossOffsets = { 0, 1, 2, 3, 5 };
-        private static readonly int[] BossWeights = { 25, 32, 25, 13, 5 };
-
-        // Plus rolls LOW and does not know how deep the run is.
-        //
-        // That independence is the point: a +3 is exciting at step 4 and
-        // still exciting at step 40, because it never became the expectation.
-        // Elites and bosses shift the distribution up rather than extending
-        // it much — a boss is more likely to hand over something honed, not
-        // reliably going to.
-        private static readonly int[] NormalPlus = { 0, 1, 2, 3 };
-        private static readonly int[] NormalPlusWeights = { 70, 20, 7, 3 };
-
-        private static readonly int[] ElitePlus = { 0, 1, 2, 3, 4 };
-        private static readonly int[] ElitePlusWeights = { 55, 25, 13, 5, 2 };
-
-        private static readonly int[] BossPlus = { 0, 1, 2, 3, 4, 5 };
-        private static readonly int[] BossPlusWeights = { 40, 27, 18, 10, 4, 1 };
-
         // The tier this encounter pays out at this depth, clamped into
         // [class floor, maxTier].
         //
         // maxTier is passed rather than assumed so a thin or re-authored
         // catalogue cannot be asked for a tier that does not exist — the same
         // reason ItemOfferTable takes it.
-        public static int RollTier(EncounterClass encounter, int depthStep, int maxTier, Func<int, int> nextIndex)
+        public static int RollTier(EncounterClass encounter, int depthStep, int maxTier, int favor, Func<int, int> nextIndex)
         {
             if (maxTier < 0)
             {
                 return 0;
             }
 
+            // The depth sets the EXPECTATION and the ladder sets the surprise.
+            //
+            // The old shape rolled an offset in [-3, +1], so the very best a
+            // normal fight could ever do was one tier above depth -- which is
+            // why an early run only ever produced tier 0 and 1 and read as
+            // stale. The ladder only ever climbs, and can climb five, so a
+            // floor-1 fight can still hand over something that changes the run.
             int centre = FloorTier(depthStep);
-            int offset = Pick(OffsetsFor(encounter), WeightsFor(encounter), nextIndex);
+            int offset = LootLadder.Climb(encounter, favor, nextIndex);
 
             int floor = TierFloorFor(encounter);
             if (floor > maxTier)
@@ -135,57 +117,16 @@ namespace PrincesPalace.Domain.Rewards
             return tier > maxTier ? maxTier : tier;
         }
 
-        public static int RollPlus(EncounterClass encounter, Func<int, int> nextIndex)
-        {
-            return Pick(PlusFor(encounter), PlusWeightsFor(encounter), nextIndex);
-        }
-
-        // Weighted pick over parallel value/weight arrays.
+        // Plus climbs its OWN ladder, and deliberately never sees the depth.
         //
-        // Takes ONE draw from nextIndex over the total weight and walks the
-        // table, rather than looping until something is accepted: a
-        // rejection loop would consume an unbounded number of draws and make
-        // a seeded test depend on how many times the roll missed.
-        private static int Pick(int[] values, int[] weights, Func<int, int> nextIndex)
+        // That independence is the point and it predates this change: a +3 is
+        // exciting at step 4 and still exciting at step 40, because it never
+        // became the expectation.
+        public static int RollPlus(EncounterClass encounter, int favor, Func<int, int> nextIndex)
         {
-            if (values == null || values.Length == 0 || nextIndex == null)
-            {
-                return 0;
-            }
-
-            int total = 0;
-            for (int i = 0; i < weights.Length; i++)
-            {
-                total += weights[i];
-            }
-
-            if (total <= 0)
-            {
-                return values[0];
-            }
-
-            int roll = nextIndex(total);
-            if (roll < 0)
-            {
-                roll = 0;
-            }
-            else if (roll >= total)
-            {
-                roll = total - 1;
-            }
-
-            int running = 0;
-            for (int i = 0; i < values.Length && i < weights.Length; i++)
-            {
-                running += weights[i];
-                if (roll < running)
-                {
-                    return values[i];
-                }
-            }
-
-            return values[values.Length - 1];
+            return LootLadder.Climb(encounter, favor, nextIndex);
         }
+
 
         // The rarity band a class is guaranteed never to fall below. Stated
         // in the player's vocabulary rather than in tiers, since that is how
@@ -195,44 +136,8 @@ namespace PrincesPalace.Domain.Rewards
             return RarityBands.For(TierFloorFor(encounter));
         }
 
-        private static int[] OffsetsFor(EncounterClass encounter)
-        {
-            switch (encounter)
-            {
-                case EncounterClass.Elite: return EliteOffsets;
-                case EncounterClass.Boss: return BossOffsets;
-                default: return NormalOffsets;
-            }
-        }
 
-        private static int[] WeightsFor(EncounterClass encounter)
-        {
-            switch (encounter)
-            {
-                case EncounterClass.Elite: return EliteWeights;
-                case EncounterClass.Boss: return BossWeights;
-                default: return NormalWeights;
-            }
-        }
 
-        private static int[] PlusFor(EncounterClass encounter)
-        {
-            switch (encounter)
-            {
-                case EncounterClass.Elite: return ElitePlus;
-                case EncounterClass.Boss: return BossPlus;
-                default: return NormalPlus;
-            }
-        }
 
-        private static int[] PlusWeightsFor(EncounterClass encounter)
-        {
-            switch (encounter)
-            {
-                case EncounterClass.Elite: return ElitePlusWeights;
-                case EncounterClass.Boss: return BossPlusWeights;
-                default: return NormalPlusWeights;
-            }
-        }
     }
 }

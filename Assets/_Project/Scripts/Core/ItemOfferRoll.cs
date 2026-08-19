@@ -40,12 +40,49 @@ namespace PrincesPalace
                 .ToList();
         }
 
+        // The squad's Prince's Favor: the HIGHEST among the fielded party,
+        // never the sum.
+        //
+        // Highest rather than total because Favor is meant to be a reason to
+        // FIELD a particular character, not a reason to field five. Summing
+        // would make the stat scale with squad size, so the real decision
+        // would become "bring more bodies" -- which is not a decision about
+        // Favor at all.
+        public static int SquadFavor(IEnumerable<CharacterDefinition> squad)
+        {
+            if (squad == null) return 0;
+
+            int best = 0;
+            foreach (var member in squad)
+            {
+                if (member != null && member.princesFavor > best) best = member.princesFavor;
+            }
+
+            return best;
+        }
+
+        // The fielded squad's Favor, read off the save.
+        //
+        // Here rather than at the call site so the rule -- which squad, and
+        // highest-not-sum -- lives with the roll it feeds, and so the fight
+        // controller does not have to learn how a definitionId maps to a
+        // definition.
+        public static int CurrentSquadFavor()
+        {
+            var save = SaveSlotManager.CurrentSave;
+            if (save == null) return 0;
+
+            return SquadFavor(save.ActiveSquad()
+                .Select(c => ContentDatabase.Characters
+                    .FirstOrDefault(d => d != null && d.id == c.definitionId)));
+        }
+
         // The three offers, each with its own independently rolled plus.
         //
         // `nextIndex` is upper-bound-exclusive and injected, matching the shape
         // both Domain tables already take -- so a caller under test can hand in
         // a seeded stand-in and get the same three items every time.
-        public static List<ItemOffer> Roll(EncounterClass encounter, int depthStep, Func<int, int> nextIndex)
+        public static List<ItemOffer> Roll(EncounterClass encounter, int depthStep, int favor, Func<int, int> nextIndex)
         {
             var offers = new List<ItemOffer>();
             if (nextIndex == null) return offers;
@@ -54,7 +91,7 @@ namespace PrincesPalace
             if (candidates.Count == 0) return offers;
 
             int maxTier = MaxTier;
-            int targetTier = RarityTable.RollTier(encounter, depthStep, maxTier, nextIndex);
+            int targetTier = RarityTable.RollTier(encounter, depthStep, maxTier, favor, nextIndex);
 
             // Tier is rolled ONCE for the offer set and plus is rolled PER
             // ITEM. Rolling the tier per item would quietly widen the spread
@@ -62,7 +99,7 @@ namespace PrincesPalace
             // offers three separate difficulty statements rather than one.
             foreach (var offer in ItemOfferTable.Choose(candidates, targetTier, maxTier, nextIndex))
             {
-                offers.Add(offer.WithPlus(RarityTable.RollPlus(encounter, nextIndex)));
+                offers.Add(offer.WithPlus(RarityTable.RollPlus(encounter, favor, nextIndex)));
             }
 
             return offers;
