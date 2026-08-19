@@ -1090,6 +1090,56 @@ Cheap to fix, and worth doing before the next content change rather than after.
 
 ---
 
+## Findings from the build-speed pass, 2026-08-19
+
+### 47. The dynamic font atlas is tracked in git, so any run that rasterises a glyph dirties it
+
+`Assets/_Project/Fonts/ChakraPetch-Regular SDF.asset` is a TMP font asset with a **dynamic**
+atlas: glyphs are rasterised on demand and written back into the asset. It is committed, so its
+`m_GlyphTable` is repo state that changes as a side effect of running the game or the tests.
+Found on 2026-08-19 sitting at `-2133/+10` lines against `4d3dfc1` — the table had emptied — with
+no commit in this session having touched it deliberately.
+
+Nothing is broken by it: the atlas repopulates at runtime, and text renders correctly either way
+(verified in the dossier captures, which are full of the glyphs the emptied table lacks). The
+cost is noise. It shows up dirty in `git status` for work that never went near a font, which is
+exactly the condition under which a real change gets waved through, and it is the kind of file
+that `git add -A` would sweep up — which this project already has an incident about.
+
+Left uncommitted rather than decided unilaterally, because the two fixes point in opposite
+directions and the choice is the author's:
+
+- **Commit it emptied and stop caring**, accepting that the table will churn again. Cheapest.
+- **Untrack it and regenerate on build**, alongside the other generated assets. Consistent with
+  rule 2 of `CLAUDE.md`, but the asset is referenced by GUID from every built scene, so it would
+  have to be generated *and* synced back like `Resources/Content/` is, and gotcha #2 applies to
+  its `.meta`.
+
+Worth noting the same property is what made #48 below land: the atlas being sparse at load time
+is not a defect, it is the design.
+
+### ~~48. `EnemyIntentIconTests` asked an arbitrary font whether it could draw a glyph~~ — **FIXED 2026-08-19** in `c2f436a`
+
+Recorded because the *shape* recurs. The test called
+`Resources.FindObjectsOfTypeAll<TMP_FontAsset>().FirstOrDefault()`, which is the same
+incidental-order trap as gotcha #4 — `Resources.LoadAll` returning alphabetical order rather than
+authoring order — reached through a different API and in a test rather than in content. Three
+font assets are loaded, one of which is a nearly empty fallback atlas, and the day enumeration
+order changed the test reported that the game's font could not draw the letter `F`.
+
+Two lessons, both already paid for elsewhere in this register:
+
+1. It had been passing for the wrong reason for its whole life. Any font with a Latin alphabet
+   satisfies an all-ASCII fallback table, so it was testing LiberationSans and proving nothing
+   about the font the game uses. A test that cannot fail is not evidence.
+2. The one-argument `HasCharacter` asks whether a glyph is rasterised *right now*, which on a
+   dynamic atlas is a question about what has been drawn so far. The three-argument form asks the
+   typeface. The distinction is invisible until the atlas is sparse.
+
+The fix reads the font off a live `TMP_Text` and pins its own premise: U+2694, the character the
+intent badges first shipped with and which drew as nothing, must still come back false. If Chakra
+Petch ever gains an emoji block, the guard fails and says the check has gone toothless.
+
 ## Open investigations
 
 ### ~~24. `BloodlustRelic_GrantsAnImmediateExtraTurnAfterAKillingBlow` flakes on fresh content/scene builds — root cause not found~~ — **ROOT CAUSE FOUND, 2026-08-04.** It is a symptom of #13, and fixing that fixed this. Reproduced 2 times in 8 runs before, then 0 in 12 after
