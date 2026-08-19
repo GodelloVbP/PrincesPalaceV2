@@ -111,7 +111,16 @@ namespace PrincesPalace
             // exist yet, and a button that logs is more honest than one that
             // loads an empty scene.
             startRunButton.onClick.AddListener(StartOrResumeRun);
-            mainMenuButton.onClick.AddListener(() => Navigation.Go(Navigation.MainMenu));
+            // Going to the title ENDS the run first. Leaving a descent, or
+            // anything that is not continuing it, kills it -- no exceptions --
+            // and EndRun is what settles the books, so skipping it here would
+            // throw away embers the run had already earned rather than just
+            // ending it.
+            mainMenuButton.onClick.AddListener(() =>
+            {
+                RunManager.EndRun();
+                Navigation.Go(Navigation.MainMenu);
+            });
         }
 
         // ---- keyboard ------------------------------------------------------------

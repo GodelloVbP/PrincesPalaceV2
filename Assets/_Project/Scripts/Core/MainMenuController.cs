@@ -25,7 +25,15 @@ namespace PrincesPalace
         {
             playButton.onClick.AddListener(() => Toggle(saveSlotPanel));
             optionsButton.onClick.AddListener(() => Toggle(optionsPanel));
-            exitButton.onClick.AddListener(Application.Quit);
+            // Settled BEFORE the process goes away. Quitting is not
+            // continuing the run, so it ends it, and ending it is what pays out
+            // what the run earned -- quitting straight to the desktop would
+            // bank nothing.
+            exitButton.onClick.AddListener(() =>
+            {
+                RunManager.EndRun();
+                Application.Quit();
+            });
             closeSaveSlotButton.onClick.AddListener(() => saveSlotPanel.SetActive(false));
             closeOptionsButton.onClick.AddListener(() => optionsPanel.SetActive(false));
         }

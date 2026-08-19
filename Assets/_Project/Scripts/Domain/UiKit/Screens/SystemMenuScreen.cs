@@ -232,9 +232,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .AsDecor()
                     .AllowOverlap("the fill is what the panel's contents stand on"),
             };
-            frameChildren.AddRange(PanelRimEdges());
             frameChildren.Add(bar);
             frameChildren.Add(content);
+
+            // THE RIM GOES ON LAST, and that is the whole fix for the sides
+            // disappearing along the tab bar.
+            //
+            // The bar's plate is opaque and spans the panel's full 1600, so it
+            // covered the left and right rim for the top 96px -- the border
+            // stopped at the bar and started again under it, which reads as a
+            // frame that was never drawn rather than one drawn underneath.
+            // Later sibling, drawn last, over everything it encloses.
+            frameChildren.AddRange(PanelRimEdges());
 
             var frame = Ui.Panel("SystemMenuFrame", Place.At(0f, 0f),
                 UiSize.Fixed(SystemMenuLayout.PanelWidth, SystemMenuLayout.PanelHeight),

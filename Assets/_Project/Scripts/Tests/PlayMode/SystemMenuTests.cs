@@ -231,16 +231,56 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator DuringARunTheBarGainsTheTwoRunTabs()
+        public IEnumerator InADescentTheBarGainsTheTwoRunTabs()
+        {
+            // ON THE MAP, not in the hub with hasRun poked true.
+            //
+            // That is what this test used to do, and it was asserting the wrong
+            // rule. A run exists from the moment the relic draft is rolled, and
+            // that draft is offered in the HUB and deliberately survives
+            // leaving and coming back -- so "a run exists" was true while the
+            // player stood in the hub with no descent under way, and Floor map
+            // and Run statistics showed up on a screen with no floor to name.
+            //
+            // The tab set is a property of the scene now, so this asks the
+            // scene.
+            yield return SceneManager.LoadSceneAsync("Map", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(menu, "the map has no SystemMenuController");
+
+            menu.Open();
+            yield return null;
+
+            Assert.AreEqual(SystemMenuTabs.Count, menu.VisibleTabs.Count,
+                "in a descent every tab should be present");
+        }
+
+        // The other half, and the one the author actually reported: standing in
+        // the hub there is no floor and no descent, so those two tabs have
+        // nothing to describe and must not be there -- even mid-run, which is a
+        // state the hub can genuinely be in.
+        [UnityTest]
+        public IEnumerator TheHubNeverShowsTheDescentTabs()
         {
             yield return OpenTheHub();
 
-            SaveSlotManager.CurrentSave.activeRun.hasRun = true;
+            var save = SaveSlotManager.CurrentSave;
+            if (save?.activeRun != null) save.activeRun.hasRun = true;
+
             _menu.Open();
             yield return null;
 
-            Assert.AreEqual(SystemMenuTabs.Count, _menu.VisibleTabs.Count,
-                "in a run every tab should be present");
+            Assert.AreEqual(3, _menu.VisibleTabs.Count,
+                "the hub showed the descent tabs; it has no descent to describe");
+
+            foreach (var absent in new[] { SystemMenuTab.FloorMap, SystemMenuTab.RunStats })
+            {
+                CollectionAssert.DoesNotContain(_menu.VisibleTabs.ToList(),
+                    SystemMenuTabs.IndexOf(absent), $"{absent} is showing in the hub");
+            }
         }
 
         // The tabs that are not in this context must be SWITCHED OFF, not merely

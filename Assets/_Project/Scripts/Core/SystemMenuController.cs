@@ -41,6 +41,21 @@ namespace PrincesPalace
                     "and a relic draft, and the fight has its reward screen")]
         [SerializeField] internal GameObject[] escapeConsumers;
 
+        // Whether THIS SCENE is part of a descent. Set at build time: false in
+        // the hub, true on the map and in a fight.
+        //
+        // Not RunManager.HasRun, which was the first answer and the wrong one.
+        // A run exists from the moment the relic draft is rolled, and that
+        // draft is offered IN THE HUB and deliberately survives leaving and
+        // coming back -- RelicDraftTests pins that. So HasRun is true while the
+        // player is standing in the hub with no descent under way, and Floor
+        // map and Run statistics appeared on a screen with no floor and no run
+        // to describe.
+        //
+        // Which scene you are in cannot be got wrong at runtime, and the hub is
+        // never part of a descent by construction.
+        [SerializeField] internal bool inDescent;
+
         private bool _wired;
         private int _selected;
 
@@ -71,7 +86,7 @@ namespace PrincesPalace
         private void Start()
         {
             Wire();
-            if (!_chosen) Select(SystemMenuTabs.IndexOf(SystemMenuTabs.DefaultFor(RunManager.HasRun)));
+            if (!_chosen) Select(SystemMenuTabs.IndexOf(SystemMenuTabs.DefaultFor(inDescent)));
         }
 
         private void Wire()
@@ -211,7 +226,7 @@ namespace PrincesPalace
         // bar without the scene being rebuilt.
         public void ApplyContext()
         {
-            bool inRun = RunManager.HasRun;
+            bool inRun = inDescent;
             _visible = new List<int>(SystemMenuTabs.VisibleIndices(inRun));
 
             var defs = SystemMenuTabs.Visible(inRun);

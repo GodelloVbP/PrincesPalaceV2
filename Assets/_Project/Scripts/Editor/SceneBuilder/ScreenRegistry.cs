@@ -135,7 +135,8 @@ public static class ScreenRegistry
                 // The reward screen owns Escape while it is up: opening this
                 // menu over a reckoning the player is trying to dismiss is the
                 // same wrong-thing-on-Escape the consumer list exists to stop.
-                WireSystemMenu(result, screen.Root, screen.SystemMenu, lockedForFight: true, screen.Reckoning.Root);
+                WireSystemMenu(result, screen.Root, screen.SystemMenu, lockedForFight: true,
+                    inDescent: true, screen.Reckoning.Root);
 
                 fight.intentTooltip = result.Go(screen.IntentTooltip);
                 fight.intentTooltipText = result.Tmp(screen.IntentTooltipText);
@@ -520,7 +521,8 @@ public static class ScreenRegistry
                 // changing gear between rooms is supposed to happen.
                 map.characterSheetPanel = result.Go(screen.SystemMenu.Root);
 
-                WireSystemMenu(result, screen.Root, screen.SystemMenu, lockedForFight: false);
+                WireSystemMenu(result, screen.Root, screen.SystemMenu, lockedForFight: false,
+                    inDescent: true);
 
                 // The painted room icons. Bound here rather than in the
                 // controller because "Assets/..." is an editor-only address and
@@ -686,7 +688,7 @@ public static class ScreenRegistry
         // Escape-ish paths already, so each is declared as owning Escape ahead
         // of the overarching menu.
         WireSystemMenu(result, screen.Root, screen.SystemMenu, lockedForFight: false,
-            screen.Glossary.Root, screen.Draft.Root);
+            inDescent: false, screen.Glossary.Root, screen.Draft.Root);
     }
 
     // The overarching menu's wiring, shared by every scene that carries one.
@@ -698,7 +700,7 @@ public static class ScreenRegistry
     // here instead of the menu guessing.
     private static SystemMenuController WireSystemMenu(
         UiEmitResult result, NodeRef host, SystemMenuScreen menu, bool lockedForFight,
-        params NodeRef[] escapeConsumers)
+        bool inDescent, params NodeRef[] escapeConsumers)
     {
         // ATTACHED TO THE SCENE ROOT, not to the menu it drives.
         //
@@ -722,6 +724,10 @@ public static class ScreenRegistry
         controller.tabDividers = menu.TabDividers.Select(result.Go).ToArray();
         controller.panes = menu.Panes.Select(result.Go).ToArray();
         controller.escapeConsumers = escapeConsumers.Select(result.Go).ToArray();
+
+        // Decided here rather than sniffed at runtime: the hub is not a
+        // descent, and no state can make it one.
+        controller.inDescent = inDescent;
 
         controller.runTitle = result.Tmp(menu.RunTitle);
         controller.contextLine = result.Tmp(menu.ContextLine);

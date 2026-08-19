@@ -81,6 +81,51 @@ namespace PrincesPalace.Domain.UiKit
 
         public const float SlotSize = 74f;
 
+        // ---- where the body ACTUALLY is ----------------------------------------
+        //
+        // The handover placed every slot against a figure filling the whole
+        // 264x564 mannequin box. The drawn figure does not fill it, and the
+        // reason is in the PNG rather than in any layout code: UiEmitter does
+        // not set preserveAspect, so the sprite is stretched to the box exactly
+        // -- but the artwork carries transparent margins, 8% at the top and 9%
+        // at the bottom. Measured off the outline's own alpha: its opaque
+        // content runs y 126..1395 of 1536, which lands at 46..512 of 564.
+        //
+        // So the body occupies stage y 138..604, and the slots were laid out
+        // around 92..656. The head slot floated about 100px clear of the head,
+        // and everything below it sat progressively low.
+        //
+        // The first attempt at this assumed preserveAspect was on and
+        // letterboxing the figure into the middle 324px. That was wrong, and
+        // wrong in a way worth recording: it compressed the column so hard that
+        // the slots overlapped each other, which looked like a different bug
+        // entirely. The number below came from measuring the art, not from
+        // reasoning about what the emitter probably did.
+        //
+        // Art with no margins makes BodyTopInBox 0 and BodyHeightInBox equal to
+        // MannequinHeight, and every number here collapses to the handover's.
+        public const float BodyTopInBox = 46f;
+        public const float BodyHeightInBox = 466f;
+
+        public static float BodyTop => MannequinTop + BodyTopInBox;
+
+        // A y authored against a box-filling figure, moved onto the drawn one.
+        // Proportional rather than clamped, so a slot the handover put ABOVE
+        // the body -- the head slot is one -- stays proportionally above it.
+        public static float OnBody(float authoredCentreY)
+        {
+            float fraction = (authoredCentreY - MannequinTop) / MannequinHeight;
+            return BodyTop + fraction * BodyHeightInBox;
+        }
+
+        // As FromStage, but with the top read against the figure that is really
+        // drawn rather than the one the handover assumed.
+        private static UiVec OnBodyFromStage(float left, float authoredTop, float w, float h)
+        {
+            float centre = OnBody(authoredTop + h * 0.5f);
+            return FromStage(left, centre - h * 0.5f, w, h);
+        }
+
         // A point given as (left, top) inside the stage, in dossier coordinates.
         public static UiVec FromStage(float left, float top, float w, float h)
         {
@@ -94,14 +139,14 @@ namespace PrincesPalace.Domain.UiKit
         {
             switch (slot)
             {
-                case EquipmentSlot.Head: return FromStage(243f, 0f, SlotSize, SlotSize);
-                case EquipmentSlot.Necklace: return FromStage(152f, 150f, SlotSize, SlotSize);
-                case EquipmentSlot.Torso: return FromStage(140f, 248f, SlotSize, SlotSize);
-                case EquipmentSlot.Gloves: return FromStage(120f, 350f, SlotSize, SlotSize);
-                case EquipmentSlot.Legs: return FromStage(132f, 452f, SlotSize, SlotSize);
-                case EquipmentSlot.Weapon1: return FromStage(388f, 248f, SlotSize, SlotSize);
-                case EquipmentSlot.Weapon2: return FromStage(388f, 350f, SlotSize, SlotSize);
-                default: return FromStage(392f, 540f, SlotSize, SlotSize);        // Shoes
+                case EquipmentSlot.Head: return OnBodyFromStage(243f, 0f, SlotSize, SlotSize);
+                case EquipmentSlot.Necklace: return OnBodyFromStage(152f, 150f, SlotSize, SlotSize);
+                case EquipmentSlot.Torso: return OnBodyFromStage(140f, 248f, SlotSize, SlotSize);
+                case EquipmentSlot.Gloves: return OnBodyFromStage(120f, 350f, SlotSize, SlotSize);
+                case EquipmentSlot.Legs: return OnBodyFromStage(132f, 452f, SlotSize, SlotSize);
+                case EquipmentSlot.Weapon1: return OnBodyFromStage(388f, 248f, SlotSize, SlotSize);
+                case EquipmentSlot.Weapon2: return OnBodyFromStage(388f, 350f, SlotSize, SlotSize);
+                default: return OnBodyFromStage(392f, 540f, SlotSize, SlotSize);  // Shoes
             }
         }
 
@@ -111,14 +156,14 @@ namespace PrincesPalace.Domain.UiKit
         {
             switch (slot)
             {
-                case EquipmentSlot.Head: width = 37f; return FromStage(243f, 82f, width, 1f);
-                case EquipmentSlot.Necklace: width = 36f; return FromStage(226f, 187f, width, 1f);
-                case EquipmentSlot.Torso: width = 24f; return FromStage(214f, 285f, width, 1f);
-                case EquipmentSlot.Gloves: width = 18f; return FromStage(194f, 387f, width, 1f);
-                case EquipmentSlot.Legs: width = 36f; return FromStage(206f, 489f, width, 1f);
-                case EquipmentSlot.Weapon1: width = 40f; return FromStage(348f, 285f, width, 1f);
-                case EquipmentSlot.Weapon2: width = 40f; return FromStage(348f, 387f, width, 1f);
-                default: width = 67f; return FromStage(325f, 577f, width, 1f);    // Shoes
+                case EquipmentSlot.Head: width = 37f; return OnBodyFromStage(243f, 82f, width, 1f);
+                case EquipmentSlot.Necklace: width = 36f; return OnBodyFromStage(226f, 187f, width, 1f);
+                case EquipmentSlot.Torso: width = 24f; return OnBodyFromStage(214f, 285f, width, 1f);
+                case EquipmentSlot.Gloves: width = 18f; return OnBodyFromStage(194f, 387f, width, 1f);
+                case EquipmentSlot.Legs: width = 36f; return OnBodyFromStage(206f, 489f, width, 1f);
+                case EquipmentSlot.Weapon1: width = 40f; return OnBodyFromStage(348f, 285f, width, 1f);
+                case EquipmentSlot.Weapon2: width = 40f; return OnBodyFromStage(348f, 387f, width, 1f);
+                default: width = 67f; return OnBodyFromStage(325f, 577f, width, 1f);  // Shoes
             }
         }
 
