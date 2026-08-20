@@ -351,17 +351,46 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // filled RECTANGLE, which is what a flat quad here looked like:
                 // a red brick under each monster's feet. Same bug class as the
                 // hub's borrowed plot art, and the reason `proc:` keys exist.
+                // ASDECOR ON ALL THREE, AND IT IS ABOUT CLICKS RATHER THAN
+                // DRAWING.
+                //
+                // A stage figure is painted, never pressed: the sprites are
+                // bound as Image[] and nothing wires a click to one -- targeting
+                // goes through the enemy PLATE in the HUD list. Without AsDecor
+                // their Images keep raycastTarget, and an Image raycasts against
+                // its RECT rather than its alpha, so each monster was a full
+                // rectangular click-blocker standing on the stage.
+                //
+                // The stage is declared after the command UI, so it sits on top
+                // of it. Open the skill list against three monsters and the rat
+                // covers three of its rows -- and swallowed every click on them.
+                // That is the "the buttons are broken in the fight": not the
+                // buttons, the transparent corner of a rodent lying over them.
+                //
+                // Nothing could see it. UiAudit checks overlap between SIBLINGS
+                // and these are not siblings; the wiring sweep checks references
+                // and they are all present; and every test in the suite clicks
+                // through button.onClick.Invoke(), which bypasses the
+                // EventSystem and therefore cannot notice a blocker at all.
+                //
+                // AsDecor covers a node's whole subtree, so the shadow carries
+                // the glow parented under it. The intent badge is deliberately
+                // NOT in this list -- it is a Button and has to stay hoverable.
                 var shadow = Ui.Sprite($"{prefix}{slot}FootShadow", "proc:ring_outline",
                         Place.Frac(new UiVec(0.32f, 0f), new UiVec(0.68f, 0f), bottom: -8f, top: -8f), UiSize.Fill)
                     .Coloured(shadowHex)
+                    .AsDecor()
                     .AllowOverflow("the contact shadow straddles the ground LINE, so half of it is below the slot by construction")
                     .AllowOverlap("the actor stands ON its own shadow - the sprite covering it is the point");
                 shadow.Children.Add(glow);
 
-                var sprite = Ui.Sprite($"{prefix}{slot}Sprite", null, Place.Stretch(), UiSize.Fill).Inactive();
+                var sprite = Ui.Sprite($"{prefix}{slot}Sprite", null, Place.Stretch(), UiSize.Fill)
+                    .Inactive()
+                    .AsDecor();
 
                 var flash = Ui.Sprite($"{prefix}{slot}HitFlash", null, Place.Stretch(), UiSize.Fill)
                     .Inactive()
+                    .AsDecor()
                     .AllowOverlap("the hit flash IS the sprite's silhouette redrawn white - sharing its box is the whole mechanism");
 
                 // Anchored to the slot's BOTTOM, not its centre: the plate hangs

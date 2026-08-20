@@ -541,5 +541,79 @@ namespace PrincesPalace.Domain.Tests
                     $"{what}: parallel ref list {i} is a different length from the first");
             }
         }
+        // NOTHING ON THE STAGE MAY TAKE A CLICK EXCEPT THE INTENT BADGE.
+        //
+        // The stage is declared after the command UI and therefore sits on top
+        // of it. A figure whose Image keeps raycastTarget is a full rectangular
+        // blocker -- an Image raycasts against its RECT, not its alpha -- so
+        // with the skill list open against three monsters, the rat covered
+        // three of its rows and swallowed every click on them.
+        //
+        // Nothing else could catch this. UiAudit checks overlap between
+        // SIBLINGS and the stage and the command column are not siblings, and
+        // every PlayMode test clicks through button.onClick.Invoke(), which
+        // bypasses the EventSystem and so cannot see a blocker at all.
+        [Test]
+        public void TheStageFiguresDoNotTakeClicks()
+        {
+            var screen = FightScreen.Build();
+
+            var offenders = new List<string>();
+
+            // INHERITED, because that is what the emitter does: AsDecor clears
+            // raycastTarget throughout a subtree, so a child of a decor node is
+            // already safe and its own flag stays false. Reading the per-node
+            // flag reported every FootGlow as an offender when its parent
+            // shadow already covered it.
+            WalkDecor(screen.Root, false, (node, decor) =>
+            {
+                if (node.Kind != UiNodeKind.Sprite) return;
+
+                bool onStage = node.Name.EndsWith("Sprite")
+                               || node.Name.EndsWith("HitFlash")
+                               || node.Name.EndsWith("FootShadow")
+                               || node.Name.EndsWith("FootGlow");
+
+                if (onStage && !decor) offenders.Add(node.Name);
+            });
+
+            CollectionAssert.IsEmpty(offenders,
+                "these stage layers still take clicks, so they block whatever the command UI has " +
+                "underneath them: " + string.Join(", ", offenders));
+        }
+
+        // The exception, pinned so the sweep above cannot be "fixed" by
+        // marking the whole stage decor and quietly killing the hover the
+        // enemy intent badge exists for.
+        [Test]
+        public void TheIntentBadgeStillTakesOne()
+        {
+            var screen = FightScreen.Build();
+
+            var badges = new List<UiNode>();
+            Walk(screen.Root, n => { if (n.Name.Contains("Intent") && n.Kind == UiNodeKind.Button) badges.Add(n); });
+
+            CollectionAssert.IsNotEmpty(badges, "the enemy intent badges are gone");
+            foreach (var badge in badges)
+            {
+                Assert.IsFalse(badge.Decor,
+                    $"'{badge.Name}' is decor, so it can never be hovered - and the badge exists to be");
+            }
+        }
+
+        private static void Walk(UiNode node, System.Action<UiNode> visit)
+        {
+            visit(node);
+            foreach (var child in node.Children) Walk(child, visit);
+        }
+
+        // Carries decor down the way UiEmitter does.
+        private static void WalkDecor(UiNode node, bool inherited, System.Action<UiNode, bool> visit)
+        {
+            bool decor = inherited || node.Decor;
+            visit(node, decor);
+            foreach (var child in node.Children) WalkDecor(child, decor, visit);
+        }
+
     }
 }
