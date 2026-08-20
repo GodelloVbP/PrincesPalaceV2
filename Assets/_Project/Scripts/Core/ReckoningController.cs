@@ -99,11 +99,33 @@ namespace PrincesPalace
         // instead of deforming it.
         private const float WipeSeconds = 0.34f;
 
-        // The phase change sweeps RIGHTWARD: the choice leaves to the right
-        // and the summary follows it in from the left, both travelling the
-        // same way, so it reads as moving forward rather than as two
-        // unrelated slides.
-        private const float SweepSeconds = 0.3f;
+        // THE PHASE CHANGE ADVANCES: the summary comes IN FROM THE RIGHT and
+        // the choice leaves to the left, both travelling the same way.
+        //
+        // It used to run the other way -- summary in from the left, choice out
+        // to the right -- and travelling rightward is the handedness every UI
+        // uses for going BACK. Taking a reward is going forward, so it was
+        // pushing the wrong way round: the new screen arrived the way a
+        // cancelled one does.
+        //
+        // FAST, and that is half of the fix. At 0.3s on a smoothstep this
+        // eased in AND out, so it left slowly, arrived slowly, and spent its
+        // middle at a speed too low to read as a move at all. It is now under
+        // half that on a quartic ease-out -- off the mark at full speed and
+        // settling hard, which is what makes it land rather than drift.
+        private const float SweepSeconds = 0.13f;
+
+        // Motion blur, such as a uGUI canvas can have one.
+        //
+        // NOT localScale on the frame, which this file already records as the
+        // mistake that made the reveal read cheap -- that was a 0.34s squash of
+        // static content, and every child compressed and sprang back. This is
+        // 6% of horizontal stretch on content that is crossing the panel at
+        // speed, held for about 60ms, which is the smear a fast pan leaves and
+        // is gone before the eye can resolve it as a shape. Paired with a dip
+        // in alpha, because a blurred thing is also a thinner one.
+        private const float SweepSmear = 0.06f;
+        private const float SweepAlphaDip = 0.45f;
 
         // The LIFT. The frame rises this far as it expands, so the screen
         // arrives from the fight rather than appearing at rest on top of it.
@@ -591,7 +613,8 @@ namespace PrincesPalace
             frameWipe.sizeDelta = new Vector2(width, ReckoningScreen.PanelHeight);
         }
 
-        // The choice leaves, the summary arrives, both moving right.
+        // The choice leaves left, the summary arrives from the right, both
+        // moving the same way, fast, with a smear on them while they travel.
         private IEnumerator SweepToSummary()
         {
             // A phase travels exactly its OWN width, which is the clip's, not
@@ -602,19 +625,37 @@ namespace PrincesPalace
             // nothing bounding it at all.
             float width = ReckoningScreen.ContentHalfWidth * 2f;
 
+            var offerBlur = BlurGroup(offerPhase);
+            var summaryBlur = BlurGroup(summaryPhase);
+
             summaryPhase.gameObject.SetActive(true);
-            summaryPhase.anchoredPosition = new Vector2(-width, 0f);
+            summaryPhase.anchoredPosition = new Vector2(width, 0f);
 
             for (float t = 0f; t < SweepSeconds; t += Time.unscaledDeltaTime)
             {
-                float k = Smooth(Mathf.Clamp01(t / SweepSeconds));
-                offerPhase.anchoredPosition = new Vector2(Mathf.Lerp(0f, width, k), 0f);
-                summaryPhase.anchoredPosition = new Vector2(Mathf.Lerp(-width, 0f, k), 0f);
+                float k = EaseOut(Mathf.Clamp01(t / SweepSeconds));
+
+                offerPhase.anchoredPosition = new Vector2(Mathf.Lerp(0f, -width, k), 0f);
+                summaryPhase.anchoredPosition = new Vector2(Mathf.Lerp(width, 0f, k), 0f);
+
+                // Peaks in the middle of the travel and is back to nothing at
+                // both ends, so nothing is ever LEFT smeared or faded -- the
+                // blur belongs to the motion and not to either screen.
+                float speed = 4f * k * (1f - k);
+                Smear(offerPhase, offerBlur, speed);
+                Smear(summaryPhase, summaryBlur, speed);
+
                 yield return null;
             }
 
-            offerPhase.anchoredPosition = new Vector2(width, 0f);
+            offerPhase.anchoredPosition = new Vector2(-width, 0f);
             summaryPhase.anchoredPosition = Vector2.zero;
+
+            // Cleared explicitly rather than left to the last loop iteration,
+            // which never lands exactly on k = 1.
+            Smear(offerPhase, offerBlur, 0f);
+            Smear(summaryPhase, summaryBlur, 0f);
+
             offerPhase.gameObject.SetActive(false);
 
             // The bars only start once the summary has arrived. Filling them
@@ -715,6 +756,36 @@ namespace PrincesPalace
         // differently by accident is the sort of thing nobody can name but
         // everybody feels.
         private static float Smooth(float k) => k * k * (3f - 2f * k);
+
+        // Quartic out: leaves at full speed and settles hard. Smooth() eases in
+        // as well, which is right for a reveal and wrong for a shove.
+        private static float EaseOut(float k)
+        {
+            float inv = 1f - k;
+            return 1f - inv * inv * inv * inv;
+        }
+
+        // Attached at RUNTIME, the same way HoverIndex and BarSlider are: the
+        // tree emits plain rects, and a group that exists only for the duration
+        // of one animation is not something a scene should carry.
+        private static CanvasGroup BlurGroup(RectTransform phase)
+        {
+            if (phase == null) return null;
+            return phase.GetComponent<CanvasGroup>() ?? phase.gameObject.AddComponent<CanvasGroup>();
+        }
+
+        private static void Smear(RectTransform phase, CanvasGroup group, float amount)
+        {
+            if (phase != null)
+            {
+                phase.localScale = new Vector3(1f + SweepSmear * amount, 1f, 1f);
+            }
+
+            if (group != null)
+            {
+                group.alpha = 1f - SweepAlphaDip * amount;
+            }
+        }
 
         // Held well under half: it is a drop behind a panel, and a glow you
         // can point at has stopped being one.

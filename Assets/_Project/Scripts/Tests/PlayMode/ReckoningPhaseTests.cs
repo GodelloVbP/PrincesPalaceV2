@@ -135,6 +135,53 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(0f, summary.anchoredPosition.x, 1f, "the sweep never finished");
         }
 
+        // WHICH WAY IT GOES, which nothing checked and which was backwards.
+        //
+        // The summary used to arrive from the LEFT and the choice leave to the
+        // right, which is the handedness every interface uses for going BACK.
+        // Taking a reward is going forward. Both directions land the summary at
+        // rest in the centre, so the test above passed either way and the only
+        // thing that could tell them apart was somebody watching it.
+        [UnityTest]
+        public IEnumerator TheSweepAdvancesRatherThanRetreating()
+        {
+            yield return OpenIt(Offers());
+
+            var offer = Named("ReckoningOfferPhase").GetComponent<RectTransform>();
+            Click("ReckoningOffer0");
+            yield return new WaitForSecondsRealtime(0.7f);
+
+            Assert.Less(offer.anchoredPosition.x, 0f,
+                "the choice left to the RIGHT, so the summary came in from the left - that is the " +
+                "direction a cancelled screen arrives from, and taking a reward is going forward");
+        }
+
+        // The smear is part of the MOTION and must not outlive it. A phase left
+        // stretched or half-faded reads as a rendering fault, and it is the
+        // failure mode of driving localScale and alpha from an animation that
+        // never lands exactly on its last frame.
+        [UnityTest]
+        public IEnumerator NothingIsLeftSmearedOnceTheSweepHasLanded()
+        {
+            yield return OpenIt(Offers());
+
+            Click("ReckoningOffer0");
+            yield return new WaitForSecondsRealtime(0.7f);
+
+            var summary = Named("ReckoningSummaryPhase");
+            var rect = summary.GetComponent<RectTransform>();
+
+            Assert.AreEqual(1f, rect.localScale.x, 0.001f,
+                "the summary is still horizontally stretched by the sweep's motion blur");
+
+            var group = summary.GetComponent<CanvasGroup>();
+            if (group != null)
+            {
+                Assert.AreEqual(1f, group.alpha, 0.001f,
+                    "the summary is still dimmed by the sweep's motion blur");
+            }
+        }
+
         [UnityTest]
         public IEnumerator TheBarsOnlyStartOnceTheSweepHasLanded()
         {
