@@ -140,6 +140,25 @@ namespace PrincesPalace.Domain.UiKit
         public UiNode Rotated(float degrees) { Rotation = degrees; return this; }
         public UiNode WithScale(UiVec scale) { Scale = scale; return this; }
         public UiNode Inactive() { StartInactive = true; return this; }
+
+        // Which set of alternatives this node belongs to, if any. Siblings
+        // sharing one are pages of the same book: they occupy the same box on
+        // purpose and at most one is ever on screen, so overlapping EACH OTHER
+        // is what they are for.
+        //
+        // A token rather than a name, so two groups cannot collide by both
+        // being called "panes" and nobody has to keep a string in step. Set
+        // through Ui.Exclusive, which is the only thing that should write it.
+        //
+        // WHY THIS EXISTS AT ALL. Six screens said this in prose --
+        // AllowOverlap("the three tab pages share one coordinate frame and
+        // exactly one is ever active") -- and AllowOverlap is a blanket: A1
+        // skips a PAIR if EITHER side carries a reason, so a page exempted to
+        // sit on its sibling pages was also exempt from colliding with the tab
+        // bar, the footer, and anything added later. Saying "these three are
+        // alternatives" exempts exactly the pairs it should and leaves every
+        // other overlap checked.
+        public object ExclusiveGroup;
         public UiNode AsDecor() { Decor = true; return this; }
         public UiNode Clipping() { Masks = true; return this; }
         public UiNode NoChrome() { Chromeless = true; return this; }
@@ -216,6 +235,21 @@ namespace PrincesPalace.Domain.UiKit
         public bool IsVisibleGraphic =>
             Kind == UiNodeKind.Label || Kind == UiNodeKind.Button
             || Kind == UiNodeKind.Sprite || Kind == UiNodeKind.Solid;
+
+        // Emits no Graphic component at all: a bare coordinate rect that draws
+        // nothing and cannot intercept a click. UiEmitter's rule exactly -- a
+        // Panel gets an Image only when it has been given a colour.
+        //
+        // Worth having as a derived fact rather than a flag somebody sets,
+        // because screens kept stating it in prose instead: "an invisible pool
+        // container spans the panel by construction and has no graphic to
+        // intercept anything", "a full-bleed viewport spans the headings it
+        // shares the panel with; it draws nothing and has no graphic to
+        // intercept a click". Both are true, both are readable off the tree,
+        // and both were spent on an AllowOverlap that then stopped checking
+        // that node against everything else as well.
+        public bool EmitsNoGraphic =>
+            !IsVisibleGraphic && string.IsNullOrEmpty(ColorHex) && string.IsNullOrEmpty(SpriteKey);
 
         public override string ToString() => $"{Kind}:{Name}";
     }

@@ -50,6 +50,7 @@ namespace PrincesPalace.Domain.UiKit
             CheckFlowCapacity(node, errors, frame);
             CheckSiblingOverlap(node, decorHere, errors, frame);
             CheckInertOverlapAllowance(node, decorHere, errors, frame);
+            CheckExclusiveGroups(node, errors, frame);
 
             foreach (var child in node.Children)
             {
@@ -219,6 +220,53 @@ namespace PrincesPalace.Domain.UiKit
             });
         }
 
+        // A8 -----------------------------------------------------------------
+        //
+        // At most one of a set of alternatives starts on screen.
+        //
+        // The prose these groups replaced said "exactly one is ever active" in
+        // six places and nothing checked it. Forgetting `.Inactive()` on the
+        // second page draws both at once -- two full-size panels of text on top
+        // of each other, which reads as a font bug or a rendering fault long
+        // before anyone suspects the declaration.
+        //
+        // AT MOST, not exactly: a menu whose panes are all inactive until the
+        // controller picks one is correct, and common here.
+        private static void CheckExclusiveGroups(SolvedNode node, List<UiAuditError> errors, UiVec frame)
+        {
+            var active = new Dictionary<object, List<string>>();
+
+            foreach (var child in node.Children)
+            {
+                var group = child.Source?.ExclusiveGroup;
+                if (group == null || child.Source.StartInactive) continue;
+
+                if (!active.TryGetValue(group, out var names))
+                {
+                    names = new List<string>();
+                    active[group] = names;
+                }
+                names.Add(child.Path);
+            }
+
+            foreach (var pair in active)
+            {
+                if (pair.Value.Count < 2) continue;
+
+                errors.Add(new UiAuditError
+                {
+                    Check = UiAuditCheck.ExclusiveGroupBothActive,
+                    Path = pair.Value[0],
+                    OtherPath = pair.Value[1],
+                    Frame = frame,
+                    Message =
+                        $"{pair.Value.Count} members of one Ui.Exclusive set start active " +
+                        $"({string.Join(", ", pair.Value)}), so they are all drawn at once on the first " +
+                        $"frame. Fix by: marking every alternative but the opening one .Inactive().",
+                });
+            }
+        }
+
         // A7 -----------------------------------------------------------------
         //
         // An AllowOverlap that cannot fire. Decoration is already exempt from
@@ -288,6 +336,24 @@ namespace PrincesPalace.Domain.UiKit
 
                     if (a.Source?.Decor == true || b.Source?.Decor == true) continue;
                     if (a.Source?.AllowOverlapReason != null || b.Source?.AllowOverlapReason != null) continue;
+
+                    // Alternatives. Exempt from EACH OTHER and from nothing
+                    // else, which is the whole difference between this and the
+                    // AllowOverlap these pages used to carry.
+                    if (a.Source?.ExclusiveGroup != null
+                        && ReferenceEquals(a.Source.ExclusiveGroup, b.Source?.ExclusiveGroup)) continue;
+
+                    // The LATER sibling draws nothing, so there is no harm to
+                    // report. Read the message below: what makes an overlap a
+                    // defect here is that uGUI puts `b` on top, where it hides
+                    // `a` and takes the clicks meant for it. A bare Panel emits
+                    // no Graphic at all -- it cannot do either.
+                    //
+                    // DIRECTIONAL, and it has to be. If `a` is the invisible
+                    // one and `b` draws, `b` really is sitting on top of
+                    // whatever `a` contains, and that is worth reporting even
+                    // though `a` itself is only a coordinate frame.
+                    if (b.Source?.EmitsNoGraphic == true) continue;
 
                     var ra = a.Footprint;
                     var rb = b.Footprint;

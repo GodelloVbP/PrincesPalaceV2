@@ -138,6 +138,44 @@ namespace PrincesPalace.Domain.UiKit
             Solid(name, colorHex, size, Place.At(x, y))
                 .AsDecor();
 
+        // These nodes are ALTERNATIVES: one box, one at a time.
+        //
+        // Tab pages, wizard phases, the panes of a menu -- anything a
+        // controller switches between. They are declared at the same place and
+        // the same size deliberately, so A1 has to be told, and until now they
+        // told it with AllowOverlap and a sentence. That worked and said too
+        // much: A1 skips a pair when EITHER side carries a reason, so a page
+        // exempted to sit on its sibling pages stopped being checked against
+        // everything else on the screen as well, permanently.
+        //
+        // Call it once where the set is complete, and add the members as
+        // children as usual -- this marks them, it does not group them in the
+        // tree. Nothing about the emitted hierarchy changes, which is the point:
+        // the controllers that switch these find them by name.
+        //
+        // A8 checks the other half of the claim, that at most one of them is
+        // active at declaration time. "Exactly one is ever active" was written
+        // in six places and verified in none.
+        public static IReadOnlyList<UiNode> Exclusive(params UiNode[] nodes) =>
+            Exclusive((IEnumerable<UiNode>)nodes);
+
+        public static IReadOnlyList<UiNode> Exclusive(IEnumerable<UiNode> nodes)
+        {
+            var list = nodes?.Where(n => n != null).ToList() ?? new List<UiNode>();
+
+            if (list.Count < 2)
+            {
+                throw new ArgumentException(
+                    $"Ui.Exclusive needs at least two alternatives to mean anything; got {list.Count}. " +
+                    "A single node that overlaps something is not a set of pages -- if it sits ON a " +
+                    "specific sibling, say that instead.");
+            }
+
+            var token = new object();
+            foreach (var node in list) node.ExclusiveGroup = token;
+            return list;
+        }
+
         // Blank main-axis extent inside a flow container. Exists so a gap can be
         // declared where it happens rather than smuggled into a neighbour's
         // size, which is how v1's offsets became unreadable.

@@ -8,6 +8,7 @@ namespace PrincesPalace.Domain.UiKit
         DuplicateName,       // A4
         ZeroSizeGraphic,     // A6
         InertOverlapAllowance, // A7
+        ExclusiveGroupBothActive, // A8
     }
 
     // One audit failure, with everything needed to act on it without opening

@@ -270,6 +270,138 @@ namespace PrincesPalace.Domain.Tests
                 "next path would sit beside the current one");
         }
 
+        // --- Ui.Exclusive: alternatives, and only against each other ----------
+
+        private static UiNode TwoPages(bool bothActive)
+        {
+            var a = Ui.Panel("PageA", Place.Stretch(), UiSize.Fill,
+                Ui.Solid("PageAFill", "#FFFFFFFF", Place.Stretch(), UiSize.Fill));
+            var b = Ui.Panel("PageB", Place.Stretch(), UiSize.Fill,
+                Ui.Solid("PageBFill", "#FFFFFFFF", Place.Stretch(), UiSize.Fill));
+
+            if (!bothActive) b.Inactive();
+            Ui.Exclusive(a, b);
+
+            return Ui.Panel("Root", UiSize.Fixed(1920f, 1080f), a, b);
+        }
+
+        [Test]
+        public void ExclusiveSiblings_DoNotCountAsOverlappingEachOther()
+        {
+            Assert.IsEmpty(Of(TwoPages(bothActive: false), UiAuditCheck.SiblingOverlap),
+                "two pages of one book occupy the same box on purpose");
+        }
+
+        [Test]
+        public void AnExclusiveNode_IsStillCheckedAgainstEverythingElse()
+        {
+            // THE WHOLE POINT, and the difference from the AllowOverlap these
+            // pages used to carry. That was a blanket: A1 skips a pair when
+            // EITHER side has a reason, so a page exempted to sit on its
+            // sibling pages stopped being checked against the tab bar and the
+            // footer too, permanently and invisibly.
+            var page = Ui.Panel("PageA", Place.At(0f, 0f), UiSize.Fixed(400f, 400f));
+            var other = Ui.Panel("PageB", Place.At(0f, 0f), UiSize.Fixed(400f, 400f)).Inactive();
+            Ui.Exclusive(page, other);
+
+            var footer = Ui.Button("Footer", UiString.FromContent("Go"), new UiVec(200f, 60f), 18,
+                Place.At(0f, 0f));
+
+            var errors = Of(Ui.Panel("Root", UiSize.Fixed(1920f, 1080f), page, other, footer),
+                UiAuditCheck.SiblingOverlap);
+
+            Assert.IsNotEmpty(errors,
+                "a page that belongs to an exclusive set is exempt from its ALTERNATIVES, not from " +
+                "an unrelated button parked on top of it");
+        }
+
+        [Test]
+        public void A8_TwoAlternativesStartingActive_IsRejected()
+        {
+            // "Exactly one is ever active" was written in six screens and
+            // checked in none. Forgetting .Inactive() on the second page draws
+            // both at once, which reads as a font or rendering fault long before
+            // anyone suspects the declaration.
+            var errors = Of(TwoPages(bothActive: true), UiAuditCheck.ExclusiveGroupBothActive);
+
+            Assert.IsNotEmpty(errors, "both pages start active and nothing said so");
+            StringAssert.Contains("drawn at once", errors[0].Message);
+        }
+
+        [Test]
+        public void A8_AllAlternativesInactive_IsFine()
+        {
+            // AT MOST one, not exactly one: the system menu's panes are all
+            // inactive until the controller picks one, and that is correct.
+            var a = Ui.Panel("PaneA", Place.Stretch(), UiSize.Fill).Inactive();
+            var b = Ui.Panel("PaneB", Place.Stretch(), UiSize.Fill).Inactive();
+            Ui.Exclusive(a, b);
+
+            Assert.IsEmpty(Of(Ui.Panel("Root", UiSize.Fixed(1920f, 1080f), a, b),
+                UiAuditCheck.ExclusiveGroupBothActive));
+        }
+
+        [Test]
+        public void ABareContainerDrawnOnTop_IsNotAnOverlap()
+        {
+            // A1's complaint is that the LATER sibling hides the earlier one
+            // and takes its clicks. A Panel with no colour emits no Graphic, so
+            // it does neither -- it is a coordinate frame, and the screens that
+            // used to spend an AllowOverlap saying so were telling the audit
+            // something it can read off the tree.
+            var button = Ui.Button("Button", UiString.FromContent("Go"), new UiVec(200f, 60f), 18,
+                Place.At(0f, 0f));
+            var frame = Ui.Panel("Frame", Place.Stretch(), UiSize.Fill,
+                Ui.Label("Caption", UiString.FromContent("x"), new UiVec(100f, 20f), 14,
+                    place: Place.At(0f, -300f)));
+
+            Assert.IsEmpty(Of(Ui.Panel("Root", UiSize.Fixed(1920f, 1080f), button, frame),
+                UiAuditCheck.SiblingOverlap));
+        }
+
+        [Test]
+        public void ADrawnSiblingOnTopOfABareContainer_IsStillAnOverlap()
+        {
+            // The direction that still matters, and the reason the rule above
+            // is not simply "ignore containers". Here the Solid is on top of
+            // whatever the frame contains, which is exactly the case A1 exists
+            // for -- the frame being invisible does not make its CONTENTS
+            // invisible.
+            var frame = Ui.Panel("Frame", Place.Stretch(), UiSize.Fill,
+                Ui.Label("Caption", UiString.FromContent("x"), new UiVec(100f, 20f), 14,
+                    place: Place.At(0f, 0f)));
+            var cover = Ui.Solid("Cover", "#FF0000FF", new UiVec(400f, 400f), Place.At(0f, 0f));
+
+            Assert.IsNotEmpty(Of(Ui.Panel("Root", UiSize.Fixed(1920f, 1080f), frame, cover),
+                UiAuditCheck.SiblingOverlap));
+        }
+
+        [Test]
+        public void AColouredPanelIsAGraphic_AndStillOverlaps()
+        {
+            // A Panel gets an Image the moment it is given a colour, which is
+            // UiEmitter's rule and therefore has to be this one's too. A rule
+            // that keyed on Kind alone would wave through a coloured panel
+            // parked on a button.
+            var button = Ui.Button("Button", UiString.FromContent("Go"), new UiVec(200f, 60f), 18,
+                Place.At(0f, 0f));
+            var plate = Ui.Panel("Plate", Place.At(0f, 0f), UiSize.Fixed(400f, 400f)).Coloured("#112233FF");
+
+            Assert.IsNotEmpty(Of(Ui.Panel("Root", UiSize.Fixed(1920f, 1080f), button, plate),
+                UiAuditCheck.SiblingOverlap));
+        }
+
+        [Test]
+        public void Exclusive_WithFewerThanTwoMembers_IsRejected()
+        {
+            // A set of one is not a set of alternatives, and would read as a
+            // licence to overlap whatever happened to be nearby -- which is
+            // exactly the blanket this replaced.
+            var lone = Ui.Panel("Lone", Place.Stretch(), UiSize.Fill);
+
+            Assert.Throws<System.ArgumentException>(() => Ui.Exclusive(lone));
+        }
+
         // --- A7: an allowance that waives nothing -----------------------------
         //
         // Written because A7 is a check that, on this codebase, is expected to

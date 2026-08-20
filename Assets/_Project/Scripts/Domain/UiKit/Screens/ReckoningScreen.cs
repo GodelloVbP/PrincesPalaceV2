@@ -253,8 +253,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             offerChildren.Add(screen.BuildOfferTooltip());
 
-            var offerPhase = Ui.Panel("ReckoningOfferPhase", Place.Stretch(), UiSize.Fill, offerChildren)
-                .AllowOverlap("the two phases share one coordinate frame and exactly one is ever active");
+            var offerPhase = Ui.Panel("ReckoningOfferPhase", Place.Stretch(), UiSize.Fill, offerChildren);
             screen.OfferPhase = offerPhase;
 
             // ---- phase two: what it was worth --------------------------
@@ -274,9 +273,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 summaryChildren.Add(screen.BuildTab(i));
             }
 
-            summaryChildren.Add(screen.BuildSpoilsPage());
-            summaryChildren.Add(screen.BuildRelicsPage());
-            summaryChildren.Add(screen.BuildTallyPage());
+            // ONE BOOK, THREE PAGES. Declared as alternatives rather than
+            // waived with an AllowOverlap apiece: they are exempt from each
+            // other and still checked against the tab bar, the footer and
+            // anything added to this panel later.
+            summaryChildren.AddRange(Ui.Exclusive(
+                screen.BuildSpoilsPage(),
+                screen.BuildRelicsPage(),
+                screen.BuildTallyPage()));
 
             // The heat behind the arrow. DECLARED FIRST, so it draws UNDER the
             // button rather than over it -- a child of the button would paint
@@ -313,12 +317,37 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var continueButton = Ui.Button("ReckoningContinueButton", UiStrings.Continue,
                 new UiVec(340f, 84f), 22, Place.At(0f, -272f));
             continueButton.SpriteKey = ContinueKey;
+
+            // THE EXEMPTION SITS HERE NOW, on one button, rather than on the
+            // three full-size pages it crosses.
+            //
+            // The pages used to carry it, and carrying it there was a blanket:
+            // A1 skips a pair when EITHER side has a reason, so each page
+            // stopped being checked against the tab bar, the footer and
+            // anything else on the phase as well. Declaring them alternatives
+            // (Ui.Exclusive) narrowed that to the pairs it should be, and this
+            // is what fell out -- a real overlap the blanket had been hiding:
+            // Continue is a drawn button, declared after the pages, so it is on
+            // top of whatever they hold at the bottom of the phase.
+            //
+            // Which is intended. It is the way out of the summary and it has to
+            // be reachable from every tab, so it belongs to the phase rather
+            // than to any one page, and the pages leave the band it occupies
+            // clear. That last clause is the part A1 cannot check for itself --
+            // it does not look inside a container - so it is stated here rather
+            // than assumed.
+            continueButton.AllowOverlap(
+                "Continue belongs to the phase, not to a page: it is the only way out of the summary and " +
+                "must be reachable from every tab, so it is declared last and draws over the page frames " +
+                "beneath it, which leave its band clear");
             screen.ContinueButton = continueButton;
             summaryChildren.Add(continueButton);
 
             var summaryPhase = Ui.Panel("ReckoningSummaryPhase", Place.Stretch(), UiSize.Fill, summaryChildren)
-                .AllowOverlap("the two phases share one coordinate frame and exactly one is ever active")
                 .Inactive();
+
+            // The offer and the summary are the same box at two moments.
+            Ui.Exclusive(offerPhase, summaryPhase);
             screen.SummaryPhase = summaryPhase;
 
             // ---- the container -----------------------------------------
@@ -443,8 +472,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 children.Add(BuildRow(i));
             }
 
-            var page = Ui.Panel("ReckoningSpoilsPage", Place.Stretch(), UiSize.Fill, children)
-                .AllowOverlap("the three tab pages share one coordinate frame and exactly one is ever active");
+            var page = Ui.Panel("ReckoningSpoilsPage", Place.Stretch(), UiSize.Fill, children);
             Pages.Add(page);
             return page;
         }
@@ -492,7 +520,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
             children.Add(empty);
 
             var page = Ui.Panel("ReckoningRelicsPage", Place.Stretch(), UiSize.Fill, children)
-                .AllowOverlap("the three tab pages share one coordinate frame and exactly one is ever active")
                 .Inactive();
             Pages.Add(page);
             return page;
@@ -534,7 +561,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
             }
 
             var page = Ui.Panel("ReckoningTallyPage", Place.Stretch(), UiSize.Fill, children)
-                .AllowOverlap("the three tab pages share one coordinate frame and exactly one is ever active")
                 .Inactive();
             Pages.Add(page);
             return page;

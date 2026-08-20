@@ -244,13 +244,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         Place.At(0f, 0f),
                         UiSize.Fixed(SystemMenuLayout.PanelWidth, SystemMenuLayout.ContentHeight),
                         contents)
-                    .Inactive()
-                    .AllowOverlap("every pane shares one box and all but the selected one is switched off");
+                    .Inactive();
 
                 screen.Panes.Add(pane);
                 screen.PanePlaceholders.Add(placeholder);
                 paneChildren.Add(pane);
             }
+
+            // ALTERNATIVES, not a pile. Every pane is the same box and the
+            // controller switches one on; declaring that exempts them from each
+            // other and leaves them checked against the bar above and the
+            // lintel, which the old blanket AllowOverlap did not.
+            Ui.Exclusive(paneChildren);
 
             var content = Ui.Panel("SystemMenuContent",
                 Place.At(0f, SystemMenuLayout.ContentCentreY),

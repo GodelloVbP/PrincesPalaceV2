@@ -63,7 +63,7 @@ of that list now exists in `tools/run_tests_parallel.ps1`, it has already
 diverged, and what it guards is the exact failure `CLAUDE.md`'s gotcha #1 warns
 about. That is finding F1 — since fixed, along with the four stale comments and
 F4, F6, F7 and F12, in the working tree accompanying this document. Eleven of the
-sixteen findings are closed and F10 is half closed; F8, F9, F13 and F15 are open on
+sixteen findings are closed and F10 is two thirds closed; F8, F9, F13 and F15 are open on
 stated grounds, and F11 was
 closed by another session mid-audit.
 
@@ -988,7 +988,7 @@ The shape this suggests is a list of per-type validators each returning its own
 work:** the function is correct, well commented, and the author may reasonably
 prefer one readable pass over content to a dispatch table.
 
-### F10 — **Upgraded to MEDIUM on inspection, and half fixed.**
+### F10 — **Upgraded to MEDIUM on inspection. Exclusion done; attachment still open.**
 
 As first written this said "six exemptions describe one missing concept" and
 proposed an exclusive-pages container. Both halves needed correcting, in
@@ -1024,16 +1024,47 @@ inherited case is the one it would miss. Three tests pin it, including one
 asserting it stays quiet on an ordinary clickable node — without that it is a
 rule against `AllowOverlap` itself.
 
-**What is left, and what it actually costs.** 39 `AllowOverlap` sites remain,
-of which 29 could ever fire; they cluster as 8 widget pairing, 7 exclusive
-one-of-N, 4 non-interactive, 2 glow, 1 frame, 7 one-offs. The exclusive-pages
-container is still worth building, but the case for it is not tidiness. It is
-that **`AllowOverlap` is a per-node blanket, not a per-pair waiver** — A1 skips
-the pair if *either* side carries a reason, so a node exempted to let its fill
-sit inside its own track is exempt from colliding with every other sibling on
-that screen, permanently, including ones added years later. Two words —
-attachment and exclusion — would retire 15 of the 29 by construction and let the
-rest be narrow.
+**The first word is built.** `Ui.Exclusive(...)` marks a set of alternatives —
+tab pages, wizard phases, menu panes — with a token rather than a name, so two
+groups cannot collide by both being called "panes". It marks nodes without
+wrapping them, so the emitted hierarchy is unchanged and the controllers that
+find these by name are untouched. A1 exempts a pair sharing a group and nothing
+else; **A8** checks the half the prose never verified, that at most one member
+starts active. "Exactly one is ever active" was written in six screens and
+tested in none, and forgetting `.Inactive()` on the second page draws both at
+once, which reads as a rendering fault long before anyone suspects the
+declaration.
+
+**What narrowing them surfaced is the argument for doing it.** Five of the eight
+newly-reported overlaps turned out to be a fact the tree already encodes: a bare
+`Ui.Panel` emits no `Image` at all — `UiEmitter` gives one a Graphic only when it
+has a colour — so it can neither hide a sibling nor take its clicks, which is
+precisely the harm A1's own message describes. A1 now skips a pair when the
+**later** sibling emits no graphic. Directional, and that matters: if the
+invisible one is first and the drawn one is second, the drawn one really is
+sitting on top of whatever the frame contains. This also retires the
+"draws nothing and has no graphic to intercept a click" cluster, which was
+telling the audit something readable off the tree.
+
+The other three were a genuine layering question nobody had been asked in years:
+`ReckoningContinueButton` is a drawn button declared after the pages, so it sits
+over whatever they hold at the bottom of the phase. Intended — it is the only way
+out of the summary and must be reachable from every tab — so the exemption moved
+onto that one button instead of the three full-size pages. Same waiver, a
+fraction of the blast radius.
+
+**Production `AllowOverlap` is 29 sites now, 28 of them live**, down from 67 of
+which 29 were live. Still open: **attachment**, the ~8 sites saying "the thumb
+rides inside its own track", "the label sits over its own plate". A word for
+"these two nodes are one widget" would exempt exactly that pair. It is the
+riskier half — narrowing those will unmask whatever else they were blanket-
+waiving, as this pass did — and it is the remaining work under this finding.
+
+**One site deliberately not migrated.** `FightScreen`'s Continue button swaps
+footprints with the verb column, and `BuildVerbColumn` returns several nodes that
+are alternatives to Continue but *not* to each other. A flat mutual-alternatives
+set cannot say that, and stretching the word to fit would make it mean "these
+sometimes do not coexist", which is loose enough to be worth nothing.
 
 *The general lesson, which is why this was upgraded:* an exemption list reads as
 a design backlog, and two thirds of this one was fiction. Count what a rule
