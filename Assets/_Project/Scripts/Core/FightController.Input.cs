@@ -336,6 +336,42 @@ namespace PrincesPalace
             }
         }
 
+        // THE FIGHT CANNOT STAY BUSY FOR A PLAYBACK THAT IS NOT RUNNING.
+        //
+        // _isBusy is half of CanAct and is cleared only by OnPlaybackFinished,
+        // so anything that ends a playback without calling back leaves every
+        // verb disabled for the rest of the fight -- no error, no message, just
+        // a screen that stops responding. An exception inside the beat
+        // coroutine does exactly that, and so did Flush before it learned to
+        // report.
+        //
+        // The two are set together and synchronously -- _isBusy = true is
+        // immediately followed by Play, which sets IsPlaying in the same frame
+        // -- so "busy but nothing playing" is not a window this can catch
+        // mid-transition. It is only ever the stranded state, which is why it
+        // can be recovered from rather than merely logged.
+        //
+        // Logged AS WELL, once, because a fight that silently repairs itself
+        // teaches nobody what broke it.
+        private bool _reportedStrandedTurn;
+
+        private void RescueAStrandedTurn()
+        {
+            if (!_isBusy || _session == null) return;
+            if (beatPlayer == null || beatPlayer.IsPlaying) return;
+
+            if (!_reportedStrandedTurn)
+            {
+                _reportedStrandedTurn = true;
+                Debug.LogWarning(
+                    "[FightController] The round ended without reporting, so the fight was left busy " +
+                    "with every verb disabled. Recovered. If an exception was logged just before " +
+                    "this, that is what stopped the playback.");
+            }
+
+            OnPlaybackFinished();
+        }
+
         private void OnPlaybackFinished()
         {
             _isBusy = false;
@@ -431,6 +467,8 @@ namespace PrincesPalace
         // this scene, so opening it cannot change the fight it is describing.
         private void Update()
         {
+            RescueAStrandedTurn();
+
             if (characterSheetPanel == null) return;
 
             if (Input.GetKeyDown(KeyCode.C)) ToggleCharacterSheet(inventory: false);
