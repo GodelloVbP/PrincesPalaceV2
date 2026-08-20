@@ -401,5 +401,88 @@ namespace PrincesPalace.Domain.Tests
                 "the left bar did not gain what the loadout column gave up");
         }
 
+        // ---- the pack, two abreast and scrolling ---------------------------------
+
+        [Test]
+        public void ThePackShowsTwoEntriesAbreast()
+        {
+            Assert.AreEqual(2, (int)DossierLayout.PackColumns,
+                "the pack is not two abreast, which is what buys each entry room for its name");
+        }
+
+        // The rows and the scrollbar together have to fit the column's content
+        // width exactly, or the bar sits over the second column of entries.
+        [Test]
+        public void TheRowsAndTheScrollbarShareTheColumnExactly()
+        {
+            float rows = DossierLayout.PackCellWidth * DossierLayout.PackColumns
+                         + DossierLayout.PackColumnGap * (DossierLayout.PackColumns - 1f);
+
+            Assert.AreEqual(DossierLayout.PackListWidth, rows, 0.001f,
+                "the entry columns do not fill the list width");
+
+            Assert.AreEqual(DossierLayout.ContentAWidth,
+                DossierLayout.PackListWidth + DossierLayout.PackScrollbarGap
+                    + DossierLayout.PackScrollbarWidth,
+                0.001f,
+                "the list and its scrollbar do not add up to the column, so the bar overlaps the " +
+                "entries or floats off the edge");
+        }
+
+        // A half-drawn row at the bottom edge reads as a clipping bug rather
+        // than as more to scroll to, and this list has no mask to cut one
+        // cleanly -- so the visible count must FLOOR into the space available.
+        [Test]
+        public void OnlyWholeRowsAreDrawn()
+        {
+            float used = DossierLayout.PackVisibleRows * DossierLayout.PackCellHeight
+                         + (DossierLayout.PackVisibleRows - 1) * DossierLayout.PackRowGap;
+
+            Assert.LessOrEqual(used, DossierLayout.PackListHeight + 0.001f,
+                $"{DossierLayout.PackVisibleRows} rows need {used:F0}px of " +
+                $"{DossierLayout.PackListHeight:F0}px, so the last one is cut off");
+
+            Assert.Greater(DossierLayout.PackVisibleRows, 1,
+                "the pack shows fewer than two rows, which is not a list");
+        }
+
+        // The thumb's LENGTH is how much of the bag is on screen. A bag that
+        // fits entirely fills the track; one twice as long fills half of it,
+        // down to a floor so it never becomes an invisible stub.
+        [Test]
+        public void TheThumbSaysHowMuchOfTheBagIsShowing()
+        {
+            int visible = DossierLayout.PackVisibleCells;
+
+            Assert.AreEqual(DossierLayout.PackTrackHeight,
+                DossierLayout.PackThumbHeight(visible), 0.001f,
+                "a bag that fits should fill the track");
+
+            Assert.Less(DossierLayout.PackThumbHeight(visible * 2),
+                DossierLayout.PackTrackHeight,
+                "a bag twice the window still filled the whole track");
+
+            Assert.GreaterOrEqual(DossierLayout.PackThumbHeight(visible * 500),
+                DossierLayout.PackThumbMinHeight,
+                "a very long bag shrank the thumb below the point it can be grabbed");
+        }
+
+        // The cells are a WINDOW rather than the capacity, which is the whole
+        // of the scrolling: a 25th item used to be simply absent.
+        [Test]
+        public void EveryCellSitsInsideTheListArea()
+        {
+            for (int row = 0; row < DossierLayout.PackVisibleRows; row++)
+            {
+                float top = DossierLayout.PackCellCentreY(row) + DossierLayout.PackCellHeight * 0.5f;
+                float bottom = DossierLayout.PackCellCentreY(row) - DossierLayout.PackCellHeight * 0.5f;
+
+                Assert.LessOrEqual(top, DossierLayout.PackListTop + 0.001f,
+                    $"pack row {row} starts above the list");
+                Assert.GreaterOrEqual(bottom, DossierLayout.PackListBottom - 0.001f,
+                    $"pack row {row} runs below the list and into the carried footer");
+            }
+        }
+
     }
 }

@@ -537,6 +537,12 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString OverlayPrev = UiString.Define("dossier.prev", "<");
         public static readonly UiString OverlayNext = UiString.Define("dossier.next", ">");
         public static readonly UiString OverlayTwoHanded = UiString.Define("dossier.two_handed", "TWO-HANDED");
+        // How the pack is ORDERED. Three keys, not four: rarity is derived
+        // from tier, so a rarity button would draw the tier button's list.
+        public static readonly UiString PackSortTier = UiString.Define("dossier.sort_tier", "TIER");
+        public static readonly UiString PackSortPlus = UiString.Define("dossier.sort_plus", "+");
+        public static readonly UiString PackSortName = UiString.Define("dossier.sort_name", "NAME");
+
         public static readonly UiString PackFilterAll = UiString.Define("dossier.filter_all", "All");
         public static readonly UiString PackFilterArmour = UiString.Define("dossier.filter_armour", "Armour");
         public static readonly UiString PackFilterWeapons = UiString.Define("dossier.filter_weapons", "Weapons");
@@ -601,6 +607,7 @@ namespace PrincesPalace.Domain.UiKit
             OverlayEquip, OverlayUnequip, OverlayCannotWear, OverlayBagEmpty,
             TalentEmbers, TalentInvest, TalentTaken, TalentLocked, TalentNoEmbers,
             TalentPrev, TalentNext, TalentBack, TalentPath,
+            PackSortTier, PackSortPlus, PackSortName,
             RunStatBattle, RunStatFold, RunStatSpoils,
             RunStatDamageDealt, RunStatDamagePhysical, RunStatDamageOther, RunStatDamageTaken,
             RunStatHealed, RunStatShielded, RunStatKills, RunStatTimesDowned,

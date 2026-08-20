@@ -75,6 +75,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> PackIcons = new List<NodeRef>();
         public List<NodeRef> PackCounts = new List<NodeRef>();
         public List<NodeRef> PackRarityTicks = new List<NodeRef>();
+
+        // The name beside each icon, which two-abreast rows have room for and
+        // a four-across grid of squares did not.
+        public List<NodeRef> PackNames = new List<NodeRef>();
+
+        // Underlines, one per sort key, showing which ordering is live -- the
+        // same marker the system menu's tab bar uses, for the same reason.
+        public List<NodeRef> PackSortUnderlines = new List<NodeRef>();
+
+        public NodeRef PackScrollTrack;
+        public NodeRef PackScrollThumb;
         public NodeRef CarriedValue;
 
         // Indexed by EquipmentSlots.All.
@@ -275,6 +286,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // ---- column A, covered: the pack -------------------------------------------
 
+        private static UiString SortLabel(BagSortKey key)
+        {
+            switch (key)
+            {
+                case BagSortKey.Plus: return UiStrings.PackSortPlus;
+                case BagSortKey.Name: return UiStrings.PackSortName;
+                default: return UiStrings.PackSortTier;
+            }
+        }
+
         private UiNode BuildPackPanel()
         {
             // ZERO, not the column centre. These are children OF the pack
@@ -299,51 +320,108 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 new UiVec(DossierLayout.ContentAWidth, 1f),
                 Place.At(cx, DossierLayout.ColumnATop - 26f)).AsDecor());
 
-            // Filter tabs, from one list so a new category is one entry.
-            float tabY = DossierLayout.ColumnATop - 48f;
-            float tabX = cx - DossierLayout.ContentAWidth * 0.5f + 30f;
-            for (int i = 0; i < PackFilters.All.Length; i++)
+            // HOW THE PACK IS ORDERED, chosen by the player.
+            //
+            // Three keys, not the four that were asked for: rarity is derived
+            // from tier by RarityBands, so a rarity button would produce the
+            // tier button's list with the precision thrown away. Two controls
+            // that do the same thing is the same failure as one that does
+            // nothing. See BagSort.
+            for (int i = 0; i < BagSort.All.Length; i++)
             {
-                var tab = Ui.Button($"DossierPackFilter{i}", PackFilters.All[i], new UiVec(60f, 24f), 12,
-                        Place.At(tabX + i * 66f, tabY))
-                    .NoChrome();
+                float x = cx - DossierLayout.ContentAWidth * 0.5f
+                          + DossierLayout.PackSortButtonWidth * (i + 0.5f);
+
+                var tab = Ui.Button($"DossierPackSort{i}", SortLabel(BagSort.All[i]),
+                        new UiVec(DossierLayout.PackSortButtonWidth, DossierLayout.PackSortRowHeight), 11,
+                        Place.At(x, DossierLayout.PackSortCentreY))
+                    .NoChrome()
+                    .AllowOverlap("the sort key's underline sits under its own label by construction");
+
+                var underline = Ui.Solid($"DossierPackSort{i}Underline", "#FFE0A8",
+                        new UiVec(DossierLayout.PackSortButtonWidth - 24f, 2f),
+                        Place.At(x, DossierLayout.PackSortCentreY - DossierLayout.PackSortRowHeight * 0.5f + 1f))
+                    .Inactive()
+                    .AsDecor()
+                    .AllowOverlap("the underline marks the key above it");
+
                 PackFilterTabs.Add(tab);
+                PackSortUnderlines.Add(underline);
                 children.Add(tab);
+                children.Add(underline);
             }
 
-            // 24 cells, always rendered: the grid IS the capacity.
-            const int columns = 4;
-            float cell = (DossierLayout.ContentAWidth - 8f * (columns - 1)) / columns;
-            float gridTop = tabY - 28f;
+            // TWO ABREAST, AND ONLY WHAT FITS. The cells are a WINDOW onto the
+            // bag rather than its capacity: the controller binds cell i to item
+            // i + offset, so a pack of any size is reachable by scrolling and a
+            // 25th item is no longer simply absent.
+            float cellW = DossierLayout.PackCellWidth;
+            float cellH = DossierLayout.PackCellHeight;
 
-            for (int i = 0; i < PackCapacity; i++)
+            for (int i = 0; i < DossierLayout.PackVisibleCells; i++)
             {
-                int col = i % columns;
-                int rowIndex = i / columns;
-                float x = cx - DossierLayout.ContentAWidth * 0.5f + cell * 0.5f + col * (cell + 8f);
-                float y = gridTop - cell * 0.5f - rowIndex * (cell + 8f);
+                int col = i % (int)DossierLayout.PackColumns;
+                int rowIndex = i / (int)DossierLayout.PackColumns;
 
-                var icon = Ui.Sprite($"DossierPackIcon{i}", null, new UiVec(cell - 14f, cell - 14f),
-                    Place.At(0f, 0f)).Inactive().AsDecor();
+                float x = cx + DossierLayout.PackCellCentreX(col);
+                float y = DossierLayout.PackCellCentreY(rowIndex);
+
+                var icon = Ui.Sprite($"DossierPackIcon{i}", null,
+                        new UiVec(DossierLayout.PackIconSize, DossierLayout.PackIconSize),
+                        Place.At(-cellW * 0.5f + 8f + DossierLayout.PackIconSize * 0.5f, 0f))
+                    .Inactive().AsDecor();
+
                 var tick = Ui.Solid($"DossierPackTick{i}", "#7F8EA3", new UiVec(8f, 8f),
-                    Place.At(-cell * 0.5f + 5f, cell * 0.5f - 5f)).Inactive().AsDecor();
-                var count = Ui.Label($"DossierPackCount{i}", UiString.Runtime, new UiVec(30f, 14f), 10,
-                    "#E6DCF0BF", Place.At(cell * 0.5f - 17f, -cell * 0.5f + 8f)).Inactive().AsDecor();
+                    Place.At(-cellW * 0.5f + 5f, cellH * 0.5f - 5f)).Inactive().AsDecor();
 
-                var button = Ui.Button($"DossierPackCell{i}", UiString.Runtime, new UiVec(cell, cell), 1,
+                // The name, which is the whole reason for going two abreast.
+                var name = Ui.Label($"DossierPackName{i}", UiString.Runtime,
+                        new UiVec(cellW - DossierLayout.PackIconSize - 26f, 34f), 11, Text,
+                        Place.At(DossierLayout.PackIconSize * 0.5f - 2f, 0f))
+                    .Inactive().AsDecor();
+
+                var count = Ui.Label($"DossierPackCount{i}", UiString.Runtime, new UiVec(30f, 14f), 10,
+                    "#E6DCF0BF", Place.At(cellW * 0.5f - 17f, -cellH * 0.5f + 8f)).Inactive().AsDecor();
+
+                var button = Ui.Button($"DossierPackCell{i}", UiString.Runtime, new UiVec(cellW, cellH), 1,
                         Place.At(x, y))
                     .NoChrome()
-                    .Hovers(1.04f);
+                    .Hovers(1.02f)
+                    .AllowOverlap("an entry's icon, name and count sit inside their own row by construction");
+
                 button.Children.Add(icon);
                 button.Children.Add(tick);
+                button.Children.Add(name);
                 button.Children.Add(count);
 
                 PackCells.Add(button);
                 PackIcons.Add(icon);
                 PackRarityTicks.Add(tick);
+                PackNames.Add(name);
                 PackCounts.Add(count);
                 children.Add(button);
             }
+
+            // The scrollbar. A track and a thumb the controller sizes and
+            // moves, rather than a ScrollRect: there is no scrolling CONTENT
+            // here to move -- the cells stay put and their CONTENTS change --
+            // so a real viewport would be machinery around a list that does not
+            // need one.
+            var track = Ui.Solid("DossierPackScrollTrack", "#0E070CD9",
+                    new UiVec(DossierLayout.PackScrollbarWidth, DossierLayout.PackTrackHeight),
+                    Place.At(cx + DossierLayout.PackScrollbarCentreX, DossierLayout.PackTrackCentreY))
+                .AllowOverlap("the thumb rides inside its own track by construction");
+
+            var thumb = Ui.Solid("DossierPackScrollThumb", "#C8AAE666",
+                    new UiVec(DossierLayout.PackScrollbarWidth, DossierLayout.PackTrackHeight),
+                    Place.At(cx + DossierLayout.PackScrollbarCentreX, DossierLayout.PackTrackCentreY))
+                .AsDecor()
+                .AllowOverlap("the thumb rides inside its own track by construction");
+
+            PackScrollTrack = track;
+            PackScrollThumb = thumb;
+            children.Add(track);
+            children.Add(thumb);
 
             float footerY = -DossierLayout.HalfHeight + DossierLayout.PadY + 16f;
             children.Add(Ui.Solid("DossierPackFooterRule", Rule,

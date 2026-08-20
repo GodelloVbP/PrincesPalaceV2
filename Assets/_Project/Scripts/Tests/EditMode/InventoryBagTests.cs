@@ -154,5 +154,91 @@ namespace PrincesPalace.Domain.Tests
 
             CollectionAssert.AreEqual(new[] { "only" }, Ids(BagView.Page(sorted, 7)));
         }
+        // ---- the player's chosen order -------------------------------------------
+        //
+        // THREE KEYS, NOT THE FOUR THAT WERE ASKED FOR. "tier / rarity / +'s /
+        // name" reads as four, and rarity is not a fourth axis: RarityBands
+        // derives the band FROM the tier, so a rarity ordering is the tier
+        // ordering with its precision thrown away. Two buttons drawing the same
+        // list is the same failure as a control that stores nothing.
+        [Test]
+        public void RarityIsNotAFourthOrdering()
+        {
+            Assert.AreEqual(3, BagSort.All.Length,
+                "a fourth sort key appeared - if it is rarity, it draws the tier list");
+        }
+
+        [Test]
+        public void SortingByPlusPutsTheMostHonedFirst()
+        {
+            var sorted = BagSort.By(new[]
+            {
+                Item("plain", plus: 0),
+                Item("honed", plus: 3),
+                Item("middling", plus: 1),
+            }, BagSortKey.Plus);
+
+            CollectionAssert.AreEqual(new[] { "honed", "middling", "plain" }, Ids(sorted));
+        }
+
+        [Test]
+        public void SortingByNameIsAlphabetical()
+        {
+            var sorted = BagSort.By(new[]
+            {
+                Item("c", name: "Cuirass"),
+                Item("a", name: "Axe"),
+                Item("b", name: "Boots"),
+            }, BagSortKey.Name);
+
+            CollectionAssert.AreEqual(new[] { "a", "b", "c" }, Ids(sorted));
+        }
+
+        // Tier defers to BagView.Sorted rather than restating that ordering, so
+        // the pack's long-standing default stays exactly one implementation.
+        [Test]
+        public void TierIsTheOrderThePackAlreadyHad()
+        {
+            var items = new[]
+            {
+                Item("potion", Consumable, equippable: false),
+                Item("cuirass", tier: 4),
+                Item("dagger", Weapon, tier: 2),
+            };
+
+            CollectionAssert.AreEqual(Ids(BagView.Sorted(items)),
+                Ids(BagSort.By(items, BagSortKey.Tier)));
+        }
+
+        // DETERMINISTIC TO THE LAST TIE-BREAK, whichever key is live. Generated
+        // gear means dozens of stacks that differ only by plus, and any pair
+        // left unordered would swap places between refreshes -- a list that
+        // reshuffles under the cursor as things are equipped.
+        [TestCase(BagSortKey.Tier)]
+        [TestCase(BagSortKey.Plus)]
+        [TestCase(BagSortKey.Name)]
+        public void EveryOrderingIsStableAcrossRepeatedSorts(BagSortKey key)
+        {
+            var items = new[]
+            {
+                Item("a", name: "Same", tier: 3, plus: 1),
+                Item("b", name: "Same", tier: 3, plus: 1),
+                Item("c", name: "Same", tier: 3, plus: 1),
+            };
+
+            CollectionAssert.AreEqual(Ids(BagSort.By(items, key)), Ids(BagSort.By(items, key)),
+                "two identical sorts disagreed, so the list reshuffles on every refresh");
+        }
+
+        [Test]
+        public void SortingHandlesAnEmptyBag()
+        {
+            foreach (var key in BagSort.All)
+            {
+                CollectionAssert.IsEmpty(BagSort.By(null, key));
+                CollectionAssert.IsEmpty(BagSort.By(new BagItem[0], key));
+            }
+        }
+
     }
 }

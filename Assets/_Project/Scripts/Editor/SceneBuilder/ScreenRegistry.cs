@@ -855,6 +855,11 @@ public static class ScreenRegistry
         controller.packIcons = dossier.PackIcons.Select(result.Image).ToArray();
         controller.packRarityTicks = dossier.PackRarityTicks.Select(result.Image).ToArray();
         controller.packCounts = dossier.PackCounts.Select(result.Tmp).ToArray();
+        controller.packNames = dossier.PackNames.Select(result.Tmp).ToArray();
+        controller.packSortTabs = dossier.PackFilterTabs.Select(result.Button).ToArray();
+        controller.packSortUnderlines = dossier.PackSortUnderlines.Select(result.Go).ToArray();
+        controller.packScrollTrack = result.Image(dossier.PackScrollTrack);
+        controller.packScrollThumb = result.Rect(dossier.PackScrollThumb);
         controller.carriedValue = result.Tmp(dossier.CarriedValue);
 
         controller.tooltip = result.Go(dossier.Tooltip);

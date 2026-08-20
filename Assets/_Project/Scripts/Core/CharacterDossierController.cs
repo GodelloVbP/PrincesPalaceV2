@@ -64,6 +64,11 @@ namespace PrincesPalace
         [SerializeField] internal Image[] packIcons;
         [SerializeField] internal Image[] packRarityTicks;
         [SerializeField] internal TMP_Text[] packCounts;
+        [SerializeField] internal TMP_Text[] packNames;
+        [SerializeField] internal Button[] packSortTabs;
+        [SerializeField] internal GameObject[] packSortUnderlines;
+        [SerializeField] internal Image packScrollTrack;
+        [SerializeField] internal RectTransform packScrollThumb;
         [SerializeField] internal TMP_Text carriedValue;
 
         [SerializeField] internal GameObject tooltip;
@@ -152,6 +157,25 @@ namespace PrincesPalace
             // again, and there is nowhere on this screen to explain why.
             if (lockedForFight) return;
 
+            if (packSortTabs != null)
+            {
+                for (int i = 0; i < packSortTabs.Length; i++)
+                {
+                    if (packSortTabs[i] == null) continue;
+                    int key = i;
+                    packSortTabs[i].onClick.AddListener(() => SortBy(key));
+                }
+            }
+
+            // Dragging the thumb, through the same component the Options
+            // sliders use -- it reports a 0..1 position on a bar, which is
+            // exactly what a scrollbar is.
+            if (packScrollTrack != null)
+            {
+                var bar = packScrollTrack.gameObject.AddComponent<BarSlider>();
+                bar.Changed = ScrollToFraction;
+            }
+
             for (int i = 0; i < packCells.Length; i++)
             {
                 if (packCells[i] == null) continue;
@@ -228,15 +252,100 @@ namespace PrincesPalace
         // ordering rules are not worth a second opinion.
         private IReadOnlyList<BagItem> _bag = new List<BagItem>();
 
+        // Which ordering the player chose, and how far down the list the
+        // window sits. Both survive a refresh: equipping something must not
+        // throw the pack back to the top or re-sort it under the cursor.
+        private BagSortKey _sortKey = BagSortKey.Tier;
+        private int _scroll;
+
+        // Exposed so a test can state the scroll rule without reaching into
+        // private state -- "the window never runs off the end of the list" is
+        // the whole of it.
+        public int ScrollOffset => _scroll;
+
+        public BagSortKey SortKey => _sortKey;
+
+        public void SortBy(int keyIndex)
+        {
+            if (keyIndex < 0 || keyIndex >= BagSort.All.Length) return;
+
+            _sortKey = BagSort.All[keyIndex];
+
+            // BACK TO THE TOP, because the item under the cursor is not the
+            // same item any more. Keeping the offset across a re-sort leaves
+            // the player looking at an arbitrary slice of a list they just
+            // reordered.
+            _scroll = 0;
+            RefreshPack();
+        }
+
+        public void Scroll(int rows)
+        {
+            _scroll = ClampScroll(_scroll + rows * (int)DossierLayout.PackColumns);
+            RefreshPack();
+        }
+
+        private void ScrollToFraction(float t)
+        {
+            int rows = MaxScrollRows();
+            if (rows <= 0) { _scroll = 0; RefreshPack(); return; }
+
+            // The bar reads left-to-right and the list runs top-to-bottom, so
+            // the fraction is inverted: the top of the track is offset zero.
+            int row = Mathf.RoundToInt((1f - Mathf.Clamp01(t)) * rows);
+            _scroll = ClampScroll(row * (int)DossierLayout.PackColumns);
+            RefreshPack();
+        }
+
+        private int MaxScrollRows()
+        {
+            int columns = (int)DossierLayout.PackColumns;
+            int totalRows = (_bag.Count + columns - 1) / columns;
+            int rows = totalRows - DossierLayout.PackVisibleRows;
+            return rows < 0 ? 0 : rows;
+        }
+
+        private int ClampScroll(int offset)
+        {
+            int max = MaxScrollRows() * (int)DossierLayout.PackColumns;
+            if (offset > max) offset = max;
+            return offset < 0 ? 0 : offset;
+        }
+
+        // The wheel, while the pack is open and the pointer is over it. Read
+        // here rather than through an event so it works over any part of the
+        // panel rather than only over the bar.
+        private void Update()
+        {
+            if (packPanel == null || !packPanel.activeSelf) return;
+
+            float wheel = Input.mouseScrollDelta.y;
+            if (Mathf.Abs(wheel) < 0.01f) return;
+
+            Scroll(wheel > 0f ? -1 : 1);
+        }
+
         private void RefreshPack()
         {
             var save = SaveSlotManager.CurrentSave;
             var entries = save?.stockpiledItems ?? new List<InventoryEntry>();
-            _bag = BagView.Sorted(entries.Select(ToBagItem).Where(i => i.Count > 0));
+
+            // ORDERED BY WHAT THE PLAYER CHOSE. BagSort.By defers to
+            // BagView.Sorted for the default, so the pack's long-standing order
+            // is still exactly one implementation.
+            _bag = BagSort.By(entries.Select(ToBagItem).Where(i => i.Count > 0), _sortKey);
+
+            // The window can be left past the end by anything that shortens the
+            // bag -- equipping the last item, or a sort that ran on a longer
+            // list. Clamped here rather than at each of those call sites.
+            _scroll = ClampScroll(_scroll);
 
             for (int i = 0; i < packCells.Length; i++)
             {
-                var item = i < _bag.Count ? _bag[i] : (BagItem?)null;
+                // THE WINDOW, and this one line is the whole of the scrolling.
+                // The cells stay put; which item each shows moves.
+                int index = _scroll + i;
+                var item = index < _bag.Count ? _bag[index] : (BagItem?)null;
 
                 if (packIcons != null && i < packIcons.Length)
                 {
@@ -254,6 +363,28 @@ namespace PrincesPalace
                     if (item.HasValue) packRarityTicks[i].color = TierColour(item.Value.Tier);
                 }
 
+                // THE NAME, which is what two abreast bought. Through
+                // RarityColors so a Legendary reads the same here as everywhere
+                // else, and carrying its own plus so two stacks of the same item
+                // are told apart without hovering either.
+                if (packNames != null && i < packNames.Length)
+                {
+                    SetActive(packNames[i].gameObject, item.HasValue);
+                    if (item.HasValue)
+                    {
+                        // Through RarityColors.Wrap, the one place an item's
+                        // name becomes coloured and plus-suffixed, so a
+                        // Legendary reads the same here as on every other
+                        // screen. A save naming content that no longer exists
+                        // falls back to the bare name BagView already carries
+                        // rather than drawing nothing.
+                        var definition = ContentDatabase.GetItem(item.Value.Id);
+                        packNames[i].SetContent(definition != null
+                            ? RarityColors.Wrap(definition, item.Value.Plus)
+                            : item.Value.Name);
+                    }
+                }
+
                 // A count only where there is more than one, so a single item
                 // does not carry a redundant "1".
                 if (packCounts != null && i < packCounts.Length)
@@ -264,21 +395,57 @@ namespace PrincesPalace
                 }
             }
 
-            // CAPACITY, not weight. The handover's "62 / 85" is a carry-weight
-            // system this game does not have; what it does have is a fixed
-            // number of cells, so the footer counts those instead of inventing
-            // a second resource.
-            // NEVER SILENTLY. The grid is 24 cells and a save can hold more
-            // than that -- this one holds 27 -- so the footer says how many are
-            // carried and, when some do not fit, that they are not all shown.
-            // "27 / 24" read as a capacity that had been exceeded, which is not
-            // a thing this game has. Paging is the real fix and is not built.
-            if (carriedValue != null)
+            RefreshSortMarkers();
+            RefreshScrollThumb();
+
+            // CAPACITY IS NO LONGER A THING THIS SCREEN HAS. The grid used to be
+            // 24 cells against a save that could hold more, so the footer had to
+            // say "24 of 27" and admit that three were unreachable. The list
+            // scrolls now, so every item is reachable and the footer is simply
+            // how many are carried.
+            if (carriedValue != null) carriedValue.SetContent(_bag.Count.ToString());
+        }
+
+        private void RefreshSortMarkers()
+        {
+            if (packSortUnderlines == null) return;
+
+            int live = BagSort.IndexOf(_sortKey);
+            for (int i = 0; i < packSortUnderlines.Length; i++)
             {
-                carriedValue.SetContent(_bag.Count > packCells.Length
-                    ? $"{packCells.Length} of {_bag.Count}"
-                    : _bag.Count.ToString());
+                SetActive(packSortUnderlines[i], i == live);
             }
+        }
+
+        // The thumb's LENGTH says how much of the list is on screen and its
+        // POSITION says where. A fixed-length thumb would answer only half of
+        // that, and on a pack of a hundred items the half it drops is the one
+        // that matters.
+        private void RefreshScrollThumb()
+        {
+            if (packScrollThumb == null) return;
+
+            float height = DossierLayout.PackThumbHeight(_bag.Count);
+            packScrollThumb.sizeDelta =
+                new Vector2(DossierLayout.PackScrollbarWidth, height);
+
+            int maxRows = MaxScrollRows();
+            float travel = DossierLayout.PackTrackHeight - height;
+
+            float t = maxRows <= 0
+                ? 0f
+                : (_scroll / (float)DossierLayout.PackColumns) / maxRows;
+
+            // Measured from the track's own centre, downwards: offset zero is
+            // the top of the track.
+            packScrollThumb.anchoredPosition = new Vector2(
+                packScrollThumb.anchoredPosition.x,
+                DossierLayout.PackTrackCentreY + travel * 0.5f - travel * Mathf.Clamp01(t));
+
+            // Nothing to scroll means nothing to drag. Hidden rather than shown
+            // full-length, so the bar's presence itself says there is more.
+            SetActive(packScrollThumb.gameObject, maxRows > 0);
+            if (packScrollTrack != null) SetActive(packScrollTrack.gameObject, maxRows > 0);
         }
 
         private static BagItem ToBagItem(InventoryEntry entry)

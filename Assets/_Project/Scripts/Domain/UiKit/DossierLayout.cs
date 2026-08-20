@@ -128,6 +128,94 @@ namespace PrincesPalace.Domain.UiKit
         public const float XpTrackLeft =
             -ContentAWidth * 0.5f + XpLabelWidth + XpLabelGap;
 
+        // ---- the pack, over column A --------------------------------------------
+        //
+        // TWO ABREAST AND SCROLLING, where it used to be a four-across grid of
+        // 24 icons with no way to reach a 25th.
+        //
+        // Two columns rather than four is what buys each entry enough width to
+        // carry its NAME beside its icon. A four-across grid of bare icons in a
+        // 389px column gave every item a 95px square and nothing to read: with
+        // generated gear the pack fills with stacks that differ only by tier and
+        // plus, and those are invisible on an icon.
+        //
+        // The list SCROLLS rather than paging. Paging was recorded as the real
+        // fix for "24 of 27" and never built; scrolling is the same fix without
+        // asking the player to remember which page a thing was on.
+        public const float PackHeaderHeight = 26f;
+
+        public const float PackSortRowHeight = 26f;
+        public const float PackSortGap = 8f;
+        public const float PackSortButtonWidth = 84f;
+
+        public static float PackSortCentreY => ColumnATop - PackHeaderHeight - PackSortRowHeight * 0.5f;
+
+        // The scrollbar lives inside the content width, to the right of the
+        // rows, so the list never has to guess whether one is present.
+        public const float PackScrollbarWidth = 8f;
+        public const float PackScrollbarGap = 10f;
+
+        public const float PackColumns = 2f;
+        public const float PackColumnGap = 10f;
+
+        public static float PackListWidth =>
+            ContentAWidth - PackScrollbarWidth - PackScrollbarGap;
+
+        public static float PackCellWidth =>
+            (PackListWidth - PackColumnGap * (PackColumns - 1f)) / PackColumns;
+
+        // Tall enough for a 44px icon with a name under a plus beside it.
+        public const float PackCellHeight = 84f;
+        public const float PackRowGap = 8f;
+
+        public const float PackIconSize = 44f;
+
+        public static float PackListTop =>
+            ColumnATop - PackHeaderHeight - PackSortRowHeight - PackSortGap;
+
+        // Clear of the carried footer and its rule.
+        public static float PackFooterY => -HalfHeight + PadY + 16f;
+        public static float PackListBottom => PackFooterY + 34f;
+
+        public static float PackListHeight => PackListTop - PackListBottom;
+
+        // HOW MANY ROWS FIT, floored -- a half-drawn row at the bottom edge
+        // reads as a clipping bug rather than as more to scroll to, and this
+        // list has no mask to cut one cleanly.
+        public static int PackVisibleRows =>
+            (int)((PackListHeight + PackRowGap) / (PackCellHeight + PackRowGap));
+
+        public static int PackVisibleCells => PackVisibleRows * (int)PackColumns;
+
+        public static float PackCellCentreX(int column) =>
+            -ContentAWidth * 0.5f + PackCellWidth * 0.5f + column * (PackCellWidth + PackColumnGap);
+
+        public static float PackCellCentreY(int row) =>
+            PackListTop - PackCellHeight * 0.5f - row * (PackCellHeight + PackRowGap);
+
+        public static float PackScrollbarCentreX =>
+            ContentAWidth * 0.5f - PackScrollbarWidth * 0.5f;
+
+        // The track spans exactly the rows it scrolls, so the thumb's position
+        // reads against the list rather than against the panel.
+        public static float PackTrackHeight =>
+            PackVisibleRows * PackCellHeight + (PackVisibleRows - 1) * PackRowGap;
+
+        public static float PackTrackCentreY => PackListTop - PackTrackHeight * 0.5f;
+
+        // The whole list fits when there is nothing to scroll, which is what
+        // keeps the thumb from becoming a stub on a nearly-empty pack.
+        public const float PackThumbMinHeight = 32f;
+
+        public static float PackThumbHeight(int itemCount)
+        {
+            if (itemCount <= PackVisibleCells) return PackTrackHeight;
+
+            float fraction = PackVisibleCells / (float)itemCount;
+            float height = PackTrackHeight * fraction;
+            return height < PackThumbMinHeight ? PackThumbMinHeight : height;
+        }
+
         // ---- column B: the loadout stage ----------------------------------------
 
         // The handover's stage is 560x658 with the mannequin at left 148, top 92
