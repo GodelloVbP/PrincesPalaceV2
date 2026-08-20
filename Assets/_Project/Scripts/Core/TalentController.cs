@@ -20,6 +20,13 @@ namespace PrincesPalace
     {
         [SerializeField] internal RectTransform sky;
         [SerializeField] internal Button[] orbs;
+
+        // The lit layer of each edge, and the slot each one arrives at. Two
+        // parallel arrays rather than a lookup: the screen built them in one
+        // pass and UiCountAudit can hold their lengths to each other, which a
+        // dictionary assembled at runtime could not be checked against.
+        [SerializeField] internal GameObject[] edgeGlows;
+        [SerializeField] internal int[] edgeChildSlots;
         [SerializeField] internal Image[] orbGlows;
         [SerializeField] internal TMP_Text characterName;
         [SerializeField] internal TMP_Text pathName;
@@ -215,6 +222,47 @@ namespace PrincesPalace
                     orbs[index].interactable = path == _path;
                 }
             }
+
+            PaintEdges(characterId, unlocked);
+        }
+
+        // THE PATH BEHIND YOU LIGHTS UP.
+        //
+        // An edge is lit when its CHILD is invested -- the parent necessarily
+        // already is, because that is what a prerequisite means, so the child
+        // alone answers it and nothing here has to re-walk the skeleton.
+        //
+        // The edges were pure decoration before this: three paths' worth of
+        // limbs that never changed whatever the player spent, so a tree with
+        // twenty orbs invested looked exactly like an empty one apart from the
+        // orbs themselves. The climb is the thing the screen is about.
+        private void PaintEdges(string characterId, HashSet<string> unlocked)
+        {
+            if (edgeGlows == null || edgeChildSlots == null) return;
+
+            int count = Mathf.Min(edgeGlows.Length, edgeChildSlots.Length);
+            int perPath = count / TalentPage.PathCount;
+            if (perPath <= 0) return;
+
+            for (int i = 0; i < count; i++)
+            {
+                if (edgeGlows[i] == null) continue;
+
+                // The edges are built path by path in the same order the orbs
+                // are, so which path an edge belongs to is its index over the
+                // per-path count -- the same arithmetic TalentScreen.OrbIndex
+                // does for orbs, without a second table to keep in step.
+                int path = i / perPath;
+                int slot = edgeChildSlots[i];
+
+                bool lit = unlocked.Contains(TalentPage.SlotId(characterId, path, slot));
+                SetActive(edgeGlows[i], lit);
+            }
+        }
+
+        private static void SetActive(GameObject go, bool active)
+        {
+            if (go != null && go.activeSelf != active) go.SetActive(active);
         }
 
         private void PaintDetail(string characterId, HashSet<string> unlocked)

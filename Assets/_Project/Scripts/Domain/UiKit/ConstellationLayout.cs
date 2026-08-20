@@ -109,6 +109,12 @@ namespace PrincesPalace.Domain.UiKit
         // the width is what makes an edge look grown rather than drawn.
         public const float EdgeWidth = 10f;
 
+        // The lit layers, as multiples of the base so they cannot drift from
+        // it. v1's numbers: a wide soft halo, a thin bright core down its
+        // middle.
+        public const float EdgeGlowWidth = EdgeWidth * 2.6f;
+        public const float EdgeCoreWidth = EdgeWidth * 0.45f;
+
         // ---- paging ------------------------------------------------------------
 
         // Where a tree sits horizontally while the sky slides between them.

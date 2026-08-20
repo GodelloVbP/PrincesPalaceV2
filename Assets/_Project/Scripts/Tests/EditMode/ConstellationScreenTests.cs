@@ -127,5 +127,62 @@ namespace PrincesPalace.Domain.Tests
                 foreach (var found in Walk(child)) yield return found;
             }
         }
+        // ---- the edge kit ---------------------------------------------------------
+        //
+        // The edges were pure decoration: three paths' worth of limbs that
+        // never changed whatever the player spent, so a tree with twenty orbs
+        // invested looked exactly like an empty one apart from the orbs. v1
+        // lights the path behind you, and the climb is what this screen is
+        // about.
+        [Test]
+        public void EveryEdgeHasALitLayerThatStartsDark()
+        {
+            var screen = TalentScreen.Build();
+
+            Assert.AreEqual(screen.Edges.Count, screen.EdgeGlows.Count,
+                "an edge has no lit layer, or a lit layer has no edge");
+
+            foreach (var glow in screen.EdgeGlows)
+            {
+                Assert.IsTrue(glow.Node.StartInactive,
+                    $"'{glow.Node.Name}' is built lit, so an unspent tree draws as though it were " +
+                    "already climbed");
+            }
+        }
+
+        // The controller lights an edge from its CHILD slot alone -- the parent
+        // is necessarily invested already, because that is what a prerequisite
+        // means. This pins that the screen hands over the slot it claims to.
+        [Test]
+        public void EachEdgeReportsTheSlotItArrivesAt()
+        {
+            var screen = TalentScreen.Build();
+
+            Assert.AreEqual(screen.Edges.Count, screen.EdgeChildSlots.Count,
+                "the edge list and its slot table are different lengths");
+
+            foreach (int slot in screen.EdgeChildSlots)
+            {
+                Assert.GreaterOrEqual(slot, 0);
+                Assert.Less(slot, TalentSkeleton.SlotCount);
+            }
+
+            // One edge per (parent, child) pair the skeleton declares, per path.
+            Assert.AreEqual(TalentPage.PathCount * TalentSkeleton.EdgesPerPath, screen.Edges.Count,
+                "the tree drew a different number of connections than the skeleton has");
+        }
+
+        // The lit layers are wider and brighter than the limb they lie on --
+        // that difference IS the light. Built as three separate widths so a
+        // change to the base carries them along.
+        [Test]
+        public void TheLitLayersAreProportionalToTheLimb()
+        {
+            Assert.Greater(ConstellationLayout.EdgeGlowWidth, ConstellationLayout.EdgeWidth,
+                "the halo is no wider than the limb, so there is nothing to see");
+            Assert.Less(ConstellationLayout.EdgeCoreWidth, ConstellationLayout.EdgeWidth,
+                "the core is not a crack down the middle, it is another limb");
+        }
+
     }
 }

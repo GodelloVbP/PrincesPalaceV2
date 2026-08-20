@@ -632,6 +632,8 @@ public static class ScreenRegistry
                 var talents = result.Attach<TalentController>(screen.Root);
                 talents.sky = result.Rect(screen.Sky);
                 talents.orbs = screen.Orbs.Select(result.Button).ToArray();
+                talents.edgeGlows = screen.EdgeGlows.Select(result.Go).ToArray();
+                talents.edgeChildSlots = screen.EdgeChildSlots.ToArray();
                 talents.orbGlows = screen.OrbGlows.Select(result.Image).ToArray();
                 talents.characterName = result.Tmp(screen.CharacterName);
                 talents.pathName = result.Tmp(screen.PathName);

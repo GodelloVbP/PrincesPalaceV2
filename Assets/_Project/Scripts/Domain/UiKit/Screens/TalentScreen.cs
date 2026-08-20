@@ -17,6 +17,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const string OrbUnlitKey = "UI/TalentTree/Processed/orb_unlit.png";
         public const string OrbLitKey = "UI/TalentTree/Processed/orb_lit.png";
 
+        // Soft along its short axis, so a limb fades at its sides rather than
+        // ending on a hard band.
+        public const string EdgeStripeKey = "proc:soft_edge_stripe";
+
+        // v1's own three: a dim bark, a warm halo, a near-white crack.
+        private const string EdgeDim = "#33263D";
+        private const string EdgeGlow = "#FF91455A";
+        private const string EdgeCore = "#FFD98C";
+
         public const string BackgroundKey = "Assets/_Project/Art/Backgrounds/Divine_principality_nebula.png";
 
         // One orb per slot per path. Declared rather than pooled: the skeleton
@@ -47,6 +56,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> Orbs = new List<NodeRef>();
         public List<NodeRef> OrbGlows = new List<NodeRef>();
         public List<NodeRef> Edges = new List<NodeRef>();
+
+        // The lit half of each edge, in the SAME order as Edges. Switched off
+        // at build time and raised by the controller for the connections the
+        // player has actually earned -- so an unspent tree draws as dim limbs
+        // and investing is what lights the path behind it.
+        public List<NodeRef> EdgeGlows = new List<NodeRef>();
+
+        // Which slot each edge arrives at, parallel to Edges. The controller
+        // lights an edge when its CHILD is invested: the parent necessarily
+        // already is, since that is what the prerequisite means, so the child
+        // alone answers it and nothing has to re-walk the skeleton at runtime.
+        public List<int> EdgeChildSlots = new List<int>();
 
         public static int OrbIndex(int path, int slot) => path * OrbCount + slot;
 
@@ -242,15 +263,50 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // TEN WIDE, not three. A 3px hairline reads as a wiring diagram;
             // v1's edges are limbs with a lit crack down them, and the width is
             // most of what makes a connection look grown rather than drawn.
-            var edge = Ui.Solid($"Edge{path}_{parent}_{slot}", "#6B5B9E66",
+            var edge = Ui.Solid($"Edge{path}_{parent}_{slot}", EdgeDim,
                     Place.At((a.X + b.X) * 0.5f, (a.Y + b.Y) * 0.5f),
                     UiSize.Fixed(length, ConstellationLayout.EdgeWidth))
                 .Rotated(angle)
                 .AsDecor()
                 .AllowOverflow("a rotated edge's axis-aligned box is wider than the line inside it");
 
+            // THE LIT LAYER, a sibling rather than a child.
+            //
+            // v1 hangs the core off the glow so it inherits the rotation for
+            // free, and that is right there -- but here the glow is what the
+            // controller switches, and a switched-off parent takes its children
+            // with it whether or not that was meant. Sibling and child are the
+            // same picture; only one of them can be reasoned about.
+            var glow = Ui.Sprite($"Edge{path}_{parent}_{slot}Glow", EdgeStripeKey,
+                    new UiVec(length, ConstellationLayout.EdgeGlowWidth),
+                    Place.At((a.X + b.X) * 0.5f, (a.Y + b.Y) * 0.5f))
+                .Coloured(EdgeGlow)
+                .Rotated(angle)
+                .Inactive()
+                .AsDecor()
+                .AllowOverlap("the lit layer lies along the dim limb it belongs to")
+                .AllowOverflow("a soft halo is meant to bleed past the limb - that bleed is the light");
+
+            var core = Ui.Sprite($"Edge{path}_{parent}_{slot}Core", EdgeStripeKey,
+                    new UiVec(length, ConstellationLayout.EdgeCoreWidth),
+                    Place.At((a.X + b.X) * 0.5f, (a.Y + b.Y) * 0.5f))
+                .Coloured(EdgeCore)
+                .Rotated(angle)
+                .Inactive()
+                .AsDecor()
+                .AllowOverlap("the bright core runs down the middle of its own halo")
+                .AllowOverflow("a rotated edge's axis-aligned box is wider than the line inside it");
+
+            glow.Children.Add(core);
+
             Edges.Add(edge);
-            return edge;
+            EdgeGlows.Add(glow);
+            EdgeChildSlots.Add(slot);
+
+            return Ui.Panel($"Edge{path}_{parent}_{slot}Group", Place.At(0f, 0f), UiSize.Fill,
+                    edge, glow)
+                .AsDecor()
+                .AllowOverlap("an edge and its own lit layer share one line by construction");
         }
     }
 }
