@@ -102,6 +102,31 @@ namespace PrincesPalace.Domain.UiKit
         // leg of any length stay aligned without needing bigger source art.
         public static float BackgroundPeriod => ColumnGap * 2f;
 
+        // HOW WIDE ONE REPEAT IS DRAWN, in map space.
+        //
+        // This has to be a fixed number and it is not a screen assumption,
+        // which is the distinction that matters here. The tile was declared
+        // UiSize.Fill, and while every screen was pinned to 1920 that happened
+        // to resolve to 1920 and looked deliberate. Once screens were unpinned
+        // (34098f9) "fill" started meaning the parent's REAL width -- and the
+        // parent is MapContent, which is the whole scrolling leg. All eight
+        // tiles became 8824 wide, so one repeat of the art was stretched across
+        // the entire wood and the visible 1920 of it was a 4.6x magnification.
+        // That is the "zoomed in forest".
+        //
+        // A tile that repeats every BackgroundPeriod must be at least
+        // BackgroundPeriod wide or the wood has gaps in it, and it cannot be
+        // measured off the window, because MapContent is 8824 map-units wide
+        // whatever size the window is. So the width belongs here beside the
+        // period it has to cover, in the same units.
+        //
+        // 1920 against 1726 of period: the overlap is deliberate and is what
+        // the tile's own AllowOverflow reason describes. The source art is
+        // 1672x941, so this is a uniform 1.15x upscale rather than a stretch --
+        // 1920x1080 and 1672x941 are both 16:9 to within a pixel.
+        public const float BackgroundTileWidth = 1920f;
+        public const float BackgroundTileHeight = 1080f;
+
         // Ceiling rather than an exact fit, so a longer leg (a test-only leg
         // length) warns instead of silently running out of forest.
         public const int MaxBackgroundTiles = 8;

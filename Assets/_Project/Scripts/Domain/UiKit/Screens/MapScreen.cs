@@ -252,9 +252,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // i starts exactly where the clearing grid says it should.
         private UiNode BuildBackdrop(int index)
         {
+            // FILLHEIGHT, NOT FILL, and the width is the tile's own.
+            //
+            // Fill takes both axes from the parent, and the parent is the whole
+            // scrolling leg -- 8824 map-units of it. One repeat of the forest
+            // was being stretched across all of it, which showed as a forest
+            // magnified about five times. See MapLayout.BackgroundTileWidth.
+            //
+            // The height still fills, because that axis genuinely is the
+            // content's: the wood is as tall as the map is, whatever that
+            // turns out to be.
             var tile = Ui.Sprite($"MapBackdrop{index}", BackgroundKey,
                     Place.Pin(ContentEdge, ContentEdge, new UiVec(MapLayout.BackgroundTileX(index), 0f)),
-                    UiSize.Fill)
+                    UiSize.FillHeight(MapLayout.BackgroundTileWidth))
                 .AsDecor()
                 .AllowOverflow("the last tile deliberately overhangs the content it fills - a forest that stopped exactly at the content edge would show a hard cut");
 
