@@ -28,7 +28,13 @@ $Areas = @{
     combat  = "Fight|Wool|Spell|Combat|Enemy|Party|Stage|Boss|Turn|Skill|Damage|Defeat|Teardown|BreakShield|Status|Signature|Ward|Gift|Empower"
     hub     = "Hub|Talent|Principality|CharacterSheet|SheetStat|Store|Constellation|Glossary"
     content = "Content|ItemSet|Item|Resolver|ArtPath|AbilityScore|StatBlock|StatPoint|Invest|Character|Enemy|Scaling|Requirement|Rounding|AbilityDerivation|Weapon|Relic|Rarity|Achievement"
-    run     = "Dungeon|Map|FullRun|RunState|Currency|MetaProgression|Save|ActiveSquad|Run|Resume|Snapshot|Seed|Descent|Depth|Difficulty|EnemyBand|Wallet|Reward|Reckoning|Ember|Ledger|Settlement|Encounter|Room"
+    # GlobalState: the lint that keeps a test from leaving a static flipped for
+    # the rest of the process. It belongs to no single subject -- the statics it
+    # guards are save roots, the run, navigation and two tuning knobs -- and
+    # this file's own header says an imprecise area beats an orphan, since an
+    # orphan is invisible to every area run. 'run' because most of what it
+    # guards is run/save state.
+    run     = "Dungeon|Map|FullRun|RunState|Currency|MetaProgression|Save|ActiveSquad|Run|Resume|Snapshot|Seed|Descent|Depth|Difficulty|EnemyBand|Wallet|Reward|Reckoning|Ember|Ledger|Settlement|Encounter|Room|GlobalState"
     ui      = "Button|Audio|Splash|PauseMenu|DebugMenu|MainMenu|SystemMenu|Cursor|Dialogue|Bark|Inventory|Equipment|Dossier|Options|Music|Screen|UiKit|Flicker|Ambience|Overlay"
     art     = "Stance|FrameHold|Shadow|WhiteQuad|SpriteFacing|BattleBackground|ItemArt|TalentArt|ArtPath|Flash|Legibility|PostProcessing"
     rng     = "Rng|SeededRandom|Seed"

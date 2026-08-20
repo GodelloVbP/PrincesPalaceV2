@@ -103,7 +103,14 @@ namespace PrincesPalace.PlayModeTests
             // needs pinning before the roster grows.
             var relic = AnEffectRelic();
             var party = ContentDatabase.Characters.Take(2).Select(c => c.id).ToList();
-            if (party.Count < 2) Assert.Ignore("content has only one character");
+
+            // ASSERTED, not skipped. The roster is five characters -- the SQUAD
+            // is solo today, which is a different number and not this one. A
+            // roster that shrank below two would silently turn "the whole party
+            // gets it" into "the only party member gets it", which is the
+            // statement this test exists to distinguish.
+            Assert.AreEqual(2, party.Count,
+                "this test needs two roster characters to prove the relic reaches BOTH");
 
             var built = FightEncounterAdapter.Build(party, OneEnemy(),
                 new Domain.Rng.SeededRandom(11), relicIds: new[] { relic.id });
@@ -123,16 +130,25 @@ namespace PrincesPalace.PlayModeTests
             // RelicModifiers.Apply had ZERO callers when it was written -- an
             // entire data-driven table that nothing could ever reach. This is
             // what stops it drifting back to that.
-            var withModifier = ContentDatabase.Relics
-                .FirstOrDefault(r => r != null && r.modifiers != null && r.modifiers.Length > 0);
+            // Picked BY THE STAT IT TOUCHES, and asserted rather than skipped.
+            //
+            // This used to take whichever relic came first in sort order with
+            // any modifier at all, then skip if that one happened not to touch
+            // attack. So whether the test ran depended on content ordering --
+            // and a silent skip is precisely how RelicModifiers.Apply would
+            // drift back to zero callers, which is the one thing this test
+            // exists to prevent. Two relics carry modifiers today and only one
+            // of them is an attack relic.
+            var withAttack = ContentDatabase.Relics.FirstOrDefault(r =>
+                r != null && r.modifiers != null &&
+                r.ToModifiers().Any(m => m.Stat == RelicStat.Attack));
 
-            if (withModifier == null) Assert.Ignore("no relic in content carries a numeric modifier yet");
+            Assert.IsNotNull(withAttack,
+                "no relic in content carries an Attack modifier - RelicModifiers.Apply is unreachable again, " +
+                "which is the state this test was written to prevent");
 
             int baseAttack = Build().Party[0].Attack;
-            int withRelic = Build(withModifier.id).Party[0].Attack;
-
-            var attackChange = withModifier.ToModifiers().FirstOrDefault(m => m.Stat == RelicStat.Attack);
-            if (attackChange.Stat != RelicStat.Attack) Assert.Ignore("that relic does not touch attack");
+            int withRelic = Build(withAttack.id).Party[0].Attack;
 
             Assert.AreNotEqual(baseAttack, withRelic, "the modifier table is not being applied");
         }

@@ -223,11 +223,14 @@ namespace PrincesPalace.PlayModeTests
             var fight = RunManager.Choices().FirstOrDefault(n =>
                 n.Type == RoomType.Fight || n.Type == RoomType.EliteFight || n.Type == RoomType.Boss);
 
-            if (fight == null)
-            {
-                Assert.Ignore("this leg offers no fight from the entry");
-                yield break;
-            }
+            // ASSERTED, not skipped. OpenTheMap seeds the run with 4242, so the
+            // leg is the SAME every run -- the old skip therefore never fired
+            // intermittently, it either always fired or never did, and nobody
+            // could tell which from a green suite. If a generator change makes
+            // this seed's entry offer no fight, that is a fixture to re-choose
+            // deliberately, not a test to switch off silently.
+            Assert.IsNotNull(fight,
+                "seed 4242's entry offers no fight room, so this test has nothing to enter - pick a seed that does");
 
             var column = RunManager.Map.AtDepth(fight.Depth).ToList();
             int slot = column.FindIndex(n => n.Id == fight.Id);
@@ -268,11 +271,12 @@ namespace PrincesPalace.PlayModeTests
             var quiet = RunManager.Choices().FirstOrDefault(n =>
                 n.Type != RoomType.Fight && n.Type != RoomType.EliteFight && n.Type != RoomType.Boss);
 
-            if (quiet == null)
-            {
-                Assert.Ignore("this leg offers only fights from the entry");
-                yield break;
-            }
+            // ASSERTED, for the same reason as EnteringAFightRoomLoadsTheFight:
+            // seed 4242 fixes the leg, so this was a deterministic skip wearing
+            // the clothes of a conditional one.
+            Assert.IsNotNull(quiet,
+                "seed 4242's entry offers only fights, so the walk cannot be watched without a scene load - " +
+                "pick a seed that offers a quiet room");
 
             var walker = (RectTransform)Named("MapWalker").transform;
             var startedAt = walker.anchoredPosition;

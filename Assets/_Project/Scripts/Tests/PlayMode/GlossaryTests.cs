@@ -8,6 +8,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
+using PrincesPalace.Content;
 using PrincesPalace.Domain.Glossary;
 
 namespace PrincesPalace.PlayModeTests
@@ -152,19 +153,49 @@ namespace PrincesPalace.PlayModeTests
             Click("GlossaryCategory0");
             yield return null;
 
-            int locked = -1;
-            for (int i = 0; i < GlossaryCatalog.RowsPerPage; i++)
+            // EVERY PAGE, not just the first, and asserted rather than skipped.
+            //
+            // This used to scan page one and Assert.Ignore if it found nothing,
+            // which meant it had never run: exactly ONE relic is gated today
+            // (forest_wardens_tooth, behind first_forest_boss), it sits at
+            // index 10 of thirteen, and the page holds ten. It was the first
+            // row of page TWO, one turn past everything this test looked at.
+            //
+            // So the skip was not protecting against a thin fixture. It was
+            // reporting green while the locked plate -- the whole subject here
+            // -- went unchecked, and it would have gone on doing that however
+            // many locked relics were added, as long as none landed in the
+            // first ten.
+            //
+            // Derived from the relic count rather than a literal page bound:
+            // one relic past a page boundary is exactly how this test went
+            // blind in the first place.
+            int pages = GlossaryCatalog.PageCount(ContentDatabase.Relics.Count);
+            bool found = false;
+
+            for (int page = 0; page < pages && !found; page++)
             {
-                var row = Named($"GlossaryRow{i}");
-                if (row == null || !row.activeSelf) continue;
+                for (int i = 0; i < GlossaryCatalog.RowsPerPage; i++)
+                {
+                    var row = Named($"GlossaryRow{i}");
+                    if (row == null || !row.activeSelf) continue;
 
-                Click($"GlossaryRow{i}");
-                yield return null;
+                    Click($"GlossaryRow{i}");
+                    yield return null;
 
-                if (Named("GlossaryDetailLockedBy").activeSelf) { locked = i; break; }
+                    if (Named("GlossaryDetailLockedBy").activeSelf) { found = true; break; }
+                }
+
+                if (!found)
+                {
+                    Click("GlossaryNextPage");
+                    yield return null;
+                }
             }
 
-            if (locked < 0) Assert.Ignore("no locked relic on the first page");
+            Assert.IsTrue(found,
+                "no relic anywhere in the glossary shows the locked plate - either every relic is " +
+                "unlocked from the start, or a locked one lost the achievement name that explains it");
 
             Assert.IsNotEmpty(TextOf("GlossaryDetailName"), "a locked entry still has a name");
             StringAssert.Contains("NOT YET FOUND", TextOf("GlossaryDetailBody"));

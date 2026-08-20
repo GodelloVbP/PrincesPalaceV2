@@ -167,11 +167,13 @@ namespace PrincesPalace.PlayModeTests
             var hero = _fight.Session.Encounter.PlayerParty[0];
             var attack = _fight.StanceAnimationFor(hero, FightSession.Stances.Attack);
 
-            if (attack.FrameCount <= 1)
-            {
-                Assert.Ignore("this character's attack is a single flat frame; nothing to step");
-                yield break;
-            }
+            // ASSERTED, not skipped. The comment above already states the design
+            // -- both sheep and golem author multi-frame attacks -- so a party
+            // leader whose attack is one flat frame is a content regression, and
+            // skipping would hide exactly the case that makes this test's
+            // subject disappear.
+            Assert.Greater(attack.FrameCount, 1,
+                "the party leader's attack is a single flat frame, so there is nothing for a beat to step through");
 
             Click("Verb0");
             Click("EnemyPlate0");

@@ -83,7 +83,14 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenTheDossier();
 
             var root = RectNamed("DossierPanel") ?? RectNamed("CharacterDossier");
-            if (root == null) Assert.Ignore("the dossier's root node was renamed; update this test");
+
+            // FAILS rather than ignores. This used to skip itself when neither
+            // name was found -- a test that cannot fail for the reason it
+            // exists, since a renamed root is exactly the change most likely to
+            // break the thing it measures.
+            Assert.IsNotNull(root,
+                "neither DossierPanel nor CharacterDossier is in the scene - if the root was renamed, " +
+                "update the names here rather than letting the pane's size go unchecked");
 
             Assert.AreEqual(SystemMenuLayout.PanelWidth, root.rect.width, 1f,
                 "the dossier is not as wide as the pane it is hosted in");

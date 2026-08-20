@@ -37,9 +37,11 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
-            Navigation.Reset();
-            SaveSystem.RootOverride = null;
-            SaveSlotManager.Forget();
+            // Every global this fixture touched, plus the ones it did not --
+            // one call, so the list cannot go stale here while it grows
+            // somewhere else. See TestGlobals.
+            TestGlobals.ResetAll();
+
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
         }
 

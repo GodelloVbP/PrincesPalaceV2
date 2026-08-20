@@ -184,7 +184,11 @@ namespace PrincesPalace.PlayModeTests
                 .OrderBy(t => t.level)
                 .ToList();
 
-            if (tiers.Count < 2) Assert.Ignore("fixture: content has fewer than two spell tiers");
+            // ASSERTED, not skipped. Content ships nine spell tiers, so this
+            // never fires -- and if it ever did, a suite that quietly stopped
+            // covering levelling is worse than a red build saying why.
+            Assert.GreaterOrEqual(tiers.Count, 2,
+                "this test needs two spell tiers to compare; content has " + tiers.Count);
 
             var low = new Character(definition.id) { level = tiers[0].level };
             var high = new Character(definition.id) { level = tiers[tiers.Count - 1].level };
