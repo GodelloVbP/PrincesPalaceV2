@@ -269,6 +269,8 @@ namespace PrincesPalace
         {
             if (keyIndex < 0 || keyIndex >= BagSort.All.Length) return;
 
+            if (BagSort.All[keyIndex] == _sortKey) return;
+
             _sortKey = BagSort.All[keyIndex];
 
             // BACK TO THE TOP, because the item under the cursor is not the
@@ -279,22 +281,33 @@ namespace PrincesPalace
             RefreshPack();
         }
 
+        // SCROLLING REBINDS, IT DOES NOT REBUILD.
+        //
+        // Both of these used to call RefreshPack, which re-reads the save,
+        // resolves every entry through ContentDatabase and re-sorts the whole
+        // bag -- to move a window by two indices, at mouse-wheel frequency.
+        // The bag has not changed; only which slice of it is on screen has.
         public void Scroll(int rows)
         {
+            int before = _scroll;
             _scroll = ClampScroll(_scroll + rows * (int)DossierLayout.PackColumns);
-            RefreshPack();
+
+            // Nothing to redraw at either end of the list, which is where a
+            // wheel spends most of its time.
+            if (_scroll != before) BindPackWindow();
         }
 
         private void ScrollToFraction(float t)
         {
             int rows = MaxScrollRows();
-            if (rows <= 0) { _scroll = 0; RefreshPack(); return; }
 
             // The bar reads left-to-right and the list runs top-to-bottom, so
             // the fraction is inverted: the top of the track is offset zero.
-            int row = Mathf.RoundToInt((1f - Mathf.Clamp01(t)) * rows);
+            int row = rows <= 0 ? 0 : Mathf.RoundToInt((1f - Mathf.Clamp01(t)) * rows);
+
+            int before = _scroll;
             _scroll = ClampScroll(row * (int)DossierLayout.PackColumns);
-            RefreshPack();
+            if (_scroll != before) BindPackWindow();
         }
 
         private int MaxScrollRows()
@@ -340,6 +353,20 @@ namespace PrincesPalace
             // list. Clamped here rather than at each of those call sites.
             _scroll = ClampScroll(_scroll);
 
+            BindPackWindow();
+
+            // CAPACITY IS NO LONGER A THING THIS SCREEN HAS. The grid used to be
+            // 24 cells against a save that could hold more, so the footer had to
+            // say "24 of 27" and admit that three were unreachable. The list
+            // scrolls now, so every item is reachable and the footer is simply
+            // how many are carried.
+            if (carriedValue != null) carriedValue.SetContent(_bag.Count.ToString());
+        }
+
+        // Puts _bag's current window onto the cells. The only thing scrolling
+        // has to do, and deliberately free of anything that reads the save.
+        private void BindPackWindow()
+        {
             for (int i = 0; i < packCells.Length; i++)
             {
                 // THE WINDOW, and this one line is the whole of the scrolling.
@@ -397,13 +424,6 @@ namespace PrincesPalace
 
             RefreshSortMarkers();
             RefreshScrollThumb();
-
-            // CAPACITY IS NO LONGER A THING THIS SCREEN HAS. The grid used to be
-            // 24 cells against a save that could hold more, so the footer had to
-            // say "24 of 27" and admit that three were unreachable. The list
-            // scrolls now, so every item is reachable and the footer is simply
-            // how many are carried.
-            if (carriedValue != null) carriedValue.SetContent(_bag.Count.ToString());
         }
 
         private void RefreshSortMarkers()

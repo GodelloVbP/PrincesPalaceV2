@@ -262,9 +262,31 @@ namespace PrincesPalace
         {
             if (edgeGlows == null || edgeChildSlots == null) return;
 
+            // FROM THE SKELETON, NOT FROM THE ARRAY'S LENGTH.
+            //
+            // This divided the array length by the path count to work out how
+            // many edges a path has, which is only correct while the array is
+            // exactly the right size -- and silently wrong in the worst way
+            // when it is not. One short array and every edge shifts to a
+            // different path, lighting connections on trees the player has
+            // never touched, with nothing logged.
+            //
+            // TalentSkeleton.EdgesPerPath is the same number derived from the
+            // graph itself, so a mismatch is now a disagreement between two
+            // sources that can be SEEN rather than a quiet reinterpretation of
+            // one. The same reason the layout derives its waist from the
+            // skeleton instead of writing 4.
+            int perPath = Domain.Talents.TalentSkeleton.EdgesPerPath;
             int count = Mathf.Min(edgeGlows.Length, edgeChildSlots.Length);
-            int perPath = count / TalentPage.PathCount;
-            if (perPath <= 0) return;
+
+            if (perPath <= 0 || count < perPath * TalentPage.PathCount)
+            {
+                Debug.LogWarning(
+                    $"[TalentController] The tree has {count} edges wired but the skeleton describes " +
+                    $"{perPath * TalentPage.PathCount}. Leaving them dark rather than lighting the " +
+                    "wrong ones.");
+                return;
+            }
 
             for (int i = 0; i < count; i++)
             {
@@ -272,8 +294,7 @@ namespace PrincesPalace
 
                 // The edges are built path by path in the same order the orbs
                 // are, so which path an edge belongs to is its index over the
-                // per-path count -- the same arithmetic TalentScreen.OrbIndex
-                // does for orbs, without a second table to keep in step.
+                // per-path count.
                 int path = i / perPath;
                 int slot = edgeChildSlots[i];
 

@@ -279,7 +279,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // stopped at the bar and started again under it, which reads as a
             // frame that was never drawn rather than one drawn underneath.
             // Later sibling, drawn last, over everything it encloses.
-            frameChildren.AddRange(PanelRimEdges());
+            frameChildren.AddRange(Ui.Rim("SystemMenu",
+                new UiVec(SystemMenuLayout.PanelWidth, SystemMenuLayout.PanelHeight),
+                PanelRim, "the rim traces the panel it encloses"));
 
             var frame = Ui.Panel("SystemMenuFrame", Place.At(0f, 0f),
                 UiSize.Fixed(SystemMenuLayout.PanelWidth, SystemMenuLayout.PanelHeight),
@@ -302,23 +304,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // Four 1px edges rather than a painted frame. The design asks for a
         // hairline rim in a token colour, and a sprite would put that colour
         // in a PNG where nobody can grep it.
-        private static IEnumerable<UiNode> PanelRimEdges()
-        {
-            const float w = SystemMenuLayout.PanelWidth;
-            const float h = SystemMenuLayout.PanelHeight;
-
-            yield return Edge("SystemMenuRimTop", new UiVec(w, 1f), 0f, h * 0.5f - 0.5f);
-            yield return Edge("SystemMenuRimBottom", new UiVec(w, 1f), 0f, -h * 0.5f + 0.5f);
-            yield return Edge("SystemMenuRimLeft", new UiVec(1f, h), -w * 0.5f + 0.5f, 0f);
-            yield return Edge("SystemMenuRimRight", new UiVec(1f, h), w * 0.5f - 0.5f, 0f);
-        }
-
-        private static UiNode Edge(string name, UiVec size, float x, float y) =>
-            Ui.Solid(name, PanelRim, size, Place.At(x, y))
-                .AsDecor()
-                .AllowOverlap("the rim traces the panel it encloses");
-
-        // ---- the title lintel ---------------------------------------------------
+                        // ---- the title lintel ---------------------------------------------------
         //
         // ABOVE the panel, in the 90px of screen the panel does not use, and
         // deliberately not panel chrome: it carries the run's identity and the

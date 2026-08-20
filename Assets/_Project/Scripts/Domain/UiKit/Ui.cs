@@ -98,6 +98,35 @@ namespace PrincesPalace.Domain.UiKit
             return node;
         }
 
+        // THE FOUR 1px EDGES THAT TRACE A BOX.
+        //
+        // Written out four times before this -- the system menu's panel, the
+        // Options card, the Run statistics card and the Main menu's plates --
+        // with the same half-pixel inset arithmetic copied each time. That
+        // inset is the fiddly part and the reason this is worth a helper: a
+        // 1px node centred exactly on the boundary pokes half a pixel outside
+        // its parent, which the containment audit is right to refuse, so every
+        // copy carried the same +/- 0.5 correction and any one of them could
+        // have lost it.
+        //
+        // Decor throughout: a rim is drawn, never pressed.
+        public static IEnumerable<UiNode> Rim(
+            string stem, UiVec size, string colorHex, string reason, UiVec centre = default)
+        {
+            float w = size.X;
+            float h = size.Y;
+
+            yield return RimEdge($"{stem}RimTop", new UiVec(w, 1f), centre.X, centre.Y + h * 0.5f - 0.5f, colorHex, reason);
+            yield return RimEdge($"{stem}RimBottom", new UiVec(w, 1f), centre.X, centre.Y - h * 0.5f + 0.5f, colorHex, reason);
+            yield return RimEdge($"{stem}RimLeft", new UiVec(1f, h), centre.X - w * 0.5f + 0.5f, centre.Y, colorHex, reason);
+            yield return RimEdge($"{stem}RimRight", new UiVec(1f, h), centre.X + w * 0.5f - 0.5f, centre.Y, colorHex, reason);
+        }
+
+        private static UiNode RimEdge(string name, UiVec size, float x, float y, string colorHex, string reason) =>
+            Solid(name, colorHex, size, Place.At(x, y))
+                .AsDecor()
+                .AllowOverlap(reason);
+
         // Blank main-axis extent inside a flow container. Exists so a gap can be
         // declared where it happens rather than smuggled into a neighbour's
         // size, which is how v1's offsets became unreadable.

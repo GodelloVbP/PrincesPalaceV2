@@ -125,8 +125,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .AllowOverlap("the plate is what its own exit stands on"),
             };
 
-            blockChildren.AddRange(Rim($"Exit{key}", ExitsLayout.ExitWidth, ExitsLayout.ExitHeight,
-                                       0f, buttonY, PlateRim));
+            blockChildren.AddRange(Ui.Rim($"Exit{key}",
+                new UiVec(ExitsLayout.ExitWidth, ExitsLayout.ExitHeight), PlateRim,
+                "the rim traces the plate it encloses", new UiVec(0f, buttonY)));
 
             // A PLATE, not a scale, for the same reason the tab bar's hover is
             // one: the button is chromeless over a drawn plate, so scaling the
@@ -173,7 +174,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .AllowOverlap("the fill is what the card's contents stand on"),
             };
 
-            cardChildren.AddRange(Rim("ExitAbandonCard", w, h, 0f, 0f, RedRim));
+            cardChildren.AddRange(Ui.Rim("ExitAbandonCard", new UiVec(w, h), RedRim,
+                "the rim traces the plate it encloses"));
 
             cardChildren.Add(Ui.Label("ExitAbandonHeading", UiStrings.ExitAbandonHeading,
                     new UiVec(w - 40f, ExitsLayout.AbandonHeadingHeight), 16, RedText,
@@ -237,17 +239,5 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return card;
         }
 
-        private static IEnumerable<UiNode> Rim(string stem, float w, float h, float cx, float cy, string colour)
-        {
-            yield return Edge($"{stem}RimTop", new UiVec(w, 1f), cx, cy + h * 0.5f - 0.5f, colour);
-            yield return Edge($"{stem}RimBottom", new UiVec(w, 1f), cx, cy - h * 0.5f + 0.5f, colour);
-            yield return Edge($"{stem}RimLeft", new UiVec(1f, h), cx - w * 0.5f + 0.5f, cy, colour);
-            yield return Edge($"{stem}RimRight", new UiVec(1f, h), cx + w * 0.5f - 0.5f, cy, colour);
-        }
-
-        private static UiNode Edge(string name, UiVec size, float x, float y, string colour) =>
-            Ui.Solid(name, colour, size, Place.At(x, y))
-                .AsDecor()
-                .AllowOverlap("the rim traces the plate it encloses");
-    }
+                    }
 }

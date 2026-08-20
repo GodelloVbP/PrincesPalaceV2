@@ -115,7 +115,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .AllowOverlap("the fill is what the card's contents stand on"),
             };
 
-            cardChildren.AddRange(Rim($"OptionsCard{group.Key}", width, height));
+            cardChildren.AddRange(Ui.Rim($"OptionsCard{group.Key}", new UiVec(width, height),
+                CardRim, "the rim traces the card it encloses"));
 
             cardChildren.Add(Ui.Label($"OptionsCard{group.Key}Heading", group.Heading,
                     new UiVec(OptionsLayout.HeadingWidth, OptionsLayout.HeadingHeight), 18, Heading,
@@ -240,17 +241,5 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return rowNode;
         }
 
-        private static IEnumerable<UiNode> Rim(string stem, float w, float h)
-        {
-            yield return Edge($"{stem}RimTop", new UiVec(w, 1f), 0f, h * 0.5f - 0.5f);
-            yield return Edge($"{stem}RimBottom", new UiVec(w, 1f), 0f, -h * 0.5f + 0.5f);
-            yield return Edge($"{stem}RimLeft", new UiVec(1f, h), -w * 0.5f + 0.5f, 0f);
-            yield return Edge($"{stem}RimRight", new UiVec(1f, h), w * 0.5f - 0.5f, 0f);
-        }
-
-        private static UiNode Edge(string name, UiVec size, float x, float y) =>
-            Ui.Solid(name, CardRim, size, Place.At(x, y))
-                .AsDecor()
-                .AllowOverlap("the rim traces the card it encloses");
-    }
+                    }
 }
