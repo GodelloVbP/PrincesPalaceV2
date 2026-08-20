@@ -224,5 +224,35 @@ namespace PrincesPalace.Domain.Tests
             Assert.Throws<System.ArgumentException>(() => node.AllowOverlap(" "));
             Assert.Throws<System.ArgumentException>(() => node.AllowOverflow(null));
         }
+
+        [Test]
+        public void AllowOverlap_WithALabelRatherThanAReason_IsRejectedToo()
+        {
+            // A non-empty string was enough until eight screen test classes had
+            // each grown their own copy of "and longer than 20 characters",
+            // walking their own tree to assert it. That covered eight screens
+            // and no others, which is the wrong shape for a rule about the API:
+            // a ninth screen was covered on the day somebody remembered to paste
+            // the block, and until then "by design" would have passed.
+            //
+            // Checked at the declaration now. These two are what the eight
+            // copies were reaching for.
+            var node = Ui.Solid("X", "#ffffff", new UiVec(10f, 10f));
+
+            Assert.Throws<System.ArgumentException>(() => node.AllowOverlap("by design"));
+            Assert.Throws<System.ArgumentException>(() => node.AllowOverflow("overlap"));
+        }
+
+        [Test]
+        public void AllowOverlap_WithARealSentence_IsAccepted()
+        {
+            // The other half. A rule that only ever refuses is indistinguishable
+            // from a broken one, and the threshold has to leave room for the
+            // reasons already in the tree -- the shortest is 39 characters.
+            var node = Ui.Solid("X", "#ffffff", new UiVec(10f, 10f))
+                .AllowOverlap("the fill sits inside its own track, which is what makes it read as a fill");
+
+            Assert.IsNotNull(node.AllowOverlapReason);
+        }
     }
 }

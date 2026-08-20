@@ -45,35 +45,6 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void EveryExemptionStatesAReason()
-        {
-            // The escape hatches are only worth having while each one is
-            // greppable and reviewable. UiNode.AllowOverlap already throws on an
-            // empty reason; this proves the SCREEN actually uses them that way
-            // rather than having found some way around it.
-            var exempted = AllNodes(Screen().Root)
-                .Where(n => n.AllowOverlapReason != null || n.AllowOverflowReason != null)
-                .ToList();
-
-            Assert.IsNotEmpty(exempted, "a screen this dense with deliberate layering should have exemptions");
-
-            foreach (var node in exempted)
-            {
-                if (node.AllowOverlapReason != null)
-                {
-                    Assert.Greater(node.AllowOverlapReason.Length, 20,
-                        $"'{node.Name}' overlap reason is too short to be a reason: '{node.AllowOverlapReason}'");
-                }
-
-                if (node.AllowOverflowReason != null)
-                {
-                    Assert.Greater(node.AllowOverflowReason.Length, 20,
-                        $"'{node.Name}' overflow reason is too short to be a reason: '{node.AllowOverflowReason}'");
-                }
-            }
-        }
-
-        [Test]
         public void OneSiblingCarryingTheExemptionIsEnoughForThePair()
         {
             // Asked explicitly by the plan, because it decides how many

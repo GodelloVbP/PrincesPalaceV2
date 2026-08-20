@@ -62,9 +62,9 @@ screen list as a documented "nothing keeps these in sync" hazard. A third copy
 of that list now exists in `tools/run_tests_parallel.ps1`, it has already
 diverged, and what it guards is the exact failure `CLAUDE.md`'s gotcha #1 warns
 about. That is finding F1 — since fixed, along with the four stale comments and
-F4, F6, F7 and F12, in the working tree accompanying this document. Ten of the
-sixteen findings are closed and F10 is half closed; F8, F9, F13, F15 and F16 are
-open on stated grounds, and F11 was
+F4, F6, F7 and F12, in the working tree accompanying this document. Eleven of the
+sixteen findings are closed and F10 is half closed; F8, F9, F13 and F15 are open on
+stated grounds, and F11 was
 closed by another session mid-audit.
 
 One correction belongs here rather than buried in F10: **this audit's own count
@@ -1176,7 +1176,7 @@ safe on a mismatch by disabling the `Image`. This is filed because the reasoning
 that chose the shape is one step short, and that is the kind of thing that gets
 re-derived the same way next time.
 
-### F16 — LOW. Eight screen-test classes carry the same six-line assertion.
+### F16 — LOW. **Fixed**, and not the way this finding proposed.
 
 `FightScreenTests`, `HubScreenTests`, `GlossaryScreenTests`, `ReckoningScreenTests`,
 `DefeatScreenTests`, `DebugMenuScreenTests`, `ConstellationScreenTests` and
@@ -1188,11 +1188,31 @@ Two things follow. A screen added without that block is simply not covered, and
 nothing says so; and until F10 was fixed, every copy was policing the prose
 quality of fields that mostly waived nothing.
 
-*Recommendation:* one lint over `ScreenRegistry.All`, the same shape as the
-colour rule in `UiKitLintTests` -- which is also the file that already knows how
-to guard itself against scanning nothing. Deleting eight copies is the smaller
-half of the payoff; the larger half is that a ninth screen is covered on the day
-it is registered rather than on the day somebody remembers to paste the block.
+*The recommendation above does not work.* `ScreenRegistry` lives in the
+**Editor** assembly and EditMode tests reference **Domain only** -- which is why
+each of the eight built its own tree in the first place. A lint over
+`ScreenRegistry.All` cannot be written from where these tests live, and one
+written in PlayMode would have the same blind spot as the eight copies, in one
+file instead of eight.
+
+*Fixed* by moving the rule to where the reason is SET. `UiNode.Require` already
+threw on an empty reason; it now also refuses one at or under
+`MinimumReasonLength`. That covers every screen that exists and every screen that
+will, it fails at the declaration rather than inside a test named after some
+other subject, and it needs no registry at all.
+
+20 is kept as the threshold -- not because it measures anything, but because it
+is the number eight test classes each settled on independently, and the shortest
+reason actually in the tree is 39 characters, so it has room. Two tests replace
+the eight: a label like `"by design"` is refused, and a real sentence is
+accepted. The second is the one that matters, since a rule that only ever
+refuses is indistinguishable from a broken one.
+
+*The general lesson:* "consolidate the duplicated check" was the right
+instinct and the wrong altitude. Eight copies of a rule are a signal that the
+rule is in the wrong layer, not that it needs a ninth home -- and the assembly
+boundary that made the lint impossible is the same one that should have
+suggested the API as the place for it.
 
 ### Cross-references, not re-counted here
 

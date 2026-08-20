@@ -105,23 +105,6 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.IsEmpty(offenders);
         }
 
-        [Test]
-        public void EveryExemptionStatesARealReason()
-        {
-            foreach (var node in Walk(Tree()))
-            {
-                if (node.AllowOverlapReason != null)
-                {
-                    Assert.Greater(node.AllowOverlapReason.Length, 20, $"{node.Name}'s overlap reason is too thin");
-                }
-
-                if (node.AllowOverflowReason != null)
-                {
-                    Assert.Greater(node.AllowOverflowReason.Length, 20, $"{node.Name}'s overflow reason is too thin");
-                }
-            }
-        }
-
         private static int Alpha(string hex) =>
             System.Convert.ToInt32(hex.Substring(hex.Length - 2), 16);
 

@@ -128,25 +128,6 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
-        [Test]
-        public void EveryExemptionStatesAReason()
-        {
-            // The audit accepts an escape hatch only with a reason, and a reason
-            // like "x" satisfies the compiler while explaining nothing.
-            foreach (var node in Walk(HubScreen.Build().Root))
-            {
-                if (node.AllowOverlapReason != null)
-                {
-                    Assert.Greater(node.AllowOverlapReason.Length, 20, $"{node.Name}'s overlap reason is too thin");
-                }
-
-                if (node.AllowOverflowReason != null)
-                {
-                    Assert.Greater(node.AllowOverflowReason.Length, 20, $"{node.Name}'s overflow reason is too thin");
-                }
-            }
-        }
-
         private static UiNode Find(UiNode root, string name) =>
             Walk(root).FirstOrDefault(n => n.Name == name);
 

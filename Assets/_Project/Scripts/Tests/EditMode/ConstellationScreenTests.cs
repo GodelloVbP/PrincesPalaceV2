@@ -105,23 +105,6 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.Contains(names, "TalentDetailBody");
         }
 
-        [Test]
-        public void EveryExemptionStatesARealReason()
-        {
-            foreach (var node in Walk(TalentScreen.Build().Root))
-            {
-                if (node.AllowOverlapReason != null)
-                {
-                    Assert.Greater(node.AllowOverlapReason.Length, 20, $"{node.Name}'s overlap reason is too thin");
-                }
-
-                if (node.AllowOverflowReason != null)
-                {
-                    Assert.Greater(node.AllowOverflowReason.Length, 20, $"{node.Name}'s overflow reason is too thin");
-                }
-            }
-        }
-
         private static IEnumerable<UiNode> Walk(UiNode node)
         {
             yield return node;

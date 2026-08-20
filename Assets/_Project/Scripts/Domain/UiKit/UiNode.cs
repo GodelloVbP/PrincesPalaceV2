@@ -170,6 +170,12 @@ namespace PrincesPalace.Domain.UiKit
             return this;
         }
 
+        // Long enough to be a sentence about this node rather than a label.
+        // 20 is not a measurement of anything; it is the number eight separate
+        // screen tests had each settled on independently, and the shortest
+        // reason actually in the tree is 39 characters, so it has room.
+        public const int MinimumReasonLength = 20;
+
         private static string Require(string reason, string what)
         {
             if (string.IsNullOrWhiteSpace(reason))
@@ -177,6 +183,23 @@ namespace PrincesPalace.Domain.UiKit
                 throw new ArgumentException(
                     $"{what} must state WHY. An unexplained exemption is indistinguishable from a bug someone silenced.");
             }
+
+            // CHECKED HERE, not per screen. Eight screen test classes used to
+            // carry their own copy of this -- walk my tree, assert every reason
+            // is longer than 20 -- which meant a ninth screen was covered on the
+            // day somebody remembered to paste the block, and until then its
+            // exemptions could say "layout" and pass. Enforcing it where the
+            // reason is SET covers every screen that exists and every screen
+            // that will, and it fails at the declaration rather than in a test
+            // named after some other subject.
+            if (reason.Trim().Length <= MinimumReasonLength)
+            {
+                throw new ArgumentException(
+                    $"{what}(\"{reason}\") is too short to be a reason. It needs to say what this node sits on " +
+                    $"and why that is intended, in a sentence the next reader can check against the screen -- " +
+                    $"a label like \"overlap\" or \"by design\" only records that somebody wanted the audit quiet.");
+            }
+
             return reason;
         }
 
