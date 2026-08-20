@@ -38,7 +38,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // One orb per slot per path. Declared rather than pooled: the skeleton
         // is a fixed shape, so every position is known at build time and the
         // audit can check all of them.
-        public const int OrbCount = TalentSkeleton.SlotCount;
+        // static readonly rather than const, because the skeleton derives its
+        // own slot count from the rows it is made of now. Nothing needs this
+        // at compile time -- it sizes arrays and bounds loops, both of which
+        // are happy with a value read at type-init.
+        public static readonly int OrbCount = TalentSkeleton.SlotCount;
 
         public UiNode Root;
 
