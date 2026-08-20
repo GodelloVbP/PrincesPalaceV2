@@ -350,5 +350,42 @@ namespace PrincesPalace.PlayModeTests
                 "the abandoned run was discarded rather than settled - its bosses paid nothing");
         }
 
+        // ---- the room after the elite -------------------------------------------
+        //
+        // PROBE for "after the elite, going into a fight it just hangs and you
+        // cant do anything anymore". FightBootstrap returns a null session when
+        // the roster is empty, which leaves an empty stage and no way to act --
+        // a hang. This walks a run over the leg boundary the elite sits on and
+        // asks what the next room would field.
+        [Test]
+        public void TheRoomAfterTheEliteFieldsAFight()
+        {
+            RunManager.StartRun(Seed);
+            var save = SaveSlotManager.CurrentSave;
+
+            // Finish the elite: the leg's last room, which is what triggers
+            // AdvanceLeg in FightBootstrap.
+            RunManager.AdvanceLeg();
+
+            var run = RunManager.Run;
+            var report = $"legStartStep={run.legStartStep} step={run.step} floor={run.floor} " +
+                         $"node={run.currentNodeId} squad=[{string.Join(",", save.ActiveSquadIds())}] " +
+                         $"health=[{string.Join(",", (run.currentHealth ?? new System.Collections.Generic.List<RunHealthEntry>()).Select(h => h.characterId + ":" + h.hp))}]";
+
+            var choices = RunManager.Choices();
+            Assert.IsNotEmpty(choices, "the new leg offered nowhere to go. " + report);
+
+            RunManager.MoveTo(choices[0].Id);
+            run = RunManager.Run;
+
+            var roster = RunEncounter.For(save, run, PrincesPalace.Domain.Dungeon.RoomType.Fight);
+
+            Assert.IsFalse(roster.IsEmpty,
+                $"the room after the elite fields nothing, so the stage comes up empty and the " +
+                $"player can do nothing. party={roster.PartyIds?.Count ?? 0} " +
+                $"enemies={roster.EnemyIds?.Count ?? 0}. {report}");
+        }
+
+
     }
 }

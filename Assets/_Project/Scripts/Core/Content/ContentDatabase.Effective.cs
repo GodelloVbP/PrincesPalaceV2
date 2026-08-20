@@ -130,7 +130,7 @@ namespace PrincesPalace.Content
                     // AbilityScoreBonusAt's own comment); the requirement IS
                     // scaled, by the global tuning knob, at this exact read
                     // point — RequirementCurve's whole reason for existing.
-                    candidates.Add(new RequirementCandidate(entry.slot, item.AbilityScoreBonusAt(entry.plus), RequirementCurve.Apply(item.requirements)));
+                    candidates.Add(new RequirementCandidate(entry.slot, item.AbilityScoreBonusAt(entry.plus), RequirementCurve.ApplyGear(item.requirements)));
                 }
             }
 

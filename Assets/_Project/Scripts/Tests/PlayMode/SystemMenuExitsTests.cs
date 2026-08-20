@@ -284,6 +284,36 @@ namespace PrincesPalace.PlayModeTests
                 "leaving through the menu left the game paused, so the next scene comes up frozen");
         }
 
+        // A STOPPED CLOCK IS NEVER WHAT WE GO BACK TO.
+        //
+        // Close() restores whatever Open() captured, so opening while timeScale
+        // is already 0 would make the freeze permanent. That is unrecoverable
+        // and, worse, invisible: WaitForSeconds is scaled and the whole fight
+        // is built on it, so every beat coroutine simply never completes and
+        // the HUD stays locked behind IsPlaying. It reads as the game hanging
+        // rather than as a clock left at zero.
+        [UnityTest]
+        public IEnumerator OpeningOnAStoppedClockStillGivesTheGameBack()
+        {
+            yield return OpenThePane("Hub");
+            _menu.Close();
+            yield return null;
+
+            // However it got here -- a second pauser, a Resume that did not
+            // run, a scene that arrived frozen.
+            Time.timeScale = 0f;
+
+            _menu.Open();
+            yield return null;
+            _menu.Close();
+            yield return null;
+
+            Assert.AreEqual(1f, Time.timeScale,
+                "the menu put the clock back to zero, so every WaitForSeconds in the fight waits " +
+                "forever and the game is frozen for good");
+        }
+
+
         // ---- fixture --------------------------------------------------------------------
 
         private IEnumerator OpenThePane(string scene, bool withRun = false)

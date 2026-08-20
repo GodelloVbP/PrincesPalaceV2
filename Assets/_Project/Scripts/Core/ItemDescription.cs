@@ -160,7 +160,7 @@ namespace PrincesPalace
                 // -- the same value the resolver gates on. Its own block
                 // overload, not six calls to the int one: this had grown a
                 // hand-written copy of a method that already existed.
-                RequirementCurve.Apply(candidate.requirements),
+                RequirementCurve.ApplyGear(candidate.requirements),
                 ContentDatabase.EffectiveAbilityScores(character),
                 comparison);
         }

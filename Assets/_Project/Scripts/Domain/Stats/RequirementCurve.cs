@@ -24,6 +24,36 @@ namespace PrincesPalace.Domain.Stats
         public const int DefaultPercent = 100;
         public static int Percent = DefaultPercent;
 
+        // ---- gear requirements are OFF ------------------------------------
+        //
+        // HIDDEN, NOT DELETED, and deliberately so: the authored requirements
+        // are still on every item, RequirementResolver still settles a loadout
+        // with them, and flipping this back on restores the whole system
+        // untouched. Nothing has been removed from content.
+        //
+        // Scoped to GEAR rather than done with Percent = 0, and that is the
+        // whole reason this flag exists instead. Percent is the knob for EVERY
+        // requirement in the game at once -- skills and spell tiers gate on it
+        // too (FightHudModel and ContentDatabase's tier pick) -- so zeroing it
+        // would silently unlock those as well, which was not the ask.
+        //
+        // The display costs nothing extra: ItemStatLines.RequirementLine
+        // already returns an empty string when nothing is required, so a
+        // zeroed block removes the "Requires STR 15" line and the CAN'T WEAR
+        // state on its own rather than needing a second switch that could
+        // disagree with this one.
+        public static bool GearRequirementsEnabled = false;
+
+        // What a piece of GEAR demands. The one seam the two gear call sites
+        // go through -- the equipment loadout in ContentDatabase.Effective and
+        // the comparison line in ItemDescription -- so "are gear requirements
+        // on" is answered in exactly one place.
+        public static AbilityScoreBlock ApplyGear(AbilityScoreBlock requirement)
+        {
+            if (!GearRequirementsEnabled) return new AbilityScoreBlock(0, 0, 0, 0, 0, 0);
+            return Apply(requirement);
+        }
+
         // Entirely in integers, floored the same asymmetric-safe way
         // ItemUpgrade.Apply is — negative inputs are not a real case for a
         // requirement (0 means "none"), but staying direction-symmetric

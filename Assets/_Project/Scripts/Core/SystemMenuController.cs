@@ -208,7 +208,21 @@ namespace PrincesPalace
         {
             if (_paused) return;
             _paused = true;
-            _resumeTimeScale = Time.timeScale;
+
+            // NEVER CAPTURE A STOPPED CLOCK.
+            //
+            // Close() puts back whatever this took, so opening the menu while
+            // timeScale is already 0 makes the freeze PERMANENT -- and a frozen
+            // clock is not a visible bug. WaitForSeconds is scaled, and the
+            // whole fight is built on it: every beat coroutine simply never
+            // finishes, the HUD stays locked behind IsPlaying, and it reads as
+            // "the game hung and I cannot do anything".
+            //
+            // There should be no way to get here at zero, which is exactly why
+            // this guard is worth having: the failure mode of being wrong about
+            // that is unrecoverable without restarting, and the cost of being
+            // right is one comparison.
+            _resumeTimeScale = Time.timeScale > 0f ? Time.timeScale : 1f;
             Time.timeScale = 0f;
         }
 
