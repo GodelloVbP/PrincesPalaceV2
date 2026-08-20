@@ -121,6 +121,14 @@ namespace PrincesPalace
 
         public void Play(IReadOnlyList<CombatBeat> beats, Action onFinished)
         {
+            // CLEARED BEFORE THE FLUSH, so the flush below has nobody to notify.
+            //
+            // This playback supersedes the last one, and the caller is about to
+            // be told when THIS one ends. Letting Flush fire the old callback
+            // here would clear the controller's busy flag a frame after it set
+            // it, and the player could act in the middle of the round they just
+            // started.
+            _onFinished = null;
             Flush();
 
             _onFinished = onFinished;
@@ -156,6 +164,20 @@ namespace PrincesPalace
             StopVfx?.Invoke();
 
             IsPlaying = false;
+
+            // AND WHOEVER WAS WAITING IS TOLD, which it never was.
+            //
+            // FightController sets _isBusy before Play and clears it ONLY in
+            // this callback, and _isBusy is half of CanAct. So a playback
+            // stopped rather than finished left the controller busy for the
+            // rest of the fight: every verb dead, every click ignored, nothing
+            // on screen saying why. "The buttons just dont work."
+            //
+            // Same capture-null-invoke as the normal completion path, so a
+            // callback that reaches back into this player cannot be run twice.
+            var finished = _onFinished;
+            _onFinished = null;
+            finished?.Invoke();
         }
 
         private void OnDisable()
@@ -220,11 +242,29 @@ namespace PrincesPalace
 
                 // The blow lands: the numbers move, the target flashes and the
                 // floating figure appears, all on the same frame.
-                PaintVitals?.Invoke(beat.Snapshot);
-                ShowAmount(beat);
-                FlashTarget?.Invoke(beat);
-                Recoil(beat);
-                Speak(beat);
+                //
+                // GUARDED, because a throw here does not just lose a hit
+                // flash. An exception inside a coroutine stops that coroutine
+                // dead: the loop never reaches its end, _onFinished never
+                // fires, and FightController stays busy for the rest of the
+                // fight with every verb disabled. One bad sprite path or one
+                // null in a delegate would take the whole fight down, and the
+                // only trace is a line in the console.
+                //
+                // Logged rather than swallowed -- this is the house's graceful
+                // degradation, not a silence.
+                try
+                {
+                    PaintVitals?.Invoke(beat.Snapshot);
+                    ShowAmount(beat);
+                    FlashTarget?.Invoke(beat);
+                    Recoil(beat);
+                    Speak(beat);
+                }
+                catch (Exception error)
+                {
+                    Debug.LogException(error);
+                }
 
                 // Follow-through, AT THE SAME PACE as the wind-up.
                 //

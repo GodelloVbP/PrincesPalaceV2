@@ -1,5 +1,10 @@
+using System.Collections;
+using System.Collections.Generic;
 using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools;
 using PrincesPalace;
+using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Stage;
 
 namespace PrincesPalace.PlayModeTests
@@ -88,5 +93,81 @@ namespace PrincesPalace.PlayModeTests
                     "floor - it reads as a flicker between the drawings either side of it");
             }
         }
+        // ---- a stopped playback still reports -----------------------------------
+        //
+        // THE BUG THESE EXIST FOR: FightController sets _isBusy before Play and
+        // clears it ONLY in the finished callback, and _isBusy is half of
+        // CanAct. Flush stopped the coroutine without ever calling that
+        // callback, so any playback that was stopped rather than allowed to
+        // finish left the controller busy for the rest of the fight -- every
+        // verb disabled, every click ignored, and nothing on screen saying why.
+        [UnityTest]
+        public IEnumerator AStoppedPlaybackTellsWhoeverWasWaiting()
+        {
+            var player = NewPlayer();
+            bool finished = false;
+
+            player.Play(OneBeat(), () => finished = true);
+            yield return null;
+
+            player.Flush();
+
+            Assert.IsTrue(finished,
+                "the playback was stopped and nobody was told, so the fight stays busy forever");
+        }
+
+        // The other half, and it is what stops the fix above from being worse
+        // than the bug: starting a NEW round must not fire the old round's
+        // callback, or the controller would clear the busy flag one frame after
+        // setting it and let the player act in the middle of the round.
+        [UnityTest]
+        public IEnumerator StartingANewRoundDoesNotFireTheOldRoundsCallback()
+        {
+            var player = NewPlayer();
+            bool first = false;
+
+            player.Play(OneBeat(), () => first = true);
+            yield return null;
+
+            player.Play(OneBeat(), () => { });
+            yield return null;
+
+            Assert.IsFalse(first,
+                "starting a round fired the previous round's finished callback, which clears the " +
+                "busy flag while the new round is still playing");
+        }
+
+
+        // ---- fixture -------------------------------------------------------------
+
+        private readonly List<GameObject> _spawned = new List<GameObject>();
+
+        [TearDown]
+        public void CleanUp()
+        {
+            foreach (var go in _spawned) if (go != null) Object.DestroyImmediate(go);
+            _spawned.Clear();
+            FightBeatPlayer.BeatSpeedMultiplier = 1f;
+        }
+
+        // A bare player on its own object. No scene needed: these are about the
+        // callback contract, not about anything being drawn.
+        private FightBeatPlayer NewPlayer()
+        {
+            var go = new GameObject("BeatPlayerUnderTest");
+            _spawned.Add(go);
+
+            var player = go.AddComponent<FightBeatPlayer>();
+
+            // Fast, so a beat's waits do not make the test wait them out.
+            FightBeatPlayer.BeatSpeedMultiplier = 60f;
+            return player;
+        }
+
+        private static IReadOnlyList<CombatBeat> OneBeat()
+        {
+            return new List<CombatBeat> { new CombatBeat() };
+        }
+
     }
 }
