@@ -110,22 +110,32 @@ namespace PrincesPalace
         //
         // FAST, and that is half of the fix. At 0.3s on a smoothstep this
         // eased in AND out, so it left slowly, arrived slowly, and spent its
-        // middle at a speed too low to read as a move at all. It is now under
-        // half that on a quartic ease-out -- off the mark at full speed and
-        // settling hard, which is what makes it land rather than drift.
-        private const float SweepSeconds = 0.13f;
+        // middle at a speed too low to read as a move at all.
+        //
+        // 0.13s on a quartic was the first answer and it overshot: quartic
+        // covers two thirds of the distance in the first quarter of the time,
+        // so at 130ms the whole crossing was over before the eye caught it
+        // moving and it read as a cut rather than a shove. 0.18 on a cubic is
+        // still well under the original and still leaves at full speed; it just
+        // gives the motion enough frames to be seen as motion.
+        private const float SweepSeconds = 0.18f;
 
         // Motion blur, such as a uGUI canvas can have one.
         //
         // NOT localScale on the frame, which this file already records as the
         // mistake that made the reveal read cheap -- that was a 0.34s squash of
-        // static content, and every child compressed and sprang back. This is
-        // 6% of horizontal stretch on content that is crossing the panel at
-        // speed, held for about 60ms, which is the smear a fast pan leaves and
-        // is gone before the eye can resolve it as a shape. Paired with a dip
-        // in alpha, because a blurred thing is also a thinner one.
-        private const float SweepSmear = 0.06f;
-        private const float SweepAlphaDip = 0.45f;
+        // static content, and every child compressed and sprang back. This is a
+        // slight horizontal stretch on content that is crossing the panel at
+        // speed, which is the smear a fast pan leaves.
+        //
+        // BOTH OF THESE WERE TOO STRONG at first: 6% of stretch and a 45% drop
+        // in alpha, over 130ms. A blur is meant to be the thing you do not
+        // quite see; at that strength the whole panel visibly thinned and
+        // swelled mid-crossing, which is a flash rather than a smear and was
+        // the twitchy half of "fast and twitchy". Enough to soften an edge in
+        // motion, not enough to notice as an effect in its own right.
+        private const float SweepSmear = 0.035f;
+        private const float SweepAlphaDip = 0.15f;
 
         // The LIFT. The frame rises this far as it expands, so the screen
         // arrives from the fight rather than appearing at rest on top of it.
@@ -757,12 +767,14 @@ namespace PrincesPalace
         // everybody feels.
         private static float Smooth(float k) => k * k * (3f - 2f * k);
 
-        // Quartic out: leaves at full speed and settles hard. Smooth() eases in
-        // as well, which is right for a reveal and wrong for a shove.
+        // Cubic out: leaves at full speed and settles. Smooth() eases in as
+        // well, which is right for a reveal and wrong for a shove -- and the
+        // quartic this started as was so front-loaded that the move was
+        // effectively over in its first third.
         private static float EaseOut(float k)
         {
             float inv = 1f - k;
-            return 1f - inv * inv * inv * inv;
+            return 1f - inv * inv * inv;
         }
 
         // Attached at RUNTIME, the same way HoverIndex and BarSlider are: the
