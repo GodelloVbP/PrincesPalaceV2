@@ -136,8 +136,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         new UiVec(w, SystemMenuLayout.TabHeight), 18,
                         Place.At(x, 0f))
                     .NoChrome()
-                    .Tracked(SystemMenuLayout.TabLabelTracking)
-                    .AllowOverlap("the tab's label sits over its own hover plate by construction");
+                    .Tracked(SystemMenuLayout.TabLabelTracking);
 
                 // WIDTH IS THE LABEL'S, not the box's. A rule as wide as a
                 // generous three-tab box reads as a second divider rather than

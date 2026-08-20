@@ -343,6 +343,11 @@ namespace PrincesPalace.Domain.UiKit
                     if (a.Source?.ExclusiveGroup != null
                         && ReferenceEquals(a.Source.ExclusiveGroup, b.Source?.ExclusiveGroup)) continue;
 
+                    // Layers of one widget. Exempt from each other, checked
+                    // against everything else -- same bargain as above.
+                    if (a.Source?.LayerGroup != null
+                        && ReferenceEquals(a.Source.LayerGroup, b.Source?.LayerGroup)) continue;
+
                     // The LATER sibling draws nothing, so there is no harm to
                     // report. Read the message below: what makes an overlap a
                     // defect here is that uGUI puts `b` on top, where it hides

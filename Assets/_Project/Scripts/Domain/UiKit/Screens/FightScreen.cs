@@ -494,8 +494,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 var ring = Ui.Sprite($"InitiativeRing{i}", null,
                         Place.Stretch(-pad, -pad, -pad, -pad), UiSize.Fill)
                     .Inactive()
-                    .AllowOverflow("the emphasis ring frames the icon from OUTSIDE it, which is what makes the acting combatant pop")
-                    .AllowOverlap("ring, portrait and initial are three layers of one badge");
+                    .AllowOverflow("the emphasis ring frames the icon from OUTSIDE it, which is what makes the acting combatant pop");
 
                 // Inactive until a combatant is actually in the slot. An Image
                 // with no sprite renders as a WHITE QUAD, so six empty slots on
@@ -506,8 +505,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
                 var label = Ui.Label($"InitiativeLabel{i}", UiString.Runtime,
                         new UiVec(FightStageAnchors.InitiativeIconSize, 24f), 14,
-                        FightHudPalette.TextPrimary, Place.At(0f, 0f))
-                    .AllowOverlap("the initial is printed ON the portrait, as the fallback for a combatant with no art");
+                        FightHudPalette.TextPrimary, Place.At(0f, 0f));
+
+                // ONE BADGE, three layers: the emphasis ring, the portrait, and
+                // the initial printed on it as the fallback for a combatant
+                // with no art. Declared as a stack rather than given an
+                // AllowOverlap apiece -- they are exempt from each other and
+                // still checked against the rest of the slot.
+                Ui.Layered(ring, icon, label);
 
                 InitiativeRings.Add(ring);
                 InitiativeIcons.Add(icon);
@@ -694,8 +699,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // wherever the current fill ends.
             var mpPreview = Ui.Solid("PartyMpPreview", FightHudPalette.MpPreview,
                     Place.At(0f, 0f, new UiVec(1f, 0.5f)), UiSize.Fixed(40f, 14f))
-                .Inactive()
-                .AllowOverlap("the preview is drawn INSIDE the mana bar - sitting on the fill is what makes it read as part of the resource rather than beside it");
+                .Inactive();
+
+            // Fill and preview are ONE BAR. The preview sitting on the fill is
+            // what makes it read as part of the resource rather than as a
+            // second thing beside it, so they are layers, not neighbours.
+            Ui.Layered(mpFill, mpPreview);
 
             var mpBar = Ui.Panel("PartyMpBar", Place.At(-24f, -22f), UiSize.Fixed(292f, 16f), mpFill, mpPreview)
                 .Coloured(FightHudPalette.TrackMp);

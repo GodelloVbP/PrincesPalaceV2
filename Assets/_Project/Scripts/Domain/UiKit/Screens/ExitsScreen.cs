@@ -137,8 +137,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor();
 
             var button = Ui.Button($"Exit{key}", label, size, 17, Place.At(0f, buttonY))
-                .NoChrome()
-                .AllowOverlap("the exit's label sits over its own plate by construction");
+                .NoChrome();
 
             screen.ExitHovers.Add(hover);
             screen.ExitButtons.Add(button);
@@ -210,8 +209,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var hold = Ui.Button("ExitAbandonHold", UiStrings.ExitAbandonHold, holdSize, 16,
                     Place.At(0f, ExitsLayout.HoldCentreY))
                 .NoChrome()
-                .Quiet()
-                .AllowOverlap("the hold's label sits over its own fill by construction");
+                .Quiet();
 
             screen.AbandonFill = fill;
             screen.AbandonHold = hold;

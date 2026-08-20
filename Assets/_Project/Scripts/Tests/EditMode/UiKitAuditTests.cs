@@ -392,6 +392,64 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void LayeredSiblings_DoNotCountAsOverlappingEachOther()
+        {
+            var track = Ui.Solid("Track", "#222222FF", new UiVec(200f, 12f), Place.At(0f, 0f));
+            var fill = Ui.Solid("Fill", "#88CCFFFF", new UiVec(120f, 12f), Place.At(0f, 0f));
+            Ui.Layered(track, fill);
+
+            Assert.IsEmpty(Of(Ui.Panel("Root", UiSize.Fixed(1920f, 1080f), track, fill),
+                UiAuditCheck.SiblingOverlap),
+                "a fill inside its own track is one widget, not two neighbours");
+        }
+
+        [Test]
+        public void ALayeredNode_IsStillCheckedAgainstEverythingElse()
+        {
+            // The same bargain Exclusive makes, and the same reason it is worth
+            // making: the AllowOverlap this replaces was a blanket, so a label
+            // exempted to sit on its own plate stopped being checked against
+            // every other sibling on the screen.
+            var track = Ui.Solid("Track", "#222222FF", new UiVec(200f, 12f), Place.At(0f, 0f));
+            var fill = Ui.Solid("Fill", "#88CCFFFF", new UiVec(120f, 12f), Place.At(0f, 0f));
+            Ui.Layered(track, fill);
+
+            var stray = Ui.Button("Stray", UiString.FromContent("?"), new UiVec(80f, 30f), 14,
+                Place.At(0f, 0f));
+
+            Assert.IsNotEmpty(Of(Ui.Panel("Root", UiSize.Fixed(1920f, 1080f), track, fill, stray),
+                UiAuditCheck.SiblingOverlap),
+                "a layer of one widget is exempt from its OWN widget, not from a button parked on it");
+        }
+
+        [Test]
+        public void LayeredAndExclusive_AreNotTheSameGroup()
+        {
+            // Two tokens, two meanings. A node in a layer stack must not be
+            // exempted from a page it happens to share a parent with, or the
+            // two words would quietly become one loose one.
+            var a = Ui.Solid("A", "#FFFFFFFF", new UiVec(100f, 100f), Place.At(0f, 0f));
+            var b = Ui.Solid("B", "#FFFFFFFF", new UiVec(100f, 100f), Place.At(0f, 0f));
+            var c = Ui.Solid("C", "#FFFFFFFF", new UiVec(100f, 100f), Place.At(0f, 0f));
+            var d = Ui.Solid("D", "#FFFFFFFF", new UiVec(100f, 100f), Place.At(0f, 0f)).Inactive();
+
+            Ui.Layered(a, b);
+            Ui.Exclusive(c, d);
+
+            Assert.IsNotEmpty(Of(Ui.Panel("Root", UiSize.Fixed(1920f, 1080f), a, b, c, d),
+                UiAuditCheck.SiblingOverlap),
+                "the layer stack and the page set are different groups and must still collide");
+        }
+
+        [Test]
+        public void Layered_WithFewerThanTwoLayers_IsRejected()
+        {
+            var lone = Ui.Solid("Lone", "#FFFFFFFF", new UiVec(10f, 10f), Place.At(0f, 0f));
+
+            Assert.Throws<System.ArgumentException>(() => Ui.Layered(lone));
+        }
+
+        [Test]
         public void Exclusive_WithFewerThanTwoMembers_IsRejected()
         {
             // A set of one is not a set of alternatives, and would read as a

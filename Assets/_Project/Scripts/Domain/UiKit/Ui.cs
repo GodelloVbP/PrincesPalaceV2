@@ -176,6 +176,40 @@ namespace PrincesPalace.Domain.UiKit
             return list;
         }
 
+        // These nodes are ONE WIDGET, stacked on purpose.
+        //
+        // A fill inside its track, a label over its own plate, the ring and
+        // portrait and initial of a single badge. Unlike Exclusive they are all
+        // on screen together -- the stacking IS the thing, and the draw order
+        // is already decided by the order they are declared in.
+        //
+        // Symmetric, because for the audit's purposes it is: which one is on
+        // top is a fact about declaration order, not something a second word
+        // should restate. "Over" and "under" would be two names for one
+        // relationship, and one of them would eventually disagree with the code.
+        //
+        // Only what it says: these nodes are exempt from EACH OTHER. Each is
+        // still checked against every other sibling, which the AllowOverlap this
+        // replaces was not.
+        public static IReadOnlyList<UiNode> Layered(params UiNode[] nodes) =>
+            Layered((IEnumerable<UiNode>)nodes);
+
+        public static IReadOnlyList<UiNode> Layered(IEnumerable<UiNode> nodes)
+        {
+            var list = nodes?.Where(n => n != null).ToList() ?? new List<UiNode>();
+
+            if (list.Count < 2)
+            {
+                throw new ArgumentException(
+                    $"Ui.Layered needs at least two layers to mean anything; got {list.Count}. " +
+                    "One node is not a stack -- if it sits on something, name the something.");
+            }
+
+            var token = new object();
+            foreach (var node in list) node.LayerGroup = token;
+            return list;
+        }
+
         // Blank main-axis extent inside a flow container. Exists so a gap can be
         // declared where it happens rather than smuggled into a neighbour's
         // size, which is how v1's offsets became unreadable.

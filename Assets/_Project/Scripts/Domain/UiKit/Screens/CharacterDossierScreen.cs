@@ -332,8 +332,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 var tab = Ui.Button($"DossierPackSort{i}", SortLabel(BagSort.All[i]),
                         new UiVec(DossierLayout.PackSortButtonWidth, DossierLayout.PackSortRowHeight), 11,
                         Place.At(x, DossierLayout.PackSortCentreY))
-                    .NoChrome()
-                    .AllowOverlap("the sort key's underline sits under its own label by construction");
+                    .NoChrome();
 
                 var underline = Ui.Solid($"DossierPackSort{i}Underline", "#FFE0A8",
                         new UiVec(DossierLayout.PackSortButtonWidth - 24f, 2f),
@@ -412,8 +411,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // need one.
             var track = Ui.Solid("DossierPackScrollTrack", "#0E070CD9",
                     new UiVec(DossierLayout.PackScrollbarWidth, DossierLayout.PackTrackHeight),
-                    Place.At(cx + DossierLayout.PackScrollbarCentreX, DossierLayout.PackTrackCentreY))
-                .AllowOverlap("the thumb rides inside its own track by construction");
+                    Place.At(cx + DossierLayout.PackScrollbarCentreX, DossierLayout.PackTrackCentreY));
 
             var thumb = Ui.Solid("DossierPackScrollThumb", "#C8AAE666",
                     new UiVec(DossierLayout.PackScrollbarWidth, DossierLayout.PackTrackHeight),

@@ -62,9 +62,9 @@ screen list as a documented "nothing keeps these in sync" hazard. A third copy
 of that list now exists in `tools/run_tests_parallel.ps1`, it has already
 diverged, and what it guards is the exact failure `CLAUDE.md`'s gotcha #1 warns
 about. That is finding F1 — since fixed, along with the four stale comments and
-F4, F6, F7 and F12, in the working tree accompanying this document. Eleven of the
-sixteen findings are closed and F10 is two thirds closed; F8, F9, F13 and F15 are open on
-stated grounds, and F11 was
+F4, F6, F7 and F12, in the working tree accompanying this document. Twelve of the
+sixteen findings are closed; F8, F9, F13 and F15 are open on stated
+grounds, and F11 was
 closed by another session mid-audit.
 
 One correction belongs here rather than buried in F10: **this audit's own count
@@ -988,7 +988,7 @@ The shape this suggests is a list of per-type validators each returning its own
 work:** the function is correct, well commented, and the author may reasonably
 prefer one readable pass over content to a dispatch table.
 
-### F10 — **Upgraded to MEDIUM on inspection. Exclusion done; attachment still open.**
+### F10 — **Upgraded to MEDIUM on inspection. Fixed.**
 
 As first written this said "six exemptions describe one missing concept" and
 proposed an exclusive-pages container. Both halves needed correcting, in
@@ -1053,12 +1053,32 @@ out of the summary and must be reachable from every tab — so the exemption mov
 onto that one button instead of the three full-size pages. Same waiver, a
 fraction of the blast radius.
 
-**Production `AllowOverlap` is 29 sites now, 28 of them live**, down from 67 of
-which 29 were live. Still open: **attachment**, the ~8 sites saying "the thumb
-rides inside its own track", "the label sits over its own plate". A word for
-"these two nodes are one widget" would exempt exactly that pair. It is the
-riskier half — narrowing those will unmask whatever else they were blanket-
-waiving, as this pass did — and it is the remaining work under this finding.
+**The second word is built.** `Ui.Layered(...)` says these nodes are one
+widget, stacked on purpose. Symmetric, because for the audit's purposes it is —
+which layer is on top is already decided by declaration order, and an
+`Over`/`Under` pair would be two names for one relationship with one of them
+eventually disagreeing with the code. A test asserts a layer stack and a page
+set are different groups and still collide, without which the two words would
+quietly collapse into one loose one.
+
+**Only two of the eight "attachment" sites needed it.** The initiative badge
+(ring, portrait, and the initial printed on it as the no-art fallback) and the
+mana bar (fill and cost preview). **The other five were already inert** — their
+partner carries `.AsDecor()`, and A1 skips any pair where either side is
+decoration, so those allowances could never fire. The same class A7 catches, one
+step removed: A7 sees an allowance ON a decor node; these were allowances on a
+node whose PARTNER is decor, which no rule detects and only reading finds.
+
+That ratio is the finding's own lesson turned on itself. This register counted
+eight sites needing a new API and there were two. **Count what a waiver actually
+waives before designing around it** — the same mistake, in the same finding, that
+the 38-inert discovery had already made once.
+
+**Production `AllowOverlap` is 21 sites, 20 of them live, down from 67 with 29
+live** when this audit opened. What remains is genuinely per-node: a modal
+covering its siblings by definition, depth-stacked actors on a receding floor,
+constellation glows reaching their neighbours, the Continue button that swaps
+footprints with the verb column.
 
 **One site deliberately not migrated.** `FightScreen`'s Continue button swaps
 footprints with the verb column, and `BuildVerbColumn` returns several nodes that

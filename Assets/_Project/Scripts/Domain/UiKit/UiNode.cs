@@ -159,6 +159,18 @@ namespace PrincesPalace.Domain.UiKit
         // alternatives" exempts exactly the pairs it should and leaves every
         // other overlap checked.
         public object ExclusiveGroup;
+
+        // Which WIDGET this node is part of, if any. Siblings sharing one are
+        // layers of a single thing -- a fill inside its track, a label over its
+        // own plate, the ring and portrait and initial of one badge. They are
+        // all on screen at once, which is the difference from ExclusiveGroup.
+        //
+        // Set through Ui.Layered. Same token trick, and the same reason for it:
+        // the alternative is each layer carrying an AllowOverlap, and that is a
+        // blanket -- A1 skips a pair when EITHER side has a reason, so a label
+        // exempted to sit on its own plate stops being checked against every
+        // other sibling on the screen too.
+        public object LayerGroup;
         public UiNode AsDecor() { Decor = true; return this; }
         public UiNode Clipping() { Masks = true; return this; }
         public UiNode NoChrome() { Chromeless = true; return this; }
