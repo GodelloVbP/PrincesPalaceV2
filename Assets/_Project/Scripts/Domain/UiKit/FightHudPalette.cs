@@ -28,6 +28,14 @@ namespace PrincesPalace.Domain.UiKit
 
         // --- borders ----------------------------------------------------------
         public const string Hairline = "#C8AAE638";          // 0.22
+
+        // ---- the system menu's two additions --------------------------------
+        //
+        // Both arrived with the menu's design pass and were written straight
+        // into four screens instead of here, which is how one token ends up
+        // with five local names. They are tokens like any other.
+        public const string CardFill = "#12091C8C";          // 0.55, a group's ground
+        public const string HoverTint = "#C8AAE60F";         // 0.06, a row lighting under the pointer
         public const string BorderGold = "#E7B25CB3";        // 0.70
         public const string BorderPartyGold = "#E7B25C6B";   // 0.42
         public const string BorderEnemy = "#E0786E42";       // 0.26

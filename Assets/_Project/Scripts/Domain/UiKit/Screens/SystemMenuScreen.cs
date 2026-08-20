@@ -28,15 +28,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         private const string Scrim = "#0A0614ED";            // was D9; the thin one let the hub read through
         private const string PanelFill = "#1A1024F5";        // PanelViolet at 96%
-        private const string PanelRim = "#E7B25CB3";         // BorderGold
+        private const string PanelRim = FightHudPalette.BorderGold;         // BorderGold
         private const string BarPlate = "#12091C";           // opaque, the bar's own ground
-        private const string Hairline = "#C8AAE638";
-        private const string GoldLight = "#FFE0A8";
+        private const string Hairline = FightHudPalette.Hairline;
+        private const string GoldLight = FightHudPalette.GoldLight;
         private const string GoldRule = "#E7B25C8C";
-        private const string TextPrimary = "#F4EBFF";
-        private const string TextMuted = "#8A7AA0";
-        private const string QuietHotkey = "#6D5F85";
-        private const string TabHover = "#C8AAE60F";
+        private const string TextPrimary = FightHudPalette.TextPrimary;
+        private const string TextMuted = FightHudPalette.TextMuted;
+        private const string QuietHotkey = FightHudPalette.QuietHotkey;
+        private const string TabHover = FightHudPalette.HoverTint;
 
         public CharacterDossierScreen Dossier;
         public OptionsScreen Options;

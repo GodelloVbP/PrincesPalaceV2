@@ -176,5 +176,83 @@ namespace PrincesPalace.Domain.Tests
             Assert.Greater(anyClass.Count, MinimumFilesExpected,
                 "The scanner found production files but almost no code in them - the rules above would be vacuous.");
         }
+        // ---- one token, one home ------------------------------------------------
+        //
+        // FightHudPalette is where a colour lives. A screen that restates one of
+        // its values as its own literal is a second copy that nothing keeps in
+        // step -- and this is not hypothetical: the system menu's four panes had
+        // 22 of them between them, with #C8AAE638 appearing under FIVE different
+        // local names. The design pass had already fixed exactly this once
+        // ("the two hardcoded values are replaced"), and it grew straight back
+        // the moment four screens were written in a row.
+        //
+        // A local NAME is fine and often better at the call site -- CardRim says
+        // what it is for where Hairline says what it looks like. What is refused
+        // is a local VALUE:
+        //
+        //     private const string CardRim = "#C8AAE638";        // no
+        //     private const string CardRim = FightHudPalette.Hairline;   // yes
+        [Test]
+        public void NoScreenRestatesAColourThePaletteAlreadyOwns()
+        {
+            var palette = new Dictionary<string, string>();
+            string paletteSource = File.ReadAllText(Path.Combine(ScriptsRoot(),
+                "Domain", "UiKit", "FightHudPalette.cs"));
+
+            foreach (Match m in Regex.Matches(paletteSource,
+                         @"public const string (\w+)\s*=\s*""(#[0-9A-Fa-f]+)"""))
+            {
+                palette[m.Groups[2].Value.ToUpperInvariant()] = m.Groups[1].Value;
+            }
+
+            // A lint that scans nothing passes everything.
+            Assert.Greater(palette.Count, 30,
+                $"only {palette.Count} palette entries were parsed, so this rule is vacuous");
+
+            var offenders = new List<string>();
+
+            // SCOPED TO Domain/UiKit, where FightHudPalette is unambiguously
+            // the authority and where a colour is a UiNode's colour.
+            //
+            // Narrowed after this rule found ItemStatLines.HeadingHex, which
+            // holds the same hex as BackRowText and is NOT the same token: it
+            // tints "VS. EQUIPPED" in an item tooltip, where BackRowText names
+            // a combatant standing at the rear. Aliasing it would have made the
+            // code say something untrue to satisfy a lint. That file owns a
+            // coherent trio of its own -- gain, loss, heading -- as rich-text
+            // tags inside a string rather than as node colours, which is a
+            // different medium with a different palette.
+            //
+            // Said plainly because narrowing a rule to make it pass is exactly
+            // how a rule stops meaning anything: the judgement here is that the
+            // match was a coincidence of VALUE, not of ROLE.
+            var screens = ProductionFiles()
+                .Where(f => f.Replace(Path.DirectorySeparatorChar, '/')
+                             .Contains("/Domain/UiKit/"))
+                .ToList();
+
+            Assert.Greater(screens.Count, 20,
+                $"only {screens.Count} UiKit files were scanned, so this rule is vacuous");
+
+            foreach (string file in screens)
+            {
+                if (Path.GetFileName(file) == "FightHudPalette.cs") continue;
+
+                foreach (Match m in Regex.Matches(File.ReadAllText(file),
+                             @"const string (\w+)\s*=\s*""(#[0-9A-Fa-f]+)"""))
+                {
+                    string hex = m.Groups[2].Value.ToUpperInvariant();
+                    if (!palette.TryGetValue(hex, out string owner)) continue;
+
+                    offenders.Add(
+                        $"{Path.GetFileName(file)}: {m.Groups[1].Value} = \"{m.Groups[2].Value}\" " +
+                        $"is FightHudPalette.{owner} - write `= FightHudPalette.{owner};` instead");
+                }
+            }
+
+            CollectionAssert.IsEmpty(offenders,
+                "these restate a colour the palette already owns -- " + string.Join("; ", offenders));
+        }
+
     }
 }

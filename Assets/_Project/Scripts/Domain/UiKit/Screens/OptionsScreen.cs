@@ -14,14 +14,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // OptionRows for the list and REMAINING.md for what each would need.
     public sealed class OptionsScreen
     {
-        private const string CardFill = "#12091C8C";
-        private const string CardRim = "#C8AAE638";
-        private const string Heading = "#FFD9A2";
-        private const string Body = "#8A7AA0";
-        private const string Value = "#F4EBFF";
+        private const string CardFill = FightHudPalette.CardFill;
+        private const string CardRim = FightHudPalette.Hairline;
+        private const string Heading = FightHudPalette.GoldText;
+        private const string Body = FightHudPalette.TextMuted;
+        private const string Value = FightHudPalette.TextPrimary;
         private const string RowHover = "#C8AAE60D";
-        private const string Track = "#0E070CD9";
-        private const string TrackFill = "#FFE0A8";
+        private const string Track = FightHudPalette.Track;
+        private const string TrackFill = FightHudPalette.GoldLight;
 
         public UiNode Root;
 

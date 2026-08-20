@@ -17,11 +17,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // above this pane already prints floor and room. See RunStatRows.
     public sealed class RunStatsScreen
     {
-        private const string CardFill = "#12091C8C";
-        private const string CardRim = "#C8AAE638";
-        private const string Heading = "#FFD9A2";
-        private const string Name = "#8A7AA0";
-        private const string Value = "#F4EBFF";
+        private const string CardFill = FightHudPalette.CardFill;
+        private const string CardRim = FightHudPalette.Hairline;
+        private const string Heading = FightHudPalette.GoldText;
+        private const string Name = FightHudPalette.TextMuted;
+        private const string Value = FightHudPalette.TextPrimary;
         private const string RowRule = "#C8AAE61F";
 
         public UiNode Root;

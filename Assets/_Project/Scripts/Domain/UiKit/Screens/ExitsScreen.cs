@@ -21,21 +21,21 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // one distorted sprite.
     public sealed class ExitsScreen
     {
-        private const string Plate = "#12091C8C";
-        private const string PlateRim = "#C8AAE638";
-        private const string Hover = "#C8AAE60F";
-        private const string Hairline = "#C8AAE638";
-        private const string TextMuted = "#8A7AA0";
+        private const string Plate = FightHudPalette.CardFill;
+        private const string PlateRim = FightHudPalette.Hairline;
+        private const string Hover = FightHudPalette.HoverTint;
+        private const string Hairline = FightHudPalette.Hairline;
+        private const string TextMuted = FightHudPalette.TextMuted;
 
         // The destructive framing, straight out of the design's token table.
-        private const string RedFill = "#1F0F14DE";
+        private const string RedFill = FightHudPalette.PanelRed;
         private const string RedRim = "#E0786E73";
-        private const string RedText = "#E0A89C";
+        private const string RedText = FightHudPalette.EnemyHpText;
 
         // The track the hold runs across, and the wash that crosses it. The
         // wash is deliberately not the rim's colour: it passes under the label
         // for 1.2 seconds and the label has to stay readable the whole way.
-        private const string HoldTrack = "#0E070CD9";
+        private const string HoldTrack = FightHudPalette.Track;
         private const string HoldFill = "#E0786E4D";
 
         public UiNode Root;
