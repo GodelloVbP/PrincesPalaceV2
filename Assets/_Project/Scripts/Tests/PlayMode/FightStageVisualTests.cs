@@ -330,5 +330,85 @@ namespace PrincesPalace.PlayModeTests
             };
             return new StanceManifest(raw);
         }
+        // ---- a repaint must not eat the swing -----------------------------------
+        //
+        // THE BUG THIS EXISTS FOR, and it is the one the fix above introduced.
+        //
+        // AnchorStageSlots re-homes the animator so a lunge returns to the mark
+        // its slot actually stands on. But RefreshStage is not an occasional
+        // event -- it runs from the HUD refresh AND from SetActorFrame, once per
+        // FRAME of an attack animation. Re-homing unconditionally therefore
+        // cancelled the lunge it was supposed to be supporting, on every
+        // combatant with more than one frame of art. Single-frame poses never
+        // call SetActorFrame, so those still moved, which is what made it look
+        // like attacks failed to animate at random rather than always.
+        [UnityTest]
+        public IEnumerator ARepaintDoesNotCancelALungeInFlight()
+        {
+            yield return LoadFightWithTwoEnemies();
+
+            var slot = (RectTransform)Named("Enemy1Slot").transform;
+            var animator = slot.GetComponent<StageActorAnimator>();
+            Assert.IsNotNull(animator, "the second enemy slot has no animator");
+
+            var mark = animator.Home;
+
+            // A long hold, so the figure is unambiguously parked AWAY from its
+            // mark when the repaint lands rather than racing the return leg.
+            animator.Play(new Vector2(140f, 40f), holdSeconds: 5f);
+
+            // Out to the target. The lunge is 0.055s and a batch-mode frame is
+            // well under a millisecond, so this waits on the POSITION rather
+            // than on a frame count.
+            for (int i = 0; i < 600 && (slot.anchoredPosition - mark).sqrMagnitude < 1f; i++)
+            {
+                yield return null;
+            }
+
+            Assert.Greater((slot.anchoredPosition - mark).sqrMagnitude, 1f,
+                "the figure never left its mark, so this test cannot show anything");
+
+            var mid = slot.anchoredPosition;
+
+            // The repaint that used to kill it.
+            _fight.RefreshUi();
+            yield return null;
+
+            Assert.Greater((slot.anchoredPosition - mark).sqrMagnitude, 1f,
+                "a repaint mid-lunge snapped the figure back onto its mark - the swing is being " +
+                "cancelled by the very frame advance that is supposed to be drawing it");
+
+            Assert.AreEqual(mark.x, animator.Home.x, 0.5f, "the repaint moved the mark itself");
+            Assert.AreEqual(mark.y, animator.Home.y, 0.5f, "the repaint moved the mark itself");
+        }
+
+        // The other half, so the guard above cannot be satisfied by simply
+        // never re-homing again: a slot that GENUINELY moves must still be
+        // re-homed, which is the whole point of the previous fix.
+        [UnityTest]
+        public IEnumerator ASlotThatReallyMovesIsStillRehomed()
+        {
+            yield return LoadFightWithTwoEnemies();
+
+            var slot = (RectTransform)Named("Enemy1Slot").transform;
+            var animator = slot.GetComponent<StageActorAnimator>();
+
+            Assert.AreEqual(slot.anchoredPosition.x, animator.Home.x, 0.5f,
+                "the mark and the slot disagree before anything has even moved");
+
+            // Shove the slot somewhere its anchor says it does not belong, then
+            // repaint. AnchorStageSlots must notice and put it back.
+            slot.anchoredPosition = new Vector2(-999f, -999f);
+            animator.Rehome();
+
+            _fight.RefreshUi();
+            yield return null;
+
+            Assert.AreEqual(slot.anchoredPosition.x, animator.Home.x, 0.5f,
+                "the slot moved and the animator was not told");
+            Assert.AreNotEqual(-999f, slot.anchoredPosition.x,
+                "the repaint left the slot where it had been shoved instead of re-anchoring it");
+        }
+
     }
 }

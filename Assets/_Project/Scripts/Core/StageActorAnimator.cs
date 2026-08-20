@@ -57,6 +57,12 @@ namespace PrincesPalace
 
         public Vector2 Home => _home;
 
+        // The depth scale the slot carries, which the stretch multiplies onto.
+        // Exposed for the same reason Home is: AnchorStageSlots has to be able
+        // to ask whether the mark it is about to assign is the one already
+        // held, and the live localScale is mid-stretch during a swing.
+        public Vector3 BaseScale => _baseScale;
+
         private void Awake()
         {
             _rect = (RectTransform)transform;
@@ -96,6 +102,11 @@ namespace PrincesPalace
         // this reads the new values rather than imposing the old ones.
         public void Rehome()
         {
+            // Resolved here as well as in Awake, because a caller can reach
+            // this before Unity has run Awake on a freshly activated slot --
+            // and a Rehome that silently did nothing would leave the mark at
+            // whatever the scene authored.
+            if (_rect == null) _rect = transform as RectTransform;
             if (_rect == null) return;
 
             // Anything in flight belongs to the old mark. Stopped rather than

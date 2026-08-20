@@ -111,10 +111,44 @@ namespace PrincesPalace
                 if (slots[i] == null) continue;
 
                 var offset = FightStageAnchors.SlotOffset(i, shown, mirrored);
-                slots[i].anchoredPosition = new Vector2(offset.X, offset.Y);
+                var mark = new Vector2(offset.X, offset.Y);
 
                 float scale = FightStageAnchors.SlotScale(i, shown);
-                slots[i].localScale = new Vector3(scale, scale, 1f);
+                var baseScale = new Vector3(scale, scale, 1f);
+
+                var animator = slots[i].GetComponent<StageActorAnimator>();
+
+                // ONLY WHEN IT ACTUALLY MOVED, and that guard is the whole of
+                // this function's correctness.
+                //
+                // RefreshStage is not an occasional event. It runs from the HUD
+                // refresh and from SetActorFrame -- once per FRAME of every
+                // attack animation. Writing the mark unconditionally therefore
+                // fought the lunge tween for the rect all the way through the
+                // swing, and telling the animator unconditionally CANCELLED
+                // that tween outright, since Rehome stops whatever is in
+                // flight. The result was an attack where nobody moved, on
+                // every combatant with more than one frame of art -- and the
+                // single-frame poses still moved, which is what made it look
+                // like it happened at random.
+                //
+                // Compared against the ANIMATOR'S mark, never the live rect:
+                // mid-lunge the rect is somewhere between here and the target
+                // by design, so reading it back would see a difference every
+                // frame and re-home forever. The animator's home is the only
+                // thing that still knows where the figure belongs. Without an
+                // animator there is nothing to move it, so the rect IS the mark.
+                var currentMark = animator != null ? animator.Home : slots[i].anchoredPosition;
+                var currentScale = animator != null ? animator.BaseScale : slots[i].localScale;
+
+                if ((currentMark - mark).sqrMagnitude < 0.0001f &&
+                    (currentScale - baseScale).sqrMagnitude < 0.0001f)
+                {
+                    continue;
+                }
+
+                slots[i].anchoredPosition = mark;
+                slots[i].localScale = baseScale;
 
                 // AND THE ANIMATOR HAS TO BE TOLD. It holds the mark a figure
                 // returns to after a lunge and the scale its stretch multiplies
@@ -126,7 +160,6 @@ namespace PrincesPalace
                 // Told rather than polled: this function is the authority on
                 // where a slot lives, so it is the one thing that always knows
                 // the answer has changed.
-                var animator = slots[i].GetComponent<StageActorAnimator>();
                 if (animator != null) animator.Rehome();
             }
         }
