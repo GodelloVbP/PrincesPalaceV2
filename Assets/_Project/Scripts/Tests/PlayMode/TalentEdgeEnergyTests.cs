@@ -141,6 +141,10 @@ namespace PrincesPalace.PlayModeTests
         // PlayMode tests have no access to Core's internals by design, and the
         // emitted node name is already a stable contract because UiAudit fails
         // the build on a duplicate one.
+        private static TalentNodeInvestReveal ActiveReveal() =>
+            Object.FindObjectsByType<TalentNodeInvestReveal>(FindObjectsInactive.Include)
+                .FirstOrDefault(r => r.isActiveAndEnabled);
+
         private static RectTransform MaskOf(TalentNodeInvestReveal reveal)
         {
             var mask = reveal.GetComponentsInChildren<Transform>(includeInactive: true)
@@ -157,9 +161,12 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             yield return null;
 
-            var reveal = Object.FindObjectsByType<TalentNodeInvestReveal>(FindObjectsInactive.Include)
-                .FirstOrDefault();
-            Assert.IsNotNull(reveal, "no reveal was attached to any orb");
+            // AN ORB THAT IS ACTUALLY ON SCREEN. Unauthored slots are switched
+            // off -- the sheep's third path is 21 of them -- and a component on
+            // a disabled object never gets an Update, so a reveal picked from
+            // one would sit at zero forever and read as "the mask never grew".
+            var reveal = ActiveReveal();
+            Assert.IsNotNull(reveal, "no reveal was attached to any orb on screen");
 
             var mask = MaskOf(reveal);
             var lit = mask.GetComponentInChildren<Image>(includeInactive: true);
@@ -204,8 +211,8 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             yield return null;
 
-            var reveal = Object.FindObjectsByType<TalentNodeInvestReveal>(FindObjectsInactive.Include)
-                .FirstOrDefault();
+            var reveal = ActiveReveal();
+            Assert.IsNotNull(reveal, "no reveal was attached to any orb on screen");
             var mask = MaskOf(reveal);
 
             reveal.Play();

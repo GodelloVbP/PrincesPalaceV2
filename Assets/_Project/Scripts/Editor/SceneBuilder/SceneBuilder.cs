@@ -9,6 +9,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
+using PrincesPalace.Domain.UiKit;
 
 // Scene generation, v2.
 //
@@ -24,7 +25,12 @@ public static class SceneBuilder
 {
     public const string ScenesDir = "Assets/_Project/Scenes";
 
-    private static readonly Vector2 ReferenceResolution = new Vector2(1920f, 1080f);
+    // READ FROM UiFrames, not restated. UiAudit re-solves every screen at
+    // UiFrames.Reference; this is what the canvas actually scales to. Two
+    // literals meaning "the frame everything is authored against" is two
+    // chances to be audited at a size the game does not render at.
+    private static readonly Vector2 ReferenceResolution =
+        new Vector2(UiFrames.Reference.X, UiFrames.Reference.Y);
     private const string ArtRoot = "Assets/_Project/Art";
 
     private static TMP_FontAsset _uiFont;

@@ -209,7 +209,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // to cover the forest it is fading out.
             var content = Ui.Panel("MapContent",
                     Place.Pin(ContentEdge, ContentEdge, UiVec.Zero),
-                    UiSize.Fixed(MapLayout.ContentWidth(MapLayout.Columns, 1920f), 1080f),
+                    UiSize.Fixed(
+                        MapLayout.ContentWidth(MapLayout.Columns, UiFrames.Reference.X),
+                        UiFrames.Reference.Y),
                     backdrops, trails, nodes, walker, fog)
                 .AllowOverflow("the content rect is deliberately wider than the window it sits in - that overflow IS the scroll, and MapViewport clips it");
 

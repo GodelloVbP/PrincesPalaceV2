@@ -23,8 +23,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float ArtHeight = 1024f;
 
         public static UiVec FromArtPixel(float x, float y) => new UiVec(
-            (x / ArtWidth - 0.5f) * 1920f,
-            (0.5f - y / ArtHeight) * 1080f);
+            (x / ArtWidth - 0.5f) * UiFrames.Reference.X,
+            (0.5f - y / ArtHeight) * UiFrames.Reference.Y);
 
         public readonly struct Light
         {

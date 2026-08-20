@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
 {
@@ -23,8 +24,10 @@ namespace PrincesPalace
         // This project's CanvasScaler.referenceResolution (see
         // SceneBuilder.CreateCanvas), so a capture matches what every
         // coordinate in SceneBuilder was authored against.
-        public const int DefaultWidth = 1920;
-        public const int DefaultHeight = 1080;
+        // The reference stage, so a capture is what the layout was authored
+        // and audited at rather than a second opinion about the size.
+        public static readonly int DefaultWidth = (int)UiFrames.Reference.X;
+        public static readonly int DefaultHeight = (int)UiFrames.Reference.Y;
 
         // A headless runner launched with -nographics has no graphics device
         // and cannot render anything — camera.Render() is a silent no-op and
@@ -47,8 +50,15 @@ namespace PrincesPalace
         // camera the canvas already uses at a texture we can read. Doing it
         // unconditionally is deliberate: it costs nothing on a camera canvas and
         // still works if one is ever switched back.
-        public static void RenderToFile(Canvas canvas, string outputPath, int width = DefaultWidth, int height = DefaultHeight)
+        // ZERO MEANS "THE REFERENCE STAGE", because a default parameter has to
+        // be a compile-time constant and the stage is now read from UiFrames --
+        // which is the right trade: one statement of the frame, resolved here,
+        // rather than a second literal kept in step by hand.
+        public static void RenderToFile(Canvas canvas, string outputPath, int width = 0, int height = 0)
         {
+            if (width <= 0) width = DefaultWidth;
+            if (height <= 0) height = DefaultHeight;
+
             var previousRenderMode = canvas.renderMode;
             var previousCamera = canvas.worldCamera;
             var previousPlaneDistance = canvas.planeDistance;

@@ -127,7 +127,11 @@ namespace PrincesPalace.Domain.UiKit
         // A full screen width apart, so exactly one is ever centred and the
         // neighbours are genuinely off-stage rather than peeking. The slide is
         // what makes three trees read as three PLACES rather than three tabs.
-        public const float PageStride = 1920f;
+        // ONE SCREEN WIDE, which is what makes a page change read as the sky
+        // sliding rather than as the tree jumping. Read from UiFrames: a stride
+        // that stopped matching the stage would leave part of the next path
+        // visible beside the current one.
+        public static float PageStride => UiFrames.Reference.X;
 
         public static float PageX(int index, int current) => (index - current) * PageStride;
 

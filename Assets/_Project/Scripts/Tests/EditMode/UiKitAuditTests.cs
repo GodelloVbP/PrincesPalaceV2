@@ -229,5 +229,46 @@ namespace PrincesPalace.Domain.Tests
                 "and it should NOT be reported at 16:9, where they genuinely clear each other");
             Assert.IsTrue(overlaps.Any(e => e.Frame.Equals(UiFrames.UltraWide)));
         }
+        // ---- one reference stage ------------------------------------------------
+        //
+        // UiAudit re-solves every screen at UiFrames.Reference; SceneBuilder
+        // sets the canvas scaler's own reference resolution. Those were two
+        // separate literals meaning "the frame everything is authored against",
+        // and if they ever disagreed the whole suite would audit every screen at
+        // a size the game does not render at -- passing cleanly, about the
+        // wrong layout.
+        //
+        // The scaler is Editor-side and this is a Domain test, so what is
+        // asserted here is the value it now reads. The pairing is the point:
+        // there is one number, and this says which.
+        [Test]
+        public void TheFrameEverythingIsAuthoredAgainstIsSixteenByNine()
+        {
+            Assert.AreEqual(1920f, UiFrames.Reference.X, 0.001f);
+            Assert.AreEqual(1080f, UiFrames.Reference.Y, 0.001f);
+
+            // And it is genuinely the FIRST frame audited, so "authored ==
+            // rendered" is checked before any stretched aspect is.
+            Assert.AreEqual(UiFrames.Reference.X, UiFrames.All[0].X, 0.001f);
+            Assert.AreEqual(UiFrames.Reference.Y, UiFrames.All[0].Y, 0.001f);
+        }
+
+        // Everything that means "the stage" derives from it rather than
+        // restating it. Spot-checked on the three layouts that had their own
+        // copy -- the system menu's, the talent page's slide, and the map's
+        // viewport height.
+        [Test]
+        public void TheLayoutsReadTheStageRatherThanRestatingIt()
+        {
+            Assert.AreEqual(UiFrames.Reference.X, SystemMenuLayout.StageWidth, 0.001f,
+                "the system menu has its own idea of how wide the stage is");
+            Assert.AreEqual(UiFrames.Reference.Y, SystemMenuLayout.StageHeight, 0.001f,
+                "the system menu has its own idea of how tall the stage is");
+
+            Assert.AreEqual(UiFrames.Reference.X, ConstellationLayout.PageStride, 0.001f,
+                "a talent page slides by something other than one screen width, so part of the " +
+                "next path would sit beside the current one");
+        }
+
     }
 }
