@@ -1,183 +1,237 @@
-# Handoff: System Menu -- the overarching menu
+# Handoff: System Menu — design pass back to engineering
 
-> **This handoff runs BACKWARDS.** Every other folder in `docs/handoffs/` is a
-> designer handing a finished prototype to engineering. This one is engineering
-> handing a working, tested, empty **frame** to design. What comes back should
-> be the normal shape -- `System Menu.dc.html` + `support.js` in this folder --
-> and it will be built into the frame described below.
+This is design's reply to the outbound brief engineering sent. That brief — the
+empty frame, the 210px tab pitch, the four-tab bar — is superseded by everything
+below; it is still readable at commit `0946625` if the history is wanted.
 
-## Overview
+> **The two prototype files this document names — `System Menu.dc.html` and
+> `support.js` — were never dropped into this folder.** Every other handoff here
+> carries them; this one does not, so this README is the whole of the design
+> pass on disk. Where it says the cards are authoritative for positions and
+> colours, treat these words as the authority instead, and the numbers below as
+> the ones that were built.
 
-A single menu reachable from anywhere in the game: a horizontal tab bar across
-the top and one large content pane beneath it. Built from a sketch (top bar
-`Character | Inventory | Options | Main menu`, dividers between, big content
-area under).
+Sections mirror the reply's original order so a GAP_AUDIT can go one row per
+section. What is built against it, and what is not, is in `REMAINING.md`.
 
-It **replaces nothing yet**. See *Out of scope* -- the Character and Inventory
-tabs overlap an existing screen that is still live, and resolving that is part
-of what this design pass decides.
+> **Everything except the geometry, the tokens and the stated rules is placeholder.**
+> Every `ART` box, node stand-in and figure ("128 gold", "8,420 damage dealt",
+> "2h 14m") is dummy data invented to lay out the screen. Numbers, labels and
+> copy are not authority; **positions, sizes, colours, states and rules are.**
 
-The skeleton is built, wired into three scenes, and covered by 16 tests. Every
-content pane is **deliberately empty**.
+## What the cards are
 
-## Files
-
-| File | Status |
-|---|---|
-| `skeleton_screenshot.png` | What exists today, captured from the running game. A starting point, **not** a target. |
-| `System Menu.dc.html` + `support.js` | **Yours to add.** Authoritative for layout and behaviour once it lands. |
-
-Code, for reference -- you do not need to read it, but it is where the numbers
-below are enforced:
-
-- `Domain/UiKit/SystemMenuLayout.cs` -- all the arithmetic
-- `Domain/UiKit/SystemMenuTabs.cs` -- the tab list
-- `Domain/UiKit/Screens/SystemMenuScreen.cs` -- the tree
-- `Core/SystemMenuController.cs` -- open/close/select
-
-## Layout (1920x1080 reference)
-
-The panel is **1600x900, centred** -- it occupies x 160-1760, y 90-990 in screen
-coordinates. Everything below is in canvas coordinates measured from the
-**panel's own centre**, which is how the codebase states positions.
-
-| Element | Position | Size |
+| Card | Pane | What it decides |
 |---|---|---|
-| Panel | centre 0, 0 | 1600 x 900 |
-| Tab bar | centre y **+402** | 1600 x 96 |
-| Content pane | centre y **-48** | 1600 x 804 |
+| `1a` | Character & Inventory | The shell: title lintel, scrim, panel frame, bar treatment, and the hosted dossier region |
+| `2a` | Options | Grouped cards, two columns, everything visible without scrolling |
+| `2b` | Options | Category rail alternative — also carries the gamepad focus-ring treatment |
+| `3a` | Main menu | Three exits, abandon set apart behind a hold |
+| `4a` | Floor map | In-run five-tab bar, and the hosted Run Map region |
+| `4b` | Run statistics | The one genuinely new content pane |
 
-Tabs run left-to-right from a 40px left inset, pitch **236** (210 wide + 26 gap):
+`2a` and `2b` are alternatives — **pick one before building**; the recommendation
+is `2a` (six groups fit at once; the rail earns its keep only past ~8 groups).
 
-| Tab | Centre x | Box | Divider after it |
+## Overview — the decisions asked for
+
+| Question | Answer |
+|---|---|
+| Character/Inventory vs. the existing screen | **One tab, not two.** `CHARACTER & INVENTORY` hosts the existing combined screen. `C` and `I` keep working — the menu is another door, not a replacement. |
+| Does opening pause the fight? | **Yes.** It pauses. |
+| Can a tab be disabled? | **No disabled tabs.** The set is context-driven instead: out of a run, three tabs; in a run, five (Floor map and Run statistics appear). A tab that cannot be used is absent, never greyed. |
+| Does it remember its tab? | **Context-appropriate.** Opened from a fight or the map: Floor map. Opened in the hub: Character & Inventory. An explicit tab passed by the caller still wins. |
+| Keyboard/gamepad? | **Full.** See *States* and *Interaction logic*. |
+| Close button? | **Yes** — an X at the right end of the title lintel, with the `ESC` hint beside it. Escape still works and still yields as it does today. |
+
+## Layout (1920 × 1080 reference)
+
+**Unchanged from `SystemMenuLayout.cs`:** panel 1600 × 900 centred (screen x 160–1760,
+y 90–990); tab bar 1600 × 96 at the panel's top (panel y 0–96); content pane 1600 × 804
+at panel y 96–900; tab boxes 56 tall at panel y 20; dividers 2 × 40 at panel y 28;
+selected underline 3 tall at panel y 81; 40px left inset.
+
+### The tab bar rule changes — two modes, one component
+
+Merging Character and Inventory produces a label no 210px box can hold, and the in-run
+set is five tabs, which no uniform width fits (5 × 420 = 2100 in a 1520 row). So:
+
+**Mode A — three tabs or fewer** (out of a run). Uniform width filling the row with
+130px gaps inside the 40px insets.
+
+| Tab | Left | Width |
+|---|---|---|
+| CHARACTER & INVENTORY | 40 | 420 |
+| OPTIONS | 590 | 420 |
+| MAIN MENU | 1140 | 420 |
+
+Dividers (2px) at **524** and **1074** — gap centres 525 / 1075. Row ends flush at 1560.
+
+**Mode B — four tabs or more** (in a run). Width = **label width + 24px padding each
+side, rounded to the nearest 4px**; the remainder inside the insets splits into equal
+gaps.
+
+| Tab | Label width | Left | Width |
 |---|---|---|---|
-| CHARACTER | -655 | 210 x 56 | x -537 |
-| INVENTORY | -419 | 210 x 56 | x -301 |
-| OPTIONS | -183 | 210 x 56 | x -65 |
-| MAIN MENU | +53 | 210 x 56 | none (no trailing divider) |
+| CHARACTER & INVENTORY | 272 | 40 | 320 |
+| FLOOR MAP | 120 | 487 | 168 |
+| RUN STATISTICS | 168 | 782 | 216 |
+| OPTIONS | 92 | 1125 | 140 |
+| MAIN MENU | 119 | 1392 | 168 |
 
-- Dividers: 2 x 40, centred in the gap.
-- Selected underline: 147 x 3, y -34 relative to the bar centre.
-- **Capacity: 6 tabs.** 4 are used. A 7th fails the build (see *For the engine*).
+Widths sum 1012, gaps **127**, row ends flush at 1560. Dividers (2px) at **422 / 717 /
+1060 / 1327**.
+
+**Both modes:** 40px insets each end, labels centred in their box, dividers centred in
+the gaps, and one underline rule — **width = label width + 24, centred under its tab**
+(296 / 116 / 143 in mode A; 296 / 144 / 192 / 116 / 143 in mode B).
+
+Label widths are measured at 18px Chakra Petch 500, letter-spacing `.14em`.
+
+**Overflow fallback, instead of a build failure:** if a localised label set cannot fit
+1520 at minimum padding, shorten the first tab's label to `CHARACTER`. Only if that
+still overflows should the bar wrap or scroll.
+
+### New geometry (deltas — not in the original frame)
+
+1. **Title lintel.** 1600 × 52 at screen **x 160, y 34** — above the panel, in the 90px
+   of screen above it. Carries, left to right: the run title (19px, `.22em`,
+   `GoldLight`), a 1px hairline, a context line (floor / room, or "Between descents"),
+   then right-aligned `GOLD` and `EMBERS`, a hairline, the `ESC` hint, and the 34 × 34
+   close X (1px `BorderGold` rim, hover tint `#E7B25C24`).
+2. **Gold rule under the lintel.** 1600 × 1 at screen y **86**, a horizontal gradient
+   fading to nothing at both ends (opaque `#E7B25C8C` between 12% and 88%).
+3. **Gamepad prompt strip.** Inside each pane's own bottom padding, right-aligned — not
+   panel chrome. Absent from `1a`, where the hosted dossier fills the pane and owns its
+   own prompts.
 
 ## States
 
-Only two interactive states exist today. **Naming the rest is your job** -- the
-skeleton has no hover, pressed, disabled or focus treatment beyond a 1.03 hover
-scale on the tab buttons.
-
-| Element | State | Reads as today |
+| Element | State | Treatment |
 |---|---|---|
-| Tab | selected | gold underline `#E8D7A0`, 147x3, beneath the tab |
-| Tab | unselected | no underline |
-| Tab | hover | 1.03 scale pop (shared button behaviour) |
-| Pane | selected | active |
-| Pane | unselected | switched off entirely |
-| Menu | closed | whole modal inactive |
-| Menu | open | modal scrim `#0A0614D9` over the screen behind |
+| Tab | selected | Label `TextPrimary`; underline `GoldLight`, 3px, at panel y 81 |
+| Tab | unselected | Label `TextMuted`, no underline |
+| Tab | hover | Background `#C8AAE60F` across the whole 56px box. **Drop the 1.03 scale** — it wobbles a bar whose positions are arithmetic |
+| Tab | pressed | Background `#C8AAE61F`, label `TextPrimary` |
+| Tab | disabled | Does not exist — see *Overview* |
+| Tab | focused (pad/keys) | 2px `#E7B25C8C` outline at 2px offset, plus the hover tint |
+| Row / control | hover | Row tint `#C8AAE60D` |
+| Row / control | focused | 2px gold outline at 2px offset + row tint (shown on `2b`'s Music row) |
+| Segmented option | on | Fill `#583216`@60%, 1px `BorderGold`, label `GoldLight` |
+| Segmented option | off | 1px `#B496D23D`, label `TextMuted` |
+| Menu | open | Scrim over the scene behind — **`#0A0614ED`**, see below |
 
-Please specify at minimum: tab hover, tab pressed, tab disabled (if a tab can
-ever be unavailable), and whether the scrim strength is right -- see *Known
-rough edges*.
+## Interaction logic
 
-## Interaction logic (as built)
+As built, plus:
 
-- **Escape opens the menu.** Escape closes it when open.
-- Escape **yields** to anything already using it: the character sheet in the
-  fight and the map, and the glossary and relic draft in the hub. Those are
-  declared per scene, not guessed by name.
-- Clicking a tab selects it. **Exactly one** pane and one underline are live at
-  a time; that is enforced by test, not by convention.
-- Default tab is index 0 (Character), and the default does **not** override a
-  tab chosen by whoever opened the menu.
-- There is **no close button** -- Escape only. Add one if the design wants it,
-  and say where.
-
-Undecided, and yours to answer:
-
-1. Does opening the menu **pause** the fight? It currently does not.
-2. Can a tab be **disabled** in some contexts (e.g. Character during a fight)?
-3. Should the menu **remember** its last tab between openings, or always open on
-   Character?
-4. Is there a **keyboard/gamepad** path through the tabs, or mouse only?
+- **Pause on open, resume on close.**
+- **LB / RB cycle tabs**; the A button activates, B closes. Prompts are printed in each
+  pane so the mapping is visible rather than learned.
+- **Focus is per pane**, and re-entering a pane restores its last focused row.
+- **Options apply immediately** — no confirm step, no apply button. `2b` states this on
+  the card.
+- **Nothing on Main menu fires on a single press.** The two exits confirm; abandon is a
+  **1.2s hold** with the fill drawn in the button.
 
 ## Design tokens
 
-Use the existing vocabulary -- `Domain/UiKit/FightHudPalette.cs` is the shared
-list, so a new screen reads as part of the same suite. What this menu already
-touches:
+All from `FightHudPalette.cs`. **The two hardcoded values are replaced, no new tokens
+needed:**
 
-| Token | Value | Used for |
-|---|---|---|
-| `TextPrimary` | `#F4EBFF` | tab labels |
-| `TextMuted` | `#8A7AA0` | the placeholder text |
-| `GoldLight` | `#FFE0A8` | the selected-tab family |
-| `PanelViolet` | `#1A1024E6` | panel fills elsewhere |
-| `BorderGold` | `#E7B25CB3` | gold rims elsewhere |
-| `Hairline` | `#C8AAE638` | dividers elsewhere |
+| Was | Use |
+|---|---|
+| `#E8D7A0` (underline) | **`GoldLight` `#FFE0A8`** |
+| `#6B5B8A` (divider) | **`Hairline` `#C8AAE638`** |
 
-The skeleton currently hardcodes `#E8D7A0` (underline) and `#6B5B8A` (divider)
-because no token matched. **Replace both with tokens**, or tell me which to add.
+| Where | Value |
+|---|---|
+| Scrim | **`#0A0614ED`** (was `#0A0614D9` — the thin one let "BETWEEN DESCENTS" read through the bar) |
+| Panel fill | `PanelViolet` at 96% — `#1A1024F5` |
+| Panel rim | `BorderGold` `#E7B25CB3`, 1px |
+| Tab bar plate | **`#12091C`** with a `Hairline` bottom border — the bar gets its own plate, opaque against the panel |
+| Group / card fill | `#12091C8C`, rim `#C8AAE638` |
+| Track (sliders) | `Track` `#0E070CD9`, fill `GoldLight` |
+| Body copy | `TextMuted` `#8A7AA0` (4.7:1 on the panel) |
+| Titles / values | `TextPrimary` `#F4EBFF`; group headings `GoldText` `#FFD9A2` |
+| `QuietHotkey` `#6D5F85` | **Only** the `ESC` glyph. It measures 3.17:1 — never body copy |
+| Better / worse figures | `IntentHeal` `#7FE0A0` / `HpBright` `#E07A62` |
+| Destructive framing | Fill `PanelRed` `#1F0F14DE`, rim `#E0786E73`, text `#E0A89C` |
+
+Type is Chakra Petch throughout, matching the other handoff prototypes. Nothing in the
+menu sets text below 12px; body copy is 14–19px.
 
 ## For the engine
 
-Things the frame does that a mockup should not fight:
+- **The bar is still generated, not drawn.** Mode A is index × pitch as before, only the
+  constants change. Mode B needs one measure pass over the labels — that is the
+  deliberate change, and it is what lets the tab set vary by context without a
+  hand-placed bar.
+- **Capacity.** Mode B's guard should be arithmetic, not a fixed count: refuse when
+  Σ(label + 48, rounded) + (n − 1) × minimum gap exceeds 1520, and say so in the same
+  voice the current message uses.
+- **Panes are still named containers**, one per tab. Two new ones: `SystemPaneFloorMap`
+  and `SystemPaneRunStats`, both run-only.
+- **Two panes host existing screens and must not be rebuilt:**
+  - `CHARACTER & INVENTORY` → **`CharacterDossierScreen`** at `DossierLayout`'s
+    1360 × 766, centred in the 1600 × 804 pane: 120px clear each side, **19px clear top
+    and bottom**, so it never scales. Both tabs are doors into this one screen.
+  - `FLOOR MAP` → the **Run Map** screen (its own handoff). Its scrolling canvas is
+    authored 1920 × 820 and auto-scrolls to hold the current node ~700px from the left
+    edge; hosted here the viewport narrows by 320 and clips 16px of height. Nothing
+    scales, and it keeps its own mossy ground rather than the menu's violet. **Its
+    pinned header and gold HUD drop** — the lintel already carries floor, room counter
+    and currency. Read-only in this pane: planning, not travelling.
+- **Options is one of two layouts — pick before building.** `2a` groups: Audio (3
+  sliders), Display (resolution stepper, fullscreen, v-sync), Readability (text size,
+  tooltip delay), Gameplay (battle speed, show tooltips), Keybinds (opens a rebind
+  screen, shows a conflict count), Language (stepper, applies immediately), plus
+  `RESTORE DEFAULTS`. **No autosave control** — autosave is the only save mode, so
+  there is nothing to choose.
+- **Main menu holds exactly three exits:** back to title (run stays as it is), quit to
+  desktop (saves first), and abandon the descent (ends the run; embers kept), the last
+  one framed in red and behind the hold.
+- **Run statistics is eighteen figures in three groups** — Battle, The Fold, Spoils —
+  under a header of floor/room, elapsed, days, turns. No charts: a run this short has
+  nothing to trend. **Every row binds to a tracked field or gets cut.** Do here what
+  was done to the dossier's Dodge/Carried/Shop-prices/Morale rows: if the run does not
+  record it, delete the row rather than print a plausible number.
 
-- **The tab bar is generated, not drawn.** Positions come from index x pitch. A
-  mock that hand-places four tabs is fine as a picture, but say explicitly if
-  you want a different *rule* -- centred rather than left-aligned, or tabs sized
-  to their text -- because that changes the arithmetic and I need it stated
-  rather than measured off a PNG.
-- **Adding a tab must stay one line.** If the design needs 7 or more, the bar
-  has to wrap, scroll or narrow; it cannot simply be given another entry. The
-  build refuses with: *"The system menu has 8 tabs but the bar holds 6 at 210px
-  wide. Either widen the panel, narrow the tabs, or the bar needs to wrap or
-  scroll."*
-- **Panes are named containers**, one per tab: `SystemPaneCharacter`,
-  `SystemPaneInventory`, `SystemPaneOptions`, `SystemPaneMainMenu`. Design each
-  independently; nothing about one affects another.
-- **Layout is checked at build time** at four canvas aspects -- overlaps,
-  overflow, duplicate names and zero-sized graphics fail the build. Overlapping
-  deliberately is fine, it just has to be *stated* so the exemption carries a
-  reason.
-- **Nothing is hooked up.** Options does not read `GameSettings`, Main menu does
-  not navigate, Character and Inventory show nothing. Behaviour comes after
-  layout.
+## Known rough edges — resolved
 
-## Known rough edges in the screenshot
+1. **Scrim too thin** → `#0A0614ED`, and the bar no longer relies on it.
+2. **Bar has no plate** → it has one: `#12091C`, opaque, with a `Hairline` bottom edge.
+3. **No title** → the lintel, above the panel, outside the 900.
+4. **Pane has no bounds** → the panel's gold rim plus the bar's bottom hairline bound
+   it; panes divide internally with `Hairline` rules, not more rims.
 
-Worth knowing so they are not mistaken for intent:
+## Still open
 
-1. The scrim (`#0A0614D9`) is **thin** -- hub text reads through behind the tab
-   bar, and "BETWEEN DESCENTS" collides visually with "MAIN MENU". Either the
-   scrim goes darker or the bar gets its own opaque plate.
-2. The bar has **no plate of its own** -- it is transparent over whatever is
-   behind it. Almost certainly wrong, and the single biggest thing the design
-   needs to answer.
-3. There is **no title** on the menu, and no visible frame around the panel.
-4. The content pane has no visible bounds at all; only the placeholder text
-   marks where it is.
+- **Open/close animation.** None designed. `ReckoningController.PlayIn` is the
+  reference; the only ask is that the lintel and panel arrive together, and that the
+  pause takes effect on the first frame of the animation rather than at its end.
+- **Sound.** Not designed — open, close, tab change, slider tick.
+- **Rebind screen.** `2a` shows the door, not the room.
+- **Talents / MainMenu scenes.** Still out of scope, unchanged.
 
-## Out of scope
+---
 
-Deliberately not covered, so a gap is not read as an oversight:
+## Where engineering departed from this
 
-- **The Character/Inventory overlap.** Those two tabs duplicate the existing
-  `CharacterOverlayScreen` (paperdoll + bag), reachable today on **C** and **I**
-  and fully built. It was *not* removed -- deleting a working screen is a
-  migration, not a skeleton. Whether these panes host that screen, replace it,
-  or link to it is a design decision, and the most consequential one here.
-- **Talents and MainMenu scenes.** The menu is embedded in Hub, Map and Fight
-  only. Talents has no overlay precedent; MainMenu already has its own Options
-  panel, and two Options screens would be worse than none.
-- **Content for any pane.** All four are empty.
-- **Open/close animation.** None. Every other modal in the game has one --
-  `ReckoningController.PlayIn` is the reference.
-- **Sound.** No open, close or tab-change sound is wired.
-- **Gamepad/keyboard navigation.**
+Two places, both recorded here so the deviation is visible from the design side rather
+than only in a commit message. Everything else below the line in `REMAINING.md` is
+scope not yet reached rather than a disagreement.
 
-## When the design lands
+1. **"Back to title (run stays as it is)" is not built, and will not be.** `RunManager`
+   states the opposite as a rule with money attached: leaving a descent, or anything
+   that does not continue it, kills the run — and `EndRun` is what *pays out* the
+   embers its bosses earned. Both existing doors enforce it (the hub's title button,
+   the main menu's quit), and the first thing the game does at startup is settle any
+   run it finds. A third title door that parked a run would leave the player at the
+   title with a live descent in the save, which is exactly the state the hub's own
+   button refuses to create. All three exits end the descent; each says so in a line
+   under it.
 
-Drop `System Menu.dc.html` + `support.js` in this folder. I will build it
-against this frame and then write `GAP_AUDIT.md` here -- one row per section
-above, spec versus `file:line`, verdict -- per `docs/HANDOFF_TEMPLATE.md`.
+2. **Abandon is absent between descents**, rather than always present. That is this
+   document's own tab rule applied one level down — a control that cannot be used is
+   absent, never greyed — and between descents there is no descent to abandon.

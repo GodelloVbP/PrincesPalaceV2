@@ -91,11 +91,11 @@ namespace PrincesPalace.Domain.UiKit
             new SystemMenuTabDef(SystemMenuTab.FloorMap, "FloorMap",
                 UiStrings.SystemTabFloorMap, labelWidth: 120f, runOnly: true),
             new SystemMenuTabDef(SystemMenuTab.RunStats, "RunStats",
-                UiStrings.SystemTabRunStats, labelWidth: 168f, runOnly: true),
+                UiStrings.SystemTabRunStats, labelWidth: 168f, runOnly: true, built: true),
             new SystemMenuTabDef(SystemMenuTab.Options, "Options",
                 UiStrings.SystemTabOptions, labelWidth: 92f, built: true),
             new SystemMenuTabDef(SystemMenuTab.MainMenu, "MainMenu",
-                UiStrings.SystemTabMainMenu, labelWidth: 119f),
+                UiStrings.SystemTabMainMenu, labelWidth: 119f, built: true),
         };
 
         public static int Count => All.Count;

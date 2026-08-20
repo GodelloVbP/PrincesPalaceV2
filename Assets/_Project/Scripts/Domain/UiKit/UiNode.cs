@@ -49,6 +49,21 @@ namespace PrincesPalace.Domain.UiKit
 
         public UiString Text;
         public int FontSize = 24;
+
+        // Letter-spacing, in hundredths of an em -- 14 is the .14em the design
+        // handoffs write. Zero means the font's own spacing.
+        //
+        // It exists because the DSL had no way to say it and the absence was
+        // measurable: the system menu's tab widths were authored off a design
+        // prototype drawn at .14em, and the emitter drew them at zero, so every
+        // label came out about a quarter narrower than the box built for it and
+        // the selected tab's underline overhung its own word by 40px a side.
+        // The bar was laid out around a number nothing in the build produced.
+        //
+        // Deliberately NOT a default. Applying tracking everywhere would move
+        // text on every screen in the game to fix one bar; this says it where
+        // the design said it.
+        public float Tracking;
         public string ColorHex;
         public string SpriteKey;
 
@@ -139,6 +154,9 @@ namespace PrincesPalace.Domain.UiKit
         public UiNode Sized(UiSize size) { Size = size; return this; }
         public UiNode Aligned(UiAlign align) { Align = align; return this; }
         public UiNode Coloured(string hex) { ColorHex = hex; return this; }
+
+        // In hundredths of an em, matching CSS: Tracked(14) is .14em.
+        public UiNode Tracked(float emHundredths) { Tracking = emHundredths; return this; }
 
         public UiNode AllowOverlap(string reason)
         {

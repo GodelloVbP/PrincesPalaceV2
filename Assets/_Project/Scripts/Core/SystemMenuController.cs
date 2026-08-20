@@ -78,6 +78,12 @@ namespace PrincesPalace
 
         public int SelectedIndex => _selected;
 
+        // Whether this scene is part of a descent, for the panes that need the
+        // same answer. Exposed rather than copied: the Main menu pane hides its
+        // abandon card between descents, and a second serialized bool over
+        // there would be one more thing that can disagree with the bar.
+        public bool InDescent => inDescent;
+
         // The tabs on show, as indices into SystemMenuTabs.All. Exposed because
         // "which tabs does this context have" is the single most testable claim
         // the context rule makes.

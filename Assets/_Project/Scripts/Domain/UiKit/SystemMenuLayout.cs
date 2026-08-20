@@ -27,6 +27,23 @@ namespace PrincesPalace.Domain.UiKit
 
         public const float TabHeight = 56f;
 
+        // LETTER-SPACING, in hundredths of an em, and it is part of the layout
+        // rather than of the styling.
+        //
+        // Every SystemMenuTabDef.LabelWidth was measured at 18px Chakra Petch
+        // with .14em tracking, and the entire bar is arithmetic over those
+        // numbers. Draw the labels at the font's own spacing and they come out
+        // about a quarter narrower than the boxes built for them -- measured,
+        // "CHARACTER & INVENTORY" is 215.5px untracked against the 272 this
+        // table claims, and 265.9 with the tracking on. So the two belong
+        // together: change this and the widths are lies.
+        //
+        // SystemMenuLabelWidthTests holds them to each other.
+        public const float TabLabelTracking = 14f;
+
+        // The design's .22em for the run title on the lintel.
+        public const float LintelTitleTracking = 22f;
+
         // The hairline between two tabs, centred in the gap.
         public const float DividerWidth = 2f;
         public const float DividerHeight = 40f;

@@ -190,6 +190,14 @@ public static class UiEmitter
         text.font = SceneBuilder.UiFont;
         text.text = BakedText(node.Text);
         text.fontSize = node.FontSize;
+
+        // TMP's characterSpacing is already in hundredths of an em, so this is
+        // a straight pass-through of the .14em the design writes. Set BEFORE
+        // UiTextFitAudit runs, which measures off this very component -- a
+        // tracked label is wider, and the audit has to see the width that will
+        // actually be drawn.
+        text.characterSpacing = node.Tracking;
+
         text.alignment = TextAlignmentOptions.Center;
         text.color = SceneBuilder.ParseHex(node.ColorHex, Color.white);
         text.raycastTarget = false; // a label is never the click target
@@ -273,6 +281,7 @@ public static class UiEmitter
         text.font = SceneBuilder.UiFont;
         text.text = BakedText(node.Text);
         text.fontSize = node.FontSize;
+        text.characterSpacing = node.Tracking;
         text.alignment = TextAlignmentOptions.Center;
 
         // Black ONLY for the missing-art fallback, which draws a light grey

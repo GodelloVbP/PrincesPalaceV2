@@ -8,7 +8,9 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using UnityEngine.TestTools;
 using PrincesPalace;
+using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Equipment;
+using PrincesPalace.Domain.Stats;
 using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
@@ -147,6 +149,107 @@ namespace PrincesPalace.PlayModeTests
             if (backup != null) File.WriteAllText(savePath, backup);
             else if (File.Exists(savePath)) File.Delete(savePath);
             SaveSlotManager.Forget();
+        }
+
+        // The two panes that only exist mid-run, captured FROM the map so the
+        // five-tab bar and the in-run lintel are in shot with them.
+        //
+        // Run statistics is the one capture on this menu that cannot be judged
+        // any other way: every assertion about it is about a figure, and the
+        // question a screenshot answers -- whether three cards of four to eight
+        // rows read as a set or as an emptier pane than it should be -- is not
+        // one a count of active objects can reach.
+        [UnityTest]
+        public IEnumerator CaptureTheRunOnlyPanes()
+        {
+            if (!CanvasCapture.IsSupported)
+            {
+                Assert.Ignore("No graphics device. Run: tools/screenshot.ps1 -Runtime -RuntimeFilter SystemMenuCaptureTests");
+            }
+
+            // A run with something to say. Captured against invented history
+            // rather than a fresh run, because a run that has done nothing
+            // prints eighteen zeroes and shows nothing about the layout.
+            RunManager.StartRun(4242);
+            var run = RunManager.Run;
+            RunLedger.RecordRoom(run, won: true, goldGained: 40, expGained: 15, step: 3);
+            RunLedger.RecordRoom(run, won: true, goldGained: 88, expGained: 30, step: 6);
+            RunLedger.Fold(run, LoudFight());
+
+            yield return SceneManager.LoadSceneAsync("Map", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(menu, "the Map scene has no SystemMenuController");
+
+            var canvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)
+                .FirstOrDefault(c => c.isRootCanvas);
+            Assert.IsNotNull(canvas);
+
+            Directory.CreateDirectory(OutputDir);
+
+            menu.Open();
+            menu.Select(SystemMenuTab.RunStats);
+            yield return new WaitForSecondsRealtime(0.4f);
+
+            string statsPath = Path.Combine(OutputDir, "SystemMenu_run_stats.png");
+            CanvasCapture.RenderToFile(canvas, statsPath);
+            Assert.IsTrue(File.Exists(statsPath));
+            Debug.Log($"[SystemMenuCapture] wrote {statsPath}");
+
+            // And the exits, with abandon showing -- which it only does in a
+            // descent, so this scene is the only place the card can be seen.
+            menu.Select(SystemMenuTab.MainMenu);
+            yield return new WaitForSecondsRealtime(0.4f);
+
+            string exitsPath = Path.Combine(OutputDir, "SystemMenu_main_menu.png");
+            CanvasCapture.RenderToFile(canvas, exitsPath);
+            Assert.IsTrue(File.Exists(exitsPath));
+            Debug.Log($"[SystemMenuCapture] wrote {exitsPath}");
+
+            // Half way through the hold, which is the state the design actually
+            // specified -- a fill drawn in the button -- and the one thing about
+            // this pane that a still of it at rest does not show.
+            var hold = Object.FindObjectsByType<HoldToConfirm>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)
+                .FirstOrDefault();
+            Assert.IsNotNull(hold, "the abandon button has no hold behaviour attached");
+
+            hold.Begin();
+            hold.Advance(hold.Seconds * 0.55f);
+            yield return null;
+
+            string holdPath = Path.Combine(OutputDir, "SystemMenu_abandon_hold.png");
+            CanvasCapture.RenderToFile(canvas, holdPath);
+            Assert.IsTrue(File.Exists(holdPath));
+            Debug.Log($"[SystemMenuCapture] wrote {holdPath}");
+
+            // Let go before the capture's own hold ends the run it is standing
+            // in. Advance() fires Completed at the top, so leaving this out
+            // would abandon the descent and navigate mid-capture.
+            hold.Cancel();
+            RunManager.EndRun();
+            SaveSlotManager.Forget();
+        }
+
+        // One fight's worth of numbers, invented. A CombatLedger rather than
+        // RunLedgerEntry directly, because Fold is the seam the game uses and a
+        // capture that hand-wrote the run's ledger would be showing a shape the
+        // game never produces.
+        private static CombatLedger LoudFight()
+        {
+            var fight = new CombatLedger();
+            fight.Dealt("a", DamageType.Physical, 1840);
+            fight.Dealt("a", DamageType.Fire, 620);
+            fight.Dealt("b", DamageType.Physical, 940);
+            fight.Took("a", 410);
+            fight.Took("b", 265, shielded: 90);
+            fight.Restored("b", 180);
+            fight.ScoredKill("a");
+            fight.ScoredKill("a");
+            fight.ScoredKill("b");
+            fight.WentDown("b");
+            return fight;
         }
     }
 }

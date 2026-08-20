@@ -32,7 +32,9 @@ namespace PrincesPalace
             exitButton.onClick.AddListener(() =>
             {
                 RunManager.EndRun();
-                Application.Quit();
+                // Navigation.Quit, not Application.Quit: the system menu grew a
+                // second quit and one of the two had to be the door. See Navigation.
+                Navigation.Quit();
             });
             closeSaveSlotButton.onClick.AddListener(() => saveSlotPanel.SetActive(false));
             closeOptionsButton.onClick.AddListener(() => optionsPanel.SetActive(false));

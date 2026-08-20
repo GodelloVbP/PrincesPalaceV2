@@ -40,6 +40,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         public CharacterDossierScreen Dossier;
         public OptionsScreen Options;
+        public RunStatsScreen RunStats;
+        public ExitsScreen Exits;
 
         public UiNode Root;
         public NodeRef Bar;
@@ -122,10 +124,21 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .AsDecor()
                     .AllowOverlap("the hover plate sits under its own tab by construction");
 
+                // TRACKED, and this is not decoration.
+                //
+                // SystemMenuTabDef.LabelWidth carries the design's measurement
+                // at 18px Chakra Petch with .14em letter-spacing, and the whole
+                // bar -- box widths, gaps, dividers, underline -- is arithmetic
+                // over those numbers. Drawn at the font's own spacing the same
+                // label is about a quarter narrower, so every box had 50px of
+                // air the design never put there and the underline overhung its
+                // own word by 40px a side. Measured: 215.5px drawn against 272
+                // authored, and 265.9 with this line.
                 var button = Ui.Button($"SystemTab{def.Key}", def.Label,
                         new UiVec(w, SystemMenuLayout.TabHeight), 18,
                         Place.At(x, 0f))
                     .NoChrome()
+                    .Tracked(SystemMenuLayout.TabLabelTracking)
                     .AllowOverlap("the tab's label sits over its own hover plate by construction");
 
                 // WIDTH IS THE LABEL'S, not the box's. A rule as wide as a
@@ -187,10 +200,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
                 var contents = new List<UiNode> { placeholder };
 
-                // The one pane with real content so far: the dossier, which
-                // replaced CharacterOverlayScreen. Its placeholder stays
-                // declared but switched off, so the pane still has something to
-                // show if the dossier is ever pulled.
+                // The panes with real content. FOUR OF FIVE now; only Floor map
+                // is still the placeholder, and it is the one that hosts an
+                // existing screen (Run Map) rather than declaring its own.
+                //
+                // Each hosted screen keeps its placeholder DECLARED but
+                // switched off, so a pane still has something to show if its
+                // screen is ever pulled -- and so the tab's Built flag has
+                // something to be checked against. SystemMenuPaneTests pins the
+                // two together: a tab claiming content it does not have would
+                // otherwise send DefaultFor onto the words CONTENT TO COME.
                 if (def.Tab == SystemMenuTab.CharacterInventory)
                 {
                     var dossier = CharacterDossierScreen.Build();
@@ -203,6 +222,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     var options = OptionsScreen.Build();
                     screen.Options = options;
                     contents.Add(options.Root);
+                    placeholder.Inactive();
+                }
+                else if (def.Tab == SystemMenuTab.RunStats)
+                {
+                    var stats = RunStatsScreen.Build();
+                    screen.RunStats = stats;
+                    contents.Add(stats.Root);
+                    placeholder.Inactive();
+                }
+                else if (def.Tab == SystemMenuTab.MainMenu)
+                {
+                    var exits = ExitsScreen.Build();
+                    screen.Exits = exits;
+                    contents.Add(exits.Root);
                     placeholder.Inactive();
                 }
 
@@ -292,7 +325,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private static UiNode BuildLintel(SystemMenuScreen screen)
         {
             var title = Ui.Label("SystemLintelTitle", UiString.Runtime, new UiVec(400f, 24f), 19, GoldLight,
-                Place.At(-560f, 0f)).AsDecor();
+                    Place.At(-560f, 0f))
+                .Tracked(SystemMenuLayout.LintelTitleTracking)
+                .AsDecor();
 
             var context = Ui.Label("SystemLintelContext", UiString.Runtime, new UiVec(420f, 20f), 14, TextMuted,
                 Place.At(-120f, 0f)).AsDecor();
@@ -323,6 +358,23 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var children = new List<UiNode>
             {
+                // THE LINTEL'S OWN PLATE, and it is a fix rather than dressing.
+                //
+                // The design resolved "the scrim is too thin" by darkening it
+                // and by giving the BAR a plate. The lintel got neither, and it
+                // sits over the brightest thing on the hub: at #0A0614ED the
+                // hub's own "DIVINE PRINCIPALITY" still read faintly through it
+                // -- and since the lintel prints those same words, the title
+                // appeared twice, a few pixels apart, looking like a render
+                // fault rather than like two labels.
+                //
+                // Same colour as the bar's plate, so the two opaque strips
+                // above and below the gold rule read as one piece of chrome.
+                Ui.Solid("SystemLintelPlate", BarPlate,
+                        new UiVec(SystemMenuLayout.LintelWidth, SystemMenuLayout.LintelHeight),
+                        Place.At(0f, 0f))
+                    .AsDecor()
+                    .AllowOverlap("the plate is what the lintel's contents stand on"),
                 title,
                 Ui.Solid("SystemLintelRuleA", Hairline, new UiVec(1f, 24f), Place.At(-344f, 0f)).AsDecor(),
                 context,

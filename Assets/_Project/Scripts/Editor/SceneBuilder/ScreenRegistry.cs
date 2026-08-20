@@ -737,6 +737,53 @@ public static class ScreenRegistry
 
         if (menu.Dossier != null) WireDossier(result, menu.Dossier, lockedForFight);
         if (menu.Options != null) WireOptions(result, menu.Options);
+        if (menu.RunStats != null) WireRunStats(result, menu.RunStats);
+        if (menu.Exits != null) WireExits(result, menu.Exits, controller);
+
+        return controller;
+    }
+
+    // The Run statistics pane, inside the system menu.
+    //
+    // Keyed like the Options pane's controls rather than index-aligned with
+    // RunStatRows: both arrays are built off the SAME declared list here, so
+    // they agree by construction, and the key travels with the label so a
+    // reordering of the table cannot silently swap two four-digit figures.
+    private static RunStatsController WireRunStats(UiEmitResult result, RunStatsScreen stats)
+    {
+        var controller = result.Attach<RunStatsController>(stats.Root);
+
+        controller.valueKeys = stats.ValueKeys.ToArray();
+        controller.values = stats.Values.Select(result.Tmp).ToArray();
+
+        return controller;
+    }
+
+    // The Main menu pane, inside the system menu.
+    //
+    // It is handed the MENU'S OWN CONTROLLER rather than a copy of its context
+    // flag: the pane has to close the menu before it navigates -- closing is
+    // what puts Time.timeScale back -- and it asks the same object whether this
+    // scene is a descent, so the abandon card and the tab bar cannot disagree.
+    private static ExitsController WireExits(
+        UiEmitResult result, ExitsScreen exits, SystemMenuController menu)
+    {
+        var controller = result.Attach<ExitsController>(exits.Root);
+
+        controller.exitButtons = exits.ExitButtons.Select(result.Button).ToArray();
+        controller.exitHovers = exits.ExitHovers.Select(result.Go).ToArray();
+
+        // The label is a CHILD of the button, which result.Tmp already looks
+        // down one level for -- so the same NodeRef serves both the click and
+        // the text swap, and there is no second handle to keep in step.
+        controller.exitLabels = exits.ExitButtons.Select(result.Tmp).ToArray();
+
+        controller.exitBlocks = exits.ExitBlocks.Select(result.Rect).ToArray();
+        controller.separator = result.Go(exits.Separator);
+        controller.abandonCard = result.Go(exits.AbandonCard);
+        controller.abandonHold = result.Button(exits.AbandonHold);
+        controller.abandonFill = result.Rect(exits.AbandonFill);
+        controller.menu = menu;
 
         return controller;
     }

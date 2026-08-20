@@ -448,6 +448,83 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString OptionsAppliesImmediately =
             UiString.Define("options.applies", "Changes apply immediately.");
 
+        // ---- the Run statistics pane ---------------------------------------
+        //
+        // Seventeen figures and no header. What is ABSENT is the design's
+        // elapsed / days / turns -- nothing counts them -- and its floor/room
+        // header, which the lintel already prints two inches above this pane.
+        // See RunStatRows.
+        public static readonly UiString RunStatBattle = UiString.Define("runstat.battle", "BATTLE");
+        public static readonly UiString RunStatFold = UiString.Define("runstat.fold", "THE FOLD");
+        public static readonly UiString RunStatSpoils = UiString.Define("runstat.spoils", "SPOILS");
+
+        public static readonly UiString RunStatDamageDealt =
+            UiString.Define("runstat.damage_dealt", "Damage dealt");
+        // The two below are the breakdown of the row above them, which is why
+        // they are one word each: read down the card they are a total and its
+        // parts, and a card that says "Physical damage dealt" under "Damage
+        // dealt" reads as two unrelated totals.
+        public static readonly UiString RunStatDamagePhysical =
+            UiString.Define("runstat.damage_physical", "Physical");
+        public static readonly UiString RunStatDamageOther =
+            UiString.Define("runstat.damage_other", "Other");
+        public static readonly UiString RunStatDamageTaken =
+            UiString.Define("runstat.damage_taken", "Damage taken");
+        public static readonly UiString RunStatHealed = UiString.Define("runstat.healed", "Healing done");
+        public static readonly UiString RunStatShielded =
+            UiString.Define("runstat.shielded", "Shielding raised");
+        public static readonly UiString RunStatKills = UiString.Define("runstat.kills", "Foes felled");
+        public static readonly UiString RunStatTimesDowned =
+            UiString.Define("runstat.times_downed", "Times downed");
+
+        public static readonly UiString RunStatFloor = UiString.Define("runstat.floor", "Floor reached");
+        public static readonly UiString RunStatRoomsCleared =
+            UiString.Define("runstat.rooms_cleared", "Rooms cleared");
+        public static readonly UiString RunStatDeepestRoom =
+            UiString.Define("runstat.deepest_room", "Deepest room");
+        public static readonly UiString RunStatBosses = UiString.Define("runstat.bosses", "Bosses felled");
+
+        public static readonly UiString RunStatGoldHeld = UiString.Define("runstat.gold_held", "Gold held");
+        public static readonly UiString RunStatGoldEarned =
+            UiString.Define("runstat.gold_earned", "Gold earned");
+        public static readonly UiString RunStatExpEarned =
+            UiString.Define("runstat.exp_earned", "Experience earned");
+        public static readonly UiString RunStatRelics = UiString.Define("runstat.relics", "Relics carried");
+        public static readonly UiString RunStatPack = UiString.Define("runstat.pack", "Items in pack");
+
+        // ---- the Main menu pane --------------------------------------------
+        //
+        // NOTHING HERE FIRES ON A SINGLE PRESS -- the design's rule, and these
+        // strings are how it is visible rather than merely true. The two exits
+        // swap their own label to ExitConfirm on the first press, which is why
+        // both carry that longer text as their audit sample: E1 has to measure
+        // the widest thing the box will ever hold, and a swapped label is
+        // exactly a value the build cannot see.
+        public static readonly UiString ExitToTitle = UiString.Define(
+            "exit.to_title", "RETURN TO TITLE", "PRESS AGAIN TO CONFIRM");
+        public static readonly UiString ExitQuit = UiString.Define(
+            "exit.quit", "QUIT TO DESKTOP", "PRESS AGAIN TO CONFIRM");
+        public static readonly UiString ExitConfirm =
+            UiString.Define("exit.confirm", "PRESS AGAIN TO CONFIRM");
+
+        // Both notes say what happens TO THE RUN, because both of these end a
+        // descent and neither button's own words say so. The design asked for
+        // "back to title (run stays as it is)"; RunManager's rule is that
+        // leaving a descent kills the run -- no exceptions -- and the hub's own
+        // title button and the main menu's quit both enforce it. Two title
+        // doors with different consequences would be worse than one honest one.
+        public static readonly UiString ExitToTitleNote =
+            UiString.Define("exit.to_title.note", "Ends the descent. Embers it earned are kept.");
+        public static readonly UiString ExitQuitNote =
+            UiString.Define("exit.quit.note", "Saves and settles the run, then closes the game.");
+
+        public static readonly UiString ExitAbandonHeading =
+            UiString.Define("exit.abandon.heading", "ABANDON THE DESCENT");
+        public static readonly UiString ExitAbandonNote =
+            UiString.Define("exit.abandon.note", "The floor is lost. Embers already earned are kept.");
+        public static readonly UiString ExitAbandonHold =
+            UiString.Define("exit.abandon.hold", "HOLD TO ABANDON");
+
         // ---- the character dossier -----------------------------------------
         public static readonly UiString OverlayLoadout = UiString.Define("dossier.loadout", "LOADOUT");
         public static readonly UiString OverlayAttributes = UiString.Define("dossier.attributes", "ATTRIBUTES");
@@ -524,6 +601,13 @@ namespace PrincesPalace.Domain.UiKit
             OverlayEquip, OverlayUnequip, OverlayCannotWear, OverlayBagEmpty,
             TalentEmbers, TalentInvest, TalentTaken, TalentLocked, TalentNoEmbers,
             TalentPrev, TalentNext, TalentBack, TalentPath,
+            RunStatBattle, RunStatFold, RunStatSpoils,
+            RunStatDamageDealt, RunStatDamagePhysical, RunStatDamageOther, RunStatDamageTaken,
+            RunStatHealed, RunStatShielded, RunStatKills, RunStatTimesDowned,
+            RunStatFloor, RunStatRoomsCleared, RunStatDeepestRoom, RunStatBosses,
+            RunStatGoldHeld, RunStatGoldEarned, RunStatExpEarned, RunStatRelics, RunStatPack,
+            ExitToTitle, ExitQuit, ExitConfirm, ExitToTitleNote, ExitQuitNote,
+            ExitAbandonHeading, ExitAbandonNote, ExitAbandonHold,
         };
     }
 }

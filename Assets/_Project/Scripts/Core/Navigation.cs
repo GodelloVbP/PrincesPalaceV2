@@ -1,3 +1,4 @@
+using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace PrincesPalace
@@ -36,6 +37,31 @@ namespace PrincesPalace
             SceneManager.LoadScene(scene, LoadSceneMode.Single);
         }
 
-        public static void Reset() => LoadOverride = null;
+        // LEAVING THE GAME ENTIRELY, behind the same seam for the same reason.
+        //
+        // Application.Quit does nothing in the editor and DOES quit in a batch-
+        // mode player, which is what the headless test runner is -- so a test
+        // that reaches a quit button either proves nothing or takes the runner
+        // down with it. Two call sites wanted it (the main menu's exit and the
+        // system menu's), and two copies of Application.Quit is exactly the
+        // scattering this class was written to stop.
+        public static System.Action QuitOverride;
+
+        public static void Quit()
+        {
+            if (QuitOverride != null)
+            {
+                QuitOverride();
+                return;
+            }
+
+            Application.Quit();
+        }
+
+        public static void Reset()
+        {
+            LoadOverride = null;
+            QuitOverride = null;
+        }
     }
 }
