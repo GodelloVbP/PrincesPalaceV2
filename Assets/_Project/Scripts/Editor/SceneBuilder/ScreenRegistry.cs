@@ -634,6 +634,23 @@ public static class ScreenRegistry
                 talents.orbs = screen.Orbs.Select(result.Button).ToArray();
                 talents.edgeGlows = screen.EdgeGlows.Select(result.Go).ToArray();
                 talents.edgeChildSlots = screen.EdgeChildSlots.ToArray();
+
+                // The motion, attached here because Domain cannot name a
+                // MonoBehaviour -- the same bounded escape hatch DressAmbience
+                // uses. Baked rather than added at runtime because neither
+                // carries a delegate or any state the controller owns: they
+                // animate whatever they are on, forever, and a scene that
+                // simply HAS them cannot forget to switch them on.
+                for (int i = 0; i < screen.EdgeCores.Count; i++)
+                {
+                    result.Attach<TalentEdgeCrackle>(screen.EdgeCores[i]);
+                }
+
+                for (int i = 0; i < screen.EdgeSparks.Count; i++)
+                {
+                    result.Attach<TalentEdgeSpark>(screen.EdgeSparks[i])
+                        .SetLength(screen.EdgeLengths[i]);
+                }
                 talents.orbGlows = screen.OrbGlows.Select(result.Image).ToArray();
                 talents.characterName = result.Tmp(screen.CharacterName);
                 talents.pathName = result.Tmp(screen.PathName);

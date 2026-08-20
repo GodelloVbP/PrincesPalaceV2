@@ -115,6 +115,11 @@ namespace PrincesPalace.Domain.UiKit
         public const float EdgeGlowWidth = EdgeWidth * 2.6f;
         public const float EdgeCoreWidth = EdgeWidth * 0.45f;
 
+        // The travelling dot. Wider than the limb it runs along, so it reads
+        // as something moving THROUGH the line rather than as a bright patch
+        // of it.
+        public const float EdgeSparkSize = EdgeWidth * 1.8f;
+
         // ---- paging ------------------------------------------------------------
 
         // Where a tree sits horizontally while the sky slides between them.

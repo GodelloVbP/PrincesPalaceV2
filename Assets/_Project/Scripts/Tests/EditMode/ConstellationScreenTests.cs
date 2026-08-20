@@ -184,5 +184,58 @@ namespace PrincesPalace.Domain.Tests
                 "the core is not a crack down the middle, it is another limb");
         }
 
+        // ---- the energy ----------------------------------------------------------
+
+        // The core and the spark are CHILDREN OF THE GLOW, and that is what
+        // makes an unlit edge dark for free: the controller switches the glow,
+        // and a switched-off parent takes its children with it. Built as
+        // siblings of the glow instead, an unspent tree would sit there
+        // crackling and running sparks along connections the player has not
+        // earned.
+        [Test]
+        public void TheCrackleAndTheSparkRideOnTheLitLayer()
+        {
+            var screen = TalentScreen.Build();
+
+            for (int i = 0; i < screen.EdgeGlows.Count; i++)
+            {
+                var glow = screen.EdgeGlows[i].Node;
+
+                CollectionAssert.Contains(glow.Children, screen.EdgeCores[i].Node,
+                    $"'{screen.EdgeCores[i].Node.Name}' is not under its own glow, so it keeps " +
+                    "crackling on an edge the player has not earned");
+                CollectionAssert.Contains(glow.Children, screen.EdgeSparks[i].Node,
+                    $"'{screen.EdgeSparks[i].Node.Name}' is not under its own glow, so it keeps " +
+                    "running on an edge the player has not earned");
+            }
+        }
+
+        // The spark is told its travel rather than measuring its parent, so the
+        // length handed to it has to be the edge's own. Nothing else can check
+        // this: it is a float passed at wiring time.
+        [Test]
+        public void EverySparkIsToldTheLengthOfItsOwnEdge()
+        {
+            var screen = TalentScreen.Build();
+
+            Assert.AreEqual(screen.Edges.Count, screen.EdgeLengths.Count,
+                "an edge has no length recorded, so its spark would travel nowhere");
+            Assert.AreEqual(screen.Edges.Count, screen.EdgeSparks.Count);
+
+            foreach (float length in screen.EdgeLengths)
+            {
+                Assert.Greater(length, 0f,
+                    "an edge of zero length means two orbs share a position");
+            }
+        }
+
+        // A spark wider than the limb reads as something moving THROUGH the
+        // line; one narrower reads as a bright patch of it.
+        [Test]
+        public void TheSparkIsWiderThanTheLineItRunsAlong()
+        {
+            Assert.Greater(ConstellationLayout.EdgeSparkSize, ConstellationLayout.EdgeWidth);
+        }
+
     }
 }

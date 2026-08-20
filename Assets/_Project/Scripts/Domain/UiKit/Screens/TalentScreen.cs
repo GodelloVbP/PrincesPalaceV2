@@ -21,10 +21,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // ending on a hard band.
         public const string EdgeStripeKey = "proc:soft_edge_stripe";
 
-        // v1's own three: a dim bark, a warm halo, a near-white crack.
+        // A DEAD CONDUIT, A WARM HALO, A WHITE-HOT CORE.
+        //
+        // Not bark. v1's kit was painted as gnarled branches and
+        // branch_tile_set is still sitting in Art/UI/TalentTree unreferenced
+        // because of it -- these limbs are lines carrying current, so an unlit
+        // one is a cold wire rather than a piece of wood, and everything that
+        // happens to it is light.
         private const string EdgeDim = "#33263D";
         private const string EdgeGlow = "#FF91455A";
         private const string EdgeCore = "#FFD98C";
+        private const string EdgeSpark = "#FFEBC0E6";
 
         public const string BackgroundKey = "Assets/_Project/Art/Backgrounds/Divine_principality_nebula.png";
 
@@ -68,6 +75,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // already is, since that is what the prerequisite means, so the child
         // alone answers it and nothing has to re-walk the skeleton at runtime.
         public List<int> EdgeChildSlots = new List<int>();
+
+        // The two animated layers, and each edge's own length. The components
+        // that drive them live in Core -- Domain cannot name a MonoBehaviour --
+        // so the wiring step attaches them, and the spark is TOLD its travel
+        // rather than measuring a parent whose rect is a cosmetic width.
+        public List<NodeRef> EdgeCores = new List<NodeRef>();
+        public List<NodeRef> EdgeSparks = new List<NodeRef>();
+        public List<float> EdgeLengths = new List<float>();
 
         public static int OrbIndex(int path, int slot) => path * OrbCount + slot;
 
@@ -292,16 +307,40 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     Place.At((a.X + b.X) * 0.5f, (a.Y + b.Y) * 0.5f))
                 .Coloured(EdgeCore)
                 .Rotated(angle)
-                .Inactive()
+                // NOT Inactive. It is a CHILD of the glow, which is the thing
+                // the controller switches, so it comes and goes with its
+                // parent -- and switching it off here as well meant it never
+                // came back on at all. A lit edge showed its halo and no crack,
+                // and the crackle rode an object that never ran.
                 .AsDecor()
                 .AllowOverlap("the bright core runs down the middle of its own halo")
                 .AllowOverflow("a rotated edge's axis-aligned box is wider than the line inside it");
 
+            // THE DOT THAT RUNS THE LINE. A child of the glow like the core,
+            // so it inherits the rotation and can travel along its own local X
+            // -- and so an unlit edge has no spark for free, because a
+            // switched-off glow takes its children with it.
+            //
+            // Placed at the far end to start; TalentEdgeSpark moves it from
+            // there. Authored somewhere real rather than at zero so the audit
+            // measures it where it will actually be seen.
+            var spark = Ui.Sprite($"Edge{path}_{parent}_{slot}Spark", "proc:radial_glow",
+                    new UiVec(ConstellationLayout.EdgeSparkSize, ConstellationLayout.EdgeSparkSize),
+                    Place.At(-length * 0.5f, 0f))
+                .Coloured(EdgeSpark)
+                .AsDecor()
+                .AllowOverlap("the spark rides the limb it belongs to")
+                .AllowOverflow("the spark sits ON the edge's end and is wider than the line - it is meant to spill past it");
+
             glow.Children.Add(core);
+            glow.Children.Add(spark);
 
             Edges.Add(edge);
             EdgeGlows.Add(glow);
             EdgeChildSlots.Add(slot);
+            EdgeCores.Add(core);
+            EdgeSparks.Add(spark);
+            EdgeLengths.Add(length);
 
             return Ui.Panel($"Edge{path}_{parent}_{slot}Group", Place.At(0f, 0f), UiSize.Fill,
                     edge, glow)
