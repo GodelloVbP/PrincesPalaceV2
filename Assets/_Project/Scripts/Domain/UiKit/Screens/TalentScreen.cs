@@ -12,6 +12,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // three tabs.
     public sealed class TalentScreen
     {
+        // Keyed by tools/key_green_screen.py out of the raw generations beside
+        // them; the Processed copies are what the game loads.
+        public const string OrbUnlitKey = "UI/TalentTree/Processed/orb_unlit.png";
+        public const string OrbLitKey = "UI/TalentTree/Processed/orb_lit.png";
+
         public const string BackgroundKey = "Assets/_Project/Art/Backgrounds/Divine_principality_nebula.png";
 
         // One orb per slot per path. Declared rather than pooled: the skeleton
@@ -174,13 +179,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
         }
 
         private static UiVec PositionOf(int slot) => new UiVec(
-            ConstellationLayout.StarX(TalentSkeleton.DxSlot[slot], TalentPage.MaxAbsDx),
-            ConstellationLayout.StarY(TalentSkeleton.Depth[slot], TalentPage.DepthCount));
+            ConstellationLayout.StarX(TalentSkeleton.DxSlot[slot], TalentSkeleton.Depth[slot]),
+            ConstellationLayout.StarY(TalentSkeleton.Depth[slot]));
 
         private UiNode BuildOrb(int path, int slot)
         {
             var at = PositionOf(slot);
-            float size = ConstellationLayout.StarSize;
+
+            // SIZED BY ROLE, which is the design's own rule and the thing this
+            // screen had lost: every orb was one size, so the capstone at the
+            // top of an eight-tier climb looked exactly like the first chain
+            // node above the root.
+            float size = ConstellationLayout.OrbSize(TalentSkeleton.Kind[slot]);
 
             // The glow is a SEPARATE node behind the orb rather than a tint on
             // it, because the two say different things at once: the orb says
@@ -195,15 +205,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     Place.At(at.X, at.Y))
                 .AllowOverlap("a constellation's stars share their light - the glows are 2.4x the orb and reaching a neighbour is the effect, not a collision")
                 .AllowOverflow("ConstellationLayout puts the first and last rows ON the sky's edges, so half an orb hangs over them by construction");
-            // A DISC, not a glow.
+            // THE PAINTED MEDALLION, which has been sitting in Art/UI/TalentTree
+            // unreferenced since the art was keyed.
             //
-            // This read "proc:radial_glow" -- the same asset as its own glow
-            // child, untinted. So an orb had no body and no rim: it was a soft
-            // white smudge sitting inside a slightly larger soft white smudge,
-            // and a constellation of them read as smears rather than as stars
-            // you could aim at. solid_circle is what the baker made for exactly
-            // this, and it lets the three state colours below actually show.
-            orb.SpriteKey = "proc:solid_circle";
+            // It was proc:solid_circle -- a flat baked disc, chosen when this
+            // screen had no orb art to reach for. It does: orb_unlit is the
+            // locked/available medallion and orb_lit the invested one, both
+            // styled after the glowing orbs on the Hub's own Talents building,
+            // which is the reference the whole kit was generated against.
+            //
+            // UNLIT IS THE BUILT STATE. The controller swaps to orb_lit on the
+            // ones the player owns, so a scene opened with nothing invested --
+            // which is every screenshot and every fresh save -- draws the tree
+            // dark, and lighting up is something the player does.
+            orb.SpriteKey = OrbUnlitKey;
             orb.Children.Add(glow);
 
             Orbs.Add(orb);
@@ -224,8 +239,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             float length = (float)System.Math.Sqrt(dx * dx + dy * dy);
             float angle = (float)(System.Math.Atan2(dy, dx) * 180.0 / System.Math.PI);
 
+            // TEN WIDE, not three. A 3px hairline reads as a wiring diagram;
+            // v1's edges are limbs with a lit crack down them, and the width is
+            // most of what makes a connection look grown rather than drawn.
             var edge = Ui.Solid($"Edge{path}_{parent}_{slot}", "#6B5B9E66",
-                    Place.At((a.X + b.X) * 0.5f, (a.Y + b.Y) * 0.5f), UiSize.Fixed(length, 3f))
+                    Place.At((a.X + b.X) * 0.5f, (a.Y + b.Y) * 0.5f),
+                    UiSize.Fixed(length, ConstellationLayout.EdgeWidth))
                 .Rotated(angle)
                 .AsDecor()
                 .AllowOverflow("a rotated edge's axis-aligned box is wider than the line inside it");

@@ -18,25 +18,31 @@ namespace PrincesPalace.Domain.Tests
         {
             // A capstone is the thing at the top of a climb. A constellation
             // that grew downward would read as falling.
-            float root = ConstellationLayout.StarY(0, 6);
-            float capstone = ConstellationLayout.StarY(5, 6);
+            Assert.Greater(ConstellationLayout.StarY(8), ConstellationLayout.StarY(0));
+        }
 
-            Assert.Greater(capstone, root);
+        // A FIXED PITCH, not a stretch to fill the sky.
+        //
+        // The old arithmetic normalised depth across the sky's height, so
+        // adding a tier silently squeezed every existing one -- and since the
+        // orbs are a constant size, the GAP between them would shrink toward
+        // nothing while the orbs stayed put. This is what v1 had and what the
+        // migration brings back.
+        [Test]
+        public void EveryTierIsTheSameDistanceApart()
+        {
+            for (int depth = 1; depth <= 8; depth++)
+            {
+                Assert.AreEqual(ConstellationLayout.DepthGap,
+                    ConstellationLayout.StarY(depth) - ConstellationLayout.StarY(depth - 1), 0.01f,
+                    $"tier {depth} is not one DepthGap above tier {depth - 1}");
+            }
         }
 
         [Test]
-        public void TheClimbFillsTheSkyExactly()
+        public void TheRootSitsWhereItWasTunedTo()
         {
-            Assert.AreEqual(-ConstellationLayout.SkyHeight * 0.5f, ConstellationLayout.StarY(0, 6), 0.01f);
-            Assert.AreEqual(ConstellationLayout.SkyHeight * 0.5f, ConstellationLayout.StarY(5, 6), 0.01f);
-        }
-
-        [Test]
-        public void ASingleTierSitsOnTheHorizon()
-        {
-            // Guarded rather than divided by: a one-deep tree is a legitimate
-            // shape and must not divide by zero.
-            Assert.AreEqual(0f, ConstellationLayout.StarY(0, 1), 0.01f);
+            Assert.AreEqual(ConstellationLayout.RootY, ConstellationLayout.StarY(0), 0.01f);
         }
 
         [Test]
@@ -56,13 +62,70 @@ namespace PrincesPalace.Domain.Tests
                 0.01f);
         }
 
+        // THE TREE OPENS OUT AS IT CLIMBS, which one normalised StarX could not
+        // say at all. The 3x3 grid below the convergence is the narrow half and
+        // the three-way branch above it is the wide half -- that widening is how
+        // the convergence reads as a waist rather than as one more row.
         [Test]
-        public void AWiderTierDoesNotOverflowTheSky()
+        public void TheBranchSpreadsWiderThanTheGrid()
         {
-            // Multiplied out rather than indexed, so a future four-wide tier
-            // needs no new case and still fits.
-            Assert.AreEqual(ConstellationLayout.SkyWidth * 0.5f, ConstellationLayout.StarX(2, 2), 0.01f);
-            Assert.AreEqual(ConstellationLayout.SkyWidth * 0.25f, ConstellationLayout.StarX(1, 2), 0.01f);
+            float grid = ConstellationLayout.StarX(1, ConstellationLayout.MergeDepth - 1);
+            float branch = ConstellationLayout.StarX(1, ConstellationLayout.BranchStartDepth);
+
+            Assert.Greater(branch, grid,
+                "the branch is no wider than the grid, so the tree is a column rather than a shape");
+            Assert.AreEqual(ConstellationLayout.GridDx, grid, 0.01f);
+            Assert.AreEqual(ConstellationLayout.BranchDx, branch, 0.01f);
+        }
+
+        // The waist is DERIVED from the skeleton rather than written as 4, so a
+        // tier added below it moves the waist instead of silently widening the
+        // grid. This pins that it is reading the table at all.
+        [Test]
+        public void TheWaistIsWhereTheSkeletonPutsTheConvergence()
+        {
+            int merge = -1;
+            for (int slot = 0; slot < Talents.TalentSkeleton.SlotCount; slot++)
+            {
+                if (Talents.TalentSkeleton.Kind[slot] == "merge") { merge = slot; break; }
+            }
+
+            Assert.GreaterOrEqual(merge, 0, "the skeleton has no convergence, so this test proves nothing");
+            Assert.AreEqual(Talents.TalentSkeleton.Depth[merge], ConstellationLayout.MergeDepth,
+                "the layout's waist is not the skeleton's convergence");
+        }
+
+        // ---- sizing marks role, not point cost -----------------------------------
+        //
+        // The design's own rule, and the thing the stretch had lost entirely:
+        // every orb was one size, so the capstone at the top of an eight-tier
+        // climb looked exactly like the first chain node above the root.
+        [Test]
+        public void TheCapstoneAndTheConvergenceAreLargerThanAChainOrb()
+        {
+            Assert.Greater(ConstellationLayout.OrbSize("cap"), ConstellationLayout.OrbSize("merge"),
+                "the capstone should out-rank the convergence");
+            Assert.Greater(ConstellationLayout.OrbSize("merge"), ConstellationLayout.OrbSize("normal"),
+                "the convergence should out-rank a chain orb");
+        }
+
+        [Test]
+        public void AnUnknownKindIsAnOrdinaryOrb()
+        {
+            // Graceful degradation, house style: a kind added to the skeleton
+            // and not to the size table draws as a normal orb rather than as
+            // nothing.
+            Assert.AreEqual(ConstellationLayout.OrbNormal, ConstellationLayout.OrbSize("something_new"), 0.01f);
+        }
+
+        // One path's tree has to fit the sky it is drawn in, orbs included --
+        // the widest orb hangs half its width past the outermost branch.
+        [Test]
+        public void OnePathsTreeFitsTheSky()
+        {
+            Assert.LessOrEqual(ConstellationLayout.TreeHeight, ConstellationLayout.SkyHeight + 0.01f,
+                $"a path is {ConstellationLayout.TreeHeight:F0}px tall in a " +
+                $"{ConstellationLayout.SkyHeight:F0}px sky");
         }
 
         // ---- paging --------------------------------------------------------------

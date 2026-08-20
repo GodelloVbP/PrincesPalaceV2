@@ -38,32 +38,37 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void AnOrbIsADiscRatherThanItsOwnGlow()
+        public void AnOrbWearsItsMedallionRatherThanItsOwnGlow()
         {
             // The orb read "proc:radial_glow" -- the SAME asset as the glow
             // child sitting behind it. A radial glow has no body and no edge,
-            // so an orb had nothing for OrbTaken/OrbReachable/OrbDistant to
-            // colour: three carefully graded states rendering as three barely
-            // different smudges.
+            // so an orb had nothing to colour: three carefully graded states
+            // rendering as three barely different smudges. It became a flat
+            // baked disc, and is now the painted medallion the talent kit was
+            // generated for.
             var screen = TalentScreen.Build();
             var byName = Walk(screen.Root).ToDictionary(n => n.Name, n => n);
 
             var orb = byName["Orb0_0"];
             var glow = byName["Orb0_0Glow"];
 
-            Assert.AreEqual("proc:solid_circle", orb.SpriteKey);
+            Assert.AreEqual(TalentScreen.OrbUnlitKey, orb.SpriteKey);
             Assert.AreNotEqual(orb.SpriteKey, glow.SpriteKey,
                 "an orb and its own halo cannot be the same picture");
         }
 
         [Test]
-        public void EveryOrbUsesTheDisc()
+        public void EveryOrbWearsTheMedallion()
         {
             // Walked rather than spot-checked: the orbs are built in a loop, so
             // a per-path divergence would mean the loop grew a branch.
+            //
+            // UNLIT is the built state -- the controller lights the ones the
+            // player owns, so a fresh save draws the tree dark and lighting up
+            // is something the player does.
             var offenders = Walk(TalentScreen.Build().Root)
                 .Where(n => n.Name.StartsWith("Orb") && !n.Name.EndsWith("Glow"))
-                .Where(n => n.SpriteKey != "proc:solid_circle")
+                .Where(n => n.SpriteKey != TalentScreen.OrbUnlitKey)
                 .Select(n => n.Name)
                 .ToList();
 
