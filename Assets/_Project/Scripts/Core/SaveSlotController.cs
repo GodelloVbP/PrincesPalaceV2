@@ -50,6 +50,14 @@ namespace PrincesPalace
         {
             SaveSlotManager.CurrentSlot = slot;
 
+            // A RUN DOES NOT SURVIVE THE PROCESS, and this is where that rule
+            // can finally be applied to the slot the player actually wants.
+            // RunManager's boot check runs before any scene, when the slot is
+            // still 0, so a descent abandoned by a crash or an alt-F4 in any
+            // other slot came back alive -- and dropped the player back into
+            // the fight they had quit.
+            RunManager.SettleOnOpening();
+
             // A brand new slot is written immediately rather than on first save.
             // Picking a slot and finding it still "Empty" next launch is the
             // sort of thing players read as lost progress.

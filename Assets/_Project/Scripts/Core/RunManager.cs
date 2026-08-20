@@ -54,6 +54,35 @@ namespace PrincesPalace
             // Before any scene, so nothing can read a run that is about to be
             // settled and act on it -- the same self-bootstrapping shape
             // GameSettings uses.
+            //
+            // THIS ONLY EVER SEES SLOT 0, and that is not a fault in it -- it
+            // is what "before any scene" means. SaveSlotManager.CurrentSlot
+            // starts at 0 and the player has not chosen yet, so a run left in
+            // any other slot was invisible here and survived the process,
+            // flatly against the rule this method exists to enforce. Quitting
+            // mid-fight in slot 5 and coming back put you straight back into
+            // the same fight, every time.
+            //
+            // SettleOnOpening below is the other half: the moment a slot is
+            // actually opened is the moment its contents can be seen at all.
+            if (HasRun) EndRun();
+        }
+
+        // Settles a run found in a slot the player has just opened.
+        //
+        // Same rule as the boot check and the same reasoning -- a run in a save
+        // being opened for the first time this session belonged to a session
+        // that is over, so it is SETTLED rather than discarded and the embers
+        // its bosses paid for are kept. It is separate only because the boot
+        // check cannot know which slot the player will pick.
+        //
+        // Called by SaveSlotController, which is the one place a slot is
+        // chosen. Deliberately NOT hung off SaveSlotManager.CurrentSlot's
+        // setter: that is a plain accessor used freely by tests and by the
+        // label refresh, and a setter that silently ends runs and writes the
+        // disk is exactly the kind of surprise its own header warns about.
+        public static void SettleOnOpening()
+        {
             if (HasRun) EndRun();
         }
 
@@ -190,7 +219,21 @@ namespace PrincesPalace
             if (target == null) return false;
 
             run.currentNodeId = nodeId;
-            run.step = target.Depth;
+
+            // ABSOLUTE, and Depth is not.
+            //
+            // A node's Depth is its column WITHIN ITS LEG, 0..8 -- the
+            // generator says so itself by passing `startStep + d` to
+            // ForcedTypeAt while storing the bare `d`. But `step` is the run's
+            // absolute counter: AdvanceLeg writes legStartStep into it, the
+            // difficulty curve compounds per step, and RunDepth reads it.
+            //
+            // Writing the bare depth here made the two disagree the moment a
+            // run left its first leg, and only then -- on leg 1 legStartStep is
+            // 0 and the two are identical, which is why this survived. On leg 2
+            // a save reads step 1 against legStartStep 8: the party is nine
+            // rooms deep and the curve is scaling them for the second.
+            run.step = run.legStartStep + target.Depth;
             Persist();
             return true;
         }

@@ -248,5 +248,107 @@ namespace PrincesPalace.PlayModeTests
 
             CollectionAssert.IsEmpty(RunManager.Run.clearedNodeIds);
         }
+        // ---- step is absolute, and a node's depth is not -------------------------
+        //
+        // THE BUG THIS EXISTS FOR: MoveTo wrote `run.step = target.Depth`, and
+        // Depth is a node's column WITHIN ITS LEG. AdvanceLeg writes the
+        // absolute legStartStep into the same field, the difficulty curve
+        // compounds per step and RunDepth reads it -- so the two disagreed the
+        // moment a run left its first leg, and ONLY then, which is why it
+        // survived. A real save read step 1 against legStartStep 8: nine rooms
+        // deep, being scaled for the second.
+        [Test]
+        public void MovingOnTheSecondLegCountsFromTheLegsStart()
+        {
+            RunManager.StartRun(Seed);
+            RunManager.AdvanceLeg();
+
+            var run = RunManager.Run;
+            Assert.AreEqual(DescentMapGenerator.DefaultLegLength, run.legStartStep,
+                "the fixture did not actually reach the second leg");
+
+            var choices = RunManager.Choices();
+            CollectionAssert.IsNotEmpty(choices, "the second leg offered nowhere to go");
+
+            var target = choices[0];
+            Assert.IsTrue(RunManager.MoveTo(target.Id), "the move was refused");
+
+            Assert.AreEqual(run.legStartStep + target.Depth, run.step,
+                $"the party stands at column {target.Depth} of a leg starting at {run.legStartStep}, " +
+                $"so it is {run.legStartStep + target.Depth} rooms deep - step says {run.step}");
+        }
+
+        // The premise, pinned: on the FIRST leg the two are identical, which is
+        // exactly why nothing caught this. Without this line the test above
+        // could be "fixed" by making legStartStep zero forever and still pass.
+        [Test]
+        public void OnTheFirstLegDepthAndStepAgree()
+        {
+            RunManager.StartRun(Seed);
+            Assert.AreEqual(0, RunManager.Run.legStartStep);
+
+            var target = RunManager.Choices()[0];
+            RunManager.MoveTo(target.Id);
+
+            Assert.AreEqual(target.Depth, RunManager.Run.step,
+                "on leg 1 the absolute step and the column are the same number");
+        }
+
+        // ---- a run does not survive the process ---------------------------------
+        //
+        // THE BUG THIS EXISTS FOR: the rule was enforced by a
+        // RuntimeInitializeOnLoadMethod that runs BEFORE ANY SCENE, when
+        // SaveSlotManager.CurrentSlot is still its default 0. So it could only
+        // ever settle slot 0, and a descent left in any other slot came back
+        // alive -- dropping the player straight back into the fight they had
+        // quit, every launch. Found in a real save: slot 5 holding a live run
+        // mid-fight, which by this rule is a state that cannot exist at rest.
+        [Test]
+        public void ARunLeftInAnotherSlotIsSettledWhenThatSlotIsOpened()
+        {
+            SaveSlotManager.CurrentSlot = 4;
+            SaveSlotManager.Forget();
+
+            RunManager.StartRun(Seed);
+            RunManager.Run.bossesKilled.Add("boss_a");
+            SaveSlotManager.SaveCurrent();
+            Assert.IsTrue(RunManager.HasRun, "the fixture did not leave a run behind");
+
+            // A fresh process: the cache is dropped and the boot check runs
+            // against slot 0, exactly as it does for real.
+            SaveSlotManager.Forget();
+            SaveSlotManager.CurrentSlot = 0;
+            RunManager.ResetForTests();
+
+            // ...and the player opens slot 5 again.
+            SaveSlotManager.CurrentSlot = 4;
+            SaveSlotManager.Forget();
+            RunManager.SettleOnOpening();
+
+            Assert.IsFalse(RunManager.HasRun,
+                "the run in slot 5 survived the process, so opening it drops the player back into " +
+                "the fight they quit");
+        }
+
+        // And settled rather than discarded: opening the slot must still pay
+        // out what the descent earned, or a crash silently costs the player
+        // every ember its bosses owed them.
+        [Test]
+        public void SettlingOnOpeningStillPaysWhatTheRunEarned()
+        {
+            SaveSlotManager.CurrentSlot = 4;
+            SaveSlotManager.Forget();
+
+            RunManager.StartRun(Seed);
+            RunManager.Run.bossesKilled.Add("boss_a");
+            RunManager.Run.roomsCleared = 5;
+
+            int before = SaveSlotManager.CurrentSave.EmberTotal();
+            RunManager.SettleOnOpening();
+
+            Assert.Greater(SaveSlotManager.CurrentSave.EmberTotal(), before,
+                "the abandoned run was discarded rather than settled - its bosses paid nothing");
+        }
+
     }
 }
