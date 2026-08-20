@@ -24,10 +24,16 @@ public static class ContentBuilder
     private const string RelicsPath = ContentRoot + "/Relics";
     private const string AchievementsPath = ContentRoot + "/Achievements";
 
-    // The talent grid's shape is no longer declared here: it is derived
-    // from talents.json by ContentDatabase.TalentColumns/TalentRows, and the
-    // authorable limits (column 0-11, row 0-5, matching what SceneBuilder can
-    // actually lay out) are enforced by TalentEntryResolver.
+    // The talent grid's shape is not declared here, and must not be written
+    // out here either. The tree's size has one home -- TalentPage.PathCount
+    // for its width, TalentSkeleton.SlotCount for its depth -- and
+    // TalentEntryResolver derives the authorable bounds from those rather than
+    // restating them.
+    //
+    // Said as a prohibition because the version of this comment that DID write
+    // them out said "column 0-11, row 0-5" long after the tree became three
+    // paths of twenty-one slots, which is a confident wrong answer sitting in
+    // the first file anyone adding content opens.
 
     [MenuItem("Prince's Palace/Build Default Content")]
     public static void BuildDefaultContent()

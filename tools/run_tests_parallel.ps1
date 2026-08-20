@@ -223,11 +223,27 @@ if (-not $SkipSync) {
     # produces dozens of NullReferenceExceptions from serialized fields that
     # "should" be wired, and the cause looks nothing like the symptom - it is
     # the same trap CLAUDE.md's gotcha #1 is about. Cheap to check, so check.
+    #
+    # ENUMERATED, NOT LISTED. This named four scenes by hand and there are five:
+    # Talents.unity sat outside the guard, so the scene whose staleness produces
+    # exactly the cascade above was the one nothing checked. The scene set
+    # already has an owner -- SceneBuilder derives it from
+    # ScreenRegistry.All.GroupBy(ScenePath) -- and a second copy of that list,
+    # in a language that cannot see the first, is how it drifted. Reading the
+    # directory cannot drift, and a sixth scene is covered the day it exists.
+    $sceneDir = Join-Path $SourceProject "Assets\_Project\Scenes"
+    $sceneFiles = @(Get-ChildItem -Path $sceneDir -Filter *.unity -File -ErrorAction SilentlyContinue)
+
+    # A guard that checks nothing passes everything. An empty glob means the
+    # path is wrong, not that the project has no scenes.
+    if ($sceneFiles.Count -lt 1) {
+        Write-Host "SCENE GUARD IS VACUOUS: no .unity files under $sceneDir - it would pass by finding nothing to check."
+        exit 1
+    }
+
     foreach ($runner in $Runners) {
-        # v2's scene set. Gameplay.unity was v1's single monolithic scene and
-        # does not exist here -- the screens are separate scenes now.
-        foreach ($rel in @("Assets\_Project\Scenes\MainMenu.unity", "Assets\_Project\Scenes\Hub.unity", "Assets\_Project\Scenes\Fight.unity", "Assets\_Project\Scenes\Map.unity")) {
-            $src = Get-Item (Join-Path $SourceProject $rel)
+        foreach ($src in $sceneFiles) {
+            $rel = Join-Path "Assets\_Project\Scenes" $src.Name
             $dst = Join-Path $runner.Path $rel
             if (-not (Test-Path $dst)) { Write-Host "SYNC FAILED: $dst missing"; exit 1 }
             if ((Get-Item $dst).Length -ne $src.Length) {

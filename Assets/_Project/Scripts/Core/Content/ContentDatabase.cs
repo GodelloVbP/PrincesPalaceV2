@@ -165,17 +165,20 @@ namespace PrincesPalace.Content
             get { EnsureLoaded(); return _items.Where(i => i.startingStock).ToList(); }
         }
 
-        // Grid dimensions are derived from the authored talents rather than
-        // fixed, so re-shaping the tree is purely a content change.
-        public static int TalentColumns
-        {
-            get { EnsureLoaded(); return _talents.Count == 0 ? 0 : _talents.Max(t => t.column) + 1; }
-        }
-
-        public static int TalentRows
-        {
-            get { EnsureLoaded(); return _talents.Count == 0 ? 0 : _talents.Max(t => t.row) + 1; }
-        }
+        // TalentColumns and TalentRows used to live here, deriving the grid's
+        // dimensions from the authored talents ("re-shaping the tree is purely
+        // a content change"). They are gone because the tree's size has one
+        // home and it is not this one: TalentPage.PathCount and
+        // TalentSkeleton.SlotCount are what the screen, the resolver and the
+        // controller all read, and these two offered a SECOND answer, derived
+        // from a different source, that nothing consulted.
+        //
+        // Recorded rather than deleted silently because "derived from content"
+        // reads like the better design and would invite re-adding them. It is
+        // not: the skeleton is a fixed graph the content is authored AGAINST,
+        // so a max() over what happens to be authored describes the content,
+        // not the tree. Content that fills fewer rows than the skeleton has
+        // would have made this pair quietly disagree with every other reader.
 
         public static IReadOnlyList<SkillDefinition> Skills
         {
@@ -407,12 +410,18 @@ namespace PrincesPalace.Content
         // redesigned freely without anyone having to re-price it: a node moved
         // deeper simply becomes worth more.
         //
-        // A talent's `row` IS its slot index in the skeleton (TalentController
-        // binds buttons by `row * TalentColumns + column`), which is what makes
-        // this lookup legitimate rather than a coincidence.
+        // A talent's `row` IS its slot index in the skeleton and its `column`
+        // IS its path — TalentController reads both that way when it fills the
+        // tree (`tree.Set(talent.column, talent.row, …)`), and
+        // TalentEntryResolver bounds them against TalentPage.PathCount and
+        // TalentSkeleton.SlotCount. That is what makes this lookup legitimate
+        // rather than a coincidence.
         //
-        // Lives here in Core rather than in the Domain resolver because
-        // TalentSkeleton is a Core type and Domain cannot see it. There is no
+        // Lives here in Core rather than in the Domain resolver because it
+        // takes a TalentDefinition, which is a Core ScriptableObject that
+        // Domain cannot see. TalentSkeleton itself is Domain — an earlier
+        // version of this comment named it as the reason, which would have sent
+        // anyone trying to move this at a wall that is not there. There is no
         // authored cost field to consult any more — see ResolvedTalent's
         // constructor for why the one that used to exist was deleted.
         //
