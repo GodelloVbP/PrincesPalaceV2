@@ -632,6 +632,18 @@ public static class ScreenRegistry
                 var talents = result.Attach<TalentController>(screen.Root);
                 talents.sky = result.Rect(screen.Sky);
                 talents.orbs = screen.Orbs.Select(result.Button).ToArray();
+
+                // One reveal per orb, attached to the ORB and pointed at its
+                // own mask -- so the controller reaches it by the same index it
+                // already uses for everything else about that slot.
+                talents.orbReveals = screen.Orbs
+                    .Select((orb, i) =>
+                    {
+                        var reveal = result.Attach<TalentNodeInvestReveal>(orb);
+                        reveal.mask = result.Rect(screen.OrbReveals[i]);
+                        return reveal;
+                    })
+                    .ToArray();
                 talents.edgeGlows = screen.EdgeGlows.Select(result.Go).ToArray();
                 talents.edgeChildSlots = screen.EdgeChildSlots.ToArray();
 

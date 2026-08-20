@@ -62,6 +62,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // lists, because the wiring binds arrays and E4 counts them.
         public List<NodeRef> Orbs = new List<NodeRef>();
         public List<NodeRef> OrbGlows = new List<NodeRef>();
+
+        // The reveal: a mask per orb, holding the LIT medallion. The mask is
+        // what grows when a talent is kindled; the orb inside it is held at
+        // full size and full strength the whole way, which is the difference
+        // between something arriving and something switching on.
+        public List<NodeRef> OrbReveals = new List<NodeRef>();
         public List<NodeRef> Edges = new List<NodeRef>();
 
         // The lit half of each edge, in the SAME order as Edges. Switched off
@@ -255,10 +261,36 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // which is every screenshot and every fresh save -- draws the tree
             // dark, and lighting up is something the player does.
             orb.SpriteKey = OrbUnlitKey;
+
+            // THE LIT MEDALLION, held at full size inside a mask that is not.
+            //
+            // orb_lit has been declared and unreferenced since the art was
+            // keyed -- the screen tinted the single unlit sprite for all three
+            // states instead. This is what it was for.
+            var lit = Ui.Sprite($"Orb{path}_{slot}Lit", OrbLitKey,
+                    new UiVec(size, size), Place.At(0f, 0f))
+                .AsDecor();
+
+            // Clipping, so shrinking this reveals a SLICE of the orb inside
+            // rather than a smaller orb. Built switched off and sized to the
+            // node's full diameter -- TalentNodeInvestReveal reads that size in
+            // Awake, which is why it is authored here rather than restated as a
+            // constant over there: the diameter depends on the slot's role.
+            var reveal = Ui.Panel($"Orb{path}_{slot}Reveal", Place.At(0f, 0f),
+                    UiSize.Fixed(size, size), lit)
+                .Clipping()
+                .Inactive()
+                .AsDecor()
+                .AllowOverlap("the lit medallion lies exactly over the unlit one it replaces");
+
+            // AFTER the glow, so the lit orb draws over the halo rather than
+            // under it.
             orb.Children.Add(glow);
+            orb.Children.Add(reveal);
 
             Orbs.Add(orb);
             OrbGlows.Add(glow);
+            OrbReveals.Add(reveal);
             return orb;
         }
 

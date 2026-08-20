@@ -60,21 +60,24 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void EveryOrbWearsTheMedallion()
         {
-            // Walked rather than spot-checked: the orbs are built in a loop, so
-            // a per-path divergence would mean the loop grew a branch.
+            // Asserted against the screen's OWN list rather than by matching
+            // node names. The first version swept everything called "Orb*" that
+            // did not end in "Glow", which quietly grew to include the lit
+            // medallion and its mask the moment the reveal was added -- a
+            // filter that has to be re-tuned every time the tree gains a part
+            // is a filter that will eventually be tuned wrong.
             //
-            // UNLIT is the built state -- the controller lights the ones the
-            // player owns, so a fresh save draws the tree dark and lighting up
-            // is something the player does.
-            var offenders = Walk(TalentScreen.Build().Root)
-                .Where(n => n.Name.StartsWith("Orb") && !n.Name.EndsWith("Glow"))
-                .Where(n => n.SpriteKey != TalentScreen.OrbUnlitKey)
-                .Select(n => n.Name)
+            // UNLIT is the built state: the controller lights what the player
+            // owns, so a fresh save draws the tree dark.
+            var screen = TalentScreen.Build();
+
+            var offenders = screen.Orbs
+                .Where(o => o.Node.SpriteKey != TalentScreen.OrbUnlitKey)
+                .Select(o => o.Node.Name)
                 .ToList();
 
             CollectionAssert.IsEmpty(offenders);
-            Assert.AreEqual(TalentPage.PathCount * TalentScreen.OrbCount,
-                Walk(TalentScreen.Build().Root).Count(n => n.Name.StartsWith("Orb") && !n.Name.EndsWith("Glow")),
+            Assert.AreEqual(TalentPage.PathCount * TalentScreen.OrbCount, screen.Orbs.Count,
                 "fixture: one orb per slot per path");
         }
 

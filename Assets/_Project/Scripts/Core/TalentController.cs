@@ -25,6 +25,7 @@ namespace PrincesPalace
         // parallel arrays rather than a lookup: the screen built them in one
         // pass and UiCountAudit can hold their lengths to each other, which a
         // dictionary assembled at runtime could not be checked against.
+        [SerializeField] internal TalentNodeInvestReveal[] orbReveals;
         [SerializeField] internal GameObject[] edgeGlows;
         [SerializeField] internal int[] edgeChildSlots;
         [SerializeField] internal Image[] orbGlows;
@@ -165,6 +166,16 @@ namespace PrincesPalace
                 TalentPage.SlotId(character.definitionId, _path, _selectedSlot));
             character.embers -= TalentPage.EmberCost;
 
+            // PLAYED BEFORE THE REPAINT, and that ordering is the whole of it.
+            //
+            // Refresh below calls EnsureShown on every taken orb, which snaps a
+            // reveal straight to full size. Starting the animation first means
+            // this orb is already mid-Play by the time that runs, and
+            // EnsureShown deliberately does nothing to a reveal in flight --
+            // so the one node the player just kindled animates and the twenty
+            // they kindled earlier do not.
+            PlayRevealFor(_path, _selectedSlot);
+
             // Written immediately. A talent tree that loses a kindled orb to a
             // crash is the single least forgivable thing this screen could do.
             SaveSlotManager.SaveCurrent();
@@ -220,6 +231,17 @@ namespace PrincesPalace
                     // is where the refusal is explained. An uninteractable orb
                     // can only say "no" by doing nothing.
                     orbs[index].interactable = path == _path;
+
+                    // Idempotent, and it must stay that way: this runs on every
+                    // redraw -- a path change, a different character, selecting
+                    // another orb -- and a reveal that restarted here would
+                    // replay the whole tree's worth of flourishes every time
+                    // the player moved the selection.
+                    if (orbReveals != null && index < orbReveals.Length && orbReveals[index] != null)
+                    {
+                        if (taken) orbReveals[index].EnsureShown();
+                        else orbReveals[index].HideInstantly();
+                    }
                 }
             }
 
@@ -258,6 +280,16 @@ namespace PrincesPalace
                 bool lit = unlocked.Contains(TalentPage.SlotId(characterId, path, slot));
                 SetActive(edgeGlows[i], lit);
             }
+        }
+
+        private void PlayRevealFor(int path, int slot)
+        {
+            if (orbReveals == null) return;
+
+            int index = TalentScreen.OrbIndex(path, slot);
+            if (index < 0 || index >= orbReveals.Length) return;
+
+            if (orbReveals[index] != null) orbReveals[index].Play();
         }
 
         private static void SetActive(GameObject go, bool active)
