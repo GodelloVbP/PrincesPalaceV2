@@ -33,18 +33,22 @@ namespace PrincesPalace.Domain.UiKit
 
         // ---- the two exits ------------------------------------------------------
 
-        public const float ExitWidth = 520f;
-        public const float ExitHeight = 76f;
+        // Wide and tall enough to be the thing the pane is about. At 520x76
+        // they were three small controls adrift in 1600x804; the pane has no
+        // other content to give them scale, so they have to carry it
+        // themselves.
+        public const float ExitWidth = 720f;
+        public const float ExitHeight = 96f;
 
         // The quiet line under each, saying what the button actually does to
         // the run. Not decoration: both of these end a descent, and a player
         // who thinks "return to title" parks one is owed the correction before
         // the click rather than after it.
         public const float NoteGap = 10f;
-        public const float NoteHeight = 18f;
+        public const float NoteHeight = 20f;
 
         public const float ExitBlockHeight = ExitHeight + NoteGap + NoteHeight;   // 104
-        public const float ExitGap = 32f;
+        public const float ExitGap = 40f;
 
         public const int ExitCount = 2;
 
@@ -86,23 +90,23 @@ namespace PrincesPalace.Domain.UiKit
 
         // ---- the rule that sets abandon apart ------------------------------------
 
-        public const float SeparatorWidth = 760f;
-        public const float SeparatorGap = 48f;
+        public const float SeparatorWidth = 980f;
+        public const float SeparatorGap = 56f;
 
         public static float SeparatorY => PairBottom - SeparatorGap;
 
         // ---- the abandon card ----------------------------------------------------
 
-        public const float AbandonWidth = 620f;
+        public const float AbandonWidth = 840f;
 
-        public const float AbandonPadY = 22f;
-        public const float AbandonHeadingHeight = 26f;
-        public const float AbandonHeadingGap = 8f;
-        public const float AbandonNoteHeight = 18f;
-        public const float AbandonNoteGap = 18f;
+        public const float AbandonPadY = 26f;
+        public const float AbandonHeadingHeight = 30f;
+        public const float AbandonHeadingGap = 10f;
+        public const float AbandonNoteHeight = 20f;
+        public const float AbandonNoteGap = 22f;
 
-        public const float HoldWidth = 460f;
-        public const float HoldHeight = 64f;
+        public const float HoldWidth = 620f;
+        public const float HoldHeight = 80f;
 
         public const float AbandonHeight =
             AbandonPadY * 2f + AbandonHeadingHeight + AbandonHeadingGap +

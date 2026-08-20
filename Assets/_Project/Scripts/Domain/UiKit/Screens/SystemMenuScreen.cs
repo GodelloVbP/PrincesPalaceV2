@@ -183,9 +183,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             //
             // One per tab, all stacked in the same box, all but one switched
             // off. The pane is the FULL content area rather than an inset one,
-            // because the design hosts the dossier by centring it here -- 1360
-            // in 1600 is 120 clear each side, 766 in 804 is 19 clear top and
-            // bottom, and nothing scales.
+            // and every hosted screen is authored AT that size rather than
+            // inset into it. The dossier used to be placed at its handover's
+            // 1360x766 and centred, which cost 118px of dead margin a side and
+            // left its columns stopping short of the floor -- it read as a
+            // small screen inside a big empty one. Every pane fills the box
+            // now; see DossierLayout's header for why scaling could not.
             var paneChildren = new List<UiNode>();
             var owners = SystemMenuTabs.PaneOwners;
 

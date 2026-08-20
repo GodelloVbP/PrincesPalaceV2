@@ -337,8 +337,24 @@ namespace PrincesPalace
             if (xpFill != null)
             {
                 float fraction = next <= 0 ? 0f : Mathf.Clamp01((float)character.exp / next);
-                xpFill.anchorMax = new Vector2(fraction, xpFill.anchorMax.y);
-                xpFill.sizeDelta = new Vector2(0f, xpFill.sizeDelta.y);
+
+                // WIDTH, against a left pivot -- not anchors.
+                //
+                // This drove anchorMax.x to the fraction and zeroed sizeDelta,
+                // which looks equivalent and is not: ANCHORS ARE RELATIVE TO
+                // THE PARENT. The parent here is column A, not the 226px track,
+                // so a bar meant to cross the track crossed that fraction of
+                // the whole column instead -- out past its own "258 left"
+                // caption and on into the loadout stage beside it.
+                //
+                // The Options slider's fill records the identical mistake in
+                // its own comment, made and fixed while this one was still
+                // live. The tree already authors this node at the track's width
+                // with a left pivot, so setting width is all that was ever
+                // needed, and DossierXpBarTests holds the fill inside the track
+                // by measuring both rather than by trusting the mechanism.
+                xpFill.sizeDelta = new Vector2(
+                    DossierLayout.XpTrackWidth * fraction, xpFill.sizeDelta.y);
             }
 
             if (xpRemaining != null) xpRemaining.SetContent(Mathf.Max(0, next - character.exp) + " left");

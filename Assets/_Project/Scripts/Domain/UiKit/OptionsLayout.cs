@@ -18,18 +18,32 @@ namespace PrincesPalace.Domain.UiKit
         public const float HalfWidth = PaneWidth * 0.5f;
         public const float HalfHeight = PaneHeight * 0.5f;
 
-        // The same 120px side clearance the dossier gets, so the two panes sit
-        // their content in the same box and switching tabs does not shift the
-        // margins under the player.
-        public const float PadX = 120f;
+        // 60, matching the dossier and Run statistics now that all three fill
+        // the pane rather than sitting inside it.
+        public const float PadX = 60f;
         public const float PadTop = 44f;
         public const float PadBottom = 64f;
 
         public const float ColumnGap = 40f;
-        public const float ColumnCount = 2f;
+
+        // ONE COLUMN, not two, and that is what lets five settings fill an
+        // 804-tall pane.
+        //
+        // Two columns put Audio's two rows beside Display's three and left both
+        // stopping less than halfway down: a card cannot be made tall enough to
+        // close the pane without rows deep enough to lose the control in. Full
+        // width, stacked, the two cards and the restore button reach 694 of 696
+        // -- and a wide row with its label at the left and its control at the
+        // right is the shape every settings screen has, rather than a
+        // compromise.
+        //
+        // What this does NOT fix is that there are five settings. The four cut
+        // groups are in REMAINING.md and each is a feature rather than a layout
+        // job; this is the honest arrangement of what exists.
+        public const float ColumnCount = 1f;
 
         public const float ColumnWidth =
-            (PaneWidth - PadX * 2f - ColumnGap * (ColumnCount - 1f)) / ColumnCount;   // 660
+            (PaneWidth - PadX * 2f - ColumnGap * (ColumnCount - 1f)) / ColumnCount;   // 1480
 
         public static float ColumnCentreX(int column) =>
             -HalfWidth + PadX + ColumnWidth * 0.5f + column * (ColumnWidth + ColumnGap);
@@ -39,10 +53,22 @@ namespace PrincesPalace.Domain.UiKit
 
         // ---- a card -------------------------------------------------------------
 
-        public const float CardPadX = 24f;
-        public const float CardPadY = 18f;
-        public const float HeadingHeight = 34f;
-        public const float RowHeight = 56f;
+        // The heading sits in its OWN narrow box at the card's left edge rather
+        // than a full-width one at its centre. Ui.Label centres text in its box
+        // and there is no left-aligned helper, so a snug box at the left is how
+        // a heading gets left-aligned here -- and over a 1420px row, a centred
+        // one floats in the middle of nothing with its own rows starting far
+        // away underneath it.
+        public const float HeadingWidth = 320f;
+
+        public const float CardPadX = 30f;
+        public const float CardPadY = 24f;
+        public const float HeadingHeight = 40f;
+
+        // 78 rather than 56, chosen against the pane rather than by eye: two
+        // cards of two and three rows, their gaps, and the restore button come
+        // to 694 of the 696 the pane has. CardsFit() is what keeps that true.
+        public const float RowHeight = 78f;
 
         public const float CardContentWidth = ColumnWidth - CardPadX * 2f;            // 612
         public const float CardContentHalf = CardContentWidth * 0.5f;                 // 306
@@ -51,7 +77,7 @@ namespace PrincesPalace.Domain.UiKit
             CardPadY * 2f + HeadingHeight + rows * RowHeight;
 
         // Cards stack down their column with this between them.
-        public const float CardGap = 28f;
+        public const float CardGap = 36f;
 
         // Row `index` inside a card of `rows`, measured from the CARD's centre.
         public static float RowCentreY(int rows, int index) =>
@@ -65,27 +91,35 @@ namespace PrincesPalace.Domain.UiKit
         // Label on the left, control on the right, and the two never negotiate:
         // the label's box ends where the control's begins, so a long label
         // truncates rather than shoving the slider off the card.
-        public const float LabelWidth = 260f;
+        public const float LabelWidth = 320f;
         public static float LabelCentreX => -CardContentHalf + LabelWidth * 0.5f;
 
-        public const float TrackWidth = 220f;
+        // The controls sit in the card's RIGHT-HAND third rather than just
+        // right of the label. On a 1420px row a control that starts where the
+        // label ends leaves 800px of nothing after it, which reads as a row
+        // that failed to finish rather than as a wide one.
+        public const float ControlBlockWidth = 620f;
+        public static float ControlLeft => CardContentHalf - ControlBlockWidth;
+
+        public const float TrackWidth = 380f;
         public const float TrackHeight = 6f;
-        public static float TrackCentreX => 90f;
+        public static float TrackCentreX => ControlLeft + TrackWidth * 0.5f;
         public static float TrackLeft => TrackCentreX - TrackWidth * 0.5f;
 
-        public const float ValueWidth = 70f;
-        public static float SliderValueCentreX => 250f;
+        public const float ValueWidth = 90f;
+        public static float SliderValueCentreX => CardContentHalf - ValueWidth * 0.5f;
 
-        public const float StepButtonSize = 26f;
-        public static float StepPrevCentreX => 60f;
-        public static float StepNextCentreX => 262f;
-        public const float StepValueWidth = 150f;
-        public static float StepValueCentreX => 161f;
+        public const float StepButtonSize = 34f;
+        public static float StepPrevCentreX => ControlLeft + StepButtonSize * 0.5f;
+        public static float StepNextCentreX => CardContentHalf - StepButtonSize * 0.5f;
+        public const float StepValueWidth = 420f;
+        public static float StepValueCentreX =>
+            (StepPrevCentreX + StepNextCentreX) * 0.5f;
 
         // ---- the restore button -------------------------------------------------
 
-        public const float RestoreWidth = 220f;
-        public const float RestoreHeight = 44f;
+        public const float RestoreWidth = 280f;
+        public const float RestoreHeight = 56f;
 
         // ---- the no-scrolling guard ---------------------------------------------
 

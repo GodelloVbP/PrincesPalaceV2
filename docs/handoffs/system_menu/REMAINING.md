@@ -61,8 +61,24 @@ tokens* sections:
   game at zero.
 - **Capacity guard is arithmetic**, not a count — a set with the same number of
   wordier labels is refused, which a count-based limit called fine.
-- Dossier hosted at 1360×766 in the 1600×804 pane: 120 clear each side, 19 top
-  and bottom, no scaling.
+- **Every pane fills the content area.** The dossier used to be hosted at its
+  handover's own 1360×766, centred, which left 118px of dead margin down each
+  side and all three of its columns stopping about 200px short of the floor — it
+  read as a small screen sitting inside a big empty one. It is authored at
+  1600×804 now, with the columns re-proportioned in the handover's own ratios
+  (23.4% / 30%) and the loadout stage scaled as one unit.
+
+  Worth recording why scaling alone could not do it: the authored panel is 1.775
+  wide per 1 tall and the pane is 1.990, so scaling to fill the height leaves
+  86px a side and scaling to fill the width overflows the height by 97. **There
+  is no scale factor that fills this box.** What the handover's "never reflow"
+  rule was protecting is kept — `FromStage` scales the sixteen slot and leader
+  coordinates as one unit, so not one of them was re-authored.
+
+  `SystemMenuPaneTests.EveryHostedPaneIsTheSizeOfTheContentArea` and
+  `EveryPaneUsesMostOfItsHeight` hold all four panes to it. Nothing else could:
+  a pane authored smaller than its box still solves, still passes containment,
+  still passes overflow — it just sits in the middle of a box it does not fill.
 
 **Four of the five panes have real content**: Character & Inventory (the
 dossier), Options, Run statistics and Main menu. Only Floor map is still a
@@ -73,7 +89,8 @@ built still shows it.
 
 ## Options — built, and four of its six groups cut
 
-Layout `2a`, two columns, no scrolling, applies immediately, `RESTORE DEFAULTS`.
+Layout `2a`, no scrolling, applies immediately, `RESTORE DEFAULTS` — but in
+**one full-width column**, not the design's two.
 `GameSettings` had been fully implemented for a while with **no UI at all**;
 this is the first screen that reaches it.
 
@@ -92,13 +109,19 @@ believes something changed, and is wrong.
 | Keybinds | rebind door, conflict count | **Cut.** No rebind screen and no keybind storage; the design lists that screen as still open, so this would be a door to a room and a number counting nothing. |
 | Language | stepper | **Cut.** No localisation table — `UiString`'s key is described in its own header as "the seam a localisation table would key on later". A stepper with one entry is not a choice. |
 
-Consequence worth seeing rather than reading: **the pane is half empty.**
-Two cards in a 1600×804 pane leaves the bottom two thirds bare. That is the
-honest state of the settings this game has, not a layout problem — but if the
-answer is "add the settings", each cut row above is a small feature rather than
-a UI job, and `battle speed` is the one with a consumer already waiting
-(`SystemMenuController.Resume` restores the previous `timeScale` specifically so
-a speed setting would survive the menu).
+**One column rather than the design's two, and that is what lets five settings
+fill the pane.** Side by side, Audio's two rows and Display's three both stopped
+less than halfway down, and no row height closes an 804px pane from a card three
+rows deep without a control you could lose a hand in. Stacked at full width the
+two cards and the restore button reach 694 of the 696 available, and a row with
+its label at the left and its control at the right is the shape every settings
+screen has rather than a compromise. `CardsFit()` is what keeps that true — at
+two pixels of slack, the next group added fails the build rather than the eye.
+
+What that does NOT fix is that there are five settings. Each cut row above is a
+small feature rather than a UI job, and `battle speed` is the one with a consumer
+already waiting (`SystemMenuController.Resume` restores the previous `timeScale`
+specifically so a speed setting would survive the menu).
 
 ## Run statistics — built, seventeen figures and no header
 
@@ -222,11 +245,13 @@ Two things fell out of building it:
   been checked for coroutines that assume time advances, and the fight is the
   place that would bite. Everything the menu's own panes count — the hold, the
   arming clock — is on unscaled time for exactly this reason.
-- **Two panes are still half empty.** Options for the reason above; Run
-  statistics because three cards of four to eight rows do not fill a 1600×804
-  pane either. Both are the honest shape of what the game records, and both
-  would fill up on their own as the game grows rather than needing a layout
-  change.
+- **Column A of the dossier carries its space in one place.** The portrait,
+  name and XP block sits at the top and the two nav rows are a footer at the
+  bottom, with about 180px between them. The portrait cannot absorb it: the
+  Image carries `preserveAspect`, so a box taller than the art's own aspect
+  letterboxes rather than fills. It reads as two groups that mean different
+  things — who this is, and what you can open — rather than as the column
+  stopping early, which is what it did before.
 
 ## Known gaps in the Options pane
 
@@ -235,10 +260,13 @@ Two things fell out of building it:
   interactable and navigation model to do what twenty lines do, and what it
   would buy is focus handling that is not wired anywhere yet. When it is, that
   is the moment to reconsider.
-- **Card headings are centred**, because `Ui.Label` centres and there is no
-  left-aligned label helper. Reads slightly odd above left-aligned rows, and the
-  Run statistics pane inherits the same limitation — its two-column rows are two
-  centred labels in snug boxes, which is the dossier's own stat-table trick.
+- **`Ui.Label` centres and there is no left-aligned helper**, so left alignment
+  is faked by putting the text in a snug box at the left edge — which is what
+  the Options card headings and the Run statistics name columns now do, and what
+  the dossier's stat table always did. It works, and it means every "left
+  aligned" label in this menu is really a centred one in a box that happens to
+  fit. A real alignment flag on `UiNode` would remove the trick; nothing needs
+  it badly enough yet.
 - **`Screen.SetResolution` is never exercised by a test.** `GameSettings.Apply`
   skips device application in batch mode on purpose — it once capped the
   headless runner at 60fps and tripled the PlayMode suite's runtime. So the

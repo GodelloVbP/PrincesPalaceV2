@@ -23,18 +23,19 @@ namespace PrincesPalace.Domain.UiKit
         public const float HalfWidth = PaneWidth * 0.5f;
         public const float HalfHeight = PaneHeight * 0.5f;
 
-        // The same 120px side clearance the dossier and Options get, so all
-        // three panes sit their content in the same box and switching tabs does
-        // not shift the margins under the player.
-        public const float PadX = 120f;
+        // 60, not the 120 this and every other pane used to take. The dossier
+        // fills the pane now, so a 120px inset here would have been the odd one
+        // out -- and three cards inside 1360 of 1600 left the columns narrow
+        // enough that the figures floated in them.
+        public const float PadX = 60f;
         public const float PadTop = 44f;
         public const float PadBottom = 64f;
 
         public const float ColumnCount = 3f;
 
-        // 50 rather than Options' 40, chosen so the column lands on a whole
-        // number: (1600 - 240 - 100) / 3 is exactly 420. Half-pixel columns are
-        // how a rim ends up one pixel thick on one card and two on the next.
+        // Chosen so the column lands on a whole number: (1600 - 120 - 100) / 3
+        // is exactly 460. Half-pixel columns are how a rim ends up one pixel
+        // thick on one card and two on the next.
         public const float ColumnGap = 50f;
 
         public const float ColumnWidth =
@@ -50,14 +51,19 @@ namespace PrincesPalace.Domain.UiKit
 
         // ---- a card -------------------------------------------------------------
 
-        public const float CardPadX = 24f;
-        public const float CardPadY = 20f;
-        public const float HeadingHeight = 34f;
+        public const float CardPadX = 30f;
+        public const float CardPadY = 26f;
+        public const float HeadingHeight = 40f;
 
-        // Tighter than an Options row, because nothing here is a control -- a
-        // row of figures wants to read as a list, and 56px apart it reads as
-        // eight separate statements.
-        public const float RowHeight = 46f;
+        // Sized so the TALLEST card closes the pane: eight rows at 70 plus the
+        // heading and the padding is 652 of 696 usable. At 46 it was 442, and
+        // the pane carried a quarter of its height in empty violet under three
+        // cards that had stopped early.
+        //
+        // Still a list rather than a control stack -- nothing here is
+        // interactive, so the rows carry a hairline between them and the height
+        // is what separates them rather than any chrome.
+        public const float RowHeight = 70f;
 
         public const float CardContentWidth = ColumnWidth - CardPadX * 2f;      // 372
         public const float CardContentHalf = CardContentWidth * 0.5f;           // 186
@@ -98,10 +104,10 @@ namespace PrincesPalace.Domain.UiKit
         // value's box ends flush against the other, with a hairline under the
         // row. Ui.Label centres text inside its box, so snug boxes at the edges
         // are what makes a pair of centred labels read as a two-column table.
-        public const float NameWidth = 220f;
+        public const float NameWidth = 250f;
         public static float NameCentreX => -CardContentHalf + NameWidth * 0.5f;
 
-        public const float ValueWidth = 120f;
+        public const float ValueWidth = 140f;
         public static float ValueCentreX => CardContentHalf - ValueWidth * 0.5f;
 
         // ---- the no-scrolling guard ---------------------------------------------

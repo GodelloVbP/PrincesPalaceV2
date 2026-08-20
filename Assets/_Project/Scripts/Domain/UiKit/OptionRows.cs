@@ -90,7 +90,7 @@ namespace PrincesPalace.Domain.UiKit
                 new OptionRowDef("music", UiStrings.OptionsMusic, OptionKind.Slider,
                     note: UiStrings.OptionsMusicNote)),
 
-            new OptionGroupDef("Display", UiStrings.OptionsDisplay, column: 1,
+            new OptionGroupDef("Display", UiStrings.OptionsDisplay, column: 0,
                 new OptionRowDef("resolution", UiStrings.OptionsResolution, OptionKind.Stepper),
                 new OptionRowDef("window", UiStrings.OptionsWindow, OptionKind.Stepper),
                 new OptionRowDef("fps", UiStrings.OptionsFrameLimit, OptionKind.Stepper)),

@@ -12,9 +12,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // Character and Inventory panes rather than being its own modal -- the two
     // tabs are two doors into this one screen, exactly as C and I are today.
     //
-    // Authored at DossierLayout's 1360x766 and centred in the menu's 1600x804
-    // content pane, so it never scales and the handover's rule about uniform
-    // scale is satisfied by never needing it.
+    // Authored AT the menu's 1600x804 content pane and filling it. It used to
+    // sit at the handover's own 1360x766, centred, which left 118px of dead
+    // margin a side and all three columns stopping short of the floor. Nothing
+    // scales: DossierLayout re-proportions the columns and scales the loadout
+    // stage as one unit, which is what the handover's rule was protecting.
     //
     // WHAT IS NOT HERE, and why: the handover's Dodge, Carried, Shop prices and
     // Party morale rows are gone. None of them exists in this game -- there is
@@ -206,8 +208,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             yield return Ui.Label("DossierXpLabel", UiStrings.OverlayXp, new UiVec(30f, 16f), 10, TextDim,
                 Place.At(cx - DossierLayout.ContentAWidth * 0.5f + 15f, DossierLayout.XpRowCentreY)).AsDecor();
 
-            float trackWidth = DossierLayout.ContentAWidth - 30f - 10f - 70f;
-            float trackLeft = cx - DossierLayout.ContentAWidth * 0.5f + 40f;
+            float trackWidth = DossierLayout.XpTrackWidth;
+            float trackLeft = cx + DossierLayout.XpTrackLeft;
             yield return Ui.Solid("DossierXpTrack", "#C8B4DE24",
                 new UiVec(trackWidth, 3f),
                 Place.At(trackLeft + trackWidth * 0.5f, DossierLayout.XpRowCentreY)).AsDecor();

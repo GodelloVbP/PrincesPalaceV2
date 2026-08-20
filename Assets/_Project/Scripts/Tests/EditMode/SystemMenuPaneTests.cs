@@ -16,6 +16,78 @@ namespace PrincesPalace.Domain.Tests
     // about intent rather than about geometry.
     public class SystemMenuPaneTests
     {
+        // ---- every pane fills its box -------------------------------------------
+        //
+        // THE RULE, and it is here because breaking it is invisible to
+        // everything else. A pane authored smaller than the content area still
+        // solves, still passes containment, still passes overflow -- it just
+        // sits in the middle of a box it does not fill, with dead violet all
+        // round it. The dossier did exactly that at the handover's own 1360x766
+        // inside a 1600x804 pane, for as long as it had been hosted here.
+        [Test]
+        public void EveryHostedPaneIsTheSizeOfTheContentArea()
+        {
+            float width = SystemMenuLayout.PanelWidth;
+            float height = SystemMenuLayout.ContentHeight;
+
+            Assert.AreEqual(width, DossierLayout.Width, 0.001f, "the dossier is not the pane's width");
+            Assert.AreEqual(height, DossierLayout.Height, 0.001f, "the dossier is not the pane's height");
+
+            Assert.AreEqual(width, OptionsLayout.PaneWidth, 0.001f, "Options is not the pane's width");
+            Assert.AreEqual(height, OptionsLayout.PaneHeight, 0.001f, "Options is not the pane's height");
+
+            Assert.AreEqual(width, RunStatsLayout.PaneWidth, 0.001f, "Run statistics is not the pane's width");
+            Assert.AreEqual(height, RunStatsLayout.PaneHeight, 0.001f, "Run statistics is not the pane's height");
+
+            Assert.AreEqual(width, ExitsLayout.PaneWidth, 0.001f, "the Main menu pane is not the pane's width");
+            Assert.AreEqual(height, ExitsLayout.PaneHeight, 0.001f, "the Main menu pane is not the pane's height");
+        }
+
+        // And their contents reach the floor rather than stopping in the middle
+        // of it. Stated as a floor on how much of the usable height the tallest
+        // thing in each pane uses -- an exact fit would be a change-detector,
+        // and the failure being guarded against is a pane a THIRD empty.
+        [TestCase("dossier")]
+        [TestCase("options")]
+        [TestCase("runstats")]
+        [TestCase("exits")]
+        public void EveryPaneUsesMostOfItsHeight(string pane)
+        {
+            float used;
+            float usable;
+
+            switch (pane)
+            {
+                case "dossier":
+                    // Column C's stat list is the last thing down the tallest
+                    // column, and it was the one stopping 184px early.
+                    usable = DossierLayout.ColumnATop - (-DossierLayout.HalfHeight + DossierLayout.PadY);
+                    used = DossierLayout.ColumnATop
+                           - (DossierLayout.StatListTop
+                              - DossierLayout.StatRowHeight * SheetStats.Derived.Length);
+                    break;
+
+                case "options":
+                    usable = OptionsLayout.UsableHeight;
+                    used = OptionsLayout.ColumnHeight(OptionRows.Groups, 0);
+                    break;
+
+                case "runstats":
+                    usable = RunStatsLayout.UsableHeight;
+                    used = RunStatsLayout.TallestCard(RunStatRows.Groups);
+                    break;
+
+                default:
+                    usable = ExitsLayout.ContentTop - ExitsLayout.ContentBottom;
+                    used = ExitsLayout.StackHeight;
+                    break;
+            }
+
+            Assert.Greater(used / usable, 0.85f,
+                $"the {pane} pane fills only {used / usable:P0} of its height ({used:F0} of " +
+                $"{usable:F0}px), so it reads as a small screen inside a big empty one");
+        }
+
         // ---- the Run statistics table -------------------------------------------
 
         [Test]

@@ -93,9 +93,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // APPLIES IMMEDIATELY, and the pane says so rather than leaving the
             // player hunting for a confirm button that is not there.
             children.Add(Ui.Label("OptionsAppliesNote", UiStrings.OptionsAppliesImmediately,
-                    new UiVec(520f, 18f), 12, Body,
-                    Place.At(-OptionsLayout.HalfWidth + OptionsLayout.PadX + 260f,
-                             OptionsLayout.ContentBottom - 16f))
+                    new UiVec(520f, 18f), 13, Body,
+                    Place.At(OptionsLayout.ColumnCentreX(0), OptionsLayout.ContentBottom - 14f))
                 .AsDecor());
 
             screen.Root = Ui.Panel("OptionsPane", Place.At(0f, 0f),
@@ -119,8 +118,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             cardChildren.AddRange(Rim($"OptionsCard{group.Key}", width, height));
 
             cardChildren.Add(Ui.Label($"OptionsCard{group.Key}Heading", group.Heading,
-                    new UiVec(OptionsLayout.CardContentWidth, OptionsLayout.HeadingHeight), 16, Heading,
-                    Place.At(0f, OptionsLayout.HeadingCentreY(rows)))
+                    new UiVec(OptionsLayout.HeadingWidth, OptionsLayout.HeadingHeight), 18, Heading,
+                    Place.At(-OptionsLayout.CardContentHalf + OptionsLayout.HeadingWidth * 0.5f,
+                             OptionsLayout.HeadingCentreY(rows)))
                 .AsDecor());
 
             for (int i = 0; i < rows; i++)
