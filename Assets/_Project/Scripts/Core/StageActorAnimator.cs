@@ -60,14 +60,55 @@ namespace PrincesPalace
         private void Awake()
         {
             _rect = (RectTransform)transform;
-            // Captured once, before anything can move us. Every animation
-            // returns here rather than accumulating offsets — otherwise a
-            // fight's worth of lunges would walk the figure off its mark.
-            _home = _rect.anchoredPosition;
 
-            // And the depth scale FightStageAnchors gave this slot, for the
-            // same reason. The stretch multiplies onto it; a back-row figure
-            // must come back to 0.56, not to 1.
+            // The mark this figure returns to, and the depth scale it returns
+            // to. Every animation goes back to these rather than accumulating
+            // offsets -- otherwise a fight's worth of lunges would walk the
+            // figure off its mark, and the stretch would compound onto itself.
+            //
+            // CAPTURED HERE AND RE-CAPTURED BY Rehome(). Awake alone was only
+            // correct while a slot's position was fixed at build time, and it
+            // is not: see Rehome.
+            Rehome();
+        }
+
+        // Re-reads the mark and the scale from where the slot ACTUALLY is now.
+        //
+        // THE BUG THIS EXISTS FOR. These were captured in Awake and never
+        // again, which quietly assumed a slot never moves. It moves constantly:
+        // FightController.AnchorStageSlots re-spreads and re-scales the live
+        // slots from FightStageAnchors every time the live count changes, so
+        // that two rats occupy the two ENDS of the formation rather than
+        // crowding its first two positions -- and an enemy dying re-lays every
+        // survivor.
+        //
+        // From that moment the animator was returning each figure to where its
+        // slot used to be, and multiplying its stretch onto the scale the slot
+        // used to have. Both are absolute writes at the end of a tween, so the
+        // figure did not drift -- it SNAPPED to a stale mark the instant a
+        // lunge finished, and did it again on every swing. That is the
+        // "sprites constantly get misplaced".
+        //
+        // It bit on the first encounter too, not only after a death: the slots
+        // are anchored during setup, which is after Awake.
+        //
+        // Called AFTER the slot has been given its new position and scale, so
+        // this reads the new values rather than imposing the old ones.
+        public void Rehome()
+        {
+            if (_rect == null) return;
+
+            // Anything in flight belongs to the old mark. Stopped rather than
+            // finished, and deliberately WITHOUT the snap-home ResetToHome
+            // does -- that would write the stale _home back over the position
+            // the caller just assigned.
+            if (_running != null)
+            {
+                StopCoroutine(_running);
+                _running = null;
+            }
+
+            _home = _rect.anchoredPosition;
             _baseScale = _rect.localScale;
         }
 

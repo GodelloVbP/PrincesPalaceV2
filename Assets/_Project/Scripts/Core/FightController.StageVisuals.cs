@@ -115,6 +115,19 @@ namespace PrincesPalace
 
                 float scale = FightStageAnchors.SlotScale(i, shown);
                 slots[i].localScale = new Vector3(scale, scale, 1f);
+
+                // AND THE ANIMATOR HAS TO BE TOLD. It holds the mark a figure
+                // returns to after a lunge and the scale its stretch multiplies
+                // onto, and it captured both in Awake -- which was correct only
+                // while these two lines did not exist. Without this every swing
+                // after a re-spread ended by snapping the figure back to where
+                // its slot used to be, at the size it used to be.
+                //
+                // Told rather than polled: this function is the authority on
+                // where a slot lives, so it is the one thing that always knows
+                // the answer has changed.
+                var animator = slots[i].GetComponent<StageActorAnimator>();
+                if (animator != null) animator.Rehome();
             }
         }
 

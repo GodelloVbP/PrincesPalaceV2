@@ -79,6 +79,116 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
         }
 
+        // Two enemies, because slot 0 stands at depth 0 whatever the count and
+        // therefore cannot show a stale mark. Beside LoadFight rather than a
+        // parameter on it: every other test in this class is about a single
+        // figure and would gain an argument it does not read.
+        private IEnumerator LoadFightWithTwoEnemies()
+        {
+            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            _fight = Object.FindAnyObjectByType<FightController>();
+            Assert.IsNotNull(_fight);
+
+            _hero = new CombatantState("Shawn", true, 300, 30, 40, 0, 10);
+            _front = new CombatantState("Front", false, 5000, 10, 8, 0, 4);
+            var back = new CombatantState("Back", false, 5000, 10, 8, 0, 4);
+
+            var encounter = new CombatEncounter(new[] { _hero }, new[] { _front, back });
+            var kit = new PlayerKit("shawn", CharacterRole.Tank, null, null, null,
+                new ResolvedSpellTier(1, "Spark", 6, 1.5f, 0), level: 4);
+
+            var enemyKit = new EnemyKit(new ResolvedEnemy("front", "Front", new StatBlock(), 5, 3, false,
+                DamageType.Physical, DamageType.Physical, 0, facing: SpriteFacing.Left), false);
+            var backKit = new EnemyKit(new ResolvedEnemy("back", "Back", new StatBlock(), 5, 3, false,
+                DamageType.Physical, DamageType.Physical, 0, facing: SpriteFacing.Left), false);
+
+            var session = new FightSession(encounter, new List<PlayerKit> { kit },
+                new List<EnemyKit> { enemyKit, backKit }, new SeededRandom(4));
+            session.Begin();
+            _fight.Bind(session, EncounterClass.Normal);
+            yield return null;
+        }
+
+        // ---- the mark a figure returns to ---------------------------------------
+        //
+        // THE BUG THESE EXIST FOR: StageActorAnimator captured its slot's
+        // position and depth scale in Awake and never again, which assumed a
+        // slot never moves. AnchorStageSlots moves them constantly -- it
+        // re-spreads and re-scales the live slots from FightStageAnchors every
+        // time the count changes, so a pair of monsters take the two ENDS of the
+        // formation rather than crowding its first two positions, and every
+        // death re-lays the survivors.
+        //
+        // So a lunge ended by snapping the figure back to where its slot used to
+        // be, at the size it used to be. Not a drift -- both are absolute writes
+        // at the end of a tween -- which is why it read as figures being flung
+        // to the wrong place rather than as sliding.
+        //
+        // TWO ENEMIES, NOT ONE, AND THAT IS THE WHOLE POINT OF THE FIXTURE.
+        // StageLayout.DepthForSlot(0, n) is 0 for every n, so slot 0 stands in
+        // the same place whatever the count and a one-enemy fight cannot show
+        // this at all -- the first version of these tests used one and passed
+        // against the unfixed code. Slot 1 is where it bites: depth 0.5 of three
+        // against depth 1.0 of two.
+        [UnityTest]
+        public IEnumerator AFigureKnowsTheMarkItsSlotActuallyHas()
+        {
+            yield return LoadFightWithTwoEnemies();
+
+            var slot = (RectTransform)Named("Enemy1Slot").transform;
+            var animator = slot.GetComponent<StageActorAnimator>();
+            Assert.IsNotNull(animator, "the second enemy slot has no animator");
+
+            Assert.AreEqual(slot.anchoredPosition.x, animator.Home.x, 0.5f,
+                $"the figure returns to x {animator.Home.x:F0} but its slot stands at " +
+                $"{slot.anchoredPosition.x:F0} - the next lunge ends by snapping it there");
+            Assert.AreEqual(slot.anchoredPosition.y, animator.Home.y, 0.5f,
+                $"the figure returns to y {animator.Home.y:F0} but its slot stands at " +
+                $"{slot.anchoredPosition.y:F0}");
+        }
+
+        // And the whole way round, because the assertion above is about a field
+        // and this is about what the player sees: a figure that lunges has to
+        // finish where it started, at the size it started.
+        [UnityTest]
+        public IEnumerator ALungeEndsBackOnItsOwnMarkAndItsOwnSize()
+        {
+            yield return LoadFightWithTwoEnemies();
+
+            var slot = (RectTransform)Named("Enemy1Slot").transform;
+            var animator = slot.GetComponent<StageActorAnimator>();
+
+            var mark = slot.anchoredPosition;
+            var size = slot.localScale;
+
+            animator.Play(new Vector2(140f, 40f), holdSeconds: 0f);
+            yield return new WaitForSecondsRealtime(0.75f);
+
+            Assert.AreEqual(mark.x, slot.anchoredPosition.x, 0.5f, "the figure did not come home in x");
+            Assert.AreEqual(mark.y, slot.anchoredPosition.y, 0.5f, "the figure did not come home in y");
+
+            // The stretch multiplies onto the captured base scale, so a stale
+            // one resizes the figure permanently rather than displacing it: a
+            // back-row monster came back the size of a front-row one.
+            Assert.AreEqual(size.x, slot.localScale.x, 0.01f, "the figure came back the wrong width");
+            Assert.AreEqual(size.y, slot.localScale.y, 0.01f, "the figure came back the wrong height");
+        }
+
+        // The premise, pinned separately so a change to the formation curve
+        // says THAT rather than failing the two tests above for a reason that
+        // has nothing to do with animators.
+        [Test]
+        public void TheSecondSlotMovesWithTheCount()
+        {
+            Assert.AreNotEqual(
+                StageLayout.DepthForSlot(1, 2), StageLayout.DepthForSlot(1, 3),
+                "slot 1 now stands in the same place whether there are two combatants or three, so " +
+                "the tests above can no longer tell a stale mark from a live one");
+        }
+
         // ---- the slots exist and are populated ----------------------------------
 
         [UnityTest]
