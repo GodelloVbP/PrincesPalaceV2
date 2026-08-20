@@ -56,6 +56,34 @@ namespace PrincesPalace
             // to by the time it settles.
             built.Session.DepthStep = RunManager.HasRun ? RunManager.Run.step : 0;
 
+            // OPEN THE FIGHT. Every test in the project called this and nothing
+            // in the game did -- 36 call sites, all of them in Tests/ -- so the
+            // opening sequence its own docstring describes ("any monsters faster
+            // than the whole party take their opening swings") never ran for a
+            // player.
+            //
+            // AutoResolveEnemyTurns has exactly two callers: this, and the path
+            // that runs AFTER the player acts. So enemies only ever moved in
+            // reply to a move. TurnOrder.Start seeds charge from initiative and
+            // gives turn one to the highest-initiative combatant -- and when
+            // that was an enemy, nothing existed to resolve its turn. It held
+            // the turn forever: monsters standing still, no intent icons
+            // (Bind's telegraph is gated on IsPlayerTurn), every verb disabled
+            // (CanAct requires IsPlayerTurn), no exception, and the stranded-
+            // turn watchdog silent because _isBusy was never set.
+            //
+            // Reported as "every game after the first elite, none of the buttons
+            // respond". Floor 1's monsters are slower than the party, so the
+            // player almost always opened and the deadlock could not happen;
+            // leg 2's pool admits faster ones. bffe4c5 added the watchdog and
+            // four tests for this symptom and recorded "WHAT I HAVE NOT DONE IS
+            // REPRODUCE IT" -- because every one of those tests calls Begin by
+            // hand, and so repairs the exact state the game was leaving broken.
+            //
+            // BEFORE Bind, because Bind paints the HUD and telegraphs the first
+            // turn from a turn state it assumes is already settled.
+            built.Session.Begin();
+
             fight.Bind(built.Session, EncounterFor(RunManager.CurrentNode), BuildSatchel());
             fight.ItemUsed += OnItemUsed;
             fight.BindPartyArt(built.Party, built.PartyArt);

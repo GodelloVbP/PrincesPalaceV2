@@ -80,6 +80,18 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(fight.IsBusy,
                 "the fight opened already busy, so every verb is disabled and nothing responds");
 
+            // THE THIRD TERM OF CanAct, which this file's own commit message
+            // named as the one never asserted -- and which is what actually
+            // broke. A fight that opens on a monster's turn with nothing to
+            // resolve it is not busy, is not over, and has a session; it simply
+            // never asks the player for anything. FightBootstrap calls
+            // FightSession.Begin now, and this is what says so through the real
+            // door rather than through the Begin every test used to call for
+            // itself.
+            Assert.IsTrue(fight.Session.IsPlayerTurn || fight.Session.IsOver,
+                "the fight opened on a monster's turn and nothing resolved it, so the player is never " +
+                "asked to act -- no intent icons, no movement, every verb dead");
+
             // The verbs a player would actually press.
             var verbs = fight.GetComponentsInChildren<Button>(includeInactive: false)
                 .Where(b => b.name.StartsWith("Verb"))

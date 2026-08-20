@@ -1140,6 +1140,57 @@ The fix reads the font off a live `TMP_Text` and pins its own premise: U+2694, t
 intent badges first shipped with and which drew as nothing, must still come back false. If Chakra
 Petch ever gains an emoji block, the guard fails and says the check has gone toothless.
 
+## The fight that never started, 2026-08-20
+
+**#46 — A fight deadlocked whenever a monster won initiative. FIXED.**
+
+Reported as "every game after the first elite, none of the buttons respond
+anymore": monsters drawn and standing still, no intent icons, every verb dead,
+nothing in the log.
+
+`FightSession.Begin()` — whose own docstring reads *"Opens the fight: the first
+actor gets its turn start, any monsters faster than the whole party take their
+opening swings"* — **had 36 call sites and every one was in `Tests/`.** Nothing
+in the game called it.
+
+`AutoResolveEnemyTurns` has exactly two callers: `Begin`, and the path that runs
+*after the player acts*. So enemies only ever moved in reply to a move.
+`TurnOrder.Start` seeds charge from initiative and gives turn one to the
+highest-initiative combatant — and when that was a monster, nothing existed to
+resolve its turn. It held the turn forever.
+
+Every symptom follows from that one fact, which is why nothing looked broken:
+intents are telegraphed only on the player's turn, `CanAct` requires the
+player's turn, no code path throws, and the stranded-turn watchdog added in
+`bffe4c5` watches `_isBusy`, which is never set because no playback was ever
+started.
+
+**Why after the elite.** Floor 1's monsters are slower than the party, so the
+player almost always opened and the deadlock could not occur. Leg 2's pool
+admits faster ones, and the first fight a monster opened was the last fight that
+worked.
+
+**Why no test caught it.** Every fight test called `Begin()` by hand — including
+the four `bffe4c5` added specifically for this report, which is why that commit
+ends "WHAT I HAVE NOT DONE IS REPRODUCE IT. All four pass." The suite was
+repairing the exact state the game left broken. `FightController.Bind` was doing
+the same thing for the telegraph half, as a deliberately narrow fix, with a
+comment that stated the missing caller outright and treated it as somebody
+else's problem.
+
+*Fixed:* `FightBootstrap` calls `Begin()` before `Bind`; `Begin` is idempotent so
+the two doors cannot double-grant; `Bind` no longer commits intents, because a
+`Bind` that quietly repairs half an opening is what let this go unnoticed. Three
+tests: a monster opening and the fight coming back to the player, `Begin` being
+idempotent, and `IsPlayerTurn || IsOver` through the real door — `CanAct`'s third
+term, which `bffe4c5` named as the only one never asserted.
+
+**Consequence worth knowing: every fight in the game has been missing its
+turn-one `GrantTurnStart`** — opening-turn regen and status ticks never
+happened. Restoring `Begin` restores them, so combat numbers move slightly in
+every fight rather than only in the deadlocked ones. The suite is green either
+way, which means nothing was tuned around the absence.
+
 ## Open investigations
 
 ### ~~24. `BloodlustRelic_GrantsAnImmediateExtraTurnAfterAKillingBlow` flakes on fresh content/scene builds — root cause not found~~ — **ROOT CAUSE FOUND, 2026-08-04.** It is a symptom of #13, and fixing that fixed this. Reproduced 2 times in 8 runs before, then 0 in 12 after

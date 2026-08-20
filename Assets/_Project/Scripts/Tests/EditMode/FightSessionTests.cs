@@ -31,6 +31,64 @@ namespace PrincesPalace.Domain.Tests
             return (Session(encounter), hero, foe);
         }
 
+        // ---- opening a fight -------------------------------------------------
+        //
+        // Reported as "every game after the first elite, none of the buttons
+        // respond anymore": monsters standing still, no intent icons, every
+        // verb dead, and nothing in the log.
+        //
+        // AutoResolveEnemyTurns has two callers -- Begin, and the path that runs
+        // AFTER the player acts -- so enemies only ever moved in reply to a
+        // move. TurnOrder.Start gives turn one to the highest-initiative
+        // combatant, and when that was a monster nothing existed to resolve its
+        // turn. It held the turn forever. Every symptom follows: intents are
+        // telegraphed only on the player's turn, CanAct requires the player's
+        // turn, nothing throws, and the stranded-turn watchdog watches _isBusy,
+        // which was never set.
+        //
+        // Begin had 36 call sites and every one was in Tests/. These two pin the
+        // contract the game now depends on.
+
+        [Test]
+        public void Begin_WhenAMonsterOpens_ResolvesItsTurnAndHandsTheFightToThePlayer()
+        {
+            // A NARROW speed gap on purpose. TurnOrder advances by rate, so a
+            // monster many times the party's speed opens with many consecutive
+            // turns -- its own header warns that at Speed 10000 that is a
+            // hundred of them and the opponent never acts. The first draft of
+            // this test used 40 against 1 and the hero was dead before Begin
+            // returned, which asserts something else entirely.
+            var hero = Fighter("Hero", true, speed: 10);
+            var quick = Fighter("Quick", false, attack: 1, speed: 11);
+            var session = Session(new CombatEncounter(new[] { hero }, new[] { quick }));
+
+            Assert.IsFalse(session.IsPlayerTurn, "fixture check: the monster should hold turn one");
+
+            session.Begin();
+
+            Assert.IsTrue(session.IsPlayerTurn,
+                "the monster's opening turn was never resolved, so the player is never asked to act " +
+                "and every verb stays disabled");
+            Assert.IsNotEmpty(session.IntentFor(quick),
+                "a fight the player can act in must telegraph what the monster does next");
+        }
+
+        [Test]
+        public void Begin_IsIdempotent()
+        {
+            // The player's door and the tests' door both call it, and
+            // GrantTurnStart is the half that would show a double call: turn one
+            // would pay its regen and tick its statuses twice.
+            var (session, hero, foe) = OneOnOne();
+
+            session.Begin();
+            int afterFirst = hero.CurrentHealth;
+            session.Begin();
+
+            Assert.AreEqual(afterFirst, hero.CurrentHealth,
+                "a second Begin granted a second turn start");
+        }
+
         [Test]
         public void ExecuteAttack_DamagesTheTargetAndRecordsOneBeat()
         {

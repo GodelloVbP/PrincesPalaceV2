@@ -218,23 +218,21 @@ namespace PrincesPalace
 
             foreach (var line in _session.DrainImmediateMessages()) PushLogLine(line);
 
-            // The FIRST turn's intents, which nothing else commits.
+            // The first turn's intents are NOT committed here any more.
             //
-            // FightSession.Begin() is where this belongs and it has NO
-            // production caller -- FightEncounterAdapter constructs the session
-            // and hands it straight over, so the opening sequence never runs.
-            // The other commit point (AfterResolution) only fires once the
-            // player has already acted, so turn one had no telegraph at all.
-            // That was invisible before the icons existed, because the nameplate
-            // telegraph shows nothing for a plain attack anyway.
+            // This used to read "FightSession.Begin() is where this belongs and
+            // it has NO production caller", and called PrepareEnemyIntents
+            // itself as the narrow fix -- deliberately narrow, because Begin
+            // also grants a turn start and auto-resolves enemy turns, and that
+            // was judged too large a change to make inside a UI one.
             //
-            // Called here rather than fixing Begin's wiring on purpose: Begin
-            // also grants a turn start and auto-resolves enemy turns, so calling
-            // it would change turn order and per-turn regen in every fight in
-            // the game. That is a real bug and it is recorded in AUDIT.md rather
-            // than fixed inside a UI change.
-            if (!_session.IsOver && _session.IsPlayerTurn) _session.PrepareEnemyIntents();
-
+            // The judgement was sound and the missing caller was the whole bug:
+            // with nothing resolving an enemy that won initiative, a fight that
+            // opened on a monster's turn never gave the player one. FightBootstrap
+            // calls Begin now and Begin telegraphs turn one, so committing them
+            // again here would be a second home for the same concern -- and a
+            // Bind that quietly repairs half an opening is what let the missing
+            // Begin go unnoticed for as long as it did.
             RefreshCommandColumn();
             RefreshUi();
         }

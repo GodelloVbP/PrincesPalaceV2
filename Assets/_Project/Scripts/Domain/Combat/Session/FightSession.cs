@@ -112,8 +112,18 @@ namespace PrincesPalace.Domain.Combat.Session
         // append its opening lines ("The bog witch blocks your path!") BEFORE
         // any beat exists, which is the one window where AppendMessage's
         // immediate path is the right one.
+        // IDEMPOTENT, so the door the player comes through and the doors the
+        // tests come through cannot double-grant between them. GrantTurnStart
+        // is the half that would show it: called twice, turn one pays its regen
+        // and its status ticks twice, which is a balance change disguised as a
+        // wiring detail.
+        private bool _begun;
+
         public void Begin()
         {
+            if (_begun) return;
+            _begun = true;
+
             GrantTurnStart();
             AutoResolveEnemyTurns();
 

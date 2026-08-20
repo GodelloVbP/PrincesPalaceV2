@@ -63,7 +63,7 @@ of that list now exists in `tools/run_tests_parallel.ps1`, it has already
 diverged, and what it guards is the exact failure `CLAUDE.md`'s gotcha #1 warns
 about. That is finding F1 — since fixed, along with the four stale comments and
 F4, F6, F7 and F12, in the working tree accompanying this document. Thirteen of the
-sixteen findings are closed; F8, F9 and F13 are open on stated grounds, and F11 was
+seventeen findings are closed; F8, F9 and F13 are open on stated grounds, and F11 was
 closed by another session mid-audit.
 
 One correction belongs here rather than buried in F10: **this audit's own count
@@ -1289,6 +1289,47 @@ instinct and the wrong altitude. Eight copies of a rule are a signal that the
 rule is in the wrong layer, not that it needs a ninth home -- and the assembly
 boundary that made the lint impossible is the same one that should have
 suggested the API as the place for it.
+
+### F17 — HIGH. The test suite repaired a state the game left broken.
+
+Found by a player report, not by this audit, and it is the sharpest instance of
+the pattern the audit kept circling.
+
+`FightSession.Begin()` opens a fight — grants turn one, lets any monster faster
+than the party take its opening swing, telegraphs what comes next. It had **36
+call sites and every one was in `Tests/`**. Nothing in the game called it, so a
+fight that opened on a monster's turn had nothing to resolve that turn and
+deadlocked. Full diagnosis in `AUDIT.md` #46; the architectural point is why it
+survived so long.
+
+**The suite could not see it, because the suite was the thing supplying the
+missing call.** Every fight test constructed a session and called `Begin()`
+itself, so all of them exercised a correctly-opened fight that no player could
+reach. `FightAfterTheEliteTests` was written for this exact report, its header
+complains that the old tests entered "by a door the player never uses", and it
+fixed that for `FightBootstrap` — while still calling `Begin()` by hand. Its
+commit ends "WHAT I HAVE NOT DONE IS REPRODUCE IT."
+
+`FightController.Bind` was doing the same repair for the telegraph half, and its
+comment said so plainly: *"FightSession.Begin() is where this belongs and it has
+NO production caller."* The missing caller was written down, in production code,
+next to a workaround for one of its symptoms — and read as a note about scope
+rather than as the bug.
+
+**The rule this earns**, and it belongs beside §11's existing test rules:
+
+> **A test may not do for production what production must do for itself.** If a
+> fixture calls a method to get the object into a workable state, either the
+> game calls it too or the test is describing a state the game cannot reach.
+> Setup that constructs inputs is fine; setup that *operates* the subject is a
+> claim about the production path, and an unchecked one.
+
+**A cheap mechanisation exists and is worth considering**: a lint over `Tests/`
+for calls to production methods that have no production caller. `Begin` would
+have failed it from the day the adapter stopped calling it — 36 test callers,
+zero elsewhere, which is a shape a grep can see. That is F8's idea aimed at
+something with evidence behind it, and it is the one lint this audit can point
+at a bug it would actually have caught.
 
 ### Cross-references, not re-counted here
 
