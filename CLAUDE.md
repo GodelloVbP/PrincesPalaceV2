@@ -95,12 +95,20 @@ Fuzzy class name, comma-separated list, or a named area (`combat`, `hub`,
 of sync with (`run_tests_parallel.ps1` refuses to run at all while one exists —
 fix the pattern, don't bypass it). No argument runs the full suite.
 
-**Before committing** — everything, ~90-100s:
+**Before committing** — everything, ~120-130s:
 ```bash
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/run_tests_parallel.ps1
 ```
-Add `-BuildContent` and/or `-BuildScenes` when content or scenes changed — that
-path also syncs the generated assets back to main automatically.
+**This builds the scenes.** They are generated artifacts, so a run against
+whatever is on disk tests whatever the source looked like the last time somebody
+remembered a flag — and it skips `UiAudit`, which is the only check that sees
+overlap, overflow and duplicate names in what was actually emitted. `-NoScenes`
+opts out and saves ~25s.
+
+It does **not** write them back to main, because a rebuild with no source change
+still reassigns every `fileID`: 165,849 lines out and the same number back,
+meaning nothing. Add `-BuildScenes` when you intend to **commit** the scenes —
+that is what syncs them (and `-BuildContent` likewise for content).
 
 > **Keep the PowerShell scripts pure ASCII.** No BOM means PowerShell 5.1 reads
 > them as Windows-1252, and a UTF-8 em-dash inside a string produces a parse

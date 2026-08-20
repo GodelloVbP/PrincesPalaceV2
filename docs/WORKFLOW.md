@@ -227,9 +227,10 @@ Triage order, cheapest first:
 |---|---|
 | Iterating on one class/area | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/test.ps1 <fuzzy-name or area>` (~12s for a single class, more for a broad area; areas: `combat`, `hub`, `content`, `run`, `ui`, `art`, `rng`, defined in `tools/test_areas.ps1`; `-List` shows everything) |
 | Iterating across several touched files, not sure which area | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/test.ps1 -Changed` — maps uncommitted changes (tracked + untracked) to the areas/classes they affect and runs just that, printing the mapping it used |
-| Before any commit | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/run_tests_parallel.ps1` (~90-100s). **Refuses to run at all** if any test class matches no area, or if a `[Test]`/`[UnityTest]` file's class was never discovered — both point at `tools/test_areas.ps1` and name the class/file; there is no bypass flag, fix the pattern |
+| Before any commit | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/run_tests_parallel.ps1` (~120-130s). **Builds the scenes every time** — see below. **Refuses to run at all** if any test class matches no area, or if a `[Test]`/`[UnityTest]` file's class was never discovered — both point at `tools/test_areas.ps1` and name the class/file; there is no bypass flag, fix the pattern |
 | Changed `ContentData/*.json` or `ContentBuilder.cs` | add `-BuildContent` |
-| Changed `SceneBuilder.cs` or anything scene-affecting | add `-BuildScenes` (auto-syncs regenerated scenes+content back to main — this is not optional bookkeeping, skipping it means the next run silently reverts what you just built) |
+| About to COMMIT regenerated scenes | add `-BuildScenes`. The full run already built them in the runners; this is what copies them back to main (not optional bookkeeping — without it the scenes you commit are not the ones the suite audited) |
+| Want the quick version, knowingly skipping the layout audit | `-NoScenes`, worth ~25s |
 | Re-running with nothing changed since the last synced build | `-SkipSync` is legal |
 | UI-visible change | also `tools/screenshot.ps1 -Panel <Name>` and actually look at the PNG |
 | Change to anything that MOVES (an ambient animator, an intro, a tween) | `tools/screenshot.ps1 -Runtime`. `-Panel`/`-All` render Edit Mode, which never ticks `Update()` — a static capture cannot show motion at all, and the pure-curve unit tests only prove the formulas vary, not that anything calls them |
@@ -248,7 +249,9 @@ Triage order, cheapest first:
   regeneration, not separately.
 - New-file sequence: create the file → `run_tests_parallel.ps1 -BuildScenes`
   (this is what actually generates its `.meta` and syncs it back to main,
-  across both TestRunner copies) → commit both.
+  across both TestRunner copies) → commit both. The `.meta` sweep is not gated
+  on the flag, but the scenes are, and a new screen file that changes them
+  needs both syncing together.
 
 ## 10. Enforced rules
 
