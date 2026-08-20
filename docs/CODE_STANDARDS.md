@@ -30,13 +30,19 @@ Check this before writing a new helper — the second copy-paste of a pattern
 is the signal to promote it here instead of a third.
 
 **Runtime (`Core/`):**
-- `ItemIcons.Find` / `.Apply(Image, string[] ids, Sprite[] sprites, string id)`
-  — the id/sprite parallel-array lookup-and-assign idiom. Disables the
-  `Image` on a miss rather than leaving a stale/null sprite (a sprite-less
-  `Image` renders as a solid white quad otherwise).
-- `PortraitIcons.Find` / `.Apply(...)` — same idiom, delegates straight to
-  `ItemIcons`, exists as its own type for discoverability when the thing
-  being looked up is a character portrait rather than an item icon.
+- `ItemIcons.Find` / `.Apply(Image, IconEntry[] icons, string id)` — the
+  lookup-and-assign idiom for art keyed by content id. Disables the `Image` on
+  a miss rather than leaving a stale/null sprite (a sprite-less `Image` renders
+  as a solid white quad otherwise), and sets `preserveAspect` in the one place
+  a new screen cannot forget it.
+- `IconEntry` — one id and its sprite, serialized as a single thing. This was
+  two parallel arrays (`string[] iconIds` beside `Sprite[] iconSprites`) across
+  five controllers and five wiring sites until 2026-08-20; the reasoning that
+  produced them ("a scene serialises arrays and does not serialise
+  dictionaries") is true and stopped one option short, because Unity serialises
+  an array of a `[Serializable]` struct perfectly well.
+  `PortraitIcons` is listed here no longer — it does not exist and had not for
+  some time; character portraits go through `ItemIcons` like everything else.
 - `RadialGlowImage`, `BeaconPulse` — the soft-glow-behind-an-icon and
   pulsing-highlight primitives (see the Relics, Talent Tree, and reward
   screens for the pattern: beacon built as a sibling *before* the element it

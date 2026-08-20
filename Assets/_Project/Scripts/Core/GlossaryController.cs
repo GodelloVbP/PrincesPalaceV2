@@ -38,8 +38,7 @@ namespace PrincesPalace
 
         [SerializeField] internal Button closeButton;
 
-        [SerializeField] internal string[] iconIds;
-        [SerializeField] internal Sprite[] iconSprites;
+        [SerializeField] internal IconEntry[] icons;
 
         private static readonly Color MarkerLit = new Color(0.95f, 0.86f, 0.62f, 1f);
         private static readonly Color MarkerDark = new Color(0.95f, 0.86f, 0.62f, 0f);
@@ -189,7 +188,7 @@ namespace PrincesPalace
                 detailMeta.SetContent("");
                 detailBody.Set(UiStrings.GlossaryPick);
                 detailLockedBy.SetActive(false);
-                ItemIcons.Apply(detailIcon, iconIds, iconSprites, null);
+                ItemIcons.Apply(detailIcon, icons, null);
                 return;
             }
 
@@ -209,7 +208,7 @@ namespace PrincesPalace
 
             // A locked entry shows no icon either -- the silhouette of a thing
             // is a spoiler in a game whose relics are mostly a surprise.
-            ItemIcons.Apply(detailIcon, iconIds, iconSprites, entry.Locked ? null : entry.IconId);
+            ItemIcons.Apply(detailIcon, icons, entry.Locked ? null : entry.IconId);
         }
     }
 }

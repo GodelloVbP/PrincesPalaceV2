@@ -254,7 +254,7 @@ public static class SceneBuilder
         // refresh whether or not anything actually needed importing --
         // StopAssetImportingV2 in the editor log. This method is called about
         // 6100 times per build (every image node in every screen, plus every
-        // iconSprites array over the whole item, relic and talent tables), so
+        // icon array over the whole item, relic and talent tables), so
         // that was 6100 refresh cycles at roughly 50ms each: 320 of the build's
         // 343 seconds, spent re-importing multi-megabyte PNGs that had not
         // changed. Long enough that the author was killing the build rather

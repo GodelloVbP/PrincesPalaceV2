@@ -48,10 +48,36 @@ public static class UiWiringSweep
                     for (int i = 0; i < property.arraySize; i++)
                     {
                         var element = property.GetArrayElementAtIndex(i);
-                        if (element.propertyType == SerializedPropertyType.ObjectReference
-                            && element.objectReferenceValue == null)
+
+                        if (element.propertyType == SerializedPropertyType.ObjectReference)
                         {
-                            problems.Add($"  {controller.GetType().Name}.{property.propertyPath}[{i}] is null");
+                            if (element.objectReferenceValue == null)
+                            {
+                                problems.Add($"  {controller.GetType().Name}.{property.propertyPath}[{i}] is null");
+                            }
+                            continue;
+                        }
+
+                        // A SERIALIZABLE STRUCT ELEMENT, whose own object
+                        // references this would otherwise walk straight past.
+                        //
+                        // Added with IconEntry, which collapsed five pairs of
+                        // parallel `string[] ids` / `Sprite[] sprites` fields
+                        // into one array. Without this, `icons[i].Sprite` being
+                        // null -- which LoadSpriteByKey returns on a miss, by
+                        // design -- would have stopped being a build failure and
+                        // started being a white quad on somebody's screen. The
+                        // check the pair had was worth keeping through the
+                        // change that removed the pair.
+                        foreach (var member in Members(element))
+                        {
+                            if (member.propertyType == SerializedPropertyType.ObjectReference
+                                && member.objectReferenceValue == null)
+                            {
+                                problems.Add(
+                                    $"  {controller.GetType().Name}.{property.propertyPath}[{i}]." +
+                                    $"{member.name} is null");
+                            }
                         }
                     }
 
@@ -74,6 +100,26 @@ public static class UiWiringSweep
         sb.AppendLine("  Fix by: assigning it in this screen's Wire step; or, if it is genuinely optional, ");
         sb.AppendLine("  dropping the [SerializeField] so nothing claims it will be there.");
         throw new System.Exception(sb.ToString());
+    }
+
+    // The immediate members of one struct element, and no deeper.
+    //
+    // SerializedProperty.Next(enterChildren) walks the whole remaining object
+    // in one flat sequence, so the only way to stop at the end of this element
+    // is to compare against where it ends -- which is what GetEndProperty is
+    // for. Copy() because Next advances the property it is called on, and the
+    // caller is still using theirs.
+    private static IEnumerable<SerializedProperty> Members(SerializedProperty element)
+    {
+        var end = element.GetEndProperty();
+        var walker = element.Copy();
+
+        bool enterChildren = true;
+        while (walker.NextVisible(enterChildren) && !SerializedProperty.EqualContents(walker, end))
+        {
+            enterChildren = false;
+            yield return walker.Copy();
+        }
     }
 
     // propertyPath is the field name for a top-level field, which is the only

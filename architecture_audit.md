@@ -62,9 +62,8 @@ screen list as a documented "nothing keeps these in sync" hazard. A third copy
 of that list now exists in `tools/run_tests_parallel.ps1`, it has already
 diverged, and what it guards is the exact failure `CLAUDE.md`'s gotcha #1 warns
 about. That is finding F1 — since fixed, along with the four stale comments and
-F4, F6, F7 and F12, in the working tree accompanying this document. Twelve of the
-sixteen findings are closed; F8, F9, F13 and F15 are open on stated
-grounds, and F11 was
+F4, F6, F7 and F12, in the working tree accompanying this document. Thirteen of the
+sixteen findings are closed; F8, F9 and F13 are open on stated grounds, and F11 was
 closed by another session mid-audit.
 
 One correction belongs here rather than buried in F10: **this audit's own count
@@ -1202,7 +1201,7 @@ long as `spells.json` happens to be authored in level order. Deleting a
 serialized field means regenerating the whole content tree, which does not
 belong in the same change as the loader. Noted at the declaration.
 
-### F15 — LOW. Six controllers maintain a two-array invariant Unity does not require.
+### F15 — LOW. **Fixed.** Controllers maintained a two-array invariant Unity does not require.
 
 `string[] iconIds` alongside `Sprite[] iconSprites`, in `CharacterDossierController`,
 `GlossaryController`, `ReckoningController`, `RelicDraftController` and others,
@@ -1222,10 +1221,36 @@ comment argues for -- it serialises, the registry binds it at build time, and
 `UiWiringSweep` still sees it -- while making the pairing structural instead of a
 standing invariant across six files.
 
-*Not urgent.* Nothing is currently desynchronised, and `ItemIcons.Find` fails
-safe on a mismatch by disabling the `Image`. This is filed because the reasoning
-that chose the shape is one step short, and that is the kind of thing that gets
-re-derived the same way next time.
+*Fixed:* `IconEntry` — a `[Serializable]` struct of one id and its sprite.
+Five field pairs across four controllers become five single arrays, and the five
+wiring sites become one `.Select(... => new IconEntry(...))` each. "Same length,
+same order" is a property of the type now rather than a rule five files keep.
+
+**The change nearly cost a check, and that was the real work.** `UiWiringSweep`
+(E3) walks array elements flagging null `ObjectReference`s — which is how a
+missing icon sprite becomes a build failure. A struct element is not an object
+reference, so `icons[i].Sprite == null` would have quietly stopped being checked
+while `SceneBuilder.LoadSpriteByKey` goes on returning null on a miss *by
+design*. The sweep recurses into serializable struct elements now, so the check
+the pair had survived the change that removed the pair, and E3 is stricter
+everywhere as a side effect.
+
+**A test was retired rather than migrated.** `RaggedArraysDoNotThrow` held that
+a `string[]` longer than its `Sprite[]` returns null instead of throwing — a
+state `IconEntry` makes unrepresentable. It is recorded in the class header
+rather than deleted quietly, since a vanishing test usually means coverage was
+lost and here it means the case was. What replaced it covers what still exists:
+an entry carrying an id and no art.
+
+This one had to rebuild and commit the scenes, because the serialized field
+shape genuinely changed — 143,062 lines out and 143,071 back, and the scenes now
+carry `icons:` where they carried `iconIds:`/`iconSprites:`.
+
+Two stale documents turned up on the way, both the same class as F2 and F3 and
+both found incidentally: `SceneBuilder`'s own comment still counted
+"iconSprites arrays", and `CODE_STANDARDS.md`'s helper registry still listed
+**`PortraitIcons`, a type that does not exist** — portraits have gone through
+`ItemIcons` for some time. Both corrected.
 
 ### F16 — LOW. **Fixed**, and not the way this finding proposed.
 

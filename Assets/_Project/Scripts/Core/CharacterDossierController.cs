@@ -87,11 +87,9 @@ namespace PrincesPalace
         // sheet the moment a squad is anything other than the first N
         // characters. Same id-paired shape the item icons below use.
         [SerializeField] internal Image portrait;
-        [SerializeField] internal string[] portraitIds;
-        [SerializeField] internal Sprite[] portraitSprites;
+        [SerializeField] internal IconEntry[] portraits;
 
-        [SerializeField] internal string[] iconIds;
-        [SerializeField] internal Sprite[] iconSprites;
+        [SerializeField] internal IconEntry[] icons;
 
         private static readonly Color Neutral = Hex(Domain.UiKit.Screens.CharacterDossierScreen.Text);
         private static readonly Color Dim = Hex(Domain.UiKit.Screens.CharacterDossierScreen.TextDim);
@@ -377,7 +375,7 @@ namespace PrincesPalace
                 if (packIcons != null && i < packIcons.Length)
                 {
                     bool shown = item.HasValue &&
-                        ItemIcons.Apply(packIcons[i], iconIds, iconSprites, item.Value.Id);
+                        ItemIcons.Apply(packIcons[i], icons, item.Value.Id);
                     packIcons[i].gameObject.SetShown(shown);
                 }
 
@@ -504,7 +502,7 @@ namespace PrincesPalace
             // placeholder. Applying would blank a character without a portrait
             // instead of leaving them the stand, turning graceful degradation
             // into a hole in the layout.
-            var face = ItemIcons.Find(portraitIds, portraitSprites, character.definitionId);
+            var face = ItemIcons.Find(portraits, character.definitionId);
             if (portrait != null && face != null)
             {
                 portrait.sprite = face;
@@ -680,7 +678,7 @@ namespace PrincesPalace
                 // ItemIcons.Apply only sets `enabled` -- on an inactive
                 // GameObject that is invisible either way, which is why the
                 // slots came up bare with items equipped.
-                bool hasArt = ItemIcons.Apply(slotIcons[i], iconIds, iconSprites, item?.id);
+                bool hasArt = ItemIcons.Apply(slotIcons[i], icons, item?.id);
                 slotIcons[i].gameObject.SetShown(hasArt);
 
                 if (slotRarityTicks != null && i < slotRarityTicks.Length)

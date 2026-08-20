@@ -910,14 +910,16 @@ public static class ScreenRegistry
         var faces = ContentDatabase.Characters
             .Where(c => c != null && !string.IsNullOrWhiteSpace(c.portraitPath))
             .ToList();
-        controller.portraitIds = faces.Select(c => c.id).ToArray();
-        controller.portraitSprites = faces.Select(c => SceneBuilder.LoadSpriteByKey(c.portraitPath)).ToArray();
+        controller.portraits = faces
+            .Select(c => new IconEntry(c.id, SceneBuilder.LoadSpriteByKey(c.portraitPath)))
+            .ToArray();
 
         var withArt = ContentDatabase.Items
             .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
             .ToList();
-        controller.iconIds = withArt.Select(i => i.id).ToArray();
-        controller.iconSprites = withArt.Select(i => SceneBuilder.LoadSpriteByKey(i.iconPath)).ToArray();
+        controller.icons = withArt
+            .Select(i => new IconEntry(i.id, SceneBuilder.LoadSpriteByKey(i.iconPath)))
+            .ToArray();
 
         return controller;
     }
@@ -959,8 +961,9 @@ public static class ScreenRegistry
             .Where(i => i != null && !string.IsNullOrEmpty(i.iconPath))
             .ToList();
 
-        controller.iconIds = offerArt.Select(i => i.id).ToArray();
-        controller.iconSprites = offerArt.Select(i => SceneBuilder.LoadSpriteByKey(i.iconPath)).ToArray();
+        controller.icons = offerArt
+            .Select(i => new IconEntry(i.id, SceneBuilder.LoadSpriteByKey(i.iconPath)))
+            .ToArray();
 
         controller.tabButtons = screen.TabButtons.Select(result.Button).ToArray();
         controller.tabMarkers = screen.TabMarkers.Select(result.Image).ToArray();
@@ -1059,8 +1062,9 @@ public static class ScreenRegistry
                 .Select(r => (r.id, r.iconPath)))
             .ToList();
 
-        controller.iconIds = withArt.Select(a => a.Item1).ToArray();
-        controller.iconSprites = withArt.Select(a => SceneBuilder.LoadSpriteByKey(a.Item2)).ToArray();
+        controller.icons = withArt
+            .Select(a => new IconEntry(a.Item1, SceneBuilder.LoadSpriteByKey(a.Item2)))
+            .ToArray();
 
         hub.glossaryPanel = result.Go(glossary.Root);
     }
@@ -1087,8 +1091,9 @@ public static class ScreenRegistry
             .Where(r => r != null && !string.IsNullOrEmpty(r.iconPath))
             .ToList();
 
-        controller.iconIds = withArt.Select(r => r.id).ToArray();
-        controller.iconSprites = withArt.Select(r => SceneBuilder.LoadSpriteByKey(r.iconPath)).ToArray();
+        controller.icons = withArt
+            .Select(r => new IconEntry(r.id, SceneBuilder.LoadSpriteByKey(r.iconPath)))
+            .ToArray();
 
         hub.relicDraft = controller;
     }

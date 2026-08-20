@@ -35,8 +35,7 @@ namespace PrincesPalace
 
         // Art, as two parallel arrays -- a scene serialises arrays and does not
         // serialise dictionaries. Same shape the character overlay uses.
-        [SerializeField] internal string[] iconIds;
-        [SerializeField] internal Sprite[] iconSprites;
+        [SerializeField] internal IconEntry[] icons;
 
         private static readonly Color RingLit = new Color(0.95f, 0.86f, 0.62f, 1f);
         private static readonly Color RingDark = new Color(0.95f, 0.86f, 0.62f, 0f);
@@ -129,7 +128,7 @@ namespace PrincesPalace
                 cardRarities[i].Set(UiStrings.DraftRarity, RelicRarityNames.Of(option.Rarity));
                 cardBodies[i].SetContent(definition?.description ?? "");
 
-                ItemIcons.Apply(cardIcons[i], iconIds, iconSprites, option.Id);
+                ItemIcons.Apply(cardIcons[i], icons, option.Id);
 
                 cardSelections[i].color = _selected == i ? RingLit : RingDark;
             }

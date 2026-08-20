@@ -53,8 +53,7 @@ namespace PrincesPalace
 
         // Item art, as two parallel arrays -- a scene serialises arrays and
         // does not serialise dictionaries. Same shape the overlay uses.
-        [SerializeField] internal string[] iconIds;
-        [SerializeField] internal Sprite[] iconSprites;
+        [SerializeField] internal IconEntry[] icons;
 
         [SerializeField] internal Button[] tabButtons;
         [SerializeField] internal Image[] tabMarkers;
@@ -368,7 +367,7 @@ namespace PrincesPalace
                 offerMetas[i].Set(UiStrings.ReckoningOfferMeta,
                     item == null ? "?" : item.Rarity.ToString(), offer.Tier);
 
-                ItemIcons.Apply(offerIcons[i], iconIds, iconSprites, item?.id);
+                ItemIcons.Apply(offerIcons[i], icons, item?.id);
 
                 // The burst wears the item's RARITY COLOUR, from the same table
                 // the name above it and the character overlay's cell edges read.
