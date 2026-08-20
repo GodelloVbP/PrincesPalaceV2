@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Rng;
 
 namespace PrincesPalace.Domain.Dungeon
@@ -44,6 +45,12 @@ namespace PrincesPalace.Domain.Dungeon
         // a rule that was playtested, and changing the shape of encounters
         // while restoring them would make any regression impossible to
         // attribute to one or the other.
+        //
+        // NEITHER MAY EXCEED THE STAGE, and that ceiling is not stated here --
+        // see FightHudSpec.StageSlotsPerSide. Raising either of these past it
+        // would field a monster with no slot to stand in, which is invisible
+        // and still swinging rather than merely undrawn. Clamped in Roll and
+        // asserted, so the two numbers cannot drift apart quietly.
         public const int EliteEnemyCount = 2;
         public const int NormalMinEnemies = 1;
         public const int NormalMaxEnemiesExclusive = 3;
@@ -125,6 +132,12 @@ namespace PrincesPalace.Domain.Dungeon
             int count = isElite
                 ? EliteEnemyCount
                 : rng.NextInt(NormalMinEnemies, NormalMaxEnemiesExclusive);
+
+            // The stage's capacity is the hard ceiling, whatever the tuning
+            // above says. Clamped rather than trusted: this is the line that
+            // keeps "how many monsters a room rolls" and "how many the stage
+            // can show" from becoming two independent facts.
+            if (count > FightHudSpec.StageSlotsPerSide) count = FightHudSpec.StageSlotsPerSide;
 
             // WITH replacement, deliberately: two of the same monster is a
             // legitimate room and v1 drew this way. Drawing without it would
@@ -217,6 +230,19 @@ namespace PrincesPalace.Domain.Dungeon
                 fieldable.Add(id);
             }
 
+            // DELIBERATELY UNCAPPED, unlike the enemy roll above.
+            //
+            // The same ceiling applies -- a hero with no slot fights from off
+            // screen exactly as a monster would -- but the fix is not to drop
+            // one here. Nobody notices two monsters instead of three; a player
+            // whose recruited character silently fails to turn up notices very
+            // much, and choosing WHICH of their squad sits out is a design
+            // decision, not a clamp.
+            //
+            // So the mismatch is made unshippable instead: EncounterRollTests
+            // holds SaveData's own maximum squad against the stage's slots, and
+            // buying the roster past it fails there with somewhere to put the
+            // decision.
             return fieldable;
         }
     }

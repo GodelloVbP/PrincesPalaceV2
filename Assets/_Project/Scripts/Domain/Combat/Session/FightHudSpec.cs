@@ -24,9 +24,23 @@ namespace PrincesPalace.Domain.Combat.Session
         // this screen that earns the pool audit exemption.
         public const int DamagePopups = 6;
 
+        // HOW MANY COMBATANTS A SIDE CAN FIELD, and it is a rule rather than a
+        // drawing detail.
+        //
+        // The stage has this many slots and the encounter roll draws this many
+        // enemies at most, because a combatant with no slot is not merely
+        // undrawn -- it is INVISIBLE AND STILL SWINGING. RefreshStage walks the
+        // slots, so a fourth monster in a three-slot stage never appears while
+        // the session goes on giving it turns, and the player takes damage from
+        // something that is not on screen.
+        //
+        // Which is why this lives here, beside the session, rather than in the
+        // screen: it bounds what combat may CREATE, and the stage having that
+        // many slots is the consequence, not the cause.
+        public const int StageSlotsPerSide = 3;
+
         // One plate per enemy stage slot; v1 tied these together with
         // `EnemyPlateCount = EnemyStageSlots` and so does this.
-        public const int StageSlotsPerSide = 3;
         public const int EnemyPlates = StageSlotsPerSide;
 
         // The signature-resource pip row. Kept as a reserved capacity with a

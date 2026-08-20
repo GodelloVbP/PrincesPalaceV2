@@ -7,6 +7,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
+using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Dungeon;
 
 namespace PrincesPalace.PlayModeTests
@@ -261,6 +262,31 @@ namespace PrincesPalace.PlayModeTests
                 $"the elite is over (won={fight.Session.PlayerWon}) and there is not one pressable " +
                 "button on the screen - the verb column is hidden, Continue is hidden, and whatever " +
                 "took over cannot be dismissed. The player is stuck in the fight.");
+        }
+
+        // ---- the stage is the ceiling for the party too --------------------------
+        //
+        // A hero with no slot fights from off screen exactly as a monster would.
+        // The enemy roll is CLAMPED to the stage; FieldableParty deliberately is
+        // not -- nobody notices two monsters instead of three, but a player whose
+        // recruited character silently fails to turn up notices very much, and
+        // choosing WHICH of the squad sits out is a design decision rather than a
+        // clamp.
+        //
+        // So the mismatch is made unshippable here: grow the roster past the
+        // stage and this fails, with somewhere to put the decision.
+        [Test]
+        public void TheBiggestSquadTheSaveAllowsStillFitsTheStage()
+        {
+            var full = SaveData.CreateNew();
+            full.purchasedUpgradeIds.Add(SaveData.ExtraRecruitSlotUpgradeId);
+
+            int max = full.EffectiveMaxSquadSize();
+
+            Assert.LessOrEqual(max, FightHudSpec.StageSlotsPerSide,
+                $"the save allows a squad of {max} against {FightHudSpec.StageSlotsPerSide} stage " +
+                "slots. FieldableParty does not clamp, on purpose, so the extra hero would fight " +
+                "from off screen - either widen the stage or decide who sits out.");
         }
 
     }

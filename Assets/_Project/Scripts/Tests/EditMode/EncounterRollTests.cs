@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Dungeon;
 using PrincesPalace.Domain.Rng;
 
@@ -255,5 +256,49 @@ namespace PrincesPalace.EditModeTests
 
             CollectionAssert.AreEqual(squad, party);
         }
+        // ---- the stage is the ceiling -------------------------------------------
+        //
+        // A combatant with no slot to stand in is not merely undrawn: the
+        // session goes on giving it turns, so it hits the player from off
+        // screen. These two numbers were independent facts, and nothing said
+        // the roll had to respect the stage.
+        [Test]
+        public void NoRoomEverRollsMoreEnemiesThanTheStageCanShow()
+        {
+            var pool = new[]
+            {
+                new EnemyCandidate("a"),
+                new EnemyCandidate("b"),
+                new EnemyCandidate("c"),
+                new EnemyCandidate("d"),
+                new EnemyCandidate("e"),
+            };
+
+            foreach (RoomType room in new[] { RoomType.Fight, RoomType.EliteFight })
+            {
+                for (int seed = 0; seed < 200; seed++)
+                {
+                    var result = EncounterRoll.Roll(room, pool, new SeededRandom((ulong)seed));
+
+                    Assert.LessOrEqual(result.EnemyIds.Count, FightHudSpec.StageSlotsPerSide,
+                        $"a {room} on seed {seed} fielded {result.EnemyIds.Count} enemies against " +
+                        $"{FightHudSpec.StageSlotsPerSide} stage slots - the extras fight from off screen");
+                }
+            }
+        }
+
+        // The tuning constants themselves, so raising one past the stage fails
+        // here rather than being silently clamped and quietly not what was
+        // intended.
+        [Test]
+        public void TheTuningItselfFitsTheStage()
+        {
+            Assert.LessOrEqual(EncounterRoll.EliteEnemyCount, FightHudSpec.StageSlotsPerSide,
+                "an elite room is tuned to field more enemies than the stage has slots");
+
+            Assert.LessOrEqual(EncounterRoll.NormalMaxEnemiesExclusive - 1, FightHudSpec.StageSlotsPerSide,
+                "a normal room is tuned to field more enemies than the stage has slots");
+        }
+
     }
 }

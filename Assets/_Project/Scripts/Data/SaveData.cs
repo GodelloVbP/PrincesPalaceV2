@@ -45,7 +45,10 @@ namespace PrincesPalace
         // extra_recruit_slot still adds one, so a 2-member party is
         // reachable in-game today.
         private const int BaseMaxSquadSize = 1;
-        private const string ExtraRecruitSlotUpgradeId = "extra_recruit_slot";
+        // PUBLIC because the squad's ceiling has to be assertable against the
+        // stage's slot count, and a test that wrote "extra_recruit_slot" as a
+        // literal would be the drift it is meant to catch.
+        public const string ExtraRecruitSlotUpgradeId = "extra_recruit_slot";
         private const int ExtraRecruitSlotBonus = 1;
 
         public int version = CurrentVersion;
