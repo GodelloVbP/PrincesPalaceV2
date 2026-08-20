@@ -9,7 +9,7 @@ namespace PrincesPalace.Content
     // Authored in Assets/_Project/ContentData/achievements.json and generated
     // by ContentBuilder -- never hand-edited under Resources/Content, which
     // ContentBuilder deletes wholesale on every build.
-    public class AchievementDefinition : ScriptableObject
+    public class AchievementDefinition : ScriptableObject, IOrderedContent
     {
         [Tooltip("Stable identifier written into save files the moment this is earned. NEVER rename after a save exists.")]
         public string id;
@@ -33,5 +33,8 @@ namespace PrincesPalace.Content
 
         public ResolvedAchievement ToResolved() =>
             new ResolvedAchievement(id, displayName, description, condition, threshold, parameter, sortOrder);
+
+        // Listed by the authored order ContentBuilder stamped on it.
+        public int SortOrder => sortOrder;
     }
 }

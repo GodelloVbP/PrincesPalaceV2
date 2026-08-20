@@ -7,7 +7,7 @@ namespace PrincesPalace.Content
     // The immutable template for a playable character. The mutable, per-save
     // half lives in Character (talent points spent, talents unlocked); this
     // is the part that is authored once and never changes at runtime.
-    public class CharacterDefinition : ScriptableObject
+    public class CharacterDefinition : ScriptableObject, IOrderedContent
     {
         [Tooltip("Stable identifier written into save files. Never rename this after a save exists.")]
         public string id;
@@ -70,5 +70,8 @@ namespace PrincesPalace.Content
         public int princesFavor;
 
         public int sortOrder;
+
+        // Listed by the authored order ContentBuilder stamped on it.
+        public int SortOrder => sortOrder;
     }
 }

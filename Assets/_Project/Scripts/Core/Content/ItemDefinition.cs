@@ -10,7 +10,7 @@ namespace PrincesPalace.Content
     // Assets/_Project/ContentData/items.json and generated into an asset by
     // ContentBuilder — never hand-edited under Resources/Content, which
     // ContentBuilder deletes wholesale on every build.
-    public class ItemDefinition : ScriptableObject
+    public class ItemDefinition : ScriptableObject, IOrderedContent
     {
         [Tooltip("Stable identifier written into save files. Never rename this after a save exists.")]
         public string id;
@@ -145,5 +145,8 @@ namespace PrincesPalace.Content
         {
             return abilityScoreBonus;
         }
+
+        // Listed by the authored order ContentBuilder stamped on it.
+        public int SortOrder => sortOrder;
     }
 }

@@ -99,10 +99,14 @@ is the signal to promote it here instead of a third.
   graphics. Do not hand-roll a bounds check; if the audit is wrong for a
   specific node, declare `AllowOverlap("reason")` / `AllowOverflow("reason")`
   so the exemption is greppable.
-- **Every content type that's read via `Resources.LoadAll` needs an explicit
-  `sortOrder` field**, sorted for in `ContentDatabase`.
-  `Resources.LoadAll` returns filename-alphabetical order, not authoring
-  order — a new content type needs the same treatment from day one.
+- **Every content type implements `IOrderedContent`**, and is loaded through
+  `ContentDatabase.LoadOrdered<T>` — which is constrained on it, so a type that
+  has not said how it is ordered will not compile. `ContentLoadingLintTests`
+  keeps `Resources.LoadAll` from being called anywhere else.
+  Most types return their authored `sortOrder`; a spell tier returns its
+  `level` and a talent its grid position, which is exactly why the interface is
+  a property rather than a required field — a second authored int could only
+  disagree with the key those two are really sorted by.
 - **Wire controllers by direct field assignment**, never by reflection over a
   field name. See §4a.
 

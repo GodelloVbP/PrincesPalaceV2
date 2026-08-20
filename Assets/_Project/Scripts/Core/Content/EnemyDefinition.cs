@@ -8,7 +8,7 @@ namespace PrincesPalace.Content
     // mana — they only ever basic-attack for now) rather than a parallel
     // stat shape, so combat math never needs to special-case which side of
     // the fight it's looking at.
-    public class EnemyDefinition : ScriptableObject
+    public class EnemyDefinition : ScriptableObject, IOrderedContent
     {
         [Tooltip("Stable identifier written into save files. Never rename this after a save exists.")]
         public string id;
@@ -89,5 +89,8 @@ namespace PrincesPalace.Content
 
         [Tooltip("The plain Attack holds position instead of lunging, same as a Skill cast. For a monster whose \"attack\" stance art is aliased from its \"cast\" stance (see slice_actor_sheet.py) -- the pixels are a stationary pose, so lunging toward the target reads as flying rather than striking.")]
         public bool attackHoldsPosition;
+
+        // Listed by the authored order ContentBuilder stamped on it.
+        public int SortOrder => sortOrder;
     }
 }

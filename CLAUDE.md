@@ -161,9 +161,13 @@ which refuses those commands before they run. Full parallel-session protocol:
    Sprite) and generates a fresh `.meta` for any newly-referenced asset. Both
    must sync back.
 
-4. **Ordering needs an explicit `sortOrder` field**, sorted for in
-   `ContentDatabase`. `Resources.LoadAll` returns incidental alphabetical
-   order, not authoring order.
+4. **Ordering is now a compile error to forget**, so this gotcha is mostly
+   history: `ContentDatabase.LoadOrdered<T>` is constrained on
+   `IOrderedContent`, and a lint keeps `Resources.LoadAll` from being called
+   anywhere else. A new content type says how it is ordered or does not build.
+   The hazard it replaced is still worth knowing, because it is what the type
+   is for: `Resources.LoadAll` returns incidental alphabetical order, and the
+   resulting list is plausible but wrong rather than obviously broken.
 
 5. **Never let a test recompute a production formula to build its own expected
    value** — that makes it a tautology, and it has already masked a real

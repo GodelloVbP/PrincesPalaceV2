@@ -8,7 +8,7 @@ namespace PrincesPalace.Content
     // generated into an asset by ContentBuilder — never hand-edited under
     // Resources/Content, which ContentBuilder deletes wholesale on every
     // build.
-    public class RelicDefinition : ScriptableObject
+    public class RelicDefinition : ScriptableObject, IOrderedContent
     {
         [Tooltip("Stable identifier written into save files. Never rename this after a save exists.")]
         public string id;
@@ -53,6 +53,9 @@ namespace PrincesPalace.Content
 
         [Tooltip("Editor-time path under Assets/_Project/Art/Items/Relics/Processed/, loaded by SceneBuilder. Empty until the art lands.")]
         public string iconPath;
+
+        // Listed by the authored order ContentBuilder stamped on it.
+        public int SortOrder => sortOrder;
     }
 
     // A serializable pair, because Unity cannot serialize a readonly struct

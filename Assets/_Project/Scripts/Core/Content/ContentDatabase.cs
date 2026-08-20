@@ -238,28 +238,20 @@ namespace PrincesPalace.Content
             IEnumerable<SkillDefinition> skills = null,
             IEnumerable<RelicDefinition> relics = null)
         {
-            _characters = (characters ?? Enumerable.Empty<CharacterDefinition>())
-                .OrderBy(c => c.sortOrder)
-                .ToList();
-            _talents = Sorted(talents ?? Enumerable.Empty<TalentDefinition>());
-            _upgrades = (upgrades ?? Enumerable.Empty<UpgradeDefinition>())
-                .OrderBy(u => u.sortOrder)
-                .ToList();
-            _enemies = (enemies ?? Enumerable.Empty<EnemyDefinition>())
-                .OrderBy(e => e.sortOrder)
-                .ToList();
-            _items = (items ?? Enumerable.Empty<ItemDefinition>())
-                .OrderBy(i => i.sortOrder)
-                .ToList();
-            _spellTiers = (spellTiers ?? Enumerable.Empty<SpellTierDefinition>())
-                .OrderBy(s => s.level)
-                .ToList();
-            _skills = (skills ?? Enumerable.Empty<SkillDefinition>())
-                .OrderBy(s => s.sortOrder)
-                .ToList();
-            _relics = (relics ?? Enumerable.Empty<RelicDefinition>())
-                .OrderBy(r => r.sortOrder)
-                .ToList();
+            // THROUGH THE SAME ORDERING AS THE REAL LOAD, which it did not used
+            // to be. This held its own copy of all eight sorts, including the
+            // spell tier's by-level special case, so a test's content could
+            // have been ordered differently from the game's with nothing to
+            // say so -- and a test that orders its fixture differently from
+            // production is a test of something else.
+            _characters = Ordered(characters);
+            _talents = Ordered(talents);
+            _upgrades = Ordered(upgrades);
+            _enemies = Ordered(enemies);
+            _items = Ordered(items);
+            _spellTiers = Ordered(spellTiers);
+            _skills = Ordered(skills);
+            _relics = Ordered(relics);
         }
 
         // Drops the cache so the next access reloads from Resources.
@@ -636,36 +628,43 @@ namespace PrincesPalace.Content
                 return;
             }
 
-            _characters = Resources.LoadAll<CharacterDefinition>(CharacterResourcePath)
-                .OrderBy(c => c.sortOrder)
-                .ToList();
-            _talents = Sorted(Resources.LoadAll<TalentDefinition>(TalentResourcePath));
-            _upgrades = Resources.LoadAll<UpgradeDefinition>(UpgradeResourcePath)
-                .OrderBy(u => u.sortOrder)
-                .ToList();
-            _enemies = Resources.LoadAll<EnemyDefinition>(EnemyResourcePath)
-                .OrderBy(e => e.sortOrder)
-                .ToList();
-            _items = Resources.LoadAll<ItemDefinition>(ItemResourcePath)
-                .OrderBy(i => i.sortOrder)
-                .ToList();
-            _spellTiers = Resources.LoadAll<SpellTierDefinition>(SpellTierResourcePath)
-                .OrderBy(s => s.level)
-                .ToList();
-            _skills = Resources.LoadAll<SkillDefinition>(SkillResourcePath)
-                .OrderBy(s => s.sortOrder)
-                .ToList();
-            _achievements = Resources.LoadAll<AchievementDefinition>(AchievementResourcePath)
-                .OrderBy(a => a.sortOrder)
-                .ToList();
-            _relics = Resources.LoadAll<RelicDefinition>(RelicResourcePath)
-                .OrderBy(r => r.sortOrder)
-                .ToList();
+            _characters = LoadOrdered<CharacterDefinition>(CharacterResourcePath);
+            _talents = LoadOrdered<TalentDefinition>(TalentResourcePath);
+            _upgrades = LoadOrdered<UpgradeDefinition>(UpgradeResourcePath);
+            _enemies = LoadOrdered<EnemyDefinition>(EnemyResourcePath);
+            _items = LoadOrdered<ItemDefinition>(ItemResourcePath);
+            _spellTiers = LoadOrdered<SpellTierDefinition>(SpellTierResourcePath);
+            _skills = LoadOrdered<SkillDefinition>(SkillResourcePath);
+            _achievements = LoadOrdered<AchievementDefinition>(AchievementResourcePath);
+            _relics = LoadOrdered<RelicDefinition>(RelicResourcePath);
         }
 
-        private static List<TalentDefinition> Sorted(IEnumerable<TalentDefinition> talents)
-        {
-            return talents.OrderBy(t => t.row).ThenBy(t => t.column).ToList();
-        }
+        // THE ONLY PLACE CONTENT IS LOADED, and the constraint is what makes
+        // that worth anything: a type that has not said how it is ordered
+        // cannot be passed to this, so "I forgot the sort" is a compile error
+        // rather than a shipped list in filename order.
+        //
+        // Nine near-identical `.OrderBy(x => x.sortOrder).ToList()` chains used
+        // to sit inline here, and two of them quietly were not that -- spell
+        // tiers sorted by level, talents by row then column. Written out nine
+        // times, the two exceptions read as ordinary lines; collected into one
+        // helper, they have to be stated on the types themselves, which is
+        // where a reader looks for them.
+        //
+        // ContentLoadingLintTests keeps Resources.LoadAll from reappearing
+        // anywhere else, for the same reason UiEmitter owns `new GameObject`:
+        // a helper you are entitled to bypass gets bypassed.
+        private static List<T> LoadOrdered<T>(string resourcePath)
+            where T : UnityEngine.Object, IOrderedContent
+            => Ordered(Resources.LoadAll<T>(resourcePath));
+
+        // The ordering itself, shared with Initialize's test-injection path so
+        // there is one answer to "what order is this list in" rather than two
+        // that happen to agree.
+        //
+        // Null-tolerant because Initialize's later parameters are optional and
+        // a caller passing none of them should get an empty list, not a throw.
+        private static List<T> Ordered<T>(IEnumerable<T> content) where T : IOrderedContent
+            => (content ?? Enumerable.Empty<T>()).OrderBy(x => x.SortOrder).ToList();
     }
 }

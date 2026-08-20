@@ -62,9 +62,9 @@ screen list as a documented "nothing keeps these in sync" hazard. A third copy
 of that list now exists in `tools/run_tests_parallel.ps1`, it has already
 diverged, and what it guards is the exact failure `CLAUDE.md`'s gotcha #1 warns
 about. That is finding F1 — since fixed, along with the four stale comments and
-F4, F6, F7 and F12, in the working tree accompanying this document. Nine of the
-sixteen findings are closed and F10 is half closed; F8, F9, F13 and the three
-appended during the same pass (F14-F16) are open on stated grounds, and F11 was
+F4, F6, F7 and F12, in the working tree accompanying this document. Ten of the
+sixteen findings are closed and F10 is half closed; F8, F9, F13, F15 and F16 are
+open on stated grounds, and F11 was
 closed by another session mid-audit.
 
 One correction belongs here rather than buried in F10: **this audit's own count
@@ -1103,7 +1103,7 @@ that also publishes a global-namespace `SceneBuilder` or `PipelineBuilder` —
 low, and Editor-only. Recorded so a future session does not "fix" it file by
 file, which would break every partial-class pairing.
 
-### F14 — MEDIUM. `sortOrder` is the one step in the content pipeline with no catch.
+### F14 — MEDIUM. **Fixed.** `sortOrder` was the one step in the content pipeline with no catch.
 
 Adding a content type is nine or ten touch points: the JSON, a `Raw*Entry`, a
 `*EntryResolver`, a `Resolved*` record, a `*Definition`, a `ContentBuilder`
@@ -1118,12 +1118,38 @@ but wrong* -- talents in a tree, spell tiers by level, items in a shop. It is
 gotcha #4 in `CLAUDE.md`, which is to say it is currently enforced by whoever
 remembers reading that file.
 
-*Recommendation:* make it structural rather than remembered. An interface the
-loader requires (`ISorted { int SortOrder { get; } }`), or a single generic load
-helper that sorts and that every list must go through, turns "I forgot the field"
-into a compile error. A test asserting every `*Definition` type declares one is
-the cheaper T3 fallback if the T1 shape does not fit the ScriptableObject
-serialisation rules.
+*Fixed:* `IOrderedContent { int SortOrder { get; } }`, with
+`ContentDatabase.LoadOrdered<T>` constrained on it, so a content type that has
+not said how it is ordered does not compile. `ContentLoadingLintTests` keeps
+`Resources.LoadAll` from being called anywhere else, the T2/T3 pair that makes
+the constraint worth having — the same arrangement as `UiEmitter` owning
+`new GameObject`.
+
+**A PROPERTY, NOT A REQUIRED FIELD, and this finding was wrong about that.** It
+said "every content type needs a `sortOrder`", repeating gotcha #4. That was
+never literally true: seven types order by an authored `sortOrder`, but a spell
+tier orders by `level` and a talent by its position in the grid. Forcing all
+nine to an authored int would have given two of them a second key that could
+only disagree with the one they are really sorted by. Nine inline `.OrderBy(...)`
+chains in `EnsureLoaded` are what hid it — written out nine times, the two
+exceptions read as ordinary lines; collected into one helper, they have to be
+declared on the types themselves, where a reader looks for them.
+
+**The real gap was not the one recorded here.** It was that the ordering rule
+already existed *twice*. `ContentDatabase.Initialize` — the test-injection path
+that bypasses `Resources` — held its own complete copy: eight `OrderBy` chains
+including the spell-tier special case, with nothing tying them to the runtime
+path. A test's fixture could have been ordered differently from the game's
+content and nothing would have said so, which makes it a test of something else.
+Found by the compiler, not by reading, when deleting the old private `Sorted`
+helper broke its second caller. `Ordered<T>` is now shared by both paths.
+
+*Left open, deliberately:* `SpellTierDefinition.sortOrder` is written by
+`ContentBuilder` and read by nothing — `SpellTierEntryResolver` stamps it as the
+JSON authoring index and only then sorts by level, so the two agree exactly as
+long as `spells.json` happens to be authored in level order. Deleting a
+serialized field means regenerating the whole content tree, which does not
+belong in the same change as the loader. Noted at the declaration.
 
 ### F15 — LOW. Six controllers maintain a two-array invariant Unity does not require.
 

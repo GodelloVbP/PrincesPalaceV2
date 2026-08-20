@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Stats;
+using PrincesPalace.Domain.Talents;
 using UnityEngine;
 
 namespace PrincesPalace.Content
@@ -10,7 +11,7 @@ namespace PrincesPalace.Content
     // Tree v2, 2026-08-02) -- see RawTalentEntry's own comment for the
     // skeleton shape. Slot 0 is the root (starter), higher slots are more
     // exclusive, same "strictly increasing" ordering as the old plain grid.
-    public class TalentDefinition : ScriptableObject
+    public class TalentDefinition : ScriptableObject, IOrderedContent
     {
         [Tooltip("Stable identifier written into save files. Never rename this after a save exists.")]
         public string id;
@@ -109,5 +110,15 @@ namespace PrincesPalace.Content
         {
             return character != null && (IsSharedByEveryCharacter || characterId == character.definitionId);
         }
+
+        // GRID READING ORDER -- bottom row first, left to right -- which the
+        // talent UI depends on and which ContentDatabase used to express as a
+        // two-key sort inside its own loader.
+        //
+        // Equivalent to OrderBy(row).ThenBy(column) because a column IS a path
+        // and TalentEntryResolver refuses any column outside 0..PathCount-1, so
+        // the encoding cannot collide. Derived from PathCount rather than
+        // written as 3, since the tree's width has one home.
+        public int SortOrder => row * TalentPage.PathCount + column;
     }
 }
