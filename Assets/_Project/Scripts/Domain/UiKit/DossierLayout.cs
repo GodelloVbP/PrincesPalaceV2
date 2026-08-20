@@ -38,13 +38,19 @@ namespace PrincesPalace.Domain.UiKit
         public const float HalfWidth = Width * 0.5f;
         public const float HalfHeight = Height * 0.5f;
 
-        // Three columns, no gap; the dividers are borders. Widened in the
-        // handover's own proportions -- 318 and 408 of 1360 are 23.4% and 30%,
-        // which is what these are of 1600 -- so the balance between the three
-        // is the one that was drawn.
-        public const float ColumnAWidth = 374f;
+        // Three columns, no gap; the dividers are borders.
+        //
+        // The loadout column gives up A TENTH OF ITS WIDTH to the left bar.
+        // The handover's proportions put 746 of 1600 under the silhouette,
+        // which is more room than a centred figure and two files of slots
+        // need -- and the left bar, which carries the portrait, the name, the
+        // XP track and the pack, wanted it. 75 is that tenth, rounded so all
+        // three columns stay whole pixels and still sum to the pane.
+        public const float ColumnBGivesUp = 75f;
+
+        public const float ColumnAWidth = 374f + ColumnBGivesUp;                 // 449
         public const float ColumnCWidth = 480f;
-        public const float ColumnBWidth = Width - ColumnAWidth - ColumnCWidth;   // 746
+        public const float ColumnBWidth = Width - ColumnAWidth - ColumnCWidth;   // 671
 
         public const float PadY = 32f;
         public const float ColumnAPadX = 30f;
@@ -133,32 +139,59 @@ namespace PrincesPalace.Domain.UiKit
         public const float AuthoredStageWidth = 560f;
         public const float AuthoredStageHeight = 658f;
 
-        public const float StageWidth = 660f;
-        public const float StageHeight = 730f;
+        // ONE SCALE FOR BOTH AXES, and this is the handover's own rule finally
+        // obeyed rather than worked around.
+        //
+        // It said: scale the whole panel as one unit, never convert individual
+        // values to percentages, because the mannequin slots and their leader
+        // hairlines are positioned against each other and only stay coherent
+        // under UNIFORM scale. Growing the stage 1.179 across and 1.109 down
+        // broke exactly that -- the body stretched wider than it grew tall
+        // while the slots moved on a different ratio again, so every icon crept
+        // off the part of the figure it names. That is the "icons are very
+        // misplaced on the silhouette".
+        //
+        // The scale is whatever the smaller axis allows, so the stage is as
+        // large as it can be without either overflowing or distorting.
+        public const float StagePadX = 20f;
 
-        public const float StageScaleX = StageWidth / AuthoredStageWidth;
-        public const float StageScaleY = StageHeight / AuthoredStageHeight;
+        public static float StageFitWidth => ColumnBWidth - StagePadX * 2f;
+        public static float StageFitHeight => Height - PadY * 2f;
 
-        public const float StageTop = HalfHeight - PadY - 30f;
-        public const float StageCentreY = StageTop - StageHeight * 0.5f;
+        public static float StageScale
+        {
+            get
+            {
+                float byWidth = StageFitWidth / AuthoredStageWidth;
+                float byHeight = StageFitHeight / AuthoredStageHeight;
+                return byWidth < byHeight ? byWidth : byHeight;
+            }
+        }
+
+        public static float StageWidth => AuthoredStageWidth * StageScale;
+        public static float StageHeight => AuthoredStageHeight * StageScale;
+
+        // PERFECTLY CENTRED IN ITS OWN COLUMN, both ways.
+        //
+        // The stage used to hang from a top inset, which left it sitting high
+        // in a column whose height it no longer matched. Centred, the figure
+        // is in the middle of the space that belongs to it -- which is the
+        // only arrangement that does not need a number tuned by eye.
+        public static float StageCentreY => 0f;
+
+        public static float StageTop => StageCentreY + StageHeight * 0.5f;
 
         // Scaled off the handover's figures rather than restated, so the
-        // mannequin and the slots hung on it can never drift apart.
-        public const float MannequinWidth = 264f * StageScaleX;
-        public const float MannequinHeight = 564f * StageScaleY;
-        public const float MannequinLeft = 148f * StageScaleX;
-        public const float MannequinTop = 92f * StageScaleY;
+        // mannequin and the slots hung on it can never drift apart. The
+        // mannequin is centred in the stage by the handover's own numbers --
+        // 148 clear on each side of a 264 figure in 560 -- so centring the
+        // stage centres the figure.
+        public static float MannequinWidth => 264f * StageScale;
+        public static float MannequinHeight => 564f * StageScale;
+        public static float MannequinLeft => 148f * StageScale;
+        public static float MannequinTop => 92f * StageScale;
 
-        // THE SMALLER OF THE TWO SCALES, and the difference is not academic.
-        //
-        // A slot is square, and the stage did not grow squarely -- 1.179 across
-        // against 1.109 down. Scaled by the width, the slot boxes grew faster
-        // than the gaps between them did, and the caption that lives in that
-        // gap ended up printed across the icon of the slot below it. Scaled by
-        // the height they grow no faster than the room they have.
-        public const float StageScale = StageScaleX < StageScaleY ? StageScaleX : StageScaleY;
-
-        public const float SlotSize = 74f * StageScale;
+        public static float SlotSize => 74f * StageScale;
 
         // ---- where the body ACTUALLY is ----------------------------------------
         //
@@ -192,8 +225,11 @@ namespace PrincesPalace.Domain.UiKit
         public const float BodyTopFraction = 126f / 1536f;
         public const float BodyHeightFraction = 1269f / 1536f;
 
-        public const float BodyTopInBox = MannequinHeight * BodyTopFraction;
-        public const float BodyHeightInBox = MannequinHeight * BodyHeightFraction;
+        // Properties rather than consts: MannequinHeight is derived from the
+        // stage scale, which is now computed from the column it has to fit
+        // rather than authored.
+        public static float BodyTopInBox => MannequinHeight * BodyTopFraction;
+        public static float BodyHeightInBox => MannequinHeight * BodyHeightFraction;
 
         public static float BodyTop => MannequinTop + BodyTopInBox;
 
@@ -213,8 +249,8 @@ namespace PrincesPalace.Domain.UiKit
         // FromStage scales its `top` argument again.
         private static UiVec OnBodyFromStage(float left, float authoredTop, float w, float h)
         {
-            float centre = OnBody(authoredTop * StageScaleY + h * 0.5f);
-            return FromStage(left, (centre - h * 0.5f) / StageScaleY, w, h);
+            float centre = OnBody(authoredTop * StageScale + h * 0.5f);
+            return FromStage(left, (centre - h * 0.5f) / StageScale, w, h);
         }
 
         // A point given as (left, top) in the HANDOVER's stage, converted into
@@ -233,8 +269,8 @@ namespace PrincesPalace.Domain.UiKit
         public static UiVec FromStage(float left, float top, float w, float h)
         {
             return new UiVec(
-                ColumnBCentreX - StageWidth * 0.5f + left * StageScaleX + w * 0.5f,
-                StageCentreY + StageHeight * 0.5f - top * StageScaleY - h * 0.5f);
+                ColumnBCentreX - StageWidth * 0.5f + left * StageScale + w * 0.5f,
+                StageCentreY + StageHeight * 0.5f - top * StageScale - h * 0.5f);
         }
 
         // Where each slot sits, straight from the handover's table.
@@ -282,7 +318,7 @@ namespace PrincesPalace.Domain.UiKit
                 default: width = 67f; left = 325f; top = 577f; break;  // Shoes
             }
 
-            width *= StageScaleX;
+            width *= StageScale;
             return OnBodyFromStage(left, top, width, 1f);
         }
 

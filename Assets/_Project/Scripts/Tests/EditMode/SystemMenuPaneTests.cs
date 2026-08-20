@@ -337,5 +337,69 @@ namespace PrincesPalace.Domain.Tests
                 Assert.IsTrue(pair.Value, $"{pair.Key} is marked Built but hosts nothing");
             }
         }
+        // ---- the loadout silhouette ---------------------------------------------
+        //
+        // THE HANDOVER'S OWN RULE: scale the whole panel as one unit, never
+        // convert individual values to percentages, because the mannequin slots
+        // and their leader hairlines are positioned against each other and only
+        // stay coherent under UNIFORM scale. Growing the stage 1.179 across and
+        // 1.109 down broke it -- the figure stretched wider than it grew tall
+        // while the slots moved on a third ratio, so every icon crept off the
+        // part of the body it names.
+        [Test]
+        public void TheStageScalesAsOneUnit()
+        {
+            Assert.LessOrEqual(DossierLayout.StageWidth, DossierLayout.StageFitWidth + 0.001f,
+                "the stage is wider than the column allows");
+            Assert.LessOrEqual(DossierLayout.StageHeight, DossierLayout.StageFitHeight + 0.001f,
+                "the stage is taller than the pane allows");
+
+            // Same ratio in and out, which is what "one unit" means.
+            Assert.AreEqual(
+                DossierLayout.AuthoredStageWidth / DossierLayout.AuthoredStageHeight,
+                DossierLayout.StageWidth / DossierLayout.StageHeight,
+                0.0001f,
+                "the stage no longer has the aspect its slot positions were authored against, so " +
+                "the icons cannot line up with the figure whatever else is done to them");
+        }
+
+        // "Perfectly centered in the silhouette part", both ways.
+        [Test]
+        public void TheSilhouetteIsCentredInItsOwnColumn()
+        {
+            // The mannequin's centre, in dossier coordinates, via the same
+            // FromStage every slot goes through -- so this measures what the
+            // figure actually gets rather than what the constants say.
+            var body = DossierLayout.FromStage(
+                DossierLayout.MannequinLeft / DossierLayout.StageScale,
+                DossierLayout.MannequinTop / DossierLayout.StageScale,
+                DossierLayout.MannequinWidth,
+                DossierLayout.MannequinHeight);
+
+            Assert.AreEqual(DossierLayout.ColumnBCentreX, body.X, 0.5f,
+                "the silhouette is not centred in the loadout column");
+
+            float left = DossierLayout.ColumnBCentreX - DossierLayout.StageWidth * 0.5f;
+            float right = DossierLayout.ColumnBCentreX + DossierLayout.StageWidth * 0.5f;
+            float columnLeft = -DossierLayout.HalfWidth + DossierLayout.ColumnAWidth;
+            float columnRight = DossierLayout.HalfWidth - DossierLayout.ColumnCWidth;
+
+            Assert.AreEqual(left - columnLeft, columnRight - right, 0.5f,
+                "the stage sits off-centre in its column - one margin is wider than the other");
+        }
+
+        // The tenth the loadout column gave up has to arrive somewhere, and the
+        // three still have to sum to the pane.
+        [Test]
+        public void TheLeftBarGainedWhatTheLoadoutGaveUp()
+        {
+            Assert.AreEqual(DossierLayout.Width,
+                DossierLayout.ColumnAWidth + DossierLayout.ColumnBWidth + DossierLayout.ColumnCWidth,
+                0.001f, "the three columns no longer fill the pane");
+
+            Assert.AreEqual(374f + DossierLayout.ColumnBGivesUp, DossierLayout.ColumnAWidth, 0.001f,
+                "the left bar did not gain what the loadout column gave up");
+        }
+
     }
 }
