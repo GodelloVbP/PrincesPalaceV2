@@ -270,5 +270,58 @@ namespace PrincesPalace.Domain.Tests
                 "next path would sit beside the current one");
         }
 
+        // --- A7: an allowance that waives nothing -----------------------------
+        //
+        // Written because A7 is a check that, on this codebase, is expected to
+        // find nothing forever -- the 39 sites it was built for were deleted in
+        // the same change. A rule with no live instance and no test is a rule
+        // nobody has ever seen work, and the whole point of it is to fire years
+        // from now for somebody who has not read any of this.
+
+        [Test]
+        public void A7_AnAllowOverlapOnDecor_IsRejectedAsInert()
+        {
+            var tree = Ui.Panel("Root", UiSize.Fixed(1920f, 1080f),
+                Ui.Solid("Plate", "#FFFFFFFF", new UiVec(200f, 200f), Place.At(0f, 0f))
+                    .AsDecor()
+                    .AllowOverlap("this waives nothing, because decoration is already exempt from A1"));
+
+            var errors = Of(tree, UiAuditCheck.InertOverlapAllowance);
+
+            Assert.IsNotEmpty(errors, "A7 did not notice an AllowOverlap sitting on a decor node");
+            StringAssert.Contains("waives nothing", errors[0].Message);
+        }
+
+        [Test]
+        public void A7_AnAllowOverlapUnderADecorParent_IsAlsoRejected()
+        {
+            // Decor is INHERITED by the whole subtree, so a child of a decor
+            // node is exempt from A1 without carrying the flag itself. That case
+            // is the one a same-node check would miss, and it is the reason A7
+            // lives in the walk rather than in the AllowOverlap setter.
+            var tree = Ui.Panel("Root", UiSize.Fixed(1920f, 1080f),
+                Ui.Panel("Ambience", UiSize.Fixed(400f, 400f),
+                    Ui.Solid("Glow", "#FFFFFFFF", new UiVec(200f, 200f), Place.At(0f, 0f))
+                        .AllowOverlap("inherited decor still means this allowance waives nothing"))
+                    .AsDecor());
+
+            Assert.IsNotEmpty(Of(tree, UiAuditCheck.InertOverlapAllowance),
+                "A7 only looks at the node's own Decor flag, so an inherited one slips past it");
+        }
+
+        [Test]
+        public void A7_AnAllowOverlapOnAnOrdinaryNode_IsLeftAlone()
+        {
+            // The other half, and the one that keeps A7 from being a rule
+            // against AllowOverlap itself. On a node that can take a click, the
+            // allowance is load-bearing and must not be reported.
+            var tree = Ui.Panel("Root", UiSize.Fixed(1920f, 1080f),
+                Ui.Button("A", UiString.FromContent("A"), new UiVec(200f, 60f), 18, Place.At(0f, 0f))
+                    .AllowOverlap("this one is real: the button takes clicks and still sits on its neighbour"),
+                Ui.Button("B", UiString.FromContent("B"), new UiVec(200f, 60f), 18, Place.At(0f, 20f)));
+
+            Assert.IsEmpty(Of(tree, UiAuditCheck.InertOverlapAllowance),
+                "A7 fired on a node that is not decoration, where the allowance does real work");
+        }
     }
 }

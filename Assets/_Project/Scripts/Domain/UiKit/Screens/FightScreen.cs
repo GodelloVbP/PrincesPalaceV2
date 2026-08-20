@@ -342,6 +342,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .Coloured(shadowHex)
                     .AllowOverflow("the bloom behind the contact ring is meant to bleed well past it - that softness IS the effect");
 
+                // the actor stands ON its own shadow - the sprite covering it
+                // is the point
                 // The ground contact shadow, straddling the slot's own ground
                 // line. Anchor-stretched to a fraction of the slot's WIDTH
                 // rather than given a fixed one, so it scales with whatever size
@@ -380,18 +382,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         Place.Frac(new UiVec(0.32f, 0f), new UiVec(0.68f, 0f), bottom: -8f, top: -8f), UiSize.Fill)
                     .Coloured(shadowHex)
                     .AsDecor()
-                    .AllowOverflow("the contact shadow straddles the ground LINE, so half of it is below the slot by construction")
-                    .AllowOverlap("the actor stands ON its own shadow - the sprite covering it is the point");
+                    .AllowOverflow("the contact shadow straddles the ground LINE, so half of it is below the slot by construction");
                 shadow.Children.Add(glow);
 
                 var sprite = Ui.Sprite($"{prefix}{slot}Sprite", null, Place.Stretch(), UiSize.Fill)
                     .Inactive()
                     .AsDecor();
 
+                // the hit flash IS the sprite's silhouette redrawn white -
+                // sharing its box is the whole mechanism
                 var flash = Ui.Sprite($"{prefix}{slot}HitFlash", null, Place.Stretch(), UiSize.Fill)
                     .Inactive()
-                    .AsDecor()
-                    .AllowOverlap("the hit flash IS the sprite's silhouette redrawn white - sharing its box is the whole mechanism");
+                    .AsDecor();
 
                 // Anchored to the slot's BOTTOM, not its centre: the plate hangs
                 // just under the feet, so it never depends on how tall a given
@@ -1023,11 +1025,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 FightHudPalette.GoldText, Place.At(0f, 0f));
             IntentTooltipText = label;
 
+            // a hover tooltip floats over whatever it has to - it is
+            // transient and takes no clicks
             var panel = Ui.Sprite("IntentTooltip", PanelViolet, Place.At(-330f, 250f),
                     UiSize.Fixed(420f, 140f))
                 .Inactive()
-                .AsDecor()
-                .AllowOverlap("a hover tooltip floats over whatever it has to - it is transient and takes no clicks");
+                .AsDecor();
             panel.Children.Add(label);
             IntentTooltip = panel;
             return panel;
@@ -1053,7 +1056,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
             prompt.Inactive();
             prompt.Opening();
             prompt.AsDecor();
-            prompt.AllowOverlap("the prompt sits over the submenu at target depth on purpose - it is the more urgent of the two, and it takes no clicks");
             TargetPrompt = prompt;
             return prompt;
         }

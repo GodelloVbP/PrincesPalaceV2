@@ -111,12 +111,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var cardChildren = new List<UiNode>
             {
                 Ui.Solid($"OptionsCard{group.Key}Fill", CardFill, new UiVec(width, height), Place.At(0f, 0f))
-                    .AsDecor()
-                    .AllowOverlap("the fill is what the card's contents stand on"),
+                    .AsDecor(),
             };
 
             cardChildren.AddRange(Ui.Rim($"OptionsCard{group.Key}", new UiVec(width, height),
-                CardRim, "the rim traces the card it encloses"));
+                CardRim));
 
             cardChildren.Add(Ui.Label($"OptionsCard{group.Key}Heading", group.Heading,
                     new UiVec(OptionsLayout.HeadingWidth, OptionsLayout.HeadingHeight), 18, Heading,
@@ -184,8 +183,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 var fill = Ui.Solid($"OptionsRow{key}Fill", TrackFill,
                         new UiVec(OptionsLayout.TrackWidth, OptionsLayout.TrackHeight),
                         Place.At(OptionsLayout.TrackLeft, 0f, new UiVec(0f, 0.5f)))
-                    .AsDecor()
-                    .AllowOverlap("the fill sits inside its own track by construction");
+                    .AsDecor();
 
                 var value = Ui.Label($"OptionsRow{key}Value", UiString.Runtime,
                         new UiVec(OptionsLayout.ValueWidth, 20f), 14, Value,

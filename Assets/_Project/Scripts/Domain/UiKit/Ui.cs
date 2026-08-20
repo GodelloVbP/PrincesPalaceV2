@@ -110,22 +110,33 @@ namespace PrincesPalace.Domain.UiKit
         // have lost it.
         //
         // Decor throughout: a rim is drawn, never pressed.
+        // NO `reason` PARAMETER, and its absence is the point.
+        //
+        // This took one, threaded it to all four edges, and spent it on an
+        // AllowOverlap that could never fire: the edges are AsDecor, and A1
+        // exempts decoration outright. Five call sites were writing "the rim
+        // traces the plate it encloses" into a string that reached nothing, and
+        // four inert allowances came out of every one of them -- twenty in
+        // total, which no search for `.AsDecor().AllowOverlap(...)` could see,
+        // because the pair only ever existed here.
+        //
+        // A7 found them, which is the argument for a rule over a sweep: a sweep
+        // sees the shapes you thought of.
         public static IEnumerable<UiNode> Rim(
-            string stem, UiVec size, string colorHex, string reason, UiVec centre = default)
+            string stem, UiVec size, string colorHex, UiVec centre = default)
         {
             float w = size.X;
             float h = size.Y;
 
-            yield return RimEdge($"{stem}RimTop", new UiVec(w, 1f), centre.X, centre.Y + h * 0.5f - 0.5f, colorHex, reason);
-            yield return RimEdge($"{stem}RimBottom", new UiVec(w, 1f), centre.X, centre.Y - h * 0.5f + 0.5f, colorHex, reason);
-            yield return RimEdge($"{stem}RimLeft", new UiVec(1f, h), centre.X - w * 0.5f + 0.5f, centre.Y, colorHex, reason);
-            yield return RimEdge($"{stem}RimRight", new UiVec(1f, h), centre.X + w * 0.5f - 0.5f, centre.Y, colorHex, reason);
+            yield return RimEdge($"{stem}RimTop", new UiVec(w, 1f), centre.X, centre.Y + h * 0.5f - 0.5f, colorHex);
+            yield return RimEdge($"{stem}RimBottom", new UiVec(w, 1f), centre.X, centre.Y - h * 0.5f + 0.5f, colorHex);
+            yield return RimEdge($"{stem}RimLeft", new UiVec(1f, h), centre.X - w * 0.5f + 0.5f, centre.Y, colorHex);
+            yield return RimEdge($"{stem}RimRight", new UiVec(1f, h), centre.X + w * 0.5f - 0.5f, centre.Y, colorHex);
         }
 
-        private static UiNode RimEdge(string name, UiVec size, float x, float y, string colorHex, string reason) =>
+        private static UiNode RimEdge(string name, UiVec size, float x, float y, string colorHex) =>
             Solid(name, colorHex, size, Place.At(x, y))
-                .AsDecor()
-                .AllowOverlap(reason);
+                .AsDecor();
 
         // Blank main-axis extent inside a flow container. Exists so a gap can be
         // declared where it happens rather than smuggled into a neighbour's

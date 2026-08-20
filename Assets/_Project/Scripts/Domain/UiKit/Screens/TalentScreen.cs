@@ -284,8 +284,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     UiSize.Fixed(size, size), lit)
                 .Clipping()
                 .Inactive()
-                .AsDecor()
-                .AllowOverlap("the lit medallion lies exactly over the unlit one it replaces");
+                .AsDecor();
 
             // AFTER the glow, so the lit orb draws over the halo rather than
             // under it.
@@ -335,7 +334,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Rotated(angle)
                 .Inactive()
                 .AsDecor()
-                .AllowOverlap("the lit layer lies along the dim limb it belongs to")
                 .AllowOverflow("a soft halo is meant to bleed past the limb - that bleed is the light");
 
             var core = Ui.Sprite($"Edge{path}_{parent}_{slot}Core", EdgeStripeKey,
@@ -349,7 +347,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // came back on at all. A lit edge showed its halo and no crack,
                 // and the crackle rode an object that never ran.
                 .AsDecor()
-                .AllowOverlap("the bright core runs down the middle of its own halo")
                 .AllowOverflow("a rotated edge's axis-aligned box is wider than the line inside it");
 
             // THE DOT THAT RUNS THE LINE. A child of the glow like the core,
@@ -365,7 +362,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     Place.At(-length * 0.5f, 0f))
                 .Coloured(EdgeSpark)
                 .AsDecor()
-                .AllowOverlap("the spark rides the limb it belongs to")
                 .AllowOverflow("the spark sits ON the edge's end and is wider than the line - it is meant to spill past it");
 
             glow.Children.Add(core);
@@ -380,8 +376,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             return Ui.Panel($"Edge{path}_{parent}_{slot}Group", Place.At(0f, 0f), UiSize.Fill,
                     edge, glow)
-                .AsDecor()
-                .AllowOverlap("an edge and its own lit layer share one line by construction");
+                .AsDecor();
         }
     }
 }

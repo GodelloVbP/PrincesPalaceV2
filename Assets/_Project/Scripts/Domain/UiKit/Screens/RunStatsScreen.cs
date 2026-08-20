@@ -68,12 +68,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var cardChildren = new List<UiNode>
             {
                 Ui.Solid($"RunStatsCard{group.Key}Fill", CardFill, new UiVec(width, height), Place.At(0f, 0f))
-                    .AsDecor()
-                    .AllowOverlap("the fill is what the card's contents stand on"),
+                    .AsDecor(),
             };
 
             cardChildren.AddRange(Ui.Rim($"RunStatsCard{group.Key}", new UiVec(width, height),
-                CardRim, "the rim traces the card it encloses"));
+                CardRim));
 
             cardChildren.Add(Ui.Label($"RunStatsCard{group.Key}Heading", group.Heading,
                     new UiVec(RunStatsLayout.CardContentWidth, RunStatsLayout.HeadingHeight), 16, Heading,

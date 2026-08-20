@@ -49,6 +49,7 @@ namespace PrincesPalace.Domain.UiKit
             CheckDuplicateNames(node, errors, frame);
             CheckFlowCapacity(node, errors, frame);
             CheckSiblingOverlap(node, decorHere, errors, frame);
+            CheckInertOverlapAllowance(node, decorHere, errors, frame);
 
             foreach (var child in node.Children)
             {
@@ -215,6 +216,50 @@ namespace PrincesPalace.Domain.UiKit
                     $"but is only {available:0.#}px. " +
                     $"Fix by: growing the container; or reducing spacing; or sizing it FromChildren so it grows with " +
                     $"its content instead of silently overflowing.",
+            });
+        }
+
+        // A7 -----------------------------------------------------------------
+        //
+        // An AllowOverlap that cannot fire. Decoration is already exempt from
+        // A1 twice over -- CheckSiblingOverlap returns outright inside a decor
+        // subtree, and skips any pair where either side is decor -- so an
+        // AllowOverlap on a decor node, or on anything under one, waives
+        // nothing.
+        //
+        // WHY THIS IS AN ERROR AND NOT A TIDY. 38 of the project's 67
+        // AllowOverlap calls were this, and the cost was not the dead code: it
+        // was that the reason STRING reads as the mechanism. Anyone auditing a
+        // screen -- including the pass that found this -- takes
+        // `AllowOverlap("the icon stands on its own glow")` as the thing
+        // holding the exemption open, counts it among the audit's blind spots,
+        // and reasons about a waiver that does not exist. Two thirds of that
+        // list was fiction.
+        //
+        // It also matters which way the real exemption is stated, because the
+        // two are not equivalent: AsDecor is inherited by the whole subtree and
+        // clears raycastTarget with it, while AllowOverlap is a blanket waiver
+        // on ONE node against EVERY sibling forever. Writing the weaker,
+        // broader one next to the stronger one and believing the weaker is what
+        // works is how a screen ends up unprotected somewhere nobody looked.
+        private static void CheckInertOverlapAllowance(SolvedNode node, bool isDecor,
+                                                       List<UiAuditError> errors, UiVec frame)
+        {
+            if (!isDecor) return;
+            if (node.Source?.AllowOverlapReason == null) return;
+
+            errors.Add(new UiAuditError
+            {
+                Check = UiAuditCheck.InertOverlapAllowance,
+                Path = node.Path,
+                Frame = frame,
+                Message =
+                    $"'{node.Path}' declares AllowOverlap(\"{node.Source.AllowOverlapReason}\") but is " +
+                    $"decoration, which A1 already exempts -- so the allowance waives nothing and its " +
+                    $"reason reads as a mechanism that is not there. " +
+                    $"Fix by: deleting the AllowOverlap and keeping the reason as a comment if it says " +
+                    $"something AsDecor does not; or, if this node genuinely needs to take clicks, " +
+                    $"dropping AsDecor instead and letting the allowance do the work.",
             });
         }
 

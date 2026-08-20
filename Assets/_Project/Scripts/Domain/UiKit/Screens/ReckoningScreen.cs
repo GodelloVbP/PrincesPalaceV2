@@ -380,8 +380,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     UiSize.Fixed(PanelWidth * 1.5f, PanelHeight * 1.6f))
                 .Coloured("#8A63D800")
                 .AsDecor()
-                .AllowOverflow("the glow is deliberately larger than the frame it sits behind - that bleed IS the drop")
-                .AllowOverlap("a drop shadow covers the thing casting it by definition");
+                .AllowOverflow("the glow is deliberately larger than the frame it sits behind - that bleed IS the drop");
             screen.FrameGlow = glow;
 
             var content = Ui.Panel("ReckoningContent", Place.At(0f, 0f), UiSize.Fill,
@@ -596,11 +595,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AllowOverflow("a bloom that stopped at the bar's edge would not be one - reaching past the track IS the effect");
             fill.Children.Add(bloom);
 
+            // the earned segment is drawn ON TOP of the before segment - one
+            // track, two fills, by design
             var track = Ui.Sprite($"ReckoningRow{index}BarTrack", BarTrackKey, Place.At(0f, -14f),
                     UiSize.Fixed(BarWidth, BarHeight))
                 .Coloured(BarTrackTint)
-                .AsDecor()
-                .AllowOverlap("the earned segment is drawn ON TOP of the before segment - one track, two fills, by design");
+                .AsDecor();
 
             track.Children.Add(before);
             track.Children.Add(fill);
@@ -635,6 +635,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 "#D9CCF2", Place.At(0f, 0f));
             OfferTooltipText = label;
 
+            // a hover tooltip floats over whatever it has to - it is
+            // transient and takes no clicks
             // y -247, NOT further down. The usable interior stops at -317
             // (A5, the painted-border check), and a 136-tall box centred any
             // lower reaches into the frame's bottom ornament -- which the audit
@@ -642,8 +644,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var panel = Ui.Sprite("ReckoningOfferTooltip", TabKey, Place.At(0f, -247f),
                     UiSize.Fixed(920f, 136f))
                 .Inactive()
-                .AsDecor()
-                .AllowOverlap("a hover tooltip floats over whatever it has to - it is transient and takes no clicks");
+                .AsDecor();
             panel.Children.Add(label);
             OfferTooltip = panel;
             return panel;
@@ -682,20 +683,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     Place.At(0f, IconCentre), UiSize.Fixed(330f, 330f))
                 .Coloured("#FFFFFF00")
                 .AsDecor()
-                .AllowOverflow("the halo is deliberately larger than the icon it sits behind - that bleed IS the rarity signal")
-                .AllowOverlap("the burst and the icon sit on top of the halo by construction");
+                .AllowOverflow("the halo is deliberately larger than the icon it sits behind - that bleed IS the rarity signal");
 
+            // the rays are meant to read THROUGH and around the icon
             var burst = Ui.Sprite($"ReckoningOffer{index}Burst", BurstKey,
                     Place.At(0f, IconCentre), UiSize.Fixed(340f, 340f))
                 .Coloured("#FFFFFF00")
                 .AsDecor()
-                .AllowOverflow("the burst is deliberately larger than the icon it sits behind - that bleed IS the rarity signal")
-                .AllowOverlap("the rays are meant to read THROUGH and around the icon");
+                .AllowOverflow("the burst is deliberately larger than the icon it sits behind - that bleed IS the rarity signal");
 
+            // the icon stands on its own glow - covering the middle of it is
+            // the point
             var icon = Ui.Sprite($"ReckoningOffer{index}Icon", null,
                     Place.At(0f, IconCentre), UiSize.Fixed(200f, IconTop - IconBottom))
-                .AsDecor()
-                .AllowOverlap("the icon stands on its own glow - covering the middle of it is the point");
+                .AsDecor();
 
             // THE NAME BELONGS TO THE ITEM, so it sits directly under it. It
             // used to float 57px below the icon with nothing in the gap, which

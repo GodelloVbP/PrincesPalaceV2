@@ -136,8 +136,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // straight through the numerals.
             children.Add(Ui.Solid("DossierGround", Ground,
                     new UiVec(DossierLayout.Width, DossierLayout.Height), Place.At(0f, 0f))
-                .AsDecor()
-                .AllowOverlap("the ground is what everything else on this screen stands on"));
+                .AsDecor());
 
             // Light from above, over the flat ground.
             //
@@ -150,8 +149,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             children.Add(Ui.Sprite("DossierVeil", VeilKey,
                     Place.At(0f, 0f), UiSize.Fixed(DossierLayout.Width, DossierLayout.Height))
                 .Coloured("#6A54902B")
-                .AsDecor()
-                .AllowOverlap("a wash over the ground is the whole of what it does"));
+                .AsDecor());
 
             children.AddRange(screen.BuildColumnA());
             children.AddRange(screen.BuildColumnB());
@@ -227,8 +225,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var fill = Ui.Solid("DossierXpFill", Accent, new UiVec(trackWidth, 3f),
                     Place.At(trackLeft, DossierLayout.XpRowCentreY, new UiVec(0f, 0.5f)))
-                .AsDecor()
-                .AllowOverlap("the fill sits on its own track by construction");
+                .AsDecor();
             XpFill = fill;
             yield return fill;
 
@@ -342,8 +339,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         new UiVec(DossierLayout.PackSortButtonWidth - 24f, 2f),
                         Place.At(x, DossierLayout.PackSortCentreY - DossierLayout.PackSortRowHeight * 0.5f + 1f))
                     .Inactive()
-                    .AsDecor()
-                    .AllowOverlap("the underline marks the key above it");
+                    .AsDecor();
 
                 PackFilterTabs.Add(tab);
                 PackSortUnderlines.Add(underline);
@@ -422,8 +418,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var thumb = Ui.Solid("DossierPackScrollThumb", "#C8AAE666",
                     new UiVec(DossierLayout.PackScrollbarWidth, DossierLayout.PackTrackHeight),
                     Place.At(cx + DossierLayout.PackScrollbarCentreX, DossierLayout.PackTrackCentreY))
-                .AsDecor()
-                .AllowOverlap("the thumb rides inside its own track by construction");
+                .AsDecor();
 
             PackScrollTrack = track;
             PackScrollThumb = thumb;
@@ -483,15 +478,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     Place.At(mannequinAt.X, mannequinAt.Y),
                     UiSize.Fixed(DossierLayout.MannequinWidth, DossierLayout.MannequinHeight))
                 .Coloured("#B9A2D60E")
-                .AsDecor()
-                .AllowOverlap("the slots and their leaders sit over the mannequin by construction");
+                .AsDecor();
 
             yield return Ui.Sprite("DossierMannequinOutline", MannequinOutlineKey,
                     Place.At(mannequinAt.X, mannequinAt.Y),
                     UiSize.Fixed(DossierLayout.MannequinWidth, DossierLayout.MannequinHeight))
                 .Coloured("#EDE4FF5C")
-                .AsDecor()
-                .AllowOverlap("the slots and their leaders sit over the mannequin by construction");
+                .AsDecor();
 
             foreach (var slot in EquipmentSlots.All)
             {
@@ -611,8 +604,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 var highlight = Ui.Solid($"DossierStatHighlight{i}", "#B9A2D61F",
                         new UiVec(DossierLayout.ContentCWidth, DossierLayout.StatRowHeight - 2f),
                         Place.At(cx, y))
-                    .Inactive().AsDecor()
-                    .AllowOverlap("the highlight sits under the row it marks");
+                    .Inactive().AsDecor();
 
                 var name = Ui.Label($"DossierStatName{i}", SheetStats.LabelFor(stat),
                     new UiVec(170f, 22f), 15, Text,
@@ -654,11 +646,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             TooltipTitle = title;
             TooltipBody = body;
 
+            // a tooltip floats over whatever it has to - it is transient and
+            // takes no clicks
             var panel = Ui.Sprite("DossierTooltip", null, Place.At(0f, 0f), UiSize.Fixed(290f, 130f))
                 .Coloured("#1D1226F2")
                 .Inactive()
-                .AsDecor()
-                .AllowOverlap("a tooltip floats over whatever it has to - it is transient and takes no clicks");
+                .AsDecor();
             panel.Children.Add(title);
             panel.Children.Add(body);
             Tooltip = panel;

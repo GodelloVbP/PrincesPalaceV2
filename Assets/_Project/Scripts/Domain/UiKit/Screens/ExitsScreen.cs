@@ -121,13 +121,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var blockChildren = new List<UiNode>
             {
                 Ui.Solid($"Exit{key}Plate", Plate, size, Place.At(0f, buttonY))
-                    .AsDecor()
-                    .AllowOverlap("the plate is what its own exit stands on"),
+                    .AsDecor(),
             };
 
             blockChildren.AddRange(Ui.Rim($"Exit{key}",
                 new UiVec(ExitsLayout.ExitWidth, ExitsLayout.ExitHeight), PlateRim,
-                "the rim traces the plate it encloses", new UiVec(0f, buttonY)));
+                new UiVec(0f, buttonY)));
 
             // A PLATE, not a scale, for the same reason the tab bar's hover is
             // one: the button is chromeless over a drawn plate, so scaling the
@@ -135,8 +134,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // still.
             var hover = Ui.Solid($"Exit{key}Hover", Hover, size, Place.At(0f, buttonY))
                 .Inactive()
-                .AsDecor()
-                .AllowOverlap("the hover plate sits under its own exit by construction");
+                .AsDecor();
 
             var button = Ui.Button($"Exit{key}", label, size, 17, Place.At(0f, buttonY))
                 .NoChrome()
@@ -170,12 +168,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var cardChildren = new List<UiNode>
             {
                 Ui.Solid("ExitAbandonCardFill", RedFill, new UiVec(w, h), Place.At(0f, 0f))
-                    .AsDecor()
-                    .AllowOverlap("the fill is what the card's contents stand on"),
+                    .AsDecor(),
             };
 
-            cardChildren.AddRange(Ui.Rim("ExitAbandonCard", new UiVec(w, h), RedRim,
-                "the rim traces the plate it encloses"));
+            cardChildren.AddRange(Ui.Rim("ExitAbandonCard", new UiVec(w, h), RedRim));
 
             cardChildren.Add(Ui.Label("ExitAbandonHeading", UiStrings.ExitAbandonHeading,
                     new UiVec(w - 40f, ExitsLayout.AbandonHeadingHeight), 16, RedText,
@@ -191,8 +187,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             cardChildren.Add(Ui.Solid("ExitAbandonHoldTrack", HoldTrack, holdSize,
                     Place.At(0f, ExitsLayout.HoldCentreY))
-                .AsDecor()
-                .AllowOverlap("the track is what the hold's fill runs across"));
+                .AsDecor());
 
             // AUTHORED FULL WIDTH and driven to zero by the controller on
             // wiring. It has to be authored at its real size because UiAudit
@@ -206,8 +201,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // Options slider's fill records in its own comment.
             var fill = Ui.Solid("ExitAbandonHoldFill", HoldFill, holdSize,
                     Place.At(ExitsLayout.HoldFillLeft, ExitsLayout.HoldCentreY, new UiVec(0f, 0.5f)))
-                .AsDecor()
-                .AllowOverlap("the fill sits inside its own hold track by construction");
+                .AsDecor();
 
             // QUIET, because a Button plays the shared click on release
             // whatever the press was for -- and a hold released early is a

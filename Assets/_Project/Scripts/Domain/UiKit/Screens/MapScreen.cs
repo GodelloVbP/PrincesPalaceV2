@@ -188,9 +188,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // The painted forest, repeated. Tiles are 1920 wide and repeat
             // every 1726, so consecutive tiles overlap by 194 -- the art's own
             // clearing pair is what has to line up end to end, not its canvas.
+            // the forest tile is 1920 wide but repeats every 1726, so
+            // neighbouring tiles overlap by design - the clearings are what
+            // tile, not the canvas
             var backdrops = Ui.Pool("MapBackdrops", MapLayout.MaxBackgroundTiles, i => screen.BuildBackdrop(i))
-                .AsDecor()
-                .AllowOverlap("the forest tile is 1920 wide but repeats every 1726, so neighbouring tiles overlap by design - the clearings are what tile, not the canvas");
+                .AsDecor();
 
             var trails = Ui.Pool("MapTrails", MapLayout.SegmentCapacity, i => screen.BuildTrailSegment(i))
                 .AllowOverlap("a pool's own rect is the whole canvas because its members are placed at runtime; it draws nothing itself and takes no clicks");

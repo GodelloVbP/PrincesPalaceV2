@@ -7,6 +7,7 @@ namespace PrincesPalace.Domain.UiKit
         FlowCapacity,        // A3
         DuplicateName,       // A4
         ZeroSizeGraphic,     // A6
+        InertOverlapAllowance, // A7
     }
 
     // One audit failure, with everything needed to act on it without opening

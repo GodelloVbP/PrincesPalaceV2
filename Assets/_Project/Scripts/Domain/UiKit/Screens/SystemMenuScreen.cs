@@ -94,16 +94,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             barChildren.Add(Ui.Solid("SystemMenuBarPlate", BarPlate,
                     new UiVec(SystemMenuLayout.PanelWidth, SystemMenuLayout.BarHeight),
                     Place.At(0f, 0f))
-                .AsDecor()
-                .AllowOverlap("the plate is what the whole bar stands on"));
+                .AsDecor());
 
             // Half a pixel in from the boundary, not on it: a 1px node centred
             // exactly on the edge pokes 0.5px outside its parent.
             barChildren.Add(Ui.Solid("SystemMenuBarEdge", Hairline,
                     new UiVec(SystemMenuLayout.PanelWidth, 1f),
                     Place.At(0f, -SystemMenuLayout.BarHeight * 0.5f + 0.5f))
-                .AsDecor()
-                .AllowOverlap("the bar's bottom edge sits on the plate it closes"));
+                .AsDecor());
 
             var centres = SystemMenuLayout.TabCentresX(authored);
             var widths = SystemMenuLayout.TabWidths(authored);
@@ -122,8 +120,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 var hover = Ui.Solid($"SystemTab{def.Key}Hover", TabHover,
                         new UiVec(w, SystemMenuLayout.TabHeight), Place.At(x, 0f))
                     .Inactive()
-                    .AsDecor()
-                    .AllowOverlap("the hover plate sits under its own tab by construction");
+                    .AsDecor();
 
                 // TRACKED, and this is not decoration.
                 //
@@ -266,8 +263,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 Ui.Solid("SystemMenuFill", PanelFill,
                         new UiVec(SystemMenuLayout.PanelWidth, SystemMenuLayout.PanelHeight),
                         Place.At(0f, 0f))
-                    .AsDecor()
-                    .AllowOverlap("the fill is what the panel's contents stand on"),
+                    .AsDecor(),
             };
             frameChildren.Add(bar);
             frameChildren.Add(content);
@@ -282,7 +278,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // Later sibling, drawn last, over everything it encloses.
             frameChildren.AddRange(Ui.Rim("SystemMenu",
                 new UiVec(SystemMenuLayout.PanelWidth, SystemMenuLayout.PanelHeight),
-                PanelRim, "the rim traces the panel it encloses"));
+                PanelRim));
 
             var frame = Ui.Panel("SystemMenuFrame", Place.At(0f, 0f),
                 UiSize.Fixed(SystemMenuLayout.PanelWidth, SystemMenuLayout.PanelHeight),
@@ -363,8 +359,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 Ui.Solid("SystemLintelPlate", BarPlate,
                         new UiVec(SystemMenuLayout.LintelWidth, SystemMenuLayout.LintelHeight),
                         Place.At(0f, 0f))
-                    .AsDecor()
-                    .AllowOverlap("the plate is what the lintel's contents stand on"),
+                    .AsDecor(),
                 title,
                 Ui.Solid("SystemLintelRuleA", Hairline, new UiVec(1f, 24f), Place.At(-344f, 0f)).AsDecor(),
                 context,
@@ -381,8 +376,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // parent and the containment audit is right to refuse that.
                 Ui.Solid("SystemLintelGoldRule", GoldRule, new UiVec(SystemMenuLayout.LintelWidth, 1f),
                         Place.At(0f, -SystemMenuLayout.LintelHeight * 0.5f + 0.5f))
-                    .AsDecor()
-                    .AllowOverlap("the rule closes the lintel it belongs to"),
+                    .AsDecor(),
             };
 
             return Ui.Panel("SystemMenuLintel",
