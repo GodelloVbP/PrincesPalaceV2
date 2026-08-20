@@ -299,7 +299,7 @@ namespace PrincesPalace
                 int slot = edgeChildSlots[i];
 
                 bool lit = unlocked.Contains(TalentPage.SlotId(characterId, path, slot));
-                SetActive(edgeGlows[i], lit);
+                edgeGlows[i].SetShown(lit);
             }
         }
 
@@ -313,12 +313,7 @@ namespace PrincesPalace
             if (orbReveals[index] != null) orbReveals[index].Play();
         }
 
-        private static void SetActive(GameObject go, bool active)
-        {
-            if (go != null && go.activeSelf != active) go.SetActive(active);
-        }
-
-        private void PaintDetail(string characterId, HashSet<string> unlocked)
+                private void PaintDetail(string characterId, HashSet<string> unlocked)
         {
             if (_selectedSlot < 0)
             {

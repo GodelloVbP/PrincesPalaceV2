@@ -94,7 +94,7 @@ namespace PrincesPalace
         // Column B, for whichever branch is open.
         private void RefreshSubmenu()
         {
-            SetActive(submenuColumn, _menu.SubmenuOpen);
+            submenuColumn.SetShown(_menu.SubmenuOpen);
             if (!_menu.SubmenuOpen || submenuRows == null) return;
 
             var rows = CurrentRows();
@@ -151,7 +151,7 @@ namespace PrincesPalace
         // synthetic Strike entry when the branch is ATTACK.
         private void RefreshDetail()
         {
-            SetActive(detailColumn, _menu.DetailOpen);
+            detailColumn.SetShown(_menu.DetailOpen);
             if (!_menu.DetailOpen) return;
 
             var panel = CurrentDetail();
@@ -168,7 +168,7 @@ namespace PrincesPalace
                 // a label pointing at nothing.
                 if (detailStatKeys != null && i < detailStatKeys.Length && detailStatKeys[i] != null)
                 {
-                    SetActive(detailStatKeys[i].gameObject, has);
+                    detailStatKeys[i].gameObject.SetShown(has);
                 }
             }
         }
@@ -176,7 +176,7 @@ namespace PrincesPalace
         private void RefreshTargetPrompt()
         {
             bool targeting = _menu.IsTargeting;
-            SetActive(targetPrompt, targeting);
+            targetPrompt.SetShown(targeting);
             if (!targeting) return;
 
             targetPromptLabel.Set(UiStrings.TargetPrompt, CurrentDetail().Name);
@@ -193,8 +193,8 @@ namespace PrincesPalace
             for (int i = 0; i < enemyPlates.Length; i++)
             {
                 bool present = i < enemies.Count && enemies[i].IsAlive;
-                SetActive(enemyPlates[i] == null ? null : enemyPlates[i].gameObject, present);
-                SetActive(enemyPlateReticles[i], present && _menu.IsTargeting);
+                enemyPlates[i].SetShown(present);
+                enemyPlateReticles[i].SetShown(present && _menu.IsTargeting);
                 if (!present) continue;
 
                 var enemy = enemies[i];
@@ -237,7 +237,7 @@ namespace PrincesPalace
 
             int preview = _menu.ManaPreview;
             bool show = preview > 0 && actor.MaxMana > 0 && preview <= actor.CurrentMana;
-            SetActive(partyMpPreview.gameObject, show);
+            partyMpPreview.gameObject.SetShown(show);
             if (!show) return;
 
             float barWidth = partyMpFill == null ? 0f : ((RectTransform)partyMpFill.transform).rect.width;
@@ -256,7 +256,7 @@ namespace PrincesPalace
         {
             var signature = actor.Signature;
             bool has = signature != null;
-            SetActive(woolValue == null ? null : woolValue.transform.parent.gameObject, has);
+            if (woolValue != null) woolValue.transform.parent.gameObject.SetShown(has);
             if (!has || woolPips == null) return;
 
             woolValue.Set(UiStrings.SignatureValue, signature.Current, signature.Max);
@@ -269,7 +269,7 @@ namespace PrincesPalace
                 // drawn empty: sixteen slots under a character whose meter only
                 // goes to eight would read as a meter half broken.
                 bool exists = i < signature.Max;
-                SetActive(woolPips[i].gameObject, exists);
+                woolPips[i].gameObject.SetShown(exists);
                 if (exists) woolPips[i].color = i < signature.Current ? PipFilled : PipEmpty;
             }
         }
@@ -381,16 +381,11 @@ namespace PrincesPalace
             if (image == null) return;
 
             bool visible = wanted && image.sprite != null;
-            SetActive(image.gameObject, visible);
+            image.gameObject.SetShown(visible);
             image.enabled = visible;
         }
 
-        private static void SetActive(GameObject go, bool active)
-        {
-            if (go != null && go.activeSelf != active) go.SetActive(active);
-        }
-
-        private static void SetAlpha(TMPro.TMP_Text label, float alpha)
+                private static void SetAlpha(TMPro.TMP_Text label, float alpha)
         {
             if (label == null) return;
             var colour = label.color;

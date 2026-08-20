@@ -186,7 +186,7 @@ namespace PrincesPalace
 
         private void OnContinuePressed()
         {
-            SetActive(continueButton.gameObject, false);
+            continueButton.gameObject.SetShown(false);
             LeaveFight();
         }
 
@@ -408,12 +408,12 @@ namespace PrincesPalace
             // neither wired: a headless fixture, a preview.
             bool tookOver = over && (_session.PlayerWon ? OpenReckoning() : OpenDefeat());
 
-            SetActive(continueButton.gameObject, over && !tookOver);
+            continueButton.gameObject.SetShown(over && !tookOver);
 
             // The verb column is fully HIDDEN when the fight is over, not
             // merely dimmed -- it and Continue swap footprints, which is why
             // the tree declares them as a deliberate overlap.
-            foreach (var verb in verbButtons) SetActive(verb.gameObject, !over);
+            foreach (var verb in verbButtons) verb.gameObject.SetShown(!over);
 
             RefreshUi();
         }
@@ -457,7 +457,7 @@ namespace PrincesPalace
         {
             if (barkLabel == null) return;
             var panel = barkLabel.transform.parent;
-            if (panel != null) SetActive(panel.gameObject, visible);
+            if (panel != null) panel.gameObject.SetShown(visible);
         }
 
         // ---- the character sheet, mid-fight -----------------------------------

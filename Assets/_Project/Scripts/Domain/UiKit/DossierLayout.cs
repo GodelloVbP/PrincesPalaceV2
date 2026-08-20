@@ -164,11 +164,31 @@ namespace PrincesPalace.Domain.UiKit
         public static float PackCellWidth =>
             (PackListWidth - PackColumnGap * (PackColumns - 1f)) / PackColumns;
 
-        // Tall enough for a 44px icon with a name under a plus beside it.
-        public const float PackCellHeight = 84f;
+        // THE ICON ON TOP, THE NAME UNDER IT.
+        //
+        // Side by side, a 44px icon left about 110px for the name at 11px --
+        // which is not a legible width for "Studded Leather Coif +1", and the
+        // icon was too small to identify at a glance either. Stacking gives the
+        // name the cell's FULL width and the icon half again its size, at the
+        // cost of one visible row.
+        public const float PackCellHeight = 104f;
         public const float PackRowGap = 8f;
 
-        public const float PackIconSize = 44f;
+        public const float PackIconSize = 64f;
+
+        // Two lines at 11px. Generated gear runs long -- a tier adjective, a
+        // noun and a plus -- and one line would clip most of it.
+        public const float PackNameHeight = 26f;
+
+        public const float PackCellPadY = 6f;
+        public const float PackIconGap = 4f;
+
+        // Measured from the cell's own centre.
+        public static float PackIconCentreY =>
+            PackCellHeight * 0.5f - PackCellPadY - PackIconSize * 0.5f;
+
+        public static float PackNameCentreY =>
+            PackIconCentreY - PackIconSize * 0.5f - PackIconGap - PackNameHeight * 0.5f;
 
         public static float PackListTop =>
             ColumnATop - PackHeaderHeight - PackSortRowHeight - PackSortGap;

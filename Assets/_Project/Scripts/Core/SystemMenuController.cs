@@ -127,7 +127,7 @@ namespace PrincesPalace
             // selected tab -- the underline already says which one that is, and
             // two markers on one tab reads as a stuck hover.
             bool show = entered && _visible.Contains(index) && index != _selected;
-            SetActive(tabHovers[index], show);
+            tabHovers[index].SetShown(show);
         }
 
         private void Update()
@@ -184,13 +184,13 @@ namespace PrincesPalace
         {
             Wire();
             ApplyContext();
-            SetActive(panel, true);
+            panel.SetShown(true);
             Pause();
         }
 
         public void Close()
         {
-            SetActive(panel, false);
+            panel.SetShown(false);
             Resume();
         }
 
@@ -258,11 +258,11 @@ namespace PrincesPalace
                 int slot = _visible.IndexOf(i);
                 bool shown = slot >= 0;
 
-                SetActive(TabObject(i), shown);
+                TabObject(i).SetShown(shown);
                 if (!shown)
                 {
-                    SetActive(Element(tabHovers, i), false);
-                    SetActive(Element(tabUnderlines, i), false);
+                    Element(tabHovers, i).SetShown(false);
+                    Element(tabUnderlines, i).SetShown(false);
                     continue;
                 }
 
@@ -285,7 +285,7 @@ namespace PrincesPalace
                 for (int i = 0; i < tabDividers.Length; i++)
                 {
                     bool shown = i < defs.Count - 1;
-                    SetActive(tabDividers[i], shown);
+                    tabDividers[i].SetShown(shown);
                     if (!shown) continue;
 
                     var rect = Rect(tabDividers[i]);
@@ -341,14 +341,14 @@ namespace PrincesPalace
 
             for (int i = 0; i < panes.Length; i++)
             {
-                SetActive(panes[i], i == pane);
+                panes[i].SetShown(i == pane);
             }
 
             if (tabUnderlines != null)
             {
                 for (int i = 0; i < tabUnderlines.Length; i++)
                 {
-                    SetActive(tabUnderlines[i], i == _selected);
+                    tabUnderlines[i].SetShown(i == _selected);
                 }
             }
 
@@ -356,7 +356,7 @@ namespace PrincesPalace
             // so a click does not leave both markers lit.
             if (tabHovers != null && _selected < tabHovers.Length)
             {
-                SetActive(tabHovers[_selected], false);
+                tabHovers[_selected].SetShown(false);
             }
         }
 
@@ -382,9 +382,5 @@ namespace PrincesPalace
             rect.sizeDelta = new Vector2(width, height);
         }
 
-        private static void SetActive(GameObject go, bool active)
-        {
-            if (go != null && go.activeSelf != active) go.SetActive(active);
-        }
-    }
+            }
 }

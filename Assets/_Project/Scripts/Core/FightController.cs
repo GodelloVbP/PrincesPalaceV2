@@ -308,7 +308,7 @@ namespace PrincesPalace
                 if (!vitals.TryGetValue(enemies[i], out var recorded)) continue;
 
                 bool standing = recorded.Health > 0;
-                SetActive(enemyPlates[i].gameObject, standing);
+                enemyPlates[i].gameObject.SetShown(standing);
                 if (!standing) continue;
 
                 enemyPlateHps[i].Set(UiStrings.HealthValue, recorded.Health, enemies[i].MaxHealth);

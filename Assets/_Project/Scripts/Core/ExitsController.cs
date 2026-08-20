@@ -142,8 +142,8 @@ namespace PrincesPalace
         {
             bool withAbandon = InDescent;
 
-            SetActive(abandonCard, withAbandon);
-            SetActive(separator, withAbandon);
+            abandonCard.SetShown(withAbandon);
+            separator.SetShown(withAbandon);
 
             if (exitBlocks == null) return;
 
@@ -282,12 +282,8 @@ namespace PrincesPalace
         private void OnExitHover(int index, bool entered)
         {
             if (exitHovers == null || index < 0 || index >= exitHovers.Length) return;
-            SetActive(exitHovers[index], entered);
+            exitHovers[index].SetShown(entered);
         }
 
-        private static void SetActive(GameObject go, bool active)
-        {
-            if (go != null && go.activeSelf != active) go.SetActive(active);
-        }
-    }
+            }
 }

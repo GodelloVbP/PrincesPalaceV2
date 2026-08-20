@@ -173,11 +173,11 @@ namespace PrincesPalace
             // lying about a descent that is not happening.
             if (map == null || current == null)
             {
-                foreach (var button in nodeButtons) SetActive(button.gameObject, false);
+                foreach (var button in nodeButtons) button.gameObject.SetShown(false);
                 HideTrails(0);
                 HideBackdrops(0);
-                SetActive(fog.gameObject, false);
-                SetActive(walker.gameObject, false);
+                fog.gameObject.SetShown(false);
+                walker.gameObject.SetShown(false);
                 return;
             }
 
@@ -198,7 +198,7 @@ namespace PrincesPalace
             if (roomMessageLabel != null)
             {
                 bool hasMessage = RoomResolver.TryMessage(RoomResolver.Last, out var message, out var args);
-                SetActive(roomMessageLabel.gameObject, hasMessage);
+                roomMessageLabel.gameObject.SetShown(hasMessage);
                 if (hasMessage) roomMessageLabel.Set(message, args);
             }
 
@@ -228,7 +228,7 @@ namespace PrincesPalace
             // that does not exist.
             for (int i = 0; i < nodeButtons.Length; i++)
             {
-                if (!occupied.Contains(i)) SetActive(nodeButtons[i].gameObject, false);
+                if (!occupied.Contains(i)) nodeButtons[i].gameObject.SetShown(false);
             }
 
             PaintTrails(map, current.Id, cleared, reachable);
@@ -279,10 +279,10 @@ namespace PrincesPalace
 
             for (int i = 0; i < backdrops.Length; i++)
             {
-                SetActive(backdrops[i].gameObject, i < needed);
+                backdrops[i].gameObject.SetShown(i < needed);
             }
 
-            SetActive(fog.gameObject, true);
+            fog.gameObject.SetShown(true);
             fog.anchoredPosition = new Vector2(
                 MapLayout.FogX(depthCount) + MapLayout.FogWidth * 0.5f, fog.anchoredPosition.y);
         }
@@ -354,7 +354,7 @@ namespace PrincesPalace
                         var piece = MapLayout.SegmentAt(from, to, seed, i);
                         var image = trailSegments[segment++];
 
-                        SetActive(image.gameObject, true);
+                        image.gameObject.SetShown(true);
                         image.color = colour;
 
                         // Indexed off the SAME counter as its verge, so the two
@@ -401,7 +401,7 @@ namespace PrincesPalace
             if (trailSegments == null) return;
             for (int i = from; i < trailSegments.Length; i++)
             {
-                if (trailSegments[i] != null) SetActive(trailSegments[i].gameObject, false);
+                if (trailSegments[i] != null) trailSegments[i].gameObject.SetShown(false);
             }
         }
 
@@ -410,14 +410,14 @@ namespace PrincesPalace
             if (backdrops == null) return;
             for (int i = from; i < backdrops.Length; i++)
             {
-                if (backdrops[i] != null) SetActive(backdrops[i].gameObject, false);
+                if (backdrops[i] != null) backdrops[i].gameObject.SetShown(false);
             }
         }
 
         private void PaintNode(int index, DescentNode node, TileState state, bool isReachable)
         {
             var button = nodeButtons[index];
-            SetActive(button.gameObject, true);
+            button.gameObject.SetShown(true);
 
             // The tile is a BOUNDING BOX, not a stretch target: the tree keeps
             // its own proportions inside an elite's or a boss's bigger box
@@ -447,7 +447,7 @@ namespace PrincesPalace
             // not offered.
             button.interactable = isReachable;
 
-            SetActive(nodeMarkers[index].gameObject, state == TileState.Current);
+            nodeMarkers[index].gameObject.SetShown(state == TileState.Current);
         }
 
         // The type-specific foreground: what turns a shared tree into "this one
@@ -462,13 +462,13 @@ namespace PrincesPalace
 
             if (sprite == null)
             {
-                SetActive(icon.gameObject, false);
+                icon.gameObject.SetShown(false);
                 return;
             }
 
             float box = width * MapScreen.IconFractionFor(type);
 
-            SetActive(icon.gameObject, true);
+            icon.gameObject.SetShown(true);
             icon.sprite = sprite;
             icon.preserveAspect = true;
             icon.color = tint;
@@ -546,9 +546,5 @@ namespace PrincesPalace
         private static bool IsFight(RoomType type) =>
             type == RoomType.Fight || type == RoomType.EliteFight || type == RoomType.Boss;
 
-        private static void SetActive(GameObject go, bool active)
-        {
-            if (go != null && go.activeSelf != active) go.SetActive(active);
-        }
-    }
+            }
 }

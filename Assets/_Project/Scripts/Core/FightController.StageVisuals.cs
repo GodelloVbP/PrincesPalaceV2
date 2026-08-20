@@ -40,7 +40,7 @@ namespace PrincesPalace
             for (int i = 0; i < enemySprites.Length; i++)
             {
                 var enemy = i < enemies.Count ? enemies[i] : null;
-                SetActive(enemySlots[i].gameObject, enemy != null);
+                enemySlots[i].gameObject.SetShown(enemy != null);
                 if (enemy == null) continue;
 
                 RefreshCombatantSprite(enemySprites[i], enemy, StageSide.Right, StanceOf(enemy));
@@ -55,7 +55,7 @@ namespace PrincesPalace
             for (int i = 0; i < partySprites.Length; i++)
             {
                 var member = i < party.Count ? party[i] : null;
-                SetActive(partySlots[i].gameObject, member != null);
+                partySlots[i].gameObject.SetShown(member != null);
                 if (member == null) continue;
 
                 RefreshCombatantSprite(partySprites[i], member, StageSide.Left, StanceOf(member));
@@ -214,7 +214,7 @@ namespace PrincesPalace
                 hover.Changed = OnHoverIndex;
             }
 
-            SetActive(intentTooltip, false);
+            intentTooltip.SetShown(false);
         }
 
         // Shown ONLY while the player's turn is the one on screen, which is the
@@ -242,7 +242,7 @@ namespace PrincesPalace
                     ? _session.IntentDetailFor(enemy)
                     : null;
 
-                SetActive(enemyIntentIcons[i], intent.HasValue);
+                enemyIntentIcons[i].SetShown(intent.HasValue);
                 if (!intent.HasValue) continue;
 
                 var kind = intent.Value.Kind;
@@ -315,7 +315,7 @@ namespace PrincesPalace
 
             if (!entered)
             {
-                SetActive(intentTooltip, false);
+                intentTooltip.SetShown(false);
                 return;
             }
 
@@ -324,7 +324,7 @@ namespace PrincesPalace
             var intent = enemy == null ? null : _session.IntentDetailFor(enemy);
             if (!intent.HasValue)
             {
-                SetActive(intentTooltip, false);
+                intentTooltip.SetShown(false);
                 return;
             }
 
@@ -333,7 +333,7 @@ namespace PrincesPalace
                 intentTooltipText.SetContent(FightHudModel.IntentTooltip(enemy.Name, intent.Value));
             }
 
-            SetActive(intentTooltip, true);
+            intentTooltip.SetShown(true);
         }
 
         // ---- one combatant ----------------------------------------------------
@@ -377,7 +377,7 @@ namespace PrincesPalace
             // GameObject is inactive draws exactly nothing -- which is why the
             // stage showed foot glows hovering over an empty forest while every
             // headless assertion about "the sprite loaded" passed.
-            SetActive(image.gameObject, true);
+            image.gameObject.SetShown(true);
             image.enabled = true;
         }
 

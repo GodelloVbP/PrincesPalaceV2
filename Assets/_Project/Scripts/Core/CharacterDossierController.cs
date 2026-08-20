@@ -208,7 +208,7 @@ namespace PrincesPalace
 
         public void ShowPack(bool open)
         {
-            SetActive(packPanel, open);
+            packPanel.SetShown(open);
             if (packChevron != null) packChevron.SetContent(open ? "<" : ">");
         }
 
@@ -378,7 +378,7 @@ namespace PrincesPalace
                 {
                     bool shown = item.HasValue &&
                         ItemIcons.Apply(packIcons[i], iconIds, iconSprites, item.Value.Id);
-                    SetActive(packIcons[i].gameObject, shown);
+                    packIcons[i].gameObject.SetShown(shown);
                 }
 
                 // The rarity TICK, not a border or a glow -- an 8px corner mark,
@@ -386,7 +386,7 @@ namespace PrincesPalace
                 // being busy.
                 if (packRarityTicks != null && i < packRarityTicks.Length)
                 {
-                    SetActive(packRarityTicks[i].gameObject, item.HasValue);
+                    packRarityTicks[i].gameObject.SetShown(item.HasValue);
                     if (item.HasValue) packRarityTicks[i].color = TierColour(item.Value.Tier);
                 }
 
@@ -396,7 +396,7 @@ namespace PrincesPalace
                 // are told apart without hovering either.
                 if (packNames != null && i < packNames.Length)
                 {
-                    SetActive(packNames[i].gameObject, item.HasValue);
+                    packNames[i].gameObject.SetShown(item.HasValue);
                     if (item.HasValue)
                     {
                         // Through RarityColors.Wrap, the one place an item's
@@ -417,7 +417,7 @@ namespace PrincesPalace
                 if (packCounts != null && i < packCounts.Length)
                 {
                     bool stacked = item.HasValue && item.Value.Count > 1;
-                    SetActive(packCounts[i].gameObject, stacked);
+                    packCounts[i].gameObject.SetShown(stacked);
                     if (stacked) packCounts[i].SetContent(item.Value.Count.ToString());
                 }
             }
@@ -433,7 +433,7 @@ namespace PrincesPalace
             int live = BagSort.IndexOf(_sortKey);
             for (int i = 0; i < packSortUnderlines.Length; i++)
             {
-                SetActive(packSortUnderlines[i], i == live);
+                packSortUnderlines[i].SetShown(i == live);
             }
         }
 
@@ -464,8 +464,8 @@ namespace PrincesPalace
 
             // Nothing to scroll means nothing to drag. Hidden rather than shown
             // full-length, so the bar's presence itself says there is more.
-            SetActive(packScrollThumb.gameObject, maxRows > 0);
-            if (packScrollTrack != null) SetActive(packScrollTrack.gameObject, maxRows > 0);
+            packScrollThumb.gameObject.SetShown(maxRows > 0);
+            if (packScrollTrack != null) packScrollTrack.gameObject.SetShown(maxRows > 0);
         }
 
         private static BagItem ToBagItem(InventoryEntry entry)
@@ -594,7 +594,7 @@ namespace PrincesPalace
                 if (statValues[i] == null) continue;
 
                 statValues[i].SetContent(DisplayValue(character, stat, stats, scores));
-                SetActive(statHighlights[i], false);
+                statHighlights[i].SetShown(false);
             }
         }
 
@@ -650,7 +650,7 @@ namespace PrincesPalace
             for (int i = 0; i < SheetStats.Derived.Length && i < statHighlights.Length; i++)
             {
                 bool lit = fed.Contains(SheetStats.Derived[i]);
-                SetActive(statHighlights[i], lit);
+                statHighlights[i].SetShown(lit);
 
                 if (statValues[i] != null)
                 {
@@ -681,11 +681,11 @@ namespace PrincesPalace
                 // GameObject that is invisible either way, which is why the
                 // slots came up bare with items equipped.
                 bool hasArt = ItemIcons.Apply(slotIcons[i], iconIds, iconSprites, item?.id);
-                SetActive(slotIcons[i].gameObject, hasArt);
+                slotIcons[i].gameObject.SetShown(hasArt);
 
                 if (slotRarityTicks != null && i < slotRarityTicks.Length)
                 {
-                    SetActive(slotRarityTicks[i].gameObject, item != null);
+                    slotRarityTicks[i].gameObject.SetShown(item != null);
                     if (item != null) slotRarityTicks[i].color = TierColour(item.tier);
                 }
 
@@ -697,7 +697,7 @@ namespace PrincesPalace
                 bool blocked = item == null
                     && loadout.InertEntries != null
                     && loadout.InertEntries.Any(e => e.Entry.slot == slot);
-                SetActive(slotBlockedCaptions[i], blocked);
+                slotBlockedCaptions[i].SetShown(blocked);
             }
         }
 
@@ -905,7 +905,7 @@ namespace PrincesPalace
             if (tooltipTitle != null) tooltipTitle.SetContent(title ?? "");
             if (tooltipBody != null) tooltipBody.SetContent(body ?? "");
             PlaceTooltip(near);
-            SetActive(tooltip, true);
+            tooltip.SetShown(true);
         }
 
         // The tooltip follows what it describes.
@@ -951,14 +951,10 @@ namespace PrincesPalace
             return cells[index].transform as RectTransform;
         }
 
-        private void HideTooltip() => SetActive(tooltip, false);
+        private void HideTooltip() => tooltip.SetShown(false);
 
         private static Color Hex(string hex) =>
             ColorUtility.TryParseHtmlString(hex, out var color) ? color : Color.white;
 
-        private static void SetActive(GameObject go, bool active)
-        {
-            if (go != null && go.activeSelf != active) go.SetActive(active);
-        }
-    }
+            }
 }

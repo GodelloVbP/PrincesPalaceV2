@@ -44,7 +44,7 @@ namespace PrincesPalace
             ResolveWalkerArt();
 
             _standing = MapWalk.Standing(PositionOf(node));
-            SetActive(walker.gameObject, true);
+            walker.gameObject.SetShown(true);
             walker.rectTransform.anchoredPosition = new Vector2(_standing.X, _standing.Y);
         }
 

@@ -366,22 +366,29 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 float x = cx + DossierLayout.PackCellCentreX(col);
                 float y = DossierLayout.PackCellCentreY(rowIndex);
 
+                // CENTRED AND ON TOP. Half again the size it was, because the
+                // icon is what the eye actually sorts by.
                 var icon = Ui.Sprite($"DossierPackIcon{i}", null,
                         new UiVec(DossierLayout.PackIconSize, DossierLayout.PackIconSize),
-                        Place.At(-cellW * 0.5f + 8f + DossierLayout.PackIconSize * 0.5f, 0f))
+                        Place.At(0f, DossierLayout.PackIconCentreY))
                     .Inactive().AsDecor();
 
                 var tick = Ui.Solid($"DossierPackTick{i}", "#7F8EA3", new UiVec(8f, 8f),
                     Place.At(-cellW * 0.5f + 5f, cellH * 0.5f - 5f)).Inactive().AsDecor();
 
-                // The name, which is the whole reason for going two abreast.
+                // UNDER the icon and the full width of the cell, which is the
+                // whole point of the change: beside a 44px icon this had about
+                // 110px, and a generated item's name does not fit in 110px at a
+                // size anyone can read.
                 var name = Ui.Label($"DossierPackName{i}", UiString.Runtime,
-                        new UiVec(cellW - DossierLayout.PackIconSize - 26f, 34f), 11, Text,
-                        Place.At(DossierLayout.PackIconSize * 0.5f - 2f, 0f))
+                        new UiVec(cellW - 12f, DossierLayout.PackNameHeight), 11, Text,
+                        Place.At(0f, DossierLayout.PackNameCentreY))
                     .Inactive().AsDecor();
 
+                // TOP right, not bottom: the name owns the bottom of the cell
+                // now, and a count sitting in it would print across the words.
                 var count = Ui.Label($"DossierPackCount{i}", UiString.Runtime, new UiVec(30f, 14f), 10,
-                    "#E6DCF0BF", Place.At(cellW * 0.5f - 17f, -cellH * 0.5f + 8f)).Inactive().AsDecor();
+                    "#E6DCF0BF", Place.At(cellW * 0.5f - 17f, cellH * 0.5f - 10f)).Inactive().AsDecor();
 
                 var button = Ui.Button($"DossierPackCell{i}", UiString.Runtime, new UiVec(cellW, cellH), 1,
                         Place.At(x, y))

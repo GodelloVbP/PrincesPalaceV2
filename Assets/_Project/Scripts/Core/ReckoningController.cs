@@ -209,12 +209,7 @@ namespace PrincesPalace
         // FightBootstrap.LastReward itself would tie this screen to the one
         // bootstrap that happens to own it today, and the Reckoning is the sort
         // of thing a test wants to drive with a fixture.
-        private static void SetActive(GameObject go, bool active)
-        {
-            if (go != null && go.activeSelf != active) go.SetActive(active);
-        }
-
-        // What this offer would do to every member of the squad.
+                // What this offer would do to every member of the squad.
         //
         // Rebuilt on each hover rather than cached: it runs the real
         // clone-and-resolve Compare, and the squad's gear can change between
@@ -225,7 +220,7 @@ namespace PrincesPalace
 
             if (!entered || _taken || index < 0 || index >= _offers.Count)
             {
-                SetActive(offerTooltip, false);
+                offerTooltip.SetShown(false);
                 return;
             }
 
@@ -233,19 +228,19 @@ namespace PrincesPalace
             var save = SaveSlotManager.CurrentSave;
             if (item == null || save == null)
             {
-                SetActive(offerTooltip, false);
+                offerTooltip.SetShown(false);
                 return;
             }
 
             string body = ItemDescription.SquadComparisonBody(save.ActiveSquad(), item, _offers[index].Plus);
             if (string.IsNullOrEmpty(body))
             {
-                SetActive(offerTooltip, false);
+                offerTooltip.SetShown(false);
                 return;
             }
 
             if (offerTooltipText != null) offerTooltipText.SetContent(body);
-            SetActive(offerTooltip, true);
+            offerTooltip.SetShown(true);
         }
 
         public void Show(CombatReward reward, List<ItemOffer> offers)
