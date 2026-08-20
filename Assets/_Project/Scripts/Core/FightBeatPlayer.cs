@@ -31,6 +31,43 @@ namespace PrincesPalace
         public const float BeatHoldSeconds = 0.45f;
         public const float BeatGapSeconds = 0.3f;
 
+        // THE SETTLE AFTER THE BLOW, AND IT IS A FLOOR RATHER THAN A REMAINDER.
+        //
+        // The hold used to be purely what was LEFT of BeatHoldSeconds once the
+        // stance had been paid for, and for every animated actor in the game
+        // that remainder was negative. Every stance is six frames, every one of
+        // them is authored at 0.08s -- the manifest's default, which all four
+        // authored actors also happen to state -- so a stance costs 0.48s
+        // against a 0.45s budget. `remaining > 0f` was therefore never true.
+        //
+        // The effect is not subtle once you know to look for it: an animated
+        // blow got NO pause at all. The last frame of the swing was followed
+        // immediately by the return to idle and the next beat, so blows ran
+        // into each other with nothing between them and the damage number had
+        // no still frame to be read against. It reads as fast and twitchy,
+        // which is exactly what it is.
+        //
+        // FrameHoldCurve's own header predicted this in as many words -- "a
+        // stance that quietly ran long would eat the pause after it" -- and it
+        // did, from the moment stances went to six frames.
+        //
+        // A floor rather than a bigger budget, because raising BeatHoldSeconds
+        // would fix the animated actors by making the flat-art ones sit even
+        // longer doing nothing. This leaves a flat-art beat exactly as it was
+        // (0.08 + 0.37 = 0.45) and gives an animated one its settle back.
+        public const float MinSettleSeconds = 0.16f;
+
+        // How long to hold after a stance of `stanceSeconds` has played.
+        //
+        // Split out so the arithmetic can be tested without a fight: this is
+        // the line that silently went to zero, and nothing could see it,
+        // because "no pause" and "a pause of zero" are the same code path.
+        public static float SettleAfter(float stanceSeconds)
+        {
+            float remaining = BeatHoldSeconds - stanceSeconds;
+            return remaining < MinSettleSeconds ? MinSettleSeconds : remaining;
+        }
+
         // The test seam. A PlayMode test that had to wait real seconds per beat
         // would take longer than the whole EditMode suite; this lets one run a
         // twelve-beat round in well under a second without changing a single
@@ -201,8 +238,8 @@ namespace PrincesPalace
                 // player time to read the damage number.
                 yield return StepActorFrames(beat.Actor, impactFrame, animation.FrameCount, animation);
 
-                float remaining = BeatHoldSeconds - animation.SecondsPerFrame * animation.FrameCount;
-                if (remaining > 0f) yield return new WaitForSeconds(Scaled(remaining));
+                float remaining = SettleAfter(animation.SecondsPerFrame * animation.FrameCount);
+                yield return new WaitForSeconds(Scaled(remaining));
 
                 // Back to idle before the next beat opens, so a pose belongs to
                 // the blow that caused it rather than persisting until something
