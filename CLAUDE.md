@@ -70,9 +70,20 @@ ScriptableObject under `Assets/_Project/Resources/Content/`. Regeneration is
 **destructive** — it deletes the whole tree first. Never hand-author an asset
 in there.
 
-> Known hazard: all five `*Definition` types carry `[CreateAssetMenu]`, which
-> invites authoring into the folder `ContentBuilder` wipes. The mitigation named
-> in its own header comment does not exist. Recorded in `AUDIT.md`, unfixed.
+> This box used to record a hazard that **does not exist in this tree**: "all
+> five `*Definition` types carry `[CreateAssetMenu]`, inviting authoring into
+> the folder `ContentBuilder` wipes." There are **nine** `*Definition` types and
+> **none of them carries the attribute** — verified 2026-08-20 across all nine
+> files and against `git log -S`, which shows the string entering at this
+> repository's first commit and never moving, consistent with it only ever
+> appearing in comments here. It was a v1 condition, carried across with the
+> rest of this file.
+>
+> Kept rather than deleted because two production comments still defend against
+> it (`ContentDatabase.Validation.cs`, `CharacterEntryResolver.cs`), and a
+> reader who meets those needs to know what they are guarding. The underlying
+> rule is unchanged and does not depend on the attribute: **never hand-author an
+> asset under `Resources/Content/`.** Regeneration deletes the tree.
 
 ---
 
@@ -132,10 +143,13 @@ which refuses those commands before they run. Full parallel-session protocol:
 ## Five gotchas, each found the hard way
 
 1. **Sync rebuilt scenes back immediately.** After `SceneBuilder.BuildAllScenes`
-   in the TestRunner, copy the two `.unity` files (and `Resources/Content/` if
+   in the TestRunner, copy **every** `.unity` file (and `Resources/Content/` if
    `ContentBuilder` ran) back to main **before** any subsequent `robocopy` from
    main → TestRunner, or stale files clobber what you just built.
    (`run_tests_parallel.ps1 -BuildContent -BuildScenes` does this for you.)
+   This said "the two `.unity` files" until 2026-08-20; there are five, and the
+   count is not worth writing down again — `ScreenRegistry.All`'s distinct
+   `ScenePath`s are the only list of them.
 
 2. **New files need their `.meta` copied back too**, in the same pass. Miss it
    and the GUID silently regenerates on the next fresh `Library` rebuild,
@@ -168,6 +182,13 @@ commit `6fb70d0`, file:line-verified, plus everything found since (findings get
 struck through with a commit sha when fixed; nothing is deleted). It is the
 best available map of what is actually wrong. Recorded, not auto-fixed, on
 purpose — several findings are design decisions that belong to the author.
+
+Its companion is `architecture_audit.md` (2026-08-20, at `b407dbd`): a map of
+the system as it actually is — assemblies, the four generated artifacts, where
+state lives, the five-tier verification stack — plus the rules for adding to it,
+thirteen verified findings, and cost-to-extend tables. `AUDIT.md` is what is
+already broken; that is the architecture itself and what to avoid breaking next.
+Read its Part I before working in an area you do not know.
 
 ---
 
