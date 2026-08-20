@@ -16,9 +16,15 @@ namespace PrincesPalace.Domain.Talents
         // page index and the slot index are separate coordinates.
         public const int PathCount = 3;
 
-        // What an orb costs. Flat rather than scaling with depth: a deep orb is
-        // already expensive in the prerequisites it demands, and charging twice
-        // for the same distance is how a tree stops being explorable.
+        // What an orb costs when nothing else says. The real figure per slot
+        // comes from the content, through TalentSlot.Cost, and it is not flat:
+        // ContentDatabase prices a chain orb by its strand tier (1-3 up the
+        // grid, 2-4 up the branch) and makes the root, the convergence and the
+        // capstone FREE -- reaching those is the price. A single constant
+        // could express none of that.
+        //
+        // Kept because a caller with no tree still needs a sane figure, and
+        // because it reads better than a bare 1 at the call site.
         public const int EmberCost = 1;
 
         // Why an orb cannot be taken. Ordered by which the player should be
@@ -28,43 +34,63 @@ namespace PrincesPalace.Domain.Talents
         public enum Refusal
         {
             None,
+
+            // Nothing is authored in this slot. FIRST, because it outranks
+            // every other answer: an orb with no talent behind it is not
+            // "unreachable" or "too expensive", it is not a thing. The sheep's
+            // third path is entirely unauthored, so this is a real state and
+            // not a defensive branch.
+            NotAuthored,
+
             AlreadyTaken,
             PrerequisiteMissing,
             NotEnoughEmbers,
         }
 
-        // A stable id for one orb on one path. The skeleton is shared by all
-        // three, so a slot number alone names three different orbs.
-        public static string SlotId(string characterId, int path, int slot) =>
-            $"{characterId}.p{path}.s{slot}";
-
+        // THE IDS COME FROM THE TREE, and that is the whole of this file's
+        // correction. This used to mint its own -- "sheep.p0.s0" -- and write
+        // them into the save, where nothing matched them: every consumer of
+        // unlockedTalentIds looks for the ids in talents.json. See TalentTree.
         public static Refusal Evaluate(
-            string characterId, int path, int slot,
+            TalentTree tree, int path, int slot,
             IReadOnlyCollection<string> unlocked, int embers)
         {
-            if (slot < 0 || slot >= TalentSkeleton.SlotCount) return Refusal.PrerequisiteMissing;
+            if (slot < 0 || slot >= TalentSkeleton.SlotCount) return Refusal.NotAuthored;
 
-            string id = SlotId(characterId, path, slot);
-            if (unlocked != null && unlocked.Contains(id)) return Refusal.AlreadyTaken;
+            var here = (tree ?? TalentTree.None).At(path, slot);
+            if (!here.Exists) return Refusal.NotAuthored;
+
+            if (unlocked != null && unlocked.Contains(here.Id)) return Refusal.AlreadyTaken;
 
             // PREREQUISITES BEFORE COST, deliberately. Told "not enough Embers"
             // for an orb three tiers above anything they own, a player goes and
             // farms -- and comes back to the same refusal.
+            //
+            // Walked through the SKELETON rather than the content's own
+            // prerequisite lists, and the two are interchangeable by
+            // measurement rather than by assumption: talents.json declares its
+            // prerequisites explicitly and they match TalentSkeleton.Parents
+            // for all 294 authored talents. The skeleton is the cheaper of the
+            // two to walk and the one this layer can see.
             foreach (int parent in TalentSkeleton.Parents[slot])
             {
-                string parentId = SlotId(characterId, path, parent);
+                string parentId = tree.IdAt(path, parent);
+
+                // A prerequisite the content never authored cannot be met, so
+                // everything above it is unreachable rather than free.
+                if (string.IsNullOrEmpty(parentId)) return Refusal.PrerequisiteMissing;
                 if (unlocked == null || !unlocked.Contains(parentId)) return Refusal.PrerequisiteMissing;
             }
 
-            if (embers < EmberCost) return Refusal.NotEnoughEmbers;
+            if (embers < here.Cost) return Refusal.NotEnoughEmbers;
 
             return Refusal.None;
         }
 
         public static bool CanInvest(
-            string characterId, int path, int slot,
+            TalentTree tree, int path, int slot,
             IReadOnlyCollection<string> unlocked, int embers) =>
-            Evaluate(characterId, path, slot, unlocked, embers) == Refusal.None;
+            Evaluate(tree, path, slot, unlocked, embers) == Refusal.None;
 
         // A root is any slot with no parents -- the entry to a path, always
         // reachable. Derived rather than listed so a skeleton change cannot
@@ -75,7 +101,7 @@ namespace PrincesPalace.Domain.Talents
         // Every slot that is one step away from being taken. This is what the
         // screen lights up: the frontier, rather than the whole tree.
         public static IReadOnlyList<int> Frontier(
-            string characterId, int path, IReadOnlyCollection<string> unlocked)
+            TalentTree tree, int path, IReadOnlyCollection<string> unlocked)
         {
             var frontier = new List<int>();
 
@@ -85,19 +111,36 @@ namespace PrincesPalace.Domain.Talents
                 // about whether the player can afford it today. An orb that
                 // greys out when the wallet empties would make the tree appear
                 // to change shape as gold is spent elsewhere.
-                var refusal = Evaluate(characterId, path, slot, unlocked, EmberCost);
+                //
+                // int.MaxValue rather than EmberCost, now that a slot can cost
+                // more than one: a capstone would otherwise drop out of the
+                // frontier for being expensive, which is exactly the wallet
+                // leaking into the shape this guards against.
+                var refusal = Evaluate(tree, path, slot, unlocked, int.MaxValue);
                 if (refusal == Refusal.None) frontier.Add(slot);
             }
 
             return frontier;
         }
 
-        public static int SpentOn(string characterId, int path, IReadOnlyCollection<string> unlocked)
+        // COUNTED AGAINST THE TREE, not by matching a prefix on the id.
+        //
+        // The prefix worked only while this file minted the ids itself; real
+        // content ids carry no path in them ("sheep_ram_root" says nothing
+        // about being on path 0), so the only honest way to ask how much has
+        // been spent on a path is to walk that path's slots.
+        public static int SpentOn(TalentTree tree, int path, IReadOnlyCollection<string> unlocked)
         {
-            if (unlocked == null) return 0;
+            if (unlocked == null || tree == null) return 0;
 
-            string prefix = $"{characterId}.p{path}.s";
-            return unlocked.Count(id => id.StartsWith(prefix));
+            int spent = 0;
+            for (int slot = 0; slot < TalentSkeleton.SlotCount; slot++)
+            {
+                var here = tree.At(path, slot);
+                if (here.Exists && unlocked.Contains(here.Id)) spent += here.Cost;
+            }
+
+            return spent;
         }
 
         // How deep the constellation runs, for the layout to space rows by.

@@ -3,6 +3,7 @@ using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using PrincesPalace.Content;
 using PrincesPalace.Domain.Ambience;
 using PrincesPalace.Domain.Talents;
 using PrincesPalace.Domain.UiKit;
@@ -152,6 +153,52 @@ namespace PrincesPalace
             Refresh();
         }
 
+        // THE CHARACTER'S OWN TREE, resolved from content.
+        //
+        // Rebuilt when the character changes rather than per repaint: it walks
+        // every talent the character has and costs each one, which is not work
+        // to repeat on every hover. Cached against the id it was built for, so
+        // switching character and switching back cannot leave a stale tree
+        // describing somebody else's talents.
+        private TalentTree _tree = TalentTree.None;
+        private string _treeFor;
+
+        private TalentTree Tree
+        {
+            get
+            {
+                var character = Current;
+                if (character == null) return TalentTree.None;
+
+                if (_treeFor == character.definitionId) return _tree;
+
+                _tree = BuildTree(character);
+                _treeFor = character.definitionId;
+                return _tree;
+            }
+        }
+
+        // column -> path and row -> slot, which is what the content has always
+        // meant by those fields: TalentEntryResolver refuses a row outside
+        // 0..20, and the skeleton is 21 slots.
+        private static TalentTree BuildTree(Character character)
+        {
+            var tree = new TalentTree();
+
+            foreach (var talent in ContentDatabase.TalentsFor(character))
+            {
+                if (talent == null) continue;
+
+                tree.Set(talent.column, talent.row, new TalentSlot(
+                    talent.id,
+                    talent.displayName,
+                    talent.description,
+                    ContentDatabase.OrbCost(talent)));
+            }
+
+            return tree;
+        }
+
         private void Kindle()
         {
             var character = Current;
@@ -160,11 +207,16 @@ namespace PrincesPalace
             var save = SaveSlotManager.CurrentSave;
             if (save == null) return;
 
-            if (!TalentPage.CanInvest(character.definitionId, _path, _selectedSlot, Unlocked, Embers)) return;
+            var tree = Tree;
+            if (!TalentPage.CanInvest(tree, _path, _selectedSlot, Unlocked, Embers)) return;
 
-            character.unlockedTalentIds.Add(
-                TalentPage.SlotId(character.definitionId, _path, _selectedSlot));
-            character.embers -= TalentPage.EmberCost;
+            // THE CONTENT'S OWN ID, which is the entire point of this seam.
+            // Everything that reads unlockedTalentIds -- the effective stats,
+            // the ability scores, the combat effect set -- matches against the
+            // ids in talents.json, and this used to write one it had invented.
+            var taken = tree.At(_path, _selectedSlot);
+            character.unlockedTalentIds.Add(taken.Id);
+            character.embers -= taken.Cost;
 
             // PLAYED BEFORE THE REPAINT, and that ordering is the whole of it.
             //
@@ -194,10 +246,10 @@ namespace PrincesPalace
 
             var unlocked = Unlocked;
             pathName.Set(UiStrings.TalentPath, _path + 1, TalentPage.PathCount,
-                TalentPage.SpentOn(character.definitionId, _path, unlocked));
+                TalentPage.SpentOn(Tree, _path, unlocked));
 
-            PaintOrbs(character.definitionId, unlocked);
-            PaintDetail(character.definitionId, unlocked);
+            PaintOrbs(unlocked);
+            PaintDetail(unlocked);
 
             // Arrows that cannot go anywhere are dimmed rather than hidden, so
             // the screen does not change shape as the player pages.
@@ -205,8 +257,10 @@ namespace PrincesPalace
             nextCharacterButton.interactable = Roster.Count > 1;
         }
 
-        private void PaintOrbs(string characterId, HashSet<string> unlocked)
+        private void PaintOrbs(HashSet<string> unlocked)
         {
+            var tree = Tree;
+
             for (int path = 0; path < TalentPage.PathCount; path++)
             {
                 for (int slot = 0; slot < TalentScreen.OrbCount; slot++)
@@ -214,9 +268,18 @@ namespace PrincesPalace
                     int index = TalentScreen.OrbIndex(path, slot);
                     if (index >= orbs.Length) continue;
 
-                    var refusal = TalentPage.Evaluate(characterId, path, slot, unlocked, TalentPage.EmberCost);
+                    var refusal = TalentPage.Evaluate(tree, path, slot, unlocked, Embers);
                     bool taken = refusal == TalentPage.Refusal.AlreadyTaken;
                     bool reachable = refusal == TalentPage.Refusal.None;
+
+                    // AN ORB WITH NOTHING BEHIND IT IS NOT DRAWN. The sheep's
+                    // third path is entirely unauthored, so this is 21 real
+                    // slots rather than a defensive branch -- and an orb that
+                    // can never be taken is worse than an absent one, because
+                    // the player spends the screen working out why.
+                    bool authored = refusal != TalentPage.Refusal.NotAuthored;
+                    orbs[index].SetShown(authored);
+                    if (!authored) continue;
 
                     var image = orbs[index].targetGraphic as Image;
                     if (image != null) image.color = taken ? OrbTaken : reachable ? OrbReachable : OrbDistant;
@@ -245,7 +308,7 @@ namespace PrincesPalace
                 }
             }
 
-            PaintEdges(characterId, unlocked);
+            PaintEdges(unlocked);
         }
 
         // THE PATH BEHIND YOU LIGHTS UP.
@@ -258,8 +321,10 @@ namespace PrincesPalace
         // limbs that never changed whatever the player spent, so a tree with
         // twenty orbs invested looked exactly like an empty one apart from the
         // orbs themselves. The climb is the thing the screen is about.
-        private void PaintEdges(string characterId, HashSet<string> unlocked)
+        private void PaintEdges(HashSet<string> unlocked)
         {
+            var tree = Tree;
+
             if (edgeGlows == null || edgeChildSlots == null) return;
 
             // FROM THE SKELETON, NOT FROM THE ARRAY'S LENGTH.
@@ -298,7 +363,10 @@ namespace PrincesPalace
                 int path = i / perPath;
                 int slot = edgeChildSlots[i];
 
-                bool lit = unlocked.Contains(TalentPage.SlotId(characterId, path, slot));
+                // An edge is lit when its CHILD is invested, and an edge into
+                // an unauthored slot can never be.
+                string id = tree.IdAt(path, slot);
+                bool lit = !string.IsNullOrEmpty(id) && unlocked.Contains(id);
                 edgeGlows[i].SetShown(lit);
             }
         }
@@ -313,7 +381,7 @@ namespace PrincesPalace
             if (orbReveals[index] != null) orbReveals[index].Play();
         }
 
-                private void PaintDetail(string characterId, HashSet<string> unlocked)
+                private void PaintDetail(HashSet<string> unlocked)
         {
             if (_selectedSlot < 0)
             {
@@ -323,17 +391,40 @@ namespace PrincesPalace
                 // slab behind is how the screen ended up opening onto an empty
                 // coloured rectangle -- the plate frames an answer, and with no
                 // orb picked there is no question.
-                if (detailPlate != null) detailPlate.SetActive(false);
-                investButton.gameObject.SetActive(false);
+                detailPlate.SetShown(false);
+                investButton.SetShown(false);
                 return;
             }
 
-            if (detailPlate != null) detailPlate.SetActive(true);
-            investButton.gameObject.SetActive(true);
+            var tree = Tree;
+            var here = tree.At(_path, _selectedSlot);
+            var refusal = TalentPage.Evaluate(tree, _path, _selectedSlot, unlocked, Embers);
 
-            var refusal = TalentPage.Evaluate(characterId, _path, _selectedSlot, unlocked, Embers);
-            detailName.SetContent(TalentSkeleton.Kind[_selectedSlot].ToUpperInvariant());
-            detailBody.SetContent(Explain(refusal));
+            // Nothing authored here means nothing to say about it. The orb is
+            // not drawn either, so this is only reachable by a selection that
+            // survived a path change.
+            if (refusal == TalentPage.Refusal.NotAuthored)
+            {
+                detailPlate.SetShown(false);
+                investButton.SetShown(false);
+                return;
+            }
+
+            detailPlate.SetShown(true);
+            investButton.SetShown(true);
+
+            // THE TALENT'S OWN NAME AND WORDS. This printed
+            // TalentSkeleton.Kind -- literally "NORMAL", "MERGE" or "CAP" --
+            // because the screen had no way to reach the content at all.
+            detailName.SetContent(here.Name);
+
+            // The description, and the reason it cannot be taken underneath it
+            // when there is one. A refusal replacing the description would
+            // leave the player unable to read what they are being refused.
+            string explain = Explain(refusal);
+            detailBody.SetContent(string.IsNullOrEmpty(explain)
+                ? here.Description
+                : here.Description + "\n" + explain);
 
             investButton.interactable = refusal == TalentPage.Refusal.None;
             investLabel.Set(LabelFor(refusal));
