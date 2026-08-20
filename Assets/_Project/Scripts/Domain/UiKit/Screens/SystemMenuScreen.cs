@@ -74,11 +74,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // same width; once a box is sized to its own label, "how many fit"
             // is a question about the words, and a localisation that doubles a
             // label overflows a bar that still has the same number of tabs.
-            if (!SystemMenuLayout.StripFits(tabs))
+            var authored = SystemMenuLayout.AuthoredWidths(tabs);
+            if (!SystemMenuLayout.StripFits(authored))
             {
                 throw new System.InvalidOperationException(
                     $"The system menu's {tabs.Count} tabs need " +
-                    $"{SystemMenuLayout.StripWidth(tabs):F0}px at minimum padding but the bar row is " +
+                    $"{SystemMenuLayout.StripWidth(authored):F0}px at minimum padding but the bar row is " +
                     $"{SystemMenuLayout.RowWidth:F0}px. Shorten a label, widen the panel, or the bar needs " +
                     "to wrap or scroll - it cannot simply be given another entry. The design's own fallback " +
                     "is to shorten the first tab to CHARACTER before either of those.");
@@ -104,8 +105,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor()
                 .AllowOverlap("the bar's bottom edge sits on the plate it closes"));
 
-            var centres = SystemMenuLayout.TabCentresX(tabs);
-            var widths = SystemMenuLayout.TabWidths(tabs);
+            var centres = SystemMenuLayout.TabCentresX(authored);
+            var widths = SystemMenuLayout.TabWidths(authored);
 
             for (int i = 0; i < tabs.Count; i++)
             {
@@ -145,7 +146,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // generous three-tab box reads as a second divider rather than
                 // as a marker for the word above it.
                 var underline = Ui.Solid($"SystemTab{def.Key}Underline", GoldLight,
-                        new UiVec(SystemMenuLayout.UnderlineWidth(def),
+                        new UiVec(SystemMenuLayout.UnderlineWidth(def.LabelWidth),
                                   SystemMenuLayout.UnderlineHeight),
                         Place.At(x, SystemMenuLayout.UnderlineOffsetY))
                     .Inactive()
@@ -166,7 +167,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             {
                 var divider = Ui.Solid($"SystemTabDivider{i}", Hairline,
                         new UiVec(SystemMenuLayout.DividerWidth, SystemMenuLayout.DividerHeight),
-                        Place.At(SystemMenuLayout.DividerCentreX(tabs, i), 0f))
+                        Place.At(SystemMenuLayout.DividerCentreX(authored, i), 0f))
                     .AsDecor();
 
                 screen.TabDividers.Add(divider);

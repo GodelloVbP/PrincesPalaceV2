@@ -250,8 +250,23 @@ namespace PrincesPalace
             _visible = new List<int>(SystemMenuTabs.VisibleIndices(inRun));
 
             var defs = SystemMenuTabs.Visible(inRun);
-            var centres = SystemMenuLayout.TabCentresX(defs);
-            var widths = SystemMenuLayout.TabWidths(defs);
+
+            // MEASURED, not read off the table.
+            //
+            // The bar is arithmetic over label widths, and the authored ones
+            // are a hand-measured approximation the build needs before any text
+            // exists. They were wrong for months -- taken from a design
+            // prototype at .14em while the emitter drew at zero tracking -- and
+            // the only reason that was ever found was measuring the running
+            // scene on purpose.
+            //
+            // Asking the labels themselves removes the whole class: change a
+            // tab's wording, or its font, or its tracking, and the bar re-lays
+            // around it with nothing to keep in step by hand.
+            var labelWidths = MeasuredLabelWidths(_visible, defs);
+
+            var centres = SystemMenuLayout.TabCentresX(labelWidths);
+            var widths = SystemMenuLayout.TabWidths(labelWidths);
 
             for (int i = 0; i < SystemMenuTabs.Count; i++)
             {
@@ -269,13 +284,20 @@ namespace PrincesPalace
                 Move(TabRect(i), centres[slot], widths[slot], SystemMenuLayout.TabHeight);
                 Move(Rect(Element(tabHovers, i)), centres[slot], widths[slot], SystemMenuLayout.TabHeight);
 
-                // The underline keeps its authored width -- it is the label's,
-                // not the box's, so it does not change with the mode.
+                // RESIZED AS WELL AS MOVED. The underline is the label's width
+                // plus a little, not the box's -- so once the label is measured
+                // rather than assumed, the rule under it has to follow. It kept
+                // its authored width before, which is why a mis-measured label
+                // showed up as a rule overhanging its own word.
                 var underline = Rect(Element(tabUnderlines, i));
                 if (underline != null)
                 {
                     underline.anchoredPosition =
                         new Vector2(centres[slot], SystemMenuLayout.UnderlineOffsetY);
+
+                    underline.sizeDelta = new Vector2(
+                        SystemMenuLayout.UnderlineWidth(labelWidths[slot]),
+                        SystemMenuLayout.UnderlineHeight);
                 }
             }
 
@@ -292,7 +314,7 @@ namespace PrincesPalace
                     if (rect != null)
                     {
                         rect.anchoredPosition =
-                            new Vector2(SystemMenuLayout.DividerCentreX(defs, i), 0f);
+                            new Vector2(SystemMenuLayout.DividerCentreX(labelWidths, i), 0f);
                     }
                 }
             }
@@ -307,6 +329,34 @@ namespace PrincesPalace
             }
 
             RefreshLintel(inRun);
+        }
+
+        // What each visible tab's label ACTUALLY draws at, in order.
+        //
+        // Falls back to the authored figure per tab rather than in bulk: a
+        // headless fixture with no label still lays out, and a real bar with
+        // one missing label still measures the other four.
+        private IReadOnlyList<float> MeasuredLabelWidths(
+            IReadOnlyList<int> visible, IReadOnlyList<SystemMenuTabDef> defs)
+        {
+            var widths = new float[visible.Count];
+
+            for (int slot = 0; slot < visible.Count; slot++)
+            {
+                var label = LabelOf(visible[slot]);
+
+                widths[slot] = label == null || string.IsNullOrEmpty(label.text)
+                    ? defs[slot].LabelWidth
+                    : label.GetPreferredValues(label.text, Mathf.Infinity, Mathf.Infinity).x;
+            }
+
+            return widths;
+        }
+
+        private TMP_Text LabelOf(int index)
+        {
+            var go = TabObject(index);
+            return go == null ? null : go.GetComponentInChildren<TMP_Text>(includeInactive: true);
         }
 
         private void RefreshLintel(bool inRun)

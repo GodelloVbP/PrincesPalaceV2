@@ -10,18 +10,22 @@ using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // Do the tab bar's authored label widths describe the labels the game
-    // actually draws?
+    // Does the tab bar fit the labels the game actually draws?
     //
-    // THE ONE THING NOTHING CHECKED. SystemMenuTabDef.LabelWidth carries the
-    // design's measurements, and the entire bar -- box widths, gaps, dividers,
-    // underline lengths, the capacity guard -- is arithmetic over them. Its own
-    // header called the numbers a liability, on the grounds that a label could
-    // be changed without its width. The liability was worse than that: they
-    // were measured at .14em letter-spacing in a browser prototype and the
-    // emitter had no way to express letter-spacing at all, so every label drew
-    // about a quarter narrower than the box built for it and the selected tab's
-    // underline overhung its own word by roughly 40px a side.
+    // THE ONE THING NOTHING CHECKED, and it was wrong for months.
+    // SystemMenuTabDef.LabelWidth was measured at .14em letter-spacing in a
+    // browser prototype while the emitter had no way to express letter-spacing
+    // at all, so every label drew about a quarter narrower than the box built
+    // for it and the selected tab's underline overhung its own word by roughly
+    // 40px a side.
+    //
+    // THE RUNTIME NO LONGER DEPENDS ON THOSE NUMBERS. The controller measures
+    // the real labels and re-lays the bar from them, so a tab can be reworded
+    // freely. What the authored figures still do is give the BUILD something to
+    // emit from -- the scene exists before any text does -- which is why the
+    // first test below keeps them honest: UiAudit and the capacity guard both
+    // run against the authored bar, and an approximation that drifts far enough
+    // would audit a bar the player never sees.
     //
     // Nothing could see it. Domain has no font metrics by design, the EditMode
     // suite is Domain-only, and UiTextFitAudit only asks whether text OVERFLOWS
@@ -109,6 +113,73 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(hubTitle, "the hub has no title label");
             Assert.AreEqual(0f, hubTitle.characterSpacing, 0.01f,
                 "tracking has leaked into labels that never asked for it");
+        }
+
+        // THE BAR LAYS OUT AROUND WHAT IS DRAWN, which is the property that
+        // replaces "the authored number happens to be right".
+        //
+        // The authored widths are still there -- the scene has to be emitted
+        // before any text exists to measure -- but they are now a build-time
+        // approximation the controller corrects on first open. So this asserts
+        // the thing that actually matters: each tab's BOX is its own label plus
+        // the declared padding, whatever the label turns out to be.
+        [UnityTest]
+        public IEnumerator EachTabsBoxIsBuiltRoundItsOwnDrawnLabel()
+        {
+            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            menu.Open();
+            yield return null;
+            yield return null;
+
+            var shown = menu.VisibleTabs;
+            CollectionAssert.IsNotEmpty(shown, "the bar shows no tabs");
+
+            foreach (int index in shown)
+            {
+                var def = SystemMenuTabs.All[index];
+                var label = LabelFor(menu, def.Key);
+                var box = (RectTransform)label.transform.parent;
+
+                float drawn = label.GetPreferredValues(label.text, Mathf.Infinity, Mathf.Infinity).x;
+
+                // Mode A shares the row out evenly and does not size a box to
+                // its label at all, so the check that means something in both
+                // modes is that the label FITS with its padding intact.
+                Assert.GreaterOrEqual(box.rect.width, drawn + SystemMenuLayout.MeasuredPadX,
+                    $"the {def.Key} tab's box is {box.rect.width:F0}px around a label that draws " +
+                    $"{drawn:F1}px - the bar is laid out for a label other than the one on it");
+            }
+        }
+
+        // And the rule under the selected tab is the width of the WORD, not of
+        // the box. It kept its authored width before, so a mis-measured label
+        // showed up as a rule overhanging its own word by 40px a side.
+        [UnityTest]
+        public IEnumerator TheUnderlineIsTheWidthOfTheWordItMarks()
+        {
+            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            menu.Open();
+            menu.Select(SystemMenuTab.Options);
+            yield return null;
+            yield return null;
+
+            var label = LabelFor(menu, "Options");
+            float drawn = label.GetPreferredValues(label.text, Mathf.Infinity, Mathf.Infinity).x;
+
+            var underline = menu.GetComponentsInChildren<Transform>(includeInactive: true)
+                .FirstOrDefault(t => t.name == "SystemTabOptionsUnderline") as RectTransform;
+
+            Assert.IsNotNull(underline, "the Options tab has no underline");
+            Assert.AreEqual(SystemMenuLayout.UnderlineWidth(drawn), underline.rect.width, 1.5f,
+                $"the underline is {underline.rect.width:F0}px under a word that draws {drawn:F1}px");
         }
 
         private static TMP_Text LabelFor(SystemMenuController menu, string key)

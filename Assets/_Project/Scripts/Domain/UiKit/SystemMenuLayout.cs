@@ -100,22 +100,35 @@ namespace PrincesPalace.Domain.UiKit
 
         public static bool IsUniformMode(int count) => count <= UniformModeMaxTabs;
 
-        // Box width for each visible tab, in order.
-        public static float[] TabWidths(IReadOnlyList<SystemMenuTabDef> tabs)
+        // ---- everything below is arithmetic over LABEL WIDTHS ------------------
+        //
+        // Widths, not tab definitions, and that is the seam that lets the bar
+        // lay itself out around what is ACTUALLY DRAWN.
+        //
+        // SystemMenuTabDef.LabelWidth is a hand-measured number and was wrong
+        // for months: it came off a design prototype at .14em while the emitter
+        // drew at zero tracking, so every box carried 50px of air and the
+        // underline overhung its own word. The authored figure is now the
+        // BUILD-TIME approximation only -- the scene has to be emitted from
+        // something before any text exists to measure -- and the controller
+        // re-lays the bar from the real TMP metrics the moment it opens.
+        //
+        // So changing a tab's wording is now just changing the wording.
+        public static float[] TabWidths(IReadOnlyList<float> labelWidths)
         {
-            var widths = new float[tabs.Count];
-            if (tabs.Count == 0) return widths;
+            var widths = new float[labelWidths.Count];
+            if (labelWidths.Count == 0) return widths;
 
-            if (IsUniformMode(tabs.Count))
+            if (IsUniformMode(labelWidths.Count))
             {
-                float uniform = (RowWidth - UniformGap * (tabs.Count - 1)) / tabs.Count;
-                for (int i = 0; i < tabs.Count; i++) widths[i] = uniform;
+                float uniform = (RowWidth - UniformGap * (labelWidths.Count - 1)) / labelWidths.Count;
+                for (int i = 0; i < labelWidths.Count; i++) widths[i] = uniform;
                 return widths;
             }
 
-            for (int i = 0; i < tabs.Count; i++)
+            for (int i = 0; i < labelWidths.Count; i++)
             {
-                float wanted = tabs[i].LabelWidth + MeasuredPadX * 2f;
+                float wanted = labelWidths[i] + MeasuredPadX * 2f;
                 // System.Math, not Mathf: this assembly deliberately does not
                 // reference UnityEngine, which is what keeps the layout
                 // arithmetic testable without a player loop. AwayFromZero
@@ -131,25 +144,25 @@ namespace PrincesPalace.Domain.UiKit
         // The gap between boxes. Uniform mode fixes it; measured mode shares
         // out whatever the boxes did not use, so the row always ends flush
         // against the right inset.
-        public static float GapFor(IReadOnlyList<SystemMenuTabDef> tabs)
+        public static float GapFor(IReadOnlyList<float> labelWidths)
         {
-            if (tabs.Count <= 1) return 0f;
-            if (IsUniformMode(tabs.Count)) return UniformGap;
+            if (labelWidths.Count <= 1) return 0f;
+            if (IsUniformMode(labelWidths.Count)) return UniformGap;
 
             float used = 0f;
-            foreach (float w in TabWidths(tabs)) used += w;
-            return (RowWidth - used) / (tabs.Count - 1);
+            foreach (float w in TabWidths(labelWidths)) used += w;
+            return (RowWidth - used) / (labelWidths.Count - 1);
         }
 
         // Left edge of each box, in panel space (0 at the panel's left edge).
-        public static float[] TabLefts(IReadOnlyList<SystemMenuTabDef> tabs)
+        public static float[] TabLefts(IReadOnlyList<float> labelWidths)
         {
-            var widths = TabWidths(tabs);
-            float gap = GapFor(tabs);
-            var lefts = new float[tabs.Count];
+            var widths = TabWidths(labelWidths);
+            float gap = GapFor(labelWidths);
+            var lefts = new float[labelWidths.Count];
 
             float x = BarInsetLeft;
-            for (int i = 0; i < tabs.Count; i++)
+            for (int i = 0; i < labelWidths.Count; i++)
             {
                 lefts[i] = x;
                 x += widths[i] + gap;
@@ -160,13 +173,13 @@ namespace PrincesPalace.Domain.UiKit
 
         // Centre x of each box, measured from the PANEL CENTRE, which is the
         // space every node in this project is placed in.
-        public static float[] TabCentresX(IReadOnlyList<SystemMenuTabDef> tabs)
+        public static float[] TabCentresX(IReadOnlyList<float> labelWidths)
         {
-            var widths = TabWidths(tabs);
-            var lefts = TabLefts(tabs);
-            var centres = new float[tabs.Count];
+            var widths = TabWidths(labelWidths);
+            var lefts = TabLefts(labelWidths);
+            var centres = new float[labelWidths.Count];
 
-            for (int i = 0; i < tabs.Count; i++)
+            for (int i = 0; i < labelWidths.Count; i++)
             {
                 centres[i] = -HalfWidth + lefts[i] + widths[i] * 0.5f;
             }
@@ -175,18 +188,58 @@ namespace PrincesPalace.Domain.UiKit
         }
 
         // The divider that follows tab `index`, centred in the gap after it.
-        public static float DividerCentreX(IReadOnlyList<SystemMenuTabDef> tabs, int index)
+        public static float DividerCentreX(IReadOnlyList<float> labelWidths, int index)
         {
-            var widths = TabWidths(tabs);
-            var lefts = TabLefts(tabs);
+            var widths = TabWidths(labelWidths);
+            var lefts = TabLefts(labelWidths);
 
             float rightOfThis = lefts[index] + widths[index];
             float leftOfNext = lefts[index + 1];
             return -HalfWidth + (rightOfThis + leftOfNext) * 0.5f;
         }
 
+        public static float UnderlineWidth(float labelWidth) =>
+            labelWidth + UnderlineOverhang;
+
+        // ---- the authored figures, for the build ------------------------------
+        //
+        // The scene has to be emitted before any text exists to measure, so the
+        // builder lays the bar out from SystemMenuTabDef.LabelWidth and the
+        // controller corrects it on first open. These overloads are that path,
+        // and the only place the authored numbers are read.
+        public static IReadOnlyList<float> AuthoredWidths(IReadOnlyList<SystemMenuTabDef> tabs)
+        {
+            var widths = new float[tabs.Count];
+            for (int i = 0; i < tabs.Count; i++) widths[i] = tabs[i].LabelWidth;
+            return widths;
+        }
+
+        // Thin delegating overloads, so a caller that has definitions does not
+        // have to say AuthoredWidths at every site. ONE implementation either
+        // way -- these exist for readability, not as a second code path.
+        public static float[] TabWidths(IReadOnlyList<SystemMenuTabDef> tabs) =>
+            TabWidths(AuthoredWidths(tabs));
+
+        public static float GapFor(IReadOnlyList<SystemMenuTabDef> tabs) =>
+            GapFor(AuthoredWidths(tabs));
+
+        public static float[] TabLefts(IReadOnlyList<SystemMenuTabDef> tabs) =>
+            TabLefts(AuthoredWidths(tabs));
+
+        public static float[] TabCentresX(IReadOnlyList<SystemMenuTabDef> tabs) =>
+            TabCentresX(AuthoredWidths(tabs));
+
+        public static float DividerCentreX(IReadOnlyList<SystemMenuTabDef> tabs, int index) =>
+            DividerCentreX(AuthoredWidths(tabs), index);
+
+        public static float StripWidth(IReadOnlyList<SystemMenuTabDef> tabs) =>
+            StripWidth(AuthoredWidths(tabs));
+
+        public static bool StripFits(IReadOnlyList<SystemMenuTabDef> tabs) =>
+            StripFits(AuthoredWidths(tabs));
+
         public static float UnderlineWidth(SystemMenuTabDef tab) =>
-            tab.LabelWidth + UnderlineOverhang;
+            UnderlineWidth(tab.LabelWidth);
 
         // ---- the title lintel ---------------------------------------------------
         //
@@ -222,16 +275,16 @@ namespace PrincesPalace.Domain.UiKit
         // boxes are sized to their own labels, "how many fit" is a question
         // about the words, and a localisation that doubles a label's length
         // overflows a bar that still has the same number of tabs.
-        public static float StripWidth(IReadOnlyList<SystemMenuTabDef> tabs)
+        public static float StripWidth(IReadOnlyList<float> labelWidths)
         {
-            if (tabs.Count == 0) return 0f;
+            if (labelWidths.Count == 0) return 0f;
 
             float used = 0f;
-            foreach (float w in TabWidths(tabs)) used += w;
-            return used + MinimumGap * (tabs.Count - 1);
+            foreach (float w in TabWidths(labelWidths)) used += w;
+            return used + MinimumGap * (labelWidths.Count - 1);
         }
 
-        public static bool StripFits(IReadOnlyList<SystemMenuTabDef> tabs) =>
-            tabs.Count <= 1 || StripWidth(tabs) <= RowWidth;
+        public static bool StripFits(IReadOnlyList<float> labelWidths) =>
+            labelWidths.Count <= 1 || StripWidth(labelWidths) <= RowWidth;
     }
 }
