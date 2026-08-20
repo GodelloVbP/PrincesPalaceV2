@@ -24,12 +24,18 @@ namespace PrincesPalace.Domain.Content
     // pass" and its "layout assertion" meeting in one place.
     public static class TalentEntryResolver
     {
-        // Exactly the fixed skeleton's own bounds — 3 paths, 21 slots per
-        // path (0-20). Unlike the old generous ceiling, going outside this
-        // range means the talent cannot be placed on the built skeleton at
-        // all, not just "further than currently used".
-        private const int MaxColumn = 2;
-        private const int MaxRow = 20;
+        // DERIVED FROM THE SKELETON, not restated as literals.
+        //
+        // These are exactly the skeleton's own bounds, and the comment here
+        // used to say so while writing 2 and 20 by hand anyway -- so widening
+        // the tree meant editing this file too, and forgetting would have had
+        // the resolver silently REJECT valid content with a message insisting
+        // the row was out of range.
+        //
+        // Both are inclusive maxima against exclusive counts, which is the one
+        // thing worth stating rather than leaving to the reader.
+        private static int MaxColumn => Talents.TalentPage.PathCount - 1;
+        private static int MaxRow => Talents.TalentSkeleton.SlotCount - 1;
 
         public static bool TryResolveAll(IReadOnlyList<RawTalentEntry> entries, out List<ResolvedTalent> resolved, out List<string> errors)
         {

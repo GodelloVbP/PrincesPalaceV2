@@ -48,11 +48,6 @@ namespace PrincesPalace.Domain.Equipment
     // squinting at it.
     public static class BagView
     {
-        // Cells per page. The ONE number the screen tree, the controller and
-        // the count audit all read -- v1's grid was sized in the builder and
-        // filled in the controller, and the two could disagree.
-        public const int CellCount = 20;
-
         // Ordered so the useful things are on page one.
         //
         // DETERMINISTIC TO THE LAST TIE-BREAK, deliberately. Generated gear
@@ -73,16 +68,5 @@ namespace PrincesPalace.Domain.Equipment
                 .ToList();
         }
 
-        // Delegated to Paging, the one copy of this arithmetic. An EMPTY bag
-        // is still one page ("PAGE 1 OF 0" is a bug report) and exactly
-        // CellCount items is one page, not two -- both guarded there.
-        public static int PageCount(int itemCount) => UiKit.Paging.PageCount(itemCount, CellCount);
-
-        public static int ClampPage(int page, int itemCount) => UiKit.Paging.Clamp(page, itemCount, CellCount);
-
-        // Short on the last page rather than padded -- the screen hides its
-        // leftover cells, which is a different job from inventing rows here.
-        public static IReadOnlyList<BagItem> Page(IReadOnlyList<BagItem> sorted, int page) =>
-            UiKit.Paging.Slice(sorted, page, CellCount);
     }
 }

@@ -6,6 +6,13 @@ using PrincesPalace.Domain.Equipment;
 namespace PrincesPalace.Domain.Tests
 {
     // What the bag grid shows, and in what order.
+    // THE PACK SCROLLS, so it has no pages and these have no paging tests.
+    //
+    // Six of them were removed with BagView's Page/PageCount/ClampPage/
+    // CellCount, which had no production caller left once the dossier's pack
+    // became a scrolling window. Paging itself is alive and tested -- the debug
+    // menu and the glossary still use UiKit.Paging -- this was only the bag's
+    // dead wrapper around it, and a "24 of 27" footer that no longer exists.
     public class InventoryBagTests
     {
         // Kind as int, mirroring Core's ItemKind: 0 Consumable, 1 Weapon,
@@ -87,72 +94,6 @@ namespace PrincesPalace.Domain.Tests
         {
             CollectionAssert.IsEmpty(BagView.Sorted(null));
             CollectionAssert.IsEmpty(BagView.Sorted(new BagItem[0]));
-        }
-
-        // ---- paging ----------------------------------------------------------------
-
-        [Test]
-        public void AnEmptyBagIsStillOnePage()
-        {
-            // "PAGE 1 OF 1" over an empty grid is a state. "PAGE 1 OF 0" is a
-            // bug report.
-            Assert.AreEqual(1, BagView.PageCount(0));
-        }
-
-        [Test]
-        public void ThePageBoundaryIsExact()
-        {
-            Assert.AreEqual(1, BagView.PageCount(BagView.CellCount), "a full page is one page");
-            Assert.AreEqual(2, BagView.PageCount(BagView.CellCount + 1), "one over spills");
-            Assert.AreEqual(2, BagView.PageCount(BagView.CellCount * 2));
-            Assert.AreEqual(3, BagView.PageCount(BagView.CellCount * 2 + 1));
-        }
-
-        [Test]
-        public void PagesAreClampedRatherThanTrusted()
-        {
-            // The controller pages by stepping an int; nothing stops it running
-            // off either end when the bag shrinks under it.
-            Assert.AreEqual(0, BagView.ClampPage(-4, 50));
-            Assert.AreEqual(2, BagView.ClampPage(99, 50), "50 items is three pages, last index 2");
-            Assert.AreEqual(0, BagView.ClampPage(3, 0), "an empty bag has only page 0");
-        }
-
-        [Test]
-        public void APageHoldsExactlyItsOwnSlice()
-        {
-            var sorted = BagView.Sorted(Enumerable.Range(0, BagView.CellCount + 5)
-                .Select(i => Item($"item{i:00}", tier: 100 - i)));
-
-            var first = BagView.Page(sorted, 0);
-            var second = BagView.Page(sorted, 1);
-
-            Assert.AreEqual(BagView.CellCount, first.Count);
-            Assert.AreEqual(5, second.Count, "the last page is short, not padded");
-            CollectionAssert.IsEmpty(first.Select(i => i.Id).Intersect(second.Select(i => i.Id)),
-                "no item appears on two pages");
-        }
-
-        [Test]
-        public void EveryItemAppearsOnExactlyOnePage()
-        {
-            var sorted = BagView.Sorted(Enumerable.Range(0, 47).Select(i => Item($"item{i:00}", tier: i)));
-
-            var walked = Enumerable.Range(0, BagView.PageCount(sorted.Count))
-                .SelectMany(p => BagView.Page(sorted, p))
-                .Select(i => i.Id)
-                .ToList();
-
-            CollectionAssert.AreEquivalent(Ids(sorted), walked, "walking every page must visit the whole bag");
-            Assert.AreEqual(47, walked.Distinct().Count());
-        }
-
-        [Test]
-        public void AskingForAPageBeyondTheEndGivesTheLastOne()
-        {
-            var sorted = BagView.Sorted(new[] { Item("only") });
-
-            CollectionAssert.AreEqual(new[] { "only" }, Ids(BagView.Page(sorted, 7)));
         }
         // ---- the player's chosen order -------------------------------------------
         //
