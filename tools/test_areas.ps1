@@ -34,7 +34,12 @@ $Areas = @{
     # this file's own header says an imprecise area beats an orphan, since an
     # orphan is invisible to every area run. 'run' because most of what it
     # guards is run/save state.
-    run     = "Dungeon|Map|FullRun|RunState|Currency|MetaProgression|Save|ActiveSquad|Run|Resume|Snapshot|Seed|Descent|Depth|Difficulty|EnemyBand|Wallet|Reward|Reckoning|Ember|Ledger|Settlement|Encounter|Room|GlobalState"
+    # 'Level' joins MetaProgression here rather than starting a 'progression'
+    # area of its own: character level is what survives a run, so it belongs
+    # with Reward, Ember and Settlement rather than beside them. It matches
+    # exactly one class today (LevelCurveTests) and no other class in either
+    # assembly contains the word.
+    run     = "Dungeon|Map|FullRun|RunState|Currency|MetaProgression|Level|Save|ActiveSquad|Run|Resume|Snapshot|Seed|Descent|Depth|Difficulty|EnemyBand|Wallet|Reward|Reckoning|Ember|Ledger|Settlement|Encounter|Room|GlobalState"
     ui      = "Button|Audio|Splash|PauseMenu|DebugMenu|MainMenu|SystemMenu|Cursor|Dialogue|Bark|Inventory|Equipment|Dossier|Options|Music|Screen|UiKit|Flicker|Ambience|Overlay"
     art     = "Stance|FrameHold|Shadow|WhiteQuad|SpriteFacing|BattleBackground|ItemArt|TalentArt|ArtPath|Flash|Legibility|PostProcessing"
     rng     = "Rng|SeededRandom|Seed"

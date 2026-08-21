@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using PrincesPalace.Domain.Equipment;
+using PrincesPalace.Domain.Progression;
 using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace
@@ -151,11 +152,14 @@ namespace PrincesPalace
             return true;
         }
 
-        // Simple placeholder curve: level * 100. Tunable later without
-        // touching callers, since they only ever ask "how much to next".
+        // What the next level costs. The curve itself is
+        // Domain.Progression.LevelCurve; this stays as the name every caller
+        // already asks, which is what the old comment here promised -- "tunable
+        // later without touching callers, since they only ever ask how much to
+        // next". Tuned, and no caller moved.
         public static int ExpToNextLevel(int level)
         {
-            return level * 100;
+            return LevelCurve.ExpToNextLevel(level);
         }
 
         // Adds exp and applies every level-up it earns (a big enough gain
