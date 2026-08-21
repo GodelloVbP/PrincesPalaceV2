@@ -61,6 +61,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef DetailBody;
         public NodeRef InvestButton;
         public NodeRef InvestLabel;
+        public NodeRef RespecButton;
 
         // Indexed [path * OrbCount + slot]. One flat list rather than a list of
         // lists, because the wiring binds arrays and E4 counts them.
@@ -174,6 +175,21 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 Place.At(-830f, 480f));
             screen.BackButton = back;
 
+            // RESPEC, level 20 of the reward track. Bottom-left, mirroring Back
+            // top-left at the same size -- the two are the screen's only
+            // whole-screen actions, as against Kindle which acts on the one orb
+            // that is selected.
+            //
+            // No confirmation step, and that is a decision rather than an
+            // omission. A respec here is FREE and gives back exactly what was
+            // spent, so pressing it by accident costs the arrangement of a
+            // build and nothing else -- re-kindling the same orbs costs the
+            // same embers that just came back. The hold-to-confirm the abandon
+            // button uses is for a run that cannot be got back.
+            var respec = Ui.Button("TalentRespecButton", UiStrings.TalentRespec, new UiVec(220f, 60f), 16,
+                Place.At(-830f, -420f));
+            screen.RespecButton = respec;
+
             // Hidden until an orb is picked, rather than sitting there empty.
             //
             // A 880x150 coloured slab with nothing written on it is the single
@@ -193,7 +209,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 Ui.Column("TalentHeading", Place.At(0f, 431f), spacing: 0f, UiAlign.Centre).AsDecor(),
                 characterName, pathName, embers,
                 prevPath, nextPath, prevCharacter, nextCharacter,
-                detailPlate, invest, back);
+                detailPlate, invest, back, respec);
 
             return screen;
         }

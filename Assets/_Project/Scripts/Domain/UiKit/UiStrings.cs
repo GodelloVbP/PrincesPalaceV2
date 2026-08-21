@@ -32,6 +32,12 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString TalentPrev = UiString.Define("talent.prev", "<");
         public static readonly UiString TalentNext = UiString.Define("talent.next", ">");
         public static readonly UiString TalentBack = UiString.Define("talent.back", "Back");
+
+        // "RESPEC", matching the word the dossier's reward-track line uses
+        // ("FREE RESPEC") rather than a thematic inverse of KINDLE. The player
+        // meets the reward's name before the button, and the two have to be
+        // recognisably the same thing.
+        public static readonly UiString TalentRespec = UiString.Define("talent.respec", "RESPEC");
         public static readonly UiString TalentPath =
             UiString.Define("talent.path", "CONSTELLATION {0} OF {1}   -   {2} KINDLED", "CONSTELLATION 3 OF 3   -   21 KINDLED");
 
@@ -606,7 +612,7 @@ namespace PrincesPalace.Domain.UiKit
             OverlayCount, OverlayPlus, OverlayPage,
             OverlayEquip, OverlayUnequip, OverlayCannotWear, OverlayBagEmpty,
             TalentEmbers, TalentInvest, TalentTaken, TalentLocked, TalentNoEmbers,
-            TalentPrev, TalentNext, TalentBack, TalentPath,
+            TalentPrev, TalentNext, TalentBack, TalentPath, TalentRespec,
             PackSortTier, PackSortPlus, PackSortName,
             RunStatBattle, RunStatFold, RunStatSpoils,
             RunStatDamageDealt, RunStatDamagePhysical, RunStatDamageOther, RunStatDamageTaken,

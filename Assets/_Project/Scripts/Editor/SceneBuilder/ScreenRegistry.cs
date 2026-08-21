@@ -672,6 +672,7 @@ public static class ScreenRegistry
                 talents.detailBody = result.Tmp(screen.DetailBody);
                 talents.investLabel = result.Tmp(screen.InvestLabel);
                 talents.investButton = result.Button(screen.InvestButton);
+                talents.respecButton = result.Button(screen.RespecButton);
                 talents.prevPathButton = result.Button(screen.PrevPathButton);
                 talents.nextPathButton = result.Button(screen.NextPathButton);
                 talents.prevCharacterButton = result.Button(screen.PrevCharacterButton);

@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Ambience;
+using PrincesPalace.Domain.Progression;
 using PrincesPalace.Domain.Talents;
 using PrincesPalace.Domain.UiKit;
 using PrincesPalace.Domain.UiKit.Screens;
@@ -38,6 +39,9 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text detailBody;
         [SerializeField] internal TMP_Text investLabel;
         [SerializeField] internal Button investButton;
+
+        // Level 20 of the reward track. See Respec().
+        [SerializeField] internal Button respecButton;
         [SerializeField] internal Button prevPathButton;
         [SerializeField] internal Button nextPathButton;
         [SerializeField] internal Button prevCharacterButton;
@@ -88,6 +92,7 @@ namespace PrincesPalace
             prevCharacterButton.onClick.AddListener(() => StepCharacter(-1));
             nextCharacterButton.onClick.AddListener(() => StepCharacter(1));
             investButton.onClick.AddListener(Kindle);
+            if (respecButton != null) respecButton.onClick.AddListener(Respec);
             backButton.onClick.AddListener(() => Navigation.Go(Navigation.Hub));
         }
 
@@ -234,6 +239,41 @@ namespace PrincesPalace
             Refresh();
         }
 
+        // Gives back everything this character has committed, so they can
+        // spend it again. Level 20 of the reward track.
+        //
+        // BOTH CURRENCIES, because there are two: embers committed to orbs, and
+        // stat points placed into ability scores. Character.Respec owns the
+        // refund itself -- including the rule that event-taught skills are NOT
+        // stripped -- and this supplies the one figure the model cannot compute
+        // for itself: what the talents actually cost, which is a content
+        // question (ContentDatabase.SpentBy walks OrbCost).
+        //
+        // The stat half currently refunds nothing in practice, and it is here
+        // anyway: nothing in the game can SPEND a stat point yet
+        // (AUDIT.md #53, Character.Invest has no production caller), so the
+        // invested block is always zero. Written now rather than later because
+        // the day a "+" appears on the dossier, a respec that quietly forgot
+        // half its job is a bug nobody would look for.
+        private void Respec()
+        {
+            var character = Current;
+            if (character == null) return;
+
+            // Earned, not free-for-all. The button is hidden below this level
+            // too -- checked in both places because a hidden button is a
+            // presentation fact and this is the rule.
+            if (!RewardTrack.HasUnlocked(TrackReward.Respec, character.level)) return;
+
+            character.Respec(ContentDatabase.SpentBy(character));
+
+            // Written immediately, for the same reason Kindle writes
+            // immediately: a tree that loses its state to a crash is the least
+            // forgivable thing this screen can do, and that cuts both ways.
+            SaveSlotManager.SaveCurrent();
+            Refresh();
+        }
+
         // ---- painting --------------------------------------------------------
 
         public void Refresh()
@@ -243,6 +283,24 @@ namespace PrincesPalace
 
             characterName.SetContent(character.definitionId);
             emberCount.Set(UiStrings.TalentEmbers, Embers);
+
+            // HIDDEN until earned, not greyed out -- the same call the
+            // Reckoning's reroll makes. A disabled button for a reward the
+            // player has never heard of reads as something broken rather than
+            // as something unearned.
+            //
+            // Interactable only when there is something to give back, so
+            // pressing it is never a no-op the player has to interpret.
+            if (respecButton != null)
+            {
+                bool earned = RewardTrack.HasUnlocked(TrackReward.Respec, character.level);
+                respecButton.SetShown(earned);
+                if (earned)
+                {
+                    respecButton.interactable =
+                        character.HasAnythingToRespec(ContentDatabase.SpentBy(character));
+                }
+            }
 
             var unlocked = Unlocked;
             pathName.Set(UiStrings.TalentPath, _path + 1, TalentPage.PathCount,

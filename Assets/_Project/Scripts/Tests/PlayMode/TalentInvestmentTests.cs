@@ -191,6 +191,156 @@ namespace PrincesPalace.PlayModeTests
                 "nothing in this tree costs more than one ember, so cost is effectively flat after all");
         }
 
+        // ---- the respec, level 20 of the reward track ------------------------------
+
+        private static IEnumerator OpenTheTree()
+        {
+            yield return SceneManager.LoadSceneAsync("Talents", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+        }
+
+        private static Button ButtonNamed(TalentController talents, string name) =>
+            talents.GetComponentsInChildren<Button>(includeInactive: true)
+                .FirstOrDefault(b => b.name == name);
+
+        [UnityTest]
+        public IEnumerator TheRespecIsHiddenUntilTheTrackGrantsIt()
+        {
+            yield return OpenTheTree();
+            var talents = Object.FindAnyObjectByType<TalentController>();
+
+            var character = SaveSlotManager.CurrentSave.ActiveSquad().First(c => c != null);
+            character.level = 19;
+            talents.Refresh();
+            yield return null;
+
+            Assert.IsFalse(ButtonNamed(talents, "TalentRespecButton").gameObject.activeSelf,
+                "a level-19 character is shown a respec they have not earned");
+
+            character.level = 20;
+            talents.Refresh();
+            yield return null;
+
+            Assert.IsTrue(ButtonNamed(talents, "TalentRespecButton").gameObject.activeSelf,
+                "level 20 granted the respec and the button is still hidden");
+        }
+
+        [UnityTest]
+        public IEnumerator RespeccingGivesBackTheEmbersTheOrbsCost()
+        {
+            yield return OpenTheTree();
+            var talents = Object.FindAnyObjectByType<TalentController>();
+
+            var character = SaveSlotManager.CurrentSave.ActiveSquad().First(c => c != null);
+            character.level = 20;
+            character.embers = 99;
+            talents.Refresh();
+            yield return null;
+
+            // The ROOT is free -- slot 0 of each path is that path's wool
+            // generation rule, and OrbCost prices it at nothing. So kindle one
+            // step past it, or this test refunds zero and passes for the wrong
+            // reason.
+            Press(talents, "Orb0_0");
+            yield return null;
+            Press(talents, "InvestButton");
+            yield return null;
+
+            Press(talents, "Orb0_1");
+            yield return null;
+            Press(talents, "InvestButton");
+            yield return null;
+
+            int spent = 99 - character.embers;
+            Assert.Greater(spent, 0, "the fixture kindled nothing that cost anything");
+
+            Press(talents, "TalentRespecButton");
+            yield return null;
+
+            Assert.AreEqual(99, character.embers, "the respec did not give back what the orbs cost");
+            Assert.IsEmpty(character.unlockedTalentIds, "the respec left an orb kindled");
+        }
+
+        // THE TRAP THIS CODEBASE NAMED BEFORE A RESPEC EXISTED.
+        //
+        // Character.unlockedSkillIds' own comment says the two lists are
+        // separate precisely so "a respec (which only ever refunds
+        // unlockedTalentIds)" cannot "strip an event-taught spell it never
+        // granted". Those skills are handed over by an Event room's mage and
+        // cost nothing, so taking them back would remove something the player
+        // never spent and cannot re-buy.
+        [UnityTest]
+        public IEnumerator ARespecDoesNotTakeBackWhatWasNeverBought()
+        {
+            yield return OpenTheTree();
+            var talents = Object.FindAnyObjectByType<TalentController>();
+
+            var character = SaveSlotManager.CurrentSave.ActiveSquad().First(c => c != null);
+            character.level = 20;
+            character.embers = 99;
+            character.unlockedSkillIds.Add("taught_by_the_mage");
+            talents.Refresh();
+            yield return null;
+
+            Press(talents, "Orb0_0");
+            yield return null;
+            Press(talents, "InvestButton");
+            yield return null;
+
+            Press(talents, "TalentRespecButton");
+            yield return null;
+
+            CollectionAssert.Contains(character.unlockedSkillIds, "taught_by_the_mage",
+                "the respec stripped a skill the player was given rather than bought");
+        }
+
+        // Stat points are refunded too, and that half cannot be reached through
+        // the UI at all: nothing in the game spends a stat point (AUDIT #53,
+        // Character.Invest has no production caller). Set directly here, which
+        // is the one honest way to cover a path production cannot yet walk --
+        // and the reason it is covered now is that a respec quietly forgetting
+        // half its job is a bug nobody would look for once a "+" appears.
+        [UnityTest]
+        public IEnumerator RespeccingGivesBackPlacedStatPoints()
+        {
+            yield return OpenTheTree();
+            var talents = Object.FindAnyObjectByType<TalentController>();
+
+            var character = SaveSlotManager.CurrentSave.ActiveSquad().First(c => c != null);
+            character.level = 20;
+            character.unspentStatPoints = 3;
+            Assert.IsTrue(character.Invest(PrincesPalace.Domain.Stats.AbilityScore.Constitution));
+            Assert.IsTrue(character.Invest(PrincesPalace.Domain.Stats.AbilityScore.Strength));
+
+            Assert.AreEqual(1, character.unspentStatPoints, "the fixture did not place two points");
+            talents.Refresh();
+            yield return null;
+
+            Press(talents, "TalentRespecButton");
+            yield return null;
+
+            Assert.AreEqual(3, character.unspentStatPoints, "the placed points did not come back");
+            Assert.AreEqual(0, character.InvestedPointTotal, "the invested block was not cleared");
+        }
+
+        [UnityTest]
+        public IEnumerator ARespecWithNothingToGiveBackIsNotPressable()
+        {
+            yield return OpenTheTree();
+            var talents = Object.FindAnyObjectByType<TalentController>();
+
+            var character = SaveSlotManager.CurrentSave.ActiveSquad().First(c => c != null);
+            character.level = 20;
+            character.unlockedTalentIds.Clear();
+            character.investedAbilityScores = default;
+            talents.Refresh();
+            yield return null;
+
+            Assert.IsFalse(ButtonNamed(talents, "TalentRespecButton").interactable,
+                "a respec with nothing to refund is pressable, so pressing it does nothing visible");
+        }
+
         private static void Press(TalentController talents, string name)
         {
             var button = talents.GetComponentsInChildren<Button>(includeInactive: true)

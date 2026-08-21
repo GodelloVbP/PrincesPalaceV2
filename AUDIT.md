@@ -1299,6 +1299,45 @@ Three ways out, and it is a design call:
 Recorded rather than chosen, per this file's standing posture on design
 decisions that belong to the author.
 
+### 53. Stat points cannot be spent -- `Character.Invest` has no production caller
+
+`Character.Invest(AbilityScore)` is implemented, commented at length ("ONE point
+at a time on purpose: the UI offers a '+' per score"), and covered by tests.
+**Nothing in the game calls it.** `grep` for `Invest` across `Assets/` returns
+this method, its tests, and otherwise only the TALENT tree's unrelated
+`CanInvest`/`InvestButton`, which spends embers on orbs and never touches an
+ability score.
+
+`investedAbilityScores` is assigned in exactly one place -- inside `Invest`
+itself (`Character.cs:191`). It is READ correctly, by
+`ContentDatabase.Effective.cs:113`, which folds it into `EffectiveAbilityScores`
+and out into attack/speed/health. So the pathway works end to end and has no
+entrance.
+
+The dossier is where the "+" per score was supposed to live. Its
+`attributeCells` are wired to `HoverIndex` -> `OnAttributeHover` only: hovering
+an attribute explains what it does, and there is no way to raise one.
+
+**What this costs.** `unspentStatPoints` accumulates and is never spendable, so:
+
+- One stat point per level was the ONLY thing levelling granted before the
+  reward track, which means levelling has never granted anything a player could
+  use.
+- The track's filler is 30 stat points, and level 80 grants 10 more. That is 40
+  of the track's rewards doing nothing -- and level 80 was chosen *because* it
+  was the safe, already-implemented reward kind (it replaced "elites always drop
+  a relic", cut as too strong).
+- A respec's stat half refunds a block that is always zero.
+
+Same class as #42 (relics that had never fired in a fight) and
+`DifficultyCurve`'s own header ("AND THEN IT WAS NEVER CALLED"): implemented,
+tested against inputs the test builds itself, and unreachable from play. The
+tests are again what makes it look covered.
+
+*Not fixed here.* The respec work that found it builds both halves so the refund
+is correct the day the spend exists, but a "+" per score on the dossier is its
+own change.
+
 ## Open investigations
 
 ### 52. `SystemMenuExitsTests.OnePressOnAnExitDoesNothingButArmIt` flaked once, navigating to `"Hub"` — cause not found

@@ -232,6 +232,70 @@ namespace PrincesPalace
             return levelsGained;
         }
 
+        // How many stat points are currently placed into ability scores.
+        //
+        // Floored at zero rather than returned raw: a hand-edited save carrying
+        // a negative invested score would otherwise make a respec DEDUCT
+        // points, and a refund that takes something away is the worst possible
+        // reading of this button.
+        public int InvestedPointTotal
+        {
+            get
+            {
+                int total = 0;
+                foreach (var score in AbilityScores.All)
+                {
+                    total += investedAbilityScores[score];
+                }
+
+                return total < 0 ? 0 : total;
+            }
+        }
+
+        // Whether a respec would give anything back. What the button reads, so
+        // that "is this worth pressing" and "what does pressing it do" cannot
+        // disagree -- the caller supplies the ember figure because that is a
+        // content lookup, but the two halves are the same two halves.
+        public bool HasAnythingToRespec(int embersSpent) =>
+            embersSpent > 0 || unlockedTalentIds.Count > 0 || InvestedPointTotal > 0;
+
+        // Takes back every choice this character has spent, and hands the
+        // currency back to spend again. Level 20 of the reward track.
+        //
+        // BOTH KINDS OF SPEND, because there are two and a player asking to
+        // rebuild means both: embers committed to talent orbs, and stat points
+        // placed into ability scores.
+        //
+        // WHAT IT MUST NOT TOUCH is `unlockedSkillIds`. Those are handed over
+        // by an Event room's mage, not bought, and this is exactly why they are
+        // a separate list from `unlockedTalentIds` -- see that field's comment,
+        // which named this hazard before a respec existed. Stripping them would
+        // take away something the player never spent anything on and cannot get
+        // back.
+        //
+        // Returns what came back, so a caller can say so rather than diffing
+        // the character. Refund order does not matter: the two currencies are
+        // independent and neither total is computed from the other.
+        //
+        // NOT gated here. Whether this character has EARNED a respec is
+        // RewardTrack.HasUnlocked(Respec, level), and it is the caller's job --
+        // a model method that silently refused would be indistinguishable from
+        // one that worked and found nothing to give back.
+        public RespecRefund Respec(int embersSpent)
+        {
+            if (embersSpent < 0) embersSpent = 0;
+
+            int points = InvestedPointTotal;
+
+            embers += embersSpent;
+            unlockedTalentIds.Clear();
+
+            unspentStatPoints += points;
+            investedAbilityScores = default;
+
+            return new RespecRefund(embersSpent, points);
+        }
+
         // Pays out everything the reward track owes for levels reached since
         // the last time this was called, and moves the watermark.
         //
