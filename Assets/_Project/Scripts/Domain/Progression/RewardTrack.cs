@@ -278,6 +278,24 @@ namespace PrincesPalace.Domain.Progression
             return 0;
         }
 
+        // Whether `level` carries a MILESTONE rather than filler.
+        //
+        // Asked of the Milestones table, which is the only thing that actually
+        // knows. The reward KIND cannot answer it: level 10 is Prince's Favor
+        // +5 and level 80 is ten stat points, and both of those kinds are also
+        // handed out as filler twenty-odd times each. A screen that guessed
+        // from the kind drew level 10 as an ordinary node -- which is how this
+        // method came to exist.
+        public static bool IsMilestone(int level)
+        {
+            foreach (var milestone in Milestones)
+            {
+                if (milestone.Level == level) return true;
+            }
+
+            return false;
+        }
+
         // The first level that grants `reward`, or 0 if the track never does.
         public static int UnlockLevel(TrackReward reward)
         {

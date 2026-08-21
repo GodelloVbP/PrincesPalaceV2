@@ -27,6 +27,53 @@ namespace PrincesPalace.PlayModeTests
             Path.GetFullPath(Path.Combine(
                 Directory.GetParent(Application.dataPath).FullName, "tools", "screenshots", "runtime"));
 
+        // The reward track, opened over the dossier and levelled enough that
+        // the rail has a lit half and a "you are here" node to scroll to.
+        //
+        // A capture rather than an assertion, because what can be wrong here is
+        // not a value: a hundred captions at 190px pitch either read or they
+        // collide, and UiAudit can only tell you they are contained.
+        [UnityTest]
+        public IEnumerator CaptureTheRewardTrack()
+        {
+            if (!CanvasCapture.IsSupported)
+            {
+                Assert.Ignore("No graphics device. Run: tools/screenshot.ps1 -Runtime -RuntimeFilter SystemMenuCaptureTests");
+            }
+
+            yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            foreach (var character in SaveSlotManager.CurrentSave.ActiveSquad())
+            {
+                character.level = 47;
+            }
+
+            var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(menu, "the hub has no SystemMenuController");
+
+            menu.Open();
+            menu.Select(0);
+            yield return null;
+
+            var row = menu.GetComponentsInChildren<UnityEngine.UI.Button>(true)
+                .FirstOrDefault(b => b.name == "DossierTrackRow");
+            Assert.IsNotNull(row, "the dossier has no reward-track row");
+            row.onClick.Invoke();
+            yield return new WaitForSecondsRealtime(0.5f);
+
+            var canvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)
+                .FirstOrDefault(c => c.isRootCanvas);
+            Assert.IsNotNull(canvas);
+
+            Directory.CreateDirectory(OutputDir);
+            string path = Path.Combine(OutputDir, "SystemMenu_reward_track.png");
+            CanvasCapture.RenderToFile(canvas, path);
+            Assert.IsTrue(File.Exists(path), $"no capture written to {path}");
+            Debug.Log($"[SystemMenuCapture] wrote {path}");
+        }
+
         [UnityTest]
         public IEnumerator CaptureTheSkeletonOnEachTab()
         {

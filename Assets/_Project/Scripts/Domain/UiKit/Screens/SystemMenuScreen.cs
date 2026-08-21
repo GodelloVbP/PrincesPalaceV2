@@ -39,6 +39,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const string TabHover = FightHudPalette.HoverTint;
 
         public CharacterDossierScreen Dossier;
+        public RewardTrackScreen RewardTrack;
         public OptionsScreen Options;
         public RunStatsScreen RunStats;
         public ExitsScreen Exits;
@@ -216,6 +217,24 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     screen.Dossier = dossier;
                     contents.Add(dossier.Root);
                     placeholder.Inactive();
+
+                    // THE REWARD TRACK, over the dossier rather than beside it
+                    // as a sixth tab.
+                    //
+                    // The tab bar's positions are AUTHORED design numbers,
+                    // pinned by SystemMenuScreenTests for exactly the three-tab
+                    // and five-tab rows -- a sixth would mean inventing a
+                    // layout somebody had specified. Over the dossier is also
+                    // where it belongs: the dossier answers "what am I now" and
+                    // the track answers "what is coming", and the door between
+                    // them is one nav row.
+                    //
+                    // Same construction as the dossier's own pack panel, which
+                    // opens over column A from a nav row and closes on its own
+                    // button. LAST in the pane so it draws over everything.
+                    var track = RewardTrackScreen.Build();
+                    screen.RewardTrack = track;
+                    contents.Add(track.Root);
                 }
                 else if (def.Tab == SystemMenuTab.Options)
                 {

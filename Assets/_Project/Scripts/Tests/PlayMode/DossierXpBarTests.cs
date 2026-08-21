@@ -117,7 +117,10 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return OpenTheDossier();
 
-            var label = TextNamed("DossierTrackNext");
+            // On the TRACK NAV ROW now, not a standalone line under the XP bar.
+            // The row supersedes it: it says what is next and is also the door
+            // to the whole track, where the line was only ever the first half.
+            var label = TextNamed("DossierTrackRowCount");
             Assert.IsNotNull(label, "the dossier has no reward-track line");
 
             Assert.IsNotEmpty(label.text, "the reward-track line is blank");
@@ -125,22 +128,21 @@ namespace PrincesPalace.PlayModeTests
                 $"the track line does not name a level: '{label.text}'");
         }
 
-        // The line has to stay inside column A or it runs under the loadout
-        // beside it -- the same failure the XP fill above is here for, and the
-        // reason this label is the widest thing in that column.
+        // The line has to stay inside the row it sits in, or a long reward name
+        // runs out over the loadout column beside it -- the same failure the XP
+        // fill above is here for.
         [UnityTest]
-        public IEnumerator TheTrackLineStaysInsideItsColumn()
+        public IEnumerator TheTrackLineStaysInsideItsRow()
         {
             yield return OpenTheDossier();
 
-            var line = Corners(RectNamed("DossierTrackNext"));
-            var track = Corners(RectNamed("DossierXpTrack"));
+            var line = Corners(RectNamed("DossierTrackRowCount"));
+            var row = Corners(RectNamed("DossierTrackRow"));
 
-            Assert.LessOrEqual(line.xMax, track.xMax + 60f,
-                "the reward-track line runs past the column the XP bar sits in");
-            Assert.GreaterOrEqual(line.yMax, 0f - 10000f);
-            Assert.Less(line.yMax, track.yMin + 0.5f,
-                "the reward-track line overlaps the XP bar above it");
+            Assert.LessOrEqual(line.xMax, row.xMax + 0.5f,
+                "the reward-track line runs past the right edge of its own row");
+            Assert.GreaterOrEqual(line.xMin, row.xMin - 0.5f,
+                "the reward-track line starts left of its own row");
         }
 
         // ---- spending a stat point ------------------------------------------------

@@ -65,6 +65,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef NextCharacterButton;
 
         public NodeRef SkillsRow;
+        public NodeRef TrackRow;
         public NodeRef SkillsCount;
         public NodeRef PackRow;
         public NodeRef PackChevron;
@@ -236,26 +237,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 Place.At(cx + DossierLayout.ContentAWidth * 0.5f - 35f, DossierLayout.XpRowCentreY));
             XpRemaining = left;
 
-            // WHAT THE NEXT LEVEL IS WORTH, under the bar that says how far
-            // away it is. The track was payable before it was legible: a player
-            // could earn Favor, a wider offer and extra starting relics without
-            // anything on any screen saying those existed or where they came
-            // from.
-            //
-            // Two lines of room. "YOUR SECOND LIFE RETURNS AT EVERY BOSS" is
-            // the longest thing the track can say, and a single line would
-            // shrink it to unreadable rather than wrap it.
-            var trackNext = Ui.Label("DossierTrackNext", UiString.Runtime,
-                new UiVec(DossierLayout.ContentAWidth, DossierLayout.TrackRowHeight), 11, TextDim,
-                Place.At(cx, DossierLayout.TrackRowCentreY));
-            TrackNext = trackNext;
-
             yield return left;
-            yield return trackNext;
 
             // The two nav rows. BuildNavRow assigns its own refs -- an iterator
             // cannot carry `out` parameters, and threading them back through the
             // caller bought nothing.
+            yield return BuildNavRow("Track", UiStrings.TrackRow, DossierLayout.TrackNavRowCentreY);
             yield return BuildNavRow("Skills", UiStrings.OverlaySkills, DossierLayout.SkillsRowCentreY);
             yield return BuildNavRow("Pack", UiStrings.OverlayPack, DossierLayout.PackRowCentreY);
         }
@@ -282,9 +269,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 new UiVec(160f, 24f), 17, Text,
                 Place.At(-DossierLayout.ContentAWidth * 0.5f + 82f, 0f)).AsDecor());
 
+            // WIDER FOR THE TRACK. "LEVEL 6: +3% EXPERIENCE" does not fit the
+            // 90px a count like "0 known" needs, and shrinking it to fit would
+            // make the one sentence on this screen that names a reward the
+            // smallest text on it.
+            float countWidth = key == "Track" ? 210f : 90f;
             var countLabel = Ui.Label($"Dossier{key}RowCount", UiString.Runtime,
-                new UiVec(90f, 20f), 12, TextDim,
-                Place.At(DossierLayout.ContentAWidth * 0.5f - 66f, 0f)).AsDecor();
+                new UiVec(countWidth, 20f), key == "Track" ? 11 : 12, TextDim,
+                Place.At(DossierLayout.ContentAWidth * 0.5f - 6f - countWidth * 0.5f, 0f)).AsDecor();
             button.Children.Add(countLabel);
 
             var chev = Ui.Label($"Dossier{key}RowChevron", UiString.Runtime,
@@ -294,7 +286,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // Assigned here rather than returned, so the two call sites stay
             // one line each.
+            // The track row's COUNT LABEL is where "LEVEL 6: +3% EXPERIENCE"
+            // now lives. It was a standalone line under the XP bar until this
+            // screen existed -- two readouts of one fact, and UiAudit caught
+            // them overlapping the moment the row arrived. The row is the
+            // better home: it says what is next AND is the door to the rest.
             if (key == "Skills") { SkillsRow = button; SkillsCount = countLabel; }
+            else if (key == "Track") { TrackRow = button; TrackNext = countLabel; }
             else { PackRow = button; PackChevron = chev; }
 
             return button;

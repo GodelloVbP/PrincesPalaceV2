@@ -768,6 +768,23 @@ public static class ScreenRegistry
         controller.closeButton = result.Button(menu.CloseButton);
 
         if (menu.Dossier != null) WireDossier(result, menu.Dossier, lockedForFight);
+        if (menu.RewardTrack != null)
+        {
+            WireRewardTrack(result, menu.RewardTrack);
+
+            // The dossier's door into it. Bound here rather than in WireDossier
+            // because it is the one thing the dossier needs that lives on
+            // another screen.
+            if (menu.Dossier != null)
+            {
+                var dossierController = result.Go(menu.Dossier.Root).GetComponent<CharacterDossierController>();
+                if (dossierController != null)
+                {
+                    dossierController.trackRow = result.Button(menu.Dossier.TrackRow);
+                    dossierController.trackPanel = result.Go(menu.RewardTrack.Root);
+                }
+            }
+        }
         if (menu.Options != null) WireOptions(result, menu.Options);
         if (menu.RunStats != null) WireRunStats(result, menu.RunStats);
         if (menu.Exits != null) WireExits(result, menu.Exits, controller);
@@ -853,6 +870,30 @@ public static class ScreenRegistry
     // Bound with the SAME icon arrays every other item surface uses, from every
     // ItemDefinition with an authored iconPath -- an item whose art is missing
     // disables its Image rather than painting a white quad.
+    // The reward track, inside the system menu's own pane.
+    //
+    // Three parallel arrays of a hundred, which is the largest declared count
+    // in the project -- and the reason they are arrays rather than a lookup is
+    // that index i IS level i + FirstLevel by construction, so neither the
+    // screen nor the controller ever searches for a node.
+    private static RewardTrackController WireRewardTrack(
+        UiEmitResult result, RewardTrackScreen track)
+    {
+        var controller = result.Attach<RewardTrackController>(track.Root);
+
+        controller.viewport = result.Rect(track.Viewport);
+        controller.content = result.Rect(track.Content);
+        controller.railFill = result.Rect(track.RailFill);
+        controller.summary = result.Tmp(track.Summary);
+        controller.closeButton = result.Button(track.CloseButton);
+
+        controller.dots = track.Dots.Select(result.Image).ToArray();
+        controller.captions = track.Captions.Select(result.Tmp).ToArray();
+        controller.levelNumbers = track.LevelNumbers.Select(result.Tmp).ToArray();
+
+        return controller;
+    }
+
     private static CharacterDossierController WireDossier(
         UiEmitResult result, CharacterDossierScreen dossier, bool lockedForFight)
     {

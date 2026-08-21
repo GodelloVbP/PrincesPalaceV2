@@ -114,6 +114,12 @@ namespace PrincesPalace.Domain.UiKit
         public const float PackRowCentreY = ColumnABottom + NavRowHeight * 0.5f;
         public const float SkillsRowCentreY = PackRowCentreY + NavRowHeight;
 
+        // The reward track's NAV ROW, third in the footer stack -- distinct
+        // from TrackRowCentreY above, which is the one-line "what does the next
+        // level give" readout under the XP bar. Two different things about the
+        // same track, at opposite ends of the column.
+        public const float TrackNavRowCentreY = SkillsRowCentreY + NavRowHeight;
+
         // ---- the XP bar ---------------------------------------------------------
         //
         // IN THE LAYOUT rather than computed in the screen, because there are

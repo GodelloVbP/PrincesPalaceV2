@@ -33,6 +33,11 @@ namespace PrincesPalace
 
         [SerializeField] internal TMP_Text skillsCount;
         [SerializeField] internal Button packRow;
+
+        // The reward track's row and the panel it opens. Same pair as the pack
+        // below: a nav row and a panel that closes on its own button.
+        [SerializeField] internal Button trackRow;
+        [SerializeField] internal GameObject trackPanel;
         [SerializeField] internal TMP_Text packChevron;
         [SerializeField] internal GameObject packPanel;
         [SerializeField] internal Button packCloseButton;
@@ -139,6 +144,12 @@ namespace PrincesPalace
             if (prevCharacterButton != null) prevCharacterButton.onClick.AddListener(() => Step(-1));
             if (nextCharacterButton != null) nextCharacterButton.onClick.AddListener(() => Step(1));
             if (packRow != null) packRow.onClick.AddListener(TogglePack);
+
+            // Wired ABOVE the lockedForFight guard, so the track opens from the
+            // fight's copy of the dossier too. It changes nothing -- it is a
+            // list of what levelling gives -- and a player checking what is
+            // coming mid-battle is exactly when they would want to.
+            if (trackRow != null) trackRow.onClick.AddListener(ShowTrack);
             if (packCloseButton != null) packCloseButton.onClick.AddListener(() => ShowPack(false));
 
             // The attribute link, driven from hover AND from the button itself,
@@ -595,6 +606,17 @@ namespace PrincesPalace
                 // count without a fight session in hand.
                 skillsCount.SetContent(ContentDatabase.TalentGrantedSkillsFor(character).Count + " known");
             }
+        }
+
+        private void ShowTrack()
+        {
+            if (trackPanel == null) return;
+
+            // SetActive rather than a toggle: the row is a door in, and the
+            // panel's own CLOSE is the way out. A row that also closed it would
+            // be a second control for one state, hidden behind the panel that
+            // covers it.
+            trackPanel.SetActive(true);
         }
 
         // Places one of this character's unspent points into the score sitting

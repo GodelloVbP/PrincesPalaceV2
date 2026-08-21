@@ -51,6 +51,20 @@ namespace PrincesPalace.Domain.UiKit
         // OverlayPlus: that one is the FORMAT "+{0}" for an item's plus level,
         // and a format emitted with no argument renders its widest-case sample
         // -- so every one of these six buttons read "+10".
+        public static readonly UiString TrackRow =
+            UiString.Define("track.row", "Reward Track");
+        public static readonly UiString TrackClose =
+            UiString.Define("track.close", "CLOSE");
+
+        // "LEVEL 37  .  NEXT AT 40: AN OFFER REROLL"
+        public static readonly UiString TrackSummary =
+            UiString.Define("track.summary", "LEVEL {0}   .   NEXT AT {1}: {2}",
+                "LEVEL 100   .   NEXT AT 100: YOUR SECOND LIFE RETURNS AT EVERY BOSS");
+
+        public static readonly UiString TrackSummaryComplete =
+            UiString.Define("track.summary_complete", "LEVEL {0}   .   REWARD TRACK COMPLETE",
+                "LEVEL 100   .   REWARD TRACK COMPLETE");
+
         public static readonly UiString DossierSpendPoint =
             UiString.Define("dossier.spend_point", "+");
         public static readonly UiString OverlayPage =
@@ -616,6 +630,7 @@ namespace PrincesPalace.Domain.UiKit
             StatPhysicalResistance, StatMagicalResistance, StatMaxMana, StatSignatureGain,
             HubWallet, HubBeginDescent, HubResumeFloor,
             OverlayCount, OverlayPlus, OverlayPage, DossierSpendPoint,
+            TrackRow, TrackClose, TrackSummary, TrackSummaryComplete,
             OverlayEquip, OverlayUnequip, OverlayCannotWear, OverlayBagEmpty,
             TalentEmbers, TalentInvest, TalentTaken, TalentLocked, TalentNoEmbers,
             TalentPrev, TalentNext, TalentBack, TalentPath, TalentRespec,
