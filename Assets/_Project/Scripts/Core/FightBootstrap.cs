@@ -153,6 +153,11 @@ namespace PrincesPalace
 
             if (built == null) return null;
 
+            // THE CHARGE GOES IN BEFORE THE FIGHT OPENS, because Domain cannot
+            // ask a save what the squad has earned. What comes back out is
+            // session.SecondLivesSpent, folded into the run by OnFightEnded.
+            built.Session.SecondLifeCharges = SquadTrack.SecondLivesLeft(run);
+
             // Damage taken in earlier rooms, carried in. Applied after the
             // build because the adapter constructs from definitions and knows
             // nothing about a descent.
@@ -266,6 +271,17 @@ namespace PrincesPalace
             // regardless of what the last one cost -- which also left Rest
             // rooms with nothing to restore even once they resolve again.
             RunEncounter.WriteBackHealth(run, session);
+
+            // AFTER WriteBackHealth, so the half-health a revived character came
+            // back on is what carries into the next room -- writing the spend
+            // first would be harmless, but writing health after a revive is the
+            // whole point and the ordering deserves to be deliberate.
+            //
+            // Folded on BOTH outcomes. A charge spent in a fight the party then
+            // lost anyway is still spent; refunding it would make a second life
+            // free whenever it failed to save the run, which is exactly when it
+            // is least deserved.
+            if (run != null && session != null) run.secondLivesUsed += session.SecondLivesSpent;
 
             var payout = won ? session?.Payout : null;
             RunLedger.RecordRoom(run, won,

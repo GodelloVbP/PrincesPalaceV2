@@ -45,5 +45,18 @@ namespace PrincesPalace
         // Whether the squad has earned a capability at all.
         public static bool HasUnlocked(TrackReward reward) =>
             RewardTrack.HasUnlocked(reward, BestLevel());
+
+        // How many second lives this descent is entitled to, less what it has
+        // already spent. Level 90 grants one; level 100 gives it back at every
+        // boss, which RunManager does by clearing the spend count rather than
+        // by handing out a second charge -- so the ceiling stays one at a time
+        // however deep a run goes.
+        public static int SecondLivesLeft(RunSnapshot run)
+        {
+            if (run == null || !HasUnlocked(TrackReward.SecondLife)) return 0;
+
+            int left = RewardTrack.UnlockedAmount(TrackReward.SecondLife, BestLevel(), 0) - run.secondLivesUsed;
+            return left < 0 ? 0 : left;
+        }
     }
 }

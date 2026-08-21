@@ -279,6 +279,23 @@ namespace PrincesPalace
             // a save reads step 1 against legStartStep 8: the party is nine
             // rooms deep and the curve is scaling them for the second.
             run.step = run.legStartStep + target.Depth;
+
+            // LEVEL 100: THE SECOND LIFE COMES BACK AT EVERY BOSS.
+            //
+            // On ENTERING the boss room rather than on clearing it, which is
+            // the only ordering that means anything -- a charge handed back
+            // after the boss is dead is a charge for the fight you already
+            // survived.
+            //
+            // Cleared rather than incremented, so the ceiling stays one at a
+            // time however deep a run goes. A run that banked a charge per boss
+            // would arrive at leg 10 with six lives, which is not a second life
+            // any more.
+            if (target.Type == RoomType.Boss && SquadTrack.HasUnlocked(TrackReward.SecondLifeRefresh))
+            {
+                run.secondLivesUsed = 0;
+            }
+
             Persist();
             return true;
         }

@@ -481,6 +481,79 @@ namespace PrincesPalace.PlayModeTests
                 "the map changed shape because a character levelled during the descent");
         }
 
+        // ---- levels 90 and 100: the second life and its refresh -------------------
+
+        [Test]
+        public void AnUnlevelledSquadHasNoSecondLife()
+        {
+            RunManager.StartRun(Seed);
+
+            Assert.AreEqual(0, SquadTrack.SecondLivesLeft(RunManager.Run));
+        }
+
+        [Test]
+        public void LevelNinetyGrantsExactlyOnePerDescent()
+        {
+            RunManager.StartRun(Seed);
+            LevelTheSquadTo(90);
+
+            Assert.AreEqual(1, SquadTrack.SecondLivesLeft(RunManager.Run));
+
+            RunManager.Run.secondLivesUsed = 1;
+            Assert.AreEqual(0, SquadTrack.SecondLivesLeft(RunManager.Run),
+                "a spent second life is still on offer");
+        }
+
+        // Level 100 gives the charge back at every boss -- on ENTERING it,
+        // because a charge handed back after the boss is dead is a charge for
+        // the fight you already survived.
+        [Test]
+        public void LevelOneHundredGivesTheChargeBackOnEnteringABoss()
+        {
+            RunManager.StartRun(Seed);
+            LevelTheSquadTo(100);
+            RunManager.Run.secondLivesUsed = 1;
+
+            WalkToTheBoss();
+
+            Assert.AreEqual(0, RunManager.Run.secondLivesUsed,
+                "entering the boss did not give the second life back");
+            Assert.AreEqual(1, SquadTrack.SecondLivesLeft(RunManager.Run));
+        }
+
+        [Test]
+        public void LevelNinetyAloneDoesNotRefreshAtTheBoss()
+        {
+            // Non-vacuity for the test above: the refresh has to be level 100's
+            // doing and not something entering a boss does anyway.
+            RunManager.StartRun(Seed);
+            LevelTheSquadTo(90);
+            RunManager.Run.secondLivesUsed = 1;
+
+            WalkToTheBoss();
+
+            Assert.AreEqual(1, RunManager.Run.secondLivesUsed,
+                "a level-90 squad got its second life back without earning the refresh");
+        }
+
+        // Walks to the boss room, which is the last column of leg 2.
+        private static void WalkToTheBoss()
+        {
+            int guard = 0;
+            while (RunManager.CurrentNode.Type != RoomType.Boss && guard++ < 64)
+            {
+                if (RunManager.LegIsOver())
+                {
+                    RunManager.AdvanceLeg();
+                    continue;
+                }
+
+                RunManager.MoveTo(RunManager.Choices().First().Id);
+            }
+
+            Assert.AreEqual(RoomType.Boss, RunManager.CurrentNode.Type, "never reached a boss");
+        }
+
         // The other half, and the reason this is two tests rather than one:
         // the run itself IS discarded. If a future change starts resetting the
         // roster on StartRun, the test above catches it; if one stops clearing

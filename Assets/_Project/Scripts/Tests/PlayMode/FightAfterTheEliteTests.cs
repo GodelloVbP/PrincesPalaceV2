@@ -54,7 +54,40 @@ namespace PrincesPalace.PlayModeTests
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
         }
 
+        // THE CHARGE HAS TO REACH THE SESSION FROM PRODUCTION.
+        //
+        // FightOutcomeTests drive the revive by setting SecondLifeCharges
+        // themselves, so every one of them would pass just as happily if
+        // FightBootstrap never handed it in and the reward silently did nothing
+        // in the real game. This is the only place a fight is built through the
+        // real door with a real run behind it. architecture_audit.md F17.
         [UnityTest]
+        public IEnumerator AFightBuiltForALevelNinetySquadCarriesItsSecondLife()
+        {
+            RunManager.StartRun(639228196442867409UL);
+
+            foreach (var character in SaveSlotManager.CurrentSave.ActiveSquad())
+            {
+                character.level = 90;
+            }
+
+            var choices = RunManager.Choices();
+            var fightRoom = choices.FirstOrDefault(n => n.Type == RoomType.Fight) ?? choices[0];
+            Assert.IsTrue(RunManager.MoveTo(fightRoom.Id));
+
+            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            var fight = Object.FindAnyObjectByType<FightController>();
+            Assert.IsNotNull(fight);
+            Assert.IsTrue(fight.HasSession, "the room built no session");
+
+            Assert.AreEqual(1, fight.Session.SecondLifeCharges,
+                "the fight opened without the second life the squad has earned, so the reward " +
+                "does nothing in the actual game");
+        }
+
         public IEnumerator TheFirstRoomOfTheSecondLegIsPlayable()
         {
             // The run state off the machine that reported this, rebuilt through

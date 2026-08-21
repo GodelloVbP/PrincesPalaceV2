@@ -158,6 +158,105 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(Lines(session).Any(m => m.Contains("The party falls")));
         }
 
+        // ---- second life, level 90 of the reward track ----------------------------
+        //
+        // The whole mechanic is that the fight REFUSES TO END. There is no
+        // re-entry, no branch in the defeat path and nothing in teardown
+        // changes -- which is what makes an in-fight revive safe where a
+        // run-level "continue" would not have been.
+
+        private static (FightSession session, CombatantState hero, CombatantState foe) FatalFight(
+            int charges, int heroHealth = 200)
+        {
+            var built = Fight(foeHealth: 5000, heroHealth: heroHealth);
+            built.session.SecondLifeCharges = charges;
+            return built;
+        }
+
+        [Test]
+        public void WithoutACharge_TheFightEndsAsItAlwaysDid()
+        {
+            var (session, hero, foe) = FatalFight(charges: 0, heroHealth: 1);
+
+            session.ExecuteAttack(foe);
+
+            Assert.IsTrue(session.IsOver, "a fight with no second life did not end");
+            Assert.IsFalse(hero.IsAlive);
+            Assert.AreEqual(0, session.SecondLivesSpent);
+        }
+
+        [Test]
+        public void AChargeBringsTheHeroBackOnHalfHealthAndTheFightGoesOn()
+        {
+            var (session, hero, foe) = FatalFight(charges: 1, heroHealth: 200);
+            hero.CurrentHealth = 1;
+
+            session.ExecuteAttack(foe);
+
+            Assert.IsFalse(session.IsOver, "the fight ended despite a second life being available");
+            Assert.IsTrue(hero.IsAlive, "the hero was not raised");
+            Assert.AreEqual(100, hero.CurrentHealth, "a second life should return HALF of max health");
+            Assert.AreEqual(1, session.SecondLivesSpent);
+            Assert.IsNull(session.Payout, "the fight settled a payout even though it is still running");
+        }
+
+        [Test]
+        public void ASecondLifeIsSpentOnlyOnce()
+        {
+            var (session, hero, foe) = FatalFight(charges: 1, heroHealth: 200);
+            hero.CurrentHealth = 1;
+
+            session.ExecuteAttack(foe);
+            Assert.IsFalse(session.IsOver);
+            Assert.AreEqual(1, session.SecondLivesSpent, "the first death did not spend the charge");
+
+            // Down again, with nothing left to spend. Driven in a loop rather
+            // than with one more swing: whether the monster gets a reply on any
+            // given exchange is a turn-order detail, and what is under test is
+            // that ONE charge buys exactly ONE refusal however many exchanges
+            // it takes to get there.
+            int guard = 0;
+            while (!session.IsOver && guard++ < 20)
+            {
+                hero.CurrentHealth = 1;
+                session.ExecuteAttack(foe);
+            }
+
+            Assert.Less(guard, 20, "the fight never ended, so a charge is being spent repeatedly");
+            Assert.IsTrue(session.IsOver, "the fight refused to end a second time on one charge");
+            Assert.AreEqual(1, session.SecondLivesSpent);
+            Assert.IsFalse(session.PlayerWon);
+        }
+
+        // A charge must not be consumable by a fight that is over for another
+        // reason -- winning, most obviously. Nobody is down, so there is
+        // nothing to raise and nothing to spend.
+        [Test]
+        public void WinningDoesNotSpendASecondLife()
+        {
+            var (session, _, foe) = Fight();
+            session.SecondLifeCharges = 1;
+
+            session.ExecuteAttack(foe);
+
+            Assert.IsTrue(session.PlayerWon);
+            Assert.AreEqual(0, session.SecondLivesSpent, "a won fight spent a second life");
+        }
+
+        // Half of max, never zero. A character whose max health is 1 would come
+        // back on nothing and die again immediately, spending the charge for
+        // an outcome identical to not having it.
+        [Test]
+        public void AVeryFrailHeroStillComesBackAlive()
+        {
+            var (session, hero, foe) = FatalFight(charges: 1, heroHealth: 1);
+
+            session.ExecuteAttack(foe);
+
+            Assert.IsTrue(hero.IsAlive, "half of 1 rounded to 0 and the revive raised a corpse");
+            Assert.GreaterOrEqual(hero.CurrentHealth, 1);
+        }
+
         [Test]
         public void ADefeatSettlesEvenThoughNoRiderEverRuns()
         {

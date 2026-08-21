@@ -154,5 +154,19 @@ namespace PrincesPalace
         // rather than the current one, which is the ordinary behaviour of a
         // rule fixed at run start.
         public bool restBeforeBoss;
+
+        // How many second lives this descent has spent -- level 90 of the
+        // reward track, with level 100 giving the charge back at every boss.
+        //
+        // USED rather than remaining, the same shape as offerRerollsUsed and
+        // for the same reason: the allowance stays a pure function of the
+        // track, so a character reaching level 90 mid-descent is owed one from
+        // that moment rather than being stuck with a count snapshotted before
+        // they earned it. Unlike restBeforeBoss this is safe to read live,
+        // because nothing regenerates from it -- it changes what a fight does
+        // next, not what the map already looked like.
+        //
+        // Purely additive, so CurrentVersion does not move.
+        public int secondLivesUsed;
     }
 }

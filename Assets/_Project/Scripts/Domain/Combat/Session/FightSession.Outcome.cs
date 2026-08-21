@@ -9,6 +9,25 @@ namespace PrincesPalace.Domain.Combat.Session
     {
         private bool _payoutResolved;
 
+        // ---- second life, level 90 of the reward track --------------------------
+        //
+        // How many times this fight may refuse to end. Set by the caller before
+        // the fight opens, because Domain is engine-free and cannot ask a save
+        // what the squad has earned.
+        public int SecondLifeCharges { get; set; }
+
+        // How many were actually spent, so the caller can write the run back.
+        // Reported rather than pushed: the session has no business knowing that
+        // a run exists.
+        public int SecondLivesSpent { get; private set; }
+
+        // What a revived character comes back on: half of max, rounded down but
+        // never to zero. Named because "half" is the design and the arithmetic
+        // is the detail -- a character with 1 max health coming back on 0 would
+        // revive into death and spend the charge for nothing.
+        public const int SecondLifeNumerator = 1;
+        public const int SecondLifeDenominator = 2;
+
         // What the fight paid out. Null until it is over -- a caller reading
         // this mid-fight is asking a question that has no answer yet, and a
         // zeroed struct would answer it wrongly rather than not at all.
@@ -27,6 +46,24 @@ namespace PrincesPalace.Domain.Combat.Session
         private void ResolveOutcome()
         {
             if (_payoutResolved || !_encounter.IsOver) return;
+
+            // BEFORE CONCEDING, not after. A second life is spent at the moment
+            // the fight would otherwise be lost, which makes this the one place
+            // it can live: health is reduced by at least four different paths
+            // (DealDamage, poison ticks, status combos, the enemies partial's
+            // own call), and hooking each of them would be four chances to miss
+            // one. Every path ends up here, because every path ends up asking
+            // whether the fight is over.
+            //
+            // The fight then simply does not end -- there is no re-entry, no
+            // branch in the defeat path, and nothing in the teardown changes.
+            // That is the whole reason an in-fight revive is safe where a
+            // run-level "continue" would not have been.
+            if (!_encounter.PlayerWon && TrySecondLife())
+            {
+                return;
+            }
+
             _payoutResolved = true;
 
             if (_encounter.PlayerWon)
@@ -49,6 +86,38 @@ namespace PrincesPalace.Domain.Combat.Session
             // number the player has to work out is meaningless.
             Payout = new VictoryRewards.Payout(0, 0);
             AppendMessage("The party falls.");
+        }
+
+        // Brings every fallen party member back on half health, once per
+        // charge. Returns whether the fight should carry on.
+        //
+        // EVERYONE WHO IS DOWN, for one charge, rather than one character per
+        // charge. This only fires when the party would otherwise be wiped, so
+        // the alternative -- reviving one and losing anyway because the second
+        // is still at zero -- would spend the charge and change nothing, which
+        // is the worst outcome available.
+        //
+        // Refuses when there is nobody to raise, so a charge cannot be spent on
+        // a fight lost some other way.
+        private bool TrySecondLife()
+        {
+            if (SecondLivesSpent >= SecondLifeCharges) return false;
+
+            bool raised = false;
+            foreach (var member in _encounter.PlayerParty)
+            {
+                if (member == null || member.IsAlive) continue;
+
+                int half = member.MaxHealth * SecondLifeNumerator / SecondLifeDenominator;
+                member.CurrentHealth = half < 1 ? 1 : half;
+                raised = true;
+            }
+
+            if (!raised) return false;
+
+            SecondLivesSpent++;
+            AppendMessage("Not yet.");
+            return true;
         }
     }
 }
