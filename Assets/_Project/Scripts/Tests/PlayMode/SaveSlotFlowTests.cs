@@ -238,5 +238,90 @@ namespace PrincesPalace.PlayModeTests
             CollectionAssert.Contains(_navigated, Navigation.Hub);
             Assert.IsTrue(SaveSystem.SlotExists(0), "the slot must be written BEFORE the scene changes");
         }
+
+        private static GameObject FindGo(string name) =>
+            Resources.FindObjectsOfTypeAll<GameObject>()
+                .FirstOrDefault(g => g.name == name && g.scene.IsValid());
+
+        private static void ClickByName(string name)
+        {
+            var go = FindGo(name);
+            Assert.IsNotNull(go, $"no object named '{name}' in the scene");
+
+            var button = go.GetComponent<Button>();
+            Assert.IsNotNull(button, $"'{name}' has no Button to press");
+            button.onClick.Invoke();
+        }
+
+        // ---- deleting a slot actually deletes it ---------------------------
+
+        [UnityTest]
+        public IEnumerator DeletingTheSlotYouAreIn_DoesNotComeBackOnTheNextSave()
+        {
+            // DRIVEN THROUGH THE BUTTONS, not by calling what the controller
+            // calls. The first version of this test ran SaveSlotManager.Forget
+            // itself with a comment saying "what ConfirmDelete now does" -- so
+            // it passed whether or not ConfirmDelete did anything, which is the
+            // exact shape architecture_audit.md F17 was written about an hour
+            // before it was typed.
+            //
+            // The bug: SaveSlotManager holds ONE SaveData for the current slot
+            // and SaveCurrent writes it wherever CurrentSlot points. Deleting
+            // the file left that copy alone, so the next Persist -- starting a
+            // run, buying an upgrade, anything -- wrote the whole save back with
+            // every item and every worn piece of gear on it. It looked like the
+            // delete had worked, because the slot list refreshes off the disk it
+            // had just been removed from.
+            const int Slot = 2;
+
+            SaveSlotManager.CurrentSlot = Slot;
+            SaveSlotManager.Forget();
+            var save = SaveSlotManager.CurrentSave;
+            save.roster.FirstOrDefault()?.equipment
+                .Set(Domain.Equipment.EquipmentSlot.Weapon1, "health_potion", plus: 2);
+            SaveSlotManager.SaveCurrent();
+            Assert.IsTrue(SaveSystem.SlotExists(Slot), "fixture check: the slot should exist before deletion");
+
+            yield return SceneManager.LoadSceneAsync("MainMenu", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            // BY NAME, because the controller's fields are `internal` and
+            // InternalsVisibleTo is granted to the Editor assembly only -- a
+            // PlayMode test is deliberately kept from reaching into controller
+            // state, so it has to press what a player presses.
+            // OPEN OPTIONS FIRST, because that is where the reset UI lives and
+            // the panel starts inactive -- so ResetProgressController.Start has
+            // not run and none of its listeners are wired until a player opens
+            // it. Found by this test failing on the assertion below rather than
+            // on the one it was written for, which is why that assertion is
+            // there.
+            ClickByName("OptionsButton");
+            yield return null;
+            yield return null;
+
+            ClickByName($"ResetSlot{Slot}DeleteButton");
+            yield return null;
+
+            // PROVES THE CLICK LANDED. Start() wires these listeners a frame
+            // after activation, so a test that clicks too early presses a button
+            // with nothing attached -- and then the assertion at the bottom
+            // fails for a reason that has nothing to do with what it is testing.
+            var confirm = FindGo("ResetConfirmPanel");
+            Assert.IsNotNull(confirm, "the reset screen has no ResetConfirmPanel");
+            Assert.IsTrue(confirm.activeInHierarchy,
+                "the delete button did not open the confirmation, so its listener was not wired yet " +
+                "and nothing below this line is testing what it claims to");
+
+            ClickByName("ResetConfirmYesButton");
+
+            // The write that used to resurrect it.
+            SaveSlotManager.SaveCurrent();
+
+            Assert.IsFalse(SaveSystem.SlotExists(Slot),
+                "the deleted slot was written straight back from the in-memory copy, so the save and " +
+                "everything on it survived being deleted");
+        }
+
 }
 }

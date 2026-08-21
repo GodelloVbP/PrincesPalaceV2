@@ -182,6 +182,28 @@ namespace PrincesPalace
 
             var settlement = RunSettlement.Settle(save, save.activeRun);
 
+            // THE GEAR GOES WITH THE RUN, like the inventory always has.
+            //
+            // Inventory lives on RunSnapshot, so replacing the snapshot below
+            // has always discarded it. Equipment lives on the CHARACTER, which
+            // is profile-scoped -- so wearing an item was the one way to carry a
+            // run's loot out of it, and a player who died fully kitted kept the
+            // kit while a player who died holding the same items lost them.
+            //
+            // AFTER Settle, not before: settlement reads the run's own ledger
+            // and pays out of it, and clearing gear first would be a change to
+            // what a run is worth rather than to what survives it.
+            //
+            // Every roster character, not just the fielded squad. A benched
+            // character cannot have picked anything up this run, so their slots
+            // are already empty and clearing them costs nothing -- and "gear
+            // does not survive a run" said with an exception is a rule somebody
+            // has to remember.
+            foreach (var character in save.roster ?? new List<Character>())
+            {
+                character?.equipment?.Clear();
+            }
+
             save.activeRun = new RunSnapshot { hasRun = false };
             Forget();
             Persist();

@@ -31,10 +31,15 @@ namespace PrincesPalace
         //
         // ALL THREE TEXTURES SHARE ONE CANVAS AND ONE TIP POSITION, cropped to
         // the same UNION bounding box rather than to their own -- so swapping
-        // state mid-hover cannot make the pointer jump. v1 scaled the original
-        // 96x71 art by 0.70 to reach 67x50 and scaled this with it, because a
-        // hotspot is in texture pixels and would otherwise drift off the tip.
-        private static readonly Vector2 Hotspot = new Vector2(11f, 4f);
+        // state mid-hover cannot make the pointer jump. Which is also why a
+        // resize is all three or none.
+        //
+        // 96x71 -> 67x50 (v1, x0.70) -> 47x35 (x0.70 again, asked for as "30%
+        // smaller"). The hotspot is in TEXTURE PIXELS, so it is scaled by the
+        // same factor every time or the click point drifts off the arrow's tip
+        // -- 11,4 became 7.7,2.8 here. Cursor.SetCursor takes it as a float,
+        // so the fractions are kept rather than rounded into a half-pixel lie.
+        private static readonly Vector2 Hotspot = new Vector2(7.7f, 2.8f);
 
         // ForceSoftware, not Auto, and this is the setting that makes the
         // cursor the size it looks. Auto hands the texture to the OS as a

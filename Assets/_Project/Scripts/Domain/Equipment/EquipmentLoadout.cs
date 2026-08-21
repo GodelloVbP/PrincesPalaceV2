@@ -221,6 +221,19 @@ namespace PrincesPalace.Domain.Equipment
             return result;
         }
 
+        // Everything comes off, and nothing comes back.
+        //
+        // A run's gear does NOT survive the run, the same way its inventory
+        // does not -- equipment lives on the character, which is profile-scoped,
+        // so without this a run item became permanent the moment it was worn.
+        // Inventory was already discarded with the RunSnapshot it sat on, so
+        // equipping was the one way to launder a run's loot into the profile.
+        //
+        // Nothing is returned. The caller is ending a run, not moving items
+        // somewhere -- handing back a list here would invite a caller to bank
+        // it, which is the behaviour this exists to remove.
+        public void Clear() => slots.Clear();
+
         // Drops every worn id the caller rejects and returns the WHOLE ENTRY --
         // id and plus together.
         //

@@ -40,6 +40,49 @@ namespace PrincesPalace.PlayModeTests
 
         private static SaveData Save => SaveSlotManager.CurrentSave;
 
+        // ---- what does not survive the run --------------------------------
+        //
+        // Inventory never did: it lives on RunSnapshot, which EndRun replaces.
+        // GEAR DID, and that was the hole -- equipment lives on the character,
+        // which is profile-scoped, so wearing a run's loot was the one way to
+        // carry it out. Dying fully kitted kept the kit; dying holding the same
+        // items lost them.
+
+        [Test]
+        public void EndRun_TakesTheGearWithIt()
+        {
+            GiveTheSaveARunWorthSettling();
+
+            var character = Save.roster.FirstOrDefault();
+            Assert.IsNotNull(character, "fixture: the save has nobody to equip");
+
+            character.equipment.Set(Domain.Equipment.EquipmentSlot.Weapon1, "health_potion", plus: 3);
+            Assert.IsFalse(character.equipment.IsEmpty(Domain.Equipment.EquipmentSlot.Weapon1),
+                "fixture check: the item should be worn before the run ends");
+
+            RunManager.EndRun();
+
+            Assert.IsTrue(character.equipment.IsEmpty(Domain.Equipment.EquipmentSlot.Weapon1),
+                "the run ended and its gear stayed on the character, so wearing an item is still a way " +
+                "to launder run loot into the profile");
+        }
+
+        [Test]
+        public void EndRun_TakesTheInventoryWithIt()
+        {
+            // The half that already worked, pinned beside the half that did
+            // not -- the rule is "a run's things do not survive it", and a test
+            // for only one of them describes an accident rather than a rule.
+            GiveTheSaveARunWorthSettling();
+
+            Save.activeRun.inventory.Add(new InventoryEntry { itemId = "health_potion", count = 2 });
+
+            RunManager.EndRun();
+
+            CollectionAssert.IsEmpty(Save.activeRun.inventory,
+                "the run's inventory outlived the run");
+        }
+
         // A run that got somewhere: a boss down, rooms cleared, damage dealt.
         private static void GiveTheSaveARunWorthSettling()
         {

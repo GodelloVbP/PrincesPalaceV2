@@ -73,6 +73,21 @@ namespace PrincesPalace
             if (_pendingSlot < 0) return;
 
             SaveSystem.DeleteSlot(_pendingSlot);
+
+            // DROP THE CACHE, or the file comes straight back.
+            //
+            // SaveSlotManager holds one SaveData for the current slot and
+            // SaveCurrent writes it wherever CurrentSlot points. Deleting the
+            // file left that copy untouched, so the next Persist -- starting a
+            // run, buying an upgrade, anything -- recreated the slot with every
+            // item and every worn piece of gear still on it. The delete looked
+            // like it worked, because the list refreshes off the disk.
+            //
+            // Unconditional rather than gated on _pendingSlot == CurrentSlot:
+            // the cache is rebuilt from disk on the next read, so dropping it
+            // when it was some other slot costs one load and cannot be wrong.
+            SaveSlotManager.Forget();
+
             _pendingSlot = -1;
             confirmPanel.SetActive(false);
 
