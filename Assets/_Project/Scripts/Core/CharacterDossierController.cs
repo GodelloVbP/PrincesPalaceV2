@@ -59,6 +59,11 @@ namespace PrincesPalace
         [SerializeField] internal GameObject[] slotBlockedCaptions;
 
         [SerializeField] internal Button[] attributeCells;
+
+        // One "+" per attribute cell, and the label saying how many points are
+        // waiting. See Spend().
+        [SerializeField] internal Button[] attributePluses;
+        [SerializeField] internal TMP_Text unspentPoints;
         [SerializeField] internal TMP_Text[] attributeValues;
         [SerializeField] internal TMP_Text[] attributeKeys;
 
@@ -159,6 +164,29 @@ namespace PrincesPalace
             // again, and there is nowhere on this screen to explain why.
             if (lockedForFight) return;
 
+            // THE "+" PER SCORE, which is what Character.Invest's own comment
+            // has always described and what nothing ever built (AUDIT #53).
+            // Below the lockedForFight guard for the same reason the equip
+            // handlers are: a stat point spent mid-battle would change the
+            // fight the sheet is describing.
+            //
+            // Indexed by CELL, not by AbilityScore. The grid is re-ordered per
+            // character so the build reads highest-first, so which score a cell
+            // holds is a runtime fact -- _cellOrder is the only thing that
+            // knows, and reading it at click time rather than at wire time is
+            // what keeps the "+" pointing at the score under it after a
+            // character step.
+            if (attributePluses != null)
+            {
+                for (int i = 0; i < attributePluses.Length; i++)
+                {
+                    if (attributePluses[i] == null) continue;
+
+                    int cell = i;
+                    attributePluses[i].onClick.AddListener(() => Spend(cell));
+                }
+            }
+
             if (packSortTabs != null)
             {
                 for (int i = 0; i < packSortTabs.Length; i++)
@@ -245,6 +273,13 @@ namespace PrincesPalace
             RefreshIdentity(character);
             _scores = scores;
             RefreshAttributes(scores);
+
+            // AFTER RefreshAttributes, not inside RefreshIdentity where it
+            // started. _cellOrder is rebuilt in there, and on the first open it
+            // is still empty -- so a "+" painted before it would hide on every
+            // cell for a character who has points to spend, which is precisely
+            // the bug this whole feature exists to end.
+            PaintStatSpending(character);
             RefreshStats(character, stats, scores);
             RefreshSlots(character);
             RefreshPack();
@@ -554,6 +589,72 @@ namespace PrincesPalace
                 // Talent-granted only, which is what this screen can actually
                 // count without a fight session in hand.
                 skillsCount.SetContent(ContentDatabase.TalentGrantedSkillsFor(character).Count + " known");
+            }
+        }
+
+        // Places one of this character's unspent points into the score sitting
+        // in cell `index`.
+        //
+        // THE CELL IS NOT THE SCORE. The six cells are filled highest-first per
+        // character, so cell 0 is whatever this character's best ability
+        // happens to be. Resolving through _cellOrder at click time is what
+        // makes that safe -- binding the score at wire time would spend into
+        // whatever was strongest when the screen was built, which is a bug that
+        // only appears after stepping to a second character.
+        //
+        // Character.Invest refuses when there is nothing to spend and returns
+        // false, so the guard here is about not repainting rather than about
+        // correctness.
+        private void Spend(int index)
+        {
+            if (lockedForFight) return;
+
+            var squad = Squad();
+            if (squad.Count == 0) return;
+            if (_index < 0 || _index >= squad.Count) return;
+
+            var character = squad[_index];
+            if (character == null) return;
+            if (index < 0 || index >= _cellOrder.Count) return;
+
+            if (!character.Invest(_cellOrder[index])) return;
+
+            // Written immediately. A placed point is permanent until a respec,
+            // so losing one to a crash costs the player a level's reward.
+            SaveSlotManager.SaveCurrent();
+            Refresh();
+        }
+
+        // Shows the "+" on every cell when there is a point to spend, and says
+        // how many.
+        //
+        // HIDDEN rather than disabled when there are none, because six greyed
+        // plus signs on a character with nothing to spend is six pieces of
+        // furniture. The count label is what makes the whole mechanic
+        // discoverable -- a 22px "+" in the corner of a cell is easy to have
+        // and never notice, which is most of how levelling came to hand out
+        // something no player could see.
+        private void PaintStatSpending(Character character)
+        {
+            int points = character?.unspentStatPoints ?? 0;
+            bool canSpend = points > 0 && !lockedForFight;
+
+            if (unspentPoints != null)
+            {
+                unspentPoints.SetContent(canSpend
+                    ? (points == 1 ? "1 POINT TO SPEND" : $"{points} POINTS TO SPEND")
+                    : "");
+            }
+
+            if (attributePluses == null) return;
+
+            for (int i = 0; i < attributePluses.Length; i++)
+            {
+                if (attributePluses[i] == null) continue;
+
+                // Only cells that actually hold a score. _cellOrder is rebuilt
+                // per character and a content pass could leave it short.
+                attributePluses[i].gameObject.SetActive(canSpend && i < _cellOrder.Count);
             }
         }
 

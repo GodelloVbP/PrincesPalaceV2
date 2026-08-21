@@ -864,6 +864,8 @@ public static class ScreenRegistry
         controller.xpFill = result.Rect(dossier.XpFill);
         controller.xpRemaining = result.Tmp(dossier.XpRemaining);
         controller.trackNext = result.Tmp(dossier.TrackNext);
+        controller.unspentPoints = result.Tmp(dossier.UnspentPoints);
+        controller.attributePluses = dossier.AttributePluses.Select(result.Button).ToArray();
         controller.prevCharacterButton = result.Button(dossier.PrevCharacterButton);
         controller.nextCharacterButton = result.Button(dossier.NextCharacterButton);
 

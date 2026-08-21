@@ -101,6 +101,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> AttributeCells = new List<NodeRef>();
         public List<NodeRef> AttributeValues = new List<NodeRef>();
         public List<NodeRef> AttributeKeys = new List<NodeRef>();
+        public List<NodeRef> AttributePluses = new List<NodeRef>();
+        public NodeRef UnspentPoints;
 
         // Indexed by SheetStats.Derived.
         public List<NodeRef> StatRows = new List<NodeRef>();
@@ -618,6 +620,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 new UiVec(DossierLayout.ContentCWidth, 1f),
                 Place.At(cx, DossierLayout.ColumnCTop - 24f)).AsDecor();
 
+            // HOW MANY POINTS ARE WAITING, on the same line as the section
+            // label. Without it the "+" buttons are the only thing saying a
+            // point exists, and they are 22px each in the corner of a cell --
+            // easy to have and never notice, which is how levelling came to
+            // hand out something nobody could see.
+            var unspent = Ui.Label("DossierUnspentPoints", UiString.Runtime,
+                new UiVec(180f, 20f), 11, Accent,
+                Place.At(cx + DossierLayout.ContentCWidth * 0.5f - 90f,
+                         DossierLayout.ColumnCTop - 10f));
+            UnspentPoints = unspent;
+            yield return unspent;
+
             // Six generic cells. Which attribute lands where is decided per
             // character at runtime -- the handover wants them highest-first so
             // the shape of the build reads off the first row.
@@ -641,12 +655,26 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         new UiVec(DossierLayout.AttributeCellWidth - 2f, DossierLayout.AttributeCellHeight - 2f), 1,
                         Place.At(x, y))
                     .NoChrome();
+                // The "+" that spends a point into this score. Inactive in the
+                // tree: it appears only when there is a point to spend, and a
+                // permanently visible one on a character with none reads as
+                // broken.
+                float halfWidth = (DossierLayout.AttributeCellWidth - 2f) * 0.5f;
+                float halfHeight = (DossierLayout.AttributeCellHeight - 2f) * 0.5f;
+                var plus = Ui.Button($"DossierAttrPlus{i}", UiStrings.OverlayPlus,
+                        new UiVec(DossierLayout.AttributePlusSize, DossierLayout.AttributePlusSize), 14,
+                        Place.At(halfWidth - DossierLayout.AttributePlusInset,
+                                 halfHeight - DossierLayout.AttributePlusInset))
+                    .Inactive();
+
                 cell.Children.Add(value);
                 cell.Children.Add(keyLabel);
+                cell.Children.Add(plus);
 
                 AttributeCells.Add(cell);
                 AttributeValues.Add(value);
                 AttributeKeys.Add(keyLabel);
+                AttributePluses.Add(plus);
                 yield return cell;
             }
 

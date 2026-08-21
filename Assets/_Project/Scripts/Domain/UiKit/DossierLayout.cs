@@ -527,6 +527,15 @@ namespace PrincesPalace.Domain.UiKit
 
         public const float ContentCWidth = ColumnCWidth - ColumnCPadX * 2f;       // 340
 
+        // The "+" that spends a stat point, in the cell's top-right corner.
+        //
+        // A CHILD of the cell rather than a sibling over it: siblings that
+        // overlap need an AllowOverlap exemption and would take clicks along a
+        // shared edge, whereas a child is contained by construction and uGUI
+        // routes the click to it because it is deeper.
+        public const float AttributePlusSize = 22f;
+        public const float AttributePlusInset = 13f;
+
         public const float AttributeCellHeight = 86f;
         public const float AttributeRows = 2f;
         public const float AttributeColumns = 3f;

@@ -143,6 +143,106 @@ namespace PrincesPalace.PlayModeTests
                 "the reward-track line overlaps the XP bar above it");
         }
 
+        // ---- spending a stat point ------------------------------------------------
+        //
+        // AUDIT #53: Character.Invest was implemented, commented about a "+"
+        // per score, tested, and called by nothing. Levelling's only reward was
+        // a point that could not be spent. These drive the "+" that ends that.
+
+        private Button ButtonNamed(string name) =>
+            _menu.GetComponentsInChildren<Button>(includeInactive: true)
+                .FirstOrDefault(b => b.name == name);
+
+        private static Character First() =>
+            SaveSlotManager.CurrentSave.ActiveSquad().First(c => c != null);
+
+        [UnityTest]
+        public IEnumerator ThePlusIsHiddenWhenThereIsNothingToSpend()
+        {
+            yield return OpenTheDossier();
+
+            First().unspentStatPoints = 0;
+            Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include).Refresh();
+            yield return null;
+
+            Assert.IsFalse(ButtonNamed("DossierAttrPlus0").gameObject.activeSelf,
+                "a character with no points to spend is shown a plus");
+            Assert.IsEmpty(TextNamed("DossierUnspentPoints").text);
+        }
+
+        [UnityTest]
+        public IEnumerator HavingPointsShowsThePlusAndSaysHowMany()
+        {
+            yield return OpenTheDossier();
+
+            First().unspentStatPoints = 3;
+            Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include).Refresh();
+            yield return null;
+
+            Assert.IsTrue(ButtonNamed("DossierAttrPlus0").gameObject.activeSelf,
+                "a character with points is not shown a plus to spend them");
+            StringAssert.Contains("3", TextNamed("DossierUnspentPoints").text,
+                "the dossier does not say how many points are waiting");
+        }
+
+        [UnityTest]
+        public IEnumerator PressingThePlusSpendsAPointIntoThatScore()
+        {
+            yield return OpenTheDossier();
+
+            var character = First();
+            character.unspentStatPoints = 2;
+            character.investedAbilityScores = default;
+
+            var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
+            dossier.Refresh();
+            yield return null;
+
+            ButtonNamed("DossierAttrPlus0").onClick.Invoke();
+            yield return null;
+
+            character = First();
+            Assert.AreEqual(1, character.unspentStatPoints, "pressing the plus did not spend a point");
+            Assert.AreEqual(1, character.InvestedPointTotal, "the point was spent but landed nowhere");
+        }
+
+        // THE TRAP THE CELL ORDER SETS. The six cells are filled highest-first
+        // per character, so cell 0 holds whatever this character's best ability
+        // happens to be -- binding the score at wire time instead of resolving
+        // it at click time would spend into whatever was strongest when the
+        // screen was built.
+        [UnityTest]
+        public IEnumerator ThePlusSpendsIntoTheScoreShownUnderIt()
+        {
+            yield return OpenTheDossier();
+
+            var character = First();
+            character.unspentStatPoints = 1;
+            character.investedAbilityScores = default;
+
+            var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
+            dossier.Refresh();
+            yield return null;
+
+            // Whatever the top-left cell is labelled with is the score that
+            // must move.
+            string key = TextNamed("DossierAttrKey0").text.Trim();
+            Assert.IsNotEmpty(key, "the first attribute cell has no key label to read");
+
+            ButtonNamed("DossierAttrPlus0").onClick.Invoke();
+            yield return null;
+
+            character = First();
+            var moved = PrincesPalace.Domain.Stats.AbilityScores.All
+                .Where(s => character.investedAbilityScores[s] > 0)
+                .ToList();
+
+            Assert.AreEqual(1, moved.Count, "the point went into more than one score, or none");
+            StringAssert.StartsWith(moved[0].ToString().Substring(0, 3).ToUpperInvariant(),
+                key.ToUpperInvariant(),
+                $"the plus on the cell labelled '{key}' spent into {moved[0]} instead");
+        }
+
         private TMPro.TMP_Text TextNamed(string name) =>
             _menu.GetComponentsInChildren<TMPro.TMP_Text>(includeInactive: true)
                 .FirstOrDefault(t => t.name == name);

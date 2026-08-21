@@ -1299,7 +1299,7 @@ Three ways out, and it is a design call:
 Recorded rather than chosen, per this file's standing posture on design
 decisions that belong to the author.
 
-### 53. Stat points cannot be spent -- `Character.Invest` has no production caller
+### ~~53. Stat points cannot be spent -- `Character.Invest` has no production caller~~ -- **FIXED**: the dossier's attribute cells now carry a "+" that calls `Invest`, shown only when there are points to spend, with a "N POINTS TO SPEND" line beside the section heading so the mechanic is discoverable rather than a 22px glyph nobody looks at
 
 `Character.Invest(AbilityScore)` is implemented, commented at length ("ONE point
 at a time on purpose: the UI offers a '+' per score"), and covered by tests.
