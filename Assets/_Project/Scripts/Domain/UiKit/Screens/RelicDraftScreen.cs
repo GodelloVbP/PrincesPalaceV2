@@ -82,14 +82,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // Outside the card row, not over it: three 380-wide cards at a 420
             // pitch reach x +/-610, and the frame's half-width is 750.
             var prevPage = Ui.Button("DraftPrevPage", UiStrings.TalentPrev,
-                new UiVec(60f, 60f), 22, Place.At(-680f, 20f));
+                    new UiVec(60f, 60f), 22, Place.At(-680f, 20f))
+                .Inactive();
             var nextPage = Ui.Button("DraftNextPage", UiStrings.TalentNext,
-                new UiVec(60f, 60f), 22, Place.At(680f, 20f));
+                    new UiVec(60f, 60f), 22, Place.At(680f, 20f))
+                .Inactive();
 
             // Between the cards (which stop at y -210) and Descend (at -350).
             var pageLabel = Ui.Label("DraftPageLabel", UiString.Runtime, new UiVec(300f, 30f), 18,
                     "#B8A8D9", Place.At(0f, -280f))
-                .AsDecor();
+                .AsDecor()
+                .Inactive();
 
             screen.PrevPageButton = prevPage;
             screen.NextPageButton = nextPage;

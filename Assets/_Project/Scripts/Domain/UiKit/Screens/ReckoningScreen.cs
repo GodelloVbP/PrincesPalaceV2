@@ -258,7 +258,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // once for every save. Same reason the offer row is built four
             // wide.
             var reroll = Ui.Button("ReckoningRerollButton", UiString.Runtime,
-                new UiVec(170f, 40f), 17, Place.At(445f, 248f));
+                    new UiVec(170f, 40f), 17, Place.At(445f, 248f))
+                .Inactive();
             screen.RerollButton = reroll;
 
             var offerChildren = new List<UiNode> { lootHeading, reroll };

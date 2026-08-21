@@ -47,6 +47,12 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("overlay.count", "x{0}", "x99");
         public static readonly UiString OverlayPlus =
             UiString.Define("overlay.plus", "+{0}", "+10");
+        // The dossier's spend-a-stat-point button. ITS OWN STRING, not
+        // OverlayPlus: that one is the FORMAT "+{0}" for an item's plus level,
+        // and a format emitted with no argument renders its widest-case sample
+        // -- so every one of these six buttons read "+10".
+        public static readonly UiString DossierSpendPoint =
+            UiString.Define("dossier.spend_point", "+");
         public static readonly UiString OverlayPage =
             UiString.Define("overlay.page", "PAGE {0} OF {1}", "PAGE 99 OF 99");
         public static readonly UiString OverlayEquip = UiString.Define("overlay.equip", "EQUIP");
@@ -609,7 +615,7 @@ namespace PrincesPalace.Domain.UiKit
             StatMaxHealth, StatAttack, StatDefence, StatSpeed, StatManaRegen,
             StatPhysicalResistance, StatMagicalResistance, StatMaxMana, StatSignatureGain,
             HubWallet, HubBeginDescent, HubResumeFloor,
-            OverlayCount, OverlayPlus, OverlayPage,
+            OverlayCount, OverlayPlus, OverlayPage, DossierSpendPoint,
             OverlayEquip, OverlayUnequip, OverlayCannotWear, OverlayBagEmpty,
             TalentEmbers, TalentInvest, TalentTaken, TalentLocked, TalentNoEmbers,
             TalentPrev, TalentNext, TalentBack, TalentPath, TalentRespec,

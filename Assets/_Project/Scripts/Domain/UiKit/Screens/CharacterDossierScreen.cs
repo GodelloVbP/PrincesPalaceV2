@@ -661,7 +661,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // broken.
                 float halfWidth = (DossierLayout.AttributeCellWidth - 2f) * 0.5f;
                 float halfHeight = (DossierLayout.AttributeCellHeight - 2f) * 0.5f;
-                var plus = Ui.Button($"DossierAttrPlus{i}", UiStrings.OverlayPlus,
+                var plus = Ui.Button($"DossierAttrPlus{i}", UiStrings.DossierSpendPoint,
                         new UiVec(DossierLayout.AttributePlusSize, DossierLayout.AttributePlusSize), 14,
                         Place.At(halfWidth - DossierLayout.AttributePlusInset,
                                  halfHeight - DossierLayout.AttributePlusInset))

@@ -186,8 +186,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // build and nothing else -- re-kindling the same orbs costs the
             // same embers that just came back. The hold-to-confirm the abandon
             // button uses is for a run that cannot be got back.
+            // INACTIVE in the tree. TalentController.Refresh shows it only for
+            // a squad that has reached level 20 -- but a node that starts
+            // active is visible for the frame before any controller paints, so
+            // an unearned reward flashes on screen every time the screen opens.
+            // Same posture as the dossier's "+" buttons and the draft's empty
+            // hint.
             var respec = Ui.Button("TalentRespecButton", UiStrings.TalentRespec, new UiVec(220f, 60f), 16,
-                Place.At(-830f, -420f));
+                    Place.At(-830f, -420f))
+                .Inactive();
             screen.RespecButton = respec;
 
             // Hidden until an orb is picked, rather than sitting there empty.
