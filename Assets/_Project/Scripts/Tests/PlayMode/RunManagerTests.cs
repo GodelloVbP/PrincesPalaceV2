@@ -481,6 +481,94 @@ namespace PrincesPalace.PlayModeTests
                 "the map changed shape because a character levelled during the descent");
         }
 
+        // ---- attrition: the party catches its breath between legs ------------------
+        //
+        // REPORTED AS "floor 1 after the first elite it already becomes so
+        // difficult". The numbers said attrition rather than scaling: health
+        // carries room to room, rest rooms are weight 6 of 90 so 62% of legs
+        // contain none, levelling does not heal, and the shop that would sell a
+        // potion is not built. The party crossed into leg 2 on whatever the
+        // elite left them.
+
+        private static void HurtTheSquad(int hp)
+        {
+            var run = RunManager.Run;
+            run.currentHealth ??= new System.Collections.Generic.List<RunHealthEntry>();
+            run.currentHealth.Clear();
+
+            foreach (var character in SaveSlotManager.CurrentSave.ActiveSquad())
+            {
+                run.currentHealth.Add(new RunHealthEntry
+                {
+                    characterId = character.definitionId,
+                    hp = hp,
+                });
+            }
+        }
+
+        private static int LowestHealth()
+        {
+            int lowest = int.MaxValue;
+            foreach (var entry in RunManager.Run.currentHealth)
+            {
+                if (entry != null && entry.hp < lowest) lowest = entry.hp;
+            }
+
+            return lowest;
+        }
+
+        [Test]
+        public void AdvancingALegRestoresTheParty()
+        {
+            RunManager.StartRun(Seed);
+            HurtTheSquad(3);
+            Assert.AreEqual(3, LowestHealth(), "the fixture did not hurt anybody");
+
+            RunManager.AdvanceLeg();
+
+            Assert.Greater(LowestHealth(), 3,
+                "crossing into the next leg left the party on what the elite took off them");
+
+            foreach (var character in SaveSlotManager.CurrentSave.ActiveSquad())
+            {
+                int max = Content.ContentDatabase.EffectiveStats(character).maxHealth;
+                var entry = RunManager.Run.currentHealth.Find(e => e.characterId == character.definitionId);
+                Assert.AreEqual(max, entry.hp, $"{character.definitionId} did not come back to full");
+            }
+        }
+
+        // The reported case exactly: walk leg 1 to its elite, cross over, and
+        // check the party does not start leg 2 already spent.
+        [Test]
+        public void TheLegAfterTheFirstEliteStartsWhole()
+        {
+            RunManager.StartRun(Seed);
+            WalkToTheEndOfTheLeg();
+            Assert.AreEqual(RoomType.EliteFight, RunManager.CurrentNode.Type,
+                "leg 1 did not end on the elite, so this is not the reported case");
+
+            HurtTheSquad(1);
+            RunManager.AdvanceLeg();
+
+            Assert.Greater(LowestHealth(), 1,
+                "the party begins leg 2 on the health the elite left them");
+        }
+
+        // A heal that only fired for a full squad would quietly skip anyone
+        // knocked out -- the same rule the rest room follows, which is what
+        // makes a rest the answer to a bad fight rather than a top up for
+        // whoever survived it.
+        [Test]
+        public void EvenACharacterAtZeroComesBack()
+        {
+            RunManager.StartRun(Seed);
+            HurtTheSquad(0);
+
+            RunManager.AdvanceLeg();
+
+            Assert.Greater(LowestHealth(), 0, "a downed character stayed down across the leg boundary");
+        }
+
         // ---- levels 90 and 100: the second life and its refresh -------------------
 
         [Test]

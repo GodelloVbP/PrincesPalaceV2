@@ -1338,6 +1338,36 @@ tests are again what makes it look covered.
 is correct the day the spend exists, but a "+" per score on the dossier is its
 own change.
 
+### 54. `StatBlock.ScaledForElite` has no production caller -- elites get no stat boost at all
+
+`ScaledForElite(multiplier, defenseMultiplier, attackMultiplier)` exists, is
+commented at length, and names the playtesting it came out of: *"That
+combination -- defense originally uncapped, attack still uncapped even after
+defense was fixed -- is what made Elites 'completely clap you' in playtesting,
+twice."* It closes by pointing at `FightController.EliteStatMultiplier /
+EliteDefenseMultiplier / EliteAttackMultiplier` "for where this is actually
+used".
+
+**None of those three constants exists**, and nothing calls `ScaledForElite`.
+`grep` returns the method, its tests, and one passing mention in `Rounding`'s
+own comment.
+
+So an elite room differs from a normal one in exactly two ways: it fields
+`EncounterRoll.EliteEnemyCount` (2) enemies where a normal room rolls 1 or 2,
+and it pays `VictoryRewards.EliteRewardMultiplier` (1.56x). Its monsters are
+scaled by depth like everything else and by nothing else. Elites are
+substantially WEAKER than the design describes, not stronger.
+
+Found while diagnosing "floor 1 after the first elite it already becomes so
+difficult" -- where it matters as the thing that is NOT the cause. The report
+points at the elite; the elite is nearly a normal room.
+
+Same class as #53, #42 and `DifficultyCurve`'s own "AND THEN IT WAS NEVER
+CALLED": implemented, tested against inputs the test builds itself, unreachable
+from play, and carrying a comment that describes it as live. Recorded rather
+than wired, because switching it on would make the game harder and the reported
+problem is that it is already too hard.
+
 ## Open investigations
 
 ### ~~52. `SystemMenuExitsTests.OnePressOnAnExitDoesNothingButArmIt` flaked once, navigating to `"Hub"` — cause not found~~ — **ROOT CAUSE FOUND AND FIXED, 2026-08-21.** A `HoldToConfirm` left running by an earlier test in the same fixture. `HoldToConfirm` cancels itself `OnDisable`, and its comment explains why — but between two tests nothing disables it: the scene stays loaded until the next `LoadSceneAsync`, so a test that begins a hold and neither completes nor releases it leaves `Update()` advancing that hold into whatever runs next. When it completed it called `Abandon`, which navigates to the hub, and the navigation landed in the *next* test's recorder. The fixture's `TearDown` now cancels every live hold. **What made it findable:** the reward-track panel added ~450 nodes to the Hub scene, frames got long enough that the leftover hold finished inside the very next test every time, and a one-in-four flake became 3-for-3 — including in isolation, which it had never done. The extra nodes did not cause it; they made it reproducible enough to get a stack trace, which named `HoldToConfirm.Update` with no test above it. Guessing had blamed process-wide `Navigation.LoadOverride` state, which was wrong

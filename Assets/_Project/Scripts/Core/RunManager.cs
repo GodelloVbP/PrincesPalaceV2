@@ -347,6 +347,32 @@ namespace PrincesPalace
             run.currentNodeId = -1;
             run.clearedNodeIds.Clear();
 
+            // THE PARTY CATCHES ITS BREATH BETWEEN LEGS.
+            //
+            // Reported as "floor 1 after the first elite it already becomes so
+            // difficult", and the numbers say it is attrition rather than
+            // scaling. Health carries from room to room and NOTHING restored
+            // it: rest rooms are weight 6 of 90, so a seven-room leg expects
+            // 0.47 of one and 62% of legs contain none at all. Levelling does
+            // not heal, advancing a leg did not heal, and the shop that would
+            // sell a potion is not built. So the party crossed into leg 2 on
+            // whatever the elite left them, against enemies at 1.95x health and
+            // 1.58x attack, and it never recovered.
+            //
+            // The elite itself was not the spike, which is worth saying because
+            // it is where the report points: an elite room fields two enemies
+            // where a normal room fields one or two, and StatBlock.ScaledForElite
+            // -- the multiplier its own comment says made elites "completely
+            // clap you" in playtesting -- HAS NO CALLER (AUDIT #54). What comes
+            // after the elite is the problem, not the elite.
+            //
+            // A leg is the natural place: it ends on an elite or a boss, so
+            // this reads as the beat after a set piece rather than as a free
+            // heal in the middle of one. The reward track's level 30 is
+            // untouched -- it forces a rest on the step BEFORE a boss, and this
+            // fires after.
+            RunEncounter.HealPartyToFull(run);
+
             Forget();
 
             var entry = Map?.Entry;

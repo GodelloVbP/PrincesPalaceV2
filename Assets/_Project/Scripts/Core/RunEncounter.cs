@@ -152,6 +152,44 @@ namespace PrincesPalace
         // threading run state through it would put the descent inside the one
         // seam that is currently reusable by tests and the screenshot path
         // alike.
+        // Every squad member back to their effective maximum.
+        //
+        // The WHOLE squad, including anyone knocked out earlier -- that is what
+        // makes a rest the answer to a bad fight rather than a small top up for
+        // whoever happened to survive it. EncounterRoll.FieldableParty reads
+        // these same entries, so a character restored here fields again in the
+        // next room.
+        //
+        // HERE RATHER THAN IN RoomResolver, which is where it used to live, so
+        // that a rest room and the end of a leg heal by the same code. Two
+        // implementations of "restore the party" is exactly the kind of pair
+        // that drifts, and one of them would have been the one nobody tested.
+        public static void HealPartyToFull(RunSnapshot run)
+        {
+            var save = SaveSlotManager.CurrentSave;
+            if (run == null || save == null) return;
+
+            run.currentHealth ??= new List<RunHealthEntry>();
+
+            foreach (var character in save.ActiveSquad())
+            {
+                if (character == null || string.IsNullOrEmpty(character.definitionId)) continue;
+
+                int maxHealth = Content.ContentDatabase.EffectiveStats(character).maxHealth;
+
+                var entry = run.currentHealth.Find(e => e != null && e.characterId == character.definitionId);
+                if (entry == null)
+                {
+                    entry = new RunHealthEntry { characterId = character.definitionId };
+                    run.currentHealth.Add(entry);
+                }
+
+                entry.hp = maxHealth;
+            }
+
+            SaveSlotManager.SaveCurrent();
+        }
+
         public static void ApplyStartingHealth(
             IReadOnlyList<CombatantState> party,
             IReadOnlyList<string> partyIds,

@@ -56,43 +56,11 @@ namespace PrincesPalace
                 RunManager.BankPayout(outcome.Gold);
             }
 
-            if (outcome.HealsPartyToFull) HealPartyToFull(run);
+            if (outcome.HealsPartyToFull) RunEncounter.HealPartyToFull(run);
 
             return true;
         }
 
-        // Every squad member back to their effective maximum.
-        //
-        // The WHOLE squad, including anyone knocked out earlier -- that is what
-        // makes a Rest room the answer to a bad fight rather than a small top
-        // up for whoever happened to survive it. EncounterRoll.FieldableParty
-        // reads these same entries, so a character restored here fields again
-        // in the next room.
-        private static void HealPartyToFull(RunSnapshot run)
-        {
-            var save = SaveSlotManager.CurrentSave;
-            if (run == null || save == null) return;
-
-            run.currentHealth ??= new List<RunHealthEntry>();
-
-            foreach (var character in save.ActiveSquad())
-            {
-                if (character == null || string.IsNullOrEmpty(character.definitionId)) continue;
-
-                int maxHealth = ContentDatabase.EffectiveStats(character).maxHealth;
-
-                var entry = run.currentHealth.Find(e => e != null && e.characterId == character.definitionId);
-                if (entry == null)
-                {
-                    entry = new RunHealthEntry { characterId = character.definitionId };
-                    run.currentHealth.Add(entry);
-                }
-
-                entry.hp = maxHealth;
-            }
-
-            SaveSlotManager.SaveCurrent();
-        }
 
         // The line the map shows, as a TEMPLATE and its arguments rather than
         // as finished text.
