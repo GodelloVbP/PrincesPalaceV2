@@ -506,9 +506,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // figure's slots sit 98 authored units apart and the box plus its
             // caption already spend 88 of that -- so the only room left for the
             // ITEM is the padding inside the box it already has.
+            // ABOVE THE CAPTION BAND, not across it. The caption moved inside
+            // the socket and the icon filled the whole socket, so an equipped
+            // sword was drawn straight through the word naming its slot --
+            // "WEA(sword)ON 1". The icon gets the socket minus that band.
+            const float CaptionBand = 22f;
+            float iconSize = DossierLayout.SlotSize - CaptionBand;
             var icon = Ui.Sprite($"DossierSlotIcon{key}", null,
-                new UiVec(DossierLayout.SlotSize - 6f, DossierLayout.SlotSize - 6f),
-                Place.At(0f, 0f)).Inactive().AsDecor();
+                new UiVec(iconSize, iconSize),
+                Place.At(0f, CaptionBand * 0.5f)).Inactive().AsDecor();
 
             var tick = Ui.Solid($"DossierSlotTick{key}", "#7F8EA3", new UiVec(11f, 11f),
                 Place.At(-DossierLayout.SlotSize * 0.5f + 7f, DossierLayout.SlotSize * 0.5f - 7f))
@@ -530,14 +536,37 @@ namespace PrincesPalace.Domain.UiKit.Screens
             cell.Children.Add(tick);
             cell.Children.Add(blocked);
 
-            // 12px, up from 9, inside the box it already had. 9px was small
-            // enough that the slot captions read as decoration rather than as
-            // words -- "you can't even read anything" was about these. 12 fits
-            // the existing 16px box, so it costs no vertical room, which the
-            // stage has none of to give.
+            // THE SOCKET'S OWN FRAME, which the handover specified and nothing
+            // ever drew: SlotEmptyBorder and SlotBorder have sat in the token
+            // table above, declared and referenced by nothing, since the screen
+            // was written.
+            //
+            // Without it an unequipped slot renders as literally nothing -- the
+            // loadout was a column of captions at the panel's edge with a
+            // leader stub floating near the figure and empty space between them,
+            // which is what "the silhouette still looks very weird" was about.
+            // Growing the boxes did not help while they were invisible.
+            //
+            // Drawn at the empty weight for every slot. Swapping to SlotBorder
+            // when something is worn needs the controller to hold four node refs
+            // per slot, which is a bigger change than making the socket visible
+            // at all -- so SlotBorder stays unused for now, and knowingly.
+            foreach (var edge in Ui.Rim($"DossierSlot{key}",
+                         new UiVec(DossierLayout.SlotSize, DossierLayout.SlotSize), SlotEmptyBorder))
+            {
+                cell.Children.Add(edge);
+            }
+
+            // INSIDE the socket, along its bottom edge.
+            //
+            // Under the box it spent vertical room the box needed; beside it,
+            // once the boxes moved out to their files, the word ended up an
+            // inch from the socket it named with nothing between them. Inside,
+            // the socket and its word are one object and the files can sit
+            // wherever the figure leaves room.
             var label = Ui.Label($"DossierSlotLabel{key}", UiString.Runtime,
-                new UiVec(DossierLayout.SlotSize + 26f, 16f), 12, TextDim,
-                Place.At(at.X, at.Y - DossierLayout.SlotSize * 0.5f - 11f)).AsDecor();
+                new UiVec(DossierLayout.SlotSize - 8f, 16f), 11, TextDim,
+                Place.At(at.X, at.Y - DossierLayout.SlotSize * 0.5f + 11f)).AsDecor();
 
             SlotCells.Add(cell);
             SlotIcons.Add(icon);

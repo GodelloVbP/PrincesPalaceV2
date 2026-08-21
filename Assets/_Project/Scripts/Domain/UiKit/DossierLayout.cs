@@ -320,7 +320,15 @@ namespace PrincesPalace.Domain.UiKit
         public static float MannequinLeft => 148f * StageScale;
         public static float MannequinTop => 92f * StageScale;
 
-        public static float SlotSize => 74f * StageScale;
+        // 86, NOT 96, and the ceiling is the spacing rather than the room.
+        //
+        // Slots sit 98 authored units apart because that is where the body
+        // parts are. At 96 the boxes cleared each other by two units and the
+        // left file rendered as one unbroken strip -- four sockets reading as a
+        // single tall box, which is worse than the small ones were. 86 leaves a
+        // 12-unit gutter, which is what makes them read as four things.
+        public static float SlotSize => 86f * StageScale;
+
 
         // ---- where the body ACTUALLY is ----------------------------------------
         //
@@ -403,19 +411,38 @@ namespace PrincesPalace.Domain.UiKit
         }
 
         // Where each slot sits, straight from the handover's table.
+        // TWO ALIGNED FILES. The x is the file's, the y is the body's.
+        //
+        // Every slot used to author both, and the x's drifted (120, 132, 140,
+        // 152, 243) because they were chosen to hug a 74-wide box against the
+        // figure's outline. At 96 that put the boxes ON the arms. The vertical
+        // positions are still anatomy -- a slot has to sit level with the part
+        // it names, which is what the leader points at -- but the horizontal
+        // never was, and pinning each file to one x is what lets the box grow.
+        // Close enough to the figure that the leader reads as a tie rather
+        // than as a long walk, and far enough that a 86-wide box clears the
+        // silhouette's arms.
+        public const float FileLeftX = 56f;
+        public const float FileRightX = 424f;
+
         public static UiVec SlotAt(EquipmentSlot slot)
         {
+            float top;
+            bool left = true;
+
             switch (slot)
             {
-                case EquipmentSlot.Head: return OnBodyFromStage(243f, 0f, SlotSize, SlotSize);
-                case EquipmentSlot.Necklace: return OnBodyFromStage(152f, 150f, SlotSize, SlotSize);
-                case EquipmentSlot.Torso: return OnBodyFromStage(140f, 248f, SlotSize, SlotSize);
-                case EquipmentSlot.Gloves: return OnBodyFromStage(120f, 350f, SlotSize, SlotSize);
-                case EquipmentSlot.Legs: return OnBodyFromStage(132f, 452f, SlotSize, SlotSize);
-                case EquipmentSlot.Weapon1: return OnBodyFromStage(388f, 248f, SlotSize, SlotSize);
-                case EquipmentSlot.Weapon2: return OnBodyFromStage(388f, 350f, SlotSize, SlotSize);
-                default: return OnBodyFromStage(392f, 540f, SlotSize, SlotSize);  // Shoes
+                case EquipmentSlot.Head: top = 0f; break;
+                case EquipmentSlot.Necklace: top = 150f; break;
+                case EquipmentSlot.Torso: top = 248f; break;
+                case EquipmentSlot.Gloves: top = 350f; break;
+                case EquipmentSlot.Legs: top = 452f; break;
+                case EquipmentSlot.Weapon1: top = 248f; left = false; break;
+                case EquipmentSlot.Weapon2: top = 350f; left = false; break;
+                default: top = 540f; left = false; break;  // Shoes
             }
+
+            return OnBodyFromStage(left ? FileLeftX : FileRightX, top, SlotSize, SlotSize);
         }
 
         // The hairline that ties a slot back to the body: left, top, width in
@@ -432,23 +459,34 @@ namespace PrincesPalace.Domain.UiKit
         // by being edited and another missed.
         public static UiVec LeaderAt(EquipmentSlot slot, out float width)
         {
-            float left;
+            // ONLY THE BODY END IS AUTHORED. Where a leader stops is anatomy --
+            // it reaches into the figure at the part its slot names, which is
+            // why these numbers are not round. Where it STARTS is wherever the
+            // box happens to be, so it is derived from the file rather than
+            // authored beside it: the pair used to be two numbers that had to be
+            // edited together, and moving a slot without its leader leaves a
+            // hairline pointing at nothing.
+            float bodyEnd;
             float top;
+            bool left = true;
 
             switch (slot)
             {
-                case EquipmentSlot.Head: width = 37f; left = 243f; top = 82f; break;
-                case EquipmentSlot.Necklace: width = 36f; left = 226f; top = 187f; break;
-                case EquipmentSlot.Torso: width = 24f; left = 214f; top = 285f; break;
-                case EquipmentSlot.Gloves: width = 18f; left = 194f; top = 387f; break;
-                case EquipmentSlot.Legs: width = 36f; left = 206f; top = 489f; break;
-                case EquipmentSlot.Weapon1: width = 40f; left = 348f; top = 285f; break;
-                case EquipmentSlot.Weapon2: width = 40f; left = 348f; top = 387f; break;
-                default: width = 67f; left = 325f; top = 577f; break;  // Shoes
+                case EquipmentSlot.Head: bodyEnd = 280f; top = 82f; break;
+                case EquipmentSlot.Necklace: bodyEnd = 262f; top = 187f; break;
+                case EquipmentSlot.Torso: bodyEnd = 238f; top = 285f; break;
+                case EquipmentSlot.Gloves: bodyEnd = 212f; top = 387f; break;
+                case EquipmentSlot.Legs: bodyEnd = 242f; top = 489f; break;
+                case EquipmentSlot.Weapon1: bodyEnd = 348f; top = 285f; left = false; break;
+                case EquipmentSlot.Weapon2: bodyEnd = 348f; top = 387f; left = false; break;
+                default: bodyEnd = 325f; top = 577f; left = false; break;  // Shoes
             }
 
-            width *= StageScale;
-            return OnBodyFromStage(left, top, width, 1f);
+            float boxEdge = left ? FileLeftX + 86f : FileRightX;
+            float from = left ? boxEdge : bodyEnd;
+            width = (left ? bodyEnd - boxEdge : boxEdge - bodyEnd) * StageScale;
+
+            return OnBodyFromStage(from, top, width, 1f);
         }
 
         // ---- column C: the numbers ----------------------------------------------
