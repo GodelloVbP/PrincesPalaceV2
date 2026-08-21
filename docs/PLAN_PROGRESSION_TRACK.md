@@ -21,7 +21,7 @@ four of the twelve milestones sit on machinery that exists:
 |---|---|---|
 | 10 | Favor +5 | the *reader* does — no writable Favor. F2 |
 | 20 | Free respec | **no.** No respec anywhere; `Character.cs:30` mentions one hypothetically |
-| 25/45 | Relic slots 2, 3 | `RelicLoadout` is one slot; its header already specs the widening |
+| 25/45 | Relic slots 2, 3 | **no cap exists to lift** — `RunSnapshot.relicIds` is a list, design is "infinite slots per run". `AUDIT.md` #50, #51 |
 | 30 | Rest before every boss | **no.** Rest is a room type the map may or may not lay down |
 | 40 | Offer reroll | **no** |
 | 50 | Wider offer | constant exists, but see F3 |
@@ -165,10 +165,17 @@ list of ids), the "what does level N grant" lookup, and the claim call sited in
 new reward kinds yet — grant stat points and Favor only, which B and C have made
 real. *This is the first phase that is playable.*
 
-**E — Reward kinds, cheapest first.** Relic slots (25/45) first: `RelicLoadout`'s
-header already specifies the shape, and 60 depends on it. Then offer width (50,
-per F3), then reroll (40), then the genuinely new systems — respec (20), rest
-access (30), relic drops (80), starting-relic choice (70), second life (90/100).
+**E — Reward kinds, cheapest first.** ~~Relic slots (25/45) first~~ — **that
+ordering was wrong and the reward itself is blocked; see `AUDIT.md` #50 and
+#51.** `RelicLoadout` has no production reader at all (relics in play live on
+`RunSnapshot.relicIds`), and there is no slot cap to lift — `relicIds` is a list
+whose header states the design as "infinite slots per run". Nothing else depends
+on 25/45: level 60 is drafting twice, level 80 is `relicIds.Add`. Those two
+levels need a design call before anything is built.
+
+Remaining order: offer width (50, per F3), then reroll (40), then relic drops
+(80, now the cheapest of the new systems rather than one of the dearest), then
+respec (20), rest access (30), starting-relic choice (70), second life (90/100).
 Each is its own commit and its own decision about whether it is worth building.
 
 **F — The screen.** Seven touch points, six mechanically caught

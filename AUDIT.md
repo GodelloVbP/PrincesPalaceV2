@@ -1239,6 +1239,66 @@ in either direction fails for its own reason. The class of bug (a comment
 asserting a guard that does not exist) is not mechanically closable; the
 narrowest available fix is that the guard now exists.
 
+### 50. `SaveData.relicLoadout` is written by nothing and read by nothing
+
+`RelicLoadout` is a 160-line class with a careful exclusivity rule ("assigning a
+relic that is already in use takes it away from whoever had it"), a `Set` that
+returns the displaced relic, `CharacterHolding` for greying out a card on an
+assign screen, and eleven EditMode tests. **Nothing in the game calls any of
+it.** `save.relicLoadout` appears in exactly two places outside its own file and
+its own tests: the field declaration (`SaveData.cs:126`) and `Reconcile`
+(`:491-492`), which validates entries that nothing ever creates.
+
+Relics in play live on `RunSnapshot.relicIds` instead, and that file says why:
+*"Drafted at the start of a descent and GONE when it ends -- which is why they
+live here rather than on SaveData."* `RelicDraftController` writes there,
+`FightBootstrap` reads there, `ReckoningController` and `RunStatsController` read
+there. The per-character loadout is a v1 shape that survived the rebuild with its
+tests attached, which is what kept it looking alive.
+
+Same class as #41 (`CurrencyType.Embers` with no live reader), and the tests are
+what make it expensive rather than merely untidy: eleven passing tests over a
+type the game never invokes read, from the outside, as coverage.
+
+**This one has already cost planning time.** `docs/PLAN_PROGRESSION_TRACK.md`
+priced the track's level-25 and level-45 "extra relic slot" rewards as a
+widening of `RelicLoadout` from one entry per character to one per
+(characterId, slotIndex) -- following that class's own header, which specifies
+the widening as a stated future extension. The widening would have been correct,
+tested, and reachable from nothing.
+
+Not deleted yet: see the reward-track note below, because whether these
+milestones become real is what decides whether the type has a future.
+
+### 51. The track's "extra relic slot" rewards have nothing to unlock
+
+`RunSnapshot.relicIds:108-111` states the design outright: *"A list rather than a
+single id, deliberately. Only one is drafted today, but the design is 'infinite
+slots per run' -- mid-run relic rewards from elites or bosses drop straight in
+here with no shape change."*
+
+There is no slot cap anywhere. A character can already hold any number of relics
+in a run; only one is ever *offered*. So levels 25 and 45 grant capacity that is
+already unlimited — the same shape as the two the handover already caught, where
+"rest heals more" had nothing to improve because `RoomResolution` already heals
+to full, and "honed offers" was a second dial on the Favor already driving
+`RollTier` and `RollPlus`.
+
+Three ways out, and it is a design call:
+
+1. **Drop 25 and 45**, refill with filler, exactly as the gold nodes were held.
+   Level 60 ("start every run with 2 relics") does not need them — it is drafting
+   twice — and level 80 ("elites drop a relic") is `relicIds.Add`, which the
+   comment above already anticipates.
+2. **Introduce a cap** so the slots have something to lift. This makes the game
+   more restrictive before it makes it more generous, and contradicts a design
+   statement that is written down rather than assumed.
+3. **Repurpose 25 and 45** to grant an extra *starting* relic each, so the relic
+   line reads 25 → 2 at start, 45 → 3, 60 → the existing milestone folds in.
+
+Recorded rather than chosen, per this file's standing posture on design
+decisions that belong to the author.
+
 ## Open investigations
 
 ### ~~24. `BloodlustRelic_GrantsAnImmediateExtraTurnAfterAKillingBlow` flakes on fresh content/scene builds — root cause not found~~ — **ROOT CAUSE FOUND, 2026-08-04.** It is a symptom of #13, and fixing that fixed this. Reproduced 2 times in 8 runs before, then 0 in 12 after
