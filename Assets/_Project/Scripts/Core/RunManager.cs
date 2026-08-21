@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using PrincesPalace.Domain.Dungeon;
+using PrincesPalace.Domain.Progression;
 using PrincesPalace.Domain.Rng;
 
 namespace PrincesPalace
@@ -100,7 +101,8 @@ namespace PrincesPalace
 
                 if (_map == null || _mapSeed != run.runSeed || _mapStartStep != run.legStartStep)
                 {
-                    _map = DescentMapGenerator.GenerateLeg(new SeededRandom(run.runSeed), run.legStartStep);
+                    _map = DescentMapGenerator.GenerateLeg(new SeededRandom(run.runSeed), run.legStartStep,
+                        restBeforeBoss: run.restBeforeBoss);
                     _mapSeed = run.runSeed;
                     _mapStartStep = run.legStartStep;
                 }
@@ -150,6 +152,12 @@ namespace PrincesPalace
                 step = 0,
                 floor = 1,
                 currentNodeId = -1,
+
+                // FIXED FOR THE WHOLE DESCENT, here and nowhere else. The map
+                // is regenerated from the seed on demand, so a rule the
+                // generator reads has to stop moving the moment the run starts
+                // -- see RunSnapshot.restBeforeBoss.
+                restBeforeBoss = SquadTrack.HasUnlocked(TrackReward.RestBeforeBoss),
             };
 
             Forget();

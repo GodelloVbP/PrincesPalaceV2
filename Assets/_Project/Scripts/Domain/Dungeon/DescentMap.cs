@@ -177,7 +177,7 @@ namespace PrincesPalace.Domain.Dungeon
         // elite. Step 0 is the entry a player is standing in rather than a
         // room they chose, so it forces nothing — without that guard the
         // very first column of the run would be a boss.
-        public static RoomType? ForcedTypeAt(int absoluteStep)
+        public static RoomType? ForcedTypeAt(int absoluteStep, bool restBeforeBoss = false)
         {
             if (absoluteStep <= 0)
             {
@@ -187,6 +187,29 @@ namespace PrincesPalace.Domain.Dungeon
             if (absoluteStep % StepsPerBoss == 0)
             {
                 return RoomType.Boss;
+            }
+
+            // A GUARANTEED REST ON THE STEP BEFORE EACH BOSS -- level 30 of the
+            // reward track.
+            //
+            // Access rather than amount, and that is the whole design: rest
+            // already heals the party to FULL (RoomResolution returns
+            // Outcome(Kind.Rest, healsPartyToFull: true)), so a "rest heals
+            // more" reward would have had nothing to improve. What a player
+            // actually lacks is the certainty of getting one before the fight
+            // that matters.
+            //
+            // Cannot collide with the elite cadence: rests land where
+            // step % 16 == 15 and elites where step % 8 == 0, so no step is
+            // ever both. Boss still wins outright, which keeps step 16 a boss
+            // rather than anything else.
+            //
+            // A parameter rather than a lookup, because Domain is engine-free
+            // and has no way to ask a save what the squad has earned. The
+            // caller threads it in.
+            if (restBeforeBoss && absoluteStep % StepsPerBoss == StepsPerBoss - 1)
+            {
+                return RoomType.Rest;
             }
 
             return absoluteStep % StepsPerElite == 0 ? RoomType.EliteFight : (RoomType?)null;
@@ -201,7 +224,8 @@ namespace PrincesPalace.Domain.Dungeon
         // 8-step grid, so a leg generated at a multiple of 8 always ENDS on
         // its forced room; that is what makes leg 1 finish on an elite and
         // leg 2 on a boss without either being special-cased here.
-        public static DescentMap GenerateLeg(SeededRandom random, int startStep, int legLength = DefaultLegLength)
+        public static DescentMap GenerateLeg(SeededRandom random, int startStep,
+            int legLength = DefaultLegLength, bool restBeforeBoss = false)
         {
             if (random == null)
             {
@@ -225,7 +249,7 @@ namespace PrincesPalace.Domain.Dungeon
             var columns = new List<List<DescentNode>>();
             for (int d = 0; d < columnCount; d++)
             {
-                RoomType? forced = d == 0 ? RoomType.Entry : ForcedTypeAt(startStep + d);
+                RoomType? forced = d == 0 ? RoomType.Entry : ForcedTypeAt(startStep + d, restBeforeBoss);
 
                 int width = forced.HasValue ? 1 : random.NextInt(2, MaxColumnWidth + 1);
                 var column = new List<DescentNode>();

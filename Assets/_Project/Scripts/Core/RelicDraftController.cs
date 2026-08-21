@@ -101,32 +101,8 @@ namespace PrincesPalace
 
         // How many relics this descent gets to draft.
         //
-        // THE BEST LEVEL IN THE FIELDED SQUAD, not the sum and not the first
-        // slot's. The same rule ItemOfferRoll.SquadFavor uses, and for the same
-        // reason: a run-scoped reward on a per-character track has to resolve
-        // to one number somehow, and "the best character you brought" makes
-        // fielding them the decision. Summing would make it "bring more
-        // bodies".
-        //
-        // This is the open question in docs/HANDOVER_PROGRESSION_TRACK.md 4c,
-        // answered the cheap way while the squad is one character. The other
-        // reading -- the benefit applies only while that character is fielded
-        // -- is more interesting and needs a per-character notion of "whose
-        // relic this is", which relicIds does not have.
-        internal static int DraftCount()
-        {
-            var save = SaveSlotManager.CurrentSave;
-            if (save == null) return RewardTrack.BaseStartingRelics;
-
-            int best = RewardTrack.BaseStartingRelics;
-            foreach (var character in save.ActiveSquad())
-            {
-                int allowed = RewardTrack.StartingRelics(character?.level ?? 1);
-                if (allowed > best) best = allowed;
-            }
-
-            return best;
-        }
+        // Best level in the squad; SquadTrack owns that rule and why.
+        internal static int DraftCount() => RewardTrack.StartingRelics(SquadTrack.BestLevel());
 
         // What the CURRENT round offers.
         //

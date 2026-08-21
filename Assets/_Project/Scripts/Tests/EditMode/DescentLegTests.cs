@@ -28,6 +28,94 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(expected, DescentMapGenerator.ForcedTypeAt(step));
         }
 
+        // ---- level 30: a rest before every boss ----------------------------------
+
+        [TestCase(15, RoomType.Rest)]
+        [TestCase(31, RoomType.Rest)]
+        [TestCase(47, RoomType.Rest)]
+        [TestCase(16, RoomType.Boss)]
+        [TestCase(32, RoomType.Boss)]
+        [TestCase(8, RoomType.EliteFight)]
+        [TestCase(24, RoomType.EliteFight)]
+        [TestCase(14, null)]
+        [TestCase(17, null)]
+        public void TheRestLandsOnTheStepBeforeEachBoss(int step, RoomType? expected)
+        {
+            Assert.AreEqual(expected, DescentMapGenerator.ForcedTypeAt(step, restBeforeBoss: true));
+        }
+
+        // Off by default, so every run that has not earned it is unchanged.
+        // Written against the whole cadence rather than one step, because the
+        // failure worth catching is the reward leaking into runs that did not
+        // earn it.
+        [Test]
+        public void WithoutTheRewardNothingAboutTheCadenceMoves()
+        {
+            for (int step = 1; step <= 64; step++)
+            {
+                Assert.AreEqual(DescentMapGenerator.ForcedTypeAt(step),
+                    DescentMapGenerator.ForcedTypeAt(step, restBeforeBoss: false),
+                    $"step {step} differs with the reward explicitly off");
+
+                Assert.AreNotEqual(RoomType.Rest, DescentMapGenerator.ForcedTypeAt(step),
+                    $"step {step} forces a rest without the reward");
+            }
+        }
+
+        // THE COLLISION THAT DOES NOT HAPPEN, pinned so a cadence retune cannot
+        // introduce it quietly. Rests land where step % 16 == 15 and elites
+        // where step % 8 == 0, so no step is ever both -- and a boss wins
+        // outright wherever it applies.
+        [Test]
+        public void ARestNeverStealsAnEliteOrABossStep()
+        {
+            for (int step = 1; step <= 200; step++)
+            {
+                var withReward = DescentMapGenerator.ForcedTypeAt(step, restBeforeBoss: true);
+                var without = DescentMapGenerator.ForcedTypeAt(step);
+
+                if (without == RoomType.Boss || without == RoomType.EliteFight)
+                {
+                    Assert.AreEqual(without, withReward,
+                        $"the rest reward replaced the {without} at step {step}");
+                }
+            }
+        }
+
+        // And it reaches the generated map, not just the rule.
+        [Test]
+        public void AGeneratedLegPutsTheRestImmediatelyBeforeItsBoss()
+        {
+            // A leg starting at 8 runs steps 9..16, so the boss at 16 is its
+            // last column and the rest at 15 is the one before.
+            var map = DescentMapGenerator.GenerateLeg(new SeededRandom(7), startStep: 8, restBeforeBoss: true);
+
+            var boss = map.Nodes.FirstOrDefault(n => n.Type == RoomType.Boss);
+            Assert.IsNotNull(boss, "the leg has no boss, so this test is not testing what it says");
+
+            var before = map.Nodes.Where(n => n.Depth == boss.Depth - 1).ToList();
+            Assert.AreEqual(1, before.Count,
+                "the column before the boss is not a forced single, so nothing guaranteed anything");
+            Assert.AreEqual(RoomType.Rest, before[0].Type,
+                "the guaranteed rest is not on the column before the boss");
+        }
+
+        // Non-vacuity for the test above: without the reward that same column
+        // is a normal forked column of rolled rooms, so the rest it finds is
+        // the reward's doing rather than something the weights rolled.
+        [Test]
+        public void TheSameLegWithoutTheRewardLeavesThatColumnAlone()
+        {
+            var map = DescentMapGenerator.GenerateLeg(new SeededRandom(7), startStep: 8);
+
+            var boss = map.Nodes.FirstOrDefault(n => n.Type == RoomType.Boss);
+            Assert.IsNotNull(boss);
+
+            var before = map.Nodes.Where(n => n.Depth == boss.Depth - 1).ToList();
+            Assert.Greater(before.Count, 1,
+                "without the reward the column before the boss is already a forced single");
+        }
+
         // Step 0 is the entry the player is standing in rather than a room
         // they chose. Without the guard, 0 % 16 == 0 would make the very
         // first column of the run a boss.

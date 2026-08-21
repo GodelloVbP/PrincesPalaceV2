@@ -133,5 +133,26 @@ namespace PrincesPalace
         // in-flight run has no such field and JsonUtility leaves it at zero,
         // which is exactly "has rerolled nothing yet".
         public int offerRerollsUsed;
+
+        // Whether this descent guarantees a rest on the step before each boss
+        // -- level 30 of the reward track.
+        //
+        // SNAPSHOT AT StartRun RATHER THAN READ LIVE, which is the opposite of
+        // how the reroll allowance works, and the difference matters. The map
+        // is not serialised: RunManager regenerates it from the seed whenever
+        // it is asked (that is what makes a reloaded descent identical). If
+        // this were read from the squad each time, a character levelling to 30
+        // MID-DESCENT would change what the generator produces -- and the leg
+        // the player is standing in would silently reshape underneath them,
+        // rooms they had already seen turning into different rooms.
+        //
+        // A reroll allowance changing mid-run is harmless. A map changing
+        // mid-run is the same class of problem as a draft that reshuffles on
+        // reload, which the relic draft's seed exists to prevent.
+        //
+        // The cost is that this reward starts applying on the NEXT descent
+        // rather than the current one, which is the ordinary behaviour of a
+        // rule fixed at run start.
+        public bool restBeforeBoss;
     }
 }

@@ -425,6 +425,62 @@ namespace PrincesPalace.PlayModeTests
                 "starting a run took away points that were earned and not yet placed");
         }
 
+        // ---- level 30: a rest before every boss ----------------------------------
+
+        private static void LevelTheSquadTo(int level)
+        {
+            foreach (var character in SaveSlotManager.CurrentSave.ActiveSquad())
+            {
+                character.level = level;
+            }
+        }
+
+        [Test]
+        public void AnUnlevelledSquadGetsNoGuaranteedRest()
+        {
+            RunManager.StartRun(Seed);
+
+            Assert.IsFalse(RunManager.Run.restBeforeBoss,
+                "a level-1 squad is getting a reward it has not earned");
+        }
+
+        [Test]
+        public void ALevelThirtySquadDescendsWithTheRestGuaranteed()
+        {
+            // Squad levelled BEFORE the run starts, because the rule is fixed
+            // at StartRun -- which is the point of the next test.
+            RunManager.StartRun(Seed);
+            LevelTheSquadTo(30);
+            RunManager.StartRun(Seed);
+
+            Assert.IsTrue(RunManager.Run.restBeforeBoss,
+                "level 30 granted a rest before every boss and the descent did not take it");
+        }
+
+        // THE REASON THIS IS SNAPSHOT RATHER THAN READ LIVE.
+        //
+        // The map is not serialised -- RunManager regenerates it from the seed
+        // whenever asked, which is what makes a reloaded descent identical. If
+        // the generator read this rule from the squad each time, a character
+        // levelling to 30 MID-DESCENT would change what it produces, and the
+        // leg the player is standing in would reshape underneath them: rooms
+        // already walked past turning into different rooms.
+        [Test]
+        public void LevellingMidDescentDoesNotReshapeTheLegUnderThePlayer()
+        {
+            RunManager.StartRun(Seed);
+            var before = RunManager.Map.Nodes.Select(n => (n.Id, n.Type, n.Depth)).ToList();
+
+            LevelTheSquadTo(30);
+
+            // Drop the cache and ask again, exactly as a reload does.
+            RunManager.ResetForTests();
+            var after = RunManager.Map.Nodes.Select(n => (n.Id, n.Type, n.Depth)).ToList();
+
+            CollectionAssert.AreEqual(before, after,
+                "the map changed shape because a character levelled during the descent");
+        }
+
         // The other half, and the reason this is two tests rather than one:
         // the run itself IS discarded. If a future change starts resetting the
         // roster on StartRun, the test above catches it; if one stops clearing

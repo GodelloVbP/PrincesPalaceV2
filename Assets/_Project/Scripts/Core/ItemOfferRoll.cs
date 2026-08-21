@@ -112,42 +112,11 @@ namespace PrincesPalace
 
         // How many items the fielded squad is offered.
         //
-        // THE BEST LEVEL IN THE SQUAD, the same max-not-sum rule Favor and the
-        // relic draft use, and for the same reason: a run-scoped reward on a
-        // per-character track has to resolve to one number, and "the best
-        // character you brought" makes fielding them the decision.
-        public static int CurrentOfferWidth()
-        {
-            var save = SaveSlotManager.CurrentSave;
-            if (save == null) return ItemOfferTable.OfferCount;
-
-            int best = ItemOfferTable.OfferCount;
-            foreach (var character in save.ActiveSquad())
-            {
-                int width = OfferRowLayout.CardsFor(character?.level ?? 1);
-                if (width > best) best = width;
-            }
-
-            return best;
-        }
+        // Best level in the squad; SquadTrack owns that rule and why.
+        public static int CurrentOfferWidth() => OfferRowLayout.CardsFor(SquadTrack.BestLevel());
 
         // How many rerolls the fielded squad gets per descent.
-        //
-        // Same best-in-squad rule as the offer width above and the relic draft.
-        public static int CurrentRerollAllowance()
-        {
-            var save = SaveSlotManager.CurrentSave;
-            if (save == null) return 0;
-
-            int best = 0;
-            foreach (var character in save.ActiveSquad())
-            {
-                int allowed = RewardTrack.RerollsPerRun(character?.level ?? 1);
-                if (allowed > best) best = allowed;
-            }
-
-            return best;
-        }
+        public static int CurrentRerollAllowance() => RewardTrack.RerollsPerRun(SquadTrack.BestLevel());
 
         // The offers, each with its own independently rolled plus.
         //
