@@ -47,6 +47,14 @@ namespace PrincesPalace.Domain.Tests
             IReadOnlyList<ResolvedRelic> relics = null) =>
             new PlayerKit("hero", role, skills, relics, null);
 
+        // A skill the actor cannot meet. STR 99 is past anything a fixture hero
+        // rolls, so "unmet" here is a fact rather than a tuning coincidence.
+        private static ResolvedSkill OutOfReachSkill(string displayName) =>
+            new ResolvedSkill("outofreach", displayName, "", "hero", 1, SkillEffect.DamageSingle,
+                SkillTargeting.SingleEnemy, 0, 0, false, 100, 0, false,
+                null, "", 0.6f, 3, "", 0,
+                requirements: new AbilityScoreBlock(99, 0, 0, 0, 0, 0));
+
         private static (FightSession session, CombatantState hero, CombatEncounter encounter) Fight(
             PlayerKit kit, CombatantState hero = null, params CombatantState[] foes)
         {
@@ -65,6 +73,45 @@ namespace PrincesPalace.Domain.Tests
             session.DrainBeats().SelectMany(b => b.Messages);
 
         // ---- damage ------------------------------------------------------------
+
+        // ---- what the menu offers -------------------------------------------
+
+        [Test]
+        public void ASkillWhoseRequirementsAreUnmet_IsNotOffered()
+        {
+            // It used to be listed with a LOCKED prefix and greyed out, so every
+            // turn the player read past rows they could not pick.
+            var reachable = Skill(SkillEffect.DamageSingle, displayName: "Reachable");
+            var (session, hero, _) = Fight(Kit(skills: new[] { OutOfReachSkill("Out Of Reach"), reachable }));
+
+            var options = session.SkillOptionsFor(hero);
+
+            CollectionAssert.AreEqual(new[] { "Reachable" },
+                options.Select(o => o.Skill.DisplayName).ToArray(),
+                "an unusable skill is still being offered");
+        }
+
+        [Test]
+        public void AFilteredOutSkill_DoesNotShiftTheOnesBehindIt()
+        {
+            // THE TRAP THIS FILTER SETS. The menu dispatches on the row that was
+            // pressed, and while nothing was hidden the row and the skill's index
+            // in the kit were the same number. Hide the first skill and they stop
+            // agreeing -- so pressing the only visible row would have cast
+            // whatever sits at kit index 0, which is the skill just hidden for
+            // being unusable.
+            //
+            // The option carries the index it came from, and that is what the
+            // dispatcher sends. This pins it.
+            var reachable = Skill(SkillEffect.DamageSingle, displayName: "Reachable");
+            var (session, hero, _) = Fight(Kit(skills: new[] { OutOfReachSkill("Out Of Reach"), reachable }));
+
+            var options = session.SkillOptionsFor(hero);
+
+            Assert.AreEqual(1, options.Count, "fixture check: exactly one skill should survive the filter");
+            Assert.AreEqual(1, options[0].Index,
+                "the surviving option forgot where it came from, so the menu would cast the hidden skill");
+        }
 
         [Test]
         public void DamageSingleHitsTheTargetAndSaysWhatItWas()

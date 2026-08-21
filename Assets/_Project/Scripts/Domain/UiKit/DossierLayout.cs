@@ -142,9 +142,13 @@ namespace PrincesPalace.Domain.UiKit
         // The list SCROLLS rather than paging. Paging was recorded as the real
         // fix for "24 of 27" and never built; scrolling is the same fix without
         // asking the player to remember which page a thing was on.
-        public const float PackHeaderHeight = 26f;
+        // 30 and 32, up from 26 each, because the type inside them grew.
+        // "The close and sort buttons on the pack are very small and not
+        // legible" -- they were 10 and 11px against the 15px the cells beside
+        // them now use, which is what made them read as decoration.
+        public const float PackHeaderHeight = 30f;
 
-        public const float PackSortRowHeight = 26f;
+        public const float PackSortRowHeight = 32f;
         public const float PackSortGap = 8f;
         public const float PackSortButtonWidth = 84f;
 

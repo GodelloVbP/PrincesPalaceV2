@@ -31,7 +31,13 @@ namespace PrincesPalace
         // migration hands the whole old pool to the first roster member rather
         // than splitting it, because splitting would silently reduce what any
         // one character can afford and there is no record of who earned what.
-        public const int CurrentVersion = 3;
+        // 3 -> 4: a run keeps nothing. Gear and the pack are cleared when a
+        // run ends now, and a save written before that rule is carrying the
+        // spoils of runs that ended under the old one -- 41 stockpiled items
+        // and three worn pieces on the save that reported this. Cleared once,
+        // on the way up, rather than left as a permanent exception to a rule
+        // the game otherwise enforces.
+        public const int CurrentVersion = 4;
 
         // Meta-progression: the "extra_recruit_slot" Principality upgrade
         // raises this. Matches the id ContentBuilder authors it under —
@@ -278,6 +284,11 @@ namespace PrincesPalace
                 MoveEmbersOntoTheRoster();
             }
 
+            if (version < 4)
+            {
+                ClearWhatARunShouldNotHaveKept();
+            }
+
             version = CurrentVersion;
             Reconcile();
             return true;
@@ -289,6 +300,23 @@ namespace PrincesPalace
         // can afford, and since nothing recorded who earned the embers there is
         // no honest way to divide them. Giving them to one character is at
         // least a decision somebody can see and undo.
+        // The one-time sweep for saves written before "a run keeps nothing".
+        //
+        // Only ever runs on the way from 3 to 4, so a player who buys something
+        // between runs after this keeps it until their next run ends -- which is
+        // the rule, not an exception to it. Deliberately NOT put in Reconcile:
+        // that runs on every load, and clearing the pack there would delete a
+        // purchase before the run it was bought for ever started.
+        private void ClearWhatARunShouldNotHaveKept()
+        {
+            stockpiledItems?.Clear();
+
+            foreach (var character in roster ?? new List<Character>())
+            {
+                character?.equipment?.Clear();
+            }
+        }
+
         private void MoveEmbersOntoTheRoster()
         {
             int pooled = wallet.embers;

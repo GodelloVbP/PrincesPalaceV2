@@ -95,8 +95,19 @@ namespace PrincesPalace.Domain.Combat.Session
             var kit = KitFor(actor);
             if (kit == null) return Array.Empty<ResolvedSkillOption>();
 
+            // ONLY WHAT THE ACTOR CAN ACTUALLY USE. A skill whose ability
+            // requirements are unmet was listed greyed with a LOCKED prefix,
+            // and a menu of things you cannot pick is a menu you have to read
+            // past every turn.
+            //
+            // Filtered HERE rather than in the row builder, because the option
+            // carries its own Index into kit.Skills and the dispatcher reads
+            // that -- filtering the rows alone would leave row position and
+            // skill index disagreeing, which casts a different skill than the
+            // one that was pressed.
             return kit.Skills
                 .Select((s, i) => new ResolvedSkillOption(i, s, SkillResolution.CanAfford(actor, s.ManaCost, s.ResourceCost)))
+                .Where(o => actor.AbilityScores.Meets(RequirementCurve.Apply(o.Skill.Requirements)))
                 .ToList();
         }
 

@@ -304,11 +304,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var children = new List<UiNode>();
 
             children.Add(Ui.Label("DossierPackTitle", UiStrings.OverlayPackTitle,
-                new UiVec(150f, 20f), 10, TextFaint,
+                new UiVec(170f, 22f), 13, TextFaint,
                 Place.At(cx - DossierLayout.ContentAWidth * 0.5f + 75f, DossierLayout.ColumnATop - 10f)).AsDecor());
 
-            var close = Ui.Button("DossierPackClose", UiStrings.OverlayPackClose, new UiVec(90f, 24f), 11,
-                    Place.At(cx + DossierLayout.ContentAWidth * 0.5f - 45f, DossierLayout.ColumnATop - 10f))
+            var close = Ui.Button("DossierPackClose", UiStrings.OverlayPackClose, new UiVec(110f, 28f), 15,
+                    Place.At(cx + DossierLayout.ContentAWidth * 0.5f - 55f, DossierLayout.ColumnATop - 12f))
                 .NoChrome();
             PackCloseButton = close;
             children.Add(close);
@@ -330,7 +330,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                           + DossierLayout.PackSortButtonWidth * (i + 0.5f);
 
                 var tab = Ui.Button($"DossierPackSort{i}", SortLabel(BagSort.All[i]),
-                        new UiVec(DossierLayout.PackSortButtonWidth, DossierLayout.PackSortRowHeight), 11,
+                        new UiVec(DossierLayout.PackSortButtonWidth, DossierLayout.PackSortRowHeight), 14,
                         Place.At(x, DossierLayout.PackSortCentreY))
                     .NoChrome();
 

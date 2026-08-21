@@ -153,15 +153,21 @@ namespace PrincesPalace
                     break;
 
                 case MenuBranch.Skill:
-                    var kit = _session.KitFor(_session.Current);
-                    int index2 = _menu.Selection;
-                    bool isBasic = kit == null || index2 >= kit.Skills.Count;
+                    // AGAINST THE OPTION LIST, not the kit.
+                    //
+                    // This used to compare the row against kit.Skills.Count and
+                    // pass the row straight to CastSkill, which worked only
+                    // while every skill in the kit had a row. The moment the
+                    // list hides one -- as it now does for unmet requirements --
+                    // row position and kit index stop agreeing, and the player
+                    // casts something other than what they pressed. The option
+                    // carries the index it came from; that is what goes down.
+                    var options = _session.SkillOptionsFor(_session.Current);
+                    int row = _menu.Selection;
+                    bool isBasic = row < 0 || row >= options.Count;
 
-                    // The basic spell's row and an authored one go down two
-                    // different session commands, and which is which is decided
-                    // by ONE index rule shared with the row builder.
                     if (isBasic) _session.ExecuteSkill(target);
-                    else _session.CastSkill(index2, target);
+                    else _session.CastSkill(options[row].Index, target);
                     break;
 
                 default:

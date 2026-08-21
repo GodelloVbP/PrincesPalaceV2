@@ -70,17 +70,28 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void EndRun_TakesTheInventoryWithIt()
         {
-            // The half that already worked, pinned beside the half that did
-            // not -- the rule is "a run's things do not survive it", and a test
-            // for only one of them describes an accident rather than a rule.
+            // THE REAL INVENTORY, which is stockpiledItems.
+            //
+            // The first version of this test added an entry to
+            // activeRun.inventory and asserted the replaced snapshot's list was
+            // empty. It passed, and it proved nothing: RunSnapshot.inventory is
+            // vestigial -- one stats readout reads it and no loot is ever put
+            // there. The list the player actually sees is stockpiledItems, which
+            // the pack draws, the fight satchel is built from, and the Reckoning
+            // drops loot into, and it was surviving every run.
+            //
+            // Third tautology of the day and the only one that hid a live bug,
+            // which is the argument for asking of every test: what does this
+            // fail on?
             GiveTheSaveARunWorthSettling();
 
-            Save.activeRun.inventory.Add(new InventoryEntry { itemId = "health_potion", count = 2 });
+            Save.stockpiledItems.Add(new InventoryEntry("health_potion", 2));
+            Assert.IsNotEmpty(Save.stockpiledItems, "fixture check: the pack should have something in it");
 
             RunManager.EndRun();
 
-            CollectionAssert.IsEmpty(Save.activeRun.inventory,
-                "the run's inventory outlived the run");
+            CollectionAssert.IsEmpty(Save.stockpiledItems,
+                "the run's haul outlived the run -- this is the list the pack draws");
         }
 
         // A run that got somewhere: a boss down, rooms cleared, damage dealt.

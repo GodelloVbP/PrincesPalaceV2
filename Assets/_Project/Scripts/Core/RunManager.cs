@@ -204,6 +204,21 @@ namespace PrincesPalace
                 character?.equipment?.Clear();
             }
 
+            // AND THE PACK, which is the part I got wrong the first time.
+            //
+            // This used to say inventory was already handled because it lives on
+            // RunSnapshot, which the line below replaces. It does not.
+            // stockpiledItems is "the single live inventory for now" --
+            // FightBootstrap's own words -- and it is what the pack draws, what
+            // the fight satchel is built from, and what the Reckoning drops loot
+            // into. RunSnapshot.inventory is vestigial: one stats readout reads
+            // it and nothing ever puts loot there.
+            //
+            // So the run's actual haul sat on the PROFILE and survived every
+            // death and every abandon, which is what "my inventory in save slot
+            // 5 is still not cleared" was.
+            save.stockpiledItems?.Clear();
+
             save.activeRun = new RunSnapshot { hasRun = false };
             Forget();
             Persist();
