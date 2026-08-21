@@ -287,6 +287,61 @@ namespace PrincesPalace.PlayModeTests
             Assert.Greater(character.bonusMaxHealth, 0, "the fixture crossed no max-health node");
         }
 
+        // ---- the experience nodes -------------------------------------------------
+
+        [Test]
+        public void ExperienceNodesRaiseWhatAFightIsWorth()
+        {
+            var character = First();
+            character.level = 1;
+            character.claimedTrackLevel = 1;
+            character.exp = 0;
+            character.bonusExpPermille = 200; // +20%
+
+            RewardApplier.Apply(new VictoryRewards.Payout(100, 0), Squad());
+
+            // 120 exp against a level-1 requirement of 109: one level, 11 over.
+            character = First();
+            Assert.AreEqual(2, character.level, "120 experience did not cross the level-1 threshold of 109");
+            Assert.AreEqual(11, character.exp, "the +20% was not applied to the payout");
+        }
+
+        [Test]
+        public void WithoutTheNodesAFightIsWorthExactlyWhatItPaid()
+        {
+            var character = First();
+            character.bonusExpPermille = 0;
+            int before = character.exp;
+
+            RewardApplier.Apply(new VictoryRewards.Payout(50, 0), Squad());
+
+            Assert.AreEqual(before + 50, First().exp);
+        }
+
+        // The bonus is read from what the character walked IN with, so a node
+        // crossed by this very payout pays out from the next fight rather than
+        // retroactively on the one that earned it.
+        [Test]
+        public void ANodeCrossedByThisPayoutDoesNotBoostThisPayout()
+        {
+            var character = First();
+            character.level = 1;
+            character.claimedTrackLevel = 1;
+            character.exp = 0;
+            character.bonusExpPermille = 0;
+
+            RewardApplier.Apply(new VictoryRewards.Payout(20000, 0), Squad());
+
+            character = First();
+            Assert.Greater(character.bonusExpPermille, 0,
+                "the fixture crossed no experience node, so this proves nothing");
+
+            // What it would have been worth had the bonus applied to itself.
+            Assert.Less(character.exp + LevelCurve.ExpToNextLevel(character.level - 1),
+                20000 + 20000 * character.bonusExpPermille / 1000,
+                "this payout was boosted by a node it earned on the way past");
+        }
+
         // A respec gives back what was SPENT. Max health was never spent -- the
         // player made no choice about where it went -- so taking it away would
         // be confiscation rather than a refund.

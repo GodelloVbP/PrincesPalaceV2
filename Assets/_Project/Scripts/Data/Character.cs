@@ -152,6 +152,17 @@ namespace PrincesPalace
         // Purely additive, so SaveData.CurrentVersion does not move.
         public int bonusMaxHealth;
 
+        // Extra experience from the reward track, in integer PERMILLE -- the
+        // same notation DifficultyCurve and LevelCurve use, so the three curves
+        // that govern levelling are all read in one unit.
+        //
+        // A GRANT, claimed once against the watermark, and not refunded by a
+        // respec for the same reason bonusMaxHealth is not: the player never
+        // chose where it went.
+        //
+        // Purely additive, so SaveData.CurrentVersion does not move.
+        public int bonusExpPermille;
+
         // How far up the reward track this character has been PAID.
         //
         // A watermark rather than a list of claimed ids, because the track is
@@ -220,6 +231,20 @@ namespace PrincesPalace
         public static int ExpToNextLevel(int level)
         {
             return LevelCurve.ExpToNextLevel(level);
+        }
+
+        // What `amount` of raw experience is actually worth to this character,
+        // after the reward track's experience nodes.
+        //
+        // Floored, like every other curve here, and never below the raw amount
+        // -- a corrupt negative permille must not turn a reward into a
+        // punishment.
+        public int ExperienceWorthOf(int amount)
+        {
+            if (amount <= 0 || bonusExpPermille <= 0) return amount;
+
+            long boosted = (long)amount + (long)amount * bonusExpPermille / 1000L;
+            return boosted > int.MaxValue ? int.MaxValue : (int)boosted;
         }
 
         // Adds exp and applies every level-up it earns (a big enough gain
@@ -344,13 +369,15 @@ namespace PrincesPalace
             int points = RewardTrack.GrantedBetween(TrackReward.StatPoint, claimedTrackLevel, level);
             int favor = RewardTrack.GrantedBetween(TrackReward.Favor, claimedTrackLevel, level);
             int health = RewardTrack.GrantedBetween(TrackReward.MaxHealth, claimedTrackLevel, level);
+            int expFind = RewardTrack.GrantedBetween(TrackReward.ExpFind, claimedTrackLevel, level);
 
             unspentStatPoints += points;
             earnedFavor += favor;
             bonusMaxHealth += health;
+            bonusExpPermille += expFind;
             claimedTrackLevel = level;
 
-            return points > 0 || favor > 0 || health > 0;
+            return points > 0 || favor > 0 || health > 0 || expFind > 0;
         }
     }
 }

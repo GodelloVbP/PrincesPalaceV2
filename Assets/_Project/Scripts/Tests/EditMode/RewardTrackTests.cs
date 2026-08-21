@@ -53,8 +53,10 @@ namespace PrincesPalace.Domain.Tests
         // track") and the placement is arithmetic, so what is asserted here is
         // the COUNT, not where any individual one landed. A test that pinned
         // placements would fail on every retune and tell you nothing.
-        [TestCase(TrackReward.StatPoint, 30 + 1)] // 30 filler nodes plus the level-80 milestone
-        [TestCase(TrackReward.Favor, 20 + 1)]     // 20 filler nodes plus the level-10 milestone
+        [TestCase(TrackReward.StatPoint, 40 + 1)] // 40 filler nodes plus the level-80 milestone
+        [TestCase(TrackReward.Favor, 23 + 1)]     // 23 filler nodes plus the level-10 milestone
+        [TestCase(TrackReward.MaxHealth, 15)]
+        [TestCase(TrackReward.ExpFind, 7)]
         public void TheTrackHandsOutTheMixItDescribes(TrackReward reward, int expectedNodes)
         {
             int nodes = 0;
@@ -66,11 +68,41 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(expectedNodes, nodes, $"the track holds the wrong number of {reward} nodes");
         }
 
-        // 20 nodes at 2 each, plus 5 at the level-10 milestone.
+        // 23 nodes at 2 each, plus 5 at the level-10 milestone.
+        //
+        // AND THAT NUMBER IS CHOSEN, not rounded to. LootLadder caps the
+        // per-rung chance at 55 Favor for a normal fight; Sheep is authored at
+        // 4, so 51 from the track puts her at exactly 55 -- the last Favor that
+        // buys anything at all. A 24th node would be worth nothing, which is
+        // why there are 23.
         [Test]
-        public void AFullTrackIsWorthFortyFiveFavor()
+        public void AFullTrackTakesSheepToExactlyTheFavorCap()
         {
-            Assert.AreEqual(45, RewardTrack.GrantedBetween(TrackReward.Favor, 1, RewardTrack.MaxLevel));
+            const int SheepAuthoredFavor = 4;
+            int fromTrack = RewardTrack.GrantedBetween(TrackReward.Favor, 1, RewardTrack.MaxLevel);
+
+            Assert.AreEqual(51, fromTrack);
+
+            float atCap = Rewards.LootLadder.StepChanceFor(
+                Rewards.EncounterClass.Normal, fromTrack + SheepAuthoredFavor);
+            float oneBelow = Rewards.LootLadder.StepChanceFor(
+                Rewards.EncounterClass.Normal, fromTrack + SheepAuthoredFavor - 1);
+
+            Assert.AreEqual(Rewards.LootLadder.MaxStep, atCap, 0.0001f,
+                "a fully-levelled Sheep does not reach the cap, so the track is short of Favor");
+            Assert.Less(oneBelow, Rewards.LootLadder.MaxStep,
+                "she was already capped before the last node, so the track has Favor to spare");
+        }
+
+        // The percentage that does work. Gold is discarded at run end
+        // (RunSettlement records it as GoldLost) and embers pay 1 per unique
+        // boss as an integer, so a percentage of either is arithmetic that
+        // never changes an outcome.
+        [Test]
+        public void AFullTrackIsWorthTwentyOnePercentExperience()
+        {
+            Assert.AreEqual(210, RewardTrack.GrantedBetween(TrackReward.ExpFind, 1, RewardTrack.MaxLevel),
+                "permille, so 210 is +21%");
         }
 
         // THE REASON Spread() exists rather than filling from level 2 upward.
@@ -417,15 +449,25 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, RewardTrack.NextRewardLevel(RewardTrack.MaxLevel + 50));
         }
 
+        // EVERY REWARD KIND THE ENUM KNOWS ABOUT IS ACTUALLY GRANTED.
+        //
+        // This replaces a test that asserted the opposite about
+        // SignatureAtFightStart -- that it was deliberately unplaced -- which
+        // was true while a reward kind existed with no way to pay it out. The
+        // author cut it rather than building it, so the enum no longer carries
+        // anything the track never grants, and the invariant worth holding is
+        // the strong one: a kind nobody can earn is dead weight, and the next
+        // one added has to be placed or this fails.
         [Test]
-        public void ARewardTheTrackNeverGrantsHasNoUnlockLevel()
+        public void EveryRewardKindTheEnumKnowsAboutIsActuallyGranted()
         {
-            // SignatureAtFightStart is the one reward kind still unplaced --
-            // there is no fight-start signature hook to pay it out, so the
-            // track deliberately does not author it. MaxHealth used to be the
-            // example here and is now real.
-            Assert.AreEqual(0, RewardTrack.UnlockLevel(TrackReward.SignatureAtFightStart),
-                "SignatureAtFightStart is not placed yet, so it should report no unlock level");
+            foreach (TrackReward reward in System.Enum.GetValues(typeof(TrackReward)))
+            {
+                if (reward == TrackReward.None) continue;
+
+                Assert.Greater(RewardTrack.UnlockLevel(reward), 0,
+                    $"{reward} exists as a reward kind but no level of the track ever grants it");
+            }
         }
 
         // ---- the max-health nodes -------------------------------------------------
@@ -458,20 +500,34 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(RewardTrack.IsUnlock(TrackReward.MaxHealth));
         }
 
-        // Now that four kinds share 87 filler levels, far fewer of them read as
-        // None. Pinned as a floor rather than an exact figure, because the
-        // remaining gap closes when the signature nodes land.
+        // EVERY LEVEL PAYS. The filler counts sum to exactly the number of
+        // filler levels, so there is no level between 2 and 100 that hands over
+        // nothing -- which is the whole reason the track can be walked without
+        // a stretch of it feeling broken.
         [Test]
-        public void MostOfTheTrackNowPaysSomething()
+        public void NoLevelOfTheTrackPaysNothing()
         {
-            int paying = 0;
             for (int level = 2; level <= RewardTrack.MaxLevel; level++)
             {
-                if (RewardTrack.At(level).IsSomething) paying++;
+                Assert.IsTrue(RewardTrack.At(level).IsSomething, $"level {level} pays nothing");
             }
+        }
 
-            Assert.GreaterOrEqual(paying, 77,
-                "the track has more empty levels than the authored mix accounts for");
+        // 50 stat points across the whole track: 40 filler plus level 80's ten.
+        //
+        // Under the 60 that would fill all six ability bands
+        // (AbilityDerivation.CharacterBand is 10, six scores), which is the
+        // right side of that line to be on: a track that filled every band
+        // exactly would leave a fully-levelled character with no decision left
+        // about where the last points go.
+        [Test]
+        public void AFullTrackCannotFillEveryAbilityBand()
+        {
+            int points = RewardTrack.GrantedBetween(TrackReward.StatPoint, 1, RewardTrack.MaxLevel);
+
+            Assert.AreEqual(50, points);
+            Assert.Less(points, Stats.AbilityScores.All.Length * 10,
+                "the track grants enough points to max every band, so spending them is no longer a choice");
         }
     }
 }

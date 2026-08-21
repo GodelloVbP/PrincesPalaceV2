@@ -17,7 +17,11 @@ namespace PrincesPalace.Domain.Progression
         StatPoint,
         Favor,
         MaxHealth,
-        SignatureAtFightStart,
+
+        // Extra experience, in integer PERMILLE, matching the idiom
+        // DifficultyCurve and LevelCurve already use rather than inventing a
+        // percent type for one reward.
+        ExpFind,
 
         // ---- UNLOCKS: a capability, true forever once the level is reached --
         Respec,
@@ -159,29 +163,52 @@ namespace PrincesPalace.Domain.Progression
         // design statement, and where each one lands is arithmetic. Retuning
         // the track is editing these numbers.
         //
-        // STILL INCOMPLETE. The design also calls for 6
-        // signature-at-fight-start nodes, and there is no fight-start signature
-        // hook to pay them out -- adding them here before they do anything
-        // would hand players a reward that silently does nothing. The levels
-        // they will occupy read as None until then, which is visible rather
-        // than quietly wrong.
+        // COMPLETE: these five counts sum to 87, which is exactly the number
+        // of filler levels, so no level of the track pays nothing.
         //
-        // The two extra offer rerolls ARE here, since level 40 built the
-        // reroll. They are what makes RerollsPerRun's accumulate-rather-than-
-        // supersede semantics observable: with only the milestone, summing and
-        // taking the highest give the same answer and the distinction is
-        // untested. The levels they will occupy read as None until
-        // then, which is visible rather than quietly wrong.
+        // HOW THE LAST TWENTY EMPTY LEVELS WERE FILLED, because two of the
+        // obvious answers turned out to be worth nothing:
         //
-        // Gold nodes are absent for a different reason and a permanent-looking
-        // one: RoomType.Shop is in the room table but the shop is not built, so
-        // gold has no sink. See docs/HANDOVER_PROGRESSION_TRACK.md 4b.
+        //   FAVOR, but only three more nodes. LootLadder.MaxStep caps the
+        //   per-rung chance at 55 Favor for a normal fight, 42 for an elite and
+        //   29 for a boss. The 20 existing nodes plus level 10's milestone are
+        //   45; Sheep is authored at 4, so she reaches 49 and has room for
+        //   exactly 6 more before normal fights stop caring too. Three nodes at
+        //   2 each is that 6 precisely. A fourth would be worth nothing to
+        //   anybody.
+        //
+        //   NOT GOLD. RunSettlement:50 records leftover run gold as GoldLost
+        //   and it never reaches wallet.gold -- the in-run shop is still not
+        //   built, so a gold-yield node would raise a number that is thrown
+        //   away at the end of every descent. That is handover 4b, unchanged.
+        //
+        //   NOT EMBERS. EmberPayout.PerUniqueBoss is 1, paid as an integer, so
+        //   any percentage of it rounds back to 1. A +20% ember node would be
+        //   arithmetic that provably never changes an outcome.
+        //
+        //   EXPERIENCE, which is the percentage that does work: RewardApplier
+        //   applies payout.Experience per character, so a multiplier lands
+        //   exactly where the grant does. Mildly self-accelerating, since the
+        //   track's own cost is experience -- that is a battle pass working as
+        //   intended rather than a loop, and +21% across a hundred levels is
+        //   nowhere near enough to run away with itself.
+        //
+        //   STAT POINTS for the rest, ten more of them.
+        //
+        // The design's 6 signature-at-fight-start nodes were CUT by the author
+        // rather than deferred. Every character's signature meter starts a
+        // fight empty and fills at 1-2 a turn against capacities of 10-20 and
+        // skill costs around 7, so even a handful of points before the first
+        // swing is closer to "your ultimate is ready on turn one" than to
+        // filler -- and a flat +6 is 60% of Sheep's 10-point Wool against 30%
+        // of Turtle's 20-point Shell.
         private static readonly (TrackReward Reward, int Amount, int Count)[] FillerMix =
         {
-            (TrackReward.StatPoint,   1, 30),
-            (TrackReward.Favor,       2, 20),
-            (TrackReward.MaxHealth,  10, 15),
-            (TrackReward.OfferReroll, 1, 2),
+            (TrackReward.StatPoint,    1, 40),
+            (TrackReward.Favor,        2, 23),
+            (TrackReward.MaxHealth,   10, 15),
+            (TrackReward.ExpFind,     30, 7),
+            (TrackReward.OfferReroll,  1, 2),
         };
 
         private static readonly TrackEntry[] Entries = Build();
@@ -207,7 +234,7 @@ namespace PrincesPalace.Domain.Progression
                 case TrackReward.StatPoint:
                 case TrackReward.Favor:
                 case TrackReward.MaxHealth:
-                case TrackReward.SignatureAtFightStart:
+                case TrackReward.ExpFind:
                     return true;
                 default:
                     return false;

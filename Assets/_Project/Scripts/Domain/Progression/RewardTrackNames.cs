@@ -29,8 +29,8 @@ namespace PrincesPalace.Domain.Progression
                 case TrackReward.MaxHealth:
                     return $"+{amount} MAX HEALTH";
 
-                case TrackReward.SignatureAtFightStart:
-                    return $"+{amount} SIGNATURE AT FIGHT START";
+                case TrackReward.ExpFind:
+                    return $"+{amount / 10}% EXPERIENCE";
 
                 case TrackReward.Respec:
                     return "FREE RESPEC";
