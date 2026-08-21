@@ -106,6 +106,8 @@ public static class ProceduralSpriteBaker
             reach[i] = Mathf.Lerp(0.42f, FadeBy, Frac(i * 0.3247f));
         }
 
+        BakeTrackMarks();
+
         BakeGlow("rarity_burst", 1024, (nx, ny) =>
         {
             float radius = Mathf.Sqrt(nx * nx + ny * ny);
@@ -132,6 +134,114 @@ public static class ProceduralSpriteBaker
 
             return Mathf.Clamp01(value);
         });
+    }
+
+    // ---- the reward track's marks -------------------------------------------
+    //
+    // FIVE SHAPES, NOT TWELVE. The track pays twelve kinds of reward and every
+    // node already carries its name in words, so an icon per kind would be
+    // eleven pieces of bespoke art doing what the caption does. What the rail
+    // needs instead is to be SCANNABLE without reading -- four grant marks that
+    // differ at a glance, and one ring standing for "a capability", which is
+    // what every milestone is.
+    //
+    // Drawn as strokes rather than glyphs on purpose. A tick or a star from the
+    // font would rasterise into the dynamic atlas, and that atlas is tracked in
+    // git -- AUDIT #47, where any run that draws a new glyph dirties a
+    // committed asset.
+    private static void BakeTrackMarks()
+    {
+        const int Size = 128;
+
+        // The claimed tick. Two strokes, the short one falling and the long one
+        // rising well past it, which is what makes a tick read as a tick rather
+        // than as a bent line.
+        BakeGlow("track_tick", Size, (nx, ny) =>
+        {
+            float d = Mathf.Min(
+                SegmentDistance(nx, ny, -0.42f, 0.02f, -0.12f, -0.34f),
+                SegmentDistance(nx, ny, -0.12f, -0.34f, 0.46f, 0.38f));
+
+            return Stroke(d, 0.11f);
+        });
+
+        // A stat point: one chevron, pointing up.
+        BakeGlow("track_stat", Size, (nx, ny) =>
+        {
+            float d = Mathf.Min(
+                SegmentDistance(nx, ny, -0.42f, -0.16f, 0f, 0.30f),
+                SegmentDistance(nx, ny, 0f, 0.30f, 0.42f, -0.16f));
+
+            return Stroke(d, 0.12f);
+        });
+
+        // Experience: the same chevron twice, because it is the same idea
+        // moving faster.
+        BakeGlow("track_exp", Size, (nx, ny) =>
+        {
+            float upper = Mathf.Min(
+                SegmentDistance(nx, ny, -0.40f, 0.02f, 0f, 0.42f),
+                SegmentDistance(nx, ny, 0f, 0.42f, 0.40f, 0.02f));
+            float lower = Mathf.Min(
+                SegmentDistance(nx, ny, -0.40f, -0.34f, 0f, 0.06f),
+                SegmentDistance(nx, ny, 0f, 0.06f, 0.40f, -0.34f));
+
+            return Mathf.Max(Stroke(upper, 0.10f), Stroke(lower, 0.10f));
+        });
+
+        // Max health: a cross. Square-armed rather than a heart, which at 22px
+        // is a blob.
+        BakeGlow("track_health", Size, (nx, ny) =>
+        {
+            float d = Mathf.Min(
+                SegmentDistance(nx, ny, -0.34f, 0f, 0.34f, 0f),
+                SegmentDistance(nx, ny, 0f, -0.34f, 0f, 0.34f));
+
+            return Stroke(d, 0.12f);
+        });
+
+        // Prince's Favor: an X.
+        //
+        // THIRD ATTEMPT, and the first two are worth recording because they
+        // failed the same way. A four-point star fades its arms to nothing and
+        // rendered as a dot; a filled diamond is crisp but a solid shape nine
+        // pixels across is also a dot. What reads at this size is a STROKE --
+        // which is why the chevron and the cross were legible from the first
+        // capture and this was not. An X is the stroke that is not either of
+        // them.
+        BakeGlow("track_favor", Size, (nx, ny) =>
+        {
+            float d = Mathf.Min(
+                SegmentDistance(nx, ny, -0.30f, -0.30f, 0.30f, 0.30f),
+                SegmentDistance(nx, ny, -0.30f, 0.30f, 0.30f, -0.30f));
+
+            return Stroke(d, 0.11f);
+        });
+    }
+
+    // Distance from (px,py) to the segment (ax,ay)-(bx,by), in the same
+    // normalised space the bake lambdas work in.
+    private static float SegmentDistance(float px, float py, float ax, float ay, float bx, float by)
+    {
+        float vx = bx - ax;
+        float vy = by - ay;
+        float wx = px - ax;
+        float wy = py - ay;
+
+        float lengthSquared = vx * vx + vy * vy;
+        float t = lengthSquared <= 0f ? 0f : Mathf.Clamp01((wx * vx + wy * vy) / lengthSquared);
+
+        float dx = wx - vx * t;
+        float dy = wy - vy * t;
+        return Mathf.Sqrt(dx * dx + dy * dy);
+    }
+
+    // A stroke of `halfWidth`, antialiased over the outer fifth of it so the
+    // marks do not read as pixel art beside painted UI.
+    private static float Stroke(float distance, float halfWidth)
+    {
+        float edge = halfWidth * 0.2f;
+        return 1f - Smoothstep(Mathf.Clamp01((distance - (halfWidth - edge)) / edge));
     }
 
     private static float Frac(float value) => value - Mathf.Floor(value);

@@ -57,6 +57,27 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void Restore()
         {
+            // ANY HOLD STILL RUNNING IS CANCELLED FIRST.
+            //
+            // HoldToConfirm cancels itself OnDisable, and its comment explains
+            // why -- but between two tests nothing disables it: the scene stays
+            // loaded until the next LoadSceneAsync, so a test that begins a
+            // hold and neither completes nor releases it leaves Update()
+            // advancing that hold into whatever runs next. When it completes it
+            // calls Abandon, which navigates -- and the navigation lands in the
+            // NEXT test's recorder, which reads as "one press on an exit left
+            // the scene".
+            //
+            // That is AUDIT #52, which sat as an unexplained one-in-four flake
+            // until a reward-track panel of ~450 nodes made frames long enough
+            // for the leftover hold to finish inside the very next test, every
+            // time. The extra nodes did not cause it; they made it reproducible
+            // enough to find the stack trace.
+            foreach (var hold in Object.FindObjectsByType<HoldToConfirm>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                hold.Cancel();
+            }
+
             Navigation.Reset();
             SaveSystem.RootOverride = null;
             SaveSlotManager.Forget();

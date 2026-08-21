@@ -888,6 +888,8 @@ public static class ScreenRegistry
         controller.closeButton = result.Button(track.CloseButton);
 
         controller.dots = track.Dots.Select(result.Image).ToArray();
+        controller.icons = track.Icons.Select(result.Image).ToArray();
+        controller.ticks = track.Ticks.Select(result.Go).ToArray();
         controller.captions = track.Captions.Select(result.Tmp).ToArray();
         controller.levelNumbers = track.LevelNumbers.Select(result.Tmp).ToArray();
 

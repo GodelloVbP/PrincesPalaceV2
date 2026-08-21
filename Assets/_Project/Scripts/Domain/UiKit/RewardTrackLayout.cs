@@ -39,6 +39,15 @@ namespace PrincesPalace.Domain.UiKit
         // The rail itself: a hairline the nodes sit on.
         public const float RailHeight = 2f;
 
+        // The reward mark, drawn inside its node.
+        public const float IconSize = 15f;
+        public const float MilestoneIconSize = 22f;
+
+        // The claimed tick, in the node's lower-right corner where it overlaps
+        // nothing: the caption is above and the level number below.
+        public const float TickSize = 14f;
+        public const float TickOffset = 11f;
+
         // Half a pitch of air at each end, so the first and last nodes are not
         // flush against the edge of the scroll.
         public const float EndPadding = NodePitch * 0.5f;
@@ -98,6 +107,26 @@ namespace PrincesPalace.Domain.UiKit
             if (centred < lowest) centred = lowest;
 
             return centred;
+        }
+
+        // Which mark a level's node carries.
+        //
+        // FOUR GRANT MARKS AND ONE RING, rather than one icon per reward kind.
+        // Every node already carries its reward in words, so a twelfth bespoke
+        // shape would be doing what the caption does; what the rail needs is to
+        // be scannable WITHOUT reading. The ring stands for "a capability",
+        // which is what every milestone is.
+        public static string IconFor(int level)
+        {
+            switch (RewardTrack.At(level).Reward)
+            {
+                case TrackReward.None: return null;
+                case TrackReward.StatPoint: return "proc:track_stat";
+                case TrackReward.Favor: return "proc:track_favor";
+                case TrackReward.MaxHealth: return "proc:track_health";
+                case TrackReward.ExpFind: return "proc:track_exp";
+                default: return "proc:ring_outline";
+            }
         }
 
         // Milestones are drawn larger, because a rail of a hundred identical

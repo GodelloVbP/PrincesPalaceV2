@@ -42,6 +42,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // level i + RewardTrackLayout.FirstLevel and the controller never has
         // to search.
         public List<NodeRef> Dots = new List<NodeRef>();
+        public List<NodeRef> Icons = new List<NodeRef>();
+        public List<NodeRef> Ticks = new List<NodeRef>();
         public List<NodeRef> Captions = new List<NodeRef>();
         public List<NodeRef> LevelNumbers = new List<NodeRef>();
 
@@ -142,15 +144,48 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 ? RewardTrackLayout.MilestoneDiameter
                 : RewardTrackLayout.NodeDiameter;
 
-            // THE DOT IS A SQUARE, and that is not laziness: Ui.Solid is a
-            // rect, the emitter has no circle primitive, and a rotated diamond
-            // reads as a landmark at milestone size better than a soft circle
-            // does at this scale. The rail behind it is what carries the line.
-            var dot = Ui.Solid($"TrackDot{level}", DotToCome,
-                    new UiVec(diameter, diameter), Place.At(x, 0f))
+            // A DISC, not a square. proc:solid_circle exists for exactly this
+            // ("a coin, an orb, anything that must not render as a square") and
+            // the first version of this screen used a Ui.Solid rect because I
+            // had not looked.
+            var dot = Ui.Sprite($"TrackDot{level}", "proc:solid_circle",
+                    Place.At(x, 0f), UiSize.Fixed(diameter, diameter))
                 .AsDecor();
             Dots.Add(dot);
             yield return dot;
+
+            // The reward's mark, inside the disc. Keyed at BUILD time because
+            // the track is static -- level 40 is an offer reroll in every save
+            // there will ever be, so there is nothing here for a controller to
+            // decide.
+            string icon = RewardTrackLayout.IconFor(level);
+            if (icon != null)
+            {
+                float iconSize = milestone
+                    ? RewardTrackLayout.MilestoneIconSize
+                    : RewardTrackLayout.IconSize;
+
+                var mark = Ui.Sprite($"TrackIcon{level}", icon,
+                        Place.At(x, 0f), UiSize.Fixed(iconSize, iconSize))
+                    .AsDecor();
+                Icons.Add(mark);
+                yield return mark;
+            }
+
+            // The claimed tick, lower-right of the node. Hidden until the
+            // controller says this level has been collected -- the one thing on
+            // a node that is about the PLAYER rather than about the track.
+            //
+            // A second channel for a state the colour already carries, and
+            // deliberately: gold-against-violet is a hue difference, and a mark
+            // that is present or absent reads for someone who cannot see it.
+            var tick = Ui.Sprite($"TrackTick{level}", "proc:track_tick",
+                    Place.At(x + RewardTrackLayout.TickOffset, -RewardTrackLayout.TickOffset),
+                    UiSize.Fixed(RewardTrackLayout.TickSize, RewardTrackLayout.TickSize))
+                .AsDecor()
+                .Inactive();
+            Ticks.Add(tick);
+            yield return tick;
 
             // The reward, above. Two lines of room -- the longest thing the
             // track says is "YOUR SECOND LIFE RETURNS AT EVERY BOSS", which is

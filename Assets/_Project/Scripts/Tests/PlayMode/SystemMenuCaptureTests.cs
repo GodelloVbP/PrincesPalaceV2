@@ -48,6 +48,13 @@ namespace PrincesPalace.PlayModeTests
             foreach (var character in SaveSlotManager.CurrentSave.ActiveSquad())
             {
                 character.level = 47;
+
+                // PAID, not merely reached. The tick is the difference: setting
+                // the level alone leaves claimedTrackLevel at 0, so a capture
+                // taken that way shows a rail lit gold with not one node ticked
+                // -- which is correct, and useless as a picture of the finished
+                // screen.
+                character.ClaimTrackRewards();
             }
 
             var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);

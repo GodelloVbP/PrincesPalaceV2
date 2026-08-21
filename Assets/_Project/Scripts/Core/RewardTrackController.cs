@@ -31,6 +31,8 @@ namespace PrincesPalace
         private bool _wired;
 
         [SerializeField] internal Image[] dots;
+        [SerializeField] internal Image[] icons;
+        [SerializeField] internal GameObject[] ticks;
         [SerializeField] internal TMP_Text[] captions;
         [SerializeField] internal TMP_Text[] levelNumbers;
 
@@ -60,14 +62,39 @@ namespace PrincesPalace
         public void Refresh()
         {
             int level = SquadTrack.BestLevel();
+            int claimed = ClaimedLevel();
 
-            PaintNodes(level);
+            PaintNodes(level, claimed);
             PaintRail(level);
             PaintSummary(level);
             ScrollTo(level);
         }
 
-        private void PaintNodes(int level)
+        // How far the track has actually PAID the best-levelled character.
+        //
+        // Read off the same character BestLevel picked, not off the whole
+        // squad: a watermark from one character against a level from another
+        // would tick nodes nobody has collected.
+        private static int ClaimedLevel()
+        {
+            var save = SaveSlotManager.CurrentSave;
+            if (save == null) return 0;
+
+            int best = RewardTrack.StartingLevel;
+            int claimed = 0;
+            foreach (var character in save.ActiveSquad())
+            {
+                if (character == null) continue;
+                if (character.level < best) continue;
+
+                best = character.level;
+                claimed = character.claimedTrackLevel;
+            }
+
+            return claimed;
+        }
+
+        private void PaintNodes(int level, int claimed)
         {
             if (dots == null) return;
 
@@ -82,6 +109,24 @@ namespace PrincesPalace
                 if (dots[i] != null)
                 {
                     dots[i].color = here ? DotHere : reached ? DotDone : DotToCome;
+                }
+
+                // The mark inside the disc, tinted so it reads AGAINST the dot
+                // rather than with it: dark on a lit node, lit on a dark one.
+                // A single colour would vanish on one half of the rail.
+                if (icons != null && i < icons.Length && icons[i] != null)
+                {
+                    icons[i].color = reached ? DotToCome : DotDone;
+                }
+
+                // COLLECTED, which is not the same question as reached. The
+                // watermark is what the track has actually PAID -- for a
+                // character levelled by a migration or a debug grant it trails
+                // the level until the next payout, and the tick is the honest
+                // answer to "have I had this".
+                if (ticks != null && i < ticks.Length && ticks[i] != null)
+                {
+                    ticks[i].SetActive(nodeLevel <= claimed);
                 }
 
                 if (captions != null && i < captions.Length && captions[i] != null)
