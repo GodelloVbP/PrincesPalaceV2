@@ -67,8 +67,9 @@ namespace PrincesPalace.Domain.UiKit
         // disagreement -- the failure that would produce is a fourth offer
         // rolled, chosen by the player, and painted onto a card that does not
         // exist.
-        public static int MaxCards =>
-            RewardTrack.UnlockedAmount(TrackReward.WiderOffer, RewardTrack.MaxLevel, ItemOfferTable.OfferCount);
+        // Literally the width at the top of the track, rather than the same
+        // UnlockedAmount call written a second time with MaxLevel in it.
+        public static int MaxCards => CardsFor(RewardTrack.MaxLevel);
 
         // How wide an offer a character at `level` is shown.
         public static int CardsFor(int level) =>

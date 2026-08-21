@@ -123,7 +123,7 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void AnUnlevelledSquadIsOfferedThree()
         {
-            Assert.AreEqual(3, ItemOfferRoll.CurrentOfferWidth());
+            Assert.AreEqual(3, SquadTrack.OfferWidth());
         }
 
         [Test]
@@ -131,7 +131,7 @@ namespace PrincesPalace.PlayModeTests
         {
             SaveSlotManager.CurrentSave.ActiveSquad()[0].level = 50;
 
-            Assert.AreEqual(4, ItemOfferRoll.CurrentOfferWidth(),
+            Assert.AreEqual(4, SquadTrack.OfferWidth(),
                 "level 50's wider offer is not reaching the roll");
         }
 
@@ -160,7 +160,7 @@ namespace PrincesPalace.PlayModeTests
                 character.level = level;
             }
 
-            Assert.AreEqual(expected, ItemOfferRoll.CurrentRerollAllowance());
+            Assert.AreEqual(expected, SquadTrack.RerollsPerRun());
         }
 
         // Best-in-squad, not sum -- the same rule Favor, the offer width and the
@@ -177,7 +177,7 @@ namespace PrincesPalace.PlayModeTests
 
             foreach (var character in squad) character.level = 40;
 
-            Assert.AreEqual(1, ItemOfferRoll.CurrentRerollAllowance(),
+            Assert.AreEqual(1, SquadTrack.RerollsPerRun(),
                 "the squad's rerolls were summed rather than taken as the highest");
         }
 

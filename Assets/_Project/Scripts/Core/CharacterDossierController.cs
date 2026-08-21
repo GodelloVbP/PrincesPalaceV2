@@ -115,6 +115,11 @@ namespace PrincesPalace
         // reads off the top row -- which means cell 0 is not always Strength.
         private readonly List<AbilityScore> _cellOrder = new List<AbilityScore>();
 
+        // Who _cellOrder was sorted for. See RefreshAttributes -- the order is
+        // FROZEN while one character is on screen, and this is how it knows the
+        // character changed.
+        private string _cellOrderFor;
+
         // Held so the tooltip can measure the NEXT point from what the
         // character actually has, rather than from a neutral block.
         private AbilityScoreBlock _scores;
@@ -272,7 +277,7 @@ namespace PrincesPalace
 
             RefreshIdentity(character);
             _scores = scores;
-            RefreshAttributes(scores);
+            RefreshAttributes(scores, character.definitionId);
 
             // AFTER RefreshAttributes, not inside RefreshIdentity where it
             // started. _cellOrder is rebuilt in there, and on the first open it
@@ -698,12 +703,31 @@ namespace PrincesPalace
         }
 
         // Highest first, so the top row IS the build.
-        private void RefreshAttributes(AbilityScoreBlock scores)
+        private void RefreshAttributes(AbilityScoreBlock scores, string characterId)
         {
-            _cellOrder.Clear();
-            _cellOrder.AddRange(AbilityScores.All
-                .OrderByDescending(s => ValueOf(scores, s))
-                .ThenBy(s => (int)s));
+            // SORTED ONCE PER CHARACTER, NOT ONCE PER REFRESH.
+            //
+            // The order is highest-first so the shape of a build reads off the
+            // top row -- but spending a stat point CHANGES that order, and
+            // Spend() refreshes. Re-sorting here meant the grid reshuffled
+            // under the player's cursor mid-click: raise a score that was tied
+            // with the one above it and the two swap cells, so pressing "+"
+            // twice in the same place put the two points into two DIFFERENT
+            // abilities. Nothing on screen warned them.
+            //
+            // The cost of freezing is that the row can be a little stale after
+            // equipping something that moves a score. That is cosmetic -- every
+            // value shown is still correct, only their arrangement is older --
+            // and it re-sorts the moment the player steps to another character
+            // and back.
+            if (_cellOrder.Count == 0 || _cellOrderFor != characterId)
+            {
+                _cellOrderFor = characterId;
+                _cellOrder.Clear();
+                _cellOrder.AddRange(AbilityScores.All
+                    .OrderByDescending(s => ValueOf(scores, s))
+                    .ThenBy(s => (int)s));
+            }
 
             // ONE tint, never two. A tie goes to the first declared, because two
             // highlighted attributes stop being a cue at all.

@@ -2,9 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using PrincesPalace.Content;
-using PrincesPalace.Domain.Progression;
 using PrincesPalace.Domain.Rewards;
-using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
 {
@@ -110,14 +108,6 @@ namespace PrincesPalace
                     .FirstOrDefault(d => d != null && d.id == c.definitionId))));
         }
 
-        // How many items the fielded squad is offered.
-        //
-        // Best level in the squad; SquadTrack owns that rule and why.
-        public static int CurrentOfferWidth() => OfferRowLayout.CardsFor(SquadTrack.BestLevel());
-
-        // How many rerolls the fielded squad gets per descent.
-        public static int CurrentRerollAllowance() => RewardTrack.RerollsPerRun(SquadTrack.BestLevel());
-
         // The offers, each with its own independently rolled plus.
         //
         // `nextIndex` is upper-bound-exclusive and injected, matching the shape
@@ -125,8 +115,8 @@ namespace PrincesPalace
         // a seeded stand-in and get the same items every time.
         //
         // `count` defaults to the base three so every existing caller reads as
-        // it did. The live call site passes CurrentOfferWidth(), because the
-        // reward track widens the offer at level 50.
+        // it did. The live call site passes SquadTrack.OfferWidth(), because
+        // the reward track widens the offer at level 50.
         public static List<ItemOffer> Roll(EncounterClass encounter, int depthStep, int favor, Func<int, int> nextIndex,
             int count = ItemOfferTable.OfferCount)
         {

@@ -383,7 +383,7 @@ namespace PrincesPalace
             var run = RunManager.Run;
             if (run == null) return;
 
-            if (run.offerRerollsUsed >= ItemOfferRoll.CurrentRerollAllowance()) return;
+            if (run.offerRerollsUsed >= SquadTrack.RerollsPerRun()) return;
 
             run.offerRerollsUsed++;
             SaveSlotManager.SaveCurrent();
@@ -407,7 +407,7 @@ namespace PrincesPalace
         {
             if (rerollButton == null) return;
 
-            int allowance = ItemOfferRoll.CurrentRerollAllowance();
+            int allowance = SquadTrack.RerollsPerRun();
             var run = RunManager.Run;
             int used = run?.offerRerollsUsed ?? 0;
             int left = allowance - used;

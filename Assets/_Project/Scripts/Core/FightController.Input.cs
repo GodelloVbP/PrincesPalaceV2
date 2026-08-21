@@ -304,7 +304,7 @@ namespace PrincesPalace
             // (int,int) and (float,float), and the int overload is the
             // upper-bound-EXCLUSIVE one both Domain tables expect.
             return ItemOfferRoll.Roll(encounter, depth, ItemOfferRoll.CurrentSquadFavor(),
-                n => UnityEngine.Random.Range(0, n), ItemOfferRoll.CurrentOfferWidth());
+                n => UnityEngine.Random.Range(0, n), SquadTrack.OfferWidth());
         }
 
         private void UseSatchelItem(int index)

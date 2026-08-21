@@ -257,16 +257,7 @@ namespace PrincesPalace.Domain.Progression
             if (!IsGrant(reward)) return 0;
 
             if (afterLevel < StartingLevel) afterLevel = StartingLevel;
-            if (throughLevel > MaxLevel) throughLevel = MaxLevel;
-
-            int total = 0;
-            for (int level = afterLevel + 1; level <= throughLevel; level++)
-            {
-                var entry = Entries[level];
-                if (entry.Reward == reward) total += entry.Amount;
-            }
-
-            return total;
+            return SumOver(reward, afterLevel, throughLevel);
         }
 
         // The next level at or after `level` + 1 that pays anything, or 0 when
@@ -325,14 +316,30 @@ namespace PrincesPalace.Domain.Progression
         // Every Amount for `reward` up to `level`, added together. For rewards
         // that stack; see UnlockedAmount for the ones where a later step
         // replaces an earlier one.
-        public static int UnlockedTotal(TrackReward reward, int level)
+        //
+        // The whole track rather than a watermark range, so the bottom bound is
+        // one BELOW StartingLevel -- SumOver is half-open there, and level 1 has
+        // to be included in principle even though nothing is authored on it.
+        public static int UnlockedTotal(TrackReward reward, int level) =>
+            SumOver(reward, StartingLevel - 1, level);
+
+        // Adds up `reward` over the levels in (afterLevel, throughLevel].
+        //
+        // ONE LOOP FOR TWO CALLERS. GrantedBetween and UnlockedTotal were the
+        // same six lines with different bounds and opposite guards -- one
+        // refusing anything that is not a grant, the other used exclusively for
+        // an unlock that stacks. What differs between them is the guard and the
+        // range, which is what each now supplies; the arithmetic is here once.
+        private static int SumOver(TrackReward reward, int afterLevel, int throughLevel)
         {
-            if (level > MaxLevel) level = MaxLevel;
+            if (throughLevel > MaxLevel) throughLevel = MaxLevel;
+            if (afterLevel < StartingLevel - 1) afterLevel = StartingLevel - 1;
 
             int total = 0;
-            for (int l = StartingLevel; l <= level; l++)
+            for (int level = afterLevel + 1; level <= throughLevel; level++)
             {
-                if (Entries[l].Reward == reward) total += Entries[l].Amount;
+                var entry = Entries[level];
+                if (entry.Reward == reward) total += entry.Amount;
             }
 
             return total;

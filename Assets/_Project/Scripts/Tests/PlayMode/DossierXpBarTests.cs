@@ -243,6 +243,64 @@ namespace PrincesPalace.PlayModeTests
                 $"the plus on the cell labelled '{key}' spent into {moved[0]} instead");
         }
 
+        // PRESSING "+" TWICE PUTS BOTH POINTS IN THE SAME PLACE.
+        //
+        // The attribute grid is sorted highest-first, and spending changes the
+        // order -- so re-sorting on every refresh made the cells reshuffle
+        // under the cursor: raise a score tied with the one above it and the
+        // two swap, sending the second click into a different ability with
+        // nothing on screen warning the player. The order is now frozen while
+        // one character is on screen.
+        [UnityTest]
+        public IEnumerator PressingThePlusTwiceSpendsBothPointsIntoOneScore()
+        {
+            yield return OpenTheDossier();
+
+            var character = First();
+            character.unspentStatPoints = 2;
+            character.investedAbilityScores = default;
+
+            var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
+            dossier.Refresh();
+            yield return null;
+
+            // THE INVARIANT, not one worked example. Which cell reorders
+            // depends on how close together this character's scores happen to
+            // be, so asserting a particular reshuffle would pass or fail on
+            // content rather than on behaviour. What must hold for every
+            // character is that the labels do not move.
+            var before = Enumerable.Range(0, 6).Select(i => TextNamed($"DossierAttrKey{i}").text).ToList();
+
+            // CELL 4 SPECIFICALLY. Sheep is authored STR 7 / DEX 7, tied and
+            // broken by declaration order, so they sit in cells 3 and 4 -- and
+            // raising DEX to 8 promotes it past STR. That is the cheapest real
+            // reshuffle this content can produce, and picking the top cell
+            // instead would prove nothing because raising the highest score
+            // leaves it highest.
+            ButtonNamed("DossierAttrPlus4").onClick.Invoke();
+            yield return null;
+
+            var after = Enumerable.Range(0, 6).Select(i => TextNamed($"DossierAttrKey{i}").text).ToList();
+
+            CollectionAssert.AreEqual(before, after,
+                "the attribute grid reordered after spending a point, so the next click lands on a " +
+                "different ability than the one the player aimed at");
+
+            // And the second click still lands where the first did.
+            ButtonNamed("DossierAttrPlus4").onClick.Invoke();
+            yield return null;
+
+            character = First();
+            var moved = PrincesPalace.Domain.Stats.AbilityScores.All
+                .Where(sc => character.investedAbilityScores[sc] > 0)
+                .ToList();
+
+            Assert.AreEqual(0, character.unspentStatPoints, "both points should have been spent");
+            Assert.AreEqual(1, moved.Count,
+                $"the two points landed in {moved.Count} different abilities");
+            Assert.AreEqual(2, character.investedAbilityScores[moved[0]]);
+        }
+
         private TMPro.TMP_Text TextNamed(string name) =>
             _menu.GetComponentsInChildren<TMPro.TMP_Text>(includeInactive: true)
                 .FirstOrDefault(t => t.name == name);

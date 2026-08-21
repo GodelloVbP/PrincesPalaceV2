@@ -46,14 +46,36 @@ namespace PrincesPalace
         public static bool HasUnlocked(TrackReward reward) =>
             RewardTrack.HasUnlocked(reward, BestLevel());
 
-        // How many second lives this descent is entitled to, less what it has
-        // already spent. Level 90 grants one; level 100 gives it back at every
-        // boss, which RunManager does by clearing the spend count rather than
-        // by handing out a second charge -- so the ceiling stays one at a time
-        // however deep a run goes.
+        // ---- the run-scoped rewards, all asked the same way ---------------------
+        //
+        // GATHERED HERE rather than left one per system. These were three
+        // one-liners in three files -- ItemOfferRoll knew about offer width and
+        // rerolls, RelicDraftController about the draft count, and this file
+        // about second lives -- and every one of them was the same sentence:
+        // ask the track a question at BestLevel(). Scattered, the max-not-sum
+        // rule was a comment repeated four times; gathered, it is the type's
+        // header and the four accessors are one line each.
+
+        // How many relics a descent drafts.
+        public static int StartingRelics() => RewardTrack.StartingRelics(BestLevel());
+
+        // How many items a won fight offers.
+        public static int OfferWidth() => Domain.UiKit.OfferRowLayout.CardsFor(BestLevel());
+
+        // How many item-offer rerolls a descent gets.
+        public static int RerollsPerRun() => RewardTrack.RerollsPerRun(BestLevel());
+
+        // How many second lives this descent has left. Level 90 grants one;
+        // level 100 gives it back at every boss, which RunManager does by
+        // clearing the spend count rather than handing out a second charge --
+        // so the ceiling stays one at a time however deep a run goes.
+        //
+        // No HasUnlocked guard: UnlockedAmount with a fallback of 0 already
+        // answers 0 below level 90, and the guard was a second BestLevel() scan
+        // to learn what the next line was about to work out anyway.
         public static int SecondLivesLeft(RunSnapshot run)
         {
-            if (run == null || !HasUnlocked(TrackReward.SecondLife)) return 0;
+            if (run == null) return 0;
 
             int left = RewardTrack.UnlockedAmount(TrackReward.SecondLife, BestLevel(), 0) - run.secondLivesUsed;
             return left < 0 ? 0 : left;

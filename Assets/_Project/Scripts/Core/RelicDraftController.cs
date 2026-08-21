@@ -112,11 +112,6 @@ namespace PrincesPalace
             Paint();
         }
 
-        // How many relics this descent gets to draft.
-        //
-        // Best level in the squad; SquadTrack owns that rule and why.
-        internal static int DraftCount() => RewardTrack.StartingRelics(SquadTrack.BestLevel());
-
         // What the CURRENT round offers.
         //
         // The round is derived from how many relics the run already holds
@@ -280,7 +275,7 @@ namespace PrincesPalace
             // An empty offer also ends it: with a pool smaller than the number
             // of rounds, there is eventually nothing left to show, and looping
             // on an empty offer would strand the player on a blank screen.
-            if (took && run.relicIds.Count < DraftCount())
+            if (took && run.relicIds.Count < SquadTrack.StartingRelics())
             {
                 _selected = -1;
                 _page = 0;
