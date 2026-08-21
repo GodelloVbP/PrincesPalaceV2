@@ -51,6 +51,11 @@ namespace PrincesPalace
         [SerializeField] internal Image[] offerIcons;
         [SerializeField] internal RectTransform[] offerBurstRects;
 
+        // The offer CARDS' own rects, so a narrower row can be re-centred.
+        // The tree is emitted at the widest the reward track can grant; see
+        // OfferRowLayout.
+        [SerializeField] internal RectTransform[] offerRects;
+
         // Item art, as two parallel arrays -- a scene serialises arrays and
         // does not serialise dictionaries. Same shape the overlay uses.
         [SerializeField] internal IconEntry[] icons;
@@ -345,10 +350,83 @@ namespace PrincesPalace
             PaintOffers();
         }
 
+        // Positions and sizes the offer row for the number of cards actually
+        // being shown.
+        //
+        // The tree is emitted at OfferRowLayout.MaxCards -- four narrow cards
+        // dividing the painted interior -- because a screen is built once for
+        // every save and a player who has earned level 50's wider offer needs
+        // the fourth card to exist. Everyone else sees three, which get the
+        // same interior split three ways and so come out at the width they
+        // always were.
+        //
+        // Both widths come from OfferRowLayout, so the row the audit solved and
+        // the row the game draws cannot disagree about the arithmetic -- only
+        // about the count, which is the one thing that genuinely varies.
+        //
+        // Driven off `count` (what is on screen) rather than the unlocked
+        // width: a thin content pool can return two offers, and two cards
+        // should be centred as two. The unlock only decides how many were
+        // asked for.
+        private void LayOutOfferRow(int count)
+        {
+            if (count <= 0) return;
+
+            float cardWidth = OfferRowLayout.CardWidth(count);
+            float labelWidth = OfferRowLayout.LabelWidth(count);
+
+            for (int i = 0; i < count; i++)
+            {
+                if (offerRects != null && i < offerRects.Length && offerRects[i] != null)
+                {
+                    var rect = offerRects[i];
+
+                    var position = rect.anchoredPosition;
+                    position.x = OfferRowLayout.CardX(i, count);
+                    rect.anchoredPosition = position;
+
+                    var size = rect.sizeDelta;
+                    size.x = cardWidth;
+                    rect.sizeDelta = size;
+                }
+
+                ResizeLabel(offerNames, i, labelWidth);
+                ResizeLabel(offerMetas, i, labelWidth);
+            }
+        }
+
+        // The labels have to follow the card or a long item name in a narrow
+        // row runs under the card next door -- they are decor, so nothing else
+        // would catch it.
+        private static void ResizeLabel(TMP_Text[] labels, int index, float width)
+        {
+            if (labels == null || index >= labels.Length || labels[index] == null) return;
+
+            var rect = labels[index].rectTransform;
+            var size = rect.sizeDelta;
+            size.x = width;
+            rect.sizeDelta = size;
+        }
+
         private void PaintOffers()
         {
             bool any = _offers.Count > 0;
             if (lootHeading != null) lootHeading.SetActive(any);
+
+            // RE-CENTRE FIRST, before anything reads a position.
+            //
+            // The row is emitted at OfferRowLayout.MaxCards wide because a
+            // screen is built once for every save and a player who has earned
+            // level 50's wider offer needs the fourth card to exist. Everyone
+            // else sees three, and three cards left at the four-wide positions
+            // would sit off-axis with a gap where the fourth belongs -- which
+            // is what a hidden card looks like if nobody moves the rest.
+            //
+            // Driven off _offers.Count rather than the unlocked width, so a
+            // thin content pool that returns two offers centres two. The count
+            // is what is actually on screen; the unlock only decides how many
+            // were asked for.
+            LayOutOfferRow(_offers.Count);
 
             for (int i = 0; i < offerButtons.Length; i++)
             {

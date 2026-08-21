@@ -40,7 +40,11 @@ $Areas = @{
     # exactly one class today (LevelCurveTests) and no other class in either
     # assembly contains the word.
     run     = "Dungeon|Map|FullRun|RunState|Currency|MetaProgression|Level|Save|ActiveSquad|Run|Resume|Snapshot|Seed|Descent|Depth|Difficulty|EnemyBand|Wallet|Reward|Reckoning|Ember|Ledger|Settlement|Encounter|Room|GlobalState"
-    ui      = "Button|Audio|Splash|PauseMenu|DebugMenu|MainMenu|SystemMenu|Cursor|Dialogue|Bark|Inventory|Equipment|Dossier|Options|Music|Screen|UiKit|Flicker|Ambience|Overlay"
+    # 'OfferRow' rather than a bare 'Offer': the offer ROW is a layout and
+    # belongs here, but ItemOfferTests and ItemOfferRollTests are reward rules
+    # that already sit in 'content' and 'run', and a bare pattern would drag
+    # them in for the sake of a shared word.
+    ui      = "Button|Audio|Splash|PauseMenu|DebugMenu|MainMenu|SystemMenu|Cursor|Dialogue|Bark|Inventory|Equipment|Dossier|Options|Music|Screen|UiKit|Flicker|Ambience|Overlay|OfferRow"
     art     = "Stance|FrameHold|Shadow|WhiteQuad|SpriteFacing|BattleBackground|ItemArt|TalentArt|ArtPath|Flash|Legibility|PostProcessing"
     rng     = "Rng|SeededRandom|Seed"
 }

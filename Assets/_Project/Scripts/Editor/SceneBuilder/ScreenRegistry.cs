@@ -996,6 +996,7 @@ public static class ScreenRegistry
         controller.rowGains = screen.RowGains.Select(result.Tmp).ToArray();
 
         controller.offerButtons = screen.OfferButtons.Select(result.Button).ToArray();
+        controller.offerRects = screen.OfferButtons.Select(result.Rect).ToArray();
         controller.offerNames = screen.OfferNames.Select(result.Tmp).ToArray();
         controller.offerMetas = screen.OfferMetas.Select(result.Tmp).ToArray();
 

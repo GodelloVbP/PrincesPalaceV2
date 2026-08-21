@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Rewards;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
 {
@@ -108,12 +109,38 @@ namespace PrincesPalace
                     .FirstOrDefault(d => d != null && d.id == c.definitionId))));
         }
 
-        // The three offers, each with its own independently rolled plus.
+        // How many items the fielded squad is offered.
+        //
+        // THE BEST LEVEL IN THE SQUAD, the same max-not-sum rule Favor and the
+        // relic draft use, and for the same reason: a run-scoped reward on a
+        // per-character track has to resolve to one number, and "the best
+        // character you brought" makes fielding them the decision.
+        public static int CurrentOfferWidth()
+        {
+            var save = SaveSlotManager.CurrentSave;
+            if (save == null) return ItemOfferTable.OfferCount;
+
+            int best = ItemOfferTable.OfferCount;
+            foreach (var character in save.ActiveSquad())
+            {
+                int width = OfferRowLayout.CardsFor(character?.level ?? 1);
+                if (width > best) best = width;
+            }
+
+            return best;
+        }
+
+        // The offers, each with its own independently rolled plus.
         //
         // `nextIndex` is upper-bound-exclusive and injected, matching the shape
         // both Domain tables already take -- so a caller under test can hand in
-        // a seeded stand-in and get the same three items every time.
-        public static List<ItemOffer> Roll(EncounterClass encounter, int depthStep, int favor, Func<int, int> nextIndex)
+        // a seeded stand-in and get the same items every time.
+        //
+        // `count` defaults to the base three so every existing caller reads as
+        // it did. The live call site passes CurrentOfferWidth(), because the
+        // reward track widens the offer at level 50.
+        public static List<ItemOffer> Roll(EncounterClass encounter, int depthStep, int favor, Func<int, int> nextIndex,
+            int count = ItemOfferTable.OfferCount)
         {
             var offers = new List<ItemOffer>();
             if (nextIndex == null) return offers;
@@ -128,7 +155,7 @@ namespace PrincesPalace
             // ITEM. Rolling the tier per item would quietly widen the spread
             // ItemOfferTable.TierSpread already controls, and make the three
             // offers three separate difficulty statements rather than one.
-            foreach (var offer in ItemOfferTable.Choose(candidates, targetTier, maxTier, nextIndex))
+            foreach (var offer in ItemOfferTable.Choose(candidates, targetTier, maxTier, nextIndex, count))
             {
                 offers.Add(offer.WithPlus(RarityTable.RollPlus(encounter, favor, nextIndex)));
             }

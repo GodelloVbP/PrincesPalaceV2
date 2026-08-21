@@ -160,16 +160,22 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void ThereIsOneOfferNodePerOfferTheTableProduces()
+        public void ThereIsOneOfferNodePerOfferTheWidestRowCanProduce()
         {
-            // ItemOfferTable.OfferCount is the contract. A tree with fewer
-            // buttons than the roll returns would silently drop an offer the
-            // player was supposed to be choosing between.
+            // OfferRowLayout.MaxCards is the contract, and it is the WIDEST the
+            // reward track can grant rather than the base three. A tree with
+            // fewer buttons than the roll returns would silently drop an offer
+            // the player was supposed to be choosing between -- and since the
+            // tree is emitted once for every save, "the roll" means the roll
+            // for the most-levelled player, not for a fresh one.
             var screen = ReckoningScreen.Build();
 
-            Assert.AreEqual(ItemOfferTable.OfferCount, screen.OfferButtons.Count);
-            Assert.AreEqual(ItemOfferTable.OfferCount, screen.OfferNames.Count);
-            Assert.AreEqual(ItemOfferTable.OfferCount, screen.OfferMetas.Count);
+            Assert.AreEqual(OfferRowLayout.MaxCards, screen.OfferButtons.Count);
+            Assert.AreEqual(OfferRowLayout.MaxCards, screen.OfferNames.Count);
+            Assert.AreEqual(OfferRowLayout.MaxCards, screen.OfferMetas.Count);
+
+            Assert.Greater(OfferRowLayout.MaxCards, ItemOfferTable.OfferCount,
+                "the track's wider offer grants nothing, so the fourth card is dead weight");
         }
 
         [Test]

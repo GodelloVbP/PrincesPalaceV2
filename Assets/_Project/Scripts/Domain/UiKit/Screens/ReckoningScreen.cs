@@ -246,7 +246,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var offerChildren = new List<UiNode> { lootHeading };
 
-            for (int i = 0; i < ItemOfferTable.OfferCount; i++)
+            // THE WIDEST the reward track can grant, not the base three. The
+            // tree is emitted once for every save, so a player who has earned
+            // level 50's wider offer needs the fourth card to already exist --
+            // the controller hides it for everyone who has not. See
+            // OfferRowLayout for why the audit wants the wide case built.
+            for (int i = 0; i < OfferRowLayout.MaxCards; i++)
             {
                 offerChildren.Add(screen.BuildOffer(i));
             }
@@ -676,17 +681,24 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return panel;
         }
 
-        // One of the three items on offer. A button, because picking one is
-        // the only decision this screen asks the player to make.
-        // One of the three, as a CARD across the width rather than a row in a
-        // list. The offers used to share the panel with the experience bar and
-        // had to be small; alone on their own phase they can be the thing the
-        // screen is about.
+        // One of the items on offer. A button, because picking one is the only
+        // decision this screen asks the player to make, and a CARD across the
+        // width rather than a row in a list -- the offers used to share the
+        // panel with the experience bar and had to be small; alone on their own
+        // phase they can be the thing the screen is about.
+        //
+        // Positioned for a FULL-WIDTH row. A narrower one is re-centred at
+        // runtime by ReckoningController, from the same OfferRowLayout.CardX
+        // this calls, so the two widths cannot drift apart.
         private UiNode BuildOffer(int index)
         {
-            const float CardWidth = 340f;
-            const float CardGap = 30f;
-            float x = (index - (ItemOfferTable.OfferCount - 1) * 0.5f) * (CardWidth + CardGap);
+            // Built at the WIDEST row the track can grant, which is also the
+            // narrowest each card can be. ReckoningController widens them again
+            // for the three-card row every player below level 50 sees, from
+            // this same OfferRowLayout, so the two cannot drift.
+            float cardWidth = OfferRowLayout.CardWidth(OfferRowLayout.MaxCards);
+            float labelWidth = OfferRowLayout.LabelWidth(OfferRowLayout.MaxCards);
+            float x = OfferRowLayout.CardX(index, OfferRowLayout.MaxCards);
 
             // THE ITEM IS THE CARD, so it gets the room. 132x132 was a square
             // slot holding sheets that are about 260x384, and with aspect now
@@ -728,10 +740,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // used to float 57px below the icon with nothing in the gap, which
             // reads as two unrelated things rather than as a labelled object.
             // 6px is enough to separate them and little enough to bind them.
-            var name = Ui.Label($"ReckoningOffer{index}Name", UiString.Runtime, new UiVec(320f, 66f), 21,
+            var name = Ui.Label($"ReckoningOffer{index}Name", UiString.Runtime, new UiVec(labelWidth, 66f), 21,
                     "#EDE6FF", Place.At(0f, IconBottom - 6f - 33f))
                 .AsDecor();
-            var meta = Ui.Label($"ReckoningOffer{index}Meta", UiString.Runtime, new UiVec(320f, 26f), 15,
+            var meta = Ui.Label($"ReckoningOffer{index}Meta", UiString.Runtime, new UiVec(labelWidth, 26f), 15,
                     "#B8A8D9", Place.At(0f, IconBottom - 6f - 66f - 4f - 13f))
                 .AsDecor();
 
@@ -745,12 +757,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // declared children and the plate came straight back from the
             // fallback.
             //
-            // The three cards run to x 540 against a clip half-width of 540.3.
-            // That is deliberate -- the offers are sized to use the full
-            // interior -- but it means widening a card by even a pixel now
-            // fails A2 rather than quietly touching the paint.
+            // The row runs to x 540 against a clip half-width of 540.3. That is
+            // deliberate -- the offers are sized to use the full interior --
+            // but it means widening a card by even a pixel fails A2 rather than
+            // quietly touching the paint. That constraint is why level 50's
+            // wider offer divides the same budget into four narrower cards
+            // instead of adding a fourth at the old width, which would have
+            // needed 1450px of a 1080px interior.
             var button = Ui.Button($"ReckoningOffer{index}", UiString.Runtime,
-                    new UiVec(CardWidth, 400f), 14, Place.At(x, 0f))
+                    new UiVec(cardWidth, 400f), 14, Place.At(x, 0f))
                 .NoChrome();
 
             button.Children.Add(halo);

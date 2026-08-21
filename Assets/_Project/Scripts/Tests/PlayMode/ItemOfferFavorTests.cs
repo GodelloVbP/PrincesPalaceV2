@@ -118,6 +118,35 @@ namespace PrincesPalace.PlayModeTests
                 "a benched character's earned Favor reached the fielded squad's roll");
         }
 
+        // ---- the wider offer, level 50 -----------------------------------------
+
+        [Test]
+        public void AnUnlevelledSquadIsOfferedThree()
+        {
+            Assert.AreEqual(3, ItemOfferRoll.CurrentOfferWidth());
+        }
+
+        [Test]
+        public void ALevelledSquadIsOfferedFour()
+        {
+            SaveSlotManager.CurrentSave.ActiveSquad()[0].level = 50;
+
+            Assert.AreEqual(4, ItemOfferRoll.CurrentOfferWidth(),
+                "level 50's wider offer is not reaching the roll");
+        }
+
+        // The width has to reach the ROLL, not just the helper beside it -- a
+        // fourth card with nothing in it is the same bug as no fourth card.
+        [Test]
+        public void TheWiderOfferActuallyRollsAFourthItem()
+        {
+            var offers = ItemOfferRoll.Roll(Domain.Rewards.EncounterClass.Normal, 0, 0,
+                n => 0, count: 4);
+
+            Assert.AreEqual(4, offers.Count,
+                "asking for four offers returned a different number");
+        }
+
         // Favor is not a free dial: LootLadder caps the per-rung step chance at
         // MaxStep, and each encounter class reaches that cap at a different
         // Favor. This pins the ceilings rather than the arithmetic, because the

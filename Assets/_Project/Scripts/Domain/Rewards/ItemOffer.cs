@@ -64,14 +64,20 @@ namespace PrincesPalace.Domain.Rewards
         // from UnityEngine.Random so the selection is deterministic under
         // test. Domain cannot see UnityEngine at all.
         //
-        // Returns fewer than OfferCount only when the candidate pool is
-        // genuinely smaller. Callers must handle that rather than assuming
-        // three, since a set could be removed from content at any time.
+        // Returns fewer than `count` only when the candidate pool is
+        // genuinely smaller. Callers must handle that rather than assuming a
+        // full row, since a set could be removed from content at any time.
+        //
+        // `count` defaults to OfferCount so every existing caller and test
+        // reads the same as before. It is a parameter at all because the
+        // reward track widens the offer at level 50, and the width is a
+        // property of who is playing rather than of this table.
         public static List<ItemOffer> Choose(
-            IReadOnlyList<ItemOffer> candidates, int targetTier, int maxTier, Func<int, int> nextIndex)
+            IReadOnlyList<ItemOffer> candidates, int targetTier, int maxTier, Func<int, int> nextIndex,
+            int count = OfferCount)
         {
             var chosen = new List<ItemOffer>();
-            if (candidates == null || candidates.Count == 0 || nextIndex == null)
+            if (candidates == null || candidates.Count == 0 || nextIndex == null || count <= 0)
             {
                 return chosen;
             }
@@ -82,7 +88,7 @@ namespace PrincesPalace.Domain.Rewards
             // narrow band at an awkward depth would otherwise return one
             // offer and silently make the screen a non-choice; widening
             // degrades the scaling gently instead of the offer count.
-            for (int spread = TierSpread; chosen.Count < OfferCount; spread++)
+            for (int spread = TierSpread; chosen.Count < count; spread++)
             {
                 var pool = candidates
                     .Where(c => Math.Abs(c.Tier - target) <= spread)
@@ -100,7 +106,7 @@ namespace PrincesPalace.Domain.Rewards
                     continue;
                 }
 
-                while (pool.Count > 0 && chosen.Count < OfferCount)
+                while (pool.Count > 0 && chosen.Count < count)
                 {
                     int index = nextIndex(pool.Count);
                     if (index < 0 || index >= pool.Count)
