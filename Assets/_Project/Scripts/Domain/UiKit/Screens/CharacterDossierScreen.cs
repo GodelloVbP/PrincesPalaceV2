@@ -498,9 +498,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
             string key = EquipmentSlots.DisplayName(slot).Replace(" ", "");
             var at = DossierLayout.SlotAt(slot);
 
+            // No hairline for the centred pair -- HEAD sits directly above the
+            // figure's head and SHOES directly below its feet, so adjacency
+            // already says which body part they belong to. Width 0 is how
+            // DossierLayout.LeaderAt says so; emitting it anyway would be a
+            // zero-sized graphic, which A6 refuses and is right to.
             var leaderAt = DossierLayout.LeaderAt(slot, out float leaderWidth);
-            yield return Ui.Solid($"DossierLeader{key}", "#C8B4DE2E",
-                new UiVec(leaderWidth, 1f), Place.At(leaderAt.X, leaderAt.Y)).AsDecor();
+            if (leaderWidth > 0f)
+            {
+                yield return Ui.Solid($"DossierLeader{key}", "#C8B4DE2E",
+                    new UiVec(leaderWidth, 1f), Place.At(leaderAt.X, leaderAt.Y)).AsDecor();
+            }
 
             // 6px of inset, down from 12. The slot box cannot grow -- the
             // figure's slots sit 98 authored units apart and the box plus its

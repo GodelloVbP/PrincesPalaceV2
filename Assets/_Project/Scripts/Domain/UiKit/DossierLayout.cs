@@ -422,6 +422,9 @@ namespace PrincesPalace.Domain.UiKit
         // Close enough to the figure that the leader reads as a tie rather
         // than as a long walk, and far enough that a 86-wide box clears the
         // silhouette's arms.
+        // Centred on the figure, for the two slots whose body part is.
+        public const float CentreFileX = 237f;
+
         public const float FileLeftX = 56f;
         public const float FileRightX = 424f;
 
@@ -432,14 +435,28 @@ namespace PrincesPalace.Domain.UiKit
 
             switch (slot)
             {
-                case EquipmentSlot.Head: top = 0f; break;
+                // HEAD IS ON THE CENTRE LINE, directly above the figure's
+                // head, and needs no leader: being right above the thing it
+                // belongs to says it better than a hairline can. In the left
+                // file it was the slot that looked most stranded, since the
+                // head sits centre-top and the leader had to run most of the
+                // way across the figure to reach it.
+                //
+                // SHOES DOES NOT GET THE SAME TREATMENT, and it was tried:
+                // centred below the feet it landed on the figure's shins,
+                // because the legs reach within a few units of the stage floor
+                // and there is no room under them. It sits at the foot of the
+                // right file instead, level with LEGS on the left, which at
+                // least makes the two files balance.
+                case EquipmentSlot.Head: return OnBodyFromStage(CentreFileX, 0f, SlotSize, SlotSize);
+
                 case EquipmentSlot.Necklace: top = 150f; break;
                 case EquipmentSlot.Torso: top = 248f; break;
                 case EquipmentSlot.Gloves: top = 350f; break;
                 case EquipmentSlot.Legs: top = 452f; break;
                 case EquipmentSlot.Weapon1: top = 248f; left = false; break;
                 case EquipmentSlot.Weapon2: top = 350f; left = false; break;
-                default: top = 540f; left = false; break;  // Shoes
+                default: top = 452f; left = false; break;  // Shoes
             }
 
             return OnBodyFromStage(left ? FileLeftX : FileRightX, top, SlotSize, SlotSize);
@@ -472,14 +489,20 @@ namespace PrincesPalace.Domain.UiKit
 
             switch (slot)
             {
-                case EquipmentSlot.Head: bodyEnd = 280f; top = 82f; break;
+                // NO LEADER for the centred slot. Width 0 is the signal, and
+                // BuildSlot skips the hairline rather than emitting a zero-wide
+                // graphic -- which UiAudit's A6 would refuse anyway, correctly.
+                case EquipmentSlot.Head:
+                    width = 0f;
+                    return UiVec.Zero;
+
                 case EquipmentSlot.Necklace: bodyEnd = 262f; top = 187f; break;
                 case EquipmentSlot.Torso: bodyEnd = 238f; top = 285f; break;
                 case EquipmentSlot.Gloves: bodyEnd = 212f; top = 387f; break;
                 case EquipmentSlot.Legs: bodyEnd = 242f; top = 489f; break;
                 case EquipmentSlot.Weapon1: bodyEnd = 348f; top = 285f; left = false; break;
                 case EquipmentSlot.Weapon2: bodyEnd = 348f; top = 387f; left = false; break;
-                default: bodyEnd = 325f; top = 577f; left = false; break;  // Shoes
+                default: bodyEnd = 330f; top = 489f; left = false; break;  // Shoes
             }
 
             float boxEdge = left ? FileLeftX + 86f : FileRightX;
