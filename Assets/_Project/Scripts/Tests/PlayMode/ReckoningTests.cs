@@ -333,5 +333,104 @@ namespace PrincesPalace.PlayModeTests
                 frame.rect.width, 0.5f);
             Assert.AreEqual(Vector3.one, frame.localScale);
         }
+
+        // ---- the reroll, level 40 of the reward track ------------------------------
+
+        private void LevelTheSquadTo(int level)
+        {
+            foreach (var character in SaveSlotManager.CurrentSave.ActiveSquad())
+            {
+                character.level = level;
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator TheRerollIsHiddenUntilTheTrackGrantsIt()
+        {
+            // HIDDEN rather than greyed out. A disabled button for a reward the
+            // player has never heard of reads as something broken.
+            RunManager.StartRun(1234);
+            yield return ShowIt(Reward(), ThreeOffers());
+
+            Assert.IsFalse(Named("ReckoningRerollButton").activeSelf,
+                "a level-1 squad is being shown a reroll it has not earned");
+        }
+
+        [UnityTest]
+        public IEnumerator ALevelFortySquadCanRerollTheOffer()
+        {
+            RunManager.StartRun(1234);
+            yield return OpenTheFight();
+            LevelTheSquadTo(40);
+
+            // The source the fight would have supplied. Set here because this
+            // test opens the Reckoning directly rather than by winning a fight.
+            _reckoning.RerollSource = ThreeOffers;
+            _reckoning.Show(Reward(), ThreeOffers());
+            yield return null;
+            yield return null;
+
+            var button = Named("ReckoningRerollButton");
+            Assert.IsTrue(button.activeSelf, "a level-40 squad is not shown the reroll it earned");
+            Assert.AreEqual(0, RunManager.Run.offerRerollsUsed);
+
+            button.GetComponent<Button>().onClick.Invoke();
+            yield return null;
+
+            Assert.AreEqual(1, RunManager.Run.offerRerollsUsed,
+                "pressing reroll did not spend one");
+        }
+
+        [UnityTest]
+        public IEnumerator TheRerollRunsOutAndStopsBeingPressable()
+        {
+            RunManager.StartRun(1234);
+            yield return OpenTheFight();
+            LevelTheSquadTo(40);
+
+            _reckoning.RerollSource = ThreeOffers;
+            _reckoning.Show(Reward(), ThreeOffers());
+            yield return null;
+            yield return null;
+
+            var button = Named("ReckoningRerollButton").GetComponent<Button>();
+
+            // One allowance at level 40, so the second press must do nothing.
+            button.onClick.Invoke();
+            yield return null;
+            button.onClick.Invoke();
+            yield return null;
+
+            Assert.AreEqual(1, RunManager.Run.offerRerollsUsed,
+                "the reroll was spent past its allowance");
+            Assert.IsFalse(button.interactable, "an exhausted reroll is still pressable");
+        }
+
+        // The allowance is spent per RUN, not per fight -- so a second
+        // Reckoning in the same descent starts from what is left, not from a
+        // fresh count. That is the whole reason offerRerollsUsed lives on
+        // RunSnapshot.
+        [UnityTest]
+        public IEnumerator RerollsDoNotComeBackForTheNextFight()
+        {
+            RunManager.StartRun(1234);
+            yield return OpenTheFight();
+            LevelTheSquadTo(40);
+
+            _reckoning.RerollSource = ThreeOffers;
+            _reckoning.Show(Reward(), ThreeOffers());
+            yield return null;
+            yield return null;
+
+            Named("ReckoningRerollButton").GetComponent<Button>().onClick.Invoke();
+            yield return null;
+
+            // A second fight in the same descent.
+            _reckoning.Show(Reward(), ThreeOffers());
+            yield return null;
+
+            Assert.IsFalse(Named("ReckoningRerollButton").GetComponent<Button>().interactable,
+                "the next fight handed back a reroll the run had already spent");
+        }
     }
 }

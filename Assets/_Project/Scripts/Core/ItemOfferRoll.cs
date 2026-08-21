@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using PrincesPalace.Content;
+using PrincesPalace.Domain.Progression;
 using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.UiKit;
 
@@ -125,6 +126,24 @@ namespace PrincesPalace
             {
                 int width = OfferRowLayout.CardsFor(character?.level ?? 1);
                 if (width > best) best = width;
+            }
+
+            return best;
+        }
+
+        // How many rerolls the fielded squad gets per descent.
+        //
+        // Same best-in-squad rule as the offer width above and the relic draft.
+        public static int CurrentRerollAllowance()
+        {
+            var save = SaveSlotManager.CurrentSave;
+            if (save == null) return 0;
+
+            int best = 0;
+            foreach (var character in save.ActiveSquad())
+            {
+                int allowed = RewardTrack.RerollsPerRun(character?.level ?? 1);
+                if (allowed > best) best = allowed;
             }
 
             return best;

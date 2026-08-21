@@ -159,12 +159,17 @@ namespace PrincesPalace.Domain.Progression
         // design statement, and where each one lands is arithmetic. Retuning
         // the track is editing these numbers.
         //
-        // INCOMPLETE ON PURPOSE. The design also calls for 15 max-HP nodes, 6
-        // signature-at-fight-start and 2 extra offer rerolls, and none of those
-        // reward kinds can be paid out yet -- there is no per-character bonus
-        // health field, no fight-start signature hook, and no reroll. Adding
-        // them here before they do anything would hand players a reward that
-        // silently does nothing. The levels they will occupy read as None until
+        // INCOMPLETE ON PURPOSE. The design also calls for 15 max-HP nodes and
+        // 6 signature-at-fight-start, and neither can be paid out yet -- there
+        // is no per-character bonus health field and no fight-start signature
+        // hook. Adding them here before they do anything would hand players a
+        // reward that silently does nothing.
+        //
+        // The two extra offer rerolls ARE here, since level 40 built the
+        // reroll. They are what makes RerollsPerRun's accumulate-rather-than-
+        // supersede semantics observable: with only the milestone, summing and
+        // taking the highest give the same answer and the distinction is
+        // untested. The levels they will occupy read as None until
         // then, which is visible rather than quietly wrong.
         //
         // Gold nodes are absent for a different reason and a permanent-looking
@@ -172,8 +177,9 @@ namespace PrincesPalace.Domain.Progression
         // gold has no sink. See docs/HANDOVER_PROGRESSION_TRACK.md 4b.
         private static readonly (TrackReward Reward, int Amount, int Count)[] FillerMix =
         {
-            (TrackReward.StatPoint, 1, 30),
-            (TrackReward.Favor,     2, 20),
+            (TrackReward.StatPoint,   1, 30),
+            (TrackReward.Favor,       2, 20),
+            (TrackReward.OfferReroll, 1, 2),
         };
 
         private static readonly TrackEntry[] Entries = Build();
@@ -273,6 +279,36 @@ namespace PrincesPalace.Domain.Progression
             return unlockedAt > 0 && level >= unlockedAt;
         }
 
+        // How many times a descent at `level` may reroll its item offer.
+        //
+        // ACCUMULATES rather than superseding, which is the opposite of
+        // StartingRelics next door and the reason both have named accessors
+        // instead of callers picking an UnlockedAmount/UnlockedTotal pair for
+        // themselves. Getting it the wrong way round is silent: rerolls would
+        // read 1 instead of 3, and nothing would look broken.
+        //
+        // A capability rather than a grant, so it is stored nowhere on the
+        // character -- how many are LEFT is run state (RunSnapshot), and how
+        // many you get is this.
+        public static int RerollsPerRun(int level) =>
+            UnlockedTotal(TrackReward.OfferReroll, level);
+
+        // Every Amount for `reward` up to `level`, added together. For rewards
+        // that stack; see UnlockedAmount for the ones where a later step
+        // replaces an earlier one.
+        public static int UnlockedTotal(TrackReward reward, int level)
+        {
+            if (level > MaxLevel) level = MaxLevel;
+
+            int total = 0;
+            for (int l = StartingLevel; l <= level; l++)
+            {
+                if (Entries[l].Reward == reward) total += Entries[l].Amount;
+            }
+
+            return total;
+        }
+
         // How many relics a descent at `level` begins with.
         //
         // Its own named method rather than a raw UnlockedAmount call, because
@@ -323,6 +359,33 @@ namespace PrincesPalace.Domain.Progression
             Spread(entries, fillerLevels, fillerCount, mixed);
 
             return entries;
+        }
+
+        // The earliest level a FILLER node of this reward may land on.
+        //
+        // A MILESTONE THAT INTRODUCES A CAPABILITY HAS TO COME FIRST. Level 40
+        // is "you may now reroll the offer"; a filler reroll at level 12 would
+        // hand the player the mechanic before the milestone announcing it, so
+        // the milestone reads as a duplicate of something they already had.
+        // The even spread put one at level 39, which is how this was found.
+        //
+        // Only UNLOCKS are gated. A grant's milestone is an extra helping
+        // rather than an introduction -- level 80's ten stat points do not
+        // introduce stat points, and gating on it would push all thirty filler
+        // stat points past level 80.
+        //
+        // Reads the Milestones table rather than Entries or UnlockLevel,
+        // because this runs DURING Build() and Entries is not assigned yet.
+        private static int EarliestFillerLevel(TrackReward reward)
+        {
+            if (!IsUnlock(reward)) return 0;
+
+            foreach (var milestone in Milestones)
+            {
+                if (milestone.Reward == reward) return milestone.Level;
+            }
+
+            return 0;
         }
 
         // The filler mix as an ORDER, with the kinds interleaved rather than
@@ -386,11 +449,39 @@ namespace PrincesPalace.Domain.Progression
                 int before = i * mixed.Length / fillerCount;
                 int after = (i + 1) * mixed.Length / fillerCount;
 
-                if (after > before)
+                if (after <= before) continue;
+
+                int level = fillerLevels[i];
+
+                // If the next reward in the sequence is not allowed this early,
+                // SWAP it with the first later one that is, rather than
+                // dropping it or leaving the slot empty. A swap keeps every
+                // count intact and every slot used -- it only perturbs the
+                // interleave locally, and the reward that was too early takes
+                // the slot of the one that stood in for it.
+                if (TooEarlyFor(mixed[taken].Reward, level))
                 {
-                    entries[fillerLevels[i]] = mixed[taken++];
+                    for (int j = taken + 1; j < mixed.Length; j++)
+                    {
+                        if (TooEarlyFor(mixed[j].Reward, level)) continue;
+
+                        var swap = mixed[taken];
+                        mixed[taken] = mixed[j];
+                        mixed[j] = swap;
+                        break;
+                    }
                 }
+
+                // Still not allowed means nothing left in the sequence may land
+                // this early. Leave the slot empty and try the next one; the
+                // remaining rewards will place further down the track.
+                if (TooEarlyFor(mixed[taken].Reward, level)) continue;
+
+                entries[level] = mixed[taken++];
             }
         }
+
+        private static bool TooEarlyFor(TrackReward reward, int level) =>
+            level < EarliestFillerLevel(reward);
     }
 }

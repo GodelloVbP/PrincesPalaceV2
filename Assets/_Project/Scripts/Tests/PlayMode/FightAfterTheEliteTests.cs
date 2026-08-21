@@ -321,6 +321,26 @@ namespace PrincesPalace.PlayModeTests
                 $"the elite is over (won={fight.Session.PlayerWon}) and there is not one pressable " +
                 "button on the screen - the verb column is hidden, Continue is hidden, and whatever " +
                 "took over cannot be dismissed. The player is stuck in the fight.");
+
+            // AND THE REROLL HAS SOMEWHERE TO ROLL FROM, if this was a win.
+            //
+            // ReckoningTests drives the reroll by setting RerollSource itself,
+            // because it opens the Reckoning directly rather than by winning --
+            // so those tests would pass just as happily if OpenReckoning never
+            // set it, and the button would silently do nothing in the actual
+            // game. This is the only place a fight is played to its end, so it
+            // is the only place that can check production did the wiring.
+            // architecture_audit.md F17.
+            if (fight.Session.PlayerWon)
+            {
+                var reckoning = fight.GetComponentInChildren<ReckoningController>(includeInactive: true);
+                if (reckoning != null && reckoning.gameObject.activeInHierarchy)
+                {
+                    Assert.IsNotNull(reckoning.RerollSource,
+                        "the fight opened the Reckoning without telling it where to re-roll offers " +
+                        "from, so the level-40 reroll button does nothing");
+                }
+            }
         }
 
         // ---- the stage is the ceiling for the party too --------------------------

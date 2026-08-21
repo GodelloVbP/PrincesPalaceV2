@@ -116,5 +116,22 @@ namespace PrincesPalace
         // with none (a pool with nothing unlocked in it) must not be asked
         // again every time they reload the hub.
         public bool relicDrafted;
+
+        // How many item-offer rerolls this descent has spent.
+        //
+        // USED rather than remaining, so the allowance stays a pure function of
+        // the reward track (RewardTrack.RerollsPerRun) and is never copied onto
+        // the run. A remaining-count would be a snapshot of the track taken at
+        // the moment the run started -- so a character who reached level 40
+        // mid-descent would finish that run with nothing, and one who was
+        // levelled by a debug grant would keep a stale allowance forever.
+        //
+        // Run-scoped, so it resets for free: StartRun replaces this whole
+        // snapshot. That is the same reason relicIds lives here.
+        //
+        // Purely additive, so CurrentVersion does not move -- an older save's
+        // in-flight run has no such field and JsonUtility leaves it at zero,
+        // which is exactly "has rerolled nothing yet".
+        public int offerRerollsUsed;
     }
 }

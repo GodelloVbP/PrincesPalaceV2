@@ -261,6 +261,82 @@ namespace PrincesPalace.Domain.Tests
             Stats.AbilityDerivation.MaxHealthBonus(
                 new Stats.AbilityScoreBlock(10, 10, 10 + investedConstitution, 10, 10, 10));
 
+        // ---- rerolls accumulate, relics supersede -------------------------------
+        //
+        // The two unlocks-with-amounts on the track combine in OPPOSITE ways,
+        // and confusing them is silent: rerolls would read 1 instead of 3 and
+        // nothing would look broken. That is why both have named accessors
+        // rather than callers choosing between UnlockedAmount and
+        // UnlockedTotal.
+        [TestCase(1, 0)]
+        [TestCase(39, 0)]
+        [TestCase(40, 1)]
+        [TestCase(100, 3)]
+        public void RerollsAddUpAcrossTheTrack(int level, int expected)
+        {
+            Assert.AreEqual(expected, RewardTrack.RerollsPerRun(level));
+        }
+
+        [Test]
+        public void RerollsAccumulateWhereStartingRelicsReplace()
+        {
+            // Three reroll nodes worth 1 each -> 3. Three starting-relic steps
+            // worth 2, 3 and 4 -> 4, not 9. Asserted together because the
+            // distinction only exists in the difference.
+            Assert.AreEqual(3, RewardTrack.UnlockedTotal(TrackReward.OfferReroll, RewardTrack.MaxLevel));
+            Assert.AreEqual(4, RewardTrack.UnlockedAmount(
+                TrackReward.StartingRelics, RewardTrack.MaxLevel, RewardTrack.BaseStartingRelics));
+
+            Assert.AreNotEqual(
+                RewardTrack.UnlockedTotal(TrackReward.StartingRelics, RewardTrack.MaxLevel),
+                RewardTrack.UnlockedAmount(
+                    TrackReward.StartingRelics, RewardTrack.MaxLevel, RewardTrack.BaseStartingRelics),
+                "summing and taking the highest agree, so nothing here proves the two are different");
+        }
+
+        // The milestone alone would make sum and max identical, which is why
+        // the two filler rerolls were added in the same commit that built the
+        // reroll rather than left for the authoring pass.
+        [Test]
+        public void MoreThanOneLevelGrantsAReroll()
+        {
+            int nodes = 0;
+            for (int level = 1; level <= RewardTrack.MaxLevel; level++)
+            {
+                if (RewardTrack.At(level).Reward == TrackReward.OfferReroll) nodes++;
+            }
+
+            Assert.AreEqual(3, nodes, "the reroll milestone plus its two filler nodes");
+        }
+
+        // NO CAPABILITY ARRIVES BEFORE THE MILESTONE THAT ANNOUNCES IT.
+        //
+        // Written against every unlock rather than against the reroll, because
+        // this is the class of bug and not the instance: the even spread put a
+        // filler reroll at level 39, one level before the milestone introducing
+        // rerolls, and a player would have met the mechanic before the track
+        // claimed to give it to them. Any future unlock with filler nodes has
+        // the same failure available to it.
+        [Test]
+        public void NoUnlockIsHandedOutBeforeItsMilestone()
+        {
+            foreach (TrackReward reward in System.Enum.GetValues(typeof(TrackReward)))
+            {
+                if (!RewardTrack.IsUnlock(reward)) continue;
+
+                int first = 0;
+                for (int level = 1; level <= RewardTrack.MaxLevel; level++)
+                {
+                    if (RewardTrack.At(level).Reward == reward) { first = level; break; }
+                }
+
+                if (first == 0) continue;
+
+                Assert.AreEqual(RewardTrack.UnlockLevel(reward), first,
+                    $"{reward} first appears at level {first}, which is not where its milestone is");
+            }
+        }
+
         // ---- what the player is told --------------------------------------------
 
         // EVERY reward kind has a name, checked by walking the enum rather than

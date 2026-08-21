@@ -277,6 +277,11 @@ namespace PrincesPalace
             if (reward == null) return false;
 
             reckoning.Dismissed = LeaveFight;
+
+            // The same roll the first offer came from, so a reroll is a fresh
+            // draw of the identical shape rather than a second, subtly
+            // different table.
+            reckoning.RerollSource = RollOffers;
             reckoning.Show(reward, RollOffers());
             return true;
         }

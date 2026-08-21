@@ -147,6 +147,40 @@ namespace PrincesPalace.PlayModeTests
                 "asking for four offers returned a different number");
         }
 
+        // ---- rerolls, level 40 --------------------------------------------------
+
+        [TestCase(1, 0)]
+        [TestCase(39, 0)]
+        [TestCase(40, 1)]
+        [TestCase(100, 3)]
+        public void TheRerollAllowanceFollowsTheBestLevelInTheSquad(int level, int expected)
+        {
+            foreach (var character in SaveSlotManager.CurrentSave.ActiveSquad())
+            {
+                character.level = level;
+            }
+
+            Assert.AreEqual(expected, ItemOfferRoll.CurrentRerollAllowance());
+        }
+
+        // Best-in-squad, not sum -- the same rule Favor, the offer width and the
+        // relic draft all use. A squad of three level-40s gets one reroll
+        // between them, not three.
+        [Test]
+        public void RerollsDoNotAddUpAcrossTheSquad()
+        {
+            var squad = SaveSlotManager.CurrentSave.ActiveSquad();
+            if (squad.Count < 2)
+            {
+                Assert.Ignore("a solo squad cannot show the difference between highest and sum");
+            }
+
+            foreach (var character in squad) character.level = 40;
+
+            Assert.AreEqual(1, ItemOfferRoll.CurrentRerollAllowance(),
+                "the squad's rerolls were summed rather than taken as the highest");
+        }
+
         // Favor is not a free dial: LootLadder caps the per-rung step chance at
         // MaxStep, and each encounter class reaches that cap at a different
         // Favor. This pins the ceilings rather than the arithmetic, because the

@@ -56,6 +56,10 @@ namespace PrincesPalace
         // OfferRowLayout.
         [SerializeField] internal RectTransform[] offerRects;
 
+        // The reroll, level 40 of the reward track. See Reroll().
+        [SerializeField] internal Button rerollButton;
+        [SerializeField] internal TMP_Text rerollLabel;
+
         // Item art, as two parallel arrays -- a scene serialises arrays and
         // does not serialise dictionaries. Same shape the overlay uses.
         [SerializeField] internal IconEntry[] icons;
@@ -191,6 +195,8 @@ namespace PrincesPalace
             }
 
             continueButton.onClick.AddListener(() => Dismissed?.Invoke());
+
+            if (rerollButton != null) rerollButton.onClick.AddListener(Reroll);
 
             for (int i = 0; i < offerButtons.Length; i++)
             {
@@ -350,6 +356,71 @@ namespace PrincesPalace
             PaintOffers();
         }
 
+        // Where the offers came from, so the reroll can ask for more.
+        //
+        // A source rather than a copy of the roll: what a fight offers depends
+        // on its encounter class and depth, which the Reckoning does not know
+        // and has no business learning. Same shape as Dismissed and the fight's
+        // own SettlementSource.
+        // PUBLIC, not internal, for the reason EquipLocked above records: the
+        // PlayMode test assembly cannot see internals, and the reroll's whole
+        // behaviour is only observable through a driven screen.
+        public System.Func<List<ItemOffer>> RerollSource;
+
+        // Spends one of the run's rerolls and replaces the offer.
+        //
+        // THE SPEND IS RECORDED BEFORE THE ROLL, and persisted, so a crash
+        // between the two costs the player a reroll rather than handing them
+        // infinite ones. The opposite order is the classic duplication bug:
+        // roll, show, die, reload, roll again.
+        //
+        // Refuses once an offer is taken. Rerolling after choosing would be
+        // choosing twice.
+        private void Reroll()
+        {
+            if (_taken || RerollSource == null) return;
+
+            var run = RunManager.Run;
+            if (run == null) return;
+
+            if (run.offerRerollsUsed >= ItemOfferRoll.CurrentRerollAllowance()) return;
+
+            run.offerRerollsUsed++;
+            SaveSlotManager.SaveCurrent();
+
+            _offers = RerollSource.Invoke() ?? new List<ItemOffer>();
+
+            // The tooltip is describing an item that no longer exists, and the
+            // pointer has not moved so nothing will close it on its own.
+            OnOfferHover(-1, false);
+            PaintOffers();
+        }
+
+        // The button's state and caption.
+        //
+        // HIDDEN, not merely disabled, when the track has granted none. The
+        // node exists in every save's scene because the tree is emitted once;
+        // a greyed-out button for a reward you have never heard of is worse
+        // than no button, because it reads as something broken rather than as
+        // something unearned.
+        private void PaintReroll()
+        {
+            if (rerollButton == null) return;
+
+            int allowance = ItemOfferRoll.CurrentRerollAllowance();
+            var run = RunManager.Run;
+            int used = run?.offerRerollsUsed ?? 0;
+            int left = allowance - used;
+            if (left < 0) left = 0;
+
+            bool earned = allowance > 0;
+            rerollButton.gameObject.SetActive(earned && _offers.Count > 0);
+            if (!earned) return;
+
+            rerollButton.interactable = !_taken && left > 0;
+            if (rerollLabel != null) rerollLabel.SetContent($"REROLL ({left})");
+        }
+
         // Positions and sizes the offer row for the number of cards actually
         // being shown.
         //
@@ -427,6 +498,7 @@ namespace PrincesPalace
             // is what is actually on screen; the unlock only decides how many
             // were asked for.
             LayOutOfferRow(_offers.Count);
+            PaintReroll();
 
             for (int i = 0; i < offerButtons.Length; i++)
             {

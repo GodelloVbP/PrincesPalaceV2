@@ -154,6 +154,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> RowGains = new List<NodeRef>();
 
         public List<NodeRef> OfferButtons = new List<NodeRef>();
+        public NodeRef RerollButton;
         public NodeRef OfferTooltip;
         public NodeRef OfferTooltipText;
         public List<NodeRef> OfferHalos = new List<NodeRef>();
@@ -244,7 +245,23 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor();
             screen.LootHeading = lootHeading;
 
-            var offerChildren = new List<UiNode> { lootHeading };
+            // REROLL, beside the heading rather than under the cards.
+            //
+            // The interior stops at +/-540.3 and the heading is 700 wide, so
+            // this is the only band with room: 360..530 clears the heading's
+            // right edge by 10px and the border by another 10. Under the cards
+            // is where the hover tooltip lives (y -247, and its own comment
+            // explains why it cannot move further down).
+            //
+            // Always present, hidden when the track has not granted one --
+            // rather than absent and grown later -- because the tree is emitted
+            // once for every save. Same reason the offer row is built four
+            // wide.
+            var reroll = Ui.Button("ReckoningRerollButton", UiString.Runtime,
+                new UiVec(170f, 40f), 17, Place.At(445f, 248f));
+            screen.RerollButton = reroll;
+
+            var offerChildren = new List<UiNode> { lootHeading, reroll };
 
             // THE WIDEST the reward track can grant, not the base three. The
             // tree is emitted once for every save, so a player who has earned

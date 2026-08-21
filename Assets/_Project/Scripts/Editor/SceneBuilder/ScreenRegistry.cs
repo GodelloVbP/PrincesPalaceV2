@@ -998,6 +998,10 @@ public static class ScreenRegistry
 
         controller.offerButtons = screen.OfferButtons.Select(result.Button).ToArray();
         controller.offerRects = screen.OfferButtons.Select(result.Rect).ToArray();
+        controller.rerollButton = result.Button(screen.RerollButton);
+        // Require<T> looks one level down, which is where a button keeps its
+        // caption -- so the label needs no NodeRef of its own.
+        controller.rerollLabel = result.Tmp(screen.RerollButton);
         controller.offerNames = screen.OfferNames.Select(result.Tmp).ToArray();
         controller.offerMetas = screen.OfferMetas.Select(result.Tmp).ToArray();
 
