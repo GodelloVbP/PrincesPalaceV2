@@ -226,6 +226,86 @@ namespace PrincesPalace.Domain.Tests
                 "the track refreshes a second life before granting one");
         }
 
+        // ---- what the player is told --------------------------------------------
+
+        // EVERY reward kind has a name, checked by walking the enum rather than
+        // by listing them. The failure this catches is the one that cannot be
+        // seen in a diff: a new TrackReward compiles, pays out correctly, and
+        // displays as an empty string.
+        [Test]
+        public void EveryRewardKindHasSomethingToCallItself()
+        {
+            foreach (TrackReward reward in System.Enum.GetValues(typeof(TrackReward)))
+            {
+                if (reward == TrackReward.None) continue;
+
+                Assert.IsNotEmpty(RewardTrackNames.Of(reward, 1),
+                    $"{reward} has no display name, so it would show as a blank line");
+            }
+        }
+
+        [Test]
+        public void NothingIsCalledAnythingAtAll()
+        {
+            Assert.IsEmpty(RewardTrackNames.Of(TrackReward.None, 0));
+        }
+
+        // Singular and plural are different sentences. "1 STAT POINTS" is the
+        // kind of thing that ships.
+        [Test]
+        public void CountsReadAsEnglish()
+        {
+            Assert.AreEqual("A STAT POINT", RewardTrackNames.Of(TrackReward.StatPoint, 1));
+            Assert.AreEqual("3 STAT POINTS", RewardTrackNames.Of(TrackReward.StatPoint, 3));
+            Assert.AreEqual("AN OFFER REROLL", RewardTrackNames.Of(TrackReward.OfferReroll, 1));
+        }
+
+        // "What do I get next" is a question about the next REWARD, not the
+        // next level -- the filler is not yet dense enough to answer with a
+        // level number and have it mean anything.
+        [Test]
+        public void TheNextRewardSkipsLevelsThatPayNothing()
+        {
+            int next = RewardTrack.NextRewardLevel(1);
+
+            Assert.Greater(next, 1);
+            Assert.IsTrue(RewardTrack.At(next).IsSomething,
+                "the next reward level does not actually hold a reward");
+
+            for (int level = 2; level < next; level++)
+            {
+                Assert.IsFalse(RewardTrack.At(level).IsSomething,
+                    $"level {level} pays something but was skipped over");
+            }
+        }
+
+        [Test]
+        public void EveryRewardLevelIsItsOwnNextFromTheOneBefore()
+        {
+            // Walking the track by NextRewardLevel has to visit every reward.
+            // Off-by-one here would hide a milestone from the player entirely.
+            int visited = 0;
+            for (int level = RewardTrack.NextRewardLevel(0); level > 0; level = RewardTrack.NextRewardLevel(level))
+            {
+                visited++;
+            }
+
+            int actual = 0;
+            for (int level = 1; level <= RewardTrack.MaxLevel; level++)
+            {
+                if (RewardTrack.At(level).IsSomething) actual++;
+            }
+
+            Assert.AreEqual(actual, visited, "walking the track skipped or repeated a reward");
+        }
+
+        [Test]
+        public void TheEndOfTheTrackHasNoNext()
+        {
+            Assert.AreEqual(0, RewardTrack.NextRewardLevel(RewardTrack.MaxLevel));
+            Assert.AreEqual(0, RewardTrack.NextRewardLevel(RewardTrack.MaxLevel + 50));
+        }
+
         [Test]
         public void ARewardTheTrackNeverGrantsHasNoUnlockLevel()
         {

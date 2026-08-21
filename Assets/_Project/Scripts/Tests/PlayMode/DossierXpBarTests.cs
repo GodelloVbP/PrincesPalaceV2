@@ -100,6 +100,53 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- fixture ------------------------------------------------------------
 
+        // ---- the reward track line ----------------------------------------------
+        //
+        // The track was PAYABLE before it was LEGIBLE. Levels grant Favor, stat
+        // points, extra starting relics and a wider item offer, and until this
+        // line existed nothing on any screen said so -- a player could pass
+        // level 25 and start drafting two relics with no way to learn why,
+        // which reads as a bug rather than as a reward.
+        //
+        // Through the real dossier rather than by calling the controller: the
+        // failure worth catching is the label never reaching the screen, and a
+        // test that read PaintTrackLine's output directly would pass with the
+        // node unbound.
+        [UnityTest]
+        public IEnumerator TheDossierSaysWhatTheNextLevelIsWorth()
+        {
+            yield return OpenTheDossier();
+
+            var label = TextNamed("DossierTrackNext");
+            Assert.IsNotNull(label, "the dossier has no reward-track line");
+
+            Assert.IsNotEmpty(label.text, "the reward-track line is blank");
+            StringAssert.Contains("LEVEL", label.text.ToUpperInvariant(),
+                $"the track line does not name a level: '{label.text}'");
+        }
+
+        // The line has to stay inside column A or it runs under the loadout
+        // beside it -- the same failure the XP fill above is here for, and the
+        // reason this label is the widest thing in that column.
+        [UnityTest]
+        public IEnumerator TheTrackLineStaysInsideItsColumn()
+        {
+            yield return OpenTheDossier();
+
+            var line = Corners(RectNamed("DossierTrackNext"));
+            var track = Corners(RectNamed("DossierXpTrack"));
+
+            Assert.LessOrEqual(line.xMax, track.xMax + 60f,
+                "the reward-track line runs past the column the XP bar sits in");
+            Assert.GreaterOrEqual(line.yMax, 0f - 10000f);
+            Assert.Less(line.yMax, track.yMin + 0.5f,
+                "the reward-track line overlaps the XP bar above it");
+        }
+
+        private TMPro.TMP_Text TextNamed(string name) =>
+            _menu.GetComponentsInChildren<TMPro.TMP_Text>(includeInactive: true)
+                .FirstOrDefault(t => t.name == name);
+
         private IEnumerator OpenTheDossier()
         {
             yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);

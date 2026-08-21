@@ -862,6 +862,7 @@ public static class ScreenRegistry
         controller.subLine = result.Tmp(dossier.SubLine);
         controller.xpFill = result.Rect(dossier.XpFill);
         controller.xpRemaining = result.Tmp(dossier.XpRemaining);
+        controller.trackNext = result.Tmp(dossier.TrackNext);
         controller.prevCharacterButton = result.Button(dossier.PrevCharacterButton);
         controller.nextCharacterButton = result.Button(dossier.NextCharacterButton);
 

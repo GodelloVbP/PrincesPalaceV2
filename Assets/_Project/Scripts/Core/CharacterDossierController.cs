@@ -6,6 +6,7 @@ using UnityEngine.UI;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Equipment;
+using PrincesPalace.Domain.Progression;
 using PrincesPalace.Domain.Stats;
 using PrincesPalace.Domain.UiKit;
 
@@ -24,6 +25,9 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text subLine;
         [SerializeField] internal RectTransform xpFill;
         [SerializeField] internal TMP_Text xpRemaining;
+
+        // What the next reward-track level pays. See PaintTrackLine.
+        [SerializeField] internal TMP_Text trackNext;
         [SerializeField] internal Button prevCharacterButton;
         [SerializeField] internal Button nextCharacterButton;
 
@@ -543,12 +547,53 @@ namespace PrincesPalace
             }
 
             if (xpRemaining != null) xpRemaining.SetContent(Mathf.Max(0, next - character.exp) + " left");
+
+            PaintTrackLine(character);
             if (skillsCount != null)
             {
                 // Talent-granted only, which is what this screen can actually
                 // count without a fight session in hand.
                 skillsCount.SetContent(ContentDatabase.TalentGrantedSkillsFor(character).Count + " known");
             }
+        }
+
+        // What this character's next level is worth, under the bar that says
+        // how far away it is.
+        //
+        // THE TRACK WAS PAYABLE BEFORE IT WAS LEGIBLE. Levels grant Favor, stat
+        // points, extra starting relics and a wider item offer, and until this
+        // line existed nothing on any screen said so -- a player could pass
+        // level 25 and find themselves drafting two relics with no way to learn
+        // why, which reads as a bug rather than as a reward.
+        //
+        // Reads `level` directly rather than the claim watermark, because it is
+        // describing the track and not the payout: what level 30 gives is the
+        // same sentence whether or not this character has been paid yet.
+        private void PaintTrackLine(Character character)
+        {
+            if (trackNext == null) return;
+
+            int next = RewardTrack.NextRewardLevel(character.level);
+            if (next <= 0)
+            {
+                // The end of the track is a real state, not an empty one. A
+                // blank line here would read as a missing value.
+                trackNext.SetContent("REWARD TRACK COMPLETE");
+                return;
+            }
+
+            string reward = RewardTrackNames.Of(RewardTrack.At(next));
+            if (string.IsNullOrEmpty(reward))
+            {
+                // A reward kind with no name is a content-shaped gap rather
+                // than an error -- say where it lands and stay quiet about
+                // what it is, the same graceful-degradation posture the rest
+                // of this screen takes for missing art.
+                trackNext.SetContent($"NEXT REWARD AT LEVEL {next}");
+                return;
+            }
+
+            trackNext.SetContent($"LEVEL {next}: {reward}");
         }
 
         // Highest first, so the top row IS the build.

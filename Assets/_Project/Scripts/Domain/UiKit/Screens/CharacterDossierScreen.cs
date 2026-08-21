@@ -60,6 +60,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef SubLine;
         public NodeRef XpFill;
         public NodeRef XpRemaining;
+        public NodeRef TrackNext;
         public NodeRef PrevCharacterButton;
         public NodeRef NextCharacterButton;
 
@@ -232,7 +233,23 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var left = Ui.Label("DossierXpRemaining", UiString.Runtime, new UiVec(70f, 16f), 11, TextDim,
                 Place.At(cx + DossierLayout.ContentAWidth * 0.5f - 35f, DossierLayout.XpRowCentreY));
             XpRemaining = left;
+
+            // WHAT THE NEXT LEVEL IS WORTH, under the bar that says how far
+            // away it is. The track was payable before it was legible: a player
+            // could earn Favor, a wider offer and extra starting relics without
+            // anything on any screen saying those existed or where they came
+            // from.
+            //
+            // Two lines of room. "YOUR SECOND LIFE RETURNS AT EVERY BOSS" is
+            // the longest thing the track can say, and a single line would
+            // shrink it to unreadable rather than wrap it.
+            var trackNext = Ui.Label("DossierTrackNext", UiString.Runtime,
+                new UiVec(DossierLayout.ContentAWidth, DossierLayout.TrackRowHeight), 11, TextDim,
+                Place.At(cx, DossierLayout.TrackRowCentreY));
+            TrackNext = trackNext;
+
             yield return left;
+            yield return trackNext;
 
             // The two nav rows. BuildNavRow assigns its own refs -- an iterator
             // cannot carry `out` parameters, and threading them back through the

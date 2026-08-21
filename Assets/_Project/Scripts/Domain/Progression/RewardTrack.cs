@@ -212,6 +212,24 @@ namespace PrincesPalace.Domain.Progression
             return total;
         }
 
+        // The next level at or after `level` + 1 that pays anything, or 0 when
+        // the track has nothing left.
+        //
+        // Skips the filler gaps, which is the point: "what do I get next" is a
+        // question about the next REWARD, and a track with unauthored levels in
+        // it would otherwise answer "nothing, at level 38".
+        public static int NextRewardLevel(int level)
+        {
+            int from = level < StartingLevel ? StartingLevel : level;
+
+            for (int next = from + 1; next <= MaxLevel; next++)
+            {
+                if (Entries[next].IsSomething) return next;
+            }
+
+            return 0;
+        }
+
         // The first level that grants `reward`, or 0 if the track never does.
         public static int UnlockLevel(TrackReward reward)
         {

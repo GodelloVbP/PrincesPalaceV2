@@ -93,6 +93,13 @@ namespace PrincesPalace.Domain.UiKit
         public const float SubLineCentreY = NameCentreY - 21f - 12f - 6f;
         public const float XpRowCentreY = SubLineCentreY - 12f - 8f - 20f;
 
+        // The reward-track line, directly under the XP bar because it answers
+        // the question the bar raises: the bar says how far to the next level,
+        // this says what that level is worth. Same step arithmetic as the rows
+        // above -- previous box's half-height, the gap, then this box's half.
+        public const float TrackRowHeight = 30f;
+        public const float TrackRowCentreY = XpRowCentreY - 20f - 8f - TrackRowHeight * 0.5f;
+
         public const float NavRowHeight = 56f;
 
         // THE TWO NAV ROWS ARE A FOOTER, measured up from the column's floor
