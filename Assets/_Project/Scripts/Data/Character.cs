@@ -132,6 +132,26 @@ namespace PrincesPalace
         // exactly "has earned none yet".
         public int earnedFavor;
 
+        // Max health granted by the reward track, on top of everything the
+        // character's definition, talents, gear and ability scores already give
+        // them.
+        //
+        // A FLAT ADDITION rather than invested Constitution, and the difference
+        // matters. AbilityDerivation pays a flat rate for the first ten points
+        // into a score and then switches to the square of the excess, which
+        // starts far lower -- so folding these into CON would make each node
+        // worth 20 health to a character who had spent nothing there and 1 to
+        // one who had already filled the band. A reward whose value depends on
+        // where the player happened to put unrelated points is not a reward
+        // anyone can plan around.
+        //
+        // A GRANT, so it goes through the claim watermark and is paid exactly
+        // once -- and unlike stat points it is NOT refunded by a respec. There
+        // is nothing to take back: the player never chose where it went.
+        //
+        // Purely additive, so SaveData.CurrentVersion does not move.
+        public int bonusMaxHealth;
+
         // How far up the reward track this character has been PAID.
         //
         // A watermark rather than a list of claimed ids, because the track is
@@ -323,12 +343,14 @@ namespace PrincesPalace
 
             int points = RewardTrack.GrantedBetween(TrackReward.StatPoint, claimedTrackLevel, level);
             int favor = RewardTrack.GrantedBetween(TrackReward.Favor, claimedTrackLevel, level);
+            int health = RewardTrack.GrantedBetween(TrackReward.MaxHealth, claimedTrackLevel, level);
 
             unspentStatPoints += points;
             earnedFavor += favor;
+            bonusMaxHealth += health;
             claimedTrackLevel = level;
 
-            return points > 0 || favor > 0;
+            return points > 0 || favor > 0 || health > 0;
         }
     }
 }

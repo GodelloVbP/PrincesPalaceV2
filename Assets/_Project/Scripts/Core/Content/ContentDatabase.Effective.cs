@@ -175,6 +175,14 @@ namespace PrincesPalace.Content
             // run RequirementResolver's fixpoint again for one caller).
             total += AbilityDerivation.DerivedStats(loadout.Scores);
 
+            // The reward track's max-health nodes, flat and on top of all of
+            // it. Here rather than in AbilityDerivation because it is not
+            // derived from anything -- it is a quantity the track handed over,
+            // and folding it into Constitution would make each node worth 20
+            // health or 1 depending on where the player had spent unrelated
+            // points (see Character.bonusMaxHealth).
+            total.maxHealth += character?.bonusMaxHealth ?? 0;
+
             return total.ClampedAtLeast(0);
         }
 

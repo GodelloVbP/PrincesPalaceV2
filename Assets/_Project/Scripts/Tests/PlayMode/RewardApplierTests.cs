@@ -252,6 +252,56 @@ namespace PrincesPalace.PlayModeTests
                 character.earnedFavor);
         }
 
+        // ---- max health reaches the character's real stats ------------------------
+        //
+        // The failure this exists for is the one AUDIT #53 records for stat
+        // points: a reward that is granted, stored, and read by nothing. A
+        // number on the save is not a reward.
+        [Test]
+        public void GrantedMaxHealthActuallyRaisesTheCharactersMaxHealth()
+        {
+            var character = First();
+            character.bonusMaxHealth = 0;
+            int before = Content.ContentDatabase.EffectiveStats(character).maxHealth;
+
+            character.bonusMaxHealth = 40;
+
+            Assert.AreEqual(before + 40, Content.ContentDatabase.EffectiveStats(character).maxHealth,
+                "bonus max health is stored but never reaches the stats the fight reads");
+        }
+
+        [Test]
+        public void LevellingPaysTheMaxHealthTheTrackOwes()
+        {
+            var character = First();
+            character.level = 60;
+            character.claimedTrackLevel = 0;
+            character.bonusMaxHealth = 0;
+
+            RewardApplier.Apply(new VictoryRewards.Payout(1, 0), Squad());
+
+            character = First();
+            Assert.AreEqual(RewardTrack.GrantedBetween(TrackReward.MaxHealth, 1, 60),
+                character.bonusMaxHealth,
+                "the max health the track owes for those levels was not handed over");
+            Assert.Greater(character.bonusMaxHealth, 0, "the fixture crossed no max-health node");
+        }
+
+        // A respec gives back what was SPENT. Max health was never spent -- the
+        // player made no choice about where it went -- so taking it away would
+        // be confiscation rather than a refund.
+        [Test]
+        public void ARespecDoesNotTakeBackGrantedMaxHealth()
+        {
+            var character = First();
+            character.bonusMaxHealth = 50;
+
+            character.Respec(0);
+
+            Assert.AreEqual(50, character.bonusMaxHealth,
+                "the respec confiscated max health the player never chose to spend");
+        }
+
         // A downed character earns no exp, so they must also not be paid for
         // levels they already claimed -- but they must still be settled if they
         // are owed something, which is the same unconditional-claim rule from

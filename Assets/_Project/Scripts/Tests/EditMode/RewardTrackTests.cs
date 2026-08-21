@@ -420,8 +420,58 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ARewardTheTrackNeverGrantsHasNoUnlockLevel()
         {
-            Assert.AreEqual(0, RewardTrack.UnlockLevel(TrackReward.MaxHealth),
-                "MaxHealth is not placed yet, so it should report no unlock level");
+            // SignatureAtFightStart is the one reward kind still unplaced --
+            // there is no fight-start signature hook to pay it out, so the
+            // track deliberately does not author it. MaxHealth used to be the
+            // example here and is now real.
+            Assert.AreEqual(0, RewardTrack.UnlockLevel(TrackReward.SignatureAtFightStart),
+                "SignatureAtFightStart is not placed yet, so it should report no unlock level");
+        }
+
+        // ---- the max-health nodes -------------------------------------------------
+
+        [Test]
+        public void TheTrackHandsOutFifteenMaxHealthNodes()
+        {
+            int nodes = 0;
+            for (int level = 1; level <= RewardTrack.MaxLevel; level++)
+            {
+                if (RewardTrack.At(level).Reward == TrackReward.MaxHealth) nodes++;
+            }
+
+            Assert.AreEqual(15, nodes);
+        }
+
+        [Test]
+        public void AFullTrackIsWorthOneHundredAndFiftyMaxHealth()
+        {
+            Assert.AreEqual(150,
+                RewardTrack.GrantedBetween(TrackReward.MaxHealth, 1, RewardTrack.MaxLevel));
+        }
+
+        // A quantity, so it is claimed against the watermark exactly once --
+        // the same rule stat points and Favor follow.
+        [Test]
+        public void MaxHealthIsAGrantRatherThanACapability()
+        {
+            Assert.IsTrue(RewardTrack.IsGrant(TrackReward.MaxHealth));
+            Assert.IsFalse(RewardTrack.IsUnlock(TrackReward.MaxHealth));
+        }
+
+        // Now that four kinds share 87 filler levels, far fewer of them read as
+        // None. Pinned as a floor rather than an exact figure, because the
+        // remaining gap closes when the signature nodes land.
+        [Test]
+        public void MostOfTheTrackNowPaysSomething()
+        {
+            int paying = 0;
+            for (int level = 2; level <= RewardTrack.MaxLevel; level++)
+            {
+                if (RewardTrack.At(level).IsSomething) paying++;
+            }
+
+            Assert.GreaterOrEqual(paying, 77,
+                "the track has more empty levels than the authored mix accounts for");
         }
     }
 }

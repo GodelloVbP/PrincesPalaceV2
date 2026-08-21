@@ -159,11 +159,12 @@ namespace PrincesPalace.Domain.Progression
         // design statement, and where each one lands is arithmetic. Retuning
         // the track is editing these numbers.
         //
-        // INCOMPLETE ON PURPOSE. The design also calls for 15 max-HP nodes and
-        // 6 signature-at-fight-start, and neither can be paid out yet -- there
-        // is no per-character bonus health field and no fight-start signature
-        // hook. Adding them here before they do anything would hand players a
-        // reward that silently does nothing.
+        // STILL INCOMPLETE. The design also calls for 6
+        // signature-at-fight-start nodes, and there is no fight-start signature
+        // hook to pay them out -- adding them here before they do anything
+        // would hand players a reward that silently does nothing. The levels
+        // they will occupy read as None until then, which is visible rather
+        // than quietly wrong.
         //
         // The two extra offer rerolls ARE here, since level 40 built the
         // reroll. They are what makes RerollsPerRun's accumulate-rather-than-
@@ -179,6 +180,7 @@ namespace PrincesPalace.Domain.Progression
         {
             (TrackReward.StatPoint,   1, 30),
             (TrackReward.Favor,       2, 20),
+            (TrackReward.MaxHealth,  10, 15),
             (TrackReward.OfferReroll, 1, 2),
         };
 
