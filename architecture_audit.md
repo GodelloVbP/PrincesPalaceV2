@@ -1324,12 +1324,37 @@ rather than as the bug.
 > Setup that constructs inputs is fine; setup that *operates* the subject is a
 > claim about the production path, and an unchecked one.
 
-**A cheap mechanisation exists and is worth considering**: a lint over `Tests/`
-for calls to production methods that have no production caller. `Begin` would
-have failed it from the day the adapter stopped calling it — 36 test callers,
-zero elsewhere, which is a shape a grep can see. That is F8's idea aimed at
-something with evidence behind it, and it is the one lint this audit can point
-at a bug it would actually have caught.
+**The lint this finding first proposed does not survive measurement**, and the
+numbers are worth keeping so nobody proposes it again. "Production methods
+called only from `Tests/`" flags **109** methods — overwhelmingly pure functions
+tested directly (`AbilityDerivation.Modifier`, `DifficultyCurve.HealthMultiplier`)
+and deliberate seams (`SaveSlotManager.Forget`, 67 test calls). Narrowed to void
+INSTANCE methods — operations on a subject rather than functions returning a
+value, which is what distinguishes `Begin` — it flags **17**, and most of those
+are `HandleEscape`, `Press`, `RestoreDefaults`, `OnPointerEnter`: handlers
+production invokes through uGUI wiring rather than a call site. A rule needing a
+fourteen-entry allowlist on its first day is the shape `UiKitLintTests` warns
+about: narrowed to make it pass, and meaning nothing afterwards.
+
+**What was built instead is a second watchdog**, at the symptom rather than at
+the cause. `bffe4c5` added `RescueAStrandedTurn`, which guards `_isBusy` — and
+`_isBusy` is only ever set by the player acting, which is precisely what this bug
+prevented. It watched the one flag that could not move, which is why it sat
+silent through the whole session that reported this.
+
+`RescueAStalledEnemyTurn` guards the state the player actually experiences: not
+their turn, nothing playing, fight not over. However that is reached — a missing
+`Begin`, an enemy turn resolving into nothing, a future status effect that skips
+an actor without advancing — it means the same thing and recovers the same way,
+by resolving the enemy turns that are owed rather than nudging the turn back,
+since skipping the monsters' round would be a different bug. It logs once, at
+error level, naming the state.
+
+And it is pinned by a test that puts a controller into exactly the broken state —
+a session bound without `Begin`, on an encounter a monster opens — and watches it
+come back, with `LogAssert.Expect` making the error part of the contract. A
+rescue nobody has watched work is worth nothing, and this one is expected to find
+nothing forever now that the door is fixed.
 
 ### Cross-references, not re-counted here
 

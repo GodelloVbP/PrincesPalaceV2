@@ -7,7 +7,10 @@ using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
+using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
+using PrincesPalace.Domain.Rewards;
+using PrincesPalace.Domain.Rng;
 using PrincesPalace.Domain.Dungeon;
 
 namespace PrincesPalace.PlayModeTests
@@ -100,6 +103,50 @@ namespace PrincesPalace.PlayModeTests
             CollectionAssert.IsNotEmpty(verbs, "the fight drew no command verbs");
             Assert.IsTrue(verbs.Any(v => v.interactable),
                 "not one command verb is interactable, so the player cannot do anything");
+        }
+
+        // THE WATCHDOG, PROVEN TO FIRE.
+        //
+        // A rescue nobody has watched work is worth nothing, and this one is
+        // expected to find nothing forever now that FightBootstrap opens its
+        // fights -- so the only way it stays trustworthy is a test that puts a
+        // controller into the exact broken state and watches it come back.
+        //
+        // The state is AUDIT.md #46 reproduced deliberately: a session bound
+        // without Begin, on an encounter a monster opens. Before the fix that
+        // was every fight where a monster was faster than the party.
+        [UnityTest]
+        public IEnumerator AFightBoundWithoutBeingOpened_RecoversInsteadOfDeadlocking()
+        {
+            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            var fight = Object.FindAnyObjectByType<FightController>();
+            Assert.IsNotNull(fight, "the Fight scene has no FightController");
+
+            // Narrow speed gap: the monster opens and takes ONE turn. A wide one
+            // gives it a run of consecutive turns and kills the hero, which
+            // asserts something else -- see FightSessionTests for that mistake.
+            var hero = new CombatantState("Hero", true, 500, 20, 20, 0, 10);
+            var quick = new CombatantState("Quick", false, 200, 10, 1, 0, 11);
+            var session = new FightSession(
+                new CombatEncounter(new[] { hero }, new[] { quick }), null, null, new SeededRandom(3));
+
+            Assert.IsFalse(session.IsPlayerTurn, "fixture check: the monster must hold turn one");
+
+            // BOUND WITHOUT Begin. The bug, exactly.
+            fight.Bind(session, EncounterClass.Normal);
+
+            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex(
+                "sitting on an enemy turn that nothing is resolving"));
+
+            yield return null;
+            yield return null;
+
+            Assert.IsTrue(session.IsPlayerTurn || session.IsOver,
+                "the watchdog did not hand the turn back, so the fight is still frozen with every " +
+                "verb disabled -- which is what a player reports as 'the buttons do nothing'");
         }
 
         // The same door, for the ROOM TYPES a leg can actually put in front of

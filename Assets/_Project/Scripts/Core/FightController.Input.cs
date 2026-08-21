@@ -372,6 +372,61 @@ namespace PrincesPalace
             OnPlaybackFinished();
         }
 
+        // THE FIGHT CANNOT SIT ON A TURN NOBODY WILL TAKE.
+        //
+        // The sibling of the rescue above, and the one that would have caught
+        // AUDIT.md #46 on the first fight instead of on a player's report.
+        //
+        // That bug was a fight opening on a monster's turn with nothing wired
+        // to resolve it -- FightSession.Begin had 36 callers and all of them
+        // were tests. The screen showed monsters standing still, no intents,
+        // and every verb dead. Nothing threw, and the busy watchdog stayed
+        // quiet because _isBusy is only ever set by the player acting, which is
+        // exactly what could not happen.
+        //
+        // So the flag that watchdog guards was the wrong one. This guards the
+        // state the PLAYER experiences: it is not my turn, nothing is playing,
+        // and the fight is not over. However that state is arrived at -- a
+        // missing Begin, an enemy turn that resolves into nothing, a future
+        // status effect that skips an actor without advancing -- it means the
+        // same thing, and it can be recovered from the same way.
+        //
+        // Recovered by resolving the enemy turns that are owed, which is what
+        // was missing rather than a reset: a fight nudged back to the player
+        // without the monsters having acted would silently skip their round.
+        //
+        // Logged once, loudly, with the state named. A screen that repairs
+        // itself and says nothing is how a bug survives 36 tests.
+        private bool _reportedStalledEnemyTurn;
+
+        private void RescueAStalledEnemyTurn()
+        {
+            if (_session == null || _isBusy) return;
+            if (beatPlayer != null && beatPlayer.IsPlaying) return;
+            if (_session.IsOver || _session.IsPlayerTurn) return;
+
+            if (!_reportedStalledEnemyTurn)
+            {
+                _reportedStalledEnemyTurn = true;
+                Debug.LogError(
+                    "[FightController] The fight is sitting on an enemy turn that nothing is resolving: " +
+                    "not the player's turn, no playback running, fight not over. Every verb is disabled " +
+                    "and the stage looks frozen. Recovering by resolving the enemy turns that are owed. " +
+                    "If the session was never opened (FightSession.Begin), that is the cause -- see " +
+                    "AUDIT.md #46.");
+            }
+
+            _session.AutoResolveEnemyTurns();
+
+            // The turn came back, so the player needs the telegraph and the
+            // HUD that Bind would have painted for an opening that worked.
+            if (!_session.IsOver && _session.IsPlayerTurn) _session.PrepareEnemyIntents();
+
+            foreach (var line in _session.DrainImmediateMessages()) PushLogLine(line);
+
+            RefreshUi();
+        }
+
         private void OnPlaybackFinished()
         {
             _isBusy = false;
@@ -468,6 +523,7 @@ namespace PrincesPalace
         private void Update()
         {
             RescueAStrandedTurn();
+            RescueAStalledEnemyTurn();
 
             if (characterSheetPanel == null) return;
 
