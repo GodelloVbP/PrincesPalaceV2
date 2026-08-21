@@ -884,15 +884,67 @@ public static class ScreenRegistry
         controller.viewport = result.Rect(track.Viewport);
         controller.content = result.Rect(track.Content);
         controller.railFill = result.Rect(track.RailFill);
+
+        // THE FOUR NODES THAT MOVE, each bound twice -- once as the Image whose
+        // colour is animated and once as the RectTransform that is moved or
+        // scaled. Two components of one GameObject, so no lookup is being done
+        // twice; this is the alternative to a GetComponent in an Update that
+        // runs sixty times a second for the life of the panel.
+        controller.shimmer = result.Image(track.Shimmering);
+        controller.shimmerRect = result.Rect(track.Shimmering);
+        controller.hereHalo = result.Image(track.HereHalo);
+        controller.hereHaloRect = result.Rect(track.HereHalo);
+        controller.nextCaret = result.Rect(track.NextCaret);
+        controller.claimBurst = result.Image(track.ClaimBurst);
+        controller.claimBurstRect = result.Rect(track.ClaimBurst);
+
         controller.summary = result.Tmp(track.Summary);
+        controller.collectButton = result.Button(track.CollectButton);
+        controller.collectLabel = result.Tmp(track.CollectCaption);
         controller.closeButton = result.Button(track.CloseButton);
 
-        controller.dots = track.Dots.Select(result.Image).ToArray();
+        controller.cardRect = result.Rect(track.Card);
+        controller.cardMat = result.Image(track.CardMat);
+        controller.cardArt = result.Image(track.CardArt);
+        controller.cardKicker = result.Tmp(track.CardKicker);
+        controller.cardLevel = result.Tmp(track.CardLevel);
+        controller.cardCaption = result.Tmp(track.CardCaption);
+        controller.cardState = result.Tmp(track.CardState);
+
+        controller.ribbon = result.Rect(track.Ribbon);
+        controller.ribbonFill = result.Rect(track.RibbonFill);
+        controller.ribbonPlayhead = result.Rect(track.RibbonPlayhead);
+        controller.ribbonWindow = result.Rect(track.RibbonWindow);
+        controller.ribbonGrab = result.Button(track.RibbonGrab);
+
+        // The disc is bound as BOTH the Button that takes the click and the
+        // Image that carries the state's colour, for the same reason as above:
+        // it is one GameObject wearing both, and the controller needs each on a
+        // different path -- one at wiring time to attach a listener, one per
+        // repaint.
+        controller.dots = track.Dots.Select(result.Button).ToArray();
+        controller.discs = track.Dots.Select(result.Image).ToArray();
+
+        controller.rings = track.Rings.Select(result.Image).ToArray();
+        controller.pulses = track.Pulses.Select(result.Image).ToArray();
+        controller.mats = track.Mats.Select(result.Image).ToArray();
         controller.icons = track.Icons.Select(result.Image).ToArray();
-        controller.ticks = track.Ticks.Select(result.Go).ToArray();
+        controller.seals = track.Seals.Select(result.Go).ToArray();
         controller.captions = track.Captions.Select(result.Tmp).ToArray();
         controller.levelNumbers = track.LevelNumbers.Select(result.Tmp).ToArray();
 
+        controller.ribbonTicks = track.RibbonTicks.Select(result.Go).ToArray();
+        controller.ribbonNumbers = track.RibbonNumbers.Select(result.Tmp).ToArray();
+
+        // NO CountBindings for any of these, and it is worth saying why rather
+        // than leaving the absence to be read as an oversight. E4 exists to
+        // catch a strip sized from one collection and filled from another;
+        // every array above is built by Select over the very list the nodes
+        // were appended to, so the binding it would check is the same count
+        // compared with itself. The reward track also has no ScreenDef of its
+        // own -- it lives inside the system menu, which three scenes each build
+        // through WireSystemMenu -- so declaring one would mean threading a
+        // bindings list through all three to assert n == n.
         return controller;
     }
 

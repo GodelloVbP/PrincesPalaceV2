@@ -121,23 +121,83 @@ load-bearing twice over:
 5. The panel ground must stay **fully opaque**. At `#120A18FA` the dossier's
    portrait and ability scores read through a hundred captions.
 
-## What the design has to decide
+## What the design decided
 
-- **The screen is airy.** The rail sits on a band of empty space above and
-  below, roughly the top and bottom thirds. Icons and ticks were the first
-  answer to that and it is still sparse. This is the main open question.
-- **The marks are procedural strokes in a painterly game.** Everything else —
-  portraits, items, relics, the talent sky — is painted. These are geometry.
-  Whether that reads as deliberate UI vocabulary or as placeholder is a call
-  nobody has made.
-- **Milestones are distinguished only by size and a ring.** Twelve of the
-  hundred nodes are the ones that matter, and the relic line (25 → 45 → 60 → 70)
-  is the track's one real chain. Neither is drawn as a chain.
-- **Nothing on the rail marks the NEXT reward.** Only the summary line names it.
-- **The tick is small and pale** at 14px in a corner.
-- **~8 nodes visible of 99.** A player at level 47 cannot see level 50's
-  milestone without scrolling. Tiers, a minimap, or milestone-only jump points
-  are all unexplored.
+**Answered.** The design handoff (`Reward Track - Handoff.dc.html`, in the
+Claude Design project) took all six of the questions below and returned a
+resolution for each. Everything in this section is now BUILT; the *Layout* and
+*States* tables above describe the screen as it was measured before that pass,
+and are kept as the record of what the design was drawn against.
+
+| Was open | Resolved as |
+|---|---|
+| The screen is airy | Two new bands: a **focus card** at y 118-268 and a full-width **ascent ribbon** at y 648-768. The rail keeps its own band, now with a soft `#2E2244` wash and hairline edges at 290 and 501. |
+| Nothing marks the next reward | Marked twice — a bobbing caret above node `level+1`, and the focus card resting on that reward whenever nothing is hovered. |
+| ~8 nodes visible of 99 | The ribbon shows all 99 at 14.5px pitch: milestones raised and numbered, waiting levels as tall gold ticks, the visible window drawn as a draggable box. |
+| The tick is small and pale | Replaced by a **seal pip** — a dark disc with the check knocked *out* of it, so the gold disc beneath shows through as the mark. |
+| Marks are procedural strokes | Every disc and the card become **art slots**. The stroke survives as the silhouette brief, and is what each slot draws until painted art lands. |
+| Milestones read only by size | Plus a gold hairline plate ring at inset −7, a larger heading caption, and a raised numbered dot on the ribbon. |
+
+**Collection became manual**, which is the largest consequence and the only one
+that is a gameplay change rather than a presentation one. `RewardApplier` no
+longer calls `ClaimTrackRewards`, so stat points, Favor, max health and
+experience-find arrive when the player opens this screen and collects, not at
+the end of a fight. That gap between `level` and `claimedTrackLevel` is what
+the four-state model draws — see `RewardTrack.StateOf`. To revert it, put the
+call back: the screen works either way and would simply have nothing to collect.
+
+### Where the build departs from the handoff
+
+Each is a deliberate call, with the reason recorded at the code site that makes
+it rather than only here.
+
+- **The face stays Chakra Petch.** Section 6 changes to Cormorant Garamond and
+  Lora; section 11 lists the face as still open. Every size and letterspacing
+  from section 6 is used as written, which is what section 6 itself prescribes
+  if the mono stays.
+- **The card caption sets at 22px, not 32.** Measured: at 32 the longest reward
+  the track can name runs about 700px against the card's 484, wraps to three
+  lines and clips. 32 is right for milestone names and wrong for filler ones.
+- **The seal pip scales with its disc**, 15px on a milestone and 9 on filler.
+  Section 2 gives one size for both; at 15 on a 26px disc it covered the very
+  mark it sits beside, on 87 of 99 nodes. The ratio carries across, not the
+  pixel count. The first runtime capture is what caught it.
+- **The lit rail is `#F2DB9EBF`, not the measured `6B`.** That measurement was
+  taken against the flat ground this screen used to have; the new band wash
+  lifts what sits behind the line, and at 42% the lit half read pale lilac.
+- **The scroll viewport is centred on the rail**, not at y 296. Section 1's own
+  numbers disagree by 6px — a viewport at 296 of height 200 has its middle at
+  396, and the rail is specified at 402. The rail landing on the panel's exact
+  vertical centre is the invariant that was kept.
+- **The NEXT caret is 26 x 14, not square.** Its height is pinned by the 14px
+  gap above the caption; drawn square in that gap it read as a speck a hundred
+  pixels from the node it points at.
+- **Reduce-motion is not implemented.** Section 7 asks for the ambient cues to
+  drop and the meaningful ones to stay. There is no accessibility setting in
+  `GameSettings` to read, and inventing one for a single screen would put the
+  switch where no other screen could find it. The split is written so it is a
+  one-line guard once that setting exists: `Animate()` is every cue that would
+  go, and nothing else is in it.
+- **No parallax and no dust.** Section 7's last row wants a background layer at
+  0.06x scroll and motes at 0.14x. This panel's ground is a single opaque solid
+  — there is no background to move. It needs art before it needs code.
+- **No sound on claim.** `Sound` is an enum of meanings whose every value is
+  asserted to resolve to a file that exists, so a collect sound is a new value,
+  a new case in `SoundLibrary.PathOf` and a clip nobody has recorded. The
+  handoff specifies no audio.
+
+### Still open
+
+- **The 16 reward sprites** of section 8. Every slot is built and draws its
+  ghost glyph; this is the one thing standing between the screen and the
+  painterly read.
+- **The relic chain**, 25 → 45 → 60 → 70, still reads as four unrelated
+  milestones. The handoff's own "not resolved, deliberately".
+- **Milestone choices.** Levels 35 and 50 grant a choice with no UI to make it.
+- **Gamepad focus.** The prototype is pointer-and-keyboard; whether focus and
+  hover are the same state needs deciding before stick navigation is built.
+- **The dead strip at y 502-648.** It falls out of the handoff's own band table,
+  and it is the one place the screen still reads as airy.
 
 ## Out of scope
 
@@ -152,8 +212,15 @@ load-bearing twice over:
 
 - `Assets/_Project/Scripts/Domain/UiKit/RewardTrackLayout.cs` — every coordinate
 - `Assets/_Project/Scripts/Domain/UiKit/Screens/RewardTrackScreen.cs` — the tree and the tokens
-- `Assets/_Project/Scripts/Core/RewardTrackController.cs` — states and scrolling
+- `Assets/_Project/Scripts/Core/RewardTrackController.cs` — states and painting
+- `Assets/_Project/Scripts/Core/RewardTrackController.Input.cs` — claiming, scrolling, hover
+- `Assets/_Project/Scripts/Core/RewardTrackController.Motion.cs` — every cue in section 7
+- `Assets/_Project/Scripts/Core/RailScroll.cs` — wheel and drag over the rail
+- `Assets/_Project/Scripts/Domain/Progression/RewardTrack.cs` — `StateOf`, `IsWaiting`, `UnclaimedCount`
 - `Assets/_Project/Scripts/Editor/ProceduralSpriteBaker.cs` — `BakeTrackMarks`
 - `Assets/_Project/Scripts/Tests/EditMode/RewardTrackLayoutTests.cs` — what must stay true
-- `tools/screenshots/runtime/SystemMenu_reward_track.png` — current state, via
+- `Assets/_Project/Scripts/Tests/EditMode/RewardTrackStateTests.cs` — the four states
+- `Assets/_Project/Scripts/Tests/PlayMode/RewardTrackClaimTests.cs` — collecting, through the panel
+- `tools/screenshots/runtime/SystemMenu_reward_track.png` and `..._waiting.png`
+  — current state in both halves, via
   `tools/screenshot.ps1 -Runtime -RuntimeFilter SystemMenuCaptureTests`

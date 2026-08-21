@@ -56,14 +56,65 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString TrackClose =
             UiString.Define("track.close", "CLOSE");
 
-        // "LEVEL 37  .  NEXT AT 40: AN OFFER REROLL"
+        // "LEVEL 37   .   NEXT AT 40"
+        //
+        // IT NO LONGER NAMES THE REWARD, and that is a subtraction rather than
+        // an oversight. This line used to be the only legible thing on the
+        // screen, so it carried the reward's name too and ran to eighty
+        // characters at its widest -- which is what made it collide with CLOSE
+        // the first time the row was built. The focus card names the reward
+        // now, in 22px type with its mark beside it, so the summary is back to
+        // the two figures only it can say.
         public static readonly UiString TrackSummary =
-            UiString.Define("track.summary", "LEVEL {0}   .   NEXT AT {1}: {2}",
-                "LEVEL 100   .   NEXT AT 100: YOUR SECOND LIFE RETURNS AT EVERY BOSS");
+            UiString.Define("track.summary", "LEVEL {0}   .   NEXT AT {1}",
+                "LEVEL 100   .   NEXT AT 100");
 
         public static readonly UiString TrackSummaryComplete =
             UiString.Define("track.summary_complete", "LEVEL {0}   .   REWARD TRACK COMPLETE",
                 "LEVEL 100   .   REWARD TRACK COMPLETE");
+
+        // COLLECT, in two forms, because "Collect 1 rewards" is the kind of
+        // thing a player reads once and stops trusting the screen over.
+        //
+        // Two entries rather than one template with a pluralising helper: there
+        // is no plural machinery in this project, inventing it for one button
+        // would be the largest thing on this screen by a distance, and English
+        // is the only language it currently has to be right in.
+        public static readonly UiString TrackCollectOne =
+            UiString.Define("track.collect_one", "COLLECT 1 REWARD");
+        public static readonly UiString TrackCollectMany =
+            UiString.Define("track.collect_many", "COLLECT {0} REWARDS", "COLLECT 99 REWARDS");
+
+        // ---- the focus card ------------------------------------------------
+        //
+        // Four lines: what this node is TO the player, which level it is, what
+        // it pays, and where they stand with it. The kicker and the state line
+        // are the two halves of that last question -- the kicker says what the
+        // card is showing and the state says what the player can do about it,
+        // and collapsing them into one line loses whichever half is not urgent.
+
+        public static readonly UiString TrackCardNext = UiString.Define("track.card_next", "NEXT REWARD");
+        public static readonly UiString TrackCardHere = UiString.Define("track.card_here", "YOU ARE HERE");
+        public static readonly UiString TrackCardWaiting = UiString.Define("track.card_waiting", "WAITING FOR YOU");
+        public static readonly UiString TrackCardCollected = UiString.Define("track.card_collected", "ALREADY YOURS");
+        public static readonly UiString TrackCardToCome = UiString.Define("track.card_to_come", "STILL AHEAD");
+
+        public static readonly UiString TrackCardLevel =
+            UiString.Define("track.card_level", "LEVEL {0}", "LEVEL 100");
+
+        public static readonly UiString TrackStateReady =
+            UiString.Define("track.state_ready", "CLICK THE NODE TO COLLECT");
+        public static readonly UiString TrackStateCollected =
+            UiString.Define("track.state_collected", "COLLECTED");
+        public static readonly UiString TrackStateLocked =
+            UiString.Define("track.state_locked", "{0} LEVELS AWAY", "99 LEVELS AWAY");
+        public static readonly UiString TrackStateNextLevel =
+            UiString.Define("track.state_next_level", "THE VERY NEXT LEVEL");
+
+        // ---- the ascent ribbon ---------------------------------------------
+
+        public static readonly UiString TrackRibbon =
+            UiString.Define("track.ribbon", "THE ASCENT   .   DRAG TO TRAVEL");
 
         public static readonly UiString DossierSpendPoint =
             UiString.Define("dossier.spend_point", "+");
@@ -631,6 +682,10 @@ namespace PrincesPalace.Domain.UiKit
             HubWallet, HubBeginDescent, HubResumeFloor,
             OverlayCount, OverlayPlus, OverlayPage, DossierSpendPoint,
             TrackRow, TrackClose, TrackSummary, TrackSummaryComplete,
+            TrackCollectOne, TrackCollectMany, TrackRibbon,
+            TrackCardNext, TrackCardHere, TrackCardWaiting, TrackCardCollected,
+            TrackCardToCome, TrackCardLevel,
+            TrackStateReady, TrackStateCollected, TrackStateLocked, TrackStateNextLevel,
             OverlayEquip, OverlayUnequip, OverlayCannotWear, OverlayBagEmpty,
             TalentEmbers, TalentInvest, TalentTaken, TalentLocked, TalentNoEmbers,
             TalentPrev, TalentNext, TalentBack, TalentPath, TalentRespec,

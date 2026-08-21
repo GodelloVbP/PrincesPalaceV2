@@ -156,14 +156,13 @@ public static class ProceduralSpriteBaker
         // The claimed tick. Two strokes, the short one falling and the long one
         // rising well past it, which is what makes a tick read as a tick rather
         // than as a bent line.
-        BakeGlow("track_tick", Size, (nx, ny) =>
-        {
-            float d = Mathf.Min(
-                SegmentDistance(nx, ny, -0.42f, 0.02f, -0.12f, -0.34f),
-                SegmentDistance(nx, ny, -0.12f, -0.34f, 0.46f, 0.38f));
-
-            return Stroke(d, 0.11f);
-        });
+        //
+        // NOTHING DRAWS THIS ANY MORE -- the reward track replaced its 14px
+        // corner tick with the seal pip below, which knocks the same mark out
+        // of a dark disc. Kept baked because CheckMark is now shared by both
+        // and this is the one place the shape can be looked at on its own,
+        // and because a check is the most reusable mark in the set.
+        BakeGlow("track_tick", (nx, ny) => CheckMark(nx, ny, 0.11f));
 
         // A stat point: one chevron, pointing up.
         BakeGlow("track_stat", Size, (nx, ny) =>
@@ -217,7 +216,139 @@ public static class ProceduralSpriteBaker
 
             return Stroke(d, 0.11f);
         });
+
+        // THE DISC ITSELF, and it is a gradient rather than a flat fill.
+        //
+        // The rail used to draw proc:solid_circle tinted per state: a flat
+        // #F2DB9E coin. Design's finding was that a flat gold disc reads as
+        // TARNISH the moment anything is laid over it, because a flat fill has
+        // no light in it for a texture to be light ON. This bakes the light in
+        // -- one specular highlight at 32% across and 24% down, falling to a
+        // dark rim -- and every state is that one sprite under a different
+        // tint: dark violet for a level to come, gold for one reached, near
+        // white for the player's own.
+        //
+        // WHITE-ISH RATHER THAN WHITE, which is the constraint a single tinted
+        // sprite imposes: Image.color multiplies, so a value ramp can darken a
+        // hue but cannot bend it. The handoff's pale disc runs #FFFFFF to
+        // #CFC2E8, a shift toward violet that a grey ramp cannot make; the
+        // controller tints it #F2ECFF instead and the rim lands near #C4BFD0.
+        // Close, and the alternative is three baked discs to carry three hues.
+        BakeShaded("disc_metal", Size, (nx, ny) =>
+        {
+            float radius = Mathf.Sqrt(nx * nx + ny * ny);
+
+            // The same antialiased edge solid_circle has, so the two read as
+            // the same family of shape at the same size.
+            float alpha = 1f - Mathf.Clamp01((radius - 0.92f) / 0.08f);
+
+            // 32% across and 24% down, in the -1..1 frame the bake works in.
+            const float HighlightX = -0.36f;
+            const float HighlightY = 0.52f;
+
+            float dx = nx - HighlightX;
+            float dy = ny - HighlightY;
+            float specular = Mathf.Exp(-(dx * dx + dy * dy) / (0.55f * 0.55f));
+
+            // Floor at 0.52 rather than at zero: a disc whose rim goes black
+            // reads as a hole, and the tint has to have something left to
+            // colour down there.
+            float value = Mathf.Lerp(0.52f, 1f, specular);
+
+            // And a little extra darkening right at the rim, which is what
+            // turns a lit circle into a struck one.
+            value *= 1f - 0.12f * Smoothstep(Mathf.Clamp01(radius / 0.95f));
+
+            return (value, alpha);
+        });
+
+        // A ONE-PIXEL RING, which ring_outline is not.
+        //
+        // That one is a soft annulus at 0.20 half-width -- the fight stage's
+        // ground contact mark, deliberately blurred so an actor reads as
+        // standing inside light rather than on a drawn circle. Everything the
+        // track wants a ring for is the opposite: the milestone plate at inset
+        // -7 and the waiting pulse are both HAIRLINES, and drawn with that
+        // sprite they came out as a fog.
+        //
+        // Half-width 0.017 is one display pixel at the 58px the plate ring is
+        // drawn at -- normalised 1.0 is half the sprite's width, so a stroke of
+        // 2 x hw normalised measures hw x D pixels at display size D. The pulse
+        // ring scales to about 92 and thickens to 1.6px on the way out, which
+        // is what a ring dissipating should do anyway.
+        Bake("ring_hairline", dist =>
+        {
+            const float Radius = 0.94f;
+            const float HalfWidth = 0.017f;
+
+            return Stroke(Mathf.Abs(dist - Radius), HalfWidth);
+        });
+
+        // The NEXT caret: a chevron pointing DOWN at the node under it.
+        //
+        // Down rather than up, because it hangs above the rail and an arrow
+        // that points away from the thing it marks is pointing at the panel's
+        // edge. The same stroke weight as the grant marks, so it reads as one
+        // vocabulary rather than as chrome from somewhere else.
+        BakeGlow("track_caret", Size, (nx, ny) =>
+        {
+            float d = Mathf.Min(
+                SegmentDistance(nx, ny, -0.34f, 0.22f, 0f, -0.24f),
+                SegmentDistance(nx, ny, 0f, -0.24f, 0.34f, 0.22f));
+
+            return Stroke(d, 0.12f);
+        });
+
+        // THE SEAL PIP: a dark disc with the claimed check KNOCKED OUT of it.
+        //
+        // A hole rather than a second sprite on top, and that is the whole
+        // trick. The pip only ever appears on a collected node, and a collected
+        // node's disc is gold metal -- so a check cut out of the pip shows that
+        // disc through it, at exactly the gold the disc is lit with. Drawing the
+        // check as its own gold sprite would need a second node per level, 99
+        // of them, and would still have to guess a gold that matched.
+        //
+        // The check is track_tick's own two strokes, evaluated at 15/9 scale so
+        // the 9px mark sits inside the 15px pip the handoff specifies.
+        BakeGlow("seal_pip", Size, (nx, ny) =>
+        {
+            float radius = Mathf.Sqrt(nx * nx + ny * ny);
+            float disc = 1f - Mathf.Clamp01((radius - 0.92f) / 0.08f);
+
+            const float CheckScale = 15f / 9f;
+
+            return Mathf.Clamp01(
+                disc - CheckMark(nx * CheckScale, ny * CheckScale, 0.13f));
+        });
+
+        // The travelling light on the rail. A soft band with no edge of its
+        // own, stretched to 300px and walked across 19,000.
+        //
+        // UNIFORM ALONG y for the reason bar_track's header gives: this is
+        // scaled horizontally at runtime, and anything that varies across the
+        // axis being scaled distorts differently every frame.
+        BakeGlow("shimmer_band", 64, (nx, ny) =>
+            Mathf.Exp(-(nx * nx) / (0.42f * 0.42f)));
     }
+
+    // THE CHECK, as one shape with two customers.
+    //
+    // track_tick draws it whole and the seal pip knocks it out of a disc, and
+    // the two used to carry the same four coordinates independently. Four
+    // magic numbers copied once is how the short stroke and the long one drift
+    // apart -- and a tick whose arms disagree between two sprites is the kind
+    // of thing nobody looks at twice and everybody half-notices.
+    private static float CheckMark(float nx, float ny, float halfWidth)
+    {
+        float d = Mathf.Min(
+            SegmentDistance(nx, ny, -0.42f, 0.02f, -0.12f, -0.34f),
+            SegmentDistance(nx, ny, -0.12f, -0.34f, 0.46f, 0.38f));
+
+        return Stroke(d, halfWidth);
+    }
+
+    private static void BakeGlow(string name, Func<float, float, float> intensityAt) =>
+        BakeGlow(name, Size, intensityAt);
 
     // Distance from (px,py) to the segment (ax,ay)-(bx,by), in the same
     // normalised space the bake lambdas work in.
@@ -561,6 +692,40 @@ public static class ProceduralSpriteBaker
 
                 float alpha = Mathf.Clamp01(intensityAt(nx, ny));
                 pixels[y * size + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(alpha * 255f));
+            }
+        }
+
+        texture.SetPixels32(pixels);
+        texture.Apply();
+        WritePng(path, texture);
+    }
+
+    // Greyscale VALUE and alpha, both varying in two dimensions.
+    //
+    // The third bake shape, and it exists because the disc needed something
+    // neither of the other two can say. Bake is white with a radial alpha -- a
+    // silhouette, tintable but flat. BakeGradient carries value but only along
+    // one axis, which is right for a bar and useless for a specular highlight
+    // that sits off-centre in both. This is the two of them at once.
+    private static void BakeShaded(string name, int size, Func<float, float, (float value, float alpha)> shade)
+    {
+        string path = $"{GeneratedDir}/{name}.png";
+
+        var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        var pixels = new Color32[size * size];
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float nx = (x + 0.5f) / size * 2f - 1f;
+                float ny = (y + 0.5f) / size * 2f - 1f;
+
+                var (value, alpha) = shade(nx, ny);
+                byte channel = (byte)Mathf.RoundToInt(Mathf.Clamp01(value) * 255f);
+                byte a = (byte)Mathf.RoundToInt(Mathf.Clamp01(alpha) * 255f);
+
+                pixels[y * size + x] = new Color32(channel, channel, channel, a);
             }
         }
 

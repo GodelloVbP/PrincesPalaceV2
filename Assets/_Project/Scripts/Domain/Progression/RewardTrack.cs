@@ -296,6 +296,48 @@ namespace PrincesPalace.Domain.Progression
             return false;
         }
 
+        // HOW ONE NODE READS, given where the player is and how far the track
+        // has paid. The screen's whole state model, in one pure function.
+        //
+        // HERE WINS OVER WAITING, and that ordering is the decision rather than
+        // an accident of the if-chain. The player's own node is the one thing
+        // on a hundred-node rail they need to find at a glance, so it draws
+        // pale even when its own reward is uncollected -- and nothing is hidden
+        // by that, because IsWaiting below is asked separately for the pulsing
+        // ring and for whether a click claims. A node can be both; only its
+        // disc has to pick one.
+        public static TrackNodeState StateOf(int level, int playerLevel, int claimedLevel)
+        {
+            if (level == playerLevel) return TrackNodeState.Here;
+            if (level > playerLevel) return TrackNodeState.ToCome;
+
+            return level > claimedLevel ? TrackNodeState.Waiting : TrackNodeState.Collected;
+        }
+
+        // Whether this level has been reached and not yet paid -- which is what
+        // a click on it collects, and what the pulsing ring advertises.
+        //
+        // NOT `StateOf(...) == Waiting`, deliberately: the player's own node
+        // answers Here and would come back false, and it is exactly the node
+        // most likely to be holding an uncollected reward.
+        public static bool IsWaiting(int level, int playerLevel, int claimedLevel) =>
+            level <= playerLevel && level > claimedLevel && level >= StartingLevel + 1;
+
+        // How many levels a press of "collect everything" would settle.
+        //
+        // CLAMPED AT ZERO rather than returning a negative for a watermark that
+        // has run ahead of the level -- a hand-edited save can hold anything,
+        // and "nothing to collect" is the right answer to "you have already
+        // been paid past where you are".
+        public static int UnclaimedCount(int playerLevel, int claimedLevel)
+        {
+            if (playerLevel > MaxLevel) playerLevel = MaxLevel;
+            if (claimedLevel < StartingLevel) claimedLevel = StartingLevel;
+
+            int owed = playerLevel - claimedLevel;
+            return owed < 0 ? 0 : owed;
+        }
+
         // The first level that grants `reward`, or 0 if the track never does.
         public static int UnlockLevel(TrackReward reward)
         {

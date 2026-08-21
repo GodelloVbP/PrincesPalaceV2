@@ -66,22 +66,36 @@ namespace PrincesPalace
                 int gained = isDowned ? 0 : character.ExperienceWorthOf(payout.Experience);
                 if (gained > 0) character.AddExperience(gained);
 
-                // AND THEN PAY THE TRACK, unconditionally rather than only when
-                // exp was gained.
+                // AND THE TRACK IS **NOT** PAID HERE ANY MORE.
                 //
-                // Unconditional because the watermark, not this call site, is
-                // what decides whether anything is owed -- and a character can
-                // arrive here already owed something they were never paid: one
-                // who levelled before the track existed, or before a reward kind
-                // was implemented. Gating on `gained > 0` would mean the only
-                // way to collect a debt is to earn more exp, which is exactly
-                // the shape of bug the watermark exists to avoid.
+                // This used to call character.ClaimTrackRewards() on every
+                // payout, unconditionally, which kept `level` and
+                // `claimedTrackLevel` in lockstep -- so the gap between reached
+                // and collected only ever appeared for a character levelled by
+                // a migration or a debug grant.
                 //
-                // In production and not in the tests, because a test that
-                // claimed on production's behalf would be repairing the state
-                // the game leaves broken -- architecture_audit.md F17, and the
-                // fight that never started is what happens when it is ignored.
-                character.ClaimTrackRewards();
+                // COLLECTION IS SOMETHING THE PLAYER DOES NOW. The reward track
+                // design handoff (section 3) makes that gap the screen's whole
+                // state model: a reward is WAITING until it is claimed, the
+                // waiting nodes pulse, the ribbon combs them, and a collect
+                // button counts them. Paying automatically here would leave all
+                // of that reachable only through the debug menu.
+                //
+                // WHAT THIS CHANGES FOR THE PLAYER, stated plainly because it
+                // is a gameplay change and not a presentation one: stat points,
+                // Favor, max health and experience-find no longer arrive at the
+                // end of a fight. They arrive when the track is opened and
+                // collected, from the system menu's Character & Inventory pane.
+                //
+                // The guarantee the old comment here defended is unchanged and
+                // is what makes this safe: the WATERMARK decides what is owed,
+                // not any call site, so a character who levelled before the
+                // track existed or before a reward kind was implemented is
+                // still owed it and can still collect it. Nothing expires.
+                //
+                // TO REVERT: put `character.ClaimTrackRewards();` back on the
+                // line below. The reward track screen keeps working either way
+                // -- it would simply have nothing to collect.
 
                 reward.Characters.Add(new CharacterReward(
                     character.definitionId,

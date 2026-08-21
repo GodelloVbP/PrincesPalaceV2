@@ -27,12 +27,19 @@ namespace PrincesPalace.PlayModeTests
             Path.GetFullPath(Path.Combine(
                 Directory.GetParent(Application.dataPath).FullName, "tools", "screenshots", "runtime"));
 
-        // The reward track, opened over the dossier and levelled enough that
-        // the rail has a lit half and a "you are here" node to scroll to.
+        // The reward track, in both of the states it can be found in.
         //
         // A capture rather than an assertion, because what can be wrong here is
         // not a value: a hundred captions at 190px pitch either read or they
-        // collide, and UiAudit can only tell you they are contained.
+        // collide, and UiAudit can only tell you they are contained. The first
+        // capture of the redesign is what caught a seal pip covering the very
+        // mark it sat beside, on eighty-seven of ninety-nine nodes.
+        //
+        // TWO PICTURES, because the screen has two halves and one of them is
+        // invisible in the other. A squad collecting as it goes has no waiting
+        // nodes at all -- no pulse rings, no gold ticks on the ribbon, no
+        // collect button -- so a single capture of that state photographs
+        // roughly half of what was built.
         [UnityTest]
         public IEnumerator CaptureTheRewardTrack()
         {
@@ -41,20 +48,31 @@ namespace PrincesPalace.PlayModeTests
                 Assert.Ignore("No graphics device. Run: tools/screenshot.ps1 -Runtime -RuntimeFilter SystemMenuCaptureTests");
             }
 
+            // COLLECTED: level and watermark in lockstep, which is what a
+            // player who opens the track regularly sees. Seal pips on every
+            // node behind them, and no collect button.
+            yield return OpenTheTrack(level: 47, claimed: 47);
+            yield return Capture("SystemMenu_reward_track.png");
+
+            // WAITING: thirty-five levels reached and unpaid, which is what a
+            // character levelled by a migration or a debug grant arrives with.
+            // Handoff section 4 calls this the expected path rather than an
+            // edge case, and it is the state the ribbon's comb of gold ticks
+            // and the collect-all button exist for.
+            yield return OpenTheTrack(level: 47, claimed: 12);
+            yield return Capture("SystemMenu_reward_track_waiting.png");
+        }
+
+        private static IEnumerator OpenTheTrack(int level, int claimed)
+        {
             yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
             yield return null;
             yield return null;
 
             foreach (var character in SaveSlotManager.CurrentSave.ActiveSquad())
             {
-                character.level = 47;
-
-                // PAID, not merely reached. The tick is the difference: setting
-                // the level alone leaves claimedTrackLevel at 0, so a capture
-                // taken that way shows a rail lit gold with not one node ticked
-                // -- which is correct, and useless as a picture of the finished
-                // screen.
-                character.ClaimTrackRewards();
+                character.level = level;
+                character.claimedTrackLevel = claimed;
             }
 
             var menu = Object.FindAnyObjectByType<SystemMenuController>(FindObjectsInactive.Include);
@@ -68,17 +86,30 @@ namespace PrincesPalace.PlayModeTests
                 .FirstOrDefault(b => b.name == "DossierTrackRow");
             Assert.IsNotNull(row, "the dossier has no reward-track row");
             row.onClick.Invoke();
-            yield return new WaitForSecondsRealtime(0.5f);
 
+            // LONG ENOUGH FOR THE FLY-IN TO LAND, which 0.5s was not.
+            //
+            // The panel opens at the rail's left edge and travels to the
+            // player's own node over 380ms of delay plus 2100 of easing. Half a
+            // second in, the shipped capture was a picture of levels 11 to 19
+            // with the window box parked over them -- structurally correct,
+            // about a screen nobody will ever be looking at.
+            yield return new WaitForSecondsRealtime(3f);
+        }
+
+        private static IEnumerator Capture(string fileName)
+        {
             var canvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)
                 .FirstOrDefault(c => c.isRootCanvas);
             Assert.IsNotNull(canvas);
 
             Directory.CreateDirectory(OutputDir);
-            string path = Path.Combine(OutputDir, "SystemMenu_reward_track.png");
+            string path = Path.Combine(OutputDir, fileName);
             CanvasCapture.RenderToFile(canvas, path);
             Assert.IsTrue(File.Exists(path), $"no capture written to {path}");
             Debug.Log($"[SystemMenuCapture] wrote {path}");
+
+            yield return null;
         }
 
         [UnityTest]
