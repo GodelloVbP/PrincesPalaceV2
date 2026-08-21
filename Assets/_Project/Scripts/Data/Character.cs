@@ -111,6 +111,27 @@ namespace PrincesPalace
         // attack/speed/health with no separate stat pathway of its own.
         public AbilityScoreBlock investedAbilityScores;
 
+        // Prince's Favor earned from the reward track, ADDED TO the authored
+        // CharacterDefinition.princesFavor rather than replacing it.
+        //
+        // The reason this field has to exist: Favor was authored-only. It is a
+        // field on CharacterDefinition, which is a ScriptableObject built by
+        // ContentBuilder and immutable at runtime, and the reward track grants
+        // Favor at 21 of its 100 nodes -- none of which had anywhere to write.
+        //
+        // PER CHARACTER, which is the whole point rather than an
+        // implementation detail. ItemOfferRoll.SquadFavor takes the fielded
+        // party's HIGHEST Favor and never the sum, precisely so that Favor is
+        // a reason to field a particular character. Earning it per character
+        // keeps that true: a levelled character becomes the one you bring for
+        // loot. A profile-wide pool would make it a reason to field nobody in
+        // particular.
+        //
+        // Purely additive, so SaveData.CurrentVersion does not move: an older
+        // save has no such field, JsonUtility leaves it at zero, and zero is
+        // exactly "has earned none yet".
+        public int earnedFavor;
+
         public Character()
         {
         }

@@ -74,10 +74,18 @@ This is why the track grants **40** Favor rather than 8. At ~44 effective Favor:
 | elite | p 0.300, E 0.428 | capped, **E 1.161** |
 | boss | p 0.380, E 0.608 | capped, **E 1.161** |
 
-**`LootLadder.MaxStep = 0.55` caps at different Favor per class: boss at 28,
-elite at 42, normal at 55.** So the back half of the Favor nodes only improves
-ordinary fights. Spread Favor across all ten bands or the last twenty levels buy
-nothing.
+**`LootLadder.MaxStep = 0.55` caps at different Favor per class: boss at ~~28~~
+**29**, elite at 42, normal at 55.** So the back half of the Favor nodes only
+improves ordinary fights. Spread Favor across all ten bands or the last twenty
+levels buy nothing.
+
+> Boss corrected 2026-08-21, during phase C: `0.38 + 28 * 0.006` is 0.548, still
+> under the cap, so 29 is the first Favor that reaches it. Elite and normal were
+> right. All three boundaries are now pinned by
+> `ItemOfferFavorTests.FavorStopsBuyingAnythingOnceTheLadderCaps` as
+> one-below/at-cap pairs, so this paragraph is no longer the only record of
+> them — which is the point, given the section it sits in says not to
+> re-derive.
 
 **Favor already drives rarity AND plus.** `RarityTable.RollTier` and
 `RollPlus` both call `LootLadder.Climb(encounter, favor, ...)`. Any "better item

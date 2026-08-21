@@ -40,6 +40,30 @@ namespace PrincesPalace
                 .ToList();
         }
 
+        // What one character's Favor is worth: what they were AUTHORED with,
+        // plus what the reward track has GRANTED them.
+        //
+        // The two halves live in different places because they have different
+        // lifetimes -- CharacterDefinition.princesFavor is content, rebuilt
+        // from characters.json by ContentBuilder and the same for every save;
+        // Character.earnedFavor is progress, and belongs to one profile's one
+        // character. This is the only place they meet, which is deliberate: a
+        // second place that added them would be a second place that could
+        // forget to.
+        //
+        // Tolerant of either side being missing, the house style: a character
+        // whose definition has gone (content edited under a live save) still
+        // contributes what they earned, and a character who has earned nothing
+        // still contributes what they were authored with.
+        public static int FavorOf(Character character, CharacterDefinition definition)
+        {
+            int authored = definition == null ? 0 : definition.princesFavor;
+            int earned = character == null ? 0 : character.earnedFavor;
+
+            int total = authored + earned;
+            return total < 0 ? 0 : total;
+        }
+
         // The squad's Prince's Favor: the HIGHEST among the fielded party,
         // never the sum.
         //
@@ -48,14 +72,21 @@ namespace PrincesPalace
         // would make the stat scale with squad size, so the real decision
         // would become "bring more bodies" -- which is not a decision about
         // Favor at all.
-        public static int SquadFavor(IEnumerable<CharacterDefinition> squad)
+        //
+        // Takes the per-member totals rather than the definitions it used to,
+        // so that this rule and the authored-plus-earned rule above are two
+        // separate facts in two separate functions. It previously read
+        // princesFavor off the definition itself, which meant "where does a
+        // member's Favor come from" and "how does a squad combine it" were the
+        // same four lines and could not be changed independently.
+        public static int SquadFavor(IEnumerable<int> memberFavors)
         {
-            if (squad == null) return 0;
+            if (memberFavors == null) return 0;
 
             int best = 0;
-            foreach (var member in squad)
+            foreach (int favor in memberFavors)
             {
-                if (member != null && member.princesFavor > best) best = member.princesFavor;
+                if (favor > best) best = favor;
             }
 
             return best;
@@ -73,8 +104,8 @@ namespace PrincesPalace
             if (save == null) return 0;
 
             return SquadFavor(save.ActiveSquad()
-                .Select(c => ContentDatabase.Characters
-                    .FirstOrDefault(d => d != null && d.id == c.definitionId)));
+                .Select(c => FavorOf(c, ContentDatabase.Characters
+                    .FirstOrDefault(d => d != null && d.id == c.definitionId))));
         }
 
         // The three offers, each with its own independently rolled plus.
