@@ -7,6 +7,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
+using PrincesPalace.Content;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -213,6 +214,124 @@ namespace PrincesPalace.PlayModeTests
                 .ToList();
 
             CollectionAssert.AreEqual(first, second, "the draft re-rolled itself on reload");
+        }
+
+        // ---- the reward track's starting relics ---------------------------------
+
+        private static void LevelTheSquadTo(int level)
+        {
+            foreach (var character in Save.ActiveSquad())
+            {
+                character.level = level;
+            }
+
+            SaveSlotManager.SaveCurrent();
+        }
+
+        [UnityTest]
+        public IEnumerator ALevelledSquadDraftsMoreThanOneRelic()
+        {
+            yield return OpenTheHub();
+            LevelTheSquadTo(25);
+
+            Click("StartRunGate");
+            yield return null;
+            yield return null;
+
+            // Round one.
+            Click("DraftCard0");
+            yield return null;
+            Click("DraftDescendButton");
+            yield return null;
+
+            Assert.AreEqual(1, RunManager.Run.relicIds.Count, "the first pick did not land");
+            Assert.IsTrue(_draft.gameObject.activeSelf,
+                "the draft closed after one pick, so the level-25 reward hands out nothing");
+
+            // Round two.
+            Click("DraftCard0");
+            yield return null;
+            Click("DraftDescendButton");
+            yield return null;
+
+            Assert.AreEqual(2, RunManager.Run.relicIds.Count);
+            Assert.IsFalse(_draft.gameObject.activeSelf, "the draft ran past the two rounds it was owed");
+            Assert.IsTrue(RunManager.Run.relicDrafted);
+        }
+
+        [UnityTest]
+        public IEnumerator AnUnlevelledSquadStillDraftsExactlyOne()
+        {
+            // The fallback is part of the reward: getting it wrong takes the
+            // draft away from every character below level 25.
+            yield return OpenTheHub();
+            Click("StartRunGate");
+            yield return null;
+            yield return null;
+
+            Click("DraftCard0");
+            yield return null;
+            Click("DraftDescendButton");
+            yield return null;
+
+            Assert.AreEqual(1, RunManager.Run.relicIds.Count);
+            Assert.IsFalse(_draft.gameObject.activeSelf, "one relic is still the whole draft at level 1");
+        }
+
+        [UnityTest]
+        public IEnumerator TheSecondRoundDoesNotOfferWhatWasAlreadyTaken()
+        {
+            // Draft() draws without replacement WITHIN an offer, which was the
+            // whole story when there was only one offer. Across rounds nothing
+            // stopped a relic coming back, and being offered what you are
+            // already carrying reads as a bug.
+            yield return OpenTheHub();
+            LevelTheSquadTo(60);
+
+            Click("StartRunGate");
+            yield return null;
+            yield return null;
+
+            Click("DraftCard0");
+            yield return null;
+            Click("DraftDescendButton");
+            yield return null;
+
+            string taken = RunManager.Run.relicIds[0];
+
+            var offered = Enumerable.Range(0, 3)
+                .Select(i => Named($"DraftCard{i}"))
+                .Where(go => go != null && go.activeSelf)
+                .Select(go => go.GetComponentsInChildren<TMPro.TMP_Text>(true)
+                    .First(t => t.name.EndsWith("Name")).text)
+                .ToList();
+
+            var takenName = ContentDatabase.Relics.First(r => r.id == taken).displayName;
+
+            CollectionAssert.DoesNotContain(offered, takenName,
+                "the second round offered the relic the first round just took");
+        }
+
+        [UnityTest]
+        public IEnumerator DecliningEndsTheWholeDraftRatherThanAskingAgain()
+        {
+            // A player who does not want what is on offer should not have to
+            // press Descend four times to say so. The alternative -- re-offering
+            // until they accept -- is a draft they cannot leave, which the
+            // Descend button exists to prevent.
+            yield return OpenTheHub();
+            LevelTheSquadTo(60);
+
+            Click("StartRunGate");
+            yield return null;
+            yield return null;
+
+            Click("DraftDescendButton");
+            yield return null;
+
+            Assert.IsEmpty(RunManager.Run.relicIds);
+            Assert.IsFalse(_draft.gameObject.activeSelf, "declining did not end the draft");
+            Assert.IsTrue(RunManager.Run.relicDrafted);
         }
     }
 }

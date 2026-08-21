@@ -12,12 +12,12 @@ namespace PrincesPalace.Domain.Tests
         // have to be typed twice.
         [TestCase(10, TrackReward.Favor, 5)]
         [TestCase(20, TrackReward.Respec, 0)]
-        [TestCase(25, TrackReward.RelicSlot, 2)]
+        [TestCase(25, TrackReward.StartingRelics, 2)]
         [TestCase(30, TrackReward.RestBeforeBoss, 0)]
         [TestCase(40, TrackReward.OfferReroll, 1)]
-        [TestCase(45, TrackReward.RelicSlot, 3)]
+        [TestCase(45, TrackReward.StartingRelics, 3)]
         [TestCase(50, TrackReward.WiderOffer, 4)]
-        [TestCase(60, TrackReward.TwoStartingRelics, 2)]
+        [TestCase(60, TrackReward.StartingRelics, 4)]
         [TestCase(70, TrackReward.ChosenStartingRelics, 0)]
         [TestCase(80, TrackReward.EliteRelicDrop, 0)]
         [TestCase(90, TrackReward.SecondLife, 1)]
@@ -173,39 +173,49 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(expected, RewardTrack.HasUnlocked(reward, level));
         }
 
-        // Relic slots are the one unlock that arrives in steps, so the answer
-        // is "the highest reached", not "the first".
+        // Starting relics are the one unlock that arrives in steps, so the
+        // answer is "the highest reached", not "the first". A character below
+        // the first step still drafts ONE -- the fallback is part of the
+        // answer, and getting it wrong takes the draft away entirely.
         [TestCase(1, 1)]
         [TestCase(24, 1)]
         [TestCase(25, 2)]
         [TestCase(44, 2)]
         [TestCase(45, 3)]
-        [TestCase(100, 3)]
-        public void RelicSlotsClimbAndDoNotGoBack(int level, int expectedSlots)
+        [TestCase(59, 3)]
+        [TestCase(60, 4)]
+        [TestCase(100, 4)]
+        public void StartingRelicsClimbAndDoNotGoBack(int level, int expected)
         {
-            Assert.AreEqual(expectedSlots, RewardTrack.UnlockedAmount(TrackReward.RelicSlot, level, 1));
+            Assert.AreEqual(expected, RewardTrack.StartingRelics(level));
         }
 
-        // Level 60 hands out two starting relics and cannot mean anything until
-        // there are two slots to put them in. Asserted as an ORDERING rather
-        // than as two levels, so moving either one keeps the constraint.
+        // THE ONE REAL CHAIN on the track: more relics, then the right to pick
+        // them. Asserted as an ORDERING rather than as fixed levels, so
+        // retuning any of the four keeps the constraint that makes it a chain
+        // rather than four unrelated grants.
         [Test]
-        public void TheSecondRelicSlotArrivesBeforeTheSecondStartingRelic()
+        public void TheRelicLineClimbsBeforeItLetsYouChoose()
         {
-            int slotTwo = 0;
+            int previousAmount = 0;
+            int lastStep = 0;
+
             for (int level = 1; level <= RewardTrack.MaxLevel; level++)
             {
                 var entry = RewardTrack.At(level);
-                if (entry.Reward == TrackReward.RelicSlot && entry.Amount >= 2)
-                {
-                    slotTwo = level;
-                    break;
-                }
+                if (entry.Reward != TrackReward.StartingRelics) continue;
+
+                Assert.Greater(entry.Amount, previousAmount,
+                    $"the starting-relic step at level {level} does not increase on the one before it");
+                previousAmount = entry.Amount;
+                lastStep = level;
             }
 
-            Assert.Greater(slotTwo, 0, "no second relic slot is granted at all");
-            Assert.Less(slotTwo, RewardTrack.UnlockLevel(TrackReward.TwoStartingRelics),
-                "the track starts every run with two relics before granting a second slot to hold one");
+            Assert.Greater(lastStep, 0, "the track never grants a starting relic step");
+            Assert.Greater(previousAmount, RewardTrack.BaseStartingRelics,
+                "every starting-relic step grants what a level-1 character already has");
+            Assert.Less(lastStep, RewardTrack.UnlockLevel(TrackReward.ChosenStartingRelics),
+                "the track lets you choose your starting relics before it finishes handing them out");
         }
 
         [Test]

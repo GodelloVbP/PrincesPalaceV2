@@ -21,11 +21,18 @@ namespace PrincesPalace.Domain.Progression
 
         // ---- UNLOCKS: a capability, true forever once the level is reached --
         Respec,
-        RelicSlot,
+
+        // How many relics the descent begins with. ONE KIND RATHER THAN TWO:
+        // this was a RelicSlot pair at 25/45 and a separate TwoStartingRelics
+        // at 60, on the assumption that holding a relic and being given one
+        // were different capacities. They are not -- there is no slot cap in
+        // the game to lift (AUDIT #50, #51) -- so the three milestones are one
+        // escalating line: 2 at level 25, 3 at 45, 4 at 60.
+        StartingRelics,
+
         RestBeforeBoss,
         OfferReroll,
         WiderOffer,
-        TwoStartingRelics,
         ChosenStartingRelics,
         EliteRelicDrop,
         SecondLife,
@@ -87,25 +94,42 @@ namespace PrincesPalace.Domain.Progression
         public const int StartingLevel = 1;
         public const int MaxLevel = 100;
 
-        // THE MILESTONES. Tens, plus the two relic slots that are deliberately
-        // off the tens: they are prerequisites rather than headline rewards,
-        // and level 60's "start every run with two relics" cannot mean anything
-        // until slot 2 exists at 25.
+        // THE MILESTONES. Tens, plus the two relic steps at 25 and 45 that are
+        // deliberately off them.
+        //
+        // THE RELIC LINE IS THE TRACK'S ONE REAL CHAIN: 2 relics at 25, 3 at
+        // 45, 4 at 60, and at 70 you stop being offered them at random and
+        // pick. Everything else on the track is independent, and a track of a
+        // hundred independent grants is a checklist rather than a tree -- the
+        // same thing ContentDatabase.OrbCost's comment warns about for the
+        // talent tree.
+        //
+        // 25 and 45 used to grant relic SLOTS, on the reasonable-sounding
+        // theory that capacity and supply were separate rewards. There is no
+        // capacity limit in the game to lift: RunSnapshot.relicIds is a list
+        // whose own header states the design as "infinite slots per run". Both
+        // levels were granting something the player already had. See AUDIT #50
+        // and #51 for how far that got before anyone checked.
         private static readonly (int Level, TrackReward Reward, int Amount)[] Milestones =
         {
             (10,  TrackReward.Favor, 5),
             (20,  TrackReward.Respec, 0),
-            (25,  TrackReward.RelicSlot, 2),
+            (25,  TrackReward.StartingRelics, 2),
             (30,  TrackReward.RestBeforeBoss, 0),
             (40,  TrackReward.OfferReroll, 1),
-            (45,  TrackReward.RelicSlot, 3),
+            (45,  TrackReward.StartingRelics, 3),
             (50,  TrackReward.WiderOffer, 4),
-            (60,  TrackReward.TwoStartingRelics, 2),
+            (60,  TrackReward.StartingRelics, 4),
             (70,  TrackReward.ChosenStartingRelics, 0),
             (80,  TrackReward.EliteRelicDrop, 0),
             (90,  TrackReward.SecondLife, 1),
             (100, TrackReward.SecondLifeRefresh, 0),
         };
+
+        // What a descent with no track progress begins with. Named rather than
+        // written as a bare 1 at the call sites, because it is the fallback
+        // UnlockedAmount needs and the two must agree.
+        public const int BaseStartingRelics = 1;
 
         // THE FILLER, as a mix rather than as a placement.
         //
@@ -209,10 +233,19 @@ namespace PrincesPalace.Domain.Progression
             return unlockedAt > 0 && level >= unlockedAt;
         }
 
+        // How many relics a descent at `level` begins with.
+        //
+        // Its own named method rather than a raw UnlockedAmount call, because
+        // the fallback is part of the answer: a character below level 25 starts
+        // with one relic, not zero, and a caller passing the wrong fallback
+        // would silently take the draft away.
+        public static int StartingRelics(int level) =>
+            UnlockedAmount(TrackReward.StartingRelics, level, BaseStartingRelics);
+
         // The highest Amount reached for an unlock that comes in steps, or
-        // `fallback` if none has. RelicSlot is the case this exists for: it
-        // appears twice, and the answer to "how many slots" is the later of the
-        // two once level 45 is passed.
+        // `fallback` if none has. StartingRelics is the case this exists for:
+        // it appears three times, and the answer to "how many" is the latest
+        // step passed rather than the first.
         public static int UnlockedAmount(TrackReward reward, int level, int fallback)
         {
             int best = fallback;

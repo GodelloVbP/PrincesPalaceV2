@@ -1301,6 +1301,38 @@ decisions that belong to the author.
 
 ## Open investigations
 
+### 52. `SystemMenuExitsTests.OnePressOnAnExitDoesNothingButArmIt` flaked once, navigating to `"Hub"` — cause not found
+
+Seen **once in four full-suite runs**, during the reward track's starting-relic
+work (2026-08-21). Passes in isolation (13/13), and passed in three consecutive
+targeted runs paired with `RelicDraftTests`, and in the three full runs after it.
+
+```
+FAILED: SystemMenuExitsTests.OnePressOnAnExitDoesNothingButArmIt
+  one press on an exit left the scene
+  Expected: <empty>   But was: < "Hub" >
+```
+
+The recorded destination is the interesting part. The test arms `ExitTitle`,
+whose second press goes to `Navigation.MainMenu` — so `"Hub"` is not this exit
+firing early, it is a **different** navigation arriving inside this test's
+recording window. `Navigation.LoadOverride` is a process-wide static that each
+fixture installs in `SetUp` and clears in `TearDown`, which is exactly the shape
+of thing `GlobalStateLintTests` exists to police, and exactly the shape that
+produces a once-in-four failure rather than a consistent one.
+
+**I do not know whether the starting-relic change introduced this.** That work
+added four PlayMode tests that load the Hub scene and drive the draft to
+completion, which changes both the ordering and the timing of every PlayMode
+test after them — enough to surface a latent race without being its cause. It
+was not observed before that change, but the change is also the first time this
+suite had been run repeatedly in one sitting, so absence of prior sightings is
+weak evidence either way. Recorded rather than guessed at.
+
+Worth pairing with #24, the other flake in this register whose root cause was
+eventually found to be a real bug (#13) rather than test noise.
+
+
 ### ~~24. `BloodlustRelic_GrantsAnImmediateExtraTurnAfterAKillingBlow` flakes on fresh content/scene builds — root cause not found~~ — **ROOT CAUSE FOUND, 2026-08-04.** It is a symptom of #13, and fixing that fixed this. Reproduced 2 times in 8 runs before, then 0 in 12 after
 
 The investigation below is preserved because most of its ruling-out was correct — it just never
