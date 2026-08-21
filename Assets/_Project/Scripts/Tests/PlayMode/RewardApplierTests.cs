@@ -4,6 +4,7 @@ using System.Linq;
 using NUnit.Framework;
 using PrincesPalace;
 using PrincesPalace.Domain.Combat.Session;
+using PrincesPalace.Domain.Progression;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -166,6 +167,109 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsNotEmpty(reward.Characters);
             Assert.IsTrue(reward.Characters.All(r => r.IsDowned && r.ExpGained == 0));
+        }
+
+        // ---- the reward track gets paid here ------------------------------------
+        //
+        // THROUGH RewardApplier, not by calling ClaimTrackRewards directly.
+        // What is under test is that the game pays the track at all: the claim
+        // has exactly one production call site and a test that reached past it
+        // would pass just as happily if that site were deleted.
+        // architecture_audit.md F17, and AUDIT #46 is what ignoring it costs.
+
+        [Test]
+        public void LevellingPaysWhateverTheTrackOwes()
+        {
+            var character = First();
+            Assert.AreEqual(1, character.level, "the fixture did not start at level 1");
+
+            // Enough to cross a long stretch of the track in one payout, which
+            // is also the multi-level case: the watermark has to settle at the
+            // level actually reached, not one past the first threshold.
+            RewardApplier.Apply(new VictoryRewards.Payout(20000, 0), Squad());
+
+            character = First();
+            Assert.Greater(character.level, 1, "the fixture did not level up");
+            Assert.AreEqual(character.level, character.claimedTrackLevel,
+                "the watermark did not follow the level, so the track will pay these levels again");
+
+            int expectedPoints = RewardTrack.GrantedBetween(TrackReward.StatPoint, 1, character.level);
+            int expectedFavor = RewardTrack.GrantedBetween(TrackReward.Favor, 1, character.level);
+
+            Assert.AreEqual(expectedPoints, character.unspentStatPoints,
+                "the stat points the track owes for those levels were not handed over");
+            Assert.AreEqual(expectedFavor, character.earnedFavor,
+                "the Favor the track owes for those levels was not handed over");
+        }
+
+        // The bug the watermark exists to prevent, from the direction it would
+        // actually arrive: a second payout that gains no levels must pay
+        // nothing more.
+        [Test]
+        public void TheSameLevelsAreNeverPaidTwice()
+        {
+            RewardApplier.Apply(new VictoryRewards.Payout(20000, 0), Squad());
+
+            var character = First();
+            int pointsAfterFirst = character.unspentStatPoints;
+            int favorAfterFirst = character.earnedFavor;
+            int levelAfterFirst = character.level;
+
+            // A trickle: not enough to reach the next level from here.
+            RewardApplier.Apply(new VictoryRewards.Payout(1, 0), Squad());
+
+            character = First();
+            Assert.AreEqual(levelAfterFirst, character.level, "the fixture levelled again and the test is moot");
+            Assert.AreEqual(pointsAfterFirst, character.unspentStatPoints,
+                "stat points were paid a second time for levels already claimed");
+            Assert.AreEqual(favorAfterFirst, character.earnedFavor,
+                "Favor was paid a second time for levels already claimed");
+        }
+
+        // A character who reached their level before the track existed has a
+        // zero watermark and is owed everything. This is the migration case,
+        // and it has to work without a save-version bump because that is the
+        // reason the field is additive.
+        [Test]
+        public void ACharacterLevelledBeforeTheTrackExistedIsPaidWhatTheyAreOwed()
+        {
+            var character = First();
+            character.level = 30;
+            character.claimedTrackLevel = 0;
+            character.unspentStatPoints = 0;
+            character.earnedFavor = 0;
+
+            // Any payout at all. The claim is deliberately NOT gated on exp
+            // being gained, or collecting a debt would require earning more.
+            RewardApplier.Apply(new VictoryRewards.Payout(1, 0), Squad());
+
+            character = First();
+            Assert.AreEqual(30, character.claimedTrackLevel,
+                "an unpaid back-catalogue of levels was not settled");
+            Assert.AreEqual(RewardTrack.GrantedBetween(TrackReward.StatPoint, 1, 30),
+                character.unspentStatPoints);
+            Assert.AreEqual(RewardTrack.GrantedBetween(TrackReward.Favor, 1, 30),
+                character.earnedFavor);
+        }
+
+        // A downed character earns no exp, so they must also not be paid for
+        // levels they already claimed -- but they must still be settled if they
+        // are owed something, which is the same unconditional-claim rule from
+        // the other side.
+        [Test]
+        public void ADownedCharacterIsStillSettledButGainsNoLevels()
+        {
+            var character = First();
+            character.level = 15;
+            character.claimedTrackLevel = 0;
+
+            // Fielded nobody: everyone is downed and gains zero exp.
+            RewardApplier.Apply(new VictoryRewards.Payout(500, 0), new List<string>());
+
+            character = First();
+            Assert.AreEqual(15, character.level, "a downed character gained a level");
+            Assert.AreEqual(15, character.claimedTrackLevel,
+                "a downed character was left holding an unpaid track debt");
         }
     }
 }

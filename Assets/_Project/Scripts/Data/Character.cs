@@ -132,6 +132,25 @@ namespace PrincesPalace
         // exactly "has earned none yet".
         public int earnedFavor;
 
+        // How far up the reward track this character has been PAID.
+        //
+        // A watermark rather than a list of claimed ids, because the track is
+        // ordered and dense: "everything up to 37" is the same statement as a
+        // list of 37 entries and cannot disagree with itself about level 12.
+        //
+        // Only GRANTS need this -- the quantities, like a stat point or two
+        // Favor, which have to be handed over exactly once. Unlocks (respec, a
+        // wider offer, a second life) are pure functions of `level` and are
+        // stored nowhere, so they cannot be missed by a character who passed
+        // the level before the feature was built. RewardTrack's header has the
+        // full reasoning.
+        //
+        // Zero on an older save, which is BELOW StartingLevel and therefore
+        // reads as "has claimed nothing" -- RewardTrack.GrantedBetween floors
+        // it. An existing character is paid everything the track owes them for
+        // the levels they already have, the next time they gain any exp.
+        public int claimedTrackLevel;
+
         public Character()
         {
         }
@@ -185,8 +204,14 @@ namespace PrincesPalace
 
         // Adds exp and applies every level-up it earns (a big enough gain
         // can cross more than one threshold at once). Returns how many
-        // levels were gained, purely so callers can show a "Level Up!" -- the
-        // stat point grant itself already happened by the time this returns.
+        // levels were gained, purely so callers can show a "Level Up!".
+        //
+        // THIS NO LONGER GRANTS ANYTHING. It used to hand out one stat point
+        // per level right here; the reward track owns every grant now, and
+        // ClaimTrackRewards below is what pays them. Levelling and being paid
+        // for levelling are two steps on purpose -- a level can be reached in
+        // more than one way (a debug grant, a migration), and a grant that
+        // rode inside the increment would fire for all of them or none.
         public int AddExperience(int amount)
         {
             if (amount <= 0)
@@ -201,14 +226,45 @@ namespace PrincesPalace
             {
                 exp -= ExpToNextLevel(level);
                 level++;
-                // One point per level. This used to be a talent point, back
-                // when levels were the tree's currency; the tree is bought
-                // with Embers now and levels buy a build instead.
-                unspentStatPoints++;
                 levelsGained++;
             }
 
             return levelsGained;
+        }
+
+        // Pays out everything the reward track owes for levels reached since
+        // the last time this was called, and moves the watermark.
+        //
+        // IDEMPOTENT, which is the property worth having: calling it twice
+        // pays once, because the second call finds the watermark already at
+        // `level` and has nothing between. Callers therefore do not have to
+        // know whether anybody else has already claimed.
+        //
+        // Only GRANTS are paid here. Unlocks are answered from `level`
+        // directly, wherever the capability is used -- see RewardTrack.
+        //
+        // Returns whether anything was actually handed over, so a caller can
+        // drive a "reward earned" flourish without diffing the character.
+        public bool ClaimTrackRewards()
+        {
+            if (claimedTrackLevel >= level)
+            {
+                // Also repairs a watermark that has somehow run ahead of the
+                // level -- a hand-edited save, or a future respec that moves
+                // levels. Clamping here means the character is not silently
+                // owed nothing forever.
+                claimedTrackLevel = level;
+                return false;
+            }
+
+            int points = RewardTrack.GrantedBetween(TrackReward.StatPoint, claimedTrackLevel, level);
+            int favor = RewardTrack.GrantedBetween(TrackReward.Favor, claimedTrackLevel, level);
+
+            unspentStatPoints += points;
+            earnedFavor += favor;
+            claimedTrackLevel = level;
+
+            return points > 0 || favor > 0;
         }
     }
 }

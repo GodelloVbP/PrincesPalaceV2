@@ -57,6 +57,23 @@ namespace PrincesPalace
                 int gained = isDowned ? 0 : payout.Experience;
                 if (gained > 0) character.AddExperience(gained);
 
+                // AND THEN PAY THE TRACK, unconditionally rather than only when
+                // exp was gained.
+                //
+                // Unconditional because the watermark, not this call site, is
+                // what decides whether anything is owed -- and a character can
+                // arrive here already owed something they were never paid: one
+                // who levelled before the track existed, or before a reward kind
+                // was implemented. Gating on `gained > 0` would mean the only
+                // way to collect a debt is to earn more exp, which is exactly
+                // the shape of bug the watermark exists to avoid.
+                //
+                // In production and not in the tests, because a test that
+                // claimed on production's behalf would be repairing the state
+                // the game leaves broken -- architecture_audit.md F17, and the
+                // fight that never started is what happens when it is ignored.
+                character.ClaimTrackRewards();
+
                 reward.Characters.Add(new CharacterReward(
                     character.definitionId,
                     DisplayNameFor(character.definitionId),
