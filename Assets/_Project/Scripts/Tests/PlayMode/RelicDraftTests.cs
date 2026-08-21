@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
@@ -214,6 +215,97 @@ namespace PrincesPalace.PlayModeTests
                 .ToList();
 
             CollectionAssert.AreEqual(first, second, "the draft re-rolled itself on reload");
+        }
+
+        // ---- level 70: choose your starting relics --------------------------------
+
+        private static int VisibleCards() => 3;
+
+        private List<string> OnScreenNames() =>
+            Enumerable.Range(0, VisibleCards())
+                .Select(i => Named($"DraftCard{i}"))
+                .Where(go => go != null && go.activeSelf)
+                .Select(go => go.GetComponentsInChildren<TMPro.TMP_Text>(true)
+                    .First(t => t.name.EndsWith("Name")).text)
+                .ToList();
+
+        [UnityTest]
+        public IEnumerator BelowLevelSeventyTheDraftIsStillThreeRandomCards()
+        {
+            yield return OpenTheHub();
+            Click("StartRunGate");
+            yield return null;
+            yield return null;
+
+            Assert.IsFalse(Named("DraftNextPage").activeSelf,
+                "an unlevelled squad is shown paging it has not earned");
+            Assert.IsFalse(Named("DraftPageLabel").activeSelf);
+        }
+
+        [UnityTest]
+        public IEnumerator LevelSeventyOffersTheWholePoolInsteadOfADraw()
+        {
+            yield return OpenTheHub();
+            LevelTheSquadTo(70);
+
+            Click("StartRunGate");
+            yield return null;
+            yield return null;
+
+            Assert.IsTrue(Named("DraftNextPage").activeSelf,
+                "the whole pool is on offer and there is no way to page through it");
+
+            // Every relic the player is allowed to see, gathered by paging.
+            var seen = new List<string>();
+            seen.AddRange(OnScreenNames());
+
+            int guard = 0;
+            while (Named("DraftNextPage").GetComponent<Button>().interactable && guard++ < 20)
+            {
+                Click("DraftNextPage");
+                yield return null;
+                seen.AddRange(OnScreenNames());
+            }
+
+            Assert.Less(guard, 20, "paging never reached the end");
+
+            int expected = ContentDatabase.Relics.Count(r => r != null && string.IsNullOrEmpty(r.unlockedBy));
+            Assert.GreaterOrEqual(seen.Distinct().Count(), expected,
+                $"paging showed {seen.Distinct().Count()} relics but {expected} are unlocked from the start");
+        }
+
+        // THE PAGE TURN MUST NOT LOSE THE CHOICE. _selected indexes the whole
+        // offer rather than the three cards, precisely so a player who picks
+        // something and then looks at the next page still has it picked -- the
+        // same trap the deselect-on-second-press rule exists to avoid, arriving
+        // from the other direction.
+        [UnityTest]
+        public IEnumerator AChoiceSurvivesLookingAtTheNextPage()
+        {
+            yield return OpenTheHub();
+            LevelTheSquadTo(70);
+
+            Click("StartRunGate");
+            yield return null;
+            yield return null;
+
+            string picked = OnScreenNames().First();
+            Click("DraftCard0");
+            yield return null;
+
+            Click("DraftNextPage");
+            yield return null;
+            Click("DraftPrevPage");
+            yield return null;
+
+            Click("DraftDescendButton");
+            yield return null;
+
+            Assert.AreEqual(1, RunManager.Run.relicIds.Count,
+                "the selection was lost by paging away and back");
+
+            string takenName = ContentDatabase.Relics.First(r => r.id == RunManager.Run.relicIds[0]).displayName;
+            Assert.AreEqual(picked, takenName, "a different relic was taken than the one chosen");
         }
 
         // ---- the reward track's starting relics ---------------------------------

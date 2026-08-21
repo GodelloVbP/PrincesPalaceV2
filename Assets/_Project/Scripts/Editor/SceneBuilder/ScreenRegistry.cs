@@ -1092,6 +1092,9 @@ public static class ScreenRegistry
 
         controller.emptyHint = result.Go(draft.EmptyHint);
         controller.descendButton = result.Button(draft.DescendButton);
+        controller.prevPageButton = result.Button(draft.PrevPageButton);
+        controller.nextPageButton = result.Button(draft.NextPageButton);
+        controller.pageLabel = result.Tmp(draft.PageLabel);
 
         // Relic icons, baked as two parallel arrays. Resolved here rather than
         // at runtime because Resources loading and AssetDatabase are different

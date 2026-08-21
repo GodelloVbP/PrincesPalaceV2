@@ -25,6 +25,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef EmptyHint;
         public NodeRef DescendButton;
 
+        // Level 70 of the reward track turns the draft from three random cards
+        // into the whole eligible pool, which is 13 relics -- more than a row
+        // of three can hold, so it pages. Hidden until then.
+        public NodeRef PrevPageButton;
+        public NodeRef NextPageButton;
+        public NodeRef PageLabel;
+
         public List<NodeRef> Cards = new List<NodeRef>();
         public List<NodeRef> CardNames = new List<NodeRef>();
         public List<NodeRef> CardRarities = new List<NodeRef>();
@@ -63,6 +70,33 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Inactive();
             screen.EmptyHint = empty;
             inside.Add(empty);
+
+            // PAGING, for level 70's "choose your starting relics".
+            //
+            // The card row is three wide and emitted once at build time, so the
+            // whole pool cannot be shown at once -- and a 13-card grid would be
+            // a second card design competing with the one that already reads
+            // well. Paging reuses the cards exactly as they are and costs two
+            // arrows.
+            //
+            // Outside the card row, not over it: three 380-wide cards at a 420
+            // pitch reach x +/-610, and the frame's half-width is 750.
+            var prevPage = Ui.Button("DraftPrevPage", UiStrings.TalentPrev,
+                new UiVec(60f, 60f), 22, Place.At(-680f, 20f));
+            var nextPage = Ui.Button("DraftNextPage", UiStrings.TalentNext,
+                new UiVec(60f, 60f), 22, Place.At(680f, 20f));
+
+            // Between the cards (which stop at y -210) and Descend (at -350).
+            var pageLabel = Ui.Label("DraftPageLabel", UiString.Runtime, new UiVec(300f, 30f), 18,
+                    "#B8A8D9", Place.At(0f, -280f))
+                .AsDecor();
+
+            screen.PrevPageButton = prevPage;
+            screen.NextPageButton = nextPage;
+            screen.PageLabel = pageLabel;
+            inside.Add(prevPage);
+            inside.Add(nextPage);
+            inside.Add(pageLabel);
 
             // Always pressable. A draft the player cannot leave is worse than a
             // draft they decline, and an empty pool has to have an exit.

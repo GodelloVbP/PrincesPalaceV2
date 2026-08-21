@@ -39,7 +39,7 @@ squad today there is one track. See §5.
 | 60 | Start every run with 2 relics |
 | 70 | Choose your starting relics (instead of a random draft) |
 | 80 | ~~Elites always drop a relic~~ **+10 stat points** (see below) |
-| 90 | Second life (once per run) |
+| 90 | Second life (once per run) — **spec below** |
 | 100 | Second life refreshes at every boss |
 
 > Level 80 changed 2026-08-21, by the author's call. "Elites always drop a
@@ -51,6 +51,22 @@ squad today there is one track. See §5.
 > being worth a flat 20 max health and starts being worth the square of the
 > excess, beginning at 1. So it is the most efficient spend the game offers
 > rather than merely a large one.
+>
+> **Second life, specified by the author 2026-08-21.** It is IN-FIGHT and
+> nothing more: when a character reaches 0 HP during a fight, they come back at
+> 50% of max HP. Not a run-level revive, not a re-entry into a lost fight, not a
+> defeat screen that offers a continue.
+>
+> That is materially cheaper and safer than this document's "second life (once
+> per run)" implied, and it is worth saying why: the plan priced 90 as the most
+> invasive item left because it appeared to contradict FightController's stated
+> invariant that "a run always ends on a loss" and to need a branch in the
+> defeat/teardown path -- the path AUDIT.md shows has already produced
+> soft-locks. An in-fight revive at 0 HP does not touch that path at all. The
+> fight simply does not end, because the party is not wiped.
+>
+> Level 100 still reads as "the charge comes back at every boss", with the
+> charge itself run-scoped.
 >
 > Levels 25 and 45 also changed; see `docs/PLAN_PROGRESSION_TRACK.md` and
 > `AUDIT.md` #50-51. The relic line is now 25 -> 2 at start, 45 -> 3, 60 -> 4,

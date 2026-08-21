@@ -45,6 +45,11 @@ namespace PrincesPalace
         [SerializeField] internal GameObject emptyHint;
         [SerializeField] internal Button descendButton;
 
+        // Level 70's paging. See Roll() and StepPage().
+        [SerializeField] internal Button prevPageButton;
+        [SerializeField] internal Button nextPageButton;
+        [SerializeField] internal TMP_Text pageLabel;
+
         // Art, as two parallel arrays -- a scene serialises arrays and does not
         // serialise dictionaries. Same shape the character overlay uses.
         [SerializeField] internal IconEntry[] icons;
@@ -60,6 +65,10 @@ namespace PrincesPalace
         // is not held -- it is derived from run.relicIds.Count, so it survives
         // a reload; see Roll().
         private ulong _seed;
+
+        // Which page of the offer is on screen. Only ever non-zero once
+        // level 70 turns the offer into the whole pool.
+        private int _page;
 
         // Raised when the player leaves the draft. An event rather than a
         // Navigation call: the draft has no business knowing that a descent
@@ -83,6 +92,9 @@ namespace PrincesPalace
             }
 
             descendButton.onClick.AddListener(Commit);
+
+            if (prevPageButton != null) prevPageButton.onClick.AddListener(() => StepPage(-1));
+            if (nextPageButton != null) nextPageButton.onClick.AddListener(() => StepPage(1));
         }
 
         // Rolls a fresh offer and shows it. Called by the hub when a run starts.
@@ -93,6 +105,7 @@ namespace PrincesPalace
 
             _seed = seed;
             _selected = -1;
+            _page = 0;
             _offer.Clear();
             _offer.AddRange(Roll(seed));
 
@@ -132,6 +145,20 @@ namespace PrincesPalace
                 .Where(r => !alreadyHeld.Contains(r.Id))
                 .ToList();
 
+            // LEVEL 70: THE WHOLE POOL, IN AUTHORED ORDER, NOT A DRAW.
+            //
+            // "Choose your starting relics (instead of a random draft)" read
+            // literally: at this level there is no roll left to make, so there
+            // is no seed involved either. ContentDatabase.Relics is ordered
+            // content (IOrderedContent), so the order is the one somebody
+            // authored rather than whatever Resources.LoadAll returned -- which
+            // matters more here than usual, because the player is now scanning a
+            // list rather than reacting to three cards.
+            if (SquadTrack.HasUnlocked(TrackReward.ChosenStartingRelics))
+            {
+                return available;
+            }
+
             // Weighted, so a Godlike relic stays a story. The seed is the run's
             // own PLUS the round, so reloading before choosing offers the same
             // three and the second round is not a repeat of the first.
@@ -139,13 +166,37 @@ namespace PrincesPalace
             return RelicPool.DraftWeighted(available, bound => rng.NextInt(0, bound));
         }
 
-        private void Select(int index)
+        // How many pages the current offer needs. At least one, so an empty
+        // pool still reads as a page rather than dividing by zero.
+        private int PageCount =>
+            _offer.Count == 0 ? 1 : (_offer.Count + cards.Length - 1) / cards.Length;
+
+        // The offer index that card `cardIndex` is currently showing.
+        private int AbsoluteIndex(int cardIndex) => _page * cards.Length + cardIndex;
+
+        private void StepPage(int direction)
         {
+            int next = _page + direction;
+            if (next < 0 || next >= PageCount) return;
+
+            // THE SELECTION SURVIVES THE PAGE TURN, because it is an index
+            // into the whole offer rather than into the three cards. Clearing
+            // it here would mean a player who chose something on page 1 and
+            // then looked at page 2 came back to nothing selected -- the same
+            // trap the deselect-on-second-press rule exists to avoid, arriving
+            // from a different direction.
+            _page = next;
+            Paint();
+        }
+
+        private void Select(int cardIndex)
+        {
+            int index = AbsoluteIndex(cardIndex);
             if (index < 0 || index >= _offer.Count) return;
 
             // Re-pressing the chosen card DESELECTS. A draft where the first
             // click is final would be a trap on a screen whose whole job is
-            // letting the player compare three things.
+            // letting the player compare things.
             _selected = _selected == index ? -1 : index;
             Paint();
         }
@@ -155,13 +206,36 @@ namespace PrincesPalace
             bool anything = _offer.Count > 0;
             if (emptyHint != null) emptyHint.SetActive(!anything);
 
+            // Paging exists only when there is more than one page, which is
+            // only ever once level 70 opens the whole pool. Hidden rather than
+            // disabled, like every other unearned reward on the track.
+            bool paged = PageCount > 1;
+            if (prevPageButton != null)
+            {
+                prevPageButton.gameObject.SetActive(paged);
+                prevPageButton.interactable = _page > 0;
+            }
+
+            if (nextPageButton != null)
+            {
+                nextPageButton.gameObject.SetActive(paged);
+                nextPageButton.interactable = _page < PageCount - 1;
+            }
+
+            if (pageLabel != null)
+            {
+                pageLabel.gameObject.SetActive(paged);
+                if (paged) pageLabel.SetContent((_page + 1) + " / " + PageCount);
+            }
+
             for (int i = 0; i < cards.Length; i++)
             {
-                bool present = i < _offer.Count;
+                int absolute = AbsoluteIndex(i);
+                bool present = absolute < _offer.Count;
                 cards[i].gameObject.SetActive(present);
                 if (!present) continue;
 
-                var option = _offer[i];
+                var option = _offer[absolute];
                 var definition = ContentDatabase.Relics.FirstOrDefault(r => r != null && r.id == option.Id);
 
                 cardNames[i].SetContent(definition?.displayName ?? option.Id);
@@ -170,7 +244,7 @@ namespace PrincesPalace
 
                 ItemIcons.Apply(cardIcons[i], icons, option.Id);
 
-                cardSelections[i].color = _selected == i ? RingLit : RingDark;
+                cardSelections[i].color = _selected == absolute ? RingLit : RingDark;
             }
         }
 
@@ -209,6 +283,7 @@ namespace PrincesPalace
             if (took && run.relicIds.Count < DraftCount())
             {
                 _selected = -1;
+                _page = 0;
                 _offer.Clear();
                 _offer.AddRange(Roll(_seed));
 
