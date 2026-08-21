@@ -55,20 +55,34 @@ namespace PrincesPalace
         // item.
         public EquipmentLoadout equipment = new EquipmentLoadout();
 
-        // PER-RUN progression, earned from combat and reset by StartRun.
+        // META progression: earned from combat and KEPT ACROSS RUNS.
         //
-        // These are save fields holding run-scoped values, which is a real
-        // impurity and a deliberate one. The alternative -- moving them to
-        // RunState -- means threading the run through EffectiveAbilityScores'
-        // ~10 call sites and every reader of `level`, where forgetting one
-        // site shows unbuffed numbers on that screen and nothing anywhere
-        // says so. Keeping them here means every consumer picks them up for
-        // free and a mid-run quit restores them with no snapshot work, at the
-        // cost of one rule that has to hold: StartRun resets all four. There
-        // is a test whose whole job is to fail if it ever stops.
+        // This comment used to say the opposite -- "PER-RUN progression,
+        // earned from combat and reset by StartRun", closing on "one rule that
+        // has to hold: StartRun resets all four. There is a test whose whole
+        // job is to fail if it ever stops." None of that was true.
+        // RunManager.StartRun replaces activeRun and never touches
+        // save.roster; nothing anywhere assigns level = 1 or exp = 0 outside
+        // this field initialiser; and there was no such test. RewardApplier's
+        // own header states the real rule and always has -- "GOLD belongs to
+        // the run and is lost with it, EXPERIENCE belongs to the characters
+        // and survives".
         //
-        // Level also gates spell tiers and level-locked skills, so those are
-        // per-run too: a descent starts at tier 1 and climbs.
+        // Worth knowing WHY the wrong version was dangerous rather than merely
+        // wrong: it read as a load-bearing invariant with a named guard, so
+        // anyone planning against it would price levels as a within-run curve
+        // and design rewards that cannot exist. See AUDIT.md #49.
+        //
+        // The consequence, stated plainly because it is a balance fact and not
+        // an implementation detail: level gates spell tiers
+        // (ContentDatabase.GetSpellTierForLevel) and level-locked skills, so a
+        // returning character starts their next descent at whatever tier they
+        // had reached, not at tier 1.
+        //
+        // Living on Character rather than RunState is still the deliberate
+        // choice it was, and now a cheaper one: every consumer picks these up
+        // for free, and there is no snapshot work to get wrong at either end
+        // of a run.
         public int level = 1;
         public int exp;
 
@@ -113,10 +127,18 @@ namespace PrincesPalace
         // a bulk-invest API would need its own partial-success story (what
         // happens when you ask for 5 and can afford 3) for no gain.
         //
-        // There is deliberately no matching Refund. A placed point is placed
-        // for the rest of the run, which is what makes levelling a decision
-        // rather than a slider -- and the run ending is already a full reset,
-        // so nobody is stuck with a build forever.
+        // There is deliberately no matching Refund, and the reason given for
+        // that has to change: it was "a placed point is placed for the rest of
+        // the run ... and the run ending is already a full reset, so nobody is
+        // stuck with a build forever". The second half was never true. Nothing
+        // resets these (see `level` above), so a placed point is placed
+        // FOREVER, and the escape hatch this argument leaned on does not
+        // exist.
+        //
+        // Left without a Refund anyway, for the half of the argument that
+        // survives: a point you can take back is a slider, and levelling
+        // should be a decision. The way out is a deliberate, earned respec
+        // rather than an always-available undo.
         public bool Invest(AbilityScore score)
         {
             if (unspentStatPoints <= 0)

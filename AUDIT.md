@@ -1191,6 +1191,54 @@ happened. Restoring `Begin` restores them, so combat numbers move slightly in
 every fight rather than only in the deadlocked ones. The suite is green either
 way, which means nothing was tuned around the absence.
 
+## Findings from the reward-track planning pass, 2026-08-21
+
+### 49. `Character.cs` documented an invariant that was inverted, unimplemented, and guarded by a test that did not exist — **FIXED** in the commit that added this
+
+`Character.cs:58` opened with *"PER-RUN progression, earned from combat and reset
+by StartRun"* and closed with *"one rule that has to hold: StartRun resets all
+four. There is a test whose whole job is to fail if it ever stops."*
+
+Three separate claims, all false:
+
+- **`RunManager.StartRun` never touched the roster.** It replaces `save.activeRun`,
+  calls `RoomResolver.Reset()`, `Forget()` and `Persist()`. `save.roster` is not
+  in the method.
+- **Nothing anywhere reset them.** `grep` for `level = 1` / `exp = 0` /
+  `unspentStatPoints = 0` across non-test code returns the field initialiser and
+  a default parameter in `FightEncounterAdapter`. Nothing else.
+- **There was no such test.** No test asserted anything about level across a run
+  boundary in either assembly.
+
+`RewardApplier.cs:12` states the true rule and always has — *"GOLD belongs to the
+run and is lost with it, EXPERIENCE belongs to the characters and survives"* —
+so the codebase carried both answers, in two comments, with the wrong one
+attached to the field itself.
+
+**Why this is worse than an ordinary stale comment.** It did not read as
+description; it read as a load-bearing invariant with a named guard, in a file
+whose house style is that comments carry the reasoning. It is the shape a
+planner trusts most. It came within one session of costing a full reward-track
+design: six of the track's ten milestones ("start every run with 2 relics",
+"guaranteed rest before every boss", "second life") are statements about how a
+run *begins*, and under the documented rule none of them can exist, because you
+would never be holding the level at the moment the reward applies. Caught only by
+reading `StartRun` rather than believing the field.
+
+The same paragraph was also propping up a second decision one screen down:
+`Invest`'s *"there is deliberately no matching Refund ... the run ending is
+already a full reset, so nobody is stuck with a build forever."* The escape hatch
+that argument leans on does not exist, so a placed stat point has always been
+placed permanently. Refund is still deliberately absent, now for the half of the
+argument that survives.
+
+*Fixed:* both comments say what is true; `RunManagerTests` gains the test that
+was claimed, inverted — `StartingARunKeepsEveryCharactersLevel` — plus
+`StartingARunStillDiscardsTheRunBeforeIt` for the other half, so a future change
+in either direction fails for its own reason. The class of bug (a comment
+asserting a guard that does not exist) is not mechanically closable; the
+narrowest available fix is that the guard now exists.
+
 ## Open investigations
 
 ### ~~24. `BloodlustRelic_GrantsAnImmediateExtraTurnAfterAKillingBlow` flakes on fresh content/scene builds — root cause not found~~ — **ROOT CAUSE FOUND, 2026-08-04.** It is a symptom of #13, and fixing that fixed this. Reproduced 2 times in 8 runs before, then 0 in 12 after

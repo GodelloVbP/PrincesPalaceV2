@@ -386,6 +386,62 @@ namespace PrincesPalace.PlayModeTests
                 $"enemies={roster.EnemyIds?.Count ?? 0}. {report}");
         }
 
+        // ---- what a new run does NOT take away ----------------------------------
+        //
+        // Character.cs claimed for a long time that level, exp and unspent
+        // points were per-run and that StartRun reset all four, closing with
+        // "there is a test whose whole job is to fail if it ever stops". There
+        // was no such test, and StartRun has never touched the roster -- so the
+        // stated invariant was inverted AND unguarded, which is the worst of
+        // the four possible combinations: anyone reading it would price levels
+        // as a within-run curve and design rewards ("start every run with two
+        // relics") that cannot exist under it.
+        //
+        // This is that test, asserting the rule that is actually true and the
+        // one the reward track is built on: LEVELS ARE META. Written against
+        // the fields directly rather than through AddExperience, because what
+        // is under test is what StartRun does to them, not how they got there.
+        [Test]
+        public void StartingARunKeepsEveryCharactersLevel()
+        {
+            RunManager.StartRun(Seed);
 
+            var save = SaveSlotManager.CurrentSave;
+            var character = save.roster[0];
+            character.level = 7;
+            character.exp = 250;
+            character.unspentStatPoints = 3;
+            SaveSlotManager.SaveCurrent();
+
+            // The next descent. Same save, same roster, new run.
+            RunManager.StartRun(Seed + 1);
+
+            var after = SaveSlotManager.CurrentSave.roster[0];
+            Assert.AreEqual(7, after.level,
+                "starting a run reset the character's level -- levels are meta and survive a " +
+                "descent, which is what the whole reward track hangs on");
+            Assert.AreEqual(250, after.exp, "starting a run reset progress toward the next level");
+            Assert.AreEqual(3, after.unspentStatPoints,
+                "starting a run took away points that were earned and not yet placed");
+        }
+
+        // The other half, and the reason this is two tests rather than one:
+        // the run itself IS discarded. If a future change starts resetting the
+        // roster on StartRun, the test above catches it; if one stops clearing
+        // the run, this catches that. They fail for different reasons.
+        [Test]
+        public void StartingARunStillDiscardsTheRunBeforeIt()
+        {
+            RunManager.StartRun(Seed);
+            RunManager.Run.bossesKilled.Add("boss_a");
+            RunManager.Run.roomsCleared = 5;
+
+            RunManager.StartRun(Seed + 1);
+
+            Assert.AreEqual(0, RunManager.Run.roomsCleared,
+                "the previous descent's cleared rooms carried into the new one");
+            Assert.IsEmpty(RunManager.Run.bossesKilled,
+                "the previous descent's kills carried into the new one");
+        }
     }
 }
