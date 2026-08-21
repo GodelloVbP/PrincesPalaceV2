@@ -86,10 +86,14 @@ namespace PrincesPalace.Domain.Tests
             // first use. Not a UI widget, no rect preamble, no parent in any
             // screen tree -- it is a service that has to outlive every scene, and
             // the alternative is an audio object hand-placed in each of them.
+            // CursorController is the same shape and the same argument: one
+            // hidden host, bootstrapped before the first scene, swapping the OS
+            // cursor texture. It draws nothing inside any screen tree, so there
+            // is no rect for the preamble this rule protects to apply to.
             string[] allowed =
             {
                 "UiEmitter.cs", "ScreenshotTool.cs", "SceneBuilder.cs", "CanvasCapture.cs",
-                "SoundController.cs",
+                "SoundController.cs", "CursorController.cs",
             };
 
             var offenders = Matches(@"new\s+GameObject\s*\(")

@@ -169,19 +169,46 @@ namespace PrincesPalace.Domain.UiKit
         // Side by side, a 44px icon left about 110px for the name at 11px --
         // which is not a legible width for "Studded Leather Coif +1", and the
         // icon was too small to identify at a glance either. Stacking gives the
-        // name the cell's FULL width and the icon half again its size, at the
-        // cost of one visible row.
-        public const float PackCellHeight = 104f;
+        // name the cell's FULL width and the icon room to be identified.
         public const float PackRowGap = 8f;
-
-        public const float PackIconSize = 64f;
-
-        // Two lines at 11px. Generated gear runs long -- a tier adjective, a
-        // noun and a plus -- and one line would clip most of it.
-        public const float PackNameHeight = 26f;
-
         public const float PackCellPadY = 6f;
         public const float PackIconGap = 4f;
+
+        // HOW MANY CELLS ARE VISIBLE IS THE AUTHORED NUMBER NOW, and the cell
+        // size follows from it. It used to run the other way -- a fixed 104px
+        // cell, with the row count falling out of whatever height was left --
+        // which meant "how much of the pack can I see at once" was a
+        // consequence nobody chose. It came out at five rows of ten cells, and
+        // the icons were 64px in a 143px cell: too small to tell a coif from a
+        // gauntlet without reading the name under it.
+        //
+        // Three rows, six cells. The pack is RUN-SCOPED -- inventory lives on
+        // RunSnapshot, not on the save, so it starts empty every descent and a
+        // player is rarely holding more than a handful. Six on screen with a
+        // scrollbar for the rest fits what is actually in there, and the
+        // scrollbar already existed for the overflow.
+        public const int PackVisibleRows = 3;
+
+        public static float PackCellHeight =>
+            (PackListHeight - PackRowGap * (PackVisibleRows - 1)) / PackVisibleRows;
+
+        // WIDTH-BOUND, and that is worth stating because it is what caps the
+        // icon rather than the row count. At two columns in a 314px content
+        // strip a cell is 143 wide, so an icon can never be larger than that
+        // however few rows are shown -- dropping to two rows would buy vertical
+        // room the icon cannot use. Three rows is the point where the two
+        // constraints meet.
+        public const float PackIconPadX = 4f;
+
+        public static float PackIconSize => PackCellWidth - PackIconPadX * 2f;
+
+        // WHATEVER THE ICON LEAVES. The cell is taller than the icon can be, so
+        // the surplus goes to the name instead of to empty space -- about 54px,
+        // which is three lines at 15px where it used to be two at 11px.
+        // Generated gear runs long ("Annotated Vellum Ink-stained Gloves +2")
+        // and the old two lines clipped most of it.
+        public static float PackNameHeight =>
+            PackCellHeight - PackCellPadY * 2f - PackIconGap - PackIconSize;
 
         // Measured from the cell's own centre.
         public static float PackIconCentreY =>
@@ -198,12 +225,6 @@ namespace PrincesPalace.Domain.UiKit
         public static float PackListBottom => PackFooterY + 34f;
 
         public static float PackListHeight => PackListTop - PackListBottom;
-
-        // HOW MANY ROWS FIT, floored -- a half-drawn row at the bottom edge
-        // reads as a clipping bug rather than as more to scroll to, and this
-        // list has no mask to cut one cleanly.
-        public static int PackVisibleRows =>
-            (int)((PackListHeight + PackRowGap) / (PackCellHeight + PackRowGap));
 
         public static int PackVisibleCells => PackVisibleRows * (int)PackColumns;
 

@@ -368,22 +368,25 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         Place.At(0f, DossierLayout.PackIconCentreY))
                     .Inactive().AsDecor();
 
-                var tick = Ui.Solid($"DossierPackTick{i}", "#7F8EA3", new UiVec(8f, 8f),
-                    Place.At(-cellW * 0.5f + 5f, cellH * 0.5f - 5f)).Inactive().AsDecor();
+                var tick = Ui.Solid($"DossierPackTick{i}", "#7F8EA3", new UiVec(12f, 12f),
+                    Place.At(-cellW * 0.5f + 9f, cellH * 0.5f - 9f)).Inactive().AsDecor();
 
                 // UNDER the icon and the full width of the cell, which is the
                 // whole point of the change: beside a 44px icon this had about
                 // 110px, and a generated item's name does not fit in 110px at a
                 // size anyone can read.
+                // 15px, up from 11. The cell is twice the height it was and the
+                // name owns the surplus, so the old size left it small text
+                // floating in a large box -- which reads as worse, not better.
                 var name = Ui.Label($"DossierPackName{i}", UiString.Runtime,
-                        new UiVec(cellW - 12f, DossierLayout.PackNameHeight), 11, Text,
+                        new UiVec(cellW - 12f, DossierLayout.PackNameHeight), 15, Text,
                         Place.At(0f, DossierLayout.PackNameCentreY))
                     .Inactive().AsDecor();
 
                 // TOP right, not bottom: the name owns the bottom of the cell
                 // now, and a count sitting in it would print across the words.
-                var count = Ui.Label($"DossierPackCount{i}", UiString.Runtime, new UiVec(30f, 14f), 10,
-                    "#E6DCF0BF", Place.At(cellW * 0.5f - 17f, cellH * 0.5f - 10f)).Inactive().AsDecor();
+                var count = Ui.Label($"DossierPackCount{i}", UiString.Runtime, new UiVec(34f, 18f), 13,
+                    "#E6DCF0BF", Place.At(cellW * 0.5f - 19f, cellH * 0.5f - 12f)).Inactive().AsDecor();
 
                 var button = Ui.Button($"DossierPackCell{i}", UiString.Runtime, new UiVec(cellW, cellH), 1,
                         Place.At(x, y))
@@ -499,12 +502,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
             yield return Ui.Solid($"DossierLeader{key}", "#C8B4DE2E",
                 new UiVec(leaderWidth, 1f), Place.At(leaderAt.X, leaderAt.Y)).AsDecor();
 
+            // 6px of inset, down from 12. The slot box cannot grow -- the
+            // figure's slots sit 98 authored units apart and the box plus its
+            // caption already spend 88 of that -- so the only room left for the
+            // ITEM is the padding inside the box it already has.
             var icon = Ui.Sprite($"DossierSlotIcon{key}", null,
-                new UiVec(DossierLayout.SlotSize - 12f, DossierLayout.SlotSize - 12f),
+                new UiVec(DossierLayout.SlotSize - 6f, DossierLayout.SlotSize - 6f),
                 Place.At(0f, 0f)).Inactive().AsDecor();
 
-            var tick = Ui.Solid($"DossierSlotTick{key}", "#7F8EA3", new UiVec(8f, 8f),
-                Place.At(-DossierLayout.SlotSize * 0.5f + 5f, DossierLayout.SlotSize * 0.5f - 5f))
+            var tick = Ui.Solid($"DossierSlotTick{key}", "#7F8EA3", new UiVec(11f, 11f),
+                Place.At(-DossierLayout.SlotSize * 0.5f + 7f, DossierLayout.SlotSize * 0.5f - 7f))
                 .Inactive().AsDecor();
 
             // The blocked caption. A two-handed weapon must never leave the off
@@ -523,8 +530,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
             cell.Children.Add(tick);
             cell.Children.Add(blocked);
 
+            // 12px, up from 9, inside the box it already had. 9px was small
+            // enough that the slot captions read as decoration rather than as
+            // words -- "you can't even read anything" was about these. 12 fits
+            // the existing 16px box, so it costs no vertical room, which the
+            // stage has none of to give.
             var label = Ui.Label($"DossierSlotLabel{key}", UiString.Runtime,
-                new UiVec(DossierLayout.SlotSize + 26f, 16f), 9, TextDim,
+                new UiVec(DossierLayout.SlotSize + 26f, 16f), 12, TextDim,
                 Place.At(at.X, at.Y - DossierLayout.SlotSize * 0.5f - 11f)).AsDecor();
 
             SlotCells.Add(cell);
