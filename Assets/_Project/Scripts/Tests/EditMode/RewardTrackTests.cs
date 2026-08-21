@@ -19,7 +19,7 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(50, TrackReward.WiderOffer, 4)]
         [TestCase(60, TrackReward.StartingRelics, 4)]
         [TestCase(70, TrackReward.ChosenStartingRelics, 0)]
-        [TestCase(80, TrackReward.EliteRelicDrop, 0)]
+        [TestCase(80, TrackReward.StatPoint, 10)]
         [TestCase(90, TrackReward.SecondLife, 1)]
         [TestCase(100, TrackReward.SecondLifeRefresh, 0)]
         public void AMilestoneLandsOnItsLevel(int level, TrackReward reward, int amount)
@@ -53,8 +53,8 @@ namespace PrincesPalace.Domain.Tests
         // track") and the placement is arithmetic, so what is asserted here is
         // the COUNT, not where any individual one landed. A test that pinned
         // placements would fail on every retune and tell you nothing.
-        [TestCase(TrackReward.StatPoint, 30)]
-        [TestCase(TrackReward.Favor, 20 + 1)] // 20 filler nodes plus the level-10 milestone
+        [TestCase(TrackReward.StatPoint, 30 + 1)] // 30 filler nodes plus the level-80 milestone
+        [TestCase(TrackReward.Favor, 20 + 1)]     // 20 filler nodes plus the level-10 milestone
         public void TheTrackHandsOutTheMixItDescribes(TrackReward reward, int expectedNodes)
         {
             int nodes = 0;
@@ -225,6 +225,41 @@ namespace PrincesPalace.Domain.Tests
                 RewardTrack.UnlockLevel(TrackReward.SecondLifeRefresh),
                 "the track refreshes a second life before granting one");
         }
+
+        // Level 80 grants exactly one CharacterBand's worth of points, and that
+        // is why it is 10 rather than a round number that looked generous.
+        //
+        // AbilityDerivation pays a flat rate per point inside the band and
+        // switches to a SQUARE OF THE EXCESS outside it -- which starts far
+        // lower and only overtakes the flat rate about eight points later. So
+        // the band edge is where a point stops being worth 20 health and starts
+        // being worth 1, and ten points into one ability is the most efficient
+        // spend the game offers rather than merely a large one.
+        //
+        // CharacterBand is private, so this asserts the BEHAVIOUR that defines
+        // it: every point up to the milestone's amount is worth the same, and
+        // the one after falls off a cliff.
+        [Test]
+        public void TheLevelEightyGrantIsExactlyOneBandOfPoints()
+        {
+            Assert.AreEqual(TrackReward.StatPoint, RewardTrack.At(80).Reward);
+            int points = RewardTrack.At(80).Amount;
+
+            int firstStep = HealthAt(1) - HealthAt(0);
+            int lastStepInside = HealthAt(points) - HealthAt(points - 1);
+            int firstStepOutside = HealthAt(points + 1) - HealthAt(points);
+
+            Assert.AreEqual(firstStep, lastStepInside,
+                $"the {points}th point is worth a different amount than the first, so the grant " +
+                "already runs past the band it is sized to");
+            Assert.Less(firstStepOutside, lastStepInside,
+                $"the point after {points} is worth as much as the ones inside, so {points} is " +
+                "not the band edge and the milestone's size means nothing");
+        }
+
+        private static int HealthAt(int investedConstitution) =>
+            Stats.AbilityDerivation.MaxHealthBonus(
+                new Stats.AbilityScoreBlock(10, 10, 10 + investedConstitution, 10, 10, 10));
 
         // ---- what the player is told --------------------------------------------
 

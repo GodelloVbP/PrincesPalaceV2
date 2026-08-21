@@ -38,21 +38,37 @@ squad today there is one track. See §5.
 | 50 | Wider Offer (4 items) |
 | 60 | Start every run with 2 relics |
 | 70 | Choose your starting relics (instead of a random draft) |
-| 80 | Elites always drop a relic |
+| 80 | ~~Elites always drop a relic~~ **+10 stat points** (see below) |
 | 90 | Second life (once per run) |
 | 100 | Second life refreshes at every boss |
 
-**Mid-tier, not on the tens:** extra relic slot at **25** (slot 2) and **45**
-(slot 3). These are ordered, not free-floating: `RelicLoadout` is
-`characterId -> one relicId` today, so level 60's "start with 2 relics" needs
-slot 2 to already exist.
+> Level 80 changed 2026-08-21, by the author's call. "Elites always drop a
+> relic" was cut as too strong: relics are run-scoped and uncapped (`AUDIT.md`
+> #51), elites recur every 8 steps, and a guaranteed drop on each compounds with
+> 60's four starting relics and 70's picking them into a run decided by its
+> relic stack before the first boss. Replaced with **10 stat points**, which is
+> exactly `AbilityDerivation.CharacterBand` -- the point at which a stat stops
+> being worth a flat 20 max health and starts being worth the square of the
+> excess, beginning at 1. So it is the most efficient spend the game offers
+> rather than merely a large one.
+>
+> Levels 25 and 45 also changed; see `docs/PLAN_PROGRESSION_TRACK.md` and
+> `AUDIT.md` #50-51. The relic line is now 25 -> 2 at start, 45 -> 3, 60 -> 4,
+> 70 -> pick them.
+
+**Mid-tier, not on the tens:** ~~extra relic slot at 25 (slot 2) and 45 (slot
+3), ordered because `RelicLoadout` is `characterId -> one relicId` today, so
+level 60's "start with 2 relics" needs slot 2 to already exist.~~ **Wrong on
+both counts** — `RelicLoadout` has no production reader at all, and there is no
+slot cap to lift. 25 and 45 grant an extra **starting relic** each instead, so
+the line is 25 -> 2, 45 -> 3, 60 -> 4. `AUDIT.md` #50-51.
 
 **The 90 filler levels:** 30x stat point, 20x Favor +2 (40 total), 15x max HP
 +10, 6x signature at fight start, 2x offer reroll. Gold nodes are **held** — see
 §4.
 
-**Two chains, deliberately.** 60 gives two relics and 70 lets you pick them; 90
-gives a second life and 100 makes it recharge. The first draft of this track was
+**Two chains, deliberately.** 25/45/60 climb to four starting relics and 70 lets
+you pick them; 90 gives a second life and 100 makes it recharge. The first draft of this track was
 100 independent grants, which is a checklist rather than a tree — the same thing
 `ContentDatabase.OrbCost`'s comment warns about for the talent tree.
 

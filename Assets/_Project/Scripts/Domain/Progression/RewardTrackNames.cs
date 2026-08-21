@@ -50,9 +50,6 @@ namespace PrincesPalace.Domain.Progression
                 case TrackReward.ChosenStartingRelics:
                     return "CHOOSE YOUR STARTING RELICS";
 
-                case TrackReward.EliteRelicDrop:
-                    return "ELITES ALWAYS DROP A RELIC";
-
                 case TrackReward.SecondLife:
                     return "A SECOND LIFE, ONCE PER RUN";
 

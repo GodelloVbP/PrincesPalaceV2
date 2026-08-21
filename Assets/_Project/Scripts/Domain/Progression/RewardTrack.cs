@@ -34,7 +34,6 @@ namespace PrincesPalace.Domain.Progression
         OfferReroll,
         WiderOffer,
         ChosenStartingRelics,
-        EliteRelicDrop,
         SecondLife,
         SecondLifeRefresh,
     }
@@ -121,7 +120,30 @@ namespace PrincesPalace.Domain.Progression
             (50,  TrackReward.WiderOffer, 4),
             (60,  TrackReward.StartingRelics, 4),
             (70,  TrackReward.ChosenStartingRelics, 0),
-            (80,  TrackReward.EliteRelicDrop, 0),
+            // A BAND'S WORTH OF POINTS, and 10 is not a round number picked
+            // for looking generous -- it is exactly AbilityDerivation's
+            // CharacterBand.
+            //
+            // That constant is where a point stops being worth a flat 20 max
+            // health and starts being worth the SQUARE OF THE EXCESS, which
+            // begins at 1 and does not overtake the flat rate for another eight
+            // points. So ten points into one ability is not merely a big spend,
+            // it is the most efficient one the game offers -- and the eleventh
+            // is where it falls off a cliff. Pinned by
+            // TheLevelEightyGrantIsExactlyOneBandOfPoints rather than left to
+            // this paragraph.
+            //
+            // This level used to grant "elites always drop a relic". Cut as too
+            // strong: relics are run-scoped and uncapped (AUDIT #51), elites
+            // recur every 8 steps, and a guaranteed drop on each of them
+            // compounds with 60's four starting relics and 70's picking them
+            // into a run that is decided by its relic stack before the first
+            // boss.
+            //
+            // A GRANT rather than an unlock, so it goes through the watermark
+            // and can only be paid once -- which is also why it can be this
+            // large without needing a cap somewhere.
+            (80,  TrackReward.StatPoint, 10),
             (90,  TrackReward.SecondLife, 1),
             (100, TrackReward.SecondLifeRefresh, 0),
         };
