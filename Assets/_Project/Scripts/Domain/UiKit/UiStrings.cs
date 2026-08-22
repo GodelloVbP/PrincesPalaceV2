@@ -38,6 +38,72 @@ namespace PrincesPalace.Domain.UiKit
         // meets the reward's name before the button, and the two have to be
         // recognisably the same thing.
         public static readonly UiString TalentRespec = UiString.Define("talent.respec", "RESPEC");
+
+        // THE PANEL'S OWN VOCABULARY. Six kickers for six states, and a reason
+        // for each of the three that refuse -- the state in a word above the
+        // name, the reason in a sentence below the description. Split that way
+        // because the two are read at different moments: the kicker while
+        // scanning, the reason only after deciding to want the thing.
+        public static readonly UiString TalentKickerLit =
+            UiString.Define("talent.kicker_lit", "KINDLED");
+        public static readonly UiString TalentKickerReady =
+            UiString.Define("talent.kicker_ready", "READY TO KINDLE");
+        public static readonly UiString TalentKickerCostly =
+            UiString.Define("talent.kicker_costly", "TOO DEAR FOR NOW");
+        public static readonly UiString TalentKickerGated =
+            UiString.Define("talent.kicker_gated", "THE PATH IS SHORT");
+        public static readonly UiString TalentKickerLocked =
+            UiString.Define("talent.kicker_locked", "UNREACHABLE");
+        public static readonly UiString TalentKickerUnwritten =
+            UiString.Define("talent.kicker_unwritten", "UNWRITTEN");
+
+        public static readonly UiString TalentWhyLocked =
+            UiString.Define("talent.why_locked", "Kindle the star beneath it first.");
+        public static readonly UiString TalentWhyGated =
+            UiString.Define("talent.why_gated", "Spend further along this path to open it.");
+        public static readonly UiString TalentWhyPoor =
+            UiString.Define("talent.why_poor", "Not enough Embers.");
+
+        public static readonly UiString TalentPriceEmbers =
+            UiString.Define("talent.price_embers", "{0} Embers", "12 Embers");
+
+        // The convergence and the capstone cost nothing and are gated instead.
+        // Saying "0 Embers" for them would read as a bargain rather than as a
+        // different kind of price.
+        public static readonly UiString TalentPriceGate =
+            UiString.Define("talent.price_gate", "{0} Embers spent on this path",
+                "20 Embers spent on this path");
+
+        // What the panel says with nothing picked. It stopped being hidden when
+        // empty, so it needs something to be.
+        public static readonly UiString TalentPickPrompt =
+            UiString.Define("talent.pick_prompt", "CHOOSE A STAR");
+        public static readonly UiString TalentPickBody =
+            UiString.Define("talent.pick_body",
+                "Every star in this constellation is a change to who they are. Pick one to read it.");
+
+        public static readonly UiString TalentUnwrittenName =
+            UiString.Define("talent.unwritten_name", "Unwritten");
+        public static readonly UiString TalentUnwrittenBody =
+            UiString.Define("talent.unwritten_body",
+                "This path is charted but not yet lit. Its stars are waiting to be written.");
+
+        // The confirmation. One press used to clear all three constellations
+        // with nothing in between, which is why these exist -- and why the body
+        // is Runtime rather than a fixed line: it names the actual refund.
+        public static readonly UiString TalentRespecTitle =
+            UiString.Define("talent.respec_title", "Put out every ember?");
+        public static readonly UiString TalentRespecCancel =
+            UiString.Define("talent.respec_cancel", "KEEP THEM LIT");
+        public static readonly UiString TalentRespecConfirm =
+            UiString.Define("talent.respec_confirm", "PUT THEM OUT");
+
+        // NAMES THE EXACT REFUND. A dialog that only asked "are you sure?"
+        // would be asking the player to remember what they had.
+        public static readonly UiString TalentRespecPrompt =
+            UiString.Define("talent.respec_prompt",
+                "{0} stars go dark across every constellation, and {1} Embers come back to you.",
+                "21 stars go dark across every constellation, and 148 Embers come back to you.");
         public static readonly UiString TalentPath =
             UiString.Define("talent.path", "CONSTELLATION {0} OF {1}   -   {2} KINDLED", "CONSTELLATION 3 OF 3   -   21 KINDLED");
 
@@ -711,6 +777,13 @@ namespace PrincesPalace.Domain.UiKit
             OverlayEquip, OverlayUnequip, OverlayCannotWear, OverlayBagEmpty,
             TalentEmbers, TalentInvest, TalentTaken, TalentLocked, TalentNoEmbers,
             TalentPrev, TalentNext, TalentBack, TalentPath, TalentRespec,
+            TalentRespecTitle, TalentRespecCancel, TalentRespecConfirm,
+            TalentKickerLit, TalentKickerReady, TalentKickerCostly, TalentKickerGated,
+            TalentKickerLocked, TalentKickerUnwritten,
+            TalentWhyLocked, TalentWhyGated, TalentWhyPoor,
+            TalentPriceEmbers, TalentPriceGate,
+            TalentPickPrompt, TalentPickBody, TalentUnwrittenName, TalentUnwrittenBody,
+            TalentRespecPrompt,
             PackSortTier, PackSortPlus, PackSortName,
             RunStatBattle, RunStatFold, RunStatSpoils,
             RunStatDamageDealt, RunStatDamagePhysical, RunStatDamageOther, RunStatDamageTaken,

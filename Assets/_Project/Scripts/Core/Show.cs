@@ -19,9 +19,8 @@ namespace PrincesPalace
     //
     // The OnEnable half is worse than the cost: several components in this
     // project treat "just activated" as "just opened" (ColumnOpenAnimator says
-    // so in as many words, and TalentNodeInvestReveal's whole EnsureShown
-    // contract depends on it), so re-activating an already-active object
-    // replays animations that were never meant to fire.
+    // so in as many words), so re-activating an already-active object replays
+    // animations that were never meant to fire.
     //
     // An extension rather than a static helper: `panel.Show(false)` reads at
     // the call site the way the guard should be thought about -- a property of

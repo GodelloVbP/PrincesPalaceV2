@@ -7,6 +7,8 @@ using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace;
+using PrincesPalace.Domain.UiKit;
+using PrincesPalace.Domain.UiKit.Screens;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Talents;
 
@@ -255,7 +257,13 @@ namespace PrincesPalace.PlayModeTests
             int spent = 99 - character.embers;
             Assert.Greater(spent, 0, "the fixture kindled nothing that cost anything");
 
+            // TWO PRESSES NOW. The button opens a confirmation rather than
+            // clearing every constellation where it stands, so a test that
+            // stops at the first press is testing that a dialog appeared.
             Press(talents, "TalentRespecButton");
+            yield return null;
+
+            Press(talents, "RespecConfirmButton");
             yield return null;
 
             Assert.AreEqual(99, character.embers, "the respec did not give back what the orbs cost");
@@ -288,7 +296,13 @@ namespace PrincesPalace.PlayModeTests
             Press(talents, "InvestButton");
             yield return null;
 
+            // TWO PRESSES NOW. The button opens a confirmation rather than
+            // clearing every constellation where it stands, so a test that
+            // stops at the first press is testing that a dialog appeared.
             Press(talents, "TalentRespecButton");
+            yield return null;
+
+            Press(talents, "RespecConfirmButton");
             yield return null;
 
             CollectionAssert.Contains(character.unlockedSkillIds, "taught_by_the_mage",
@@ -317,7 +331,13 @@ namespace PrincesPalace.PlayModeTests
             talents.Refresh();
             yield return null;
 
+            // TWO PRESSES NOW. The button opens a confirmation rather than
+            // clearing every constellation where it stands, so a test that
+            // stops at the first press is testing that a dialog appeared.
             Press(talents, "TalentRespecButton");
+            yield return null;
+
+            Press(talents, "RespecConfirmButton");
             yield return null;
 
             Assert.AreEqual(3, character.unspentStatPoints, "the placed points did not come back");
@@ -354,5 +374,177 @@ namespace PrincesPalace.PlayModeTests
         private static int Sum(PrincesPalace.Domain.Stats.StatBlock s) =>
             s.maxHealth + s.attack + s.defense + s.speed + s.manaRegen
             + s.physicalResistance + s.magicalResistance;
+        // ---- the kindling beat ---------------------------------------------------
+        //
+        // WHAT REPLACED THE REVEAL MASK. The mask grew a lit medallion out of
+        // nothing behind a shrinking window, which was the right answer while
+        // "lit" and "unlit" were the same sprite at two tints. They are six
+        // separately baked materials now, so there is nothing to reveal -- the
+        // stone IS swapped, and what has to sell the swap is the beat around
+        // it: the crust cracking, the stone overshooting as it catches, and six
+        // motes leaving on widening gaps.
+        //
+        // Only the overshoot is checkable from out here, and it is the one that
+        // matters: a stone that scales to 1 and stops has switched on, and a
+        // stone that goes past 1 and settles has caught.
+        [UnityTest]
+        public IEnumerator KindlingOvershootsTheStoneAndSettlesItBack()
+        {
+            yield return OpenTheTree();
+
+            var talents = Object.FindAnyObjectByType<TalentController>();
+
+            var character = SaveSlotManager.CurrentSave.ActiveSquad().First(c => c != null);
+            character.embers = 99;
+            character.unlockedTalentIds.Clear();
+            talents.Refresh();
+            yield return null;
+
+            // The root of every path is free and parentless, so it is the one
+            // stone that can always be kindled from a fresh save.
+            var rect = (RectTransform)ButtonNamed(talents, "Orb0_0").transform;
+
+            Press(talents, "Orb0_0");
+            yield return null;
+
+            Press(talents, "InvestButton");
+
+            // COUNTED IN SECONDS, NOT IN FRAMES. Batchmode runs the beat at
+            // whatever framerate it can, and 90 frames turned out to be 0.6s of
+            // a 1.12s beat -- which reported the overshoot as never settling
+            // when it had simply not finished yet.
+            var scales = new System.Collections.Generic.List<float>();
+            float watched = 0f;
+            while (watched < ConstellationLayout.KindleSeconds + 0.25f)
+            {
+                scales.Add(rect.localScale.x);
+                watched += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            Assert.Greater(scales.Max(), 1.02f,
+                "the stone never went past its own size, so kindling reads as it switching on " +
+                "rather than as it catching");
+
+            // AND COMES BACK. An overshoot that is left standing is a stone
+            // permanently the wrong size, which the layout audit cannot see
+            // because it measures the built scene rather than a running one.
+            Assert.AreEqual(1f, scales.Last(), 0.01f,
+                "the stone was left larger than it started - the beat overshot and never settled");
+        }
+
+        // ---- where a paged-to constellation actually lands ------------------------
+        //
+        // A SETTLED PAGE SITS WHERE PAGE ZERO SITS, and nothing else in the
+        // stack can say so. The screen places pages one stride apart at BUILD
+        // time and the controller slides the sky by the same stride at RUNTIME;
+        // that is two numbers from one property, and the layout tests only see
+        // one of them. When they disagreed -- a 1464 stride built against a 1920
+        // stride slid -- every page but the first landed hundreds of pixels off,
+        // the third constellation half under the detail panel, and the whole
+        // suite stayed green.
+        [UnityTest]
+        public IEnumerator EveryConstellationSettlesWhereTheFirstOneSits()
+        {
+            yield return OpenTheTree();
+
+            var talents = Object.FindAnyObjectByType<TalentController>();
+            var sky = talents.GetComponentsInChildren<RectTransform>(true)
+                .FirstOrDefault(r => r.name == "TalentSky");
+            Assert.IsNotNull(sky, "the talent scene has no sky");
+
+            // Measured on the convergence, which every path puts on its spine.
+            float home = LocalX(talents, "Orb0_10") + sky.anchoredPosition.x;
+
+            for (int path = 1; path < TalentPage.PathCount; path++)
+            {
+                Press(talents, "NextPathButton");
+                yield return Settled(sky);
+
+                float landed = LocalX(talents, $"Orb{path}_10") + sky.anchoredPosition.x;
+
+                Assert.AreEqual(home, landed, 0.5f,
+                    $"constellation {path + 1} settles {landed - home:0.#}px away from where the " +
+                    "first one sits. The screen's page stride and the controller's slide stride " +
+                    "are the same property read twice - see ConstellationLayout.PageStride");
+            }
+        }
+
+        // The whole page, not just its spine: a stride that is too SHORT leaves
+        // the neighbour standing in the open beside the current one, which no
+        // measurement of the centre can see.
+        [UnityTest]
+        public IEnumerator AParkedConstellationIsCompletelyOffScreen()
+        {
+            yield return OpenTheTree();
+
+            var talents = Object.FindAnyObjectByType<TalentController>();
+            var sky = talents.GetComponentsInChildren<RectTransform>(true)
+                .FirstOrDefault(r => r.name == "TalentSky");
+
+            yield return null;
+
+            float half = UiFrames.Reference.X * 0.5f;
+
+            for (int slot = 0; slot < TalentScreen.OrbCount; slot++)
+            {
+                float x = LocalX(talents, $"Orb1_{slot}") + sky.anchoredPosition.x;
+
+                Assert.Greater(System.Math.Abs(x), half,
+                    $"slot {slot} of the parked constellation sits at x {x:0.#}, inside a canvas " +
+                    "that ends at " + half + " - so two trees share the screen");
+            }
+        }
+
+        private static float LocalX(TalentController talents, string orb)
+        {
+            var rect = talents.GetComponentsInChildren<RectTransform>(true)
+                .FirstOrDefault(r => r.name == orb);
+            Assert.IsNotNull(rect, orb + " is not in the emitted tree");
+
+            // Up to the sky, adding each frame's own offset. Reading .position
+            // would fold in the canvas scaler, which varies with the test
+            // window and is not what this is about.
+            float x = 0f;
+            for (var t = rect; t != null && t.name != "TalentSky"; t = t.parent as RectTransform)
+            {
+                x += t.anchoredPosition.x;
+            }
+
+            return x;
+        }
+
+        // Polls the sky rather than waiting a fixed time: batchmode does not
+        // advance the controller at the rate a coroutine measures, and a timed
+        // wait has already reported a slide as finished at 72%.
+        //
+        // EXACT EQUALITY OVER SEVERAL FRAMES, and both halves are load-bearing.
+        // The slide eases in AND out, so at either end it moves by less than a
+        // Mathf.Approximately tolerance while still moving -- a single
+        // near-equal frame reported the settle 26px early, on a curve whose
+        // last 2% is the flattest part of it. Only the clamp at progress 1
+        // produces bit-identical frames.
+        private static IEnumerator Settled(RectTransform sky)
+        {
+            float last = float.NaN;
+            int still = 0;
+
+            for (int i = 0; i < 900; i++)
+            {
+                if (sky.anchoredPosition.x == last && sky.localScale.x == 1f)
+                {
+                    if (++still >= 4) yield break;
+                }
+                else
+                {
+                    still = 0;
+                }
+
+                last = sky.anchoredPosition.x;
+                yield return null;
+            }
+
+            Assert.Fail("the sky never settled");
+        }
     }
 }

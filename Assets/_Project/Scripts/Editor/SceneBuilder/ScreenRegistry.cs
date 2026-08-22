@@ -637,17 +637,37 @@ public static class ScreenRegistry
                 talents.sky = result.Rect(screen.Sky);
                 talents.orbs = screen.Orbs.Select(result.Button).ToArray();
 
-                // One reveal per orb, attached to the ORB and pointed at its
-                // own mask -- so the controller reaches it by the same index it
-                // already uses for everything else about that slot.
-                talents.orbReveals = screen.Orbs
-                    .Select((orb, i) =>
-                    {
-                        var reveal = result.Attach<TalentNodeInvestReveal>(orb);
-                        reveal.mask = result.Rect(screen.OrbReveals[i]);
-                        return reveal;
-                    })
-                    .ToArray();
+                // SIX BAKED VARIANTS, one per state. Wired here rather than
+                // loaded at runtime because they live under Art/ and not
+                // Resources/ -- the same arrangement the map's node icons use.
+                //
+                // The controller paints STATE BY SPRITE, so these are not
+                // decoration: a missing one leaves a stone drawn as whatever it
+                // was last, which is the one failure mode worth being loud
+                // about. LoadSpriteByKey already logs a miss.
+                talents.orbUnlitSprite = SceneBuilder.LoadSpriteByKey(TalentScreen.OrbUnlitKey);
+                talents.orbLitSprite = SceneBuilder.LoadSpriteByKey(TalentScreen.OrbLitKey);
+                talents.orbAshSprite = SceneBuilder.LoadSpriteByKey(TalentScreen.OrbAshKey);
+                talents.orbAshUnauthoredSprite =
+                    SceneBuilder.LoadSpriteByKey(TalentScreen.OrbAshUnauthoredKey);
+                talents.orbReachableSprite = SceneBuilder.LoadSpriteByKey(TalentScreen.OrbReachableKey);
+                talents.orbCostlySprite = SceneBuilder.LoadSpriteByKey(TalentScreen.OrbCostlyKey);
+
+                // A stone's own furniture, in the orbs' own order.
+                talents.orbAuras = screen.OrbAuras.Select(result.Image).ToArray();
+                talents.orbCores = screen.OrbCores.Select(result.Image).ToArray();
+                talents.orbRings = screen.OrbRings.Select(result.Image).ToArray();
+                talents.orbLabels = screen.OrbLabels.Select(result.Tmp).ToArray();
+                talents.orbPrices = screen.OrbPrices.Select(result.Tmp).ToArray();
+
+                // The gated pair only. These are SHORTER than the arrays above
+                // and indexed by their own position -- collarSlots is what maps
+                // that position back to a stone.
+                talents.collarSlots = screen.CollarSlots.ToArray();
+                talents.collarTracks = screen.CollarTracks.Select(result.Image).ToArray();
+                talents.collarFills = screen.CollarFills.Select(result.Image).ToArray();
+                talents.collarCounts = screen.CollarCounts.Select(result.Tmp).ToArray();
+
                 talents.edgeGlows = screen.EdgeGlows.Select(result.Go).ToArray();
                 talents.edgeChildSlots = screen.EdgeChildSlots.ToArray();
 
@@ -667,47 +687,45 @@ public static class ScreenRegistry
                     result.Attach<TalentEdgeSpark>(screen.EdgeSparks[i])
                         .SetLength(screen.EdgeLengths[i]);
                 }
+
                 talents.orbGlows = screen.OrbGlows.Select(result.Image).ToArray();
                 talents.characterName = result.Tmp(screen.CharacterName);
                 talents.pathName = result.Tmp(screen.PathName);
                 talents.emberCount = result.Tmp(screen.EmberCount);
-                talents.detailPlate = result.Go(screen.DetailPlate);
                 talents.detailName = result.Tmp(screen.DetailName);
                 talents.detailBody = result.Tmp(screen.DetailBody);
+                talents.panelKicker = result.Tmp(screen.PanelKicker);
+                talents.panelPrice = result.Tmp(screen.PanelPrice);
+                talents.panelRefusal = result.Tmp(screen.PanelRefusal);
+                talents.panelMeterFill = result.Rect(screen.PanelMeterFill);
                 talents.investLabel = result.Tmp(screen.InvestLabel);
                 talents.investButton = result.Button(screen.InvestButton);
+
+                // THE BACKDROP, driven from the controller rather than by a
+                // component each. Both halves of every layer are bound -- the
+                // rect that moves and the graphic that fades -- because the
+                // fades and the drifts run on different periods and a single
+                // handle could only carry one of them.
+                talents.starFields = screen.StarFields.Select(result.Rect).ToArray();
+                talents.cloudWashes = screen.CloudWashes.Select(result.Rect).ToArray();
+                talents.cloudImages = screen.CloudWashes.Select(result.Image).ToArray();
+                talents.dustMotes = screen.DustMotes.Select(result.Rect).ToArray();
+                talents.dustImages = screen.DustMotes.Select(result.Image).ToArray();
+                talents.shootingStars = screen.ShootingStars.Select(result.Rect).ToArray();
+                talents.shootingStarImages = screen.ShootingStars.Select(result.Image).ToArray();
+
                 talents.respecButton = result.Button(screen.RespecButton);
+                talents.respecDialog = result.Go(screen.RespecDialog);
+                talents.respecDialogBody = result.Tmp(screen.RespecDialogBody);
+                talents.respecConfirmButton = result.Button(screen.RespecConfirmButton);
+                talents.respecCancelButton = result.Button(screen.RespecCancelButton);
                 talents.prevPathButton = result.Button(screen.PrevPathButton);
                 talents.nextPathButton = result.Button(screen.NextPathButton);
                 talents.prevCharacterButton = result.Button(screen.PrevCharacterButton);
                 talents.nextCharacterButton = result.Button(screen.NextCharacterButton);
                 talents.backButton = result.Button(screen.BackButton);
-
-                // The sky is a night sky: it gets the same twinkle the hub's
-                // does, so the constellations sit in something alive rather
-                // than on a flat plate.
-                DressTalentSky(result, screen);
             },
         };
-    }
-
-    // The animated backdrop. Reuses the hub's star data outright -- the
-    // constellations ARE the Divine Principality's sky, and giving them a
-    // second star field would be two skies for one place.
-    private static void DressTalentSky(UiEmitResult result, TalentScreen screen)
-    {
-        for (int i = 0; i < screen.OrbGlows.Count; i++)
-        {
-            // A slow pulse under every orb, phase-spread. Attached to all of
-            // them; the controller decides which are visible by alpha, so an
-            // unlit orb pulses at zero and costs nothing.
-            var pulse = result.Attach<BeaconPulse>(screen.OrbGlows[i]);
-            pulse.BaseColor = result.Image(screen.OrbGlows[i]).color;
-            pulse.PeriodSeconds = 3.8f + i % 4 * 0.6f;
-            pulse.PhaseSeconds = HubAmbience.Repeat01(i * HubAmbience.GoldenStride) * pulse.PeriodSeconds;
-            pulse.MinAlpha = 0.65f;
-            pulse.MaxAlpha = 1f;
-        }
     }
 
     // The character overlay: a Modal living inside the hub's own tree.

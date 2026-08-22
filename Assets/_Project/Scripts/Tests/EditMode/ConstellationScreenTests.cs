@@ -81,28 +81,44 @@ namespace PrincesPalace.Domain.Tests
                 "fixture: one orb per slot per path");
         }
 
+        // THE PLATE BECAME A COLUMN, and stopped hiding itself.
+        //
+        // What it replaced was an 880x150 slab along the bottom that appeared
+        // with the selection and vanished with it, which made the screen change
+        // shape as the pointer moved. A column that is always there and says
+        // what to do with it is furniture; the two tests that used to guard the
+        // hiding are replaced by these, which guard the not-hiding.
         [Test]
-        public void TheDetailPlateStartsHidden()
+        public void ThePanelIsAlwaysThere()
         {
-            // Nothing is selected when the screen opens, and a plate with
-            // nothing written on it is just a coloured rectangle. The
-            // controller shows it the moment an orb is picked.
             var screen = TalentScreen.Build();
 
-            Assert.IsTrue(screen.DetailPlate.Node.StartInactive);
+            Assert.IsFalse(screen.Panel.Node.StartInactive,
+                "the panel starts hidden, so the screen opens a column short and grows one later");
         }
 
         [Test]
-        public void TheDetailTextRidesOnThePlateSoHidingOneHidesBoth()
+        public void ThePanelTextRidesOnThePanelSoTheyMoveTogether()
         {
-            // If the labels were siblings of the plate rather than its
-            // children, hiding the plate would leave the text floating over the
-            // sky -- the same class of bug in the other direction.
-            var plate = Walk(TalentScreen.Build().Root).First(n => n.Name == "TalentDetailPlate");
-            var names = plate.Children.Select(c => c.Name).ToList();
+            // If the labels were siblings rather than children, the column
+            // could be moved or hidden and leave its own text over the sky --
+            // the same class of bug the plate had, in the other direction.
+            var panel = Walk(TalentScreen.Build().Root).First(n => n.Name == "TalentPanelColumn");
+            var names = panel.Children.Select(c => c.Name).ToList();
 
             CollectionAssert.Contains(names, "TalentDetailName");
             CollectionAssert.Contains(names, "TalentDetailBody");
+            CollectionAssert.Contains(names, "TalentDetailKicker");
+            CollectionAssert.Contains(names, "TalentDetailRefusal");
+        }
+
+        // The confirmation is the one thing on this screen that MUST start
+        // hidden: it is a modal over everything, and a screen that opens asking
+        // whether to put out every ember has asked a question nobody posed.
+        [Test]
+        public void TheRespecDialogStartsHidden()
+        {
+            Assert.IsTrue(TalentScreen.Build().RespecDialog.Node.StartInactive);
         }
 
         private static IEnumerable<UiNode> Walk(UiNode node)
@@ -223,5 +239,51 @@ namespace PrincesPalace.Domain.Tests
             Assert.Greater(ConstellationLayout.EdgeSparkSize, ConstellationLayout.EdgeWidth);
         }
 
+
+        // ---- a child is placed in its PARENT'S frame ------------------------------
+        //
+        // The edge kit's lit core is a child of the glow and was placed at the
+        // edge's absolute midpoint, rotated to the edge's absolute angle --
+        // both correct for the sibling it used to be, and both wrong once it
+        // moved. A child's transform composes with its parent's, so every lit
+        // edge drew a second gold line at twice the offset and twice the angle,
+        // scattered across the sky with no stone at either end.
+        //
+        // UiAudit could not see it: the core declares AllowOverflow, which
+        // waives the one check -- child containment -- that measures exactly
+        // this. So it is asserted here instead, against the built tree, where
+        // "sits on its parent" is a thing that can be stated.
+        [Test]
+        public void EveryEdgesLitCoreSitsOnTheEdgeItLights()
+        {
+            var offenders = new List<string>();
+
+            foreach (var node in Walk(TalentScreen.Build().Root))
+            {
+                if (!node.Name.EndsWith("Glow") || !node.Name.StartsWith("Edge")) continue;
+
+                foreach (var child in node.Children)
+                {
+                    if (!child.Name.EndsWith("Core")) continue;
+
+                    if (child.Place.Offset.X != 0f || child.Place.Offset.Y != 0f)
+                    {
+                        offenders.Add($"{child.Name} is offset " +
+                                      $"({child.Place.Offset.X}, {child.Place.Offset.Y}) " +
+                                      "from the edge it is drawn on");
+                    }
+
+                    if (child.Rotation != 0f)
+                    {
+                        offenders.Add($"{child.Name} carries its own rotation of {child.Rotation}, " +
+                                      "which composes with the edge's and doubles it");
+                    }
+                }
+            }
+
+            CollectionAssert.IsEmpty(offenders,
+                "a lit core is placed in its PARENT'S frame, not the page's - the glow already " +
+                "carries the midpoint and the angle");
+        }
     }
 }

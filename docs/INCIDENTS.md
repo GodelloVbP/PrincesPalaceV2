@@ -236,3 +236,76 @@ which is the only reason it was found at all.
 belong to its generator. `LoadSpriteByKey` now skips anything under
 `Art/Generated/` for everything except the textureType check that stops
 `LoadAssetAtPath<Sprite>` silently returning null.
+
+## A child placed in its parent's frame, and an exemption that hid it (2026-08-22)
+
+The talent tree's edges are three nodes: a dim limb, a lit glow, and a bright
+core running down the middle of the glow. The core started as a SIBLING of the
+glow and was later moved to be its CHILD, so that switching the glow off would
+take the core with it. Its placement was not moved with it:
+
+```csharp
+Place.At((a.X + b.X) * 0.5f, (a.Y + b.Y) * 0.5f)   // the edge's absolute midpoint
+.Rotated(angle)                                     // the edge's absolute angle
+```
+
+Both are correct for a sibling. As a child, a transform composes with its
+parent's — so every lit edge drew its core at **twice** the midpoint, turned to
+**twice** the angle: a second gold hairline somewhere else in the sky, with no
+stone at either end. The spark beside it, added at the same time, was already
+written as `Place.At(-length * 0.5f, 0f)` — local — and was the clue.
+
+**It survived because the check that would have caught it was waived on
+purpose.** `UiAudit`'s ChildContainment measures exactly this: a child that
+escapes its parent's rect. The core declares
+
+```csharp
+.AllowOverflow("a rotated edge's axis-aligned box is wider than the line inside it")
+```
+
+which is a true statement about a rotated quad and the reason the exemption is
+legitimate. It is also a blanket waiver, so it silenced a 900px escape as
+readily as the 4px one it was written for.
+
+Found by looking at a runtime screenshot, not by a test — the built scene said
+nothing was wrong, and every test agreed. What it looks like on a still frame is
+loose diagonal lines in empty sky, which reads as a stray art asset rather than
+as a transform bug, and cost a detour through the backdrop layers first.
+
+Two things came out of it. `ConstellationScreenTests.EveryEdgesLitCoreSitsOnThe\
+EdgeItLights` asserts against the built tree that a `*Core` under a `*Glow` has
+no offset and no rotation of its own — the specific claim, in the one place the
+generic check cannot make it. And the general lesson, which is the reason this
+is written down: **an `AllowOverflow`/`AllowOverlap` reason describes why SOME
+overflow is expected, never how much.** Where a node is exempt from the generic
+check, the specific property it still has to satisfy needs its own test, or that
+node has no layout coverage at all.
+
+## A rule written, commented, and called by nothing (2026-08-22)
+
+`ContentDatabase.MinSpentMet` enforces the talent tree's two point-gates — 9
+spent on a path before its convergence opens, 20 before its capstone. It carries
+this comment:
+
+> One function rather than four checks the caller composes, because there are
+> now four of them and they have to agree between the talent screen's colouring
+> pass, its click handler and its tests.
+
+It had **no callers**. `TalentPage` was written later to own the "can this be
+kindled" question, took prerequisites and cost across, and did not take the gate.
+The convergence and the capstone are also the only two orbs priced at zero
+embers, so their gate was their entire price — and it was not being asked.
+
+It went unnoticed for the same reason it was safe to turn back on: a merge
+requires all three tiers beneath it, which is ten orbs by the time the 9-gate
+applies, so the parent chain very nearly pays the gate on its own.
+`TalentGateTests.TheAuthoredGatesArePaidByTheirOwnAncestry` pins that
+near-redundancy, and will fail the day a skeleton change makes the gate bite for
+the first time — which is a balance decision, and should arrive as a failing
+test rather than as a quiet change in what a player can buy.
+
+The transferable part is the comment. It described four agreeing callers with
+enough confidence that nobody checked, and `git log -S` would have shown they
+never existed. **A comment that asserts who calls something is a claim about the
+world, and it decays silently.** `grep` for the symbol is cheap; the comment is
+not evidence.

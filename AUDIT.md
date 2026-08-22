@@ -1368,6 +1368,56 @@ from play, and carrying a comment that describes it as live. Recorded rather
 than wired, because switching it on would make the game harder and the reported
 problem is that it is already too hard.
 
+### ~~55. `ContentDatabase.MinSpentMet` enforces the talent gates and nothing calls it~~ -- **FIXED**: the rule now lives in `TalentPage.Evaluate` as `Refusal.Gated`
+
+`MinSpentMet`/`SpentInPath`/`MeetsGates` (`ContentDatabase.cs:596-625`) implement
+the tree's two point-gates -- 9 embers spent on a path before its convergence
+opens, 20 before its capstone. `MeetsGates`' comment says "there are now four of
+them and they have to agree between the talent screen's colouring pass, its
+click handler and its tests". There were none: `grep` finds no caller outside
+`ContentDatabase` itself.
+
+`TalentPage` was written later to own "can this be kindled", carried
+prerequisites and cost across, and did not carry the gate. Those two slots are
+also the only orbs `OrbCost` prices at zero, so the gate WAS their price and it
+was not being asked -- both were free the instant their parents lit.
+
+Fixed by adding `Refusal.Gated`, ranked below `PrerequisiteMissing` (a player
+told to spend more on a path they cannot climb yet will spend and come back to
+the same refusal) and above `NotEnoughEmbers` (a stone behind a gate is not
+expensive, it is shut). `TalentSlot` carries `MinSpent` so Domain can answer
+without reaching across the layer boundary, and the collar the talent screen
+draws around each gated stone reads the same number.
+
+**Behaviourally this blocks nothing that used to succeed**, which is also why it
+went unnoticed: a merge requires all three tiers beneath it, so the parent chain
+is worth ten orbs by the time the 9-gate applies.
+`TalentGateTests.TheAuthoredGatesArePaidByTheirOwnAncestry` pins that, and fails
+the day a skeleton change makes the gate bite -- which is a balance decision and
+should arrive as a failing test.
+
+### ~~56. Every lit talent edge drew a second stray line, and the layout audit was exempted from seeing it~~ -- **FIXED**
+
+`TalentScreen.BuildEdge` builds three nodes per connection: a dim limb, a lit
+glow, and a core down the middle of the glow. The core is a CHILD of the glow
+and was placed at the edge's absolute midpoint with the edge's absolute angle --
+correct for the sibling it used to be. A child's transform composes with its
+parent's, so every lit edge rendered its core at twice the offset and twice the
+angle: a loose gold hairline elsewhere in the sky with no stone at either end.
+
+`UiAudit`'s ChildContainment measures exactly this and was silenced by the
+core's own `AllowOverflow("a rotated edge's axis-aligned box is wider than the
+line inside it")` -- a true statement, and a blanket one, so it waived a 900px
+escape as readily as the 4px it was written for.
+
+Found in a runtime screenshot; nothing in the built scene or the suite said
+anything was wrong. Fixed by placing the core at `(0, 0)` unrotated, and pinned
+by `ConstellationScreenTests.EveryEdgesLitCoreSitsOnTheEdgeItLights`.
+
+**The generalisable half is filed in `docs/INCIDENTS.md`:** an `AllowOverflow`
+reason says why SOME overflow is expected, never how much, so a node carrying
+one has no layout coverage until something asserts the property it still owes.
+
 ## Open investigations
 
 ### ~~52. `SystemMenuExitsTests.OnePressOnAnExitDoesNothingButArmIt` flaked once, navigating to `"Hub"` — cause not found~~ — **ROOT CAUSE FOUND AND FIXED, 2026-08-21.** A `HoldToConfirm` left running by an earlier test in the same fixture. `HoldToConfirm` cancels itself `OnDisable`, and its comment explains why — but between two tests nothing disables it: the scene stays loaded until the next `LoadSceneAsync`, so a test that begins a hold and neither completes nor releases it leaves `Update()` advancing that hold into whatever runs next. When it completed it called `Abandon`, which navigates to the hub, and the navigation landed in the *next* test's recorder. The fixture's `TearDown` now cancels every live hold. **What made it findable:** the reward-track panel added ~450 nodes to the Hub scene, frames got long enough that the leftover hold finished inside the very next test every time, and a one-in-four flake became 3-for-3 — including in isolation, which it had never done. The extra nodes did not cause it; they made it reproducible enough to get a stack trace, which named `HoldToConfirm.Update` with no test above it. Guessing had blamed process-wide `Navigation.LoadOverride` state, which was wrong

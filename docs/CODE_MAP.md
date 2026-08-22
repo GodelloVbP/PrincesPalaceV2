@@ -27,7 +27,7 @@ parts, for Fight), its tests, and its content data (where applicable).
 | Equipment (bag + paperdoll) | `SceneBuilder/SceneBuilder.Equipment.cs` (`BuildEquipmentScreens`) | `EquipmentController.cs` | — |
 | Shop / Store | `SceneBuilder/SceneBuilder.Store.cs` | `StoreController.cs` | `items.json` (Upgrades/Consumables) |
 | Hub | `SceneBuilder/SceneBuilder.Hub.cs` | `HubController.cs` | — |
-| Talents | `SceneBuilder/SceneBuilder.Talents.cs` | `TalentController.cs` | `talents.json` |
+| Talents | `Domain/UiKit/Screens/TalentScreen.cs` + `Domain/UiKit/ConstellationLayout.cs` | `TalentController.cs` + `.Motion.cs` | `talents.json` |
 | Relics | `SceneBuilder/SceneBuilder.Relics.cs` | `RelicsController.cs` | `relics.json` |
 | Character Sheet | `SceneBuilder/SceneBuilder.CharacterSheet.cs` | `CharacterSheetController.cs` | `characters.json` |
 | Pause Menu | `SceneBuilder/SceneBuilder.Overlays.cs` (`BuildPauseMenu`/`BuildPauseLayer`) | `PauseMenuController.cs` | — |

@@ -9,27 +9,133 @@ namespace PrincesPalace.Domain.UiKit
     // be the same function or the sky drifts from what it claims.
     public static class ConstellationLayout
     {
-        // The sky the stars are placed in. Wider than tall, because a tree
-        // climbs and a constellation is read across.
-        public const float SkyWidth = 1180f;
-        public const float SkyHeight = 720f;
+        // ---- the handoff's canvas, converted once --------------------------------
+        //
+        // THE DESIGN IS AUTHORED AT 1600x900 AND THIS GAME RENDERS AT 1920x1080,
+        // which is exactly x1.2 with no distortion -- both are 16:9. The handoff
+        // says it plainly: "1600x900 is the authoring canvas, not a stage inside
+        // a larger one. Multiply everything by 1.2." Every number below is that
+        // multiplication already done, ROUNDED ONCE AT THE END rather than
+        // per-term, which is also the handoff's instruction and is why the spine
+        // ladder lands on whole pixels while the plots do not always.
+        //
+        // The design also measures y DOWNWARD from the canvas top-left, and this
+        // project measures it up from the centre. Both conversions happen here
+        // and nowhere else, so every coordinate below can be checked against the
+        // document it came from.
+        public const float Scale = 1.2f;
 
-        // ---- the orb layout, migrated from v1 -----------------------------------
+        // The sky the stars are placed in: the full canvas height, and the
+        // canvas width less the panel that sits over its right-hand end.
+        public const float SkyWidth = 1464f;    // 1220 authored
+        public const float SkyHeight = 1080f;   // 900 authored
+
+        // The detail panel, over the sky rather than beside it.
+        public const float PanelWidth = 456f;   // 380 authored at x 1220
+        public static float PanelCentreX => UiFrames.Reference.X * 0.5f - PanelWidth * 0.5f;
+
+        // Where slot 0 sits, in this project's own frame: the handoff's
+        // (610, 856) on a 1600x900 canvas, scaled and flipped.
         //
-        // Everything below is v1's talent-tree-v2 geometry, brought over with
-        // its numbers intact. v2 had replaced it with a stretch -- one orb size
-        // for every slot, and depth and dx normalised across the whole sky --
-        // which lost the two things the design was actually saying.
+        // Horizontally that is the SKY STAGE's centre rather than the canvas's,
+        // which is the whole reason the tree is not centred on screen -- the
+        // panel takes the right-hand column and the constellation keeps the
+        // middle of what is left.
+        public const float TreeOriginX = -228f;   // 732 - 960
+        // 540 - 1027 authored, then raised 11px. The figure is 1071 tall once
+        // the root's NAME and the capstone's gate reading are counted -- 8px of
+        // slack in a 1080 canvas -- and the authored origin spent all of it at
+        // the top, clipping the root's name off the bottom edge. Centred here
+        // instead, and held there by
+        // ConstellationLayoutTests.TheWholeFigureFitsTheCanvas.
+        public const float TreeOriginY = -476f;
+
+        // The stage arrows, at the sky's own edges rather than the canvas's --
+        // and MEASURED FROM THE TREE'S CENTRE, not the canvas's.
         //
-        // SIZING MARKS ROLE, NOT POINT COST. That is the design's own rule and
-        // v2 had no way to express it: every orb was StarSize, so the capstone
-        // at the top of an eight-tier climb looked exactly like the first chain
-        // node above the root. The convergence and the capstone are the two
-        // slots whose SHAPE is their meaning, and they are the two that render
-        // larger.
-        public const float OrbNormal = 60f;
-        public const float OrbMerge = 70f;
-        public const float OrbCap = 82f;
+        // Symmetric about the screen they landed the right-hand one at x 665,
+        // underneath a panel that spans 504 to 960: an arrow drawn beneath an
+        // opaque column, taking clicks meant for whatever is under it. The sky
+        // is offset left by half the panel width for exactly this reason and
+        // the arrows have to follow it, which makes them an asymmetric pair
+        // about the canvas and a symmetric one about the thing they page.
+        public const float ArrowWidth = 53f;      // 44 authored
+        public const float ArrowHeight = 115f;    // 96 authored
+        private const float ArrowInset = 67f;
+
+        public static float ArrowRightX => TreeOriginX + SkyWidth * 0.5f - ArrowInset;
+
+        public static float ArrowLeftX => TreeOriginX - SkyWidth * 0.5f + ArrowInset;
+
+        // ---- the detail panel ----------------------------------------------------
+        //
+        // A RIGHT-HAND COLUMN, NOT A BOTTOM PLATE, and the handoff gives the
+        // reason: the figure is tall. A plate along the bottom would either
+        // crop the capstone or shrink the stones below the size the art needs.
+        //
+        // It sits OVER the sky rather than beside it -- the sky is the full
+        // canvas and the panel covers its right-hand end -- which is why the
+        // tree's origin is the sky STAGE's centre and not the screen's.
+        public const float PanelHeight = 1080f;
+        public const float PanelPad = 34f;         // 28 authored
+
+        public static float PanelInnerWidth => PanelWidth - PanelPad * 2f;
+
+        // The rows, from the panel's own centre. Authored sizes x1.2 come from
+        // the handoff's type table; these are where the boxes sit.
+        public const float PanelHeaderY = 486f;
+        public const float PanelPathY = 430f;
+        public const float PanelNameY = 322f;
+        public const float PanelKickerY = 244f;
+        public const float PanelPriceY = 196f;
+        public const float PanelBodyY = 40f;
+        public const float PanelBodyHeight = 240f;
+        public const float PanelRefusalY = -132f;
+        public const float PanelActionY = -320f;
+        public const float PanelMeterY = -420f;
+        public const float PanelRespecY = -480f;
+
+        public const float PanelActionWidth = 320f;
+        public const float PanelActionHeight = 72f;
+
+        // ---- gate collars --------------------------------------------------------
+        //
+        // Drawn in EVERY state, including unreachable, because the collar is how
+        // a player reads how far a path is from its gate long before the shape
+        // lets them buy anything. A ring that only appeared once it was
+        // satisfied would answer a question nobody could still be asking.
+        public const float CollarInset = 17f;      // 14 authored
+
+        public static float CollarSize(string kind) => OrbSize(kind) + CollarInset * 2f;
+
+        // ---- labels on the sky ---------------------------------------------------
+        //
+        // A stone's name sits under it and its price under that. Prices appear
+        // only where a number changes a decision -- the two gates, and any stone
+        // reachable, too expensive, hovered or selected. Labelling all 21 turned
+        // the sky back into a spreadsheet.
+        public const float LabelWidth = 240f;
+        public const float LabelHeight = 22f;
+        public const int LabelFont = 16;           // 13 authored
+        public const int PriceFont = 13;           // 11 authored
+
+        public static float LabelY(string kind) => -(OrbSize(kind) * 0.5f + 20f);
+
+        public static float PriceY(string kind) => LabelY(kind) - LabelHeight;
+
+        // ---- the orbs -----------------------------------------------------------
+        //
+        // SIZING MARKS ROLE, NOT POINT COST, and never depth and never state.
+        // The convergence and the capstone are the two slots whose SHAPE is
+        // their meaning; a build where every orb was one size left the capstone
+        // at the top of an eight-tier climb looking exactly like the first
+        // chain node above the root.
+        //
+        // 58 / 74 / 91 is the handoff's 48 / 62 / 76 at x1.2, and its own §12
+        // states those three as the intent rather than leaving them derived.
+        public const float OrbNormal = 58f;
+        public const float OrbMerge = 74f;
+        public const float OrbCap = 91f;
 
         // Kept as the old name so nothing that only wants "about an orb wide"
         // has to care which kind it is asking about.
@@ -45,62 +151,165 @@ namespace PrincesPalace.Domain.UiKit
             }
         }
 
-        // THE GRID AND THE BRANCH SPREAD DIFFERENTLY, which a single normalised
-        // StarX cannot say at all. The 3x3 grid below the convergence is the
-        // narrow half of the tree and the three-way branch above it is the wide
-        // half -- the shape opens out as it climbs, and that widening is how the
-        // convergence reads as a waist rather than as one more row.
+        // ---- the plots: each path draws its own beast ----------------------------
         //
-        // v1's own comment: the design draws these as 150 and 200 on a 1920
-        // reference canvas, scaled down slightly for this game's column pitch.
-        public const float GridDx = 130f;
-        public const float BranchDx = 170f;
-
-        // The convergence sits at depth 4; everything above it is the branch.
-        // Derived from the skeleton rather than written as 4, so a tier added
-        // below the waist moves the waist instead of silently widening the grid.
-        public static int BranchStartDepth => MergeDepth + 1;
-
-        public static int MergeDepth
+        // THE TREE STOPPED BEING A LATTICE. It was dx x depth -- a signed column
+        // times a fixed pitch -- which is a grid however it is dressed, and a
+        // grid reads as a spreadsheet. Every slot is now hand-plotted per path,
+        // so The Black Ram is a ram's head and The Fragile Lamb a lamb's: the
+        // face climbs the spine, and the branch above the waist sweeps wide and
+        // curls back in as horns, or falls wide and flat as ears.
+        //
+        // THE DOMAIN IS UNTOUCHED. Same 21 slots, same nine tiers, same parents,
+        // same prices, same two gates -- only the coordinates changed. A fourth
+        // path is a fourth table here and nothing else.
+        //
+        // Authored numbers x1.2, rounded once. Two properties survive the
+        // scaling and are what the tests check rather than the individual pairs:
+        //
+        //   THE SPINE LADDER IS SHARED. All three tables put their centre column
+        //   on 0, -130, -242, -355, -468, -582, -696, -810, -924. That is what
+        //   guarantees the separation floor -- the figures differ only in how
+        //   far their side nodes swing out, so a new plot only has to respect
+        //   the horizontal clearances.
+        //
+        //   y IS THE HANDOFF'S OWN SIGN, negative climbing, because the design
+        //   measures down from the canvas top. StarY flips it once. Storing the
+        //   document's numbers verbatim is what lets a reader check this table
+        //   against the table it came from without doing arithmetic in their
+        //   head.
+        private static readonly float[,] BlackRam =
         {
-            get
-            {
-                for (int slot = 0; slot < Talents.TalentSkeleton.SlotCount; slot++)
-                {
-                    if (Talents.TalentSkeleton.Kind[slot] == "merge") return Talents.TalentSkeleton.Depth[slot];
-                }
+            { 0f, 0f },            // root
+            { -149f, -118f },      // tier 1
+            { 0f, -130f },
+            { 149f, -118f },
+            { -211f, -230f },      // tier 2
+            { 0f, -242f },
+            { 211f, -230f },
+            { -247f, -348f },      // tier 3
+            { 0f, -355f },
+            { 247f, -348f },
+            { 0f, -468f },         // the convergence
+            { -302f, -528f },      // tier 4 -- the horns begin their sweep
+            { 0f, -582f },
+            { 302f, -528f },
+            { -422f, -641f },      // tier 5 -- widest, +/-422
+            { 0f, -696f },
+            { 422f, -641f },
+            { -382f, -778f },      // tier 6 -- curling back in
+            { 0f, -810f },
+            { 382f, -778f },
+            { 0f, -924f },         // the capstone, the crown
+        };
 
-                return 0;
-            }
+        private static readonly float[,] FragileLamb =
+        {
+            { 0f, 0f },            // root
+            { -134f, -120f },      // tier 1 -- a narrower face
+            { 0f, -130f },
+            { 134f, -120f },
+            { -180f, -233f },      // tier 2
+            { 0f, -242f },
+            { 180f, -233f },
+            { -202f, -350f },      // tier 3
+            { 0f, -355f },
+            { 202f, -350f },
+            { 0f, -468f },         // the convergence
+            { -286f, -518f },      // tier 4 -- ears, falling wide and flat
+            { 0f, -582f },
+            { 286f, -518f },
+            { -408f, -569f },      // tier 5 -- widest and shallowest
+            { 0f, -696f },
+            { 408f, -569f },
+            { -331f, -703f },      // tier 6
+            { 0f, -810f },
+            { 331f, -703f },
+            { 0f, -924f },         // the capstone
+        };
+
+        private static readonly float[,] Unwritten =
+        {
+            { 0f, 0f },            // root
+            { -132f, -125f },      // tier 1
+            { 0f, -130f },
+            { 132f, -125f },
+            { -142f, -238f },      // tier 2
+            { 0f, -242f },
+            { 142f, -238f },
+            { -151f, -353f },      // tier 3
+            { 0f, -355f },
+            { 151f, -353f },
+            { 0f, -468f },         // the convergence
+            { -175f, -526f },      // tier 4
+            { 0f, -582f },
+            { 175f, -526f },
+            { -204f, -641f },      // tier 5 -- +/-204 at its widest
+            { 0f, -696f },
+            { 204f, -641f },
+            { -180f, -778f },      // tier 6
+            { 0f, -810f },
+            { 180f, -778f },
+            { 0f, -924f },         // the capstone
+        };
+
+        // A spire rather than a third animal, and that is the design saying
+        // something with a shape: an unauthored path should read as a thin
+        // unfinished thing, not as a beast nobody has written yet.
+        private static readonly float[][,] Plots = { BlackRam, FragileLamb, Unwritten };
+
+        public static int PlotCount => Plots.Length;
+
+        // A path with no plot of its own falls back to the spire rather than
+        // throwing or stacking every stone on the origin. Graceful degradation
+        // is the house style, and an unplotted path is exactly the case the
+        // spire was drawn for.
+        private static float[,] PlotFor(int path) =>
+            path >= 0 && path < Plots.Length ? Plots[path] : Unwritten;
+
+        public static float StarX(int path, int slot)
+        {
+            var plot = PlotFor(path);
+            return slot >= 0 && slot < plot.GetLength(0) ? plot[slot, 0] : 0f;
         }
 
-        // A FIXED PITCH, not a stretch to fill the sky. Normalising depth across
-        // the sky's height means adding a tier silently squeezes every existing
-        // one, so a tree's spacing would depend on how many tiers it happened to
-        // have -- and the orbs are a constant size, so the gap between them would
-        // shrink toward nothing while the orbs stayed put.
-        public const float DepthGap = 75f;
+        // THE ONE PLACE THE HANDOFF'S y IS FLIPPED. Its numbers climb negative
+        // because the design measures down from the canvas top; depth runs UP
+        // the screen here, because a constellation that grew downward would read
+        // as falling.
+        public static float StarY(int path, int slot)
+        {
+            var plot = PlotFor(path);
+            return slot >= 0 && slot < plot.GetLength(0) ? -plot[slot, 1] : 0f;
+        }
 
-        // Chosen in v1 so the capstone clears the path titles above it and the
-        // root clears the info panel below it.
-        public const float RootY = -250f;
+        // ---- what the plots guarantee -------------------------------------------
+        //
+        // The floors the design set, at x1.2. Not used to PLACE anything -- the
+        // tables above are placement -- but asserted against every pair, so a
+        // hand-plotted figure cannot quietly put two stones on top of each
+        // other. Hand-plotted is the whole point and also the whole risk.
+        // 112, NOT THE HANDOFF'S 113, and the missing pixel is worth explaining.
+        //
+        // The design's floor is 94 authored and it sits exactly ON it: the
+        // tightest pair in all three figures is the spine's own -108 and -202,
+        // 94 apart to the pixel. x1.2 makes that 112.8, the handoff rounds it up
+        // to 113 in prose, and the ladder rounds to -130 and -242 -- so the
+        // shipped plots measure 112 and no integer plot at this scale can do
+        // better without moving the ladder.
+        //
+        // Stated as what the plots actually hold rather than as what the
+        // document rounds to, because a constant the data provably violates is
+        // worse than none: the alternative was a tolerance on the assertion,
+        // and a loose test against an aspirational number catches less than a
+        // strict test against a true one.
+        public const float SeparationFloor = 112f;   // 94 authored, x1.2, rounded down
+        public const float SideClearance = 130f;     // 108 authored
 
-        // DEPTH RUNS UP THE SCREEN. The capstone is the thing at the top of the
-        // climb, and a constellation that grew downward would read as falling.
-        public static float StarY(int depth) => RootY + depth * DepthGap;
+        // How wide and tall the widest plot actually is, orbs included.
+        public static float TreeWidth => 422f * 2f + OrbCap;
 
-        // dx is signed and centred: -1 is the left branch, 0 the spine, +1 the
-        // right. Multiplied out rather than indexed, so a future four-wide tier
-        // needs no new case.
-        public static float StarX(int dx, int depth) =>
-            dx * (depth >= BranchStartDepth ? BranchDx : GridDx);
-
-        // How wide and tall one path's tree actually is, orbs included. Used by
-        // the screen to place three of them side by side, and by the tests to
-        // say the thing fits what it is drawn in.
-        public static float TreeWidth => BranchDx * 2f + OrbCap;
-
-        public static float TreeHeight => (Talents.TalentPage.DepthCount - 1) * DepthGap + OrbCap;
+        public static float TreeHeight => 924f + OrbCap;
 
         // ---- edges ---------------------------------------------------------------
         //
@@ -127,10 +336,19 @@ namespace PrincesPalace.Domain.UiKit
         // A full screen width apart, so exactly one is ever centred and the
         // neighbours are genuinely off-stage rather than peeking. The slide is
         // what makes three trees read as three PLACES rather than three tabs.
-        // ONE SCREEN WIDE, which is what makes a page change read as the sky
-        // sliding rather than as the tree jumping. Read from UiFrames: a stride
-        // that stopped matching the stage would leave part of the next path
-        // visible beside the current one.
+        // ONE STAGE WIDE, which is what makes a page change read as the sky
+        // sliding rather than as the tree jumping.
+        //
+        // THE SCREEN, NOT THE STAGE, and the sky being narrower than the screen
+        // is not a reason to shorten it.
+        //
+        // This was briefly SkyWidth, on the argument that the stage is what
+        // slides and the panel covers the rest. Half of that is true: the panel
+        // covers the neighbour on the RIGHT. Nothing covers the one on the
+        // LEFT, and a 1464 stride on a 1920 canvas leaves 228px of the previous
+        // constellation standing in the open beside the current one -- which is
+        // exactly what ConstellationLayoutTests.TheNeighboursAreGenuinelyOffStage
+        // measures, and how it was caught.
         public static float PageStride => UiFrames.Reference.X;
 
         public static float PageX(int index, int current) => (index - current) * PageStride;
@@ -140,7 +358,10 @@ namespace PrincesPalace.Domain.UiKit
         // A pure static seam like every other animation curve in this project:
         // the shape can be pinned by an EditMode test with no scene, no
         // coroutine and no frame.
-        public const float SlideSeconds = 0.42f;
+        // 620ms, the handoff's own figure, up from 420. A stage-wide slide is
+        // a longer journey than the screen-wide one this was tuned for and
+        // wants the time; the curve below is the ease it asks for.
+        public const float SlideSeconds = 0.62f;
 
         // No divide-by-zero guard here, deliberately. SlideSeconds is a const,
         // so the compiler folded that branch away and warned it was
@@ -189,5 +410,142 @@ namespace PrincesPalace.Domain.UiKit
 
         public static bool CanStep(int current, int direction, int count) =>
             Step(current, direction, count) != current;
+
+        // ---- motion ----------------------------------------------------------
+        //
+        // Every period the screen animates on, in one place, because the whole
+        // point of them is that they DISAGREE. Nine loops running at 2.4, 3.2,
+        // 4.6, 5.0, 6.0, 7.2, 11, 15, 41, 58, 74, 96, 112 and 148 seconds
+        // share no common multiple worth reaching, so the sky never repeats a
+        // frame inside a session -- which is the only thing that separates
+        // "alive" from "looping". Scattered across the controller as literals
+        // that property is invisible and one careless round to 5.0 destroys it.
+
+        // The stagger. A tree of stones that all breathe together is a tree
+        // that blinks; 491ms against a 3200ms cycle walks the phase around
+        // without ever landing twice in 21 slots.
+        public const float RestingStrideMs = 491f;
+        public const float RestingCycleMs = 3200f;
+
+        public static float RestingPhase(int slot) =>
+            slot * RestingStrideMs % RestingCycleMs / 1000f;
+
+        public const float CoreFlickerSeconds = 3.2f;
+        public const float HaloCrackleSeconds = 4.6f;
+        public const float ReadyPulseSeconds = 2.4f;
+        public const float CapCoronaSeconds = 5.0f;
+
+        // ---- the kindling beat ----------------------------------------------
+        //
+        // 1.1 SECONDS, IN FOUR OVERLAPPING PARTS. They overlap on purpose: the
+        // crust cracks while the stone is still catching, and the motes leave
+        // before either has finished. Played in sequence it reads as a machine
+        // completing steps; played over itself it reads as something igniting.
+        public const float KindleSeconds = 1.12f;
+        public const float KindleCrustSeconds = 0.52f;
+        public const float KindleCatchSeconds = 0.90f;
+        public const float KindleEdgeSeconds = 0.62f;
+        public const float KindleMoteSeconds = 0.70f;
+        public const int KindleMoteCount = 6;
+
+        // The six motes leave unevenly -- the gaps widen, 90/70/80/90/90 --
+        // because six embers on an even beat is a metronome.
+        private static readonly float[] MoteDelays = { 0f, 0.09f, 0.16f, 0.24f, 0.33f, 0.42f };
+
+        public static float MoteDelay(int index) =>
+            index < 0 || index >= MoteDelays.Length ? 0f : MoteDelays[index];
+
+        // Each part clamps at its own end rather than at the beat's, so a part
+        // that finishes early STAYS finished instead of easing back.
+        public static float Phase(float elapsed, float length) =>
+            length <= 0f ? 1f : Clamp01(elapsed / length);
+
+        // The stone's own catch: overshoots to 1.18 and settles. The overshoot
+        // is the difference between a stone lighting up and a stone catching.
+        public static float CatchScale(float phase)
+        {
+            if (phase <= 0f) return 1f;
+            if (phase >= 1f) return 1f;
+
+            // Peak a third of the way in, then ease back down over the rest.
+            const float peak = 0.34f;
+            return phase < peak
+                ? 1f + 0.18f * (phase / peak)
+                : 1f + 0.18f * (1f - Ease((phase - peak) / (1f - peak)));
+        }
+
+        // ---- the push-in -----------------------------------------------------
+        //
+        // Selecting a stone leans the sky towards it: 2% larger, and shifted
+        // by a seventh of how far off-centre the stone is. Deliberately far
+        // less than centring it -- a camera that snapped the selection to the
+        // middle would move the whole tree under a pointer that is trying to
+        // compare two stones next to each other.
+        public const float PushInScale = 1.02f;
+        public const float PushInFraction = 0.14f;
+        public const float PushInSeconds = 0.62f;
+
+        public static float PushInOffset(float starX) => -starX * PushInFraction;
+
+        // ---- the backdrop ----------------------------------------------------
+        //
+        // Two pan tracks, unequal and opposed. That inequality IS the parallax:
+        // near drifts further and slower than far, so the fields separate
+        // rather than sliding as one painting.
+        public const float StarPanNearSeconds = 148f;
+        public const float StarPanFarSeconds = 96f;
+        public static readonly UiVec StarPanNear = new UiVec(-30f, 12f);
+        public static readonly UiVec StarPanFar = new UiVec(11f, -7f);
+
+        public const float CloudBreatheSeconds = 41f;
+        private static readonly float[] CloudDriftSeconds = { 58f, 74f, 112f };
+
+        public static float CloudDrift(int index) =>
+            index < 0 || index >= CloudDriftSeconds.Length
+                ? CloudDriftSeconds[CloudDriftSeconds.Length - 1]
+                : CloudDriftSeconds[index];
+
+        public const float DustRiseSeconds = 9.4f;
+        public const float DustRise = 340f;
+
+        // TWO STREAKS, IDLE FOR ALMOST ALL OF THEIR CYCLE. This is the one
+        // EVENT in the backdrop and it has to stay rare to read as one: 38s and
+        // 57s apart with a 23s offset between them, so they never arrive
+        // together and the sky is empty of them nearly all the time.
+        private static readonly float[] StreakSeconds = { 38f, 57f };
+        public const float StreakOffsetSeconds = 23f;
+        public const float StreakTravelSeconds = 0.9f;
+        public const float StreakTravel = 620f;
+
+        public static float StreakPeriod(int index) =>
+            index < 0 || index >= StreakSeconds.Length ? StreakSeconds[0] : StreakSeconds[index];
+
+        // A sawtooth on [0,1) for a loop of the given period. One function
+        // rather than a phase field per layer: none of these loops has any
+        // state worth keeping, so time is the only input they need.
+        public static float Cycle(float time, float period, float offset = 0f) =>
+            period <= 0f ? 0f : Repeat(time + offset, period) / period;
+
+        // A 0-1-0 triangle, eased. What every breathe, pulse and flicker on
+        // this screen is made of.
+        public static float Breathe(float cycle) =>
+            Ease(1f - Abs(cycle * 2f - 1f));
+
+        private static float Ease(float t) => t * t * (3f - 2f * t);
+
+        // ENGINE-FREE, like the rest of this file. Domain cannot reach Mathf,
+        // and these three are the whole of what the motion arithmetic needs.
+        private static float Clamp01(float v) => v < 0f ? 0f : v > 1f ? 1f : v;
+
+        private static float Abs(float v) => v < 0f ? -v : v;
+
+        private static float Repeat(float v, float period)
+        {
+            if (period <= 0f) return 0f;
+
+            float r = v - (int)(v / period) * period;
+            return r < 0f ? r + period : r;
+        }
+
     }
 }

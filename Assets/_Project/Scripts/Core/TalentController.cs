@@ -18,45 +18,114 @@ namespace PrincesPalace
     // its own tests. This decides nothing -- it reads the save, asks Domain, and
     // paints. The one thing it genuinely owns is the SLIDE, because that is time
     // and time needs a frame.
-    public class TalentController : MonoBehaviour
+    public partial class TalentController : MonoBehaviour
     {
         [SerializeField] internal RectTransform sky;
         [SerializeField] internal Button[] orbs;
 
-        // The lit layer of each edge, and the slot each one arrives at. Two
-        // parallel arrays rather than a lookup: the screen built them in one
-        // pass and UiCountAudit can hold their lengths to each other, which a
-        // dictionary assembled at runtime could not be checked against.
-        [SerializeField] internal TalentNodeInvestReveal[] orbReveals;
         [SerializeField] internal GameObject[] edgeGlows;
         [SerializeField] internal int[] edgeChildSlots;
         [SerializeField] internal Image[] orbGlows;
+
+        // A stone's own furniture, one entry per orb in the same order as
+        // `orbs`. Parallel arrays rather than a lookup: the screen built them
+        // in one pass and UiCountAudit can hold their lengths to each other,
+        // which a dictionary assembled at runtime could not be checked against.
+        [SerializeField] internal Image[] orbAuras;
+        [SerializeField] internal Image[] orbCores;
+        [SerializeField] internal Image[] orbRings;
+        [SerializeField] internal TMP_Text[] orbLabels;
+        [SerializeField] internal TMP_Text[] orbPrices;
+
+        // The gated stones only -- SHORTER than the arrays above, and indexed
+        // by their own position. collarSlots maps that position back to an orb
+        // index, which is how this knows which stone a collar belongs to
+        // without re-deriving the skeleton on this side of the boundary.
+        [SerializeField] internal int[] collarSlots;
+        [SerializeField] internal Image[] collarTracks;
+        [SerializeField] internal Image[] collarFills;
+        [SerializeField] internal TMP_Text[] collarCounts;
+
+        // THE STATE IS THE SPRITE, not a tint. Six baked variants, wired at
+        // build time because they live under Art/ rather than Resources/ --
+        // the same arrangement MapScreen's node icons use. Nothing here
+        // multiplies a colour into a stone: "ash" is a different material, and
+        // reaching it by turning an orange stone down produced a brown one.
+        [SerializeField] internal Sprite orbUnlitSprite;
+        [SerializeField] internal Sprite orbLitSprite;
+        [SerializeField] internal Sprite orbAshSprite;
+        [SerializeField] internal Sprite orbAshUnauthoredSprite;
+        [SerializeField] internal Sprite orbReachableSprite;
+        [SerializeField] internal Sprite orbCostlySprite;
+
         [SerializeField] internal TMP_Text characterName;
         [SerializeField] internal TMP_Text pathName;
         [SerializeField] internal TMP_Text emberCount;
-        [SerializeField] internal GameObject detailPlate;
         [SerializeField] internal TMP_Text detailName;
         [SerializeField] internal TMP_Text detailBody;
+        [SerializeField] internal TMP_Text panelKicker;
+        [SerializeField] internal TMP_Text panelPrice;
+        [SerializeField] internal TMP_Text panelRefusal;
+        [SerializeField] internal RectTransform panelMeterFill;
         [SerializeField] internal TMP_Text investLabel;
         [SerializeField] internal Button investButton;
 
+        // The backdrop's own layers, animated in Update rather than by a
+        // component each: they are pure functions of time with no state worth
+        // owning, and fifteen MonoBehaviours to say so would cost more than the
+        // arithmetic does.
+        [SerializeField] internal RectTransform[] starFields;
+        [SerializeField] internal RectTransform[] cloudWashes;
+        [SerializeField] internal Image[] cloudImages;
+        [SerializeField] internal RectTransform[] dustMotes;
+        [SerializeField] internal Image[] dustImages;
+        [SerializeField] internal RectTransform[] shootingStars;
+        [SerializeField] internal Image[] shootingStarImages;
+
         // Level 20 of the reward track. See Respec().
         [SerializeField] internal Button respecButton;
+        [SerializeField] internal GameObject respecDialog;
+        [SerializeField] internal TMP_Text respecDialogBody;
+        [SerializeField] internal Button respecConfirmButton;
+        [SerializeField] internal Button respecCancelButton;
         [SerializeField] internal Button prevPathButton;
         [SerializeField] internal Button nextPathButton;
         [SerializeField] internal Button prevCharacterButton;
         [SerializeField] internal Button nextCharacterButton;
         [SerializeField] internal Button backButton;
 
-        // Orb states, graded so the tree reads at a glance rather than needing
-        // to be studied: yours is bright, reachable is warm, everything else is
-        // barely there.
-        private static readonly Color OrbTaken = new Color(1f, 0.85f, 0.55f, 1f);
-        private static readonly Color OrbReachable = new Color(0.95f, 0.78f, 0.45f, 0.75f);
-        private static readonly Color OrbDistant = new Color(0.45f, 0.40f, 0.58f, 0.5f);
+        // ---- the palette -----------------------------------------------------
+        //
+        // Every value here is the handoff's, and the one that looks arbitrary
+        // is the one that matters: the ring at 40% while a stone is merely
+        // affordable-later is what stops twenty rings pulsing at once.
         private static readonly Color GlowTaken = new Color(1f, 0.80f, 0.45f, 0.55f);
-        private static readonly Color GlowReachable = new Color(1f, 0.80f, 0.45f, 0.16f);
         private static readonly Color GlowOff = new Color(1f, 0.80f, 0.45f, 0f);
+
+        private static readonly Color RingReady = new Color(0.906f, 0.698f, 0.361f, 1f);
+        private static readonly Color RingCostly = new Color(0.906f, 0.698f, 0.361f, 0.4f);
+        private static readonly Color RingOff = new Color(0.906f, 0.698f, 0.361f, 0f);
+
+        private static readonly Color CoreLit = new Color(1f, 0.86f, 0.62f, 1f);
+        private static readonly Color CoreOff = new Color(1f, 0.86f, 0.62f, 0f);
+        private static readonly Color AuraLit = new Color(0.949f, 0.686f, 0.298f, 0.55f);
+        private static readonly Color AuraOff = new Color(0.949f, 0.686f, 0.298f, 0f);
+
+        // AN UNAUTHORED PATH IS DRAWN IN ITS OWN GREY. uGUI has no grayscale
+        // filter, so the stones for it are a separately baked ash variant and
+        // this only carries the 55% the design asks for.
+        private static readonly Color UnauthoredTint = new Color(1f, 1f, 1f, 0.55f);
+
+        private static readonly Color LabelLit = new Color(0.929f, 0.902f, 1f, 1f);
+        private static readonly Color LabelReady = new Color(0.949f, 0.859f, 0.620f, 1f);
+        private static readonly Color LabelQuiet = new Color(0.557f, 0.498f, 0.690f, 1f);
+        private static readonly Color PriceReady = new Color(0.949f, 0.859f, 0.620f, 1f);
+        private static readonly Color PriceShort = new Color(0.761f, 0.376f, 0.227f, 1f);
+
+        private static readonly Color CollarFill = new Color(0.906f, 0.698f, 0.361f, 0.85f);
+        private static readonly Color CollarPassed = new Color(0.949f, 0.859f, 0.620f, 0.28f);
+        private static readonly Color CollarTrack = new Color(0.443f, 0.376f, 0.588f, 0.55f);
+        private static readonly Color CollarOff = new Color(0.443f, 0.376f, 0.588f, 0f);
 
         private int _path;
         private int _character;
@@ -73,6 +142,12 @@ namespace PrincesPalace
         private void Start()
         {
             Wire();
+
+            // Closed on arrival. The screen builds it Inactive, but a scene
+            // re-entered mid-session arrives with whatever the last frame left,
+            // and a confirmation dialog is the worst thing to inherit.
+            CloseRespec();
+
             Refresh();
         }
 
@@ -92,7 +167,9 @@ namespace PrincesPalace
             prevCharacterButton.onClick.AddListener(() => StepCharacter(-1));
             nextCharacterButton.onClick.AddListener(() => StepCharacter(1));
             investButton.onClick.AddListener(Kindle);
-            if (respecButton != null) respecButton.onClick.AddListener(Respec);
+            if (respecButton != null) respecButton.onClick.AddListener(OpenRespec);
+            if (respecConfirmButton != null) respecConfirmButton.onClick.AddListener(ConfirmRespec);
+            if (respecCancelButton != null) respecCancelButton.onClick.AddListener(CloseRespec);
             backButton.onClick.AddListener(() => Navigation.Go(Navigation.Hub));
         }
 
@@ -128,6 +205,7 @@ namespace PrincesPalace
             _sliding = true;
 
             _selectedSlot = -1;
+            AimPushIn();
             Refresh();
         }
 
@@ -141,6 +219,7 @@ namespace PrincesPalace
             // the selection cannot survive the switch -- it would describe an
             // orb that is no longer under the cursor.
             _selectedSlot = -1;
+            AimPushIn();
             Refresh();
         }
 
@@ -155,6 +234,7 @@ namespace PrincesPalace
             if (path != _path) return;
 
             _selectedSlot = slot;
+            AimPushIn();
             Refresh();
         }
 
@@ -198,7 +278,8 @@ namespace PrincesPalace
                     talent.id,
                     talent.displayName,
                     talent.description,
-                    ContentDatabase.OrbCost(talent)));
+                    ContentDatabase.OrbCost(talent),
+                    talent.minSpent));
             }
 
             return tree;
@@ -223,15 +304,12 @@ namespace PrincesPalace
             character.unlockedTalentIds.Add(taken.Id);
             character.embers -= taken.Cost;
 
-            // PLAYED BEFORE THE REPAINT, and that ordering is the whole of it.
-            //
-            // Refresh below calls EnsureShown on every taken orb, which snaps a
-            // reveal straight to full size. Starting the animation first means
-            // this orb is already mid-Play by the time that runs, and
-            // EnsureShown deliberately does nothing to a reveal in flight --
-            // so the one node the player just kindled animates and the twenty
-            // they kindled earlier do not.
-            PlayRevealFor(_path, _selectedSlot);
+            // STARTED BEFORE THE REPAINT. Refresh below paints this stone lit,
+            // and the beat is what carries it from ash to lit -- so the beat
+            // has to already own the stone by the time the paint lands, or the
+            // stone snaps and the beat plays over the top of an event that
+            // already happened.
+            BeginKindling(_path, _selectedSlot);
 
             // Written immediately. A talent tree that loses a kindled orb to a
             // crash is the single least forgivable thing this screen could do.
@@ -242,6 +320,33 @@ namespace PrincesPalace
         // Gives back everything this character has committed, so they can
         // spend it again. Level 20 of the reward track.
         //
+        // IT ASKS FIRST NOW. One press used to clear all three constellations
+        // outright, with nothing between the pointer and twenty-one dark
+        // stones. The handoff settled both halves: the respec stays FREE --
+        // charging for it taxes experimenting with a system whose whole point
+        // is experimenting -- and it confirms.
+        private void OpenRespec()
+        {
+            var character = Current;
+            if (character == null || respecDialog == null) return;
+            if (!RewardTrack.HasUnlocked(TrackReward.Respec, character.level)) return;
+
+            int refund = ContentDatabase.SpentBy(character);
+            int stars = character.unlockedTalentIds?.Count ?? 0;
+
+            if (respecDialogBody != null)
+            {
+                respecDialogBody.SetContent(UiStrings.TalentRespecPrompt.Format(stars, refund));
+            }
+
+            respecDialog.SetShown(true);
+        }
+
+        private void CloseRespec()
+        {
+            if (respecDialog != null) respecDialog.SetShown(false);
+        }
+
         // BOTH CURRENCIES, because there are two: embers committed to orbs, and
         // stat points placed into ability scores. Character.Respec owns the
         // refund itself -- including the rule that event-taught skills are NOT
@@ -255,22 +360,28 @@ namespace PrincesPalace
         // invested block is always zero. Written now rather than later because
         // the day a "+" appears on the dossier, a respec that quietly forgot
         // half its job is a bug nobody would look for.
-        private void Respec()
+        private void ConfirmRespec()
         {
             var character = Current;
             if (character == null) return;
 
-            // Earned, not free-for-all. The button is hidden below this level
-            // too -- checked in both places because a hidden button is a
-            // presentation fact and this is the rule.
+            // Earned, not free-for-all. Checked here as well as on the button,
+            // because a hidden button is a presentation fact and this is the
+            // rule.
             if (!RewardTrack.HasUnlocked(TrackReward.Respec, character.level)) return;
 
             character.Respec(ContentDatabase.SpentBy(character));
+
+            // Every resting loop belonged to stones that are now ash, and the
+            // selection describes one of them. Both go with the embers.
+            _selectedSlot = -1;
+            _kindlingSlot = -1;
 
             // Written immediately, for the same reason Kindle writes
             // immediately: a tree that loses its state to a crash is the least
             // forgivable thing this screen can do, and that cuts both ways.
             SaveSlotManager.SaveCurrent();
+            CloseRespec();
             Refresh();
         }
 
@@ -282,7 +393,6 @@ namespace PrincesPalace
             if (character == null) return;
 
             characterName.SetContent(character.definitionId);
-            emberCount.Set(UiStrings.TalentEmbers, Embers);
 
             // HIDDEN until earned, not greyed out -- the same call the
             // Reckoning's reroll makes. A disabled button for a reward the
@@ -308,6 +418,7 @@ namespace PrincesPalace
 
             PaintOrbs(unlocked);
             PaintDetail(unlocked);
+            PaintMeter(character);
 
             // HIDDEN, not dimmed, when there is nobody to page to.
             //
@@ -336,7 +447,39 @@ namespace PrincesPalace
             {
                 nextCharacterButton.gameObject.SetActive(canPage);
             }
+
+            // THE ARROWS FIND THE ENDS. Paging is a clamped line, not a ring,
+            // so an arrow with nowhere to go says where the player is standing.
+            prevPathButton.interactable = ConstellationLayout.CanStep(_path, -1, TalentPage.PathCount);
+            nextPathButton.interactable = ConstellationLayout.CanStep(_path, 1, TalentPage.PathCount);
         }
+
+        // ---- the six states --------------------------------------------------
+        //
+        // The domain answers with six refusals and the design names six states,
+        // and they line up one for one. Nothing here tints a stone into another
+        // state: the variants are baked, so Image.color only ever multiplies
+        // white, and the one exception says why in its own comment.
+        private Sprite SpriteFor(TalentPage.Refusal refusal)
+        {
+            switch (refusal)
+            {
+                case TalentPage.Refusal.AlreadyTaken: return orbLitSprite;
+                case TalentPage.Refusal.None: return orbReachableSprite;
+                case TalentPage.Refusal.NotEnoughEmbers: return orbCostlySprite;
+                case TalentPage.Refusal.NotAuthored: return orbAshUnauthoredSprite;
+
+                // GATED AND LOCKED ARE THE SAME MATERIAL. A stone whose path is
+                // short of its gate and one whose parent is dark are both ash,
+                // and neither carries a price -- in neither case is the price
+                // what is in the way. What separates them is the collar, which
+                // only the gated pair wears.
+                default: return orbAshSprite;
+            }
+        }
+
+        private static bool Has<T>(T[] array, int index) where T : Object =>
+            array != null && index >= 0 && index < array.Length && array[index] != null;
 
         private void PaintOrbs(HashSet<string> unlocked)
         {
@@ -344,6 +487,8 @@ namespace PrincesPalace
 
             for (int path = 0; path < TalentPage.PathCount; path++)
             {
+                int spent = TalentPage.SpentOn(tree, path, unlocked);
+
                 for (int slot = 0; slot < TalentScreen.OrbCount; slot++)
                 {
                     int index = TalentScreen.OrbIndex(path, slot);
@@ -352,44 +497,166 @@ namespace PrincesPalace
                     var refusal = TalentPage.Evaluate(tree, path, slot, unlocked, Embers);
                     bool taken = refusal == TalentPage.Refusal.AlreadyTaken;
                     bool reachable = refusal == TalentPage.Refusal.None;
+                    bool costly = refusal == TalentPage.Refusal.NotEnoughEmbers;
+                    bool unauthored = refusal == TalentPage.Refusal.NotAuthored;
 
-                    // AN ORB WITH NOTHING BEHIND IT IS NOT DRAWN. The sheep's
-                    // third path is entirely unauthored, so this is 21 real
-                    // slots rather than a defensive branch -- and an orb that
-                    // can never be taken is worse than an absent one, because
-                    // the player spends the screen working out why.
-                    bool authored = refusal != TalentPage.Refusal.NotAuthored;
-                    orbs[index].SetShown(authored);
-                    if (!authored) continue;
+                    // AN UNAUTHORED PATH KEEPS ITS SHAPE. It used to be hidden
+                    // outright, which left the third constellation as an empty
+                    // sky; the design draws the spire in full-grey stones at
+                    // 55% and says so in the panel. The shape ships even though
+                    // the content does not -- what a player learns from it is
+                    // that there IS a third path.
+                    orbs[index].SetShown(true);
 
                     var image = orbs[index].targetGraphic as Image;
-                    if (image != null) image.color = taken ? OrbTaken : reachable ? OrbReachable : OrbDistant;
-
-                    if (index < orbGlows.Length && orbGlows[index] != null)
+                    if (image != null)
                     {
-                        orbGlows[index].color = taken ? GlowTaken : reachable ? GlowReachable : GlowOff;
+                        var sprite = SpriteFor(refusal);
+                        if (sprite != null) image.sprite = sprite;
+
+                        // The one tint, and it is an opacity rather than a hue:
+                        // the ash variant is already grey, and this is the 55%
+                        // that separates "not authored" from "not yet".
+                        image.color = unauthored ? UnauthoredTint : Color.white;
                     }
 
+                    // The warm drop-shadow, and only under a kindled stone.
+                    if (Has(orbGlows, index)) orbGlows[index].color = taken ? GlowTaken : GlowOff;
+
+                    // THE RING IS AN INVITATION and it is the only pulse on the
+                    // screen, so nothing else may wear one: full accent while a
+                    // stone can be bought, 40% while it is affordable-later,
+                    // nothing at all otherwise.
+                    if (Has(orbRings, index))
+                    {
+                        orbRings[index].color = reachable ? RingReady : costly ? RingCostly : RingOff;
+                    }
+
+                    // The molten core, and the aura around it. Painted here
+                    // only to switch them on and off -- the flicker itself is a
+                    // resting loop, and a loop this reset would restart every
+                    // time the player moved the selection.
+                    if (Has(orbCores, index)) orbCores[index].color = taken ? CoreLit : CoreOff;
+                    if (Has(orbAuras, index)) orbAuras[index].color = taken ? AuraLit : AuraOff;
+
                     // Everything stays PRESSABLE, including what cannot be
-                    // afforded: pressing an orb selects it and the detail plate
-                    // is where the refusal is explained. An uninteractable orb
+                    // afforded: pressing a stone selects it and the panel is
+                    // where the refusal is explained. An uninteractable stone
                     // can only say "no" by doing nothing.
                     orbs[index].interactable = path == _path;
 
-                    // Idempotent, and it must stay that way: this runs on every
-                    // redraw -- a path change, a different character, selecting
-                    // another orb -- and a reveal that restarted here would
-                    // replay the whole tree's worth of flourishes every time
-                    // the player moved the selection.
-                    if (orbReveals != null && index < orbReveals.Length && orbReveals[index] != null)
-                    {
-                        if (taken) orbReveals[index].EnsureShown();
-                        else orbReveals[index].HideInstantly();
-                    }
+                    PaintOrbLabels(index, tree, path, slot, refusal);
                 }
+
+                PaintCollars(tree, path, spent);
             }
 
             PaintEdges(unlocked);
+        }
+
+        // A NAME UNDER EVERY STONE, A PRICE UNDER ALMOST NONE.
+        //
+        // The design's rule, and the reason for it: labelling all 21 prices
+        // turned the sky back into a spreadsheet. A number is drawn only where
+        // it changes a decision -- a stone that can be bought, one that is
+        // short of embers, or the one the player has selected.
+        private void PaintOrbLabels(int index, TalentTree tree, int path, int slot,
+                                    TalentPage.Refusal refusal)
+        {
+            var here = tree.At(path, slot);
+
+            if (Has(orbLabels, index))
+            {
+                orbLabels[index].SetContent(here.Exists ? here.Name : string.Empty);
+                orbLabels[index].color =
+                    refusal == TalentPage.Refusal.AlreadyTaken ? LabelLit
+                    : refusal == TalentPage.Refusal.None ? LabelReady
+                    : LabelQuiet;
+            }
+
+            if (!Has(orbPrices, index)) return;
+
+            bool selected = path == _path && slot == _selectedSlot;
+            bool shows = refusal == TalentPage.Refusal.None
+                         || refusal == TalentPage.Refusal.NotEnoughEmbers
+                         || selected;
+
+            // A FREE SLOT SAYS NOTHING rather than showing a nought. The
+            // convergence and the capstone cost zero embers and are gated
+            // instead; reaching them is the price, and "0" would read as a
+            // bargain rather than as a different kind of cost.
+            if (!shows || refusal == TalentPage.Refusal.AlreadyTaken || here.Cost <= 0)
+            {
+                orbPrices[index].SetContent(string.Empty);
+                return;
+            }
+
+            orbPrices[index].SetContent(here.Cost.ToString());
+            orbPrices[index].color =
+                refusal == TalentPage.Refusal.NotEnoughEmbers ? PriceShort : PriceReady;
+        }
+
+        // THE COLLAR IS A MEASURED ARC, DRAWN IN EVERY STATE.
+        //
+        // uGUI's Image.type Filled on Radial360 IS the design's conic gradient:
+        // an arc from twelve o'clock filled to spent/required. It needs no
+        // shader to say, and it STEPS rather than tweens -- in the same frame
+        // as the stone it belongs to, so the two read as one event rather than
+        // as a consequence arriving late.
+        //
+        // Drawn even where the stone is unreachable, which is the whole point:
+        // a player reads how far a path is from its gate long before the shape
+        // of the tree lets them buy anything up there.
+        private void PaintCollars(TalentTree tree, int path, int spent)
+        {
+            if (collarSlots == null) return;
+
+            for (int i = 0; i < collarSlots.Length; i++)
+            {
+                int index = collarSlots[i];
+                if (TalentScreen.PathOf(index) != path) continue;
+
+                var here = tree.At(path, TalentScreen.SlotOf(index));
+                int required = here.MinSpent;
+
+                // NO GATE, NO COLLAR, AND THAT INCLUDES AN UNWRITTEN PATH.
+                //
+                // A slot with nothing authored behind it answers MinSpent 0
+                // like any ungated stone -- which drew a full, bright, met
+                // collar around both singles of the third constellation: a ring
+                // saying "gate passed" on a path that has no gate and no
+                // content, and the brightest thing on a screen that is supposed
+                // to read as unwritten.
+                bool gated = here.Exists && required > 0;
+                bool met = gated && spent >= required;
+
+                if (Has(collarFills, i))
+                {
+                    var fill = collarFills[i];
+                    fill.type = Image.Type.Filled;
+                    fill.fillMethod = Image.FillMethod.Radial360;
+                    fill.fillOrigin = (int)Image.Origin360.Top;
+                    fill.fillClockwise = true;
+                    fill.fillAmount = gated ? Mathf.Clamp01(spent / (float)required) : 0f;
+
+                    // WHEN THE GATE IS MET THE RUN FINISHES PALE and the track
+                    // behind it goes: there is no longer a distance to read,
+                    // and a full bright ring is a ring still asking for
+                    // something. Pale rather than gone, because the collar is
+                    // also how a player remembers WHICH two stones were gated.
+                    fill.color = !gated ? CollarOff : met ? CollarPassed : CollarFill;
+                }
+
+                if (Has(collarTracks, i)) collarTracks[i].color = gated && !met ? CollarTrack : CollarOff;
+
+                if (Has(collarCounts, i))
+                {
+                    // Blanked once met. "9/9" is a sum with nothing left to say,
+                    // and it was landing on top of the label of the stone below.
+                    collarCounts[i].SetContent(gated && !met ? spent + "/" + required : string.Empty);
+                    collarCounts[i].color = LabelQuiet;
+                }
+            }
         }
 
         // THE PATH BEHIND YOU LIGHTS UP.
@@ -452,63 +719,99 @@ namespace PrincesPalace
             }
         }
 
-        private void PlayRevealFor(int path, int slot)
+        // ---- the panel -------------------------------------------------------
+        //
+        // A COLUMN THAT IS ALWAYS THERE. The plate it replaced appeared and
+        // disappeared with the selection, which made the screen change shape as
+        // the pointer moved; this one is furniture, and says what to do with it
+        // when nothing is picked.
+        private void PaintDetail(HashSet<string> unlocked)
         {
-            if (orbReveals == null) return;
+            var tree = Tree;
 
-            int index = TalentScreen.OrbIndex(path, slot);
-            if (index < 0 || index >= orbReveals.Length) return;
-
-            if (orbReveals[index] != null) orbReveals[index].Play();
-        }
-
-                private void PaintDetail(HashSet<string> unlocked)
-        {
             if (_selectedSlot < 0)
             {
-                detailName.SetContent("");
-                detailBody.SetContent("");
-                // The plate goes with them. Blanking the text and leaving the
-                // slab behind is how the screen ended up opening onto an empty
-                // coloured rectangle -- the plate frames an answer, and with no
-                // orb picked there is no question.
-                detailPlate.SetShown(false);
+                detailName.SetContent(string.Empty);
+                panelKicker.SetContent(UiStrings.TalentPickPrompt.Template);
+                panelPrice.SetContent(string.Empty);
+                detailBody.SetContent(UiStrings.TalentPickBody.Template);
+                panelRefusal.SetContent(string.Empty);
                 investButton.SetShown(false);
                 return;
             }
 
-            var tree = Tree;
             var here = tree.At(_path, _selectedSlot);
             var refusal = TalentPage.Evaluate(tree, _path, _selectedSlot, unlocked, Embers);
 
-            // Nothing authored here means nothing to say about it. The orb is
-            // not drawn either, so this is only reachable by a selection that
-            // survived a path change.
+            // AN UNAUTHORED SLOT STILL ANSWERS, because its stone is drawn now
+            // and a stone you can press has to say something back. What it says
+            // is that the path exists and is not written yet -- which is true,
+            // and better than a panel that goes blank for no stated reason.
             if (refusal == TalentPage.Refusal.NotAuthored)
             {
-                detailPlate.SetShown(false);
+                detailName.SetContent(UiStrings.TalentUnwrittenName.Template);
+                panelKicker.SetContent(KickerFor(refusal));
+                panelPrice.SetContent(string.Empty);
+                detailBody.SetContent(UiStrings.TalentUnwrittenBody.Template);
+                panelRefusal.SetContent(string.Empty);
                 investButton.SetShown(false);
                 return;
             }
 
-            detailPlate.SetShown(true);
             investButton.SetShown(true);
 
             // THE TALENT'S OWN NAME AND WORDS. This printed
             // TalentSkeleton.Kind -- literally "NORMAL", "MERGE" or "CAP" --
             // because the screen had no way to reach the content at all.
             detailName.SetContent(here.Name);
+            detailBody.SetContent(here.Description);
 
-            // The description, and the reason it cannot be taken underneath it
-            // when there is one. A refusal replacing the description would
-            // leave the player unable to read what they are being refused.
-            string explain = Explain(refusal);
-            detailBody.SetContent(string.IsNullOrEmpty(explain)
-                ? here.Description
-                : here.Description + "\n" + explain);
+            // THE KICKER IS THE STATE IN WORDS. The stone's own material says
+            // it too, but a material is a thing you learn and a word is a thing
+            // you read -- and on the first visit nothing has been learned yet.
+            panelKicker.SetContent(KickerFor(refusal));
+
+            // The two free orbs price themselves in distance rather than in
+            // embers, so they say the gate instead of a number.
+            panelPrice.SetContent(
+                here.Cost > 0 ? UiStrings.TalentPriceEmbers.Format(here.Cost)
+                : here.MinSpent > 0 ? UiStrings.TalentPriceGate.Format(here.MinSpent)
+                : string.Empty);
+
+            // THE REFUSAL, on its own line and in its own colour. A stone that
+            // cannot be bought says why here, rather than by doing nothing when
+            // it is pressed. It sits BESIDE the description rather than over
+            // it: being refused and being unable to read what you were refused
+            // is two problems.
+            panelRefusal.SetContent(Explain(refusal));
 
             investButton.interactable = refusal == TalentPage.Refusal.None;
             investLabel.Set(LabelFor(refusal));
+        }
+
+        // The committed meter, drawn as a length because a proportion is a
+        // length and a pair of numbers is not.
+        //
+        // AGAINST WHAT HAS BEEN EARNED, NOT AGAINST A CAP. The design measures
+        // this against a 30-ember ceiling; there is no such ceiling in this
+        // game -- embers are earned per character with no limit -- so a bar
+        // drawn against 30 would fill and then keep being full, which says
+        // something untrue about a currency you can still gather. Committed
+        // over committed-plus-held is the same shape and is a real quantity:
+        // empty when nothing is spent, full when everything is.
+        private void PaintMeter(Character character)
+        {
+            emberCount.Set(UiStrings.TalentEmbers, Embers);
+
+            if (panelMeterFill == null) return;
+
+            int spent = ContentDatabase.SpentBy(character);
+            int total = spent + Embers;
+            float fraction = total <= 0 ? 0f : Mathf.Clamp01(spent / (float)total);
+
+            panelMeterFill.sizeDelta = new Vector2(
+                ConstellationLayout.PanelInnerWidth * fraction,
+                panelMeterFill.sizeDelta.y);
         }
 
         // The refusal the player is told about is the FIRST one that applies,
@@ -519,10 +822,27 @@ namespace PrincesPalace
         {
             switch (refusal)
             {
-                case TalentPage.Refusal.AlreadyTaken: return "Already kindled.";
-                case TalentPage.Refusal.PrerequisiteMissing: return "Kindle the star before it first.";
-                case TalentPage.Refusal.NotEnoughEmbers: return "Not enough Embers.";
-                default: return "Ready to kindle.";
+                case TalentPage.Refusal.PrerequisiteMissing:
+                    return UiStrings.TalentWhyLocked.Template;
+                case TalentPage.Refusal.Gated:
+                    return UiStrings.TalentWhyGated.Template;
+                case TalentPage.Refusal.NotEnoughEmbers:
+                    return UiStrings.TalentWhyPoor.Template;
+                default:
+                    return string.Empty;
+            }
+        }
+
+        private static string KickerFor(TalentPage.Refusal refusal)
+        {
+            switch (refusal)
+            {
+                case TalentPage.Refusal.AlreadyTaken: return UiStrings.TalentKickerLit.Template;
+                case TalentPage.Refusal.None: return UiStrings.TalentKickerReady.Template;
+                case TalentPage.Refusal.NotEnoughEmbers: return UiStrings.TalentKickerCostly.Template;
+                case TalentPage.Refusal.Gated: return UiStrings.TalentKickerGated.Template;
+                case TalentPage.Refusal.NotAuthored: return UiStrings.TalentKickerUnwritten.Template;
+                default: return UiStrings.TalentKickerLocked.Template;
             }
         }
 
@@ -532,33 +852,10 @@ namespace PrincesPalace
             {
                 case TalentPage.Refusal.AlreadyTaken: return UiStrings.TalentTaken;
                 case TalentPage.Refusal.PrerequisiteMissing: return UiStrings.TalentLocked;
+                case TalentPage.Refusal.Gated: return UiStrings.TalentLocked;
                 case TalentPage.Refusal.NotEnoughEmbers: return UiStrings.TalentNoEmbers;
                 default: return UiStrings.TalentInvest;
             }
         }
-
-        // ---- the slide -------------------------------------------------------
-
-        private void Update()
-        {
-            if (sky == null) return;
-
-            if (!_sliding)
-            {
-                sky.anchoredPosition = new Vector2(SettledX(), sky.anchoredPosition.y);
-                return;
-            }
-
-            _slideElapsed += Time.deltaTime;
-            float progress = ConstellationLayout.SlideProgress(_slideElapsed);
-
-            sky.anchoredPosition = new Vector2(
-                ConstellationLayout.SlideOffset(_slideFrom, _path, progress),
-                sky.anchoredPosition.y);
-
-            if (progress >= 1f) _sliding = false;
-        }
-
-        private float SettledX() => ConstellationLayout.SlideOffset(_path, _path, 1f);
     }
 }

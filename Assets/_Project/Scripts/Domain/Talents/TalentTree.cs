@@ -15,12 +15,23 @@ namespace PrincesPalace.Domain.Talents
         public readonly string Description;
         public readonly int Cost;
 
-        public TalentSlot(string id, string name, string description, int cost)
+        // How much must already be spent ON THIS PATH before the slot opens --
+        // 9 at the convergence, 20 at the capstone, 0 everywhere else.
+        //
+        // Read twice: TalentPage.Evaluate refuses a slot whose path is short of
+        // it (Refusal.Gated), and the collar drawn around the two gated stones
+        // shows how far off it is. Carrying it on the slot rather than looking
+        // it up per-check is what lets Domain answer the question at all --
+        // ContentDatabase is on the far side of the layer boundary.
+        public readonly int MinSpent;
+
+        public TalentSlot(string id, string name, string description, int cost, int minSpent = 0)
         {
             Id = id;
             Name = name;
             Description = description;
             Cost = cost;
+            MinSpent = minSpent;
         }
 
         // A slot the content does not fill. Real: the sheep's third path is

@@ -64,6 +64,7 @@ public static class ProceduralSpriteBaker
         BakeBar();
         BakeScrim();
         BakeEmber();
+        BakeConstellation();
 
         AssetDatabase.SaveAssets();
         Debug.Log("BUILD-COMPLETE: ProceduralSpriteBaker");
@@ -384,6 +385,161 @@ public static class ProceduralSpriteBaker
             Mathf.Exp(-(nx * nx) / (0.42f * 0.42f)));
 
         BakeTrackGrounds();
+    }
+
+    // ---- the talent sky ---------------------------------------------------------
+    //
+    // The design's backdrop is nine CSS-animated layers. Three of them are
+    // shapes this baker can make once and the screen can then simply MOVE:
+    // star fields, a nebula wash and a vignette. What the design animates as a
+    // filter -- the hue rotation -- was cut in its own handoff (§12), so
+    // nothing here needs a shader.
+    //
+    // FOUR STAR FIELDS AS FOUR TEXTURES, not seventy-eight nodes. The design
+    // authors 28 + 20 + 18 + 12 individual stars because a div is what it has;
+    // a baked field pans and twinkles as one Image and reads identically at
+    // 1px per star. The property the design actually cares about -- that the
+    // fields never synchronise -- survives, because it lives in the periods
+    // rather than in the stars.
+    private static void BakeConstellation()
+    {
+        // Deterministic from an index: the baker must produce the same bytes
+        // every run or WritePng's compare-before-write is defeated.
+        BakeStarField("star_field_near", 512, count: 28, seed: 17, maxRadius: 1.6f, brightness: 1.0f);
+        BakeStarField("star_field_mid", 512, count: 20, seed: 41, maxRadius: 1.1f, brightness: 0.85f);
+        BakeStarField("star_field_mid_b", 512, count: 18, seed: 73, maxRadius: 1.1f, brightness: 0.8f);
+        BakeStarField("star_field_far", 512, count: 12, seed: 109, maxRadius: 0.9f, brightness: 0.34f);
+
+        // A NEBULA WASH: soft overlapping blooms rather than one radial. A
+        // single gradient drifting reads as a spotlight moving; several at
+        // different scales read as cloud.
+        BakeGlow("cloud_wash", 256, (nx, ny) =>
+        {
+            float value = 0f;
+            for (int i = 0; i < 5; i++)
+            {
+                float cx = Mathf.Sin(i * 12.9898f) * 0.62f;
+                float cy = Mathf.Cos(i * 78.233f) * 0.55f;
+                float spread = Mathf.Lerp(0.34f, 0.72f, Frac(i * 0.6180f));
+
+                float dx = nx - cx;
+                float dy = ny - cy;
+                value += Mathf.Exp(-(dx * dx + dy * dy) / (spread * spread)) * 0.5f;
+            }
+
+            // Gone by the edge whatever the blooms did, so the layer has no
+            // rectangle of its own when it drifts.
+            float edge = 1f - Smoothstep(Mathf.Clamp01((Mathf.Max(Mathf.Abs(nx), Mathf.Abs(ny)) - 0.55f) / 0.45f));
+            return Mathf.Clamp01(value) * edge;
+        });
+
+        // THE VIGNETTE, as an inverse of everything else here: opaque at the
+        // frame and nothing in the middle. The design states it as an inset
+        // shadow, which uGUI has no equivalent of -- this is that shadow drawn
+        // as a sprite and stretched over the stage.
+        BakeGlow("sky_vignette", 256, (nx, ny) =>
+        {
+            float d = Mathf.Sqrt(nx * nx * 0.78f + ny * ny);
+            return Smoothstep(Mathf.Clamp01((d - 0.55f) / 0.62f)) * 0.92f;
+        });
+
+        // THE GATE COLLAR, as a ring thick enough to read a fill along. Drawn
+        // with Image.type Filled / Radial360 by the controller, which is uGUI's
+        // own conic gradient -- the design's arc is exactly a radial fill of a
+        // ring, and needs no shader to say so.
+        //
+        // A NOTCH AT TWELVE O'CLOCK, because at 7/9 a plain conic looked like a
+        // closed circle. The gap is where the count starts, so the arc has a
+        // beginning as well as an end.
+        Bake("collar_ring", dist =>
+        {
+            const float Radius = 0.86f;
+            const float HalfWidth = 0.055f;
+
+            return 1f - Smoothstep(Mathf.Clamp01(Mathf.Abs(dist - Radius) / HalfWidth));
+        });
+
+        BakeGlow("collar_notch", 64, (nx, ny) =>
+        {
+            // A wedge at the top, cut out of the collar by drawing over it in
+            // the panel's own ground.
+            float radius = Mathf.Sqrt(nx * nx + ny * ny);
+            if (radius < 0.6f || radius > 1f) return 0f;
+
+            return Mathf.Abs(nx) < 0.055f && ny > 0f ? 1f : 0f;
+        });
+
+        // A LIT STONE'S AURA: two soft arcs in a band, rotated by the
+        // controller. It never changes size or brightness -- motion without
+        // pulsing is the difference between "this is alive" and "you may press
+        // this", and the pulse is reserved for the reachable ring.
+        BakeGlow("orb_aura", 256, (nx, ny) =>
+        {
+            float radius = Mathf.Sqrt(nx * nx + ny * ny);
+            float band = 1f - Smoothstep(Mathf.Clamp01(Mathf.Abs(radius - 0.84f) / 0.16f));
+            if (band <= 0f) return 0f;
+
+            // Two arcs, opposite each other, each feathered along its own
+            // length so neither has an end.
+            float turn = (Mathf.Atan2(ny, nx) / (Mathf.PI * 2f) + 1f) % 1f;
+            float within = (turn * 2f) % 1f;
+            float arc = Mathf.Exp(-Mathf.Pow((within - 0.5f) / 0.26f, 2f));
+
+            return band * arc;
+        });
+    }
+
+    // One field of stars, placed deterministically and drawn with a soft edge
+    // so a 1px star does not alias into a square when the field pans.
+    private static void BakeStarField(string name, int size, int count, int seed,
+                                      float maxRadius, float brightness)
+    {
+        string path = $"{GeneratedDir}/{name}.png";
+
+        var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        var pixels = new Color32[size * size];
+
+        var xs = new float[count];
+        var ys = new float[count];
+        var rs = new float[count];
+        var bs = new float[count];
+
+        for (int i = 0; i < count; i++)
+        {
+            // Hashed rather than Random: same bytes every run.
+            xs[i] = Frac(Mathf.Sin((i + seed) * 12.9898f) * 43758.5453f) * size;
+            ys[i] = Frac(Mathf.Sin((i + seed) * 78.233f) * 12345.6789f) * size;
+            rs[i] = Mathf.Lerp(0.55f, maxRadius, Frac((i + seed) * 0.6180f));
+            bs[i] = Mathf.Lerp(0.5f, 1f, Frac((i + seed) * 0.3247f)) * brightness;
+        }
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float value = 0f;
+
+                for (int i = 0; i < count; i++)
+                {
+                    float dx = x + 0.5f - xs[i];
+                    float dy = y + 0.5f - ys[i];
+                    float d2 = dx * dx + dy * dy;
+
+                    // Cheap reject: a star reaches about three radii.
+                    float reach = rs[i] * 3f;
+                    if (d2 > reach * reach) continue;
+
+                    value += Mathf.Exp(-d2 / (rs[i] * rs[i])) * bs[i];
+                }
+
+                byte a = (byte)Mathf.RoundToInt(Mathf.Clamp01(value) * 255f);
+                pixels[y * size + x] = new Color32(255, 255, 255, a);
+            }
+        }
+
+        texture.SetPixels32(pixels);
+        texture.Apply();
+        WritePng(path, texture);
     }
 
     // THE FOUR GROUNDS THE TRACK SITS ON, all of them gradients and all of them

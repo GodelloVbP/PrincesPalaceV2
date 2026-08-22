@@ -44,6 +44,18 @@ namespace PrincesPalace.Domain.Talents
 
             AlreadyTaken,
             PrerequisiteMissing,
+
+            // The path has not been spent up to this slot's gate. Only the
+            // convergence and the capstone carry one -- 9 and 20 -- and they
+            // are also the only two orbs that cost nothing, so the gate is
+            // their entire price. Reaching them IS the payment.
+            //
+            // ABOVE PrerequisiteMissing IS WRONG AND BELOW IT IS RIGHT: a
+            // player who cannot reach the convergence yet should be told what
+            // is missing beneath it, not handed a number they will meet on the
+            // way there anyway.
+            Gated,
+
             NotEnoughEmbers,
         }
 
@@ -80,6 +92,24 @@ namespace PrincesPalace.Domain.Talents
                 // everything above it is unreachable rather than free.
                 if (string.IsNullOrEmpty(parentId)) return Refusal.PrerequisiteMissing;
                 if (unlocked == null || !unlocked.Contains(parentId)) return Refusal.PrerequisiteMissing;
+            }
+
+            // THE GATE, WHICH NOTHING WAS CHECKING.
+            //
+            // ContentDatabase.MinSpentMet has held this rule since the content
+            // layer was written, and its comment names four callers that agree
+            // on it -- "the talent screen's colouring pass, its click handler
+            // and its tests". It has none. TalentPage replaced that pass and
+            // did not carry the gate across, which left the two orbs whose cost
+            // is zero costing nothing at all the moment their parents lit.
+            //
+            // In practice the parent chain nearly always pays it: a merge needs
+            // all three tiers beneath it, which is ten orbs by the time the
+            // 9-gate applies. That near-redundancy is why it went unnoticed,
+            // and is also why turning it on is safe.
+            if (here.MinSpent > 0 && SpentOn(tree, path, unlocked) < here.MinSpent)
+            {
+                return Refusal.Gated;
             }
 
             if (embers < here.Cost) return Refusal.NotEnoughEmbers;
