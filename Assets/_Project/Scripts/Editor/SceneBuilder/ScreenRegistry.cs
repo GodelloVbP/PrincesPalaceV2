@@ -147,6 +147,10 @@ public static class ScreenRegistry
                 fight.submenuBackButton = result.Button(screen.SubmenuBackButton);
                 fight.submenuRows = screen.SubmenuRows.Select(result.Button).ToArray();
                 fight.submenuRowRects = screen.SubmenuRows.Select(result.Rect).ToArray();
+                fight.submenuViewport = result.Rect(screen.SubmenuViewport);
+                fight.submenuContent = result.Rect(screen.SubmenuContent);
+                fight.submenuScrollTrack = result.Rect(screen.SubmenuScrollTrack);
+                fight.submenuScrollThumb = result.Rect(screen.SubmenuScrollThumb);
                 fight.submenuNames = screen.SubmenuNames.Select(result.Tmp).ToArray();
                 fight.submenuMetas = screen.SubmenuMetas.Select(result.Tmp).ToArray();
                 fight.submenuCosts = screen.SubmenuCosts.Select(result.Tmp).ToArray();

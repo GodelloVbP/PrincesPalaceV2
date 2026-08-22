@@ -132,6 +132,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> SubmenuMetas = new List<NodeRef>();
         public List<NodeRef> SubmenuCosts = new List<NodeRef>();
 
+        // The frame the rows scroll inside. The container is the plate, the
+        // content is the rect that moves, and the two bar pieces are shown only
+        // when the list is longer than the window.
+        public NodeRef SubmenuContainer;
+        public NodeRef SubmenuViewport;
+        public NodeRef SubmenuContent;
+        public NodeRef SubmenuScrollTrack;
+        public NodeRef SubmenuScrollThumb;
+
         public NodeRef DetailColumn;
         public NodeRef DetailName;
         public NodeRef DetailKind;
@@ -888,7 +897,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             back.Children.Add(backText);
             SubmenuBackButton = back;
 
-            int count = FightSubmenuLayout.MaxRows;
+            int count = FightSubmenuLayout.PoolSize;
             var rows = Ui.Each(Enumerable.Range(0, count).ToList(), (_, i) =>
             {
                 var mark = Ui.Sprite($"CharacterSkill{i}Mark", null, new UiVec(36f, 36f), Place.At(-168f, 0f))
@@ -915,9 +924,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // 1.02, the gentler of the two: a submenu row is 404 wide with
                 // four columns of text in it, so the press pop would shift all
                 // four. Same split v1 used -- verb rows pop, submenu rows hover.
+                // PLACED IN COLUMN COORDINATES, inside a content rect whose own
+                // frame is the column's. That is what lets RowY stay exactly
+                // what it was through the whole scroll rework: the rows do not
+                // know they are inside a viewport, and the only thing that
+                // moves when the list scrolls is the rect around them.
                 var row = Ui.Button($"CharacterSkill{i}", UiString.Runtime,
                     new UiVec(SubmenuRowW, FightSubmenuLayout.RowHeight), 1,
-                    Place.At(SubmenuX, FightSubmenuLayout.RowY(count, i))).Hovers(1.02f);
+                    Place.At(0f, FightSubmenuLayout.RowYInContent(i))).Hovers(1.02f);
                 row.Children.Add(mark);
                 row.Children.Add(name);
                 row.Children.Add(meta);
@@ -944,7 +958,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             SubmenuHint = hint;
 
             var children = new List<UiNode> { back };
-            children.AddRange(rows);
+            children.AddRange(BuildSubmenuFrame(rows));
             children.Add(title);
             children.Add(hint);
 
@@ -954,6 +968,91 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AllowOverlap("a full-screen transparent group toggled as one unit; it deliberately draws over the stage, and its own rows are audited against each other normally");
             SubmenuColumn = column;
             return column;
+        }
+
+        // THE FRAME AROUND THE SKILL LIST: a plate, a window that clips, the
+        // rows inside it, and a bar down the right showing how much of the list
+        // is on screen.
+        //
+        // The rows used to hang on the battlefield with nothing behind them and
+        // nothing bounding them, which was survivable while there were never
+        // more than eight -- the list simply ended. It does not end now, it
+        // scrolls, and a list that scrolls with no edge to scroll against reads
+        // as rows appearing out of the air.
+        //
+        // THE CONTENT RECT IS THE COLUMN'S OWN COORDINATE FRAME, offset so that
+        // a child placed at RowY lands where RowY says. That is the trick that
+        // kept this rework off the row-placement arithmetic entirely: the rows
+        // are authored in exactly the coordinates they always were, and
+        // scrolling is one anchoredPosition on their parent.
+        private IEnumerable<UiNode> BuildSubmenuFrame(IEnumerable<UiNode> rows)
+        {
+            float containerW = SubmenuRowW + FightSubmenuLayout.ContainerPad * 2f
+                               + FightSubmenuLayout.ScrollbarGap + FightSubmenuLayout.ScrollbarWidth;
+
+            // The rows keep their x; the container grows to the right of them
+            // to find room for the bar, so nothing on the left edge moves.
+            float containerX = SubmenuX - SubmenuRowW * 0.5f - FightSubmenuLayout.ContainerPad
+                               + containerW * 0.5f;
+
+            var frame = new List<UiNode>
+            {
+                Ui.Solid("SubmenuPlate", FightHudPalette.PanelVioletDeep,
+                        new UiVec(containerW, FightSubmenuLayout.ContainerHeight),
+                        Place.At(0f, 0f))
+                    .AsDecor(),
+            };
+
+            frame.AddRange(Ui.Rim("SubmenuPlate",
+                new UiVec(containerW, FightSubmenuLayout.ContainerHeight),
+                FightHudPalette.BorderSub));
+
+            // The content: a full-canvas rect so every row in the pool fits
+            // inside it, centred on the column's origin so its children's
+            // coordinates ARE column coordinates.
+            var content = Ui.Panel("SubmenuContent",
+                    Place.At(0f, FightSubmenuLayout.ContentRestY),
+                    UiSize.Fixed(SubmenuRowW, FightSubmenuLayout.ContentHeight),
+                    rows)
+                .AllowOverflow("the content rect holds the whole sixteen-row pool and is deliberately taller than the nine-row window it sits in - that overflow IS the scroll, and SubmenuViewport clips it, which is what makes a list longer than nine rows reachable at all");
+            SubmenuContent = content;
+
+            var viewport = Ui.Panel("SubmenuViewport",
+                    Place.At(SubmenuX - containerX, 0f),
+                    UiSize.Fixed(SubmenuRowW, FightSubmenuLayout.ViewportHeight),
+                    content)
+                .Clipping();
+            SubmenuViewport = viewport;
+            frame.Add(viewport);
+
+            // The bar. Track and thumb both start inactive: a list that fits
+            // has no bar at all, and the controller is what knows the count.
+            float barX = containerW * 0.5f - FightSubmenuLayout.ContainerPad
+                         - FightSubmenuLayout.ScrollbarWidth * 0.5f;
+
+            var track = Ui.Solid("SubmenuScrollTrack", FightHudPalette.ScrollTrack,
+                    new UiVec(FightSubmenuLayout.ScrollbarWidth, FightSubmenuLayout.ViewportHeight),
+                    Place.At(barX, 0f))
+                .AsDecor()
+                .Inactive();
+            SubmenuScrollTrack = track;
+            frame.Add(track);
+
+            var thumb = Ui.Solid("SubmenuScrollThumb", FightHudPalette.ScrollThumb,
+                    new UiVec(FightSubmenuLayout.ScrollbarWidth, FightSubmenuLayout.ThumbMinHeight),
+                    Place.At(barX, 0f))
+                .AsDecor()
+                .Inactive();
+            SubmenuScrollThumb = thumb;
+            frame.Add(thumb);
+
+            var container = Ui.Panel("SubmenuContainer",
+                Place.At(containerX, FightSubmenuLayout.ContainerCentreY),
+                UiSize.Fixed(containerW, FightSubmenuLayout.ContainerHeight),
+                frame);
+            SubmenuContainer = container;
+
+            yield return container;
         }
 
         // ---- column C: the detail panel ----------------------------------------------

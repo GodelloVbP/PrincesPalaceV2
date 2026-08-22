@@ -26,6 +26,15 @@ namespace PrincesPalace.Domain.UiKit
         public const string Track = "#0E070CD9";             // 0.85
         public const string TrackMp = "#080A14D9";           // 0.85
 
+        // The skill list's scrollbar. Two tokens rather than reusing Track and
+        // a border: a scrollbar is the one element on this screen whose whole
+        // job is to be findable WITHOUT being read, so the thumb has to carry
+        // more contrast against its groove than a bar fill does against a
+        // plate. Both are quiet enough to disappear when the list fits, which
+        // is when neither is drawn at all.
+        public const string ScrollTrack = "#0B0612B8";        // 0.72
+        public const string ScrollThumb = "#C8AAE68A";        // 0.54
+
         // --- borders ----------------------------------------------------------
         public const string Hairline = "#C8AAE638";          // 0.22
 

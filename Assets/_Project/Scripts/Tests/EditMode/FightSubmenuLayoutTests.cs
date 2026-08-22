@@ -44,49 +44,110 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
+        // THE CLAMP IS THE POOL, NOT THE WINDOW, and that distinction is the
+        // whole scroll rework. Sixteen rects exist; nine of them are on screen
+        // at once. A twelve-skill actor gets twelve rows, three of which are a
+        // scroll away -- where before it got eight and lost four.
         [Test]
         public void AskingForMoreRowsThanThePoolHoldsIsClampedRatherThanHonoured()
         {
-            Assert.AreEqual(8, FightSubmenuLayout.VisibleCount(17));
-            Assert.AreEqual(8, FightSubmenuLayout.VisibleCount(FightSubmenuLayout.MaxRows));
+            Assert.AreEqual(16, FightSubmenuLayout.VisibleCount(17));
+            Assert.AreEqual(16, FightSubmenuLayout.VisibleCount(FightSubmenuLayout.PoolSize));
+            Assert.AreEqual(12, FightSubmenuLayout.VisibleCount(12), "a list longer than the window is not truncated to it");
             Assert.AreEqual(5, FightSubmenuLayout.VisibleCount(5));
             Assert.AreEqual(0, FightSubmenuLayout.VisibleCount(0));
             Assert.AreEqual(0, FightSubmenuLayout.VisibleCount(-3), "a negative count must not become a negative layout");
         }
 
-        // The exact number the shipped bug produced, kept as a literal so this
-        // fails loudly if the clamp is ever removed.
+        // The shipped bug's shape, kept as literals so this fails loudly if
+        // the clamp is ever removed. The NUMBERS moved when rows went from 66
+        // tall to 48 -- 777 was that bug at the old pitch -- but the property
+        // is unchanged: unclamped placement runs away, clamped placement does
+        // not.
         [Test]
-        public void TheShippedBug_SeventeenRowsPlacingTheTopRowAt777_CannotRecur()
+        public void TheShippedBug_AnUnclampedCountRunningAwayUpTheScreen_CannotRecur()
         {
-            Assert.AreEqual(777f, FightSubmenuLayout.RowY(17, 0), 0.01f,
-                "unclamped, RowY still produces the off-screen position - this documents the input, not the behaviour");
+            Assert.AreEqual(448f, FightSubmenuLayout.RowY(17, 0), 0.01f,
+                "unclamped, RowY still produces the runaway position - this documents the input, not the behaviour");
 
             int shown = FightSubmenuLayout.VisibleCount(17);
-            Assert.AreEqual(111f, FightSubmenuLayout.RowY(shown, 0), 0.01f,
-                "clamped, the top row must sit at the 8-row height and stay on screen");
+            Assert.AreEqual(394f, FightSubmenuLayout.RowY(shown, 0), 0.01f,
+                "clamped, the top row must sit at the pool height");
         }
 
-        // The header belongs to the LIST, not to the pool. A five-skill actor
-        // whose title sits at the eight-row height has a label floating over
-        // the battlefield with nothing beneath it.
-        [Test]
-        public void TheHeaderSitsJustAboveTheTopRowOfTheListActuallyShown()
-        {
-            float fiveRowTop = FightSubmenuLayout.RowY(5, 0) + FightSubmenuLayout.RowHeight * 0.5f;
-            float header = FightSubmenuLayout.HeaderY(5);
+        // ---- the scroll ----------------------------------------------------------
 
-            Assert.Greater(header, fiveRowTop, "the header must clear the top row");
-            Assert.Less(header - fiveRowTop, FightSubmenuLayout.RowPitch,
-                "the header drifted more than a row's pitch above the list it labels");
+        // A list that fits does not move and shows no bar. This is the common
+        // case -- Shawn reaches nine skills only with a talent root behind him
+        // -- and it has to look exactly like the screen always did.
+        [Test]
+        public void AListThatFitsDoesNotScrollAtAll()
+        {
+            Assert.AreEqual(0f, FightSubmenuLayout.ScrollRange(5), 0.01f);
+            Assert.AreEqual(0f, FightSubmenuLayout.ScrollRange(FightSubmenuLayout.RowsInView), 0.01f,
+                "a list of exactly the window's height must not scroll by a pixel");
+            Assert.AreEqual(0f, FightSubmenuLayout.ContentOffsetY(5, 0f), 0.01f);
+        }
+
+        // Twelve rows against a nine-row window: three rows' worth of travel.
+        [Test]
+        public void AListLongerThanTheWindowScrollsByTheDifference()
+        {
+            Assert.AreEqual(162f, FightSubmenuLayout.ScrollRange(12), 0.01f);
+        }
+
+        // SCROLL ZERO IS THE TOP OF THE LIST, which is the inversion worth
+        // pinning: rows are laid out bottom-anchored, so at rest the content
+        // sits pushed DOWN by its whole range and only reaches its authored
+        // position once scrolled to the end.
+        [Test]
+        public void ScrollZeroShowsTheTopOfTheListAndFullScrollTheBottom()
+        {
+            Assert.AreEqual(-162f, FightSubmenuLayout.ContentOffsetY(12, 0f), 0.01f);
+            Assert.AreEqual(0f, FightSubmenuLayout.ContentOffsetY(12, 162f), 0.01f);
+        }
+
+        // The thumb is the visible fraction of the list, floored so it stays
+        // grabbable, and it travels the track in the same direction as scroll.
+        [Test]
+        public void TheThumbShowsHowMuchOfTheListIsOnScreen()
+        {
+            // 358.88 rather than the 360 that nine-of-twelve suggests, and the
+            // difference is the gaps: the thumb is the visible fraction of the
+            // content BY HEIGHT (480 of 642), and twelve rows carry eleven gaps
+            // against the window's eight. Pinned at the real number, because
+            // the tidy one would mean the thumb was measuring rows rather than
+            // pixels and would drift the moment the gap changed.
+            Assert.AreEqual(358.88f, FightSubmenuLayout.ThumbHeight(12), 0.01f,
+                "the thumb must be the visible fraction of the content's height");
+
+            Assert.Greater(FightSubmenuLayout.ThumbCentreY(12, 0f), 0f, "at the top of the list the thumb sits high");
+            Assert.Less(FightSubmenuLayout.ThumbCentreY(12, 162f), 0f, "at the bottom it sits low");
         }
 
         [Test]
-        public void TheHeaderIsClampedTheSameWayTheRowsAre()
+        public void ThumbHeightNeverCollapsesHoweverLongTheList()
         {
-            Assert.AreEqual(FightSubmenuLayout.HeaderY(FightSubmenuLayout.MaxRows),
-                FightSubmenuLayout.HeaderY(17), 0.01f,
-                "a 17-row request must place the header exactly where an 8-row one does");
+            Assert.GreaterOrEqual(FightSubmenuLayout.ThumbHeight(FightSubmenuLayout.PoolSize),
+                FightSubmenuLayout.ThumbMinHeight);
+        }
+
+        // THE HEADER NO LONGER MOVES AT ALL, which is a deliberate reversal.
+        // It used to ride the top row so a short list kept its label attached
+        // to it; with a container that is wrong twice -- the label would sit
+        // inside the frame for a short list, and it would slide every time the
+        // count changed while the box around it did not.
+        [Test]
+        public void TheHeaderSitsOnTheContainerRatherThanOnTheList()
+        {
+            Assert.AreEqual(FightSubmenuLayout.HeaderY(2), FightSubmenuLayout.HeaderY(17), 0.01f,
+                "the header moved with the count instead of staying on its frame");
+
+            float containerTop = FightSubmenuLayout.ContainerCentreY
+                                 + FightSubmenuLayout.ContainerHeight * 0.5f;
+
+            Assert.Greater(FightSubmenuLayout.HeaderY(5), containerTop,
+                "the header must clear the top of the frame it labels");
         }
     }
 }

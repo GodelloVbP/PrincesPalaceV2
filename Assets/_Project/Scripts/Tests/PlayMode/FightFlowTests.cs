@@ -171,14 +171,32 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator TheOnlyRowLandsJustAboveBack_WhateverTheCount()
         {
             // v1's design preview drew rows at 8-slot positions and left a gap
-            // above BACK. Here the runtime re-anchor and the build-time
-            // placement are the same function, so this cannot drift.
+            // above BACK.
+            //
+            // MEASURED IN WORLD SPACE, not against the row's own
+            // anchoredPosition, and the difference is the scrolling container:
+            // a row's local y is now its fixed slot in a sixteen-row pool, and
+            // what puts the LIST where it belongs is the rect around it. Asking
+            // the row where it thinks it is would only ever get the pool answer
+            // back, which is 405 whatever the count and means nothing on its
+            // own.
+            //
+            // World space is also the more honest question. The claim is about
+            // where the row lands ON SCREEN relative to BACK, and that is true
+            // or false regardless of how many rects are nested between them.
             yield return LoadFight();
 
             Click("Verb1");
 
             var row = (RectTransform)Named("CharacterSkill0").transform;
-            Assert.AreEqual(FightSubmenuLayout.RowY(1, 0), row.anchoredPosition.y, 0.01f);
+            var back = (RectTransform)Named("SubmenuBack").transform;
+
+            float rowBottom = row.position.y - row.rect.height * 0.5f * row.lossyScale.y;
+            float backTop = back.position.y + back.rect.height * 0.5f * back.lossyScale.y;
+
+            Assert.Greater(rowBottom, backTop, "the only row stacks above BACK, never through it");
+            Assert.Less(rowBottom - backTop, 8f * row.lossyScale.y,
+                "and immediately above it, with no dead space -- which is what bottom-anchoring buys");
         }
 
         [UnityTest]

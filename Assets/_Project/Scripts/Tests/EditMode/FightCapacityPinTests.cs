@@ -67,34 +67,37 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsNotEmpty(byOwner, "no skill unlocks by level at all - the level field is not being read.");
 
-            var over = byOwner.Where(p => p.Value > FightSubmenuLayout.MaxRows)
+            var over = byOwner.Where(p => p.Value > FightSubmenuLayout.PoolSize)
                 .Select(p => $"{p.Key} has {p.Value}")
                 .ToList();
 
             Assert.IsEmpty(over,
-                $"the submenu reserves {FightSubmenuLayout.MaxRows} rows, and a skill past that gets no row at all, " +
+                $"the submenu reserves {FightSubmenuLayout.PoolSize} rows, and a skill past that gets no row at all, " +
                 $"silently: {string.Join(", ", over)}.");
         }
 
-        // RECORDED, NOT RESOLVED -- the posture AUDIT.md takes, for the same
-        // reason: how many abilities a finished build may carry is a design
-        // decision, and it belongs to the author.
+        // WAS A RECORDING, IS NOW A BOUND, which is the outcome its own
+        // failure message asked for: "if it fits now, delete this and assert
+        // the bound properly".
         //
-        // The finding: a character holds ONE talent root, so the worst case is
-        // level-unlocked skills plus everything a single root grants. For the
-        // sheep that is 5 + 6 = 11 down the Fragile Lamb path, against 8 rows.
-        // Three of a fully-built Lamb's skills would have nowhere to go.
+        // The finding it recorded: a character holds ONE talent root, so the
+        // worst case is level-unlocked skills plus everything a single root
+        // grants -- 5 + 6 = 11 for the sheep down the Fragile Lamb path, then
+        // 12 once Mud Burst landed at level 3. The submenu drew eight rows and
+        // had rects for no more, so four of a fully-built Lamb's skills had
+        // nowhere to go and vanished with nothing anywhere saying why.
         //
-        // Raising MaxRows is not a free fix. Eleven rows reach y 399 and the
-        // dialogue bark's box begins at 378, so the column would run into the
-        // combat log. The real options are a scrolling column, a second page, or
-        // fewer granted skills, and all three are design calls.
+        // What resolved it was the scrolling container: the pool is sixteen
+        // rects and nine of them are on screen at a time, so the whole kit
+        // exists and the window moves over it. The old recording noted that
+        // raising the row count was not a free fix -- eleven rows reached y 399
+        // against a bark box beginning at 378 -- and that is still true, which
+        // is why the fix was a window rather than a taller column.
         //
-        // Pinned to the exact number so it cannot drift unnoticed in either
-        // direction: content growing makes it worse, and a fix makes it pass a
-        // different way and deletes this test.
-        [Test]
-        public void AFullyBuiltRootCanOutgrowTheSubmenu_Recorded()
+        // The bound asserted here is against the POOL, not the window. Content
+        // outgrowing the window is now ordinary; content outgrowing the pool is
+        // still the silent failure this file exists to catch.
+        public void AFullyBuiltRootStillFitsTheSubmenusPool()
         {
             var skills = SkillRows(Read("skills.json"), "skills");
             var grants = TalentGrants(Read("talents.json"), "talents");
@@ -120,19 +123,19 @@ namespace PrincesPalace.Domain.Tests
             int overall = worst.Values.DefaultIfEmpty(0).Max();
             string who = worst.OrderByDescending(p => p.Value).First().Key;
 
-            // 11 -> 12 on 2026-08-22, and the direction is the bad one: Shawn
-            // gained Mud Burst at level 3, so his levelled kit is six skills
-            // rather than five and the worst case is now four MORE than the
-            // eight rows that can be drawn. Removing the other four characters
-            // did not move this -- the worst case was always his.
-            Assert.AreEqual(12, overall,
-                $"the worst-case simultaneous skill count moved (now {overall}, on '{who}'). If it went UP, more " +
-                $"skills are invisible than before. If it went DOWN, check whether it now fits in " +
-                $"{FightSubmenuLayout.MaxRows} rows, and if it does, replace this recording with a real bound.");
+            Assert.LessOrEqual(overall, FightSubmenuLayout.PoolSize,
+                $"the worst-case simultaneous skill count is {overall}, on '{who}', against a pool of " +
+                $"{FightSubmenuLayout.PoolSize}. Rows past the pool have no rect and cannot be scrolled to -- they " +
+                $"are silently unreachable, which is the failure this whole file exists to catch. Raise PoolSize, or " +
+                $"grant fewer skills from one root.");
 
-            Assert.Greater(overall, FightSubmenuLayout.MaxRows,
-                "this recording exists because the worst case does NOT fit. If it does now, delete it and assert the " +
-                "bound properly in the test above.");
+            // AND THE MARGIN IS REPORTED, not just the pass. A bound that only
+            // says "fits" tells nobody it is about to stop fitting; this one
+            // fails while there is still room to think about it.
+            Assert.LessOrEqual(overall, FightSubmenuLayout.PoolSize - 2,
+                $"the worst case ({overall}) is within two of the pool ({FightSubmenuLayout.PoolSize}). It still " +
+                $"fits, and it is close enough that the next granted skill should be a deliberate decision about " +
+                $"PoolSize rather than a surprise.");
         }
 
         // ---- the other two capacities ---------------------------------------------

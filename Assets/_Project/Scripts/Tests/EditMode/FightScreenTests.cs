@@ -81,7 +81,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(FightHudSpec.DetailStatRows, screen.DetailStatKeys.Count);
             Assert.AreEqual(FightHudSpec.StageSlotsPerSide, screen.EnemySlots.Count);
             Assert.AreEqual(FightHudSpec.StageSlotsPerSide, screen.PartySlots.Count);
-            Assert.AreEqual(FightSubmenuLayout.MaxRows, screen.SubmenuRows.Count);
+            Assert.AreEqual(FightSubmenuLayout.PoolSize, screen.SubmenuRows.Count);
         }
 
         [Test]
@@ -200,7 +200,7 @@ namespace PrincesPalace.Domain.Tests
             // The single most important binding on this screen: the same
             // function the runtime controller calls to RE-anchor these rows is
             // the one that placed them here. v1 had two hand-mirrored copies.
-            int count = FightSubmenuLayout.MaxRows;
+            int count = FightSubmenuLayout.PoolSize;
             for (int i = 0; i < count; i++)
             {
                 Assert.AreEqual(FightSubmenuLayout.RowY(count, i), RectOf($"CharacterSkill{i}").Centre.Y, 0.01f);
@@ -213,7 +213,7 @@ namespace PrincesPalace.Domain.Tests
             // What "anchored to the bottom" buys: the last row sits in the same
             // slot whether the actor has two skills or eight.
             float back = RectOf("SubmenuBack").Top;
-            float lastRow = RectOf($"CharacterSkill{FightSubmenuLayout.MaxRows - 1}").Bottom;
+            float lastRow = RectOf($"CharacterSkill{FightSubmenuLayout.PoolSize - 1}").Bottom;
 
             Assert.Greater(lastRow, back, "rows stack above BACK, never through it");
             Assert.Less(lastRow - back, 8f, "and immediately above it, with no dead space");

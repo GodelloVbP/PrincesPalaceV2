@@ -203,12 +203,24 @@ namespace PrincesPalace.Content
             }
 
             // A skill is available by LEVEL, same as always, OR because it
-            // was granted outright — right now that only ever means an
-            // Event room's mage taught it (see Character.unlockedSkillIds'
-            // own header). A skill authored with a level so high it can
-            // never be reached by levelling alone (see frost_flare/
-            // lightning_bolt in skills.json) is how a skill is marked
-            // "event-only" without a separate content field for it.
+            // was granted outright — an Event room's mage teaching it (see
+            // Character.unlockedSkillIds' own header). A skill authored with a
+            // level so high it can never be reached by levelling alone is how a
+            // skill is marked "granted rather than earned" without a separate
+            // content field for it.
+            //
+            // THE TWO EXAMPLES THIS NAMED ARE GONE. frost_flare and
+            // lightning_bolt were authored at 999 as the event-taught pair, and
+            // in the whole codebase nothing ever writes unlockedSkillIds except
+            // one test: the mage is not implemented, so neither spell was
+            // reachable by any route. They were removed on 2026-08-22 rather
+            // than left as content that cannot be played.
+            //
+            // The technique still has live examples and they are the talent
+            // ones below — Provoke, Headbutt and Black Ram Mode are authored at
+            // 999 and reached through grantsSkillId. The read path here keeps
+            // its unlockedSkillIds branch: it is the seam the mage will use,
+            // and it costs a Contains on a list that is empty today.
             // ...or because a TALENT granted it. The third route in, and the
             // reason the reworked tree needs no parallel ability system at
             // all: Provoke, Headbutt and Black Ram Mode are ordinary skills

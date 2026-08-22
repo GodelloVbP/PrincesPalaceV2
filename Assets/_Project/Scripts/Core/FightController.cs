@@ -94,6 +94,18 @@ namespace PrincesPalace
         [SerializeField] internal Button submenuBackButton;
         [SerializeField] internal Button[] submenuRows;
         [SerializeField] internal RectTransform[] submenuRowRects;
+
+        // The scrolling frame around those rows.
+        [SerializeField] internal RectTransform submenuViewport;
+        [SerializeField] internal RectTransform submenuContent;
+        [SerializeField] internal RectTransform submenuScrollTrack;
+        [SerializeField] internal RectTransform submenuScrollThumb;
+
+        // How far down the open list the player has scrolled, in pixels, and
+        // how many rows that list holds. Held together because neither means
+        // anything without the other -- the range is a function of the count.
+        private float _submenuScroll;
+        private int _submenuCount;
         [SerializeField] internal TMP_Text[] submenuNames;
         [SerializeField] internal TMP_Text[] submenuMetas;
         [SerializeField] internal TMP_Text[] submenuCosts;
@@ -247,6 +259,43 @@ namespace PrincesPalace
             // Once, here rather than per refresh: attaching a hover handler
             // every frame would stack them.
             WireIntentIcons();
+            WireSubmenuScroll();
+        }
+
+        // The skill list's two scroll surfaces.
+        //
+        // ADDED AT RUNTIME, the same bargain HoverIndex and RailScroll make:
+        // both carry a delegate, and a scene cannot serialise one usefully.
+        private void WireSubmenuScroll()
+        {
+            if (submenuViewport != null)
+            {
+                // The viewport draws nothing, so it has no Graphic and would
+                // never see a wheel event. A fully transparent Image raycasts
+                // against its RECT, which is exactly what a scroll surface
+                // wants -- the same mechanism the reward track's rail uses.
+                var catcher = submenuViewport.gameObject.GetComponent<Image>()
+                              ?? submenuViewport.gameObject.AddComponent<Image>();
+                catcher.color = new Color(0f, 0f, 0f, 0f);
+                catcher.raycastTarget = true;
+
+                var wheel = submenuViewport.gameObject.GetComponent<ListScroll>()
+                            ?? submenuViewport.gameObject.AddComponent<ListScroll>();
+                wheel.WheelStep = FightSubmenuLayout.RowPitch;
+                wheel.Scrolled = ScrollSubmenuBy;
+            }
+
+            if (submenuScrollTrack == null) return;
+
+            // The track is decoration and the emitter cleared its raycast
+            // target with everything else in the subtree; a bar you cannot
+            // grab is a picture of a bar.
+            var trackImage = submenuScrollTrack.GetComponent<Image>();
+            if (trackImage != null) trackImage.raycastTarget = true;
+
+            var seek = submenuScrollTrack.gameObject.GetComponent<ListScroll>()
+                       ?? submenuScrollTrack.gameObject.AddComponent<ListScroll>();
+            seek.Seeked = SeekSubmenuTo;
         }
 
         private void WirePlayback()
@@ -365,29 +414,97 @@ namespace PrincesPalace
         {
             if (submenuRowRects == null) return;
 
-            // CLAMPED, because a character can offer more rows than the pool
-            // holds. Passing the raw count laid the column out for 17 rows and
-            // pushed every rect that exists off the top of the screen.
+            // CLAMPED TO THE POOL, which is sixteen rows rather than the nine
+            // that fit. A count above the pool is content growth, not an error
+            // -- but a row past it has no rect and cannot be reached at all,
+            // which is why the pool carries four spare.
             int shown = FightSubmenuLayout.VisibleCount(count);
+            _submenuCount = shown;
 
+            // NOTHING IS RE-ANCHORED ANY MORE. Every row sits at its pool
+            // position forever and the rect around them moves instead -- one
+            // write where there were sixteen, and the only construction that
+            // can also scroll. Rows are switched on or off and nothing else.
             for (int i = 0; i < submenuRowRects.Length; i++)
             {
                 var rect = submenuRowRects[i];
                 if (rect == null) continue;
 
                 bool visible = i < shown;
-                rect.gameObject.SetActive(visible);
-                if (!visible) continue;
-
-                var position = rect.anchoredPosition;
-                rect.anchoredPosition = new Vector2(position.x, FightSubmenuLayout.RowY(shown, i));
+                if (rect.gameObject.activeSelf != visible) rect.gameObject.SetActive(visible);
             }
 
-            // The header rides the top of the list rather than the top of the
-            // pool, so a short list keeps its own label attached to it.
+            // Opening at the TOP of the list: row 0 is the first skill, and a
+            // menu that opens halfway down its own contents is a menu the
+            // player has to scroll before they can read it.
+            _submenuScroll = 0f;
+            ApplySubmenuScroll();
+
+            // The header sits on the container now rather than on the top row,
+            // so it no longer moves with the count -- but it is still written
+            // here, because the container's height is what it is derived from
+            // and that is a layout number rather than a constant.
             float headerY = FightSubmenuLayout.HeaderY(shown);
             MoveToY(submenuTitle, headerY);
             MoveToY(submenuHint, headerY);
+        }
+
+        // Slides the list and repaints the bar. The one place either is written.
+        private void ApplySubmenuScroll()
+        {
+            float range = FightSubmenuLayout.ScrollRange(_submenuCount);
+
+            if (_submenuScroll < 0f) _submenuScroll = 0f;
+            if (_submenuScroll > range) _submenuScroll = range;
+
+            if (submenuContent != null)
+            {
+                submenuContent.anchoredPosition = new Vector2(
+                    submenuContent.anchoredPosition.x,
+                    FightSubmenuLayout.ContentY(_submenuCount, _submenuScroll));
+            }
+
+            // NO BAR WHEN THERE IS NOTHING TO SCROLL, which is the common case:
+            // a character with nine skills or fewer sees a plain framed list.
+            // A track drawn against a list that fits is a control that cannot
+            // do anything, and this screen already had eight of those.
+            bool scrolls = range > 0f;
+
+            if (submenuScrollTrack != null
+                && submenuScrollTrack.gameObject.activeSelf != scrolls)
+            {
+                submenuScrollTrack.gameObject.SetActive(scrolls);
+            }
+
+            if (submenuScrollThumb == null) return;
+
+            if (submenuScrollThumb.gameObject.activeSelf != scrolls)
+            {
+                submenuScrollThumb.gameObject.SetActive(scrolls);
+            }
+            if (!scrolls) return;
+
+            submenuScrollThumb.sizeDelta = new Vector2(
+                submenuScrollThumb.sizeDelta.x, FightSubmenuLayout.ThumbHeight(_submenuCount));
+
+            submenuScrollThumb.anchoredPosition = new Vector2(
+                submenuScrollThumb.anchoredPosition.x,
+                FightSubmenuLayout.ThumbCentreY(_submenuCount, _submenuScroll));
+        }
+
+        // The two gestures, both landing in the same place. The wheel and a drag
+        // over the rows arrive as pixels; a grab on the track arrives as a
+        // fraction of the whole list.
+        private void ScrollSubmenuBy(float pixels)
+        {
+            _submenuScroll += pixels;
+            ApplySubmenuScroll();
+        }
+
+        private void SeekSubmenuTo(float fromTop)
+        {
+            _submenuScroll = FightSubmenuLayout.ScrollAt(_submenuCount, fromTop);
+            ApplySubmenuScroll();
         }
 
         private static void MoveToY(TMP_Text text, float y)
