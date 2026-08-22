@@ -141,6 +141,21 @@ namespace PrincesPalace.Domain.UiKit
         // has to care which kind it is asking about.
         public const float StarSize = OrbNormal;
 
+        // ---- what a lit stone wears ---------------------------------------------
+        //
+        // MEASURED OFF THE DESIGN'S OWN RECORDING rather than guessed. Its sky
+        // sits at luma 6.5 and its ember's hot centre reaches 252 -- so the
+        // halo is allowed to be tight, because it has a black room to be bright
+        // in. Drawn at the sizes this used to carry (2.4x glow, 1.7x aura, 0.52x
+        // core) over a nebula at luma 34, the same stone read as a smear.
+        //
+        // The core is the one that mattered. The delivered art already IS the
+        // molten sphere; a pale disc at 52% of the stone laid over the veins
+        // erased the thing the art was for.
+        public const float GlowScale = 1.8f;
+        public const float AuraScale = 1.3f;
+        public const float CoreScale = 0.34f;
+
         public static float OrbSize(string kind)
         {
             switch (kind)
@@ -318,6 +333,17 @@ namespace PrincesPalace.Domain.UiKit
         // the width is what makes an edge look grown rather than drawn.
         public const float EdgeWidth = 10f;
 
+        // THE UNLIT CONNECTION IS A HAIRLINE. The lit one is not.
+        //
+        // Both were drawn at EdgeWidth, on the argument recorded below that a
+        // 3px line reads as a wiring diagram rather than as a limb. Measured off
+        // the design's recording, its unlit connections run 3 to 4px and its lit
+        // ones 5 to 21 -- so the argument holds, and it holds for the LIT edge
+        // only. An unlit connection is meant to recede until something travels
+        // it; ten pixels of it between every pair of ash stones is a lattice
+        // drawn over the sky at the same weight as the constellation.
+        public const float EdgeDimWidth = 4f;
+
         // The lit layers, as multiples of the base so they cannot drift from
         // it. v1's numbers: a wide soft halo, a thin bright core down its
         // middle.
@@ -431,6 +457,39 @@ namespace PrincesPalace.Domain.UiKit
             slot * RestingStrideMs % RestingCycleMs / 1000f;
 
         public const float CoreFlickerSeconds = 3.2f;
+
+        // ---- the ember's own flicker ---------------------------------------------
+        //
+        // A FIRE, NOT A BREATHE, and the difference is measurable. Frame-by-frame
+        // off the design's recording, the white-hot centre of a kindled stone
+        // swings 131 to 313 pixels of area -- 2.4x, so about 1.55x across --
+        // with peaks landing 0.6 to 1.0 seconds apart and never on a beat. The
+        // body of the sphere moves by 4% over the same stretch and is not what
+        // the eye is reading.
+        //
+        // A single smooth 3.2s cycle produced a stone that swelled and sank.
+        // Two incommensurate sines summed produce something whose peaks are
+        // irregular, whose troughs are uneven, and which does not repeat inside
+        // a session -- which is the whole of what makes a flame look like one.
+        public const float EmberFastSeconds = 0.62f;
+        public const float EmberSlowSeconds = 0.97f;
+
+        public const float EmberCoreMinScale = 0.78f;
+        public const float EmberCoreMaxScale = 1.34f;
+        // ONLY THE VERY CENTRE IS WHITE. The delivered sphere already runs from
+        // deep red rock through orange veins to a white heart; laid on at full
+        // strength this overlay flattened that gradient into one bright orange
+        // mass. It is a highlight on the heart, not a second light source.
+        public const float EmberCoreMinAlpha = 0.18f;
+        public const float EmberCoreMaxAlpha = 0.72f;
+
+        public static float EmberFlicker(float time, float phase)
+        {
+            float fast = Breathe(Cycle(time, EmberFastSeconds, phase));
+            float slow = Breathe(Cycle(time, EmberSlowSeconds, phase * 1.7f));
+
+            return Clamp01(fast * 0.55f + slow * 0.45f);
+        }
         public const float HaloCrackleSeconds = 4.6f;
         public const float ReadyPulseSeconds = 2.4f;
         public const float CapCoronaSeconds = 5.0f;

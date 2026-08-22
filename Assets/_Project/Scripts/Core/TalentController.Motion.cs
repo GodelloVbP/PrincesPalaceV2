@@ -210,22 +210,51 @@ namespace PrincesPalace
                 int slot = TalentScreen.SlotOf(i);
                 float phase = ConstellationLayout.RestingPhase(slot);
 
+                // THE HOT HEART GUTTERS. Scale and alpha together, because a
+                // flame that only changes brightness reads as a lamp on a
+                // dimmer -- what says "burning" is the hot part growing and
+                // shrinking against a body that stays put.
                 if (Has(orbCores, i) && orbCores[i].color.a > 0f)
                 {
-                    float flicker = ConstellationLayout.Breathe(
-                        ConstellationLayout.Cycle(time, ConstellationLayout.CoreFlickerSeconds, phase));
+                    float flick = ConstellationLayout.EmberFlicker(time, phase);
 
                     var c = orbCores[i].color;
-                    orbCores[i].color = new Color(c.r, c.g, c.b, Mathf.Lerp(0.72f, 1f, flicker));
+                    orbCores[i].color = new Color(c.r, c.g, c.b, Mathf.Lerp(
+                        ConstellationLayout.EmberCoreMinAlpha,
+                        ConstellationLayout.EmberCoreMaxAlpha, flick));
+
+                    float s = Mathf.Lerp(
+                        ConstellationLayout.EmberCoreMinScale,
+                        ConstellationLayout.EmberCoreMaxScale, flick);
+
+                    orbCores[i].rectTransform.localScale = new Vector3(s, s, 1f);
                 }
 
+                // THE HALO ANSWERS THE HEART, at about half its amplitude and
+                // over a slower crackle underneath. Two rates rather than one:
+                // a halo locked to the core is the same event drawn twice, and
+                // a halo on its own clock reads as a separate light source
+                // sitting behind the stone.
                 if (Has(orbAuras, i) && orbAuras[i].color.a > 0f)
                 {
                     float crackle = ConstellationLayout.Breathe(
                         ConstellationLayout.Cycle(time, ConstellationLayout.HaloCrackleSeconds, phase));
+                    float flick = ConstellationLayout.EmberFlicker(time, phase);
 
                     var a = orbAuras[i].color;
-                    orbAuras[i].color = new Color(a.r, a.g, a.b, Mathf.Lerp(0.34f, 0.62f, crackle));
+                    orbAuras[i].color = new Color(a.r, a.g, a.b,
+                        Mathf.Lerp(0.22f, 0.40f, crackle * 0.6f + flick * 0.4f));
+                }
+
+                // The warm ground the stone sits on, moving least of the three.
+                // It is what carries the ember's light onto the sky around it,
+                // so a visible pulse here would look like the sky flashing.
+                if (Has(orbGlows, i) && orbGlows[i].color.a > 0f)
+                {
+                    float flick = ConstellationLayout.EmberFlicker(time, phase);
+
+                    var g = orbGlows[i].color;
+                    orbGlows[i].color = new Color(g.r, g.g, g.b, Mathf.Lerp(0.34f, 0.48f, flick));
                 }
 
                 // THE READY PULSE IS THE ONLY INVITATION ON THE SCREEN, which
@@ -236,9 +265,13 @@ namespace PrincesPalace
                     float pulse = ConstellationLayout.Breathe(
                         ConstellationLayout.Cycle(time, ConstellationLayout.ReadyPulseSeconds, phase));
 
+                    // 70% TO FULL, NOT 45%. The ring is an invitation and it
+                    // has to stay legible at the bottom of its swing; taking it
+                    // to under half made a reachable stone look like it was
+                    // going out, which is the opposite of the message.
                     var r = orbRings[i].color;
                     float peak = r.a > 0.5f ? 1f : 0.4f;
-                    orbRings[i].color = new Color(r.r, r.g, r.b, Mathf.Lerp(peak * 0.45f, peak, pulse));
+                    orbRings[i].color = new Color(r.r, r.g, r.b, Mathf.Lerp(peak * 0.7f, peak, pulse));
                 }
             }
         }

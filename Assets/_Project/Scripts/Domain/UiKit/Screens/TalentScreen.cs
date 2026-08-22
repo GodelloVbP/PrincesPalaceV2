@@ -45,11 +45,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // one is a cold wire rather than a piece of wood, and everything that
         // happens to it is light.
         private const string EdgeDim = "#33263D";
-        private const string EdgeGlow = "#FF91455A";
+        private const string EdgeGlow = "#FF914594";
         private const string EdgeCore = "#FFD98C";
         private const string EdgeSpark = "#FFEBC0E6";
 
         public const string BackgroundKey = "Assets/_Project/Art/Backgrounds/Divine_principality_nebula.png";
+
+        // A multiply, so this is "keep a quarter of it, cooled". Landed by
+        // measurement rather than by eye: the design's empty sky sits at luma
+        // 6.4 and this brings the nebula to 6.9, where it stops competing with
+        // an ember and starts being the dark the ember is bright against.
+        private const string BackgroundTint = "#3E3A58";
 
         // One orb per slot per path. Declared rather than pooled: the skeleton
         // is a fixed shape, so every position is known at build time and the
@@ -197,12 +203,23 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // that no backdrop layer ever competes with a stone.
             var vignette = Ui.Sprite("TalentVignette", "proc:sky_vignette",
                     Place.Stretch(), UiSize.Fill)
-                .Coloured("#000000B8")
+                .Coloured("#000000D9")
                 .AsDecor();
 
             var children = new List<UiNode>
             {
-                Ui.Sprite("TalentBackground", BackgroundKey, Place.Stretch(), UiSize.Fill).AsDecor(),
+                // TURNED DOWN TO A THIRD, and that is the single largest
+                // difference between this screen and the design's.
+                //
+                // The nebula ships at full brightness and its hot core sits
+                // directly behind the constellation -- measured at luma 34
+                // where the design's sky is 6.5. An ember drawn over that has
+                // nothing to be brighter THAN, which is why the stones read as
+                // washed out no matter what is done to them. The painting is
+                // the room, not the subject.
+                Ui.Sprite("TalentBackground", BackgroundKey, Place.Stretch(), UiSize.Fill)
+                    .Coloured(BackgroundTint)
+                    .AsDecor(),
             };
 
             children.AddRange(screen.BuildSkyLayers());
@@ -565,7 +582,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // difference between "this is alive" and "you may press this" -- the
             // pulse is reserved for the reachable ring, which is an invitation.
             var aura = Ui.Sprite($"Orb{path}_{slot}Aura", "proc:orb_aura",
-                    new UiVec(size * 1.7f, size * 1.7f), Place.At(0f, 0f))
+                    new UiVec(size * ConstellationLayout.AuraScale,
+                              size * ConstellationLayout.AuraScale), Place.At(0f, 0f))
                 .Coloured("#FF914500")
                 .AllowOverflow("a lit stone's aura is light around the stone - contained inside it, it would be a filling instead")
                 .AsDecor();
@@ -575,19 +593,26 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // The warm drop-shadow a kindled stone carries. Behind the stone,
             // wider than it, and off entirely until the stone is lit.
             var glow = Ui.Sprite($"Orb{path}_{slot}Glow", "proc:radial_glow",
-                    new UiVec(size * 2.4f, size * 2.4f), Place.At(0f, 0f))
+                    new UiVec(size * ConstellationLayout.GlowScale,
+                              size * ConstellationLayout.GlowScale), Place.At(0f, 0f))
                 .Coloured("#F2DB9E00")
                 .AllowOverflow("a drop-shadow that stops at the stone's own edge is not a shadow")
                 .AsDecor();
             OrbGlows.Add(glow);
             orb.Children.Add(glow);
 
-            // THE CORE, screen-blended over the sprite: the crackle is INSIDE
-            // the stone. The art already shows a molten core with veins running
-            // out of it, so what moves is that core guttering behind the shell;
-            // flickering the halo instead was what read as a strobe.
+            // THE WHITE-HOT HEART, and it is SMALL.
+            //
+            // The delivered art is already the design's molten sphere -- dark
+            // rock, orange veins, a white centre. This layer's only job is to
+            // make that centre gutter, and at 52% of the stone it was not
+            // guttering, it was a pale disc laid over the veins that erased
+            // them. Measured off the design's own recording, the white-hot spot
+            // is about 14% of the stone across and flares to 21%: this is that
+            // spot, and TalentController.Motion swings it.
             var core = Ui.Sprite($"Orb{path}_{slot}Core", "proc:radial_glow",
-                    new UiVec(size * 0.52f, size * 0.52f), Place.At(0f, 0f))
+                    new UiVec(size * ConstellationLayout.CoreScale,
+                              size * ConstellationLayout.CoreScale), Place.At(0f, 0f))
                 .Coloured("#FFC97A00")
                 .AsDecor();
             OrbCores.Add(core);
@@ -691,12 +716,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
             float length = (float)System.Math.Sqrt(dx * dx + dy * dy);
             float angle = (float)(System.Math.Atan2(dy, dx) * 180.0 / System.Math.PI);
 
-            // TEN WIDE, not three. A 3px hairline reads as a wiring diagram;
-            // v1's edges are limbs with a lit crack down them, and the width is
-            // most of what makes a connection look grown rather than drawn.
+            // A HAIRLINE UNTIL IT IS LIT -- see ConstellationLayout.EdgeDimWidth
+            // for the measurement and for what happened to the ten-wide version
+            // this used to be. The weight argument moved to the glow, which is
+            // where it was always true.
             var edge = Ui.Solid($"Edge{path}_{parent}_{slot}", EdgeDim,
                     Place.At((a.X + b.X) * 0.5f, (a.Y + b.Y) * 0.5f),
-                    UiSize.Fixed(length, ConstellationLayout.EdgeWidth))
+                    UiSize.Fixed(length, ConstellationLayout.EdgeDimWidth))
                 .Rotated(angle)
                 .AsDecor()
                 .AllowOverflow("a rotated edge's axis-aligned box is wider than the line inside it");

@@ -498,11 +498,72 @@ namespace PrincesPalace.Domain.Tests
                 ConstellationLayout.HaloCrackleSeconds,
                 ConstellationLayout.ReadyPulseSeconds,
                 ConstellationLayout.CapCoronaSeconds,
+                ConstellationLayout.EmberFastSeconds,
+                ConstellationLayout.EmberSlowSeconds,
             };
 
             CollectionAssert.AllItemsAreUnique(periods,
                 "two of the screen's loops run on the same period, so they synchronise and the " +
                 "backdrop starts reading as one repeating layer");
+        }
+
+        // ---- the ember flickers like a fire ---------------------------------------
+        //
+        // Measured off the design's own recording: its hot centre swings 2.4x in
+        // area with peaks 0.6 to 1.0 seconds apart and never on a beat. A single
+        // sine cannot do that -- it gives evenly spaced peaks of equal height,
+        // which reads as a stone swelling and sinking rather than burning.
+        [Test]
+        public void TheEmbersFlickerIsIrregular()
+        {
+            var peaks = new System.Collections.Generic.List<float>();
+            float previous = 0f, before = 0f;
+
+            for (float t = 0f; t < 30f; t += 1f / 60f)
+            {
+                float v = ConstellationLayout.EmberFlicker(t, 0f);
+
+                Assert.That(v, Is.InRange(0f, 1f), $"the flicker left its range at t {t}");
+
+                if (previous > before && previous > v) peaks.Add(previous);
+
+                before = previous;
+                previous = v;
+            }
+
+            Assert.Greater(peaks.Count, 20, "the flicker barely peaks over 30 seconds");
+
+            // THE PEAKS ARE OF DIFFERENT HEIGHTS, which is the property. A sine
+            // of any period gives peaks that are all exactly 1.
+            float tallest = 0f, shortest = 1f;
+            foreach (float p in peaks)
+            {
+                if (p > tallest) tallest = p;
+                if (p < shortest) shortest = p;
+            }
+
+            Assert.Greater(tallest - shortest, 0.15f,
+                "every peak of the flicker is the same height, so it is a breathe with extra " +
+                "arithmetic rather than a fire");
+        }
+
+        // The two rates must not divide into each other, or their sum settles
+        // into a short repeating pattern and the irregularity above is a lie
+        // that happens to hold for the first few seconds.
+        [Test]
+        public void TheEmbersTwoRatesAreIncommensurate()
+        {
+            float ratio = ConstellationLayout.EmberSlowSeconds / ConstellationLayout.EmberFastSeconds;
+
+            for (int n = 1; n <= 6; n++)
+            {
+                for (int d = 1; d <= 6; d++)
+                {
+                    Assert.Greater(System.Math.Abs(ratio - (float)n / d), 0.02f,
+                        $"the ember's two rates sit at {n}:{d}, so their sum repeats every " +
+                        $"{d * ConstellationLayout.EmberFastSeconds:0.##}s");
+                }
+            }
         }
 
         // The lean is a LEAN, not a centring. A push that moved the selected

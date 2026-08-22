@@ -116,6 +116,26 @@ namespace PrincesPalace
         // this only carries the 55% the design asks for.
         private static readonly Color UnauthoredTint = new Color(1f, 1f, 1f, 0.55f);
 
+        // THE LIT SPHERE IS TURNED DOWN TO 70%, and the number is fitted rather
+        // than judged.
+        //
+        // The design's ember is mostly DARK: across its disc the median pixel
+        // sits at luma 21 and only the veins and a small heart are bright. The
+        // delivered PNG drawn at full white has a median of 27 and far more of
+        // the disc above 120, so it reads as a ball of fire rather than as a
+        // stone with fire inside it.
+        //
+        // 0.70 is the multiple that minimises quantile-RMS error against the
+        // design ember's own luma distribution, sampled off its recording --
+        // 18.3, against 31.8 at full white. The white HEART the darkening costs
+        // is what the core overlay puts back, which is why that overlay's alpha
+        // and this were settled together.
+        //
+        // The residual 18.3 is NOT fixable here: the delivered sprite's veins
+        // are denser and thicker than the prototype's, and no uniform multiply
+        // moves vein coverage. That is an art difference, not a compositing one.
+        private static readonly Color LitTint = new Color(0.70f, 0.70f, 0.70f, 1f);
+
         private static readonly Color LabelLit = new Color(0.929f, 0.902f, 1f, 1f);
         private static readonly Color LabelReady = new Color(0.949f, 0.859f, 0.620f, 1f);
         private static readonly Color LabelQuiet = new Color(0.557f, 0.498f, 0.690f, 1f);
@@ -514,10 +534,9 @@ namespace PrincesPalace
                         var sprite = SpriteFor(refusal);
                         if (sprite != null) image.sprite = sprite;
 
-                        // The one tint, and it is an opacity rather than a hue:
-                        // the ash variant is already grey, and this is the 55%
-                        // that separates "not authored" from "not yet".
-                        image.color = unauthored ? UnauthoredTint : Color.white;
+                        image.color = unauthored ? UnauthoredTint
+                            : taken ? LitTint
+                            : Color.white;
                     }
 
                     // The warm drop-shadow, and only under a kindled stone.
@@ -536,7 +555,16 @@ namespace PrincesPalace
                     // only to switch them on and off -- the flicker itself is a
                     // resting loop, and a loop this reset would restart every
                     // time the player moved the selection.
-                    if (Has(orbCores, index)) orbCores[index].color = taken ? CoreLit : CoreOff;
+                    if (Has(orbCores, index))
+                    {
+                        orbCores[index].color = taken ? CoreLit : CoreOff;
+
+                        // The flicker scales this rect, and an unlit core is
+                        // invisible rather than absent -- so a respec that
+                        // catches one mid-flare would leave it parked at 1.34
+                        // and the next kindling would start from the wrong size.
+                        if (!taken) orbCores[index].rectTransform.localScale = Vector3.one;
+                    }
                     if (Has(orbAuras, index)) orbAuras[index].color = taken ? AuraLit : AuraOff;
 
                     // Everything stays PRESSABLE, including what cannot be
