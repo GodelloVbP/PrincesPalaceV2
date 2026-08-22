@@ -162,24 +162,33 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(216f, rect.Height, 0.01f);
         }
 
+        // TWO ABREAST, NOT A COLUMN OF THREE. Half-width plates in two columns
+        // put the same three readouts in two rows of the same total width, and
+        // the height that buys goes back to the stage they describe.
         [Test]
-        public void TheEnemyPlatesStepDownByTheirOwnPitch()
+        public void TheEnemyPlatesFillTwoColumnsBeforeStartingASecondRow()
         {
-            float first = RectOf("EnemyPlate0").Centre.Y;
-            float second = RectOf("EnemyPlate1").Centre.Y;
-            float third = RectOf("EnemyPlate2").Centre.Y;
+            var first = RectOf("EnemyPlate0").Centre;
+            var second = RectOf("EnemyPlate1").Centre;
+            var third = RectOf("EnemyPlate2").Centre;
 
-            // 392, up from 332 when the stage came out of the HUD. The plates
-            // are the stage's ceiling: the tallest actor needs 300 above the
-            // front slot's ground line, so its head reaches 72, and the middle
-            // slot's reaches 89 while still just crossing the plates in x.
-            // This stack's lowest edge (first - 284) has to clear both.
-            Assert.AreEqual(392f, first, 0.01f);
-            Assert.Greater(first - 284f, 89f + 12f,
+            Assert.AreEqual(first.Y, second.Y, 0.01f, "the first two sit side by side");
+            Assert.AreEqual(216f, second.X - first.X, 0.01f, "plate width plus a 16px gutter");
+
+            Assert.AreEqual(first.X, third.X, 0.01f, "the third starts the next row under the first");
+            Assert.AreEqual(76f, first.Y - third.Y, 0.01f, "plate height plus a 12px gutter");
+
+            // 392 still, and the block's RIGHT edge is what is pinned -- it sits
+            // against the same margin the heading and the standing-count do.
+            Assert.AreEqual(392f, first.Y, 0.01f);
+            Assert.AreEqual(920f, RectOf("EnemyPlate1").Centre.X + RectOf("EnemyPlate1").Width * 0.5f, 0.01f);
+
+            // The plates are the stage's ceiling: the tallest actor needs 300
+            // above the front slot's ground line, so its head reaches 72, and
+            // the middle slot's reaches 89 while still just crossing the plates
+            // in x. Two rows of 64 clear both by more than the three of 104 did.
+            Assert.Greater(third.Y - 32f, 89f + 12f,
                 "the bottom plate has dropped back onto an actor's head - see tools/measure_stage.py");
-            Assert.AreEqual(116f, first - second, 0.01f, "plate height plus a 12px gutter");
-            Assert.AreEqual(first - second, second - third, 0.01f, "and the same step again");
-            Assert.AreEqual(720f, RectOf("EnemyPlate0").Centre.X, 0.01f);
         }
 
         [Test]
@@ -586,5 +595,56 @@ namespace PrincesPalace.Domain.Tests
             foreach (var child in node.Children) WalkDecor(child, decor, visit);
         }
 
+
+        // ---- there is always a way out of targeting -------------------------------
+        //
+        // The skill list folds once something is picked, and BACK was a row in
+        // that list. Escape belongs to the system menu in this scene, so with
+        // the list gone there was nothing left that could cancel: a player who
+        // changed their mind had to pick a victim anyway.
+        //
+        // Asserted against the BUILT TREE rather than the menu model, because
+        // the failure is a missing node, not a wrong state -- the model already
+        // said Back() works, and it did, with nothing wired to call it.
+        [Test]
+        public void TargetingOffersACancelThatIsNotInsideTheFoldedList()
+        {
+            var screen = FightScreen.Build();
+
+            var cancel = Walk(screen.Root).FirstOrDefault(n => n.Name == "TargetCancelButton");
+            Assert.IsNotNull(cancel, "targeting has no way out - see FightMenuState.SubmenuOpen");
+
+            var inColumn = Walk(screen.SubmenuColumn.Node).Any(n => n.Name == "TargetCancelButton");
+            Assert.IsFalse(inColumn,
+                "the cancel is inside the column that folds when a skill is picked, so it is gone " +
+                "in exactly the state it exists for");
+        }
+
+        // AND IT HAS TO TAKE CLICKS. The banner it rides is AsDecor -- it hangs
+        // over the stage the player is aiming at, and a bar that swallowed a
+        // click on the monster behind it would be worse than no bar. AsDecor
+        // walks the subtree when it is called, so a cancel appended before that
+        // call is a button with its raycast cleared: present, correct-looking,
+        // and dead.
+        [Test]
+        public void TheCancelIsNotDecorEvenThoughTheBannerAroundItIs()
+        {
+            var screen = FightScreen.Build();
+            var prompt = Walk(screen.Root).First(n => n.Name == "TargetPrompt");
+
+            Assert.IsTrue(prompt.Decor, "the banner must not take clicks meant for the stage");
+
+            var cancel = prompt.Children.First(c => c.Name == "TargetCancelButton");
+            Assert.IsFalse(cancel.Decor, "the one control on the banner cannot be pressed");
+        }
+
+        private static IEnumerable<UiNode> Walk(UiNode node)
+        {
+            yield return node;
+            foreach (var child in node.Children)
+            {
+                foreach (var found in Walk(child)) yield return found;
+            }
+        }
     }
 }

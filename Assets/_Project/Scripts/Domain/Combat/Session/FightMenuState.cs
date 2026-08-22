@@ -55,8 +55,17 @@ namespace PrincesPalace.Domain.Combat.Session
         // unreachable in exactly the states where playback was still catching
         // up. The branch is only ever set through a guarded path and Reset
         // clears it on every resolution, so it is already the authority.
-        public bool SubmenuOpen =>
-            IsOpen && (Depth == MenuDepth.Sub || (Depth == MenuDepth.Target && Branch != MenuBranch.Attack));
+        // THE LIST FOLDS ONCE SOMETHING IS PICKED.
+        //
+        // It used to stay up through targeting, so that the player could see
+        // what they had chosen. The detail column says that, in more words, and
+        // the target prompt names it outright -- while the list itself was
+        // sitting over the middle of the battlefield, which is the half of the
+        // screen the player has just been asked to point at.
+        //
+        // ATTACK was already excluded, because it skips the submenu on the way
+        // in. That exception is now the rule.
+        public bool SubmenuOpen => IsOpen && Depth == MenuDepth.Sub;
 
         // The detail column is populated for ATTACK too, through a synthetic
         // "Strike" entry: a verb that jumps straight to targeting would

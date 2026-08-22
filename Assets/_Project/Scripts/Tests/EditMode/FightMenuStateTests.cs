@@ -62,17 +62,28 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(1, menu.ActiveVerbIndex);
         }
 
+        // WHAT REPLACED "the column stays up while targeting from it".
+        //
+        // That reasoned the player should still see what they picked. They do
+        // -- the detail column has it in full and the target prompt names it
+        // outright -- and the price of the list saying it a third time was the
+        // list sitting over the middle of the battlefield, which is the half of
+        // the screen the player has just been told to point at.
         [Test]
-        public void TheColumnStaysUpWhileTargetingFromIt()
+        public void TheColumnFoldsOnceSomethingIsPicked()
         {
-            // Targeting from a skill does NOT close the list it was chosen from:
-            // the player can still see what they picked while they aim.
             var menu = Menu();
             menu.OpenBranch(MenuBranch.Skill);
             menu.EnterTargeting();
 
             Assert.AreEqual(MenuDepth.Target, menu.Depth);
-            Assert.IsTrue(menu.SubmenuOpen);
+            Assert.IsFalse(menu.SubmenuOpen,
+                "the list is still covering the stage the player is being asked to aim at");
+
+            // AND THE DETAIL COLUMN DOES NOT. It is what carries the choice
+            // through targeting now, so folding both would leave the prompt as
+            // the only thing naming what is about to happen.
+            Assert.IsTrue(menu.DetailOpen);
         }
 
         [Test]
@@ -470,5 +481,52 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(1, rows.Count);
             Assert.IsTrue(rows[0].IsBasicSpell);
         }
+
+        // ---- telling two of the same monster apart -------------------------------
+
+        [Test]
+        public void TwoOfTheSameKindAreNumberedInTheOrderTheyStand()
+        {
+            var names = FightHudModel.DisplayNames(new[]
+            {
+                Foe("Giant Rat"), Foe("Bog Witch"), Foe("Giant Rat"),
+            });
+
+            CollectionAssert.AreEqual(
+                new[] { "Giant Rat 1", "Bog Witch", "Giant Rat 2" }, names);
+        }
+
+        // THE ORDINAL IS INFORMATION, so it appears only where there is
+        // something to tell apart. Numbering a lone Bog Witch makes the
+        // encounter read as a spawn table.
+        [Test]
+        public void AKindWithOnlyOneOfItIsNotNumbered()
+        {
+            CollectionAssert.AreEqual(
+                new[] { "Bog Witch" }, FightHudModel.DisplayNames(new[] { Foe("Bog Witch") }));
+        }
+
+        // OVER THE WHOLE LIST INCLUDING THE DEAD, and this is the one that
+        // matters in play. A player learns which rat they have been hurting; if
+        // rat 1 falls and rat 2 becomes "Giant Rat 1", the name they learned now
+        // belongs to a different animal, at exactly the moment they are counting
+        // on it.
+        [Test]
+        public void ARatKeepsItsNumberWhenTheRatBesideItFalls()
+        {
+            var first = Foe("Giant Rat");
+            var second = Foe("Giant Rat");
+            var all = new[] { first, second };
+
+            Assert.AreEqual("Giant Rat 2", FightHudModel.DisplayNameOf(all, second));
+
+            first.CurrentHealth = 0;
+
+            Assert.AreEqual("Giant Rat 2", FightHudModel.DisplayNameOf(all, second),
+                "the survivor was renumbered, so the name the player learned now means something else");
+        }
+
+        private static CombatantState Foe(string name) =>
+            new CombatantState(name, false, 40, 0, 5, 0, 3);
     }
 }

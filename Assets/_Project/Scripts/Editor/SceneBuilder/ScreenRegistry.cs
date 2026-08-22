@@ -108,6 +108,7 @@ public static class ScreenRegistry
 
                 fight.enemiesHint = result.Tmp(screen.EnemiesHint);
                 fight.enemyPlates = screen.EnemyPlates.Select(result.Button).ToArray();
+                fight.enemyPlateIcons = screen.EnemyPlateIcons.Select(result.Image).ToArray();
                 fight.enemyPlateNames = screen.EnemyPlateNames.Select(result.Tmp).ToArray();
                 fight.enemyPlateHps = screen.EnemyPlateHps.Select(result.Tmp).ToArray();
                 fight.enemyPlateHpFills = screen.EnemyPlateHpFills.Select(result.Image).ToArray();
@@ -132,6 +133,8 @@ public static class ScreenRegistry
                 fight.continueButton = result.Button(screen.ContinueButton);
 
                 fight.enemyIntentIcons = screen.EnemyIntentIcons.Select(result.Go).ToArray();
+                fight.enemyHitAreas = screen.EnemyHitAreas.Select(result.Button).ToArray();
+                fight.targetCancelButton = result.Button(screen.TargetCancelButton);
                 // The reward screen owns Escape while it is up: opening this
                 // menu over a reckoning the player is trying to dismiss is the
                 // same wrong-thing-on-Escape the consumer list exists to stop.

@@ -334,6 +334,76 @@ namespace PrincesPalace.Domain.Combat.Session
         public static int StandingCount(CombatEncounter encounter) =>
             encounter == null ? 0 : encounter.LivingEnemies.Count();
 
+        // ---- telling two of the same monster apart -------------------------------
+        //
+        // Three plates reading "Giant Rat", "Giant Rat", "Giant Rat" name the
+        // KIND and leave the player to work out which is which from position --
+        // which they cannot, because the plates are a list on the right and the
+        // rats are a row in the middle, and the two orders are only incidentally
+        // the same. It matters the moment one of them is at 4 HP.
+        //
+        // NUMBERED ONLY WHEN THERE IS SOMETHING TO TELL APART. A lone Bog Witch
+        // is "Bog Witch", not "Bog Witch 1" -- the ordinal is information, and
+        // adding one where there is no ambiguity is noise that also makes the
+        // encounter read as a spawn table.
+        //
+        // Over the WHOLE list including the dead, so a rat's number does not
+        // change when the rat beside it falls. A name that renumbers mid-fight
+        // is worse than no name: the player has already learned which one they
+        // were hurting.
+        public static IReadOnlyList<string> DisplayNames(IReadOnlyList<CombatantState> combatants)
+        {
+            var names = new List<string>();
+            if (combatants == null) return names;
+
+            var totals = new Dictionary<string, int>();
+            foreach (var c in combatants)
+            {
+                if (c == null) continue;
+                totals.TryGetValue(c.Name, out int seen);
+                totals[c.Name] = seen + 1;
+            }
+
+            var used = new Dictionary<string, int>();
+            foreach (var c in combatants)
+            {
+                if (c == null)
+                {
+                    names.Add("");
+                    continue;
+                }
+
+                if (totals[c.Name] <= 1)
+                {
+                    names.Add(c.Name);
+                    continue;
+                }
+
+                used.TryGetValue(c.Name, out int n);
+                used[c.Name] = n + 1;
+                names.Add($"{c.Name} {n + 1}");
+            }
+
+            return names;
+        }
+
+        // One combatant's display name out of the list it belongs to. The plates
+        // walk the list and take the whole thing; the nameplate under a figure
+        // and the intent tooltip each want one, and both have to agree with the
+        // plates or the screen contradicts itself.
+        public static string DisplayNameOf(IReadOnlyList<CombatantState> combatants, CombatantState combatant)
+        {
+            if (combatants == null || combatant == null) return combatant?.Name ?? "";
+
+            var names = DisplayNames(combatants);
+            for (int i = 0; i < combatants.Count && i < names.Count; i++)
+            {
+                if (ReferenceEquals(combatants[i], combatant)) return names[i];
+            }
+
+            return combatant.Name;
+        }
+
         // ---- enemy intent -------------------------------------------------------
 
         // The sentence behind an intent icon.

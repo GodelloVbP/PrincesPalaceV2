@@ -52,7 +52,17 @@ namespace PrincesPalace
 
         [SerializeField] internal TMP_Text enemiesHint;
         [SerializeField] internal Button[] enemyPlates;
+        [SerializeField] internal Image[] enemyPlateIcons;
         [SerializeField] internal TMP_Text[] enemyPlateNames;
+
+        // A click target over each enemy FIGURE, live only while a mark is
+        // being chosen -- see FightScreen.BuildStage for why it is a separate
+        // node rather than the sprite.
+        [SerializeField] internal Button[] enemyHitAreas;
+
+        // The way out of targeting. It lives on the target prompt because the
+        // list BACK used to live in folds as soon as a skill is picked.
+        [SerializeField] internal Button targetCancelButton;
         [SerializeField] internal TMP_Text[] enemyPlateHps;
         [SerializeField] internal Image[] enemyPlateHpFills;
         [SerializeField] internal TMP_Text[] enemyPlateTags;

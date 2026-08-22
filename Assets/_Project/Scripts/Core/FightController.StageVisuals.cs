@@ -164,10 +164,29 @@ namespace PrincesPalace
             }
         }
 
+        // THE SAME NAME THE PLATE IN THE CORNER USES, ordinal and all. Three
+        // rats labelled "Giant Rat" under their feet and "Giant Rat 2" in the
+        // list is a screen disagreeing with itself about which one is which,
+        // which is worse than not numbering them at all.
         private void RefreshNameplate(TMPro.TMP_Text plate, CombatantState combatant)
         {
             if (plate == null) return;
-            plate.SetContent(combatant.Name);
+
+            plate.SetContent(DisplayNameOf(combatant));
+        }
+
+        // Over the side the combatant is on. Numbering across both armies would
+        // make Shawn "Shawn" and a summoned Shawn "Shawn 2" -- correct, and not
+        // a case that exists -- while costing every lookup a second list walk.
+        private string DisplayNameOf(CombatantState combatant)
+        {
+            if (_session == null || combatant == null) return combatant?.Name ?? "";
+
+            var side = combatant.IsPlayerSide
+                ? _session.Encounter.PlayerParty
+                : _session.Encounter.Enemies;
+
+            return FightHudModel.DisplayNameOf(side, combatant);
         }
 
         // ---- enemy intent icons -------------------------------------------------
@@ -330,7 +349,8 @@ namespace PrincesPalace
 
             if (intentTooltipText != null)
             {
-                intentTooltipText.SetContent(FightHudModel.IntentTooltip(enemy.Name, intent.Value));
+                intentTooltipText.SetContent(
+                    FightHudModel.IntentTooltip(DisplayNameOf(enemy), intent.Value));
             }
 
             intentTooltip.SetShown(true);

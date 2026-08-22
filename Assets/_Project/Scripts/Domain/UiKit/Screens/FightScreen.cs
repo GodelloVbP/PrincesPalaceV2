@@ -64,6 +64,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef EnemyStage;
         public NodeRef PartyStage;
         public List<NodeRef> EnemySlots = new List<NodeRef>();
+
+        // One per enemy slot: a click target over the figure itself, live only
+        // while the player is choosing a mark. See BuildStage.
+        public List<NodeRef> EnemyHitAreas = new List<NodeRef>();
         public List<NodeRef> EnemySprites = new List<NodeRef>();
         public List<NodeRef> EnemyHitFlashes = new List<NodeRef>();
         public List<NodeRef> EnemyNameplates = new List<NodeRef>();
@@ -85,6 +89,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         public NodeRef EnemiesHint;
         public List<NodeRef> EnemyPlates = new List<NodeRef>();
+        public List<NodeRef> EnemyPlateIcons = new List<NodeRef>();
         public List<NodeRef> EnemyPlateNames = new List<NodeRef>();
         public List<NodeRef> EnemyPlateHps = new List<NodeRef>();
         public List<NodeRef> EnemyPlateHpFills = new List<NodeRef>();
@@ -150,6 +155,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef IntentTooltip;
         public NodeRef IntentTooltipText;
         public NodeRef TargetPromptLabel;
+        public NodeRef TargetCancelButton;
 
         public NodeRef SpellVfxPool;
         public NodeRef SpellVfx;
@@ -181,7 +187,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 s.PartyNameplates, s.PartyFootShadows);
             var enemyStage = s.BuildStage("Enemy", mirrored: false,
                 FightStageAnchors.EnemyShadowColor, s.EnemySlots, s.EnemySprites, s.EnemyHitFlashes,
-                s.EnemyNameplates, s.EnemyFootShadows, s.EnemyIntentIcons);
+                s.EnemyNameplates, s.EnemyFootShadows, s.EnemyIntentIcons, s.EnemyHitAreas);
             s.PartyStage = partyStage;
             s.EnemyStage = enemyStage;
             children.Add(partyStage);
@@ -320,7 +326,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private UiNode BuildStage(string prefix, bool mirrored, string shadowHex,
                                   List<NodeRef> slots, List<NodeRef> sprites, List<NodeRef> flashes,
                                   List<NodeRef> nameplates, List<NodeRef> shadows,
-                                  List<NodeRef> intentIcons = null)
+                                  List<NodeRef> intentIcons = null,
+                                  List<NodeRef> hitAreas = null)
         {
             int count = FightHudSpec.StageSlotsPerSide;
             for (int i = 0; i < count; i++)
@@ -331,6 +338,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 nameplates.Add(default);
                 shadows.Add(default);
                 intentIcons?.Add(default);
+                hitAreas?.Add(default);
             }
 
             var children = new List<UiNode>();
@@ -418,6 +426,45 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // the glyph alone says "something nasty is coming", and the
                 // detail (who, and roughly how hard) is what the player opens on
                 // demand rather than reading five of at once.
+                // ---- the figure itself, as a target -----------------------
+                //
+                // CLICKING THE MONSTER is what a player tries first, and until
+                // now the only way to pick one was the plate in the corner --
+                // which meant looking away from the thing being pointed at to
+                // point at it.
+                //
+                // A DEDICATED BUTTON, INACTIVE UNTIL TARGETING, and both halves
+                // are load-bearing. It cannot be the sprite: an Image raycasts
+                // against its RECT, not its alpha, so a monster with a
+                // transparent corner is a rectangular click-blocker standing
+                // over whatever is behind it -- which is exactly the bug the
+                // AsDecor comment above records, where a rat swallowed three
+                // rows of the skill list. This one is a separate node that
+                // exists only in the state where a click on a monster means
+                // something, so outside targeting it raycasts nothing at all.
+                //
+                // Sized to the figure's own footprint rather than the slot,
+                // which the runtime resizes to the real sprite: a wide box on a
+                // narrow monster is the same blocker in a smaller costume.
+                UiNode hitArea = null;
+                if (!mirrored)
+                {
+                    // NoChrome, NOT AsDecor and not merely a null SpriteKey.
+                    // The monster is the button and this is only the area that
+                    // hears the click, so it must draw nothing -- but AsDecor
+                    // takes raycasting away with the drawing, and an empty
+                    // SpriteKey selects the shared button face, which is what
+                    // put three gold slabs over the monsters the first time
+                    // this ran. NoChrome keeps the Image, keeps the raycast,
+                    // and paints nothing; see UiEmitter.EmitButton.
+                    hitArea = Ui.Button($"EnemyHitArea{slot}", UiString.Runtime,
+                            Place.Frac(new UiVec(0.18f, 0f), new UiVec(0.82f, 0.92f)), UiSize.Fill, 1)
+                        .NoChrome()
+                        .Inactive();
+
+                    hitAreas[slot] = hitArea;
+                }
+
                 UiNode intent = null;
                 if (!mirrored)
                 {
@@ -447,12 +494,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     intentIcons[slot] = intent;
                 }
 
+                var kids = new List<UiNode> { shadow, sprite, flash, nameplate };
+                if (hitArea != null) kids.Add(hitArea);
+                if (intent != null) kids.Add(intent);
+
                 var slotNode = Ui.Panel($"{prefix}{slot}Slot",
                         Place.At(offset.X, offset.Y, new UiVec(0.5f, 0f)),
                         UiSize.Fixed(320f, 200f),
-                        intent == null
-                            ? new[] { shadow, sprite, flash, nameplate }
-                            : new[] { shadow, sprite, flash, nameplate, intent })
+                        kids.ToArray())
                     .WithScale(new UiVec(scale, scale))
                     .AllowOverlap("depth-stacked actors standing on one receding floor overlap by construction - that IS the perspective")
                     .AllowOverflow("320x200 is a placeholder resized to the real sprite at runtime; the stage is a coordinate frame, not a clip region");
@@ -566,10 +615,37 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // ---- enemy plates ------------------------------------------------------
 
-        private const float PlateX = 720f;
-        private const float PlateW = 400f;
-        private const float PlateH = 104f;
+        // HALF THE SIZE, AND TWO ABREAST. 400x104 stacked three deep was a
+        // column of cards down a quarter of the screen's height for information
+        // that is a name, a number and a bar. At 200x56 in two columns the same
+        // three plates occupy two rows in the same width, and the space that
+        // buys goes back to the battlefield they are describing.
+        private const float PlateW = 200f;
+
+        // 64 RATHER THAN THE 52 THAT WOULD BE EXACTLY HALF, and the twelve is
+        // the status line. A plate is three rows -- name and HP, the bar, and
+        // whatever the monster is currently suffering -- and "9999/9999" at
+        // 11pt measures 28.6 tall on its own, which UiTextFitAudit refuses to
+        // put in a box that cannot hold it. Halving the height exactly means
+        // dropping the status row, and an enemy's Vulnerable is not decoration.
+        private const float PlateH = 64f;
+        private const float PlateGap = 16f;
+        private const int PlateColumns = 2;
+
+        // The block's RIGHT edge is unchanged, which is the anchor that matters
+        // -- it sits against the same margin the heading and the hint do.
+        private const float PlateBlockRight = 920f;
+        private const float PlateFirstX =
+            PlateBlockRight - (PlateColumns * PlateW + (PlateColumns - 1) * PlateGap) + PlateW * 0.5f;
+
+        private const float PlatePitchX = PlateW + PlateGap;
         private const float PlatePitch = PlateH + 12f;
+
+        // The icon that tells two of the same monster apart at a glance, before
+        // the name is read. The actor's own idle sprite, fitted -- no new art,
+        // and it cannot disagree with the figure on the stage because it IS the
+        // figure on the stage.
+        private const float PlateIconSize = 40f;
         // 332 until the stage came up out of the HUD. The anchors' ceiling is
         // this plate stack: the tallest actor needs 300 units above the front
         // slot's ground line, so at Near.Y -228 its head reaches 72, and this
@@ -591,11 +667,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // audit refuses. "E N E M I E S" at 12pt bold is well under 155.
             yield return Ui.Label("EnemiesHeading", UiStrings.EnemiesHeading, new UiVec(155f, 24f), 12,
                 FightHudPalette.TextMuted,
-                Place.At(PlateX - PlateW * 0.5f, PlateFirstY + 74f, new UiVec(0f, 0.5f)));
+                Place.At(PlateFirstX - PlateW * 0.5f, PlateFirstY + 50f, new UiVec(0f, 0.5f)));
 
             var hint = Ui.Label("EnemiesHint", UiStrings.StandingCount, new UiVec(240f, 24f), 12,
                 FightHudPalette.TextDisabled,
-                Place.At(PlateX + PlateW * 0.5f, PlateFirstY + 74f, new UiVec(1f, 0.5f)));
+                Place.At(PlateBlockRight, PlateFirstY + 50f, new UiVec(1f, 0.5f)));
             EnemiesHint = hint;
             yield return hint;
         }
@@ -603,47 +679,67 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // The plates are BUTTONS as well as readouts -- targeting reuses them
         // rather than opening a fourth column, which keeps the player's eye on
         // the column they are already reading rather than moving it somewhere
-        // new mid-decision.
+        // new mid-decision. The figures on the stage are pressable too now; see
+        // EnemyHitAreas.
         private IEnumerable<UiNode> BuildEnemyPlates()
         {
             return Ui.Each(Enumerable.Range(0, FightHudSpec.EnemyPlates).ToList(), (_, i) =>
             {
-                var name = Ui.Label($"EnemyPlate{i}Name", UiString.Runtime, new UiVec(250f, 26f), 17,
-                    FightHudPalette.EnemyName, Place.At(-184f, 30f, new UiVec(0f, 0.5f)));
+                float left = -PlateW * 0.5f;
 
-                // 110 wide, not v1's 140: at 140 the right-aligned HP box began
-                // at x 44 and the left-aligned name box ends at 66.
-                var hp = Ui.Label($"EnemyPlate{i}Hp", UiStrings.HealthValue, new UiVec(110f, 24f), 14,
-                    FightHudPalette.EnemyHpText, Place.At(184f, 30f, new UiVec(1f, 0.5f)));
+                var icon = Ui.Sprite($"EnemyPlate{i}Icon", null,
+                        new UiVec(PlateIconSize, PlateIconSize),
+                        Place.At(left + 4f + PlateIconSize * 0.5f, 0f))
+                    .Inactive()
+                    .AsDecor();
+
+                // Everything else starts to the right of the icon.
+                float textLeft = left + 8f + PlateIconSize;
+
+                var name = Ui.Label($"EnemyPlate{i}Name", UiString.Runtime, new UiVec(86f, 20f), 13,
+                    FightHudPalette.EnemyName, Place.At(textLeft, 16f, new UiVec(0f, 0.5f)))
+                    .TextAligned(UiTextAlign.Left);
+
+                // 30 tall for an 11pt line: the audit measures "9999/9999" at
+                // 28.6, and a 20-tall box clipped the descenders off a number
+                // that is the whole reason the plate exists.
+                var hp = Ui.Label($"EnemyPlate{i}Hp", UiStrings.HealthValue, new UiVec(56f, 30f), 11,
+                    FightHudPalette.EnemyHpText, Place.At(PlateW * 0.5f - 8f, 16f, new UiVec(1f, 0.5f)))
+                    .TextAligned(UiTextAlign.Right);
 
                 var fill = Ui.Solid($"EnemyPlate{i}HpFill", FightHudPalette.HpBright, Place.Stretch(), UiSize.Fill);
-                var bar = Ui.Panel($"EnemyPlate{i}Bar", Place.At(0f, 8f), UiSize.Fixed(368f, 11f), fill)
+                var bar = Ui.Panel($"EnemyPlate{i}Bar",
+                        Place.At(textLeft + 71f, -6f), UiSize.Fixed(142f, 7f), fill)
                     .Coloured(FightHudPalette.Track);
 
-                var tags = Ui.Label($"EnemyPlate{i}Tags", UiString.Runtime, new UiVec(360f, 22f), 11,
-                    FightHudPalette.TextSecondary, Place.At(-184f, -20f, new UiVec(0f, 0.5f)));
+                var tags = Ui.Label($"EnemyPlate{i}Tags", UiString.Runtime, new UiVec(142f, 16f), 9,
+                    FightHudPalette.TextSecondary, Place.At(textLeft, -22f, new UiVec(0f, 0.5f)))
+                    .TextAligned(UiTextAlign.Left);
 
-                // A 14px square rotated 45 degrees, pinned just outside the
+                // A 12px square rotated 45 degrees, pinned just outside the
                 // plate's left edge. Visible only while targeting.
                 var reticle = Ui.Solid($"EnemyPlate{i}Reticle", FightHudPalette.TargetAmber,
-                        new UiVec(14f, 14f), Place.At(-PlateW * 0.5f - 13f, 0f))
+                        new UiVec(12f, 12f), Place.At(-PlateW * 0.5f - 9f, 0f))
                     .Rotated(45f)
                     .Inactive()
                     .AllowOverflow("the reticle is deliberately OUTSIDE the plate - a marker in the margin, not a badge on the card");
 
+                EnemyPlateIcons.Add(icon);
                 EnemyPlateNames.Add(name);
                 EnemyPlateHps.Add(hp);
                 EnemyPlateHpFills.Add(fill);
                 EnemyPlateTags.Add(tags);
                 EnemyPlateReticles.Add(reticle);
 
-                // 1.03 hover, no press pop: the plate is 400+ wide and carries
-                // four labels, so the press animator's 1.05/0.95 would swing
-                // the name and HP text sideways under the cursor. v1 made the
-                // same call at the same number.
+                // 1.03 hover, no press pop: the plate carries four pieces of
+                // text, so the press animator's 1.05/0.95 would swing them all
+                // sideways under the cursor. v1 made the same call at the same
+                // number.
                 var plate = Ui.Button($"EnemyPlate{i}", UiString.Runtime, new UiVec(PlateW, PlateH), 1,
-                    Place.At(PlateX, PlateFirstY - i * PlatePitch)).Hovers(1.03f);
+                    Place.At(PlateFirstX + i % PlateColumns * PlatePitchX,
+                             PlateFirstY - i / PlateColumns * PlatePitch)).Hovers(1.03f);
                 plate.SpriteKey = PanelCrimson;
+                plate.Children.Add(icon);
                 plate.Children.Add(name);
                 plate.Children.Add(hp);
                 plate.Children.Add(bar);
@@ -1205,16 +1301,29 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // ---- the target prompt ---------------------------------------------------------
 
-        // Visible only at target depth, and non-interactive -- it must never eat
-        // a click meant for the plate underneath it. AsDecor is how that is
-        // stated: the emitter clears raycastTarget across the whole subtree, so
-        // "takes no clicks" is enforced rather than remembered.
+        // Visible only at target depth. The BAR takes no clicks -- it hangs over
+        // the stage the player is being asked to point at, and a banner that
+        // swallowed a click on the monster behind it would be worse than no
+        // banner. AsDecor states that for the whole subtree rather than leaving
+        // it to be remembered.
+        //
+        // THE CANCEL BUTTON IS THE ONE EXCEPTION, and it exists because the
+        // skill list folds once something is picked. BACK lived in that list, so
+        // folding it left targeting with no way out at all: Escape belongs to
+        // the system menu here (see FightController.Input), and the verbs behind
+        // the prompt do not reopen a branch mid-target. A player who changed
+        // their mind was stuck choosing a victim.
+        //
+        // Added AFTER AsDecor, because AsDecor walks the subtree at the moment
+        // it is called -- a child appended first would have had its raycast
+        // cleared with the rest and been a button that could not be pressed.
         private UiNode BuildTargetPrompt()
         {
             var diamond = Ui.Solid("TargetPromptDiamond", FightHudPalette.TargetAmber, new UiVec(12f, 12f),
                 Place.At(-206f, 0f)).Rotated(45f);
-            var label = Ui.Label("TargetPromptLabel", UiStrings.TargetPrompt, new UiVec(400f, 24f), 15,
-                FightHudPalette.GoldText, Place.At(-182f, 0f, new UiVec(0f, 0.5f)));
+            var label = Ui.Label("TargetPromptLabel", UiStrings.TargetPrompt, new UiVec(330f, 24f), 15,
+                FightHudPalette.GoldText, Place.At(-182f, 0f, new UiVec(0f, 0.5f)))
+                .TextAligned(UiTextAlign.Left);
             TargetPromptLabel = label;
 
             var prompt = Ui.Sprite("TargetPrompt", BannerFrame, Place.At(0f, -150f), UiSize.Fixed(480f, 48f));
@@ -1223,6 +1332,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
             prompt.Inactive();
             prompt.Opening();
             prompt.AsDecor();
+
+            var cancel = Ui.Button("TargetCancelButton", UiStrings.TargetCancel,
+                    new UiVec(88f, 30f), 12, Place.At(190f, 0f))
+                .Hovers(1.05f);
+            TargetCancelButton = cancel;
+            prompt.Children.Add(cancel);
+
             TargetPrompt = prompt;
             return prompt;
         }

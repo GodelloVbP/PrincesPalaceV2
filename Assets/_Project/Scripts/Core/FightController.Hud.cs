@@ -191,20 +191,50 @@ namespace PrincesPalace
             enemiesHint.Set(UiStrings.StandingCount,
                 _session == null ? 0 : FightHudModel.StandingCount(_session.Encounter));
 
+            // OVER THE WHOLE LIST INCLUDING THE DEAD, so a rat keeps its number
+            // when the rat beside it falls. See FightHudModel.DisplayNames.
+            var names = FightHudModel.DisplayNames(enemies);
+
             for (int i = 0; i < enemyPlates.Length; i++)
             {
                 bool present = i < enemies.Count && enemies[i].IsAlive;
                 enemyPlates[i].SetShown(present);
                 enemyPlateReticles[i].SetShown(present && _menu.IsTargeting);
+
+                // THE FIGURE IS A TARGET ONLY WHILE ONE IS BEING CHOSEN. Left
+                // live it is a rectangle over the battlefield eating clicks
+                // meant for whatever is behind it.
+                if (Has(enemyHitAreas, i))
+                {
+                    enemyHitAreas[i].gameObject.SetShown(present && _menu.IsTargeting);
+                }
+
                 if (!present) continue;
 
                 var enemy = enemies[i];
-                enemyPlateNames[i].SetContent(enemy.Name);
+                enemyPlateNames[i].SetContent(i < names.Count ? names[i] : enemy.Name);
                 enemyPlateHps[i].Set(UiStrings.HealthValue, enemy.CurrentHealth, enemy.MaxHealth);
                 SetFill(enemyPlateHpFills[i], enemy.CurrentHealth, enemy.MaxHealth);
                 enemyPlateTags[i].SetContent(TagLineFor(enemy));
+
+                // The actor's own idle art, fitted into the plate. Reusing the
+                // stage sprite rather than authoring plate icons is what makes
+                // the two impossible to disagree.
+                if (Has(enemyPlateIcons, i))
+                {
+                    var art = LoadStanceSprite(enemy, FightSession.Stances.Idle);
+                    enemyPlateIcons[i].gameObject.SetShown(art != null);
+                    if (art != null)
+                    {
+                        enemyPlateIcons[i].sprite = art;
+                        enemyPlateIcons[i].preserveAspect = true;
+                    }
+                }
             }
         }
+
+        private static bool Has<T>(T[] array, int index) where T : UnityEngine.Object =>
+            array != null && index >= 0 && index < array.Length && array[index] != null;
 
         private void RefreshPartyPlate()
         {

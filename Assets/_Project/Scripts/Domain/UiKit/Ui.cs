@@ -61,6 +61,24 @@ namespace PrincesPalace.Domain.UiKit
             return node;
         }
 
+        // A BUTTON SIZED BY ITS ANCHORS rather than by a fixed box.
+        //
+        // Every other button on every screen has a size it was designed at,
+        // which is why the fixed-size overload below is the one that reads like
+        // the primary. This one exists for a control that has to TRACK
+        // something the runtime resizes: the fight's enemy hit areas fill a
+        // stage slot whose rect is set from the real sprite on load, so a fixed
+        // box authored here would be the wrong shape for every monster.
+        public static UiNode Button(string name, UiString text, Place place, UiSize size,
+            int fontSize = 24)
+        {
+            RequireText(text, name, nameof(Button));
+            var node = Node(name, UiNodeKind.Button, place, size);
+            node.Text = text;
+            node.FontSize = fontSize;
+            return node;
+        }
+
         public static UiNode Button(string name, UiString text, UiVec size, int fontSize = 24, Place? place = null)
         {
             RequireText(text, name, nameof(Button));

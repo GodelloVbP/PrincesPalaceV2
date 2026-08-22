@@ -41,7 +41,23 @@ namespace PrincesPalace
                 enemyPlates[i].onClick.AddListener(() => OnEnemyPressed(index));
             }
 
+            // THE SAME HANDLER FROM THE FIGURE ITSELF. Two ways to name the
+            // same monster and one place that decides what naming it means --
+            // the alternative is a second copy of the front-rank rule and the
+            // is-it-alive check, which is how two paths to one action drift.
+            if (enemyHitAreas != null)
+            {
+                for (int i = 0; i < enemyHitAreas.Length; i++)
+                {
+                    if (enemyHitAreas[i] == null) continue;
+
+                    int index = i;
+                    enemyHitAreas[i].onClick.AddListener(() => OnEnemyPressed(index));
+                }
+            }
+
             submenuBackButton.onClick.AddListener(OnBackPressed);
+            if (targetCancelButton != null) targetCancelButton.onClick.AddListener(OnBackPressed);
             continueButton.onClick.AddListener(OnContinuePressed);
         }
 

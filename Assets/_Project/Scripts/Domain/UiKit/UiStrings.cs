@@ -553,6 +553,14 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString DetailStatTarget = UiString.Define("detail_stat_target", "TARGET");
         public static readonly UiString DetailStatEffect = UiString.Define("detail_stat_effect", "EFFECT");
 
+        // The way out of targeting. It reads ESC because that is what the row
+        // it replaced said, and because a player who has learned that key in
+        // every other menu should not have to unlearn it here -- even though
+        // the fight scene's Escape belongs to the system menu and this is a
+        // click. Named honestly rather than promising a key that does something
+        // else would be the alternative, and "CANCEL" alone loses the mnemonic.
+        public static readonly UiString TargetCancel = UiString.Define("fight.target_cancel", "CANCEL");
+
         public static readonly UiString TargetPrompt =
             UiString.Define("target_prompt", "Choose a target for {0}.", "Choose a target for Boulder Slam.");
 
@@ -757,7 +765,7 @@ namespace PrincesPalace.Domain.UiKit
             SubmenuSkillsTitle, SubmenuItemsTitle, SubmenuHint,
             DetailKindSkill, DetailKindItem,
             DetailStatCost, DetailStatPower, DetailStatTarget, DetailStatEffect,
-            TargetPrompt,
+            TargetPrompt, TargetCancel,
             MapTitle, MapDepth, MapGold, MapAbandon, MapFog,
             MapRoomTreasure, MapRoomRest, MapRoomShop, MapRoomEvent,
             MapRoomItem, MapRoomEmpty,
