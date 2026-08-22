@@ -88,9 +88,24 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // Column B for the skill branch.
         //
-        // UNAFFORDABLE ROWS ARE INCLUDED, marked, never dropped -- the player
-        // should learn what their character has rather than watch the list
-        // change length as their mana moves.
+        // UNAFFORDABLE ROWS ARE INCLUDED AND DIMMED. They are the character's
+        // own kit; the player should learn what they have rather than watch the
+        // list change length as their wool moves, and what stands in the way is
+        // a resource that comes back this turn or the next.
+        //
+        // NOTHING LOCKED REACHES HERE. Two gates upstream see to it: the kit is
+        // built from skills whose unlockLevel the character has reached, and
+        // SkillOptionsFor drops any whose ability requirements are unmet -- and
+        // it filters THERE rather than here on purpose, because an option
+        // carries its own index into kit.Skills and the dispatcher reads it, so
+        // filtering rows alone would cast a different skill than the one
+        // pressed.
+        //
+        // This used to re-test the requirement anyway and prefix the meta line
+        // with LOCKED for a failure that could no longer happen. Removed rather
+        // than left as a belt: a second copy of a rule that cannot fire is not
+        // a safety net, it is a claim that the list can contain locked entries,
+        // and it reads as one to anyone deciding where to add the next gate.
         public static IReadOnlyList<SubmenuRow> SkillRows(FightSession session, CombatantState actor)
         {
             var rows = new List<SubmenuRow>();
@@ -101,14 +116,14 @@ namespace PrincesPalace.Domain.Combat.Session
             foreach (var option in session.SkillOptionsFor(actor))
             {
                 var skill = option.Skill;
-                bool meets = actor.AbilityScores.Meets(RequirementCurve.Apply(skill.Requirements));
+                if (!actor.AbilityScores.Meets(RequirementCurve.Apply(skill.Requirements))) continue;
 
                 rows.Add(new SubmenuRow(
                     skill.DisplayName,
-                    meets ? MetaLine(skill) : LockedPrefix + MetaLine(skill),
+                    MetaLine(skill),
                     CostLabel(skill, resourceName),
                     option.Affordable,
-                    meets,
+                    meetsRequirement: true,
                     skill.ManaCost));
             }
 
@@ -200,14 +215,6 @@ namespace PrincesPalace.Domain.Combat.Session
                 default: return effect.ToString().ToUpperInvariant();
             }
         }
-
-        // Marks a row the character is not yet ALLOWED to use, as opposed to one
-        // they merely cannot pay for right now.
-        //
-        // Both dim, and before this nothing told them apart: five greyed skills
-        // above a full mana bar read as a bug. Affordability is already carried
-        // by the cost's own colour, so the word only has to cover the other one.
-        public const string LockedPrefix = "LOCKED  ·  ";
 
         // Both halves ALWAYS carry their unit.
         //

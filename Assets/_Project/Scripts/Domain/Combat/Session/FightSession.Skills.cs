@@ -564,6 +564,7 @@ namespace PrincesPalace.Domain.Combat.Session
             combatant.MaxHealth > 0 && combatant.CurrentHealth <= combatant.MaxHealth * fraction;
 
         private void RecordSpellPresentation(ResolvedSkill skill) =>
-            RecordSpellPresentation(skill.VfxPath, skill.VfxSeconds, skill.VfxImpactFrame, skill.SfxPath);
+            RecordSpellPresentation(skill.VfxPath, skill.VfxSeconds, skill.VfxImpactFrame, skill.SfxPath,
+                skill.VfxFromCaster);
     }
 }

@@ -74,8 +74,9 @@
       "statusMagnitude": 25,
       "statusDuration": 2,
       "vfxPath": "Spells/mud_burst",
-      "vfxSeconds": 0.6,
-      "vfxImpactFrame": 4
+      "vfxSeconds": 0.78,
+      "vfxImpactFrame": 11,
+      "vfxFromCaster": true
     },
     {
       "id": "provoke",

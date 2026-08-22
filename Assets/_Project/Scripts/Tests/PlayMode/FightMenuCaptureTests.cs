@@ -131,9 +131,22 @@ namespace PrincesPalace.PlayModeTests
             Click("Verb1");
             yield return Shoot("2_skill_submenu");
 
-            // The first skill row, which puts the fight into target selection
-            // and should raise the detail column and the target prompt.
-            Click("CharacterSkill0");
+            // The first skill row THE ACTOR CAN ACTUALLY CAST, which puts the
+            // fight into target selection and raises the detail column and the
+            // target prompt.
+            //
+            // It was CharacterSkill0 flat. Shawn opens a fight on 0 wool and
+            // most of his kit is priced in it, so row 0 is unaffordable, the
+            // press is refused, and this shot and the one after it were
+            // silently identical to the one before -- a capture of the screen
+            // NOT advancing, which looks exactly like a capture of it advancing
+            // if nobody checks the filename against the picture.
+            var castable = _fight.GetComponentsInChildren<UnityEngine.UI.Button>(includeInactive: true)
+                .FirstOrDefault(b => b.name.StartsWith("CharacterSkill") && b.interactable
+                                     && b.gameObject.activeInHierarchy);
+            Assert.IsNotNull(castable, "the actor has no castable skill to open targeting with");
+            castable.onClick.Invoke();
+            yield return null;
             yield return Shoot("3_targeting");
 
             // ITEM, the other submenu, to see whether the two are consistent.

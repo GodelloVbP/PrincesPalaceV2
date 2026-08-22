@@ -36,6 +36,7 @@ Usage:
 """
 
 import argparse
+import math
 import os
 import sys
 
@@ -83,6 +84,25 @@ VFX = {
         "grid": (2, 3),
         "names": ["f0", "f1", "f2", "f3", "f4", "f5"],
         "keyed": False,
+
+        # THE GLYPH SPINS UP BEFORE IT FIRES. Six cells become fourteen
+        # frames -- see compose_sequence for what the two operations are and
+        # why they live here rather than in the player.
+        #
+        # Eight turns of 45 degrees, growing 12% across them, then the lance,
+        # then the impact held for two frames with the second 6% larger, then
+        # the spray and the debris. The pivot is the glyph's own centre,
+        # measured off f0: it sits at (140, 240) of a 512 square because the
+        # right two thirds of every cell is reserved for the beam.
+        "sequence": [
+            {"from": "f0", "spin": 8, "pivot": (140, 240), "mask": 150, "scale": (1.0, 1.12)},
+            {"from": "f1"},
+            {"from": "f2"},
+            {"from": "f3"},
+            {"from": "f3", "scale": (1.06, 1.06)},
+            {"from": "f4"},
+            {"from": "f5"},
+        ],
     },
 }
 
@@ -216,7 +236,124 @@ def key_to_alpha(image):
     return rgba
 
 
-def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True):
+def compose_sequence(cells, steps):
+    """Build the frames that ship, out of the cells the sheet actually holds.
+
+    A SHEET IS NOT A TIMELINE. mud_blast arrived as six cells: a conjuring
+    glyph, a lance forming, the lance extending, the impact, the spray, and
+    the debris. Played straight through at six frames that is a spell that
+    happens rather than one that is cast -- the glyph appears for a sixth of
+    a second and is gone before it reads as a circle at all.
+
+    So the shipped sequence is composed from the cells rather than equal to
+    them. Two operations, both of which the art already supports and neither
+    of which needs a new drawing:
+
+      SPIN  -- one cell, emitted N times, each turned a further 360/N degrees
+               about a stated pivot. The glyph is a disc; a disc turned is a
+               new frame for free, and eight of them read as a charge-up.
+
+               ABOUT A PIVOT, NOT THE FRAME'S CENTRE. mud_blast's glyph sits
+               at (140, 240) of a 512 square because the rest of the cell is
+               reserved for the beam it fires. Rotating the cell about its own
+               middle swings the glyph in a circle around the frame instead of
+               turning it on the spot.
+
+      HOLD/SCALE -- a cell emitted again at a different scale. An impact held
+               for two frames and 6% larger on the second reads as a blow
+               landing and expanding; the same cell twice at the same size
+               reads as a dropped frame.
+
+    Both are the cheap half of animation, and the reason to do it here rather
+    than in the player is that the player would then need to be told the
+    recipe -- which is per-sheet, which makes it content, which makes it a
+    file. These are files.
+    """
+    out = []
+    for step in steps:
+        cell = cells[step["from"]]
+        turns = step.get("spin", 1)
+        pivot = step.get("pivot")
+        lo, hi = step.get("scale", (1.0, 1.0))
+        radius = step.get("mask")
+
+        if radius:
+            cell = discs(cell, pivot, radius)
+
+        for i in range(turns):
+            angle = -360.0 * i / turns if turns > 1 else 0.0
+            t = i / (turns - 1) if turns > 1 else 1.0
+            out.append(turned(cell, angle, pivot, lo + (hi - lo) * t))
+
+    return out
+
+
+def discs(cell, pivot, radius):
+    """Keep what is inside `radius` of the pivot, fading out over the last 18px.
+
+    THE SPIN NEEDS THIS AND NOTHING ELSE DOES. mud_blast's glyph cell is not
+    only the glyph: a hairline beam stub already runs out of it to the right,
+    ready for the frames that follow. Rotated with the disc that stub becomes
+    a one-pixel spoke sweeping the frame, which is the single most artificial
+    thing on screen -- straight, hard-edged, and clearly a rotating rectangle.
+
+    Cropping to a disc first removes it, and the fade is what keeps the crop
+    from replacing one hard edge with another.
+    """
+    w, h = cell.size
+    cx, cy = pivot if pivot else (w / 2.0, h / 2.0)
+    feather = 18.0
+
+    alpha = cell.getchannel("A").load()
+    out = cell.copy()
+    px = out.load()
+
+    for y in range(h):
+        dy = y - cy
+        for x in range(w):
+            a = alpha[x, y]
+            if a == 0:
+                continue
+
+            d = math.hypot(x - cx, dy)
+            if d <= radius - feather:
+                continue
+
+            if d >= radius:
+                r, g, b, _ = px[x, y]
+                px[x, y] = (r, g, b, 0)
+                continue
+
+            r, g, b, _ = px[x, y]
+            px[x, y] = (r, g, b, int(a * (radius - d) / feather))
+
+    return out
+
+
+def turned(cell, degrees, pivot, scale):
+    """One cell, rotated about `pivot` and scaled about the same point.
+
+    Scaled by resampling the whole cell and re-registering it on the pivot,
+    so the glyph grows where it stands rather than drifting toward the
+    frame's centre as it does.
+    """
+    w, h = cell.size
+    cx, cy = pivot if pivot else (w / 2.0, h / 2.0)
+
+    frame = cell
+    if abs(scale - 1.0) > 1e-4:
+        big = cell.resize((max(1, int(round(w * scale))), max(1, int(round(h * scale)))),
+                          Image.LANCZOS)
+        frame = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        frame.paste(big, (int(round(cx - cx * scale)), int(round(cy - cy * scale))))
+
+    if abs(degrees) < 1e-4:
+        return frame
+
+    return frame.rotate(degrees, resample=Image.BICUBIC, center=(cx, cy))
+
+
+def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=None):
     """Cut a sheet into frames.
 
     `keyed` picks between the two kinds of sheet this has to handle:
@@ -279,7 +416,7 @@ def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True):
     cell_w = width // cols
     cell_h = height // rows
 
-    blanks = []
+    cells = {}
     for index, name in enumerate(names):
         row, col = divmod(index, cols)
         box = (col * cell_w, row * cell_h, (col + 1) * cell_w, (row + 1) * cell_h)
@@ -290,6 +427,23 @@ def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True):
             if borders:
                 print(f"  {name}: erased {borders} cell border line(s)")
 
+        cells[name] = frame
+
+    # The cells ARE the frames unless a recipe says otherwise. Every sheet
+    # before mud_blast shipped one for one, and those still do.
+    if sequence:
+        frames = compose_sequence(cells, sequence)
+        print(f"  composed {len(frames)} frames from {len(cells)} cells")
+    else:
+        frames = [cells[name] for name in names]
+
+    # The names on disk are always f0..fN in play order. A recipe emits more
+    # frames than the sheet has cells, so the cell names cannot also be the
+    # file names -- and the player reads the directory in order.
+    written = [f"f{i}" for i in range(len(frames))]
+
+    blanks = []
+    for index, (name, frame) in enumerate(zip(written, frames)):
         opaque = sum(1 for a in frame.getchannel("A").getdata() if a > 8)
         coverage = opaque * 100 // (cell_w * cell_h)
         if opaque == 0:
@@ -298,6 +452,8 @@ def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True):
         out_path = os.path.join(out_dir, f"{name}.png")
         frame.save(out_path)
         print(f"  {name}.png  {cell_w}x{cell_h}  {coverage}% visible")
+
+    names = written
 
     # A blank frame is legitimate ONLY as a lead-in beat (see the
     # golem_boulder note by HAND_ASSEMBLED). One in the middle of a sequence
@@ -341,7 +497,7 @@ def main():
         print(f"[{vfx_id}] {spec['sheet']} {rows}x{cols}")
         slice_sheet(os.path.join(SOURCE_DIR, spec["sheet"]),
                     os.path.join(OUTPUT_ROOT, vfx_id), rows, cols, spec["names"],
-                    keyed=spec.get("keyed", True))
+                    keyed=spec.get("keyed", True), sequence=spec.get("sequence"))
 
 
 if __name__ == "__main__":

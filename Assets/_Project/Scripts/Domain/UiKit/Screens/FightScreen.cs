@@ -129,8 +129,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> SubmenuRows = new List<NodeRef>();
         public List<NodeRef> SubmenuMarks = new List<NodeRef>();
         public List<NodeRef> SubmenuNames = new List<NodeRef>();
-        public List<NodeRef> SubmenuMetas = new List<NodeRef>();
-        public List<NodeRef> SubmenuCosts = new List<NodeRef>();
 
         // The frame the rows scroll inside. The container is the plate, the
         // content is the rect that moves, and the two bar pieces are shown only
@@ -886,40 +884,27 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // copy left to disagree with.
         private UiNode BuildSubmenuColumn()
         {
-            var backKey = Ui.Label("SubmenuBackKey", UiStrings.HotkeyEscape, new UiVec(48f, 20f), 12,
-                FightHudPalette.TextDisabled, Place.At(-186f, 0f, new UiVec(0f, 0.5f)));
-            var backText = Ui.Label("SubmenuBackText", UiStrings.Back, new UiVec(160f, 20f), 13,
-                FightHudPalette.BackRowText, Place.At(-132f, 0f, new UiVec(0f, 0.5f)));
-
-            var back = Ui.Button("SubmenuBack", UiString.Runtime, new UiVec(SubmenuRowW, 44f), 1,
-                Place.At(SubmenuX, CommandBottom + 22f));
-            back.Children.Add(backKey);
-            back.Children.Add(backText);
-            SubmenuBackButton = back;
-
             int count = FightSubmenuLayout.PoolSize;
             var rows = Ui.Each(Enumerable.Range(0, count).ToList(), (_, i) =>
             {
                 var mark = Ui.Sprite($"CharacterSkill{i}Mark", null, new UiVec(36f, 36f), Place.At(-168f, 0f))
                     .Inactive();
 
-                // 20 tall, not v1's 24: at 24 this box reached y -2 and the meta
-                // line's box below it reaches -4.
-                // 190, down from 240, to pay for the cost box beside them. The
-                // longest authored name is well inside this; the cost is the
-                // half that was actually starved.
-                var name = Ui.Label($"CharacterSkill{i}Name", UiString.Runtime, new UiVec(190f, 20f), 18,
-                    FightHudPalette.RowNameText, Place.At(-136f, 10f, new UiVec(0f, 0.5f)));
-                var meta = Ui.Label($"CharacterSkill{i}Meta", UiString.Runtime, new UiVec(190f, 20f), 11,
-                    FightHudPalette.TextMuted, Place.At(-136f, -14f, new UiVec(0f, 0.5f)));
-
-                // 128, up from 80. 80 was sized for "5 MP" and the moment costs
-                // started naming their resource -- "12 MP + 8 WOOL" -- the label
-                // wrapped onto a second line and hung out over the battlefield.
-                // The name and meta boxes gave up the width, since 240 was more
-                // than any authored name uses and the cost had none to spare.
-                var cost = Ui.Label($"CharacterSkill{i}Cost", UiStrings.SignatureValue, new UiVec(128f, 22f), 14,
-                    FightHudPalette.GoldLight, Place.At(186f, 0f, new UiVec(1f, 0.5f)));
+                // A NAME, AND NOTHING ELSE.
+                //
+                // A row used to carry four things: a mark, the name, a meta line
+                // ("DAMAGE - SINGLE") under it, and the cost right-aligned. Every
+                // one of those three extras is also in the detail column two
+                // columns over, in more room and in full sentences, and the list
+                // is the place a player SCANS. Sixteen rows each saying four
+                // things is a table; sixteen rows each saying one thing is a
+                // list, and the detail panel is what the list is for.
+                //
+                // Centred in the space left of the mark, and vertically centred
+                // in the row now there is no second line to make room for.
+                var name = Ui.Label($"CharacterSkill{i}Name", UiString.Runtime,
+                    new UiVec(SubmenuRowW - 100f, 24f), 18,
+                    FightHudPalette.RowNameText, Place.At(18f, 0f));
 
                 // 1.02, the gentler of the two: a submenu row is 404 wide with
                 // four columns of text in it, so the press pop would shift all
@@ -934,14 +919,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     Place.At(0f, FightSubmenuLayout.RowYInContent(i))).Hovers(1.02f);
                 row.Children.Add(mark);
                 row.Children.Add(name);
-                row.Children.Add(meta);
-                row.Children.Add(cost);
 
                 SubmenuRows.Add(row);
                 SubmenuMarks.Add(mark);
                 SubmenuNames.Add(name);
-                SubmenuMetas.Add(meta);
-                SubmenuCosts.Add(cost);
                 return row;
             }).ToList();
 
@@ -957,7 +938,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             SubmenuTitle = title;
             SubmenuHint = hint;
 
-            var children = new List<UiNode> { back };
+            var children = new List<UiNode>();
             children.AddRange(BuildSubmenuFrame(rows));
             children.Add(title);
             children.Add(hint);
@@ -1017,8 +998,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AllowOverflow("the content rect holds the whole sixteen-row pool and is deliberately taller than the nine-row window it sits in - that overflow IS the scroll, and SubmenuViewport clips it, which is what makes a list longer than nine rows reachable at all");
             SubmenuContent = content;
 
+            // NOT AT THE CONTAINER'S CENTRE ANY MORE. It was, while the frame
+            // held nothing but the list; the back row sits in the bottom
+            // padding now, so the viewport rides above the container's middle
+            // by half a back row and half a gap.
+            float viewportY = FightSubmenuLayout.ViewportOffsetInContainer;
+
             var viewport = Ui.Panel("SubmenuViewport",
-                    Place.At(SubmenuX - containerX, 0f),
+                    Place.At(SubmenuX - containerX, viewportY),
                     UiSize.Fixed(SubmenuRowW, FightSubmenuLayout.ViewportHeight),
                     content)
                 .Clipping();
@@ -1032,7 +1019,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var track = Ui.Solid("SubmenuScrollTrack", FightHudPalette.ScrollTrack,
                     new UiVec(FightSubmenuLayout.ScrollbarWidth, FightSubmenuLayout.ViewportHeight),
-                    Place.At(barX, 0f))
+                    Place.At(barX, viewportY))
                 .AsDecor()
                 .Inactive();
             SubmenuScrollTrack = track;
@@ -1040,11 +1027,38 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var thumb = Ui.Solid("SubmenuScrollThumb", FightHudPalette.ScrollThumb,
                     new UiVec(FightSubmenuLayout.ScrollbarWidth, FightSubmenuLayout.ThumbMinHeight),
-                    Place.At(barX, 0f))
+                    Place.At(barX, viewportY))
                 .AsDecor()
                 .Inactive();
             SubmenuScrollThumb = thumb;
             frame.Add(thumb);
+
+            // ---- BACK, as the last row ------------------------------------------
+            //
+            // Same width, same x and the same row height as a skill, sitting in
+            // the container's bottom padding OUTSIDE the scrolling viewport --
+            // so it never scrolls away, which is the one behaviour it does not
+            // share with the entries above it.
+            //
+            // The letters are red. It is the only row in the list that leaves
+            // rather than commits, and colour is how that reads at a glance
+            // without a second line of text saying so.
+            var backKey = Ui.Label("SubmenuBackKey", UiStrings.HotkeyEscape, new UiVec(48f, 20f), 12,
+                FightHudPalette.TextDisabled, Place.At(-186f, 0f, new UiVec(0f, 0.5f)));
+            var backText = Ui.Label("SubmenuBackText", UiStrings.Back,
+                new UiVec(SubmenuRowW - 100f, 24f), 18,
+                FightHudPalette.BackRowText, Place.At(18f, 0f));
+
+            var back = Ui.Button("SubmenuBack", UiString.Runtime,
+                    new UiVec(SubmenuRowW, FightSubmenuLayout.BackRowHeight), 1,
+                    Place.At(SubmenuX - containerX,
+                             FightSubmenuLayout.BackRowY - FightSubmenuLayout.ContainerCentreY))
+                .Coloured(FightHudPalette.RowQuiet)
+                .Hovers(1.02f);
+            back.Children.Add(backKey);
+            back.Children.Add(backText);
+            SubmenuBackButton = back;
+            frame.Add(back);
 
             var container = Ui.Panel("SubmenuContainer",
                 Place.At(containerX, FightSubmenuLayout.ContainerCentreY),
@@ -1059,7 +1073,32 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         private const float DetailX = 478f;
         private const float DetailW = 340f;
-        private const float DetailH = 300f;
+
+        // THE SAME BOX AS THE LIST, and level with it.
+        //
+        // It was 300 tall sitting on CommandBottom, which put its top edge 236px
+        // below the skill panel's -- two columns of the same screen starting at
+        // different heights, with the shorter one floating in the middle of the
+        // battlefield. Matching the container makes them read as one control.
+        //
+        // The height is also newly needed rather than merely tidier: the rows
+        // gave up their meta line and their cost, and this is where both went.
+        //
+        // BIGGER THAN THE CONTAINER BY ITS OWN FRAME'S BLEED. panel_violet is an
+        // ornate 9-slice whose art does not reach its own edges -- 3.32% of the
+        // height is transparent above the frame and 3.12% below, measured off
+        // the file. The submenu's plate is a Solid with a Rim and has no such
+        // margin, so two rects of equal height draw visible edges 33px apart.
+        // Given equal RECTS they look misaligned; given this, they look level,
+        // which is the thing being asked for.
+        private const float PanelBleedY = 0.0332f + 0.0312f;
+        private static float DetailH => FightSubmenuLayout.ContainerHeight / (1f - PanelBleedY);
+
+        // Where the drawn frame actually is, which is what the contents have to
+        // stay inside. Everything below measures from these rather than from the
+        // rect, because the rect's corners are empty pixels.
+        private static float DetailFrameTop => DetailH * (0.5f - 0.0332f);
+        private static float DetailFrameBottom => -DetailH * (0.5f - 0.0312f);
 
         // A PERSISTENT third column rather than a hover tooltip: arrowing
         // through options lets the player compare without re-hovering, and a
@@ -1068,16 +1107,35 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private UiNode BuildDetailColumn()
         {
             float left = -DetailW * 0.5f + 22f;
-            float top = DetailH * 0.5f - 20f;
+            float top = DetailFrameTop - 14f;
+
+            // THE STATS ARE A FOOTER, MEASURED FROM THE BOTTOM. They used to
+            // hang off `top` like everything else, which was fine in a 300-tall
+            // box and left half of a 500-tall one empty below them. Pinning
+            // them to the frame's bottom gives the description the whole middle,
+            // which is where the meta line and the cost went when the rows gave
+            // them up.
+            float statBottom = DetailFrameBottom + 52f;
+            float statPitch = 26f;
+            float dividerY = statBottom + (FightHudSpec.DetailStatRows - 1) * statPitch + 24f;
 
             var name = Ui.Label("DetailName", UiString.Runtime, new UiVec(296f, 28f), 20,
                 FightHudPalette.TextPrimary, Place.At(left, top - 12f, new UiVec(0f, 0.5f)));
             var kind = Ui.Label("DetailKind", UiStrings.DetailKindSkill, new UiVec(296f, 20f), 12,
                 FightHudPalette.GoldLight, Place.At(left, top - 40f, new UiVec(0f, 0.5f)));
-            var body = Ui.Label("DetailBody", UiString.Runtime, new UiVec(296f, 76f), 14,
-                FightHudPalette.TextSecondary, Place.At(left, top - 92f, new UiVec(0f, 0.5f)));
+
+            // TOP-ALIGNED IN A TALL BOX. Centred, a one-line description sat in
+            // the middle of the space and a three-line one started higher --
+            // the block moved every time the text wrapped, which is exactly
+            // what a reader uses the first line's position to track.
+            float bodyTop = top - 62f;
+            float bodyHeight = bodyTop - (dividerY + 18f);
+            var body = Ui.Label("DetailBody", UiString.Runtime, new UiVec(296f, bodyHeight), 15,
+                    FightHudPalette.TextSecondary,
+                    Place.At(left, bodyTop - bodyHeight * 0.5f, new UiVec(0f, 0.5f)))
+                .TextAligned(UiTextAlign.TopLeft);
             var divider = Ui.Solid("DetailDivider", FightHudPalette.Hairline, new UiVec(296f, 1f),
-                Place.At(0f, top - 140f));
+                Place.At(0f, dividerY));
 
             DetailName = name;
             DetailKind = kind;
@@ -1092,7 +1150,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var children = new List<UiNode> { name, kind, body, divider };
             for (int i = 0; i < FightHudSpec.DetailStatRows; i++)
             {
-                float y = top - 162f - i * 24f;
+                float y = statBottom + (FightHudSpec.DetailStatRows - 1 - i) * statPitch;
                 var key = Ui.Label($"DetailStatKey{i}", keys[i], new UiVec(170f, 20f), 12,
                     FightHudPalette.TextMuted, Place.At(left, y, new UiVec(0f, 0.5f)));
 
@@ -1108,7 +1166,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             }
 
             var column = Ui.Sprite("DetailColumn", PanelViolet,
-                Place.At(DetailX, CommandBottom + DetailH * 0.5f), UiSize.Fixed(DetailW, DetailH));
+                Place.At(DetailX, FightSubmenuLayout.ContainerCentreY),
+                UiSize.Fixed(DetailW, DetailH));
             foreach (var child in children) column.Children.Add(child);
             column.Inactive();
             column.Opening();

@@ -62,7 +62,12 @@ namespace PrincesPalace.Domain.UiKit
         public const string RowNameText = "#E9DFF8";
         public const string PartyNameText = "#FFF3DE";
         public const string PartyClassText = "#C8A879";
-        public const string BackRowText = "#A695BC";
+        // RED, because it is the one row in the list that leaves. It was
+        // #A695BC -- the same muted violet as every other piece of secondary
+        // text on the screen -- which was fine while BACK was a separate button
+        // below the frame and is not now it is a row among the skills. Colour
+        // is the only thing separating it from an entry that commits.
+        public const string BackRowText = "#D9604A";
         public const string QuietHotkey = "#6D5F85";
         public const string LoudHotkey = "#FFDCAA8C";        // 0.55
 

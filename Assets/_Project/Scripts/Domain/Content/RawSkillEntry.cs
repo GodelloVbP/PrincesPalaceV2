@@ -77,6 +77,23 @@ namespace PrincesPalace.Domain.Content
         // spell lands on its peak frame - see SkillEntryResolver.
         public int vfxImpactFrame = -1;
 
+        // Does this effect TRAVEL, or does it happen where it lands?
+        //
+        // Almost every sheet is a thing that occurs on the target -- a flare, a
+        // bolt striking down, rocks erupting -- and is fitted into a square box
+        // centred on them. mud_blast is drawn the other way: a conjuring glyph
+        // at the left of the cell, a lance crossing it, an impact at the right.
+        // Centred on the target that glyph appears in mid-air a few hundred
+        // pixels short of the caster, which is what "it does not come from the
+        // character" describes.
+        //
+        // A flag rather than something inferred from the art. It could be
+        // guessed -- the energy's centroid walks left to right across a
+        // directional sheet and stays put on a centred one -- and a guess that
+        // is right four times out of five puts an effect in the wrong place on
+        // the fifth with nothing in the content saying why.
+        public bool vfxFromCaster;
+
         // Resources-relative path of the clip that plays when the skill
         // resolves. A path rather than an entry in the Sound enum because a
         // skill is content: adding a spell should not require editing an

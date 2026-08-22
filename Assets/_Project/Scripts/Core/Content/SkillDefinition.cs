@@ -62,6 +62,9 @@ namespace PrincesPalace.Content
         [Tooltip("Which frame of the animation the spell lands on, counting from 1. The damage, flash and number wait for it; the rest of the animation plays out after.")]
         public int vfxImpactFrame = 3;
 
+        // See RawSkillEntry.vfxFromCaster.
+        public bool vfxFromCaster;
+
         [Tooltip("Resources-relative path of the clip played when this skill resolves. Empty means silent.")]
         public string sfxPath;
 

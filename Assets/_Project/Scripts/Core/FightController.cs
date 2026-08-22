@@ -107,8 +107,6 @@ namespace PrincesPalace
         private float _submenuScroll;
         private int _submenuCount;
         [SerializeField] internal TMP_Text[] submenuNames;
-        [SerializeField] internal TMP_Text[] submenuMetas;
-        [SerializeField] internal TMP_Text[] submenuCosts;
 
         [SerializeField] internal GameObject detailColumn;
         [SerializeField] internal TMP_Text detailName;

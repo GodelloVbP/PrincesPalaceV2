@@ -76,13 +76,15 @@ namespace PrincesPalace.Domain.Combat.Session
             _recordingBeat.ActorHoldsPosition = true;
         }
 
-        private void RecordSpellPresentation(string vfxPath, float vfxSeconds, int vfxImpactFrame, string sfxPath)
+        private void RecordSpellPresentation(string vfxPath, float vfxSeconds, int vfxImpactFrame, string sfxPath,
+            bool vfxFromCaster = false)
         {
             if (_recordingBeat == null) return;
 
             _recordingBeat.VfxPath = vfxPath;
             _recordingBeat.VfxSeconds = vfxSeconds;
             _recordingBeat.VfxImpactFrame = vfxImpactFrame;
+            _recordingBeat.VfxFromCaster = vfxFromCaster;
             _recordingBeat.SfxPath = sfxPath;
         }
 

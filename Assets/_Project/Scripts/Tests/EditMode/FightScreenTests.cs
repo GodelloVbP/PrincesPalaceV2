@@ -96,7 +96,7 @@ namespace PrincesPalace.Domain.Tests
             AssertSameLength("enemy plates", s.EnemyPlates, s.EnemyPlateNames, s.EnemyPlateHps,
                 s.EnemyPlateHpFills, s.EnemyPlateTags, s.EnemyPlateReticles);
             AssertSameLength("verbs", s.VerbButtons, s.VerbLabels, s.VerbCarets);
-            AssertSameLength("submenu", s.SubmenuRows, s.SubmenuMarks, s.SubmenuNames, s.SubmenuMetas, s.SubmenuCosts);
+            AssertSameLength("submenu", s.SubmenuRows, s.SubmenuMarks, s.SubmenuNames);
             AssertSameLength("detail stats", s.DetailStatKeys, s.DetailStatValues);
             AssertSameLength("popups", s.DamagePopups, s.DamagePopupLabels);
             AssertSameLength("enemy stage", s.EnemySlots, s.EnemySprites, s.EnemyHitFlashes,

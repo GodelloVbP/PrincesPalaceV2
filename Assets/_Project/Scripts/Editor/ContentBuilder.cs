@@ -491,6 +491,7 @@ public static class ContentBuilder
             asset.vfxPath = skill.VfxPath;
             asset.vfxSeconds = skill.VfxSeconds;
             asset.vfxImpactFrame = skill.VfxImpactFrame;
+            asset.vfxFromCaster = skill.VfxFromCaster;
             asset.sfxPath = skill.SfxPath;
             asset.sortOrder = skill.SortOrder;
             asset.requirements = skill.Requirements;

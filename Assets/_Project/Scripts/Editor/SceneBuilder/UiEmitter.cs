@@ -220,6 +220,7 @@ public static class UiEmitter
             case UiTextAlign.Right: return TextAlignmentOptions.Right;
             case UiTextAlign.Bottom: return TextAlignmentOptions.Bottom;
             case UiTextAlign.BottomLeft: return TextAlignmentOptions.BottomLeft;
+            case UiTextAlign.TopLeft: return TextAlignmentOptions.TopLeft;
             default: return TextAlignmentOptions.Center;
         }
     }

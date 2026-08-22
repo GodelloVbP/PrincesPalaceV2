@@ -17,9 +17,11 @@ namespace PrincesPalace.Domain.UiKit
     // centred caption block moves its last line whenever the reward's name
     // wraps.
     //
-    // NOT A FULL CROSS PRODUCT of the nine TMP alignments. These are the five
-    // that a screen has asked for; the tenth is cheap to add and nobody should
-    // add it speculatively. Note it is a separate enum from UiAlign, which is
+    // NOT A FULL CROSS PRODUCT of the nine TMP alignments. These are the six
+    // that a screen has asked for; the rest are cheap to add and nobody should
+    // add one speculatively. TopLeft arrived when the fight's detail column
+    // grew to 500px: a description centred in a box that tall floats in the
+    // middle of it and moves every time the text wraps to another line. Note it is a separate enum from UiAlign, which is
     // the cross-axis alignment of CHILDREN inside a flow container -- one is
     // about boxes, this is about glyphs, and one enum serving both would read
     // as though a Column could align its text.
@@ -30,5 +32,6 @@ namespace PrincesPalace.Domain.UiKit
         Right,
         Bottom,
         BottomLeft,
+        TopLeft,
     }
 }

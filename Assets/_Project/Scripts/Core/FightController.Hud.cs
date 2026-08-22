@@ -129,18 +129,19 @@ namespace PrincesPalace
 
                 var row = rows[i];
                 submenuNames[i].SetContent(row.Name);
-                submenuMetas[i].SetContent(row.Meta);
-                submenuCosts[i].SetContent(row.Cost);
-                submenuCosts[i].color = row.Affordable ? CostAffordable : CostUnaffordable;
 
                 var frame = submenuRows[i].targetGraphic as UnityEngine.UI.Image;
                 if (frame != null) frame.color = i == _menu.Selection ? RowSelected : RowIdle;
 
                 submenuRows[i].interactable = row.Affordable;
 
-                float alpha = row.Affordable ? 1f : DimmedAlpha;
-                SetAlpha(submenuNames[i], alpha);
-                SetAlpha(submenuMetas[i], alpha);
+                // The row's whole state, in one channel. It used to carry the
+                // name at full strength, the meta dimmed and the cost
+                // recoloured; there is one thing on the row now, so dimming it
+                // is the entire vocabulary a name-only list has. What the
+                // player cannot afford is still hovered, and hovering is what
+                // fills the detail column with the cost they are short of.
+                SetAlpha(submenuNames[i], row.Affordable ? 1f : DimmedAlpha);
             }
 
             // Still never a silent truncation -- the count moved to the hint

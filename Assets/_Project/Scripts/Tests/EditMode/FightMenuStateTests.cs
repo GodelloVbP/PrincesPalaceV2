@@ -243,10 +243,10 @@ namespace PrincesPalace.Domain.Tests
     {
         private static ResolvedSkill Skill(string id, string name, int manaCost = 5,
             SkillEffect effect = SkillEffect.DamageSingle, int power = 12,
-            DamageInstance[] packets = null) =>
+            DamageInstance[] packets = null, AbilityScoreBlock requirements = default) =>
             new ResolvedSkill(id, name, "It does a thing.", "hero", 1, effect,
                 SkillTargeting.SingleEnemy, manaCost, 0, false, power, 0, false,
-                packets, "", 0.6f, 3, "", 0);
+                packets, "", 0.6f, 3, "", 0, requirements: requirements);
 
         private static (FightSession session, CombatantState hero) Fight(params ResolvedSkill[] skills)
         {
@@ -335,16 +335,32 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("SINGLE", FightHudModel.MetaLine(skill), "targeting is authored separately from the effect");
         }
 
+        // WHAT REPLACED "a locked skill says so rather than just going grey".
+        //
+        // That was the right fix for the wrong problem. Two different dims did
+        // look identical -- cannot afford it now, and not allowed to use it at
+        // all -- and prefixing the second with LOCKED separated them. It also
+        // kept them in the list, and the list is where the separation stopped
+        // mattering: nine entries, two castable, seven greyed, and the seven the
+        // player could do nothing about for several levels were most of what
+        // they were looking at.
+        //
+        // A locked skill is not in the list now. The one dim left means exactly
+        // one thing, which is what the LOCKED prefix was trying to buy.
         [Test]
-        public void ASkillTheCharacterMayNotYetUseSaysSoRatherThanJustGoingGrey()
+        public void ASkillTheCharacterMayNotYetUseIsNotListedAtAll()
         {
-            // Two different dims looked identical: cannot afford it right now,
-            // and not allowed to use it at all. Five greyed skills above a FULL
-            // mana bar read as a bug rather than as a requirement.
-            var skill = Skill("x", "Firestorm", effect: SkillEffect.DamageAll);
-            string meta = FightHudModel.LockedPrefix + FightHudModel.MetaLine(skill);
+            var (session, hero) = Fight(
+                Skill("open", "Headbutt"),
+                Skill("shut", "Firestorm",
+                    requirements: new AbilityScoreBlock(99, 0, 0, 0, 0, 0)));
 
-            StringAssert.StartsWith("LOCKED", meta);
+            var names = FightHudModel.SkillRows(session, hero).Select(r => r.Name).ToList();
+
+            CollectionAssert.Contains(names, "Headbutt");
+            CollectionAssert.DoesNotContain(names, "Firestorm",
+                "a skill whose requirement the character cannot meet is greyed noise in a list " +
+                "they are trying to scan - it appears when it becomes usable");
         }
 
         [Test]

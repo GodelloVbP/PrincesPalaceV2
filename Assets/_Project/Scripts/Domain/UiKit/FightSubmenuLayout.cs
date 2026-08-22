@@ -26,9 +26,35 @@ namespace PrincesPalace.Domain.UiKit
         public const float RowGap = 6f;
         public const float RowPitch = RowHeight + RowGap;
 
-        // The command column's bottom edge, lifted by the BACK row's height.
         public const float CommandBottom = -486f;
-        public const float RowsBottom = CommandBottom + 46f;
+
+        // ---- BACK IS A ROW NOW, AND IT IS INSIDE THE FRAME -----------------------
+        //
+        // It used to be a 404-wide button floating BELOW the container, in the
+        // style the screen used before the list got a frame around it. Two
+        // things were wrong with that and only one of them was visible: it did
+        // not line up with the panel above it (the panel is 438 wide and grew
+        // to the right to find room for the scrollbar, so the button was inset
+        // 10px on the left and 34 on the right), and it was the last thing on
+        // the screen still drawn in the old idiom.
+        //
+        // As a row inside the container it inherits the rows' width and x for
+        // free, which is the alignment fix -- there is no second number left to
+        // disagree. It reads as the last entry in the list, which is what it is.
+        public const float BackRowHeight = RowHeight;
+
+        // The container's own bottom edge. Unchanged: the assembly still ends
+        // where it always did, and everything the back row needs comes out of
+        // the rows' space rather than out of the screen.
+        public const float ContainerBottom = CommandBottom + 36f;
+
+        // In the container's bottom padding, so the frame closes tight under it.
+        public static float BackRowY => ContainerBottom + ContainerPad + BackRowHeight * 0.5f;
+
+        // The list ends one gap above the back row. This was CommandBottom + 46
+        // -- the old external button's top -- and every row in the pool moves up
+        // with it, which is the whole visible cost of folding BACK inside.
+        public static float RowsBottom => BackRowY + BackRowHeight * 0.5f + RowGap;
 
         // ---- the container and its scroll ---------------------------------------
         //
@@ -46,7 +72,14 @@ namespace PrincesPalace.Domain.UiKit
         // being the same number, which they were only ever by accident.
 
         // How many rows fit in the viewport at a time.
-        public const int RowsInView = 9;
+        //
+        // EIGHT, down from nine, and the ninth went to the back row. The
+        // container's outer footprint is unchanged, so the choice was between
+        // taking a row's worth of height off the list or growing the panel
+        // downward past the verb column it stands beside. A list that scrolls
+        // loses nothing by being one row shorter; a panel that overhangs its
+        // neighbour is wrong at every list length.
+        public const int RowsInView = 8;
 
         // How many row rects the tree emits. The list SCROLLS now, so this is
         // no longer "as many as fit" -- it is as many as a character can ever
@@ -76,12 +109,15 @@ namespace PrincesPalace.Domain.UiKit
         // two-pixel thumb is a mark rather than a handle.
         public const float ThumbMinHeight = 28f;
 
-        public static float ContainerHeight => ViewportHeight + ContainerPad * 2f;
+        // Padding, the list, a gap, and the back row.
+        public static float ContainerHeight =>
+            ContainerPad * 2f + ViewportHeight + RowGap + BackRowHeight;
 
-        // Concentric with the viewport, because the padding is even. Written as
-        // its own name rather than as the same expression twice: they are equal
-        // by construction and would stop being if the padding ever went uneven.
-        public static float ContainerCentreY => ViewportCentreY;
+        // NO LONGER CONCENTRIC WITH THE VIEWPORT. It was, while the container
+        // held nothing but the list; the back row hangs below the viewport now,
+        // so the two centres are a back row and a gap apart. Written from the
+        // bottom edge, which is the part that is actually pinned.
+        public static float ContainerCentreY => ContainerBottom + ContainerHeight * 0.5f;
 
         // How far the list can travel. Zero when everything fits, which is also
         // what hides the bar.
@@ -180,20 +216,30 @@ namespace PrincesPalace.Domain.UiKit
             return height < ThumbMinHeight ? ThumbMinHeight : height;
         }
 
-        // Where the thumb's centre sits, measured from the TRACK's centre. The
-        // track is the viewport's own height, so the thumb reads as the visible
-        // window over the whole list.
+        // How far the list sits above the container's own middle. Zero until
+        // the back row moved into the bottom padding; half a back row and half
+        // a gap ever since.
+        //
+        // Named rather than inlined because THREE things read it -- the
+        // viewport, the scroll track and the thumb -- and the thumb's is
+        // computed at runtime while the other two are placed at build time.
+        // That is precisely the split this whole type exists to keep honest.
+        public static float ViewportOffsetInContainer => ViewportCentreY - ContainerCentreY;
+
+        // Where the thumb's centre sits, in CONTAINER coordinates. The track is
+        // the viewport's own height, so the thumb reads as the visible window
+        // over the whole list.
         public static float ThumbCentreY(int count, float scroll)
         {
             float travel = ViewportHeight - ThumbHeight(count);
             float range = ScrollRange(count);
-            if (travel <= 0f || range <= 0f) return 0f;
+            if (travel <= 0f || range <= 0f) return ViewportOffsetInContainer;
 
             float fraction = scroll / range;
             if (fraction < 0f) fraction = 0f;
             if (fraction > 1f) fraction = 1f;
 
-            return travel * 0.5f - fraction * travel;
+            return ViewportOffsetInContainer + travel * 0.5f - fraction * travel;
         }
 
         // Turning a grab on the track into a scroll: where the pointer sits

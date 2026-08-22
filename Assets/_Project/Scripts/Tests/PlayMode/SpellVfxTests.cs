@@ -304,5 +304,114 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.AreEqual(0f, _fight.ImpactDelayFor(beat), 0.0001f);
         }
+
+        // ---- an effect that crosses the stage --------------------------------------
+        //
+        // mud_blast is drawn as a conjuring glyph on the left, a lance across
+        // the middle and an impact on the right. Fitted into a 380 square on the
+        // target -- which is what every other sheet wants -- the glyph appears
+        // in open air short of the caster, and the spell reads as arriving from
+        // nowhere. These pin the placement that fixes it.
+
+        [UnityTest]
+        public IEnumerator ATravellingEffectStartsOnTheCasterAndEndsOnTheTarget()
+        {
+            yield return LoadFight();
+
+            var caster = SlotXOf("Shawn");
+            var target = SlotXOf("Front");
+            Assume.That(Mathf.Abs(target - caster), Is.GreaterThan(200f),
+                "fixture: the two have to be far enough apart for the flight to be measurable");
+
+            // READ BEFORE YIELDING. PlayFrom writes the start position
+            // synchronously and the coroutine begins easing on its very first
+            // frame, so a yield here reads the effect already 6px underway --
+            // which is correct behaviour and a flaky assertion, and it failed
+            // that way exactly once before this comment was written.
+            _fight.PlaySpellVfxForTest(TravellingBeat());
+
+            Assert.AreEqual(caster, _player.Image.rectTransform.anchoredPosition.x, 2f,
+                "the effect does not begin on the caster, which is the whole complaint it fixes");
+
+            // Out to the end of the sequence, where it has to have arrived.
+            float waited = 0f;
+            while (waited < 1.4f)
+            {
+                waited += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            Assert.AreEqual(target, _player.Image.rectTransform.anchoredPosition.x, 2f,
+                "the effect never reached the thing it was cast at");
+        }
+
+        // MIRRORED WHEN THE CASTER IS ON THE RIGHT. The Bog Witch casts the same
+        // spell back across the stage; drawn as-authored her glyph forms on
+        // Shawn and her impact lands on herself.
+        [UnityTest]
+        public IEnumerator ATravellingEffectFiresTheWayTheCasterIsFacing()
+        {
+            yield return LoadFight();
+
+            _fight.PlaySpellVfxForTest(TravellingBeat());
+            yield return null;
+            Assert.Greater(_player.Image.rectTransform.localScale.x, 0f,
+                "the hero casts left to right, which is how the sheet is drawn");
+
+            _fight.PlaySpellVfxForTest(TravellingBeat(reversed: true));
+            yield return null;
+            Assert.Less(_player.Image.rectTransform.localScale.x, 0f,
+                "cast back across the stage the sheet has to be mirrored");
+        }
+
+        // THE MIRROR IS STATE A CAST LEAVES ON A SHARED IMAGE. One player
+        // serves every spell in the fight, so a spell cast right-to-left would
+        // hand the next one a mirrored box -- a bug that only ever appears in
+        // the SECOND spell and never in the one that caused it.
+        [UnityTest]
+        public IEnumerator AnOrdinaryEffectAfterAMirroredOneIsNotItselfMirrored()
+        {
+            yield return LoadFight();
+
+            _fight.PlaySpellVfxForTest(TravellingBeat(reversed: true));
+            yield return null;
+
+            _fight.PlaySpellVfxForTest(TravellingBeat(fromCaster: false));
+            yield return null;
+
+            Assert.AreEqual(1f, _player.Image.rectTransform.localScale.x, 0.001f,
+                "the mirror survived into the next cast");
+            Assert.AreEqual(380f, _player.Image.rectTransform.sizeDelta.x, 1f,
+                "the box size survived into the next cast");
+        }
+
+        private CombatBeat TravellingBeat(bool reversed = false, bool fromCaster = true)
+        {
+            var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
+            var foe = _fight.SessionForTest.Encounter.Enemies.First(c => c != null);
+
+            return new CombatBeat
+            {
+                Actor = reversed ? foe : hero,
+                Target = reversed ? hero : foe,
+                VfxPath = "Spells/mud_burst",
+                VfxSeconds = 0.78f,
+                VfxImpactFrame = 11,
+                VfxFromCaster = fromCaster,
+            };
+        }
+
+        private float SlotXOf(string name)
+        {
+            var combatant = _fight.SessionForTest.Encounter.PlayerParty
+                .Concat(_fight.SessionForTest.Encounter.Enemies)
+                .First(c => c != null && c.Name == name);
+
+            var slot = _fight.SlotForTest(combatant);
+            Assert.IsNotNull(slot, $"'{name}' has no stage slot");
+
+            var parent = _player.transform.parent;
+            return parent.InverseTransformPoint(slot.TransformPoint(Vector3.zero)).x;
+        }
     }
 }

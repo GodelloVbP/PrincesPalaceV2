@@ -152,8 +152,6 @@ public static class ScreenRegistry
                 fight.submenuScrollTrack = result.Rect(screen.SubmenuScrollTrack);
                 fight.submenuScrollThumb = result.Rect(screen.SubmenuScrollThumb);
                 fight.submenuNames = screen.SubmenuNames.Select(result.Tmp).ToArray();
-                fight.submenuMetas = screen.SubmenuMetas.Select(result.Tmp).ToArray();
-                fight.submenuCosts = screen.SubmenuCosts.Select(result.Tmp).ToArray();
 
                 fight.detailColumn = result.Go(screen.DetailColumn);
                 fight.detailName = result.Tmp(screen.DetailName);

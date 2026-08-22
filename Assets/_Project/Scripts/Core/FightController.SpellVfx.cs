@@ -38,6 +38,19 @@ namespace PrincesPalace
             return beat.VfxSeconds * CombatBeat.ImpactFraction(beat.VfxImpactFrame, frameCount);
         }
 
+        // ---- seams for the PlayMode tests -----------------------------------------
+        //
+        // Placement is the half of this file that has ever been wrong, and it is
+        // only observable from a running scene: the maths depends on the stage's
+        // depth scaling and on where the slots actually landed, neither of which
+        // an EditMode test can build. InternalsVisibleTo names the EDITOR
+        // assembly only, so a PlayMode test reaches these or reaches nothing.
+        public void PlaySpellVfxForTest(CombatBeat beat) => PlaySpellVfx(beat);
+
+        public RectTransform SlotForTest(CombatantState combatant) => SlotFor(combatant);
+
+        public FightSession SessionForTest => _session;
+
         private void PlaySpellVfx(CombatBeat beat)
         {
             if (beat == null) return;
@@ -65,9 +78,65 @@ namespace PrincesPalace
             var rect = targetRect.rect;
             float centreX = parent.InverseTransformPoint(targetRect.TransformPoint(Vector3.zero)).x;
             float bottomY = parent.InverseTransformPoint(targetRect.TransformPoint(new Vector3(0f, rect.yMin, 0f))).y;
+
+            if (beat.VfxFromCaster)
+            {
+                PlayTravellingVfx(beat, parent, centreX, bottomY);
+                return;
+            }
+
+            spellVfxPlayer.SetFacing(1f);
             var anchoredPosition = new Vector2(centreX, bottomY + SpellVfxSize.y * 0.5f - deadSpaceBelow);
 
             spellVfxPlayer.PlayAt(beat.VfxPath, beat.VfxSeconds, anchoredPosition, SpellVfxSize);
+        }
+
+        // ---- an effect that CROSSES the stage ------------------------------------
+        //
+        // Everything above puts an effect where it lands. This one starts where
+        // it was cast and flies, and the difference is not a nicety: mud_blast
+        // is drawn as a conjuring glyph, a lance leaving it, and an impact.
+        // Played on the target the glyph appears in open air with nothing
+        // between it and the caster, and the spell reads as arriving from
+        // somewhere rather than as being cast by anybody.
+        //
+        // The box does not change size or shape -- see SpellVfxPlayer.PlayFrom
+        // for the stretched version that was tried first and for the
+        // measurement that killed it.
+        private void PlayTravellingVfx(CombatBeat beat, Transform parent, float targetX, float bottomY)
+        {
+            float dead = VfxDeadSpaceBelow(beat.VfxPath);
+            var to = new Vector2(targetX, bottomY + SpellVfxSize.y * 0.5f - dead);
+
+            var casterRect = SlotFor(beat.Actor);
+
+            // No slot for the caster -- an off-stage or synthetic actor -- means
+            // falling back to the placement every other spell uses rather than
+            // flying in from an origin that does not exist.
+            if (casterRect == null)
+            {
+                spellVfxPlayer.SetFacing(1f);
+                spellVfxPlayer.PlayAt(beat.VfxPath, beat.VfxSeconds, to, SpellVfxSize);
+                return;
+            }
+
+            float casterX = parent.InverseTransformPoint(casterRect.TransformPoint(Vector3.zero)).x;
+            var from = new Vector2(casterX, to.y);
+
+            // MIRRORED WHEN THE CASTER IS ON THE RIGHT. The sheet fires left to
+            // right; the Bog Witch casts the same spell back across the stage,
+            // and unmirrored her glyph would form facing away from the thing it
+            // is about to hit.
+            spellVfxPlayer.SetFacing(targetX >= casterX ? 1f : -1f);
+
+            // ARRIVES ON THE IMPACT FRAME, which is the frame the damage number
+            // is already timed to (see ImpactDelayFor). Tying the two to the
+            // same authored number is what keeps the burst and the hit from
+            // drifting apart when a spell's timing is retuned.
+            //
+            // VfxImpactFrame is 1-based in content, like the golem's.
+            spellVfxPlayer.PlayFrom(beat.VfxPath, beat.VfxSeconds, from, to, SpellVfxSize,
+                beat.VfxImpactFrame - 1);
         }
 
         // How much empty box sits BELOW the visible art once preserveAspect has

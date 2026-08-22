@@ -33,6 +33,9 @@ namespace PrincesPalace.Domain.Content
         public readonly string VfxPath;
         public readonly float VfxSeconds;
         public readonly int VfxImpactFrame;
+
+        // See RawSkillEntry.vfxFromCaster.
+        public readonly bool VfxFromCaster;
         public readonly string SfxPath;
 
         public readonly int SortOrder;
@@ -70,6 +73,7 @@ namespace PrincesPalace.Domain.Content
             int unlockLevel, SkillEffect effect, SkillTargeting targeting, int manaCost,
             int resourceCost, bool spendsAllResource, int power, int flatAmount, bool ignoresDefense,
             DamageInstance[] damageInstances, string vfxPath, float vfxSeconds, int vfxImpactFrame, string sfxPath, int sortOrder,
+            bool vfxFromCaster = false,
             StatusEffectType? appliesStatus = null, int statusMagnitude = 0, int statusDuration = 0,
             AbilityScoreBlock requirements = default, ScalingAxis scalingAxis = ScalingAxis.Auto,
             int queuePushSlots = 0, TransformGrant transform = null)
@@ -80,6 +84,7 @@ namespace PrincesPalace.Domain.Content
             VfxPath = vfxPath ?? "";
             VfxSeconds = vfxSeconds;
             VfxImpactFrame = vfxImpactFrame;
+            VfxFromCaster = vfxFromCaster;
             SfxPath = sfxPath ?? "";
             Id = id;
             DisplayName = displayName;
