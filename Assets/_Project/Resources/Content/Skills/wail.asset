@@ -26,12 +26,13 @@ MonoBehaviour:
   flatAmount: 0
   ignoresDefense: 0
   damageInstances: []
-  vfxPath: 
-  vfxSeconds: 0.6
-  vfxImpactFrame: 3
-  vfxFromCaster: 0
-  vfxDepartFrame: 0
-  sfxPath: 
+  vfx:
+    path: 
+    seconds: 0.6
+    impactFrame: 3
+    fromCaster: 0
+    departFrame: 0
+    sfxPath: 
   appliesStatus: 2
   hasStatus: 1
   statusMagnitude: 50

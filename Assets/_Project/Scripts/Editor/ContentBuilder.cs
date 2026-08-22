@@ -396,10 +396,7 @@ public static class ContentBuilder
             asset.skillChance = enemy.SkillChance;
             asset.sortOrder = enemy.SortOrder;
             asset.breakShieldPoints = enemy.BreakShieldPoints;
-            asset.vfxPath = enemy.VfxPath;
-            asset.vfxSeconds = enemy.VfxSeconds;
-            asset.vfxImpactFrame = enemy.VfxImpactFrame;
-            asset.sfxPath = enemy.SfxPath;
+            asset.vfx = enemy.Vfx.Copy();
             asset.hasStatus = enemy.AppliesStatus.HasValue;
             if (enemy.AppliesStatus.HasValue)
             {
@@ -488,12 +485,7 @@ public static class ContentBuilder
             asset.flatAmount = skill.FlatAmount;
             asset.ignoresDefense = skill.IgnoresDefense;
             asset.damageInstances = skill.DamageInstances;
-            asset.vfxPath = skill.VfxPath;
-            asset.vfxSeconds = skill.VfxSeconds;
-            asset.vfxImpactFrame = skill.VfxImpactFrame;
-            asset.vfxFromCaster = skill.VfxFromCaster;
-            asset.vfxDepartFrame = skill.VfxDepartFrame;
-            asset.sfxPath = skill.SfxPath;
+            asset.vfx = skill.Vfx.Copy();
             asset.sortOrder = skill.SortOrder;
             asset.requirements = skill.Requirements;
             asset.scalingAxis = skill.ScalingAxis;

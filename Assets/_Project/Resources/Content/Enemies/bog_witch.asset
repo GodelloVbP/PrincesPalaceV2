@@ -35,10 +35,13 @@ MonoBehaviour:
   skillName: Mud Burst
   skillPower: 1.6
   skillChance: 0.4
-  vfxPath: Spells/mud_burst
-  vfxSeconds: 0.6
-  vfxImpactFrame: 4
-  sfxPath: 
+  vfx:
+    path: Spells/mud_burst
+    seconds: 0.6
+    impactFrame: 4
+    fromCaster: 0
+    departFrame: 0
+    sfxPath: 
   appliesStatus: 0
   hasStatus: 0
   statusMagnitude: 0

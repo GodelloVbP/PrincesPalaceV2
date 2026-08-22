@@ -96,12 +96,17 @@ namespace PrincesPalace.Domain.Tests
             // The graceful-degradation posture: a spell with no authored art
             // still resolves, it just has nothing to play.
             var beat = new CombatBeat();
-            Assert.IsFalse(beat.HasSpellAnimation);
+            Assert.IsFalse(beat.HasSpellAnimation, "an empty presentation has no path to play");
 
-            beat.VfxPath = "Spells/frost_flare";
+            // THE SENTINEL IS GONE. seconds used to arrive as -1 meaning "not
+            // authored" and was resolved to 0.6 by whichever resolver saw it
+            // first; a presentation now carries the real default from the
+            // moment it exists, so "no duration" has to be said outright.
+            beat.Vfx.path = "Spells/frost_flare";
+            beat.Vfx.seconds = 0f;
             Assert.IsFalse(beat.HasSpellAnimation, "a path with no duration is not an animation");
 
-            beat.VfxSeconds = 0.6f;
+            beat.Vfx.seconds = 0.6f;
             Assert.IsTrue(beat.HasSpellAnimation);
         }
 

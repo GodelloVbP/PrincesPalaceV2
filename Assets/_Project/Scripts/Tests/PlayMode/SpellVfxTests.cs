@@ -95,23 +95,23 @@ namespace PrincesPalace.PlayModeTests
 
             foreach (var skill in ContentDatabase.Skills)
             {
-                if (skill == null || string.IsNullOrWhiteSpace(skill.vfxPath)) continue;
+                if (skill == null || string.IsNullOrWhiteSpace(skill.vfx.path)) continue;
 
-                var frames = FrameSequenceLoader.Load(skill.vfxPath);
+                var frames = FrameSequenceLoader.Load(skill.vfx.path);
                 if (frames == null || frames.Length == 0)
                 {
-                    missing.Add($"skill '{skill.id}' declares vfxPath '{skill.vfxPath}'");
+                    missing.Add($"skill '{skill.id}' declares vfxPath '{skill.vfx.path}'");
                 }
             }
 
             foreach (var enemy in ContentDatabase.Enemies)
             {
-                if (enemy == null || string.IsNullOrWhiteSpace(enemy.vfxPath)) continue;
+                if (enemy == null || string.IsNullOrWhiteSpace(enemy.vfx.path)) continue;
 
-                var frames = FrameSequenceLoader.Load(enemy.vfxPath);
+                var frames = FrameSequenceLoader.Load(enemy.vfx.path);
                 if (frames == null || frames.Length == 0)
                 {
-                    missing.Add($"enemy '{enemy.id}' declares vfxPath '{enemy.vfxPath}'");
+                    missing.Add($"enemy '{enemy.id}' declares vfxPath '{enemy.vfx.path}'");
                 }
             }
 
@@ -153,8 +153,8 @@ namespace PrincesPalace.PlayModeTests
                 // declared path has frames; this checks the path is declared,
                 // which is the other half and the one a merge is likelier to
                 // drop.
-                Assert.AreEqual($"Spells/{id}", skill.vfxPath, $"'{id}' lost its vfxPath");
-                Assert.GreaterOrEqual(skill.vfxImpactFrame, 1,
+                Assert.AreEqual($"Spells/{id}", skill.vfx.path, $"'{id}' lost its vfxPath");
+                Assert.GreaterOrEqual(skill.vfx.impactFrame, 1,
                     $"'{id}' has no authored impact frame, so its blow lands on the resolver's " +
                     "default rather than on the peak the sequence was composed around");
             }
@@ -170,23 +170,23 @@ namespace PrincesPalace.PlayModeTests
 
             foreach (var enemy in ContentDatabase.Enemies)
             {
-                if (enemy == null || string.IsNullOrWhiteSpace(enemy.vfxPath)) continue;
+                if (enemy == null || string.IsNullOrWhiteSpace(enemy.vfx.path)) continue;
 
-                int count = FrameSequenceLoader.Load(enemy.vfxPath)?.Length ?? 0;
-                if (count > 0 && (enemy.vfxImpactFrame < 1 || enemy.vfxImpactFrame > count))
+                int count = FrameSequenceLoader.Load(enemy.vfx.path)?.Length ?? 0;
+                if (count > 0 && (enemy.vfx.impactFrame < 1 || enemy.vfx.impactFrame > count))
                 {
-                    wrong.Add($"enemy '{enemy.id}' impacts on frame {enemy.vfxImpactFrame} of {count}");
+                    wrong.Add($"enemy '{enemy.id}' impacts on frame {enemy.vfx.impactFrame} of {count}");
                 }
             }
 
             foreach (var skill in ContentDatabase.Skills)
             {
-                if (skill == null || string.IsNullOrWhiteSpace(skill.vfxPath)) continue;
+                if (skill == null || string.IsNullOrWhiteSpace(skill.vfx.path)) continue;
 
-                int count = FrameSequenceLoader.Load(skill.vfxPath)?.Length ?? 0;
-                if (count > 0 && (skill.vfxImpactFrame < 1 || skill.vfxImpactFrame > count))
+                int count = FrameSequenceLoader.Load(skill.vfx.path)?.Length ?? 0;
+                if (count > 0 && (skill.vfx.impactFrame < 1 || skill.vfx.impactFrame > count))
                 {
-                    wrong.Add($"skill '{skill.id}' impacts on frame {skill.vfxImpactFrame} of {count}");
+                    wrong.Add($"skill '{skill.id}' impacts on frame {skill.vfx.impactFrame} of {count}");
                 }
             }
 
@@ -338,7 +338,7 @@ namespace PrincesPalace.PlayModeTests
             // the overwhelming majority of beats.
             yield return LoadFight();
 
-            var beat = new CombatBeat { VfxPath = "", VfxSeconds = 0f };
+            var beat = new CombatBeat { Vfx = SpellPresentation.None };
 
             Assert.AreEqual(0f, _fight.ImpactDelayFor(beat), 0.0001f);
         }
@@ -439,7 +439,7 @@ namespace PrincesPalace.PlayModeTests
             // look. That is correct behaviour for a time-based animation and a
             // useless thing to assert against. At 6s the same hitch is 5% of
             // the run and the SHAPE is what gets tested: held, then thrown.
-            beat.VfxSeconds = 6f;
+            beat.Vfx.seconds = 6f;
             _fight.PlaySpellVfxForTest(beat);
 
             // WHERE IT STARTED, not where the slot is. The two agree to within a
@@ -503,11 +503,14 @@ namespace PrincesPalace.PlayModeTests
             {
                 Actor = reversed ? foe : hero,
                 Target = reversed ? hero : foe,
-                VfxPath = "Spells/mud_burst",
-                VfxSeconds = 0.65f,
-                VfxImpactFrame = 13,
-                VfxDepartFrame = 9,
-                VfxFromCaster = fromCaster,
+                Vfx = new SpellPresentation
+                {
+                    path = "Spells/mud_burst",
+                    seconds = 0.65f,
+                    impactFrame = 13,
+                    departFrame = 9,
+                    fromCaster = fromCaster,
+                },
             };
         }
 

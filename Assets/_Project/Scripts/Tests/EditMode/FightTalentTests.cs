@@ -34,7 +34,7 @@ namespace PrincesPalace.Domain.Tests
 
         private static ResolvedSkill Skill(SkillEffect effect, string name = "Skill", TransformGrant transform = null) =>
             new ResolvedSkill("t", name, "", "hero", 1, effect, SkillTargeting.Self,
-                0, 0, false, 100, 0, false, null, "", 0.6f, 3, "", 0, transform: transform);
+                0, 0, false, 100, 0, false, null, SpellPresentation.None, 0, transform: transform);
 
         private static PlayerKit Kit(params ResolvedSkill[] skills) =>
             new PlayerKit("hero", CharacterRole.Tank, skills, null, null);

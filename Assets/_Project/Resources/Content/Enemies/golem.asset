@@ -35,10 +35,13 @@ MonoBehaviour:
   skillName: Boulder Slam
   skillPower: 1.8
   skillChance: 1
-  vfxPath: Spells/golem_boulder
-  vfxSeconds: 0.48
-  vfxImpactFrame: 3
-  sfxPath: 
+  vfx:
+    path: Spells/golem_boulder
+    seconds: 0.48
+    impactFrame: 3
+    fromCaster: 0
+    departFrame: 0
+    sfxPath: 
   appliesStatus: 0
   hasStatus: 0
   statusMagnitude: 0

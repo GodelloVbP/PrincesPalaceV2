@@ -301,7 +301,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // posture as everywhere else.
             if (usingSkill)
             {
-                RecordSpellPresentation(source.VfxPath, source.VfxSeconds, source.VfxImpactFrame, source.SfxPath);
+                RecordSpellPresentation(source.Vfx);
             }
 
             // Through the ledger's funnel, like every other damage path.

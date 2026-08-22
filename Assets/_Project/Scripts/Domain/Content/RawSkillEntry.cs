@@ -63,58 +63,22 @@ namespace PrincesPalace.Domain.Content
         // of something averaged.
         public RawDamageInstance[] damageInstances = Array.Empty<RawDamageInstance>();
 
-        // Resources-relative folder of this spell's animation frames, played
-        // over the stage when it resolves. Empty means no visual.
-        public string vfxPath = "";
-
-        // How long the whole animation takes, in seconds.
-        public float vfxSeconds = -1f;
-
-        // Which frame of that animation the spell actually LANDS on, counting
-        // from 1. A bolt is drawn arriving, not sitting still: the damage,
-        // the flash and the number belong to the moment it connects, which is
-        // partway through the sequence, not at the end of it. Left unset, a
-        // spell lands on its peak frame - see SkillEntryResolver.
-        public int vfxImpactFrame = -1;
-
-        // Does this effect TRAVEL, or does it happen where it lands?
+        // HOW IT LOOKS, nested under "vfx" in the JSON.
         //
-        // Almost every sheet is a thing that occurs on the target -- a flare, a
-        // bolt striking down, rocks erupting -- and is fitted into a square box
-        // centred on them. mud_blast is drawn the other way: a conjuring glyph
-        // at the left of the cell, a lance crossing it, an impact at the right.
-        // Centred on the target that glyph appears in mid-air a few hundred
-        // pixels short of the caster, which is what "it does not come from the
-        // character" describes.
+        // Six flat fields lived here -- vfxPath, vfxSeconds, vfxImpactFrame,
+        // vfxFromCaster, vfxDepartFrame, sfxPath -- and every one of them had a
+        // twin on the resolved skill, a twin on the ScriptableObject, and a
+        // twin on the combat beat. Adding a seventh meant writing the same
+        // field four times and copying it three. Holding the SAME TYPE the rest
+        // of the chain holds is what makes a new knob one field instead of
+        // four; see SpellPresentation.
         //
-        // A flag rather than something inferred from the art. It could be
-        // guessed -- the energy's centroid walks left to right across a
-        // directional sheet and stays put on a centred one -- and a guess that
-        // is right four times out of five puts an effect in the wrong place on
-        // the fifth with nothing in the content saying why.
-        public bool vfxFromCaster;
+        // JsonUtility runs field initialisers before it fills anything in, so
+        // an entry with no "vfx" block gets the defaults and an entry with a
+        // partial one gets defaults for whatever it left out. That is what
+        // retired the -1 and 0 sentinels these fields used to carry.
+        public SpellPresentation vfx = new SpellPresentation();
 
-        // WHICH FRAME THE EFFECT LEAVES ON, for a vfxFromCaster sheet. 1-based
-        // like vfxImpactFrame, and 0 means "from the very first frame".
-        //
-        // Without it a travelling effect starts drifting the instant it appears,
-        // so mud_blast's conjuring glyph spun its eight turns while already
-        // halfway across the stage -- it tumbled through the air instead of
-        // charging where it was cast. The sequence has two phases and the flight
-        // belongs to the second: hold at the caster for the charge, then throw.
-        //
-        // Authored rather than inferred. It could be guessed from the recipe --
-        // the spin ends where the composed frames stop rotating -- but the
-        // recipe is a build-time tool and the player has never heard of it, and
-        // a sheet that charges without spinning would defeat the guess anyway.
-        public int vfxDepartFrame;
-
-        // Resources-relative path of the clip that plays when the skill
-        // resolves. A path rather than an entry in the Sound enum because a
-        // skill is content: adding a spell should not require editing an
-        // enum, and a sound that only one spell uses has no business being a
-        // named member alongside ButtonClick. Empty means silent.
-        public string sfxPath = "";
 
         // One of Domain.Combat.StatusEffectType — Poison, Regen, Protect,
         // Vulnerable, Stun — matched case-insensitively. Empty means this

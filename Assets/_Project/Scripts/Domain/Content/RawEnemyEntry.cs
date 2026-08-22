@@ -87,14 +87,10 @@ namespace PrincesPalace.Domain.Content
         public string facing = "right";
 
         // Optional VFX played over the TARGET when this monster's skill
-        // lands — same four fields as SkillDefinition's own (see
-        // RawSkillEntry), same -1/"" sentinels, so a monster's skill can
-        // show a prop near the player it hit exactly the way a player
-        // skill already shows one near the enemy it hit.
-        public string vfxPath = "";
-        public float vfxSeconds = -1f;
-        public int vfxImpactFrame = -1;
-        public string sfxPath = "";
+        // lands, nested under "vfx" -- the SAME value a skill carries, so a
+        // monster's skill shows a prop near the player it hit exactly the way a
+        // player skill shows one near the enemy it hit. See SpellPresentation.
+        public SpellPresentation vfx = new SpellPresentation();
 
         // Optional status this monster's ATTACK (basic attack or skill,
         // either lands it) applies to whoever it hits — same shape as

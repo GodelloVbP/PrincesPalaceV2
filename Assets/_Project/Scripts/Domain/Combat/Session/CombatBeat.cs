@@ -25,6 +25,7 @@ namespace PrincesPalace.Domain.Combat.Session
     //
     // This is v1's StageBeat, moved whole. It was already engine-free apart
     // from using Vector3Int as an (hp, mana, signature) tuple, which is now
+using PrincesPalace.Domain.Content;
     // Vitals -- so the recording half of the beat system needs no Unity at all,
     // and the whole of it becomes testable in EditMode.
     public sealed class CombatBeat
@@ -72,16 +73,11 @@ namespace PrincesPalace.Domain.Combat.Session
         // the same reason: one command resolves the whole round in a single
         // pass, so anything fired during resolution fires for every action at
         // once, before the first one has been drawn.
-        public string VfxPath;
-        public float VfxSeconds;
-        public int VfxImpactFrame;
-
-        // See RawSkillEntry.vfxFromCaster.
-        public bool VfxFromCaster;
-
-        // See RawSkillEntry.vfxDepartFrame.
-        public int VfxDepartFrame;
-        public string SfxPath;
+        // CARRIED WHOLE. Six fields lived here -- path, seconds, impact frame,
+        // from-caster, depart frame, sfx -- and every one had to be copied in by
+        // hand from a skill or an enemy that already held the same six. See
+        // SpellPresentation for the measurement that collapsed them.
+        public SpellPresentation Vfx = new SpellPresentation();
 
         // A cast does not cross the stage. Set by the action rather than
         // inferred, so it is still right for a skill with no art at all.
@@ -94,7 +90,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // so it has nothing to wait for.
         public Dictionary<CombatantState, Vitals> PreSnapshot;
 
-        public bool HasSpellAnimation => !string.IsNullOrEmpty(VfxPath) && VfxSeconds > 0f;
+        public bool HasSpellAnimation => Vfx != null && Vfx.HasAnimation;
 
         // How far through the animation the impact falls, as a fraction of its
         // total length. Pure arithmetic -- no Resources.Load, no beat, nothing

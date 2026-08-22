@@ -31,12 +31,13 @@ MonoBehaviour:
     amount: 14
   - type: 2
     amount: 14
-  vfxPath: Spells/frost_flare
-  vfxSeconds: 0.52
-  vfxImpactFrame: 5
-  vfxFromCaster: 0
-  vfxDepartFrame: 0
-  sfxPath: Audio/Sfx/frost_flare
+  vfx:
+    path: Spells/frost_flare
+    seconds: 0.52
+    impactFrame: 5
+    fromCaster: 0
+    departFrame: 0
+    sfxPath: Audio/Sfx/frost_flare
   appliesStatus: 0
   hasStatus: 0
   statusMagnitude: 0

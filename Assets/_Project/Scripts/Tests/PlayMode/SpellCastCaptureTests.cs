@@ -124,10 +124,13 @@ namespace PrincesPalace.PlayModeTests
             {
                 Actor = actor,
                 Target = target,
-                VfxPath = path,
-                VfxSeconds = seconds,
-                VfxImpactFrame = impactFrame,
-                VfxFromCaster = fromCaster,
+                Vfx = new SpellPresentation
+                {
+                    path = path,
+                    seconds = seconds,
+                    impactFrame = impactFrame,
+                    fromCaster = fromCaster,
+                },
             });
 
             float started = Time.realtimeSinceStartup;

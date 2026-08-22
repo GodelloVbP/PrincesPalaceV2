@@ -58,8 +58,13 @@ namespace PrincesPalace.Domain.Content
                 // Loaded at runtime, off Resources.
                 { "spritePath", ArtPathKind.RuntimeLoaded },
                 { "battleSpritePath", ArtPathKind.RuntimeLoaded },
-                { "vfxPath", ArtPathKind.RuntimeLoaded },
-                { "sfxPath", ArtPathKind.RuntimeLoaded },
+                // DOTTED, because the field moved inside a nested block and the
+                // key is what an author types. A spell's presentation is one
+                // "vfx" object now -- see SpellPresentation -- so the JSON reads
+                // "vfx": { "path": ... } and an error naming "vfxPath" would
+                // send someone looking for a field that is not in the file.
+                { "vfx.path", ArtPathKind.RuntimeLoaded },
+                { "vfx.sfxPath", ArtPathKind.RuntimeLoaded },
             };
 
         // Extensions checked for explicitly rather than "contains a dot",

@@ -1,6 +1,7 @@
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Stats;
 using UnityEngine;
+using PrincesPalace.Domain.Content;
 
 namespace PrincesPalace.Content
 {
@@ -54,22 +55,10 @@ namespace PrincesPalace.Content
         public DamageInstance[] damageInstances = System.Array.Empty<DamageInstance>();
 
         [Tooltip("Resources-relative folder of this spell's animation frames (f0..fN). Empty means no visual.")]
-        public string vfxPath;
-
-        [Tooltip("How long the whole animation takes, in seconds.")]
-        public float vfxSeconds = 0.6f;
-
-        [Tooltip("Which frame of the animation the spell lands on, counting from 1. The damage, flash and number wait for it; the rest of the animation plays out after.")]
-        public int vfxImpactFrame = 3;
-
-        // See RawSkillEntry.vfxFromCaster.
-        public bool vfxFromCaster;
-
-        // See RawSkillEntry.vfxDepartFrame.
-        public int vfxDepartFrame;
-
-        [Tooltip("Resources-relative path of the clip played when this skill resolves. Empty means silent.")]
-        public string sfxPath;
+        // HOW IT LOOKS, as one serialized value. Six fields lived here and
+        // each had to be copied across in ContentBuilder and again in
+        // FightEncounterAdapter -- see SpellPresentation.
+        public SpellPresentation vfx = new SpellPresentation();
 
         [Tooltip("Status this skill applies to whoever its effect already resolves against (the enemy it damaged, the ally it healed). None means it applies no status, which is most skills.")]
         public StatusEffectType appliesStatus;

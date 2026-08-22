@@ -38,7 +38,7 @@ namespace PrincesPalace.Domain.Tests
             TransformGrant transform = null) =>
             new ResolvedSkill("test", displayName, "", "hero", 1, effect, SkillTargeting.SingleEnemy,
                 manaCost, resourceCost, false, power, flatAmount, false,
-                damageInstances, "", 0.6f, 3, "", 0,
+                damageInstances, SpellPresentation.None, 0,
                 appliesStatus: appliesStatus, statusMagnitude: statusMagnitude,
                 statusDuration: statusDuration, queuePushSlots: queuePushSlots, transform: transform);
 
@@ -52,7 +52,7 @@ namespace PrincesPalace.Domain.Tests
         private static ResolvedSkill OutOfReachSkill(string displayName) =>
             new ResolvedSkill("outofreach", displayName, "", "hero", 1, SkillEffect.DamageSingle,
                 SkillTargeting.SingleEnemy, 0, 0, false, 100, 0, false,
-                null, "", 0.6f, 3, "", 0,
+                null, SpellPresentation.None, 0,
                 requirements: new AbilityScoreBlock(99, 0, 0, 0, 0, 0));
 
         private static (FightSession session, CombatantState hero, CombatEncounter encounter) Fight(

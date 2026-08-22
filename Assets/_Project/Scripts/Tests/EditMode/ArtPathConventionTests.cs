@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -25,18 +26,58 @@ namespace PrincesPalace.Domain.Tests
         // on both spellings because iconSheet is a path field whose name does
         // not end in "Path" -- a sweep keyed on that suffix alone would miss it,
         // which is the sort of gap this test exists to refuse.
+        //
+        // AND "path" ON ITS OWN, which is the same gap arriving from the other
+        // direction. A field inside a nested block does not need to repeat the
+        // block's name: SpellPresentation.path is "vfx.path" to an author, and
+        // calling it "vfxPath" inside a type already called a presentation
+        // would be the stutter the nesting removed. The sweep found
+        // "vfx.sfxPath" and missed "vfx.path" until this said so.
         private static bool IsPathShaped(string fieldName) =>
-            fieldName.EndsWith("Path") || fieldName.EndsWith("Sheet");
+            fieldName.EndsWith("Path") || fieldName.EndsWith("Sheet")
+            || string.Equals(fieldName, "path", StringComparison.Ordinal);
 
+        // ONE LEVEL DOWN AS WELL AS ON THE ENTRY ITSELF, reported dotted.
+        //
+        // A raw entry's path fields used to all be flat. SpellPresentation moved
+        // six of them into a nested "vfx" block, and a sweep that only looked at
+        // the entry's own fields stopped seeing two of them -- which made the
+        // reverse test below declare "vfx.path" orphaned while the resolver was
+        // checking it on every skill in the game.
+        //
+        // One level, not arbitrary depth: the content DTOs are flat by
+        // convention and the one exception is a presentation. A recursive walk
+        // would be guarding against a shape nobody has proposed, and would need
+        // its own cycle check to be correct.
         private static List<(string Type, string Field)> PathFieldsOnRawEntries()
         {
-            return typeof(RawEnemyEntry).Assembly
-                .GetTypes()
-                .Where(t => t.Namespace == "PrincesPalace.Domain.Content" && t.Name.StartsWith("Raw"))
-                .SelectMany(t => t.GetFields(BindingFlags.Public | BindingFlags.Instance)
-                    .Where(f => f.FieldType == typeof(string) && IsPathShaped(f.Name))
-                    .Select(f => (t.Name, f.Name)))
-                .ToList();
+            var found = new List<(string, string)>();
+
+            foreach (var type in typeof(RawEnemyEntry).Assembly.GetTypes()
+                         .Where(t => t.Namespace == "PrincesPalace.Domain.Content" && t.Name.StartsWith("Raw")))
+            {
+                foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Instance))
+                {
+                    if (field.FieldType == typeof(string))
+                    {
+                        if (IsPathShaped(field.Name)) found.Add((type.Name, field.Name));
+                        continue;
+                    }
+
+                    if (field.FieldType.IsPrimitive || field.FieldType.IsEnum || field.FieldType.IsArray) continue;
+                    if (field.FieldType.Namespace != "PrincesPalace.Domain.Content") continue;
+
+                    foreach (var nested in field.FieldType.GetFields(BindingFlags.Public | BindingFlags.Instance))
+                    {
+                        if (nested.FieldType == typeof(string) && IsPathShaped(nested.Name))
+                        {
+                            found.Add((type.Name, $"{field.Name}.{nested.Name}"));
+                        }
+                    }
+                }
+            }
+
+            return found;
         }
 
         // ---- the table keeps up with the content types -------------------------
@@ -66,8 +107,11 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.GreaterOrEqual(found.Count, 9,
                 "The reflection sweep found " + found.Count + " path fields. It should see at least the nine " +
-                "that exist (iconPath x4, iconSheet x2, portraitPath, battleSpritePath, spritePath, vfxPath x2, " +
-                "sfxPath x2) -- a sweep finding nothing would pass every other test in this file.");
+                "that exist (iconPath x4, iconSheet x2, portraitPath, battleSpritePath, spritePath, and the " +
+                "nested vfx.path x2 / vfx.sfxPath x2) -- a sweep finding nothing would pass every other test " +
+                "in this file.");
+            CollectionAssert.Contains(found.Select(f => f.Field).ToList(), "vfx.path",
+                "the sweep stopped descending into nested blocks, so a presentation's paths are unguarded");
             CollectionAssert.Contains(found.Select(f => f.Field).ToList(), "iconSheet",
                 "iconSheet is the field whose name does not end in 'Path'; if the sweep misses it the suffix " +
                 "matching has regressed.");
@@ -117,7 +161,7 @@ namespace PrincesPalace.Domain.Tests
         public void TheRealShippedShapesAreAccepted()
         {
             Assert.IsTrue(ArtPathConvention.Check("x", "spritePath", "Enemies/rat", out _));
-            Assert.IsTrue(ArtPathConvention.Check("x", "sfxPath", "Audio/Sfx/frost_flare", out _));
+            Assert.IsTrue(ArtPathConvention.Check("x", "vfx.sfxPath", "Audio/Sfx/frost_flare", out _));
             Assert.IsTrue(ArtPathConvention.Check("x", "battleSpritePath", "Characters/sheep", out _));
             Assert.IsTrue(ArtPathConvention.Check("x", "iconPath",
                 "Assets/_Project/Art/Items/helmets_str/level_1.png", out _));
@@ -133,7 +177,7 @@ namespace PrincesPalace.Domain.Tests
         {
             Assert.IsTrue(ArtPathConvention.Check("x", "iconPath", "", out _));
             Assert.IsTrue(ArtPathConvention.Check("x", "spritePath", null, out _));
-            Assert.IsTrue(ArtPathConvention.Check("x", "vfxPath", "   ", out _));
+            Assert.IsTrue(ArtPathConvention.Check("x", "vfx.path", "   ", out _));
         }
 
         [Test]
@@ -165,11 +209,13 @@ namespace PrincesPalace.Domain.Tests
         {
             var vfx = new RawEnemyEntry
             {
-                id = "e1", displayName = "E", maxHealth = 30, vfxPath = "Assets/_Project/Art/Spells/boulder.png",
+                id = "e1", displayName = "E", maxHealth = 30,
+                vfx = new SpellPresentation { path = "Assets/_Project/Art/Spells/boulder.png" },
             };
             var sfx = new RawEnemyEntry
             {
-                id = "e2", displayName = "E", maxHealth = 30, sfxPath = "Assets/_Project/Audio/hit.wav",
+                id = "e2", displayName = "E", maxHealth = 30,
+                vfx = new SpellPresentation { sfxPath = "Assets/_Project/Audio/hit.wav" },
             };
 
             Assert.IsFalse(EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { vfx }, out _, out _));
@@ -193,13 +239,13 @@ namespace PrincesPalace.Domain.Tests
             var raw = new RawSkillEntry
             {
                 id = "s1", displayName = "Zap", characterId = "sheep", manaCost = 5,
-                vfxPath = "Assets/_Project/Art/Spells/lightning_bolt.png",
+                vfx = new SpellPresentation { path = "Assets/_Project/Art/Spells/lightning_bolt.png" },
             };
 
             bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { raw }, out _, out var errors);
 
             Assert.IsFalse(ok);
-            StringAssert.Contains("vfxPath", string.Join(" ", errors));
+            StringAssert.Contains("vfx.path", string.Join(" ", errors));
         }
 
         [Test]

@@ -1,5 +1,5 @@
 {
-  "_readme": "Every monster in the game. Edit this file, then run Prince's Palace > Build Default Content in the Unity Editor to regenerate. Only id, displayName, and maxHealth are required \u2014 everything else is optional and gets a reasonable auto-derived default if left out (see EnemyEntryResolver.cs for the exact formulas). weakness/resistance are one of: Physical, Fire, Ice, Nature, Poison, Arcane (case-insensitive) \u2014 an attack matching weakness deals +50% damage, matching resistance deals -50%. Set isBoss to true only for monsters that should appear exclusively in the dungeon's final room.",
+  "_readme": "Every monster in the game. Edit this file, then run Prince's Palace > Build Default Content in the Unity Editor to regenerate. Only id, displayName, and maxHealth are required — everything else is optional and gets a reasonable auto-derived default if left out (see EnemyEntryResolver.cs for the exact formulas). weakness/resistance are one of: Physical, Fire, Ice, Nature, Poison, Arcane (case-insensitive) — an attack matching weakness deals +50% damage, matching resistance deals -50%. Set isBoss to true only for monsters that should appear exclusively in the dungeon's final room.",
   "enemies": [
     {
       "id": "rat",
@@ -66,9 +66,11 @@
       "skillName": "Boulder Slam",
       "skillPower": 1.8,
       "skillChance": 1.0,
-      "vfxPath": "Spells/golem_boulder",
-      "vfxSeconds": 0.48,
-      "vfxImpactFrame": 3
+      "vfx": {
+        "path": "Spells/golem_boulder",
+        "seconds": 0.48,
+        "impactFrame": 3
+      }
     },
     {
       "id": "imp",
@@ -101,9 +103,11 @@
       "skillName": "Mud Burst",
       "skillPower": 1.6,
       "skillChance": 0.4,
-      "vfxPath": "Spells/mud_burst",
-      "vfxSeconds": 0.6,
-      "vfxImpactFrame": 4
+      "vfx": {
+        "path": "Spells/mud_burst",
+        "seconds": 0.6,
+        "impactFrame": 4
+      }
     },
     {
       "id": "crystal_bat",

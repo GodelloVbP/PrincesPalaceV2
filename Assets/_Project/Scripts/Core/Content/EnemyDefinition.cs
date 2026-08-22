@@ -1,6 +1,7 @@
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Stats;
 using UnityEngine;
+using PrincesPalace.Domain.Content;
 
 namespace PrincesPalace.Content
 {
@@ -66,14 +67,8 @@ namespace PrincesPalace.Content
         public bool HasSkill => !string.IsNullOrWhiteSpace(skillName);
 
         [Tooltip("Resources-relative path of a f0..fN VFX sequence played over the TARGET when this monster's skill lands. Empty means no prop.")]
-        public string vfxPath;
-
-        public float vfxSeconds = 0.6f;
-
-        [Tooltip("Which frame of vfxPath the hit actually lands on, counting from 1.")]
-        public int vfxImpactFrame = 3;
-
-        public string sfxPath;
+        // One serialized value, like a skill's. See SpellPresentation.
+        public SpellPresentation vfx = new SpellPresentation();
 
         [Tooltip("Status this monster's attacks apply to whoever they hit — basic attack or skill, either lands it. Not gated to skill use the way a player skill's own status is.")]
         public StatusEffectType appliesStatus;

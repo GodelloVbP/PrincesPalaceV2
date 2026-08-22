@@ -34,8 +34,8 @@ namespace PrincesPalace
         {
             if (spellVfxPlayer == null || beat == null || !beat.HasSpellAnimation) return 0f;
 
-            int frameCount = spellVfxPlayer.Frames(beat.VfxPath)?.Length ?? 0;
-            return beat.VfxSeconds * CombatBeat.ImpactFraction(beat.VfxImpactFrame, frameCount);
+            int frameCount = spellVfxPlayer.Frames(beat.Vfx.path)?.Length ?? 0;
+            return beat.Vfx.seconds * CombatBeat.ImpactFraction(beat.Vfx.impactFrame, frameCount);
         }
 
         // ---- seams for the PlayMode tests -----------------------------------------
@@ -55,7 +55,7 @@ namespace PrincesPalace
         {
             if (beat == null) return;
 
-            if (spellVfxPlayer == null || string.IsNullOrEmpty(beat.VfxPath) || beat.Target == null) return;
+            if (spellVfxPlayer == null || string.IsNullOrEmpty(beat.Vfx.path) || beat.Target == null) return;
 
             // The SLOT, not the sprite Image inside it. The Image is the art's
             // raw canvas and its bottom edge is wherever the sheet happened to
@@ -73,13 +73,13 @@ namespace PrincesPalace
             var parent = spellVfxPlayer.transform.parent;
             if (parent == null) return;
 
-            float deadSpaceBelow = VfxDeadSpaceBelow(beat.VfxPath);
+            float deadSpaceBelow = VfxDeadSpaceBelow(beat.Vfx.path);
 
             var rect = targetRect.rect;
             float centreX = parent.InverseTransformPoint(targetRect.TransformPoint(Vector3.zero)).x;
             float bottomY = parent.InverseTransformPoint(targetRect.TransformPoint(new Vector3(0f, rect.yMin, 0f))).y;
 
-            if (beat.VfxFromCaster)
+            if (beat.Vfx.fromCaster)
             {
                 PlayTravellingVfx(beat, parent, centreX, bottomY);
                 return;
@@ -88,7 +88,7 @@ namespace PrincesPalace
             spellVfxPlayer.SetFacing(1f);
             var anchoredPosition = new Vector2(centreX, bottomY + SpellVfxSize.y * 0.5f - deadSpaceBelow);
 
-            spellVfxPlayer.PlayAt(beat.VfxPath, beat.VfxSeconds, anchoredPosition, SpellVfxSize);
+            spellVfxPlayer.PlayAt(beat.Vfx.path, beat.Vfx.seconds, anchoredPosition, SpellVfxSize);
         }
 
         // ---- an effect that CROSSES the stage ------------------------------------
@@ -105,7 +105,7 @@ namespace PrincesPalace
         // measurement that killed it.
         private void PlayTravellingVfx(CombatBeat beat, Transform parent, float targetX, float bottomY)
         {
-            float dead = VfxDeadSpaceBelow(beat.VfxPath);
+            float dead = VfxDeadSpaceBelow(beat.Vfx.path);
             var to = new Vector2(targetX, bottomY + SpellVfxSize.y * 0.5f - dead);
 
             var casterRect = SlotFor(beat.Actor);
@@ -116,7 +116,7 @@ namespace PrincesPalace
             if (casterRect == null)
             {
                 spellVfxPlayer.SetFacing(1f);
-                spellVfxPlayer.PlayAt(beat.VfxPath, beat.VfxSeconds, to, SpellVfxSize);
+                spellVfxPlayer.PlayAt(beat.Vfx.path, beat.Vfx.seconds, to, SpellVfxSize);
                 return;
             }
 
@@ -137,8 +137,8 @@ namespace PrincesPalace
             // through its own wind-up.
             //
             // Both are 1-based in content, like the golem's impact frame.
-            spellVfxPlayer.PlayFrom(beat.VfxPath, beat.VfxSeconds, from, to, SpellVfxSize,
-                beat.VfxDepartFrame - 1, beat.VfxImpactFrame - 1);
+            spellVfxPlayer.PlayFrom(beat.Vfx.path, beat.Vfx.seconds, from, to, SpellVfxSize,
+                beat.Vfx.departFrame - 1, beat.Vfx.impactFrame - 1);
         }
 
         // How much empty box sits BELOW the visible art once preserveAspect has

@@ -220,7 +220,7 @@ namespace PrincesPalace
                 // BEFORE the positioning work, because a spell with a sound but
                 // no frames should still be audible -- an empty path is a silent
                 // no-op, which is why this needs no guard of its own.
-                SoundController.PlayClip(beat.SfxPath);
+                SoundController.PlayClip(beat.Vfx.sfxPath);
 
                 var animation = AnimationOf(beat);
 

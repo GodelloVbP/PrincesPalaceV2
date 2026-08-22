@@ -35,10 +35,13 @@ MonoBehaviour:
   skillName: 
   skillPower: 1.5
   skillChance: 0.35
-  vfxPath: 
-  vfxSeconds: 0.6
-  vfxImpactFrame: 3
-  sfxPath: 
+  vfx:
+    path: 
+    seconds: 0.6
+    impactFrame: 3
+    fromCaster: 0
+    departFrame: 0
+    sfxPath: 
   appliesStatus: 0
   hasStatus: 0
   statusMagnitude: 0

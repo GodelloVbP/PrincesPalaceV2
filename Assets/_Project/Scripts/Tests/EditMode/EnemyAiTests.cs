@@ -39,7 +39,7 @@ namespace PrincesPalace.Domain.Tests
             new ResolvedEnemy(id, id, new StatBlock(), 0, 0, false,
                 DamageType.Physical, DamageType.Physical, 0,
                 skillName: skillName, skillPower: skillPower, skillChance: skillChance,
-                vfxPath: vfxPath, vfxSeconds: 0.6f, vfxImpactFrame: 3, sfxPath: sfxPath,
+                presentation: SpellPresentation.Of(vfxPath, 0.6f, 3, sfxPath),
                 appliesStatus: appliesStatus, statusMagnitude: statusMagnitude,
                 statusDuration: statusDuration, attackHoldsPosition: attackHoldsPosition);
 
@@ -118,8 +118,8 @@ namespace PrincesPalace.Domain.Tests
             session.ExecuteAttack(session.Encounter.Enemies[0]);
             var beat = EnemyBeats(session)[0];
 
-            Assert.AreEqual("Vfx/rock", beat.VfxPath);
-            Assert.AreEqual("Sfx/slam", beat.SfxPath);
+            Assert.AreEqual("Vfx/rock", beat.Vfx.path);
+            Assert.AreEqual("Sfx/slam", beat.Vfx.sfxPath);
             Assert.IsTrue(beat.HasSpellAnimation);
         }
 

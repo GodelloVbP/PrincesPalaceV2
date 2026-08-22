@@ -29,12 +29,13 @@ MonoBehaviour:
   damageInstances:
   - type: 5
     amount: 40
-  vfxPath: Spells/lightning_bolt
-  vfxSeconds: 0.52
-  vfxImpactFrame: 5
-  vfxFromCaster: 0
-  vfxDepartFrame: 0
-  sfxPath: Audio/Sfx/lightning_strike
+  vfx:
+    path: Spells/lightning_bolt
+    seconds: 0.52
+    impactFrame: 5
+    fromCaster: 0
+    departFrame: 0
+    sfxPath: Audio/Sfx/lightning_strike
   appliesStatus: 0
   hasStatus: 0
   statusMagnitude: 0

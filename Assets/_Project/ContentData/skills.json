@@ -1,5 +1,5 @@
 {
-  "_readme": "Per-character combat skills, unlocked by levelling. Edit this file, then run Prince's Palace > Build Default Content. These are DIFFERENT from spells.json: that is one global power curve every character shares, which only changes the name and number of the single Skill button. These are a character's own kit, shown as their own row of buttons in a fight. id, displayName and characterId are always required. unlockLevel defaults to 1. effect is one of DamageSingle (default), DamageAll, HealSelf, HealParty, RestorePartyMana; targeting is inferred from the effect and rarely needs writing. Damage is (Attack, scaled by the caster's own weapon or spell scaling depending on scalingAxis, + flatAmount + power x (resource spent), minus the target's Defense unless ignoresDefense is set, floored at 1) x10 — health pools are on a x10 scale and stat-derived damage is scaled to match (CombatMath.DamageScale). damageInstances is the exception: a list of {type, amount} packets written directly on the final scale and NOT multiplied, each one checked against the target's weakness and resistance on its own, so one cast can land at +50% and -50% at the same time. Heals and mana restores are flatAmount + power x (resource spent). Costs: manaCost and/or resourceCost, and a skill must cost SOMETHING. resourceCost spends the owner's signature resource (Shawn's Wool); set spendsAllResource to take the lot, in which case resourceCost is the minimum needed to cast at all. power scales per point actually spent, so a skill with power but no resource cost is rejected rather than silently scaling by zero. Two skills for the same character MAY share an unlockLevel — Shawn opens with three. Presentation is authored here too and is entirely optional: vfxPath is a Resources folder of animation frames named f0..fN, vfxSeconds is how long the whole sequence takes, and sfxPath is a Resources path to the clip that plays when the skill lands. Any of them left out simply means no visual or no sound — never an error. scalingAxis is Auto (default, derives Weapon-vs-Spell from the caster's own attackType), Weapon, Spell, or None — override it when a skill's flavour does not match the caster's own type (a physical move authored on a Nature-typed caster, say). requires is a list of \"<ability score> <amount>\" lines (e.g. \"strength 15\") gating whether the skill can be cast at all, from base scores/talents/worn gear — empty means always castable once unlocked.",
+  "_readme": "Per-character combat skills, unlocked by levelling. Edit this file, then run Prince's Palace > Build Default Content. These are DIFFERENT from spells.json: that is one global power curve every character shares, which only changes the name and number of the single Skill button. These are a character's own kit, shown as their own row of buttons in a fight. id, displayName and characterId are always required. unlockLevel defaults to 1. effect is one of DamageSingle (default), DamageAll, HealSelf, HealParty, RestorePartyMana; targeting is inferred from the effect and rarely needs writing. Damage is (Attack, scaled by the caster's own weapon or spell scaling depending on scalingAxis, + flatAmount + power x (resource spent), minus the target's Defense unless ignoresDefense is set, floored at 1) x10 — health pools are on a x10 scale and stat-derived damage is scaled to match (CombatMath.DamageScale). damageInstances is the exception: a list of {type, amount} packets written directly on the final scale and NOT multiplied, each one checked against the target's weakness and resistance on its own, so one cast can land at +50% and -50% at the same time. Heals and mana restores are flatAmount + power x (resource spent). Costs: manaCost and/or resourceCost, and a skill must cost SOMETHING. resourceCost spends the owner's signature resource (Shawn's Wool); set spendsAllResource to take the lot, in which case resourceCost is the minimum needed to cast at all. power scales per point actually spent, so a skill with power but no resource cost is rejected rather than silently scaling by zero. Two skills for the same character MAY share an unlockLevel — Shawn opens with three. Presentation is authored here too, nested under \"vfx\", and is entirely optional: path is a Resources folder of animation frames named f0..fN, seconds is how long the whole sequence takes, impactFrame is which frame (counting from 1) the blow actually lands on, sfxPath is a Resources path to the clip that plays when it lands, and fromCaster/departFrame describe an effect that TRAVELS -- it starts on the caster and leaves on departFrame instead of appearing on the target. The whole block, or any field in it, left out simply means the default or no visual and no sound — never an error. scalingAxis is Auto (default, derives Weapon-vs-Spell from the caster's own attackType), Weapon, Spell, or None — override it when a skill's flavour does not match the caster's own type (a physical move authored on a Nature-typed caster, say). requires is a list of \"<ability score> <amount>\" lines (e.g. \"strength 15\") gating whether the skill can be cast at all, from base scores/talents/worn gear — empty means always castable once unlocked.",
   "skills": [
     {
       "id": "shear",
@@ -73,11 +73,13 @@
       "appliesStatus": "Vulnerable",
       "statusMagnitude": 25,
       "statusDuration": 2,
-      "vfxPath": "Spells/mud_burst",
-      "vfxSeconds": 0.65,
-      "vfxImpactFrame": 13,
-      "vfxFromCaster": true,
-      "vfxDepartFrame": 9
+      "vfx": {
+        "path": "Spells/mud_burst",
+        "seconds": 0.65,
+        "impactFrame": 13,
+        "fromCaster": true,
+        "departFrame": 9
+      }
     },
     {
       "id": "frost_flare",
@@ -97,10 +99,12 @@
           "amount": 14
         }
       ],
-      "vfxPath": "Spells/frost_flare",
-      "vfxSeconds": 0.52,
-      "vfxImpactFrame": 5,
-      "sfxPath": "Audio/Sfx/frost_flare"
+      "vfx": {
+        "path": "Spells/frost_flare",
+        "seconds": 0.52,
+        "impactFrame": 5,
+        "sfxPath": "Audio/Sfx/frost_flare"
+      }
     },
     {
       "id": "lightning_bolt",
@@ -116,10 +120,12 @@
           "amount": 40
         }
       ],
-      "vfxPath": "Spells/lightning_bolt",
-      "vfxSeconds": 0.52,
-      "vfxImpactFrame": 5,
-      "sfxPath": "Audio/Sfx/lightning_strike"
+      "vfx": {
+        "path": "Spells/lightning_bolt",
+        "seconds": 0.52,
+        "impactFrame": 5,
+        "sfxPath": "Audio/Sfx/lightning_strike"
+      }
     },
     {
       "id": "provoke",

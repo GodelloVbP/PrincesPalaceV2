@@ -257,7 +257,7 @@ namespace PrincesPalace.Domain.Tests
             DamageInstance[] packets = null, AbilityScoreBlock requirements = default) =>
             new ResolvedSkill(id, name, "It does a thing.", "hero", 1, effect,
                 SkillTargeting.SingleEnemy, manaCost, 0, false, power, 0, false,
-                packets, "", 0.6f, 3, "", 0, requirements: requirements);
+                packets, SpellPresentation.None, 0, requirements: requirements);
 
         private static (FightSession session, CombatantState hero) Fight(params ResolvedSkill[] skills)
         {

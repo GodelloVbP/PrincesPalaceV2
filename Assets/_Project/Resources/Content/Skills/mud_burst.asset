@@ -26,12 +26,13 @@ MonoBehaviour:
   flatAmount: 12
   ignoresDefense: 0
   damageInstances: []
-  vfxPath: Spells/mud_burst
-  vfxSeconds: 0.65
-  vfxImpactFrame: 13
-  vfxFromCaster: 1
-  vfxDepartFrame: 9
-  sfxPath: 
+  vfx:
+    path: Spells/mud_burst
+    seconds: 0.65
+    impactFrame: 13
+    fromCaster: 1
+    departFrame: 9
+    sfxPath: 
   appliesStatus: 3
   hasStatus: 1
   statusMagnitude: 25

@@ -50,10 +50,7 @@ namespace PrincesPalace
                 skillPower: definition.skillPower,
                 skillChance: definition.skillChance,
                 breakShieldPoints: definition.breakShieldPoints,
-                vfxPath: definition.vfxPath,
-                vfxSeconds: definition.vfxSeconds,
-                vfxImpactFrame: definition.vfxImpactFrame,
-                sfxPath: definition.sfxPath,
+                presentation: definition.vfx,
 
                 // hasStatus is the AUTHORING gate, and it is deliberately not the
                 // same question as "is a status type set". appliesStatus is a
@@ -382,9 +379,7 @@ namespace PrincesPalace
                 definition.targeting, definition.manaCost, definition.resourceCost,
                 definition.spendsAllResource, definition.power, definition.flatAmount,
                 definition.ignoresDefense, definition.damageInstances,
-                definition.vfxPath, definition.vfxSeconds, definition.vfxImpactFrame,
-                definition.sfxPath, definition.sortOrder, definition.vfxFromCaster,
-                definition.vfxDepartFrame,
+                definition.vfx, definition.sortOrder,
 
                 // Same authoring-gate rule as the enemy conversion: appliesStatus
                 // is an enum with a valid zero, so the FLAG is what says whether

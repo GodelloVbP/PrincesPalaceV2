@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using PrincesPalace.Domain.Content;
 
 namespace PrincesPalace.Domain.Combat.Session
 {
@@ -76,17 +77,13 @@ namespace PrincesPalace.Domain.Combat.Session
             _recordingBeat.ActorHoldsPosition = true;
         }
 
-        private void RecordSpellPresentation(string vfxPath, float vfxSeconds, int vfxImpactFrame, string sfxPath,
-            bool vfxFromCaster = false, int vfxDepartFrame = 0)
+        private void RecordSpellPresentation(SpellPresentation presentation)
         {
             if (_recordingBeat == null) return;
 
-            _recordingBeat.VfxPath = vfxPath;
-            _recordingBeat.VfxSeconds = vfxSeconds;
-            _recordingBeat.VfxImpactFrame = vfxImpactFrame;
-            _recordingBeat.VfxFromCaster = vfxFromCaster;
-            _recordingBeat.VfxDepartFrame = vfxDepartFrame;
-            _recordingBeat.SfxPath = sfxPath;
+            // COPIED at the boundary. A beat holding the catalogue's own object
+            // would let a fight edit the content it was dealt from.
+            _recordingBeat.Vfx = (presentation ?? SpellPresentation.None).Copy();
         }
 
         // What the beat's target should SAY about the blow that just landed.

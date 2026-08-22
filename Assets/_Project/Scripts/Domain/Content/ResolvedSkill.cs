@@ -30,16 +30,11 @@ namespace PrincesPalace.Domain.Content
         // Empty for a skill that scales off Attack; non-empty for one that
         // deals fixed typed packets instead.
         public readonly DamageInstance[] DamageInstances;
-        public readonly string VfxPath;
-        public readonly float VfxSeconds;
-        public readonly int VfxImpactFrame;
-
-        // See RawSkillEntry.vfxFromCaster.
-        public readonly bool VfxFromCaster;
-
-        // See RawSkillEntry.vfxDepartFrame.
-        public readonly int VfxDepartFrame;
-        public readonly string SfxPath;
+        // HOW IT LOOKS, as one value. Six parallel fields lived here --
+        // path, seconds, impact frame, from-caster, depart frame, sfx -- and
+        // every one of them had to be threaded by hand through ten files that
+        // do not care what a spell looks like. See SpellPresentation.
+        public readonly SpellPresentation Vfx;
 
         public readonly int SortOrder;
 
@@ -75,8 +70,7 @@ namespace PrincesPalace.Domain.Content
         public ResolvedSkill(string id, string displayName, string description, string characterId,
             int unlockLevel, SkillEffect effect, SkillTargeting targeting, int manaCost,
             int resourceCost, bool spendsAllResource, int power, int flatAmount, bool ignoresDefense,
-            DamageInstance[] damageInstances, string vfxPath, float vfxSeconds, int vfxImpactFrame, string sfxPath, int sortOrder,
-            bool vfxFromCaster = false, int vfxDepartFrame = 0,
+            DamageInstance[] damageInstances, SpellPresentation presentation, int sortOrder,
             StatusEffectType? appliesStatus = null, int statusMagnitude = 0, int statusDuration = 0,
             AbilityScoreBlock requirements = default, ScalingAxis scalingAxis = ScalingAxis.Auto,
             int queuePushSlots = 0, TransformGrant transform = null)
@@ -84,12 +78,9 @@ namespace PrincesPalace.Domain.Content
             QueuePushSlots = queuePushSlots;
             Transform = transform;
             DamageInstances = damageInstances ?? Array.Empty<DamageInstance>();
-            VfxPath = vfxPath ?? "";
-            VfxSeconds = vfxSeconds;
-            VfxImpactFrame = vfxImpactFrame;
-            VfxFromCaster = vfxFromCaster;
-            VfxDepartFrame = vfxDepartFrame;
-            SfxPath = sfxPath ?? "";
+            // COPIED, not aliased. A skill in the catalogue and a beat in a
+            // fight would otherwise hold the same mutable object.
+            Vfx = (presentation ?? SpellPresentation.None).Copy();
             Id = id;
             DisplayName = displayName;
             Description = description;

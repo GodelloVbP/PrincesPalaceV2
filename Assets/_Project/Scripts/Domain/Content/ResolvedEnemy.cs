@@ -44,10 +44,9 @@ namespace PrincesPalace.Domain.Content
 
         // A skill's VFX, shown over the TARGET when it lands — see
         // RawEnemyEntry's own comment. Empty VfxPath means no prop.
-        public readonly string VfxPath;
-        public readonly float VfxSeconds;
-        public readonly int VfxImpactFrame;
-        public readonly string SfxPath;
+        // ONE VALUE, like a skill's. See SpellPresentation for the
+        // measurement that collapsed the four fields that were here.
+        public readonly SpellPresentation Vfx;
 
         // The status this monster's attacks apply on a hit, regardless of
         // whether that hit was the skill or a plain attack. Null means it
@@ -70,8 +69,8 @@ namespace PrincesPalace.Domain.Content
             bool isBoss, DamageType weakness, DamageType resistance, int sortOrder, string spritePath = "",
             PrincesPalace.Domain.Stage.SpriteFacing facing = PrincesPalace.Domain.Stage.SpriteFacing.Right,
             bool active = true, string skillName = "", float skillPower = 1.5f, float skillChance = 0f,
-            int breakShieldPoints = 0, string vfxPath = "", float vfxSeconds = 0.6f, int vfxImpactFrame = 3,
-            string sfxPath = "", StatusEffectType? appliesStatus = null, int statusMagnitude = 0,
+            int breakShieldPoints = 0, SpellPresentation presentation = null,
+            StatusEffectType? appliesStatus = null, int statusMagnitude = 0,
             int statusDuration = 0, bool avoidsFrontSlot = false, bool attackHoldsPosition = false,
             int minFloor = 1)
         {
@@ -96,10 +95,7 @@ namespace PrincesPalace.Domain.Content
             SortOrder = sortOrder;
             SpritePath = spritePath ?? "";
             BreakShieldPoints = breakShieldPoints;
-            VfxPath = vfxPath ?? "";
-            VfxSeconds = vfxSeconds;
-            VfxImpactFrame = vfxImpactFrame;
-            SfxPath = sfxPath ?? "";
+            Vfx = (presentation ?? SpellPresentation.None).Copy();
             AppliesStatus = appliesStatus;
             StatusMagnitude = statusMagnitude;
             StatusDuration = statusDuration;
