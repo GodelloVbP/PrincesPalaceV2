@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
@@ -284,41 +285,93 @@ public static class ProceduralSpriteBaker
             return Stroke(Mathf.Abs(dist - Radius), HalfWidth);
         });
 
-        // The NEXT caret: a chevron pointing DOWN at the node under it.
+        // THE NEXT CARET IS GONE, and unlike track_tick above it is not kept.
         //
-        // Down rather than up, because it hangs above the rail and an arrow
-        // that points away from the thing it marks is pointing at the panel's
-        // edge. The same stroke weight as the grant marks, so it reads as one
-        // vocabulary rather than as chrome from somewhere else.
-        BakeGlow("track_caret", Size, (nx, ny) =>
-        {
-            float d = Mathf.Min(
-                SegmentDistance(nx, ny, -0.34f, 0.22f, 0f, -0.24f),
-                SegmentDistance(nx, ny, 0f, -0.24f, 0.34f, 0.22f));
+        // It was a chevron pointing down at the node under it, and the argument
+        // for the shape was sound: an arrow that points away from what it marks
+        // points at the panel's edge instead. What killed it was where it had
+        // to live. A centred caption block left one clear strip in the band,
+        // 14px tall and a hundred pixels above the rail, so the caret sat there
+        // -- and at 26x14, a hundred pixels from its node, it read as dust.
+        //
+        // The mark that replaced it is the word NEXT over a fading hairline,
+        // which needs no sprite of its own beyond track_drop. track_tick stays
+        // baked because its shape is shared with the seal pip and is the most
+        // reusable mark in the set; a chevron pointing down is neither.
 
-            return Stroke(d, 0.12f);
-        });
-
-        // THE SEAL PIP: a dark disc with the claimed check KNOCKED OUT of it.
+        // THE SEAL PIP'S GOLD HALF: a hairline ring at the rim with the claimed
+        // check inside it. Drawn OVER a dark disc, which is solid_circle tinted
+        // to the pip's own ground -- two nodes, not one.
         //
-        // A hole rather than a second sprite on top, and that is the whole
-        // trick. The pip only ever appears on a collected node, and a collected
-        // node's disc is gold metal -- so a check cut out of the pip shows that
-        // disc through it, at exactly the gold the disc is lit with. Drawing the
-        // check as its own gold sprite would need a second node per level, 99
-        // of them, and would still have to guess a gold that matched.
+        // THE KNOCKOUT WENT THE OTHER WAY AND DID NOT READ, which is worth
+        // recording because the argument for it was good. The pip only appears
+        // on a collected node and a collected node's disc is gold metal, so a
+        // check CUT OUT of a dark pip shows that gold through it at exactly the
+        // light the disc is lit with -- one sprite, one node, and no second gold
+        // to keep in step with the first.
         //
-        // The check is track_tick's own two strokes, evaluated at 15/9 scale so
-        // the 9px mark sits inside the 15px pip the handoff specifies.
-        BakeGlow("seal_pip", Size, (nx, ny) =>
+        // What that reasoning left out is the width of the hole. A knocked-out
+        // stroke can only be as wide as the pip has room for, and on a filler
+        // node the pip is 9px across: the check came out about a pixel wide,
+        // against gold, inside a dark disc 9px across on a disc 26px across.
+        // The first runtime capture shows eighty-seven nodes wearing what reads
+        // as a dark smudge at four o'clock. The prototype draws the mark
+        // POSITIVE at 2.2/14 of a 15px pip -- 2.4px of gold on near-black -- and
+        // that is a stroke rather than a hairline crack.
+        //
+        // The ring is the design's 1px rim; it is what stops a dark disc on a
+        // dark background dissolving on an unlit node.
+        BakeGlow("seal_mark", Size, (nx, ny) =>
         {
             float radius = Mathf.Sqrt(nx * nx + ny * ny);
-            float disc = 1f - Mathf.Clamp01((radius - 0.92f) / 0.08f);
+            float rim = Stroke(Mathf.Abs(radius - 0.90f), 0.055f) * 0.6f;
 
+            // The same two strokes track_tick draws, at 9/15 of the pip so the
+            // check sits inside the ring rather than touching it.
             const float CheckScale = 15f / 9f;
+            float check = CheckMark(nx * CheckScale, ny * CheckScale, 0.16f);
 
-            return Mathf.Clamp01(
-                disc - CheckMark(nx * CheckScale, ny * CheckScale, 0.13f));
+            return Mathf.Clamp01(rim + check);
+        });
+
+        // THE MILESTONE'S ORBIT: a hairline ring broken into eight arcs, turned
+        // slowly by the controller.
+        //
+        // A CONTINUOUS RING CANNOT BE SEEN TO ROTATE, which is the whole reason
+        // this is dashed rather than being the plate ring turned. Rotation only
+        // reads where there is something to carry it, and a circle is the one
+        // shape that looks identical at every angle.
+        //
+        // Eight arcs at a 0.55 duty cycle, each end feathered over a fifth of
+        // its own gap: hard-ended dashes read as a dial or a loading spinner,
+        // which is chrome, and feathered ones read as light travelling round a
+        // circle, which is what a milestone is meant to feel like.
+        BakeGlow("milestone_ring", Size, (nx, ny) =>
+        {
+            float radius = Mathf.Sqrt(nx * nx + ny * ny);
+
+            // 0.94 AND 0.017, WHICH ARE ring_hairline's OWN NUMBERS and have to
+            // be: this sprite replaces that one at the same node and the same
+            // size, so any difference in radius is a difference in where the
+            // milestone's plate ring sits. Baked at 0.88 first, and the ring
+            // came off its inset-7 station and landed on the disc's rim -- two
+            // pixels, and it read as a ring drawn ON the coin rather than
+            // around it.
+            float ring = Stroke(Mathf.Abs(radius - 0.94f), 0.017f);
+            if (ring <= 0f) return 0f;
+
+            const int Arcs = 8;
+            const float Duty = 0.55f;
+
+            // 0..1 round the circle, then 0..1 within one arc's own slot.
+            float turn = (Mathf.Atan2(ny, nx) / (Mathf.PI * 2f) + 1f) % 1f;
+            float within = (turn * Arcs) % 1f;
+
+            // Feathered at both ends of the lit part of the slot.
+            const float Feather = Duty * 0.2f;
+            float dash = Mathf.Min(within, Duty - within) / Feather;
+
+            return ring * Mathf.Clamp01(dash);
         });
 
         // The travelling light on the rail. A soft band with no edge of its
@@ -329,6 +382,96 @@ public static class ProceduralSpriteBaker
         // axis being scaled distorts differently every frame.
         BakeGlow("shimmer_band", 64, (nx, ny) =>
             Mathf.Exp(-(nx * nx) / (0.42f * 0.42f)));
+
+        BakeTrackGrounds();
+    }
+
+    // THE FOUR GROUNDS THE TRACK SITS ON, all of them gradients and all of them
+    // gradients for the same reason: every one of these replaced a flat fill
+    // that read as a printed block on a painted screen.
+    //
+    // A flat rect has an edge everywhere along it. That is fine for a button,
+    // which is meant to have one, and wrong for a wash, a band, or a lit line,
+    // which are meant to be light rather than paint -- and the only way to say
+    // "no edge" in uGUI is to hand Image a sprite whose alpha falls off.
+    private static void BakeTrackGrounds()
+    {
+        // THE RAIL BAND'S WASH. Vertical, dark in the middle and nothing at
+        // either edge, so the band has no top or bottom line of its own -- the
+        // two gold hairlines are the edge, and the wash is what fills between
+        // them.
+        //
+        // sqrt of a triangle rather than a smoothstep, and the shape is fitted
+        // rather than chosen: the design gives four stops, 0 at both edges,
+        // 0.67 of peak at 22% and 78%, and peak at the middle. |2t-1| is the
+        // triangle those points nearly lie on and the square root pulls it onto
+        // them -- 0.44 becomes 0.66 against a specified 0.67.
+        BakeGradient("band_fade", 128, ny =>
+            (1f, Mathf.Sqrt(Mathf.Clamp01(1f - Mathf.Abs(ny * 2f - 1f)))));
+
+        // A HAIRLINE THAT ENDS IN NOTHING. Full across the middle two thirds
+        // and gone by the ends, which is what keeps a 1600px rule from meeting
+        // the panel's own border at a hard T.
+        //
+        // Uniform along y: this is stretched to 1px tall and 1500 wide, and
+        // anything varying across the axis being scaled resamples differently
+        // at every canvas size.
+        BakeGlow("hairline_fade", 64, (nx, ny) =>
+            1f - Smoothstep(Mathf.Clamp01((Mathf.Abs(nx) - 0.64f) / 0.36f)));
+
+        // THE LIT RAIL, brightening toward the player.
+        //
+        // A flat bar says "this much is done". A bar that gains light as it
+        // travels says which END of it is now -- and on a rail 19,000px long
+        // whose lit half can be 8,000 of them, that is the difference between a
+        // progress bar and a path.
+        //
+        // ALPHA rather than value, which is the constraint a tinted sprite
+        // imposes: the design runs #F2DB9E52 to #FFF3D6, gold warming to cream,
+        // and a single Image.color cannot bend a hue along its own length. Gold
+        // at rising opacity over this ground gets the brightening; the last two
+        // percent of warmth is what it cannot have.
+        BakeGlow("rail_ramp", 64, (nx, ny) =>
+        {
+            float t = Mathf.Clamp01((nx + 1f) * 0.5f);
+
+            return t < 0.6f
+                ? Mathf.Lerp(0.32f, 0.6f, t / 0.6f)
+                : Mathf.Lerp(0.6f, 1f, (t - 0.6f) / 0.4f);
+        });
+
+        // And the bloom under it. The same ramp across, a gaussian down, so the
+        // lit rail sits in light rather than on a second bar -- the design asks
+        // for a 15px band at blur 5, and a blur is exactly what a baked falloff
+        // is for.
+        BakeGlow("rail_glow", 64, (nx, ny) =>
+        {
+            float t = Mathf.Clamp01((nx + 1f) * 0.5f);
+            float across = t < 0.65f
+                ? Mathf.Lerp(0.125f, 0.5f, t / 0.65f)
+                : Mathf.Lerp(0.5f, 1f, (t - 0.65f) / 0.35f);
+
+            return across * Mathf.Exp(-(ny * ny) / (0.55f * 0.55f));
+        });
+
+        // THE LINE UNDER THE WORD "NEXT", dissolving as it falls toward the
+        // node it points at. Solid where it leaves the word and gone before it
+        // arrives -- a line that stops dead above a disc reads as a join
+        // between two things rather than as a direction.
+        BakeGradient("track_drop", 32, ny => (1f, ny));
+
+        // THE FOCUS CARD'S GROUND, lighter at its head than at its foot.
+        //
+        // The design's is a 158-degree linear gradient, #241735 to #120A18 --
+        // very nearly vertical, and taken as vertical here because a diagonal
+        // would need a rotated sprite and eight degrees is not worth one.
+        //
+        // A VALUE ramp, not an alpha one: this is opaque and sits over the
+        // panel's own ground, so fading it would show that ground through and
+        // make the card a tint rather than a plate. #120A18 is #241735 at very
+        // nearly half brightness, which is why one tint and one ramp can say
+        // both ends of it.
+        BakeGradient("card_ground", 128, ny => (Mathf.Lerp(0.5f, 1f, ny), 1f));
     }
 
     // THE CHECK, as one shape with two customers.
@@ -768,27 +911,121 @@ public static class ProceduralSpriteBaker
 
         // Byte-compare before writing: an unchanged PNG must not be rewritten,
         // or every build churns the file and every diff is noise.
+        //
+        // THE IMPORT SETTINGS ARE CHECKED EITHER WAY. They live in the .meta,
+        // not in the pixels, so gating them on the pixels having changed makes
+        // them unfixable for every sprite already on disk.
         if (File.Exists(path) && File.ReadAllBytes(path).AsSpan().SequenceEqual(png))
         {
+            Import(path);
             return;
         }
 
         File.WriteAllBytes(path, png);
         AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
 
+        Import(path);
+        Debug.Log($"[ProceduralSpriteBaker] baked {path}");
+    }
+
+    // THE IMPORTER SETTINGS EVERY BAKED SPRITE NEEDS, applied whether or not the
+    // PNG itself changed.
+    //
+    // Outside the byte-compare above, deliberately: the compare exists to stop
+    // an unchanged PNG churning in git, and it used to skip the import block
+    // with it. That made the settings unfixable -- changing what a baked sprite
+    // should be imported as did nothing to the twenty-odd already on disk,
+    // because their pixels had not moved.
+    // THE SPRITES DRAWN AS BARS rather than as shapes, which is the one set
+    // mipmaps must not be turned on for.
+    //
+    // A mip level is chosen from the LARGER of the two axis derivatives, so a
+    // 64px texture stretched to 1512x1 is sampled as though it were downscaled
+    // 64 times -- mip 6, which is a single texel. The horizontal fade that is
+    // the whole point of hairline_fade would come back as a flat line. The lit
+    // rail's ramp, 19,000 wide and 3 tall, goes the same way.
+    //
+    // Anisotropic filtering is the textbook answer and is not taken here: it
+    // would have to be raised on every one of these, it is capped by the
+    // project's quality settings rather than by this file, and the thing it
+    // buys back is detail along an axis where these textures have none to spare
+    // anyway. A stretched gradient has no high-frequency content for a mip
+    // chain to protect it from -- which is the same reason it never looked
+    // grainy and is not what this change is for.
+    private static readonly HashSet<string> DrawnAsBars = new HashSet<string>
+    {
+        "hairline_fade", "rail_ramp", "rail_glow", "shimmer_band", "track_drop",
+        "band_fade", "card_ground", "soft_edge_stripe",
+        "bar_track", "bar_fill", "bar_bloom",
+        "scrim_band", "dossier_veil", "scrim_floor",
+    };
+
+    private static void Import(string path)
+    {
+        var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+        if (importer == null) return;
+
+        bool mip = !DrawnAsBars.Contains(Path.GetFileNameWithoutExtension(path));
+
+        // The mesh type lives on TextureImporterSettings rather than on the
+        // importer itself, so it has to be read out, changed and written back.
+        var settings = new TextureImporterSettings();
+        importer.ReadTextureSettings(settings);
+
         // Without Sprite + alphaIsTransparency, LoadAssetAtPath<Sprite> returns
         // null with no error anywhere - the failure that shipped a spell playing
         // nothing for weeks in v1.
-        var importer = AssetImporter.GetAtPath(path) as TextureImporter;
-        if (importer != null)
-        {
-            importer.textureType = TextureImporterType.Sprite;
-            importer.spriteImportMode = SpriteImportMode.Single;
-            importer.alphaIsTransparency = true;
-            importer.mipmapEnabled = false;
-            importer.SaveAndReimport();
-        }
+        bool wrong =
+            importer.textureType != TextureImporterType.Sprite
+            || importer.spriteImportMode != SpriteImportMode.Single
+            || !importer.alphaIsTransparency
+            || importer.mipmapEnabled != mip
+            || importer.filterMode != FilterMode.Trilinear
+            || importer.textureCompression != TextureImporterCompression.Uncompressed
+            || settings.spriteMeshType != SpriteMeshType.FullRect;
 
-        Debug.Log($"[ProceduralSpriteBaker] baked {path}");
+        if (!wrong) return;
+
+        importer.textureType = TextureImporterType.Sprite;
+        importer.spriteImportMode = SpriteImportMode.Single;
+        importer.alphaIsTransparency = true;
+
+        // MIPMAPS, WHICH THIS EXPLICITLY TURNED OFF.
+        //
+        // Off is the usual advice for UI, and the usual advice assumes UI art
+        // drawn at roughly the size it was authored. None of this is: every
+        // shape here is baked at 128 or 1024 and drawn at 15 to 60. A reward
+        // mark is 128px of texture in 15px of screen, so bilinear samples four
+        // texels out of every seventy-two and the other sixty-eight are simply
+        // not in the result -- which is what "grainy" is. It moves as the disc
+        // scales on hover, because a different four texels win.
+        //
+        // Trilinear rather than bilinear for the same reason: the discs scale
+        // 1.16x on hover and the pulse rings scale to 2.1x, so they cross mip
+        // levels while moving, and a hard switch between two mips is a visible
+        // pop mid-animation.
+        importer.mipmapEnabled = mip;
+        importer.filterMode = FilterMode.Trilinear;
+
+        // UNCOMPRESSED, and affordable precisely because these are small: the
+        // whole generated set is 27 files, none bigger than 1024 and most 128
+        // square. Every one of them is a smooth gradient or a soft-edged
+        // stroke, which is the worst case for block compression -- DXT quantises
+        // each 4x4 block to two endpoints, so a gold ramp comes back as bands
+        // and a 1px hairline comes back chewed.
+        importer.textureCompression = TextureImporterCompression.Uncompressed;
+
+        // FullRect, not Tight: a tight mesh traces the alpha and cuts the faint
+        // outer edge off a glow, which is the part of a glow that does the work.
+        //
+        // Written through the settings object because the importer has no
+        // property for it -- and the settings have to be re-read AFTER the
+        // fields above are set, or writing them back would put the old values
+        // over the top of what was just assigned.
+        importer.ReadTextureSettings(settings);
+        settings.spriteMeshType = SpriteMeshType.FullRect;
+        importer.SetTextureSettings(settings);
+
+        importer.SaveAndReimport();
     }
 }

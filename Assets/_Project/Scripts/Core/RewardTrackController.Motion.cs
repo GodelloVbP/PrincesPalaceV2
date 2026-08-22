@@ -40,11 +40,34 @@ namespace PrincesPalace
         private const float CardSwapSeconds = 0.28f;
         private const float CardRisePixels = 7f;
 
-        private const float ShimmerLoop = 9f;
+        // 18, up from 9. Twice as long over a twelfth of the distance, so the
+        // light drifts across the visible rail rather than crossing it: about
+        // 90 pixels a second against the 2,100 it used to travel at. A cue that
+        // is always present has to be slow enough to stop being an event.
+        private const float ShimmerLoop = 18f;
+
+        // How far the shimmer travels, centred on the player's node. One
+        // window's width, so the light is somewhere on screen for the whole
+        // loop whenever the rail is showing where the player stands -- which is
+        // where it opens and where every glide returns it to.
+        private const float SweepSpan = SystemMenuLayout.PanelWidth;
         private const float BreatheLoop = 3.4f;
         private const float PulseLoop = 2f;
         private const float BobLoop = 2.6f;
         private const float BobPixels = 5f;
+        private const float PipLoop = 1.6f;
+
+        // Slower than the here-node's 3.4s breathe, and deliberately: that one
+        // is about the player and should read as a pulse, and twelve of these
+        // are on screen at once. 5.2s is slow enough that a still frame of the
+        // rail looks composed rather than caught mid-flicker.
+        private const float AuraLoop = 5.2f;
+
+        // Twenty-six seconds for one turn, which is slow enough to be noticed
+        // only on purpose. A dashed ring at any speed the eye can follow is a
+        // loading spinner, and a loading spinner on twelve nodes is a screen
+        // that looks like it is waiting for something.
+        private const float OrbitLoop = 26f;
 
         private Coroutine _glide;
         private Coroutine _cardSwap;
@@ -66,26 +89,133 @@ namespace PrincesPalace
 
             AnimateShimmer(t);
             AnimateHalo(t);
+            AnimateMilestones(t);
             AnimatePulses(t);
             AnimateCaret(t);
+            AnimateCollectPip(t);
         }
 
-        // 300px of gold walking the full 19,000, linear and infinite. Linear
-        // rather than eased because it never stops: an eased loop has a visible
-        // seam where it restarts, which is exactly what a shimmer must not do.
+        // The twelve landmarks, breathing and turning.
+        //
+        // NOT IN LOCKSTEP, which is the opposite of the waiting pulse below and
+        // the reason is what each one means. The pulse is a STATEMENT -- these
+        // levels are owed you -- and forty of them in time reads as one
+        // statement about how much. This is ambience, and twelve gold auras
+        // swelling together reads as a machine cycling: the eye picks up the
+        // rhythm and stops seeing twelve objects.
+        //
+        // The offset is the index times the golden ratio's fractional part, so
+        // no two of the twelve land near each other and none of them repeats
+        // the spacing of the pair before it.
+        //
+        // ONE PHASE DRIVES BOTH the aura's scale and its opacity, and the ring
+        // turns at a constant rate through all of it. A glow that brightens
+        // without growing reads as a light being turned up; one that grows
+        // without brightening reads as something inflating. Together they read
+        // as breathing, which is the word the design asks for.
+        private void AnimateMilestones(float t)
+        {
+            if (milestoneAuras == null && milestoneRings == null) return;
+
+            int i = 0;
+            foreach (int level in RewardTrackLayout.MilestoneLevels())
+            {
+                float phase = EaseInOut(PingPong(t / AuraLoop + i * 0.618f));
+                float fade = FadeAt(level - RewardTrackLayout.FirstLevel);
+                var state = RewardTrack.StateOf(level, _level, _claimed);
+
+                // Brighter the further along the track you have got with it.
+                // An unreached landmark is still alive -- it is a place on the
+                // rail whether or not it is yours yet -- but it is not yours,
+                // and the aura is the cheapest place to say so without adding
+                // a fifth colour to a node.
+                float weight =
+                    state == TrackNodeState.ToCome ? 0.45f :
+                    state == TrackNodeState.Collected ? 0.85f : 1f;
+
+                if (i < (milestoneAuras?.Length ?? 0) && milestoneAuras[i] != null)
+                {
+                    // 0.22 TO 0.55, which is far higher than it looks on the
+                    // screen: the glow's bright middle is behind an opaque
+                    // disc, so what shows is its outer half, already down to
+                    // about a third. Authored at what it should look like, it
+                    // was invisible.
+                    milestoneAuras[i].color = WithAlpha(
+                        Gold, Mathf.Lerp(0.18f, 0.45f, phase) * weight * fade);
+
+                    milestoneAuras[i].rectTransform.localScale =
+                        Vector3.one * Mathf.Lerp(0.92f, 1.1f, phase);
+                }
+
+                // Every ring turns the same way and at the same rate. The
+                // alternative -- counter-rotation, or a speed per node -- was
+                // rejected on the same ground as the phase offset above:
+                // twelve mechanisms disagreeing with each other is a lot of
+                // movement to put behind text somebody is trying to read.
+                //
+                // ROTATION ONLY. The ring's colour belongs to PaintNode, which
+                // already carries the state and the depth-of-field fade for
+                // every ring on the rail; writing it here as well would be two
+                // passes deciding one value, and the one that ran last would
+                // win by accident rather than by design.
+                if (i < (milestoneRings?.Length ?? 0) && milestoneRings[i] != null)
+                {
+                    milestoneRings[i].rectTransform.localRotation =
+                        Quaternion.Euler(0f, 0f, -360f * Mathf.Repeat(t / OrbitLoop, 1f));
+                }
+
+                i++;
+            }
+        }
+
+        // The dot on the collect button, breathing on a 1.6s loop.
+        //
+        // The button only exists when the track owes something, so this is the
+        // screen's one notification -- and a notification that does not move is
+        // a label. It shares the pulse's argument and not its ring: one dot
+        // brightening is an alert, and the same dot throwing rings would be a
+        // second claim gesture on a control that is already the shortcut for
+        // the first.
+        private void AnimateCollectPip(float t)
+        {
+            if (collectPip == null || !collectPip.gameObject.activeInHierarchy) return;
+
+            float phase = EaseInOut(PingPong(t / PipLoop));
+
+            collectPip.color = WithAlpha(Gold, Mathf.Lerp(0.55f, 1f, phase));
+            collectPip.rectTransform.localScale = Vector3.one * Mathf.Lerp(1f, 1.13f, phase);
+        }
+
+        // 300px of gold crossing the player's own node, linear and infinite.
+        // Linear rather than eased because it never stops: an eased loop has a
+        // visible seam where it restarts, which is exactly what a shimmer must
+        // not do.
+        //
+        // IT USED TO WALK THE FULL 19,000 AND WAS THEREFORE ALMOST NEVER ON
+        // SCREEN. The window shows 1,600 of the rail, so a light travelling the
+        // whole content was inside it for about one second in every twelve --
+        // and it crossed at 2,100px a second when it did. The rail spent eleven
+        // seconds out of twelve looking like a printed rule, which is the one
+        // thing this cue exists to prevent, and the twelfth second looked like
+        // something being flicked past.
+        //
+        // So the sweep is bound to the player's node instead of to the content:
+        // a window's width of travel, centred on where they actually are. The
+        // panel opens centred there, so the light is on screen from the first
+        // frame and stays on it.
         private void AnimateShimmer(float t)
         {
             if (shimmerRect == null || shimmer == null) return;
 
             float phase = Mathf.Repeat(t / ShimmerLoop, 1f);
-            float span = RewardTrackLayout.ContentWidth;
+            float span = SweepSpan;
+            float centre = RewardTrackLayout.NodeOffsetX(_level);
 
             shimmerRect.anchoredPosition = new Vector2(
-                -span * 0.5f + phase * span, shimmerRect.anchoredPosition.y);
+                centre - span * 0.5f + phase * span, shimmerRect.anchoredPosition.y);
 
             // Faded at both ends of the sweep, so the light arrives and leaves
-            // rather than appearing at the rail's left edge and vanishing at
-            // its right.
+            // rather than appearing at one edge and vanishing at the other.
             float edge = Mathf.Min(phase, 1f - phase) / 0.08f;
             shimmer.color = WithAlpha(Gold, 0.42f * Mathf.Clamp01(edge));
         }
@@ -100,7 +230,11 @@ namespace PrincesPalace
             float phase = EaseInOut(PingPong(t / BreatheLoop));
 
             hereHaloRect.localScale = Vector3.one * Mathf.Lerp(1f, 1.5f, phase);
-            hereHalo.color = WithAlpha(Gold, Mathf.Lerp(0.25f, 0.6f, phase));
+
+            // PALE, not gold. The node it is behind draws pale metal -- a gold
+            // halo round a white disc reads as the gold state seen through
+            // something, which is the one thing this node must not look like.
+            hereHalo.color = WithAlpha(Pale, Mathf.Lerp(0.25f, 0.6f, phase));
         }
 
         // A 1px gold ring leaving every waiting node: scale .9 -> 2.1, opacity
@@ -129,17 +263,17 @@ namespace PrincesPalace
             }
         }
 
-        // The NEXT caret bobbing 5px, so the one thing on the rail that is not
+        // The NEXT mark bobbing 5px, so the one thing on the rail that is not
         // a node does not read as another one.
         private void AnimateCaret(float t)
         {
-            if (nextCaret == null || !nextCaret.gameObject.activeSelf) return;
+            if (nextMark == null || !nextMark.gameObject.activeSelf) return;
 
             float phase = EaseInOut(PingPong(t / BobLoop));
 
-            nextCaret.anchoredPosition = new Vector2(
-                nextCaret.anchoredPosition.x,
-                RewardTrackLayout.CaretY - BobPixels * phase);
+            nextMark.anchoredPosition = new Vector2(
+                nextMark.anchoredPosition.x,
+                RewardTrackLayout.NextMarkCentreY - BobPixels * phase);
         }
 
         // ---- the fly-in --------------------------------------------------------

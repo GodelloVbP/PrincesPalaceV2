@@ -277,12 +277,56 @@ public static class SceneBuilder
         // It costs a reimport only on the FIRST build after new art lands,
         // because the flipped setting is then written into the .meta and
         // synced back to main -- which is what gotcha #3 in CLAUDE.md is about.
+        // MIPMAPS ARE PART OF THE SAME CHECK, and for the same class of reason.
+        //
+        // Every painted asset in this game is authored far larger than it is
+        // drawn -- the talent icons are 240-350px square and land in 64px
+        // slots, the reward track's card art in 86. Without a mip chain the
+        // sampler takes four texels out of every twenty-five and drops the
+        // rest, which is the graininess that shows on every downscaled icon in
+        // the game. It is not an anti-aliasing setting on the canvas and no
+        // amount of MSAA reaches it: the detail is discarded during sampling,
+        // before anything could be smoothed.
+        //
+        // Trilinear because so much of this UI scales while it is looked at --
+        // a hovered node, a growing ring, a card swapping in. Bilinear switches
+        // mip level in one frame and the switch is visible as a pop.
+        //
+        // COMPRESSION IS LEFT ALONE HERE, unlike in the procedural baker, and
+        // the difference is size. The baked shapes are 128px gradients where a
+        // block codec bands visibly and uncompressed costs kilobytes; the
+        // painted art is up to 2048 square, where uncompressed would cost 16MB
+        // apiece and the artefacts are far less visible in painted texture than
+        // in a flat ramp.
+        // THE BAKED SPRITES ARE NOT THIS METHOD'S TO SET. ProceduralSpriteBaker
+        // decides their import settings, including which of them must NOT have
+        // mipmaps -- the ones stretched into bars, where a mip level chosen off
+        // the squashed axis takes the whole gradient with it.
+        //
+        // Without this line the two seams fight and the later one wins: the
+        // baker turned mipmaps off for rail_ramp and hairline_fade, and this
+        // method turned them straight back on a few seconds later, in the same
+        // build. Found by reading the .meta files afterwards rather than by
+        // anything failing, which is the argument for looking.
+        bool generated = assetPath.StartsWith(ProceduralSpriteBaker.GeneratedDir);
+
         var importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
-        if (importer != null && importer.textureType != TextureImporterType.Sprite)
+        if (importer != null
+            && (importer.textureType != TextureImporterType.Sprite
+                || (!generated
+                    && (!importer.mipmapEnabled
+                        || importer.filterMode != FilterMode.Trilinear))))
         {
             importer.textureType = TextureImporterType.Sprite;
             importer.spriteImportMode = SpriteImportMode.Single;
             importer.alphaIsTransparency = true;
+
+            if (!generated)
+            {
+                importer.mipmapEnabled = true;
+                importer.filterMode = FilterMode.Trilinear;
+            }
+
             importer.SaveAndReimport();
         }
 

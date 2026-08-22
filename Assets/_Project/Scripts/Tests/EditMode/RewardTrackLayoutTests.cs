@@ -162,30 +162,41 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // The scrolled content is measured from the RAIL at its centre, not
-        // from the band. Sizing it to the band instead put the caret six pixels
-        // outside its parent at all four aspects, and UiAudit refused the build
-        // -- which is the whole reason this test exists.
+        // from the band. Sizing it to the band instead put the tallest thing on
+        // a node six pixels outside its parent at all four aspects, and UiAudit
+        // refused the build -- which is the whole reason this test exists.
         [Test]
-        public void TheCaretFitsInsideTheScrolledContent()
+        public void TheNextMarkHangsInTheGapAboveTheNode()
         {
             float half = RewardTrackLayout.ScrollContentHeight * 0.5f;
-            float caretTop = RewardTrackLayout.CaretY + RewardTrackLayout.CaretHeight * 0.5f;
 
-            Assert.LessOrEqual(caretTop, half + 0.001f,
-                "the NEXT caret escapes the content rect it scrolls inside");
+            Assert.LessOrEqual(RewardTrackLayout.CaptionY + RewardTrackLayout.CaptionHeight * 0.5f,
+                half + 0.001f,
+                "the caption box escapes the content rect it scrolls inside");
 
-            // And it sits ABOVE the caption rather than on it: 98 is the
-            // caption's top edge, and the caret's 14px slot is exactly the gap
-            // between that and the band's own top.
-            Assert.GreaterOrEqual(RewardTrackLayout.CaretY - RewardTrackLayout.CaretHeight * 0.5f,
-                RewardTrackLayout.CaptionY + RewardTrackLayout.CaptionHeight * 0.5f - 0.001f,
-                "the caret overlaps the caption it is supposed to hang above");
+            // BELOW THE CAPTION, NOT ABOVE IT, which is the whole difference
+            // between this and the chevron it replaced. That one lived in the
+            // 14px gap between the caption's top edge and the band's, which put
+            // it a hundred pixels above the node it pointed at and made it read
+            // as dust on the band's edge. This hangs in the strip between the
+            // caption's fixed lower edge and the disc.
+            Assert.LessOrEqual(RewardTrackLayout.NextMarkTopY,
+                RewardTrackLayout.CaptionBottomY + 0.001f,
+                "the NEXT mark has climbed above the caption again");
 
-            // WIDER THAN IT IS TALL. The height is pinned by the gap; the width
-            // is the only axis left to make it findable, and drawn square in
-            // that gap it read as a speck rather than as a pointer.
-            Assert.Greater(RewardTrackLayout.CaretWidth, RewardTrackLayout.CaretHeight,
-                "the caret is square again, which is the size it was invisible at");
+            // And it stops above the filler disc it points at, which is
+            // eighty-seven of the ninety-nine nodes it can hang over.
+            //
+            // NOT ABOVE A MILESTONE'S, and that is the design's own geometry
+            // rather than an oversight in this test: a milestone disc reaches
+            // 22 above the rail and its plate ring 29, so on those twelve
+            // levels the tick's last few pixels cross the ring. The tick fades
+            // to nothing along its length, so what crosses is its transparent
+            // end -- and shortening it for those twelve would leave it hanging
+            // in mid-air on the other eighty-seven.
+            float tickBottom = RewardTrackLayout.NextMarkTopY - RewardTrackLayout.NextMarkHeight;
+            Assert.GreaterOrEqual(tickBottom, RewardTrackLayout.NodeDiameter * 0.5f - 0.001f,
+                "the NEXT mark's tick runs into the filler disc it hangs over");
         }
 
         [Test]
@@ -202,14 +213,36 @@ namespace PrincesPalace.Domain.Tests
                 Assert.LessOrEqual(top, half + 0.001f, $"level {level}'s caption leaves the band");
                 Assert.GreaterOrEqual(bottom, -half - 0.001f, $"level {level}'s number leaves the band");
 
-                // The plate ring is the widest thing a milestone carries, and
-                // it has to clear both the caption above and the number below.
+                // The orbit ring is the widest DRAWN EDGE a milestone carries --
+                // wider than the plate ring it sits outside -- and it has to
+                // clear both the caption above and the number below.
+                //
+                // THE AURA IS WIDER STILL AND IS NOT CHECKED HERE, on purpose.
+                // It is a radial glow that has faded to nothing well before its
+                // own rect ends, so it is meant to reach behind the level
+                // number; a rect measurement of a gradient is a measurement of
+                // where it stopped being drawn, not of where it stopped being
+                // seen. It stays inside the content rect, which is what the
+                // caption bound above already checks for everything.
                 float ring = RewardTrackLayout.PlateRingDiameter(level) * 0.5f;
+
                 Assert.Less(ring, RewardTrackLayout.CaptionY - RewardTrackLayout.CaptionHeight * 0.5f,
                     $"level {level}'s plate ring runs into its caption");
                 Assert.Less(ring, -(RewardTrackLayout.LevelNumberY
                                     + RewardTrackLayout.LevelNumberHeight * 0.5f),
                     $"level {level}'s plate ring runs into its level number");
+
+                // THE AURA IS WIDER THAN THE RING AND IS BOUNDED DIFFERENTLY.
+                // It is a radial glow, faded to nothing well before its own
+                // rect ends, so it is allowed to reach behind the level number
+                // -- a rect measurement of a gradient says where it stopped
+                // being drawn, not where it stopped being seen. What it may not
+                // do is leave the band, because that IS a hard edge: the
+                // viewport would cut it.
+                if (!RewardTrackLayout.IsMilestone(level)) continue;
+
+                Assert.LessOrEqual(RewardTrackLayout.MilestoneAuraSize * 0.5f, half + 0.001f,
+                    $"level {level}'s aura is clipped by the band it sits in");
             }
         }
 
@@ -253,61 +286,67 @@ namespace PrincesPalace.Domain.Tests
         // so DIAGONALLY -- which is the whole subtlety, and the reason this is
         // a test rather than an assertion about one number.
         //
-        // The offset is applied to BOTH axes, so the pip's centre is not
-        // (d/2 - 8) from the disc's centre, it is that times root two. Measured
-        // along either axis alone the pip sits half a pixel INSIDE the rim and
-        // looks like a mistake; measured radially, where it is actually drawn,
-        // it cuts the edge at both sizes. Checking the axis was the first
-        // version of this test and it failed against correct code.
+        // The rule is stated on ONE AXIS: the pip's centre sits on the disc's
+        // rim, half a pixel inside, in x and in y. That is the whole placement,
+        // and it is what makes the pip look the same on a 26px disc and a 44px
+        // one despite being the same 15px on both.
+        //
+        // WHAT IT DOES RADIALLY IS NOT THE SAME AT THE TWO SIZES, which is
+        // worth pinning because it looks like a bug in one of them and is not.
+        // The offset applies to both axes, so the pip's centre is root two
+        // times it from the disc's -- and against a circular rim that means a
+        // filler pip cuts the edge while a milestone pip comes to rest just
+        // outside it, tangent by about a pixel. Both read as applied to the
+        // node; neither sits in it.
         [Test]
-        public void TheSealPipStraddlesTheRimAtBothSizes()
+        public void TheSealPipSitsOnTheRimAtBothSizes()
         {
-            // The handoff's own number for a milestone, reproduced exactly.
-            Assert.AreEqual(14f, RewardTrackLayout.SealPipOffset(10), 0.001f, "44px disc");
+            // The design's own number for a milestone: it states the pip's LEFT
+            // EDGE at d/2 - 8, and 8 is the pip's radius plus the half-pixel
+            // bite, so the centre lands at d/2 - 0.5.
+            Assert.AreEqual(RewardTrackLayout.MilestoneDiameter * 0.5f - 8f
+                            + RewardTrackLayout.SealPipSize * 0.5f,
+                RewardTrackLayout.SealPipOffset(10), 0.001f, "44px disc");
 
             foreach (int level in new[] { 3, 10 })
             {
                 float rim = RewardTrackLayout.DiameterOf(level) * 0.5f;
-                float half = RewardTrackLayout.SealPipSize(level) * 0.5f;
-
-                // BOTH AXES, so the radial distance is root two times the
-                // offset. Measuring along one axis says the pip sits inside the
-                // rim, and it does not -- that reading failed against correct
-                // code once already.
+                const float Half = RewardTrackLayout.SealPipSize * 0.5f;
                 float offset = RewardTrackLayout.SealPipOffset(level);
-                float radial = Mathf.Sqrt(offset * offset * 2f);
 
-                Assert.Greater(radial + half, rim,
+                Assert.AreEqual(rim, offset + RewardTrackLayout.SealPipRimBite, 0.001f,
+                    $"level {level}'s pip has come off the rim it is meant to sit on");
+
+                // Straddling, as the rects the audit measures see it: the pip
+                // reaches past the disc's edge and back inside it.
+                Assert.Greater(offset + Half, rim,
                     $"level {level}'s pip sits entirely inside the disc instead of cutting its rim");
-                Assert.Less(radial - half, rim,
+                Assert.Less(offset - Half, rim,
                     $"level {level}'s pip floats clear of the disc instead of straddling it");
             }
         }
 
-        // THE ONE THE FIRST CAPTURE CAUGHT. A 15px pip on a 26px filler disc is
-        // 58% of it, and sat directly on the reward's mark -- eighty-seven of
-        // ninety-nine nodes with their one scannable feature covered by the
-        // tick saying they had been collected. The pip scales with the disc
-        // now, and this is what "small enough to sit beside the mark" means as
-        // a number.
+        // ONE SIZE FOR BOTH DISCS, and the thing that makes that safe is WHERE
+        // it sits rather than how big it is.
+        //
+        // The pip was scaled with its disc for one build -- 15 on a milestone,
+        // 9 on filler -- on the grounds that a 15px pip on a 26px disc covers
+        // the reward's mark. It does, if its centre is placed at the design's
+        // d/2 - 8; that number is the pip's LEFT EDGE, and read as a centre it
+        // lands the pip's near edge half a pixel past the mark's own middle.
+        // Placed as the design places it, the pip's near edge clears the mark
+        // by ten pixels on a filler node, and one size can serve both.
         [Test]
         public void TheSealPipNeverCoversTheMarkItSitsBeside()
         {
             foreach (int level in new[] { 3, 10 })
             {
-                float pip = RewardTrackLayout.SealPipSize(level);
-                float disc = RewardTrackLayout.DiameterOf(level);
-
-                Assert.LessOrEqual(pip / disc, 0.36f,
-                    $"level {level}'s pip is more than a third of its disc");
-
-                // And the mark still has most of the disc to itself: the pip's
-                // near edge has to clear the mark's own radius.
                 float offset = RewardTrackLayout.SealPipOffset(level);
                 float radial = Mathf.Sqrt(offset * offset * 2f);
+                float near = radial - RewardTrackLayout.SealPipSize * 0.5f;
 
-                Assert.Greater(radial - pip * 0.5f, RewardTrackLayout.IconSizeOf(level) * 0.35f,
-                    $"level {level}'s pip overlaps the middle of its own reward mark");
+                Assert.Greater(near, RewardTrackLayout.IconSizeOf(level) * 0.5f,
+                    $"level {level}'s pip overlaps its own reward mark");
             }
         }
 
@@ -322,7 +361,10 @@ namespace PrincesPalace.Domain.Tests
             {
                 float x = RewardTrackLayout.RibbonOffsetX(level);
 
-                Assert.LessOrEqual(Mathf.Abs(x) + RewardTrackLayout.RibbonTickWidth * 0.5f,
+                // Measured at the WAITING width, which is what the tree emits:
+                // a tick is built at its largest and shrunk by the controller,
+                // never the other way about, so this is the rect UiAudit sees.
+                Assert.LessOrEqual(Mathf.Abs(x) + RewardTrackLayout.RibbonWaitingTickWidth * 0.5f,
                     half + 0.001f, $"level {level}'s ribbon tick leaves the ribbon");
             }
         }

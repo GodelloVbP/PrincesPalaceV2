@@ -884,6 +884,7 @@ public static class ScreenRegistry
         controller.viewport = result.Rect(track.Viewport);
         controller.content = result.Rect(track.Content);
         controller.railFill = result.Rect(track.RailFill);
+        controller.railGlowFill = result.Rect(track.RailGlowFill);
 
         // THE FOUR NODES THAT MOVE, each bound twice -- once as the Image whose
         // colour is animated and once as the RectTransform that is moved or
@@ -894,13 +895,16 @@ public static class ScreenRegistry
         controller.shimmerRect = result.Rect(track.Shimmering);
         controller.hereHalo = result.Image(track.HereHalo);
         controller.hereHaloRect = result.Rect(track.HereHalo);
-        controller.nextCaret = result.Rect(track.NextCaret);
+        controller.nextMark = result.Rect(track.NextMark);
         controller.claimBurst = result.Image(track.ClaimBurst);
         controller.claimBurstRect = result.Rect(track.ClaimBurst);
 
-        controller.summary = result.Tmp(track.Summary);
+        controller.summaryLevel = result.Tmp(track.SummaryLevel);
+        controller.summaryNextAt = result.Tmp(track.SummaryNextAt);
+        controller.summaryReward = result.Tmp(track.SummaryReward);
         controller.collectButton = result.Button(track.CollectButton);
         controller.collectLabel = result.Tmp(track.CollectCaption);
+        controller.collectPip = result.Image(track.CollectPip);
         controller.closeButton = result.Button(track.CloseButton);
 
         controller.cardRect = result.Rect(track.Card);
@@ -910,6 +914,17 @@ public static class ScreenRegistry
         controller.cardLevel = result.Tmp(track.CardLevel);
         controller.cardCaption = result.Tmp(track.CardCaption);
         controller.cardState = result.Tmp(track.CardState);
+        controller.cardStateDot = result.Image(track.CardStateDot);
+
+        // ONE ENTRY PER LEVEL, resolved here rather than at runtime: the
+        // controller lives in the runtime assembly and LoadSpriteByKey is
+        // editor-only, so these bake into the scene like every other art
+        // reference. LoadSpriteByKey caches, so ninety-nine calls are twelve
+        // loads and eighty-seven dictionary hits.
+        controller.cardArtByLevel = Enumerable
+            .Range(RewardTrackLayout.FirstLevel, RewardTrackLayout.NodeCount)
+            .Select(level => SceneBuilder.LoadSpriteByKey(RewardTrackLayout.CardArtFor(level)))
+            .ToArray();
 
         controller.ribbon = result.Rect(track.Ribbon);
         controller.ribbonFill = result.Rect(track.RibbonFill);
@@ -933,7 +948,11 @@ public static class ScreenRegistry
         controller.captions = track.Captions.Select(result.Tmp).ToArray();
         controller.levelNumbers = track.LevelNumbers.Select(result.Tmp).ToArray();
 
-        controller.ribbonTicks = track.RibbonTicks.Select(result.Go).ToArray();
+        controller.milestoneAuras = track.MilestoneAuras.Select(result.Image).ToArray();
+        controller.milestoneRings = track.MilestoneRings.Select(result.Image).ToArray();
+
+        controller.ribbonTicks = track.RibbonTicks.Select(result.Image).ToArray();
+        controller.ribbonDots = track.RibbonDots.Select(result.Image).ToArray();
         controller.ribbonNumbers = track.RibbonNumbers.Select(result.Tmp).ToArray();
 
         // NO CountBindings for any of these, and it is worth saying why rather

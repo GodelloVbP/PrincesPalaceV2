@@ -198,10 +198,30 @@ public static class UiEmitter
         // actually be drawn.
         text.characterSpacing = node.Tracking;
 
-        text.alignment = TextAlignmentOptions.Center;
+        text.alignment = Alignment(node.TextAlign);
         text.color = SceneBuilder.ParseHex(node.ColorHex, Color.white);
         text.raycastTarget = false; // a label is never the click target
         if (decor) text.raycastTarget = false;
+    }
+
+    // A LABEL'S ALIGNMENT, and only a label's: a button's caption fills its
+    // face and is centred in it whatever the tree says, because a button is
+    // sized around its word rather than the other way about.
+    //
+    // Midline rather than Baseline for the two vertically-centred cases. TMP's
+    // Center measures the whole line box, so a row of labels at different point
+    // sizes lines up on their middles; Baseline would line up their feet, which
+    // is right for type set on one line and wrong for a stack of boxes.
+    private static TextAlignmentOptions Alignment(UiTextAlign align)
+    {
+        switch (align)
+        {
+            case UiTextAlign.Left: return TextAlignmentOptions.Left;
+            case UiTextAlign.Right: return TextAlignmentOptions.Right;
+            case UiTextAlign.Bottom: return TextAlignmentOptions.Bottom;
+            case UiTextAlign.BottomLeft: return TextAlignmentOptions.BottomLeft;
+            default: return TextAlignmentOptions.Center;
+        }
     }
 
     private static void EmitButton(GameObject go, UiNode node, SolvedNode solved)

@@ -50,6 +50,10 @@ namespace PrincesPalace.Domain.UiKit
         public UiString Text;
         public int FontSize = 24;
 
+        // Where the text sits in the rect. Centre is the default and stays the
+        // overwhelming case; see UiTextAlign for why the other four exist.
+        public UiTextAlign TextAlign = UiTextAlign.Centre;
+
         // Letter-spacing, in hundredths of an em -- 14 is the .14em the design
         // handoffs write. Zero means the font's own spacing.
         //
@@ -184,6 +188,7 @@ namespace PrincesPalace.Domain.UiKit
         // Fill inside FromChildren is the circular case the solver refuses.
         public UiNode Sized(UiSize size) { Size = size; return this; }
         public UiNode Aligned(UiAlign align) { Align = align; return this; }
+        public UiNode TextAligned(UiTextAlign align) { TextAlign = align; return this; }
         public UiNode Coloured(string hex) { ColorHex = hex; return this; }
 
         // In hundredths of an em, matching CSS: Tracked(14) is .14em.

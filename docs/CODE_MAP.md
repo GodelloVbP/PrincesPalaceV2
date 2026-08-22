@@ -47,7 +47,8 @@ living at construction sites. There are no construction sites now.
 
 **`Domain/UiKit/` — engine-free, so screens are testable without a scene:**
 
-`UiVec` · `UiRect` · `Place` · `UiSize` · `UiPad` · `UiAlign` · `UiNode` ·
+`UiVec` · `UiRect` · `Place` · `UiSize` · `UiPad` · `UiAlign` · `UiTextAlign` ·
+`UiNode` ·
 `NodeRef` · `Ui` (the factories) · `UiString` · `UiStrings` · `UiSolver` ·
 `SolvedNode` · `UiAudit` · `UiAuditError` · `UiFrames` · `FightSubmenuLayout`
 

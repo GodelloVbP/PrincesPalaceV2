@@ -27,17 +27,21 @@ namespace PrincesPalace
         [SerializeField] internal RectTransform viewport;
         [SerializeField] internal RectTransform content;
         [SerializeField] internal RectTransform railFill;
+        [SerializeField] internal RectTransform railGlowFill;
         [SerializeField] internal Image shimmer;
         [SerializeField] internal RectTransform shimmerRect;
         [SerializeField] internal Image hereHalo;
         [SerializeField] internal RectTransform hereHaloRect;
-        [SerializeField] internal RectTransform nextCaret;
+        [SerializeField] internal RectTransform nextMark;
         [SerializeField] internal Image claimBurst;
         [SerializeField] internal RectTransform claimBurstRect;
 
-        [SerializeField] internal TMP_Text summary;
+        [SerializeField] internal TMP_Text summaryLevel;
+        [SerializeField] internal TMP_Text summaryNextAt;
+        [SerializeField] internal TMP_Text summaryReward;
         [SerializeField] internal Button collectButton;
         [SerializeField] internal TMP_Text collectLabel;
+        [SerializeField] internal Image collectPip;
         [SerializeField] internal Button closeButton;
 
         [SerializeField] internal RectTransform cardRect;
@@ -47,6 +51,14 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text cardLevel;
         [SerializeField] internal TMP_Text cardCaption;
         [SerializeField] internal TMP_Text cardState;
+        [SerializeField] internal Image cardStateDot;
+
+        // The painted medallion the card shows, one entry per level in rail
+        // order. Twelve distinct sprites across ninety-nine entries, because
+        // the map is by reward KIND and the index is by level -- which keeps
+        // the lookup a subscript rather than a switch the controller has to
+        // carry a second copy of.
+        [SerializeField] internal Sprite[] cardArtByLevel;
 
         [SerializeField] internal RectTransform ribbon;
         [SerializeField] internal RectTransform ribbonFill;
@@ -63,7 +75,17 @@ namespace PrincesPalace
         [SerializeField] internal GameObject[] seals;
         [SerializeField] internal TMP_Text[] captions;
         [SerializeField] internal TMP_Text[] levelNumbers;
-        [SerializeField] internal GameObject[] ribbonTicks;
+
+        // ONE TICK PER NON-MILESTONE LEVEL, in rail order and nothing else --
+        // index i is NOT level i + FirstLevel, because the twelve landmarks are
+        // drawn as dots instead and have no tick. TickLevels() is the only
+        // thing that knows the mapping.
+        // The twelve landmarks' ambient cues, in ascending level order.
+        [SerializeField] internal Image[] milestoneAuras;
+        [SerializeField] internal Image[] milestoneRings;
+
+        [SerializeField] internal Image[] ribbonTicks;
+        [SerializeField] internal Image[] ribbonDots;
         [SerializeField] internal TMP_Text[] ribbonNumbers;
 
         private bool _wired;
@@ -99,6 +121,18 @@ namespace PrincesPalace
         private static readonly Color TextCollectedDim = Hex(RewardTrackScreen.TextCollectedDim);
         private static readonly Color TextHere = Hex(RewardTrackScreen.TextHere);
         private static readonly Color TextQuiet = Hex(RewardTrackScreen.TextQuiet);
+
+        // The card's ghost glyph, at the 62% the design draws its placeholder
+        // at: a stroke standing in for art is meant to read as a stand-in.
+        private static readonly Color CardMark = Hex("#F2DB9E9E");
+        private static readonly Color Pale = Hex(RewardTrackScreen.Pale);
+
+        // The card's own text, none of it tinted by state -- see PaintCard.
+        private static readonly Color CardName = Hex(RewardTrackScreen.CardName);
+        private static readonly Color CardKickerQuiet = Hex(RewardTrackScreen.CardKickerQuiet);
+        private static readonly Color RibbonTickToCome = Hex(RewardTrackScreen.RibbonTickToCome);
+        private static readonly Color RibbonTickReached = Hex(RewardTrackScreen.RibbonTickReached);
+        private static readonly Color RibbonDotToCome = Hex(RewardTrackScreen.RibbonDotToCome);
 
         private void OnEnable()
         {
@@ -298,22 +332,55 @@ namespace PrincesPalace
         // it ships.
         private void PaintRail()
         {
-            if (railFill == null) return;
-
             float width = _level < RewardTrackLayout.FirstLevel
                 ? 0f
                 : RewardTrackLayout.NodeX(_level);
 
-            railFill.sizeDelta = new Vector2(width, railFill.sizeDelta.y);
+            if (railFill != null)
+            {
+                railFill.sizeDelta = new Vector2(width, railFill.sizeDelta.y);
+            }
+
+            // The bloom is the same width as the line it is under, always. Two
+            // rects rather than one taller sprite, because the line has to stay
+            // a hard 3px edge and the light under it must not.
+            if (railGlowFill != null)
+            {
+                railGlowFill.sizeDelta = new Vector2(width, railGlowFill.sizeDelta.y);
+            }
         }
 
+        // THE ROW AS FOUR WRITES, not one. The figure, where the next reward
+        // is, and what it is -- each in its own box at its own size, which is
+        // the whole reason the row was split up.
         private void PaintSummary()
         {
-            if (summary != null)
+            if (summaryLevel != null) summaryLevel.SetContent(_level.ToString());
+
+            int next = RewardTrack.NextRewardLevel(_level);
+            bool complete = next <= 0;
+
+            // A FINISHED TRACK SAYS SO IN THE REWARD'S SLOT, not in the one
+            // that names a level -- "REWARD TRACK COMPLETE" is twenty-one
+            // characters and the "NEXT AT 100" box is 130px wide, so putting it
+            // there would overflow a box nothing measures. The reward slot is
+            // 360 and is already sized for the longest thing the track can
+            // name.
+            //
+            // Blank rather than hidden for whichever of the two is not
+            // speaking: an empty label holds its place in the row, and
+            // switching a GameObject off to say "nothing more" is a state the
+            // row's geometry never sees.
+            if (summaryNextAt != null)
             {
-                int next = RewardTrack.NextRewardLevel(_level);
-                if (next <= 0) summary.Set(UiStrings.TrackSummaryComplete, _level);
-                else summary.Set(UiStrings.TrackSummary, _level, next);
+                if (complete) summaryNextAt.SetContent(string.Empty);
+                else summaryNextAt.Set(UiStrings.TrackNextAt, next);
+            }
+
+            if (summaryReward != null)
+            {
+                if (complete) summaryReward.Set(UiStrings.TrackNextAtComplete);
+                else summaryReward.SetContent(RewardTrackNames.Of(RewardTrack.At(next)));
             }
 
             PaintCollectButton();
@@ -384,34 +451,88 @@ namespace PrincesPalace
                 // is the seam that was missing rather than a lookup that was
                 // wrong.
                 int i = level - RewardTrackLayout.FirstLevel;
-                if (Has(icons, i)) cardArt.sprite = icons[i].sprite;
+                var painted = i >= 0 && cardArtByLevel != null && i < cardArtByLevel.Length
+                    ? cardArtByLevel[i]
+                    : null;
 
-                cardArt.color = state == TrackNodeState.ToCome ? Gold : MarkInk;
+                if (painted != null)
+                {
+                    // PAINTED ART IS NOT TINTED. It arrives with its own gold
+                    // and its own light; a colour over it is a filter, and the
+                    // one thing an art slot exists to stop is the UI deciding
+                    // what the art looks like.
+                    cardArt.sprite = painted;
+                    cardArt.color = Color.white;
+                    cardArt.rectTransform.sizeDelta =
+                        new Vector2(RewardTrackLayout.CardArtSize, RewardTrackLayout.CardArtSize);
+                }
+                else
+                {
+                    // The stroke glyph, at a stroke's size rather than blown up
+                    // to fill the slot. Reached for when a reward has no art
+                    // mapped or its file is missing -- graceful degradation, as
+                    // everywhere else.
+                    //
+                    // GOLD IN EVERY STATE, which the rail's marks are not. A
+                    // mark on the rail is tinted against its disc -- ink on a
+                    // lit node, gold on a dark one -- because the disc under it
+                    // changes; this one always sits on the same near-black
+                    // plate, and the ink it used to switch to on a reached
+                    // reward simply vanished there.
+                    if (Has(icons, i)) cardArt.sprite = icons[i].sprite;
+                    cardArt.color = CardMark;
+                    cardArt.rectTransform.sizeDelta =
+                        new Vector2(RewardTrackLayout.CardMarkSize, RewardTrackLayout.CardMarkSize);
+                }
             }
 
+            // The mat carries the reward kind's hue over the plate, at the same
+            // 2E the rail's own slots use. Not state-dependent: the plate is a
+            // dark well whatever the state, so there is no gold underneath for
+            // a tint to turn into tarnish.
             if (cardMat != null)
             {
-                cardMat.color = state == TrackNodeState.ToCome
-                    ? Hex(RewardTrackScreen.DeepViolet)
-                    : DiscLit;
+                cardMat.color = Hex(RewardTrackLayout.MatTintFor(level));
             }
 
             if (cardKicker != null)
             {
                 cardKicker.Set(KickerFor(level, state, waiting));
-                cardKicker.color = waiting ? TextWaiting : TextQuiet;
+                cardKicker.color = waiting ? TextWaiting : CardKickerQuiet;
             }
 
+            // GOLD IN EVERY STATE, like the caption below it.
+            //
+            // These two were tinted by state and should not be: the card is
+            // whatever the rail is pointing at, and dimming its level and its
+            // name for a reward the player has not reached yet makes the focus
+            // element hardest to read exactly when it is doing its job -- which
+            // is telling them about something they do not have. The state is
+            // said three times already, by the dot, the kicker and the words
+            // along the bottom.
             if (cardLevel != null)
             {
-                cardLevel.Set(UiStrings.TrackCardLevel, level);
-                cardLevel.color = state == TrackNodeState.ToCome ? TextToCome : TextCollected;
+                cardLevel.SetContent(level.ToString());
+                cardLevel.color = Gold;
+            }
+
+            // The state's dot, which says the same thing the words below it do
+            // and says it in a colour: pale for where you are, gold for
+            // something owed, dim gold for something had, and the unreached
+            // violet for everything else.
+            if (cardStateDot != null)
+            {
+                cardStateDot.color =
+                    state == TrackNodeState.Here ? Pale :
+                    waiting ? Gold :
+                    state == TrackNodeState.Collected ? Hex("#F2DB9E80") :
+                    Hex(RewardTrackScreen.DeepViolet);
             }
 
             if (cardCaption != null)
             {
                 cardCaption.SetContent(RewardTrackNames.Of(entry));
-                cardCaption.color = CaptionColour(state);
+                cardCaption.color = CardName;
             }
 
             if (cardState == null) return;
@@ -472,21 +593,67 @@ namespace PrincesPalace
                     RewardTrackLayout.RibbonOffsetX(_level), ribbonPlayhead.anchoredPosition.y);
             }
 
-            if (ribbonTicks != null)
-            {
-                for (int i = 0; i < ribbonTicks.Length; i++)
-                {
-                    if (ribbonTicks[i] == null) continue;
-
-                    bool waiting = RewardTrack.IsWaiting(
-                        RewardTrackLayout.FirstLevel + i, _level, _claimed);
-
-                    if (ribbonTicks[i].activeSelf != waiting) ribbonTicks[i].SetActive(waiting);
-                }
-            }
-
+            PaintRibbonTicks();
+            PaintRibbonDots();
             PaintRibbonNumbers();
             MoveRibbonWindow();
+        }
+
+        // EVERY TICK IS DRAWN, in one of three weights: a pale hairline for a
+        // level not yet reached, a gold one for a level had, and twice the size
+        // in full gold for one that is waiting.
+        //
+        // The size is written as well as the colour, and it has to be: a
+        // waiting tick is 2x14 against 1x7, which is what makes a run of them
+        // read as a comb from across the panel rather than as a slightly
+        // brighter stretch of the same line.
+        private void PaintRibbonTicks()
+        {
+            if (ribbonTicks == null) return;
+
+            int i = 0;
+            for (int level = RewardTrackLayout.FirstLevel;
+                 level <= RewardTrack.MaxLevel && i < ribbonTicks.Length;
+                 level++)
+            {
+                if (RewardTrackLayout.IsMilestone(level)) continue;
+
+                var tick = ribbonTicks[i++];
+                if (tick == null) continue;
+
+                bool waiting = RewardTrack.IsWaiting(level, _level, _claimed);
+
+                tick.color = waiting ? Gold
+                    : level <= _level ? RibbonTickReached
+                    : RibbonTickToCome;
+
+                tick.rectTransform.sizeDelta = waiting
+                    ? new Vector2(RewardTrackLayout.RibbonWaitingTickWidth,
+                                  RewardTrackLayout.RibbonWaitingTickHeight)
+                    : new Vector2(RewardTrackLayout.RibbonTickWidth,
+                                  RewardTrackLayout.RibbonTickHeight);
+            }
+        }
+
+        // The twelve landmarks: filled once reached, hollow until then. The
+        // hairline ring around each is emitted gold and never repainted, so a
+        // milestone reads as a landmark at every state and as a REACHED one
+        // only when the disc inside it lights.
+        private void PaintRibbonDots()
+        {
+            if (ribbonDots == null) return;
+
+            int i = 0;
+            foreach (int level in RewardTrackLayout.MilestoneLevels())
+            {
+                if (i >= ribbonDots.Length) break;
+
+                if (ribbonDots[i] != null)
+                {
+                    ribbonDots[i].color = level <= _level ? Gold : RibbonDotToCome;
+                }
+                i++;
+            }
         }
 
         // Filled once per refresh rather than once ever, because there is no
@@ -521,18 +688,22 @@ namespace PrincesPalace
 
         private void MoveCaret()
         {
-            if (nextCaret == null) return;
+            if (nextMark == null) return;
 
             int next = _level + 1;
             bool visible = next >= RewardTrackLayout.FirstLevel && next <= RewardTrack.MaxLevel;
 
-            if (nextCaret.gameObject.activeSelf != visible) nextCaret.gameObject.SetActive(visible);
+            if (nextMark.gameObject.activeSelf != visible) nextMark.gameObject.SetActive(visible);
             if (!visible) return;
 
-            nextCaret.anchoredPosition = new Vector2(
-                RewardTrackLayout.NodeOffsetX(next), RewardTrackLayout.CaretY);
+            nextMark.anchoredPosition = new Vector2(
+                RewardTrackLayout.NodeOffsetX(next), RewardTrackLayout.NextMarkCentreY);
         }
 
+        // SIZED AS WELL AS MOVED, because a milestone disc is 44 and a filler
+        // one 26 -- a halo built for the larger and left there is two thirds
+        // wider than the node it is behind on eighty-seven levels out of
+        // ninety-nine, which is how a glow becomes a smear.
         private void MoveHalo()
         {
             if (hereHaloRect == null) return;
@@ -545,6 +716,8 @@ namespace PrincesPalace
             }
             if (!visible) return;
 
+            float size = RewardTrackLayout.HaloSize(_level);
+            hereHaloRect.sizeDelta = new Vector2(size, size);
             hereHaloRect.anchoredPosition = new Vector2(RewardTrackLayout.NodeOffsetX(_level), 0f);
         }
 

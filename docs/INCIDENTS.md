@@ -175,3 +175,64 @@ diffs were suspected to be line-ending noise. They are not. Every file in the
 working tree is CRLF, `core.autocrlf=true` was normalising correctly, and the
 diffs are real fileID reassignment from `SceneBuilder` regeneration, exactly as
 `CLAUDE.md` says.
+
+## A spec number read as a centre when it was an edge (2026-08-22)
+
+The reward track's seal pip is given by its design handoff as 15px at
+`+(d/2 - 8)` on both axes. Read as the pip's CENTRE, that lands a 15px pip half
+a pixel past the middle of the 15px reward mark it is meant to sit beside - on
+a 26px filler disc, which is 87 of the track's 99 nodes.
+
+The first build measured exactly that, from a runtime capture, and fixed the
+symptom: it shrank the pip to 9px on filler nodes and wrote down that the
+handoff's single size could not be right for both discs. The pip was also drawn
+as a knockout - the check cut OUT of a dark disc so the gold underneath shows
+through - and at 9px that check is a one-pixel crack. The result reads as a
+smudge at four o'clock on every collected node.
+
+The number was an EDGE. In the prototype the pip is positioned by its top-left
+corner with no centring transform, unlike the halo and the pulse ring beside it,
+which both carry `translate(-50%,-50%)`. `d/2 - 8` puts its left edge there and
+its centre 7.5 further out, on the rim - where a 15px pip clears the mark by ten
+pixels and one size does serve both discs.
+
+Two things this cost, both of which looked like progress at the time: a measured
+deviation written into the handoff record as though the design were wrong, and a
+"fix" that made the thing less legible than the bug.
+
+**What would have caught it.** Reading the prototype rather than the handoff
+tables. The tables carry a position but not what it is measured from; the
+running code carries both, and it is in the same folder of the same design
+project. Nine other differences came out of the same reading - a flat band that
+should be a gradient, a halo four times its node, a centred caption block that
+should hang from its lower edge.
+
+## Two seams set the same importer field, and the later one won (2026-08-22)
+
+Every UI sprite in the game was importing with mipmaps off, which is the usual
+advice for UI and the wrong one here: the art is authored two to ten times
+larger than it is drawn, so the sampler took four texels out of every twenty-five
+and dropped the rest. That is what "grainy" was, and no canvas anti-aliasing
+setting could have reached it - the detail is gone during sampling, before there
+is anything to smooth.
+
+The fix went in at the two seams every sprite passes through:
+`ProceduralSpriteBaker.WritePng` for the generated shapes and
+`SceneBuilder.LoadSpriteByKey` for the painted art. The baker also turns mipmaps
+OFF again for the fourteen sprites drawn as BARS - a 64px texture stretched to
+1512x1 picks its mip level off the squashed axis, lands on a single texel, and
+the gradient that was the whole point of it comes back flat.
+
+Both seams then ran in the same build, in that order, and the second one set
+`mipmapEnabled = true` on everything it loaded - including the baked sprites the
+first had just turned it off for. Nothing failed. The build was green, the
+scenes were correct, and the setting was simply not what the baker had asked
+for.
+
+Found by reading the `.meta` files afterwards to check the change had landed,
+which is the only reason it was found at all.
+
+**The rule, since it will come up again:** a generated asset's import settings
+belong to its generator. `LoadSpriteByKey` now skips anything under
+`Art/Generated/` for everything except the textureType check that stops
+`LoadAssetAtPath<Sprite>` silently returning null.

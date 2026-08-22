@@ -56,22 +56,28 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString TrackClose =
             UiString.Define("track.close", "CLOSE");
 
-        // "LEVEL 37   .   NEXT AT 40"
+        // "LEVEL 37 -- NEXT AT 40   A STAT POINT", set as four pieces plus a
+        // rule rather than as one sentence.
         //
-        // IT NO LONGER NAMES THE REWARD, and that is a subtraction rather than
-        // an oversight. This line used to be the only legible thing on the
-        // screen, so it carried the reward's name too and ran to eighty
-        // characters at its widest -- which is what made it collide with CLOSE
-        // the first time the row was built. The focus card names the reward
-        // now, in 22px type with its mark beside it, so the summary is back to
-        // the two figures only it can say.
-        public static readonly UiString TrackSummary =
-            UiString.Define("track.summary", "LEVEL {0}   .   NEXT AT {1}",
-                "LEVEL 100   .   NEXT AT 100");
+        // ONE STRING WAS THE FIRST BUILD, and the reason it is not one now is
+        // that a sentence can only be one size. The figure is the thing this
+        // row exists to say and it was set at the same 18px as the word LEVEL
+        // in front of it; separate pieces let it stand at 34 while the words
+        // around it stay quiet.
+        //
+        // THE REWARD'S NAME IS BACK, having been cut once for good reason: as
+        // part of a single centred sentence it ran to eighty characters and
+        // collided with CLOSE. It has its own box now, which is what the text
+        // fit audit measures against, so the collision is a build failure
+        // rather than something to discover in a screenshot.
+        public static readonly UiString TrackLevelWord =
+            UiString.Define("track.level_word", "LEVEL");
 
-        public static readonly UiString TrackSummaryComplete =
-            UiString.Define("track.summary_complete", "LEVEL {0}   .   REWARD TRACK COMPLETE",
-                "LEVEL 100   .   REWARD TRACK COMPLETE");
+        public static readonly UiString TrackNextAt =
+            UiString.Define("track.next_at", "NEXT AT {0}", "NEXT AT 100");
+
+        public static readonly UiString TrackNextAtComplete =
+            UiString.Define("track.next_at_complete", "REWARD TRACK COMPLETE");
 
         // COLLECT, in two forms, because "Collect 1 rewards" is the kind of
         // thing a player reads once and stops trusting the screen over.
@@ -99,8 +105,11 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString TrackCardCollected = UiString.Define("track.card_collected", "ALREADY YOURS");
         public static readonly UiString TrackCardToCome = UiString.Define("track.card_to_come", "STILL AHEAD");
 
-        public static readonly UiString TrackCardLevel =
-            UiString.Define("track.card_level", "LEVEL {0}", "LEVEL 100");
+        // The card's level is a FIGURE now, standing at the right end of the
+        // header row after a small "LVL" -- so the word and the number are two
+        // strings, at two sizes, rather than one label reading "LEVEL 48".
+        public static readonly UiString TrackCardLvl =
+            UiString.Define("track.card_lvl", "LVL");
 
         public static readonly UiString TrackStateReady =
             UiString.Define("track.state_ready", "CLICK THE NODE TO COLLECT");
@@ -113,8 +122,20 @@ namespace PrincesPalace.Domain.UiKit
 
         // ---- the ascent ribbon ---------------------------------------------
 
-        public static readonly UiString TrackRibbon =
-            UiString.Define("track.ribbon", "THE ASCENT   .   DRAG TO TRAVEL");
+        // A HEAD AND AN INSTRUCTION AT OPPOSITE ENDS of the ribbon's own width,
+        // with a rule between them. One centred caption saying both was the
+        // first build, and it read as a note under a picture rather than as the
+        // top of a scale.
+        public static readonly UiString TrackRibbonTitle =
+            UiString.Define("track.ribbon_title", "THE WHOLE ASCENT");
+
+        public static readonly UiString TrackRibbonHint =
+            UiString.Define("track.ribbon_hint", "DRAG TO TRAVEL   .   LEVELS 2 TO 100");
+
+        // Above the node the caret hangs over. Nine pixels of it, which is why
+        // it is one word.
+        public static readonly UiString TrackNext =
+            UiString.Define("track.next", "NEXT");
 
         public static readonly UiString DossierSpendPoint =
             UiString.Define("dossier.spend_point", "+");
@@ -681,10 +702,11 @@ namespace PrincesPalace.Domain.UiKit
             StatPhysicalResistance, StatMagicalResistance, StatMaxMana, StatSignatureGain,
             HubWallet, HubBeginDescent, HubResumeFloor,
             OverlayCount, OverlayPlus, OverlayPage, DossierSpendPoint,
-            TrackRow, TrackClose, TrackSummary, TrackSummaryComplete,
-            TrackCollectOne, TrackCollectMany, TrackRibbon,
+            TrackRow, TrackClose, TrackLevelWord, TrackNextAt, TrackNextAtComplete,
+            TrackCollectOne, TrackCollectMany,
+            TrackRibbonTitle, TrackRibbonHint, TrackNext,
             TrackCardNext, TrackCardHere, TrackCardWaiting, TrackCardCollected,
-            TrackCardToCome, TrackCardLevel,
+            TrackCardToCome, TrackCardLvl,
             TrackStateReady, TrackStateCollected, TrackStateLocked, TrackStateNextLevel,
             OverlayEquip, OverlayUnequip, OverlayCannotWear, OverlayBagEmpty,
             TalentEmbers, TalentInvest, TalentTaken, TalentLocked, TalentNoEmbers,

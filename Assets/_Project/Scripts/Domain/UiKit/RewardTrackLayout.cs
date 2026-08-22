@@ -60,13 +60,69 @@ namespace PrincesPalace.Domain.UiKit
         public static float DiameterOf(int level) =>
             IsMilestone(level) ? MilestoneDiameter : NodeDiameter;
 
+        // ---- what makes a milestone a milestone ---------------------------------
+        //
+        // Size, a plate ring, a bigger caption and a bigger number were the
+        // whole of it, and all four are STATIC. Twelve landmarks on a rail that
+        // shimmers, breathes and pulses everywhere else were the only things on
+        // it holding perfectly still -- which reads as printed rather than as
+        // important.
+        //
+        // Two ambient cues answer that, and neither carries information: an
+        // aura that breathes behind the disc, and a broken ring that turns
+        // around it. State is still said by colour and by the pulse; these say
+        // only that the thing is alive.
+        //
+        // NOT IN THE DESIGN HANDOFF. Section 6's milestone treatment is the
+        // four static differences above; this is an addition on top of it,
+        // asked for after seeing the built screen.
+        // TWICE THE DISC, and it cannot usefully be much more: the caption's
+        // lower edge is 50 above the rail and the level number's upper edge 33
+        // below it, so 88 is very nearly all the room a node has.
+        //
+        // Which is also why the ALPHA had to carry this rather than the size.
+        // The glow is brightest at its centre and the centre is behind an
+        // opaque 44px disc, so only its outer half is ever seen -- the half
+        // that has already fallen to a third of full. The first attempt was
+        // authored at the value it should LOOK like and came out invisible.
+        public const float MilestoneAuraSize = MilestoneDiameter * 2f;
+
+        // THE ORBIT IS THE PLATE RING ITSELF, not a second circle outside it.
+        //
+        // It was a second circle for one build, at 60 against the plate's 58,
+        // and two hairlines two pixels apart are one hairline: the solid ring
+        // filled the turning one's gaps exactly, so the dashes were invisible
+        // and the rotation had nothing to show. Moving it outward is not
+        // available either -- 66 is where the level number starts.
+        //
+        // So the milestone's ring is the dashed sprite and turns, and the
+        // design's "gold hairline plate ring at inset -7" keeps its radius and
+        // its weight while losing its continuity. That is the trade: a solid
+        // ring cannot be seen to move, and being seen to move is the ask.
+
         public static float PlateRingDiameter(int level) =>
             DiameterOf(level) + PlateRingInset * 2f;
 
         // The caption block above each node, and the level number below it.
+        //
+        // THE CAPTION HANGS FROM ITS BOTTOM EDGE rather than floating at its
+        // centre, which is a two-part statement: the box's lower edge sits 50
+        // above the rail and never moves, and the text inside it is
+        // UiTextAlign.Bottom.
+        //
+        // Centred was the first build and it is wrong in a way that only shows
+        // up across a hundred nodes at once. Eighty-seven filler captions are
+        // one line and twelve milestones are two to four, so a centred block
+        // puts the last line of a one-line caption 66 above the rail and the
+        // last line of a four-line one at 34 -- the gap between a reward's name
+        // and its own dot changing by half its own height depending on how long
+        // the name happens to be. Hung from the bottom, every caption on the
+        // rail ends at the same distance from its node and the long ones grow
+        // upward, away, into the space above.
         public const float CaptionWidth = NodePitch - 20f;
         public const float CaptionHeight = 64f;
-        public const float CaptionY = 66f;
+        public const float CaptionBottomY = 50f;
+        public const float CaptionY = CaptionBottomY + CaptionHeight * 0.5f;
         public const float LevelNumberY = -44f;
         public const float LevelNumberHeight = 22f;
 
@@ -97,68 +153,105 @@ namespace PrincesPalace.Domain.UiKit
 
         // THE SEAL PIP, which replaced a 14px tick the brief's own open
         // questions called small and pale. A dark disc with the claimed check
-        // knocked out of it, STRADDLING the disc's rim at lower-right rather
-        // than sitting inside it -- cutting the edge is what makes it read as
-        // applied to the node rather than as part of the reward's own mark.
+        // ON it, at lower-right, just inside the rim.
         //
-        // IT SCALES WITH THE DISC, which the handoff does not say and the first
-        // build got wrong by following it literally.
-        //
-        // Section 2 gives one pip size, 15, for both disc sizes. On a 44px
-        // milestone that is 34% of the disc and looks exactly like the design.
-        // On a 26px filler node it is 58%, and at that size it does not sit
-        // beside the reward's mark, it sits ON it: the first capture of this
-        // screen has an X for Prince's Favor and a chevron for a stat point
-        // that are simply not there -- eighty-seven of ninety-nine nodes with
-        // their one scannable feature covered by the tick saying they had been
-        // collected.
-        //
-        // So the RATIO is what carries across, not the pixel count. 15 of 44 is
-        // 0.34; the same fraction of 26 is 9.
-        public const float MilestoneSealPipSize = 15f;
+        // ONE SIZE FOR BOTH DISCS, which is what the design says and is not
+        // what the first build did. It scaled the pip with the disc -- 15 on a
+        // milestone, 9 on filler -- on the measured grounds that 15px of pip
+        // on a 26px disc lands on the reward's own mark rather than beside it.
+        // That measurement was right and the conclusion was wrong: the pip is
+        // MEANT to overlap the mark's lower-right quadrant, and what made the
+        // first version unreadable was not its size but that its check was
+        // knocked out rather than drawn (see the seal_mark bake). At 9px the
+        // pip cleared the mark and became a smudge nobody could identify;
+        // at 15 it covers a corner of a mark that is still legible from the
+        // other three, and the check inside it is the size of a check.
+        public const float SealPipSize = 15f;
         public const float SealPipStroke = 1f;
 
-        public static float SealPipSize(int level) =>
-            IsMilestone(level) ? MilestoneSealPipSize : 9f;
-
-        // Straddling, expressed as the handoff expresses it and then
-        // generalised: its +(d/2 - 8) is 8 = 15 x 0.53, the pip's own radius
-        // plus a little, so a milestone still lands on exactly 14.
+        // THE PIP'S CENTRE SITS ON THE DISC'S RIM, half a pixel inside it, on
+        // both axes -- so it is cut by the rim at 45 degrees and hangs half
+        // outside the node it belongs to. That is what makes it read as applied
+        // to the node rather than as part of the reward's own mark, and it is
+        // also what keeps it clear of that mark: at 15px on a 26px disc the
+        // pip's near edge is still 10px from the mark's own edge.
         //
-        // NOTE THE OFFSET IS ON BOTH AXES, so the pip's centre is this times
-        // root two from the disc's, which is why a number that looks like it
-        // leaves the pip inside the rim in fact cuts it.
-        public static float SealPipOffset(int level) =>
-            DiameterOf(level) * 0.5f - SealPipSize(level) * 0.5333f;
+        // THE DESIGN'S NUMBER IS +(d/2 - 8) AND IT IS AN EDGE, NOT A CENTRE,
+        // which is worth writing down because reading it as a centre is an
+        // easy mistake that lands the pip squarely on top of the mark. In the
+        // prototype the pip is positioned by its top-left corner with no
+        // centring transform, unlike the halo and the pulse ring beside it
+        // which both carry translate(-50%,-50%) -- so d/2 - 8 puts its LEFT
+        // EDGE there and its centre 7.5 further out, at d/2 - 0.5.
+        public const float SealPipRimBite = 0.5f;
 
-        // The NEXT caret, above node level+1. ONE node rather than a hundred:
-        // exactly one level is ever next, and the caret is the only thing on
-        // this rail whose x is not fixed forever -- so it is placed at runtime
+        public static float SealPipOffset(int level) =>
+            DiameterOf(level) * 0.5f - SealPipRimBite;
+
+        // ---- the NEXT mark ------------------------------------------------------
+        //
+        // Above node level+1: the word NEXT, and a hairline dropping from it
+        // toward the node, fading out as it goes. ONE group rather than a
+        // hundred -- exactly one level is ever next, and this is the only thing
+        // on the rail whose x is not fixed forever, so it is placed at runtime
         // and nothing else is.
         //
-        // WIDE AND FLAT, 26 x 14, which is not the square the handoff implies.
+        // A BARE CHEVRON WAS THE FIRST BUILD AND IT FAILED ITS ONE JOB. It sat
+        // in the 14px gap above the caption -- the only clear space left once
+        // the caption block was centred -- which put it 105px above the rail,
+        // at the very top of the band, a 26x14 speck with a hundred pixels of
+        // caption between it and the node it pointed at. The first capture
+        // shows it reading as dust on the band's edge.
         //
-        // The height is fixed by the gap it lives in and cannot grow. Drawn
-        // square in that gap it came out as a 14px speck a hundred pixels above
-        // the node it points at, and the first capture of the finished screen
-        // shows it as a mote most readers would not find -- which fails the
-        // open question it exists to answer. Stretched to a filler disc's own
-        // width it reads as a pointer over that column instead of as dust.
-        public const float CaretWidth = NodeDiameter;
-        public const float CaretHeight = 14f;
+        // Hanging the caption from a fixed bottom edge opened the space this
+        // actually needs: the strip between the caption's lower edge at 50 and
+        // the disc's own rim. A word plus a line into that gap is unmistakable
+        // where a chevron above the caption was invisible.
+        public const float NextMarkTopY = 46f;
+        public const float NextLabelHeight = 12f;
+        public const float NextLabelGap = 5f;
+        public const float NextTickHeight = 14f;
+        public const float NextTickWidth = 1f;
 
-        // Between the caption's top edge (66 + 64/2 = 98) and the band's top
-        // (112 above the line). That 14px gap is the only clear space above a
-        // node, and it is exactly one caret tall -- which is why the band is
-        // asymmetric about the rail in the first place.
-        public const float CaretY = CaptionY + CaptionHeight * 0.5f + CaretHeight * 0.5f;
+        // Wide enough for the word at 9px tracked .24em, and no wider: this
+        // hangs over whichever column is next, and a box wider than the pitch
+        // would reach into its neighbours.
+        public const float NextMarkWidth = 60f;
+        public const int NextLabelFont = 9;
+
+        public static float NextMarkHeight =>
+            NextLabelHeight + NextLabelGap + NextTickHeight;
+
+        public static float NextMarkCentreY => NextMarkTopY - NextMarkHeight * 0.5f;
+
+        // Inside the group, from ITS centre: the word at the top, the tick
+        // hanging under it.
+        public static float NextLabelCentreY =>
+            NextMarkHeight * 0.5f - NextLabelHeight * 0.5f;
+
+        public static float NextTickCentreY =>
+            -NextMarkHeight * 0.5f + NextTickHeight * 0.5f;
 
         // The breathing halo behind the player's own node, and the pulse ring
-        // on a waiting one. The halo is a single node the controller moves; the
-        // pulse is per-node, because any number of levels can be waiting at
-        // once and a migrated character arrives with dozens.
-        public const float HaloSize = 106f;
+        // on a waiting one. The halo is a single node the controller moves and
+        // SIZES; the pulse is per-node, because any number of levels can be
+        // waiting at once and a migrated character arrives with dozens.
+        //
+        // SIXTEEN PIXELS WIDER THAN THE DISC IT IS BEHIND, which is a glow and
+        // not a spotlight. It was a flat 106 -- four times a filler disc --
+        // and the first capture of the screen shows the player's own node as a
+        // white smear a hundred pixels across with its mark invisible inside
+        // it: the one node the eye is meant to land on was the one node whose
+        // reward could not be read. The design breathes it to 1.5x, so 42
+        // reaches 63 at the top of its cycle, which is where 106 started.
+        public const float HaloPad = 16f;
         public const float PulseRingStroke = 1f;
+
+        public static float HaloSize(int level) => DiameterOf(level) + HaloPad;
+
+        // The burst is a different shape with a different job -- it fires once,
+        // over the node, and is meant to exceed it.
+        public const float BurstSize = 96f;
 
         // Half a pitch of air at each end, so the first and last nodes are not
         // flush against the edge of the scroll.
@@ -198,12 +291,93 @@ namespace PrincesPalace.Domain.UiKit
         // sits at (160, 186) on a 1920x1080 screen; nothing below needs to know
         // that second fact.
 
+        // THE PANEL'S OWN FRAME: four corner brackets, 18px arms at 26px inset.
+        //
+        // Not a full border. The panel already has one from the system menu
+        // around it, and a second full rectangle inside the first reads as a
+        // mistake; four corners read as a plate. It is the cheapest thing on
+        // this screen and does more than its price to stop 1600x804 of flat
+        // ground looking like an untextured rect.
+        public const float CornerInset = 26f;
+        public const float CornerArm = 18f;
+        public const float CornerStroke = 1f;
+
+        public static float CornerCentreX =>
+            SystemMenuLayout.PanelWidth * 0.5f - CornerInset - CornerArm * 0.5f;
+
+        public static float CornerCentreY =>
+            SystemMenuLayout.ContentHeight * 0.5f - CornerInset - CornerArm * 0.5f;
+
+        // A soft violet wash at the panel's middle, so the ground has a centre.
+        // The design states it as a radial gradient at 72% of the width and 58%
+        // of the height, which are RADII -- hence the doubling.
+        public static float WashWidth => SystemMenuLayout.PanelWidth * 1.44f;
+        public static float WashHeight => SystemMenuLayout.ContentHeight * 1.16f;
+
         // Summary: the collect button, where you are, and CLOSE.
         public const float SummaryYFromTop = 43f;         // band 20..66
         public const float SummaryInsetX = 44f;
         public const float SummaryRowHeight = 44f;
         public const float CollectWidth = 260f;
         public const float CloseWidth = 180f;
+
+        // ---- the summary line, as five pieces --------------------------------
+        //
+        // "LEVEL 47 -- NEXT AT 48   A STAT POINT", set as a rule of parts
+        // rather than as one sentence: the word LEVEL small and letterspaced,
+        // the figure itself at 40px, a hairline, then where the next reward is
+        // and what it is.
+        //
+        // ONE LABEL WAS THE FIRST BUILD and it said the same words at one size,
+        // which made the only number on the row that changes -- the one the
+        // whole screen is about -- the same weight as the word in front of it.
+        //
+        // THE REWARD'S NAME IS BACK, and it was removed once for a good reason:
+        // at eighty characters it collided with CLOSE. What has changed is that
+        // it is now a piece with a box of its own, so the audit measures it
+        // against 360px rather than against whatever is left of the row -- and
+        // the longest name the track can say fits that at 12px with room over.
+        public const float LevelWordWidth = 80f;
+        public const int LevelWordFont = 13;
+        public const float LevelFigureWidth = 80f;
+        public const int LevelFigureFont = 34;
+        public const float SummaryRuleWidth = 34f;
+        public const float NextAtWidth = 130f;
+        public const int NextAtFont = 12;
+
+        // 420 for a name that measures about 320 at its longest.
+        //
+        // GENEROUS ON PURPOSE, because nothing measures it: the text fit audit
+        // skips content-derived strings, so this box is checked by arithmetic
+        // and by eye rather than at build time. The longest thing the track can
+        // say is RewardTrackNames' "YOUR SECOND LIFE RETURNS AT EVERY BOSS" at
+        // 38 characters, and the row has 200px spare before it reaches CLOSE.
+        public const float NextRewardWidth = 420f;
+        public const float SummaryGap = 18f;
+
+        public static float SummaryPartsWidth =>
+            LevelWordWidth + LevelFigureWidth + SummaryRuleWidth
+            + NextAtWidth + NextRewardWidth + SummaryGap * 4f;
+
+        // Each piece's centre, walked left to right from the assembly's own
+        // left edge. Written as a walk rather than as five constants so that
+        // widening one piece moves the rest instead of overlapping them.
+        public static float SummaryPartX(int index)
+        {
+            float[] widths =
+            {
+                LevelWordWidth, LevelFigureWidth, SummaryRuleWidth,
+                NextAtWidth, NextRewardWidth,
+            };
+
+            float x = -SummaryPartsWidth * 0.5f;
+            for (int i = 0; i < index && i < widths.Length; i++)
+            {
+                x += widths[i] + SummaryGap;
+            }
+
+            return x + widths[index] * 0.5f;
+        }
 
         public static float SummaryCentreY => CentreY(SummaryYFromTop);
 
@@ -252,10 +426,26 @@ namespace PrincesPalace.Domain.UiKit
         public const float CardHeight = 150f;
 
         // Art plate 104x104, holding 86x86 of art inside a 9px mat.
+        //
+        // THE SLOT IS 86 AND THE GHOST GLYPH INSIDE IT IS 46, which are two
+        // different measurements and were one. Section 8 gives 86 as the plate
+        // art is DELIVERED for; the prototype draws its placeholder mark at 46
+        // and at 62% opacity, because a stroke blown up to fill an 86px square
+        // stops reading as a mark and starts reading as a diagram. The slot
+        // keeps its size for the day art lands; what stands in it until then is
+        // a mark at a mark's size.
         public const float CardPlateSize = 104f;
         public const float CardArtSize = 86f;
-        public const float CardPlateInsetX = 24f;
-        public const float CardTextGap = 28f;
+        public const float CardMarkSize = 46f;
+        public const float CardPlateInsetX = 28f;
+        public const float CardTextGap = 26f;
+
+        // The plate's own corner ticks, 9px arms 5px in -- the same gesture the
+        // panel's four corners make, at the scale of a single object. This is
+        // what makes an empty slot read as a FRAME AWAITING ART rather than as
+        // a violet square somebody forgot to fill.
+        public const float CardTickInset = 5f;
+        public const float CardTickArm = 9f;
 
         public static float CardCentreY => CentreY(CardYFromTop);
 
@@ -270,17 +460,52 @@ namespace PrincesPalace.Domain.UiKit
 
         public static float CardTextCentreX => CardTextLeft + CardTextWidth * 0.5f;
 
-        // The four lines of the card, from its own centre. The reward's name
-        // gets the most room because it is the only one whose length the track
-        // decides rather than this file.
-        public const float CardKickerY = 56f;
+        // The card's three rows, from its own centre.
+        //
+        // A HEADER RULE, A NAME, AND A FOOTER, which is a different shape from
+        // the four stacked centred lines this was built as. The design sets the
+        // kicker hard left and the level hard right on one line with a hairline
+        // running between them, then the reward's name below, then a divider
+        // and the state along the bottom -- so the card reads as a plate with a
+        // head and a foot rather than as four sentences in a column.
+        //
+        // The content occupies 106 of the card's 150, matching the art plate
+        // beside it: 22 of padding top and bottom, exactly as the design gives
+        // it, and the plate is what sets the height in the first place. Every
+        // row below is inside +/-53 because of that, which is why none of them
+        // is written as an offset from a shared constant -- they are authored
+        // positions in a band, not a stack.
+        public const float CardHeaderY = 36f;
+        public const float CardHeaderHeight = 34f;
+        public const float CardKickerWidth = 200f;
         public const float CardKickerHeight = 14f;
         public const int CardKickerFont = 10;
-        public const float CardLevelY = 32f;
-        public const float CardLevelHeight = 36f;
+        public const float CardLevelWordWidth = 40f;
+        public const int CardLevelWordFont = 13;
+
+        // 18, not the kicker's 14: this sets three points larger, and a 13px
+        // line needs 16.9 of height before its descenders are anywhere. The
+        // text-fit audit refused the build over the 1.9 difference, which is
+        // the whole argument for having one.
+        public const float CardLevelWordHeight = 18f;
+        public const float CardLevelWidth = 60f;
+        public const float CardLevelHeight = 34f;
         public const int CardLevelFont = 30;
-        public const float CardCaptionY = -10f;
+
+        // Between the kicker and the LVL that follows it, with 14px of air at
+        // each end. Derived rather than authored, so a longer kicker cannot
+        // silently run under the rule.
+        public const float CardRuleGap = 14f;
+
+        // 48 tall, which is two lines at the caption's 22px.
+        //
+        // The longest reward name measures about 460 against this column's 474,
+        // so it fits on one line by fourteen pixels -- and a box sized for one
+        // line would clip it the moment a name, a font or the plate's inset
+        // moves by more than that. Two lines of room is the margin.
+        public const float CardCaptionY = -5f;
         public const float CardCaptionHeight = 48f;
+        public const float CardDividerY = -31f;
 
         // 22, not the handoff's 32.
         //
@@ -291,9 +516,52 @@ namespace PrincesPalace.Domain.UiKit
         // design was drawn against and wrong for the filler ones. If the card
         // grows, this is the number that goes back up.
         public const int CardCaptionFont = 22;
-        public const float CardStateY = -54f;
-        public const float CardStateHeight = 16f;
+        public const float CardStateY = -45f;
+        public const float CardStateHeight = 14f;
         public const int CardStateFont = 11;
+
+        // The state's own dot, before its words: 8px, coloured by state. The
+        // one thing on the card that says which of the four states this is
+        // without being read.
+        public const float CardStateDotSize = 8f;
+        public const float CardStateDotGap = 11f;
+
+        // ---- the card's columns ---------------------------------------------
+        //
+        // Everything above is a y; these are the xs, and they are computed from
+        // the plate rather than authored, because the plate's inset is the only
+        // number the design states and every column left of the card's right
+        // edge follows from it.
+
+        public static float CardTextRight => CardWidth * 0.5f - CardPlateInsetX;
+
+        public static float CardLevelCentreX => CardTextRight - CardLevelWidth * 0.5f;
+
+        public static float CardLevelWordCentreX =>
+            CardTextRight - CardLevelWidth - CardLevelWordWidth * 0.5f;
+
+        public static float CardKickerCentreX => CardTextLeft + CardKickerWidth * 0.5f;
+
+        // What is left of the header row once the kicker and the level have
+        // taken theirs, less a gap at each end.
+        public static float CardRuleWidth =>
+            CardTextRight - CardLevelWidth - CardLevelWordWidth
+            - (CardTextLeft + CardKickerWidth) - CardRuleGap * 2f;
+
+        public static float CardRuleCentreX =>
+            CardTextLeft + CardKickerWidth + CardRuleGap + CardRuleWidth * 0.5f;
+
+        // The state row: a dot at the column's left edge, its words after.
+        public static float CardStateDotCentreX =>
+            CardTextLeft + CardStateDotSize * 0.5f;
+
+        public static float CardStateTextLeft =>
+            CardTextLeft + CardStateDotSize + CardStateDotGap;
+
+        public static float CardStateTextWidth => CardTextRight - CardStateTextLeft;
+
+        public static float CardStateCentreX =>
+            CardStateTextLeft + CardStateTextWidth * 0.5f;
 
         // The rail band. Asymmetric about the rail on purpose: 112px above the
         // line and 100 below, because the caption stack is taller than the
@@ -302,6 +570,19 @@ namespace PrincesPalace.Domain.UiKit
         public const float BandBottomFromTop = 502f;
         public const float BandHairlineFromTop = 501f;
         public const float RailYFromTop = 402f;           // the panel's own vertical centre
+
+        // The two hairlines stop short of the panel's edge and fade out before
+        // they get there -- see the hairline_fade bake. A rule that runs the
+        // full 1600 meets the panel's own border at a hard T, which is the one
+        // junction that makes a drawn line look like a table.
+        public const float BandEdgeInsetX = 44f;
+
+        public static float BandEdgeWidth =>
+            SystemMenuLayout.PanelWidth - BandEdgeInsetX * 2f;
+
+        // The bloom under the lit rail. Fifteen pixels of it, against the
+        // rail's own three.
+        public const float RailGlowHeight = 15f;
 
         public static float BandHeight => BandBottomFromTop - BandTopFromTop;
         public static float BandCentreY => CentreY((BandTopFromTop + BandBottomFromTop) * 0.5f);
@@ -314,17 +595,22 @@ namespace PrincesPalace.Domain.UiKit
         //
         // Everything inside that rect is positioned relative to the RAIL, which
         // sits at its centre -- so the rect's half-height is however far the
-        // tallest thing reaches from the rail, and the caret reaches 112. Sizing
-        // it to the band's own 212 instead put the caret six pixels outside its
-        // parent at all four aspects, which is what UiAudit refused: the band is
-        // 112 above the line and 100 below, and a rect centred on the rail
-        // cannot be both.
+        // tallest thing reaches from the rail. Sizing it to the band's own 212
+        // instead put the tallest thing six pixels outside its parent at all
+        // four aspects, which is what UiAudit refused: the band is 112 above the
+        // line and 100 below, and a rect centred on the rail cannot be both.
         //
-        // The extra twelve pixels hang below the band and are clipped by the
-        // viewport, which IS the band's height. Nothing is lost: there is
-        // nothing down there, because every node's lowest element is its level
-        // number at -55.
-        public static float ScrollContentHeight => RailToBandTop * 2f;
+        // The tallest thing is the caption BOX, whose top edge is at 114 -- two
+        // pixels above the band itself. That is the design's own geometry and
+        // not a mistake in it: the box is four lines tall for the one reward
+        // that needs four lines, the text inside hangs from the bottom, and the
+        // two pixels of empty box that poke above the band on the other
+        // ninety-eight nodes are clipped by the viewport with nothing in them.
+        //
+        // The overhang below is clipped the same way. Nothing is lost there
+        // either: every node's lowest element is its level number at -55.
+        public static float ScrollContentHeight =>
+            (CaptionY + CaptionHeight * 0.5f) * 2f;
 
         // How far the rail sits from the band's centre.
         //
@@ -352,15 +638,50 @@ namespace PrincesPalace.Domain.UiKit
         public static float RibbonCentreY => CentreY((RibbonTopFromTop + RibbonBottomFromTop) * 0.5f);
         public static float RibbonLabelCentreY => CentreY(RibbonLabelYFromTop);
 
-        // Inside the ribbon, measured from its own centre. The base line runs
-        // through the middle; ticks and milestone dots stand above it, level
-        // numbers hang below.
-        public const float RibbonBaseHeight = 2f;
-        public const float RibbonTickWidth = 2f;
-        public const float RibbonTickHeight = 14f;
-        public const float RibbonDotSize = 7f;
-        public const float RibbonDotY = 22f;
-        public const float RibbonNumberY = -20f;
+        // The label row, as a title at one end and an instruction at the other
+        // with a rule running between them. A single centred caption was the
+        // first build; it names the thing and tells you what to do with it in
+        // one breath, in the middle of 1440px of empty row, and reads as a
+        // caption under a picture rather than as the head of a scale.
+        public const float RibbonTitleWidth = 240f;
+        public const float RibbonHintWidth = 380f;
+        public const float RibbonLabelGap = 14f;
+
+        public static float RibbonTitleCentreX =>
+            -RibbonWidth * 0.5f + RibbonTitleWidth * 0.5f;
+
+        public static float RibbonHintCentreX =>
+            RibbonWidth * 0.5f - RibbonHintWidth * 0.5f;
+
+        public static float RibbonLabelRuleWidth =>
+            RibbonWidth - RibbonTitleWidth - RibbonHintWidth - RibbonLabelGap * 2f;
+
+        public static float RibbonLabelRuleCentreX =>
+            -RibbonWidth * 0.5f + RibbonTitleWidth + RibbonLabelGap
+            + RibbonLabelRuleWidth * 0.5f;
+
+        // Inside the ribbon, measured from its own centre.
+        //
+        // EVERYTHING SITS ON THE LINE and the numbers stand above it, which is
+        // the reverse of the first build -- that one raised the dots off the
+        // line and hung the numbers underneath, and the result reads as three
+        // separate rows of marks rather than as one ruler. A ruler has its
+        // ticks ON the edge it measures and its figures beside them.
+        public const float RibbonBaseHeight = 1f;
+
+        // A TICK FOR EVERY LEVEL, in two weights. The first build drew one only
+        // where a level was reached and uncollected, so a player who collects
+        // as they go saw a bare line with twelve dots on it -- 99 levels
+        // rendered as 12 marks, which says nothing about how far apart they
+        // are. Every level standing as a hairline is what makes the ribbon a
+        // measure of the whole ascent rather than a list of its landmarks.
+        public const float RibbonTickWidth = 1f;
+        public const float RibbonTickHeight = 7f;
+        public const float RibbonWaitingTickWidth = 2f;
+        public const float RibbonWaitingTickHeight = 14f;
+
+        public const float RibbonDotSize = 9f;
+        public const float RibbonNumberY = 24f;
 
         // 26, and the constraint is level 100 rather than the widest numeral.
         //
@@ -372,10 +693,16 @@ namespace PrincesPalace.Domain.UiKit
         // the same constraint and only one of them is obvious.
         public const float RibbonNumberWidth = 26f;
         public const float RibbonNumberHeight = 14f;
-        public const int RibbonNumberFont = 10;
+        public const int RibbonNumberFont = 12;
         public const float RibbonPlayheadWidth = 2f;
-        public const float RibbonPlayheadHeight = 30f;
+        public const float RibbonPlayheadHeight = 18f;
         public const float RibbonWindowStroke = 1f;
+
+        // The window box is a BAND across the ruler, not a box around the whole
+        // ribbon. At the ribbon's full 86px height it enclosed the numbers as
+        // well, which made the twelve landmarks inside the window look like a
+        // different kind of landmark from the ones outside it.
+        public const float RibbonWindowHeight = 30f;
 
         // The gap between two ribbon ticks. 1440 across 99 levels is about
         // 14.5px, which is why the ticks are 2px hairlines and not dots: at
@@ -525,6 +852,38 @@ namespace PrincesPalace.Domain.UiKit
                 case TrackReward.MaxHealth: return "proc:track_health";
                 case TrackReward.ExpFind: return "proc:track_exp";
                 default: return "proc:ring_outline";
+            }
+        }
+
+        // WHICH PAINTED MEDALLION THE CARD SHOWS for a level's reward.
+        //
+        // Keyed off the reward KIND rather than the level, so the twelve
+        // milestones and the eighty-seven filler nodes go through one map and a
+        // new reward kind is a compile error here rather than a blank plate. It
+        // returns null for None, which the card draws as its stroke glyph --
+        // graceful degradation, and the same fallback a missing file gets.
+        //
+        // See RewardTrackScreen's art block for why these are the card's and
+        // not the rail's, and for how provisional the assignments are.
+        public static string CardArtFor(int level)
+        {
+            switch (RewardTrack.At(level).Reward)
+            {
+                case TrackReward.StatPoint: return Screens.RewardTrackScreen.StatArtKey;
+                case TrackReward.MaxHealth: return Screens.RewardTrackScreen.HealthArtKey;
+                case TrackReward.ExpFind: return Screens.RewardTrackScreen.ExpArtKey;
+                case TrackReward.Favor: return Screens.RewardTrackScreen.FavorArtKey;
+                case TrackReward.Respec: return Screens.RewardTrackScreen.RespecArtKey;
+                case TrackReward.RestBeforeBoss: return Screens.RewardTrackScreen.RestArtKey;
+                case TrackReward.OfferReroll: return Screens.RewardTrackScreen.RerollArtKey;
+                case TrackReward.WiderOffer: return Screens.RewardTrackScreen.OfferArtKey;
+                case TrackReward.StartingRelics: return Screens.RewardTrackScreen.RelicArtKey;
+                case TrackReward.ChosenStartingRelics:
+                    return Screens.RewardTrackScreen.ChosenRelicArtKey;
+                case TrackReward.SecondLife: return Screens.RewardTrackScreen.SecondLifeArtKey;
+                case TrackReward.SecondLifeRefresh:
+                    return Screens.RewardTrackScreen.SecondLifeRefreshArtKey;
+                default: return null;
             }
         }
 
