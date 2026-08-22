@@ -188,6 +188,15 @@ public static class ScreenRegistry
                 vfx.image.raycastTarget = false;
                 vfx.image.preserveAspect = true;
                 vfx.image.enabled = false;
+
+                // The dissolve layer. Same settings as the frame it fades over,
+                // because it IS that frame one step later -- a different
+                // preserveAspect between the two would swap the effect's shape
+                // halfway through every transition.
+                vfx.fade = result.Image(screen.SpellVfxNext);
+                vfx.fade.raycastTarget = false;
+                vfx.fade.preserveAspect = true;
+                vfx.fade.enabled = false;
                 fight.spellVfxPlayer = vfx;
                 fight.damagePopups = screen.DamagePopups.Select(result.Go).ToArray();
                 fight.damagePopupLabels = screen.DamagePopupLabels.Select(result.Tmp).ToArray();

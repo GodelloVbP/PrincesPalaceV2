@@ -82,15 +82,25 @@ namespace PrincesPalace.PlayModeTests
             // Set, it froze every shot on the second frame of the sequence and
             // produced six identical pictures of a glyph.
 
-            yield return Shoot(fight, canvas, hero, foe, "away");
-            yield return Shoot(fight, canvas, foe, hero, "back");
+            yield return Shoot(fight, canvas, hero, foe, "Spells/mud_burst", true, 11, "away");
+            yield return Shoot(fight, canvas, foe, hero, "Spells/mud_burst", true, 11, "back");
+
+            // THE TWO STRIKE SHEETS, which nothing in content currently casts:
+            // frost_flare and lightning_bolt were Shawn's until they were cut
+            // for being unreachable, and their frames are still on disk. They
+            // are recomposed the same way mud_blast is, so they are captured
+            // the same way -- otherwise the only proof the recipe worked would
+            // be the contact sheet, which cannot show the dissolve.
+            yield return Shoot(fight, canvas, hero, foe, "Spells/frost_flare", false, 0, "frost");
+            yield return Shoot(fight, canvas, hero, foe, "Spells/lightning_bolt", false, 0, "bolt");
         }
 
         // One cast, sampled six times across its own length. The sample points
         // are fractions rather than seconds so they still land in the right
         // places if the spell's authored duration changes.
         private IEnumerator Shoot(FightController fight, Canvas canvas,
-            CombatantState actor, CombatantState target, string label)
+            CombatantState actor, CombatantState target,
+            string path, bool fromCaster, int impactFrame, string label)
         {
             // SLOWED DOWN FOR THE CAMERA, and it has to be. Writing a 1920x1080
             // PNG takes longer than a frame of the real 0.78s cast, so six shots
@@ -102,16 +112,22 @@ namespace PrincesPalace.PlayModeTests
             // keeps this a picture of the SHIPPING sequence: same frames, same
             // order, same easing on the flight, only slower.
             const float seconds = 7f;
-            float[] at = { 0.05f, 0.30f, 0.55f, 0.72f, 0.85f, 0.97f };
+
+            // SAMPLED BETWEEN FRAMES AS WELL AS ON THEM. The dissolve happens
+            // over the last 45% of each frame's time, so a sequence sampled at
+            // frame boundaries would look exactly like the stepped one it
+            // replaced -- the whole change is invisible at the moments a naive
+            // capture picks.
+            float[] at = { 0.06f, 0.22f, 0.29f, 0.50f, 0.57f, 0.74f, 0.86f, 0.97f };
 
             fight.PlaySpellVfxForTest(new CombatBeat
             {
                 Actor = actor,
                 Target = target,
-                VfxPath = "Spells/mud_burst",
+                VfxPath = path,
                 VfxSeconds = seconds,
-                VfxImpactFrame = 11,
-                VfxFromCaster = true,
+                VfxImpactFrame = impactFrame,
+                VfxFromCaster = fromCaster,
             });
 
             float started = Time.realtimeSinceStartup;

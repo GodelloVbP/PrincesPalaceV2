@@ -413,5 +413,75 @@ namespace PrincesPalace.PlayModeTests
             var parent = _player.transform.parent;
             return parent.InverseTransformPoint(slot.TransformPoint(Vector3.zero)).x;
         }
+
+        // ---- the dissolve ----------------------------------------------------------
+        //
+        // A sheet is six to fourteen drawings over three quarters of a second.
+        // Swapped, that is a slideshow: each drawing sits still for 50ms and is
+        // replaced, which reads as steps -- and speeding it up does not fix it,
+        // because faster steps are still steps and past a point the whole spell
+        // is gone before it registers.
+        //
+        // The incoming frame fades up over the outgoing one instead. Asserted
+        // rather than eyeballed because a still frame cannot show it: a capture
+        // taken at a frame boundary looks exactly like the stepped version, and
+        // that is most of the sequence's running time.
+        [UnityTest]
+        public IEnumerator TheIncomingFrameFadesUpOverTheOutgoingOne()
+        {
+            yield return LoadFight();
+
+            // Slowed right down, so the sampling below lands where it means to.
+            _player.PlayAt("Spells/mud_burst", 8f, Vector2.zero, new Vector2(380f, 380f));
+
+            var fade = FadeLayer();
+            Assert.IsNotNull(fade, "the player has no dissolve layer - see FightScreen.BuildSpellVfx");
+
+            bool sawBlend = false;
+            bool sawClean = false;
+
+            float watched = 0f;
+            while (watched < 1.6f)
+            {
+                if (fade.enabled && fade.color.a > 0.05f && fade.color.a < 0.95f) sawBlend = true;
+
+                // AND IT IS NOT ALWAYS BLENDING. A frame that dissolves from the
+                // moment it appears is never itself: halfway through, two
+                // drawings share the screen at half strength and neither is
+                // legible, which for a lightning bolt means two bolts.
+                if (!fade.enabled || fade.color.a <= 0.01f) sawClean = true;
+
+                watched += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            Assert.IsTrue(sawBlend, "no frame ever blended into the next - the sequence is still a slideshow");
+            Assert.IsTrue(sawClean, "every frame was mid-dissolve, so no frame is ever shown on its own");
+        }
+
+        // BOTH LAYERS GO WHEN THE EFFECT DOES. The dissolve layer is a child of
+        // the frame image, so a leftover alpha on it would paint the last
+        // incoming frame over the stage until the next cast overwrote it.
+        [UnityTest]
+        public IEnumerator StoppingClearsTheDissolveLayerTooNotJustTheFrame()
+        {
+            yield return LoadFight();
+
+            _player.PlayAt("Spells/mud_burst", 8f, Vector2.zero, new Vector2(380f, 380f));
+            yield return null;
+
+            _player.StopImmediately();
+
+            Assert.IsFalse(_player.Image.enabled);
+            Assert.IsFalse(FadeLayer().enabled, "the dissolve layer is still drawing a frame of a stopped spell");
+        }
+
+        // Reached by NAME rather than through the component's field: a PlayMode
+        // test has no access to Core's internals by design, and the emitted node
+        // name is already a stable contract because UiAudit fails the build on a
+        // duplicate one.
+        private UnityEngine.UI.Image FadeLayer() =>
+            _player.GetComponentsInChildren<UnityEngine.UI.Image>(includeInactive: true)
+                .FirstOrDefault(i => i.name.EndsWith("Next"));
     }
 }

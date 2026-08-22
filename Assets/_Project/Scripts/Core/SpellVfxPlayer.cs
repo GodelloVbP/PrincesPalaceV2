@@ -18,6 +18,20 @@ namespace PrincesPalace
     {
         [SerializeField] internal Image image;
 
+        // The dissolve layer: a child of `image`, holding the NEXT frame and
+        // fading up over the current one. See FightScreen.BuildSpellVfx.
+        [SerializeField] internal Image fade;
+
+        // HOW MUCH OF EACH FRAME'S TIME IS SPENT DISSOLVING.
+        //
+        // Not all of it, and the number matters. A frame that cross-fades from
+        // the moment it appears is never itself: at 0.5 through, two drawings
+        // are on screen at half strength each and neither is legible, which for
+        // a lightning bolt means two bolts. Holding for the first 55% and
+        // dissolving over the last 45% keeps every frame readable and removes
+        // the step between them, which is the whole complaint.
+        private const float DissolveFraction = 0.45f;
+
         private Coroutine _playing;
 
         public bool IsPlaying => _playing != null;
@@ -102,6 +116,7 @@ namespace PrincesPalace
             }
 
             if (image != null) image.enabled = false;
+            if (fade != null) fade.enabled = false;
         }
 
         private void OnDisable()
@@ -118,37 +133,75 @@ namespace PrincesPalace
         // reload re-probed every spell folder from disk for no reason.
         public Sprite[] Frames(string vfxPath) => FrameSequenceLoader.Load(vfxPath);
 
+        // TICKED EVERY FRAME, NOT STEPPED EVERY 50ms.
+        //
+        // This waited out each frame's whole duration and then swapped the
+        // sprite, which is a slideshow: the drawing sits still, jumps, sits
+        // still. Two things come out of running it per frame instead -- the
+        // dissolve above, and a flight path that is continuous rather than
+        // fourteen discrete hops.
+        //
+        // REAL TIME STILL, through FightBeatPlayer.Scaled, so a spell cannot
+        // outlast the turn that cast it when a test runs the fight at 60x.
         private IEnumerator PlayRoutine(Sprite[] frames, float seconds,
             Vector2 from, Vector2 to, int arriveAtFrame)
         {
-            // Respects the same battle-speed seam the rest of playback uses, so
-            // a spell cannot outlast the turn that cast it when a test runs the
-            // fight at 60x.
-            float perFrame = Mathf.Max(0.001f, FightBeatPlayer.Scaled(seconds / frames.Length));
+            float total = Mathf.Max(0.001f, FightBeatPlayer.Scaled(seconds));
+            float perFrame = total / frames.Length;
 
-            // Clamped to the sequence it is travelling across: an arrival
-            // frame past the end would leave the effect still in flight when it
-            // stops being drawn.
+            // Clamped to the sequence it is travelling across: an arrival frame
+            // past the end would leave the effect still in flight when it stops
+            // being drawn.
             int arrival = Mathf.Clamp(arriveAtFrame, 0, frames.Length - 1);
 
+            var rect = image.rectTransform;
             image.enabled = true;
-            for (int i = 0; i < frames.Length; i++)
+
+            float elapsed = 0f;
+            while (elapsed < total)
             {
-                image.sprite = frames[i];
+                // Fractional frame: 3.4 is "three tenths of the way from frame
+                // 3 into frame 4", which is what both the dissolve and the
+                // flight read.
+                float at = Mathf.Min(elapsed / perFrame, frames.Length - 0.0001f);
+                int index = (int)at;
+                float within = at - index;
+
+                image.sprite = frames[index];
+
+                bool hasNext = index + 1 < frames.Length;
+                float blend = within <= 1f - DissolveFraction
+                    ? 0f
+                    : (within - (1f - DissolveFraction)) / DissolveFraction;
+
+                if (fade != null)
+                {
+                    fade.enabled = hasNext && blend > 0f;
+                    if (fade.enabled)
+                    {
+                        fade.sprite = frames[index + 1];
+                        var c = fade.color;
+                        fade.color = new Color(c.r, c.g, c.b, blend);
+                    }
+                }
 
                 if (arrival > 0)
                 {
                     // EASED IN, so it leaves slowly and arrives fast. A linear
                     // crawl reads as the effect being dragged; the glyph is
                     // supposed to hold where it was cast and then go.
-                    float t = Mathf.Clamp01(i / (float)arrival);
-                    image.rectTransform.anchoredPosition = Vector2.Lerp(from, to, t * t);
+                    float t = Mathf.Clamp01(at / arrival);
+                    rect.anchoredPosition = Vector2.Lerp(from, to, t * t);
                 }
 
-                yield return new WaitForSecondsRealtime(perFrame);
+                elapsed += Time.unscaledDeltaTime;
+                yield return null;
             }
 
+            if (arrival > 0) rect.anchoredPosition = to;
+
             image.enabled = false;
+            if (fade != null) fade.enabled = false;
             _playing = null;
         }
     }

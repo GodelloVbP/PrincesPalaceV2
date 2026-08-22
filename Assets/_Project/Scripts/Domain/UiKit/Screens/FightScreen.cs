@@ -159,6 +159,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         public NodeRef SpellVfxPool;
         public NodeRef SpellVfx;
+        public NodeRef SpellVfxNext;
         public NodeRef DamagePopupPool;
         public List<NodeRef> DamagePopups = new List<NodeRef>();
         public List<NodeRef> DamagePopupLabels = new List<NodeRef>();
@@ -1358,7 +1359,33 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var pool = Ui.Pool("SpellVfx", 1, i =>
             {
                 var image = Ui.Sprite($"SpellVfx{i}", null, new UiVec(380f, 380f), Place.At(0f, 0f)).Inactive();
+
+                // THE INCOMING FRAME, DISSOLVING IN OVER THE OUTGOING ONE.
+                //
+                // A sheet is six to fourteen drawings and the effect is over in
+                // three quarters of a second, so at any honest frame rate the
+                // player is watching a slideshow -- each drawing sits still for
+                // 50ms and is replaced. That reads as steps, and no amount of
+                // speeding it up fixes it: faster steps are still steps, and
+                // past a point the whole spell is gone before it registers.
+                //
+                // A SECOND IMAGE STACKED ON THE FIRST is the cheap half of
+                // interpolation. The outgoing frame holds at full strength and
+                // the incoming one fades up over it, so there is no dip in the
+                // middle the way a symmetrical cross-fade has -- see
+                // SpellVfxPlayer for the timing.
+                //
+                // A CHILD rather than a sibling, so it inherits the position,
+                // the size and the mirror for free. Those three are set per
+                // cast, and a sibling would need all of them kept in step by
+                // hand -- which is the class of bug that put an edge's lit core
+                // at twice its own offset.
+                var next = Ui.Sprite($"SpellVfx{i}Next", null, Place.Stretch(), UiSize.Fill)
+                    .AsDecor();
+                image.Children.Add(next);
+
                 SpellVfx = image;
+                SpellVfxNext = next;
                 return image;
             }).AllowOverlap("a pool's own rect is the whole canvas because its members are placed at runtime; it draws nothing itself and takes no clicks");
 

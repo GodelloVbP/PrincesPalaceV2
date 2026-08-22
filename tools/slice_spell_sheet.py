@@ -60,11 +60,56 @@ VFX = {
         "sheet": "frost_flare.png",
         "grid": (2, 3),
         "names": ["f0", "f1", "f2", "f3", "f4", "f5"],
+
+        # A STRIKE, NOT A SWIRL, so the recipe is a different shape from
+        # mud_burst's. There is nothing to spin: the sequence is a gathering,
+        # a bolt coming down, the ground taking it, and embers. What it wants
+        # is WEIGHT at the moment of contact and a wind-up that is more than
+        # one flicker.
+        #
+        #   the gather, twice and growing -- one frame of sparks is a
+        #     dropped frame rather than a warning;
+        #   the descent, unchanged, because a bolt is meant to be sudden;
+        #   the strike HELD, the second 8% larger, which is the whole trick:
+        #     a peak that lasts two frames and grows into the second reads as
+        #     a blow landing rather than as a frame going past;
+        #   the fade, unchanged.
+        #
+        # Nine frames out of six drawings. The dissolve in SpellVfxPlayer does
+        # the rest -- see its DissolveFraction.
+        "sequence": [
+            {"from": "f0", "scale": (0.88, 0.88)},
+            {"from": "f0"},
+            {"from": "f1"},
+            {"from": "f2"},
+            {"from": "f3"},
+            {"from": "f3", "scale": (1.08, 1.08)},
+            {"from": "f4"},
+            {"from": "f5"},
+            {"from": "f5", "scale": (1.06, 1.06)},
+        ],
     },
     "lightning_bolt": {
         "sheet": "lightning_bolt.png",
         "grid": (2, 3),
         "names": ["f0", "f1", "f2", "f3", "f4", "f5"],
+
+        # THE SAME STRIKE RECIPE as frost_flare above, and for the same reason:
+        # the two sheets are the same drawing in different colours -- a gather,
+        # a bolt, a ground burst, embers. Written out rather than shared,
+        # because a shared constant would claim the two must always agree, and
+        # the moment one of them is redrawn they will not.
+        "sequence": [
+            {"from": "f0", "scale": (0.88, 0.88)},
+            {"from": "f0"},
+            {"from": "f1"},
+            {"from": "f2"},
+            {"from": "f3"},
+            {"from": "f3", "scale": (1.08, 1.08)},
+            {"from": "f4"},
+            {"from": "f5"},
+            {"from": "f5", "scale": (1.06, 1.06)},
+        ],
     },
     # DELIVERED WITH ITS OWN ALPHA, so this one is cut and nothing else --
     # see the `keyed` flag below.
