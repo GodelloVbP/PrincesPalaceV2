@@ -565,6 +565,6 @@ namespace PrincesPalace.Domain.Combat.Session
 
         private void RecordSpellPresentation(ResolvedSkill skill) =>
             RecordSpellPresentation(skill.VfxPath, skill.VfxSeconds, skill.VfxImpactFrame, skill.SfxPath,
-                skill.VfxFromCaster);
+                skill.VfxFromCaster, skill.VfxDepartFrame);
     }
 }

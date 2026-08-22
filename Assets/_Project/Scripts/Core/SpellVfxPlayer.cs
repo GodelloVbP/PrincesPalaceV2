@@ -63,7 +63,7 @@ namespace PrincesPalace
         // Set from the controller so the effect lands ON the thing it hit
         // rather than in the middle of the screen.
         public void PlayAt(string vfxPath, float seconds, Vector2 anchoredPosition, Vector2 size) =>
-            PlayFrom(vfxPath, seconds, anchoredPosition, anchoredPosition, size, 0);
+            PlayFrom(vfxPath, seconds, anchoredPosition, anchoredPosition, size, 0, 0);
 
         // AN EFFECT THAT TRAVELS, arriving by `arriveAtFrame` and staying put
         // for the rest of the sequence.
@@ -83,7 +83,7 @@ namespace PrincesPalace
         // where it was cast, the lance leaves, and the burst is at the target
         // by the frame the damage lands.
         public void PlayFrom(string vfxPath, float seconds, Vector2 from, Vector2 to, Vector2 size,
-            int arriveAtFrame)
+            int departAtFrame, int arriveAtFrame)
         {
             if (image == null) return;
 
@@ -104,7 +104,7 @@ namespace PrincesPalace
             var rect = image.rectTransform;
             rect.anchoredPosition = from;
             rect.sizeDelta = size;
-            _playing = StartCoroutine(PlayRoutine(frames, seconds, from, to, arriveAtFrame));
+            _playing = StartCoroutine(PlayRoutine(frames, seconds, from, to, departAtFrame, arriveAtFrame));
         }
 
         public void StopImmediately()
@@ -144,7 +144,7 @@ namespace PrincesPalace
         // REAL TIME STILL, through FightBeatPlayer.Scaled, so a spell cannot
         // outlast the turn that cast it when a test runs the fight at 60x.
         private IEnumerator PlayRoutine(Sprite[] frames, float seconds,
-            Vector2 from, Vector2 to, int arriveAtFrame)
+            Vector2 from, Vector2 to, int departAtFrame, int arriveAtFrame)
         {
             float total = Mathf.Max(0.001f, FightBeatPlayer.Scaled(seconds));
             float perFrame = total / frames.Length;
@@ -154,8 +154,27 @@ namespace PrincesPalace
             // being drawn.
             int arrival = Mathf.Clamp(arriveAtFrame, 0, frames.Length - 1);
 
+            // AND IT DOES NOT LEAVE UNTIL THE CHARGE IS DONE. Departure was
+            // frame zero, so a sheet with a wind-up spent that wind-up already
+            // moving -- mud_blast's glyph turned its eight charging revolutions
+            // while halfway across the stage, which reads as tumbling rather
+            // than as charging. Held below the arrival so the two can never
+            // cross and produce a negative flight.
+            int departure = Mathf.Clamp(departAtFrame, 0, arrival);
+
             var rect = image.rectTransform;
             image.enabled = true;
+
+            // MEASURED FROM A START STAMP, not accumulated.
+            //
+            // `elapsed += Time.unscaledDeltaTime` at the end of the body charges
+            // the effect's FIRST advance a delta measured before it existed --
+            // the frame it was started in, whose length has nothing to do with
+            // it. After a scene load or a long beat that is a tenth of a second
+            // the sequence never had, spent before its first drawing is seen.
+            // It also drifts: twenty-six additions of a float are not the sum
+            // anyone intended.
+            float started = Time.realtimeSinceStartup;
 
             float elapsed = 0f;
             while (elapsed < total)
@@ -185,17 +204,18 @@ namespace PrincesPalace
                     }
                 }
 
-                if (arrival > 0)
+                if (arrival > departure)
                 {
-                    // EASED IN, so it leaves slowly and arrives fast. A linear
-                    // crawl reads as the effect being dragged; the glyph is
-                    // supposed to hold where it was cast and then go.
-                    float t = Mathf.Clamp01(at / arrival);
+                    // EASED IN over the flight window ALONE, so it leaves fast
+                    // and hard rather than being dragged the whole way. Before
+                    // the departure frame it has not left: the lerp reads zero
+                    // and the effect sits exactly where it was cast.
+                    float t = Mathf.Clamp01((at - departure) / (arrival - departure));
                     rect.anchoredPosition = Vector2.Lerp(from, to, t * t);
                 }
 
-                elapsed += Time.unscaledDeltaTime;
                 yield return null;
+                elapsed = Time.realtimeSinceStartup - started;
             }
 
             if (arrival > 0) rect.anchoredPosition = to;

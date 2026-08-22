@@ -78,6 +78,9 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // See RawSkillEntry.vfxFromCaster.
         public bool VfxFromCaster;
+
+        // See RawSkillEntry.vfxDepartFrame.
+        public int VfxDepartFrame;
         public string SfxPath;
 
         // A cast does not cross the stage. Set by the action rather than

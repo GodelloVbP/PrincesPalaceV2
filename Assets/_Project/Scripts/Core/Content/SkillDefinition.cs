@@ -65,6 +65,9 @@ namespace PrincesPalace.Content
         // See RawSkillEntry.vfxFromCaster.
         public bool vfxFromCaster;
 
+        // See RawSkillEntry.vfxDepartFrame.
+        public int vfxDepartFrame;
+
         [Tooltip("Resources-relative path of the clip played when this skill resolves. Empty means silent.")]
         public string sfxPath;
 

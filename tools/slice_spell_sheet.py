@@ -131,23 +131,30 @@ VFX = {
         "names": ["f0", "f1", "f2", "f3", "f4", "f5"],
         "keyed": False,
 
-        # THE GLYPH SPINS UP BEFORE IT FIRES. Six cells become fourteen
-        # frames -- see compose_sequence for what the two operations are and
-        # why they live here rather than in the player.
+        # A FAST CHARGE, THEN A THROW. Six cells become twenty-six frames.
         #
-        # Eight turns of 45 degrees, growing 12% across them, then the lance,
-        # then the impact held for two frames with the second 6% larger, then
-        # the spray and the debris. The pivot is the glyph's own centre,
-        # measured off f0: it sits at (140, 240) of a 512 square because the
-        # right two thirds of every cell is reserved for the beam.
+        # The first cut gave the spin eight frames of fourteen -- over half the
+        # spell -- so the glyph turned lazily and the burst was over before it
+        # registered. The frame rate is uniform (SpellVfxPlayer divides
+        # vfxSeconds by the count), so the only way to make one phase quick and
+        # another slow is to give the slow one MORE SLOTS. That is what the
+        # holds below are for: the spin keeps its eight frames and the tail
+        # grows to eighteen, so the same eight turns now occupy 8/26 of the
+        # runtime instead of 8/14.
+        #
+        # Eight turns of 45 degrees, growing 12%, about the glyph's own centre
+        # -- measured off f0 at (140, 240) of a 512 square, because the right
+        # two thirds of every cell is reserved for the beam it fires. Then the
+        # lance twice, the impact held four times and growing, and a spray and
+        # debris held five each so the burst has weight rather than flicking
+        # past.
         "sequence": [
             {"from": "f0", "spin": 8, "pivot": (140, 240), "mask": 150, "scale": (1.0, 1.12)},
-            {"from": "f1"},
-            {"from": "f2"},
-            {"from": "f3"},
-            {"from": "f3", "scale": (1.06, 1.06)},
-            {"from": "f4"},
-            {"from": "f5"},
+            {"from": "f1", "hold": 2},
+            {"from": "f2", "hold": 2},
+            {"from": "f3", "hold": 4, "scale": (1.0, 1.08)},
+            {"from": "f4", "hold": 5, "scale": (1.0, 1.05)},
+            {"from": "f5", "hold": 5, "scale": (1.0, 1.04)},
         ],
     },
 }
@@ -318,17 +325,24 @@ def compose_sequence(cells, steps):
     out = []
     for step in steps:
         cell = cells[step["from"]]
-        turns = step.get("spin", 1)
         pivot = step.get("pivot")
         lo, hi = step.get("scale", (1.0, 1.0))
         radius = step.get("mask")
 
+        # SPIN TURNS, HOLD DOES NOT, and they are separate keys rather than one
+        # count with a flag because they answer different questions. "spin: 8"
+        # is a full revolution divided eight ways; "hold: 4" is one drawing
+        # given four of the timeline's slots. Written as one key, a held impact
+        # would have quietly rotated 90 degrees per frame.
+        count = step.get("spin") or step.get("hold") or 1
+        rotates = "spin" in step
+
         if radius:
             cell = discs(cell, pivot, radius)
 
-        for i in range(turns):
-            angle = -360.0 * i / turns if turns > 1 else 0.0
-            t = i / (turns - 1) if turns > 1 else 1.0
+        for i in range(count):
+            angle = -360.0 * i / count if rotates and count > 1 else 0.0
+            t = i / (count - 1) if count > 1 else 1.0
             out.append(turned(cell, angle, pivot, lo + (hi - lo) * t))
 
     return out

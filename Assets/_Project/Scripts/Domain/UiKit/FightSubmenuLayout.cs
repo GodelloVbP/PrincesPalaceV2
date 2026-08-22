@@ -43,10 +43,12 @@ namespace PrincesPalace.Domain.UiKit
         // disagree. It reads as the last entry in the list, which is what it is.
         public const float BackRowHeight = RowHeight;
 
-        // The container's own bottom edge. Unchanged: the assembly still ends
-        // where it always did, and everything the back row needs comes out of
-        // the rows' space rather than out of the screen.
-        public const float ContainerBottom = CommandBottom + 36f;
+        // FLUSH WITH THE VERB COLUMN'S BOTTOM EDGE, which is what CommandBottom
+        // is. ATTACK sits at CommandBottom + 26 and is 52 tall, so its lower
+        // edge lands exactly here -- and the panel beside it was floating 36px
+        // above that line, which reads as a panel that missed rather than as
+        // two columns of one control.
+        public const float ContainerBottom = CommandBottom;
 
         // In the container's bottom padding, so the frame closes tight under it.
         public static float BackRowY => ContainerBottom + ContainerPad + BackRowHeight * 0.5f;
@@ -85,12 +87,20 @@ namespace PrincesPalace.Domain.UiKit
         // no longer "as many as fit" -- it is as many as a character can ever
         // offer, and every one of them has to exist to be scrolled to.
         //
-        // 16 against a worst case of 12 (six levelled skills plus the six a
-        // single talent root can grant -- FightCapacityPinTests measures it).
-        // The margin is four rather than none because content grows and the
-        // failure mode of running out is invisible: rows past the pool are
-        // silently unreachable, which is the exact bug this replaced.
-        public const int PoolSize = 16;
+        // 24, up from 16, and the sixteen was caught in a screenshot rather
+        // than by the pin that exists to catch it. Adding Frost Flare and
+        // Lightning Bolt to Shawn's ladder took a real save to EIGHTEEN skills;
+        // the list said "SHOWING 16 OF 18" and two of them had no rect to
+        // scroll to.
+        //
+        // FightCapacityPinTests did not fail, and its model is why: it computes
+        // the worst case as levelled skills plus the grants of a SINGLE talent
+        // root, on the reading that allegiance makes the roots exclusive. The
+        // save in the capture had more than that. Whether that save is
+        // reachable in play is a separate question worth asking -- but the pool
+        // is a display reservation, and sizing it to the strictest reading of a
+        // gameplay rule means any hole in that rule silently eats rows.
+        public const int PoolSize = 24;
 
         public static float ViewportHeight => ColumnHeight(RowsInView);
 

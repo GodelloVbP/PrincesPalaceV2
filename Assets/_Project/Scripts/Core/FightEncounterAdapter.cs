@@ -384,6 +384,7 @@ namespace PrincesPalace
                 definition.ignoresDefense, definition.damageInstances,
                 definition.vfxPath, definition.vfxSeconds, definition.vfxImpactFrame,
                 definition.sfxPath, definition.sortOrder, definition.vfxFromCaster,
+                definition.vfxDepartFrame,
 
                 // Same authoring-gate rule as the enemy conversion: appliesStatus
                 // is an enum with a valid zero, so the FLAG is what says whether

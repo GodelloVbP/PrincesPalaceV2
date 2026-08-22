@@ -27,9 +27,10 @@ MonoBehaviour:
   ignoresDefense: 0
   damageInstances: []
   vfxPath: Spells/mud_burst
-  vfxSeconds: 0.78
-  vfxImpactFrame: 11
+  vfxSeconds: 0.65
+  vfxImpactFrame: 13
   vfxFromCaster: 1
+  vfxDepartFrame: 9
   sfxPath: 
   appliesStatus: 3
   hasStatus: 1

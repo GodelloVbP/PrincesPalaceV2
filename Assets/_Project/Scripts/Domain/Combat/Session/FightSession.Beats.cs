@@ -77,7 +77,7 @@ namespace PrincesPalace.Domain.Combat.Session
         }
 
         private void RecordSpellPresentation(string vfxPath, float vfxSeconds, int vfxImpactFrame, string sfxPath,
-            bool vfxFromCaster = false)
+            bool vfxFromCaster = false, int vfxDepartFrame = 0)
         {
             if (_recordingBeat == null) return;
 
@@ -85,6 +85,7 @@ namespace PrincesPalace.Domain.Combat.Session
             _recordingBeat.VfxSeconds = vfxSeconds;
             _recordingBeat.VfxImpactFrame = vfxImpactFrame;
             _recordingBeat.VfxFromCaster = vfxFromCaster;
+            _recordingBeat.VfxDepartFrame = vfxDepartFrame;
             _recordingBeat.SfxPath = sfxPath;
         }
 

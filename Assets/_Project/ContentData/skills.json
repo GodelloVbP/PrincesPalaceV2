@@ -74,9 +74,10 @@
       "statusMagnitude": 25,
       "statusDuration": 2,
       "vfxPath": "Spells/mud_burst",
-      "vfxSeconds": 0.78,
-      "vfxImpactFrame": 11,
-      "vfxFromCaster": true
+      "vfxSeconds": 0.65,
+      "vfxImpactFrame": 13,
+      "vfxFromCaster": true,
+      "vfxDepartFrame": 9
     },
     {
       "id": "frost_flare",

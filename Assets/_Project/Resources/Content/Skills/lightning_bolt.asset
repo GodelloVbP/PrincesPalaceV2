@@ -33,6 +33,7 @@ MonoBehaviour:
   vfxSeconds: 0.52
   vfxImpactFrame: 5
   vfxFromCaster: 0
+  vfxDepartFrame: 0
   sfxPath: Audio/Sfx/lightning_strike
   appliesStatus: 0
   hasStatus: 0

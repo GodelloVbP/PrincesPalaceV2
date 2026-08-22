@@ -224,7 +224,7 @@ namespace PrincesPalace.Domain.Content
                 power, flatAmount, raw.ignoresDefense, instances,
                 (raw.vfxPath ?? "").Trim(), raw.vfxSeconds >= 0f ? raw.vfxSeconds : DefaultVfxSeconds,
                 raw.vfxImpactFrame >= 1 ? raw.vfxImpactFrame : DefaultVfxImpactFrame,
-                (raw.sfxPath ?? "").Trim(), sortOrder, raw.vfxFromCaster,
+                (raw.sfxPath ?? "").Trim(), sortOrder, raw.vfxFromCaster, raw.vfxDepartFrame,
                 appliesStatus, statusMagnitude, statusDuration, requirements, scalingAxis,
                 raw.queuePushSlots, transform);
             error = null;

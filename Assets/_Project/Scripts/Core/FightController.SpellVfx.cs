@@ -129,14 +129,16 @@ namespace PrincesPalace
             // is about to hit.
             spellVfxPlayer.SetFacing(targetX >= casterX ? 1f : -1f);
 
-            // ARRIVES ON THE IMPACT FRAME, which is the frame the damage number
-            // is already timed to (see ImpactDelayFor). Tying the two to the
-            // same authored number is what keeps the burst and the hit from
-            // drifting apart when a spell's timing is retuned.
+            // LEAVES ON THE DEPARTURE FRAME AND ARRIVES ON THE IMPACT ONE. The
+            // second is the frame the damage number is already timed to (see
+            // ImpactDelayFor), so tying the flight to it keeps the burst and the
+            // hit from drifting apart when a spell is retuned; the first is what
+            // holds the charge where it was cast instead of letting it drift
+            // through its own wind-up.
             //
-            // VfxImpactFrame is 1-based in content, like the golem's.
+            // Both are 1-based in content, like the golem's impact frame.
             spellVfxPlayer.PlayFrom(beat.VfxPath, beat.VfxSeconds, from, to, SpellVfxSize,
-                beat.VfxImpactFrame - 1);
+                beat.VfxDepartFrame - 1, beat.VfxImpactFrame - 1);
         }
 
         // How much empty box sits BELOW the visible art once preserveAspect has

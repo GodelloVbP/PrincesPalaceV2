@@ -35,6 +35,7 @@ MonoBehaviour:
   vfxSeconds: 0.52
   vfxImpactFrame: 5
   vfxFromCaster: 0
+  vfxDepartFrame: 0
   sfxPath: Audio/Sfx/frost_flare
   appliesStatus: 0
   hasStatus: 0

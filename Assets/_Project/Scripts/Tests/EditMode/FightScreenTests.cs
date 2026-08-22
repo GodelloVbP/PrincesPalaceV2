@@ -638,6 +638,29 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(cancel.Decor, "the one control on the banner cannot be pressed");
         }
 
+        // ---- the two columns of the command UI end on one line ---------------------
+        //
+        // The skill panel floated 36px above the verb column beside it, which
+        // reads as a panel that missed rather than as two halves of one
+        // control. Both edges are derived from CommandBottom now, so they
+        // cannot drift apart -- and this is what says so, because nothing else
+        // compares them: UiAudit checks siblings against each other and these
+        // two are in different branches of the tree.
+        [Test]
+        public void TheSkillPanelEndsOnTheSameLineAsTheVerbColumn()
+        {
+            var attack = RectOf("Verb0");
+            var panel = RectOf("SubmenuContainer");
+
+            float verbBottom = attack.Centre.Y - attack.Height * 0.5f;
+            float panelBottom = panel.Centre.Y - panel.Height * 0.5f;
+
+            Assert.AreEqual(verbBottom, panelBottom, 0.01f,
+                "the skill panel and the verb column no longer end on the same line");
+            Assert.AreEqual(FightSubmenuLayout.CommandBottom, panelBottom, 0.01f,
+                "and that line is CommandBottom, which is what both are measured from");
+        }
+
         private static IEnumerable<UiNode> Walk(UiNode node)
         {
             yield return node;

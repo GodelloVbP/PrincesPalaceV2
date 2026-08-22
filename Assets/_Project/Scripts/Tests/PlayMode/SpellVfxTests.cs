@@ -402,6 +402,77 @@ namespace PrincesPalace.PlayModeTests
                 "cast back across the stage the sheet has to be mirrored");
         }
 
+        // IT CHARGES WHERE IT WAS CAST, THEN THROWS.
+        //
+        // The flight used to start on frame zero, so mud_blast's glyph spun its
+        // eight charging revolutions while already halfway across the stage --
+        // it tumbled through the air instead of winding up. The sequence has two
+        // phases and the flight belongs to the second.
+        //
+        // Measured in SECONDS off the authored numbers rather than in frames,
+        // because the frame count is a property of the recipe and this is about
+        // what a player sees: for a third of the effect the glyph must not have
+        // moved at all.
+        [UnityTest]
+        public IEnumerator ATravellingEffectHoldsAtTheCasterUntilItsChargeIsDone()
+        {
+            yield return LoadFight();
+
+            var caster = SlotXOf("Shawn");
+            var beat = TravellingBeat();
+
+            // Frame 9 of 26 over 0.65s: the glyph is still at the caster at
+            // 0.15s and gone by 0.35s.
+            // AT REAL SPEED, opting out of the fixture's 60x. Everything else
+            // in this class wants the fight to resolve instantly and does not
+            // care how long a frame of a spell lasts; this is the one test that
+            // is ABOUT how long, and at 60x its six seconds are a tenth of one.
+            // That is not a slow version of the same measurement -- it is a
+            // measurement of nothing, and it read as a bug in the player for
+            // three rounds.
+            FightBeatPlayer.BeatSpeedMultiplier = 1f;
+
+            // SLOWED FOR THE MEASUREMENT, and the reason is not convenience.
+            // At the shipping 0.65s a frame is 25ms, so a single long frame --
+            // routine in batchmode, and possible in a real fight after a heavy
+            // beat -- steps the sequence past its whole charge before this can
+            // look. That is correct behaviour for a time-based animation and a
+            // useless thing to assert against. At 6s the same hitch is 5% of
+            // the run and the SHAPE is what gets tested: held, then thrown.
+            beat.VfxSeconds = 6f;
+            _fight.PlaySpellVfxForTest(beat);
+
+            // WHERE IT STARTED, not where the slot is. The two agree to within a
+            // couple of pixels and are not the same measurement: the stage
+            // re-anchors its slots on repaint, so reading the slot again mid-run
+            // asks a question that has moved. What is being asserted is that the
+            // effect does not travel during its charge, which is about the
+            // effect.
+            float launch = _player.Image.rectTransform.anchoredPosition.x;
+            Assert.AreEqual(caster, launch, 6f, "the effect did not begin on the caster at all");
+
+            // Frame 9 of 26 lands at 2.08s; frame 13 at 3.0s.
+            float watched = 0f;
+            while (watched < 1.6f)
+            {
+                Assert.AreEqual(launch, _player.Image.rectTransform.anchoredPosition.x, 1f,
+                    $"the effect had already drifted {watched:0.00}s in, during its own wind-up");
+
+                watched += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            while (watched < 3.4f)
+            {
+                watched += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            Assert.Greater(Mathf.Abs(_player.Image.rectTransform.anchoredPosition.x - launch), 40f,
+                "the effect never left the caster - a throw that does not travel is a charge that " +
+                "never fired");
+        }
+
         // THE MIRROR IS STATE A CAST LEAVES ON A SHARED IMAGE. One player
         // serves every spell in the fight, so a spell cast right-to-left would
         // hand the next one a mirrored box -- a bug that only ever appears in
@@ -433,8 +504,9 @@ namespace PrincesPalace.PlayModeTests
                 Actor = reversed ? foe : hero,
                 Target = reversed ? hero : foe,
                 VfxPath = "Spells/mud_burst",
-                VfxSeconds = 0.78f,
-                VfxImpactFrame = 11,
+                VfxSeconds = 0.65f,
+                VfxImpactFrame = 13,
+                VfxDepartFrame = 9,
                 VfxFromCaster = fromCaster,
             };
         }

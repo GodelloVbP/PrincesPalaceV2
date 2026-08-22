@@ -698,24 +698,38 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 float textLeft = left + 8f + PlateIconSize;
 
                 var name = Ui.Label($"EnemyPlate{i}Name", UiString.Runtime, new UiVec(86f, 20f), 13,
-                    FightHudPalette.EnemyName, Place.At(textLeft, 16f, new UiVec(0f, 0.5f)))
+                    FightHudPalette.EnemyName, Place.At(textLeft, 17f, new UiVec(0f, 0.5f)))
                     .TextAligned(UiTextAlign.Left);
 
-                // 30 tall for an 11pt line: the audit measures "9999/9999" at
-                // 28.6, and a 20-tall box clipped the descenders off a number
-                // that is the whole reason the plate exists.
-                var hp = Ui.Label($"EnemyPlate{i}Hp", UiStrings.HealthValue, new UiVec(56f, 30f), 11,
-                    FightHudPalette.EnemyHpText, Place.At(PlateW * 0.5f - 8f, 16f, new UiVec(1f, 0.5f)))
+                // 27 tall for a 10pt line: the audit measures "9999/9999" at
+                // 26 there, and a box that cannot hold it clips the descenders
+                // off the number the plate exists for. 10 rather than 11
+                // because the status line moved above the bar and the three
+                // rows now have to share 64px.
+                var hp = Ui.Label($"EnemyPlate{i}Hp", UiStrings.HealthValue, new UiVec(56f, 27f), 10,
+                    FightHudPalette.EnemyHpText, Place.At(PlateW * 0.5f - 8f, 17f, new UiVec(1f, 0.5f)))
                     .TextAligned(UiTextAlign.Right);
 
                 var fill = Ui.Solid($"EnemyPlate{i}HpFill", FightHudPalette.HpBright, Place.Stretch(), UiSize.Fill);
-                var bar = Ui.Panel($"EnemyPlate{i}Bar",
-                        Place.At(textLeft + 71f, -6f), UiSize.Fixed(142f, 7f), fill)
-                    .Coloured(FightHudPalette.Track);
-
-                var tags = Ui.Label($"EnemyPlate{i}Tags", UiString.Runtime, new UiVec(142f, 16f), 9,
-                    FightHudPalette.TextSecondary, Place.At(textLeft, -22f, new UiVec(0f, 0.5f)))
+                // ---- ABOVE THE BAR, NOT BELOW IT ---------------------------
+                //
+                // The order on the plate is now name, what is wrong with them,
+                // then how much of them is left. Underneath, the status line sat
+                // in the plate's bottom margin against its border and read as a
+                // footnote to the bar rather than as a fact about the monster --
+                // and the bar, which is the thing being watched, had text on
+                // both sides of it.
+                //
+                // 8pt in a 12-tall box: it is a word or two of shorthand, and
+                // the row it is squeezing into came out of the space the old
+                // one had.
+                var tags = Ui.Label($"EnemyPlate{i}Tags", UiString.Runtime, new UiVec(142f, 12f), 8,
+                    FightHudPalette.TextSecondary, Place.At(textLeft, -4f, new UiVec(0f, 0.5f)))
                     .TextAligned(UiTextAlign.Left);
+
+                var bar = Ui.Panel($"EnemyPlate{i}Bar",
+                        Place.At(textLeft + 71f, -18f), UiSize.Fixed(142f, 7f), fill)
+                    .Coloured(FightHudPalette.Track);
 
                 // A 12px square rotated 45 degrees, pinned just outside the
                 // plate's left edge. Visible only while targeting.
@@ -743,8 +757,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 plate.Children.Add(icon);
                 plate.Children.Add(name);
                 plate.Children.Add(hp);
-                plate.Children.Add(bar);
                 plate.Children.Add(tags);
+                plate.Children.Add(bar);
                 plate.Children.Add(reticle);
                 plate.Inactive();
 
@@ -966,8 +980,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // ---- column B: the submenu -------------------------------------------------
 
-        private const float SubmenuX = 86f;
-        private const float SubmenuRowW = 404f;
+        // 282, DOWN FROM 404 -- thirty percent off. The rows carry a name and
+        // nothing else now, so the width was sized for a meta line and a cost
+        // that are two columns away.
+        //
+        // THE LEFT EDGE STAYS PUT and the panel shrinks rightward, which is why
+        // SubmenuX moved with the width rather than staying at 86. The panel
+        // belongs to the verb column it opens from and sits against it; taking
+        // the width off both sides would have opened a gap there and closed one
+        // on the battlefield, which is the half of the screen the narrowing is
+        // for.
+        private const float SubmenuRowW = 282f;
+        private const float SubmenuX = 25f;
 
         // Opens to the RIGHT of the verbs rather than replacing them: nothing is
         // taken off screen, only added, which is what the breadcrumb underneath
@@ -984,7 +1008,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             int count = FightSubmenuLayout.PoolSize;
             var rows = Ui.Each(Enumerable.Range(0, count).ToList(), (_, i) =>
             {
-                var mark = Ui.Sprite($"CharacterSkill{i}Mark", null, new UiVec(36f, 36f), Place.At(-168f, 0f))
+                var mark = Ui.Sprite($"CharacterSkill{i}Mark", null, new UiVec(36f, 36f),
+                        Place.At(-SubmenuRowW * 0.5f + 24f, 0f))
                     .Inactive();
 
                 // A NAME, AND NOTHING ELSE.
@@ -1000,8 +1025,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // Centred in the space left of the mark, and vertically centred
                 // in the row now there is no second line to make room for.
                 var name = Ui.Label($"CharacterSkill{i}Name", UiString.Runtime,
-                    new UiVec(SubmenuRowW - 100f, 24f), 18,
-                    FightHudPalette.RowNameText, Place.At(18f, 0f));
+                    new UiVec(SubmenuRowW - 90f, 24f), 18,
+                    FightHudPalette.RowNameText, Place.At(21f, 0f));
 
                 // 1.02, the gentler of the two: a submenu row is 404 wide with
                 // four columns of text in it, so the press pop would shift all
@@ -1023,13 +1048,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 return row;
             }).ToList();
 
-            // 170 wide each, not v1's 220: at 220 the left-aligned title reached
-            // x 104 and the right-aligned hint began at 68.
+            // 110 and 150, not 170 each: the rows lost 30% of their width and
+            // the two headers over them were sized for the old span, so they
+            // crossed by 58px. The hint is the wider of the two because it is
+            // the one that grows -- "SHOWING 9 OF 12" when a kit outruns the
+            // window.
             float headerY = FightSubmenuLayout.HeaderY(count);
-            var title = Ui.Label("SubmenuTitle", UiStrings.SubmenuSkillsTitle, new UiVec(170f, 20f), 11,
+            var title = Ui.Label("SubmenuTitle", UiStrings.SubmenuSkillsTitle, new UiVec(110f, 20f), 11,
                 FightHudPalette.GoldLight,
                 Place.At(SubmenuX - SubmenuRowW * 0.5f, headerY, new UiVec(0f, 0.5f)));
-            var hint = Ui.Label("SubmenuHint", UiStrings.SubmenuHint, new UiVec(170f, 20f), 11,
+            var hint = Ui.Label("SubmenuHint", UiStrings.SubmenuHint, new UiVec(150f, 20f), 11,
                 FightHudPalette.TextDisabled,
                 Place.At(SubmenuX + SubmenuRowW * 0.5f, headerY, new UiVec(1f, 0.5f)));
             SubmenuTitle = title;
@@ -1141,7 +1169,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // rather than commits, and colour is how that reads at a glance
             // without a second line of text saying so.
             var backKey = Ui.Label("SubmenuBackKey", UiStrings.HotkeyEscape, new UiVec(48f, 20f), 12,
-                FightHudPalette.TextDisabled, Place.At(-186f, 0f, new UiVec(0f, 0.5f)));
+                FightHudPalette.TextDisabled,
+                Place.At(-SubmenuRowW * 0.5f + 6f, 0f, new UiVec(0f, 0.5f)));
             var backText = Ui.Label("SubmenuBackText", UiStrings.Back,
                 new UiVec(SubmenuRowW - 100f, 24f), 18,
                 FightHudPalette.BackRowText, Place.At(18f, 0f));

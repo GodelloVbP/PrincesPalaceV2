@@ -94,6 +94,21 @@ namespace PrincesPalace.Domain.Content
         // the fifth with nothing in the content saying why.
         public bool vfxFromCaster;
 
+        // WHICH FRAME THE EFFECT LEAVES ON, for a vfxFromCaster sheet. 1-based
+        // like vfxImpactFrame, and 0 means "from the very first frame".
+        //
+        // Without it a travelling effect starts drifting the instant it appears,
+        // so mud_blast's conjuring glyph spun its eight turns while already
+        // halfway across the stage -- it tumbled through the air instead of
+        // charging where it was cast. The sequence has two phases and the flight
+        // belongs to the second: hold at the caster for the charge, then throw.
+        //
+        // Authored rather than inferred. It could be guessed from the recipe --
+        // the spin ends where the composed frames stop rotating -- but the
+        // recipe is a build-time tool and the player has never heard of it, and
+        // a sheet that charges without spinning would defeat the guess anyway.
+        public int vfxDepartFrame;
+
         // Resources-relative path of the clip that plays when the skill
         // resolves. A path rather than an entry in the Sound enum because a
         // skill is content: adding a spell should not require editing an

@@ -21,38 +21,73 @@ namespace PrincesPalace.Domain.Tests
         // one below -540 is too. This is the invariant the shipped bug broke.
         private const float CanvasHalfHeight = 540f;
 
+        // WHAT REPLACED "no row is ever placed off the canvas".
+        //
+        // That was the shipped bug's exact shape and it was written when the
+        // rows were loose on the battlefield: an unclamped count laid out
+        // seventeen of them and pushed the whole column off the top. It kept
+        // passing after the scroll container arrived, and it kept passing for
+        // the WRONG REASON -- sixteen rows happen to fit in 1080, so an
+        // invariant about the canvas and an invariant about the pool agreed by
+        // coincidence. Raising the pool to 24 separated them and the test
+        // failed on a list that is perfectly fine, because rows above the
+        // window are now supposed to be off-canvas. That IS the scroll.
+        //
+        // The property that still matters is that nothing is UNREACHABLE, and
+        // these three are it: the window is on screen, the top of the list can
+        // be scrolled to, and so can the bottom.
         [TestCase(0)]
         [TestCase(1)]
         [TestCase(5)]
         [TestCase(8)]
         [TestCase(17)]
         [TestCase(200)]
-        public void NoRowIsEverPlacedOffTheCanvas(int requested)
+        public void EveryRowCanBeScrolledIntoAWindowThatIsOnScreen(int requested)
         {
             int shown = FightSubmenuLayout.VisibleCount(requested);
 
-            for (int i = 0; i < shown; i++)
-            {
-                float y = FightSubmenuLayout.RowY(shown, i);
-                float top = y + FightSubmenuLayout.RowHeight * 0.5f;
-                float bottom = y - FightSubmenuLayout.RowHeight * 0.5f;
+            float windowTop = FightSubmenuLayout.ViewportCentreY + FightSubmenuLayout.ViewportHeight * 0.5f;
+            float windowBottom = FightSubmenuLayout.ViewportCentreY - FightSubmenuLayout.ViewportHeight * 0.5f;
 
-                Assert.Less(top, CanvasHalfHeight,
-                    $"row {i} of {requested} requested runs off the TOP of the canvas at y={y}");
-                Assert.Greater(bottom, -CanvasHalfHeight,
-                    $"row {i} of {requested} requested runs off the BOTTOM of the canvas at y={y}");
-            }
+            Assert.Less(windowTop, CanvasHalfHeight, "the list's window runs off the top of the canvas");
+            Assert.Greater(windowBottom, -CanvasHalfHeight, "the list's window runs off the bottom");
+
+            if (shown == 0) return;
+
+            float range = FightSubmenuLayout.ScrollRange(shown);
+
+            // Row 0 is the top of the list, which scroll 0 shows; row shown-1 is
+            // the bottom, which full scroll shows. If either falls outside the
+            // window at the scroll that is supposed to reveal it, it cannot be
+            // reached at all -- which is the failure the original test was for.
+            AssertInsideWindow(RowAt(shown, 0, 0f), 0, "scroll 0 must show the top of the list");
+            AssertInsideWindow(RowAt(shown, shown - 1, range), shown - 1,
+                "full scroll must show the bottom of the list");
         }
 
-        // THE CLAMP IS THE POOL, NOT THE WINDOW, and that distinction is the
-        // whole scroll rework. Sixteen rects exist; nine of them are on screen
-        // at once. A twelve-skill actor gets twelve rows, three of which are a
-        // scroll away -- where before it got eight and lost four.
+        // A row's absolute y: the window, plus where the content sits inside it,
+        // plus the row's fixed slot in the pool.
+        private static float RowAt(int count, int index, float scroll) =>
+            FightSubmenuLayout.ViewportCentreY
+            + FightSubmenuLayout.ContentY(count, scroll)
+            + FightSubmenuLayout.RowYInContent(index);
+
+        private static void AssertInsideWindow(float y, int index, string why)
+        {
+            float top = FightSubmenuLayout.ViewportCentreY + FightSubmenuLayout.ViewportHeight * 0.5f;
+            float bottom = FightSubmenuLayout.ViewportCentreY - FightSubmenuLayout.ViewportHeight * 0.5f;
+
+            Assert.LessOrEqual(y + FightSubmenuLayout.RowHeight * 0.5f, top + 0.01f,
+                $"row {index} sits above the window - {why}");
+            Assert.GreaterOrEqual(y - FightSubmenuLayout.RowHeight * 0.5f, bottom - 0.01f,
+                $"row {index} sits below the window - {why}");
+        }
+
         [Test]
         public void AskingForMoreRowsThanThePoolHoldsIsClampedRatherThanHonoured()
         {
-            Assert.AreEqual(16, FightSubmenuLayout.VisibleCount(17));
-            Assert.AreEqual(16, FightSubmenuLayout.VisibleCount(FightSubmenuLayout.PoolSize));
+            Assert.AreEqual(24, FightSubmenuLayout.VisibleCount(40));
+            Assert.AreEqual(24, FightSubmenuLayout.VisibleCount(FightSubmenuLayout.PoolSize));
             Assert.AreEqual(12, FightSubmenuLayout.VisibleCount(12), "a list longer than the window is not truncated to it");
             Assert.AreEqual(5, FightSubmenuLayout.VisibleCount(5));
             Assert.AreEqual(0, FightSubmenuLayout.VisibleCount(0));
@@ -60,18 +95,23 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // The shipped bug's shape, kept as literals so this fails loudly if
-        // the clamp is ever removed. The NUMBERS have moved twice -- 777 at the
-        // old 66px pitch, 448 at 48, and 502 once BACK moved inside the frame
-        // and lifted RowsBottom by a row and a gap -- but the property is
-        // unchanged: unclamped placement runs away, clamped placement does not.
+        // the clamp is ever removed. The NUMBERS have moved four times now --
+        // the pitch changed, BACK moved inside the frame, the panel dropped to
+        // sit flush with the verb column, and the pool grew to 24 -- but the
+        // property is unchanged: unclamped placement runs away, clamped
+        // placement does not.
+        //
+        // ASKED FOR FORTY, not seventeen. Seventeen was above the old pool and
+        // is inside the new one, so the test's two halves had become the same
+        // call and it proved nothing while still passing.
         [Test]
         public void TheShippedBug_AnUnclampedCountRunningAwayUpTheScreen_CannotRecur()
         {
-            Assert.AreEqual(502f, FightSubmenuLayout.RowY(17, 0), 0.01f,
+            Assert.AreEqual(1708f, FightSubmenuLayout.RowY(40, 0), 0.01f,
                 "unclamped, RowY still produces the runaway position - this documents the input, not the behaviour");
 
-            int shown = FightSubmenuLayout.VisibleCount(17);
-            Assert.AreEqual(448f, FightSubmenuLayout.RowY(shown, 0), 0.01f,
+            int shown = FightSubmenuLayout.VisibleCount(40);
+            Assert.AreEqual(844f, FightSubmenuLayout.RowY(shown, 0), 0.01f,
                 "clamped, the top row must sit at the pool height");
         }
 
