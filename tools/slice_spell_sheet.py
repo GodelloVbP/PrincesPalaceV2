@@ -531,6 +531,8 @@ def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=Non
     if preview:
         write_preview(vfx_id or os.path.basename(out_dir.rstrip("/\\")), frames, out_dir)
 
+    return frames
+
 
 # ---- the preview ------------------------------------------------------------
 #
@@ -690,6 +692,80 @@ def write_preview(vfx_id, frames, out_dir):
           f"-> {gif}")
 
 
+# ---- scaffolding a sheet nobody has cut yet ---------------------------------
+#
+# WHAT --new IS FOR. Adding a spell is four steps and three of them are
+# clerical: cut the sheet, write a manifest entry, write a skills.json entry,
+# then look at it and set the timing. The one that needs judgement is the last.
+#
+# This does the three and makes a first guess at the fourth, so the loop starts
+# at "watch it and change the numbers" instead of at a blank file.
+#
+# IT PRINTS THE TWO BLOCKS RATHER THAN WRITING THEM. Editing this file from
+# inside itself is a trick that works until it does not, and skills.json is
+# content a person owns -- a tool that reaches into it turns a review of five
+# lines into a review of a diff nobody asked for.
+
+
+def peak_frame(frames):
+    """Which frame carries the most ink, 1-based.
+
+    A DEFAULT FOR vfxImpactFrame, and a decent one: the impact of nearly every
+    sheet is its widest moment. Every strike sheet cut so far peaks on the
+    frame the ground takes the blow, and mud_blast on its burst.
+
+    It is a starting point rather than an answer. A sheet whose fade is drawn
+    larger than its hit would fool it, and the preview beside it is how that
+    gets noticed in the two seconds after this prints.
+    """
+    best, at = -1, 1
+    for i, frame in enumerate(frames):
+        ink = sum(1 for a in frame.getchannel("A").getdata() if a > 8)
+        if ink > best:
+            best, at = ink, i + 1
+
+    return at
+
+
+def scaffold(vfx_id, sheet, rows, cols, frames):
+    names = ", ".join(f'"f{i}"' for i in range(rows * cols))
+    impact = peak_frame(frames)
+
+    print()
+    print("-" * 72)
+    print(f"  {vfx_id}: {len(frames)} frames cut. Two blocks to paste, then tune.")
+    print("-" * 72)
+    print()
+    print("  1. tools/slice_spell_sheet.py, in VFX:")
+    print()
+    print(f'    "{vfx_id}": {{')
+    print(f'        "sheet": "{sheet}",')
+    print(f'        "grid": ({rows}, {cols}),')
+    print(f'        "names": [{names}],')
+    print('        # keyed=False if the sheet already carries the alpha the artist')
+    print('        # intended; leave it out for RGB-on-black that needs the key.')
+    print('        #')
+    print('        # "sequence" composes frames from these cells -- spin, hold and')
+    print('        # scale. Left out, the cells ARE the frames one for one, which')
+    print('        # is what every sheet shipped as before mud_blast.')
+    print("    },")
+    print()
+    print("  2. Assets/_Project/ContentData/skills.json, on the skill that casts it:")
+    print()
+    print('      "vfx": {')
+    print(f'        "path": "Spells/{vfx_id}",')
+    print(f'        "seconds": {round(len(frames) * 0.058, 2)},')
+    print(f'        "impactFrame": {impact}')
+    print("      }")
+    print()
+    print(f"  seconds is {len(frames)} frames at ~58ms, which is where the sheets that")
+    print(f"  look right sit. impactFrame {impact} is the frame carrying the most ink --")
+    print("  a guess from the art, and the first thing to check against the preview.")
+    print()
+    print(f"  Then: python tools/slice_spell_sheet.py {vfx_id} --preview")
+    print()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("ids", nargs="*", help="VFX ids to process (default: every entry in VFX)")
@@ -698,10 +774,49 @@ def main():
     parser.add_argument("--rows", type=int, default=2)
     parser.add_argument("--cols", type=int, default=3)
     parser.add_argument("--names", nargs="+")
+    parser.add_argument("--keyed", action="store_true",
+                        help="--new only: the sheet is RGB on black and its alpha must be keyed from "
+                             "luminance. Leave it off for a sheet that already carries authored alpha.")
+    parser.add_argument("--new", metavar="ID",
+                        help="Scaffold a sheet nobody has cut yet: cut it, preview it, and print the "
+                             "manifest and skills.json blocks to paste. Needs --sheet.")
     parser.add_argument("--preview", action="store_true",
                         help="Also write tools/screenshots/vfx/<id>.gif -- the sequence at the "
                              "speed content gives it, with the dissolve -- and <id>_frames.png")
     args = parser.parse_args()
+
+    if args.new:
+        if not args.sheet:
+            parser.error("--new also needs --sheet")
+
+        vfx_id = args.new
+
+        # BOTH REGISTERS, and the second one is the reason this check exists at
+        # all. Scaffolding over a name already in VFX would be a wasted run;
+        # scaffolding over a HAND_ASSEMBLED name DESTROYS art the tool cannot
+        # remake -- golem_boulder is a hand-cut sequence with a held duplicate
+        # and a stepped fade, and this refused it only after overwriting all six
+        # of its frames once.
+        if vfx_id in VFX:
+            sys.exit(f"'{vfx_id}' is already in the manifest -- run it by name instead of scaffolding it.")
+        if vfx_id in HAND_ASSEMBLED:
+            sys.exit(f"'{vfx_id}' is hand-assembled and must not be regenerated: {HAND_ASSEMBLED[vfx_id]}")
+
+        # And nothing gets written over even under a fresh name. A directory
+        # that already holds frames belongs to something.
+        existing = os.path.join(OUTPUT_ROOT, vfx_id)
+        if os.path.isdir(existing) and any(f.endswith(".png") for f in os.listdir(existing)):
+            sys.exit(f"'{existing}' already holds frames. Delete them first if that is really the intent.")
+
+        names = [f"f{i}" for i in range(args.rows * args.cols)]
+        out_dir = os.path.join(OUTPUT_ROOT, vfx_id)
+
+        print(f"[{vfx_id}] {args.sheet} {args.rows}x{args.cols}")
+        frames = slice_sheet(os.path.join(SOURCE_DIR, args.sheet), out_dir,
+                             args.rows, args.cols, names, keyed=args.keyed, preview=True,
+                             vfx_id=vfx_id)
+        scaffold(vfx_id, args.sheet, args.rows, args.cols, frames)
+        return
 
     if args.sheet:
         if not args.out or not args.names:
