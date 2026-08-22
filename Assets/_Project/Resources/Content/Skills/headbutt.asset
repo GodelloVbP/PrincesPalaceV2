@@ -51,4 +51,4 @@ MonoBehaviour:
     speedPercent: 0
     temporaryHealthPercent: 0
     splashPercent: 0
-  sortOrder: 7
+  sortOrder: 9

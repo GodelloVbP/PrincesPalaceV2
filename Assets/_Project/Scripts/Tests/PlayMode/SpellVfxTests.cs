@@ -122,6 +122,44 @@ namespace PrincesPalace.PlayModeTests
                 + "plain Textures rather than Sprites (see StanceSpriteImporter).");
         }
 
+        // ---- the two strike spells are actually reachable ---------------------------
+        //
+        // Frost Flare and Lightning Bolt shipped for months with unlockLevel 999
+        // -- the "authored at a level that can never be reached" idiom the
+        // content layer uses to park something. Their frames were on disk, their
+        // sfx were on disk, their entries were in skills.json, and no character
+        // could ever cast either of them. Nothing failed, because nothing was
+        // wrong: an unreachable skill is a legitimate state and looks exactly
+        // like a parked one.
+        //
+        // They are on Shawn's ladder now, in the gaps at 5 and 7. This is the
+        // test that notices if they are parked again -- which a bulk edit of
+        // unlockLevel would do silently, and which the VFX path tests above
+        // cannot see, since a parked skill's art resolves perfectly well.
+        [Test]
+        public void TheTwoStrikeSpellsSitOnAReachableRungOfShawnsLadder()
+        {
+            foreach (var (id, level) in new[] { ("frost_flare", 5), ("lightning_bolt", 7) })
+            {
+                var skill = ContentDatabase.Skills.FirstOrDefault(s => s != null && s.id == id);
+
+                Assert.IsNotNull(skill, $"'{id}' is not in skills.json at all");
+                Assert.AreEqual("sheep", skill.characterId, $"'{id}' is no longer Shawn's");
+                Assert.AreEqual(level, skill.unlockLevel,
+                    $"'{id}' moved off its rung - if that is deliberate, move it, but 999 means " +
+                    "nobody can ever cast it and nothing else will say so");
+
+                // AND ITS ART IS POINTED AT. The sibling test above checks every
+                // declared path has frames; this checks the path is declared,
+                // which is the other half and the one a merge is likelier to
+                // drop.
+                Assert.AreEqual($"Spells/{id}", skill.vfxPath, $"'{id}' lost its vfxPath");
+                Assert.GreaterOrEqual(skill.vfxImpactFrame, 1,
+                    $"'{id}' has no authored impact frame, so its blow lands on the resolver's " +
+                    "default rather than on the peak the sequence was composed around");
+            }
+        }
+
         // And the impact frame has to be a frame that exists -- an effect whose
         // hit lands on frame 8 of a six-frame sequence lands at the end
         // instead, quietly, which is the same class of miss one step along.

@@ -10,27 +10,30 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dace2591de5ca4247a661c0479d541c1, type: 3}
-  m_Name: gift_mana
+  m_Name: lightning_bolt
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SkillDefinition
-  id: gift_mana
-  displayName: 'Gift: Mana'
-  description: She has more wool than she has turns. Somebody else can have the difference.
+  id: lightning_bolt
+  displayName: Lightning Bolt
+  description: A single white line from the ceiling to whatever is standing under
+    it.
   characterId: sheep
-  unlockLevel: 999
-  effect: 10
-  targeting: 3
-  manaCost: 0
-  resourceCost: 2
+  unlockLevel: 7
+  effect: 0
+  targeting: 0
+  manaCost: 11
+  resourceCost: 0
   spendsAllResource: 0
   power: 0
   flatAmount: 0
   ignoresDefense: 0
-  damageInstances: []
-  vfxPath: 
-  vfxSeconds: 0.6
-  vfxImpactFrame: 3
+  damageInstances:
+  - type: 5
+    amount: 40
+  vfxPath: Spells/lightning_bolt
+  vfxSeconds: 0.52
+  vfxImpactFrame: 5
   vfxFromCaster: 0
-  sfxPath: 
+  sfxPath: Audio/Sfx/lightning_strike
   appliesStatus: 0
   hasStatus: 0
   statusMagnitude: 0
@@ -51,4 +54,4 @@ MonoBehaviour:
     speedPercent: 0
     temporaryHealthPercent: 0
     splashPercent: 0
-  sortOrder: 14
+  sortOrder: 7

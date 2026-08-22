@@ -10,27 +10,32 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dace2591de5ca4247a661c0479d541c1, type: 3}
-  m_Name: gift_mana
+  m_Name: frost_flare
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SkillDefinition
-  id: gift_mana
-  displayName: 'Gift: Mana'
-  description: She has more wool than she has turns. Somebody else can have the difference.
+  id: frost_flare
+  displayName: Frost Flare
+  description: Burns and freezes in the same breath. Something out there hates one
+    half of it.
   characterId: sheep
-  unlockLevel: 999
-  effect: 10
-  targeting: 3
-  manaCost: 0
-  resourceCost: 2
+  unlockLevel: 5
+  effect: 0
+  targeting: 0
+  manaCost: 7
+  resourceCost: 0
   spendsAllResource: 0
   power: 0
   flatAmount: 0
   ignoresDefense: 0
-  damageInstances: []
-  vfxPath: 
-  vfxSeconds: 0.6
-  vfxImpactFrame: 3
+  damageInstances:
+  - type: 1
+    amount: 14
+  - type: 2
+    amount: 14
+  vfxPath: Spells/frost_flare
+  vfxSeconds: 0.52
+  vfxImpactFrame: 5
   vfxFromCaster: 0
-  sfxPath: 
+  sfxPath: Audio/Sfx/frost_flare
   appliesStatus: 0
   hasStatus: 0
   statusMagnitude: 0
@@ -51,4 +56,4 @@ MonoBehaviour:
     speedPercent: 0
     temporaryHealthPercent: 0
     splashPercent: 0
-  sortOrder: 14
+  sortOrder: 6

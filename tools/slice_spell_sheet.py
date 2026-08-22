@@ -36,6 +36,7 @@ Usage:
 """
 
 import argparse
+import json
 import math
 import os
 import sys
@@ -398,7 +399,8 @@ def turned(cell, degrees, pivot, scale):
     return frame.rotate(degrees, resample=Image.BICUBIC, center=(cx, cy))
 
 
-def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=None):
+def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=None,
+                preview=False, vfx_id=None):
     """Cut a sheet into frames.
 
     `keyed` picks between the two kinds of sheet this has to handle:
@@ -512,6 +514,167 @@ def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=Non
 
     print(f"wrote {len(names)} frames to {out_dir}")
 
+    if preview:
+        write_preview(vfx_id or os.path.basename(out_dir.rstrip("/\\")), frames, out_dir)
+
+
+# ---- the preview ------------------------------------------------------------
+#
+# WHAT THIS IS FOR, because a contact sheet is not it.
+#
+# Every knob on a spell's look -- how many frames the recipe composes, how long
+# vfxSeconds gives them, where vfxImpactFrame puts the blow -- could only be
+# judged by building the scenes and running a PlayMode capture. Ninety seconds
+# to see nine frames play, per tweak. That cost is what made the timing on
+# these sheets get set once and left alone.
+#
+# The GIF below is the same sequence the game will play, composed the same way
+# and paced by the same number, in about two seconds and with no Unity at all.
+# It is deliberately a SIMULATION rather than a recording: the real thing is
+# unreachable from here, so what this owes is that every rule it copies is
+# copied exactly and every one it cannot is named.
+#
+# COPIED: the composed frame list, the frame duration (vfxSeconds / count), and
+# the dissolve -- each frame held clean for the first 55% of its slot and then
+# faded into by the next, which is SpellVfxPlayer.DissolveFraction.
+#
+# NOT COPIED, and each of these is a thing to go and look at in the scene:
+#   the travel across the stage for a vfxFromCaster sheet, because where the
+#     caster and the target stand is a runtime fact;
+#   preserveAspect fitting the art into a 380 box, which changes nothing for
+#     the square sheets and would for a wider one;
+#   the mirror when a caster is on the right.
+PREVIEW_FPS = 50
+PREVIEW_SIZE = 320
+PREVIEW_BACKDROP = (14, 11, 20)
+
+# Must equal SpellVfxPlayer.DissolveFraction. Two copies of one number, in two
+# languages, with no build step that can compare them -- so it is asserted from
+# the C# side rather than trusted: SpellVfxTests reads the constant, and this
+# comment is where a reader of the tool is told the other half exists.
+PREVIEW_DISSOLVE = 0.45
+
+DEFAULT_VFX_SECONDS = 0.6
+
+# NOT BESIDE THE FRAMES, and this is the one thing about the preview that is
+# not a preference. Assets/_Project/Resources/ is a Unity Resources folder:
+# everything in it is imported, everything in it is compiled into the shipped
+# build, and a .gif has no importer that would even be right. Writing the
+# preview next to the art it previews would put two files nobody asked for into
+# the game.
+#
+# tools/screenshots/ is already .gitignore'd and already where every other
+# thing-to-look-at ends up.
+PREVIEW_DIR = "tools/screenshots/vfx"
+
+CONTENT_FILES = [
+    "Assets/_Project/ContentData/skills.json",
+    "Assets/_Project/ContentData/enemies.json",
+]
+
+
+def declared_seconds(vfx_id):
+    """How long the CONTENT says this effect runs, or the resolver's default.
+
+    Read out of skills.json rather than taken as a flag, because the preview's
+    whole claim is that it shows what will ship. A --seconds switch would show
+    what the person running it typed, which is the same class of tool as no
+    tool: something that agrees with you.
+    """
+    path = f"Spells/{vfx_id}"
+
+    for source in CONTENT_FILES:
+        if not os.path.isfile(source):
+            continue
+
+        with open(source, encoding="utf-8") as handle:
+            raw = json.load(handle)
+
+        for entries in raw.values() if isinstance(raw, dict) else [raw]:
+            if not isinstance(entries, list):
+                continue
+
+            for entry in entries:
+                if not isinstance(entry, dict) or entry.get("vfxPath") != path:
+                    continue
+
+                seconds = entry.get("vfxSeconds", -1)
+                return (seconds if seconds >= 0 else DEFAULT_VFX_SECONDS,
+                        entry.get("vfxImpactFrame", -1), entry.get("id", "?"))
+
+    return None, -1, None
+
+
+def composite(frames, index, blend):
+    """One rendered instant: frame `index` at full, the next faded over it.
+
+    The outgoing frame holds at full strength rather than fading out with the
+    incoming one rising -- a symmetrical cross-fade dips in the middle, where
+    both drawings sit at half and neither is legible. Same as the player.
+    """
+    base = Image.new("RGBA", frames[0].size, (0, 0, 0, 0))
+    base.alpha_composite(frames[index])
+
+    if blend > 0 and index + 1 < len(frames):
+        nxt = frames[index + 1].copy()
+        alpha = nxt.getchannel("A").point(lambda a: int(a * blend))
+        nxt.putalpha(alpha)
+        base.alpha_composite(nxt)
+
+    return base
+
+
+def write_preview(vfx_id, frames, out_dir):
+    out_dir = PREVIEW_DIR
+    os.makedirs(out_dir, exist_ok=True)
+
+    seconds, impact, skill_id = declared_seconds(vfx_id)
+    if seconds is None:
+        seconds = DEFAULT_VFX_SECONDS
+        print(f"  preview: nothing in content casts 'Spells/{vfx_id}', "
+              f"pacing at the resolver's default {seconds}s")
+    else:
+        where = f"frame {impact}" if impact >= 1 else "unset (defaults to 3)"
+        print(f"  preview: '{skill_id}' runs it in {seconds}s, impact at {where}")
+
+    if impact > len(frames):
+        print(f"  preview: WARNING vfxImpactFrame {impact} is past the end of a "
+              f"{len(frames)}-frame sequence -- the blow will land on the last frame instead")
+
+    per_frame = seconds / len(frames)
+    step = 1.0 / PREVIEW_FPS
+    hold = 1.0 - PREVIEW_DISSOLVE
+
+    small = [f.resize((PREVIEW_SIZE, PREVIEW_SIZE), Image.LANCZOS) for f in frames]
+    backdrop = Image.new("RGBA", (PREVIEW_SIZE, PREVIEW_SIZE), PREVIEW_BACKDROP + (255,))
+
+    shots = []
+    elapsed = 0.0
+    while elapsed < seconds:
+        at = min(elapsed / per_frame, len(small) - 0.0001)
+        index = int(at)
+        within = at - index
+        blend = 0.0 if within <= hold else (within - hold) / PREVIEW_DISSOLVE
+
+        flat = backdrop.copy()
+        flat.alpha_composite(composite(small, index, blend))
+        shots.append(flat.convert("P", palette=Image.ADAPTIVE))
+
+        elapsed += step
+
+    gif = os.path.join(out_dir, f"{vfx_id}.gif")
+    shots[0].save(gif, save_all=True, append_images=shots[1:],
+                  duration=int(round(step * 1000)), loop=0, disposal=2)
+
+    # The strip beside it, for reading a single frame rather than the timing.
+    strip = Image.new("RGB", (PREVIEW_SIZE * len(small), PREVIEW_SIZE), PREVIEW_BACKDROP)
+    for i, frame in enumerate(small):
+        strip.paste(frame, (i * PREVIEW_SIZE, 0), frame)
+    strip.save(os.path.join(out_dir, f"{vfx_id}_frames.png"))
+
+    print(f"  preview: {len(shots)} rendered instants of {len(small)} frames "
+          f"-> {gif}")
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -521,12 +684,15 @@ def main():
     parser.add_argument("--rows", type=int, default=2)
     parser.add_argument("--cols", type=int, default=3)
     parser.add_argument("--names", nargs="+")
+    parser.add_argument("--preview", action="store_true",
+                        help="Also write tools/screenshots/vfx/<id>.gif -- the sequence at the "
+                             "speed content gives it, with the dissolve -- and <id>_frames.png")
     args = parser.parse_args()
 
     if args.sheet:
         if not args.out or not args.names:
             parser.error("--sheet also needs --out and --names")
-        slice_sheet(args.sheet, args.out, args.rows, args.cols, args.names)
+        slice_sheet(args.sheet, args.out, args.rows, args.cols, args.names, preview=args.preview)
         print("NOTE: one-off mode wrote nothing to the VFX manifest. If this output is going to "
               "ship, add an entry so the recipe survives.")
         return
@@ -542,7 +708,8 @@ def main():
         print(f"[{vfx_id}] {spec['sheet']} {rows}x{cols}")
         slice_sheet(os.path.join(SOURCE_DIR, spec["sheet"]),
                     os.path.join(OUTPUT_ROOT, vfx_id), rows, cols, spec["names"],
-                    keyed=spec.get("keyed", True), sequence=spec.get("sequence"))
+                    keyed=spec.get("keyed", True), sequence=spec.get("sequence"),
+                    preview=args.preview, vfx_id=vfx_id)
 
 
 if __name__ == "__main__":

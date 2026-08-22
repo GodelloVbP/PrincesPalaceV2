@@ -79,6 +79,48 @@
       "vfxFromCaster": true
     },
     {
+      "id": "frost_flare",
+      "displayName": "Frost Flare",
+      "description": "Burns and freezes in the same breath. Something out there hates one half of it.",
+      "characterId": "sheep",
+      "unlockLevel": 5,
+      "effect": "DamageSingle",
+      "manaCost": 7,
+      "damageInstances": [
+        {
+          "type": "Fire",
+          "amount": 14
+        },
+        {
+          "type": "Frost",
+          "amount": 14
+        }
+      ],
+      "vfxPath": "Spells/frost_flare",
+      "vfxSeconds": 0.52,
+      "vfxImpactFrame": 5,
+      "sfxPath": "Audio/Sfx/frost_flare"
+    },
+    {
+      "id": "lightning_bolt",
+      "displayName": "Lightning Bolt",
+      "description": "A single white line from the ceiling to whatever is standing under it.",
+      "characterId": "sheep",
+      "unlockLevel": 7,
+      "effect": "DamageSingle",
+      "manaCost": 11,
+      "damageInstances": [
+        {
+          "type": "Arcane",
+          "amount": 40
+        }
+      ],
+      "vfxPath": "Spells/lightning_bolt",
+      "vfxSeconds": 0.52,
+      "vfxImpactFrame": 5,
+      "sfxPath": "Audio/Sfx/lightning_strike"
+    },
+    {
       "id": "provoke",
       "displayName": "Provoke",
       "description": "Head down, eyes up. Whatever it was going to do, it is going to do it to you.",
