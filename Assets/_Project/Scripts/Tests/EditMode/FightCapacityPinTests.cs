@@ -120,7 +120,12 @@ namespace PrincesPalace.Domain.Tests
             int overall = worst.Values.DefaultIfEmpty(0).Max();
             string who = worst.OrderByDescending(p => p.Value).First().Key;
 
-            Assert.AreEqual(11, overall,
+            // 11 -> 12 on 2026-08-22, and the direction is the bad one: Shawn
+            // gained Mud Burst at level 3, so his levelled kit is six skills
+            // rather than five and the worst case is now four MORE than the
+            // eight rows that can be drawn. Removing the other four characters
+            // did not move this -- the worst case was always his.
+            Assert.AreEqual(12, overall,
                 $"the worst-case simultaneous skill count moved (now {overall}, on '{who}'). If it went UP, more " +
                 $"skills are invisible than before. If it went DOWN, check whether it now fits in " +
                 $"{FightSubmenuLayout.MaxRows} rows, and if it does, replace this recording with a real bound.");

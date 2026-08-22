@@ -95,8 +95,16 @@ you pick them; 90 gives a second life and 100 makes it recharge. The first draft
 **Prince's Favor is worth almost nothing per point.**
 `LootLadder.FavorPerPoint = 0.006` — one point adds 0.6 percentage points to the
 per-rung step chance. On a normal fight that moves expected climb from **0.282
-to 0.292 rungs**. The authored characters span 1–10 (turtle 1, fly 2, sheep 4,
-dog 6, owl 10), so the entire content spread is worth ~0.08 rungs.
+to 0.292 rungs**. The authored characters spanned 1–10 (turtle 1, fly 2, sheep 4,
+dog 6, owl 10), so the entire content spread was worth ~0.08 rungs.
+
+> **The spread is gone, and the conclusion is stronger without it.** Fly, Dog,
+> Turtle and Owl were removed on 2026-08-22 — they had no art and no
+> implementation, and anything else built for them could only have been a
+> placeholder. Shawn's 4 is the whole of authored Favor now, so the range this
+> paragraph measured is a single point. That does not change what follows: the
+> argument was always that the CONTENT spread is negligible against what the
+> TRACK grants, and a spread of zero makes it more so.
 
 This is why the track grants **40** Favor rather than 8. At ~44 effective Favor:
 

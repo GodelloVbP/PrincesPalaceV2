@@ -210,7 +210,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef Shimmering;
         public NodeRef HereHalo;
         public NodeRef NextMark;
-        public NodeRef ClaimBurst;
+        // The claim burst's four rigs, and their parts flattened: rig k's spark
+        // s is at k * BurstSparkCount + s. Flat because a scene serialises
+        // arrays and not jagged ones, and because the controller walks them by
+        // arithmetic rather than by shape.
+        public List<NodeRef> BurstRoots = new List<NodeRef>();
+        public List<NodeRef> BurstCores = new List<NodeRef>();
+        public List<NodeRef> BurstRings = new List<NodeRef>();
+        public List<NodeRef> BurstRays = new List<NodeRef>();
+        public List<NodeRef> BurstSparks = new List<NodeRef>();
 
         public NodeRef SummaryLevel;
         public NodeRef SummaryNextAt;
@@ -430,16 +438,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.HereHalo = haloNode;
             railChildren.Add(haloNode);
 
-            // The claim burst, likewise: one node, re-fired at each level in
-            // turn 130ms apart, rather than a hundred sleeping particles.
-            var burst = Ui.Sprite("TrackClaimBurst", "proc:rarity_burst",
-                    new UiVec(RewardTrackLayout.BurstSize, RewardTrackLayout.BurstSize),
-                    Place.At(0f, 0f))
-                .Coloured(Burst)
-                .AsDecor()
-                .Inactive();
-            screen.ClaimBurst = burst;
-            railChildren.Add(burst);
+            // THE CLAIM BURST, four rigs deep, moved to whichever node is
+            // being collected. Four rather than one because claims land 130ms
+            // apart and a burst lives five times that; four rather than
+            // ninety-nine because only a handful are ever alight at once.
+            for (int rig = 0; rig < RewardTrackLayout.BurstRigs; rig++)
+            {
+                railChildren.Add(screen.BuildBurstRig(rig));
+            }
 
             for (int level = RewardTrackLayout.FirstLevel; level <= RewardTrack.MaxLevel; level++)
             {
@@ -509,6 +515,71 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.Viewport = viewport;
 
             yield return viewport;
+        }
+
+        // ONE BURST, as four things landing together.
+        //
+        // A flash with no shape of its own, a shockwave leaving the node, rays
+        // fanning out behind it, and six sparks thrown clear. Everything here
+        // is built TRANSPARENT and inactive: the rig is inert until a claim
+        // fires it, and a build-time screenshot must not be a picture of an
+        // explosion nobody set off.
+        private UiNode BuildBurstRig(int rig)
+        {
+            float size = RewardTrackLayout.BurstRigSize;
+            var parts = new List<UiNode>();
+
+            // The rays first, so they sit BEHIND the flash. A starburst is the
+            // slowest and largest of the four and reads as what the light is
+            // coming from; drawn over the core it reads as a cog.
+            var rays = Ui.Sprite($"TrackBurstRays{rig}", "proc:rarity_burst",
+                    new UiVec(RewardTrackLayout.BurstRaysSize, RewardTrackLayout.BurstRaysSize),
+                    Place.At(0f, 0f))
+                .Coloured(Burst)
+                .AsDecor();
+            BurstRays.Add(rays);
+            parts.Add(rays);
+
+            var core = Ui.Sprite($"TrackBurstCore{rig}", "proc:radial_glow",
+                    new UiVec(RewardTrackLayout.BurstCoreSize, RewardTrackLayout.BurstCoreSize),
+                    Place.At(0f, 0f))
+                .Coloured(Burst)
+                .AsDecor();
+            BurstCores.Add(core);
+            parts.Add(core);
+
+            var ring = Ui.Sprite($"TrackBurstRing{rig}", "proc:ring_hairline",
+                    new UiVec(RewardTrackLayout.BurstRingSize, RewardTrackLayout.BurstRingSize),
+                    Place.At(0f, 0f))
+                .Coloured(Burst)
+                .AsDecor();
+            BurstRings.Add(ring);
+            parts.Add(ring);
+
+            // Sparks last, over everything: they are the part that carries the
+            // gesture outward, and debris behind the flash it came from is
+            // debris nobody sees.
+            for (int spark = 0; spark < RewardTrackLayout.BurstSparkCount; spark++)
+            {
+                var mote = Ui.Sprite($"TrackBurstSpark{rig}_{spark}", "proc:solid_circle",
+                        new UiVec(RewardTrackLayout.BurstSparkSize,
+                                  RewardTrackLayout.BurstSparkSize),
+                        Place.At(0f, 0f))
+                    .Coloured(Burst)
+                    .AsDecor();
+                BurstSparks.Add(mote);
+                parts.Add(mote);
+            }
+
+            var root = Ui.Panel($"TrackBurst{rig}", Place.At(0f, 0f),
+                UiSize.Fixed(size, size), parts);
+
+            root.AsDecor()
+                .AllowOverflow("everything in this rig is meant to leave it - the shockwave scales to 3.4x and the sparks travel 46px out - and the rig is sized to the ring's own reach rather than to the furthest thing in it, because a rect big enough for every part at its largest would be most of the band")
+                .Inactive();
+
+            BurstRoots.Add(root);
+            return root;
         }
 
         private IEnumerable<UiNode> BuildNode(int level)

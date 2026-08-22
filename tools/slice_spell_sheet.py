@@ -65,6 +65,25 @@ VFX = {
         "grid": (2, 3),
         "names": ["f0", "f1", "f2", "f3", "f4", "f5"],
     },
+    # DELIVERED WITH ITS OWN ALPHA, so this one is cut and nothing else --
+    # see the `keyed` flag below.
+    #
+    # It is also the sheet that proves the luminance key is not universal.
+    # Mud is dark: a brown splat against black differs from the background by
+    # very little luminance, so keying it would hand most of the effect an
+    # alpha in the twenties and the spell would play as a stain. Every sheet
+    # keyed before this one was a bright effect on black, where luminance and
+    # coverage happen to agree.
+    #
+    # NOTE THE ID IS NOT THE FILENAME. The spell is mud_burst; the sheet
+    # arrived as mud_blast.png. The id is what skills.json and the enemy
+    # table reference, so it is the id that has to be right.
+    "mud_burst": {
+        "sheet": "mud_blast.png",
+        "grid": (2, 3),
+        "names": ["f0", "f1", "f2", "f3", "f4", "f5"],
+        "keyed": False,
+    },
 }
 
 # VFX that exist on disk but that this tool did NOT produce and cannot
@@ -197,7 +216,30 @@ def key_to_alpha(image):
     return rgba
 
 
-def slice_sheet(sheet_path, out_dir, rows, cols, names):
+def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True):
+    """Cut a sheet into frames.
+
+    `keyed` picks between the two kinds of sheet this has to handle:
+
+    True  - RGB on black, alpha synthesised from luminance. Every sheet
+            delivered before mud_blast came this way.
+    False - the sheet already carries the alpha the artist intended. Cut the
+            grid and change nothing else.
+
+    THE FLAG EXISTS BECAUSE THE KEY IS NOT UNIVERSAL, and the failure is
+    silent rather than loud. Keying assumes brightness and coverage are the
+    same thing, which holds for a lightning bolt and a frost flare and fails
+    completely for anything dark -- mud, smoke, shadow, blood. Run through
+    the keyer, a brown splat keeps its colour and loses four fifths of its
+    opacity, so the spell still plays and still looks like something. It just
+    looks like a stain.
+
+    The line-erasing passes are skipped with it, and for the same reason
+    rather than for convenience: both hunt for artefacts of an unkeyed
+    delivery -- light lines drawn across the sheet, borders boxed around each
+    cell -- and neither can tell those from art in a frame whose alpha was
+    authored deliberately.
+    """
     expected = rows * cols
     if len(names) != expected:
         sys.exit(f"Need exactly {expected} names for a {rows}x{cols} sheet, got {len(names)}.")
@@ -210,17 +252,28 @@ def slice_sheet(sheet_path, out_dir, rows, cols, names):
     if not os.path.isfile(sheet_path):
         sys.exit(f"Missing source sheet: {sheet_path}")
 
-    sheet = Image.open(sheet_path).convert("RGB")
-    width, height = sheet.size
+    source = Image.open(sheet_path)
+    width, height = source.size
     if width % cols or height % rows:
         print(f"warning: {width}x{height} does not divide evenly into {cols}x{rows}; "
               f"cells will be truncated by up to a pixel.")
 
-    lines = erase_drawn_lines(sheet)
-    if lines:
-        print(f"erased {lines} drawn grid line(s)")
+    if keyed:
+        sheet = source.convert("RGB")
 
-    keyed = key_to_alpha(sheet)
+        lines = erase_drawn_lines(sheet)
+        if lines:
+            print(f"erased {lines} drawn grid line(s)")
+
+        cut = key_to_alpha(sheet)
+    else:
+        if "A" not in source.getbands():
+            sys.exit(f"'{sheet_path}' has no alpha channel but is declared keyed=False. "
+                     f"Either the wrong sheet was delivered or the entry should be keyed.")
+
+        cut = source.convert("RGBA")
+        print("authored alpha: keeping it, and skipping both line-erasing passes")
+
     os.makedirs(out_dir, exist_ok=True)
 
     cell_w = width // cols
@@ -230,11 +283,12 @@ def slice_sheet(sheet_path, out_dir, rows, cols, names):
     for index, name in enumerate(names):
         row, col = divmod(index, cols)
         box = (col * cell_w, row * cell_h, (col + 1) * cell_w, (row + 1) * cell_h)
-        frame = keyed.crop(box)
+        frame = cut.crop(box)
 
-        borders = erase_frame_borders(frame)
-        if borders:
-            print(f"  {name}: erased {borders} cell border line(s)")
+        if keyed:
+            borders = erase_frame_borders(frame)
+            if borders:
+                print(f"  {name}: erased {borders} cell border line(s)")
 
         opaque = sum(1 for a in frame.getchannel("A").getdata() if a > 8)
         coverage = opaque * 100 // (cell_w * cell_h)
@@ -286,7 +340,8 @@ def main():
         rows, cols = spec["grid"]
         print(f"[{vfx_id}] {spec['sheet']} {rows}x{cols}")
         slice_sheet(os.path.join(SOURCE_DIR, spec["sheet"]),
-                    os.path.join(OUTPUT_ROOT, vfx_id), rows, cols, spec["names"])
+                    os.path.join(OUTPUT_ROOT, vfx_id), rows, cols, spec["names"],
+                    keyed=spec.get("keyed", True))
 
 
 if __name__ == "__main__":

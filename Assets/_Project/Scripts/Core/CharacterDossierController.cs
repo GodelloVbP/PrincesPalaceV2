@@ -283,6 +283,26 @@ namespace PrincesPalace
             if (_index >= squad.Count) _index = 0;
             var character = squad[_index];
 
+            // The paging arrows, hidden when there is nobody to page to.
+            //
+            // These were always live and Step wrapped a one-element list, so
+            // pressing either did nothing at all -- a control that answers a
+            // click by not moving is worse than one that is not there. The same
+            // reasoning as TalentController's pair, and the same threshold: at
+            // two characters they come back on their own.
+            bool canPage = squad.Count > 1;
+
+            if (prevCharacterButton != null
+                && prevCharacterButton.gameObject.activeSelf != canPage)
+            {
+                prevCharacterButton.gameObject.SetActive(canPage);
+            }
+            if (nextCharacterButton != null
+                && nextCharacterButton.gameObject.activeSelf != canPage)
+            {
+                nextCharacterButton.gameObject.SetActive(canPage);
+            }
+
             var stats = ContentDatabase.EffectiveStats(character);
             var scores = ContentDatabase.EffectiveAbilityScores(character);
 
@@ -907,11 +927,19 @@ namespace PrincesPalace
             if (character?.equipment == null || save == null) return;
 
             var item = _bag[index];
+
+            // MEASURED BEFORE THE SWAP, because the swap is what moves it.
+            // Gear that carries max health changes what the run's carried
+            // current health is a fraction OF -- see ScaleCarriedHealth.
+            int maxBefore = ContentDatabase.EffectiveStats(character).maxHealth;
+
             if (!EquipMove.TryEquip(character.equipment, save.stockpiledItems, item.Id, item.Slot,
                                     item.IsEquippable, plus: item.Plus))
             {
                 return;
             }
+
+            RunEncounter.ScaleCarriedHealth(character, maxBefore);
 
             // WRITTEN IMMEDIATELY. Gear that vanishes because the game closed
             // between an equip and a save is the least forgivable thing this
@@ -937,10 +965,16 @@ namespace PrincesPalace
             var save = SaveSlotManager.CurrentSave;
             if (character?.equipment == null || save == null) return;
 
+            int maxBefore = ContentDatabase.EffectiveStats(character).maxHealth;
+
             if (!EquipMove.TryUnequip(character.equipment, save.stockpiledItems, EquipmentSlots.All[index]))
             {
                 return;
             }
+
+            // Both ways, and that symmetry is the point: scaling only on the
+            // way in would make an equip/unequip cycle a healing exploit.
+            RunEncounter.ScaleCarriedHealth(character, maxBefore);
 
             SaveSlotManager.SaveCurrent();
             ClearPreview();

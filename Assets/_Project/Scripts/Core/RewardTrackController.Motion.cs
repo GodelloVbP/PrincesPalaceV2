@@ -34,9 +34,15 @@ namespace PrincesPalace
         private const float GlideSeconds = 0.46f;
         private const float FollowSeconds = 0.7f;
         private const float AdvanceSeconds = 0.6f;
-        private const float IgniteSeconds = 0.9f;
-        private const float BurstSeconds = 0.9f;
+        // 0.7 rather than 0.9. The burst is four parts now and the last of them
+        // is gone by 70% of the old duration; the remaining 200ms were a fully
+        // transparent node still being written to every frame.
+        private const float BurstSeconds = 0.7f;
         private const float BurstStagger = 0.13f;
+
+        // The seal stamps home in the burst's first third, so it is the last
+        // thing still moving when the light goes out.
+        private const float SealStampSeconds = 0.24f;
         private const float CardSwapSeconds = 0.28f;
         private const float CardRisePixels = 7f;
 
@@ -72,6 +78,11 @@ namespace PrincesPalace
         private Coroutine _glide;
         private Coroutine _cardSwap;
         private Coroutine _bursts;
+
+        // Which rig the next burst takes. Kept across claims rather than reset,
+        // so two collections in quick succession do not both start on rig 0 and
+        // cut each other off.
+        private int _nextRig;
 
         // Quantised depth-of-field, one entry per node.
         //
@@ -373,61 +384,198 @@ namespace PrincesPalace
         // flashes.
         private void BeginClaimBursts(int fromLevel, int throughLevel)
         {
-            if (claimBurstRect == null || claimBurst == null) return;
+            if (burstRoots == null || burstRoots.Length == 0) return;
             if (throughLevel < fromLevel) return;
 
             if (_bursts != null) StopCoroutine(_bursts);
             _bursts = StartCoroutine(ClaimBursts(fromLevel, throughLevel));
         }
 
+        // ONE COROUTINE PER LEVEL, on its own rig, which is the opposite of
+        // what this did.
+        //
+        // It used to drive a single shared node from one loop, so the burst for
+        // level 14 was cut off at its 130th millisecond by level 15's -- five
+        // sixths of every burst in a chain was never drawn, and what the player
+        // saw was one smear travelling up the rail. Collecting thirty-five
+        // levels is the biggest thing this screen ever does and it looked like
+        // a loading bar.
+        //
+        // Rigs are taken round-robin, so a burst gets four stagger periods --
+        // 520ms of its 700 -- before its rig is needed again. The overlap that
+        // remains is at the tail, where a burst is nearly transparent anyway.
         private IEnumerator ClaimBursts(int fromLevel, int throughLevel)
         {
-            claimBurstRect.gameObject.SetActive(true);
-
             for (int level = fromLevel; level <= throughLevel; level++)
             {
-                claimBurstRect.anchoredPosition =
-                    new Vector2(RewardTrackLayout.NodeOffsetX(level), 0f);
+                StartCoroutine(Burst(_nextRig, level));
+                _nextRig = (_nextRig + 1) % burstRoots.Length;
 
-                // A NESTED COROUTINE PER LEVEL WOULD BE WRONG. The bursts are
-                // 130ms apart and each lasts 900, so they overlap five deep --
-                // and with one shared node there is only ever one to draw. What
-                // the player sees is the last one fired, still travelling,
-                // which is what a sweep looks like.
+                // ACCELERATING, slightly. A fixed stagger over thirty-five
+                // levels is thirty-five identical events in a row; shortening
+                // it as the chain runs turns a list into a cascade, which is
+                // the shape every game that does this well uses.
+                float wait = Mathf.Lerp(
+                    BurstStagger, BurstStagger * 0.55f,
+                    Mathf.InverseLerp(fromLevel, fromLevel + 12f, level));
+
                 float elapsed = 0f;
-                while (elapsed < BurstStagger)
+                while (elapsed < wait)
                 {
                     elapsed += Time.unscaledDeltaTime;
-                    PaintBurst(elapsed / BurstSeconds);
                     yield return null;
                 }
             }
 
-            // And then let the last one finish on its own.
-            float tail = BurstStagger;
-            while (tail < BurstSeconds)
-            {
-                tail += Time.unscaledDeltaTime;
-                PaintBurst(tail / BurstSeconds);
-                yield return null;
-            }
-
-            claimBurstRect.gameObject.SetActive(false);
             _bursts = null;
         }
 
-        // Ring scale .3 -> 3.4, opacity up and then out over its own life.
-        private void PaintBurst(float t)
+        // One burst, from ignition to nothing.
+        private IEnumerator Burst(int rig, int level)
         {
-            t = Mathf.Clamp01(t);
+            var root = Rig(burstRoots, rig);
+            if (root == null) yield break;
 
-            claimBurstRect.localScale = Vector3.one * Mathf.Lerp(0.3f, 3.4f, EaseOutCubic(t));
+            root.anchoredPosition = new Vector2(RewardTrackLayout.NodeOffsetX(level), 0f);
+            root.gameObject.SetActive(true);
 
-            // In over the first sixth, out over the rest. A symmetric fade
-            // makes a burst read as a pulse; this reads as an ignition.
-            float alpha = t < 0.16f ? t / 0.16f : 1f - (t - 0.16f) / 0.84f;
-            claimBurst.color = WithAlpha(Gold, Mathf.Clamp01(alpha));
+            // The seal stamping onto the node is part of the same event and is
+            // driven from here, because it belongs to a LEVEL rather than to a
+            // rig -- the pip is one of the ninety-nine, not one of the four.
+            int index = level - RewardTrackLayout.FirstLevel;
+
+            float t = 0f;
+            while (t < BurstSeconds)
+            {
+                t += Time.unscaledDeltaTime;
+                PaintBurst(rig, Mathf.Clamp01(t / BurstSeconds));
+                StampSeal(index, Mathf.Clamp01(t / SealStampSeconds));
+                yield return null;
+            }
+
+            PaintBurst(rig, 1f);
+            StampSeal(index, 1f);
+            root.gameObject.SetActive(false);
         }
+
+        // THE FOUR PARTS, each on its own curve, which is the whole difference
+        // between an impact and a thing getting bigger.
+        //
+        // The flash is fastest and dies first; the shockwave outlives it and
+        // travels furthest; the rays turn while they fan, so the burst is not
+        // radially symmetric for its whole life; the sparks leave late, in
+        // sequence, and fall as they go. Nothing here shares a duration with
+        // anything else on purpose.
+        private void PaintBurst(int rig, float t)
+        {
+            // The core: a white-hot flash cooling to gold as it dies. It is
+            // over in the first 60% of the burst, which is what makes the
+            // shockwave look like it is leaving something behind.
+            var core = Rig(burstCores, rig);
+            if (core != null)
+            {
+                float u = Mathf.Clamp01(t / 0.6f);
+
+                core.rectTransform.localScale = Vector3.one * Mathf.Lerp(0.35f, 2.1f, EaseOutCubic(u));
+                core.color = WithAlpha(
+                    Color.Lerp(Color.white, Gold, EaseOutCubic(u)),
+                    (1f - u) * (1f - u));
+            }
+
+            // The shockwave: all the way out, thinning as it goes because a
+            // scaled hairline does exactly that, and fading on a curve that
+            // holds its brightness early and drops it late.
+            var ring = Rig(burstRings, rig);
+            if (ring != null)
+            {
+                ring.rectTransform.localScale = Vector3.one * Mathf.Lerp(0.3f, 3.4f, EaseOutCubic(t));
+                ring.color = WithAlpha(Gold, 0.95f * Mathf.Pow(1f - t, 1.6f));
+            }
+
+            // The rays, turning as they fan. Twenty-two degrees over the whole
+            // burst is not enough to read as a spin and is exactly enough to
+            // stop the shape being the same shape twice.
+            var rays = Rig(burstRays, rig);
+            if (rays != null)
+            {
+                float u = Mathf.Clamp01(t / 0.8f);
+
+                rays.rectTransform.localScale = Vector3.one * Mathf.Lerp(0.45f, 1.55f, EaseOutCubic(u));
+                rays.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -22f * u);
+                rays.color = WithAlpha(Gold, 0.85f * (1f - u) * (1f - u));
+            }
+
+            PaintSparks(rig, t);
+        }
+
+        // Six sparks thrown clear, each leaving a little after the one before
+        // and falling as it travels.
+        //
+        // THE DIRECTIONS ARE AUTHORED, not random. A burst wants to look the
+        // same every time it fires -- a player collecting thirty-five levels
+        // sees this thirty-five times in five seconds, and randomness there
+        // reads as noise rather than as variety. The spread is biased upward
+        // because the level number sits directly below the node and debris
+        // raining onto a figure is debris obscuring it.
+        private static readonly Vector2[] SparkDirections =
+        {
+            new Vector2(0.26f, 0.97f),
+            new Vector2(0.87f, 0.50f),
+            new Vector2(-0.71f, 0.71f),
+            new Vector2(-0.97f, 0.26f),
+            new Vector2(0.64f, -0.77f),
+            new Vector2(-0.42f, -0.91f),
+        };
+
+        private void PaintSparks(int rig, float t)
+        {
+            if (burstSparks == null) return;
+
+            int count = RewardTrackLayout.BurstSparkCount;
+
+            for (int s = 0; s < count; s++)
+            {
+                int i = rig * count + s;
+                if (i >= burstSparks.Length || burstSparks[i] == null) continue;
+
+                // Each leaves 55ms after the last, so the six read as one thing
+                // shattering rather than as six things starting together.
+                float delay = s * 0.055f / BurstSeconds;
+                float u = Mathf.Clamp01((t - delay) / (1f - delay));
+
+                var direction = SparkDirections[s % SparkDirections.Length];
+                float reach = RewardTrackLayout.BurstSparkReach * EaseOutCubic(u);
+
+                // Gravity, as the square of the time it has been in the air.
+                // Sparks that fly in straight lines are a firework; sparks that
+                // arc are debris.
+                float fall = 26f * u * u;
+
+                burstSparks[i].rectTransform.anchoredPosition =
+                    new Vector2(direction.x * reach, direction.y * reach - fall);
+
+                burstSparks[i].rectTransform.localScale = Vector3.one * Mathf.Lerp(1.1f, 0.25f, u);
+                burstSparks[i].color = WithAlpha(Gold, (1f - u) * (1f - u));
+            }
+        }
+
+        // The seal landing on the node it was just earned by: 2.4x down to 1
+        // with a little overshoot, over the burst's first quarter.
+        //
+        // A pip that simply appears is a pip the player never sees appear --
+        // it is nine pixels across and it arrives during an explosion. Stamped,
+        // it is the last thing to settle and therefore the thing the eye ends
+        // on, which is where the record of what just happened should be.
+        private void StampSeal(int index, float u)
+        {
+            if (seals == null || index < 0 || index >= seals.Length) return;
+            if (seals[index] == null || !seals[index].activeSelf) return;
+
+            seals[index].transform.localScale = Vector3.one * Mathf.Lerp(2.4f, 1f, EaseOutBack(u));
+        }
+
+        private static T Rig<T>(T[] array, int rig) where T : class =>
+            array != null && rig >= 0 && rig < array.Length ? array[rig] : null;
 
         // ---- the card ------------------------------------------------------------
 
@@ -485,10 +633,18 @@ namespace PrincesPalace
 
             GlideTo(newLevel, FollowSeconds);
 
-            if (claimBurstRect != null)
+            // THE SAME RIG THE CLAIM USES, at the level just reached.
+            //
+            // Ignition and collection are different events and were drawn by
+            // different code against the same node; now that a burst is four
+            // parts, keeping a second hand-rolled version of it would be two
+            // explosions to keep in step. What separates them is not the shape
+            // -- it is that this one leaves a reward WAITING and the other
+            // takes it away, which the pulse and the seal already say.
+            if (burstRoots != null && burstRoots.Length > 0)
             {
-                if (_bursts != null) StopCoroutine(_bursts);
-                _bursts = StartCoroutine(Ignite(newLevel));
+                StartCoroutine(Burst(_nextRig, newLevel));
+                _nextRig = (_nextRig + 1) % burstRoots.Length;
             }
         }
 
@@ -510,27 +666,6 @@ namespace PrincesPalace
             }
 
             railFill.sizeDelta = new Vector2(target, railFill.sizeDelta.y);
-        }
-
-        private IEnumerator Ignite(int level)
-        {
-            claimBurstRect.gameObject.SetActive(true);
-            claimBurstRect.anchoredPosition = new Vector2(RewardTrackLayout.NodeOffsetX(level), 0f);
-
-            float elapsed = 0f;
-            while (elapsed < IgniteSeconds)
-            {
-                elapsed += Time.unscaledDeltaTime;
-                float t = Mathf.Clamp01(elapsed / IgniteSeconds);
-
-                claimBurstRect.localScale = Vector3.one * Mathf.Lerp(0.4f, 2.6f, EaseOutCubic(t));
-                claimBurst.color = WithAlpha(Gold, t < 0.2f ? t / 0.2f : 1f - (t - 0.2f) / 0.8f);
-
-                yield return null;
-            }
-
-            claimBurstRect.gameObject.SetActive(false);
-            _bursts = null;
         }
 
         // ---- depth of field --------------------------------------------------------
@@ -602,6 +737,18 @@ namespace PrincesPalace
         }
 
         private static float EaseInOut(float t) => t * t * (3f - 2f * t);
+
+        // Overshoots its target and settles back, which is what makes a stamp
+        // land rather than arrive. The 1.70158 is the standard back-ease
+        // constant -- it is what gives roughly a 10% overshoot.
+        private static float EaseOutBack(float t)
+        {
+            const float C1 = 1.70158f;
+            const float C3 = C1 + 1f;
+
+            float inverse = t - 1f;
+            return 1f + C3 * inverse * inverse * inverse + C1 * inverse * inverse;
+        }
 
         // 0 -> 1 -> 0 over one period, for the loops the handoff describes as
         // "alternate".

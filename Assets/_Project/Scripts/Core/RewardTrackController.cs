@@ -33,8 +33,13 @@ namespace PrincesPalace
         [SerializeField] internal Image hereHalo;
         [SerializeField] internal RectTransform hereHaloRect;
         [SerializeField] internal RectTransform nextMark;
-        [SerializeField] internal Image claimBurst;
-        [SerializeField] internal RectTransform claimBurstRect;
+        // The claim burst's four rigs and their parts. Sparks are flattened:
+        // rig k's spark s is at k * BurstSparkCount + s.
+        [SerializeField] internal RectTransform[] burstRoots;
+        [SerializeField] internal Image[] burstCores;
+        [SerializeField] internal Image[] burstRings;
+        [SerializeField] internal Image[] burstRays;
+        [SerializeField] internal Image[] burstSparks;
 
         [SerializeField] internal TMP_Text summaryLevel;
         [SerializeField] internal TMP_Text summaryNextAt;
@@ -148,6 +153,19 @@ namespace PrincesPalace
             // cleared here rather than left to reassert itself.
             StopAllCoroutines();
             _hovered = -1;
+
+            // A BURST STOPPED MID-FLIGHT LEAVES ITS RIG LIT. StopAllCoroutines
+            // kills the thing that would have switched it off, so closing the
+            // panel during a collection and reopening it showed a frozen
+            // explosion hanging over a node -- the first frame of the next
+            // visit, before anything had a chance to repaint.
+            if (burstRoots != null)
+            {
+                foreach (var rig in burstRoots)
+                {
+                    if (rig != null) rig.gameObject.SetActive(false);
+                }
+            }
 
             // And the next open is a FIRST paint again, not a level-up. A
             // character who gained eight levels while this was shut should be
@@ -272,6 +290,13 @@ namespace PrincesPalace
             if (seals != null && i < seals.Length && seals[i] != null)
             {
                 seals[i].SetActive(state == TrackNodeState.Collected);
+
+                // AND ITS SCALE PUT BACK, because the stamp animation leaves it
+                // wherever it stopped. A claim interrupted by the panel closing
+                // -- or by a second claim landing on the same node's coroutine
+                // -- would otherwise leave a pip frozen at 2.4x forever, and
+                // the paint pass is the only thing that runs unconditionally.
+                seals[i].transform.localScale = Vector3.one;
             }
 
             // The pulse plays on ANY waiting node, including the player's own

@@ -1,4 +1,5 @@
 using UnityEngine;
+using PrincesPalace.Content;
 using PrincesPalace.Domain.Progression;
 using PrincesPalace.Domain.UiKit;
 
@@ -132,16 +133,24 @@ namespace PrincesPalace
             int from = character.claimedTrackLevel;
             if (throughLevel <= from) return;
 
-            // The character pays out its own debt, and it pays out ALL of it --
-            // ClaimTrackRewards settles the whole gap to `level` rather than to
-            // an arbitrary stopping point.
+            // TO THE NODE THAT WAS PRESSED, and no further.
             //
-            // WHICH MEANS PRESSING A NODE BELOW YOUR LEVEL STILL COLLECTS
-            // EVERYTHING, and that is deliberate rather than a limitation
-            // worked around. Half-claiming would put a second number on the
-            // save -- "paid to here, but the player only asked for that far" --
-            // and the watermark's whole value is that there is one.
-            if (!character.ClaimTrackRewards()) return;
+            // This passed no argument for one build, so ClaimTrackRewards
+            // settled the entire gap and pressing any waiting node collected
+            // every waiting node. The watermark is still a single integer --
+            // a claim starts where the last one stopped, so there is no hole
+            // to store -- which is the thing the old comment here thought it
+            // was protecting.
+            //
+            // The max-health nodes are the reason this also has to go through
+            // ScaleCarriedHealth below: collecting one moves a character's
+            // maximum, and a run that is carrying their current health has to
+            // be told, or the bar grows a permanently empty tail.
+            int maxBefore = ContentDatabase.EffectiveStats(character).maxHealth;
+
+            if (!character.ClaimTrackRewards(throughLevel)) return;
+
+            RunEncounter.ScaleCarriedHealth(character, maxBefore);
 
             SaveSlotManager.SaveCurrent();
 

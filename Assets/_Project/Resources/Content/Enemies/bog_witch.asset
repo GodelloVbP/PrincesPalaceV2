@@ -32,12 +32,12 @@ MonoBehaviour:
   spritePath: Enemies/bog_witch
   facing: 1
   sortOrder: 5
-  skillName: Hex Bolt
+  skillName: Mud Burst
   skillPower: 1.6
   skillChance: 0.4
-  vfxPath: 
+  vfxPath: Spells/mud_burst
   vfxSeconds: 0.6
-  vfxImpactFrame: 3
+  vfxImpactFrame: 4
   sfxPath: 
   appliesStatus: 0
   hasStatus: 0

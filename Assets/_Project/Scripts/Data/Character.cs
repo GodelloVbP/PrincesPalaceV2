@@ -354,8 +354,30 @@ namespace PrincesPalace
         //
         // Returns whether anything was actually handed over, so a caller can
         // drive a "reward earned" flourish without diffing the character.
-        public bool ClaimTrackRewards()
+        // THROUGH A LEVEL, not simply up to the character's own.
+        //
+        // It used to take no argument and always settle the entire gap, and
+        // the reward track's node press called it -- so pressing level 13 with
+        // a watermark at 12 and a character at 47 collected all thirty-five
+        // levels. Every node on the rail was a collect-everything button
+        // wearing a different number, which is what "it still auto claims"
+        // describes from the outside: rewards arriving that nobody asked for.
+        //
+        // The comment that defended it argued that stopping short would need
+        // "a second number on the save -- paid to here, but the player only
+        // asked for that far". That is not so, and it is worth saying why: a
+        // claim always begins at the watermark and always moves it, so
+        // stopping at 13 leaves the watermark at 13 and 14 upward still owed.
+        // One number, no hole, exactly as before. The design says the same
+        // thing in section 4 -- "claims everything from claimedTrackLevel + 1
+        // up to and including it" -- and `it` is the node, not the character.
+        public bool ClaimTrackRewards(int throughLevel)
         {
+            // NEVER PAST THE CHARACTER'S OWN LEVEL, whatever the caller asks
+            // for. This is the one guard that makes an arbitrary argument safe:
+            // a caller cannot collect a reward that has not been earned.
+            if (throughLevel > level) throughLevel = level;
+
             if (claimedTrackLevel >= level)
             {
                 // Also repairs a watermark that has somehow run ahead of the
@@ -366,18 +388,23 @@ namespace PrincesPalace
                 return false;
             }
 
-            int points = RewardTrack.GrantedBetween(TrackReward.StatPoint, claimedTrackLevel, level);
-            int favor = RewardTrack.GrantedBetween(TrackReward.Favor, claimedTrackLevel, level);
-            int health = RewardTrack.GrantedBetween(TrackReward.MaxHealth, claimedTrackLevel, level);
-            int expFind = RewardTrack.GrantedBetween(TrackReward.ExpFind, claimedTrackLevel, level);
+            if (throughLevel <= claimedTrackLevel) return false;
+
+            int points = RewardTrack.GrantedBetween(TrackReward.StatPoint, claimedTrackLevel, throughLevel);
+            int favor = RewardTrack.GrantedBetween(TrackReward.Favor, claimedTrackLevel, throughLevel);
+            int health = RewardTrack.GrantedBetween(TrackReward.MaxHealth, claimedTrackLevel, throughLevel);
+            int expFind = RewardTrack.GrantedBetween(TrackReward.ExpFind, claimedTrackLevel, throughLevel);
 
             unspentStatPoints += points;
             earnedFavor += favor;
             bonusMaxHealth += health;
             bonusExpPermille += expFind;
-            claimedTrackLevel = level;
+            claimedTrackLevel = throughLevel;
 
             return points > 0 || favor > 0 || health > 0 || expFind > 0;
         }
+
+        // Everything owed, which is what a collect-all button asks for.
+        public bool ClaimTrackRewards() => ClaimTrackRewards(level);
     }
 }

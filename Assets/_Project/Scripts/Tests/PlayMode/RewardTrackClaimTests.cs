@@ -178,16 +178,27 @@ namespace PrincesPalace.PlayModeTests
             node.onClick.Invoke();
             yield return null;
 
-            // 30, NOT 20.
+            // 20, NOT 30 -- the node that was pressed, which is what this
+            // test's own name says and what handoff section 4 specifies.
             //
-            // ClaimTrackRewards settles the whole gap to the character's level
-            // rather than to an arbitrary stopping point, and pinning that here
-            // is deliberate: the alternative -- paying only as far as the node
-            // pressed -- needs a second number on the save ("paid to here, but
-            // only this much was asked for"), and the watermark's entire value
-            // is that there is one.
-            Assert.AreEqual(30, First().claimedTrackLevel,
-                "pressing a waiting node settled part of the debt and left the rest");
+            // IT ASSERTED 30 UNTIL 2026-08-22, with a comment arguing that
+            // stopping at the pressed node "needs a second number on the save".
+            // It does not: a claim always begins at the watermark and always
+            // moves it, so stopping at 20 leaves the watermark at 20 and 21
+            // upward still owed. One number, no hole.
+            //
+            // What the test was really pinning was the implementation it was
+            // written beside -- ClaimTrackRewards took no argument, so every
+            // node on the rail was a collect-everything button wearing a
+            // different number. A test that agrees with the code rather than
+            // with the design cannot fail when the code is the thing that is
+            // wrong, which is the whole reason this one survived.
+            Assert.AreEqual(20, First().claimedTrackLevel,
+                "pressing a waiting node paid past the node that was pressed");
+
+            // And the rest is still owed rather than lost.
+            Assert.AreEqual(10, RewardTrack.UnclaimedCount(30, First().claimedTrackLevel),
+                "the levels above the pressed node stopped being owed");
         }
 
         // A node that cannot be collected must still do something. A hundred

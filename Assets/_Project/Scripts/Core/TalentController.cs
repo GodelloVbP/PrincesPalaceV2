@@ -309,10 +309,33 @@ namespace PrincesPalace
             PaintOrbs(unlocked);
             PaintDetail(unlocked);
 
-            // Arrows that cannot go anywhere are dimmed rather than hidden, so
-            // the screen does not change shape as the player pages.
-            prevCharacterButton.interactable = Roster.Count > 1;
-            nextCharacterButton.interactable = Roster.Count > 1;
+            // HIDDEN, not dimmed, when there is nobody to page to.
+            //
+            // Dimming was right while the roster was five and a squad might
+            // field fewer: the arrows would come back, so keeping the screen
+            // the same shape was worth more than removing two greyed controls.
+            // The roster is ONE character now and the other four were removed
+            // rather than postponed, so a permanently disabled arrow is not a
+            // control between uses -- it is an advertisement for characters
+            // that do not exist, which is exactly what this project keeps
+            // having to unpick.
+            //
+            // The shape argument still holds for a roster that grows: this
+            // hides only at one, so a second character brings both back
+            // without anything else changing.
+            bool canPage = Roster.Count > 1;
+
+            prevCharacterButton.interactable = canPage;
+            nextCharacterButton.interactable = canPage;
+
+            if (prevCharacterButton.gameObject.activeSelf != canPage)
+            {
+                prevCharacterButton.gameObject.SetActive(canPage);
+            }
+            if (nextCharacterButton.gameObject.activeSelf != canPage)
+            {
+                nextCharacterButton.gameObject.SetActive(canPage);
+            }
         }
 
         private void PaintOrbs(HashSet<string> unlocked)

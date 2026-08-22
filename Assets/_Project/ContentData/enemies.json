@@ -98,9 +98,12 @@
       "resistance": "Nature",
       "spritePath": "Enemies/bog_witch",
       "active": true,
-      "skillName": "Hex Bolt",
+      "skillName": "Mud Burst",
       "skillPower": 1.6,
-      "skillChance": 0.4
+      "skillChance": 0.4,
+      "vfxPath": "Spells/mud_burst",
+      "vfxSeconds": 0.6,
+      "vfxImpactFrame": 4
     },
     {
       "id": "crystal_bat",

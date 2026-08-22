@@ -39,7 +39,11 @@ $Areas = @{
     # with Reward, Ember and Settlement rather than beside them. It matches
     # exactly one class today (LevelCurveTests) and no other class in either
     # assembly contains the word.
-    run     = "Dungeon|Map|FullRun|RunState|Currency|MetaProgression|Level|Save|ActiveSquad|Run|Resume|Snapshot|Seed|Descent|Depth|Difficulty|EnemyBand|Wallet|Reward|Reckoning|Ember|Ledger|Settlement|Encounter|Room|GlobalState"
+    # 'CarriedHealth' rather than a bare 'Health': what it covers is health
+    # CARRIED BETWEEN ROOMS across a change of maximum, which is run state.
+    # A bare pattern would reach into combat, where most of the health in this
+    # game lives and where none of it is this.
+    run     = "Dungeon|Map|FullRun|RunState|Currency|MetaProgression|Level|Save|ActiveSquad|Run|Resume|Snapshot|Seed|Descent|Depth|Difficulty|EnemyBand|Wallet|Reward|Reckoning|Ember|Ledger|Settlement|Encounter|Room|GlobalState|CarriedHealth"
     # 'OfferRow' rather than a bare 'Offer': the offer ROW is a layout and
     # belongs here, but ItemOfferTests and ItemOfferRollTests are reward rules
     # that already sit in 'content' and 'run', and a bare pattern would drag

@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
+using PrincesPalace.Content;
 using PrincesPalace;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
@@ -68,6 +69,90 @@ namespace PrincesPalace.PlayModeTests
                     texture.SetPixel(x, y, clear);
             texture.Apply();
             return Sprite.Create(texture, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f));
+        }
+
+        // ---- every declared path has art behind it -------------------------------
+
+        // THE GOLEM'S BOULDER SLAM PLAYED NOTHING FOR SIX WEEKS and nothing
+        // reported it. Its six frames shipped at textureType 0, so
+        // Resources.Load<Sprite> returned null on f0, the frame probe stopped
+        // on the first miss, and the enemy's signature attack simply had no
+        // effect -- a silent failure with no error, no warning and no visual
+        // difference from an enemy that was never given one.
+        //
+        // StanceSpriteImporter now sets the texture type on import, which fixes
+        // the cause. This is the half that would have NOTICED: a path declared
+        // in content and answered by nothing is a build failure rather than
+        // something for a player to not-see.
+        //
+        // Deliberately over content rather than over the folder: art with no
+        // path pointing at it is spare art, which is harmless. A path with no
+        // art is a hole.
+        [Test]
+        public void EveryDeclaredVfxPathHasFramesBehindIt()
+        {
+            var missing = new List<string>();
+
+            foreach (var skill in ContentDatabase.Skills)
+            {
+                if (skill == null || string.IsNullOrWhiteSpace(skill.vfxPath)) continue;
+
+                var frames = FrameSequenceLoader.Load(skill.vfxPath);
+                if (frames == null || frames.Length == 0)
+                {
+                    missing.Add($"skill '{skill.id}' declares vfxPath '{skill.vfxPath}'");
+                }
+            }
+
+            foreach (var enemy in ContentDatabase.Enemies)
+            {
+                if (enemy == null || string.IsNullOrWhiteSpace(enemy.vfxPath)) continue;
+
+                var frames = FrameSequenceLoader.Load(enemy.vfxPath);
+                if (frames == null || frames.Length == 0)
+                {
+                    missing.Add($"enemy '{enemy.id}' declares vfxPath '{enemy.vfxPath}'");
+                }
+            }
+
+            Assert.IsEmpty(missing,
+                "these resolve to no frames at all, so the effect plays as nothing:\n  "
+                + string.Join("\n  ", missing)
+                + "\nEither the frames are missing from Resources, or they imported as "
+                + "plain Textures rather than Sprites (see StanceSpriteImporter).");
+        }
+
+        // And the impact frame has to be a frame that exists -- an effect whose
+        // hit lands on frame 8 of a six-frame sequence lands at the end
+        // instead, quietly, which is the same class of miss one step along.
+        [Test]
+        public void EveryImpactFrameIsInsideItsOwnSequence()
+        {
+            var wrong = new List<string>();
+
+            foreach (var enemy in ContentDatabase.Enemies)
+            {
+                if (enemy == null || string.IsNullOrWhiteSpace(enemy.vfxPath)) continue;
+
+                int count = FrameSequenceLoader.Load(enemy.vfxPath)?.Length ?? 0;
+                if (count > 0 && (enemy.vfxImpactFrame < 1 || enemy.vfxImpactFrame > count))
+                {
+                    wrong.Add($"enemy '{enemy.id}' impacts on frame {enemy.vfxImpactFrame} of {count}");
+                }
+            }
+
+            foreach (var skill in ContentDatabase.Skills)
+            {
+                if (skill == null || string.IsNullOrWhiteSpace(skill.vfxPath)) continue;
+
+                int count = FrameSequenceLoader.Load(skill.vfxPath)?.Length ?? 0;
+                if (count > 0 && (skill.vfxImpactFrame < 1 || skill.vfxImpactFrame > count))
+                {
+                    wrong.Add($"skill '{skill.id}' impacts on frame {skill.vfxImpactFrame} of {count}");
+                }
+            }
+
+            Assert.IsEmpty(wrong, "the hit lands outside the animation:\n  " + string.Join("\n  ", wrong));
         }
 
         // ---- the content-margin correction --------------------------------------

@@ -102,15 +102,26 @@ namespace PrincesPalace.PlayModeTests
             // this is the same statement either way, which is exactly why it
             // needs pinning before the roster grows.
             var relic = AnEffectRelic();
-            var party = ContentDatabase.Characters.Take(2).Select(c => c.id).ToList();
 
-            // ASSERTED, not skipped. The roster is five characters -- the SQUAD
-            // is solo today, which is a different number and not this one. A
-            // roster that shrank below two would silently turn "the whole party
-            // gets it" into "the only party member gets it", which is the
-            // statement this test exists to distinguish.
+            // TWO MEMBERS, BUILT FROM ONE CHARACTER.
+            //
+            // This used to take the first two of the roster and assert it got
+            // two, so that "the whole party gets it" could not quietly become
+            // "the only party member gets it". The roster shrank to one on
+            // 2026-08-22 -- the other four characters had no art and no
+            // implementation and were removed -- and the guard fired, correctly,
+            // for a reason with nothing to do with relics.
+            //
+            // The claim is put the same way instead of being weakened: the
+            // adapter builds one combatant per id in the list and pairs kits
+            // positionally, so the same id twice is two independent party
+            // members. What is under test is that EVERY member is handed the
+            // run's relic, and that is still exactly what is asked.
+            string only = ContentDatabase.Characters.First().id;
+            var party = new List<string> { only, only };
+
             Assert.AreEqual(2, party.Count,
-                "this test needs two roster characters to prove the relic reaches BOTH");
+                "this test needs a party of two to prove the relic reaches BOTH");
 
             var built = FightEncounterAdapter.Build(party, OneEnemy(),
                 new Domain.Rng.SeededRandom(11), relicIds: new[] { relic.id });

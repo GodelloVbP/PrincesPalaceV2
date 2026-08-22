@@ -896,8 +896,11 @@ public static class ScreenRegistry
         controller.hereHalo = result.Image(track.HereHalo);
         controller.hereHaloRect = result.Rect(track.HereHalo);
         controller.nextMark = result.Rect(track.NextMark);
-        controller.claimBurst = result.Image(track.ClaimBurst);
-        controller.claimBurstRect = result.Rect(track.ClaimBurst);
+        controller.burstRoots = track.BurstRoots.Select(result.Rect).ToArray();
+        controller.burstCores = track.BurstCores.Select(result.Image).ToArray();
+        controller.burstRings = track.BurstRings.Select(result.Image).ToArray();
+        controller.burstRays = track.BurstRays.Select(result.Image).ToArray();
+        controller.burstSparks = track.BurstSparks.Select(result.Image).ToArray();
 
         controller.summaryLevel = result.Tmp(track.SummaryLevel);
         controller.summaryNextAt = result.Tmp(track.SummaryNextAt);

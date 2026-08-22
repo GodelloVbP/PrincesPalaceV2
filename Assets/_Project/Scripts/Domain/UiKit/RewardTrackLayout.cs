@@ -249,9 +249,36 @@ namespace PrincesPalace.Domain.UiKit
 
         public static float HaloSize(int level) => DiameterOf(level) + HaloPad;
 
-        // The burst is a different shape with a different job -- it fires once,
-        // over the node, and is meant to exceed it.
-        public const float BurstSize = 96f;
+        // ---- the claim burst -----------------------------------------------------
+        //
+        // FOUR PARTS, NOT ONE, and the reason is what a single scaling sprite
+        // can and cannot say. The first build was one rarity_burst node growing
+        // from 0.3 to 3.4 and fading: it reads as a thing getting bigger, which
+        // is an event happening NEAR the node rather than TO it.
+        //
+        // A burst that lands reads as four things at once -- a flash with no
+        // shape, a shockwave leaving, rays fanning out, and debris thrown clear.
+        // Each is cheap on its own; what they buy together is the difference
+        // between a transition and an impact.
+        public const float BurstCoreSize = 96f;
+        public const float BurstRingSize = 40f;
+        public const float BurstRaysSize = 120f;
+        public const float BurstSparkSize = 5f;
+
+        // How far a spark travels from the node it left.
+        public const float BurstSparkReach = 46f;
+        public const int BurstSparkCount = 6;
+
+        // FOUR RIGS, CYCLED. Claims land 130ms apart and a burst lives about
+        // 700, so up to five overlap -- and with one shared rig the player sees
+        // each burst cut off at its 130th millisecond by the next. Four is what
+        // covers the overlap at that stagger without emitting a fifth nobody
+        // ever sees.
+        public const int BurstRigs = 4;
+
+        // The size of the rig's own rect, which has to hold the largest thing
+        // in it at its largest: the ring reaches 3.4x.
+        public static float BurstRigSize => BurstRingSize * 3.4f;
 
         // Half a pitch of air at each end, so the first and last nodes are not
         // flush against the edge of the scroll.

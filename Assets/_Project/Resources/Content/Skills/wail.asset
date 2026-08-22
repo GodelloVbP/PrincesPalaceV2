@@ -50,4 +50,4 @@ MonoBehaviour:
     speedPercent: 0
     temporaryHealthPercent: 0
     splashPercent: 0
-  sortOrder: 25
+  sortOrder: 13

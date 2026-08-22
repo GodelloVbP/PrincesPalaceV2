@@ -190,6 +190,51 @@ namespace PrincesPalace
             SaveSlotManager.SaveCurrent();
         }
 
+        // KEEPS A CHARACTER'S CARRIED HEALTH AT THE SAME FRACTION of a maximum
+        // that just moved under it.
+        //
+        // The run stores current health as an ABSOLUTE number per character,
+        // and the maximum it is a fraction of is computed from the character --
+        // so anything that changes the maximum silently changes the fraction.
+        // Equipping a +20 max health item at 50 of 100 left the run holding 50
+        // against a new maximum of 120, and the bar grew a tail of empty at the
+        // end that no amount of resting could fill in that fight. Taking the
+        // item off again did not give it back: the old value simply clamped.
+        //
+        // THE FRACTION IS THE RIGHT THING TO PRESERVE rather than the delta,
+        // and the argument is the equip/unequip cycle rather than taste. Adding
+        // the difference to current health on the way in and clamping on the
+        // way out is a healing exploit: put the item on at 50/100 for 70/120,
+        // take it off for 70 clamped to 100, repeat until full. Scaling both
+        // ways is symmetric, so a round trip returns exactly what it took.
+        //
+        // A DOWNED CHARACTER STAYS DOWN. Zero times any fraction is zero, and
+        // the floor at 1 below is applied only to someone who was standing --
+        // otherwise a max-health item would be a resurrection.
+        public static void ScaleCarriedHealth(Character character, int previousMax)
+        {
+            if (character == null || previousMax <= 0) return;
+            if (string.IsNullOrEmpty(character.definitionId)) return;
+
+            var run = SaveSlotManager.CurrentSave?.activeRun;
+            if (run?.currentHealth == null) return;
+
+            var entry = run.currentHealth.Find(
+                e => e != null && e.characterId == character.definitionId);
+
+            // No entry means this character is not carrying health -- outside a
+            // run, or not yet fielded. There is no fraction to preserve, and
+            // the next descent starts them full anyway.
+            if (entry == null || entry.hp <= 0) return;
+
+            int newMax = Content.ContentDatabase.EffectiveStats(character).maxHealth;
+
+            // The arithmetic lives in Domain so it can be tested without a
+            // save, a run or an engine; this half knows only where the numbers
+            // are kept.
+            entry.hp = Domain.Progression.CarriedHealth.Rescaled(entry.hp, previousMax, newMax);
+        }
+
         public static void ApplyStartingHealth(
             IReadOnlyList<CombatantState> party,
             IReadOnlyList<string> partyIds,

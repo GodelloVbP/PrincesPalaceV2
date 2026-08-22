@@ -10,30 +10,30 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dace2591de5ca4247a661c0479d541c1, type: 3}
-  m_Name: black_ram_mode
+  m_Name: mud_burst
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SkillDefinition
-  id: black_ram_mode
-  displayName: Black Ram Mode
-  description: Three turns of something the fleece was hiding.
+  id: mud_burst
+  displayName: Mud Burst
+  description: The bog answers. It arrives wearing whatever it picked up on the way.
   characterId: sheep
-  unlockLevel: 999
-  effect: 6
-  targeting: 2
-  manaCost: 0
-  resourceCost: 7
+  unlockLevel: 3
+  effect: 0
+  targeting: 0
+  manaCost: 8
+  resourceCost: 0
   spendsAllResource: 0
   power: 0
-  flatAmount: 0
+  flatAmount: 12
   ignoresDefense: 0
   damageInstances: []
-  vfxPath: 
+  vfxPath: Spells/mud_burst
   vfxSeconds: 0.6
-  vfxImpactFrame: 3
+  vfxImpactFrame: 4
   sfxPath: 
-  appliesStatus: 0
-  hasStatus: 0
-  statusMagnitude: 0
-  statusDuration: 0
+  appliesStatus: 3
+  hasStatus: 1
+  statusMagnitude: 25
+  statusDuration: 2
   requirements:
     strength: 0
     dexterity: 0
@@ -44,10 +44,10 @@ MonoBehaviour:
   scalingAxis: 0
   queuePushSlots: 0
   transform:
-    displayName: the Black Ram
-    turns: 3
-    attackPercent: 50
-    speedPercent: 30
-    temporaryHealthPercent: 25
-    splashPercent: 50
-  sortOrder: 10
+    displayName: 
+    turns: 0
+    attackPercent: 0
+    speedPercent: 0
+    temporaryHealthPercent: 0
+    splashPercent: 0
+  sortOrder: 7
