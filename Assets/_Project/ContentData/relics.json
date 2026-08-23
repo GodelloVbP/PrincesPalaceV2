@@ -1,24 +1,119 @@
 {
   "_readme": "Every relic in the game. Edit this file, then run Prince's Palace > Build Default Content. id and displayName are always required. Everything else is optional and defaulted. RELICS ARE DRAFTED PER RUN: three are offered at the start of a descent, the player keeps one for that run only, and it is gone when the run ends. Nothing here is permanent progression. `rarity` is one of common, uncommon, rare, ultrarare, mythic, godlike (case-insensitive, default common) and is an AUTHORED statement about how often the relic should be offered -- unlike item rarity it is not derived from a tier, because a relic has no numbers to derive it from. Changing a relic's band is this one word and nothing else. `unlockedBy` names an AchievementIds value; empty means available from the very first run, and an unknown id is a content-build failure rather than a relic that silently never appears. `effect` names a PrincesPalace.Domain.Content.RelicEffect value (case-insensitive); OMIT IT for a relic that has no mechanic yet -- it resolves to None, which is exempt from the one-relic-per-effect rule precisely so a pool of named-but-unimplemented relics can exist. Every other effect must still be unique: two relics doing the same thing makes one of them a dead choice in a draft. iconPath is optional and points at Assets/_Project/Art/Items/Relics/Processed/ -- SceneBuilder.LoadSprite leaves the slot blank with a console warning until that file exists.",
-
   "_placeholders": "seven_teeth through drowned_lantern are DELIBERATELY MECHANIC-LESS. They exist so the draft, the rarity ladder and the glossary can be seen working against a pool big enough to be a real choice, before anybody has designed what they do. Give one an `effect` when it earns one; until then they are honest about being furniture.",
-
   "relics": [
-    { "id": "dual_wield", "displayName": "Dual Wield", "description": "Whenever this character attacks, they strike the same target a second time.", "effect": "DualWield", "rarity": "common", "iconPath": "Assets/_Project/Art/Items/Relics/Processed/dual_wield.png" },
-    { "id": "magical_shield", "displayName": "Magical Shield", "description": "After casting, the next hit this character takes is reduced by half.", "effect": "MagicalShield", "rarity": "common", "iconPath": "Assets/_Project/Art/Items/Relics/Processed/magical_shield.png" },
-    { "id": "bloodlust", "displayName": "Bloodlust", "description": "Killing an enemy grants this character another turn.", "effect": "Bloodlust", "rarity": "common", "iconPath": "Assets/_Project/Art/Items/Relics/Processed/bloodlust.png" },
-
-    { "id": "seven_teeth", "displayName": "Seven Teeth", "description": "A jawbone worn smooth by counting. It has no power yet.", "rarity": "common" },
-    { "id": "salt_ledger", "displayName": "The Salt Ledger", "description": "Every debt the sea remembers, written small. It has no power yet.", "rarity": "common" },
-    { "id": "cold_iron_ring", "displayName": "Cold Iron Ring", "description": "Too heavy for the finger it was made for. It has no power yet.", "rarity": "common" },
-    { "id": "moth_king_crown", "displayName": "Crown of the Moth King", "description": "Paper thin, and it flakes. It has no power yet.", "rarity": "common" },
-    { "id": "widows_thimble", "displayName": "The Widow's Thimble", "description": "Dented on the inside only. It has no power yet.", "rarity": "common" },
-    { "id": "long_count", "displayName": "The Long Count", "description": "It has been counting since before you found it. It has no power yet.", "rarity": "common" },
-    { "id": "drowned_lantern", "displayName": "Drowned Lantern", "description": "Still lit, which is the troubling part. It has no power yet.", "rarity": "common" },
-
-    { "id": "forest_wardens_tooth", "displayName": "The Warden's Tooth", "description": "Taken from the thing that guards the first wood. It has no power yet.", "rarity": "uncommon", "unlockedBy": "first_forest_boss" },
-
-    { "id": "whetstone_heart", "displayName": "Whetstone Heart", "description": "Strikes 20% harder, and bruises just as easily.", "rarity": "uncommon", "modifiers": [ { "type": "AttackPercent", "amount": 20 }, { "type": "DefencePercent", "amount": -10 } ] },
-    { "id": "thick_hide", "displayName": "Thick Hide", "description": "Forty more health, carried slowly.", "rarity": "common", "modifiers": [ { "type": "MaxHealthFlat", "amount": 40 }, { "type": "SpeedPercent", "amount": -5 } ] }
+    {
+      "id": "dual_wield",
+      "displayName": "Dual Wield",
+      "description": "Whenever this character attacks, they strike the same target a second time.",
+      "effect": "DualWield",
+      "rarity": "common",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/dual_wield.png"
+    },
+    {
+      "id": "magical_shield",
+      "displayName": "Magical Shield",
+      "description": "After casting, the next hit this character takes is reduced by half.",
+      "effect": "MagicalShield",
+      "rarity": "common",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/magical_shield.png"
+    },
+    {
+      "id": "bloodlust",
+      "displayName": "Bloodlust",
+      "description": "Killing an enemy grants this character another turn.",
+      "effect": "Bloodlust",
+      "rarity": "common",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/bloodlust.png"
+    },
+    {
+      "id": "seven_teeth",
+      "displayName": "Seven Teeth",
+      "description": "A jawbone worn smooth by counting. It has no power yet.",
+      "rarity": "common"
+    },
+    {
+      "id": "salt_ledger",
+      "displayName": "The Salt Ledger",
+      "description": "Every debt the sea remembers, written small. It has no power yet.",
+      "rarity": "common"
+    },
+    {
+      "id": "cold_iron_ring",
+      "displayName": "Cold Iron Ring",
+      "description": "Too heavy for the finger it was made for. It has no power yet.",
+      "rarity": "common"
+    },
+    {
+      "id": "moth_king_crown",
+      "displayName": "Crown of the Moth King",
+      "description": "Paper thin, and it flakes. It has no power yet.",
+      "rarity": "common"
+    },
+    {
+      "id": "widows_thimble",
+      "displayName": "The Widow's Thimble",
+      "description": "Dented on the inside only. It has no power yet.",
+      "rarity": "common"
+    },
+    {
+      "id": "long_count",
+      "displayName": "The Long Count",
+      "description": "It has been counting since before you found it, and every third blow it lets you in on the tally.",
+      "rarity": "common",
+      "effect": "LongCount"
+    },
+    {
+      "id": "drowned_lantern",
+      "displayName": "Drowned Lantern",
+      "description": "Still lit, which is the troubling part. It has no power yet.",
+      "rarity": "common"
+    },
+    {
+      "id": "forest_wardens_tooth",
+      "displayName": "The Warden's Tooth",
+      "description": "Taken from the thing that guards the first wood. It has no power yet.",
+      "rarity": "uncommon",
+      "unlockedBy": "first_forest_boss"
+    },
+    {
+      "id": "whetstone_heart",
+      "displayName": "Whetstone Heart",
+      "description": "Strikes 20% harder, and bruises just as easily.",
+      "rarity": "uncommon",
+      "modifiers": [
+        {
+          "type": "AttackPercent",
+          "amount": 20
+        },
+        {
+          "type": "DefencePercent",
+          "amount": -10
+        }
+      ]
+    },
+    {
+      "id": "thick_hide",
+      "displayName": "Thick Hide",
+      "description": "Forty more health, carried slowly.",
+      "rarity": "common",
+      "modifiers": [
+        {
+          "type": "MaxHealthFlat",
+          "amount": 40
+        },
+        {
+          "type": "SpeedPercent",
+          "amount": -5
+        }
+      ]
+    },
+    {
+      "id": "charging_crystal",
+      "displayName": "Charging Crystal",
+      "description": "It drinks a little from every spell and gives the fourth one back with interest. The interest is reckoned on the spell itself, never on whatever else was helping.",
+      "effect": "ChargingCrystal",
+      "rarity": "common"
+    }
   ]
 }

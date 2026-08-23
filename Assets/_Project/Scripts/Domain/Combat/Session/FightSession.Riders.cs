@@ -193,7 +193,7 @@ namespace PrincesPalace.Domain.Combat.Session
             int chainSoFar = actor == _bloodlustChainActor ? _bloodlustChainCount : 0;
 
             if (actor.IsPlayerSide && actor.IsAlive
-                && RelicEffectFor(actor) == RelicEffect.Bloodlust
+                && HasRelic(actor, RelicEffect.Bloodlust)
                 && chainSoFar < FightTuning.MaxBloodlustChain
                 && _encounter.GrantExtraTurn(actor))
             {
@@ -210,11 +210,28 @@ namespace PrincesPalace.Domain.Combat.Session
         // From the kit, not from a save-file lookup. v1 read the relic loadout
         // out of GameplayManager.Instance.Save here, which is a large part of
         // why this logic could not leave the controller.
-        private RelicEffect? RelicEffectFor(CombatantState actor)
+        // EVERY RELIC THEY ARE CARRYING, not just the first one.
+        //
+        // This read Relics[0] and answered "what is this character's relic
+        // effect", which was a fair question while three effects existed and a
+        // draft handed out one relic. It silently disabled the second: a character holding Bloodlust and Dual Wield
+        // gets whichever the list happens to open with, and nothing anywhere
+        // says the other one is inert.
+        //
+        // Asked as "do they have THIS" rather than "what do they have",
+        // because that is the question every call site actually has and it is
+        // the only spelling that stays correct as the list grows.
+        private bool HasRelic(CombatantState actor, RelicEffect effect)
         {
             var kit = KitFor(actor);
-            if (kit == null || kit.Relics.Count == 0) return null;
-            return kit.Relics[0].Effect;
+            if (kit == null) return false;
+
+            for (int i = 0; i < kit.Relics.Count; i++)
+            {
+                if (kit.Relics[i].Effect == effect) return true;
+            }
+
+            return false;
         }
 
         // The next actor's turn opens: mana regenerates, statuses tick, and a

@@ -18,6 +18,20 @@ namespace PrincesPalace.Domain.Combat.Session
         // without one, a lucky room turns into an unbounded chain.
         public const int MaxBloodlustChain = 2;
 
+        // ---- counting relics -----------------------------------------------------
+        //
+        // "Every Nth" is counted PER FIGHT and per character, not per run: a
+        // counter carried between fights would make the first cast of a fight
+        // arbitrarily lucky depending on how the last one ended, which is not a
+        // thing a player can plan around.
+        //
+        // The percentages are of the action's OWN BASE. See FightSession.Potency.
+        public const int ChargingCrystalEvery = 4;
+        public const int ChargingCrystalPercent = 50;
+
+        public const int LongCountEvery = 3;
+        public const int LongCountPercent = 40;
+
         // ---- role riders -----------------------------------------------------
         //
         // Every role gets one small extra effect on top of Skill's plain

@@ -162,6 +162,24 @@ namespace PrincesPalace.Domain.Combat.Session
         // resource soaks it exactly as it would any other hit.
         private void ResolveCharacterSkill(CombatantState actor, ResolvedSkill skill, CombatantState target, int resourceSpent)
         {
+            // ONE CAST, one advance of the counter, however many things it
+            // lands on. See FightSession.Potency.
+            BeginSpellPotency(actor);
+
+            try
+            {
+                ResolveCharacterSkillInner(actor, skill, target, resourceSpent);
+            }
+            finally
+            {
+                // Every path out, including the ones that resolve nothing --
+                // a charge left armed would be spent by whatever acted next.
+                EndPotency();
+            }
+        }
+
+        private void ResolveCharacterSkillInner(CombatantState actor, ResolvedSkill skill, CombatantState target, int resourceSpent)
+        {
             switch (skill.Effect)
             {
                 case SkillEffect.DamageSingle:
@@ -311,9 +329,14 @@ namespace PrincesPalace.Domain.Combat.Session
                 // axis and the effectiveness check, which is what guarantees
                 // they can never disagree about which element this cast is.
                 var castType = ActorAttackType(actor) ?? DamageType.Physical;
+
+                // THE BASE, held so the charge can be measured against it
+                // rather than against whatever the pipeline turns it into.
+                int baseAmount = SkillResolution.Amount(skill.Effect, actor, target, skill.Power,
+                    skill.FlatAmount, resourceSpent, skill.IgnoresDefense, castType, skill.ScalingAxis);
+
                 var outcome = DamagePipeline.AfterDefences(
-                    SkillResolution.Amount(skill.Effect, actor, target, skill.Power, skill.FlatAmount,
-                        resourceSpent, skill.IgnoresDefense, castType, skill.ScalingAxis),
+                    baseAmount,
                     actor, target,
                     attackType: castType,
                     weakness: SourceFor(target)?.Weakness,
@@ -322,7 +345,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     rng: _rng,
                     resolveWard: ResolveWard);
 
-                damage = outcome.Damage;
+                damage = outcome.Damage + PotencyBonus(baseAmount);
                 DepleteBreakShield(target, outcome.Effectiveness);
                 AppendMessage($"{actor.Name} uses {skill.DisplayName} on {target.Name} for {damage} damage!{EffectivenessSuffix(outcome.Effectiveness)}");
             }
@@ -367,9 +390,13 @@ namespace PrincesPalace.Domain.Combat.Session
                 // Effectiveness is resolved PER ENEMY: one cast can be super
                 // effective against one target and resisted by another in the
                 // same fight.
+                // Per enemy, because the base itself is per enemy -- defence
+                // differs. The CHARGE was decided once for the whole cast.
+                int baseAmount = SkillResolution.Amount(skill.Effect, actor, enemy, skill.Power,
+                    skill.FlatAmount, resourceSpent, skill.IgnoresDefense, castType, skill.ScalingAxis);
+
                 var outcome = DamagePipeline.AfterDefences(
-                    SkillResolution.Amount(skill.Effect, actor, enemy, skill.Power, skill.FlatAmount,
-                        resourceSpent, skill.IgnoresDefense, castType, skill.ScalingAxis),
+                    baseAmount,
                     actor, enemy,
                     attackType: castType,
                     weakness: SourceFor(enemy)?.Weakness,
@@ -537,7 +564,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
         private void RaiseMagicalShield(CombatantState actor)
         {
-            if (RelicEffectFor(actor) != RelicEffect.MagicalShield) return;
+            if (!HasRelic(actor, RelicEffect.MagicalShield)) return;
 
             StatusEffects.Apply(actor.Statuses, StatusEffectType.Shielded,
                 FightTuning.MagicalShieldReductionPercent, FightTuning.MagicalShieldDurationTurns, actor);

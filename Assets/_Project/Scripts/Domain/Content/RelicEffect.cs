@@ -47,5 +47,23 @@ namespace PrincesPalace.Domain.Content
         // After the character's action kills an enemy, they get an extra
         // turn (capped — see FightTuning.MaxBloodlustChain).
         Bloodlust,
+
+        // Every 4th cast lands with half its own base potency again on top.
+        //
+        // ON THE BASE, NOT ON THE TOTAL, and that distinction is the whole
+        // design of it. See FightSession.Potency: the bonus is computed from
+        // the figure the spell produces on its own and added AFTER everything
+        // that multiplies -- so it cannot turn a cast that is already tripled
+        // into one that is four and a half times, and it is worth the same
+        // whether the target happens to be weak to the element or not.
+        ChargingCrystal,
+
+        // Every 3rd plain attack hits for 40% of its own base again.
+        //
+        // The same rule as ChargingCrystal in every respect except which
+        // action it counts, and deliberately so: two relics that count
+        // different things should not also disagree about what a percentage
+        // means.
+        LongCount,
     }
 }

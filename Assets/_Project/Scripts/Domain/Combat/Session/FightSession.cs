@@ -183,7 +183,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // activity happens inside it, so two swings sharing a beat rendered
             // as one action with the second swing's number silently overwriting
             // the first's (RecordBeatAmount assigns, it does not accumulate).
-            if (target.IsAlive && RelicEffectFor(actor) == RelicEffect.DualWield)
+            if (target.IsAlive && HasRelic(actor, RelicEffect.DualWield))
             {
                 CommitBeat();
                 BeginBeat(actor, target);
@@ -229,8 +229,15 @@ namespace PrincesPalace.Domain.Combat.Session
             var enemyKit = SourceFor(target);
             var actorKit = KitFor(actor);
 
+            BeginAttackPotency(actor);
+
+            // The base, held so a counted swing measures its bonus against the
+            // blow itself rather than against what armour and elements make of
+            // it. See FightSession.Potency.
+            int baseAmount = CombatMath.ComputeAttackDamage(actor, target);
+
             var outcome = DamagePipeline.AfterDefences(
-                CombatMath.ComputeAttackDamage(actor, target),
+                baseAmount,
                 actor, target,
                 attackType: actorKit?.AttackType,
                 weakness: enemyKit?.Weakness,
@@ -246,11 +253,14 @@ namespace PrincesPalace.Domain.Combat.Session
                 AppendMessage($"The poison detonates! {target.Name} takes {outcome.PoisonDetonation} bonus damage!");
             }
 
-            AppendMessage($"{verbPhrase} for {outcome.Damage} damage!{EffectivenessSuffix(outcome.Effectiveness)}");
-            RecordActorVoice(actor);
-            ApplyFinalDamage(actor, target, outcome.Damage);
+            int damage = outcome.Damage + PotencyBonus(baseAmount);
+            EndPotency();
 
-            return outcome.Damage;
+            AppendMessage($"{verbPhrase} for {damage} damage!{EffectivenessSuffix(outcome.Effectiveness)}");
+            RecordActorVoice(actor);
+            ApplyFinalDamage(actor, target, damage);
+
+            return damage;
         }
 
         // The part that never differs once a damage figure and its own message

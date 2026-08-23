@@ -10,15 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6da02db8c4530f747adcb0b4f87d4af4, type: 3}
-  m_Name: long_count
+  m_Name: charging_crystal
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
-  id: long_count
-  displayName: The Long Count
-  description: It has been counting since before you found it, and every third blow
-    it lets you in on the tally.
-  effect: 5
+  id: charging_crystal
+  displayName: Charging Crystal
+  description: It drinks a little from every spell and gives the fourth one back
+    with interest. The interest is reckoned on the spell itself, never on whatever
+    else was helping.
+  effect: 4
   rarity: 0
   unlockedBy: 
   modifiers: []
-  sortOrder: 8
+  sortOrder: 13
   iconPath: 
