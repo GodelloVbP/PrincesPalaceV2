@@ -110,6 +110,34 @@ namespace PrincesPalace.Domain.Combat.Session
             }
         }
 
+        // ---- the one funnel every landed blow goes through -----------------------
+        //
+        // FOUR CALL SITES USED TO WRITE THIS EXPRESSION BY HAND: a plain
+        // swing, a single-target skill, an all-enemies sweep, and the
+        // Assassin's execute branch. All four read
+        //
+        //     outcome.Damage + PotencyBonus(baseAmount) + NecklaceDamageBonus(actor, baseAmount)
+        //
+        // which is not a coincidence, it is the same sentence copied four
+        // times -- and copying it is exactly what let the sweep ship TWICE
+        // without one of the two bonuses: the Charging Crystal's PotencyBonus
+        // was wired into the single-target path and the plain swing and
+        // forgotten on the sweep, and months later the necklace's
+        // NecklaceDamageBonus would have repeated the identical gap if it had
+        // been added the same way a second time.
+        //
+        // Every damage-modifying relic from here on adds its bonus INSIDE
+        // this one function. A new one can be forgotten at a call site only if
+        // every call site is rewritten to forget it, which is not a mistake
+        // copy-paste makes by accident.
+        //
+        // `outcomeDamage` rather than `outcome.Damage` taken directly, because
+        // the execute branch needs to stack these bonuses on top of a figure
+        // ALREADY multiplied by the execute bonus, not on top of the pipeline's
+        // raw output -- the two are different numbers on that one path.
+        private int TotalDamage(CombatantState actor, int baseAmount, int outcomeDamage) =>
+            outcomeDamage + PotencyBonus(baseAmount) + NecklaceDamageBonus(actor, baseAmount);
+
         // ---- the necklace --------------------------------------------------------
         //
         // NOT AN EVENT. Every other relic here reacts to something happening;

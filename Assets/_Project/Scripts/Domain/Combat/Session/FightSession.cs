@@ -255,7 +255,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 AppendMessage($"The poison detonates! {target.Name} takes {outcome.PoisonDetonation} bonus damage!");
             }
 
-            int damage = outcome.Damage + PotencyBonus(baseAmount) + NecklaceDamageBonus(actor, baseAmount);
+            int damage = TotalDamage(actor, baseAmount, outcome.Damage);
             RelicsAfterSwing(actor, target, damage);
 
             AppendMessage($"{verbPhrase} for {damage} damage!{EffectivenessSuffix(outcome.Effectiveness)}");

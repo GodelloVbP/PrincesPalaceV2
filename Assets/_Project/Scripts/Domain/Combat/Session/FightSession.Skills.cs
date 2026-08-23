@@ -68,9 +68,10 @@ namespace PrincesPalace.Domain.Combat.Session
             // rather than against what the execute bonus makes of it.
             int baseAmount = CombatMath.ComputeSkillDamage(actor, target, SkillPowerMultiplierFor(actor));
 
-            int damage = (isExecute
+            int executeAdjusted = isExecute
                 ? Rounding.AwayFromZero(outcome.Damage * FightTuning.AssassinExecuteBonusMultiplier)
-                : outcome.Damage) + PotencyBonus(baseAmount) + NecklaceDamageBonus(actor, baseAmount);
+                : outcome.Damage;
+            int damage = TotalDamage(actor, baseAmount, executeAdjusted);
 
             AppendMessage($"{actor.Name} casts {SkillDisplayNameFor(actor)} on {target.Name} for {damage} damage!{EffectivenessSuffix(outcome.Effectiveness)}");
             ApplySkillRoleEffect(role, actor, target, damage, isExecute);
@@ -367,7 +368,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     rng: _rng,
                     resolveWard: ResolveWard);
 
-                damage = outcome.Damage + PotencyBonus(baseAmount) + NecklaceDamageBonus(actor, baseAmount);
+                damage = TotalDamage(actor, baseAmount, outcome.Damage);
                 DepleteBreakShield(target, outcome.Effectiveness);
                 AppendMessage($"{actor.Name} uses {skill.DisplayName} on {target.Name} for {damage} damage!{EffectivenessSuffix(outcome.Effectiveness)}");
             }
@@ -428,16 +429,9 @@ namespace PrincesPalace.Domain.Combat.Session
                     resolveWard: ResolveWard);
 
                 DepleteBreakShield(enemy, outcome.Effectiveness);
-
-                // A SWEEP GETS THE SAME BONUSES A SINGLE CAST DOES. This did
-                // not, once: the Charging Crystal's PotencyBonus was wired into
-                // the single-target path and the plain swing when it shipped,
-                // and never into the all-enemies path, so a charged sweep
-                // charged nothing. Found while adding the necklace, which would
-                // otherwise have quietly repeated the same gap.
-                int landed = outcome.Damage + PotencyBonus(baseAmount)
-                             + NecklaceDamageBonus(actor, baseAmount);
-
+                // Through the ONE FUNNEL now -- see FightSession.Relics.TotalDamage
+                // for why this call site is the reason it exists.
+                int landed = TotalDamage(actor, baseAmount, outcome.Damage);
                 // Counted with the CAST's type, not the caster's swing: a
                 // physical character throwing a fire skill dealt fire.
                 DealDamage(actor, enemy, landed, castType);
