@@ -58,6 +58,22 @@ namespace PrincesPalace.Domain.Combat.Session
         // What a kill pays, per level of whatever died.
         public const int BountyPerLevel = 3;
 
+        // ---- lucky deck ------------------------------------------------------------
+        //
+        // Three effects, one roll per swing, equal odds -- the relic's whole
+        // appeal is not knowing which one you get.
+        public const int LuckyDeckHealHealthPercent = 5;
+        public const int LuckyDeckHealManaPercent = 10;
+        public const int LuckyDeckSplashPercent = 25;
+        public const int LuckyDeckSlowPercent = 30;
+        public const int LuckyDeckSlowTurns = 1;
+
+        // ---- the drowned lantern's mark ---------------------------------------------
+        //
+        // Half the swing's own base again -- a meaningful payoff, because it
+        // costs a whole cast to set up before an attack can cash it in.
+        public const int MarkBonusPercent = 50;
+
         public const int LongCountEvery = 3;
         public const int LongCountPercent = 40;
 

@@ -48,6 +48,26 @@ namespace PrincesPalace.Domain.Combat.Session
 
             CombatMath.SpendMana(actor, SkillManaCostFor(actor));
 
+            ExecuteSkillInner(actor, target);
+
+            // Everything a relic does when a cast finishes -- the shield
+            // rises, the charge disarms, the rune and the sword follow. See
+            // FightSession.Relics. 0 resourceSpent: the basic spell has no
+            // signature-resource cost of its own to echo back.
+            RelicsAfterCast(actor, null, target, resourceSpent: 0);
+
+            CommitBeat();
+            AdvanceAfterAction();
+        }
+
+        // THE EFFECT ITSELF, separated from mana/RefreshAttackBonus/relic
+        // bookkeeping for the same reason ResolveCharacterSkillInner is
+        // separate from ResolveCharacterSkill: the First Rune replays THIS
+        // and only this, for free, without spending mana a second time or
+        // re-entering RelicsBeforeCast/RelicsAfterCast. See
+        // FightSession.Relics.TryFirstRune.
+        private void ExecuteSkillInner(CombatantState actor, CombatantState target)
+        {
             var outcome = DamagePipeline.AfterDefences(
                 CombatMath.ComputeSkillDamage(actor, target, SkillPowerMultiplierFor(actor)),
                 actor, target,
@@ -77,16 +97,12 @@ namespace PrincesPalace.Domain.Combat.Session
             ApplySkillRoleEffect(role, actor, target, damage, isExecute);
             ApplyFinalDamage(actor, target, damage);
 
+            // The Drowned Lantern: the basic spell marks its target too.
+            ApplyMark(actor, target);
+
             // The actor poses too, not just the victim -- the player can see
             // which of their own actions actually went off.
             SetStance(actor, Stances.Cast);
-
-            // Everything a relic does when a cast finishes -- the shield
-            // rises, the charge disarms. See FightSession.Relics.
-            RelicsAfterCast(actor, null, target);
-
-            CommitBeat();
-            AdvanceAfterAction();
         }
 
         // ---- authored character skills ---------------------------------------
@@ -197,7 +213,7 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 // Every path out, including the ones that resolve nothing --
                 // a charge left armed would be spent by whatever acted next.
-                RelicsAfterCast(actor, skill, target);
+                RelicsAfterCast(actor, skill, target, resourceSpent);
             }
         }
 
@@ -378,6 +394,10 @@ namespace PrincesPalace.Domain.Combat.Session
             // does. A swing is a swing.
             ApplyFinalDamage(actor, target, damage);
 
+            // The Drowned Lantern: a damaging spell marks whatever it lands
+            // on, for an attack to cash in later.
+            ApplyMark(actor, target);
+
             if (target.IsAlive)
             {
                 ApplySkillStatus(skill, target, actor);
@@ -443,6 +463,9 @@ namespace PrincesPalace.Domain.Combat.Session
                 RecordBeatAmount(System.Math.Max(landed, LargestAmountSoFar));
                 SetStance(enemy, enemy.IsAlive ? Stances.Hurt : Stances.Defeated);
                 summary.Append($" {enemy.Name} takes {landed}{EffectivenessSuffix(outcome.Effectiveness)}");
+
+                // The Drowned Lantern: a sweep marks everyone it actually hits.
+                ApplyMark(actor, enemy);
 
                 if (!enemy.IsAlive)
                 {

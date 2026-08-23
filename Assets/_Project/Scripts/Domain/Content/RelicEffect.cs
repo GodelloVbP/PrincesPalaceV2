@@ -75,6 +75,24 @@ namespace PrincesPalace.Domain.Content
         // Killing something pays, scaling with the level of what died.
         BountyHunterContract,
 
+        // After a cast lands on an enemy, one free plain attack follows on the
+        // same target -- a spell, then steel.
+        SwordInABox,
+
+        // On every plain attack, one of three effects fires at random: a small
+        // heal-and-refill, splash onto every other enemy, or a slow on the
+        // target. Re-rolled per swing, so Dual Wield's second hit gets its own
+        // independent roll.
+        LuckyDeck,
+
+        // A damaging spell marks the target it lands on; a plain attack against
+        // a marked target consumes the mark for bonus damage.
+        DrownedLantern,
+
+        // After a single-target damaging cast lands, an identical free copy of
+        // it lands again on the same target.
+        FirstRune,
+
         // A plain attack takes a turn off everything the actor is waiting on.
         //
         // Worth nothing at all in a kit with no cooldowns, and worth more the

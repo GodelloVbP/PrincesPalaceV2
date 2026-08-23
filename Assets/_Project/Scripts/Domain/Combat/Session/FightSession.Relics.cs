@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using PrincesPalace.Domain.Content;
 
 namespace PrincesPalace.Domain.Combat.Session
@@ -79,6 +81,11 @@ namespace PrincesPalace.Domain.Combat.Session
 
                 if (gained > 0) AppendMessage($"{actor.Name} finds their footing - faster.");
             }
+
+            // Lucky Deck: one roll, every swing -- including Dual Wield's
+            // second and Sword in a Box's bonus attack, both of which reach
+            // here through this same call.
+            RollLuckyDeck(actor, target, damage);
         }
 
         // ---- the cast ------------------------------------------------------------
@@ -93,7 +100,8 @@ namespace PrincesPalace.Domain.Combat.Session
         // ResolvedSkill behind it -- it is the global spell tier, not a
         // character's own kit entry. Relics that care which spell it was must
         // handle that; relics that only care THAT one happened need not.
-        private void RelicsAfterCast(CombatantState actor, ResolvedSkill? skill, CombatantState target)
+        private void RelicsAfterCast(CombatantState actor, ResolvedSkill? skill, CombatantState target,
+                                     int resourceSpent)
         {
             EndPotency();
 
@@ -108,7 +116,249 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 AppendMessage($"{actor.Name}'s pipe crackles - everything speeds up for a moment.");
             }
+
+            // The First Rune, then Sword in a Box -- both are extra actions
+            // AFTER everything else a cast can do, in the order a player would
+            // read them: the spell repeats itself, and THEN steel follows.
+            TryFirstRune(actor, skill, target, resourceSpent);
+            TrySwordInABox(actor, target);
         }
+
+        // ---- sword in a box --------------------------------------------------------
+        //
+        // A free plain Attack, on the SAME target a cast just resolved on.
+        // Played as its OWN beat, the identical pattern Dual Wield's second
+        // swing already uses -- CommitBeat closes the cast's beat, a fresh
+        // BeginBeat opens the attack's, and the CALLER's own trailing
+        // CommitBeat (in CastSkill or ExecuteSkill) finalises it. Reusing
+        // ResolveAttackSwing means this attack counts toward the Long Count,
+        // can trigger Lucky Deck, and can earn Bloodlust on a kill exactly as
+        // a player-pressed Attack would -- it IS one, just not one the player
+        // chose to press.
+        //
+        // GATED ON THE TARGET BEING AN OPPONENT, not merely alive. A self-cast
+        // heal or a Ward on an ally would otherwise have the actor "attack"
+        // their own side -- excluded by construction rather than by naming
+        // every non-damaging effect.
+        private void TrySwordInABox(CombatantState actor, CombatantState target)
+        {
+            if (actor == null || target == null || !target.IsAlive) return;
+            if (target.IsPlayerSide == actor.IsPlayerSide) return;
+            if (!HasRelic(actor, RelicEffect.SwordInABox)) return;
+
+            CommitBeat();
+            BeginBeat(actor, target);
+            SetStance(actor, Stances.Attack);
+            ResolveAttackSwing(actor, target,
+                $"{actor.Name}'s Sword in a Box springs open - {actor.Name} strikes {target.Name}");
+        }
+
+        // ---- the first rune ---------------------------------------------------------
+        //
+        // An identical free copy of the cast that just landed, on the same
+        // target. SAME resourceSpent as the original -- "a copy" means the
+        // same numbers, not a cheaper echo of them -- and the copy costs
+        // nothing further: no mana, no cooldown started twice (BeginCooldown
+        // already ran once, in the outer CastSkill, before this ever fires).
+        //
+        // CALLS *Inner DIRECTLY, never the wrapper. ResolveCharacterSkillInner
+        // and ExecuteSkillInner are the halves of each cast path that do not
+        // touch relics at all -- BeginSpellPotency/RelicsBeforeCast/
+        // RelicsAfterCast live only in the OUTER methods. Going straight to
+        // Inner is what makes a second copy of the Charging Crystal's tally
+        // and a second First Rune off the first's own copy both structurally
+        // impossible, rather than guarded by a flag that could be forgotten.
+        //
+        // SCOPED TO A SINGLE DAMAGING TARGET. "A copy of that spell, on the
+        // same target" reads cleanly for the one thing a DamageSingle cast or
+        // the basic spell hit -- and reads as a genuine question for a heal, a
+        // Ward, a Transform, or a sweep that already hit everyone. Left out
+        // rather than guessed at.
+        private void TryFirstRune(CombatantState actor, ResolvedSkill? skill, CombatantState target,
+                                  int resourceSpent)
+        {
+            if (actor == null || target == null || !target.IsAlive) return;
+            if (!HasRelic(actor, RelicEffect.FirstRune)) return;
+
+            bool eligible = skill.HasValue
+                ? skill.Value.Effect == SkillEffect.DamageSingle
+                : true; // the basic spell action is always single-target
+
+            if (!eligible) return;
+
+            CommitBeat();
+            BeginBeat(actor, target, isCast: true);
+            AppendMessage($"{actor.Name}'s First Rune flares - the spell lands again!");
+
+            if (skill.HasValue)
+            {
+                ResolveCharacterSkillInner(actor, skill.Value, target, resourceSpent);
+            }
+            else
+            {
+                ExecuteSkillInner(actor, target);
+            }
+        }
+
+        // ---- the drowned lantern's mark ---------------------------------------------
+        //
+        // WHO IS MARKED, tracked by target alone rather than by (caster,
+        // target) pair. Correct for a one-relic-holder roster -- only the
+        // wearer's own spells can ever add to this set, and only the wearer's
+        // own attacks are checked against it, so there is no third party who
+        // could see or spend a mark that is not theirs. Revisit the moment a
+        // second character can carry this relic at once: two wearers marking
+        // the same enemy would then need to know whose mark it is.
+        private readonly HashSet<CombatantState> _marked = new HashSet<CombatantState>();
+
+        // Called from the two places a SPELL actually lands damage on a
+        // specific target: the single-target skill and each hit of a sweep.
+        // Not from RelicsAfterCast, because that fires once per ACTION and a
+        // sweep's real target is a list, not the one CombatantState the beat
+        // happens to be opened on.
+        private void ApplyMark(CombatantState actor, CombatantState target)
+        {
+            if (actor == null || target == null || !target.IsAlive) return;
+            if (!HasRelic(actor, RelicEffect.DrownedLantern)) return;
+
+            _marked.Add(target);
+        }
+
+        // Consumed by an ATTACK specifically -- see FightTuning.MarkBonusPercent
+        // for why this lives beside PotencyBonus/NecklaceDamageBonus rather than
+        // inside TotalDamage itself: TotalDamage is every path a hit can land
+        // through, and this is deliberately only one of them.
+        private int MarkBonus(CombatantState actor, CombatantState target, int baseAmount)
+        {
+            if (actor == null || target == null || baseAmount <= 0) return 0;
+            if (!HasRelic(actor, RelicEffect.DrownedLantern)) return 0;
+            if (!_marked.Remove(target)) return 0;
+
+            int bonus = baseAmount * FightTuning.MarkBonusPercent / 100;
+            if (bonus > 0) AppendMessage($"{target.Name}'s mark ignites - bonus damage!");
+            return bonus;
+        }
+
+        public bool IsMarked(CombatantState target) => target != null && _marked.Contains(target);
+
+        // ---- lucky deck ---------------------------------------------------------------
+        //
+        // ONE ROLL PER SWING. Hooked from RelicsAfterSwing, which already fires
+        // once per ResolveAttackSwing call -- the same call Dual Wield's second
+        // hit and Sword in a Box's bonus attack both go through -- so a double
+        // attack gets two independent rolls for free, exactly as asked for,
+        // with no extra wiring at either of those call sites.
+        private void RollLuckyDeck(CombatantState actor, CombatantState target, int damage)
+        {
+            if (actor == null || target == null || damage <= 0) return;
+            if (!HasRelic(actor, RelicEffect.LuckyDeck)) return;
+
+            float roll = _rng?.NextFloat() ?? 0f;
+
+            if (roll < 1f / 3f)
+            {
+                LuckyDeckHeal(actor);
+            }
+            else if (roll < 2f / 3f)
+            {
+                LuckyDeckSplash(actor, target, damage);
+            }
+            else
+            {
+                LuckyDeckSlow(actor, target);
+            }
+        }
+
+        private void LuckyDeckHeal(CombatantState actor)
+        {
+            int health = actor.MaxHealth * FightTuning.LuckyDeckHealHealthPercent / 100;
+            int mana = actor.MaxMana * FightTuning.LuckyDeckHealManaPercent / 100;
+
+            if (health > 0) HealAndCount(actor, health);
+            if (mana > 0) CombatMath.RestoreMana(actor, mana);
+
+            AppendMessage($"{actor.Name}'s Lucky Deck turns up a red card - a moment to recover.");
+        }
+
+        // A FRACTION OF THE LANDED HIT, applied as raw damage rather than run
+        // back through each victim's own defence and resistance. The blow
+        // that splashes is the one that already paid its own armour tax; a
+        // second full typed resolution per victim would be a different,
+        // heavier attack wearing a light relic's name.
+        //
+        // DealDamage/SetStance/RecordKill is the fourth appearance of this
+        // exact shape in the file family (the sweep, Shatter's chain, and
+        // Transform splash all do the same three calls in the same order) --
+        // worth collapsing the day a fifth shows up and actually causes a gap
+        // the way the damage-bonus duplication did, not before.
+        private void LuckyDeckSplash(CombatantState actor, CombatantState primary, int damage)
+        {
+            int splash = damage * FightTuning.LuckyDeckSplashPercent / 100;
+            if (splash <= 0) return;
+
+            bool hitAnyone = false;
+
+            foreach (var other in _encounter.OpponentsOf(actor).ToList())
+            {
+                if (ReferenceEquals(other, primary) || !other.IsAlive) continue;
+
+                DealDamage(actor, other, splash, AttackTypeOf(actor));
+                SetStance(other, other.IsAlive ? Stances.Hurt : Stances.Defeated);
+                hitAnyone = true;
+
+                if (!other.IsAlive)
+                {
+                    _killedThisAction = true;
+                    RecordKill(actor, other);
+                }
+            }
+
+            if (hitAnyone)
+            {
+                AppendMessage($"{actor.Name}'s Lucky Deck turns up a black card - the blow splashes for {splash}!");
+            }
+        }
+
+        // -30% SPEED FOR ONE TURN, on the real Speed stat -- not a status
+        // effect. Speed already has its own machinery (it decides turn order
+        // directly), so a StatusEffectType entry that ALSO tried to mean "slow"
+        // would be a second system claiming the same authority the first
+        // already has, and the two could disagree about how slow "slowed"
+        // actually is. GrantSpeedMalusPercent reuses the exact SpeedBuff
+        // bookkeeping the player-side speed relics use, just with a negative
+        // grant -- refresh-not-stack and exact-reversal on expiry come for
+        // free from code already proven correct.
+        //
+        // SHOWN even so -- see TagLineFor in FightController.Hud.cs, which
+        // reads SpeedBonusFrom(target, LuckyDeck) < 0 to print "SLOWED" on the
+        // enemy plate. Cosmetic tag, mechanical truth; the two are wired
+        // separately on purpose.
+        private void LuckyDeckSlow(CombatantState actor, CombatantState target)
+        {
+            int lost = GrantSpeedMalusPercent(target, RelicEffect.LuckyDeck,
+                FightTuning.LuckyDeckSlowPercent, FightTuning.LuckyDeckSlowTurns);
+
+            if (lost < 0)
+            {
+                AppendMessage($"{actor.Name}'s Lucky Deck turns up a pale card - {target.Name} slows!");
+            }
+        }
+
+        // ---- seams for tests -------------------------------------------------
+        //
+        // Lucky Deck's branch is chosen by ONE RNG draw with nothing else to
+        // key a test off. Hunting for a seed that happens to land in a given
+        // third would make the test file secretly depend on SeededRandom's
+        // exact algorithm, and silently rot the day that algorithm changes for
+        // an unrelated reason. These call the three branches directly, so each
+        // one's arithmetic is checkable without fighting the roll.
+        public void LuckyDeckHealForTest(CombatantState actor) => LuckyDeckHeal(actor);
+
+        public void LuckyDeckSplashForTest(CombatantState actor, CombatantState primary, int damage) =>
+            LuckyDeckSplash(actor, primary, damage);
+
+        public void LuckyDeckSlowForTest(CombatantState actor, CombatantState target) =>
+            LuckyDeckSlow(actor, target);
 
         // ---- the one funnel every landed blow goes through -----------------------
         //

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
@@ -215,7 +216,7 @@ namespace PrincesPalace
                 enemyPlateNames[i].SetContent(i < names.Count ? names[i] : enemy.Name);
                 enemyPlateHps[i].Set(UiStrings.HealthValue, enemy.CurrentHealth, enemy.MaxHealth);
                 SetFill(enemyPlateHpFills[i], enemy.CurrentHealth, enemy.MaxHealth);
-                enemyPlateTags[i].SetContent(TagLineFor(enemy));
+                enemyPlateTags[i].SetContent(TagLineFor(enemy, _session));
 
                 // The actor's own idle art, fitted into the plate. Reusing the
                 // stage sprite rather than authoring plate icons is what makes
@@ -389,11 +390,23 @@ namespace PrincesPalace
             return null;
         }
 
-        private static string TagLineFor(CombatantState enemy)
+        private static string TagLineFor(CombatantState enemy, FightSession session)
         {
             var tags = new List<string>();
             if (enemy.BreakShield != null && enemy.BreakShield.IsBroken) tags.Add("REELING");
             foreach (var status in enemy.Statuses) tags.Add(status.Type.ToString().ToUpperInvariant());
+
+            // SLOWED and MARKED are not StatusEffectType entries -- see
+            // FightSession.Relics.LuckyDeckSlow and .ApplyMark for why each
+            // stays outside that system. This is the display half of both,
+            // read back from the session that actually holds the mechanical
+            // truth rather than duplicated onto the combatant itself.
+            if (session != null)
+            {
+                if (session.SpeedBonusFrom(enemy, RelicEffect.LuckyDeck) < 0) tags.Add("SLOWED");
+                if (session.IsMarked(enemy)) tags.Add("MARKED");
+            }
+
             return string.Join("  ·  ", tags);
         }
 

@@ -255,7 +255,10 @@ namespace PrincesPalace.Domain.Combat.Session
                 AppendMessage($"The poison detonates! {target.Name} takes {outcome.PoisonDetonation} bonus damage!");
             }
 
-            int damage = TotalDamage(actor, baseAmount, outcome.Damage);
+            // MarkBonus stays OUTSIDE the shared funnel deliberately -- it is
+            // consumed by an ATTACK specifically, and TotalDamage is every
+            // path a hit can land through. See FightSession.Relics.MarkBonus.
+            int damage = TotalDamage(actor, baseAmount, outcome.Damage) + MarkBonus(actor, target, baseAmount);
             RelicsAfterSwing(actor, target, damage);
 
             AppendMessage($"{verbPhrase} for {damage} damage!{EffectivenessSuffix(outcome.Effectiveness)}");

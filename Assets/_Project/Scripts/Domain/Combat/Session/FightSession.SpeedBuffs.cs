@@ -91,6 +91,64 @@ namespace PrincesPalace.Domain.Combat.Session
             return wanted;
         }
 
+        // THE MALUS TWIN, for a relic that SLOWS someone rather than
+        // speeding them up -- Lucky Deck's one-turn slow, on an enemy.
+        //
+        // A SEPARATE METHOD rather than GrantSpeedPercent taught to accept a
+        // negative percent, on purpose. That method's rounding rule
+        // ("wanted <= 0 -> wanted = 1") exists specifically to guarantee a
+        // BUFF is never rounded down to nothing, and its cap logic only makes
+        // sense against a ceiling a positive grant is climbing toward. Neither
+        // idea has an honest opposite for a malus, and bolting a sign flag
+        // onto one function to cover both would make its rounding rule read
+        // correctly for one sign and silently wrong for the other. Same
+        // underlying SpeedBuff bookkeeping, own small function.
+        //
+        // Returns the (negative) amount actually taken, so a caller can tell
+        // whether anything happened -- 0 for a combatant with no Speed to
+        // take from.
+        private int GrantSpeedMalusPercent(CombatantState actor, RelicEffect source, int percent, int turns)
+        {
+            if (actor == null || percent <= 0 || actor.Speed <= 0) return 0;
+
+            if (!_speedBuffs.TryGetValue(actor, out var forActor))
+            {
+                forActor = new Dictionary<RelicEffect, SpeedBuff>();
+                _speedBuffs[actor] = forActor;
+            }
+
+            if (!forActor.TryGetValue(source, out var buff))
+            {
+                buff = new SpeedBuff();
+                forActor[source] = buff;
+            }
+
+            // The base this relic measures against: what the combatant would
+            // be without what THIS relic has already taken from them.
+            int baseSpeed = actor.Speed - buff.Granted;
+            int wanted = -(baseSpeed * percent / 100);
+            if (wanted >= 0) wanted = -1;
+
+            // REFRESHED, NOT STACKED. A second slow landing before the first
+            // wears off resets the one-turn clock rather than compounding the
+            // malus -- the same rule the buff side follows, and the same
+            // reason: two slows should not be worse than one applied twice.
+            buff.TurnsLeft = turns > 0 ? turns : -1;
+
+            // Never past the point of taking a combatant to 0 -- RevokeSpeedBuff
+            // already floors at 1, and a malus larger than what remains of the
+            // BASE would otherwise ask for more than there is to give back.
+            if (buff.Granted + wanted < -baseSpeed) wanted = -baseSpeed - buff.Granted;
+            if (wanted >= 0) return 0;
+
+            buff.Granted += wanted;
+            actor.Speed += wanted;
+            if (actor.Speed < 1) actor.Speed = 1;
+            _encounter.RefreshSpeed(actor);
+
+            return wanted;
+        }
+
         // Hands back exactly what was given and forgets the buff.
         private void RevokeSpeedBuff(CombatantState actor, RelicEffect source)
         {

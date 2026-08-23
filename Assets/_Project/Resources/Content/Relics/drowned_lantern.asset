@@ -14,9 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
   id: drowned_lantern
   displayName: Drowned Lantern
-  description: Still lit, which is the troubling part. It has no power yet.
-  effect: 0
-  rarity: 0
+  description: Still lit, which is the troubling part. Whatever a spell touches,
+    it marks - and the next blow that lands there burns brighter for it.
+  effect: 11
+  rarity: 3
   unlockedBy: 
   modifiers: []
   sortOrder: 9

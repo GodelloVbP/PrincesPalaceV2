@@ -10,15 +10,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6da02db8c4530f747adcb0b4f87d4af4, type: 3}
-  m_Name: long_count
+  m_Name: lucky_deck
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
-  id: long_count
-  displayName: The Long Count
-  description: It has been counting since before you found it, and every third blow
-    it lets you in on the tally.
-  effect: 14
-  rarity: 0
+  id: lucky_deck
+  displayName: Lucky Deck
+  description: Fifty-two ways for a fight to go your way, and it never shows you
+    which one until the card is already turned.
+  effect: 10
+  rarity: 3
   unlockedBy: 
   modifiers: []
-  sortOrder: 8
+  sortOrder: 16
   iconPath: 

@@ -71,8 +71,9 @@
     {
       "id": "drowned_lantern",
       "displayName": "Drowned Lantern",
-      "description": "Still lit, which is the troubling part. It has no power yet.",
-      "rarity": "common"
+      "description": "Still lit, which is the troubling part. Whatever a spell touches, it marks - and the next blow that lands there burns brighter for it.",
+      "rarity": "ultrarare",
+      "effect": "DrownedLantern"
     },
     {
       "id": "forest_wardens_tooth",
@@ -137,6 +138,27 @@
           "damageType": "magical"
         }
       ]
+    },
+    {
+      "id": "sword_in_a_box",
+      "displayName": "Sword in a Box",
+      "description": "Small enough to carry, sharp enough to matter. Whatever a spell touches, the box opens on its own and finishes the thought.",
+      "effect": "SwordInABox",
+      "rarity": "ultrarare"
+    },
+    {
+      "id": "lucky_deck",
+      "displayName": "Lucky Deck",
+      "description": "Fifty-two ways for a fight to go your way, and it never shows you which one until the card is already turned.",
+      "effect": "LuckyDeck",
+      "rarity": "ultrarare"
+    },
+    {
+      "id": "first_rune",
+      "displayName": "The First Rune",
+      "description": "The oldest word for fire, cut so deep the stone still says it twice. Every spell it hears, it repeats.",
+      "effect": "FirstRune",
+      "rarity": "godlike"
     }
   ]
 }
