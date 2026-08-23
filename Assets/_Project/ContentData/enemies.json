@@ -100,14 +100,13 @@
       "resistance": "Nature",
       "spritePath": "Enemies/bog_witch",
       "active": true,
-      "skillName": "Mud Burst",
-      "skillPower": 1.6,
-      "skillChance": 0.4,
-      "vfx": {
-        "path": "Spells/mud_burst",
-        "seconds": 0.6,
-        "impactFrame": 4
-      }
+      "abilities": [
+        {
+          "skillId": "mud_burst",
+          "weight": 2
+        }
+      ],
+      "attackWeight": 3
     },
     {
       "id": "crystal_bat",

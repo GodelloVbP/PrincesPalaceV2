@@ -67,9 +67,41 @@ namespace PrincesPalace.Domain.Content
         // every monster that predates this. skillPower multiplies its
         // attack, skillChance is the odds of picking it on any given turn.
         // -1 sentinels so "omitted" is distinguishable from "written as 0".
+        // THE LEGACY SINGLE ACTION. A name for the telegraph, a multiplier on
+        // this monster's own basic attack, and how often it fires.
+        //
+        // Kept working, and kept because migrating it is a CONTENT decision
+        // rather than a plumbing one: "attack x 1.6" has no equivalent skill id
+        // until somebody writes the skill it should have been. A monster
+        // authored this way still behaves exactly as it did.
+        //
+        // Prefer `abilities` for anything new -- see below.
         public string skillName = "";
         public float skillPower = -1f;
         public float skillChance = -1f;
+
+        // WHAT THIS MONSTER CAN DO, as real skills with relative weights.
+        //
+        // Each entry names a skill id from skills.json, so a monster reaches
+        // the whole SkillEffect vocabulary -- damage one, damage all, heal
+        // itself, mend its own side, apply a status that belongs to the ability
+        // rather than to the monster -- and every skill written for a character
+        // in future is available to monsters for free.
+        //
+        // Weights are RELATIVE and need not sum to anything: 2 against 1 is
+        // twice as likely, and adding a third entry does not require rebalancing
+        // the first two.
+        //
+        // Non-empty, this REPLACES the trio above rather than adding to it. Two
+        // ways of saying what a monster does, both live at once, is the drift
+        // this project keeps writing rules against.
+        public RawEnemyAbility[] abilities = Array.Empty<RawEnemyAbility>();
+
+        // HOW OFTEN IT JUST SWINGS, on the same relative scale as the ability
+        // weights above. The basic attack is always in the pool -- a monster
+        // whose every turn is a special reads as scripted rather than as
+        // dangerous -- and this is the dial for it. 0 takes it out entirely.
+        public float attackWeight = 1f;
 
         // Benched, not deleted. An inactive monster keeps its full entry
         // here — stats, weakness, rewards, the lot — but no asset is built
@@ -124,6 +156,22 @@ namespace PrincesPalace.Domain.Content
         // which reads as the monster flying rather than striking. True marks
         // the plain attack as holding position exactly the way a cast does.
         public bool attackHoldsPosition;
+    }
+
+    // One line of a monster's ability list.
+    [Serializable]
+    public class RawEnemyAbility
+    {
+        // A skill id from skills.json. A skill a monster uses does not need a
+        // characterId and is never offered to a player -- the two catalogues
+        // are one file because the RULES are identical, not because the
+        // audiences are.
+        public string skillId = "";
+
+        // Relative likelihood. Zero means "authored but never chosen", which is
+        // a legitimate thing to want while tuning and is refused at build time
+        // only if EVERY entry is zero.
+        public float weight = 1f;
     }
 
     // JsonUtility can't deserialize a bare top-level JSON array, so

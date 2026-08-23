@@ -1,8 +1,24 @@
+using System;
+using System.Collections.Generic;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Content
 {
+    // A monster's ability, before the skill behind it has been looked up. See
+    // ResolvedEnemy.Abilities for why the id survives this far.
+    public readonly struct EnemyAbilityRef
+    {
+        public readonly string SkillId;
+        public readonly float Weight;
+
+        public EnemyAbilityRef(string skillId, float weight)
+        {
+            SkillId = (skillId ?? "").Trim();
+            Weight = weight;
+        }
+    }
+
     // A monster after every omitted field in its RawEnemyEntry has been
     // filled in and every provided field has been validated — the shape
     // ContentBuilder actually needs to create an EnemyDefinition asset from.
@@ -28,6 +44,21 @@ namespace PrincesPalace.Domain.Content
         // than showing a broken sprite, same graceful-missing-art rule as
         // CharacterDefinition.portraitPath.
         public readonly string SpritePath;
+
+        // WHAT THIS MONSTER CAN DO, as skill ids and relative weights.
+        //
+        // IDS RATHER THAN RESOLVED SKILLS, deliberately. Enemies and skills are
+        // two catalogues resolved independently and in no guaranteed order, so
+        // holding a ResolvedSkill here would make one resolver depend on the
+        // other having finished. The lookup happens where player kits are
+        // already built from content -- FightEncounterAdapter -- which is the
+        // one place that legitimately sees both.
+        //
+        // Empty means this monster uses the legacy SkillName trio below.
+        public readonly IReadOnlyList<EnemyAbilityRef> Abilities;
+
+        // The basic attack's own weight in that pool. See RawEnemyEntry.
+        public readonly float AttackWeight;
 
         // Empty SkillName means this monster has no second action at all.
         public readonly string SkillName;
@@ -70,6 +101,7 @@ namespace PrincesPalace.Domain.Content
             PrincesPalace.Domain.Stage.SpriteFacing facing = PrincesPalace.Domain.Stage.SpriteFacing.Right,
             bool active = true, string skillName = "", float skillPower = 1.5f, float skillChance = 0f,
             int breakShieldPoints = 0, SpellPresentation presentation = null,
+            IReadOnlyList<EnemyAbilityRef> abilities = null, float attackWeight = 1f,
             StatusEffectType? appliesStatus = null, int statusMagnitude = 0,
             int statusDuration = 0, bool avoidsFrontSlot = false, bool attackHoldsPosition = false,
             int minFloor = 1)
@@ -96,6 +128,8 @@ namespace PrincesPalace.Domain.Content
             SpritePath = spritePath ?? "";
             BreakShieldPoints = breakShieldPoints;
             Vfx = (presentation ?? SpellPresentation.None).Copy();
+            Abilities = abilities ?? Array.Empty<EnemyAbilityRef>();
+            AttackWeight = attackWeight < 0f ? 0f : attackWeight;
             AppliesStatus = appliesStatus;
             StatusMagnitude = statusMagnitude;
             StatusDuration = statusDuration;

@@ -32,17 +32,21 @@ MonoBehaviour:
   spritePath: Enemies/bog_witch
   facing: 1
   sortOrder: 5
-  skillName: Mud Burst
-  skillPower: 1.6
-  skillChance: 0.4
+  skillName: 
+  skillPower: 1.5
+  skillChance: 0.35
   vfx:
-    path: Spells/mud_burst
+    path: 
     seconds: 0.6
-    impactFrame: 4
+    impactFrame: 3
     anchor: 
     size: 380
     departFrame: 0
     sfxPath: 
+  abilities:
+  - skillId: mud_burst
+    weight: 2
+  attackWeight: 3
   appliesStatus: 0
   hasStatus: 0
   statusMagnitude: 0

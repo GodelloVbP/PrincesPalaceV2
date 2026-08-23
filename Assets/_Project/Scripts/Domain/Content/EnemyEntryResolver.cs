@@ -173,6 +173,45 @@ namespace PrincesPalace.Domain.Content
             // so the enemy just fights as a blank plate with no VFX and nothing
             // anywhere says why.
             if (!ArtPathConvention.Check(label, "spritePath", raw.spritePath, out error)) return false;
+            // THE ABILITY LIST, validated here and looked up later.
+            //
+            // This resolver cannot check that a skill id EXISTS -- skills are a
+            // separate catalogue resolved independently, and making one resolver
+            // wait on the other would couple two things that have no other
+            // reason to know about each other. What it can check is everything
+            // that is wrong on its face, and ContentBuilder checks the ids
+            // against the real catalogue once both have resolved (the same
+            // arrangement talents already use for grantsSkillId).
+            var abilities = new List<EnemyAbilityRef>();
+            for (int i = 0; i < (raw.abilities?.Length ?? 0); i++)
+            {
+                var entry = raw.abilities[i];
+                string id = (entry?.skillId ?? "").Trim();
+
+                if (string.IsNullOrEmpty(id))
+                {
+                    error = $"{label}: abilities[{i}] has no skillId.";
+                    return false;
+                }
+
+                if (entry.weight < 0f)
+                {
+                    error = $"{label}: abilities[{i}] ('{id}') has a negative weight {entry.weight}.";
+                    return false;
+                }
+
+                abilities.Add(new EnemyAbilityRef(id, entry.weight));
+            }
+
+            // Every weight at zero is a monster authored as able to do nothing
+            // -- it would fall back to a basic attack forever with nothing
+            // saying why. A SINGLE zero is fine and useful while tuning.
+            if (abilities.Count > 0 && abilities.All(a => a.Weight <= 0f))
+            {
+                error = $"{label}: every ability weight is zero, so none can ever be chosen.";
+                return false;
+            }
+
             if (!ArtPathConvention.Check(label, "vfx.path", raw.vfx.path, out error)) return false;
             if (!ArtPathConvention.Check(label, "vfx.sfxPath", raw.vfx.sfxPath, out error)) return false;
 
@@ -184,6 +223,7 @@ namespace PrincesPalace.Domain.Content
                 raw.skillChance < 0f ? DefaultSkillChance : raw.skillChance,
                 breakShieldPoints,
                 raw.vfx.Copy(),
+                abilities, raw.attackWeight < 0f ? 1f : raw.attackWeight,
                 appliesStatus, statusMagnitude, statusDuration, raw.avoidsFrontSlot, raw.attackHoldsPosition,
                 raw.minFloor);
             error = null;

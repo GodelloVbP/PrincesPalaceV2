@@ -38,25 +38,91 @@ namespace PrincesPalace.Domain.Combat.Session
                 // Already committed; do not re-roll behind the player's back.
                 if (_intents.ContainsKey(enemy)) continue;
 
-                var source = SourceFor(enemy)?.Source;
-                bool useSkill = source.HasValue
-                                && source.Value.HasSkill
-                                && (_rng?.NextFloat() ?? 1f) < source.Value.SkillChance;
+                // ONE DRAW, from the monster's whole pool.
+                //
+                // This used to be a coin flip against SkillChance, which is the
+                // same draw and the same position in the stream -- so a seeded
+                // run keeps its shape -- but it now chooses among everything the
+                // monster can do rather than between its two hardcoded options.
+                var kit = SourceFor(enemy);
+                var pool = kit?.Abilities;
+                int chosen = EnemyAbilityDraw.Pick(pool, _rng?.NextFloat() ?? 0f);
 
                 var target = PickRandomLivingPlayerTarget();
-                _intents[enemy] = BuildIntent(enemy, target, useSkill, source);
+                _intents[enemy] = BuildIntent(enemy, target, pool, chosen);
             }
         }
 
-        private EnemyIntent BuildIntent(CombatantState enemy, CombatantState target, bool useSkill, ResolvedEnemy? source)
+        private EnemyIntent BuildIntent(CombatantState enemy, CombatantState target,
+                                        IReadOnlyList<EnemyAbility> pool, int chosen)
         {
-            string label = useSkill && source.HasValue ? source.Value.SkillName : IntentAttack;
-            var kind = EnemyIntentIcons.KindFor(
-                useSkill,
-                source.HasValue ? source.Value.AppliesStatus : null,
-                source.HasValue && source.Value.HasStatus);
+            var source = SourceFor(enemy)?.Source;
 
-            return new EnemyIntent(label, kind, target, PreviewDamage(enemy, target, useSkill, source));
+            // Nothing to draw from: a monster that joined mid-round, or one
+            // whose whole pool was weighted out. It swings.
+            if (pool == null || chosen < 0 || chosen >= pool.Count)
+            {
+                return new EnemyIntent(IntentAttack, EnemyIntentKind.Attack, target,
+                    PreviewDamage(enemy, target, false, source, 1f));
+            }
+
+            var ability = pool[chosen];
+
+            // THE LEGACY SCALED ATTACK, including the plain swing that sits in
+            // every pool. Its magnitude is the basic attack times its own power.
+            if (ability.IsLegacyAttack)
+            {
+                bool isPlainSwing = ability.IsPlainSwing;
+                var kind = isPlainSwing
+                    ? EnemyIntentKind.Attack
+                    : EnemyIntentIcons.KindFor(true,
+                        source?.AppliesStatus, source.HasValue && source.Value.HasStatus);
+
+                return new EnemyIntent(ability.Label, kind, target,
+                    PreviewDamage(enemy, target, !isPlainSwing, source, ability.Power), chosen);
+            }
+
+            // A REAL SKILL. Its own effect decides the icon, the scope and
+            // whether the number is a wound or a mend -- see EnemyIntentIcons.
+            var skill = ability.Skill;
+            var effect = skill.Effect;
+
+            return new EnemyIntent(
+                ability.Label,
+                EnemyIntentIcons.KindFor(effect, skill.AppliesStatus, skill.AppliesStatus.HasValue),
+                target,
+                PreviewSkill(enemy, target, skill),
+                chosen,
+                EnemyIntentIcons.ScopeFor(effect),
+                EnemyIntentIcons.HealsFor(effect));
+        }
+
+        // What a monster's SKILL would land for, on the same terms as
+        // PreviewDamage below: no variance, no ward, and nothing that draws
+        // from the run's generator.
+        //
+        // Routed through SkillResolution, which is the same arithmetic the
+        // resolution itself will run -- a preview computed by a second formula
+        // is a promise the fight is free to break.
+        private static int PreviewSkill(CombatantState enemy, CombatantState target, ResolvedSkill skill)
+        {
+            if (enemy == null) return 0;
+
+            var against = skill.Effect == SkillEffect.HealSelf || skill.Effect == SkillEffect.HealParty
+                ? enemy
+                : target;
+
+            if (against == null) return 0;
+
+            int raw = SkillResolution.Amount(skill.Effect, enemy, against,
+                skill.Power, skill.FlatAmount, 0, skill.IgnoresDefense);
+
+            if (EnemyIntentIcons.HealsFor(skill.Effect)) return raw;
+
+            return DamagePipeline.AfterDefences(
+                raw, enemy, against,
+                attackType: null, weakness: null, resistance: null,
+                varianceRange: 0f, rng: null, resolveWard: null).Damage;
         }
 
         // What the blow would land for, with NOTHING that mutates and NOTHING
@@ -67,14 +133,15 @@ namespace PrincesPalace.Domain.Combat.Session
         // player still has, and the third depends on a taunt that may not exist
         // yet when the icon is drawn. The number is therefore a centre, not a
         // promise, and the tooltip says "about" for that reason.
-        private static int PreviewDamage(CombatantState enemy, CombatantState target, bool useSkill, ResolvedEnemy? source)
+        private static int PreviewDamage(CombatantState enemy, CombatantState target, bool useSkill,
+                                         ResolvedEnemy? source, float power)
         {
             if (enemy == null || target == null) return 0;
 
             int damage = CombatMath.ComputeAttackDamage(enemy, target);
             if (useSkill && source.HasValue)
             {
-                damage = System.Math.Max(1, Rounding.AwayFromZero(damage * source.Value.SkillPower));
+                damage = System.Math.Max(1, Rounding.AwayFromZero(damage * power));
             }
 
             return DamagePipeline.AfterDefences(
@@ -248,9 +315,37 @@ namespace PrincesPalace.Domain.Combat.Session
             var kit = SourceFor(enemy);
             bool hasSource = kit != null;
             var source = hasSource ? kit.Source : default(ResolvedEnemy);
-            string intent = IntentFor(enemy) ?? IntentAttack;
-            bool usingSkill = hasSource && source.HasSkill && intent == source.SkillName;
+
+            // BY INDEX, not by comparing the label back to a name.
+            //
+            // That comparison was sound while a monster had exactly one skill
+            // and its name was therefore unique. A weighted pool can hold two
+            // abilities that share a display name, and matching on text would
+            // resolve the wrong one while the telegraph looked correct -- the
+            // precise failure a telegraph exists to prevent.
+            var committed = IntentDetailFor(enemy);
+            var pool = kit?.Abilities;
+            var chosen = committed.HasValue && pool != null
+                         && committed.Value.AbilityIndex >= 0
+                         && committed.Value.AbilityIndex < pool.Count
+                ? pool[committed.Value.AbilityIndex]
+                : (EnemyAbility?)null;
+
             _intents.Remove(enemy);
+
+            // A REAL SKILL RUNS THE SKILL PATH -- the same one a player's cast
+            // goes through, which is what makes the whole SkillEffect
+            // vocabulary available to monsters rather than a second
+            // implementation of half of it.
+            if (chosen.HasValue && chosen.Value.HasSkill)
+            {
+                SetStance(enemy, Stances.Cast);
+                ResolveCharacterSkill(enemy, chosen.Value.Skill, target, 0);
+                return;
+            }
+
+            bool usingSkill = chosen.HasValue && !chosen.Value.IsPlainSwing;
+            float skillPower = chosen?.Power ?? 1f;
 
             // A skill already holds position through its cast stance. A monster
             // whose PLAIN attack art is itself a stationary pose needs the same
@@ -268,7 +363,7 @@ namespace PrincesPalace.Domain.Combat.Session
             int damage = CombatMath.ComputeAttackDamage(enemy, target);
             if (usingSkill)
             {
-                damage = System.Math.Max(1, Rounding.AwayFromZero(damage * source.SkillPower));
+                damage = System.Math.Max(1, Rounding.AwayFromZero(damage * skillPower));
             }
 
             // The player's armour, on the one path where it matters most: this

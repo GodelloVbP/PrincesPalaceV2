@@ -52,6 +52,26 @@ namespace PrincesPalace.Domain.Combat
         public IEnumerable<CombatantState> LivingPlayerParty => PlayerParty.Where(c => c.IsAlive);
         public IEnumerable<CombatantState> LivingEnemies => Enemies.Where(c => c.IsAlive);
 
+        // ---- the same two lists, RELATIVE TO WHOEVER IS ACTING -------------------
+        //
+        // "Every enemy" and "the whole party" are the player's words for them.
+        // Skill resolution spelled them that way throughout, which was correct
+        // while only the player could cast: DamageAll meant LivingEnemies and
+        // HealParty meant LivingPlayerParty, full stop.
+        //
+        // A monster casting the same skill means the mirror image of both, and
+        // hardcoding the sides is what made every enemy ability a scaled basic
+        // attack -- there was no way to express "it heals its own side" or "it
+        // hits your whole party" without writing a second resolution path.
+        //
+        // Asked of the ACTOR rather than passed a flag, so a caller cannot get
+        // it backwards: there is no argument to swap.
+        public IEnumerable<CombatantState> OpponentsOf(CombatantState actor) =>
+            actor != null && actor.IsPlayerSide ? LivingEnemies : LivingPlayerParty;
+
+        public IEnumerable<CombatantState> AlliesOf(CombatantState actor) =>
+            actor != null && actor.IsPlayerSide ? LivingPlayerParty : LivingEnemies;
+
         // The frontmost living enemy — the lowest slot index still
         // standing, in the SAME order Enemies was built in and the stage
         // already draws front-to-back (see Domain.Stage.StageLayout, where

@@ -1,3 +1,4 @@
+using System;
 using PrincesPalace.Domain.Dungeon;
 using System.Collections.Generic;
 using System.Linq;
@@ -51,6 +52,11 @@ namespace PrincesPalace
                 skillChance: definition.skillChance,
                 breakShieldPoints: definition.breakShieldPoints,
                 presentation: definition.vfx,
+                abilities: (definition.abilities ?? Array.Empty<RawEnemyAbility>())
+                    .Where(a => a != null && !string.IsNullOrWhiteSpace(a.skillId))
+                    .Select(a => new EnemyAbilityRef(a.skillId, a.weight))
+                    .ToList(),
+                attackWeight: definition.attackWeight,
 
                 // hasStatus is the AUTHORING gate, and it is deliberately not the
                 // same question as "is a status type set". appliesStatus is a
@@ -285,7 +291,7 @@ namespace PrincesPalace
                 if (definition == null) continue;
 
                 enemies.Add(ToCombatant(definition, depthStep));
-                enemyKits.Add(new EnemyKit(Resolve(definition), isElite));
+                enemyKits.Add(EnemyKitFor(definition, isElite));
             }
 
             if (party.Count == 0 || enemies.Count == 0) return null;
@@ -294,6 +300,58 @@ namespace PrincesPalace
             var session = new FightSession(encounter, kits, enemyKits, rng, isBoss, isElite);
 
             return new BuiltFight { Session = session, Party = party, PartyArt = art };
+        }
+
+        // A MONSTER'S KIT, with its abilities looked up.
+        //
+        // THE ONE PLACE THAT LEGITIMATELY SEES BOTH CATALOGUES. Enemies and
+        // skills resolve independently and in no guaranteed order, so a monster
+        // carries ability IDS out of content and the skills behind them are
+        // found here -- the same file, and the same moment, that already turns a
+        // character definition into a PlayerKit.
+        //
+        // A missing id is DROPPED rather than fatal. ContentBuilder refuses one
+        // at build time, so reaching this with a broken id means content that
+        // was edited past the guard; losing one ability beats losing the fight.
+        private static EnemyKit EnemyKitFor(EnemyDefinition definition, bool isElite)
+        {
+            var source = Resolve(definition);
+            if (source.Abilities == null || source.Abilities.Count == 0)
+            {
+                // No list authored: the kit synthesises the legacy pool itself.
+                return new EnemyKit(source, isElite);
+            }
+
+            var pool = new List<EnemyAbility>();
+
+            // The basic attack, always in the mix unless authored out.
+            if (source.AttackWeight > 0f)
+            {
+                pool.Add(EnemyAbility.LegacyAttack(FightSession.IntentAttack, 1f, source.AttackWeight));
+            }
+
+            foreach (var reference in source.Abilities)
+            {
+                var skill = ContentDatabase.Skills.FirstOrDefault(sk => sk != null && sk.id == reference.SkillId);
+                if (skill == null)
+                {
+                    Debug.LogWarning(
+                        $"[FightEncounterAdapter] Enemy '{definition.id}' names ability " +
+                        $"'{reference.SkillId}', which no skill matches. Dropping it.");
+                    continue;
+                }
+
+                pool.Add(EnemyAbility.Of(Resolve(skill), reference.Weight));
+            }
+
+            // Every entry dropped or weighted out leaves nothing to draw, and a
+            // monster that cannot act is worse than one that only swings.
+            if (pool.Count == 0)
+            {
+                pool.Add(EnemyAbility.LegacyAttack(FightSession.IntentAttack, 1f, 1f));
+            }
+
+            return new EnemyKit(source, isElite, pool);
         }
 
         private static PlayerKit KitFor(CharacterDefinition definition,

@@ -189,7 +189,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     BeginBeat(actor, actor, isCast: true);
                     RecordSpellPresentation(skill);
                     int amount = SkillResolution.Amount(skill.Effect, actor, actor, skill.Power, skill.FlatAmount, resourceSpent, false);
-                    foreach (var ally in _encounter.LivingPlayerParty.ToList())
+                    foreach (var ally in _encounter.AlliesOf(actor).ToList())
                     {
                         HealAndCount(ally, amount);
                         ApplySkillStatus(skill, ally, actor);
@@ -205,7 +205,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     BeginBeat(actor, actor, isCast: true);
                     RecordSpellPresentation(skill);
                     int amount = SkillResolution.Amount(skill.Effect, actor, actor, skill.Power, skill.FlatAmount, resourceSpent, false);
-                    foreach (var ally in _encounter.LivingPlayerParty.ToList())
+                    foreach (var ally in _encounter.AlliesOf(actor).ToList())
                     {
                         CombatMath.RestoreMana(ally, amount);
                     }
@@ -216,7 +216,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
                 case SkillEffect.Provoke:
                 {
-                    BeginBeat(actor, target ?? _encounter.LivingEnemies.FirstOrDefault(), isCast: true);
+                    BeginBeat(actor, target ?? _encounter.OpponentsOf(actor).FirstOrDefault(), isCast: true);
                     RecordSpellPresentation(skill);
                     SetStance(actor, Stances.Cast);
 
@@ -253,7 +253,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
                 case SkillEffect.Shatter:
                 {
-                    BeginBeat(actor, _encounter.LivingEnemies.FirstOrDefault(), isCast: true);
+                    BeginBeat(actor, _encounter.OpponentsOf(actor).FirstOrDefault(), isCast: true);
                     RecordSpellPresentation(skill);
                     SetStance(actor, Stances.Cast);
                     ResolveShatter(actor);
@@ -266,7 +266,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     RecordSpellPresentation(skill);
                     SetStance(actor, Stances.Cast);
 
-                    foreach (var ally in _encounter.LivingPlayerParty.ToList())
+                    foreach (var ally in _encounter.AlliesOf(actor).ToList())
                     {
                         ApplySkillStatus(skill, ally, actor);
                     }
@@ -290,7 +290,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
         private void ResolveDamageSingle(CombatantState actor, ResolvedSkill skill, CombatantState target, int resourceSpent)
         {
-            target = target ?? _encounter.LivingEnemies.FirstOrDefault();
+            target = target ?? _encounter.OpponentsOf(actor).FirstOrDefault();
             if (target == null) return;
 
             BeginBeat(actor, target, isCast: true);
@@ -344,15 +344,15 @@ namespace PrincesPalace.Domain.Combat.Session
             var summary = new StringBuilder();
             summary.Append($"{actor.Name} unleashes {skill.DisplayName}!");
 
-            // EVERY LIVING ENEMY, snapshotted before the loop resolves any of
-            // them. The beat's Target is the first of them and always was; the
+            // EVERYONE ON THE OTHER SIDE, snapshotted before the loop resolves
+            // any of them. The beat's Target is the first of them and always was; the
             // rest are what the view needed and never had, which is why an
             // all-enemies spell animated on exactly one rat.
             //
             // Taken BEFORE the damage lands, deliberately: an enemy killed by
             // this very cast should still be drawn taking the hit that killed
-            // it, and reading LivingEnemies afterwards would skip it.
-            var struck = _encounter.LivingEnemies.ToList();
+            // it, and reading the living list afterwards would skip it.
+            var struck = _encounter.OpponentsOf(actor).ToList();
 
             BeginBeat(actor, struck.FirstOrDefault(), isCast: true);
             RecordSpellPresentation(skill);
@@ -362,7 +362,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // once -- same reasoning as the single-target branch.
             var castType = ActorAttackType(actor) ?? DamageType.Physical;
 
-            foreach (var enemy in _encounter.LivingEnemies.ToList())
+            foreach (var enemy in _encounter.OpponentsOf(actor).ToList())
             {
                 // Effectiveness is resolved PER ENEMY: one cast can be super
                 // effective against one target and resisted by another in the
@@ -472,7 +472,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     break;
 
                 case CharacterRole.Support:
-                    foreach (var ally in _encounter.LivingPlayerParty.ToList())
+                    foreach (var ally in _encounter.AlliesOf(actor).ToList())
                     {
                         HealAndCount(ally, FightTuning.SupportSkillPartyHealAmount);
                     }

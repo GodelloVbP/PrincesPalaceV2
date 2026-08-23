@@ -85,6 +85,31 @@ namespace PrincesPalace.Content
                 }
             }
 
+            foreach (var enemy in _enemies)
+            {
+                // AN ABILITY POINTING AT NOTHING SILENTLY DISARMS A MONSTER.
+                //
+                // The adapter drops an unresolvable id with a warning rather
+                // than failing a fight, which is the right call at play time and
+                // the wrong place to find out: the symptom is a boss that is
+                // merely easier than intended, and nothing about an easier boss
+                // looks like a bug. Named here for the same reason the talent
+                // check below exists, and caught at build time where a typo is
+                // still a typo.
+                if (enemy?.abilities == null) continue;
+
+                foreach (var ability in enemy.abilities)
+                {
+                    if (ability == null || string.IsNullOrEmpty(ability.skillId)) continue;
+
+                    if (GetSkill(ability.skillId) == null)
+                    {
+                        errors.Add($"Enemy '{enemy.id}' has an ability naming unknown skill id " +
+                                   $"'{ability.skillId}'.");
+                    }
+                }
+            }
+
             foreach (var talent in _talents)
             {
                 CheckId(talent.id, "Talent");

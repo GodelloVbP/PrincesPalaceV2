@@ -33,6 +33,30 @@ namespace PrincesPalace.Domain.Combat.Session
         Shield,
     }
 
+    // WHO IT LANDS ON, which is the half of a telegraph that changes the
+    // player's decision most.
+    //
+    // "It will hit Shawn for 40" and "it will heal its whole side for 40" are
+    // opposite problems and used to be indistinguishable, because a monster
+    // could only ever do one thing: damage the person it was pointed at. Now
+    // that a monster casts real skills, the scope has to be said or the
+    // telegraph is worse than none -- it would name a single target for an
+    // effect that hits everybody.
+    public enum EnemyIntentScope
+    {
+        // The one combatant named in the intent.
+        One,
+
+        // Everyone on the player's side.
+        AllOpponents,
+
+        // The monster itself.
+        Self,
+
+        // Every monster still standing.
+        AllAllies,
+    }
+
     public readonly struct EnemyIntent
     {
         // The label the resolution path compares against to decide whether the
@@ -63,12 +87,36 @@ namespace PrincesPalace.Domain.Combat.Session
         // view says "about".
         public readonly int ExpectedDamage;
 
-        public EnemyIntent(string label, EnemyIntentKind kind, CombatantState target, int expectedDamage)
+        // WHICH ABILITY, by index into the kit's pool.
+        //
+        // Resolution used to recover this by comparing the intent's Label back
+        // against the monster's single skill name. That worked while there was
+        // exactly one skill and its name was therefore unique. With a weighted
+        // pool two abilities may share a display name -- two flavours of the
+        // same spell, a placeholder authored twice -- and a comparison on text
+        // would resolve the wrong one while the telegraph looked right.
+        //
+        // -1 means a plain swing declared by something with no pool at all.
+        public readonly int AbilityIndex;
+
+        // Who it lands on, and whether the number is a wound or a mend. Both
+        // are needed before the tooltip can phrase a sentence that is true:
+        // ExpectedDamage is a magnitude, and a magnitude with no sign reads as
+        // a threat even when it is a heal.
+        public readonly EnemyIntentScope Scope;
+        public readonly bool Heals;
+
+        public EnemyIntent(string label, EnemyIntentKind kind, CombatantState target, int expectedDamage,
+                           int abilityIndex = -1, EnemyIntentScope scope = EnemyIntentScope.One,
+                           bool heals = false)
         {
             Label = label;
             Kind = kind;
             Target = target;
             ExpectedDamage = expectedDamage;
+            AbilityIndex = abilityIndex;
+            Scope = scope;
+            Heals = heals;
         }
 
         public bool IsAttack => Kind == EnemyIntentKind.Attack;
@@ -93,6 +141,34 @@ namespace PrincesPalace.Domain.Combat.Session
         // Resources.Load returns null for an Assets/ path or a path carrying
         // ".png", and returns it silently.
         public static string ResourceFor(EnemyIntentKind kind) => "Intent/" + Slug(kind);
+
+        // WHO AN EFFECT LANDS ON, from the effect alone.
+        //
+        // Read from the SkillEffect rather than stored per ability, because it
+        // is not an authoring choice: DamageAll hits everyone opposite by
+        // definition, and an author who could disagree with that could make the
+        // telegraph lie.
+        public static EnemyIntentScope ScopeFor(SkillEffect effect)
+        {
+            switch (effect)
+            {
+                case SkillEffect.DamageAll:
+                    return EnemyIntentScope.AllOpponents;
+
+                case SkillEffect.HealSelf:
+                    return EnemyIntentScope.Self;
+
+                case SkillEffect.HealParty:
+                case SkillEffect.RestorePartyMana:
+                    return EnemyIntentScope.AllAllies;
+
+                default:
+                    return EnemyIntentScope.One;
+            }
+        }
+
+        public static bool HealsFor(SkillEffect effect) =>
+            effect == SkillEffect.HealSelf || effect == SkillEffect.HealParty;
 
         public static string Slug(EnemyIntentKind kind)
         {
@@ -144,6 +220,26 @@ namespace PrincesPalace.Domain.Combat.Session
         // Which kind an authored enemy skill reads as. Statuses win over the
         // generic Skill because what a monster is about to APPLY changes the
         // player's decision more than the fact that it is a skill at all.
+        // THE EFFECT FIRST, then the status.
+        //
+        // KindFor below reads only the status a monster applies, which was the
+        // whole vocabulary while a monster's "skill" was a scaled attack that
+        // might poison. A real skill says what it does in its own Effect, and a
+        // heal with no Regen attached would otherwise telegraph as a generic
+        // "skill" -- the icon that means "something is coming" on the one turn
+        // the player most needs to know it is not coming for them.
+        public static EnemyIntentKind KindFor(SkillEffect effect, StatusEffectType? appliesStatus, bool hasStatus)
+        {
+            switch (effect)
+            {
+                case SkillEffect.HealSelf:
+                case SkillEffect.HealParty:
+                    return EnemyIntentKind.Heal;
+            }
+
+            return KindFor(true, appliesStatus, hasStatus);
+        }
+
         public static EnemyIntentKind KindFor(bool usingSkill, StatusEffectType? appliesStatus, bool hasStatus)
         {
             if (!usingSkill) return EnemyIntentKind.Attack;

@@ -416,12 +416,43 @@ namespace PrincesPalace.Domain.Combat.Session
         public static string IntentTooltip(string enemyName, EnemyIntent intent)
         {
             string verb = intent.IsAttack ? "attack" : intent.Label;
-            string who = string.IsNullOrEmpty(intent.TargetName) ? "someone" : intent.TargetName;
+
+            // WHO, BY SCOPE. A telegraph that names one target for an effect
+            // landing on everybody is worse than no telegraph: it is a specific
+            // claim, and it is false. See EnemyIntentScope.
+            string who;
+            switch (intent.Scope)
+            {
+                case EnemyIntentScope.AllOpponents:
+                    who = "your whole party";
+                    break;
+                case EnemyIntentScope.Self:
+                    who = "itself";
+                    break;
+                case EnemyIntentScope.AllAllies:
+                    who = "its allies";
+                    break;
+                default:
+                    who = string.IsNullOrEmpty(intent.TargetName) ? "someone" : intent.TargetName;
+                    break;
+            }
 
             string line = $"{enemyName} will {verb} {who}";
-            return intent.ExpectedDamage > 0
-                ? line + $"\nfor about {intent.ExpectedDamage} damage"
-                : line;
+            if (intent.ExpectedDamage <= 0) return line;
+
+            // THE SIGN, SAID IN WORDS. ExpectedDamage is a magnitude, and a
+            // magnitude with no sign reads as a threat -- "for about 40" under a
+            // heal icon is the one sentence that could send a player to kill the
+            // wrong monster.
+            string what = intent.Heals ? "healing" : "damage";
+
+            // "each" only where there is more than one of them to be each of.
+            string spread = intent.Scope == EnemyIntentScope.AllOpponents
+                            || intent.Scope == EnemyIntentScope.AllAllies
+                ? " each"
+                : "";
+
+            return line + $"\nfor about {intent.ExpectedDamage} {what}{spread}";
         }
     }
 }

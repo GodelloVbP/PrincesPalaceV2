@@ -67,11 +67,50 @@ namespace PrincesPalace.Domain.Combat.Session
         // it rides the kit rather than the definition.
         public readonly bool IsElite;
 
-        public EnemyKit(ResolvedEnemy source, bool isElite)
+        // EVERYTHING THIS MONSTER CAN DO, ready to draw from.
+        //
+        // Always includes the basic attack, so a monster whose every turn is a
+        // special is a thing an author has to ask for (attackWeight 0) rather
+        // than the default.
+        public readonly IReadOnlyList<EnemyAbility> Abilities;
+
+        public EnemyKit(ResolvedEnemy source, bool isElite,
+                        IReadOnlyList<EnemyAbility> abilities = null)
         {
             Source = source;
             IsElite = isElite;
+            Abilities = abilities != null && abilities.Count > 0
+                ? abilities
+                : LegacyPoolFor(source);
         }
+
+        // A MONSTER AUTHORED BEFORE ABILITIES EXISTED, expressed in the same
+        // shape as one authored after.
+        //
+        // The old trio is a two-entry weighted pool and always was: skillChance
+        // of the scaled attack, and the remainder of a plain one. Saying it that
+        // way means there is ONE list and ONE draw everywhere downstream rather
+        // than a branch that has to be remembered at every call site -- and it
+        // consumes exactly the draw the old code did, so a seeded run keeps its
+        // shape.
+        private static IReadOnlyList<EnemyAbility> LegacyPoolFor(ResolvedEnemy source)
+        {
+            float chance = source.HasSkill ? Clamp01(source.SkillChance) : 0f;
+
+            var pool = new List<EnemyAbility>
+            {
+                EnemyAbility.LegacyAttack(FightSession.IntentAttack, 1f, 1f - chance),
+            };
+
+            if (chance > 0f)
+            {
+                pool.Add(EnemyAbility.LegacyAttack(source.SkillName, source.SkillPower, chance));
+            }
+
+            return pool;
+        }
+
+        private static float Clamp01(float v) => v < 0f ? 0f : v > 1f ? 1f : v;
 
         public DamageType Weakness => Source.Weakness;
         public DamageType Resistance => Source.Resistance;

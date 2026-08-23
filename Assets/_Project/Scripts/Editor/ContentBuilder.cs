@@ -397,6 +397,10 @@ public static class ContentBuilder
             asset.sortOrder = enemy.SortOrder;
             asset.breakShieldPoints = enemy.BreakShieldPoints;
             asset.vfx = enemy.Vfx.Copy();
+            asset.attackWeight = enemy.AttackWeight;
+            asset.abilities = enemy.Abilities
+                .Select(a => new RawEnemyAbility { skillId = a.SkillId, weight = a.Weight })
+                .ToArray();
             asset.hasStatus = enemy.AppliesStatus.HasValue;
             if (enemy.AppliesStatus.HasValue)
             {

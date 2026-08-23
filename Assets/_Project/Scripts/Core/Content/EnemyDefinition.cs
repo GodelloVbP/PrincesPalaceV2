@@ -1,3 +1,4 @@
+using System;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Stats;
 using UnityEngine;
@@ -69,6 +70,17 @@ namespace PrincesPalace.Content
         [Tooltip("Resources-relative path of a f0..fN VFX sequence played over the TARGET when this monster's skill lands. Empty means no prop.")]
         // One serialized value, like a skill's. See SpellPresentation.
         public SpellPresentation vfx = new SpellPresentation();
+
+        // WHAT THIS MONSTER CAN DO, as skill ids and relative weights.
+        //
+        // RawEnemyAbility rather than a third type: it is [Serializable] with
+        // public fields, which is what both JsonUtility and Unity's own
+        // serialiser need, and inventing a parallel shape for the same two
+        // values is the duplication SpellPresentation exists to argue against.
+        public RawEnemyAbility[] abilities = Array.Empty<RawEnemyAbility>();
+
+        // The basic attack's own weight in that pool. See RawEnemyEntry.
+        public float attackWeight = 1f;
 
         [Tooltip("Status this monster's attacks apply to whoever they hit — basic attack or skill, either lands it. Not gated to skill use the way a player skill's own status is.")]
         public StatusEffectType appliesStatus;

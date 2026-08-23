@@ -43,6 +43,8 @@ MonoBehaviour:
     size: 380
     departFrame: 0
     sfxPath: 
+  abilities: []
+  attackWeight: 1
   appliesStatus: 0
   hasStatus: 0
   statusMagnitude: 0
