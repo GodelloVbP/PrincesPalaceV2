@@ -162,10 +162,14 @@ namespace PrincesPalace.Domain.Content
     [Serializable]
     public class RawEnemyAbility
     {
-        // A skill id from skills.json. A skill a monster uses does not need a
-        // characterId and is never offered to a player -- the two catalogues
-        // are one file because the RULES are identical, not because the
-        // audiences are.
+        // A skill id from skills.json.
+        //
+        // A monster's skill is authored in the same file a character's is,
+        // because the RULES are identical -- not because the audiences are. It
+        // still needs an owner: characterId names the ENEMY that owns it, which
+        // keeps it out of every player's button strip (AvailableSkillsFor
+        // matches on a character's definitionId) while leaving a typo'd owner
+        // just as catchable as it is for a character skill.
         public string skillId = "";
 
         // Relative likelihood. Zero means "authored but never chosen", which is

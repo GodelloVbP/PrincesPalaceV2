@@ -292,6 +292,50 @@ namespace PrincesPalace.Domain.Tests
         }
 
 
+        // ---- the golem's slam, pinned -------------------------------------------
+        //
+        // Boulder Slam was a 1.8x multiplier on the golem's basic attack and is
+        // a real skill now. The two forms do not produce the same curve and
+        // cannot: the multiplier scaled a figure the target's armour had
+        // ALREADY been subtracted from, so armour counted twice against it,
+        // while a skill's flatAmount is added BEFORE defence.
+        //
+        // flatAmount 2 lands it within about a tenth of the old number across
+        // the defence band Shawn actually occupies (4 base, plus gear). What
+        // changes is the tail: heavily armoured, the old slam collapsed toward
+        // the floor of 1 and the new one does not.
+        //
+        // LITERAL EXPECTED VALUES, not a recomputation of the formula -- see
+        // CLAUDE.md. These are what the numbers ARE, so a retune has to come
+        // here and say so.
+        [Test]
+        public void TheGolemsSlamLandsWhereItUsedTo()
+        {
+            var slam = new ResolvedSkill("boulder_slam", "Boulder Slam", "", "golem", 1,
+                SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, 0, 0, false, 0, 2, false,
+                null, SpellPresentation.None, 0);
+
+            var golem = new CombatantState("Golem", false, 350, 0, 6, 8, 3);
+
+            Assert.AreEqual(40, Landed(slam, golem, defence: 4),
+                "against Shawn's base 4 defence the slam should land where the old 1.8x did");
+            Assert.AreEqual(20, Landed(slam, golem, defence: 6),
+                "and hold up through the gear band");
+        }
+
+        private static int Landed(ResolvedSkill skill, CombatantState attacker, int defence)
+        {
+            var victim = new CombatantState("Shawn", true, 5000, 30, 7, defence, 10);
+
+            int raw = SkillResolution.Amount(skill.Effect, attacker, victim,
+                skill.Power, skill.FlatAmount, 0, skill.IgnoresDefense);
+
+            return DamagePipeline.AfterDefences(raw, attacker, victim,
+                attackType: null, weakness: null, resistance: null,
+                varianceRange: 0f, rng: null, resolveWard: null).Damage;
+        }
+
+
         // A tiny stand-in so these tests do not depend on StatBlock's own
         // constructor shape, which is not what any of them are about.
         private struct StatBlockOf

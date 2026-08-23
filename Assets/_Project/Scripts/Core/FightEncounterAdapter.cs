@@ -429,6 +429,18 @@ namespace PrincesPalace
 
         // The other half of the content conversion. Mechanical, field for field:
         // ResolvedSkill was designed as the shape SkillDefinition already had.
+        //
+        // AND IT DROPPED ONE. `transform` was written onto the asset by
+        // ContentBuilder and never read back here, so every skill resolved for
+        // a fight -- including the player's own -- arrived with a null grant and
+        // Black Ram Mode did nothing at all. Nothing caught it: the transform
+        // tests build a ResolvedSkill by hand and pass the grant in, which is
+        // the half of the journey that always worked.
+        //
+        // "Mechanical, field for field" is exactly the kind of copy where one
+        // missing line is invisible, which is the argument SpellPresentation
+        // makes about the six VFX fields. This conversion is the next candidate
+        // for the same treatment.
         public static ResolvedSkill Resolve(SkillDefinition definition)
         {
             return new ResolvedSkill(
@@ -444,7 +456,8 @@ namespace PrincesPalace
                 // anyone meant it.
                 definition.hasStatus ? definition.appliesStatus : (StatusEffectType?)null,
                 definition.statusMagnitude, definition.statusDuration,
-                definition.requirements, definition.scalingAxis, definition.queuePushSlots);
+                definition.requirements, definition.scalingAxis, definition.queuePushSlots,
+                definition.transform, definition.playerSelectable);
         }
     }
 }

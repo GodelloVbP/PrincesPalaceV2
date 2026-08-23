@@ -55,6 +55,10 @@ namespace PrincesPalace.Content
         public DamageInstance[] damageInstances = System.Array.Empty<DamageInstance>();
 
         [Tooltip("Resources-relative folder of this spell's animation frames (f0..fN). Empty means no visual.")]
+        // See RawSkillEntry.playerSelectable. False keeps a monster's skill off
+        // every player's action strip whatever its owner id says.
+        public bool playerSelectable = true;
+
         // HOW IT LOOKS, as one serialized value. Six fields lived here and
         // each had to be copied across in ContentBuilder and again in
         // FightEncounterAdapter -- see SpellPresentation.

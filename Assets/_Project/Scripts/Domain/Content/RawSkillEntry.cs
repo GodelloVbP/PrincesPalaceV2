@@ -63,6 +63,23 @@ namespace PrincesPalace.Domain.Content
         // of something averaged.
         public RawDamageInstance[] damageInstances = Array.Empty<RawDamageInstance>();
 
+        // DOES A PLAYER EVER PICK THIS FROM A MENU?
+        //
+        // True for a character's kit. False for a skill a MONSTER owns, and the
+        // difference is not cosmetic: nearly every rule about what a skill may
+        // cost exists because a player chooses between actions, and a free one
+        // would dominate that choice. A monster does not choose -- a weighted
+        // draw does -- so "free" is not exploitable and Boulder Slam has no
+        // wallet to charge.
+        //
+        // A FIELD RATHER THAN INFERRED FROM THE OWNER. The resolver cannot see
+        // the enemy catalogue, and making it wait for one so it could look up
+        // whether characterId names a monster would couple two resolutions that
+        // have no other reason to know about each other. ContentDatabase checks
+        // the two facts agree once both catalogues exist, which is where every
+        // other cross-catalogue check already lives.
+        public bool playerSelectable = true;
+
         // HOW IT LOOKS, nested under "vfx" in the JSON.
         //
         // Six flat fields lived here -- vfxPath, vfxSeconds, vfxImpactFrame,

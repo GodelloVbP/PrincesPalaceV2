@@ -29,6 +29,7 @@ MonoBehaviour:
   damageInstances:
   - type: 5
     amount: 40
+  playerSelectable: 1
   vfx:
     path: Spells/lightning_bolt
     seconds: 0.52

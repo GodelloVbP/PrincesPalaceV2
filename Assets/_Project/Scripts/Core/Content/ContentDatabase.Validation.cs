@@ -346,9 +346,44 @@ namespace PrincesPalace.Content
                 // character who does not exist can never be pressed, and the
                 // typo is invisible until someone wonders where the button
                 // went.
-                if (GetCharacter(skill.characterId) == null)
+                // A MONSTER MAY OWN A SKILL TOO, and the owner still has to
+                // exist. The rule this is loosening is "a skill with no owner
+                // would be offered to the whole roster" -- an enemy id is an
+                // owner, and AvailableSkillsFor matches characterId against a
+                // CHARACTER's definitionId, so a skill owned by 'golem' can
+                // never reach a player's button strip.
+                //
+                // Checked against both catalogues rather than skipped for
+                // anything unrecognised: the whole value of this check is that
+                // a typo'd owner is invisible until someone wonders where the
+                // button went, and that is exactly as true for a monster.
+                bool ownedByCharacter = GetCharacter(skill.characterId) != null;
+                bool ownedByEnemy = GetEnemy(skill.characterId) != null;
+
+                if (!ownedByCharacter && !ownedByEnemy)
                 {
-                    errors.Add($"Skill '{skill.id}' belongs to unknown character id '{skill.characterId}'.");
+                    errors.Add($"Skill '{skill.id}' belongs to unknown owner id '{skill.characterId}'. " +
+                               "It must name a character or an enemy.");
+                }
+
+                // THE TWO FACTS HAVE TO AGREE. playerSelectable exists because
+                // the resolver cannot see this catalogue; this is the other end
+                // of that trade, and without it the flag is an unchecked claim.
+                //
+                // Both directions are wrong in their own way: a selectable
+                // skill owned by a monster can never be pressed by anyone, and
+                // a non-selectable one owned by a character is a button the
+                // player has silently lost.
+                else if (skill.playerSelectable && ownedByEnemy)
+                {
+                    errors.Add($"Skill '{skill.id}' is player-selectable but belongs to enemy " +
+                               $"'{skill.characterId}', so no character can ever be offered it. " +
+                               "Set playerSelectable false, or give it a character owner.");
+                }
+                else if (!skill.playerSelectable && ownedByCharacter)
+                {
+                    errors.Add($"Skill '{skill.id}' belongs to character '{skill.characterId}' but is " +
+                               "not player-selectable, so it will never appear on their strip.");
                 }
 
                 if (skill.unlockLevel < 1)
@@ -364,7 +399,12 @@ namespace PrincesPalace.Content
                 // reasoning, as SkillEntryResolver's copy of this rule; both
                 // exist because content is checked at authoring time AND
                 // after generation, and neither is redundant.
-                if (skill.manaCost == 0 && !skill.CostsResource && skill.effect != SkillEffect.Provoke)
+                // AND, LIKE THAT COPY, ONLY WHERE SOMEBODY CHOOSES IT. The
+                // argument is about a player weighing this action against
+                // another; a monster's abilities are drawn by weight and it has
+                // neither mana nor wool to spend either way.
+                if (skill.playerSelectable && skill.manaCost == 0 && !skill.CostsResource
+                    && skill.effect != SkillEffect.Provoke)
                 {
                     errors.Add($"Skill '{skill.id}' costs nothing at all, so it strictly dominates every other action.");
                 }

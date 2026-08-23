@@ -10,27 +10,26 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dace2591de5ca4247a661c0479d541c1, type: 3}
-  m_Name: provoke
+  m_Name: boulder_slam
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SkillDefinition
-  id: provoke
-  displayName: Provoke
-  description: Head down, eyes up. Whatever it was going to do, it is going to do
-    it to you.
-  characterId: sheep
-  unlockLevel: 999
-  effect: 5
+  id: boulder_slam
+  displayName: Boulder Slam
+  description: The golem heaves a slab of the floor overhead and brings it down.
+  characterId: golem
+  unlockLevel: 1
+  effect: 0
   targeting: 0
   manaCost: 0
   resourceCost: 0
   spendsAllResource: 0
   power: 0
-  flatAmount: 0
+  flatAmount: 2
   ignoresDefense: 0
   damageInstances: []
-  playerSelectable: 1
+  playerSelectable: 0
   vfx:
-    path: 
-    seconds: 0.6
+    path: Spells/golem_boulder
+    seconds: 0.48
     impactFrame: 3
     anchor: 
     size: 380
@@ -56,4 +55,4 @@ MonoBehaviour:
     speedPercent: 0
     temporaryHealthPercent: 0
     splashPercent: 0
-  sortOrder: 8
+  sortOrder: 17

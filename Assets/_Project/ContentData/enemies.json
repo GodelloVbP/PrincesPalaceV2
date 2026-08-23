@@ -63,14 +63,13 @@
       "spritePath": "Enemies/golem",
       "attackHoldsPosition": true,
       "active": true,
-      "skillName": "Boulder Slam",
-      "skillPower": 1.8,
-      "skillChance": 1.0,
-      "vfx": {
-        "path": "Spells/golem_boulder",
-        "seconds": 0.48,
-        "impactFrame": 3
-      }
+      "abilities": [
+        {
+          "skillId": "boulder_slam",
+          "weight": 1
+        }
+      ],
+      "attackWeight": 0
     },
     {
       "id": "imp",

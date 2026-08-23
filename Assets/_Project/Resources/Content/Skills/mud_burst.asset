@@ -26,6 +26,7 @@ MonoBehaviour:
   flatAmount: 12
   ignoresDefense: 0
   damageInstances: []
+  playerSelectable: 1
   vfx:
     path: Spells/mud_burst
     seconds: 0.65

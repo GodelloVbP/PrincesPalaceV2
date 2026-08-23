@@ -32,19 +32,21 @@ MonoBehaviour:
   spritePath: Enemies/golem
   facing: 1
   sortOrder: 3
-  skillName: Boulder Slam
-  skillPower: 1.8
-  skillChance: 1
+  skillName: 
+  skillPower: 1.5
+  skillChance: 0.35
   vfx:
-    path: Spells/golem_boulder
-    seconds: 0.48
+    path: 
+    seconds: 0.6
     impactFrame: 3
     anchor: 
     size: 380
     departFrame: 0
     sfxPath: 
-  abilities: []
-  attackWeight: 1
+  abilities:
+  - skillId: boulder_slam
+    weight: 1
+  attackWeight: 0
   appliesStatus: 0
   hasStatus: 0
   statusMagnitude: 0

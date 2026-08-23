@@ -27,7 +27,7 @@ $AreasTestsRoot = Join-Path $AreasProjectRoot "Assets\_Project\Scripts\Tests"
 $Areas = @{
     combat  = "Fight|Wool|Spell|Combat|Enemy|Party|Stage|Boss|Turn|Skill|Damage|Defeat|Teardown|BreakShield|Status|Signature|Ward|Gift|Empower"
     hub     = "Hub|Talent|Principality|CharacterSheet|SheetStat|Store|Constellation|Glossary"
-    content = "Content|ItemSet|Item|Resolver|ArtPath|AbilityScore|StatBlock|StatPoint|Invest|Character|Enemy|Scaling|Requirement|Rounding|AbilityDerivation|Weapon|Relic|Rarity|Achievement"
+    content = "Content|ItemSet|Item|Resolver|ArtPath|AbilityScore|StatBlock|StatPoint|Invest|Character|Enemy|Scaling|Requirement|Rounding|AbilityDerivation|Weapon|Relic|Rarity|Achievement|RoundTrip"
     # GlobalState: the lint that keeps a test from leaving a static flipped for
     # the rest of the process. It belongs to no single subject -- the statics it
     # guards are save roots, the run, navigation and two tuning knobs -- and

@@ -26,6 +26,7 @@ MonoBehaviour:
   flatAmount: 40
   ignoresDefense: 0
   damageInstances: []
+  playerSelectable: 1
   vfx:
     path: 
     seconds: 0.6

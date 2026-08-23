@@ -490,6 +490,7 @@ public static class ContentBuilder
             asset.ignoresDefense = skill.IgnoresDefense;
             asset.damageInstances = skill.DamageInstances;
             asset.vfx = skill.Vfx.Copy();
+            asset.playerSelectable = skill.PlayerSelectable;
             asset.sortOrder = skill.SortOrder;
             asset.requirements = skill.Requirements;
             asset.scalingAxis = skill.ScalingAxis;

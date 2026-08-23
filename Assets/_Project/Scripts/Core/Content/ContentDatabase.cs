@@ -230,7 +230,8 @@ namespace PrincesPalace.Content
             var granted = TalentGrantedSkillsFor(character);
 
             return _skills
-                .Where(s => s.characterId == character.definitionId
+                .Where(s => s.playerSelectable
+                            && s.characterId == character.definitionId
                     && (s.unlockLevel <= character.level
                         || character.unlockedSkillIds.Contains(s.id)
                         || granted.Contains(s)))

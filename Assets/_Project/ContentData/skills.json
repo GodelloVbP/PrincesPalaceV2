@@ -234,6 +234,22 @@
       "effect": "GiftHaste",
       "manaCost": 0,
       "resourceCost": 5
+    },
+    {
+      "id": "boulder_slam",
+      "displayName": "Boulder Slam",
+      "description": "The golem heaves a slab of the floor overhead and brings it down.",
+      "characterId": "golem",
+      "unlockLevel": 1,
+      "effect": "DamageSingle",
+      "flatAmount": 2,
+      "manaCost": 0,
+      "vfx": {
+        "path": "Spells/golem_boulder",
+        "seconds": 0.48,
+        "impactFrame": 3
+      },
+      "playerSelectable": false
     }
   ]
 }

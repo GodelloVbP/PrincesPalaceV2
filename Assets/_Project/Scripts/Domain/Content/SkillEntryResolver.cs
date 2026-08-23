@@ -123,7 +123,11 @@ namespace PrincesPalace.Domain.Content
             // the strand is for (handoff §6.2).
             bool touchesHealthOrMana = effect != SkillEffect.Provoke;
 
-            if (manaCost == 0 && resourceCost == 0 && touchesHealthOrMana)
+            // AND ONLY WHEN SOMEBODY CHOOSES IT. The whole argument above is
+            // about a player weighing this action against another one; a
+            // monster's abilities are drawn by weight and it has no mana or
+            // wool to spend either way. See RawSkillEntry.playerSelectable.
+            if (raw.playerSelectable && manaCost == 0 && resourceCost == 0 && touchesHealthOrMana)
             {
                 error = $"{label}: a skill that costs neither mana nor resource is strictly better than every other action " +
                         "and would simply be spammed. Give it a cost.";
@@ -225,7 +229,7 @@ namespace PrincesPalace.Domain.Content
                 raw.vfx.Copy(),
                 sortOrder,
                 appliesStatus, statusMagnitude, statusDuration, requirements, scalingAxis,
-                raw.queuePushSlots, transform);
+                raw.queuePushSlots, transform, raw.playerSelectable);
             error = null;
             return true;
         }

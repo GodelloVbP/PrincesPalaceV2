@@ -65,6 +65,9 @@ namespace PrincesPalace.Domain.Content
         // silently ignored one.
         public readonly TransformGrant Transform;
 
+        // See RawSkillEntry.playerSelectable.
+        public readonly bool PlayerSelectable;
+
         public bool HasFixedDamage => DamageInstances != null && DamageInstances.Length > 0;
 
         public ResolvedSkill(string id, string displayName, string description, string characterId,
@@ -73,8 +76,9 @@ namespace PrincesPalace.Domain.Content
             DamageInstance[] damageInstances, SpellPresentation presentation, int sortOrder,
             StatusEffectType? appliesStatus = null, int statusMagnitude = 0, int statusDuration = 0,
             AbilityScoreBlock requirements = default, ScalingAxis scalingAxis = ScalingAxis.Auto,
-            int queuePushSlots = 0, TransformGrant transform = null)
+            int queuePushSlots = 0, TransformGrant transform = null, bool playerSelectable = true)
         {
+            PlayerSelectable = playerSelectable;
             QueuePushSlots = queuePushSlots;
             Transform = transform;
             DamageInstances = damageInstances ?? Array.Empty<DamageInstance>();
