@@ -263,6 +263,52 @@ namespace PrincesPalace.Domain.Tests
                 "at 25% health the necklace should add its full 30% damage bonus");
         }
 
+        // ---- two speed relics on one character ---------------------------------------
+        //
+        // A REAL BUG, FOUND AFTER SHIPPING, not designed against from the
+        // start. GrantSpeedPercent's own base subtracted only the CURRENT
+        // relic's own Granted, which stops a relic compounding against
+        // ITSELF on a second grant and does nothing to stop it compounding
+        // against a DIFFERENT relic's grant that landed first: Slippers
+        // +10% off 100 gave +10 (110), and the Pipe's +20% then read 110 as
+        // its base and granted +22 instead of the +20 a true 20%-of-100
+        // owes -- 132 total instead of the 114 the two relics together
+        // should produce.
+        //
+        // NOT A CORNER CASE. SquadTrack.StartingRelics escalates past level
+        // 25 with no cap to lift (RewardTrack.cs), so a character carrying
+        // two relics at once is an ordinary mid-run state, not a
+        // hypothetical.
+        [Test]
+        public void TwoSpeedRelicsBothMeasureAgainstTheSameTrueBase()
+        {
+            var hero = new CombatantState("Shawn", true, 999999, 999, 20, 0, 100);
+            var foe = new CombatantState("Dummy", false, 999999, 0, 1, 0, 1);
+
+            var relics = new List<ResolvedRelic>
+            {
+                Relic(RelicEffect.BallerinasSlippers),
+                Relic(RelicEffect.TinFoilPipe),
+            };
+            var kit = new PlayerKit("hero", CharacterRole.Tank, null, relics, null);
+
+            var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foe }),
+                new List<PlayerKit> { kit },
+                new List<EnemyKit> { new EnemyKit(new ResolvedEnemy("dummy", "Dummy", new StatBlock(),
+                    0, 0, false, DamageType.Physical, DamageType.Physical, 0), false) },
+                new SeededRandom(5)) { DamageVarianceRange = 0f };
+            session.Begin();
+
+            session.GrantSpeedPercentForTest(hero, RelicEffect.BallerinasSlippers, 10, turns: 0);
+            Assert.AreEqual(110, hero.Speed, "10% of the true base 100 is +10");
+
+            session.GrantSpeedPercentForTest(hero, RelicEffect.TinFoilPipe, 20, turns: 1);
+
+            Assert.AreEqual(130, hero.Speed,
+                "the Pipe's 20% must read the TRUE base (100 -> +20), not the Slippers-inflated " +
+                "110 (which would wrongly grant +22 and land on 132)");
+        }
+
         // ---- the bounty hunter contract ---------------------------------------------
 
         [Test]

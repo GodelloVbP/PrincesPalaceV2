@@ -40,6 +40,32 @@ namespace PrincesPalace.Domain.Combat.Session
         private readonly Dictionary<CombatantState, Dictionary<RelicEffect, SpeedBuff>> _speedBuffs =
             new Dictionary<CombatantState, Dictionary<RelicEffect, SpeedBuff>>();
 
+        // THE TRUE BASE every grant measures against -- what this combatant's
+        // Speed would be with NONE of the relic buffs and maluses in this
+        // dictionary applied, from any source.
+        //
+        // FOUND AS A BUG, not designed in from the start. The first version
+        // subtracted only the CURRENT source's own Granted, which stops a
+        // relic compounding against ITSELF on a second grant, and does
+        // nothing to stop it compounding against a DIFFERENT relic's grant
+        // that landed first: Slippers +10% off 100 gives +10 (110), and Pipe's
+        // +20% then read 110 as the base and gave +22 instead of the +20 a
+        // true 20%-of-100 owes -- 132 instead of the 114 the two relics
+        // together should produce. Proven with a throwaway test before this
+        // was believed, the same way the potency funnel's compounding rule was
+        // proven rather than assumed.
+        //
+        // Summing every source's Granted and subtracting it once is what makes
+        // "against the true base" actually true regardless of how many speed
+        // relics a character is carrying -- and past level 25 a character
+        // carries more than one relic at all, so this is not an edge case.
+        private int TrueBaseSpeed(CombatantState actor, Dictionary<RelicEffect, SpeedBuff> forActor)
+        {
+            int granted = 0;
+            foreach (var buff in forActor.Values) granted += buff.Granted;
+            return actor.Speed - granted;
+        }
+
         // Percent of the combatant's speed AT THE MOMENT OF GRANTING, converted
         // to flat points immediately. Returns what was actually given, which is
         // 0 when the cap is already reached -- the caller uses that to decide
@@ -61,10 +87,10 @@ namespace PrincesPalace.Domain.Combat.Session
                 forActor[source] = buff;
             }
 
-            // The base this relic measures against: what the combatant would be
-            // without what THIS relic has already given them. Anything else
-            // compounds -- 10% of an already-boosted speed is more than 10%.
-            int baseSpeed = actor.Speed - buff.Granted;
+            // The TRUE base -- see TrueBaseSpeed. Every OTHER relic's grant is
+            // subtracted too, not only this one's, or a second speed relic
+            // reads a base that the first one already inflated.
+            int baseSpeed = TrueBaseSpeed(actor, forActor);
             int wanted = baseSpeed * percent / 100;
             if (wanted <= 0) wanted = 1;
 
@@ -123,9 +149,13 @@ namespace PrincesPalace.Domain.Combat.Session
                 forActor[source] = buff;
             }
 
-            // The base this relic measures against: what the combatant would
-            // be without what THIS relic has already taken from them.
-            int baseSpeed = actor.Speed - buff.Granted;
+            // The TRUE base -- see TrueBaseSpeed. Only relic-granted buffs and
+            // maluses ever populate this dictionary, and today a malus and a
+            // buff never land on the same combatant (Lucky Deck's slow only
+            // ever targets an enemy, the buffs only ever the player who cast
+            // them), but the fix is the same one the buff side needed and
+            // costs nothing to apply here too.
+            int baseSpeed = TrueBaseSpeed(actor, forActor);
             int wanted = -(baseSpeed * percent / 100);
             if (wanted >= 0) wanted = -1;
 
