@@ -30,7 +30,8 @@ MonoBehaviour:
     path: Spells/mud_burst
     seconds: 0.65
     impactFrame: 13
-    fromCaster: 1
+    anchor: travel
+    size: 380
     departFrame: 9
     sfxPath: 
   appliesStatus: 3

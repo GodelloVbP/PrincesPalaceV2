@@ -48,22 +48,33 @@ namespace PrincesPalace.Domain.Content
         // sequence rather than at the end of it.
         public int impactFrame = DefaultImpactFrame;
 
-        // Does this effect TRAVEL, or does it happen where it lands?
+        // WHERE THE EFFECT HAPPENS. One of SpellAnchor, spelled as a word.
         //
-        // Almost every sheet is a thing that occurs on the target -- a flare, a
-        // bolt striking down, rocks erupting -- and is fitted into a square box
-        // centred on them. mud_blast is drawn the other way: a conjuring glyph
-        // at the left of the cell, a lance crossing it, an impact at the right.
-        // Centred on the target that glyph appears in mid-air a few hundred
-        // pixels short of the caster, which is what "it does not come from the
-        // character" describes.
+        // This was a bool called fromCaster, which is an enum wearing a
+        // disguise: it could say "on the target" or "flies from the caster" and
+        // there was no third thing it could say. A sheet of rocks erupting
+        // wants the ground rather than the target's midriff; a self-buff wants
+        // the caster even when the skill's target is an ally; a screen flash
+        // wants neither. Each of those was a code change to a bool.
         //
-        // A flag rather than something inferred from the art. It could be
-        // guessed -- the energy's centroid walks left to right across a
-        // directional sheet and stays put on a centred one -- and a guess that
-        // is right four times out of five puts an effect in the wrong place on
-        // the fifth with nothing in the content saying why.
-        public bool fromCaster;
+        // A STRING, parsed, rather than the enum itself: JsonUtility writes an
+        // enum as its ordinal, so the file would read "anchor": 2 and a
+        // reordering of the enum would silently repoint every spell. The word
+        // is what an author types and what an error message can name.
+        //
+        // Unrecognised spellings fall back to Target and say so once -- the
+        // house style, and the right one here: a typo should misplace one
+        // effect, not stop a fight resolving.
+        public string anchor = "";
+
+        // THE BOX THE ART IS FITTED INTO, square, in reference-frame units.
+        //
+        // 380 was a constant in FightController for every spell there has ever
+        // been. It is fine for a bolt and wrong in both directions for the two
+        // obvious next things: a boss's slam that should fill the stage, and a
+        // status tick that should be a glint. Authored per spell now, and left
+        // out it is still 380.
+        public float size = DefaultSize;
 
         // WHICH FRAME THE EFFECT LEAVES ON, for a fromCaster sheet. 1-based
         // like impactFrame, and 0 means "from the very first frame".
@@ -83,6 +94,11 @@ namespace PrincesPalace.Domain.Content
         // they default, so a new caller cannot invent a different silence.
         public const float DefaultSeconds = 0.6f;
         public const int DefaultImpactFrame = 3;
+        public const float DefaultSize = 380f;
+
+        // The parsed anchor. Case-insensitive, because "Travel" and "travel"
+        // are the same intent and refusing one of them teaches nothing.
+        public SpellAnchor Anchor => SpellAnchorNames.Parse(anchor);
 
         // THE ONE THING A CONSUMER ASKS BEFORE DRAWING ANYTHING.
         public bool HasAnimation => !string.IsNullOrEmpty(path) && seconds > 0f;
@@ -102,14 +118,14 @@ namespace PrincesPalace.Domain.Content
         // it as a real duration and play nothing for six tenths of a negative
         // second.
         public static SpellPresentation Of(string rawPath, float rawSeconds, int rawImpactFrame,
-            string rawSfxPath, bool rawFromCaster = false, int rawDepartFrame = 0)
+            string rawSfxPath, string rawAnchor = "", int rawDepartFrame = 0)
         {
             return new SpellPresentation
             {
                 path = (rawPath ?? "").Trim(),
                 seconds = rawSeconds >= 0f ? rawSeconds : DefaultSeconds,
                 impactFrame = rawImpactFrame >= 1 ? rawImpactFrame : DefaultImpactFrame,
-                fromCaster = rawFromCaster,
+                anchor = rawAnchor ?? "",
                 departFrame = rawDepartFrame,
                 sfxPath = (rawSfxPath ?? "").Trim(),
             };
@@ -123,7 +139,8 @@ namespace PrincesPalace.Domain.Content
             path = path,
             seconds = seconds,
             impactFrame = impactFrame,
-            fromCaster = fromCaster,
+            anchor = anchor,
+            size = size,
             departFrame = departFrame,
             sfxPath = sfxPath,
         };

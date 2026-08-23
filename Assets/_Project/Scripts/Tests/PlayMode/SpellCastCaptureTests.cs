@@ -129,7 +129,7 @@ namespace PrincesPalace.PlayModeTests
                     path = path,
                     seconds = seconds,
                     impactFrame = impactFrame,
-                    fromCaster = fromCaster,
+                    anchor = fromCaster ? "travel" : "target",
                 },
             });
 

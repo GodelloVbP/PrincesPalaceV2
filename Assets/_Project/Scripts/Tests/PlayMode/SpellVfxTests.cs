@@ -160,6 +160,69 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
+        // AN ANCHOR THAT DOES NOT PARSE IS A TYPO, and the parser cannot say
+        // so on its own. It falls back to Target rather than throwing, which is
+        // right at play time -- one misplaced effect beats a fight that will not
+        // resolve -- and means a misspelling reaches a player as an explosion in
+        // the wrong place with nothing logged.
+        //
+        // This is the other half of that bargain: the fallback keeps the game
+        // running, and the suite refuses the content that would need it.
+        [Test]
+        public void EveryAuthoredAnchorIsAWordTheParserKnows()
+        {
+            var wrong = new List<string>();
+
+            foreach (var skill in ContentDatabase.Skills)
+            {
+                if (skill == null || skill.vfx == null) continue;
+                if (!SpellAnchorNames.IsKnown(skill.vfx.anchor))
+                {
+                    wrong.Add($"skill '{skill.id}' anchors to '{skill.vfx.anchor}'");
+                }
+            }
+
+            foreach (var enemy in ContentDatabase.Enemies)
+            {
+                if (enemy == null || enemy.vfx == null) continue;
+                if (!SpellAnchorNames.IsKnown(enemy.vfx.anchor))
+                {
+                    wrong.Add($"enemy '{enemy.id}' anchors to '{enemy.vfx.anchor}'");
+                }
+            }
+
+            Assert.IsEmpty(wrong,
+                "These anchors are not words the parser knows, so each one silently becomes " +
+                "'target' at play time: " + string.Join(", ", wrong) + ". Valid: " +
+                string.Join(", ", SpellAnchorNames.All) + ".");
+        }
+
+        // A size of zero or less is not "the default" -- it is a box with no
+        // area, which draws nothing at all. The presentation treats it as the
+        // default at play time for the same graceful-degradation reason the
+        // anchor does, and this refuses the content that relies on it.
+        [Test]
+        public void EveryAuthoredSizeIsPositive()
+        {
+            var wrong = new List<string>();
+
+            foreach (var skill in ContentDatabase.Skills)
+            {
+                if (skill?.vfx == null || string.IsNullOrEmpty(skill.vfx.path)) continue;
+                if (skill.vfx.size <= 0f) wrong.Add($"skill '{skill.id}' has size {skill.vfx.size}");
+            }
+
+            foreach (var enemy in ContentDatabase.Enemies)
+            {
+                if (enemy?.vfx == null || string.IsNullOrEmpty(enemy.vfx.path)) continue;
+                if (enemy.vfx.size <= 0f) wrong.Add($"enemy '{enemy.id}' has size {enemy.vfx.size}");
+            }
+
+            Assert.IsEmpty(wrong,
+                "A spell box with no area draws nothing: " + string.Join(", ", wrong) +
+                ". Leave size out entirely to get the default rather than writing 0.");
+        }
+
         // And the impact frame has to be a frame that exists -- an effect whose
         // hit lands on frame 8 of a six-frame sequence lands at the end
         // instead, quietly, which is the same class of miss one step along.
@@ -509,7 +572,7 @@ namespace PrincesPalace.PlayModeTests
                     seconds = 0.65f,
                     impactFrame = 13,
                     departFrame = 9,
-                    fromCaster = fromCaster,
+                    anchor = fromCaster ? "travel" : "target",
                 },
             };
         }

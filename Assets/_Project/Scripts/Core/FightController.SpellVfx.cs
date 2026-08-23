@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
+using PrincesPalace.Domain.Content;
 
 namespace PrincesPalace
 {
@@ -13,7 +14,16 @@ namespace PrincesPalace
     public partial class FightController
     {
         // The box the effect is fitted into. Square, and the art is not always.
-        private static readonly Vector2 SpellVfxSize = new Vector2(380f, 380f);
+        //
+        // AUTHORED PER SPELL NOW. This was a constant for every effect there
+        // had ever been -- fine for a bolt, wrong in both directions for a
+        // boss's slam and for a status glint.
+        private static Vector2 BoxFor(CombatBeat beat)
+        {
+            float size = beat?.Vfx?.size ?? SpellPresentation.DefaultSize;
+            if (size <= 0f) size = SpellPresentation.DefaultSize;
+            return new Vector2(size, size);
+        }
 
         // A per-pixel scan of every frame of a sheet, asked for on every cast.
         // Keyed by PATH rather than by sprite so nothing accumulates across
@@ -73,22 +83,61 @@ namespace PrincesPalace
             var parent = spellVfxPlayer.transform.parent;
             if (parent == null) return;
 
-            float deadSpaceBelow = VfxDeadSpaceBelow(beat.Vfx.path);
+            // The box first: the letterbox measurement below depends on it, and
+            // it stopped being a constant when spells got their own sizes.
+            var box = BoxFor(beat);
+            float deadSpaceBelow = VfxDeadSpaceBelow(beat.Vfx.path, box);
 
             var rect = targetRect.rect;
             float centreX = parent.InverseTransformPoint(targetRect.TransformPoint(Vector3.zero)).x;
             float bottomY = parent.InverseTransformPoint(targetRect.TransformPoint(new Vector3(0f, rect.yMin, 0f))).y;
 
-            if (beat.Vfx.fromCaster)
+            // WHERE THE ART HAPPENS, which is not the same question as who the
+            // skill hits -- see SpellAnchor. Travel leaves here entirely; the
+            // other four are two independent choices, read as two.
+            var anchor = beat.Vfx.Anchor;
+
+            if (anchor == SpellAnchor.Travel)
             {
                 PlayTravellingVfx(beat, parent, centreX, bottomY);
                 return;
             }
 
-            spellVfxPlayer.SetFacing(1f);
-            var anchoredPosition = new Vector2(centreX, bottomY + SpellVfxSize.y * 0.5f - deadSpaceBelow);
+            // WHOSE BODY. A caster-anchored effect moves its origin, not its
+            // shape: a self-buff aura belongs on whoever cast it even when the
+            // skill is aimed at an ally. Falling back to the target when the
+            // caster has no slot -- an off-stage or synthetic actor -- is the
+            // same graceful default the travelling branch takes.
+            var on = SpellAnchorNames.OnCaster(anchor) ? SlotFor(beat.Actor) ?? targetRect : targetRect;
 
-            spellVfxPlayer.PlayAt(beat.Vfx.path, beat.Vfx.seconds, anchoredPosition, SpellVfxSize);
+            if (!ReferenceEquals(on, targetRect))
+            {
+                var onRect = on.rect;
+                centreX = parent.InverseTransformPoint(on.TransformPoint(Vector3.zero)).x;
+                bottomY = parent.InverseTransformPoint(
+                    on.TransformPoint(new Vector3(0f, onRect.yMin, 0f))).y;
+            }
+
+            spellVfxPlayer.SetFacing(1f);
+
+            // WHERE ON IT. Standing on the ground line is half the box less
+            // whatever transparent margin the sheet carries below its drawn
+            // content, which lands the DRAWN bottom on the line rather than the
+            // box's. Centred ignores all of that and takes the slot's midpoint.
+            float y;
+            if (SpellAnchorNames.Centred(anchor))
+            {
+                var body = on.rect;
+                y = parent.InverseTransformPoint(on.TransformPoint(new Vector3(0f, body.center.y, 0f))).y;
+            }
+            else
+            {
+                y = bottomY + box.y * 0.5f - deadSpaceBelow;
+            }
+
+            var anchoredPosition = new Vector2(centreX, y);
+
+            spellVfxPlayer.PlayAt(beat.Vfx.path, beat.Vfx.seconds, anchoredPosition, box);
         }
 
         // ---- an effect that CROSSES the stage ------------------------------------
@@ -105,8 +154,9 @@ namespace PrincesPalace
         // measurement that killed it.
         private void PlayTravellingVfx(CombatBeat beat, Transform parent, float targetX, float bottomY)
         {
-            float dead = VfxDeadSpaceBelow(beat.Vfx.path);
-            var to = new Vector2(targetX, bottomY + SpellVfxSize.y * 0.5f - dead);
+            var box = BoxFor(beat);
+            float dead = VfxDeadSpaceBelow(beat.Vfx.path, box);
+            var to = new Vector2(targetX, bottomY + box.y * 0.5f - dead);
 
             var casterRect = SlotFor(beat.Actor);
 
@@ -116,7 +166,7 @@ namespace PrincesPalace
             if (casterRect == null)
             {
                 spellVfxPlayer.SetFacing(1f);
-                spellVfxPlayer.PlayAt(beat.Vfx.path, beat.Vfx.seconds, to, SpellVfxSize);
+                spellVfxPlayer.PlayAt(beat.Vfx.path, beat.Vfx.seconds, to, box);
                 return;
             }
 
@@ -137,12 +187,17 @@ namespace PrincesPalace
             // through its own wind-up.
             //
             // Both are 1-based in content, like the golem's impact frame.
-            spellVfxPlayer.PlayFrom(beat.Vfx.path, beat.Vfx.seconds, from, to, SpellVfxSize,
+            spellVfxPlayer.PlayFrom(beat.Vfx.path, beat.Vfx.seconds, from, to, box,
                 beat.Vfx.departFrame - 1, beat.Vfx.impactFrame - 1);
         }
 
         // How much empty box sits BELOW the visible art once preserveAspect has
-        // fitted this sheet into SpellVfxSize. Two corrections, both earned.
+        // fitted this sheet into the box. Two corrections, both earned.
+        //
+        // THE BOX IS A PARAMETER, not the old constant: the letterbox is a
+        // function of both the art's aspect and the box's, so a spell that
+        // authored its own size and kept reading 380 here would be corrected by
+        // the wrong margin and land off the ground line.
         //
         // ONE: THE LETTERBOX. Anchoring the BOX's bottom edge to the target's
         // ground line is not enough on its own, because the box is square and
@@ -172,23 +227,23 @@ namespace PrincesPalace
         // the moment it is fully extended. That is the MINIMUM margin across the
         // sheet, and it is the effect's own ground line: correcting by it lands
         // the strike on the feet and still lets the fade retreat upward.
-        private float VfxDeadSpaceBelow(string vfxPath)
+        private float VfxDeadSpaceBelow(string vfxPath, Vector2 box)
         {
             var frames = spellVfxPlayer == null ? null : spellVfxPlayer.Frames(vfxPath);
             if (frames == null || frames.Length == 0 || frames[0] == null) return 0f;
 
             float frameWidth = frames[0].rect.width;
             float frameHeight = frames[0].rect.height;
-            if (frameWidth <= 0f || frameHeight <= 0f || SpellVfxSize.y <= 0f) return 0f;
+            if (frameWidth <= 0f || frameHeight <= 0f || box.y <= 0f) return 0f;
 
             // Height-constrained (tall or square) art already reaches the box's
             // bottom edge; only wider-than-the-box art letterboxes.
             float frameAspect = frameWidth / frameHeight;
-            float boxAspect = SpellVfxSize.x / SpellVfxSize.y;
+            float boxAspect = box.x / box.y;
             float renderedHeight = frameAspect <= boxAspect
-                ? SpellVfxSize.y
-                : SpellVfxSize.x / frameAspect;
-            float letterboxBelow = (SpellVfxSize.y - renderedHeight) * 0.5f;
+                ? box.y
+                : box.x / frameAspect;
+            float letterboxBelow = (box.y - renderedHeight) * 0.5f;
 
             return letterboxBelow + VfxContentPaddingFraction(vfxPath, frames) * renderedHeight;
         }

@@ -33,7 +33,8 @@ MonoBehaviour:
     path: Spells/lightning_bolt
     seconds: 0.52
     impactFrame: 5
-    fromCaster: 0
+    anchor: 
+    size: 380
     departFrame: 0
     sfxPath: Audio/Sfx/lightning_strike
   appliesStatus: 0

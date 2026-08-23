@@ -524,14 +524,37 @@ namespace PrincesPalace.PlayModeTests
         // near-equal frame reported the settle 26px early, on a curve whose
         // last 2% is the flattest part of it. Only the clamp at progress 1
         // produces bit-identical frames.
+        //
+        // BOTH CHANNELS, not just x. This asked for localScale.x == 1f, which
+        // was a fine way to say "nothing is leaning" while the only thing that
+        // touched scale was a lean returning to rest. The push-in leaves the
+        // sky at 1.02 for as long as a stone is selected, so that spelling
+        // would report a perfectly still sky as never settling. What a caller
+        // needs is that nothing is MOVING, in either channel.
+        //
+        // BUDGETED IN GAME TIME, NOT IN FRAMES, and that is the part worth
+        // reading. It was 900 frames, a number that means nothing on its own:
+        // a batchmode frame here is 0.65ms, so 900 of them are 0.58 SECONDS of
+        // game time. The slide was 0.42s when that was written and fitted
+        // comfortably inside it. Raising it to 0.62s for the talent handoff put
+        // the slide OUTSIDE the budget -- 0.58 < 0.62 -- and this began failing
+        // on a threshold nothing in it mentioned, which reads as a flake
+        // because the margin moves with machine load.
+        //
+        // Six slides' worth, derived from the constant itself, so retuning the
+        // slide can never again quietly outrun the thing waiting for it.
         private static IEnumerator Settled(RectTransform sky)
         {
-            float last = float.NaN;
+            float lastX = float.NaN;
+            float lastScale = float.NaN;
             int still = 0;
 
-            for (int i = 0; i < 900; i++)
+            float budget = ConstellationLayout.SlideSeconds * 6f;
+            float spent = 0f;
+
+            while (spent < budget)
             {
-                if (sky.anchoredPosition.x == last && sky.localScale.x == 1f)
+                if (sky.anchoredPosition.x == lastX && sky.localScale.x == lastScale)
                 {
                     if (++still >= 4) yield break;
                 }
@@ -540,11 +563,16 @@ namespace PrincesPalace.PlayModeTests
                     still = 0;
                 }
 
-                last = sky.anchoredPosition.x;
+                lastX = sky.anchoredPosition.x;
+                lastScale = sky.localScale.x;
+                spent += Time.unscaledDeltaTime;
                 yield return null;
             }
 
-            Assert.Fail("the sky never settled");
+            Assert.Fail(
+                $"the sky never settled inside {budget:0.00}s of game time -- x {sky.anchoredPosition.x}, " +
+                $"scale {sky.localScale.x}. Either something is still driving it, or the slide now takes " +
+                $"longer than six times ConstellationLayout.SlideSeconds ({ConstellationLayout.SlideSeconds}s).");
         }
     }
 }

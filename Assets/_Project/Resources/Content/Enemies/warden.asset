@@ -39,7 +39,8 @@ MonoBehaviour:
     path: 
     seconds: 0.6
     impactFrame: 3
-    fromCaster: 0
+    anchor: 
+    size: 380
     departFrame: 0
     sfxPath: 
   appliesStatus: 0

@@ -77,8 +77,8 @@
         "path": "Spells/mud_burst",
         "seconds": 0.65,
         "impactFrame": 13,
-        "fromCaster": true,
-        "departFrame": 9
+        "departFrame": 9,
+        "anchor": "travel"
       }
     },
     {
