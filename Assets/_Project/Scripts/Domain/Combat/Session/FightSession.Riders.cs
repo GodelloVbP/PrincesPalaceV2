@@ -72,7 +72,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
             if (killedThisAction && !trampled)
             {
-                TryGrantBloodlust(_encounter.Current);
+                RelicsOnKill(_encounter.Current);
             }
             else
             {

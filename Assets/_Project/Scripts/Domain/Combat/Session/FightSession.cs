@@ -229,7 +229,7 @@ namespace PrincesPalace.Domain.Combat.Session
             var enemyKit = SourceFor(target);
             var actorKit = KitFor(actor);
 
-            BeginAttackPotency(actor);
+            RelicsBeforeSwing(actor);
 
             // The base, held so a counted swing measures its bonus against the
             // blow itself rather than against what armour and elements make of
@@ -254,7 +254,7 @@ namespace PrincesPalace.Domain.Combat.Session
             }
 
             int damage = outcome.Damage + PotencyBonus(baseAmount);
-            EndPotency();
+            RelicsAfterSwing(actor, target, damage);
 
             AppendMessage($"{verbPhrase} for {damage} damage!{EffectivenessSuffix(outcome.Effectiveness)}");
             RecordActorVoice(actor);

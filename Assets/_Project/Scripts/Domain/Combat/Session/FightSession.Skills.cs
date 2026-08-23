@@ -28,6 +28,17 @@ namespace PrincesPalace.Domain.Combat.Session
             _actionCanBrave = true;
             BeginBeat(actor, target);
 
+            // THE BASIC SPELL IS A SPELL. It did not advance the Charging
+            // Crystal's tally before this file existed -- the counter was
+            // hooked into the character-skill path alone, so "every 4th spell"
+            // quietly meant "every 4th of one KIND of spell" and a player
+            // pressing the plain Skill button would never charge one.
+            //
+            // Nothing was wrong with the counter; the moment simply had two
+            // entrances and only one of them was wired. Naming the moments is
+            // what made the second one visible.
+            RelicsBeforeCast(actor);
+
             // Weight of Wool counts warded party members and Gift: Fury is
             // spent by the swing, and CombatMath can see neither from inside
             // its own scaling. Summed onto the actor here, immediately before
@@ -53,9 +64,13 @@ namespace PrincesPalace.Domain.Combat.Session
             bool isExecute = role == CharacterRole.Assassin
                              && IsBelowHealthFraction(target, FightTuning.AssassinExecuteHealthFraction);
 
-            int damage = isExecute
+            // The base, held so a charged cast measures against the spell
+            // rather than against what the execute bonus makes of it.
+            int baseAmount = CombatMath.ComputeSkillDamage(actor, target, SkillPowerMultiplierFor(actor));
+
+            int damage = (isExecute
                 ? Rounding.AwayFromZero(outcome.Damage * FightTuning.AssassinExecuteBonusMultiplier)
-                : outcome.Damage;
+                : outcome.Damage) + PotencyBonus(baseAmount);
 
             AppendMessage($"{actor.Name} casts {SkillDisplayNameFor(actor)} on {target.Name} for {damage} damage!{EffectivenessSuffix(outcome.Effectiveness)}");
             ApplySkillRoleEffect(role, actor, target, damage, isExecute);
@@ -65,10 +80,9 @@ namespace PrincesPalace.Domain.Combat.Session
             // which of their own actions actually went off.
             SetStance(actor, Stances.Cast);
 
-            // Magical Shield rises after CASTING specifically, never after a
-            // plain attack. Apply's refresh-not-stack rule is the whole of the
-            // "does not stack" requirement.
-            RaiseMagicalShield(actor);
+            // Everything a relic does when a cast finishes -- the shield
+            // rises, the charge disarms. See FightSession.Relics.
+            RelicsAfterCast(actor, null, target);
 
             CommitBeat();
             AdvanceAfterAction();
@@ -129,7 +143,10 @@ namespace PrincesPalace.Domain.Combat.Session
             // on a Lamb pays her engine; that reads correctly (she warded
             // herself, by another route) and is worth saying out loud rather
             // than discovering.
-            RaiseMagicalShield(actor);
+            // The shield rose inside ResolveCharacterSkill's own relic moment
+            // -- see FightSession.Relics.RelicsAfterCast. It used to be raised
+            // here as well, which was harmless only because Apply refreshes
+            // rather than stacks.
 
             // Fleece Ward T3: warding stops costing the turn. The single
             // biggest quality-of-life node in the Lamb's path -- before it,
@@ -164,7 +181,7 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             // ONE CAST, one advance of the counter, however many things it
             // lands on. See FightSession.Potency.
-            BeginSpellPotency(actor);
+            RelicsBeforeCast(actor);
 
             try
             {
@@ -174,7 +191,7 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 // Every path out, including the ones that resolve nothing --
                 // a charge left armed would be spent by whatever acted next.
-                EndPotency();
+                RelicsAfterCast(actor, skill, target);
             }
         }
 
