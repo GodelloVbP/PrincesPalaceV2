@@ -308,6 +308,88 @@ into a demonstrable before/after rather than an assertion.
    sync back, the committed scene ends up pointing at a Sprite sub-asset
    that doesn't exist in main's copy of the file.
 
+## 5b. Spell effects (`Resources/Spells/{id}/f0..fN`)
+
+A spell's frames are cut from a sheet by `tools/slice_spell_sheet.py`, and
+everything about how one LOOKS is one value in the content — see
+`SpellPresentation`. Adding a spell is a manifest entry, a JSON block, and one
+command; it should not require touching C#.
+
+### The whole loop
+
+```bash
+python tools/slice_spell_sheet.py --new <id> --sheet <file.png>
+```
+
+Cuts the sheet, writes a preview, and prints the two blocks to paste: the
+manifest entry and the `skills.json` `vfx` block, with `impactFrame` guessed
+from the frame carrying the most ink. Then tune against the preview:
+
+```bash
+python tools/slice_spell_sheet.py <id> --preview
+```
+
+The preview renders the sequence at the speed content actually declares,
+dissolve and all, to `tools/screenshots/vfx/{id}.gif`.
+
+### The `vfx` block
+
+| field | default | what it does |
+| --- | --- | --- |
+| `path` | — | `Resources`-relative folder of `f0..fN`. Empty means no visual. |
+| `seconds` | `0.6` | How long the whole sequence takes. |
+| `impactFrame` | `3` | Which frame (from 1) the blow lands on. The damage number, the flash and the hit-stop are all timed to it. |
+| `anchor` | `target` | Where the art happens — see below. |
+| `size` | `380` | Square box the art is fitted into, in reference-frame units. |
+| `departFrame` | `0` | `travel` only: which frame (from 1) it leaves the caster on. Holds the wind-up in place instead of letting it drift. |
+| `sfxPath` | — | `Resources` path to the clip that plays on impact. |
+
+Anything left out takes its default. There are no sentinels to remember.
+
+### `anchor`
+
+Where the art happens, which is **not** the same question as who the skill
+hits. Two axes — whose body, and where on it — flattened into one word:
+
+| word | meaning | for |
+| --- | --- | --- |
+| `target` | on the target's ground line | bolts, impacts, eruptions — almost everything |
+| `caster` | on the caster's ground line | wind-ups, stomps, transformations |
+| `target-centre` | on the target's midpoint | rings, binds, status glints — art drawn around a body |
+| `caster-centre` | on the caster's midpoint | self-buff auras, shield bubbles |
+| `travel` | flies caster → target, mirrored if the caster is on the right | anything drawn as crossing the stage |
+
+An unrecognised word falls back to `target` at play time and **fails the
+suite** — `SpellVfxTests` refuses any anchor that does not parse, so a typo
+cannot reach a player as a quietly misplaced explosion.
+
+### Composing frames from cells
+
+The manifest's optional `sequence` builds frames out of the cut cells, so a
+six-drawing sheet can become a twenty-six-frame animation without new art:
+
+- `{"from": "f0", "spin": 8}` — eight frames rotating a full turn
+- `{"from": "f3", "hold": 4, "scale": (1.0, 1.08)}` — four frames, growing
+- `{"from": "f5", "scale": (1.0, 1.04)}` — one frame, resized
+
+Left out entirely, the cells **are** the frames one for one.
+
+### Multi-target
+
+An effect that lands on more than one thing draws on each of them. The beat
+carries `SplashTargets` and the pool holds one member per stage slot; nothing
+in content asks for it, because "this skill hits everything" is already said by
+`effect: DamageAll`.
+
+### Art that is NOT reproducible
+
+`Assets/_Project/Art/Sheets/hand_assembled.json` names sequences the slicer must
+never write over — hand-cut frames with held duplicates or stepped fades that
+re-running the tool does not restore. The slicer refuses them, and
+`HandAssembledArtTests` pins their bytes so a clobber from any direction fails
+the suite. See `docs/INCIDENTS.md`.
+
+
 ## 6. Per-kit README index
 
 - `Assets/_Project/Art/UI/Hub/README.md`
