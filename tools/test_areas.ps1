@@ -49,7 +49,7 @@ $Areas = @{
     # that already sit in 'content' and 'run', and a bare pattern would drag
     # them in for the sake of a shared word.
     ui      = "Button|Audio|Splash|PauseMenu|DebugMenu|MainMenu|SystemMenu|Cursor|Dialogue|Bark|Inventory|Equipment|Dossier|Options|Music|Screen|UiKit|Flicker|Ambience|Overlay|OfferRow"
-    art     = "Stance|FrameHold|Shadow|WhiteQuad|SpriteFacing|BattleBackground|ItemArt|TalentArt|ArtPath|Flash|Legibility|PostProcessing"
+    art     = "Stance|FrameHold|Shadow|WhiteQuad|SpriteFacing|BattleBackground|ItemArt|TalentArt|ArtPath|HandAssembled|Flash|Legibility|PostProcessing"
     rng     = "Rng|SeededRandom|Seed"
 }
 

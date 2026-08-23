@@ -174,14 +174,29 @@ VFX = {
 # WHITE-backed painted sheet whose 2x3 cells are 724x362 -- the shipped
 # frames are 598x433, so they were not cut from it on that grid either.
 # Reconstructing the real recipe needs the author, not more measurement.
-HAND_ASSEMBLED = {
-    "golem_boulder": (
-        "Hand-assembled, not tool-produced. f2==f3 (held peak), f4/f5 are a "
-        "stepped alpha fade-out, f0 is an intentional blank wind-up frame. "
-        "Do not regenerate from golem_sheet_attack_rock.png -- the grid does "
-        "not match and the post-steps are not reproducible here."
-    ),
-}
+# SEQUENCES THIS TOOL MUST NEVER WRITE OVER, read from the register rather
+# than declared here.
+#
+# It was a dict in this file, which meant the only thing that knew golem_boulder
+# was irreplaceable was the tool most likely to overwrite it -- and the C# suite,
+# which runs against a headless copy that mirrors Assets and nothing else, could
+# not see it at all. One file under Assets, read by both: this refuses to write
+# into any of them, and HandAssembledArtTests pins their bytes so a clobber from
+# any other direction fails the suite too.
+HAND_ASSEMBLED_REGISTER = os.path.join(SOURCE_DIR, "hand_assembled.json")
+
+
+def _load_hand_assembled():
+    try:
+        with open(HAND_ASSEMBLED_REGISTER, encoding="utf-8") as handle:
+            return json.load(handle).get("sequences", {})
+    except (OSError, ValueError) as problem:
+        # LOUD, and fatal. A tool that writes frames and cannot read the list of
+        # frames it must not write is not in a state to run at all.
+        sys.exit(f"cannot read {HAND_ASSEMBLED_REGISTER}: {problem}")
+
+
+HAND_ASSEMBLED = _load_hand_assembled()
 
 # A pixel this bright counts as "light" when hunting for drawn grid lines.
 LIGHT_THRESHOLD = 200

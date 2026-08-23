@@ -309,3 +309,56 @@ enough confidence that nobody checked, and `git log -S` would have shown they
 never existed. **A comment that asserts who calls something is a claim about the
 world, and it decays silently.** `grep` for the symbol is cheap; the comment is
 not evidence.
+
+---
+
+## Irreplaceable art used as a test fixture for the guard meant to protect it (2026-08-23)
+
+`tools/slice_spell_sheet.py` grew a `--new <id> --sheet <file>` flag that cuts a
+sheet nobody has cut yet and prints the manifest and `skills.json` blocks to
+paste. It guarded against scaffolding over an id already in the `VFX` manifest.
+
+`golem_boulder` is not in `VFX`. It is in `HAND_ASSEMBLED`, the register
+declared immediately below it, whose only purpose is naming sequences the tool
+cannot reproduce: `f2==f3` is a held peak, `f4`/`f5` are a stepped alpha fade,
+`f0` is a deliberately blank wind-up, and the source sheet does not even share a
+grid with the result.
+
+The new flag was then pointed at `golem_boulder` **to check whether the guard
+worked**, and cut six cells of an unrelated sheet over all six frames.
+
+`git checkout` restored them exactly and nothing damaged was ever committed,
+which is luck about timing rather than anything the design earned.
+
+### The mistake is not the missing branch
+
+The obvious reading is "the guard checked one register and there were two", and
+the obvious fix is the second check. Both are true and both are now done —
+three guards: the manifest, the register, and a flat refusal to write into any
+directory that already holds frames, which is the one that would have caught
+this without knowing why.
+
+But the register had been read earlier in the same session. What
+`golem_boulder` was, was known. The actual error was **choosing live,
+irreplaceable data as the fixture for an unverified destructive tool**, when a
+copied sheet under a throwaway id would have proved exactly as much. A guard's
+first execution is the least trustworthy moment it will ever have, and that is
+precisely when it was aimed at something that could not be regenerated.
+
+### What enforces it now
+
+`Assets/_Project/Art/Sheets/hand_assembled.json` is the register, and both sides
+read it: the slicer refuses to write into anything named there, and
+`HandAssembledArtTests` pins every listed sequence by SHA-256 so a clobber fails
+the suite **whatever caused it** — a different tool, a bad merge, a stray copy.
+Verified by clobbering a frame on purpose and watching it fail with the file
+named and the recovery command in the message.
+
+The register is a JSON file under `Assets/` rather than a dict inside the Python
+tool, and that placement is the point rather than tidiness: the headless
+TestRunner mirrors `Assets` and nothing else, so a register living beside the
+tool is unreadable from the suite — which would leave the single list of what is
+irreplaceable legible only to the tool most likely to overwrite it.
+
+A pin can be updated. Art is meant to change; it is meant to cost one deliberate
+edit in the same commit as the art, rather than happening while nobody chose it.
