@@ -33,6 +33,11 @@ namespace PrincesPalace.Domain.Combat
         public int PhysicalResistance;
         public int MagicalResistance;
 
+        // Resistance to ONE element, on top of the two-way split above. Empty
+        // for everything that has not been given any, which is why adding it
+        // retuned nothing. See ResistanceByType.
+        public ResistanceByType TypedResistance;
+
         // Null for everyone who has no signature resource, which today is
         // everyone except Shawn. A nullable reference rather than a
         // zero-capacity instance so "has one" is a single unambiguous check

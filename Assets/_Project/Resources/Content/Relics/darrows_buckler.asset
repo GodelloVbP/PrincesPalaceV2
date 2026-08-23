@@ -10,18 +10,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6da02db8c4530f747adcb0b4f87d4af4, type: 3}
-  m_Name: thick_hide
+  m_Name: darrows_buckler
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
-  id: thick_hide
-  displayName: Thick Hide
-  description: Forty more health, carried slowly.
+  id: darrows_buckler
+  displayName: Darrow's Buckler
+  description: Small, dented, and held by somebody who lived. It turns a blow and
+    a curse with the same indifference.
   effect: 0
   rarity: 0
   unlockedBy: 
   modifiers:
-  - type: 9
-    amount: 40
-  - type: 5
-    amount: -5
-  sortOrder: 12
+  - type: 6
+    amount: 25
+  - type: 6
+    amount: 25
+  sortOrder: 14
   iconPath: 

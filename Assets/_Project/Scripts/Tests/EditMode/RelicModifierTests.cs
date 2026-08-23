@@ -1,3 +1,4 @@
+using PrincesPalace.Domain.Stats;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -97,6 +98,16 @@ namespace PrincesPalace.Domain.Tests
                 new[] { Mod(RelicModifierType.None, 999) }));
         }
 
+        // Modifier types that deliberately do NOT map to a single stat, and
+        // are applied by their own path instead. Named here rather than
+        // skipped by a condition, so adding one is a decision somebody makes
+        // in this file rather than a hole that opens quietly.
+        private static readonly RelicModifierType[] NotSingleStat =
+        {
+            // Five numbers, not one -- see RelicModifiers.ApplyResistance.
+            RelicModifierType.ResistanceFlat,
+        };
+
         [Test]
         public void EveryModifierTypeExceptNoneMapsToARealStat()
         {
@@ -105,10 +116,30 @@ namespace PrincesPalace.Domain.Tests
             foreach (RelicModifierType type in Enum.GetValues(typeof(RelicModifierType)))
             {
                 if (type == RelicModifierType.None) continue;
+                if (NotSingleStat.Contains(type)) continue;
 
                 Assert.AreNotEqual(RelicStat.None, Mod(type, 1).Stat,
                     $"{type} has no case in RelicModifier.Stat, so it can never apply");
             }
+        }
+
+        // AND THE EXEMPTION IS NOT A FREE PASS. A type excused from the sweep
+        // above still has to be applied by something, or the exemption is
+        // exactly the silent hole the sweep exists to refuse.
+        [Test]
+        public void AModifierExcusedFromTheStatSweepIsStillAppliedBySomething()
+        {
+            var before = new ResistanceByType();
+
+            var after = RelicModifiers.ApplyResistance(before, new[]
+            {
+                new RelicModifier(RelicModifierType.ResistanceFlat, 15, DamageType.Fire),
+                new RelicModifier(RelicModifierType.ResistanceFlat, 10, againstMagical: true),
+            });
+
+            Assert.AreEqual(25, after.Fire, "fire takes both the specific 15 and the magical 10");
+            Assert.AreEqual(10, after.Ice, "ice takes the magical 10 alone");
+            Assert.AreEqual(0, after.Physical, "physical is not magical and takes neither");
         }
 
         [Test]

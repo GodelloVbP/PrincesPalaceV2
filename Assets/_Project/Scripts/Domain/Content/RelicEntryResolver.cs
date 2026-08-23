@@ -1,3 +1,5 @@
+using PrincesPalace.Domain.Stats;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -140,7 +142,40 @@ namespace PrincesPalace.Domain.Content
                         return false;
                     }
 
-                    modifiers.Add(new RelicModifier(type, rawModifier.amount));
+                    // TYPED RESISTANCE HAS TO SAY WHAT IT RESISTS. Unnamed, it
+                    // is a number protecting against nothing, sitting in a
+                    // relic's description promising otherwise.
+                    DamageType? against = null;
+                    bool againstMagical = false;
+
+                    if (type == RelicModifierType.ResistanceFlat)
+                    {
+                        string named = (rawModifier.damageType ?? "").Trim();
+
+                        if (string.Equals(named, "magical", StringComparison.OrdinalIgnoreCase))
+                        {
+                            againstMagical = true;
+                        }
+                        else if (Enum.TryParse<DamageType>(named, ignoreCase: true, out var parsed))
+                        {
+                            against = parsed;
+                        }
+                        else
+                        {
+                            error = $"{label}: modifier 'ResistanceFlat' names damageType " +
+                                    $"'{rawModifier.damageType}', which is neither a damage type " +
+                                    "nor 'magical'.";
+                            return false;
+                        }
+                    }
+                    else if (!string.IsNullOrWhiteSpace(rawModifier.damageType))
+                    {
+                        error = $"{label}: modifier '{rawModifier.type}' names a damageType, " +
+                                "which only ResistanceFlat reads.";
+                        return false;
+                    }
+
+                    modifiers.Add(new RelicModifier(type, rawModifier.amount, against, againstMagical));
                 }
             }
 

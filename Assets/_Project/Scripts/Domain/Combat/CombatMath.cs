@@ -339,7 +339,17 @@ namespace PrincesPalace.Domain.Combat
                 return 0;
             }
 
-            return IsPhysical(type) ? target.PhysicalResistance : target.MagicalResistance;
+            // THE BROAD ANSWER PLUS THE SPECIFIC ONE. Physical-or-magical is
+            // what gear rolls and the sheet shows; the typed block is what a
+            // cloak worn against fire adds on top of it.
+            //
+            // Summed rather than taking the larger, because they are different
+            // claims: generic warding and a fire cloak both genuinely stand
+            // between you and a fire bolt. The softening curve stops that
+            // running away -- R/(R+100) means the second hundred is worth much
+            // less than the first.
+            int broad = IsPhysical(type) ? target.PhysicalResistance : target.MagicalResistance;
+            return broad + target.TypedResistance.For(type);
         }
 
         // Returns how much a signature resource soaked before health was

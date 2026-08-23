@@ -1,3 +1,4 @@
+using PrincesPalace.Domain.Stats;
 using System;
 using System.Collections.Generic;
 
@@ -29,6 +30,20 @@ namespace PrincesPalace.Domain.Content
         MaxManaPercent,
         SpeedPercent,
 
+        // RESISTANCE TO ONE KIND OF HARM. The kind is named by the modifier's
+        // own damageType field rather than by a value per type here: five types
+        // would be five more entries saying the same thing, and a sixth damage
+        // type would make it six.
+        //
+        // "magical" is accepted there as shorthand for every type that is not
+        // physical -- what a buckler is actually sold as, and what the existing
+        // two-way split already means by the word.
+        //
+        // FLAT ONLY, no percent twin. Resistance is already a percentage of a
+        // sort: it reduces on the R/(R+100) curve, so "+20% resistance" would
+        // be a percentage of a percentage and nobody could predict it.
+        ResistanceFlat,
+
         // Flat additions, applied the same way.
         AttackFlat,
         DefenceFlat,
@@ -43,6 +58,12 @@ namespace PrincesPalace.Domain.Content
     {
         public string type = "";
         public int amount;
+
+        // Which kind of harm, for ResistanceFlat. One of the DamageType names,
+        // or "magical" for every type that is not physical. Required by that
+        // type and refused on every other -- an author who names a damage type
+        // on an AttackPercent believes they have made a typed thing.
+        public string damageType = "";
     }
 
     // One validated numeric change.
@@ -51,10 +72,19 @@ namespace PrincesPalace.Domain.Content
         public readonly RelicModifierType Type;
         public readonly int Amount;
 
-        public RelicModifier(RelicModifierType type, int amount)
+        // Set only for ResistanceFlat. Against names one element; AgainstMagical
+        // means every type that is not physical, resolved from the "magical"
+        // shorthand once at authoring time so nothing downstream knows the word.
+        public readonly DamageType? Against;
+        public readonly bool AgainstMagical;
+
+        public RelicModifier(RelicModifierType type, int amount,
+                             DamageType? against = null, bool againstMagical = false)
         {
             Type = type;
             Amount = amount;
+            Against = against;
+            AgainstMagical = againstMagical;
         }
 
         public bool IsPercent
@@ -126,6 +156,28 @@ namespace PrincesPalace.Domain.Content
     // anybody having authored a large one.
     public static class RelicModifiers
     {
+        // TYPED RESISTANCE DOES NOT GO THROUGH Apply, and cannot: Apply
+        // answers "what does this ONE stat become", and resistance is five
+        // numbers a relic contributes to independently. Folded into a block
+        // instead, which is the shape the combatant already holds.
+        public static ResistanceByType ApplyResistance(ResistanceByType baseValue,
+                                                       IEnumerable<RelicModifier> modifiers)
+        {
+            if (modifiers == null) return baseValue;
+
+            var result = baseValue;
+
+            foreach (var modifier in modifiers)
+            {
+                if (modifier.Type != RelicModifierType.ResistanceFlat) continue;
+
+                if (modifier.AgainstMagical) result = result.WithMagical(modifier.Amount);
+                else if (modifier.Against.HasValue) result = result.With(modifier.Against.Value, modifier.Amount);
+            }
+
+            return result;
+        }
+
         public static int Apply(int baseValue, RelicStat stat, IEnumerable<RelicModifier> modifiers)
         {
             if (modifiers == null) return baseValue;

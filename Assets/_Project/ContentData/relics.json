@@ -114,6 +114,24 @@
       "description": "It drinks a little from every spell and gives the fourth one back with interest. The interest is reckoned on the spell itself, never on whatever else was helping.",
       "effect": "ChargingCrystal",
       "rarity": "common"
+    },
+    {
+      "id": "darrows_buckler",
+      "displayName": "Darrow's Buckler",
+      "description": "Small, dented, and held by somebody who lived. It turns a blow and a curse with the same indifference.",
+      "rarity": "common",
+      "modifiers": [
+        {
+          "type": "ResistanceFlat",
+          "amount": 25,
+          "damageType": "physical"
+        },
+        {
+          "type": "ResistanceFlat",
+          "amount": 25,
+          "damageType": "magical"
+        }
+      ]
     }
   ]
 }

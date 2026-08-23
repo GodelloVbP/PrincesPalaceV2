@@ -169,6 +169,9 @@ namespace PrincesPalace
             state.PhysicalResistance = stats.physicalResistance;
             state.MagicalResistance = stats.magicalResistance;
 
+            // And whatever a relic adds against ONE element, on top of those.
+            state.TypedResistance = RelicModifiers.ApplyResistance(state.TypedResistance, modifiers);
+
             // Built from the CHARACTER, so a signature whose capacity a talent
             // widened arrives at that width. Its single call site until now was
             // its own definition.
