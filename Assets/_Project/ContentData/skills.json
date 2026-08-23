@@ -33,7 +33,8 @@
       "effect": "DamageAll",
       "resourceCost": 3,
       "power": 1,
-      "manaCost": 6
+      "manaCost": 6,
+      "cooldownTurns": 2
     },
     {
       "id": "battering_ram",
@@ -59,7 +60,8 @@
       "spendsAllResource": true,
       "power": 3,
       "ignoresDefense": true,
-      "manaCost": 12
+      "manaCost": 12,
+      "cooldownTurns": 5
     },
     {
       "id": "mud_burst",
@@ -79,7 +81,8 @@
         "impactFrame": 13,
         "departFrame": 9,
         "anchor": "travel"
-      }
+      },
+      "cooldownTurns": 2
     },
     {
       "id": "frost_flare",
@@ -169,7 +172,8 @@
         "speedPercent": 30,
         "temporaryHealthPercent": 25,
         "splashPercent": 50
-      }
+      },
+      "cooldownTurns": 5
     },
     {
       "id": "fleece_ward",
@@ -190,7 +194,8 @@
       "unlockLevel": 999,
       "effect": "Shatter",
       "manaCost": 0,
-      "resourceCost": 3
+      "resourceCost": 3,
+      "cooldownTurns": 3
     },
     {
       "id": "wail",
@@ -203,7 +208,8 @@
       "resourceCost": 10,
       "appliesStatus": "Protect",
       "statusMagnitude": 50,
-      "statusDuration": 2
+      "statusDuration": 2,
+      "cooldownTurns": 3
     },
     {
       "id": "gift_mana",

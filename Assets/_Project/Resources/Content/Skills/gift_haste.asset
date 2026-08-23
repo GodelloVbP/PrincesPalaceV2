@@ -26,6 +26,7 @@ MonoBehaviour:
   flatAmount: 0
   ignoresDefense: 0
   damageInstances: []
+  cooldownTurns: 0
   playerSelectable: 1
   vfx:
     path: 

@@ -29,6 +29,12 @@ namespace PrincesPalace.Domain.Combat.Session
         public const int ChargingCrystalEvery = 4;
         public const int ChargingCrystalPercent = 50;
 
+        // How many turns a swing takes off, for the Salt Ledger. One, and it
+        // is a constant rather than a literal because the relic's whole value
+        // is a ratio against the cooldowns it shortens -- retuning either
+        // without seeing the other is how a relic becomes mandatory.
+        public const int SaltLedgerTurns = 1;
+
         public const int LongCountEvery = 3;
         public const int LongCountPercent = 40;
 

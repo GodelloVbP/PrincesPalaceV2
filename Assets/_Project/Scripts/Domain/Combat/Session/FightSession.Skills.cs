@@ -127,6 +127,11 @@ namespace PrincesPalace.Domain.Combat.Session
 
             int resourceSpent = SkillResolution.ResourceToSpend(actor.Signature, skill.ResourceCost, skill.SpendsAllResource);
             CombatMath.SpendMana(actor, skill.ManaCost);
+
+            // Spent alongside the mana, and for the same reason it is spent
+            // here rather than at the end: the cast is committed at this point.
+            // A resolution that lands on nothing still cost the turn.
+            BeginCooldown(actor, skill);
             actor.Signature?.TrySpend(resourceSpent);
 
             // Only a cast that can actually deal damage spends Gift: Fury. A

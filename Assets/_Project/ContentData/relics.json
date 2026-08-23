@@ -35,8 +35,9 @@
     {
       "id": "salt_ledger",
       "displayName": "The Salt Ledger",
-      "description": "Every debt the sea remembers, written small. It has no power yet.",
-      "rarity": "common"
+      "description": "Every debt the sea remembers, written small. Swing, and a line of it is struck out - whatever you are waiting on comes back a turn sooner.",
+      "rarity": "ultrarare",
+      "effect": "SaltLedger"
     },
     {
       "id": "cold_iron_ring",

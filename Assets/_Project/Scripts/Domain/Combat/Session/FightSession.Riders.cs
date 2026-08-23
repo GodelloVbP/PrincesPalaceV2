@@ -245,6 +245,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
             RegenerateMana(actor);
             TickStatuses(actor);
+            TickCooldowns(actor);
 
             // Every other duration ticks here too, so "a turn" means the same
             // thing for a ward payout cap, a grace period and a transform as it

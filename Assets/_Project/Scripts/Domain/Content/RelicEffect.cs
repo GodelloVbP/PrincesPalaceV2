@@ -58,6 +58,14 @@ namespace PrincesPalace.Domain.Content
         // whether the target happens to be weak to the element or not.
         ChargingCrystal,
 
+        // A plain attack takes a turn off everything the actor is waiting on.
+        //
+        // Worth nothing at all in a kit with no cooldowns, and worth more the
+        // longer they are -- which is the point. It is the relic that makes
+        // "swing while the big one comes back" a real line of play rather than
+        // the thing you do because there is nothing else.
+        SaltLedger,
+
         // Every 3rd plain attack hits for 40% of its own base again.
         //
         // The same rule as ChargingCrystal in every respect except which

@@ -230,6 +230,19 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             refusal = null;
 
+            // STILL COOLING. First, because it is the cheapest question and the
+            // one whose answer never depends on the board -- and because a
+            // player told "no wards to shatter" about a skill they could not
+            // have cast anyway has been told the wrong thing.
+            int cooling = CooldownRemaining(actor, skill.Id);
+            if (cooling > 0)
+            {
+                refusal = cooling == 1
+                    ? $"{skill.DisplayName} is ready next turn."
+                    : $"{skill.DisplayName} is ready in {cooling} turns.";
+                return false;
+            }
+
             switch (skill.Effect)
             {
                 case SkillEffect.Shatter:

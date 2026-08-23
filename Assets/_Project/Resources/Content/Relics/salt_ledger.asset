@@ -14,9 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
   id: salt_ledger
   displayName: The Salt Ledger
-  description: Every debt the sea remembers, written small. It has no power yet.
-  effect: 0
-  rarity: 0
+  description: Every debt the sea remembers, written small. Swing, and a line of
+    it is struck out - whatever you are waiting on comes back a turn sooner.
+  effect: 5
+  rarity: 3
   unlockedBy: 
   modifiers: []
   sortOrder: 4

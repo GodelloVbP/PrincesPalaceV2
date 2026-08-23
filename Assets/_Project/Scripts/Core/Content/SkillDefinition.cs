@@ -55,6 +55,9 @@ namespace PrincesPalace.Content
         public DamageInstance[] damageInstances = System.Array.Empty<DamageInstance>();
 
         [Tooltip("Resources-relative folder of this spell's animation frames (f0..fN). Empty means no visual.")]
+        // See RawSkillEntry.cooldownTurns.
+        public int cooldownTurns;
+
         // See RawSkillEntry.playerSelectable. False keeps a monster's skill off
         // every player's action strip whatever its owner id says.
         public bool playerSelectable = true;

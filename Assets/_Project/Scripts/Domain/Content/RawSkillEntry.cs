@@ -63,6 +63,19 @@ namespace PrincesPalace.Domain.Content
         // of something averaged.
         public RawDamageInstance[] damageInstances = Array.Empty<RawDamageInstance>();
 
+        // HOW MANY OF THE CASTER'S OWN TURNS BEFORE IT COMES BACK.
+        //
+        // 0, the default, is a skill with no cooldown at all -- which is every
+        // skill authored before this existed and still most of them. 2 means
+        // "use it turn one, then again turn three": the number is counted from
+        // the turn it was cast on, which is how an author says it out loud.
+        //
+        // Counted in the CASTER'S turns rather than in rounds. The turn order
+        // is charge-based, so a fast character acts more often than a slow one
+        // and a cooldown measured in rounds would be worth twice as much to one
+        // of them for reasons nobody chose.
+        public int cooldownTurns;
+
         // DOES A PLAYER EVER PICK THIS FROM A MENU?
         //
         // True for a character's kit. False for a skill a MONSTER owns, and the

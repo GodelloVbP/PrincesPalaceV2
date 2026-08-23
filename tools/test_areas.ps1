@@ -25,7 +25,7 @@ $AreasTestsRoot = Join-Path $AreasProjectRoot "Assets\_Project\Scripts\Tests"
 # imprecise area. Overlap between areas is fine and already happens (a class
 # can and often does belong to two subjects at once).
 $Areas = @{
-    combat  = "Fight|Wool|Spell|Combat|Enemy|Party|Stage|Boss|Turn|Skill|Damage|Defeat|Teardown|BreakShield|Status|Signature|Ward|Gift|Empower"
+    combat  = "Fight|Wool|Spell|Combat|Enemy|Party|Stage|Boss|Turn|Skill|Damage|Defeat|Teardown|BreakShield|Status|Signature|Ward|Gift|Empower|Cooldown|Relic"
     hub     = "Hub|Talent|Principality|CharacterSheet|SheetStat|Store|Constellation|Glossary"
     content = "Content|ItemSet|Item|Resolver|ArtPath|AbilityScore|StatBlock|StatPoint|Invest|Character|Enemy|Scaling|Requirement|Rounding|AbilityDerivation|Weapon|Relic|Rarity|Achievement|RoundTrip"
     # GlobalState: the lint that keeps a test from leaving a static flipped for

@@ -65,6 +65,9 @@ namespace PrincesPalace.Domain.Content
         // silently ignored one.
         public readonly TransformGrant Transform;
 
+        // See RawSkillEntry.cooldownTurns. 0 for a skill with no cooldown.
+        public readonly int CooldownTurns;
+
         // See RawSkillEntry.playerSelectable.
         public readonly bool PlayerSelectable;
 
@@ -76,8 +79,10 @@ namespace PrincesPalace.Domain.Content
             DamageInstance[] damageInstances, SpellPresentation presentation, int sortOrder,
             StatusEffectType? appliesStatus = null, int statusMagnitude = 0, int statusDuration = 0,
             AbilityScoreBlock requirements = default, ScalingAxis scalingAxis = ScalingAxis.Auto,
-            int queuePushSlots = 0, TransformGrant transform = null, bool playerSelectable = true)
+            int queuePushSlots = 0, TransformGrant transform = null, bool playerSelectable = true,
+            int cooldownTurns = 0)
         {
+            CooldownTurns = cooldownTurns < 0 ? 0 : cooldownTurns;
             PlayerSelectable = playerSelectable;
             QueuePushSlots = queuePushSlots;
             Transform = transform;

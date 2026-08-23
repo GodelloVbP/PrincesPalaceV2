@@ -106,7 +106,9 @@ namespace PrincesPalace.Domain.Combat.Session
             // skill index disagreeing, which casts a different skill than the
             // one that was pressed.
             return kit.Skills
-                .Select((s, i) => new ResolvedSkillOption(i, s, SkillResolution.CanAfford(actor, s.ManaCost, s.ResourceCost)))
+                .Select((s, i) => new ResolvedSkillOption(i, s,
+                    SkillResolution.CanAfford(actor, s.ManaCost, s.ResourceCost),
+                    CooldownRemaining(actor, s.Id)))
                 .Where(o => actor.AbilityScores.Meets(RequirementCurve.Apply(o.Skill.Requirements)))
                 .ToList();
         }
@@ -324,11 +326,21 @@ namespace PrincesPalace.Domain.Combat.Session
         public readonly Content.ResolvedSkill Skill;
         public readonly bool Affordable;
 
-        public ResolvedSkillOption(int index, Content.ResolvedSkill skill, bool affordable)
+        // Turns until it comes back, 0 when it is ready. Carried BESIDE
+        // Affordable rather than folded into it: "you cannot pay for this" and
+        // "you cannot do this yet" want different words on the row, and a
+        // single bool would make the menu say the wrong one.
+        public readonly int CooldownRemaining;
+
+        public bool Ready => Affordable && CooldownRemaining <= 0;
+
+        public ResolvedSkillOption(int index, Content.ResolvedSkill skill, bool affordable,
+                                   int cooldownRemaining = 0)
         {
             Index = index;
             Skill = skill;
             Affordable = affordable;
+            CooldownRemaining = cooldownRemaining;
         }
     }
 }

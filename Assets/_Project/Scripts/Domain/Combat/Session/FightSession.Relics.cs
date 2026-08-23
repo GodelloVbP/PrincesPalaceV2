@@ -60,6 +60,13 @@ namespace PrincesPalace.Domain.Combat.Session
         private void RelicsAfterSwing(CombatantState actor, CombatantState target, int damage)
         {
             EndPotency();
+
+            // The Salt Ledger: a swing pays down what is owed.
+            if (HasRelic(actor, RelicEffect.SaltLedger)
+                && ReduceCooldowns(actor, FightTuning.SaltLedgerTurns) > 0)
+            {
+                AppendMessage($"{actor.Name}'s Salt Ledger settles a debt - cooldowns tick down.");
+            }
         }
 
         // ---- the cast ------------------------------------------------------------

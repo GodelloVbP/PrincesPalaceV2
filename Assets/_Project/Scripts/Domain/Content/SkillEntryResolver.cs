@@ -220,6 +220,28 @@ namespace PrincesPalace.Domain.Content
             // Both Resources-relative. A wrong convention here costs the skill
             // its animation and its sound with no error anywhere — the hit just
             // lands silently.
+            // A COOLDOWN OF 1 IS NOT A COOLDOWN. The number counts from the
+            // turn it was cast on, so 2 means "turn one, then turn three" and 1
+            // means "turn one, then turn two" -- which is every turn, which is
+            // what a skill with no cooldown already does.
+            //
+            // Refused rather than silently rounded up or ignored: an author who
+            // types 1 believes they have made the skill wait, and the shortest
+            // wait that exists is 2. Same reasoning as a relic modifier of zero.
+            if (raw.cooldownTurns == 1)
+            {
+                error = $"{label}: a cooldownTurns of 1 means 'usable again next turn', which is " +
+                        "no cooldown at all. Use 0 for none, or 2 for the shortest real wait " +
+                        "(cast on turn one, back on turn three).";
+                return false;
+            }
+
+            if (raw.cooldownTurns < 0)
+            {
+                error = $"{label}: cooldownTurns {raw.cooldownTurns} cannot be negative.";
+                return false;
+            }
+
             if (!ArtPathConvention.Check(label, "vfx.path", raw.vfx.path, out error)) return false;
             if (!ArtPathConvention.Check(label, "vfx.sfxPath", raw.vfx.sfxPath, out error)) return false;
 
@@ -229,7 +251,7 @@ namespace PrincesPalace.Domain.Content
                 raw.vfx.Copy(),
                 sortOrder,
                 appliesStatus, statusMagnitude, statusDuration, requirements, scalingAxis,
-                raw.queuePushSlots, transform, raw.playerSelectable);
+                raw.queuePushSlots, transform, raw.playerSelectable, raw.cooldownTurns);
             error = null;
             return true;
         }

@@ -460,7 +460,7 @@ namespace PrincesPalace
                 definition.hasStatus ? definition.appliesStatus : (StatusEffectType?)null,
                 definition.statusMagnitude, definition.statusDuration,
                 definition.requirements, definition.scalingAxis, definition.queuePushSlots,
-                definition.transform, definition.playerSelectable);
+                definition.transform, definition.playerSelectable, definition.cooldownTurns);
         }
     }
 }

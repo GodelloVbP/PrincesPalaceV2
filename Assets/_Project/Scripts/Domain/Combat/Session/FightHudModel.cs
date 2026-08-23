@@ -33,16 +33,23 @@ namespace PrincesPalace.Domain.Combat.Session
         // every character has one and no character has it in their skill list.
         public readonly bool IsBasicSpell;
 
-        public bool Affordable => CanPay && MeetsRequirement;
+        // A THIRD reason, kept apart for the same stated reason as the other
+        // two: "no mana" and "not yet" are different sentences, and a row that
+        // greyed out without saying which leaves the player checking their mana
+        // bar for an answer that is not there.
+        public readonly int CooldownRemaining;
+
+        public bool Affordable => CanPay && MeetsRequirement && CooldownRemaining <= 0;
 
         public SubmenuRow(string name, string meta, string cost, bool canPay, bool meetsRequirement,
-                          int manaCost, bool isBasicSpell = false)
+                          int manaCost, bool isBasicSpell = false, int cooldownRemaining = 0)
         {
             Name = name;
             Meta = meta;
             Cost = cost;
             CanPay = canPay;
             MeetsRequirement = meetsRequirement;
+            CooldownRemaining = cooldownRemaining;
             ManaCost = manaCost;
             IsBasicSpell = isBasicSpell;
         }
@@ -121,10 +128,18 @@ namespace PrincesPalace.Domain.Combat.Session
                 rows.Add(new SubmenuRow(
                     skill.DisplayName,
                     MetaLine(skill),
-                    CostLabel(skill, resourceName),
+
+                    // THE COST COLUMN SAYS THE WAIT INSTEAD, while there is
+                    // one. A row showing "8 MP" that cannot be pressed is
+                    // telling the player about the only thing that is NOT
+                    // stopping them.
+                    option.CooldownRemaining > 0
+                        ? CooldownLabel(option.CooldownRemaining)
+                        : CostLabel(skill, resourceName),
                     option.Affordable,
                     meetsRequirement: true,
-                    skill.ManaCost));
+                    skill.ManaCost,
+                    cooldownRemaining: option.CooldownRemaining));
             }
 
             // The basic spell's own row. Its cost comes through the same
@@ -223,6 +238,13 @@ namespace PrincesPalace.Domain.Combat.Session
         // meant a different resource than the one beside it. A skill costing
         // nothing says so in words rather than showing "0 MP", which reads as a
         // missing value.
+        // "2 TURNS" in the column a cost would occupy. Upper case to match the
+        // costs it stands in for -- a row whose cost column suddenly changed
+        // case would read as a different KIND of row rather than the same row
+        // waiting.
+        private static string CooldownLabel(int turns) =>
+            turns == 1 ? "1 TURN" : $"{turns} TURNS";
+
         public static string CostLabel(ResolvedSkill skill, string resourceName)
         {
             string resource = string.IsNullOrWhiteSpace(resourceName) ? "" : " " + resourceName.ToUpperInvariant();

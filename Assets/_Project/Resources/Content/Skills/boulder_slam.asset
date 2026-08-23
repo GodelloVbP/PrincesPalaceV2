@@ -26,6 +26,7 @@ MonoBehaviour:
   flatAmount: 2
   ignoresDefense: 0
   damageInstances: []
+  cooldownTurns: 0
   playerSelectable: 0
   vfx:
     path: Spells/golem_boulder

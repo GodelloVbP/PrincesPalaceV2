@@ -31,6 +31,7 @@ MonoBehaviour:
     amount: 14
   - type: 2
     amount: 14
+  cooldownTurns: 0
   playerSelectable: 1
   vfx:
     path: Spells/frost_flare
