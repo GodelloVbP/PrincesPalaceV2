@@ -374,6 +374,40 @@ six-drawing sheet can become a twenty-six-frame animation without new art:
 
 Left out entirely, the cells **are** the frames one for one.
 
+### A monster casting it
+
+A monster's abilities are real skills, drawn weighted, in `enemies.json`:
+
+```json
+"abilities": [ { "skillId": "mud_burst", "weight": 2 } ],
+"attackWeight": 3
+```
+
+Weights are **relative**, not probabilities — 2 against 3 is 40%, and adding a
+third entry does not require rebalancing the first two. The basic attack is
+always in the pool (`attackWeight`, default 1; `0` removes it), because a
+monster whose every turn is a special reads as scripted rather than dangerous.
+
+A monster reaches the whole `SkillEffect` vocabulary this way, and every skill
+written for a character in future is available to monsters for free. Targeting
+is side-relative: `DamageAll` cast by a monster hits your party, `HealParty`
+mends its own side.
+
+The telegraph is derived, never authored — its icon from the skill's effect and
+status, its scope (`one` / `your whole party` / `itself` / `its allies`) from
+the effect alone, and its magnitude from the same formula the resolution runs.
+An author who could disagree with any of those could make the telegraph lie.
+
+A skill id that names nothing **fails the content build**. At play time the
+adapter would drop it with a warning, and the symptom of that is a boss quietly
+easier than authored — which does not look like a bug.
+
+The old `skillName`/`skillPower`/`skillChance` trio still works and still means
+what it did; internally it becomes the same two-entry weighted pool. Migrating a
+monster is a content decision, not a plumbing one: `"attack x 1.8"` has no
+equivalent skill id until somebody writes the skill it should have been.
+
+
 ### Multi-target
 
 An effect that lands on more than one thing draws on each of them. The beat
