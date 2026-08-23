@@ -58,6 +58,23 @@ namespace PrincesPalace.Domain.Content
         // whether the target happens to be weak to the element or not.
         ChargingCrystal,
 
+        // Every plain attack makes the wearer permanently faster for the rest
+        // of the fight, to a ceiling. Warming up rather than a burst.
+        BallerinasSlippers,
+
+        // A cast leaves the wearer quicker until their next turn. The opposite
+        // shape to the Slippers: sharp, brief, and it rewards casting rather
+        // than swinging.
+        TinFoilPipe,
+
+        // The lower the wearer's health, the harder they hit and the faster
+        // they act -- reaching full value at a quarter health. The relic that
+        // makes being nearly dead a position rather than only a problem.
+        ToothedNecklace,
+
+        // Killing something pays, scaling with the level of what died.
+        BountyHunterContract,
+
         // A plain attack takes a turn off everything the actor is waiting on.
         //
         // Worth nothing at all in a kit with no cooldowns, and worth more the

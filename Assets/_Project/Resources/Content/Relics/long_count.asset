@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: The Long Count
   description: It has been counting since before you found it, and every third blow
     it lets you in on the tally.
-  effect: 6
+  effect: 10
   rarity: 0
   unlockedBy: 
   modifiers: []

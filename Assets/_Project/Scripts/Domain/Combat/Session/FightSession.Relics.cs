@@ -67,6 +67,18 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 AppendMessage($"{actor.Name}'s Salt Ledger settles a debt - cooldowns tick down.");
             }
+
+            // Ballerina's Slippers: warming up, to a ceiling, for the rest of
+            // the fight. Silent once the cap is reached rather than repeating
+            // a line every swing about a bonus that is no longer growing.
+            if (HasRelic(actor, RelicEffect.BallerinasSlippers))
+            {
+                int gained = GrantSpeedPercent(actor, RelicEffect.BallerinasSlippers,
+                    FightTuning.SlippersPercentPerSwing, turns: 0,
+                    capPercent: FightTuning.SlippersCapPercent);
+
+                if (gained > 0) AppendMessage($"{actor.Name} finds their footing - faster.");
+            }
         }
 
         // ---- the cast ------------------------------------------------------------
@@ -87,7 +99,108 @@ namespace PrincesPalace.Domain.Combat.Session
 
             // Magical Shield: the next hit taken is halved.
             RaiseMagicalShield(actor);
+
+            // Tin-Foil Pipe: quick until their next turn. Refreshes rather
+            // than stacks -- see GrantSpeedPercent.
+            if (HasRelic(actor, RelicEffect.TinFoilPipe)
+                && GrantSpeedPercent(actor, RelicEffect.TinFoilPipe,
+                    FightTuning.PipePercent, FightTuning.PipeTurns) > 0)
+            {
+                AppendMessage($"{actor.Name}'s pipe crackles - everything speeds up for a moment.");
+            }
         }
+
+        // ---- the necklace --------------------------------------------------------
+        //
+        // NOT AN EVENT. Every other relic here reacts to something happening;
+        // this one is a function of how hurt the wearer is right now, and it
+        // has to be true continuously rather than at a moment.
+        //
+        // Which makes it two different problems wearing one name. The DAMAGE
+        // half is asked at the instant a blow is computed and needs no state at
+        // all -- a pure function of current health. The SPEED half cannot work
+        // that way: speed is a stored number the turn order was told about, so
+        // it has to be pushed when it changes rather than pulled when it is
+        // read. Recomputed at turn start, which is the only moment the order
+        // can act on it anyway.
+        //
+        // Full value at a quarter health, nothing at full, straight ramp
+        // between. The floor is a QUARTER rather than zero because a bonus that
+        // only pays at 1hp pays on the turn you die.
+        private int NecklaceRampPercent(CombatantState actor, int maxPercent)
+        {
+            if (actor == null || actor.MaxHealth <= 0) return 0;
+            if (!HasRelic(actor, RelicEffect.ToothedNecklace)) return 0;
+
+            int healthPercent = actor.CurrentHealth * 100 / actor.MaxHealth;
+            int floor = FightTuning.NecklaceFloorHealthPercent;
+
+            if (healthPercent >= 100) return 0;
+            if (healthPercent <= floor) return maxPercent;
+
+            // How far down the ramp, from full health to the floor.
+            int travelled = 100 - healthPercent;
+            int total = 100 - floor;
+
+            return maxPercent * travelled / total;
+        }
+
+        // The damage half, asked at the moment a blow is computed.
+        private int NecklaceDamageBonus(CombatantState actor, int baseAmount)
+        {
+            if (baseAmount <= 0) return 0;
+
+            int percent = NecklaceRampPercent(actor, FightTuning.NecklaceMaxDamagePercent);
+            return percent <= 0 ? 0 : baseAmount * percent / 100;
+        }
+
+        // The speed half, pushed at turn start. Revoked and re-granted rather
+        // than adjusted, because the ramp moves in both directions -- healing
+        // has to give the speed back as surely as being hurt hands it over.
+        private void RefreshNecklaceSpeed(CombatantState actor)
+        {
+            if (actor == null) return;
+
+            int percent = NecklaceRampPercent(actor, FightTuning.NecklaceMaxSpeedPercent);
+            int already = SpeedBonusFrom(actor, RelicEffect.ToothedNecklace);
+
+            if (percent <= 0)
+            {
+                if (already > 0) RevokeSpeedBuff(actor, RelicEffect.ToothedNecklace);
+                return;
+            }
+
+            RevokeSpeedBuff(actor, RelicEffect.ToothedNecklace);
+            GrantSpeedPercent(actor, RelicEffect.ToothedNecklace, percent, turns: 0);
+        }
+
+        // ---- the kill ------------------------------------------------------------
+
+        // WHAT A BODY IS WORTH, scaled by what it was.
+        //
+        // Measured off the enemy's authored expReward rather than a level,
+        // because a CombatantState has no level -- experience is the number
+        // content already uses to say how much a monster is worth, and a second
+        // measure of the same thing would drift from it.
+        //
+        // Player-side only. Nothing pays a monster for killing you.
+        private void PayBounty(CombatantState actor, CombatantState victim)
+        {
+            if (actor == null || victim == null || !actor.IsPlayerSide) return;
+            if (!HasRelic(actor, RelicEffect.BountyHunterContract)) return;
+
+            int worth = SourceFor(victim)?.Source.ExpReward ?? 0;
+            int paid = worth * FightTuning.BountyPerLevel / 10;
+            if (paid <= 0) paid = 1;
+
+            BountyEarned += paid;
+            AppendMessage($"{actor.Name} collects on {victim.Name} - {paid} gold.");
+        }
+
+        // Banked on the session and read out by whoever settles the fight, the
+        // same way experience and currency already travel. A relic reaching for
+        // the save directly is what put v1's relic logic in a controller.
+        public int BountyEarned { get; private set; }
 
         // ---- the rest ------------------------------------------------------------
 
@@ -95,9 +208,26 @@ namespace PrincesPalace.Domain.Combat.Session
         // chain state that has to be RESET when the chain breaks, so a call
         // skipped because nobody was carrying the relic would leave a stale
         // count behind for whoever picks one up later in the fight.
+        // ONCE PER ACTION, however many things that action killed.
+        //
+        // Bloodlust grants a turn, and a swing that fells two enemies should
+        // not grant two. It also has to be called when NOTHING died -- see
+        // below.
         private void RelicsOnKill(CombatantState actor)
         {
             TryGrantBloodlust(actor);
+        }
+
+        // ONCE PER BODY, which is a different moment and deliberately a second
+        // method rather than a flag on the first.
+        //
+        // A bounty is paid for a corpse, so a splash that fells two pays twice.
+        // Collapsing the two moments into one would force whichever relic was
+        // written second to be wrong: Bloodlust would grant two turns, or the
+        // Contract would pay for one of the two things it killed.
+        private void RelicsOnEachKill(CombatantState actor, CombatantState victim)
+        {
+            PayBounty(actor, victim);
         }
 
     }

@@ -13,10 +13,11 @@ MonoBehaviour:
   m_Name: moth_king_crown
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
   id: moth_king_crown
-  displayName: Crown of the Moth King
-  description: Paper thin, and it flakes. It has no power yet.
-  effect: 0
-  rarity: 0
+  displayName: Tin-Foil Pipe of Magic
+  description: Paper thin, and it flakes - but it draws hard and fast, and what it
+    gives back does not last.
+  effect: 6
+  rarity: 2
   unlockedBy: 
   modifiers: []
   sortOrder: 6

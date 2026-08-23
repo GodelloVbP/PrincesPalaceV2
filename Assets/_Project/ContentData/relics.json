@@ -28,9 +28,10 @@
     },
     {
       "id": "seven_teeth",
-      "displayName": "Seven Teeth",
-      "description": "A jawbone worn smooth by counting. It has no power yet.",
-      "rarity": "common"
+      "displayName": "Bounty Hunter Contract",
+      "description": "A jawbone worn smooth by counting. Every kill is a line struck off, and every line is worth something.",
+      "rarity": "uncommon",
+      "effect": "BountyHunterContract"
     },
     {
       "id": "salt_ledger",
@@ -41,21 +42,24 @@
     },
     {
       "id": "cold_iron_ring",
-      "displayName": "Cold Iron Ring",
-      "description": "Too heavy for the finger it was made for. It has no power yet.",
-      "rarity": "common"
+      "displayName": "Toothed Necklace",
+      "description": "Too heavy for the finger it was made for, so somebody wore it around their throat instead. The closer it sits to your last breath, the sharper it bites on your behalf.",
+      "rarity": "common",
+      "effect": "ToothedNecklace"
     },
     {
       "id": "moth_king_crown",
-      "displayName": "Crown of the Moth King",
-      "description": "Paper thin, and it flakes. It has no power yet.",
-      "rarity": "common"
+      "displayName": "Tin-Foil Pipe of Magic",
+      "description": "Paper thin, and it flakes - but it draws hard and fast, and what it gives back does not last.",
+      "rarity": "rare",
+      "effect": "TinFoilPipe"
     },
     {
       "id": "widows_thimble",
-      "displayName": "The Widow's Thimble",
-      "description": "Dented on the inside only. It has no power yet.",
-      "rarity": "common"
+      "displayName": "Ballerina's Slippers",
+      "description": "Dented on the inside only, from a foot that never stopped moving. Every swing wears them in a little more, up to a point.",
+      "rarity": "common",
+      "effect": "BallerinasSlippers"
     },
     {
       "id": "long_count",

@@ -81,10 +81,17 @@ namespace PrincesPalace.Domain.Combat.Session
             Ledger.Restored(LedgerIdOf(target), target.CurrentHealth - before);
         }
 
+        // THE ONE PLACE A KILL IS RECORDED, from all four call sites: a plain
+        // swing, an all-enemies cast, Shatter's chain, and a transform's splash.
+        // Anything that has to happen once per body rather than once per action
+        // belongs HERE rather than at whichever of the four happened to be
+        // written most recently -- see FightSession.Relics.RelicsOnEachKill for
+        // what already learned that lesson once, on the sweep.
         private void RecordKill(CombatantState actor, CombatantState target)
         {
             Ledger.ScoredKill(LedgerIdOf(actor));
             Ledger.WentDown(LedgerIdOf(target));
+            RelicsOnEachKill(actor, target);
         }
 
         // The damage type a combatant's ordinary swing carries. Only player

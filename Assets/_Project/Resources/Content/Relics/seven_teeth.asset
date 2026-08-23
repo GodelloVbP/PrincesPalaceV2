@@ -13,10 +13,11 @@ MonoBehaviour:
   m_Name: seven_teeth
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
   id: seven_teeth
-  displayName: Seven Teeth
-  description: A jawbone worn smooth by counting. It has no power yet.
-  effect: 0
-  rarity: 0
+  displayName: Bounty Hunter Contract
+  description: A jawbone worn smooth by counting. Every kill is a line struck off,
+    and every line is worth something.
+  effect: 8
+  rarity: 1
   unlockedBy: 
   modifiers: []
   sortOrder: 3

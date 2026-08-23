@@ -246,6 +246,12 @@ namespace PrincesPalace.Domain.Combat.Session
             RegenerateMana(actor);
             TickStatuses(actor);
             TickCooldowns(actor);
+            TickSpeedBuffs(actor);
+
+            // The necklace is a function of current health rather than an
+            // event, so it is recomputed rather than triggered -- see
+            // FightSession.Relics.
+            RefreshNecklaceSpeed(actor);
 
             // Every other duration ticks here too, so "a turn" means the same
             // thing for a ward payout cap, a grace period and a transform as it

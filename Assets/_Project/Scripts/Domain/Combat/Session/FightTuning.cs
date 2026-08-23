@@ -35,6 +35,29 @@ namespace PrincesPalace.Domain.Combat.Session
         // without seeing the other is how a relic becomes mandatory.
         public const int SaltLedgerTurns = 1;
 
+        // ---- speed relics --------------------------------------------------------
+        //
+        // The Slippers accumulate and the Pipe does not, which is the whole
+        // difference between them: one rewards a long fight of swinging, the
+        // other rewards casting at the right moment. Same stat, opposite shape.
+        public const int SlippersPercentPerSwing = 10;
+        public const int SlippersCapPercent = 40;
+
+        public const int PipePercent = 20;
+        public const int PipeTurns = 1;
+
+        // ---- the necklace --------------------------------------------------------
+        //
+        // Full value at a quarter health, nothing at full, and a straight ramp
+        // between. The floor is a QUARTER rather than zero because a bonus that
+        // only pays at 1hp pays on the turn you die.
+        public const int NecklaceMaxDamagePercent = 30;
+        public const int NecklaceMaxSpeedPercent = 20;
+        public const int NecklaceFloorHealthPercent = 25;
+
+        // What a kill pays, per level of whatever died.
+        public const int BountyPerLevel = 3;
+
         public const int LongCountEvery = 3;
         public const int LongCountPercent = 40;
 

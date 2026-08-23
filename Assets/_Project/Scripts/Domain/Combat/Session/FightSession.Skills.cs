@@ -70,7 +70,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
             int damage = (isExecute
                 ? Rounding.AwayFromZero(outcome.Damage * FightTuning.AssassinExecuteBonusMultiplier)
-                : outcome.Damage) + PotencyBonus(baseAmount);
+                : outcome.Damage) + PotencyBonus(baseAmount) + NecklaceDamageBonus(actor, baseAmount);
 
             AppendMessage($"{actor.Name} casts {SkillDisplayNameFor(actor)} on {target.Name} for {damage} damage!{EffectivenessSuffix(outcome.Effectiveness)}");
             ApplySkillRoleEffect(role, actor, target, damage, isExecute);
@@ -367,7 +367,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     rng: _rng,
                     resolveWard: ResolveWard);
 
-                damage = outcome.Damage + PotencyBonus(baseAmount);
+                damage = outcome.Damage + PotencyBonus(baseAmount) + NecklaceDamageBonus(actor, baseAmount);
                 DepleteBreakShield(target, outcome.Effectiveness);
                 AppendMessage($"{actor.Name} uses {skill.DisplayName} on {target.Name} for {damage} damage!{EffectivenessSuffix(outcome.Effectiveness)}");
             }
@@ -429,17 +429,26 @@ namespace PrincesPalace.Domain.Combat.Session
 
                 DepleteBreakShield(enemy, outcome.Effectiveness);
 
+                // A SWEEP GETS THE SAME BONUSES A SINGLE CAST DOES. This did
+                // not, once: the Charging Crystal's PotencyBonus was wired into
+                // the single-target path and the plain swing when it shipped,
+                // and never into the all-enemies path, so a charged sweep
+                // charged nothing. Found while adding the necklace, which would
+                // otherwise have quietly repeated the same gap.
+                int landed = outcome.Damage + PotencyBonus(baseAmount)
+                             + NecklaceDamageBonus(actor, baseAmount);
+
                 // Counted with the CAST's type, not the caster's swing: a
                 // physical character throwing a fire skill dealt fire.
-                DealDamage(actor, enemy, outcome.Damage, castType);
+                DealDamage(actor, enemy, landed, castType);
 
                 // One beat shows one number, so an AOE reports its largest
                 // single hit rather than a total that matches no one enemy's HP
                 // drop. The LEDGER takes the full amount per enemy, which is
                 // why it cannot be derived from the beats.
-                RecordBeatAmount(System.Math.Max(outcome.Damage, LargestAmountSoFar));
+                RecordBeatAmount(System.Math.Max(landed, LargestAmountSoFar));
                 SetStance(enemy, enemy.IsAlive ? Stances.Hurt : Stances.Defeated);
-                summary.Append($" {enemy.Name} takes {outcome.Damage}{EffectivenessSuffix(outcome.Effectiveness)}");
+                summary.Append($" {enemy.Name} takes {landed}{EffectivenessSuffix(outcome.Effectiveness)}");
 
                 if (!enemy.IsAlive)
                 {

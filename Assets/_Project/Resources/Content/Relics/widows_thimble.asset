@@ -13,9 +13,10 @@ MonoBehaviour:
   m_Name: widows_thimble
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
   id: widows_thimble
-  displayName: The Widow's Thimble
-  description: Dented on the inside only. It has no power yet.
-  effect: 0
+  displayName: Ballerina's Slippers
+  description: Dented on the inside only, from a foot that never stopped moving.
+    Every swing wears them in a little more, up to a point.
+  effect: 5
   rarity: 0
   unlockedBy: 
   modifiers: []

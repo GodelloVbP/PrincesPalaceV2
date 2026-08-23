@@ -13,9 +13,11 @@ MonoBehaviour:
   m_Name: cold_iron_ring
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
   id: cold_iron_ring
-  displayName: Cold Iron Ring
-  description: Too heavy for the finger it was made for. It has no power yet.
-  effect: 0
+  displayName: Toothed Necklace
+  description: Too heavy for the finger it was made for, so somebody wore it around
+    their throat instead. The closer it sits to your last breath, the sharper it
+    bites on your behalf.
+  effect: 7
   rarity: 0
   unlockedBy: 
   modifiers: []
