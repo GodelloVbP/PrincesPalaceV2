@@ -134,11 +134,14 @@ namespace PrincesPalace
         [SerializeField] internal GameObject targetPrompt;
         [SerializeField] internal TMP_Text targetPromptLabel;
 
-        [SerializeField] internal Image spellVfx;
+        [SerializeField] internal Image[] spellVfx;
         [SerializeField] internal GameObject[] damagePopups;
         [SerializeField] internal TMP_Text[] damagePopupLabels;
         [SerializeField] internal FightBeatPlayer beatPlayer;
-        [SerializeField] internal SpellVfxPlayer spellVfxPlayer;
+        // One per stage slot. Index 0 is the primary -- it draws the beat's
+        // own Target and is what the measurement helpers read -- and the rest
+        // only ever run for an effect that lands on more than one thing.
+        [SerializeField] internal SpellVfxPlayer[] spellVfxPlayers;
 
         // The plate every combatant with no authored battle art falls back to.
         // Assigned at build time from the same sprite the enemy plates use, so a
@@ -382,7 +385,13 @@ namespace PrincesPalace
 
         private void StopSpellVfx()
         {
-            if (spellVfxPlayer != null) spellVfxPlayer.StopImmediately();
+            if (spellVfxPlayers != null)
+            {
+                foreach (var player in spellVfxPlayers)
+                {
+                    if (player != null) player.StopImmediately();
+                }
+            }
         }
 
         // Three backdrops on ONE Image, swapped by encounter class -- v1's

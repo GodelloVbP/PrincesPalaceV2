@@ -124,6 +124,7 @@ namespace PrincesPalace.Domain.Tests
                 { "EnemyPlates", s.EnemyPlates }, { "VerbButtons", s.VerbButtons },
                 { "SubmenuRows", s.SubmenuRows }, { "WoolPips", s.WoolPips },
                 { "DamagePopups", s.DamagePopups },
+                { "SpellVfx", s.SpellVfx }, { "SpellVfxNext", s.SpellVfxNext },
             };
 
             foreach (var pair in lists)
@@ -138,7 +139,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(s.SubmenuColumn.IsValid);
             Assert.IsTrue(s.DetailColumn.IsValid);
             Assert.IsTrue(s.TargetPrompt.IsValid);
-            Assert.IsTrue(s.SpellVfx.IsValid);
+            Assert.IsTrue(s.SpellVfxPool.IsValid);
             Assert.IsTrue(s.ContinueButton.IsValid);
         }
 

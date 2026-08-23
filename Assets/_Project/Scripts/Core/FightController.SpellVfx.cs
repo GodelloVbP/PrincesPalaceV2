@@ -42,9 +42,10 @@ namespace PrincesPalace
         // Public, so a test can assert the plain-swing case without reflection.
         public float ImpactDelayFor(CombatBeat beat)
         {
-            if (spellVfxPlayer == null || beat == null || !beat.HasSpellAnimation) return 0f;
+            var primary = PrimaryPlayer;
+            if (primary == null || beat == null || !beat.HasSpellAnimation) return 0f;
 
-            int frameCount = spellVfxPlayer.Frames(beat.Vfx.path)?.Length ?? 0;
+            int frameCount = primary.Frames(beat.Vfx.path)?.Length ?? 0;
             return beat.Vfx.seconds * CombatBeat.ImpactFraction(beat.Vfx.impactFrame, frameCount);
         }
 
@@ -61,11 +62,44 @@ namespace PrincesPalace
 
         public FightSession SessionForTest => _session;
 
+        // Index 0, and the only one the measurement helpers ever touch. Frames
+        // and dead space are properties of the SHEET, so asking any member
+        // gives the same answer -- asking a fixed one keeps that obvious.
+        private SpellVfxPlayer PrimaryPlayer =>
+            spellVfxPlayers != null && spellVfxPlayers.Length > 0 ? spellVfxPlayers[0] : null;
+
+        // ONE EFFECT PER THING THE SPELL LANDED ON.
+        //
+        // The beat's Target is the primary and gets member 0; SplashTargets is
+        // everyone else an all-enemies cast struck, and each gets its own
+        // member. Beyond what the pool holds the extras are simply not drawn --
+        // the pool is sized to the stage, so running out means more combatants
+        // than there are slots to stand in, and a silent drop beats an
+        // exception mid-fight.
         private void PlaySpellVfx(CombatBeat beat)
         {
             if (beat == null) return;
+            if (PrimaryPlayer == null || string.IsNullOrEmpty(beat.Vfx.path) || beat.Target == null) return;
 
-            if (spellVfxPlayer == null || string.IsNullOrEmpty(beat.Vfx.path) || beat.Target == null) return;
+            PlaySpellVfxOn(beat, beat.Target, 0);
+
+            if (beat.SplashTargets == null) return;
+
+            int member = 1;
+            foreach (var also in beat.SplashTargets)
+            {
+                if (also == null || ReferenceEquals(also, beat.Target)) continue;
+                if (member >= spellVfxPlayers.Length) break;
+
+                PlaySpellVfxOn(beat, also, member);
+                member++;
+            }
+        }
+
+        private void PlaySpellVfxOn(CombatBeat beat, CombatantState target, int member)
+        {
+            var spellVfxPlayer = spellVfxPlayers[member];
+            if (spellVfxPlayer == null) return;
 
             // The SLOT, not the sprite Image inside it. The Image is the art's
             // raw canvas and its bottom edge is wherever the sheet happened to
@@ -73,7 +107,7 @@ namespace PrincesPalace
             // the stage visuals stand every frame's feet on. Aiming at the
             // canvas put a strike below the feet by whatever padding that sheet
             // carried -- and a MOVING amount, since the offset is per frame.
-            var targetRect = SlotFor(beat.Target);
+            var targetRect = SlotFor(target);
             if (targetRect == null) return;
 
             // The slot is nested inside the stage and scaled by depth, so its
@@ -99,7 +133,7 @@ namespace PrincesPalace
 
             if (anchor == SpellAnchor.Travel)
             {
-                PlayTravellingVfx(beat, parent, centreX, bottomY);
+                PlayTravellingVfx(beat, spellVfxPlayer, parent, centreX, bottomY, box, deadSpaceBelow);
                 return;
             }
 
@@ -152,10 +186,9 @@ namespace PrincesPalace
         // The box does not change size or shape -- see SpellVfxPlayer.PlayFrom
         // for the stretched version that was tried first and for the
         // measurement that killed it.
-        private void PlayTravellingVfx(CombatBeat beat, Transform parent, float targetX, float bottomY)
+        private void PlayTravellingVfx(CombatBeat beat, SpellVfxPlayer spellVfxPlayer, Transform parent,
+                                       float targetX, float bottomY, Vector2 box, float dead)
         {
-            var box = BoxFor(beat);
-            float dead = VfxDeadSpaceBelow(beat.Vfx.path, box);
             var to = new Vector2(targetX, bottomY + box.y * 0.5f - dead);
 
             var casterRect = SlotFor(beat.Actor);
@@ -229,7 +262,7 @@ namespace PrincesPalace
         // the strike on the feet and still lets the fade retreat upward.
         private float VfxDeadSpaceBelow(string vfxPath, Vector2 box)
         {
-            var frames = spellVfxPlayer == null ? null : spellVfxPlayer.Frames(vfxPath);
+            var frames = PrimaryPlayer?.Frames(vfxPath);
             if (frames == null || frames.Length == 0 || frames[0] == null) return 0f;
 
             float frameWidth = frames[0].rect.width;

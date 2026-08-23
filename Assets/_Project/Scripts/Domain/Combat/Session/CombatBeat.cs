@@ -79,6 +79,18 @@ using PrincesPalace.Domain.Content;
         // SpellPresentation for the measurement that collapsed them.
         public SpellPresentation Vfx = new SpellPresentation();
 
+        // EVERYONE ELSE THE EFFECT SHOULD BE DRAWN ON, beyond Target.
+        //
+        // Almost always empty. It exists for the shape of spell that hits more
+        // than one thing at once: ResolveDamageAll opens ONE beat aimed at the
+        // first living enemy, which was correct for the damage -- the numbers
+        // are recorded per enemy -- and quietly wrong for the art. Three rats
+        // took the hit and one of them got the animation.
+        //
+        // Target stays the primary and is what everything else about a beat
+        // means by "the target". This is only ever read by the view.
+        public List<CombatantState> SplashTargets;
+
         // A cast does not cross the stage. Set by the action rather than
         // inferred, so it is still right for a skill with no art at all.
         public bool ActorHoldsPosition;

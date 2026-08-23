@@ -77,6 +77,17 @@ namespace PrincesPalace.Domain.Combat.Session
             _recordingBeat.ActorHoldsPosition = true;
         }
 
+        // The extra combatants a multi-target effect should be DRAWN on. Kept
+        // beside RecordSpellPresentation because it is the same kind of fact --
+        // something the view needs that the resolution already knows.
+        private void RecordSplashTargets(IEnumerable<CombatantState> targets)
+        {
+            if (_recordingBeat == null || targets == null) return;
+
+            var extra = targets.Where(t => t != null).ToList();
+            _recordingBeat.SplashTargets = extra.Count == 0 ? null : extra;
+        }
+
         private void RecordSpellPresentation(SpellPresentation presentation)
         {
             if (_recordingBeat == null) return;

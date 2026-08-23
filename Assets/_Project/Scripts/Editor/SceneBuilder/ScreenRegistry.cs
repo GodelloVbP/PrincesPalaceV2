@@ -173,31 +173,39 @@ public static class ScreenRegistry
                 // built with the lock on.
                 fight.characterSheetPanel = result.Go(screen.SystemMenu.Root);
 
-                fight.spellVfx = result.Image(screen.SpellVfx);
+                // ONE PLAYER PER POOL MEMBER. The player lives on the VFX
+                // node itself, so disabling that node is a real stop rather
+                // than something the controller has to remember -- the same
+                // arrangement FightBeatPlayer has with the popup pool.
+                fight.spellVfx = screen.SpellVfx.Select(result.Image).ToArray();
+                fight.spellVfxPlayers = screen.SpellVfx
+                    .Select((node, i) =>
+                    {
+                        var player = result.Attach<SpellVfxPlayer>(node);
+                        player.image = fight.spellVfx[i];
 
-                // The player lives on the VFX node itself, so disabling that
-                // node is a real stop rather than something the controller has
-                // to remember -- the same arrangement FightBeatPlayer has with
-                // the popup pool.
-                var vfx = result.Attach<SpellVfxPlayer>(screen.SpellVfx);
-                vfx.image = fight.spellVfx;
+                        // Never eats a click meant for an enemy behind it. The
+                        // effect is drawn ABOVE the stage, so without this a
+                        // spell in flight would swallow the next target
+                        // selection.
+                        player.image.raycastTarget = false;
+                        player.image.preserveAspect = true;
+                        player.image.enabled = false;
 
-                // Never eats a click meant for an enemy behind it. The effect is
-                // drawn ABOVE the stage, so without this a spell in flight would
-                // swallow the next target selection.
-                vfx.image.raycastTarget = false;
-                vfx.image.preserveAspect = true;
-                vfx.image.enabled = false;
+                        // The dissolve layer. Same settings as the frame it
+                        // fades over, because it IS that frame one step later
+                        // -- a different preserveAspect between the two would
+                        // swap the effect's shape halfway through every
+                        // transition.
+                        player.fade = result.Image(screen.SpellVfxNext[i]);
+                        player.fade.raycastTarget = false;
+                        player.fade.preserveAspect = true;
+                        player.fade.enabled = false;
 
-                // The dissolve layer. Same settings as the frame it fades over,
-                // because it IS that frame one step later -- a different
-                // preserveAspect between the two would swap the effect's shape
-                // halfway through every transition.
-                vfx.fade = result.Image(screen.SpellVfxNext);
-                vfx.fade.raycastTarget = false;
-                vfx.fade.preserveAspect = true;
-                vfx.fade.enabled = false;
-                fight.spellVfxPlayer = vfx;
+                        return player;
+                    })
+                    .ToArray();
+
                 fight.damagePopups = screen.DamagePopups.Select(result.Go).ToArray();
                 fight.damagePopupLabels = screen.DamagePopupLabels.Select(result.Tmp).ToArray();
 

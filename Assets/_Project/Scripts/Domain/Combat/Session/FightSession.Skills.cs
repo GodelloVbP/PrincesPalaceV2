@@ -344,8 +344,19 @@ namespace PrincesPalace.Domain.Combat.Session
             var summary = new StringBuilder();
             summary.Append($"{actor.Name} unleashes {skill.DisplayName}!");
 
-            BeginBeat(actor, _encounter.LivingEnemies.FirstOrDefault(), isCast: true);
+            // EVERY LIVING ENEMY, snapshotted before the loop resolves any of
+            // them. The beat's Target is the first of them and always was; the
+            // rest are what the view needed and never had, which is why an
+            // all-enemies spell animated on exactly one rat.
+            //
+            // Taken BEFORE the damage lands, deliberately: an enemy killed by
+            // this very cast should still be drawn taking the hit that killed
+            // it, and reading LivingEnemies afterwards would skip it.
+            var struck = _encounter.LivingEnemies.ToList();
+
+            BeginBeat(actor, struck.FirstOrDefault(), isCast: true);
             RecordSpellPresentation(skill);
+            RecordSplashTargets(struck.Skip(1));
 
             // The caster's own type does not change per target, so this reads
             // once -- same reasoning as the single-target branch.

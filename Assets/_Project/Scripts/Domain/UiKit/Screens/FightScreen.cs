@@ -158,8 +158,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef TargetCancelButton;
 
         public NodeRef SpellVfxPool;
-        public NodeRef SpellVfx;
-        public NodeRef SpellVfxNext;
+        public List<NodeRef> SpellVfx = new List<NodeRef>();
+        public List<NodeRef> SpellVfxNext = new List<NodeRef>();
         public NodeRef DamagePopupPool;
         public List<NodeRef> DamagePopups = new List<NodeRef>();
         public List<NodeRef> DamagePopupLabels = new List<NodeRef>();
@@ -1385,7 +1385,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // behaviour wins over a comment describing an earlier draft.
         private UiNode BuildSpellVfx()
         {
-            var pool = Ui.Pool("SpellVfx", 1, i =>
+            // ONE PER STAGE SLOT, not one full stop.
+            //
+            // A single member was right while every spell hit one thing. An
+            // all-enemies cast resolves against every living enemy and animated
+            // on whichever the beat named first -- three rats took the damage,
+            // one took the spell. Three is the most that can ever be standing
+            // on either side (FightHudSpec.StageSlotsPerSide), which covers a
+            // full sweep of enemies and a party-wide effect alike.
+            var pool = Ui.Pool("SpellVfx", FightHudSpec.StageSlotsPerSide, i =>
             {
                 var image = Ui.Sprite($"SpellVfx{i}", null, new UiVec(380f, 380f), Place.At(0f, 0f)).Inactive();
 
@@ -1413,8 +1421,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .AsDecor();
                 image.Children.Add(next);
 
-                SpellVfx = image;
-                SpellVfxNext = next;
+                SpellVfx.Add(image);
+                SpellVfxNext.Add(next);
                 return image;
             }).AllowOverlap("a pool's own rect is the whole canvas because its members are placed at runtime; it draws nothing itself and takes no clicks");
 

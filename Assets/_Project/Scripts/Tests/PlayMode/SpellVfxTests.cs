@@ -327,7 +327,13 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- the scene half -------------------------------------------------------
 
-        private IEnumerator LoadFight()
+        private IEnumerator LoadFight() => LoadFight(1);
+
+        // ENEMY COUNT AS A PARAMETER, because a test that skips is a test that
+        // reads as coverage without being any. The splash case needs more than
+        // one thing on the stage and the default fixture fields exactly one, so
+        // it called Assert.Ignore and the capability shipped unverified.
+        private IEnumerator LoadFight(int enemyCount)
         {
             yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
             yield return null;
@@ -344,15 +350,23 @@ namespace PrincesPalace.PlayModeTests
             _player = _fight.GetComponentInChildren<SpellVfxPlayer>(includeInactive: true);
 
             var hero = new CombatantState("Shawn", true, 300, 30, 40, 0, 10);
-            var foe = new CombatantState("Front", false, 5000, 10, 8, 0, 4);
-            var encounter = new CombatEncounter(new[] { hero }, new[] { foe });
+            // The first stays "Front": a sibling test looks its stage slot up
+            // by name, and renaming the fixture's enemy was a change this did
+            // not need to make.
+            var foes = Enumerable.Range(0, Mathf.Max(1, enemyCount))
+                .Select(i => new CombatantState(i == 0 ? "Front" : $"Foe{i}", false, 5000, 10, 8, 0, 4))
+                .ToArray();
+            var encounter = new CombatEncounter(new[] { hero }, foes);
             var kit = new PlayerKit("shawn", CharacterRole.Tank, null, null, null,
                 new ResolvedSpellTier(1, "Spark", 6, 1.5f, 0), level: 4);
-            var enemyKit = new EnemyKit(new ResolvedEnemy("front", "Front", new StatBlock(), 5, 3, false,
-                DamageType.Physical, DamageType.Physical, 0), false);
+            var enemyKits = foes
+                .Select(f => new EnemyKit(new ResolvedEnemy(f.Name.ToLowerInvariant(), f.Name,
+                    new StatBlock(), 5, 3, false,
+                    DamageType.Physical, DamageType.Physical, 0), false))
+                .ToList();
 
             var session = new FightSession(encounter, new List<PlayerKit> { kit },
-                new List<EnemyKit> { enemyKit }, new SeededRandom(5));
+                enemyKits, new SeededRandom(5));
             session.Begin();
             _fight.Bind(session, EncounterClass.Normal);
             yield return null;
@@ -555,6 +569,93 @@ namespace PrincesPalace.PlayModeTests
                 "the mirror survived into the next cast");
             Assert.AreEqual(380f, _player.Image.rectTransform.sizeDelta.x, 1f,
                 "the box size survived into the next cast");
+        }
+
+        // ---- an effect that lands on more than one thing -------------------------
+        //
+        // ResolveDamageAll opens ONE beat aimed at the first living enemy,
+        // which is correct for the damage -- the numbers are recorded per
+        // enemy -- and was quietly wrong for the art: three rats took the hit
+        // and one of them got the animation. The beat carries the rest as
+        // SplashTargets now, and the pool holds one member per stage slot.
+        //
+        // ASSERTED ON DISTINCT POSITIONS rather than on a count of enabled
+        // Images. A pool that played three effects stacked on one enemy would
+        // pass a count and be exactly the bug this replaced.
+        [UnityTest]
+        public IEnumerator AnEffectThatHitsEveryEnemyDrawsOnEveryEnemy()
+        {
+            // A FULL STAGE. The pool holds one member per slot, so three is
+            // both the realistic worst case and the number that would expose an
+            // off-by-one in the member walk.
+            yield return LoadFight(FightHudSpec.StageSlotsPerSide);
+
+            var enemies = _fight.SessionForTest.Encounter.Enemies
+                .Where(e => e != null && e.IsAlive)
+                .ToList();
+
+            Assert.AreEqual(FightHudSpec.StageSlotsPerSide, enemies.Count,
+                "the fixture did not field a full stage, so this would prove nothing about a splash");
+
+            var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
+
+            _fight.PlaySpellVfxForTest(new CombatBeat
+            {
+                Actor = hero,
+                Target = enemies[0],
+                SplashTargets = enemies.Skip(1).ToList(),
+                Vfx = new SpellPresentation
+                {
+                    path = "Spells/frost_flare",
+                    seconds = 0.52f,
+                    impactFrame = 5,
+                },
+            });
+            yield return null;
+
+            var drawn = _fight.GetComponentsInChildren<SpellVfxPlayer>(includeInactive: true)
+                .Where(p => p.Image != null && p.Image.enabled)
+                .Select(p => p.Image.rectTransform.anchoredPosition.x)
+                .ToList();
+
+            Assert.AreEqual(enemies.Count, drawn.Count,
+                $"{enemies.Count} enemies were struck but {drawn.Count} effect(s) are drawn. An " +
+                "all-enemies spell animating on one of them is what SplashTargets exists to fix.");
+
+            Assert.AreEqual(drawn.Count, drawn.Distinct().Count(),
+                "two effects are drawn at the same x, so they are stacked on one enemy rather than " +
+                "spread across the ones that were hit");
+        }
+
+        // The ordinary case has to stay ordinary: a single-target spell must
+        // not light up the rest of the pool now that there is a rest of it.
+        [UnityTest]
+        public IEnumerator ASingleTargetSpellStillDrawsExactlyOnce()
+        {
+            yield return LoadFight();
+
+            var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
+            var foe = _fight.SessionForTest.Encounter.Enemies.First(c => c != null);
+
+            _fight.PlaySpellVfxForTest(new CombatBeat
+            {
+                Actor = hero,
+                Target = foe,
+                Vfx = new SpellPresentation
+                {
+                    path = "Spells/frost_flare",
+                    seconds = 0.52f,
+                    impactFrame = 5,
+                },
+            });
+            yield return null;
+
+            int drawn = _fight.GetComponentsInChildren<SpellVfxPlayer>(includeInactive: true)
+                .Count(p => p.Image != null && p.Image.enabled);
+
+            Assert.AreEqual(1, drawn,
+                "a single-target spell lit " + drawn + " pool members; widening the pool for splash " +
+                "effects must not change what an ordinary cast draws");
         }
 
         private CombatBeat TravellingBeat(bool reversed = false, bool fromCaster = true)
