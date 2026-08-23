@@ -5,6 +5,7 @@ using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Stats;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Rng;
 
 namespace PrincesPalace.Domain.Tests
 {
@@ -205,6 +206,91 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("40 healing", text);
             StringAssert.DoesNotContain("damage", text);
         }
+
+        // ---- end to end ----------------------------------------------------------
+        //
+        // The pieces above are each correct on their own. This is the one that
+        // would have caught them being correct and not connected: a monster
+        // whose pool holds a real skill has to TELEGRAPH that skill and then
+        // RESOLVE that skill, and the failure worth fearing is the two
+        // disagreeing.
+        private static ResolvedSkill Hex() =>
+            new ResolvedSkill("hex", "Hex", "", "", 1, SkillEffect.DamageSingle,
+                SkillTargeting.SingleEnemy, 0, 0, false, 100, 25, false,
+                null, SpellPresentation.None, 0,
+                appliesStatus: StatusEffectType.Vulnerable, statusMagnitude: 25, statusDuration: 2);
+
+        private static (FightSession session, CombatantState hero, CombatantState monster) WithAbility(
+            ResolvedSkill skill)
+        {
+            // TOUGH ENOUGH TO SURVIVE THE BLOW. Health lost is capped by health
+            // held, so a hero who dies to the cast reports the damage as exactly
+            // their remaining HP -- which reads as the preview being wrong when
+            // it is the assertion that cannot see past zero.
+            var hero = new CombatantState("Shawn", true, 5000, 30, 40, 0, 10);
+            // SLOWER THAN THE HERO, and tough enough to survive being hit.
+            //
+            // The turn order is what drives this: ExecuteAttack's argument is
+            // the TARGET and the actor is whoever is up, so the monster's reply
+            // only resolves when the turn advances past the hero. A witch that
+            // dies to Shawn's opening swing never gets to cast the thing this
+            // test is about.
+            var monster = new CombatantState("Witch", false, 5000, 0, 12, 2, 9);
+            var source = new ResolvedEnemy("witch", "Witch", new StatBlockOf(), 5, 3, false,
+                DamageType.Physical, DamageType.Physical, 0);
+
+            // Weight 1 against nothing else: the draw cannot pick anything but
+            // the ability, so this tests the wiring rather than the dice.
+            var kit = new EnemyKit(source, false, new List<EnemyAbility> { EnemyAbility.Of(skill, 1f) });
+
+            var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { monster }),
+                null, new List<EnemyKit> { kit }, new SeededRandom(7)) { DamageVarianceRange = 0f };
+            session.Begin();
+            return (session, hero, monster);
+        }
+
+        [Test]
+        public void AMonsterTelegraphsTheSkillItIsAboutToCast()
+        {
+            var (session, hero, monster) = WithAbility(Hex());
+
+            session.PrepareEnemyIntents();
+            var intent = session.IntentDetailFor(monster);
+
+            Assert.IsTrue(intent.HasValue, "nothing was telegraphed at all");
+            Assert.AreEqual("Hex", intent.Value.Label, "the telegraph names the wrong action");
+            Assert.AreEqual(EnemyIntentKind.Weaken, intent.Value.Kind,
+                "a skill inflicting Vulnerable telegraphs as the weaken icon, not the generic one");
+            Assert.AreEqual(EnemyIntentScope.One, intent.Value.Scope);
+            Assert.AreSame(hero, intent.Value.Target, "the victim is committed with the action");
+            Assert.Greater(intent.Value.ExpectedDamage, 0, "the player cannot plan against a blank number");
+        }
+
+        // THE TELEGRAPH AND THE BLOW HAVE TO BE THE SAME EVENT. A monster that
+        // announces one thing and does another is worse than one that announces
+        // nothing, and it is the specific failure that resolving by label rather
+        // than by index would produce.
+        [Test]
+        public void AndThenActuallyCastsIt()
+        {
+            var (session, hero, monster) = WithAbility(Hex());
+
+            session.PrepareEnemyIntents();
+            int expected = session.IntentDetailFor(monster).Value.ExpectedDamage;
+            int before = hero.CurrentHealth;
+
+            // The hero swings; the witch's reply resolves as the turn advances.
+            session.ExecuteAttack(monster);
+
+            Assert.Less(hero.CurrentHealth, before, "the announced blow never landed");
+            Assert.AreEqual(expected, before - hero.CurrentHealth,
+                "the damage differs from what was telegraphed, so the preview is a second formula");
+
+            Assert.IsTrue(hero.Statuses.Any(st => st.Type == StatusEffectType.Vulnerable),
+                "the skill's own status never applied -- a monster casting a real skill has to get " +
+                "the whole skill, not the damage half of it");
+        }
+
 
         // A tiny stand-in so these tests do not depend on StatBlock's own
         // constructor shape, which is not what any of them are about.

@@ -97,31 +97,39 @@ namespace PrincesPalace.Domain.Combat.Session
                 EnemyIntentIcons.HealsFor(effect));
         }
 
-        // What a monster's SKILL would land for, on the same terms as
-        // PreviewDamage below: no variance, no ward, and nothing that draws
-        // from the run's generator.
+        // What a monster's SKILL would land for.
         //
-        // Routed through SkillResolution, which is the same arithmetic the
-        // resolution itself will run -- a preview computed by a second formula
-        // is a promise the fight is free to break.
-        private static int PreviewSkill(CombatantState enemy, CombatantState target, ResolvedSkill skill)
+        // THE SAME CALL ResolveDamageSingle MAKES, argument for argument, and
+        // that is not tidiness. The first version left out castType and
+        // ScalingAxis -- which decide whether the figure scales off Attack or
+        // off Spell -- and promised 370 for a blow that landed 300. A telegraph
+        // overstating by a fifth is worse than none: the player budgets a heal
+        // they did not need, or declines a trade they could have won.
+        //
+        // The three things it deliberately does NOT share are the three that
+        // would change the fight it is previewing: variance and the ward would
+        // consume a draw and spend a shield the player still holds, and both
+        // are why the tooltip says "about".
+        private int PreviewSkill(CombatantState enemy, CombatantState target, ResolvedSkill skill)
         {
             if (enemy == null) return 0;
 
-            var against = skill.Effect == SkillEffect.HealSelf || skill.Effect == SkillEffect.HealParty
-                ? enemy
-                : target;
-
+            bool heals = EnemyIntentIcons.HealsFor(skill.Effect);
+            var against = heals ? enemy : target;
             if (against == null) return 0;
 
-            int raw = SkillResolution.Amount(skill.Effect, enemy, against,
-                skill.Power, skill.FlatAmount, 0, skill.IgnoresDefense);
+            var castType = ActorAttackType(enemy) ?? DamageType.Physical;
 
-            if (EnemyIntentIcons.HealsFor(skill.Effect)) return raw;
+            int raw = SkillResolution.Amount(skill.Effect, enemy, against,
+                skill.Power, skill.FlatAmount, 0, skill.IgnoresDefense, castType, skill.ScalingAxis);
+
+            if (heals) return raw;
 
             return DamagePipeline.AfterDefences(
                 raw, enemy, against,
-                attackType: null, weakness: null, resistance: null,
+                attackType: castType,
+                weakness: SourceFor(against)?.Weakness,
+                resistance: SourceFor(against)?.Resistance,
                 varianceRange: 0f, rng: null, resolveWard: null).Damage;
         }
 
