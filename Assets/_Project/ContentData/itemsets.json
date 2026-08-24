@@ -23,7 +23,8 @@
       "costPerTier": 20,
       "sortOrder": 0,
       "styleWeights": [
-        "dexterity 100"
+        "dexterity 100",
+        "constitution 15"
       ],
       "pieces": [
         {
@@ -206,7 +207,8 @@
       "costPerTier": 45,
       "sortOrder": 2,
       "styleWeights": [
-        "intelligence 100"
+        "intelligence 100",
+        "constitution 10"
       ],
       "pieces": [
         {
@@ -305,7 +307,8 @@
       "costPerTier": 30,
       "sortOrder": 3,
       "styleWeights": [
-        "strength 100"
+        "strength 100",
+        "constitution 10"
       ],
       "pieces": [
         {
@@ -401,10 +404,12 @@
           "slot": "Head",
           "iconSheet": "Assets/_Project/Art/Items/siege_cuirass_helmet",
           "baseStats": [
-            "physicalResistance 8"
+            "physicalResistance 8",
+            "magicalResistance 5"
           ],
           "topStats": [
-            "physicalResistance 18"
+            "physicalResistance 18",
+            "magicalResistance 11"
           ]
         },
         {
@@ -413,10 +418,12 @@
           "slot": "Torso",
           "iconSheet": "Assets/_Project/Art/Items/siege_cuirass_sheet",
           "baseStats": [
-            "physicalResistance 14"
+            "physicalResistance 14",
+            "magicalResistance 8"
           ],
           "topStats": [
-            "physicalResistance 30"
+            "physicalResistance 30",
+            "magicalResistance 18"
           ]
         },
         {
@@ -425,10 +432,12 @@
           "slot": "Legs",
           "iconSheet": "Assets/_Project/Art/Items/siege_tassets_sheet",
           "baseStats": [
-            "physicalResistance 11"
+            "physicalResistance 11",
+            "magicalResistance 7"
           ],
           "topStats": [
-            "physicalResistance 24"
+            "physicalResistance 24",
+            "magicalResistance 14"
           ]
         },
         {
@@ -437,10 +446,12 @@
           "slot": "Gloves",
           "iconSheet": "Assets/_Project/Art/Items/siege_gloves_sheets",
           "baseStats": [
-            "physicalResistance 6"
+            "physicalResistance 6",
+            "magicalResistance 4"
           ],
           "topStats": [
-            "physicalResistance 12"
+            "physicalResistance 12",
+            "magicalResistance 7"
           ]
         },
         {
@@ -449,10 +460,12 @@
           "slot": "Shoes",
           "iconSheet": "Assets/_Project/Art/Items/siege_sabatons_sheet",
           "baseStats": [
-            "physicalResistance 7"
+            "physicalResistance 7",
+            "magicalResistance 4"
           ],
           "topStats": [
-            "physicalResistance 15"
+            "physicalResistance 15",
+            "magicalResistance 9"
           ]
         }
       ]
@@ -480,7 +493,8 @@
       "sortOrder": 5,
       "styleWeights": [
         "dexterity 60",
-        "strength 50"
+        "strength 50",
+        "constitution 20"
       ],
       "pieces": [
         {
@@ -568,7 +582,8 @@
       "sortOrder": 6,
       "styleWeights": [
         "strength 60",
-        "intelligence 50"
+        "intelligence 50",
+        "constitution 25"
       ],
       "pieces": [
         {
@@ -656,7 +671,8 @@
       "sortOrder": 7,
       "styleWeights": [
         "intelligence 60",
-        "wisdom 50"
+        "wisdom 50",
+        "constitution 10"
       ],
       "pieces": [
         {
@@ -744,7 +760,8 @@
       "sortOrder": 8,
       "styleWeights": [
         "charisma 60",
-        "wisdom 50"
+        "wisdom 50",
+        "constitution 10"
       ],
       "pieces": [
         {
@@ -831,7 +848,8 @@
       "costPerTier": 50,
       "sortOrder": 9,
       "styleWeights": [
-        "charisma 100"
+        "charisma 100",
+        "constitution 8"
       ],
       "pieces": [
         {

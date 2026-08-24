@@ -28,7 +28,7 @@ MonoBehaviour:
     defense: 0
     manaRegen: 0
     physicalResistance: 12
-    magicalResistance: 0
+    magicalResistance: 7
   abilityScoreBonus:
     strength: 0
     dexterity: 0

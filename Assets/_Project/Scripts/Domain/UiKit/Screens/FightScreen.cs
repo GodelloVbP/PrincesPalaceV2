@@ -105,6 +105,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef PartyMpFill;
         public NodeRef PartyMpValue;
         public NodeRef PartyMpPreview;
+        public List<NodeRef> PartyBuffIcons = new List<NodeRef>();
+        public NodeRef PartyBuffTooltip;
+        public NodeRef PartyBuffTooltipText;
         public NodeRef WoolRow;
         public NodeRef WoolValue;
         public List<NodeRef> WoolPips = new List<NodeRef>();
@@ -206,6 +209,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             children.Add(s.BuildDetailColumn());
             children.Add(s.BuildTargetPrompt());
             children.Add(s.BuildIntentTooltip());
+            children.Add(s.BuildPartyBuffTooltip());
             children.Add(s.BuildSpellVfx());
             children.Add(s.BuildDamagePopups());
 
@@ -849,8 +853,38 @@ namespace PrincesPalace.Domain.UiKit.Screens
             plate.Children.Add(mpBar);
             plate.Children.Add(mpValue);
             plate.Children.Add(BuildWoolRow());
+            foreach (var icon in BuildPartyBuffIcons()) plate.Children.Add(icon);
             PartyPlate = plate;
             return plate;
+        }
+
+        // Up to four badges in a row above the portrait, reading whatever
+        // FightHudModel.BuffBadgesFor says is currently on the acting
+        // character. The portrait had nothing here before this -- a buff a
+        // relic granted was visible nowhere except a menu that does not even
+        // say it fired (see FightHudModel's BuffBadge comment).
+        //
+        // No icon art exists for any of this yet, so each badge is the same
+        // "no art authored" shape the rest of this project already uses for
+        // that state -- a plain button face, tinted at runtime rather than
+        // switching sprites (see RefreshPartyBuffs). Four is a guess at how
+        // many a character plausibly carries at once, not a measured limit.
+        private const int PartyBuffSlots = 4;
+
+        private IEnumerable<UiNode> BuildPartyBuffIcons()
+        {
+            PartyBuffIcons.Clear();
+
+            for (int i = 0; i < PartyBuffSlots; i++)
+            {
+                float x = -202f + i * 22f;
+                var icon = Ui.Button($"PartyBuff{i}", UiString.Runtime, new UiVec(18f, 18f), 11,
+                        Place.At(x, 96f))
+                    .Inactive();
+
+                PartyBuffIcons.Add(icon);
+                yield return icon;
+            }
         }
 
         // 16 pips rather than a fraction. A charge meter you can watch fill
@@ -1326,6 +1360,25 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor();
             panel.Children.Add(label);
             IntentTooltip = panel;
+            return panel;
+        }
+
+        // The party buff row's own tooltip -- same one-runtime-label shape as
+        // IntentTooltip and for the same reason, just anchored near the party
+        // plate instead of floating over the stage, since that is where the
+        // icons it explains actually sit.
+        private UiNode BuildPartyBuffTooltip()
+        {
+            var label = Ui.Label("PartyBuffTooltipText", UiString.Runtime, new UiVec(360f, 100f), 15,
+                FightHudPalette.GoldText, Place.At(0f, 0f));
+            PartyBuffTooltipText = label;
+
+            var panel = Ui.Sprite("PartyBuffTooltip", PanelViolet, Place.At(-540f, -250f),
+                    UiSize.Fixed(380f, 120f))
+                .Inactive()
+                .AsDecor();
+            panel.Children.Add(label);
+            PartyBuffTooltip = panel;
             return panel;
         }
 

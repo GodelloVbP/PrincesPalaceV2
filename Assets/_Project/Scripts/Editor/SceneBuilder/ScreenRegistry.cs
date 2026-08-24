@@ -123,6 +123,9 @@ public static class ScreenRegistry
                 fight.partyMpFill = result.Image(screen.PartyMpFill);
                 fight.partyMpValue = result.Tmp(screen.PartyMpValue);
                 fight.partyMpPreview = result.Rect(screen.PartyMpPreview);
+                fight.partyBuffIcons = screen.PartyBuffIcons.Select(result.Go).ToArray();
+                fight.partyBuffTooltip = result.Go(screen.PartyBuffTooltip);
+                fight.partyBuffTooltipText = result.Tmp(screen.PartyBuffTooltipText);
                 fight.woolPips = screen.WoolPips.Select(result.Image).ToArray();
                 fight.woolValue = result.Tmp(screen.WoolValue);
 

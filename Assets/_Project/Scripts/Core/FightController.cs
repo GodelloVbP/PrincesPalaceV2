@@ -76,6 +76,13 @@ namespace PrincesPalace
         [SerializeField] internal Image partyMpFill;
         [SerializeField] internal TMP_Text partyMpValue;
         [SerializeField] internal RectTransform partyMpPreview;
+
+        // Same "caption is a synthesised child with no NodeRef" story as
+        // enemyIntentIcons below -- each badge's Image and TMP glyph are both
+        // resolved at Start.
+        [SerializeField] internal GameObject[] partyBuffIcons;
+        [SerializeField] internal GameObject partyBuffTooltip;
+        [SerializeField] internal TMP_Text partyBuffTooltipText;
         [SerializeField] internal Image[] woolPips;
         [SerializeField] internal TMP_Text woolValue;
 
@@ -270,6 +277,7 @@ namespace PrincesPalace
             // Once, here rather than per refresh: attaching a hover handler
             // every frame would stack them.
             WireIntentIcons();
+            WirePartyBuffIcons();
             WireSubmenuScroll();
         }
 

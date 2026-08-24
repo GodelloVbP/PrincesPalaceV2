@@ -14,8 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
   id: lucky_deck
   displayName: Lucky Deck
-  description: Fifty-two ways for a fight to go your way, and it never shows you
+  description: 'Fifty-two ways for a fight to go your way, and it never shows you
     which one until the card is already turned.
+
+
+    Mechanic: every landed attack
+    rolls one of three outcomes at random - heal 5% health and 10% mana, splash 25%
+    of the damage onto every other enemy, or slow the target by 30% speed for a turn.'
   effect: 10
   rarity: 3
   unlockedBy: 

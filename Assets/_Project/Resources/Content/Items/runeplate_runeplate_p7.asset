@@ -31,14 +31,14 @@ MonoBehaviour:
   abilityScoreBonus:
     strength: 14
     dexterity: 0
-    constitution: 0
+    constitution: 5
     wisdom: 0
     intelligence: 12
     charisma: 0
   requirements:
     strength: 28
     dexterity: 0
-    constitution: 0
+    constitution: 12
     wisdom: 0
     intelligence: 24
     charisma: 0

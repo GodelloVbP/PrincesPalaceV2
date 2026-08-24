@@ -14,8 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
   id: darrows_buckler
   displayName: Darrow's Buckler
-  description: Small, dented, and held by somebody who lived. It turns a blow and
+  description: 'Small, dented, and held by somebody who lived. It turns a blow and
     a curse with the same indifference.
+
+
+    Mechanic: +25 physical resistance and
+    +25 magical resistance.'
   effect: 0
   rarity: 0
   unlockedBy: 

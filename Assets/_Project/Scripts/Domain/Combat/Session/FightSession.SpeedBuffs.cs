@@ -220,6 +220,24 @@ namespace PrincesPalace.Domain.Combat.Session
                 ? buff.Granted
                 : 0;
 
+        // EVERY speed buff/malus currently on a combatant, for a display that
+        // cannot afford to hard-code which RelicEffect to ask about the way
+        // TagLineFor does. Empty rather than null for a combatant carrying
+        // nothing, so a caller never needs its own null check on top of the
+        // empty-collection one.
+        public IEnumerable<(RelicEffect Source, int Granted, int TurnsLeft)> ActiveSpeedBuffs(CombatantState actor)
+        {
+            if (actor == null || !_speedBuffs.TryGetValue(actor, out var forActor))
+            {
+                yield break;
+            }
+
+            foreach (var pair in forActor)
+            {
+                yield return (pair.Key, pair.Value.Granted, pair.Value.TurnsLeft);
+            }
+        }
+
         // ---- seams for tests -------------------------------------------------
         //
         // A one-turn speed buff's ENTIRE observable lifecycle sits inside one

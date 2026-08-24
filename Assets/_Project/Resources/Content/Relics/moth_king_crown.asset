@@ -14,8 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
   id: moth_king_crown
   displayName: Tin-Foil Pipe of Magic
-  description: Paper thin, and it flakes - but it draws hard and fast, and what it
-    gives back does not last.
+  description: 'Paper thin, and it flakes - but it draws hard and fast, and what
+    it gives back does not last.
+
+
+    Mechanic: casting a spell grants +20% speed
+    for your next turn.'
   effect: 6
   rarity: 2
   unlockedBy: 

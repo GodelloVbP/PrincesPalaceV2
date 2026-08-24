@@ -39,7 +39,7 @@ MonoBehaviour:
   requirements:
     strength: 0
     dexterity: 0
-    constitution: 0
+    constitution: 1
     wisdom: 6
     intelligence: 7
     charisma: 0

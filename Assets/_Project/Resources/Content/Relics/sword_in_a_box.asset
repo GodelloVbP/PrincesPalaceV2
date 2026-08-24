@@ -14,8 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
   id: sword_in_a_box
   displayName: Sword in a Box
-  description: Small enough to carry, sharp enough to matter. Whatever a spell touches,
+  description: 'Small enough to carry, sharp enough to matter. Whatever a spell touches,
     the box opens on its own and finishes the thought.
+
+
+    Mechanic: landing a
+    spell on an enemy immediately follows with a free basic attack against them.'
   effect: 9
   rarity: 3
   unlockedBy: 
