@@ -29,49 +29,49 @@
     {
       "id": "seven_teeth",
       "displayName": "Bounty Hunter Contract",
-      "description": "A jawbone worn smooth by counting. Every kill is a line struck off, and every line is worth something.\n\nMechanic: killing an enemy pays gold equal to about 30% of its own experience reward (minimum 1 gold).",
+      "description": "Killing an enemy pays gold equal to about 30% of its own experience reward (minimum 1 gold).",
       "rarity": "uncommon",
       "effect": "BountyHunterContract"
     },
     {
       "id": "salt_ledger",
       "displayName": "The Salt Ledger",
-      "description": "Every debt the sea remembers, written small. Swing, and a line of it is struck out - whatever you are waiting on comes back a turn sooner.\n\nMechanic: every attack you land reduces all of your active cooldowns by 1 turn.",
+      "description": "Every attack you land reduces all of your active cooldowns by 1 turn.",
       "rarity": "ultrarare",
       "effect": "SaltLedger"
     },
     {
       "id": "cold_iron_ring",
       "displayName": "Toothed Necklace",
-      "description": "Too heavy for the finger it was made for, so somebody wore it around their throat instead. The closer it sits to your last breath, the sharper it bites on your behalf.\n\nMechanic: the lower your health, the harder and faster you fight - up to +30% damage and +20% speed at 25% health or below, scaling smoothly in between.",
+      "description": "The lower your health, the harder and faster you fight - up to +30% damage and +20% speed at 25% health or below, scaling smoothly in between.",
       "rarity": "common",
       "effect": "ToothedNecklace"
     },
     {
       "id": "moth_king_crown",
       "displayName": "Tin-Foil Pipe of Magic",
-      "description": "Paper thin, and it flakes - but it draws hard and fast, and what it gives back does not last.\n\nMechanic: casting a spell grants +20% speed for your next turn.",
+      "description": "Casting a spell grants +20% speed for your next turn.",
       "rarity": "rare",
       "effect": "TinFoilPipe"
     },
     {
       "id": "widows_thimble",
       "displayName": "Ballerina's Slippers",
-      "description": "Dented on the inside only, from a foot that never stopped moving. Every swing wears them in a little more, up to a point.\n\nMechanic: each attack you land permanently speeds you up by 10% for the rest of the fight, up to +40% total.",
+      "description": "Each attack you land permanently speeds you up by 10% for the rest of the fight, up to +40% total.",
       "rarity": "common",
       "effect": "BallerinasSlippers"
     },
     {
       "id": "long_count",
       "displayName": "The Long Count",
-      "description": "It has been counting since before you found it, and every third blow it lets you in on the tally.\n\nMechanic: every third attack you land this fight deals 40% bonus damage.",
+      "description": "Every third attack you land this fight deals 40% bonus damage.",
       "rarity": "common",
       "effect": "LongCount"
     },
     {
       "id": "drowned_lantern",
       "displayName": "Drowned Lantern",
-      "description": "Still lit, which is the troubling part. Whatever a spell touches, it marks - and the next blow that lands there burns brighter for it.\n\nMechanic: a spell that lands marks its target; your next attack against a marked target deals 50% bonus damage.",
+      "description": "A spell that lands marks its target; your next attack against a marked target deals 50% bonus damage.",
       "rarity": "ultrarare",
       "effect": "DrownedLantern"
     },
@@ -117,14 +117,14 @@
     {
       "id": "charging_crystal",
       "displayName": "Charging Crystal",
-      "description": "It drinks a little from every spell and gives the fourth one back with interest. The interest is reckoned on the spell itself, never on whatever else was helping.\n\nMechanic: every fourth spell you cast this fight deals 50% bonus damage.",
+      "description": "Every fourth spell you cast this fight deals 50% bonus damage.",
       "effect": "ChargingCrystal",
       "rarity": "common"
     },
     {
       "id": "darrows_buckler",
       "displayName": "Darrow's Buckler",
-      "description": "Small, dented, and held by somebody who lived. It turns a blow and a curse with the same indifference.\n\nMechanic: +25 physical resistance and +25 magical resistance.",
+      "description": "+25 physical resistance and +25 magical resistance.",
       "rarity": "common",
       "modifiers": [
         {
@@ -142,21 +142,21 @@
     {
       "id": "sword_in_a_box",
       "displayName": "Sword in a Box",
-      "description": "Small enough to carry, sharp enough to matter. Whatever a spell touches, the box opens on its own and finishes the thought.\n\nMechanic: landing a spell on an enemy immediately follows with a free basic attack against them.",
+      "description": "Landing a spell on an enemy immediately follows with a free basic attack against them.",
       "effect": "SwordInABox",
       "rarity": "ultrarare"
     },
     {
       "id": "lucky_deck",
       "displayName": "Lucky Deck",
-      "description": "Fifty-two ways for a fight to go your way, and it never shows you which one until the card is already turned.\n\nMechanic: every landed attack rolls one of three outcomes at random - heal 5% health and 10% mana, splash 25% of the damage onto every other enemy, or slow the target by 30% speed for a turn.",
+      "description": "Every landed attack rolls one of three outcomes at random - heal 5% health and 10% mana, splash 25% of the damage onto every other enemy, or slow the target by 30% speed for a turn.",
       "effect": "LuckyDeck",
       "rarity": "ultrarare"
     },
     {
       "id": "first_rune",
       "displayName": "The First Rune",
-      "description": "The oldest word for fire, cut so deep the stone still says it twice. Every spell it hears, it repeats.\n\nMechanic: a single-target damaging spell you cast repeats itself once more on the same target, for free.",
+      "description": "A single-target damaging spell you cast repeats itself once more on the same target, for free.",
       "effect": "FirstRune",
       "rarity": "godlike"
     }

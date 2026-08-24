@@ -14,13 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
   id: charging_crystal
   displayName: Charging Crystal
-  description: 'It drinks a little from every spell and gives the fourth one back
-    with interest. The interest is reckoned on the spell itself, never on whatever
-    else was helping.
-
-
-    Mechanic: every fourth spell you cast this fight deals
-    50% bonus damage.'
+  description: Every fourth spell you cast this fight deals 50% bonus damage.
   effect: 4
   rarity: 0
   unlockedBy: 

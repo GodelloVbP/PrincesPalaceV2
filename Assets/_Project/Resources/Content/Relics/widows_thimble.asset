@@ -14,13 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
   id: widows_thimble
   displayName: Ballerina's Slippers
-  description: 'Dented on the inside only, from a foot that never stopped moving.
-    Every swing wears them in a little more, up to a point.
-
-
-    Mechanic: each
-    attack you land permanently speeds you up by 10% for the rest of the fight, up
-    to +40% total.'
+  description: Each attack you land permanently speeds you up by 10% for the rest
+    of the fight, up to +40% total.
   effect: 5
   rarity: 0
   unlockedBy: 

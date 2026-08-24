@@ -14,12 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
   id: first_rune
   displayName: The First Rune
-  description: 'The oldest word for fire, cut so deep the stone still says it twice.
-    Every spell it hears, it repeats.
-
-
-    Mechanic: a single-target damaging spell
-    you cast repeats itself once more on the same target, for free.'
+  description: A single-target damaging spell you cast repeats itself once more on
+    the same target, for free.
   effect: 12
   rarity: 5
   unlockedBy: 

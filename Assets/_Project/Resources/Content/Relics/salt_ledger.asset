@@ -14,12 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
   id: salt_ledger
   displayName: The Salt Ledger
-  description: 'Every debt the sea remembers, written small. Swing, and a line of
-    it is struck out - whatever you are waiting on comes back a turn sooner.
-
-
-    Mechanic:
-    every attack you land reduces all of your active cooldowns by 1 turn.'
+  description: Every attack you land reduces all of your active cooldowns by 1 turn.
   effect: 13
   rarity: 3
   unlockedBy: 

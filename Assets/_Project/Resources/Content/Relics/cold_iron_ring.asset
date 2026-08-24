@@ -14,14 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
   id: cold_iron_ring
   displayName: Toothed Necklace
-  description: 'Too heavy for the finger it was made for, so somebody wore it around
-    their throat instead. The closer it sits to your last breath, the sharper it
-    bites on your behalf.
-
-
-    Mechanic: the lower your health, the harder and faster
-    you fight - up to +30% damage and +20% speed at 25% health or below, scaling
-    smoothly in between.'
+  description: The lower your health, the harder and faster you fight - up to +30%
+    damage and +20% speed at 25% health or below, scaling smoothly in between.
   effect: 7
   rarity: 0
   unlockedBy: 

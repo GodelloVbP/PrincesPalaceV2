@@ -14,12 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
   id: seven_teeth
   displayName: Bounty Hunter Contract
-  description: 'A jawbone worn smooth by counting. Every kill is a line struck off,
-    and every line is worth something.
-
-
-    Mechanic: killing an enemy pays gold
-    equal to about 30% of its own experience reward (minimum 1 gold).'
+  description: Killing an enemy pays gold equal to about 30% of its own experience
+    reward (minimum 1 gold).
   effect: 8
   rarity: 1
   unlockedBy: 

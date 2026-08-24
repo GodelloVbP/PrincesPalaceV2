@@ -14,12 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
   id: long_count
   displayName: The Long Count
-  description: 'It has been counting since before you found it, and every third blow
-    it lets you in on the tally.
-
-
-    Mechanic: every third attack you land this
-    fight deals 40% bonus damage.'
+  description: Every third attack you land this fight deals 40% bonus damage.
   effect: 14
   rarity: 0
   unlockedBy: 
