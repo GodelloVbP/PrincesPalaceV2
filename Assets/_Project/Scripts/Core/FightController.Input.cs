@@ -101,10 +101,6 @@ namespace PrincesPalace
                     break;
 
                 case 3:
-                    OnRunPressed();
-                    return;
-
-                case 4:
                     _session.HoldBack();
                     AfterResolution();
                     return;
@@ -137,6 +133,25 @@ namespace PrincesPalace
             {
                 UseSatchelItem(index);
                 return;
+            }
+
+            // A skill that does not target one enemy resolves the same way --
+            // Wool Gathering (HealSelf) was routing through the enemy-target
+            // prompt regardless, so the player clicked an enemy plate for a
+            // self-heal that ignored the click and healed the caster anyway
+            // (ResolveCharacterSkillInner's HealSelf case never reads its
+            // target argument). SkillTargeting is otherwise read only for the
+            // detail card's TARGET row -- this is the one place it needs to
+            // change what actually happens, not just what is displayed.
+            if (_menu.Branch == MenuBranch.Skill)
+            {
+                var options = _session.SkillOptionsFor(_session.Current);
+                if (index < options.Count && options[index].Skill.Targeting != Domain.Combat.SkillTargeting.SingleEnemy)
+                {
+                    _session.CastSkill(options[index].Index, _session.Current);
+                    AfterResolution();
+                    return;
+                }
             }
 
             _menu.EnterTargeting();
@@ -196,14 +211,6 @@ namespace PrincesPalace
         private void OnBackPressed()
         {
             if (_menu.Back()) RefreshUi();
-        }
-
-        private void OnRunPressed()
-        {
-            // Fleeing is the run's business, not the fight's -- the session only
-            // ever answers whether it is allowed.
-            _session?.AppendMessage("There is no way out of this one.");
-            RefreshUi();
         }
 
         private void OnContinuePressed()

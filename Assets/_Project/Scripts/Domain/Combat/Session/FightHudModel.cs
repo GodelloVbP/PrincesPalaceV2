@@ -277,7 +277,15 @@ namespace PrincesPalace.Domain.Combat.Session
                 Kind = "SKILL",
                 Body = skill.Description ?? "",
             };
-            panel.Stats.Add(("COST", CostLabel(skill, resourceName)));
+
+            // THE COST ROW SAYS THE WAIT INSTEAD, while there is one -- the
+            // exact rule the submenu row's own cost column already follows
+            // (see SkillRows above). Without this, mud_burst's card showed
+            // "8 MP" whether or not it could actually be cast, which is how a
+            // relic/skill that genuinely does have a cooldown reads as having
+            // none: nothing on this card ever said so.
+            int cooldown = session?.CooldownRemaining(actor, skill.Id) ?? 0;
+            panel.Stats.Add(("COST", cooldown > 0 ? CooldownLabel(cooldown) : CostLabel(skill, resourceName)));
             panel.Stats.Add(("POWER", PowerLabel(session, actor, skill)));
 
             // Both of these printed the enum: "SINGLEENEMY" and "DAMAGESINGLE".
@@ -286,7 +294,56 @@ namespace PrincesPalace.Domain.Combat.Session
             // player.
             panel.Stats.Add(("TARGET", ReachFor(skill.Targeting)));
             panel.Stats.Add(("EFFECT", VerbFor(skill.Effect)));
+            panel.Stats.Add(("SCALES", ScalingLabelForSkill(session, actor, skill)));
             return panel;
+        }
+
+        // Which ability score this skill's damage actually rides, for the
+        // SCALES row. "-" for anything that does not scale off an ability
+        // score at all -- heals (flat + per-resource-point only, no
+        // CombatMath.ScaledAttack term) and fixed-packet spells (their own
+        // multiplier comes from the caster's spell TIER, not a grade on any
+        // one score) both genuinely have no answer here, and saying so is more
+        // honest than guessing.
+        private static string ScalingLabelForSkill(FightSession session, CombatantState actor, ResolvedSkill skill)
+        {
+            if (session == null || actor == null) return "-";
+            if (skill.HasFixedDamage) return "-";
+            if (skill.Effect != SkillEffect.DamageSingle && skill.Effect != SkillEffect.DamageAll) return "-";
+
+            var castType = session.ActorAttackType(actor) ?? DamageType.Physical;
+            var axis = skill.ScalingAxis == ScalingAxis.Auto ? ScalingAxes.For(castType) : skill.ScalingAxis;
+            var set = axis == ScalingAxis.Weapon ? actor.WeaponScaling
+                    : axis == ScalingAxis.Spell ? actor.SkillScaling
+                    : ScalingSet.None;
+            return ScalingLabel(set);
+        }
+
+        // The strongest-graded ability score across all three scaling slots,
+        // by SHORT NAME alone -- "STR", not "STR A · DEX C". The detail
+        // card's value column is one short line shared with numbers like
+        // "108" and "ONE ENEMY"; the full grade breakdown ScalingProfile.
+        // Describe() prints belongs on an item tooltip, which has the room.
+        public static string ScalingLabel(ScalingSet set)
+        {
+            AbilityScore? best = null;
+            ScalingGrade bestGrade = ScalingGrade.None;
+
+            foreach (AbilityScore score in AbilityScores.All)
+            {
+                var grade = set.SpellTier[score];
+                if (set.MainHand[score] > grade) grade = set.MainHand[score];
+                if (set.OffHand[score] > grade) grade = set.OffHand[score];
+                if (grade == ScalingGrade.None) continue;
+
+                if (best == null || grade > bestGrade)
+                {
+                    best = score;
+                    bestGrade = grade;
+                }
+            }
+
+            return best.HasValue ? AbilityScores.ShortName(best.Value) : "-";
         }
 
         private static string ReachFor(SkillTargeting targeting)
@@ -322,6 +379,7 @@ namespace PrincesPalace.Domain.Combat.Session
             panel.Stats.Add(("POWER", actor == null ? "0" : CombatMath.Scale(CombatMath.ScaledAttack(actor, actor.WeaponScaling, 1f)).ToString()));
             panel.Stats.Add(("TARGET", "SINGLE"));
             panel.Stats.Add(("EFFECT", "DAMAGE"));
+            panel.Stats.Add(("SCALES", actor == null ? "-" : ScalingLabel(actor.WeaponScaling)));
             return panel;
         }
 

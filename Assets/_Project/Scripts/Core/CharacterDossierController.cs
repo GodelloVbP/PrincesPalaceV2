@@ -1117,8 +1117,21 @@ namespace PrincesPalace
 
             var entry = _bag[index];
             var item = ContentDatabase.GetItem(entry.Id);
-            ShowTooltip(entry.Name, item == null ? "" : ItemDescription.CardSummary(item, entry.Plus),
-                       RectOf(packCells, index));
+            var squad = Squad();
+
+            // COMPARISON, not the bare card. "ATK +3" on its own is a number
+            // with no context -- the player cannot tell whether that is
+            // meaningful or trivial without knowing what they already have.
+            // ComparisonBody is the same VS.-EQUIPPED breakdown the stat sheet
+            // preview already computes; this just also puts it in words in the
+            // tooltip itself, since the live preview only covers the derived
+            // stat ROWS and not everything a body of text can say (cascade
+            // notes, requirement lines).
+            string body = item == null ? ""
+                : squad.Count > 0 ? ItemDescription.ComparisonBody(squad[_index], item, entry.Plus)
+                : ItemDescription.CardSummary(item, entry.Plus);
+
+            ShowTooltip(entry.Name, body, RectOf(packCells, index));
             ShowPreviewFor(entry);
         }
 

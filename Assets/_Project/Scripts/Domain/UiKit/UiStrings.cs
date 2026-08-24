@@ -505,14 +505,12 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString VerbAttack = UiString.Define("verb_attack", "ATTACK");
         public static readonly UiString VerbSkill = UiString.Define("verb_skill", "SKILL");
         public static readonly UiString VerbItem = UiString.Define("verb_item", "ITEM");
-        public static readonly UiString VerbRun = UiString.Define("verb_run", "RUN");
         public static readonly UiString VerbHoldBack = UiString.Define("verb_hold_back", "HOLD BACK");
 
         public static readonly UiString HotkeyOne = UiString.Define("hotkey_1", "1");
         public static readonly UiString HotkeyTwo = UiString.Define("hotkey_2", "2");
         public static readonly UiString HotkeyThree = UiString.Define("hotkey_3", "3");
         public static readonly UiString HotkeyFour = UiString.Define("hotkey_4", "4");
-        public static readonly UiString HotkeyFive = UiString.Define("hotkey_5", "5");
         public static readonly UiString HotkeyEscape = UiString.Define("hotkey_escape", "ESC");
 
         // A caret on a verb that opens a submenu, and nothing on one that acts
@@ -552,6 +550,7 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString DetailStatPower = UiString.Define("detail_stat_power", "POWER");
         public static readonly UiString DetailStatTarget = UiString.Define("detail_stat_target", "TARGET");
         public static readonly UiString DetailStatEffect = UiString.Define("detail_stat_effect", "EFFECT");
+        public static readonly UiString DetailStatScaling = UiString.Define("detail_stat_scaling", "SCALES");
 
         // The way out of targeting. It reads ESC because that is what the row
         // it replaced said, and because a player who has learned that key in
@@ -758,13 +757,13 @@ namespace PrincesPalace.Domain.UiKit
             ConfirmSquad,
             HubTitle, HubSubtitle, HubTalents, HubPrincipality, HubCharacterSheet,
             HubRelics, HubStartRun, HubMainMenu,
-            VerbAttack, VerbSkill, VerbItem, VerbRun, VerbHoldBack,
-            HotkeyOne, HotkeyTwo, HotkeyThree, HotkeyFour, HotkeyFive, HotkeyEscape,
+            VerbAttack, VerbSkill, VerbItem, VerbHoldBack,
+            HotkeyOne, HotkeyTwo, HotkeyThree, HotkeyFour, HotkeyEscape,
             VerbNestCaret, EnemiesHeading, WoolHeading, HpTag, MpTag, Continue,
             HealthValue, GuardValue, SignatureValue, StandingCount, LevelAndRole,
             SubmenuSkillsTitle, SubmenuItemsTitle, SubmenuHint,
             DetailKindSkill, DetailKindItem,
-            DetailStatCost, DetailStatPower, DetailStatTarget, DetailStatEffect,
+            DetailStatCost, DetailStatPower, DetailStatTarget, DetailStatEffect, DetailStatScaling,
             TargetPrompt, TargetCancel,
             MapTitle, MapDepth, MapGold, MapAbandon, MapFog,
             MapRoomTreasure, MapRoomRest, MapRoomShop, MapRoomEvent,

@@ -131,13 +131,13 @@ namespace PrincesPalace.Domain.Equipment
             if (!comparison.CandidateIsLive) return "cannot equip yet";
 
             var deltas = DeltaLines(comparison);
-            string body = deltas.Count == 0 ? "no change" : string.Join("   ", deltas);
+            string body = deltas.Count == 0 ? "no change" : string.Join("\n   ", deltas);
 
             // A swap that knocks another slot dormant is the one consequence a
             // list of deltas hides: the numbers above already include the loss,
             // so without this the player sees a drop with no cause.
             int inert = comparison.NewlyInertSlots?.Count ?? 0;
-            if (inert > 0) body += $"   ({inert} other slot{(inert == 1 ? "" : "s")} goes inert)";
+            if (inert > 0) body += $"\n   ({inert} other slot{(inert == 1 ? "" : "s")} goes inert)";
 
             return body;
         }

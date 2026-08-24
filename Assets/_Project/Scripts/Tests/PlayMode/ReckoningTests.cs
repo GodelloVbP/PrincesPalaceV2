@@ -169,23 +169,53 @@ namespace PrincesPalace.PlayModeTests
             return candidates.Take(3).Select(c => c.WithPlus(2)).ToList();
         }
 
-        [UnityTest]
-        public IEnumerator TakingAnOfferPutsItInTheBagAtItsPlusAndSavesIt()
+        // Whether `itemId` at `plus` ended up ANYWHERE this save can hold it --
+        // the bag, or auto-equipped into a squad member's slot. Auto-equip
+        // (ReckoningController.AutoEquipIntoAnEmptySlot) moves a picked item
+        // straight into an empty slot instead of leaving it in the bag, so
+        // "the pick reached the save" can no longer be read off bag count
+        // alone -- only one of these two places will have gained it.
+        private static bool ItemLandedSomewhere(string itemId, int plus)
         {
+            if (Save.stockpiledItems.Any(e => e.itemId == itemId && e.plus == plus)) return true;
+
+            foreach (var character in Save.ActiveSquad())
+            {
+                if (character?.equipment == null) continue;
+                foreach (var slot in Domain.Equipment.EquipmentSlots.All)
+                {
+                    if (character.equipment.Get(slot) == itemId && character.equipment.GetPlus(slot) == plus)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        [UnityTest]
+        public IEnumerator TakingAnOfferPutsItInTheSaveAtItsPlusAndSavesIt()
+        {
+            // NOT necessarily the bag any more -- every offer is an equippable
+            // item (ThreeOffers' own fixture guard), so a fresh Shawn with an
+            // empty slot for it auto-equips instead. Bag-or-equipped is the
+            // real guarantee this test states now; ItemLandedSomewhere checks
+            // both rather than assuming which one won.
             var offers = ThreeOffers();
             yield return ShowIt(Reward(rows: Row("shawn", "Shawn")), offers);
 
-            int before = Save.stockpiledItems.Sum(e => e.count);
+            Assert.IsFalse(ItemLandedSomewhere(offers[0].ItemId, 2),
+                "fixture: should not exist anywhere in a fresh save before it is taken");
 
             Named("ReckoningOffer0").GetComponent<Button>().onClick.Invoke();
             yield return null;
 
-            Assert.AreEqual(before + 1, Save.stockpiledItems.Sum(e => e.count));
-            Assert.IsTrue(Save.stockpiledItems.Any(e => e.itemId == offers[0].ItemId && e.plus == 2),
-                "the plus the offer was rolled at did not survive into the bag");
+            Assert.IsTrue(ItemLandedSomewhere(offers[0].ItemId, 2),
+                "the plus the offer was rolled at did not survive into the save, wherever it landed");
 
             SaveSlotManager.Forget();
-            Assert.AreEqual(before + 1, Save.stockpiledItems.Sum(e => e.count),
+            Assert.IsTrue(ItemLandedSomewhere(offers[0].ItemId, 2),
                 "the pick never reached the file");
         }
 
@@ -193,17 +223,20 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator OnlyOneOfferCanBeTaken()
         {
             // It is a CHOICE. Two presses handing over two items would make the
-            // decision decorative.
-            yield return ShowIt(Reward(rows: Row("shawn", "Shawn")), ThreeOffers());
-
-            int before = Save.stockpiledItems.Sum(e => e.count);
+            // decision decorative. Counts bag PLUS equipped for the same reason
+            // TakingAnOfferPutsItInTheSaveAtItsPlusAndSavesIt does -- a taken
+            // offer may auto-equip rather than sit in the bag, so "exactly one
+            // item arrived" has to be read off both.
+            var offers = ThreeOffers();
+            yield return ShowIt(Reward(rows: Row("shawn", "Shawn")), offers);
 
             Named("ReckoningOffer0").GetComponent<Button>().onClick.Invoke();
             yield return null;
             Named("ReckoningOffer1").GetComponent<Button>().onClick.Invoke();
             yield return null;
 
-            Assert.AreEqual(before + 1, Save.stockpiledItems.Sum(e => e.count));
+            Assert.IsTrue(ItemLandedSomewhere(offers[0].ItemId, 2), "the one offer taken must have arrived");
+            Assert.IsFalse(ItemLandedSomewhere(offers[1].ItemId, 2), "the second press must not also hand over its item");
             Assert.IsTrue(_reckoning.HasTakenAnItem);
         }
 

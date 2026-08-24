@@ -507,13 +507,13 @@ namespace PrincesPalace.Domain.Tests
             var panel = FightHudModel.DetailForStrike(hero);
 
             Assert.AreEqual("Strike", panel.Name);
-            Assert.AreEqual(4, panel.Stats.Count, "the column has four fixed rows");
+            Assert.AreEqual(5, panel.Stats.Count, "the column has five fixed rows");
             Assert.AreEqual("200", panel.Stats[1].Value,
                 "it describes THIS actor's swing, not a generic one");
         }
 
         [Test]
-        public void ASkillsDetailPanelFillsAllFourStatRows()
+        public void ASkillsDetailPanelFillsAllFiveStatRows()
         {
             var skill = Skill("a", "Alpha", manaCost: 5, power: 12);
             var (session, hero) = Fight(skill);
@@ -521,9 +521,66 @@ namespace PrincesPalace.Domain.Tests
             var panel = FightHudModel.DetailForSkill(session, hero, skill);
 
             Assert.AreEqual("Alpha", panel.Name);
-            Assert.AreEqual(4, panel.Stats.Count);
-            CollectionAssert.AreEqual(new[] { "COST", "POWER", "TARGET", "EFFECT" },
+            Assert.AreEqual(5, panel.Stats.Count);
+            CollectionAssert.AreEqual(new[] { "COST", "POWER", "TARGET", "EFFECT", "SCALES" },
                 panel.Stats.Select(s => s.Key).ToArray());
+        }
+
+        [Test]
+        public void ADetailCardOnCooldownShowsThatInsteadOfItsCost()
+        {
+            // The bug this pins: mud_burst genuinely has a cooldown authored
+            // in content, and nothing anywhere on the fight screen ever said
+            // so -- the card kept showing its mana cost as though it were
+            // freely castable. COST already knows how to say "not yet" for a
+            // skill the row model gates the same way (see SkillRows' own
+            // comment); this is that same rule reaching the detail card.
+            var skill = new ResolvedSkill("cd", "Cooldown Bolt", "Waits between casts.", "hero", 1,
+                SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, manaCost: 5,
+                resourceCost: 0, spendsAllResource: false, power: 0, flatAmount: 10,
+                ignoresDefense: false, damageInstances: null, presentation: SpellPresentation.None,
+                sortOrder: 0, cooldownTurns: 2);
+            var (session, hero) = Fight(skill);
+            var foe = session.Encounter.Enemies[0];
+
+            var before = FightHudModel.DetailForSkill(session, hero, skill);
+            Assert.AreEqual("5 MP", before.Stats[0].Value,
+                "fixture: not yet cast, so this should read its plain cost");
+
+            Assert.IsTrue(session.CastSkill(skill, foe), "fixture: the cast itself must succeed to arm the cooldown");
+
+            var after = FightHudModel.DetailForSkill(session, hero, skill);
+            Assert.AreNotEqual("5 MP", after.Stats[0].Value,
+                "a skill actually on cooldown must not still read its mana cost as though it were castable");
+            StringAssert.Contains("TURN", after.Stats[0].Value);
+        }
+
+        [Test]
+        public void StrikesScalesRowNamesTheStrongestWeaponScalingScore()
+        {
+            var (_, hero) = Fight();
+            hero.WeaponScaling = ScalingProfile.None.With(AbilityScore.Strength, ScalingGrade.A);
+
+            var panel = FightHudModel.DetailForStrike(hero);
+
+            Assert.AreEqual("SCALES", panel.Stats[4].Key);
+            Assert.AreEqual("STR", panel.Stats[4].Value);
+        }
+
+        [Test]
+        public void AHealHasNoScalingToNameEvenWithAGradeOnTheActor()
+        {
+            // HealSelf's own Amount formula (flatAmount + power*resourceSpent)
+            // never touches CombatMath.ScaledAttack at all -- a grade on the
+            // actor is real, but irrelevant to what this specific skill does,
+            // and claiming otherwise would be worse than saying nothing.
+            var heal = Skill("h", "Mend", effect: SkillEffect.HealSelf, power: 5);
+            var (session, hero) = Fight(heal);
+            hero.SkillScaling = ScalingProfile.None.With(AbilityScore.Wisdom, ScalingGrade.S);
+
+            var panel = FightHudModel.DetailForSkill(session, hero, heal);
+
+            Assert.AreEqual("-", panel.Stats[4].Value);
         }
 
         [Test]

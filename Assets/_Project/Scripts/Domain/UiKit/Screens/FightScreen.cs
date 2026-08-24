@@ -584,8 +584,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     ring, icon, label);
             });
 
+            // Pushed down below BarkHeight (plus a gap) now that the combat log
+            // sits flush against the true top of the screen instead of 58px
+            // short of it -- the two used to clear each other by a few pixels
+            // at the log's old position; a log actually flush to the top would
+            // otherwise draw over these icons, since BuildBark is added as a
+            // later sibling and later siblings paint over earlier ones.
             var tracker = Ui.Row("InitiativeTracker",
-                Place.Pin(new UiVec(0f, 1f), new UiVec(0f, 1f), new UiVec(28f, -20f)),
+                Place.Pin(new UiVec(0f, 1f), new UiVec(0f, 1f), new UiVec(28f, -(BarkHeight + 16f))),
                 FightStageAnchors.InitiativeIconGap, UiAlign.Centre, entries);
 
             InitiativeTracker = tracker;
@@ -594,24 +600,46 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // ---- the dialogue bark (the combat log's home) ------------------------
 
+        // Bark height, named rather than inlined -- InitiativeTracker's own Y
+        // offset is pushed down by exactly this much below, so the two boxes
+        // stack instead of overlapping. Change one, change the other.
+        private const float BarkHeight = 130f;
+
+        // A PLAIN BLACK BOX, full width, flush to the true top of the screen --
+        // not banner_violet.png. That texture is an 8:1 strip; stretched into
+        // this box's ~1.56:1 shape it compressed its own painted border ~5x
+        // more vertically than horizontally, which is what the "black bar
+        // around the log bar" playtest note was actually seeing. The box also
+        // sat 58px short of the real top edge (Place.At(0f, 430f) against a
+        // 1080-tall reference frame, top edge at y=540) rather than flush to
+        // it. Both fixed here; the plain colour is deliberately a placeholder
+        // until real chrome is designed for it.
         private UiNode BuildBark()
         {
-            var portrait = Ui.Sprite("BarkPortrait", null, new UiVec(56f, 56f), Place.At(-362f, 0f)).Inactive();
+            var portrait = Ui.Sprite("BarkPortrait", null, new UiVec(56f, 56f), Place.At(-880f, -8f)).Inactive();
 
-            // 660 wide from a left pivot at -316, so it stops 18px short of the
-            // banner's right inner edge. Best-fit shrinking is a runtime
-            // property; the BOX is what the audit measures.
-            var label = Ui.Label("MessageLabel", UiString.Runtime, new UiVec(660f, 90f), 20,
-                FightHudPalette.TextPrimary, Place.At(-316f, 0f, new UiVec(0f, 0.5f)));
+            // Full box width minus the portrait's own column, so four joined
+            // lines at 20pt (roughly 100px including line spacing) actually fit
+            // the box instead of spilling past it -- TMP's default overflow is
+            // unclamped, so a box too short for its own text was the other half
+            // of "pops in one go and overflows."
+            var label = Ui.Label("MessageLabel", UiString.Runtime, new UiVec(1780f, 108f), 20,
+                FightHudPalette.TextPrimary, Place.At(-820f, -8f, new UiVec(0f, 0.5f)));
 
             BarkPortrait = portrait;
             BarkLabel = label;
 
-            // banner_violet.png, not the near-square panel texture: this box is
-            // an 8:1 strip, and stretching a 1.56:1 canvas into it compressed
-            // its own border ~5x more vertically than horizontally -- the "black
-            // bar around the log bar + it overflows" playtest report.
-            var bark = Ui.Sprite("DialogueBark", BannerViolet, Place.At(0f, 430f), UiSize.Fixed(840f, 104f));
+            // AsDecor, same as IntentTooltip and the target-prompt banner: a
+            // log the player is reading is meant to sit visually over the
+            // enemy heading/plates it now reaches at full width, and must not
+            // steal the clicks those plates exist to receive. This is also
+            // what clears UiAudit's SiblingOverlap check for that overlap --
+            // the check exists to catch a decorative-looking node accidentally
+            // eating real clicks, which AsDecor is the actual fix for, not
+            // just the silencer.
+            var bark = Ui.Solid("DialogueBark", "#000000", new UiVec(1920f, BarkHeight),
+                    Place.Pin(new UiVec(0.5f, 1f), new UiVec(0.5f, 1f), UiVec.Zero))
+                .AsDecor();
             bark.Children.Add(portrait);
             bark.Children.Add(label);
             BarkPanel = bark;
@@ -931,22 +959,29 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float VerbPitch = 62f;
 
         // Rendered BOTTOM-UP so ATTACK sits nearest the cursor, and tiered so
-        // read order matches use frequency: ATTACK loud, SKILL/ITEM neutral, RUN
-        // and HOLD BACK quiet. That hierarchy is the main fix over v1's earlier
+        // read order matches use frequency: ATTACK loud, SKILL/ITEM neutral,
+        // HOLD BACK quiet. That hierarchy is the main fix over v1's earlier
         // row of five identical gold buttons.
+        //
+        // RUN REMOVED, not hidden. It never actually fled a fight -- the
+        // handler behind it always answered "There is no way out of this
+        // one." and there was no Flee/Run method anywhere in FightSession to
+        // wire it to. A command that exists only to refuse itself is worse
+        // than no command, so it is gone rather than joining HOLD BACK's old
+        // spot as a second hidden-but-wired row.
         private IEnumerable<UiNode> BuildVerbColumn()
         {
             var labels = new[]
             {
                 UiStrings.VerbAttack, UiStrings.VerbSkill, UiStrings.VerbItem,
-                UiStrings.VerbRun, UiStrings.VerbHoldBack,
+                UiStrings.VerbHoldBack,
             };
             var hotkeys = new[]
             {
                 UiStrings.HotkeyOne, UiStrings.HotkeyTwo, UiStrings.HotkeyThree,
-                UiStrings.HotkeyFour, UiStrings.HotkeyFive,
+                UiStrings.HotkeyFour,
             };
-            var nests = new[] { false, true, true, false, false };
+            var nests = new[] { false, true, true, false };
 
             return Ui.Each(labels, (label, i) =>
             {
@@ -981,10 +1016,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 row.Children.Add(hotkey);
                 row.Children.Add(text);
                 row.Children.Add(caret);
-
-                // HOLD BACK is hidden on request. The button, its wiring and its
-                // layout slot all stay, so re-enabling it is one line.
-                if (i == 4) row.Inactive();
 
                 VerbButtons.Add(row);
                 VerbLabels.Add(text);
@@ -1231,28 +1262,32 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // ---- column C: the detail panel ----------------------------------------------
 
-        private const float DetailX = 478f;
+        // BOTTOM-RIGHT, at the same 40px margin PlateBlockRight and PartyPlate
+        // already use against this screen's edges (see their own comments) --
+        // no longer level with the skill list. It used to sit centred against
+        // the submenu at half the screen's height, with most of that height
+        // empty below a short description; moving it out of the middle of the
+        // battlefield and shrinking it is the actual request, not a like-for-
+        // like reposition.
         private const float DetailW = 340f;
+        private const float DetailRightMargin = 40f;
+        private const float DetailBottomMargin = 40f;
+        private static float DetailX => (960f - DetailRightMargin) - DetailW * 0.5f;
 
-        // THE SAME BOX AS THE LIST, and level with it.
+        // HALF the old height, on request -- the old box was tuned for four
+        // stat rows and a lot of empty middle; this one carries five (SCALES
+        // joined COST/POWER/TARGET/EFFECT) in half the space, so the padding
+        // below is retuned alongside the height rather than left to overflow
+        // it.
         //
-        // It was 300 tall sitting on CommandBottom, which put its top edge 236px
-        // below the skill panel's -- two columns of the same screen starting at
-        // different heights, with the shorter one floating in the middle of the
-        // battlefield. Matching the container makes them read as one control.
-        //
-        // The height is also newly needed rather than merely tidier: the rows
-        // gave up their meta line and their cost, and this is where both went.
-        //
-        // BIGGER THAN THE CONTAINER BY ITS OWN FRAME'S BLEED. panel_violet is an
-        // ornate 9-slice whose art does not reach its own edges -- 3.32% of the
-        // height is transparent above the frame and 3.12% below, measured off
-        // the file. The submenu's plate is a Solid with a Rim and has no such
-        // margin, so two rects of equal height draw visible edges 33px apart.
-        // Given equal RECTS they look misaligned; given this, they look level,
-        // which is the thing being asked for.
+        // BIGGER THAN THE CONTAINER'S HALF BY ITS OWN FRAME'S BLEED, same
+        // reason as before: panel_violet is a 9-slice whose art does not reach
+        // its own edges (3.32% top, 3.12% bottom, measured off the file), so
+        // the RECT has to be bigger than the drawn frame by that margin for
+        // the frame itself to land on the intended box.
         private const float PanelBleedY = 0.0332f + 0.0312f;
-        private static float DetailH => FightSubmenuLayout.ContainerHeight / (1f - PanelBleedY);
+        private static float DetailH => (FightSubmenuLayout.ContainerHeight * 0.5f) / (1f - PanelBleedY);
+        private static float DetailY => -(540f - DetailBottomMargin) + DetailH * 0.5f;
 
         // Where the drawn frame actually is, which is what the contents have to
         // stay inside. Everything below measures from these rather than from the
@@ -1267,30 +1302,27 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private UiNode BuildDetailColumn()
         {
             float left = -DetailW * 0.5f + 22f;
-            float top = DetailFrameTop - 14f;
+            float top = DetailFrameTop - 10f;
 
-            // THE STATS ARE A FOOTER, MEASURED FROM THE BOTTOM. They used to
-            // hang off `top` like everything else, which was fine in a 300-tall
-            // box and left half of a 500-tall one empty below them. Pinning
-            // them to the frame's bottom gives the description the whole middle,
-            // which is where the meta line and the cost went when the rows gave
-            // them up.
-            float statBottom = DetailFrameBottom + 52f;
-            float statPitch = 26f;
-            float dividerY = statBottom + (FightHudSpec.DetailStatRows - 1) * statPitch + 24f;
+            // THE STATS ARE A FOOTER, MEASURED FROM THE BOTTOM, same as
+            // before -- retuned smaller and tighter for a box half the height
+            // carrying a fifth row (SCALES) the old one didn't.
+            float statBottom = DetailFrameBottom + 16f;
+            float statPitch = 18f;
+            float dividerY = statBottom + (FightHudSpec.DetailStatRows - 1) * statPitch + 12f;
 
-            var name = Ui.Label("DetailName", UiString.Runtime, new UiVec(296f, 28f), 20,
-                FightHudPalette.TextPrimary, Place.At(left, top - 12f, new UiVec(0f, 0.5f)));
-            var kind = Ui.Label("DetailKind", UiStrings.DetailKindSkill, new UiVec(296f, 20f), 12,
-                FightHudPalette.GoldLight, Place.At(left, top - 40f, new UiVec(0f, 0.5f)));
+            var name = Ui.Label("DetailName", UiString.Runtime, new UiVec(296f, 20f), 17,
+                FightHudPalette.TextPrimary, Place.At(left, top - 10f, new UiVec(0f, 0.5f)));
+            var kind = Ui.Label("DetailKind", UiStrings.DetailKindSkill, new UiVec(296f, 14f), 11,
+                FightHudPalette.GoldLight, Place.At(left, top - 28f, new UiVec(0f, 0.5f)));
 
             // TOP-ALIGNED IN A TALL BOX. Centred, a one-line description sat in
             // the middle of the space and a three-line one started higher --
             // the block moved every time the text wrapped, which is exactly
             // what a reader uses the first line's position to track.
-            float bodyTop = top - 62f;
-            float bodyHeight = bodyTop - (dividerY + 18f);
-            var body = Ui.Label("DetailBody", UiString.Runtime, new UiVec(296f, bodyHeight), 15,
+            float bodyTop = top - 38f;
+            float bodyHeight = bodyTop - (dividerY + 8f);
+            var body = Ui.Label("DetailBody", UiString.Runtime, new UiVec(296f, bodyHeight), 13,
                     FightHudPalette.TextSecondary,
                     Place.At(left, bodyTop - bodyHeight * 0.5f, new UiVec(0f, 0.5f)))
                 .TextAligned(UiTextAlign.TopLeft);
@@ -1305,18 +1337,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
             {
                 UiStrings.DetailStatCost, UiStrings.DetailStatPower,
                 UiStrings.DetailStatTarget, UiStrings.DetailStatEffect,
+                UiStrings.DetailStatScaling,
             };
 
             var children = new List<UiNode> { name, kind, body, divider };
             for (int i = 0; i < FightHudSpec.DetailStatRows; i++)
             {
                 float y = statBottom + (FightHudSpec.DetailStatRows - 1 - i) * statPitch;
-                var key = Ui.Label($"DetailStatKey{i}", keys[i], new UiVec(170f, 20f), 12,
+                var key = Ui.Label($"DetailStatKey{i}", keys[i], new UiVec(170f, 16f), 12,
                     FightHudPalette.TextMuted, Place.At(left, y, new UiVec(0f, 0.5f)));
 
                 // 120 wide, not v1's 170: at 170 this box began at x -22 and the
                 // key's box reaches 22.
-                var value = Ui.Label($"DetailStatValue{i}", UiString.Runtime, new UiVec(120f, 20f), 15,
+                var value = Ui.Label($"DetailStatValue{i}", UiString.Runtime, new UiVec(120f, 16f), 13,
                     FightHudPalette.GoldLight, Place.At(DetailW * 0.5f - 22f, y, new UiVec(1f, 0.5f)));
 
                 DetailStatKeys.Add(key);
@@ -1326,7 +1359,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             }
 
             var column = Ui.Sprite("DetailColumn", PanelViolet,
-                Place.At(DetailX, FightSubmenuLayout.ContainerCentreY),
+                Place.At(DetailX, DetailY),
                 UiSize.Fixed(DetailW, DetailH));
             foreach (var child in children) column.Children.Add(child);
             column.Inactive();

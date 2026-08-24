@@ -660,7 +660,10 @@ namespace PrincesPalace.Domain.Combat.Session
 
         private CharacterRole? ActorRole(CombatantState actor) => KitFor(actor)?.Role;
 
-        private DamageType? ActorAttackType(CombatantState actor) => KitFor(actor)?.AttackType;
+        // Public: FightHudModel's SCALES row needs to resolve the same
+        // Weapon-vs-Spell axis SkillResolution.Damage resolves at cast time,
+        // and that resolution starts here.
+        public DamageType? ActorAttackType(CombatantState actor) => KitFor(actor)?.AttackType;
 
         // The generic Skill verb's numbers come from the character's basic
         // spell tier, if their level grants one, and fall back to plain

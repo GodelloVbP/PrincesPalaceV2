@@ -423,6 +423,38 @@ namespace PrincesPalace.Content
             return tier != null ? tier.powerMultiplier : 1.5f;
         }
 
+        // What a character's PLAIN SWING rides: the main-hand weapon's own
+        // `scaling` grade, and nothing else. A swing is one weapon (see
+        // ScalingSet's own header) so, unlike EffectiveSkillScaling below,
+        // the off hand never contributes here even when one is worn.
+        //
+        // FOUND MISSING, not designed this way. CombatantState.WeaponScaling/
+        // SkillScaling existed, CombatMath/SkillResolution already read them,
+        // and an extensive EditMode suite already pinned the arithmetic --
+        // but nothing in the real adapter path (FightEncounterAdapter.
+        // ToCombatant) ever WROTE them, so every real fight built its
+        // combatants with ScalingSet.None regardless of what was equipped.
+        // A Strength build and a Dexterity build swung for identical damage
+        // off identical Attack, because the one thing meant to tell them
+        // apart was never plugged in.
+        public static ScalingSet EffectiveWeaponScaling(Character character)
+        {
+            EnsureLoaded();
+
+            var loadout = ActiveLoadout(character);
+            var mainHand = ScalingProfile.None;
+            foreach (var (entry, item) in loadout.LiveEntries)
+            {
+                if (entry.slot == EquipmentSlot.Weapon1)
+                {
+                    mainHand = item.scaling;
+                    break;
+                }
+            }
+
+            return new ScalingSet(ScalingProfile.None, mainHand, ScalingProfile.None);
+        }
+
         // Every axis a character's Skill rides right now: the spell tier
         // their level grants, PLUS whatever spellScaling their weapons
         // contribute — a staff in the main hand, an off-hand item, or both.

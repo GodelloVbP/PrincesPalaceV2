@@ -72,6 +72,17 @@ namespace PrincesPalace
                 // Open() activates the object.
                 menu.Open();
                 menu.Select(TabFor(inventory));
+
+                // THE PACK, now that `inventory` has somewhere real to go.
+                // I opens with it up, C opens without -- Select has already
+                // activated the pane synchronously (SetShown runs inline, not
+                // deferred to next frame the way the menu's own Start() is),
+                // so the dossier and its pack panel are live by the time this
+                // runs. Found rather than wired: SheetPanel only ever knows
+                // the outer system-menu panel, one field shared by three
+                // callers, not the dossier underneath it.
+                var dossier = panel.GetComponentInChildren<CharacterDossierController>(includeInactive: true);
+                dossier?.ShowPack(inventory);
                 return;
             }
 

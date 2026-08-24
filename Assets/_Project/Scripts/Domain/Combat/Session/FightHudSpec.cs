@@ -49,10 +49,13 @@ namespace PrincesPalace.Domain.Combat.Session
         // change it for no gain.
         public const int WoolPips = 16;
 
-        // The detail column's fixed stat rows: cost, power, target, effect.
-        public const int DetailStatRows = 4;
+        // The detail column's fixed stat rows: cost, power, target, effect,
+        // scales.
+        public const int DetailStatRows = 5;
 
-        // Attack / Skill / Item / Run / Hold Back.
-        public const int Verbs = 5;
+        // Attack / Skill / Item / Hold Back. RUN was removed -- see
+        // FightScreen.BuildVerbColumn's own comment -- rather than joining
+        // HOLD BACK's old hidden-but-wired spot.
+        public const int Verbs = 4;
     }
 }

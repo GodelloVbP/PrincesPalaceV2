@@ -22,6 +22,19 @@ namespace PrincesPalace
         private readonly Dictionary<CombatantState, string> _stance = new Dictionary<CombatantState, string>();
         private readonly Dictionary<CombatantState, int> _actorFrame = new Dictionary<CombatantState, int>();
 
+        // Who has actually been SHOWN dying, as of the beats painted so far --
+        // not who Domain already knows is dead. FightSession resolves a whole
+        // round synchronously before any beat reaches the view, so by the time
+        // beat 1 starts playing, CombatantState.IsAlive already reflects
+        // whatever beat 4 or 5 does to that combatant. StanceOf used to read
+        // IsAlive directly, which put a character in the Defeated pose from the
+        // very first frame of the round if anything later in that same round
+        // killed them -- "before the turn is done, with all phases, Shawn
+        // already downs." FadeTheFallen already solved this exact class of bug
+        // for the death fade by keying off beat.Snapshot instead of live
+        // health; this is the same fix applied to the pose.
+        private readonly HashSet<CombatantState> _confirmedDefeated = new HashSet<CombatantState>();
+
         // Horizontal centring is MEASURED rather than authored, unlike the
         // ground line -- see RefreshCombatantSprite. Cached because it opens a
         // sprite's pixels, which is far too expensive to do per repaint.
@@ -77,7 +90,20 @@ namespace PrincesPalace
 
         private string StanceOf(CombatantState combatant)
         {
-            if (combatant != null && !combatant.IsAlive) return FightSession.Stances.Defeated;
+            if (combatant != null)
+            {
+                // WHILE A ROUND IS PLAYING, only what has actually been
+                // confirmed by a painted beat counts -- that is the whole
+                // fix. The rest of the time (idle between actions, or a test
+                // that pokes CurrentHealth directly with no beat involved at
+                // all) there is no in-flight animation to get ahead of, so
+                // falling back to live IsAlive is correct and is what lets a
+                // combatant killed outside the beat pipeline still show
+                // defeated once refreshed.
+                bool defeated = _isBusy ? _confirmedDefeated.Contains(combatant) : !combatant.IsAlive;
+                if (defeated) return FightSession.Stances.Defeated;
+            }
+
             return _stance.TryGetValue(combatant, out var stance) ? stance : FightSession.Stances.Idle;
         }
 
@@ -545,6 +571,11 @@ namespace PrincesPalace
             {
                 if (pair.Value.Health > 0) continue;
 
+                // The pose's own confirmation, alongside the fade's. Same
+                // beat-scoped moment, same reason: this is the first point
+                // "actually dead" is allowed to become visible.
+                _confirmedDefeated.Add(pair.Key);
+
                 var slot = SlotFor(pair.Key);
                 var fade = slot == null ? null : slot.GetComponent<StageDeathFade>();
 
@@ -560,6 +591,8 @@ namespace PrincesPalace
         // fight invisible, and its slot is reused rather than rebuilt.
         private void ResetStagePresentation()
         {
+            _confirmedDefeated.Clear();
+
             foreach (var slot in enemySlots.Concat(partySlots))
             {
                 if (slot == null) continue;

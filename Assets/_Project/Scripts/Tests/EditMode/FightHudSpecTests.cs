@@ -16,7 +16,12 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(6, FightHudSpec.DamagePopups);
             Assert.AreEqual(3, FightHudSpec.StageSlotsPerSide);
             Assert.AreEqual(16, FightHudSpec.WoolPips);
-            Assert.AreEqual(5, FightHudSpec.Verbs);
+
+            // NOT v1 parity any more -- v1 shipped RUN as a fifth verb, and it
+            // never actually let anyone flee (see FightScreen.BuildVerbColumn's
+            // own comment). Four, once RUN is gone and HOLD BACK takes its
+            // place rather than joining it.
+            Assert.AreEqual(4, FightHudSpec.Verbs);
         }
 
         [Test]

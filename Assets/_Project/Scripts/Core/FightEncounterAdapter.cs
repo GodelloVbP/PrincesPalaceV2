@@ -162,6 +162,14 @@ namespace PrincesPalace
             state.ManaRegen = stats.manaRegen;
             state.AbilityScores = scores;
 
+            // Never assigned anywhere in the real adapter path before this --
+            // see ContentDatabase.EffectiveWeaponScaling's own header. Without
+            // it every real fight built combatants with ScalingSet.None
+            // regardless of what was equipped, so a weapon's own ATK grade and
+            // a spell tier's INT/WIS grade never touched real damage at all.
+            state.WeaponScaling = ContentDatabase.EffectiveWeaponScaling(character);
+            state.SkillScaling = ContentDatabase.EffectiveSkillScaling(character);
+
             // Set by neither path before this. A resistance rolled onto a
             // breastplate was written to the save, shown on the sheet, folded
             // into EffectiveStats -- and then dropped on the way into the one

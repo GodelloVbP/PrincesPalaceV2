@@ -5,6 +5,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using PrincesPalace.Content;
+using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.UiKit;
 using PrincesPalace.Domain.UiKit.Screens;
@@ -562,6 +563,17 @@ namespace PrincesPalace
             // Straight to the meta stash, which is the single live bag -- the
             // same one the character overlay and the fight satchel read.
             InventoryOps.Add(save.stockpiledItems, offer.ItemId, 1, offer.Plus);
+
+            // AUTO-EQUIP INTO AN EMPTY SLOT. A reward picked for a slot nobody
+            // is wearing anything in went to the bag and sat there until the
+            // player remembered to open the character sheet -- for a piece
+            // that fills a hole in the loadout rather than replacing a choice
+            // already made, that extra step is friction with no decision
+            // behind it. Only fires when the slot is EMPTY: a slot already
+            // holding something is a real choice (keep this, or swap it), and
+            // that choice stays the player's.
+            AutoEquipIntoAnEmptySlot(save, offer);
+
             SaveSlotManager.SaveCurrent();
 
             if (_reward != null)
@@ -590,6 +602,38 @@ namespace PrincesPalace
                     offerPhase.gameObject.SetActive(false);
                     summaryPhase.gameObject.SetActive(true);
                 }
+            }
+        }
+
+        // First squad member (in ActiveSquad order, same order the loadout
+        // comparison tooltip already reads) with an empty slot this item
+        // fits. Not equippable, or every candidate slot already occupied
+        // across the whole squad: does nothing, and the item stays in the
+        // bag exactly as it did before this existed.
+        private static void AutoEquipIntoAnEmptySlot(SaveData save, ItemOffer offer)
+        {
+            var itemDef = ContentDatabase.GetItem(offer.ItemId);
+            if (itemDef == null || !itemDef.IsEquippable) return;
+
+            foreach (var character in save.ActiveSquad())
+            {
+                if (character?.equipment == null) continue;
+                if (character.equipment.FirstFreeSlotFor(itemDef.equipSlot) == null) continue;
+
+                // MEASURED BEFORE THE SWAP, same reason CharacterDossierController.
+                // EquipFromPack measures it before its own TryEquip: gear
+                // carrying max health changes what the run's carried current
+                // health is a fraction OF.
+                int maxBefore = ContentDatabase.EffectiveStats(character).maxHealth;
+
+                if (!EquipMove.TryEquip(character.equipment, save.stockpiledItems, offer.ItemId,
+                                        itemDef.equipSlot, itemDef.IsEquippable, plus: offer.Plus))
+                {
+                    return;
+                }
+
+                RunEncounter.ScaleCarriedHealth(character, maxBefore);
+                return;
             }
         }
 
