@@ -39,6 +39,27 @@ Three distinct techniques, picked by what the asset actually is:
   existing files in `Art/Backgrounds/` rather than the engine's own
   1920×1080 reference resolution.
 
+### Drawn borders survive an authored alpha
+
+`slice_spell_sheet.py` runs two passes that delete lines a generator drew
+and nobody asked for: `erase_drawn_lines` (luminance, sheet-wide) and
+`erase_frame_borders` (coverage, per cell).
+
+The second runs on **every** sheet, including one delivered with its own
+alpha. That was not always true, and the reasoning for skipping it sounds
+right: a frame whose alpha the artist wrote is a frame whose every opaque
+pixel was meant. It holds for the luminance pass — which would cheerfully
+blank a bright horizon — and it fails for the border pass, because
+`mud_blast.png` arrived with a box drawn around every cell *and* with the
+alpha to make that box solid. "The artist authored it" was true of the
+artefact as well as of the art, and every Mud Burst played a white rectangle
+around its target. Frost Flare had produced the same complaint by the other
+route.
+
+Safe to run unconditionally because it does not ask what a pixel looks like,
+only what its row does: edge to edge, with nothing beside it
+(`FRAME_BORDER_ISOLATION`). Real art that spans a frame has neighbours.
+
 ## 3. `key_green_screen.py` usage
 
 ```
@@ -342,9 +363,47 @@ dissolve and all, to `tools/screenshots/vfx/{id}.gif`.
 | `anchor` | `target` | Where the art happens — see below. |
 | `size` | `380` | Square box the art is fitted into, in reference-frame units. |
 | `departFrame` | `0` | `travel` only: which frame (from 1) it leaves the caster on. Holds the wind-up in place instead of letting it drift. |
+| `impactX` | unset | Where across its own frame the sheet actually strikes, `0`..`1` from the LEFT. |
+| `impactY` | unset | Where up its own frame the sheet actually strikes, `0`..`1` from the BOTTOM. |
 | `sfxPath` | — | `Resources` path to the clip that plays on impact. |
 
-Anything left out takes its default. There are no sentinels to remember.
+Anything left out takes its default. There are no sentinels to remember,
+with one exception: `impactX`/`impactY` are unset at `-1`, because `0` is a
+legitimate point (the frame's bottom-left corner) and a sentinel that
+collides with a real value is a bug waiting for its first author.
+
+### `impactX` / `impactY` — where the sheet hits
+
+**State them, or the view guesses, and the guess is only right for one kind
+of art.** Without a point the box's bottom edge goes on the target's ground
+line, corrected by the lowest opaque pixel the sheet reaches once it has
+landed. That is exactly right for an eruption drawn standing on a floor
+(`golem_boulder`), and it shipped two visible bugs for everything else:
+
+- `frost_flare`'s burst sits a sixth of the way up its frame with embers
+  falling *below* it, so the measured "floor" was the embers and the strike
+  rendered on the Giant Rat's **chest**;
+- `mud_burst` is a lance fired flat — its impact is halfway up the frame and
+  two thirds of the way **across** it, because the left third is reserved
+  for the incoming bolt. Bottom-anchored and centre-aligned it detonated
+  above the rat's head and to one side.
+
+Same conclusion the stance manifest reached about actors' feet, for the same
+reason: a scan believes whatever it finds, and what it finds is a spray of
+sparks. Measured in the same direction, too — `impactY` counts up from the
+bottom, like `groundLine`.
+
+How to read one off a sheet: open its `impactFrame` and find the centre of
+the burst — not the centroid of the whole drawing, which a bolt's shaft
+drags upwards. `tools/screenshots/vfx/{id}_frames.png` is the contact sheet.
+
+Both halves or neither: a partly-stated point is ignored at play time and
+**fails the suite**, because silently reverting to the rule the spell was
+authored to escape is the least visible way to be wrong.
+
+The point is aligned to whatever the `anchor` aims at — the ground line, or
+the body's middle. It is corrected on **both** axes, and the horizontal
+correction flips with the sheet's mirroring.
 
 ### `anchor`
 
@@ -357,7 +416,16 @@ hits. Two axes — whose body, and where on it — flattened into one word:
 | `caster` | on the caster's ground line | wind-ups, stomps, transformations |
 | `target-centre` | on the target's midpoint | rings, binds, status glints — art drawn around a body |
 | `caster-centre` | on the caster's midpoint | self-buff auras, shield bubbles |
-| `travel` | flies caster → target, mirrored if the caster is on the right | anything drawn as crossing the stage |
+| `travel` | flies caster → target, arriving at its ground line | a bolt that buries itself in the floor |
+| `travel-centre` | flies caster → target, arriving at its **middle** | anything thrown flat across the stage |
+
+Both `travel` words are mirrored when the caster is on the right.
+
+`travel` versus `travel-centre` is the third axis this word carries, and it
+matters more the taller the target: a Giant Rat is 675×306 of canvas, mostly
+length, so its ground line and its middle are nowhere near each other.
+`mud_burst` arrived at the ground line and detonated above the rat's head
+until it was moved to `travel-centre`.
 
 An unrecognised word falls back to `target` at play time and **fails the
 suite** — `SpellVfxTests` refuses any anchor that does not parse, so a typo

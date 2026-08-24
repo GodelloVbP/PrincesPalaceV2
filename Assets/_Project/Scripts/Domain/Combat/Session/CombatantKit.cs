@@ -35,8 +35,8 @@ namespace PrincesPalace.Domain.Combat.Session
         public readonly IReadOnlyList<ResolvedSkill> Skills;
         public readonly IReadOnlyList<ResolvedRelic> Relics;
 
-        // Only player characters carry an attack type; only enemies carry a
-        // weakness/resistance. A rudimentary, one-directional system by design.
+        // Only player characters carry an attack type; only enemies carry an
+        // elemental affinity. A rudimentary, one-directional system by design.
         public readonly DamageType? AttackType;
 
         // The character's basic spell, if their level grants one.
@@ -112,7 +112,10 @@ namespace PrincesPalace.Domain.Combat.Session
 
         private static float Clamp01(float v) => v < 0f ? 0f : v > 1f ? 1f : v;
 
-        public DamageType Weakness => Source.Weakness;
-        public DamageType Resistance => Source.Resistance;
+        // What this monster takes badly and what it shrugs off, as one value
+        // -- see ElementalAffinity. Two properties for two single elements is
+        // what this was, and the pair had to be threaded through every damage
+        // call site together anyway.
+        public ElementalAffinity Affinity => Source.Affinity;
     }
 }

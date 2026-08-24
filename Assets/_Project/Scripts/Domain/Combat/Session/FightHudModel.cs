@@ -610,6 +610,15 @@ namespace PrincesPalace.Domain.Combat.Session
                     break;
             }
 
+            // A SUMMON HAS NO OBJECT. "will Roar itself" is grammatical and
+            // says nothing; what the player needs is that the fight is about to
+            // be one monster bigger. Its own sentence rather than a fourth
+            // `who` case, because the shape of the sentence is what differs.
+            if (intent.Kind == EnemyIntentKind.Summon)
+            {
+                return $"{enemyName} will {verb}, calling in another monster";
+            }
+
             string line = $"{enemyName} will {verb} {who}";
             if (intent.ExpectedDamage <= 0) return line;
 

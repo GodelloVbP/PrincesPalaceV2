@@ -48,7 +48,7 @@ $Areas = @{
     # belongs here, but ItemOfferTests and ItemOfferRollTests are reward rules
     # that already sit in 'content' and 'run', and a bare pattern would drag
     # them in for the sake of a shared word.
-    ui      = "Button|Audio|Splash|PauseMenu|DebugMenu|MainMenu|SystemMenu|Cursor|Dialogue|Bark|Inventory|Equipment|Dossier|Options|Music|Screen|UiKit|Flicker|Ambience|Overlay|OfferRow"
+    ui      = "Button|Audio|Splash|PauseMenu|DebugMenu|MainMenu|SystemMenu|Cursor|Dialogue|Bark|Inventory|Equipment|Dossier|Options|Music|Screen|UiKit|Flicker|Ambience|Overlay|OfferRow|Tooltip"
     art     = "Stance|FrameHold|Shadow|WhiteQuad|SpriteFacing|BattleBackground|ItemArt|TalentArt|ArtPath|HandAssembled|Flash|Legibility|PostProcessing"
     rng     = "Rng|SeededRandom|Seed"
 }
@@ -246,6 +246,18 @@ $PathAreas = @(
     # moment a content build touched Resources or anyone edited a music table.
     @{ Pattern = '^Assets/_Project/Resources/Audio/';   Areas = @('ui') }
     @{ Pattern = '^Assets/_Project/Resources/Content/'; Areas = @('content') }
+    # The enemy intent badges. 'combat' for the lookup tables that name them and
+    # 'ui' for EnemyIntentIconTests, which loads the Fight scene and checks that
+    # every kind resolves to a sprite that actually imported -- the one test that
+    # would catch a new icon dropped in with the wrong texture type.
+    @{ Pattern = '^Assets/_Project/Resources/Intent/';   Areas = @('combat', 'ui') }
+    # Runtime-loaded ART: the stance folders a monster's spritePath names, the
+    # f0..fN spell sequences, and the manifest that measures both. Unmapped
+    # until a whole boss's worth of frames landed at once and -Changed refused;
+    # 'art' for the import settings and ground lines, 'combat' because the fight
+    # stage is the only thing that loads any of it.
+    @{ Pattern = '^Assets/_Project/Resources/(Enemies|Spells)/'; Areas = @('art', 'combat') }
+    @{ Pattern = '^Assets/_Project/Resources/StanceManifest\.json'; Areas = @('art', 'combat') }
     @{ Pattern = '^Assets/_Project/Art/';         Areas = @('art') }
     # TMP font assets. 'ui' rather than 'art': the thing that breaks when one
     # of these changes is text metrics -- a re-baked atlas shifts glyph

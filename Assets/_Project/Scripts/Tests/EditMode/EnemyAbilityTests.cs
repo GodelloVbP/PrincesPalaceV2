@@ -152,6 +152,62 @@ namespace PrincesPalace.Domain.Tests
                 EnemyIntentIcons.KindFor(SkillEffect.HealParty, null, false));
         }
 
+        // THE SAME GAP ONE STEP FURTHER ON. A Summon telegraphed as the generic
+        // "skill" badge, which is the icon that means "something is coming" --
+        // useless on the one turn where what is coming is another monster, and
+        // where knowing it changes whether the player spends their burst now or
+        // banks it for the fight that is about to be one enemy larger.
+        [Test]
+        public void ASummonTelegraphsAsASummon_NotAsAGenericSkill()
+        {
+            Assert.AreEqual(EnemyIntentKind.Summon,
+                EnemyIntentIcons.KindFor(SkillEffect.Summon, null, false));
+        }
+
+        // The effect outranks the status, same precedence heals already have.
+        // A summon that also poisoned would otherwise announce the poison and
+        // hide the extra body, which is the larger fact by a distance.
+        [Test]
+        public void ASummonOutranksAnyStatusItAlsoCarries()
+        {
+            Assert.AreEqual(EnemyIntentKind.Summon,
+                EnemyIntentIcons.KindFor(SkillEffect.Summon, StatusEffectType.Poison, true));
+        }
+
+        // A badge kind with no artwork behind it renders as NOTHING, silently
+        // -- the failure this whole icon set was rebuilt to stop. The PlayMode
+        // suite proves the sprite actually loads; this proves the two lookup
+        // tables were not left with a default-case hole, which is the half that
+        // is cheap to check and easy to forget.
+        [Test]
+        public void SummonHasItsOwnIconAndTintRatherThanFallingThroughToSkill()
+        {
+            Assert.AreNotEqual(EnemyIntentIcons.ResourceFor(EnemyIntentKind.Skill),
+                EnemyIntentIcons.ResourceFor(EnemyIntentKind.Summon));
+            Assert.AreNotEqual(EnemyIntentIcons.TintFor(EnemyIntentKind.Skill),
+                EnemyIntentIcons.TintFor(EnemyIntentKind.Summon));
+            Assert.AreNotEqual(EnemyIntentIcons.For(EnemyIntentKind.Skill),
+                EnemyIntentIcons.For(EnemyIntentKind.Summon));
+        }
+
+        // The sentence under the badge, which had the same bug the icon did.
+        // A summon's committed target is whoever the draw happened to pick, and
+        // with the default scope the tooltip announced an attack on them.
+        [Test]
+        public void TheSummonTooltipSaysWhatIsComing_NotWhoItIsComingFor()
+        {
+            var shawn = new CombatantState("Shawn", true, 100, 0, 10, 0, 5);
+            var intent = new EnemyIntent("Roar", EnemyIntentKind.Summon, shawn, 0, 0,
+                EnemyIntentIcons.ScopeFor(SkillEffect.Summon));
+
+            string tooltip = FightHudModel.IntentTooltip("Forest Troll", intent);
+
+            StringAssert.Contains("Roar", tooltip);
+            StringAssert.Contains("another monster", tooltip);
+            StringAssert.DoesNotContain("Shawn", tooltip,
+                "the draw picked Shawn as a target, but a Roar never touches him");
+        }
+
         [Test]
         public void ADamagingSkillStillTakesItsKindFromTheStatusItInflicts()
         {
@@ -331,7 +387,7 @@ namespace PrincesPalace.Domain.Tests
                 skill.Power, skill.FlatAmount, 0, skill.IgnoresDefense);
 
             return DamagePipeline.AfterDefences(raw, attacker, victim,
-                attackType: null, weakness: null, resistance: null,
+                attackType: null, affinity: ElementalAffinity.Neutral,
                 varianceRange: 0f, rng: null, resolveWard: null).Damage;
         }
 

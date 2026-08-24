@@ -86,6 +86,38 @@ namespace PrincesPalace.Domain.Content
         // belongs to the second: hold at the caster for the charge, then throw.
         public int departFrame;
 
+        // WHERE THE BLOW LANDS INSIDE THE SHEET, as fractions of one frame:
+        // impactX from the LEFT edge, impactY from the BOTTOM edge -- the same
+        // way up StanceManifest's groundLine measures, so the two numbers a
+        // reader has to hold at once agree about which way is up.
+        //
+        // WHY AUTHORED RATHER THAN MEASURED, which is the whole argument.
+        // The view used to derive this: put the box's bottom edge on the
+        // target's ground line, corrected by the lowest opaque pixel the sheet
+        // reaches once it has landed. That is a good rule for an effect drawn
+        // standing on a floor and it is not a rule at all for anything else,
+        // and both failure modes shipped:
+        //
+        //   frost_flare's burst sits a sixth of the way up its frame with a
+        //   spray of embers falling BELOW it, so the measured floor was the
+        //   embers and the burst rendered on the Giant Rat's chest;
+        //
+        //   mud_burst is a horizontal lance -- its impact is halfway up the
+        //   frame and two thirds of the way ACROSS it, because the left third
+        //   is reserved for the incoming bolt. Bottom-anchored and
+        //   centre-aligned, it detonated above the rat's head and to one side.
+        //
+        // This is the same conclusion StanceManifest reached about actors,
+        // and for the same reason: a scan believes whatever it finds, and what
+        // it finds is a spray of sparks. A sheet states where it hits.
+        //
+        // UNAUTHORED means "keep the measured behaviour", so nothing that does
+        // not state a point moves. -1 rather than 0, because 0 is a legitimate
+        // point (the bottom-left corner) and a sentinel that collides with a
+        // real value is a bug waiting for its first author.
+        public float impactX = Unauthored;
+        public float impactY = Unauthored;
+
         // Where the sound is, if there is one.
         public string sfxPath = "";
 
@@ -95,6 +127,16 @@ namespace PrincesPalace.Domain.Content
         public const float DefaultSeconds = 0.6f;
         public const int DefaultImpactFrame = 3;
         public const float DefaultSize = 380f;
+
+        // "This sheet does not say." Negative on purpose -- see impactX.
+        public const float Unauthored = -1f;
+
+        // Whether both halves of the point are there. BOTH, never one: a sheet
+        // that states its height and not its width would be corrected on one
+        // axis and left on the other, which lands the effect somewhere neither
+        // rule intended and looks like a third bug.
+        public bool HasImpactPoint =>
+            impactX >= 0f && impactX <= 1f && impactY >= 0f && impactY <= 1f;
 
         // The parsed anchor. Case-insensitive, because "Travel" and "travel"
         // are the same intent and refusing one of them teaches nothing.
@@ -142,6 +184,8 @@ namespace PrincesPalace.Domain.Content
             anchor = anchor,
             size = size,
             departFrame = departFrame,
+            impactX = impactX,
+            impactY = impactY,
             sfxPath = sfxPath,
         };
     }

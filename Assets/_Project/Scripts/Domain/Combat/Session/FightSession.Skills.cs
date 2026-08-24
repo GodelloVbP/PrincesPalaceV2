@@ -72,8 +72,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 CombatMath.ComputeSkillDamage(actor, target, SkillPowerMultiplierFor(actor)),
                 actor, target,
                 attackType: ActorAttackType(actor),
-                weakness: SourceFor(target)?.Weakness,
-                resistance: SourceFor(target)?.Resistance,
+                affinity: AffinityOf(target),
                 varianceRange: DamageVarianceRange,
                 rng: _rng,
                 resolveWard: ResolveWard);
@@ -342,7 +341,65 @@ namespace PrincesPalace.Domain.Combat.Session
                     ResolveGift(actor, skill);
                     break;
                 }
+
+                case SkillEffect.Summon:
+                {
+                    BeginBeat(actor, actor, isCast: true);
+                    RecordSpellPresentation(skill);
+                    SetStance(actor, StanceFor(skill));
+                    ResolveSummon(actor, skill);
+                    break;
+                }
             }
+        }
+
+        // Which of the CASTER'S OWN stance folders plays for this skill —
+        // the authored override if there is one, "cast" otherwise. Every
+        // skill written before RawSkillEntry.stance existed left it blank,
+        // so this changes nothing for any of them.
+        private static string StanceFor(ResolvedSkill skill) =>
+            string.IsNullOrEmpty(skill.Stance) ? Stances.Cast : skill.Stance;
+
+        // Roar's whole mechanic: call in one more of whatever this skill
+        // names, unless the caster's own side already fields the cap.
+        //
+        // THE CAP IS ALSO CHECKED AT DRAW TIME (see PrepareEnemyIntents'
+        // EffectivePoolFor), which is what stops the boss from visibly
+        // winding up for a call that then does nothing turn after turn.
+        // Checked again HERE regardless, because a draw made when the field
+        // was under the cap can still land after something else filled the
+        // gap in the meantime — a second summon resolving first in the same
+        // round, say — and resolving into a fizzle beats resolving into a
+        // silent over-cap.
+        private void ResolveSummon(CombatantState actor, ResolvedSkill skill)
+        {
+            if (string.IsNullOrEmpty(skill.SummonEnemyId) || _summonFactory == null)
+            {
+                AppendMessage($"{actor.Name} calls out, but nothing answers.");
+                return;
+            }
+
+            int living = _encounter.LivingEnemies.Count(e => SourceFor(e)?.Source.Id == skill.SummonEnemyId);
+            if (living >= skill.SummonCap)
+            {
+                AppendMessage($"{actor.Name} calls out, but there is no room left on the field.");
+                return;
+            }
+
+            if (!_summonFactory(skill.SummonEnemyId, out var state, out var kit) || state == null || kit == null)
+            {
+                AppendMessage($"{actor.Name} calls out, but nothing answers.");
+                return;
+            }
+
+            if (!_encounter.TryAddEnemy(state, _stageSlotsPerSide))
+            {
+                AppendMessage($"{actor.Name} calls out, but there is no room left on the field.");
+                return;
+            }
+
+            _enemyKits[state] = kit;
+            AppendMessage($"{actor.Name} calls out — {state.Name} answers!");
         }
 
         private void ResolveDamageSingle(CombatantState actor, ResolvedSkill skill, CombatantState target, int resourceSpent)
@@ -378,8 +435,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     baseAmount,
                     actor, target,
                     attackType: castType,
-                    weakness: SourceFor(target)?.Weakness,
-                    resistance: SourceFor(target)?.Resistance,
+                    affinity: AffinityOf(target),
                     varianceRange: DamageVarianceRange,
                     rng: _rng,
                     resolveWard: ResolveWard);
@@ -442,8 +498,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     baseAmount,
                     actor, enemy,
                     attackType: castType,
-                    weakness: SourceFor(enemy)?.Weakness,
-                    resistance: SourceFor(enemy)?.Resistance,
+                    affinity: AffinityOf(enemy),
                     varianceRange: DamageVarianceRange,
                     rng: _rng,
                     resolveWard: ResolveWard);
@@ -492,8 +547,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 int scaled = System.Math.Max(1, Rounding.AwayFromZero(instance.amount * multiplier));
                 var outcome = DamagePipeline.AfterDefences(
                     scaled, instance.type, target,
-                    weakness: SourceFor(target)?.Weakness,
-                    resistance: SourceFor(target)?.Resistance,
+                    affinity: AffinityOf(target),
                     varianceRange: DamageVarianceRange,
                     rng: _rng,
                     resolveWard: ResolveWard);

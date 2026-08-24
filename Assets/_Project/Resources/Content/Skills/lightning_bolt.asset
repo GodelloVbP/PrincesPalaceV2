@@ -38,6 +38,8 @@ MonoBehaviour:
     anchor: 
     size: 380
     departFrame: 0
+    impactX: 0.5
+    impactY: 0.23
     sfxPath: Audio/Sfx/lightning_strike
   appliesStatus: 0
   hasStatus: 0
@@ -59,4 +61,7 @@ MonoBehaviour:
     speedPercent: 0
     temporaryHealthPercent: 0
     splashPercent: 0
+  stance: 
+  summonEnemyId: 
+  summonCap: 0
   sortOrder: 7

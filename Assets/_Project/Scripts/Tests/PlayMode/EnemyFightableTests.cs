@@ -21,6 +21,14 @@ namespace PrincesPalace.PlayModeTests
     // time several of these are reachable at all, and the first time anybody
     // finds out whether their art, their manifest entry and their skill line up.
     //
+    // BOSSES INCLUDED, now -- they used to be filtered out here on the theory
+    // that "only appears in the final room" meant "covered separately", and
+    // nothing separately covered them. A boss whose whole kit is authored
+    // skills (attackWeight 0, no plain swing at all -- the Forest Warden is
+    // the first of these) is exactly the shape most likely to hang: there is
+    // no legacy fallback to quietly carry a broken ability id or a missing
+    // stance folder the way a plain swing always can.
+    //
     // A beat that never finishes leaves the HUD locked behind IsBusy forever,
     // so the deadline IS the assertion -- there is no exception to catch.
     public class EnemyFightableTests
@@ -48,8 +56,8 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(_fight, "the Fight scene has no FightController");
 
             var enemies = ContentDatabase.Enemies
-                .Where(e => e != null && !e.isBoss)
-                .Select(e => e.id)
+                .Where(e => e != null)
+                .Select(e => (e.id, e.isBoss))
                 .ToList();
 
             CollectionAssert.IsNotEmpty(enemies, "no active enemies in content");
@@ -59,15 +67,23 @@ namespace PrincesPalace.PlayModeTests
 
             var stalled = new List<string>();
 
-            foreach (string enemyId in enemies)
+            foreach (var (enemyId, isBoss) in enemies)
             {
                 var built = FightEncounterAdapter.Build(
                     new List<string> { hero.id }, new List<string> { enemyId },
-                    new Domain.Rng.SeededRandom(7), isBoss: false, isElite: false);
+                    new Domain.Rng.SeededRandom(7), isBoss: isBoss, isElite: false);
 
                 Assert.IsNotNull(built?.Session, $"'{enemyId}' could not be built into an encounter");
 
-                _fight.Bind(built.Session, EncounterClass.Normal);
+                // Bind alone was never enough -- see its own header comment.
+                // FightBootstrap is what calls Begin() in real play, which is
+                // where an enemy that wins the opening initiative roll gets
+                // its turn actually resolved. Every enemy this sweep tried
+                // before happened to open slower than the hero, so the gap
+                // was invisible until something here (hollow_choir, at speed
+                // 14) did not.
+                built.Session.Begin();
+                _fight.Bind(built.Session, isBoss ? EncounterClass.Boss : EncounterClass.Normal);
                 yield return null;
                 yield return null;
 

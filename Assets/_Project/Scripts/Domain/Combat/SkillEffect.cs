@@ -70,6 +70,20 @@ namespace PrincesPalace.Domain.Combat
         GiftMana,
         GiftFury,
         GiftHaste,
+
+        // Adds a fresh combatant to the CASTER'S OWN side, mid-fight. First
+        // used by the Forest Warden's Roar, calling in a Giant Rat.
+        //
+        // Gated by SummonEnemyId/SummonCap rather than by a condition anyone
+        // authors separately: the ability is simply drawn less often once the
+        // field already holds enough of what it calls, via the same weighted
+        // pool every other ability is drawn from -- see
+        // FightSession.Enemies.EffectivePoolFor. A resolution that runs
+        // anyway (an existing summon dying between the intent being
+        // telegraphed and it landing, say) just tops back up to the cap
+        // rather than refusing outright, so the boss is never shown winding
+        // up for a call that then visibly does nothing.
+        Summon,
     }
 
     // Who a skill is aimed at. Kept separate from the effect because the

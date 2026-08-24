@@ -48,6 +48,28 @@ namespace PrincesPalace.Domain.Content
         // 0 or absent means floor 1, so an unbanded enemy is available from the
         // start rather than never -- content should degrade into the game.
         public int minFloor;
+        // WHAT THIS MONSTER TAKES BADLY AND WHAT IT SHRUGS OFF.
+        //
+        // A COMMA-SEPARATED LIST, not a single element: "Fire" and
+        // "Fire, Ice" are both valid, and a creature that should burn and
+        // freeze no longer has to pick one. Order does not matter and
+        // whitespace around each name is trimmed; names are matched
+        // case-insensitively against DamageType, and one bad name in the list
+        // fails the build rather than being skipped (a typo'd element would
+        // otherwise just quietly stop applying).
+        //
+        // The field names stayed singular on purpose. Renaming them to
+        // `weaknesses`/`resistances` would mean either migrating every entry in
+        // enemies.json in the same breath or accepting both spellings forever,
+        // and "both spellings forever" is the drift this file's own abilities
+        // comment argues against below. What changed is the grammar of the
+        // value, not what the field means.
+        //
+        // Blank still means OMITTED and is derived from the id (see
+        // EnemyEntryResolver.DeriveDamageTypePair) -- the same sentinel every
+        // other optional field here uses. To say a monster genuinely has no
+        // weakness, write "none": that is an authored answer, and it is the one
+        // thing an empty list could never be distinguished from an omission.
         public string weakness = "";
         public string resistance = "";
 

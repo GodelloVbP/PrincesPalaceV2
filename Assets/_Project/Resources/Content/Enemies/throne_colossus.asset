@@ -26,12 +26,12 @@ MonoBehaviour:
   currencyReward: 82
   isBoss: 1
   minFloor: 3
-  weakness: 4
-  resistance: 0
+  weaknesses: 04000000
+  resistances: 00000000
   breakShieldPoints: 24
   spritePath: 
   facing: 1
-  sortOrder: 14
+  sortOrder: 15
   skillName: 
   skillPower: 1.5
   skillChance: 0.35
@@ -42,6 +42,8 @@ MonoBehaviour:
     anchor: 
     size: 380
     departFrame: 0
+    impactX: -1
+    impactY: -1
     sfxPath: 
   abilities: []
   attackWeight: 1

@@ -103,6 +103,14 @@ namespace PrincesPalace.Domain.UiKit
         public const string IntentShield = "#7EA8E6";        // MpBright: defensive, matches the mana blue
         public const string IntentSkill = "#C79BEE";
 
+        // The one free slot on the wheel. Every other badge sits between
+        // 12 degrees and 275 degrees of hue; magenta is the gap, and it is next
+        // to the generic skill violet on purpose — a summon IS a skill, just
+        // the one that changes how many monsters there are. The SHAPE carries
+        // the distinction at badge size (a ring against a hand), so the colour
+        // only has to say "related, but not that".
+        public const string IntentSummon = "#E58ACB";
+
         // --- the fight's own panel art ----------------------------------------
         public const string TargetPromptFill = "#26160AE6";   // 0.90
         public const string TargetPromptBorder = "#FFC45A8C"; // 0.55

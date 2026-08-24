@@ -223,6 +223,47 @@ namespace PrincesPalace.PlayModeTests
                 ". Leave size out entirely to get the default rather than writing 0.");
         }
 
+        // AN IMPACT POINT IS TWO NUMBERS OR IT IS NONE.
+        //
+        // impactX/impactY say where inside its own frame a sheet actually
+        // strikes, and the view only believes them when BOTH are inside 0..1 --
+        // anything else falls back to measuring the sheet's bottom margin, the
+        // rule that was wrong for every sheet that is not drawn standing on a
+        // floor. So a half-authored or out-of-range point does not fail: it
+        // silently reverts a spell to the behaviour it was authored to escape,
+        // which is the least visible way to be wrong.
+        //
+        // Same bargain as the anchor and the size above -- graceful at play
+        // time, refused here.
+        [Test]
+        public void EveryAuthoredImpactPointIsWholeAndInsideItsOwnFrame()
+        {
+            var wrong = new List<string>();
+
+            void Check(string what, SpellPresentation vfx)
+            {
+                if (vfx == null || string.IsNullOrEmpty(vfx.path)) return;
+
+                bool anyStated = vfx.impactX != SpellPresentation.Unauthored
+                              || vfx.impactY != SpellPresentation.Unauthored;
+
+                if (!anyStated) return;
+
+                if (!vfx.HasImpactPoint)
+                {
+                    wrong.Add($"{what} states ({vfx.impactX}, {vfx.impactY})");
+                }
+            }
+
+            foreach (var skill in ContentDatabase.Skills) Check($"skill '{skill?.id}'", skill?.vfx);
+            foreach (var enemy in ContentDatabase.Enemies) Check($"enemy '{enemy?.id}'", enemy?.vfx);
+
+            Assert.IsEmpty(wrong,
+                "an impact point needs BOTH impactX and impactY, each between 0 and 1 -- these are " +
+                "ignored at play time and the spell falls back to bottom-margin placement: " +
+                string.Join(", ", wrong));
+        }
+
         // And the impact frame has to be a frame that exists -- an effect whose
         // hit lands on frame 8 of a six-frame sequence lands at the end
         // instead, quietly, which is the same class of miss one step along.
@@ -684,6 +725,171 @@ namespace PrincesPalace.PlayModeTests
                 "effects must not change what an ordinary cast draws");
         }
 
+        // ---- where a sheet says it hits ------------------------------------------
+        //
+        // The rule these replace: put the box's bottom edge on the target's
+        // ground line, corrected by the lowest opaque pixel the sheet reaches.
+        // Right for an effect drawn standing on a floor, and wrong for the two
+        // other kinds this game already ships --
+        //
+        //   frost_flare's burst sits a sixth of the way up its frame with
+        //   embers falling below it, so the measured floor was the embers and
+        //   the strike rendered on the Giant Rat's chest;
+        //
+        //   mud_burst's impact is halfway up its frame and two thirds of the
+        //   way across it, so it detonated above the rat's head and to one side.
+        //
+        // A sheet can now state its own point of contact, and the box is placed
+        // to put that point where the spell is aimed.
+        //
+        // EVERY EXPECTED VALUE IS A LITERAL with its arithmetic spelled out,
+        // never a call back into the code under test -- CLAUDE.md gotcha 5. The
+        // whole fixture is chosen to make that possible: a 512x512 sheet in a
+        // 380 box renders 380x380, so a frame fraction and a screen distance are
+        // the same number times 380.
+
+        [UnityTest]
+        public IEnumerator AnAuthoredImpactPointLandsOnTheTargetsGroundLine()
+        {
+            yield return LoadFight();
+
+            float ground = GroundYOf("Front");
+
+            // 0.25 of the frame's height up from its bottom. The box is 380
+            // tall, so that point sits 95 above the box's own bottom edge and
+            // therefore 190 - 95 = 95 BELOW the box's centre. For it to land on
+            // the ground line the box centre has to be 95 above it.
+            _fight.PlaySpellVfxForTest(AimedBeat(impactX: 0.5f, impactY: 0.25f));
+
+            Assert.AreEqual(ground + 95f, _player.Image.rectTransform.anchoredPosition.y, 1.5f,
+                "the sheet's stated point of contact did not land on the target's ground line");
+        }
+
+        // THE HORIZONTAL HALF, which the old rule did not have at all: the box
+        // was centred on the target whatever the sheet had drawn where.
+        [UnityTest]
+        public IEnumerator AnOffCentreImpactPointMovesTheBoxSideways()
+        {
+            yield return LoadFight();
+
+            float target = SlotXOf("Front");
+
+            // 0.75 across the frame is 0.25 of 380 = 95 to the RIGHT of the
+            // box's centre, so the box has to sit 95 to the LEFT of the target
+            // for the drawn impact to land on it.
+            _fight.PlaySpellVfxForTest(AimedBeat(impactX: 0.75f, impactY: 0.5f));
+
+            Assert.AreEqual(target - 95f, _player.Image.rectTransform.anchoredPosition.x, 1.5f,
+                "an impact drawn off-centre still detonated in the middle of the box");
+        }
+
+        // A SHEET THAT SAYS NOTHING MUST NOT MOVE. The measured rule is what
+        // golem_boulder is tuned against and what every future unstated sheet
+        // will get, so the fallback is as load-bearing as the new path.
+        //
+        // Asserted as a DIFFERENCE between two casts of the same sheet rather
+        // than against an absolute, because the absolute is the measured
+        // correction itself -- recomputing it here would be the tautology this
+        // file's siblings warn about, and pinning it as a literal would pin the
+        // sheet's alpha rather than the rule.
+        [UnityTest]
+        public IEnumerator ASheetWithNoStatedPointKeepsTheMeasuredPlacement()
+        {
+            yield return LoadFight();
+
+            _fight.PlaySpellVfxForTest(AimedBeat(impactX: -1f, impactY: -1f));
+            var measured = _player.Image.rectTransform.anchoredPosition;
+
+            // The same sheet, stating the point the measured rule would have
+            // put there anyway: dead centre horizontally, and a whole box-half
+            // up from the ground line. Those two agree only if the sheet has no
+            // bottom margin at all -- frost_flare's embers reach its floor, so
+            // they very nearly do, and "very nearly" is what the tolerance is.
+            _fight.PlaySpellVfxForTest(AimedBeat(impactX: 0.5f, impactY: 0f));
+            var stated = _player.Image.rectTransform.anchoredPosition;
+
+            Assert.AreEqual(stated.x, measured.x, 1.5f,
+                "an unstated sheet stopped being centred on its target");
+            Assert.AreEqual(stated.y, measured.y, 12f,
+                "an unstated sheet no longer stands on the ground line -- the measured fallback " +
+                "moved, and every sheet that has not been given a point moved with it");
+        }
+
+        // MIRRORED, THE CORRECTION GOES THE OTHER WAY. A sheet fired back across
+        // the stage has its point of contact the same distance in from the
+        // OTHER edge, so a horizontal correction that ignores facing does not
+        // merely fail to help -- it doubles the error.
+        //
+        // Invisible on Shawn, who always casts rightward, and wrong on every
+        // enemy: the same shape as every stage bug this project has recorded.
+        [UnityTest]
+        public IEnumerator AMirroredCastCorrectsTowardsTheOtherEdge()
+        {
+            yield return LoadFight();
+
+            float hero = SlotXOf("Shawn");
+
+            var beat = TravellingBeat(reversed: true);
+            beat.Vfx.impactX = 0.75f;
+            beat.Vfx.impactY = 0.5f;
+
+            _fight.PlaySpellVfxForTest(beat);
+            yield return null;
+
+            Assert.Less(_player.Image.rectTransform.localScale.x, 0f,
+                "fixture: the cast was not mirrored, so this proves nothing about mirroring");
+
+            // Mirrored, 0.75-from-the-left is drawn 0.75 from the RIGHT, so the
+            // box sits 95 to the right of what it is aimed at rather than 95 to
+            // the left. Read at the END of the flight, which is where the
+            // arrival is placed.
+            float waited = 0f;
+            while (waited < 1.4f)
+            {
+                waited += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            Assert.AreEqual(hero + 95f, _player.Image.rectTransform.anchoredPosition.x, 2f,
+                "the mirrored cast corrected the same way an unmirrored one does, which puts the " +
+                "impact twice as far off as leaving it uncorrected would have");
+        }
+
+        // A beat aimed at the fixture's one enemy with a sheet whose frames are
+        // a known 512 square. frost_flare rather than a synthetic texture: the
+        // placement maths reads the sheet's own dimensions, so a fabricated
+        // sprite would be testing a fabricated aspect ratio.
+        private CombatBeat AimedBeat(float impactX, float impactY)
+        {
+            var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
+            var foe = _fight.SessionForTest.Encounter.Enemies.First(c => c != null);
+
+            return new CombatBeat
+            {
+                Actor = hero,
+                Target = foe,
+                Vfx = new SpellPresentation
+                {
+                    path = "Spells/frost_flare",
+                    seconds = 0.52f,
+                    impactFrame = 5,
+                    impactX = impactX,
+                    impactY = impactY,
+                },
+            };
+        }
+
+        // The stage's ground line under a combatant, in the effect pool's own
+        // coordinates -- the slot's bottom edge, which is what the figures
+        // stand on.
+        private float GroundYOf(string name)
+        {
+            var slot = SlotOf(name);
+            var parent = _player.transform.parent;
+            return parent.InverseTransformPoint(
+                slot.TransformPoint(new Vector3(0f, slot.rect.yMin, 0f))).y;
+        }
+
         private CombatBeat TravellingBeat(bool reversed = false, bool fromCaster = true)
         {
             var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
@@ -706,15 +912,19 @@ namespace PrincesPalace.PlayModeTests
 
         private float SlotXOf(string name)
         {
+            var parent = _player.transform.parent;
+            return parent.InverseTransformPoint(SlotOf(name).TransformPoint(Vector3.zero)).x;
+        }
+
+        private RectTransform SlotOf(string name)
+        {
             var combatant = _fight.SessionForTest.Encounter.PlayerParty
                 .Concat(_fight.SessionForTest.Encounter.Enemies)
                 .First(c => c != null && c.Name == name);
 
             var slot = _fight.SlotForTest(combatant);
             Assert.IsNotNull(slot, $"'{name}' has no stage slot");
-
-            var parent = _player.transform.parent;
-            return parent.InverseTransformPoint(slot.TransformPoint(Vector3.zero)).x;
+            return slot;
         }
 
         // ---- the dissolve ----------------------------------------------------------

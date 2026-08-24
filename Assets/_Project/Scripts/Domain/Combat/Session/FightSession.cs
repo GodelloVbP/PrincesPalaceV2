@@ -29,11 +29,22 @@ namespace PrincesPalace.Domain.Combat.Session
     // port shape-for-shape with their comments.
     public sealed partial class FightSession
     {
+        // Builds the state and kit for a summoned enemy, by content id — a
+        // Roar's whole reason to exist. Domain cannot look ContentDatabase
+        // up itself (see FightEncounterAdapter's own header on why that
+        // boundary exists), so the one call site that CAN — the adapter,
+        // building the fight in the first place — hands down a closure over
+        // its own content-reading code instead. False means the id named
+        // nothing real; the caller treats that exactly like "no room left".
+        public delegate bool SummonFactory(string enemyId, out CombatantState state, out EnemyKit kit);
+
         private readonly CombatEncounter _encounter;
         private readonly Dictionary<CombatantState, PlayerKit> _playerKits = new Dictionary<CombatantState, PlayerKit>();
         private readonly Dictionary<CombatantState, EnemyKit> _enemyKits = new Dictionary<CombatantState, EnemyKit>();
         private readonly SeededRandom _rng;
         private readonly int _initiativeSlots;
+        private readonly SummonFactory _summonFactory;
+        private readonly int _stageSlotsPerSide;
 
         public bool IsBossFight { get; }
         public bool IsEliteFight { get; }
@@ -50,11 +61,15 @@ namespace PrincesPalace.Domain.Combat.Session
             SeededRandom rng,
             bool isBossFight = false,
             bool isEliteFight = false,
-            int initiativeSlots = FightHudSpec.InitiativeSlots)
+            int initiativeSlots = FightHudSpec.InitiativeSlots,
+            SummonFactory summonFactory = null,
+            int stageSlotsPerSide = FightHudSpec.StageSlotsPerSide)
         {
             _encounter = encounter ?? throw new ArgumentNullException(nameof(encounter));
             _rng = rng;
             _initiativeSlots = initiativeSlots;
+            _summonFactory = summonFactory;
+            _stageSlotsPerSide = stageSlotsPerSide;
             IsBossFight = isBossFight;
             IsEliteFight = isEliteFight;
 
@@ -89,6 +104,16 @@ namespace PrincesPalace.Domain.Combat.Session
 
         public EnemyKit SourceFor(CombatantState combatant) =>
             combatant != null && _enemyKits.TryGetValue(combatant, out var kit) ? kit : null;
+
+        // What a blow landing on this combatant is up against, elementally.
+        //
+        // ONE helper rather than `SourceFor(x)?.Affinity ?? Neutral` repeated at
+        // eight damage call sites: the fallback is the whole rule for the player
+        // side of a fight (no definition, no affinity, everything lands at face
+        // value), and a rule spelled out eight times is a rule seven of them can
+        // drift away from.
+        private ElementalAffinity AffinityOf(CombatantState combatant) =>
+            SourceFor(combatant)?.Affinity ?? ElementalAffinity.Neutral;
 
         public IReadOnlyList<ResolvedSkillOption> SkillOptionsFor(CombatantState actor)
         {
@@ -242,8 +267,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 baseAmount,
                 actor, target,
                 attackType: actorKit?.AttackType,
-                weakness: enemyKit?.Weakness,
-                resistance: enemyKit?.Resistance,
+                affinity: enemyKit?.Affinity ?? ElementalAffinity.Neutral,
                 varianceRange: DamageVarianceRange,
                 rng: _rng,
                 resolveWard: ResolveWard);

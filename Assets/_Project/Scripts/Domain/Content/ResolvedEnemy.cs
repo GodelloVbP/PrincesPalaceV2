@@ -30,8 +30,12 @@ namespace PrincesPalace.Domain.Content
         public readonly int ExpReward;
         public readonly int CurrencyReward;
         public readonly bool IsBoss;
-        public readonly DamageType Weakness;
-        public readonly DamageType Resistance;
+
+        // Every element this monster takes badly and every one it shrugs off.
+        // Two DamageType fields until multi-element affinities landed -- see
+        // ElementalAffinity for why the pair became one value rather than two
+        // arrays.
+        public readonly ElementalAffinity Affinity;
         public readonly int SortOrder;
 
         // 0 means this enemy carries no stagger meter and cannot be broken.
@@ -96,8 +100,30 @@ namespace PrincesPalace.Domain.Content
         // See RawEnemyEntry.minFloor.
         public readonly int MinFloor;
 
+        // THE SINGLE-ELEMENT CONVENIENCE, kept because it is still how most of
+        // the roster is authored and how nearly every fixture reads. It is one
+        // line of delegation, not a second definition of anything: both forms
+        // end up in the same Affinity field, so there is no shape here that can
+        // drift out of step with the other.
         public ResolvedEnemy(string id, string displayName, StatBlock baseStats, int expReward, int currencyReward,
             bool isBoss, DamageType weakness, DamageType resistance, int sortOrder, string spritePath = "",
+            PrincesPalace.Domain.Stage.SpriteFacing facing = PrincesPalace.Domain.Stage.SpriteFacing.Right,
+            bool active = true, string skillName = "", float skillPower = 1.5f, float skillChance = 0f,
+            int breakShieldPoints = 0, SpellPresentation presentation = null,
+            IReadOnlyList<EnemyAbilityRef> abilities = null, float attackWeight = 1f,
+            StatusEffectType? appliesStatus = null, int statusMagnitude = 0,
+            int statusDuration = 0, bool avoidsFrontSlot = false, bool attackHoldsPosition = false,
+            int minFloor = 1)
+            : this(id, displayName, baseStats, expReward, currencyReward, isBoss,
+                   ElementalAffinity.Of(weakness, resistance), sortOrder, spritePath, facing, active,
+                   skillName, skillPower, skillChance, breakShieldPoints, presentation, abilities,
+                   attackWeight, appliesStatus, statusMagnitude, statusDuration, avoidsFrontSlot,
+                   attackHoldsPosition, minFloor)
+        {
+        }
+
+        public ResolvedEnemy(string id, string displayName, StatBlock baseStats, int expReward, int currencyReward,
+            bool isBoss, ElementalAffinity affinity, int sortOrder, string spritePath = "",
             PrincesPalace.Domain.Stage.SpriteFacing facing = PrincesPalace.Domain.Stage.SpriteFacing.Right,
             bool active = true, string skillName = "", float skillPower = 1.5f, float skillChance = 0f,
             int breakShieldPoints = 0, SpellPresentation presentation = null,
@@ -122,8 +148,7 @@ namespace PrincesPalace.Domain.Content
             // first floor, and a negative would let a filter of the form
             // `minFloor <= floor` pass everything forever.
             MinFloor = minFloor < 1 ? 1 : minFloor;
-            Weakness = weakness;
-            Resistance = resistance;
+            Affinity = affinity;
             SortOrder = sortOrder;
             SpritePath = spritePath ?? "";
             BreakShieldPoints = breakShieldPoints;

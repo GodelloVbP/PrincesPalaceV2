@@ -159,6 +159,29 @@ namespace PrincesPalace.Domain.Content
         // doing nothing is exactly the silent-typo case every other
         // cross-field rule in SkillEntryResolver exists to catch.
         public Combat.TransformGrant transform = new Combat.TransformGrant();
+
+        // Which of the caster's OWN stance folders plays while this skill
+        // resolves. Empty means the long-standing default of "cast" — every
+        // skill authored before this field existed still plays exactly the
+        // pose it always did. Set this when a monster owns more than one
+        // skill and each should look like a different thing happening,
+        // rather than three abilities sharing one generic casting pose.
+        public string stance = "";
+
+        // Summon only. The enemy id (Assets/_Project/ContentData/enemies.json)
+        // this skill calls in on the caster's own side. Required together
+        // with summonCap; empty means this skill does not summon anything,
+        // which is every skill but a Summon effect's.
+        public string summonEnemyId = "";
+
+        // Summon only. Don't summon another one once the caster's side
+        // already fields this many LIVING copies of summonEnemyId — the cap
+        // is read at the moment the ability is DRAWN, not at the moment it
+        // resolves, so a boss capped at two rats picks something else that
+        // turn instead of visibly failing to call a third. Required
+        // together with summonEnemyId, same both-fields-or-neither rule
+        // appliesStatus/statusMagnitude/statusDuration already follow.
+        public int summonCap = -1;
     }
 
     // One typed packet inside a spell. `type` is a DamageType name -

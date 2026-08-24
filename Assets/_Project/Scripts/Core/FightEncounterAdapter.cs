@@ -43,7 +43,7 @@ namespace PrincesPalace
             return new ResolvedEnemy(
                 definition.id, definition.displayName, definition.baseStats,
                 definition.expReward, definition.currencyReward, definition.isBoss,
-                definition.weakness, definition.resistance, definition.sortOrder,
+                definition.Affinity, definition.sortOrder,
                 spritePath: definition.spritePath,
                 facing: definition.facing,
                 active: true,
@@ -318,7 +318,29 @@ namespace PrincesPalace
             if (party.Count == 0 || enemies.Count == 0) return null;
 
             var encounter = new CombatEncounter(party, enemies);
-            var session = new FightSession(encounter, kits, enemyKits, rng, isBoss, isElite);
+
+            // A CLOSURE OVER THIS BUILD'S OWN depthStep/isElite, so a rat
+            // called in on floor 20 by a Roar scales exactly like one that
+            // was in the room from the start -- the same ToCombatant/
+            // EnemyKitFor pair every enemy in `enemies` above was just built
+            // through, not a second, drifting copy of that logic.
+            bool SummonFactory(string enemyId, out CombatantState state, out EnemyKit kit)
+            {
+                var definition = ContentDatabase.Enemies.FirstOrDefault(e => e.id == enemyId);
+                if (definition == null)
+                {
+                    state = null;
+                    kit = null;
+                    return false;
+                }
+
+                state = ToCombatant(definition, depthStep);
+                kit = EnemyKitFor(definition, isElite);
+                return true;
+            }
+
+            var session = new FightSession(encounter, kits, enemyKits, rng, isBoss, isElite,
+                summonFactory: SummonFactory);
 
             return new BuiltFight { Session = session, Party = party, PartyArt = art };
         }
@@ -478,7 +500,8 @@ namespace PrincesPalace
                 definition.hasStatus ? definition.appliesStatus : (StatusEffectType?)null,
                 definition.statusMagnitude, definition.statusDuration,
                 definition.requirements, definition.scalingAxis, definition.queuePushSlots,
-                definition.transform, definition.playerSelectable, definition.cooldownTurns);
+                definition.transform, definition.playerSelectable, definition.cooldownTurns,
+                definition.stance, definition.summonEnemyId, definition.summonCap);
         }
     }
 }

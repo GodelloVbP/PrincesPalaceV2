@@ -117,61 +117,140 @@ namespace PrincesPalace
             var parent = spellVfxPlayer.transform.parent;
             if (parent == null) return;
 
-            // The box first: the letterbox measurement below depends on it, and
-            // it stopped being a constant when spells got their own sizes.
+            // The box first: every measurement below depends on it, and it
+            // stopped being a constant when spells got their own sizes.
             var box = BoxFor(beat);
-            float deadSpaceBelow = VfxDeadSpaceBelow(beat.Vfx.path, box, beat.Vfx.impactFrame);
-
-            var rect = targetRect.rect;
-            float centreX = parent.InverseTransformPoint(targetRect.TransformPoint(Vector3.zero)).x;
-            float bottomY = parent.InverseTransformPoint(targetRect.TransformPoint(new Vector3(0f, rect.yMin, 0f))).y;
 
             // WHERE THE ART HAPPENS, which is not the same question as who the
-            // skill hits -- see SpellAnchor. Travel leaves here entirely; the
-            // other four are two independent choices, read as two.
+            // skill hits -- see SpellAnchor. Three independent choices, read as
+            // three: whose body, where on it, and whether it flies there.
             var anchor = beat.Vfx.Anchor;
-
-            if (anchor == SpellAnchor.Travel)
-            {
-                PlayTravellingVfx(beat, spellVfxPlayer, parent, centreX, bottomY, box, deadSpaceBelow);
-                return;
-            }
 
             // WHOSE BODY. A caster-anchored effect moves its origin, not its
             // shape: a self-buff aura belongs on whoever cast it even when the
             // skill is aimed at an ally. Falling back to the target when the
             // caster has no slot -- an off-stage or synthetic actor -- is the
             // same graceful default the travelling branch takes.
-            var on = SpellAnchorNames.OnCaster(anchor) ? SlotFor(beat.Actor) ?? targetRect : targetRect;
+            //
+            // A travelling effect always AIMS at the target; where it comes
+            // from is the travelling branch's business, not this one's.
+            var on = SpellAnchorNames.OnCaster(anchor) && !SpellAnchorNames.Travels(anchor)
+                ? SlotFor(beat.Actor) ?? targetRect
+                : targetRect;
 
-            if (!ReferenceEquals(on, targetRect))
+            // WHERE ON IT: the point the effect is supposed to touch. The
+            // ground line under the body, or the middle of it.
+            var aim = AimPoint(parent, on, SpellAnchorNames.Centred(anchor));
+
+            if (SpellAnchorNames.Travels(anchor))
             {
-                var onRect = on.rect;
-                centreX = parent.InverseTransformPoint(on.TransformPoint(Vector3.zero)).x;
-                bottomY = parent.InverseTransformPoint(
-                    on.TransformPoint(new Vector3(0f, onRect.yMin, 0f))).y;
+                PlayTravellingVfx(beat, spellVfxPlayer, parent, aim, box,
+                    standing: !SpellAnchorNames.Centred(anchor));
+                return;
             }
 
             spellVfxPlayer.SetFacing(1f);
 
-            // WHERE ON IT. Standing on the ground line is half the box less
-            // whatever transparent margin the sheet carries below its drawn
-            // content, which lands the DRAWN bottom on the line rather than the
-            // box's. Centred ignores all of that and takes the slot's midpoint.
-            float y;
-            if (SpellAnchorNames.Centred(anchor))
+            spellVfxPlayer.PlayAt(beat.Vfx.path, beat.Vfx.seconds,
+                BoxCentreFor(beat, aim, box, facing: 1f, standing: !SpellAnchorNames.Centred(anchor)), box);
+        }
+
+        // THE POINT ON A COMBATANT AN EFFECT IS AIMED AT, in the effect pool's
+        // own coordinates.
+        //
+        // The SLOT, not the sprite Image inside it. The Image is the art's raw
+        // canvas and its bottom edge is wherever the sheet happened to be cut;
+        // the slot's bottom edge is the stage's ground line, which the stage
+        // visuals stand every frame's feet on. Aiming at the canvas put a
+        // strike below the feet by whatever padding that sheet carried -- and a
+        // MOVING amount, since the offset is per frame.
+        //
+        // Converted through the shared parent rather than read off
+        // anchoredPosition, because the slot is nested inside the stage and
+        // scaled by depth: its own coordinates are not where it appears.
+        //
+        // KNOWN, AND FINE FOR EVERY ACTOR THAT USES IT TODAY: `centred` takes
+        // the slot's midpoint, and the slot is sized to the sprite's raw
+        // CANVAS rather than to the figure drawn on it. The two agree closely
+        // for the rat (canvas mid 153, content mid ~142) and would not for the
+        // golem, whose idle frame carries 123px of empty headroom -- the same
+        // disagreement PlaceIntentBadge already had to stop measuring around.
+        // Nothing centred is aimed at the golem yet; when something is, the
+        // measured answer is ContentTopForActor, not another constant.
+        private static Vector2 AimPoint(Transform parent, RectTransform slot, bool centred)
+        {
+            var rect = slot.rect;
+            float x = parent.InverseTransformPoint(slot.TransformPoint(Vector3.zero)).x;
+            float y = parent.InverseTransformPoint(
+                slot.TransformPoint(new Vector3(0f, centred ? rect.center.y : rect.yMin, 0f))).y;
+
+            return new Vector2(x, y);
+        }
+
+        // WHERE THE BOX GOES so that the SHEET'S OWN POINT OF CONTACT lands on
+        // the point the spell is aimed at.
+        //
+        // Two rules, and which one applies is the sheet's choice rather than
+        // this file's.
+        //
+        // AUTHORED (SpellPresentation.impactX/impactY): the offset from the
+        // box's centre to the drawn impact is arithmetic, and the box is placed
+        // to cancel it. Correct on BOTH axes, which the measured rule never
+        // was: mud_burst's impact sits two thirds of the way across its frame,
+        // so centring the box put the detonation a sixth of a box to one side
+        // of everything it hit.
+        //
+        // MEASURED (the fallback, for any sheet that does not state a point):
+        // the box's bottom edge on the ground line, less the transparent margin
+        // the sheet carries below its landed content. Kept verbatim rather than
+        // replaced -- it is right for an effect drawn standing on a floor, it
+        // is what golem_boulder is tuned against, and a sheet that says nothing
+        // must not move.
+        //
+        // `facing` is +1 as drawn and -1 mirrored, and only the horizontal
+        // correction cares: a mirrored sheet's impact is the same distance from
+        // the other edge, so the box has to sit on the other side of the target.
+        // Getting this wrong is invisible on Shawn (who always casts rightward)
+        // and doubles the error on every enemy.
+        private Vector2 BoxCentreFor(CombatBeat beat, Vector2 aim, Vector2 box, float facing, bool standing)
+        {
+            var vfx = beat.Vfx;
+
+            if (vfx.HasImpactPoint)
             {
-                var body = on.rect;
-                y = parent.InverseTransformPoint(on.TransformPoint(new Vector3(0f, body.center.y, 0f))).y;
-            }
-            else
-            {
-                y = bottomY + box.y * 0.5f - deadSpaceBelow;
+                var art = RenderedSize(vfx.path, box);
+                return new Vector2(
+                    aim.x + (0.5f - vfx.impactX) * art.x * (facing < 0f ? -1f : 1f),
+                    aim.y + (0.5f - vfx.impactY) * art.y);
             }
 
-            var anchoredPosition = new Vector2(centreX, y);
+            if (!standing) return aim;
 
-            spellVfxPlayer.PlayAt(beat.Vfx.path, beat.Vfx.seconds, anchoredPosition, box);
+            return new Vector2(aim.x, aim.y + box.y * 0.5f - VfxDeadSpaceBelow(vfx.path, box, vfx.impactFrame));
+        }
+
+        // How big the art actually draws once preserveAspect has fitted it into
+        // the box. The box is square and not every sheet is, so a fraction of
+        // the FRAME is only a distance on screen after this.
+        //
+        // Falls back to the box itself for a sheet with no readable frames --
+        // the same answer a square sheet gives, and the one that degrades to
+        // "no correction" rather than to a division by zero.
+        private Vector2 RenderedSize(string vfxPath, Vector2 box)
+        {
+            var frames = PrimaryPlayer?.Frames(vfxPath);
+            if (frames == null || frames.Length == 0 || frames[0] == null) return box;
+
+            float frameWidth = frames[0].rect.width;
+            float frameHeight = frames[0].rect.height;
+            if (frameWidth <= 0f || frameHeight <= 0f || box.x <= 0f || box.y <= 0f) return box;
+
+            float frameAspect = frameWidth / frameHeight;
+            float boxAspect = box.x / box.y;
+
+            return frameAspect <= boxAspect
+                ? new Vector2(box.y * frameAspect, box.y)
+                : new Vector2(box.x, box.x / frameAspect);
         }
 
         // ---- an effect that CROSSES the stage ------------------------------------
@@ -187,10 +266,8 @@ namespace PrincesPalace
         // for the stretched version that was tried first and for the
         // measurement that killed it.
         private void PlayTravellingVfx(CombatBeat beat, SpellVfxPlayer spellVfxPlayer, Transform parent,
-                                       float targetX, float bottomY, Vector2 box, float dead)
+                                       Vector2 aim, Vector2 box, bool standing)
         {
-            var to = new Vector2(targetX, bottomY + box.y * 0.5f - dead);
-
             var casterRect = SlotFor(beat.Actor);
 
             // No slot for the caster -- an off-stage or synthetic actor -- means
@@ -199,18 +276,40 @@ namespace PrincesPalace
             if (casterRect == null)
             {
                 spellVfxPlayer.SetFacing(1f);
-                spellVfxPlayer.PlayAt(beat.Vfx.path, beat.Vfx.seconds, to, box);
+                spellVfxPlayer.PlayAt(beat.Vfx.path, beat.Vfx.seconds,
+                    BoxCentreFor(beat, aim, box, facing: 1f, standing), box);
                 return;
             }
 
             float casterX = parent.InverseTransformPoint(casterRect.TransformPoint(Vector3.zero)).x;
-            var from = new Vector2(casterX, to.y);
 
             // MIRRORED WHEN THE CASTER IS ON THE RIGHT. The sheet fires left to
             // right; the Bog Witch casts the same spell back across the stage,
             // and unmirrored her glyph would form facing away from the thing it
             // is about to hit.
-            spellVfxPlayer.SetFacing(targetX >= casterX ? 1f : -1f);
+            //
+            // DECIDED BEFORE the arrival is placed, not after, because the
+            // horizontal impact correction depends on it: a mirrored sheet's
+            // point of contact is the same distance in from the OTHER edge.
+            float facing = aim.x >= casterX ? 1f : -1f;
+            spellVfxPlayer.SetFacing(facing);
+
+            var to = BoxCentreFor(beat, aim, box, facing, standing);
+
+            // THE LAUNCH IS NOT IMPACT-CORRECTED, and that asymmetry is on
+            // purpose. `to` is placed so the sheet's IMPACT sits on the target;
+            // the same offset applied at the other end would shift the sheet's
+            // conjuring glyph -- a different part of the drawing entirely --
+            // away from the caster by that amount rather than onto them. For
+            // mud_burst that would drag the glyph a further sixth of a box out
+            // into open air, which is the exact complaint the travelling anchor
+            // was written to fix.
+            //
+            // Correcting the launch properly needs a second authored point (the
+            // sheet's origin, as against its impact), and no sheet has yet
+            // wanted one. Until one does, the launch keeps the rule it has
+            // always had: the box centred on the caster.
+            var from = new Vector2(casterX, to.y);
 
             // LEAVES ON THE DEPARTURE FRAME AND ARRIVES ON THE IMPACT ONE. The
             // second is the frame the damage number is already timed to (see
@@ -264,18 +363,14 @@ namespace PrincesPalace
         {
             var frames = PrimaryPlayer?.Frames(vfxPath);
             if (frames == null || frames.Length == 0 || frames[0] == null) return 0f;
-
-            float frameWidth = frames[0].rect.width;
-            float frameHeight = frames[0].rect.height;
-            if (frameWidth <= 0f || frameHeight <= 0f || box.y <= 0f) return 0f;
+            if (box.y <= 0f) return 0f;
 
             // Height-constrained (tall or square) art already reaches the box's
-            // bottom edge; only wider-than-the-box art letterboxes.
-            float frameAspect = frameWidth / frameHeight;
-            float boxAspect = box.x / box.y;
-            float renderedHeight = frameAspect <= boxAspect
-                ? box.y
-                : box.x / frameAspect;
+            // bottom edge; only wider-than-the-box art letterboxes. How much is
+            // RenderedSize's answer rather than a second copy of the same fit --
+            // two copies of a preserveAspect calculation is exactly the shape of
+            // the bug this method's own header records, one layer up.
+            float renderedHeight = RenderedSize(vfxPath, box).y;
             float letterboxBelow = (box.y - renderedHeight) * 0.5f;
 
             return letterboxBelow + VfxContentPaddingFraction(vfxPath, frames, impactFrame) * renderedHeight;

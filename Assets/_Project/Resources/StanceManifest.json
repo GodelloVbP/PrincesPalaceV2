@@ -50,6 +50,19 @@
       "stances": [
         { "stance": "attack", "secondsPerFrame": 0.08, "impactFrame": 3, "soundFrame": 3 }
       ]
+    },
+    {
+      "spritePath": "Enemies/forest_warden",
+      "groundLine": 14,
+      "_groundLineNote": "Every forest_warden frame was cropped independently to its own content bounding box plus a uniform 14px pad on every side, rather than sliced off one shared-canvas sheet the way golem/rat were -- so this value is that pad, not a measured foot position. It should hold well for idle/attack/attack_roar/attack_charge, where the feet are consistently each frame's lowest point; hurt and defeated change body orientation enough that a small vertical pop between stances is possible and worth an eyeball pass in the editor.",
+      "stances": [
+        { "stance": "idle", "secondsPerFrame": 0.12, "impactFrame": 1, "soundFrame": 1 },
+        { "stance": "attack", "secondsPerFrame": 0.08, "impactFrame": 5, "soundFrame": 5 },
+        { "stance": "attack_roar", "secondsPerFrame": 0.1, "impactFrame": 4, "soundFrame": 4 },
+        { "stance": "attack_charge", "secondsPerFrame": 0.07, "impactFrame": 5, "soundFrame": 5 },
+        { "stance": "hurt", "secondsPerFrame": 0.08, "impactFrame": 1, "soundFrame": 1 },
+        { "stance": "defeated", "secondsPerFrame": 0.1, "impactFrame": 1, "soundFrame": 1 }
+      ]
     }
   ]
 }

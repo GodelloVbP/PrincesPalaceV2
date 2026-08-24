@@ -230,9 +230,15 @@ namespace PrincesPalace.Content
                     errors.Add($"Enemy '{enemy.id}' has non-positive baseStats.maxHealth ({enemy.baseStats.maxHealth}).");
                 }
 
-                if (enemy.weakness == enemy.resistance)
+                // An element on BOTH lists, now that each is a list. Still an
+                // error rather than a precedence rule: CombatMath scores a
+                // weakness first, so the resistance would be authored, shown in
+                // the glossary, and never once apply.
+                var contradictions = enemy.Affinity.Contradictions;
+                if (contradictions.Count > 0)
                 {
-                    errors.Add($"Enemy '{enemy.id}' has the same DamageType ({enemy.weakness}) for both weakness and resistance.");
+                    errors.Add($"Enemy '{enemy.id}' lists {string.Join(" and ", contradictions)} " +
+                               "as both a weakness and a resistance.");
                 }
             }
 

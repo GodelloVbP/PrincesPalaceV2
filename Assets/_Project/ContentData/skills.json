@@ -80,7 +80,9 @@
         "seconds": 0.65,
         "impactFrame": 13,
         "departFrame": 9,
-        "anchor": "travel"
+        "anchor": "travel-centre",
+        "impactX": 0.69,
+        "impactY": 0.52
       },
       "cooldownTurns": 2
     },
@@ -106,6 +108,8 @@
         "path": "Spells/frost_flare",
         "seconds": 0.52,
         "impactFrame": 5,
+        "impactX": 0.5,
+        "impactY": 0.18,
         "sfxPath": "Audio/Sfx/frost_flare"
       }
     },
@@ -127,6 +131,8 @@
         "path": "Spells/lightning_bolt",
         "seconds": 0.52,
         "impactFrame": 5,
+        "impactX": 0.5,
+        "impactY": 0.23,
         "sfxPath": "Audio/Sfx/lightning_strike"
       }
     },
@@ -255,6 +261,46 @@
         "seconds": 0.48,
         "impactFrame": 3
       },
+      "playerSelectable": false
+    },
+    {
+      "id": "overhead_slam",
+      "displayName": "Overhead Slam",
+      "description": "A killing blow that does not care what you are wearing.",
+      "characterId": "forest_warden",
+      "unlockLevel": 1,
+      "effect": "DamageSingle",
+      "flatAmount": 4,
+      "manaCost": 0,
+      "ignoresDefense": true,
+      "stance": "attack",
+      "playerSelectable": false
+    },
+    {
+      "id": "roar",
+      "displayName": "Roar",
+      "description": "A call that carries back through the trees. Something answers.",
+      "characterId": "forest_warden",
+      "unlockLevel": 1,
+      "effect": "Summon",
+      "manaCost": 0,
+      "summonEnemyId": "rat",
+      "summonCap": 2,
+      "stance": "attack_roar",
+      "playerSelectable": false
+    },
+    {
+      "id": "grapple",
+      "displayName": "Grapple",
+      "description": "Caught, and held long enough to forget what you were about to do.",
+      "characterId": "forest_warden",
+      "unlockLevel": 1,
+      "effect": "DamageSingle",
+      "manaCost": 0,
+      "appliesStatus": "Stun",
+      "statusMagnitude": 1,
+      "statusDuration": 1,
+      "stance": "attack_charge",
       "playerSelectable": false
     }
   ]

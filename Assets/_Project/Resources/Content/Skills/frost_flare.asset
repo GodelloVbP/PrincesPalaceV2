@@ -40,6 +40,8 @@ MonoBehaviour:
     anchor: 
     size: 380
     departFrame: 0
+    impactX: 0.5
+    impactY: 0.18
     sfxPath: Audio/Sfx/frost_flare
   appliesStatus: 0
   hasStatus: 0
@@ -61,4 +63,7 @@ MonoBehaviour:
     speedPercent: 0
     temporaryHealthPercent: 0
     splashPercent: 0
+  stance: 
+  summonEnemyId: 
+  summonCap: 0
   sortOrder: 6

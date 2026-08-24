@@ -10,28 +10,28 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 429d83c7acd1e6546892363aadea2846, type: 3}
-  m_Name: hollow_choir
+  m_Name: forest_warden
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.EnemyDefinition
-  id: hollow_choir
-  displayName: The Hollow Choir
+  id: forest_warden
+  displayName: Forest Troll
   baseStats:
-    maxHealth: 480
-    speed: 14
+    maxHealth: 650
+    speed: 4
     attack: 7
-    defense: 2
+    defense: 9
     manaRegen: 0
     physicalResistance: 0
     magicalResistance: 0
-  expReward: 115
-  currencyReward: 68
+  expReward: 100
+  currencyReward: 60
   isBoss: 1
   minFloor: 1
-  weakness: 0
-  resistance: 5
-  breakShieldPoints: 12
-  spritePath: 
+  weaknesses: 0100000002000000
+  resistances: 0000000004000000
+  breakShieldPoints: 16
+  spritePath: Enemies/forest_warden
   facing: 1
-  sortOrder: 13
+  sortOrder: 14
   skillName: 
   skillPower: 1.5
   skillChance: 0.35
@@ -42,9 +42,17 @@ MonoBehaviour:
     anchor: 
     size: 380
     departFrame: 0
+    impactX: -1
+    impactY: -1
     sfxPath: 
-  abilities: []
-  attackWeight: 1
+  abilities:
+  - skillId: overhead_slam
+    weight: 3
+  - skillId: roar
+    weight: 2
+  - skillId: grapple
+    weight: 2
+  attackWeight: 0
   appliesStatus: 0
   hasStatus: 0
   statusMagnitude: 0

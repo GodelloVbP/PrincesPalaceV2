@@ -53,26 +53,25 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // The typed path: a spell or skill whose damage type is authored.
         //
-        // `weakness`/`resistance` come from the target's own definition and are
-        // passed in rather than looked up -- v1 reached into a live
+        // `affinity` comes from the target's own definition and is passed in
+        // rather than looked up -- v1 reached into a live
         // CombatantState->EnemyDefinition dictionary here, which is exactly the
         // kind of view-owned lookup that kept this logic out of Domain.
-        // Anything with no definition behind it is neutral, silently, which is
-        // the sensible reading for an enemy attacking a player or a direct test
-        // entry.
+        // Anything with no definition behind it is ElementalAffinity.Neutral,
+        // silently, which is the sensible reading for an enemy attacking a
+        // player or a direct test entry -- and is default(T), so the
+        // "no answer" case cannot be forgotten at a call site the way a
+        // nullable pair could be half-supplied.
         public static Outcome AfterDefences(
             int raw,
             DamageType type,
             CombatantState target,
-            DamageType? weakness,
-            DamageType? resistance,
+            ElementalAffinity affinity,
             float varianceRange,
             SeededRandom rng,
             Func<CombatantState, int, int> resolveWard)
         {
-            float effectiveness = weakness.HasValue && resistance.HasValue
-                ? CombatMath.EffectivenessMultiplier(type, weakness.Value, resistance.Value)
-                : 1f;
+            float effectiveness = CombatMath.EffectivenessMultiplier(type, affinity);
 
             int result = CombatMath.AfterResistance(
                 CombatMath.ApplyStatusEffects(CombatMath.ApplyEffectiveness(raw, effectiveness), target),
@@ -115,8 +114,7 @@ namespace PrincesPalace.Domain.Combat.Session
             CombatantState actor,
             CombatantState target,
             DamageType? attackType,
-            DamageType? weakness,
-            DamageType? resistance,
+            ElementalAffinity affinity,
             float varianceRange,
             SeededRandom rng,
             Func<CombatantState, int, int> resolveWard)
@@ -135,7 +133,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
             if (attackType.HasValue)
             {
-                return AfterDefences(raw, attackType.Value, target, weakness, resistance,
+                return AfterDefences(raw, attackType.Value, target, affinity,
                                      varianceRange, rng, resolveWard);
             }
 

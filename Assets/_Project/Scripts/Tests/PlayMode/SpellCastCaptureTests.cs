@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using PrincesPalace;
+using PrincesPalace.Content;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Content;
@@ -41,7 +42,7 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator CaptureMudBurstCrossingTheStage()
+        public IEnumerator CaptureEverySpellShawnCastsAtAGiantRat()
         {
             if (!CanvasCapture.IsSupported)
             {
@@ -57,13 +58,25 @@ namespace PrincesPalace.PlayModeTests
             var fight = Object.FindAnyObjectByType<FightController>();
             Assert.IsNotNull(fight, "the fight scene has no controller");
 
+            // A GIANT RAT, not the Bog Witch, and the swap is the point.
+            //
+            // Every placement bug this file exists to catch was reported
+            // against the rat, and the rat is why: it is 675x306 of canvas,
+            // most of it length, so its ground line and its middle are nowhere
+            // near each other. A tall humanoid hides the difference -- an
+            // effect placed by either rule lands somewhere on it.
+            //
+            // spritePath spelled out because that is what the stage reads to
+            // find the art (see FightController.SpriteFolderFor); a synthetic
+            // enemy without one poses as a fallback plate and the capture shows
+            // a spell going off next to a grey rectangle.
             var hero = new CombatantState("Shawn", true, 300, 30, 40, 0, 10);
-            var foe = new CombatantState("Bog Witch", false, 5000, 10, 8, 0, 4);
+            var foe = new CombatantState("Giant Rat", false, 5000, 10, 8, 0, 4);
             var encounter = new CombatEncounter(new[] { hero }, new[] { foe });
             var kit = new PlayerKit("shawn", CharacterRole.Tank, null, null, null,
                 new ResolvedSpellTier(1, "Spark", 6, 1.5f, 0), level: 4);
-            var enemyKit = new EnemyKit(new ResolvedEnemy("witch", "Bog Witch", new StatBlock(), 5, 3, false,
-                DamageType.Physical, DamageType.Physical, 0), false);
+            var enemyKit = new EnemyKit(new ResolvedEnemy("rat", "Giant Rat", new StatBlock(), 5, 3, false,
+                DamageType.Physical, DamageType.Physical, 0, spritePath: "Enemies/rat"), false);
 
             fight.Bind(new FightSession(encounter, new List<PlayerKit> { kit },
                 new List<EnemyKit> { enemyKit }, new SeededRandom(5)), EncounterClass.Normal);
@@ -82,17 +95,20 @@ namespace PrincesPalace.PlayModeTests
             // Set, it froze every shot on the second frame of the sequence and
             // produced six identical pictures of a glyph.
 
-            yield return Shoot(fight, canvas, hero, foe, "Spells/mud_burst", true, 11, "away");
-            yield return Shoot(fight, canvas, foe, hero, "Spells/mud_burst", true, 11, "back");
+            yield return Shoot(fight, canvas, hero, foe, "mud_burst", "away");
+            yield return Shoot(fight, canvas, foe, hero, "mud_burst", "back");
 
-            // THE TWO STRIKE SHEETS, which nothing in content currently casts:
-            // frost_flare and lightning_bolt were Shawn's until they were cut
-            // for being unreachable, and their frames are still on disk. They
-            // are recomposed the same way mud_blast is, so they are captured
-            // the same way -- otherwise the only proof the recipe worked would
-            // be the contact sheet, which cannot show the dissolve.
-            yield return Shoot(fight, canvas, hero, foe, "Spells/frost_flare", false, 0, "frost");
-            yield return Shoot(fight, canvas, hero, foe, "Spells/lightning_bolt", false, 0, "bolt");
+            // All three of Shawn's spells, and all three read from CONTENT.
+            //
+            // They used to be captured through a presentation this file built
+            // by hand, which quietly made the pictures useless for the one
+            // thing they are for: a capture of a fixture is a capture of the
+            // fixture's anchor and the fixture's impact point, not of the
+            // spell's. Both of the placement bugs the impact point exists to
+            // fix were invisible here for exactly that reason, and both were
+            // reported by a player instead.
+            yield return Shoot(fight, canvas, hero, foe, "frost_flare", "frost");
+            yield return Shoot(fight, canvas, hero, foe, "lightning_bolt", "bolt");
         }
 
         // One cast, sampled six times across its own length. The sample points
@@ -100,8 +116,12 @@ namespace PrincesPalace.PlayModeTests
         // places if the spell's authored duration changes.
         private IEnumerator Shoot(FightController fight, Canvas canvas,
             CombatantState actor, CombatantState target,
-            string path, bool fromCaster, int impactFrame, string label)
+            string skillId, string label)
         {
+            var skill = ContentDatabase.Skills.FirstOrDefault(s => s != null && s.id == skillId);
+            Assert.IsNotNull(skill, $"'{skillId}' is not in skills.json");
+            Assert.IsFalse(string.IsNullOrEmpty(skill.vfx.path), $"'{skillId}' has no vfx path");
+
             // SLOWED DOWN FOR THE CAMERA, and it has to be. Writing a 1920x1080
             // PNG takes longer than a frame of the real 0.78s cast, so six shots
             // paced against the real duration all landed inside the first two
@@ -120,17 +140,18 @@ namespace PrincesPalace.PlayModeTests
             // capture picks.
             float[] at = { 0.06f, 0.22f, 0.29f, 0.50f, 0.57f, 0.74f, 0.86f, 0.97f };
 
+            // THE SHIPPED PRESENTATION, with only its duration overridden.
+            // Copy() rather than the asset's own object: a beat holding the
+            // catalogue's instance would let this capture edit the content
+            // every later test in the process reads.
+            var presentation = skill.vfx.Copy();
+            presentation.seconds = seconds;
+
             fight.PlaySpellVfxForTest(new CombatBeat
             {
                 Actor = actor,
                 Target = target,
-                Vfx = new SpellPresentation
-                {
-                    path = path,
-                    seconds = seconds,
-                    impactFrame = impactFrame,
-                    anchor = fromCaster ? "travel" : "target",
-                },
+                Vfx = presentation,
             });
 
             float started = Time.realtimeSinceStartup;
@@ -142,7 +163,7 @@ namespace PrincesPalace.PlayModeTests
                 }
 
                 CanvasCapture.RenderToFile(canvas,
-                    Path.Combine(OutputDir, $"MudBurst_{label}_{i}.png"), 1920, 1080);
+                    Path.Combine(OutputDir, $"SpellCast_{label}_{i}.png"), 1920, 1080);
             }
         }
     }

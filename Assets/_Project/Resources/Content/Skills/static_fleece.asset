@@ -36,6 +36,8 @@ MonoBehaviour:
     anchor: 
     size: 380
     departFrame: 0
+    impactX: -1
+    impactY: -1
     sfxPath: 
   appliesStatus: 0
   hasStatus: 0
@@ -57,4 +59,7 @@ MonoBehaviour:
     speedPercent: 0
     temporaryHealthPercent: 0
     splashPercent: 0
+  stance: 
+  summonEnemyId: 
+  summonCap: 0
   sortOrder: 2

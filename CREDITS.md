@@ -33,6 +33,19 @@ illustrations for a specific reason recorded in `EnemyIntentIcons`: the badge
 is ~46px over a painted battlefield, where a full-colour illustration reads as
 mud and cannot be recoloured to carry state.
 
+### `summon.png` is not one of them
+
+`Assets/_Project/Resources/Intent/summon.png` is drawn by this project, by
+`tools/art/make_summon_icon.py`, and carries no third-party licence. game-icons
+has nothing that reads as "another monster is joining" at badge size, and the
+nearest candidates were all rings — which is what the existing `skill.png`
+already is once it downsamples. The script's own header records why it ended up
+a bare pentagram rather than the summoning circle it started as.
+
+Regenerate it with `python tools/art/make_summon_icon.py` from the project root.
+It is committed as a PNG like every other icon; the script is kept so the shape
+can be retuned rather than redrawn by hand.
+
 ### What this obliges
 
 CC BY 3.0 requires attribution wherever the work is distributed. A build of this

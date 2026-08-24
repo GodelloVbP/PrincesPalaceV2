@@ -57,6 +57,14 @@ namespace PrincesPalace.Domain.Tests
                 @"RequirementCurve\.Percent\s*=",
                 @"RequirementCurve\.Percent\s*=\s*RequirementCurve\.DefaultPercent"),
 
+            // Written by the menu rather than by the test, usually -- but a
+            // fixture that opens the menu has stopped the clock just as surely
+            // as one that assigns it, and the restore is the same line either
+            // way.
+            ("Time.timeScale",
+                @"Time\.timeScale\s*=",
+                @"Time\.timeScale\s*=\s*1f"),
+
             ("RequirementCurve.GearRequirementsEnabled",
                 @"GearRequirementsEnabled\s*=",
                 @"GearRequirementsEnabled\s*=\s*false"),

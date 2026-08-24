@@ -145,6 +145,79 @@ namespace PrincesPalace.PlayModeTests
                 "pressing the SAME key again, with nothing left to switch to, should close the sheet");
         }
 
+        // ---- the clock the sheet borrows --------------------------------------
+
+        // CLOSING THE SHEET HAS TO GIVE THE PAUSE BACK.
+        //
+        // The sheet IS the system menu, and that menu pauses the game while it
+        // is up -- Time.timeScale = 0, restored by its Close(). SheetPanel
+        // opened through the controller and closed by deactivating the panel
+        // behind its back, so the pause was taken and never returned: every
+        // C-then-C left the clock stopped.
+        //
+        // Nothing on screen says so. The reward screen the player is looking
+        // at runs on unscaled time and behaves perfectly; the bill arrives one
+        // scene later, on the map, whose walk to the next room counts in
+        // Time.deltaTime and therefore never finishes. Reported as "I cannot
+        // continue to the next step after winning a battle and then opening
+        // the inventory".
+        //
+        // Asserted on the CLOCK rather than on the map, deliberately: the map
+        // is one victim of a stopped clock and every scaled coroutine in the
+        // game is another, so the clock is the claim worth pinning.
+        [UnityTest]
+        public IEnumerator ClosingTheSheetWithTheSameKeyRestoresTheClock()
+        {
+            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            var fight = Object.FindAnyObjectByType<FightController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(fight);
+
+            Assert.AreEqual(1f, Time.timeScale, 0.0001f, "fixture: the clock was not running to begin with");
+
+            fight.ToggleCharacterSheet(inventory: false);
+            yield return null;
+            Assert.AreEqual(0f, Time.timeScale, "opening the sheet did not pause the game");
+
+            fight.ToggleCharacterSheet(inventory: false);
+            yield return null;
+
+            Assert.IsFalse(fight.CharacterSheetIsOpen, "the sheet did not close");
+            Assert.AreEqual(1f, Time.timeScale, 0.0001f,
+                "the sheet closed but the game is still paused -- every scaled coroutine from here " +
+                "on is frozen, including the map walk that leads to the next room");
+        }
+
+        // The other key closes it too, by the switch-then-close route, and the
+        // clock has to come back the same way. Written out rather than folded
+        // into the case above because the two reach Set(open: false) from
+        // different branches of Toggle, and it is the CLOSE that was broken --
+        // a fix that only covered one of them would look right in one test.
+        [UnityTest]
+        public IEnumerator ClosingTheSheetAfterSwitchingPacksAlsoRestoresTheClock()
+        {
+            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            var fight = Object.FindAnyObjectByType<FightController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(fight);
+
+            fight.ToggleCharacterSheet(inventory: false);
+            yield return null;
+            fight.ToggleCharacterSheet(inventory: true);
+            yield return null;
+            Assert.IsTrue(fight.CharacterSheetIsOpen, "fixture: the other key closed it instead of switching");
+
+            fight.ToggleCharacterSheet(inventory: true);
+            yield return null;
+
+            Assert.IsFalse(fight.CharacterSheetIsOpen, "the sheet did not close");
+            Assert.AreEqual(1f, Time.timeScale, 0.0001f, "the sheet closed but the game is still paused");
+        }
+
         // The hub's copy is the live one. Same tree, opposite setting, and the
         // whole design rests on ScreenRegistry giving each scene the right one.
         [UnityTest]

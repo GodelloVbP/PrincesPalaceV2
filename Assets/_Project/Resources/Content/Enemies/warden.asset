@@ -26,8 +26,8 @@ MonoBehaviour:
   currencyReward: 60
   isBoss: 1
   minFloor: 2
-  weakness: 5
-  resistance: 1
+  weaknesses: 05000000
+  resistances: 01000000
   breakShieldPoints: 15
   spritePath: 
   facing: 1
@@ -42,6 +42,8 @@ MonoBehaviour:
     anchor: 
     size: 380
     departFrame: 0
+    impactX: -1
+    impactY: -1
     sfxPath: 
   abilities: []
   attackWeight: 1

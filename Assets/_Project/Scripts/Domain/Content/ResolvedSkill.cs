@@ -71,6 +71,15 @@ namespace PrincesPalace.Domain.Content
         // See RawSkillEntry.playerSelectable.
         public readonly bool PlayerSelectable;
 
+        // See RawSkillEntry.stance. Empty means the long-standing default:
+        // whoever resolves this skill plays their "cast" pose.
+        public readonly string Stance;
+
+        // See RawSkillEntry.summonEnemyId / summonCap. Null/0 for every
+        // skill but a Summon effect's.
+        public readonly string SummonEnemyId;
+        public readonly int SummonCap;
+
         public bool HasFixedDamage => DamageInstances != null && DamageInstances.Length > 0;
 
         public ResolvedSkill(string id, string displayName, string description, string characterId,
@@ -80,7 +89,7 @@ namespace PrincesPalace.Domain.Content
             StatusEffectType? appliesStatus = null, int statusMagnitude = 0, int statusDuration = 0,
             AbilityScoreBlock requirements = default, ScalingAxis scalingAxis = ScalingAxis.Auto,
             int queuePushSlots = 0, TransformGrant transform = null, bool playerSelectable = true,
-            int cooldownTurns = 0)
+            int cooldownTurns = 0, string stance = "", string summonEnemyId = "", int summonCap = 0)
         {
             CooldownTurns = cooldownTurns < 0 ? 0 : cooldownTurns;
             PlayerSelectable = playerSelectable;
@@ -109,6 +118,9 @@ namespace PrincesPalace.Domain.Content
             StatusDuration = statusDuration;
             Requirements = requirements;
             ScalingAxis = scalingAxis;
+            Stance = stance ?? "";
+            SummonEnemyId = summonEnemyId ?? "";
+            SummonCap = summonCap;
         }
     }
 }

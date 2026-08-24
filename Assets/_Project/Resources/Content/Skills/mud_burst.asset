@@ -32,9 +32,11 @@ MonoBehaviour:
     path: Spells/mud_burst
     seconds: 0.65
     impactFrame: 13
-    anchor: travel
+    anchor: travel-centre
     size: 380
     departFrame: 9
+    impactX: 0.69
+    impactY: 0.52
     sfxPath: 
   appliesStatus: 3
   hasStatus: 1
@@ -56,4 +58,7 @@ MonoBehaviour:
     speedPercent: 0
     temporaryHealthPercent: 0
     splashPercent: 0
+  stance: 
+  summonEnemyId: 
+  summonCap: 0
   sortOrder: 5

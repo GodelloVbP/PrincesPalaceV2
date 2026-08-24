@@ -31,11 +31,18 @@ namespace PrincesPalace.Content
         // See RawEnemyEntry.minFloor.
         public int minFloor = 1;
 
-        [Tooltip("A player attack of this type deals double damage to this enemy.")]
-        public DamageType weakness = DamageType.Fire;
+        [Tooltip("Player attacks of these types deal half again to this enemy. May name several, or none.")]
+        public DamageType[] weaknesses = { DamageType.Fire };
 
-        [Tooltip("A player attack of this type deals half damage to this enemy.")]
-        public DamageType resistance = DamageType.Physical;
+        [Tooltip("Player attacks of these types deal half to this enemy. May name several, or none. An element must never appear in both lists — ContentDatabase.Validation rejects that, because CombatMath scores a weakness first and the resistance would silently never apply.")]
+        public DamageType[] resistances = { DamageType.Physical };
+
+        // The pair as one value, which is the shape every damage path wants —
+        // see ElementalAffinity. Built on demand rather than stored, because
+        // the arrays above are what Unity serialises and a cached copy beside
+        // them would be a second source of truth that a hand-edit could
+        // desynchronise. Called once per enemy when a fight is built.
+        public ElementalAffinity Affinity => ElementalAffinity.Of(weaknesses, resistances);
 
         [Tooltip("Stagger meter. Every hit costs BreakShield.BaseDepletion, a weakness-matched hit costs BreakShield.WeaknessDepletion; hitting zero skips this enemy's next turn and drops its Defense to zero for the rest of that window. 0 means no stagger meter at all — this enemy cannot be broken.")]
         public int breakShieldPoints;

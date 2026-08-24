@@ -13,20 +13,27 @@ namespace PrincesPalace.Domain.Combat
     {
         private readonly TurnOrder<CombatantState> _turnOrder = new TurnOrder<CombatantState>();
 
+        // A LIST, not the IEnumerable it started as, since the roster it
+        // backs (Enemies) can now grow mid-fight — see TryAddEnemy. Never
+        // shrinks: the same "dead combatants stay in the list, only their
+        // turn is skipped" rule this class's own header already states for
+        // the encounter as a whole.
+        private readonly List<CombatantState> _enemies;
+
         public IReadOnlyList<CombatantState> PlayerParty { get; }
-        public IReadOnlyList<CombatantState> Enemies { get; }
+        public IReadOnlyList<CombatantState> Enemies => _enemies;
 
         public CombatEncounter(IEnumerable<CombatantState> playerParty, IEnumerable<CombatantState> enemies)
         {
             PlayerParty = playerParty.ToList();
-            Enemies = enemies.ToList();
+            _enemies = enemies.ToList();
 
-            if (PlayerParty.Count == 0 || Enemies.Count == 0)
+            if (PlayerParty.Count == 0 || _enemies.Count == 0)
             {
                 throw new ArgumentException("A CombatEncounter needs at least one combatant on each side.");
             }
 
-            foreach (var combatant in PlayerParty.Concat(Enemies))
+            foreach (var combatant in PlayerParty.Concat(_enemies))
             {
                 // Speed is used TWICE, for two different jobs. As initiative
                 // it decides who opens the fight and breaks exact ties. As a
@@ -98,6 +105,27 @@ namespace PrincesPalace.Domain.Combat
 
             var front = FrontEnemy;
             return front == null || target == front;
+        }
+
+        // Adds a combatant to the ENEMY side mid-fight — a summon, so far
+        // the only caller. Refuses past `maxSlots` (the stage has exactly
+        // that many visual positions on a side; see FightHudSpec.
+        // StageSlotsPerSide) rather than accepting a combatant the view has
+        // nowhere to put, which would leave it in the encounter, fighting,
+        // and permanently invisible.
+        //
+        // Joins the turn order at the BACK of the current schedule via the
+        // same AddCombatant/SetSpeed pair the constructor uses for every
+        // starting combatant — it does not act this round, only from the
+        // next one its own Speed earns it a turn.
+        public bool TryAddEnemy(CombatantState enemy, int maxSlots)
+        {
+            if (enemy == null || _enemies.Count >= maxSlots) return false;
+
+            _enemies.Add(enemy);
+            _turnOrder.AddCombatant(enemy, enemy.Speed);
+            _turnOrder.SetSpeed(enemy, enemy.Speed);
+            return true;
         }
 
         public bool IsOver => !LivingPlayerParty.Any() || !LivingEnemies.Any();

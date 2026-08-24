@@ -26,8 +26,8 @@ MonoBehaviour:
   currencyReward: 20
   isBoss: 0
   minFloor: 5
-  weakness: 3
-  resistance: 0
+  weaknesses: 03000000
+  resistances: 00000000
   breakShieldPoints: 9
   spritePath: Enemies/golem
   facing: 1
@@ -42,6 +42,8 @@ MonoBehaviour:
     anchor: 
     size: 380
     departFrame: 0
+    impactX: -1
+    impactY: -1
     sfxPath: 
   abilities:
   - skillId: boulder_slam

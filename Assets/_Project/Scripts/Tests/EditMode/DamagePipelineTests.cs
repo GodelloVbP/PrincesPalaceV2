@@ -25,9 +25,9 @@ namespace PrincesPalace.Domain.Tests
 
         private static DamagePipeline.Outcome Typed(
             int raw, DamageType type, CombatantState target,
-            DamageType? weakness = null, DamageType? resistance = null,
+            ElementalAffinity affinity = default,
             System.Func<CombatantState, int, int> ward = null) =>
-            DamagePipeline.AfterDefences(raw, type, target, weakness, resistance, NoVariance, null, ward);
+            DamagePipeline.AfterDefences(raw, type, target, affinity, NoVariance, null, ward);
 
         [Test]
         public void WithNoDefencesAtAll_TheRawFigureSurvives()
@@ -63,7 +63,7 @@ namespace PrincesPalace.Domain.Tests
             target.PhysicalResistance = 10;
 
             var outcome = Typed(30, DamageType.Physical, target,
-                weakness: DamageType.Physical, resistance: DamageType.Fire);
+                ElementalAffinity.Of(DamageType.Physical, DamageType.Fire));
 
             Assert.AreEqual(1.5f, outcome.Effectiveness, 0.0001f, "physical into a physical weakness");
             Assert.AreEqual(40, outcome.Damage);
@@ -79,7 +79,7 @@ namespace PrincesPalace.Domain.Tests
 
             int wardSaw = -1;
             var outcome = Typed(30, DamageType.Physical, target,
-                weakness: DamageType.Physical, resistance: DamageType.Fire,
+                ElementalAffinity.Of(DamageType.Physical, DamageType.Fire),
                 ward: (t, dmg) => { wardSaw = dmg; return dmg - 5; });
 
             Assert.AreEqual(40, wardSaw,
@@ -100,7 +100,7 @@ namespace PrincesPalace.Domain.Tests
             var seen = new List<int>();
             for (int i = 0; i < 40; i++)
             {
-                DamagePipeline.AfterDefences(100, DamageType.Fire, target, null, null,
+                DamagePipeline.AfterDefences(100, DamageType.Fire, target, ElementalAffinity.Neutral,
                     varianceRange: 0.2f, rng: rng,
                     resolveWard: (t, dmg) => { seen.Add(dmg); return dmg; });
             }
@@ -123,13 +123,13 @@ namespace PrincesPalace.Domain.Tests
             target.PhysicalResistance = 25;
 
             var withoutBonus = DamagePipeline.AfterDefences(
-                40, actor, target, attackType: null, weakness: null, resistance: null,
+                40, actor, target, attackType: null, affinity: ElementalAffinity.Neutral,
                 varianceRange: NoVariance, rng: null, resolveWard: null);
 
             // Drop the target low enough for the execute bonus to engage.
             target.CurrentHealth = 5;
             var withBonus = DamagePipeline.AfterDefences(
-                40, actor, target, attackType: null, weakness: null, resistance: null,
+                40, actor, target, attackType: null, affinity: ElementalAffinity.Neutral,
                 varianceRange: NoVariance, rng: null, resolveWard: null);
 
             Assert.GreaterOrEqual(withBonus.Damage, withoutBonus.Damage,
@@ -160,7 +160,7 @@ namespace PrincesPalace.Domain.Tests
             StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 20, 3);
 
             var outcome = DamagePipeline.AfterDefences(
-                20, actor, target, attackType: null, weakness: null, resistance: null,
+                20, actor, target, attackType: null, affinity: ElementalAffinity.Neutral,
                 varianceRange: NoVariance, rng: null, resolveWard: null);
 
             Assert.AreEqual(0, outcome.PoisonDetonation);
@@ -175,7 +175,7 @@ namespace PrincesPalace.Domain.Tests
             target.PhysicalResistance = 8;
 
             var outcome = DamagePipeline.AfterDefences(
-                30, actor, target, attackType: null, weakness: null, resistance: null,
+                30, actor, target, attackType: null, affinity: ElementalAffinity.Neutral,
                 varianceRange: NoVariance, rng: null, resolveWard: null);
 
             // Resistance softens rather than subtracts: 30 * 100/(8+100) = 27.

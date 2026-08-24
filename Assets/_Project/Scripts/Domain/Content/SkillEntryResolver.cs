@@ -181,6 +181,11 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            if (!TryResolveSummon(raw, label, effect, out int summonCap, out error))
+            {
+                return false;
+            }
+
             var requirementErrors = new List<string>();
             if (!AbilityScoreLineParser.TryParse(raw.requires, label, out var requirements, requirementErrors))
             {
@@ -251,8 +256,48 @@ namespace PrincesPalace.Domain.Content
                 raw.vfx.Copy(),
                 sortOrder,
                 appliesStatus, statusMagnitude, statusDuration, requirements, scalingAxis,
-                raw.queuePushSlots, transform, raw.playerSelectable, raw.cooldownTurns);
+                raw.queuePushSlots, transform, raw.playerSelectable, raw.cooldownTurns,
+                raw.stance?.Trim() ?? "", raw.summonEnemyId?.Trim() ?? "", summonCap);
             error = null;
+            return true;
+        }
+
+        // summonEnemyId and summonCap are required together, same
+        // both-fields-or-neither rule appliesStatus/statusMagnitude follow —
+        // and only mean anything on a Summon effect, same rule transform
+        // follows against every effect but its own.
+        private static bool TryResolveSummon(RawSkillEntry raw, string label, SkillEffect effect,
+            out int summonCap, out string error)
+        {
+            summonCap = 0;
+            error = null;
+
+            bool authored = !string.IsNullOrWhiteSpace(raw.summonEnemyId) || raw.summonCap >= 0;
+
+            if (effect != SkillEffect.Summon)
+            {
+                if (authored)
+                {
+                    error = $"{label}: summonEnemyId/summonCap have no meaning on a {effect} skill.";
+                    return false;
+                }
+
+                return true;
+            }
+
+            if (string.IsNullOrWhiteSpace(raw.summonEnemyId))
+            {
+                error = $"{label}: a Summon skill needs a summonEnemyId — without one it would resolve and call in nothing.";
+                return false;
+            }
+
+            if (raw.summonCap <= 0)
+            {
+                error = $"{label}: summonEnemyId is set to '{raw.summonEnemyId}', so summonCap is required and must be positive.";
+                return false;
+            }
+
+            summonCap = raw.summonCap;
             return true;
         }
 
@@ -451,7 +496,10 @@ namespace PrincesPalace.Domain.Content
                 // time when the caster's tree says so (see SkillEffect.Provoke)
                 // rather than being authored twice.
                 case SkillEffect.Transform:
-                case SkillEffect.Ward: return SkillTargeting.Self;
+                case SkillEffect.Ward:
+                // A summon happens to the caster's own side, not to
+                // whoever the player last clicked.
+                case SkillEffect.Summon: return SkillTargeting.Self;
                 // Shatter picks its own targets from the wards it detonates,
                 // and a Gift lands on an ally. Neither asks the player to
                 // click an enemy, so neither may default to SingleEnemy or

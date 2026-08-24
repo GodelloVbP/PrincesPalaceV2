@@ -244,12 +244,12 @@ namespace PrincesPalace.Domain.Combat
             return Scale(ScaledAttack(attacker, attacker.SkillScaling, powerMultiplier) - EffectiveDefense(target, attacker));
         }
 
-        // Rudimentary weakness/resistance: an attack matching the target's
-        // weakness deals double, matching its resistance deals half,
-        // anything else is unaffected. Weakness is checked first, so an
-        // enemy authored with the same type in both fields (a content
-        // mistake, not a valid design) resolves as a weakness rather than
-        // silently cancelling out.
+        // Rudimentary weakness/resistance: an attack matching one of the
+        // target's weaknesses deals half again, matching one of its
+        // resistances deals half, anything else is unaffected. Weakness is
+        // checked first, so an enemy authored with the same type in both sets
+        // (a content mistake, not a valid design -- see ElementalAffinity)
+        // resolves as a weakness rather than silently cancelling out.
         // Symmetric: +50% into a weakness, -50% into a resistance.
         //
         // Weakness was 2x (a full +100%) and is now 1.5x, so the pair finally
@@ -291,14 +291,21 @@ namespace PrincesPalace.Domain.Combat
             return Math.Max(1, Rounding.AwayFromZero(damage * StatusEffects.DamageTakenMultiplier(target.Statuses)));
         }
 
-        public static float EffectivenessMultiplier(DamageType attackType, DamageType weakness, DamageType resistance)
+        // ONE MATCH IS THE WHOLE ANSWER, however many elements the affinity
+        // names. Deliberately not additive: two weaknesses matched by one
+        // typed packet is impossible (a packet carries a single DamageType),
+        // and stacking multipliers per element would make "weak to four
+        // things" a different KIND of vulnerability rather than a broader one.
+        // A troll that burns and freezes takes 1.5x from fire and 1.5x from
+        // ice, not 2.25x from either.
+        public static float EffectivenessMultiplier(DamageType attackType, ElementalAffinity affinity)
         {
-            if (attackType == weakness)
+            if (affinity.IsWeakTo(attackType))
             {
                 return WeaknessMultiplier;
             }
 
-            if (attackType == resistance)
+            if (affinity.Resists(attackType))
             {
                 return ResistanceMultiplier;
             }

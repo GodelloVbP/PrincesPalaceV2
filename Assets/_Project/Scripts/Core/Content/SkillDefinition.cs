@@ -91,6 +91,15 @@ namespace PrincesPalace.Content
         [Tooltip("What a Transform skill turns the caster into. Left unauthored — and rejected by the content resolver — on every other effect.")]
         public TransformGrant transform;
 
+        [Tooltip("Which of the caster's own stance folders plays while this skill resolves. Empty means the default: \"cast\".")]
+        public string stance = "";
+
+        [Tooltip("Summon only: the enemy id this skill calls in on the caster's own side.")]
+        public string summonEnemyId = "";
+
+        [Tooltip("Summon only: don't summon another one once the caster's side already fields this many living copies of summonEnemyId.")]
+        public int summonCap;
+
         // A spell that deals exactly what it says, rather than scaling off
         // the caster's Attack.
         public bool HasFixedDamage => damageInstances != null && damageInstances.Length > 0;

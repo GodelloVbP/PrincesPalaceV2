@@ -84,7 +84,11 @@ namespace PrincesPalace.Domain.Tests
         {
             EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { Minimal() }, out var resolved, out _);
 
-            Assert.AreNotEqual(resolved[0].Weakness, resolved[0].Resistance);
+            var affinity = resolved[0].Affinity;
+
+            Assert.AreEqual(1, affinity.Weaknesses.Count, "derivation invents ONE weakness, not a set");
+            Assert.AreEqual(1, affinity.Resistances.Count, "derivation invents ONE resistance, not a set");
+            Assert.AreNotEqual(affinity.Weaknesses[0], affinity.Resistances[0]);
         }
 
         [Test]
@@ -93,8 +97,7 @@ namespace PrincesPalace.Domain.Tests
             EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { Minimal(id: "goblin") }, out var first, out _);
             EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { Minimal(id: "goblin") }, out var second, out _);
 
-            Assert.AreEqual(first[0].Weakness, second[0].Weakness);
-            Assert.AreEqual(first[0].Resistance, second[0].Resistance);
+            Assert.AreEqual(first[0].Affinity, second[0].Affinity);
         }
 
         [Test]
@@ -137,8 +140,75 @@ namespace PrincesPalace.Domain.Tests
 
             EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { entry }, out var resolved, out _);
 
-            Assert.AreEqual(DamageType.Fire, resolved[0].Weakness);
-            Assert.AreEqual(DamageType.Ice, resolved[0].Resistance);
+            Assert.AreEqual(new[] { DamageType.Fire }, resolved[0].Affinity.Weaknesses);
+            Assert.AreEqual(new[] { DamageType.Ice }, resolved[0].Affinity.Resistances);
+        }
+
+        // ---- lists, which is the point of the whole grammar -----------------
+
+        [Test]
+        public void SeveralWeaknessesAndResistances_AreAllKept()
+        {
+            var entry = Minimal();
+            entry.weakness = "Fire, Ice";
+            entry.resistance = "Physical, Poison";
+
+            bool ok = EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { entry }, out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.AreEqual(new[] { DamageType.Fire, DamageType.Ice }, resolved[0].Affinity.Weaknesses);
+            Assert.AreEqual(new[] { DamageType.Physical, DamageType.Poison }, resolved[0].Affinity.Resistances);
+        }
+
+        // Whatever order an author writes them in, the affinity is a SET and
+        // reads back in DamageType declaration order -- so a glossary row does
+        // not reshuffle itself because someone tidied the JSON.
+        [Test]
+        public void ListOrderAndSpacingDoNotChangeTheResult()
+        {
+            var tidy = Minimal();
+            tidy.weakness = "Fire, Ice";
+
+            var messy = Minimal();
+            messy.weakness = "  ice ,fire,  ";
+
+            EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { tidy }, out var a, out _);
+            EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { messy }, out var b, out _);
+
+            Assert.AreEqual(new[] { DamageType.Fire, DamageType.Ice }, a[0].Affinity.Weaknesses);
+            Assert.AreEqual(a[0].Affinity, b[0].Affinity);
+        }
+
+        // The difference an empty list cannot express, which is why the keyword
+        // exists at all -- see RawEnemyEntry.weakness.
+        [Test]
+        public void NoneIsAnAuthoredAnswer_NotAnOmissionToBeDerivedOver()
+        {
+            var entry = Minimal();
+            entry.weakness = "none";
+            entry.resistance = "Fire";
+
+            bool ok = EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { entry }, out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.IsEmpty(resolved[0].Affinity.Weaknesses,
+                "\"none\" was derived over, so a monster can never be authored as having no weakness");
+            Assert.AreEqual(new[] { DamageType.Fire }, resolved[0].Affinity.Resistances);
+        }
+
+        // Six elements, and a monster resisting five of them leaves exactly one
+        // free. The single-step version of this walk could land on a collision
+        // and hand back a contradiction the very next check rejects.
+        [Test]
+        public void DerivingAWeaknessAroundALongResistanceList_FindsTheOneFreeElement()
+        {
+            var entry = Minimal();
+            entry.resistance = "Physical, Fire, Ice, Nature, Poison";
+
+            bool ok = EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { entry }, out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.AreEqual(new[] { DamageType.Arcane }, resolved[0].Affinity.Weaknesses);
         }
 
         [Test]
@@ -151,8 +221,8 @@ namespace PrincesPalace.Domain.Tests
             bool ok = EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { entry }, out var resolved, out var errors);
 
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
-            Assert.AreEqual(DamageType.Fire, resolved[0].Weakness);
-            Assert.AreEqual(DamageType.Ice, resolved[0].Resistance);
+            Assert.AreEqual(new[] { DamageType.Fire }, resolved[0].Affinity.Weaknesses);
+            Assert.AreEqual(new[] { DamageType.Ice }, resolved[0].Affinity.Resistances);
         }
 
         [Test]
@@ -163,8 +233,8 @@ namespace PrincesPalace.Domain.Tests
 
             EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { entry }, out var resolved, out _);
 
-            Assert.AreEqual(DamageType.Physical, resolved[0].Weakness);
-            Assert.AreNotEqual(DamageType.Physical, resolved[0].Resistance);
+            Assert.AreEqual(new[] { DamageType.Physical }, resolved[0].Affinity.Weaknesses);
+            Assert.IsFalse(resolved[0].Affinity.Resists(DamageType.Physical));
         }
 
         [Test]
@@ -226,7 +296,25 @@ namespace PrincesPalace.Domain.Tests
             bool ok = EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { entry }, out _, out var errors);
 
             Assert.IsFalse(ok);
-            StringAssert.Contains("can't both be", errors[0]);
+            StringAssert.Contains("Ice", errors[0]);
+            StringAssert.Contains("both a weakness and a resistance", errors[0]);
+        }
+
+        // The same mistake, but buried in a list where it is easy to miss by
+        // eye -- which is the case the equality check this replaced could not
+        // have caught at all.
+        [Test]
+        public void AnElementOnBothLists_IsRejectedAndNamed()
+        {
+            var entry = Minimal();
+            entry.weakness = "Fire, Ice";
+            entry.resistance = "Poison, Ice";
+
+            bool ok = EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { entry }, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            StringAssert.Contains("Ice", errors[0]);
+            StringAssert.DoesNotContain("Fire", errors[0], "only the contradicting element should be named");
         }
 
         [Test]

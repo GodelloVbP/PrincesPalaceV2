@@ -3,6 +3,7 @@ using System.Linq;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Glossary;
+using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace
 {
@@ -85,9 +86,38 @@ namespace PrincesPalace
                     $"{e.baseStats.maxHealth} HP  ·  {e.baseStats.attack} ATK{(e.isBoss ? "  ·  BOSS" : "")}",
                     // Enemies carry no authored prose, so the row says what it
                     // actually knows rather than showing an empty plate.
-                    $"Weak to {e.weakness}. Resists {e.resistance}.",
+                    AffinityLine(e),
                     iconId: e.id))
                 .ToList();
+
+        // "Weak to Fire and Ice. Resists Physical." — and each half disappears
+        // rather than reading "Weak to ." when a monster is authored with none.
+        // A monster with neither says so outright: a blank description row looks
+        // like content that failed to load.
+        private static string AffinityLine(EnemyDefinition enemy)
+        {
+            var affinity = enemy.Affinity;
+            var parts = new List<string>();
+
+            if (affinity.Weaknesses.Count > 0)
+            {
+                parts.Add($"Weak to {Listed(affinity.Weaknesses)}.");
+            }
+
+            if (affinity.Resistances.Count > 0)
+            {
+                parts.Add($"Resists {Listed(affinity.Resistances)}.");
+            }
+
+            return parts.Count > 0 ? string.Join(" ", parts) : "Takes every element the same way.";
+        }
+
+        private static string Listed(IReadOnlyList<DamageType> types)
+        {
+            if (types.Count == 1) return types[0].ToString();
+
+            return string.Join(", ", types.Take(types.Count - 1)) + " and " + types[types.Count - 1];
+        }
 
         private static List<GlossaryEntry> Spells() =>
             ContentDatabase.Skills

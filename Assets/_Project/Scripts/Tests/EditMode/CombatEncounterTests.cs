@@ -223,5 +223,67 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsTrue(enemyEverActed, "The enemy must get a turn eventually, however outpaced");
         }
+
+        // ---- TryAddEnemy (Forest Warden's Roar) --------------------------------
+
+        [Test]
+        public void TryAddEnemy_JoinsTheLivingRosterUnderTheCap()
+        {
+            var player = Fighter("Player", true, speed: 5);
+            var boss = Fighter("Boss", false, speed: 5);
+            var encounter = new CombatEncounter(new[] { player }, new[] { boss });
+
+            var rat = Fighter("Rat", false, speed: 5);
+            bool added = encounter.TryAddEnemy(rat, maxSlots: 3);
+
+            Assert.IsTrue(added);
+            CollectionAssert.Contains(encounter.Enemies, rat);
+            CollectionAssert.Contains(encounter.LivingEnemies.ToList(), rat);
+        }
+
+        [Test]
+        public void TryAddEnemy_RefusesOnceTheStageIsFull()
+        {
+            var player = Fighter("Player", true, speed: 5);
+            var boss = Fighter("Boss", false, speed: 5);
+            var firstRat = Fighter("Rat 1", false, speed: 5);
+            var encounter = new CombatEncounter(new[] { player }, new[] { boss, firstRat });
+
+            var secondRat = Fighter("Rat 2", false, speed: 5);
+            bool added = encounter.TryAddEnemy(secondRat, maxSlots: 2);
+
+            Assert.IsFalse(added, "the stage only has 2 slots and both are already taken");
+            CollectionAssert.DoesNotContain(encounter.Enemies, secondRat);
+        }
+
+        [Test]
+        public void TryAddEnemy_TheNewArrivalEventuallyGetsATurn()
+        {
+            var player = Fighter("Player", true, speed: 1);
+            var boss = Fighter("Boss", false, speed: 1);
+            var encounter = new CombatEncounter(new[] { player }, new[] { boss });
+
+            var rat = Fighter("Rat", false, speed: 20);
+            Assert.IsTrue(encounter.TryAddEnemy(rat, maxSlots: 3));
+
+            bool ratActed = false;
+            for (int i = 0; i < 30 && !ratActed; i++)
+            {
+                encounter.AdvanceTurn();
+                ratActed = ReferenceEquals(encounter.Current, rat);
+            }
+
+            Assert.IsTrue(ratActed, "a summon that never enters the turn order would stand on stage forever doing nothing");
+        }
+
+        [Test]
+        public void TryAddEnemy_RefusesANullCombatant()
+        {
+            var player = Fighter("Player", true, speed: 5);
+            var boss = Fighter("Boss", false, speed: 5);
+            var encounter = new CombatEncounter(new[] { player }, new[] { boss });
+
+            Assert.IsFalse(encounter.TryAddEnemy(null, maxSlots: 3));
+        }
     }
 }

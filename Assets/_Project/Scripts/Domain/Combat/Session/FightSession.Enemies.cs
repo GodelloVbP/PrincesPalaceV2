@@ -45,12 +45,43 @@ namespace PrincesPalace.Domain.Combat.Session
                 // run keeps its shape -- but it now chooses among everything the
                 // monster can do rather than between its two hardcoded options.
                 var kit = SourceFor(enemy);
-                var pool = kit?.Abilities;
+                var pool = EffectivePoolFor(kit?.Abilities);
                 int chosen = EnemyAbilityDraw.Pick(pool, _rng?.NextFloat() ?? 0f);
 
                 var target = PickRandomLivingPlayerTarget();
                 _intents[enemy] = BuildIntent(enemy, target, pool, chosen);
             }
+        }
+
+        // The pool a draw actually considers, with any Summon ability
+        // already at its cap weighted to zero for THIS draw. The authored
+        // weight on the kit itself is untouched — capped this turn does not
+        // mean gone, only skipped over in favour of whatever else the
+        // monster can do, exactly the way EnemyAbilityDraw already treats
+        // any other zero-weight entry.
+        //
+        // SAME LENGTH, SAME ORDER as the source pool, always -- the index a
+        // draw commits to is looked back up against kit.Abilities directly
+        // at resolution time (see ResolveEnemyAction), so this can adjust
+        // weights but can never reshuffle or drop an entry.
+        private List<EnemyAbility> EffectivePoolFor(IReadOnlyList<EnemyAbility> abilities)
+        {
+            if (abilities == null) return null;
+
+            List<EnemyAbility> effective = null;
+            for (int i = 0; i < abilities.Count; i++)
+            {
+                var ability = abilities[i];
+                if (!ability.HasSkill || ability.Skill.Effect != SkillEffect.Summon) continue;
+
+                int living = _encounter.LivingEnemies.Count(e => SourceFor(e)?.Source.Id == ability.Skill.SummonEnemyId);
+                if (living < ability.Skill.SummonCap) continue;
+
+                effective ??= new List<EnemyAbility>(abilities);
+                effective[i] = EnemyAbility.Of(ability.Skill, 0f);
+            }
+
+            return effective ?? abilities.ToList();
         }
 
         private EnemyIntent BuildIntent(CombatantState enemy, CombatantState target,
@@ -128,8 +159,7 @@ namespace PrincesPalace.Domain.Combat.Session
             return DamagePipeline.AfterDefences(
                 raw, enemy, against,
                 attackType: castType,
-                weakness: SourceFor(against)?.Weakness,
-                resistance: SourceFor(against)?.Resistance,
+                affinity: AffinityOf(against),
                 varianceRange: 0f, rng: null, resolveWard: null).Damage;
         }
 
@@ -154,7 +184,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
             return DamagePipeline.AfterDefences(
                 damage, enemy, target,
-                attackType: null, weakness: null, resistance: null,
+                attackType: null, affinity: ElementalAffinity.Neutral,
                 varianceRange: 0f, rng: null, resolveWard: null).Damage;
         }
 
@@ -190,34 +220,50 @@ namespace PrincesPalace.Domain.Combat.Session
             return string.IsNullOrEmpty(intent) || intent == IntentAttack ? "" : "\n" + intent + "!";
         }
 
-        // Resolves every enemy turn between now and the player's next one, in
-        // full, synchronously -- the whole round lands before the view draws a
-        // single frame of it, exactly as v1 did.
+        // Resolves every enemy turn between now and the player's next REAL one,
+        // in full, synchronously -- the whole round lands before the view draws
+        // a single frame of it, exactly as v1 did.
+        //
+        // "Real" is doing work in that sentence since Grapple: a stunned PLAYER
+        // turn is a turn nobody can act on either, and belongs on the same
+        // auto-skip path an enemy's already took -- not stopped on and handed
+        // to a player with no legal action to take. ResolveSkippedTurn already
+        // does not care which side its combatant is on; it only ever checked a
+        // broken stagger meter and a Stun status, and a player combatant is
+        // never built with a BreakShield (see FightEncounterAdapter's two
+        // ToCombatant overloads), so the broken half of that check is simply
+        // always false for them -- Stun is the only one that can ever fire
+        // here, which is exactly what Grapple needs.
         public void AutoResolveEnemyTurns()
         {
-            while (!_encounter.IsOver && !_encounter.IsPlayerTurn)
+            while (!_encounter.IsOver)
             {
-                var enemy = _encounter.Current;
+                var current = _encounter.Current;
 
                 // A status tick (Poison) can kill the very combatant whose turn
                 // it was ticking for, inside GrantTurnStart -- before this loop
                 // ever gets to resolve an action for them. CombatEncounter only
                 // re-checks who is alive inside AdvanceTurn, so without this a
-                // dead enemy would still swing once more on the strength of
+                // dead combatant would still swing once more on the strength of
                 // having been alive when the schedule picked it.
-                if (!enemy.IsAlive)
+                if (!current.IsAlive)
                 {
                     if (!StepToNextTurn()) break;
                     continue;
                 }
 
-                if (ResolveSkippedTurn(enemy))
+                if (ResolveSkippedTurn(current))
                 {
                     if (!StepToNextTurn()) break;
                     continue;
                 }
 
-                ResolveEnemyAction(enemy);
+                // A genuine, unskipped PLAYER turn is where this loop stops and
+                // hands control back -- the one case that was always this
+                // method's whole reason to return early.
+                if (current.IsPlayerSide) break;
+
+                ResolveEnemyAction(current);
 
                 if (!StepToNextTurn()) break;
             }
@@ -347,7 +393,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // implementation of half of it.
             if (chosen.HasValue && chosen.Value.HasSkill)
             {
-                SetStance(enemy, Stances.Cast);
+                SetStance(enemy, StanceFor(chosen.Value.Skill));
                 ResolveCharacterSkill(enemy, chosen.Value.Skill, target, 0);
                 return;
             }
@@ -381,7 +427,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // "hits you with whatever it has".
             damage = DamagePipeline.AfterDefences(
                 damage, enemy, target,
-                attackType: null, weakness: null, resistance: null,
+                attackType: null, affinity: ElementalAffinity.Neutral,
                 varianceRange: DamageVarianceRange,
                 rng: _rng,
                 resolveWard: ResolveWard).Damage;

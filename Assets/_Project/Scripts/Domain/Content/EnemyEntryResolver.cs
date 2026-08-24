@@ -117,36 +117,51 @@ namespace PrincesPalace.Domain.Content
                 ? raw.breakShieldPoints
                 : Math.Max(MinimumBreakShieldPoints, (int)MathF.Round(raw.maxHealth * BreakShieldPerHealth));
 
-            if (!TryResolveDamageType(raw.weakness, label, "weakness", out var weakness, out error))
+            if (!TryResolveDamageTypes(raw.weakness, label, "weakness", out var weaknesses, out error))
             {
                 return false;
             }
 
-            if (!TryResolveDamageType(raw.resistance, label, "resistance", out var resistance, out error))
+            if (!TryResolveDamageTypes(raw.resistance, label, "resistance", out var resistances, out error))
             {
                 return false;
             }
 
+            // DERIVATION IS STILL SINGLE-ELEMENT, and stays that way on purpose.
+            // It exists so an unauthored monster is not neutral to everything,
+            // not to invent a creature's elemental identity -- guessing two
+            // weaknesses off an id hash would be twice as much fiction, and
+            // twice as much for a real authoring pass to undo.
             bool weaknessWasBlank = string.IsNullOrWhiteSpace(raw.weakness);
             bool resistanceWasBlank = string.IsNullOrWhiteSpace(raw.resistance);
             if (weaknessWasBlank && resistanceWasBlank)
             {
                 // Neither given: derive both from the id, distinct by construction.
-                DeriveDamageTypePair(raw.id, out weakness, out resistance);
+                DeriveDamageTypePair(raw.id, out var derivedWeakness, out var derivedResistance);
+                weaknesses = new List<DamageType> { derivedWeakness };
+                resistances = new List<DamageType> { derivedResistance };
             }
             else if (weaknessWasBlank)
             {
-                // Only weakness omitted: derive one that isn't the author's own explicit resistance.
-                weakness = DeriveSingleDamageType(raw.id, exclude: resistance);
+                // Only weakness omitted: derive one that isn't among the author's
+                // own explicit resistances.
+                weaknesses = new List<DamageType> { DeriveSingleDamageType(raw.id, exclude: resistances) };
             }
             else if (resistanceWasBlank)
             {
-                resistance = DeriveSingleDamageType(raw.id, exclude: weakness);
+                resistances = new List<DamageType> { DeriveSingleDamageType(raw.id, exclude: weaknesses) };
             }
 
-            if (weakness == resistance)
+            // An element claimed as both is the one thing multi-element
+            // affinities cannot resolve for themselves -- CombatMath would score
+            // it as a weakness and the resistance would silently never apply.
+            // Named in full rather than one at a time, so fixing three of them
+            // takes one build instead of three.
+            var contradictions = weaknesses.Where(resistances.Contains).ToList();
+            if (contradictions.Count > 0)
             {
-                error = $"{label}: weakness and resistance can't both be '{weakness}'.";
+                error = $"{label}: {string.Join(" and ", contradictions)} " +
+                        $"{(contradictions.Count == 1 ? "is" : "are")} listed as both a weakness and a resistance.";
                 return false;
             }
 
@@ -216,7 +231,8 @@ namespace PrincesPalace.Domain.Content
             if (!ArtPathConvention.Check(label, "vfx.sfxPath", raw.vfx.sfxPath, out error)) return false;
 
             var baseStats = new StatBlock(raw.maxHealth, speed, attack, defense);
-            resolvedEnemy = new ResolvedEnemy(raw.id, raw.displayName, baseStats, expReward, currencyReward, raw.isBoss, weakness, resistance, sortOrder,
+            resolvedEnemy = new ResolvedEnemy(raw.id, raw.displayName, baseStats, expReward, currencyReward, raw.isBoss,
+                ElementalAffinity.Of(weaknesses, resistances), sortOrder,
                 (raw.spritePath ?? string.Empty).Trim(), facing, raw.active,
                 (raw.skillName ?? string.Empty).Trim(),
                 raw.skillPower < 0f ? DefaultSkillPower : raw.skillPower,
@@ -278,26 +294,57 @@ namespace PrincesPalace.Domain.Content
             return true;
         }
 
-        private static bool TryResolveDamageType(string value, string label, string fieldName, out DamageType result, out string error)
+        // The keyword for "this monster genuinely has none", as against a blank
+        // field meaning "I did not say". See RawEnemyEntry.weakness.
+        private const string NoneKeyword = "none";
+
+        // Parses one comma-separated element list.
+        //
+        // Returns an EMPTY list for a blank field, which the caller reads as
+        // "omitted, derive it", and an empty list for "none", which it reads as
+        // authored -- the two are told apart at the call site by re-checking the
+        // raw string, because the difference is a fact about the JSON rather
+        // than about the parsed result.
+        //
+        // A duplicate inside one list is harmless (the affinity is a set, so
+        // "Fire, Fire" is "Fire") and is not worth failing a build over.
+        private static bool TryResolveDamageTypes(string value, string label, string fieldName,
+                                                  out List<DamageType> result, out string error)
         {
+            result = new List<DamageType>();
+            error = null;
+
             if (string.IsNullOrWhiteSpace(value))
             {
-                result = default;
-                error = null;
                 return true; // resolved later by DeriveDamageTypePair
             }
 
-            if (Enum.TryParse(value, ignoreCase: true, out DamageType parsed))
+            if (string.Equals(value.Trim(), NoneKeyword, StringComparison.OrdinalIgnoreCase))
             {
-                result = parsed;
-                error = null;
-                return true;
+                return true; // authored as none -- see NoneKeyword
             }
 
-            result = default;
-            string validOptions = string.Join(", ", Enum.GetNames(typeof(DamageType)));
-            error = $"{label}: {fieldName} '{value}' isn't a valid damage type. Valid options: {validOptions}.";
-            return false;
+            foreach (var piece in value.Split(','))
+            {
+                string name = piece.Trim();
+
+                // A trailing comma, or "Fire,, Ice". Skipped rather than
+                // rejected: nothing about it is ambiguous.
+                if (name.Length == 0) continue;
+
+                if (!Enum.TryParse(name, ignoreCase: true, out DamageType parsed))
+                {
+                    string validOptions = string.Join(", ", Enum.GetNames(typeof(DamageType)));
+                    error = $"{label}: {fieldName} '{name}' isn't a valid damage type. " +
+                            $"Valid options: {validOptions}, or \"{NoneKeyword}\".";
+                    result = null;
+                    return false;
+                }
+
+                if (!result.Contains(parsed)) result.Add(parsed);
+            }
+
+            return true;
         }
 
         // Deterministic (same id -> same pair, every regeneration) so
@@ -316,18 +363,29 @@ namespace PrincesPalace.Domain.Content
 
         // Same deterministic id-hash approach as DeriveDamageTypePair, for
         // the case where only ONE of weakness/resistance was left blank —
-        // picks a value that can't collide with the author's own explicit
-        // choice for the other field.
-        private static DamageType DeriveSingleDamageType(string id, DamageType exclude)
+        // picks a value that can't collide with anything the author explicitly
+        // listed on the other side.
+        //
+        // Walks forward until it finds a free element rather than stepping once,
+        // because `exclude` is a LIST now: a monster authored as resisting four
+        // things has four ways for a single step to land on another collision.
+        // Six elements against at most five exclusions means this always
+        // terminates with something to return.
+        private static DamageType DeriveSingleDamageType(string id, IReadOnlyList<DamageType> exclude)
         {
             var values = (DamageType[])Enum.GetValues(typeof(DamageType));
             int hash = Math.Abs((id ?? string.Empty).GetHashCode());
             int index = hash % values.Length;
-            if (values[index] == exclude)
+
+            for (int step = 0; step < values.Length; step++)
             {
-                index = (index + 1) % values.Length;
+                var candidate = values[(index + step) % values.Length];
+                if (!exclude.Contains(candidate)) return candidate;
             }
 
+            // Every element excluded, which content validation would have to
+            // have let through. Neutral-ish rather than a throw: the house style
+            // is that bad content degrades into the game, not out of it.
             return values[index];
         }
     }

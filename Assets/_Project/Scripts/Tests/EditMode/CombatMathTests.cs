@@ -331,21 +331,24 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void EffectivenessMultiplier_MatchingWeakness_AddsHalfAgain()
         {
-            float multiplier = CombatMath.EffectivenessMultiplier(DamageType.Fire, weakness: DamageType.Fire, resistance: DamageType.Ice);
+            float multiplier = CombatMath.EffectivenessMultiplier(
+                DamageType.Fire, ElementalAffinity.Of(DamageType.Fire, DamageType.Ice));
             Assert.AreEqual(1.5f, multiplier);
         }
 
         [Test]
         public void EffectivenessMultiplier_MatchingResistance_HalvesDamage()
         {
-            float multiplier = CombatMath.EffectivenessMultiplier(DamageType.Ice, weakness: DamageType.Fire, resistance: DamageType.Ice);
+            float multiplier = CombatMath.EffectivenessMultiplier(
+                DamageType.Ice, ElementalAffinity.Of(DamageType.Fire, DamageType.Ice));
             Assert.AreEqual(0.5f, multiplier);
         }
 
         [Test]
         public void EffectivenessMultiplier_NeitherMatch_IsNeutral()
         {
-            float multiplier = CombatMath.EffectivenessMultiplier(DamageType.Arcane, weakness: DamageType.Fire, resistance: DamageType.Ice);
+            float multiplier = CombatMath.EffectivenessMultiplier(
+                DamageType.Arcane, ElementalAffinity.Of(DamageType.Fire, DamageType.Ice));
             Assert.AreEqual(1f, multiplier);
         }
 
@@ -355,8 +358,57 @@ namespace PrincesPalace.Domain.Tests
             // Not a valid authoring choice (an enemy shouldn't be weak to and
             // resistant to the same type), but the function still needs a
             // defined answer rather than an ambiguous one.
-            float multiplier = CombatMath.EffectivenessMultiplier(DamageType.Fire, weakness: DamageType.Fire, resistance: DamageType.Fire);
+            float multiplier = CombatMath.EffectivenessMultiplier(
+                DamageType.Fire, ElementalAffinity.Of(DamageType.Fire, DamageType.Fire));
             Assert.AreEqual(1.5f, multiplier);
+        }
+
+        // ---- several elements a side ---------------------------------------
+
+        // The limit this whole type exists to remove. A forest troll that burns
+        // AND freezes, and shrugs off blades AND venom, is now authorable, and
+        // every one of those four answers has to come out of the same call.
+        [Test]
+        public void EffectivenessMultiplier_ScoresEveryElementInEitherSet()
+        {
+            var troll = ElementalAffinity.Of(
+                new[] { DamageType.Fire, DamageType.Ice },
+                new[] { DamageType.Physical, DamageType.Poison });
+
+            Assert.AreEqual(1.5f, CombatMath.EffectivenessMultiplier(DamageType.Fire, troll), "first weakness");
+            Assert.AreEqual(1.5f, CombatMath.EffectivenessMultiplier(DamageType.Ice, troll), "second weakness");
+            Assert.AreEqual(0.5f, CombatMath.EffectivenessMultiplier(DamageType.Physical, troll), "first resistance");
+            Assert.AreEqual(0.5f, CombatMath.EffectivenessMultiplier(DamageType.Poison, troll), "second resistance");
+            Assert.AreEqual(1f, CombatMath.EffectivenessMultiplier(DamageType.Arcane, troll), "named by neither set");
+            Assert.AreEqual(1f, CombatMath.EffectivenessMultiplier(DamageType.Nature, troll), "named by neither set");
+        }
+
+        // A LONGER LIST IS BROADER, NOT DEEPER, and this is the assertion that
+        // stops someone "fixing" the multiplier into an accumulator later. Two
+        // weaknesses means two elements that each deal 1.5x -- never 2.25x.
+        [Test]
+        public void EffectivenessMultiplier_DoesNotCompoundAcrossASetsOwnEntries()
+        {
+            var many = ElementalAffinity.Of(
+                new[] { DamageType.Fire, DamageType.Ice, DamageType.Arcane },
+                new[] { DamageType.Physical });
+
+            Assert.AreEqual(1.5f, CombatMath.EffectivenessMultiplier(DamageType.Fire, many));
+        }
+
+        // default(ElementalAffinity) has to be the neutral answer, because that
+        // is what every player-side combatant and every fixture with no
+        // definition behind it gets -- see DamagePipeline.AfterDefences.
+        [Test]
+        public void EffectivenessMultiplier_AnEmptyAffinityIsNeutralToEverything()
+        {
+            foreach (DamageType type in System.Enum.GetValues(typeof(DamageType)))
+            {
+                Assert.AreEqual(1f, CombatMath.EffectivenessMultiplier(type, ElementalAffinity.Neutral),
+                    $"{type} against nothing in particular");
+                Assert.AreEqual(1f, CombatMath.EffectivenessMultiplier(type, default),
+                    $"{type} against default(ElementalAffinity)");
+            }
         }
 
         // A multi-element spell weighs each packet on its own. This is the
@@ -373,15 +425,14 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AMultiElementSpell_ResolvesEachPacketAgainstTheTargetSeparately()
         {
-            const DamageType weakness = DamageType.Fire;
-            const DamageType resistance = DamageType.Ice;
+            var affinity = ElementalAffinity.Of(DamageType.Fire, DamageType.Ice);
 
             int fire = CombatMath.ApplyEffectiveness(25,
-                CombatMath.EffectivenessMultiplier(DamageType.Fire, weakness, resistance));
+                CombatMath.EffectivenessMultiplier(DamageType.Fire, affinity));
             int frost = CombatMath.ApplyEffectiveness(25,
-                CombatMath.EffectivenessMultiplier(DamageType.Ice, weakness, resistance));
+                CombatMath.EffectivenessMultiplier(DamageType.Ice, affinity));
             int arcane = CombatMath.ApplyEffectiveness(50,
-                CombatMath.EffectivenessMultiplier(DamageType.Arcane, weakness, resistance));
+                CombatMath.EffectivenessMultiplier(DamageType.Arcane, affinity));
 
             Assert.AreEqual(38, fire, "Into the weakness: +50%");
             Assert.AreEqual(13, frost, "Into the resistance: -50%");

@@ -31,6 +31,15 @@ namespace PrincesPalace.Domain.Combat.Session
         Weaken,
         Heal,
         Shield,
+
+        // ANOTHER BODY ON THE FIELD, which is not a kind of damage and is the
+        // reason it needs its own badge. Every other kind above answers "what
+        // is about to happen to someone"; this one answers "the shape of this
+        // fight is about to change", and it read as the generic Skill icon --
+        // the badge that means "something is coming" -- on the one turn where
+        // knowing what is coming would change whether the player spends their
+        // burst now or saves it for the two enemies about to exist.
+        Summon,
     }
 
     // WHO IT LANDS ON, which is the half of a telegraph that changes the
@@ -156,6 +165,12 @@ namespace PrincesPalace.Domain.Combat.Session
                     return EnemyIntentScope.AllOpponents;
 
                 case SkillEffect.HealSelf:
+
+                // A summon does nothing to anyone standing opposite. Left on
+                // the default One, the telegraph named a party member for an
+                // action that never touches them -- "will Roar Shawn" -- which
+                // is the specific-and-false claim this enum exists to stop.
+                case SkillEffect.Summon:
                     return EnemyIntentScope.Self;
 
                 case SkillEffect.HealParty:
@@ -180,6 +195,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 case EnemyIntentKind.Weaken: return "weaken";
                 case EnemyIntentKind.Heal: return "heal";
                 case EnemyIntentKind.Shield: return "shield";
+                case EnemyIntentKind.Summon: return "summon";
                 default: return "skill";
             }
         }
@@ -195,6 +211,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 case EnemyIntentKind.Weaken: return UiKit.FightHudPalette.IntentWeaken;
                 case EnemyIntentKind.Heal: return UiKit.FightHudPalette.IntentHeal;
                 case EnemyIntentKind.Shield: return UiKit.FightHudPalette.IntentShield;
+                case EnemyIntentKind.Summon: return UiKit.FightHudPalette.IntentSummon;
                 default: return UiKit.FightHudPalette.IntentSkill;
             }
         }
@@ -213,6 +230,10 @@ namespace PrincesPalace.Domain.Combat.Session
                 case EnemyIntentKind.Weaken: return "WKN";
                 case EnemyIntentKind.Heal: return "HEAL";
                 case EnemyIntentKind.Shield: return "DEF";
+
+                // "CALL", not "SUM" — three letters that read as arithmetic on
+                // a badge full of other three-letter abbreviations.
+                case EnemyIntentKind.Summon: return "CALL";
                 default: return "SKL";
             }
         }
@@ -235,6 +256,13 @@ namespace PrincesPalace.Domain.Combat.Session
                 case SkillEffect.HealSelf:
                 case SkillEffect.HealParty:
                     return EnemyIntentKind.Heal;
+
+                // Before the status check below, like the heals are, and for
+                // the same reason: a summon that also applied a status would
+                // otherwise telegraph the status and hide the summon, which is
+                // the larger of the two facts by a distance.
+                case SkillEffect.Summon:
+                    return EnemyIntentKind.Summon;
             }
 
             return KindFor(true, appliesStatus, hasStatus);

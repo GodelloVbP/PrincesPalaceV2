@@ -54,6 +54,14 @@ namespace PrincesPalace.PlayModeTests
             // number that already has one.
             SaveSystem.RootOverride = null;
             Navigation.Reset();
+
+            // THE CLOCK, which no test writes on purpose and several stop by
+            // accident. The system menu pauses by setting this to zero, so any
+            // fixture that opens it -- or opens the character sheet, which IS
+            // it -- and then fails before closing hands every later test in the
+            // process a frozen game. Nothing throws; the scaled coroutines
+            // simply never finish, and it surfaces as an unrelated timeout.
+            UnityEngine.Time.timeScale = 1f;
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
             RequirementCurve.Percent = RequirementCurve.DefaultPercent;
             RequirementCurve.GearRequirementsEnabled = false;

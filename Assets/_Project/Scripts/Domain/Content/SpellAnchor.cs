@@ -45,7 +45,24 @@ namespace PrincesPalace.Domain.Content
         // Starts at the caster and flies to the target, mirrored if the caster
         // is on the right. See SpellPresentation.departFrame for the half of
         // this that says WHEN it leaves.
+        //
+        // Arrives at the target's GROUND LINE, which is right for a bolt that
+        // buries itself in the floor and wrong for anything thrown flat across
+        // the stage -- see TravelCentre below.
         Travel,
+
+        // Travel, arriving at the target's MIDDLE rather than its feet.
+        //
+        // The third axis this enum has always had and could not say. A
+        // horizontal projectile has to land where a body is, and "where a body
+        // is" for a Giant Rat -- 675x306 of canvas, most of it length -- is
+        // nowhere near the floor. mud_burst, drawn as a lance fired flat,
+        // arrived at the ground line and detonated above the rat's head; the
+        // taller the target, the more the two disagree.
+        //
+        // Reached by the same OnCaster/Centred pair as the other four, so
+        // nothing that reads the axes has to learn a special case.
+        TravelCentre,
     }
 
     public static class SpellAnchorNames
@@ -73,13 +90,21 @@ namespace PrincesPalace.Domain.Content
             anchor == SpellAnchor.Caster || anchor == SpellAnchor.CasterCentre;
 
         public static bool Centred(SpellAnchor anchor) =>
-            anchor == SpellAnchor.TargetCentre || anchor == SpellAnchor.CasterCentre;
+            anchor == SpellAnchor.TargetCentre ||
+            anchor == SpellAnchor.CasterCentre ||
+            anchor == SpellAnchor.TravelCentre;
+
+        // Whether the effect crosses the stage at all. Asked rather than
+        // compared, so the two travelling values cannot drift apart at one of
+        // the several places that has to branch on this.
+        public static bool Travels(SpellAnchor anchor) =>
+            anchor == SpellAnchor.Travel || anchor == SpellAnchor.TravelCentre;
 
         // Advertised spellings, for the error message that lists them. Both
         // spellings of centre parse and only one is advertised -- refusing
         // "center" would be a rule about English rather than about spells.
         public static string[] All =>
-            new[] { "target", "caster", "target-centre", "caster-centre", "travel" };
+            new[] { "target", "caster", "target-centre", "caster-centre", "travel", "travel-centre" };
 
         private static SpellAnchor Lookup(string name, SpellAnchor fallback)
         {
@@ -90,6 +115,9 @@ namespace PrincesPalace.Domain.Content
                 case "target": return SpellAnchor.Target;
                 case "caster": return SpellAnchor.Caster;
                 case "travel": return SpellAnchor.Travel;
+
+                case "travel-centre":
+                case "travel-center": return SpellAnchor.TravelCentre;
 
                 case "target-centre":
                 case "target-center": return SpellAnchor.TargetCentre;

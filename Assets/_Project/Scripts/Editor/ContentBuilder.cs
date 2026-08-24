@@ -394,8 +394,8 @@ public static class ContentBuilder
             asset.currencyReward = enemy.CurrencyReward;
             asset.isBoss = enemy.IsBoss;
             asset.minFloor = enemy.MinFloor;
-            asset.weakness = enemy.Weakness;
-            asset.resistance = enemy.Resistance;
+            asset.weaknesses = enemy.Affinity.Weaknesses.ToArray();
+            asset.resistances = enemy.Affinity.Resistances.ToArray();
             asset.spritePath = enemy.SpritePath;
             asset.facing = enemy.Facing;
             asset.skillName = enemy.SkillName;
@@ -504,6 +504,9 @@ public static class ContentBuilder
             asset.scalingAxis = skill.ScalingAxis;
             asset.queuePushSlots = skill.QueuePushSlots;
             asset.transform = skill.Transform;
+            asset.stance = skill.Stance;
+            asset.summonEnemyId = skill.SummonEnemyId;
+            asset.summonCap = skill.SummonCap;
             asset.hasStatus = skill.AppliesStatus.HasValue;
             if (skill.AppliesStatus.HasValue)
             {

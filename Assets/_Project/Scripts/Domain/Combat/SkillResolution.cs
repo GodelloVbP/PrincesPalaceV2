@@ -45,6 +45,15 @@ namespace PrincesPalace.Domain.Combat
                 case SkillEffect.RestorePartyMana:
                     return Math.Max(0, flatAmount + power * resourceSpent);
 
+                // No number to preview -- what a Summon does is add a
+                // combatant, not move a health bar. FightSession.Enemies'
+                // PreviewSkill calls this unconditionally for every enemy
+                // skill's telegraph, and Roar is the first enemy ability
+                // whose effect is neither a damage nor a heal, which is what
+                // exposed this case ever being reached at all.
+                case SkillEffect.Summon:
+                    return 0;
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(effect), effect, "SkillResolution has no case for this effect.");
             }
