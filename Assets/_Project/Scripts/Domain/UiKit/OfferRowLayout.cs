@@ -91,6 +91,37 @@ namespace PrincesPalace.Domain.UiKit
             return width < 0f ? 0f : width;
         }
 
+        // How much narrower the ITEM ART is than its card, so a big icon does
+        // not run to the card edge and read as touching the next one along.
+        public const float IconInset = 20f;
+
+        // The item art's box in a row of `visibleCount`.
+        //
+        // WIDTH IS THE CONSTRAINT, not height, and that is the whole reason
+        // this exists. ItemIcons.Apply preserves aspect, so an icon box taller
+        // than it is wide simply letterboxes: the old 200x250 box drew a
+        // 260x384 sheet at 169x250 and the extra height was doing nothing. Tie
+        // the box to the card and a three-card row -- which is every player
+        // below level 50 -- gets art half again as large, while the four-card
+        // row the audit solves still fits.
+        public static float IconWidth(int visibleCount)
+        {
+            float width = CardWidth(visibleCount) - IconInset;
+            return width < 0f ? 0f : width;
+        }
+
+        // The rarity glow behind the art, and the rayed burst behind that.
+        //
+        // Sized off the CARD rather than off the icon, which is the constraint
+        // that actually matters now the icon is large: a glow scaled to the art
+        // would reach into the neighbouring card, and rarity colour bleeding
+        // from one offer onto the next is worse than a glow that is merely
+        // subtle. The burst is the wider of the two because its rays are the
+        // part that has to clear the art at all -- see BuildOffer.
+        public static float HaloDiameter(int visibleCount) => CardWidth(visibleCount);
+
+        public static float BurstDiameter(int visibleCount) => CardWidth(visibleCount) + 10f;
+
         // The x of card `index` in a row showing `visibleCount` cards.
         //
         // Centred on zero: card i sits at its offset from the middle of the

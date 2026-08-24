@@ -251,7 +251,82 @@ namespace PrincesPalace
             }
 
             if (offerTooltipText != null) offerTooltipText.SetContent(body);
+            PlaceTooltipBeside(index, FitTooltipToBody(body));
             offerTooltip.SetShown(true);
+        }
+
+        // The box follows the card it describes.
+        //
+        // It used to be a fixed strip across the bottom of the panel, which
+        // meant nothing on screen connected the numbers to the thing under the
+        // cursor -- see ReckoningScreen.BuildOfferTooltip for the full story.
+        // The arithmetic is TooltipPlacement's, shared with the dossier's pack,
+        // so "beside, flipped if there is no room, clamped inside" is one rule
+        // with one set of tests rather than two hand-written copies.
+        // SHRUNK TO WHAT IS IN IT, and the height is returned so the placement
+        // below clamps against the real box rather than the emitted one.
+        //
+        // The tree is emitted at ReckoningScreen.TooltipHeight because that is
+        // the tallest body a full squad can produce and the containment audit
+        // has to solve the case that can fail. A squad of one produces three
+        // lines, and leaving the box at its emitted height put 200px of empty
+        // violet over the item next door.
+        private float FitTooltipToBody(string body)
+        {
+            var self = offerTooltip == null ? null : offerTooltip.transform as RectTransform;
+            if (self == null) return ReckoningScreen.TooltipHeight;
+
+            float height = ReckoningScreen.TooltipHeight;
+
+            if (offerTooltipText != null)
+            {
+                // GetPreferredValues rather than preferredHeight: the latter
+                // reads the last laid-out mesh, and this is called in the same
+                // frame the content was set -- so it would answer for the
+                // PREVIOUS card's text, which is a stale box on every hover but
+                // the first.
+                float wanted = offerTooltipText.GetPreferredValues(
+                    body, ReckoningScreen.TooltipWidth - ReckoningScreen.TooltipPad * 2f, 0f).y;
+
+                height = Mathf.Clamp(wanted + ReckoningScreen.TooltipPad * 2f,
+                                     ReckoningScreen.TooltipMinHeight, ReckoningScreen.TooltipHeight);
+
+                var text = offerTooltipText.rectTransform;
+                text.sizeDelta = new Vector2(text.sizeDelta.x, height - ReckoningScreen.TooltipPad * 2f);
+            }
+
+            self.sizeDelta = new Vector2(ReckoningScreen.TooltipWidth, height);
+            return height;
+        }
+
+        private void PlaceTooltipBeside(int index, float height)
+        {
+            var self = offerTooltip == null ? null : offerTooltip.transform as RectTransform;
+            if (self == null) return;
+
+            // The card's own rect, so this reads the row as LAID OUT rather
+            // than as emitted: LayOutOfferRow has already re-centred and
+            // re-widened it for the number of offers actually showing, and
+            // recomputing the position here from OfferRowLayout would be a
+            // second answer to a question already answered.
+            var card = offerRects != null && index < offerRects.Length ? offerRects[index] : null;
+            if (card == null) return;
+
+            // Inset by the same 8px margin the dossier uses, off the painted
+            // interior rather than the panel: the frame's ornament is 9.8% in
+            // horizontally and deeper at top than bottom, and a tooltip resting
+            // on the border is exactly what ContentTop/ContentBottom exist to
+            // prevent.
+            const float Margin = 8f;
+            var at = TooltipPlacement.Beside(
+                card.anchoredPosition.x, card.anchoredPosition.y, card.sizeDelta.x,
+                ReckoningScreen.TooltipWidth, height,
+                interiorLeft: -ReckoningScreen.ContentHalfWidth + Margin,
+                interiorRight: ReckoningScreen.ContentHalfWidth - Margin,
+                interiorBottom: ReckoningScreen.ContentBottom + Margin,
+                interiorTop: ReckoningScreen.ContentTop - Margin);
+
+            self.anchoredPosition = new Vector2(at.X, at.Y);
         }
 
         public void Show(CombatReward reward, List<ItemOffer> offers)
@@ -464,7 +539,39 @@ namespace PrincesPalace
 
                 ResizeLabel(offerNames, i, labelWidth);
                 ResizeLabel(offerMetas, i, labelWidth);
+
+                // THE ART TOO, which the labels' own comment below explains the
+                // general case of. The icon box is emitted at the four-card
+                // width because that is the row the audit solves; leaving it
+                // there would mean a three-card row -- every player below level
+                // 50 -- drawing its items 16% smaller than the card can hold,
+                // for no reason but the audit's convenience.
+                ResizeIcon(offerIcons, i, OfferRowLayout.IconWidth(count));
+                ResizeGlow(offerHalos, i, OfferRowLayout.HaloDiameter(count));
+                ResizeGlow(offerBursts, i, OfferRowLayout.BurstDiameter(count));
             }
+        }
+
+        // Width only: the icon's HEIGHT is the band ReckoningScreen fixed, and
+        // ItemIcons.Apply fits the art inside whatever box it is given, so
+        // widening the box is the whole of "make the item bigger".
+        private static void ResizeIcon(Image[] images, int index, float width)
+        {
+            if (images == null || index >= images.Length || images[index] == null) return;
+
+            var rect = images[index].rectTransform;
+            var size = rect.sizeDelta;
+            size.x = width;
+            rect.sizeDelta = size;
+        }
+
+        // Square, both axes, because a glow is a disc and stretching one reads
+        // as a smear rather than as light.
+        private static void ResizeGlow(Image[] images, int index, float diameter)
+        {
+            if (images == null || index >= images.Length || images[index] == null) return;
+
+            images[index].rectTransform.sizeDelta = new Vector2(diameter, diameter);
         }
 
         // The labels have to follow the card or a long item name in a narrow

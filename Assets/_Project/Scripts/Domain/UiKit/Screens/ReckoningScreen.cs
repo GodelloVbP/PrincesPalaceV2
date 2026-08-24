@@ -667,37 +667,126 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return group;
         }
 
+        // How big the hover comparison is. Named because the placement
+        // arithmetic needs them and they must be the same numbers the box is
+        // actually built at.
+        public const float TooltipWidth = 300f;
+
+        // The TALLEST it gets, which is what the tree is emitted at and what
+        // the containment audit therefore solves. The controller shrinks it to
+        // whatever the text actually needs -- a squad of one produces three
+        // short lines, and a 300px box holding three lines reads as a slab
+        // dropped on the card next door rather than as a label belonging to
+        // the one being hovered.
+        public const float TooltipHeight = 300f;
+
+        // And the shortest, so a one-line body still looks like a considered
+        // box rather than a strip.
+        public const float TooltipMinHeight = 96f;
+
+        // Air between the text and the box's edge, on every side.
+        public const float TooltipPad = 16f;
+
         // What a hovered offer would actually DO, per squad member.
         //
-        // Under the cards rather than beside one: the prize goes to the
-        // stockpile, so the comparison is about the whole squad and belongs
-        // somewhere the eye can hold all three cards and the numbers at once.
-        // A per-card popup would also have to dodge the panel edge on the
-        // outer two, which is a lot of arithmetic for no gain.
+        // BESIDE THE CARD, not under the row. This was a 920x136 strip pinned
+        // across the bottom of the panel, and the comment defending that spot
+        // argued the comparison is about the whole squad and so belongs where
+        // the eye can hold every card and the numbers at once. In the running
+        // game it did not read that way: a wide bar detached from any of the
+        // three cards looks like a status line the screen always has, so
+        // nothing connects the numbers to the thing under the cursor. The
+        // second argument -- that a per-card popup has to dodge the panel edge
+        // on the outer two, "a lot of arithmetic for no gain" -- was true and
+        // is no longer, because the dossier's pack has since written that
+        // arithmetic and it is now TooltipPlacement, shared by both.
+        //
+        // The strip also cost the cards 136px of the panel's height for a box
+        // that is empty until something is hovered. That space is the icons'
+        // now; see BuildOffer.
+        //
+        // SQUARE, like the pack's, because the content is the same shape: a
+        // per-character stack of short delta lines, which runs deep rather than
+        // wide and wants height far more than the 116px the strip gave it.
         //
         // Decor, so the emitter clears raycastTarget across the subtree -- a
         // tooltip that ate the click meant for the card underneath it would be
-        // a cruel bug on a screen whose only job is taking one click.
+        // a cruel bug on a screen whose only job is taking one click. That
+        // matters more now that it sits ON a card rather than below them all.
         private UiNode BuildOfferTooltip()
         {
-            var label = Ui.Label("ReckoningOfferTooltipText", UiString.Runtime, new UiVec(880f, 116f), 15,
-                "#D9CCF2", Place.At(0f, 0f));
+            var label = Ui.Label("ReckoningOfferTooltipText", UiString.Runtime,
+                    new UiVec(TooltipWidth - TooltipPad * 2f, TooltipHeight - TooltipPad * 2f), 15,
+                    "#D9CCF2", Place.At(0f, 0f))
+                .TextAligned(UiTextAlign.TopLeft);
             OfferTooltipText = label;
 
-            // a hover tooltip floats over whatever it has to - it is
-            // transient and takes no clicks
-            // y -247, NOT further down. The usable interior stops at -317
-            // (A5, the painted-border check), and a 136-tall box centred any
-            // lower reaches into the frame's bottom ornament -- which the audit
-            // caught at -354 rather than a playtest catching it later.
-            var panel = Ui.Sprite("ReckoningOfferTooltip", TabKey, Place.At(0f, -247f),
-                    UiSize.Fixed(920f, 136f))
+            // A FLAT GROUND rather than the tab plate this used to wear. That
+            // sprite is a wide 9-slice and a 300x300 crop of it reads as a
+            // button someone forgot to label; the pack's tooltip already
+            // established a plain dark sheet as the house tooltip surface.
+            //
+            // Declared at the panel's centre and moved on every hover, exactly
+            // as the dossier's is -- an authored position an inactive node
+            // never draws at, chosen because it is somewhere the containment
+            // audit can solve.
+            var panel = Ui.Sprite("ReckoningOfferTooltip", null, Place.At(0f, 0f),
+                    UiSize.Fixed(TooltipWidth, TooltipHeight))
+                // FULLY OPAQUE. The pack's tooltip gets away with 95% because
+                // it opens over the dossier's flat ground; this one opens over
+                // a neighbouring card's item art, and at F2 the coif behind it
+                // read straight through the comparison numbers -- confirmed in
+                // a capture, which is the only place it could be seen.
+                .Coloured("#1D1226")
                 .Inactive()
                 .AsDecor();
             panel.Children.Add(label);
             OfferTooltip = panel;
             return panel;
         }
+
+        // ---- one offer card's vertical band -----------------------------------
+        //
+        // ALL OF IT DERIVED FROM THREE NUMBERS: where the art starts, where it
+        // stops, and how tall the two lines under it are. Everything else --
+        // where the name sits, where the meta sits, how tall the card is and
+        // where its centre lands -- falls out.
+        //
+        // That is not tidiness. The card used to be a fixed 400 tall centred on
+        // the phase axis with its children placed by eye inside it, and the
+        // first attempt at growing the art moved the labels without moving the
+        // frame: the containment audit refused the build with name and meta
+        // hanging 67 and 97px below their own card. Deriving the frame from its
+        // contents means the next retune of the band cannot make that mistake.
+        //
+        // IconBottom is -195 and not lower because the painted interior stops
+        // at ContentBottom (-317.2) and these two lines plus their gaps come to
+        // 108px; the 20px left over is the meta line's clearance from the
+        // frame's bottom ornament.
+        private const float IconTop = 205f;
+        private const float IconBottom = -195f;
+
+        // 6px binds the name to the art (see BuildOffer); 4px separates the two
+        // lines from each other.
+        private const float IconToNameGap = 6f;
+        private const float NameToMetaGap = 4f;
+        private const float NameHeight = 66f;
+        private const float MetaHeight = 26f;
+
+        private const float IconCentreY = (IconTop + IconBottom) * 0.5f;
+        private const float NameCentreY = IconBottom - IconToNameGap - NameHeight * 0.5f;
+        private const float MetaCentreY =
+            NameCentreY - NameHeight * 0.5f - NameToMetaGap - MetaHeight * 0.5f;
+
+        private const float CardTop = IconTop;
+        private const float CardBottom = MetaCentreY - MetaHeight * 0.5f;
+        private const float CardHeight = CardTop - CardBottom;
+        private const float CardCentreY = (CardTop + CardBottom) * 0.5f;
+
+        // A y measured in the OFFER PHASE, expressed relative to the card that
+        // holds it -- the card is no longer centred on the phase's axis, so the
+        // two spaces differ by exactly its offset.
+        private const float Rebase = CardCentreY;
 
         // One of the items on offer. A button, because picking one is the only
         // decision this screen asks the player to make, and a CARD across the
@@ -718,14 +807,34 @@ namespace PrincesPalace.Domain.UiKit.Screens
             float labelWidth = OfferRowLayout.LabelWidth(OfferRowLayout.MaxCards);
             float x = OfferRowLayout.CardX(index, OfferRowLayout.MaxCards);
 
-            // THE ITEM IS THE CARD, so it gets the room. 132x132 was a square
-            // slot holding sheets that are about 260x384, and with aspect now
-            // preserved (ItemIcons.Apply) a square box would simply letterbox
-            // them small. 200x250 is the shape the art actually is, so a dagger
-            // fills the height instead of sitting stubby in the middle of it.
-            const float IconTop = 185f;
-            const float IconBottom = -65f;
-            const float IconCentre = (IconTop + IconBottom) * 0.5f;
+            // THE ITEM IS THE CARD, so it gets the room -- and it gets the
+            // room the hover strip used to hold.
+            //
+            // 200x250 was the shape the art is, which was right as far as it
+            // went, but the box was WIDTH-limited: a 260x384 sheet in a 200-wide
+            // box draws 169x250 and the last 80px of height went to letterbox.
+            // So the icon grew in the only direction that pays -- the box is
+            // now as wide as its card allows (OfferRowLayout.IconWidth) and
+            // deep enough that width stays the binding constraint at three
+            // cards. A three-card row draws its art about 60% larger.
+            //
+            // -195, not lower: name and meta still hang below it, and the
+            // painted interior stops at -317 (ContentBottom, which the
+            // border check A5 measures). Those two lines plus their gaps come
+            // to 108px, and 20px of clearance keeps the meta line off the
+            // bottom ornament.
+            // The band is declared once at class scope -- see the block above
+            // BuildOffer. What is left here is the art's WIDTH, which depends
+            // on how many cards share the row and so cannot be a constant.
+            const float IconCentre = IconCentreY - Rebase;
+
+            // Built at the four-card row for the same reason the card is: the
+            // audit solves the emitted tree and cannot see the controller widen
+            // it, so what it solves should be the tightest case. See
+            // ReckoningController.LayOutOfferRow for the other half.
+            float iconWidth = OfferRowLayout.IconWidth(OfferRowLayout.MaxCards);
+            float haloSize = OfferRowLayout.HaloDiameter(OfferRowLayout.MaxCards);
+            float burstSize = OfferRowLayout.BurstDiameter(OfferRowLayout.MaxCards);
 
             // TWO layers behind the icon, because one was not readable.
             //
@@ -736,14 +845,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // shows as a few spikes and nothing else, which is why the rarity
             // read as "small and hidden behind the sprite".
             var halo = Ui.Sprite($"ReckoningOffer{index}Halo", "proc:radial_glow",
-                    Place.At(0f, IconCentre), UiSize.Fixed(330f, 330f))
+                    Place.At(0f, IconCentre), UiSize.Fixed(haloSize, haloSize))
                 .Coloured("#FFFFFF00")
                 .AsDecor()
                 .AllowOverflow("the halo is deliberately larger than the icon it sits behind - that bleed IS the rarity signal");
 
             // the rays are meant to read THROUGH and around the icon
             var burst = Ui.Sprite($"ReckoningOffer{index}Burst", BurstKey,
-                    Place.At(0f, IconCentre), UiSize.Fixed(340f, 340f))
+                    Place.At(0f, IconCentre), UiSize.Fixed(burstSize, burstSize))
                 .Coloured("#FFFFFF00")
                 .AsDecor()
                 .AllowOverflow("the burst is deliberately larger than the icon it sits behind - that bleed IS the rarity signal");
@@ -751,18 +860,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // the icon stands on its own glow - covering the middle of it is
             // the point
             var icon = Ui.Sprite($"ReckoningOffer{index}Icon", null,
-                    Place.At(0f, IconCentre), UiSize.Fixed(200f, IconTop - IconBottom))
+                    Place.At(0f, IconCentre), UiSize.Fixed(iconWidth, IconTop - IconBottom))
                 .AsDecor();
 
             // THE NAME BELONGS TO THE ITEM, so it sits directly under it. It
             // used to float 57px below the icon with nothing in the gap, which
             // reads as two unrelated things rather than as a labelled object.
             // 6px is enough to separate them and little enough to bind them.
-            var name = Ui.Label($"ReckoningOffer{index}Name", UiString.Runtime, new UiVec(labelWidth, 66f), 21,
-                    "#EDE6FF", Place.At(0f, IconBottom - 6f - 33f))
+            var name = Ui.Label($"ReckoningOffer{index}Name", UiString.Runtime, new UiVec(labelWidth, NameHeight), 21,
+                    "#EDE6FF", Place.At(0f, NameCentreY - Rebase))
                 .AsDecor();
-            var meta = Ui.Label($"ReckoningOffer{index}Meta", UiString.Runtime, new UiVec(labelWidth, 26f), 15,
-                    "#B8A8D9", Place.At(0f, IconBottom - 6f - 66f - 4f - 13f))
+            var meta = Ui.Label($"ReckoningOffer{index}Meta", UiString.Runtime, new UiVec(labelWidth, MetaHeight), 15,
+                    "#B8A8D9", Place.At(0f, MetaCentreY - Rebase))
                 .AsDecor();
 
             // NO PLATE. The card is its burst, its icon and its two lines --
@@ -783,7 +892,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // instead of adding a fourth at the old width, which would have
             // needed 1450px of a 1080px interior.
             var button = Ui.Button($"ReckoningOffer{index}", UiString.Runtime,
-                    new UiVec(cardWidth, 400f), 14, Place.At(x, 0f))
+                    new UiVec(cardWidth, CardHeight), 14, Place.At(x, CardCentreY))
                 .NoChrome();
 
             button.Children.Add(halo);

@@ -1161,6 +1161,11 @@ namespace PrincesPalace
         //
         // Beside the cell if there is room on the right, flipped to the left if
         // there is not, and clamped so it never leaves the panel.
+        //
+        // The arithmetic moved to TooltipPlacement when the Reckoning needed
+        // the same answer for its offer cards. What is left here is the part
+        // that is genuinely this screen's: which rect is being hovered, and
+        // what space it has to be expressed in.
         private void PlaceTooltip(RectTransform near)
         {
             var self = tooltip == null ? null : tooltip.transform as RectTransform;
@@ -1173,18 +1178,16 @@ namespace PrincesPalace
             // ended up 339px off the panel they belong to.
             Vector2 local = parent.InverseTransformPoint(near.TransformPoint(Vector3.zero));
 
-            float halfW = self.sizeDelta.x * 0.5f;
-            float halfH = self.sizeDelta.y * 0.5f;
-            float gap = 14f + near.rect.width * 0.5f;
+            const float Margin = 8f;
+            var at = TooltipPlacement.Beside(
+                local.x, local.y, near.rect.width,
+                self.sizeDelta.x, self.sizeDelta.y,
+                interiorLeft: -DossierLayout.HalfWidth + Margin,
+                interiorRight: DossierLayout.HalfWidth - Margin,
+                interiorBottom: -DossierLayout.HalfHeight + Margin,
+                interiorTop: DossierLayout.HalfHeight - Margin);
 
-            float x = local.x + gap + halfW;
-            if (x + halfW > DossierLayout.HalfWidth - 8f) x = local.x - gap - halfW;
-
-            float y = Mathf.Clamp(local.y,
-                                  -DossierLayout.HalfHeight + halfH + 8f,
-                                  DossierLayout.HalfHeight - halfH - 8f);
-
-            self.anchoredPosition = new Vector2(x, y);
+            self.anchoredPosition = new Vector2(at.X, at.Y);
         }
 
         private static RectTransform RectOf(Button[] cells, int index)
