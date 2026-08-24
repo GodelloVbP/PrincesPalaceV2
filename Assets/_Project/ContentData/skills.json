@@ -95,11 +95,11 @@
       "damageInstances": [
         {
           "type": "Fire",
-          "amount": 14
+          "amount": 7
         },
         {
           "type": "Frost",
-          "amount": 14
+          "amount": 7
         }
       ],
       "vfx": {
@@ -120,7 +120,7 @@
       "damageInstances": [
         {
           "type": "Arcane",
-          "amount": 40
+          "amount": 20
         }
       ],
       "vfx": {

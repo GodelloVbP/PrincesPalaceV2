@@ -28,7 +28,7 @@ MonoBehaviour:
   ignoresDefense: 0
   damageInstances:
   - type: 5
-    amount: 40
+    amount: 20
   cooldownTurns: 0
   playerSelectable: 1
   vfx:

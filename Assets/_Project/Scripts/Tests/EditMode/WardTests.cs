@@ -189,16 +189,16 @@ namespace PrincesPalace.Domain.Tests
             var attacker = new CombatantState("Shawn", true, 200, 30, 10, 4, 8);
             var target = new CombatantState("Golem", false, 300, 0, 5, 6, 4);
 
-            // (10 - 6) x 10 = 40 with no bonus.
-            Assert.AreEqual(40, CombatMath.ComputeAttackDamage(attacker, target));
+            // (10 - 6) x 5 = 20 with no bonus.
+            Assert.AreEqual(20, CombatMath.ComputeAttackDamage(attacker, target));
 
             attacker.BonusAttackPercent = 100;
 
-            // Doubling the ATTACK gives (20 - 6) x 10 = 140. Doubling the
-            // finished figure would have given 80 -- and would have made the
+            // Doubling the ATTACK gives (20 - 6) x 5 = 70. Doubling the
+            // finished figure would have given 40 -- and would have made the
             // golem's armour worth half as much against exactly the swing it
             // most needs to blunt.
-            Assert.AreEqual(140, CombatMath.ComputeAttackDamage(attacker, target));
+            Assert.AreEqual(70, CombatMath.ComputeAttackDamage(attacker, target));
         }
     }
 

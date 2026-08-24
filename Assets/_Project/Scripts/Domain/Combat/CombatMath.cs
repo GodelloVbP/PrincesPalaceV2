@@ -34,7 +34,26 @@ namespace PrincesPalace.Domain.Combat
         // Fixed damage authored directly on a skill (a spell's
         // damageInstances) is already written on the new scale and is
         // deliberately NOT routed through here.
-        public const int DamageScale = 10;
+        //
+        // TAKEN FROM 10 TO 5, on request, to make fights -- Giant Rat in
+        // particular -- take more than one hit. Halving this halves EVERY
+        // (attack-defense)-derived damage number in the game uniformly,
+        // player and enemy alike, which is what "all damage just less"
+        // actually needs: one constant, not a pass over every enemy and
+        // skill's own stats. It does NOT reach damageInstances (frost_flare,
+        // lightning_bolt) or a flat statusMagnitude (the rat's own Poison) --
+        // both are already-final numbers by design, per the comment above --
+        // so those were halved by hand alongside this, in skills.json and
+        // enemies.json, to keep them in the same proportion to plain attacks
+        // they were authored in. SignatureAbsorbPerPoint (ContentDatabase.
+        // Effective.cs) was halved too, for the reason its own comment
+        // already documents: it is deliberately NOT coupled to this constant,
+        // calibrated instead against the SIZE of a typical hit -- halve hits
+        // and leave it standing, and two points of Wool absorbs what used to
+        // take four, which is the exact "quietly catastrophic" failure that
+        // comment records happening once already, just approached from the
+        // other direction this time.
+        public const int DamageScale = 5;
 
         // Basic attack: attack minus defense, floored at 1 so defense alone
         // can never make a combatant unhittable.

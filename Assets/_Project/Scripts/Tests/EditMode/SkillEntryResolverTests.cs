@@ -190,8 +190,8 @@ namespace PrincesPalace.Domain.Tests
         public void Damage_IsAttackPlusScalingMinusDefense()
         {
             // 5 attack + 2 power x 6 spent = 17, minus 8 defense = 9,
-            // x10 for the health scale.
-            Assert.AreEqual(90, SkillResolution.Amount(
+            // x5 for the health scale.
+            Assert.AreEqual(45, SkillResolution.Amount(
                 SkillEffect.DamageSingle, Actor(), Target(8), power: 2, flatAmount: 0, resourceSpent: 6, ignoresDefense: false));
         }
 
@@ -199,7 +199,7 @@ namespace PrincesPalace.Domain.Tests
         public void Damage_IgnoringDefense_SkipsItEntirely()
         {
             // Same 17, and the target's 8 defense simply does not apply.
-            Assert.AreEqual(170, SkillResolution.Amount(
+            Assert.AreEqual(85, SkillResolution.Amount(
                 SkillEffect.DamageSingle, Actor(), Target(8), power: 2, flatAmount: 0, resourceSpent: 6, ignoresDefense: true));
         }
 
@@ -213,8 +213,8 @@ namespace PrincesPalace.Domain.Tests
             int ram = SkillResolution.Amount(
                 SkillEffect.DamageSingle, Actor(), Target(99), power: 2, flatAmount: 0, resourceSpent: 6, ignoresDefense: true);
 
-            Assert.AreEqual(10, ordinary, "Floored at 1 before the x10 scale, so defense can never make a target unhittable");
-            Assert.AreEqual(170, ram);
+            Assert.AreEqual(5, ordinary, "Floored at 1 before the x5 scale, so defense can never make a target unhittable");
+            Assert.AreEqual(85, ram);
         }
 
         [Test]
@@ -252,7 +252,7 @@ namespace PrincesPalace.Domain.Tests
                 power: 0, flatAmount: 0, resourceSpent: 0, ignoresDefense: false,
                 type: DamageType.Physical, axis: ScalingAxis.Auto);
 
-            Assert.AreEqual(100, damage, "5 Attack x 2.00 (WeaponScaling S) = 10, x10 health scale = 100");
+            Assert.AreEqual(50, damage, "5 Attack x 2.00 (WeaponScaling S) = 10, x5 health scale = 50");
         }
 
         // Non-physical + Auto resolves to the SPELL axis — A grade at +10
@@ -266,7 +266,7 @@ namespace PrincesPalace.Domain.Tests
                 power: 0, flatAmount: 0, resourceSpent: 0, ignoresDefense: false,
                 type: DamageType.Nature, axis: ScalingAxis.Auto);
 
-            Assert.AreEqual(90, damage, "5 Attack x 1.70 (SkillScaling A) = 8.5, rounded away from zero to 9, x10 health scale = 90");
+            Assert.AreEqual(45, damage, "5 Attack x 1.70 (SkillScaling A) = 8.5, rounded away from zero to 9, x5 health scale = 45");
         }
 
         // An explicit override wins regardless of the damage type — this is
@@ -280,7 +280,7 @@ namespace PrincesPalace.Domain.Tests
                 power: 0, flatAmount: 0, resourceSpent: 0, ignoresDefense: false,
                 type: DamageType.Nature, axis: ScalingAxis.Weapon);
 
-            Assert.AreEqual(100, damage, "Weapon override should read WeaponScaling (2.00x) even though the type is Nature");
+            Assert.AreEqual(50, damage, "Weapon override should read WeaponScaling (2.00x) even though the type is Nature");
         }
 
         [Test]
@@ -291,7 +291,7 @@ namespace PrincesPalace.Domain.Tests
                 power: 0, flatAmount: 0, resourceSpent: 0, ignoresDefense: false,
                 type: DamageType.Physical, axis: ScalingAxis.None);
 
-            Assert.AreEqual(50, damage, "None should leave Attack completely unscaled: 5 x10 = 50");
+            Assert.AreEqual(25, damage, "None should leave Attack completely unscaled: 5 x5 = 25");
         }
 
         // "Multiply only the actor.Attack term" — power/resourceSpent must
@@ -306,10 +306,10 @@ namespace PrincesPalace.Domain.Tests
                 type: DamageType.Physical, axis: ScalingAxis.Weapon);
 
             // Scaled attack 10 (as in the first test above) + flatAmount 3 +
-            // power 2 x resourceSpent 4 = 8, total 21, x10 = 210 — NOT
-            // (5 + 3 + 8) x 2.00 x 10 = 320, which is what scaling the whole
+            // power 2 x resourceSpent 4 = 8, total 21, x5 = 105 — NOT
+            // (5 + 3 + 8) x 2.00 x 5 = 160, which is what scaling the whole
             // sum would produce.
-            Assert.AreEqual(210, damage);
+            Assert.AreEqual(105, damage);
         }
 
         [Test]

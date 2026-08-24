@@ -317,9 +317,9 @@ namespace PrincesPalace.Domain.Tests
 
             var golem = new CombatantState("Golem", false, 350, 0, 6, 8, 3);
 
-            Assert.AreEqual(40, Landed(slam, golem, defence: 4),
+            Assert.AreEqual(20, Landed(slam, golem, defence: 4),
                 "against Shawn's base 4 defence the slam should land where the old 1.8x did");
-            Assert.AreEqual(20, Landed(slam, golem, defence: 6),
+            Assert.AreEqual(10, Landed(slam, golem, defence: 6),
                 "and hold up through the gear band");
         }
 

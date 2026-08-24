@@ -17,7 +17,7 @@
       "spritePath": "Enemies/rat",
       "avoidsFrontSlot": true,
       "appliesStatus": "Poison",
-      "statusMagnitude": 15,
+      "statusMagnitude": 8,
       "statusDuration": 3
     },
     {

@@ -17,8 +17,8 @@ namespace PrincesPalace.Domain.Tests
             var attacker = MakeCombatant(attack: 10);
             var target = MakeCombatant(defense: 3);
 
-            // 10 attack - 3 defense = 7, x10 for the health scale.
-            Assert.AreEqual(70, CombatMath.ComputeAttackDamage(attacker, target));
+            // 10 attack - 3 defense = 7, x5 for the health scale (CombatMath.DamageScale).
+            Assert.AreEqual(35, CombatMath.ComputeAttackDamage(attacker, target));
         }
 
         [Test]
@@ -27,10 +27,10 @@ namespace PrincesPalace.Domain.Tests
             var attacker = MakeCombatant(attack: 2);
             var target = MakeCombatant(defense: 50);
 
-            // Floored at 1 BEFORE the scale, so the worst case is a scaled 10
+            // Floored at 1 BEFORE the scale, so the worst case is a scaled 5
             // rather than a scaled 0 — defense can never make a target
             // unhittable, at either end of the multiplication.
-            Assert.AreEqual(10, CombatMath.ComputeAttackDamage(attacker, target));
+            Assert.AreEqual(5, CombatMath.ComputeAttackDamage(attacker, target));
         }
 
         [Test]
@@ -92,8 +92,8 @@ namespace PrincesPalace.Domain.Tests
             target.BreakShield = new BreakShield(5);
             target.BreakShield.Deplete(5);
 
-            // 10 attack - 0 effective defense = 10, x10 for the health scale.
-            Assert.AreEqual(100, CombatMath.ComputeAttackDamage(attacker, target));
+            // 10 attack - 0 effective defense = 10, x5 for the health scale.
+            Assert.AreEqual(50, CombatMath.ComputeAttackDamage(attacker, target));
         }
 
         // ---- ApplyStatusEffects ---------------------------------------------
@@ -146,7 +146,7 @@ namespace PrincesPalace.Domain.Tests
             var target = new CombatantState("B", false, 100, 0, attack: 0, defense: 13, speed: 10);
 
             // Unchanged from ComputeAttackDamage_SubtractsDefenseFromAttack.
-            Assert.AreEqual(70, CombatMath.ComputeAttackDamage(attacker, target));
+            Assert.AreEqual(35, CombatMath.ComputeAttackDamage(attacker, target));
         }
 
         [Test]
@@ -159,8 +159,8 @@ namespace PrincesPalace.Domain.Tests
             attacker.AbilityScores = new AbilityScoreBlock(20, 10, 10, 10, 10, 10);
 
             // S at Strength 20 is 2.00x: 20 attack becomes 40, less 10
-            // defense, times the x10 damage scale.
-            Assert.AreEqual(300, CombatMath.ComputeAttackDamage(attacker, target));
+            // defense, times the x5 damage scale.
+            Assert.AreEqual(150, CombatMath.ComputeAttackDamage(attacker, target));
         }
 
         // Scaling is folded into the ATTACK, before defense — so armour keeps
@@ -174,8 +174,8 @@ namespace PrincesPalace.Domain.Tests
             attacker.WeaponScaling = ScalingProfile.None.With(AbilityScore.Strength, ScalingGrade.S);
             attacker.AbilityScores = new AbilityScoreBlock(20, 10, 10, 10, 10, 10);
 
-            // 300, not the 200 that doubling (20 - 10) * 10 would give.
-            Assert.AreEqual(300, CombatMath.ComputeAttackDamage(attacker, target));
+            // 150, not the 100 that doubling (20 - 10) * 5 would give.
+            Assert.AreEqual(150, CombatMath.ComputeAttackDamage(attacker, target));
         }
 
         [Test]
@@ -213,11 +213,11 @@ namespace PrincesPalace.Domain.Tests
             // Strong, and not at all clever.
             attacker.AbilityScores = new AbilityScoreBlock(20, 10, 10, 10, 10, 10);
 
-            // The swing gets the Strength: 20 * 2.00 = 40, x10.
-            Assert.AreEqual(400, CombatMath.ComputeAttackDamage(attacker, target));
+            // The swing gets the Strength: 20 * 2.00 = 40, x5.
+            Assert.AreEqual(200, CombatMath.ComputeAttackDamage(attacker, target));
             // The cast does not: Intelligence is neutral, so only the tier's
-            // 1.5x applies. 20 * 1.5 = 30, x10.
-            Assert.AreEqual(300, CombatMath.ComputeSkillDamage(attacker, target, powerMultiplier: 1.5f));
+            // 1.5x applies. 20 * 1.5 = 30, x5.
+            Assert.AreEqual(150, CombatMath.ComputeSkillDamage(attacker, target, powerMultiplier: 1.5f));
         }
 
         [Test]
@@ -229,8 +229,8 @@ namespace PrincesPalace.Domain.Tests
             attacker.SkillScaling = ScalingProfile.None.With(AbilityScore.Intelligence, ScalingGrade.S);
             attacker.AbilityScores = new AbilityScoreBlock(10, 10, 10, 10, 20, 10);
 
-            // 2.00x scaling on top of the tier's 1.5x: 20 * 3.0 = 60, x10.
-            Assert.AreEqual(600, CombatMath.ComputeSkillDamage(attacker, target, powerMultiplier: 1.5f));
+            // 2.00x scaling on top of the tier's 1.5x: 20 * 3.0 = 60, x5.
+            Assert.AreEqual(300, CombatMath.ComputeSkillDamage(attacker, target, powerMultiplier: 1.5f));
         }
 
         [Test]
@@ -239,7 +239,7 @@ namespace PrincesPalace.Domain.Tests
             var attacker = MakeCombatant(attack: 1);
             var target = MakeCombatant(defense: 50);
 
-            Assert.AreEqual(10, CombatMath.ComputeSkillDamage(attacker, target, powerMultiplier: 1.5f));
+            Assert.AreEqual(5, CombatMath.ComputeSkillDamage(attacker, target, powerMultiplier: 1.5f));
         }
 
         [Test]

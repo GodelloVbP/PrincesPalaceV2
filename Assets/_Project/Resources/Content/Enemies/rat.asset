@@ -47,7 +47,7 @@ MonoBehaviour:
   attackWeight: 1
   appliesStatus: 0
   hasStatus: 1
-  statusMagnitude: 15
+  statusMagnitude: 8
   statusDuration: 3
   avoidsFrontSlot: 1
   attackHoldsPosition: 0

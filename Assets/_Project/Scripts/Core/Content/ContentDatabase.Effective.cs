@@ -30,7 +30,16 @@ namespace PrincesPalace.Content
         // so ordinary attacks always get some damage through, bigger hits
         // get proportionally more through, and the fleece reads as real
         // armour rather than a toggle between "irrelevant" and "invulnerable".
-        private const int SignatureAbsorbPerPoint = 2;
+        //
+        // HALVED TO 1 alongside CombatMath.DamageScale's own halving (10->5).
+        // Deliberately uncoupled from that constant does not mean immune to
+        // it: this is calibrated against the SIZE of a typical hit, and every
+        // hit in the game just got half as big. Leaving this at 2 would have
+        // reproduced the exact failure this comment already records, from the
+        // other direction -- a 10-damage hit needing only 5 points to fully
+        // stop instead of 10, i.e. Wool absorbing twice as much fight as
+        // before for the same investment.
+        private const int SignatureAbsorbPerPoint = 1;
 
         // The settled result of resolving which of a character's worn items
         // are actually contributing their bonus right now — see

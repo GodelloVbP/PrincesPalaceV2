@@ -427,9 +427,9 @@ namespace PrincesPalace.Domain.Tests
             string power = FightHudModel.PowerLabel(session, hero, skill);
 
             Assert.AreNotEqual("0", power, "flatAmount alone must not read as no power");
-            // Hero's Attack (20, scaled) + flatAmount (12), on the x10 scale,
-            // with no target so no defense subtracted: (20 + 12) * 10 = 320.
-            Assert.AreEqual("320", power);
+            // Hero's Attack (20, scaled) + flatAmount (12), on the x5 scale,
+            // with no target so no defense subtracted: (20 + 12) * 5 = 160.
+            Assert.AreEqual("160", power);
         }
 
         [Test]
@@ -457,7 +457,7 @@ namespace PrincesPalace.Domain.Tests
             // damage comes from flatAmount instead (mud_burst's actual shape),
             // that field is 0 and the row reads blank despite the skill
             // dealing real damage. This pins the fix: the CASTER'S OWN Attack,
-            // scaled and put on the x10 scale every other damage number uses,
+            // scaled and put on the x5 scale every other damage number uses,
             // with no target and therefore no defense subtracted. Hero's
             // Attack is 20 and this skill spends no signature resource (no
             // Signature is set on the test hero), so `power: 12` never
@@ -466,7 +466,7 @@ namespace PrincesPalace.Domain.Tests
             var skill = Skill("a", "Alpha", power: 12);
             var (session, hero) = Fight(skill);
 
-            Assert.AreEqual("200", FightHudModel.PowerLabel(session, hero, skill));
+            Assert.AreEqual("100", FightHudModel.PowerLabel(session, hero, skill));
         }
 
         [Test]
@@ -499,8 +499,8 @@ namespace PrincesPalace.Domain.Tests
             //
             // POWER is Scale(ScaledAttack(...)), not the raw Attack stat --
             // hero.Attack is 20, and CombatMath puts every damage number on
-            // its own x10 scale, so a swing with nothing else in play reads
-            // 200, matching what ComputeAttackDamage would produce against a
+            // its own x5 scale, so a swing with nothing else in play reads
+            // 100, matching what ComputeAttackDamage would produce against a
             // defenseless target.
             var (_, hero) = Fight();
 
@@ -508,7 +508,7 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual("Strike", panel.Name);
             Assert.AreEqual(5, panel.Stats.Count, "the column has five fixed rows");
-            Assert.AreEqual("200", panel.Stats[1].Value,
+            Assert.AreEqual("100", panel.Stats[1].Value,
                 "it describes THIS actor's swing, not a generic one");
         }
 
