@@ -159,5 +159,37 @@ namespace PrincesPalace.Domain.Tests
             int hit = System.Math.Max(1, playerAttack - DifficultyCurve.ScaleAttack(defense, step)) * 10;
             return DifficultyCurve.ScaleHealth(health, step) / (float)hit;
         }
+
+        // THE MISSING HALF OF THE INVARIANT ABOVE. AGolemTakesAboutTheSame...
+        // pins player-attacks-enemy; nothing pinned enemy-attacks-player, which
+        // is exactly the gap a user report walked through: Dungeon Warden's
+        // authored attack (9, before this) scaled to 2.25x at step 16 -- the
+        // EARLIEST a boss room can ever appear (DescentMapGenerator.
+        // StepsPerBoss=16) -- for 160 damage against Shawn's starting Defense
+        // (4, no ability-score bonus; see AbilityDerivation's own header on
+        // why Defense is gear-only). That is exactly half of his starting
+        // effective max health (320 = base 200 + CON 16's +120) in one
+        // unmitigated plain swing, from a boss with no special ability at
+        // all. The Hollow Choir's authored attack (12) was worse: 72%.
+        //
+        // 35% is not a tuned number, it is a sanity ceiling -- comfortably
+        // above what a genuinely tense early boss hit should cost (roughly a
+        // quarter of a health bar) and comfortably below "half your health
+        // bar from one swing nothing warned you about."
+        [TestCase(6, "warden")]
+        [TestCase(7, "hollow_choir")]
+        public void ABossDoesNotDevastateAStartingPlayerAtItsOwnEarliestStep(int bossAttack, string id)
+        {
+            const int EarliestBossStep = 16;
+            const int StartingPlayerDefense = 4;
+            const int StartingPlayerMaxHealth = 320;
+
+            int scaledAttack = DifficultyCurve.ScaleAttack(bossAttack, EarliestBossStep);
+            int damage = System.Math.Max(1, scaledAttack - StartingPlayerDefense) * 10;
+
+            Assert.LessOrEqual(damage, StartingPlayerMaxHealth * 0.35f,
+                $"{id}'s own earliest legal boss fight (step {EarliestBossStep}) deals {damage} against a " +
+                $"starting player's {StartingPlayerMaxHealth} HP -- more than 35% in one unmitigated swing.");
+        }
     }
 }

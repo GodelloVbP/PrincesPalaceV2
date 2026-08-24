@@ -17,7 +17,7 @@ MonoBehaviour:
   baseStats:
     maxHealth: 600
     speed: 8
-    attack: 9
+    attack: 6
     defense: 5
     manaRegen: 0
     physicalResistance: 0
