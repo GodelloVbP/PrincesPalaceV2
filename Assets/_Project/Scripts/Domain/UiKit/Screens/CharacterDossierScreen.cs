@@ -726,19 +726,29 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // ---- the shared tooltip --------------------------------------------------------
 
+        // 280x280, not 290x130. It used to hold a one-line item summary and a
+        // wide-short box suited that; a pack item's tooltip is
+        // ItemDescription.ComparisonBody now (bonuses, requirement, a
+        // VS.-EQUIPPED delta per changed stat, cascade notes) -- the same
+        // content routinely runs to eight or ten lines, and the old 84px-tall
+        // body clipped or overflowed almost everything it was asked to show.
+        // Square rather than wider-still, on request, and because a taller
+        // box is what the longer text actually needs -- width was never the
+        // constraint.
         private UiNode BuildTooltip()
         {
-            var title = Ui.Label("DossierTooltipTitle", UiString.Runtime, new UiVec(270f, 26f), 18, AccentHi,
-                Place.At(0f, 44f)).AsDecor();
-            var body = Ui.Label("DossierTooltipBody", UiString.Runtime, new UiVec(270f, 84f), 13, TextDim,
-                Place.At(0f, -14f)).AsDecor();
+            var title = Ui.Label("DossierTooltipTitle", UiString.Runtime, new UiVec(260f, 26f), 18, AccentHi,
+                Place.At(0f, 118f)).AsDecor();
+            var body = Ui.Label("DossierTooltipBody", UiString.Runtime, new UiVec(260f, 220f), 13, TextDim,
+                    Place.At(0f, -14f)).AsDecor()
+                .TextAligned(UiTextAlign.TopLeft);
 
             TooltipTitle = title;
             TooltipBody = body;
 
             // a tooltip floats over whatever it has to - it is transient and
             // takes no clicks
-            var panel = Ui.Sprite("DossierTooltip", null, Place.At(0f, 0f), UiSize.Fixed(290f, 130f))
+            var panel = Ui.Sprite("DossierTooltip", null, Place.At(0f, 0f), UiSize.Fixed(280f, 280f))
                 .Coloured("#1D1226F2")
                 .Inactive()
                 .AsDecor();

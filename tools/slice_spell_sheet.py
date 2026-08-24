@@ -432,8 +432,20 @@ def feather_edges(frame, width=12.0):
             d = min(dx, dy)
             if d >= width:
                 continue
+
+            # RGB fades toward black WITH alpha, not just alpha alone --
+            # premultiplied, in effect. A live capture showed a light fringe
+            # along exactly this feathered band even though its ALPHA read as
+            # correctly near-zero on disk: LANCZOS resampling of a hard-edged
+            # non-premultiplied RGBA source leaves "ghost" colour in pixels
+            # that are meant to be invisible, and GPU bilinear filtering (or a
+            # mip level) blends that ghost colour in regardless of how low
+            # alpha is, because filtering does not know a pixel is "supposed"
+            # to be irrelevant. Converging colour to (0,0,0) at the same rate
+            # as alpha removes the ghost rather than merely hiding it.
+            t = d / width
             r, g, b, a = px[x, y]
-            px[x, y] = (r, g, b, int(a * (d / width)))
+            px[x, y] = (int(r * t), int(g * t), int(b * t), int(a * t))
     return frame
 
 
