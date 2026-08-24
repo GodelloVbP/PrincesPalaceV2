@@ -258,6 +258,11 @@ namespace PrincesPalace
             if (packChevron != null) packChevron.SetContent(open ? "<" : ">");
         }
 
+        // Read by SheetPanel so I/C can tell "already showing what was asked
+        // for" from "showing the other state" -- the distinction that makes
+        // the second press of the OTHER key switch instead of closing.
+        public bool IsPackShown => packPanel != null && packPanel.activeSelf;
+
         private void TogglePack() => ShowPack(packPanel != null && !packPanel.activeSelf);
 
         private void Step(int by)

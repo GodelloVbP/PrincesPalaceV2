@@ -81,6 +81,23 @@ namespace PrincesPalace
         {
             if (verbButtons == null) return;
 
+            // HIDDEN DURING THE FIGHT PHASE, same reason the detail card,
+            // submenu and target prompt already are (see AfterResolution's own
+            // comment) -- ATTACK/SKILL/ITEM/HOLD BACK describe choices the
+            // player is not currently making while a beat is animating, and
+            // leaving them up read as though the menu were still live.
+            // RefreshVerbs runs from RefreshMenuChrome, which AfterResolution
+            // already calls the instant _isBusy goes true, so this needs no
+            // new call site -- just an additional reason to hide, alongside
+            // the ones RefreshMenuChrome's other three calls already act on.
+            bool visible = !_isBusy;
+            for (int i = 0; i < verbButtons.Length; i++)
+            {
+                if (verbButtons[i] != null) verbButtons[i].gameObject.SetShown(visible);
+            }
+
+            if (!visible) return;
+
             int active = _menu.ActiveVerbIndex;
             for (int i = 0; i < verbButtons.Length; i++)
             {

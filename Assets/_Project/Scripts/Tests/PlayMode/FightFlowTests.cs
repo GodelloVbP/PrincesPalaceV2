@@ -257,6 +257,15 @@ namespace PrincesPalace.PlayModeTests
                 "fixture: the beat should still be playing right after the click, or this proves nothing");
             Assert.IsFalse(Active("TargetPrompt"), "the target prompt must not survive into its own animation");
             Assert.IsFalse(Active("DetailColumn"), "the skill card must not survive into its own animation");
+
+            // ATTACK/SKILL/ITEM/HOLD BACK too, on the same report: the verb
+            // column used to stay up for the whole animation right alongside
+            // the card and the prompt, describing choices the player was not
+            // currently making.
+            for (int i = 0; i < 4; i++)
+            {
+                Assert.IsFalse(Active($"Verb{i}"), $"Verb{i} must not survive into the animation it triggered");
+            }
         }
 
         [UnityTest]

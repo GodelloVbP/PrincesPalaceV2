@@ -348,17 +348,26 @@ namespace PrincesPalace
         {
             _menu.Reset();
 
+            // SET BEFORE THE REPAINT, not after. RefreshMenuChrome (below)
+            // includes RefreshVerbs, which now hides ATTACK/SKILL/ITEM/HOLD
+            // BACK for exactly the same reason the detail card, submenu and
+            // target prompt already hide -- the fight phase has begun, and
+            // none of them describe a choice the player is currently making.
+            // Setting this after the repaint would have RefreshVerbs read the
+            // stale "not busy yet" state on the one frame it actually matters.
+            _isBusy = true;
+
             // REPAINTED HERE, not left for OnPlaybackFinished. _menu.Reset()
             // above already closes the domain state, but nothing was telling
             // the view -- RefreshUi() only ran once the whole beat sequence
-            // finished, so the skill-detail card, submenu list and target
-            // prompt stayed on screen for the full swing/cast animation and
-            // only vanished at the very end. RefreshMenuChrome() is the menu-
-            // only half of RefreshUi(): it skips the plates/stage/initiative,
-            // which stay on their pre-resolution snapshot on purpose until
-            // FightBeatPlayer paints each beat's vitals -- painting those here
-            // would snap health bars to their final value before the
-            // animation plays.
+            // finished, so the skill-detail card, submenu list, target
+            // prompt and verb column stayed on screen for the full swing/cast
+            // animation and only vanished at the very end. RefreshMenuChrome()
+            // is the menu-only half of RefreshUi(): it skips the plates/
+            // stage/initiative, which stay on their pre-resolution snapshot
+            // on purpose until FightBeatPlayer paints each beat's vitals --
+            // painting those here would snap health bars to their final
+            // value before the animation plays.
             RefreshMenuChrome();
 
             foreach (var line in _session.DrainImmediateMessages()) PushLogLine(line);
@@ -367,7 +376,6 @@ namespace PrincesPalace
 
             if (beatPlayer != null && beats.Count > 0)
             {
-                _isBusy = true;
                 beatPlayer.Play(beats, OnPlaybackFinished);
             }
             else

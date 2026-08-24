@@ -98,36 +98,51 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(fight.CharacterSheetIsOpen, "pressing the same key again did not close it");
         }
 
-        // The test that used to sit here pinned "pressing the other pane's key
-        // switches panes rather than closing". The design pass merged Character
-        // and Inventory into ONE tab, so there is no other pane to switch to
-        // and both keys are now the same gesture. Deleted rather than rewritten
-        // to assert nothing, and recorded here so its absence reads as a
-        // decision instead of an oversight.
-
+        // The switch-vs-close rule this used to pin ("pressing the other
+        // pane's key switches panes rather than closing") was retired when
+        // Character and Inventory merged into one tab -- correctly, at the
+        // time, since there was nothing left to switch between. It came back
+        // when the pack argument was wired to CharacterDossierController.
+        // ShowPack: I and C each mean a real state again (pack up / pack
+        // down), so the same rule the old test asserted applies again, just
+        // retargeted at the pack instead of at a tab. A user report is what
+        // caught the gap between the two: pressing I then C closed the whole
+        // sheet instead of switching the pack down, because the toggle was
+        // only ever comparing open-vs-closed.
         [UnityTest]
-        public IEnumerator BothKeysDriveTheSameScreen()
+        public IEnumerator BothKeysDriveTheSameScreenAndTheOtherOneSwitchesThePack()
         {
             yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
             yield return null;
             yield return null;
 
             var fight = Object.FindAnyObjectByType<FightController>(FindObjectsInactive.Include);
+            var dossier = Object.FindAnyObjectByType<CharacterDossierController>(FindObjectsInactive.Include);
+            Assert.IsNotNull(dossier, "the fight scene lost its dossier");
 
             fight.ToggleCharacterSheet(inventory: false);
             yield return null;
             Assert.IsTrue(fight.CharacterSheetIsOpen, "C did not open the character screen");
+            Assert.IsFalse(dossier.IsPackShown, "C should open WITHOUT the pack");
 
-            // AND I CLOSES IT. That is a real behaviour change and it is the
-            // design's, not an oversight: Character and Inventory used to be two
-            // panes and the other key switched between them, so it had somewhere
-            // else to go. They are one tab now -- the dossier was always both
-            // halves -- so both keys are the same gesture and the second press
-            // is a second press.
+            // THE OTHER KEY SWITCHES, it does not close. This is the exact
+            // gesture the report named: I while the sheet is already open
+            // (via C) should bring the pack up and leave the sheet open, not
+            // close the whole screen.
+            fight.ToggleCharacterSheet(inventory: true);
+            yield return null;
+            Assert.IsTrue(fight.CharacterSheetIsOpen,
+                "pressing the OTHER key while open should switch the pack, not close the sheet");
+            Assert.IsTrue(dossier.IsPackShown, "I should have brought the pack up");
+
+            // THE SAME KEY, ASKING FOR WHAT IS ALREADY SHOWING, closes it --
+            // this is the one case that still has to behave like a plain
+            // toggle, or there would be no keyboard way to close the sheet at
+            // all short of Escape.
             fight.ToggleCharacterSheet(inventory: true);
             yield return null;
             Assert.IsFalse(fight.CharacterSheetIsOpen,
-                "I left the screen open, so the two keys are still behaving as two doors");
+                "pressing the SAME key again, with nothing left to switch to, should close the sheet");
         }
 
         // The hub's copy is the live one. Same tree, opposite setting, and the

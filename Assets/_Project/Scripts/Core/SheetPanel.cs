@@ -40,17 +40,30 @@ namespace PrincesPalace
         private static SystemMenuTab TabFor(bool inventory) =>
             SystemMenuTab.CharacterInventory;
 
-        // A PLAIN TOGGLE now that both keys mean one tab.
-        //
-        // This used to carry a switch-vs-close rule: pressing the other pane's
-        // key while open switched panes rather than closing. There is nothing
-        // left to switch between, and leaving the comment would have described
-        // behaviour the code no longer has.
+        // THE SWITCH-VS-CLOSE RULE IS BACK, retargeted at the pack rather than
+        // at a tab. It genuinely had nothing left to switch between for the
+        // stretch between the tab merge and the pack argument being wired to
+        // anything -- the comment above used to say so correctly. Now that I
+        // and C each mean a real state (pack up / pack down), the rule they
+        // were written for applies again: pressing the SAME key a second time
+        // closes the sheet, pressing the OTHER key while it is open switches
+        // to that key's pack state instead of closing it. A plain
+        // `!panel.activeSelf` toggle got this wrong in exactly the way that
+        // rule exists to prevent -- opening with I, then pressing C to see
+        // the pack go down, closed the whole sheet instead, because closed-
+        // vs-open was the only state it was checking.
         public static void Toggle(GameObject panel, bool inventory)
         {
             if (panel == null) return;
 
-            Set(panel, !panel.activeSelf, inventory);
+            bool alreadyShowingThis = panel.activeSelf && CurrentPackState(panel) == inventory;
+            Set(panel, !alreadyShowingThis, inventory);
+        }
+
+        private static bool CurrentPackState(GameObject panel)
+        {
+            var dossier = panel.GetComponentInChildren<CharacterDossierController>(includeInactive: true);
+            return dossier != null && dossier.IsPackShown;
         }
 
         public static void Set(GameObject panel, bool open, bool inventory = false)
@@ -63,7 +76,20 @@ namespace PrincesPalace
                 return;
             }
 
-            var menu = panel.GetComponent<SystemMenuController>();
+            // IN A PARENT, not on `panel` itself. `panel` is what every caller
+            // passes as "the sheet" -- menu.Root, the visual panel that
+            // actually toggles active/inactive, which is what IsOpen has to
+            // read. SystemMenuController lives one level up, on the SCENE
+            // ROOT, deliberately (see WireSystemMenu's own comment: attached
+            // there so its Update() keeps listening for Escape while the menu
+            // itself is closed and inactive). GetComponent<SystemMenuController>
+            // on `panel` was always null, silently -- Open(), Select() and the
+            // ShowPack(inventory) call below never ran, for either key, in any
+            // scene; C and I only ever worked by accident, through the plain
+            // SetActive(true) fallback at the bottom of this method, which is
+            // why the sheet opened and closed but never actually landed on
+            // the right tab or the right pack state.
+            var menu = panel.GetComponentInParent<SystemMenuController>();
             if (menu != null)
             {
                 // Open THEN Select, and the order matters: Select records a
