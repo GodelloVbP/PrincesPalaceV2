@@ -210,6 +210,16 @@ namespace PrincesPalace
             state.ManaRegen = stats.manaRegen;
             state.AbilityScores = scores;
 
+            // The same relic-typed-resistance line the save-backed overload
+            // has -- missed here even though every other relic modifier above
+            // (health/mana/attack/defense/speed) already applies symmetrically
+            // on both paths. A ResistanceFlat relic drafted while this overload
+            // builds the party -- the placeholder/tooling fight, or any real
+            // fight where a party member has no matching save Character --
+            // silently did nothing. Found by EveryRelicReachesCombatTests,
+            // which drafts every relic alone and checks every stat moved.
+            state.TypedResistance = RelicModifiers.ApplyResistance(state.TypedResistance, modifiers);
+
             if (definition.HasSignatureResource)
             {
                 state.Signature = new SignatureResource(

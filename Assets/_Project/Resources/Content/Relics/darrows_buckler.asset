@@ -22,7 +22,13 @@ MonoBehaviour:
   modifiers:
   - type: 6
     amount: 25
+    against: 0
+    hasAgainst: 1
+    againstMagical: 0
   - type: 6
     amount: 25
+    against: 0
+    hasAgainst: 0
+    againstMagical: 1
   sortOrder: 14
   iconPath: 

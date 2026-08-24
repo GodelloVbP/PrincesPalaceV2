@@ -1,4 +1,5 @@
 using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Stats;
 using UnityEngine;
 
 namespace PrincesPalace.Content
@@ -40,7 +41,16 @@ namespace PrincesPalace.Content
 
             foreach (var entry in modifiers)
             {
-                if (entry != null) list.Add(new RelicModifier(entry.type, entry.amount));
+                if (entry != null)
+                {
+                    // Nullable<DamageType> itself does not round-trip through
+                    // Unity's serializer -- hasAgainst is the flag that
+                    // carries "unset" across a domain reload/asset write,
+                    // since Physical is DamageType's own zero value and would
+                    // otherwise be indistinguishable from "no target".
+                    DamageType? against = entry.hasAgainst ? entry.against : (DamageType?)null;
+                    list.Add(new RelicModifier(entry.type, entry.amount, against, entry.againstMagical));
+                }
             }
 
             return list;
@@ -66,5 +76,15 @@ namespace PrincesPalace.Content
     {
         public RelicModifierType type;
         public int amount;
+
+        // ResistanceFlat's target. Two fields rather than a nullable
+        // DamageType -- Unity's serializer does not round-trip
+        // System.Nullable, and Physical is DamageType's own zero value, so a
+        // dropped nullable would silently read back as "resists Physical"
+        // instead of "resists nothing." hasAgainst is what actually survives
+        // the write.
+        public DamageType against;
+        public bool hasAgainst;
+        public bool againstMagical;
     }
 }

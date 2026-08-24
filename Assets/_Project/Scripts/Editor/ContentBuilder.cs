@@ -264,7 +264,14 @@ public static class ContentBuilder
             asset.rarity = relic.Rarity;
             asset.unlockedBy = relic.UnlockedBy;
             asset.modifiers = relic.Modifiers
-                .Select(m => new RelicModifierEntry { type = m.Type, amount = m.Amount })
+                .Select(m => new RelicModifierEntry
+                {
+                    type = m.Type,
+                    amount = m.Amount,
+                    against = m.Against ?? default,
+                    hasAgainst = m.Against.HasValue,
+                    againstMagical = m.AgainstMagical
+                })
                 .ToArray();
             AssetDatabase.CreateAsset(asset, $"{RelicsPath}/{relic.Id}.asset");
         }
