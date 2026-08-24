@@ -70,9 +70,37 @@ namespace PrincesPalace
         {
             if (panel == null) return;
 
+            // FOUND BEFORE THE BRANCH, because CLOSING needs it too, and that
+            // asymmetry is the bug this shape exists to prevent.
+            //
+            // Opening went through SystemMenuController.Open(), which PAUSES
+            // the game -- Time.timeScale = 0, restored by its Close(). Closing
+            // went straight to SetActive(false) and never reached Close(), so
+            // every C-then-C left the clock stopped with nothing on screen to
+            // say so. The controller sits on the scene root rather than on
+            // `panel`, so deactivating the panel does not even fire its
+            // OnDisable safety net.
+            //
+            // What that cost, as reported: win a fight, press C or I over the
+            // Reckoning, press it again, and the run cannot be continued. The
+            // reward screen itself runs on unscaled time and looks fine, so
+            // there is no visible symptom until the map loads and the walk to
+            // the next room -- Time.deltaTime, like the rest of the map --
+            // never advances a single step.
+            //
+            // Escape was never affected and does not rescue it either: the
+            // Reckoning is one of the fight's escapeConsumers, so with it up
+            // Escape is declined rather than handled.
+            var menu = panel.GetComponentInParent<SystemMenuController>();
+
             if (!open)
             {
-                panel.SetActive(false);
+                // Through the menu when there is one, so the pause it took is
+                // the pause it gives back. SetActive stays as the fallback for
+                // a panel mounted without a controller above it -- a headless
+                // fixture, or a future screen that reuses this seam.
+                if (menu != null) menu.Close();
+                else panel.SetActive(false);
                 return;
             }
 
@@ -89,7 +117,6 @@ namespace PrincesPalace
             // SetActive(true) fallback at the bottom of this method, which is
             // why the sheet opened and closed but never actually landed on
             // the right tab or the right pack state.
-            var menu = panel.GetComponentInParent<SystemMenuController>();
             if (menu != null)
             {
                 // Open THEN Select, and the order matters: Select records a

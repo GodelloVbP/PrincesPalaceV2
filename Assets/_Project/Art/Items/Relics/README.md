@@ -45,8 +45,10 @@ slot blank with only a console warning to explain why.
 
 ## Sizes
 
-Generate square, 1024×1024, subject centred with roughly 10% padding. Unlike
-the Hub buildings, these are **not** resampled down — the keyer writes them
-through at whatever resolution they're generated at, since a relic icon only
-ever needs to exist at its one authored size (no runtime `Resources.Load`
-here, so there's no separate "delivery size" to hit).
+Generate square, subject centred with roughly 10% padding, then downscale to
+**256×256** before keying — the image generator's native output is larger
+(commonly 1024×1024) and every icon in the game is shown small enough that
+the extra resolution just makes the alpha-key edges more expensive to clean
+up. Unlike the Hub buildings, the keyer does not resample on its own: whatever
+size the file is when it hits `key_green_screen.py` is the size that ships,
+so downscale first, key second.

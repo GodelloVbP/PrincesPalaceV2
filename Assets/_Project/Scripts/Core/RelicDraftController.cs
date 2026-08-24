@@ -42,6 +42,11 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text[] cardRarities;
         [SerializeField] internal TMP_Text[] cardBodies;
 
+        // The halo and burst behind the icon, same pair the Reckoning's item
+        // offers wear -- see RelicDraftScreen.BuildCard.
+        [SerializeField] internal Image[] cardHalos;
+        [SerializeField] internal Image[] cardBursts;
+
         [SerializeField] internal GameObject emptyHint;
         [SerializeField] internal Button descendButton;
 
@@ -240,6 +245,25 @@ namespace PrincesPalace
                 ItemIcons.Apply(cardIcons[i], icons, option.Id);
 
                 cardSelections[i].color = _selected == absolute ? RingLit : RingDark;
+
+                // Same two-layer rarity read as the Reckoning's item offers:
+                // a burst carrying the colour behind the icon and a softer
+                // halo under that, since the burst's core is hidden by the
+                // icon it sits behind. See ReckoningController.PaintOffers.
+                var glow = RarityColors.For(option.Rarity);
+                if (cardBursts != null && i < cardBursts.Length && cardBursts[i] != null)
+                {
+                    var strong = glow;
+                    strong.a = 0.42f;
+                    cardBursts[i].color = strong;
+                }
+
+                if (cardHalos != null && i < cardHalos.Length && cardHalos[i] != null)
+                {
+                    var soft = glow;
+                    soft.a = 0.30f;
+                    cardHalos[i].color = soft;
+                }
             }
         }
 

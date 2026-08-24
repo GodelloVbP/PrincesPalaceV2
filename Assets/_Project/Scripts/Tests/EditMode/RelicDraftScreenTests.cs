@@ -47,6 +47,8 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(screen.Cards.Count, screen.CardIcons.Count);
             Assert.AreEqual(screen.Cards.Count, screen.CardRarities.Count);
             Assert.AreEqual(screen.Cards.Count, screen.CardBodies.Count);
+            Assert.AreEqual(screen.Cards.Count, screen.CardHalos.Count);
+            Assert.AreEqual(screen.Cards.Count, screen.CardBursts.Count);
             Assert.AreEqual(screen.Cards.Count, screen.CardSelections.Count);
         }
 

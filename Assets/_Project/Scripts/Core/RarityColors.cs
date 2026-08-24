@@ -39,6 +39,19 @@ namespace PrincesPalace
             return item == null ? Color.white : ForTier(item.tier);
         }
 
+        // RelicRarity reuses the item Rarity table by ordinal rather than
+        // carrying its own hex strings — an easy-paste stand-in for the relic
+        // draft's card colour, not a statement that the two rarity ladders
+        // are the same thing (RelicRarity's own doc comment says they are
+        // not). Godlike, the one band Rarity has no slot for, falls through
+        // to Mythic's colour rather than the neutral default, since a relic
+        // that rare reading as an ordinary item would undersell it.
+        public static Color For(RelicRarity rarity)
+        {
+            int index = (int)rarity;
+            return For((Rarity)System.Math.Min(index, (int)Rarity.Mythic));
+        }
+
         // The name a player should see for one particular copy: the tier's
         // adjective (already baked into displayName) with this instance's
         // plus appended.

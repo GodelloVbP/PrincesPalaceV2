@@ -30,4 +30,4 @@ MonoBehaviour:
     hasAgainst: 0
     againstMagical: 0
   sortOrder: 11
-  iconPath: 
+  iconPath: Assets/_Project/Art/Items/Relics/Processed/whetstone_heart.png

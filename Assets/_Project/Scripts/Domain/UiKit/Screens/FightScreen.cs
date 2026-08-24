@@ -605,15 +605,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // stack instead of overlapping. Change one, change the other.
         private const float BarkHeight = 130f;
 
-        // A PLAIN BLACK BOX, full width, flush to the true top of the screen --
-        // not banner_violet.png. That texture is an 8:1 strip; stretched into
-        // this box's ~1.56:1 shape it compressed its own painted border ~5x
-        // more vertically than horizontally, which is what the "black bar
-        // around the log bar" playtest note was actually seeing. The box also
-        // sat 58px short of the real top edge (Place.At(0f, 430f) against a
-        // 1080-tall reference frame, top edge at y=540) rather than flush to
-        // it. Both fixed here; the plain colour is deliberately a placeholder
-        // until real chrome is designed for it.
+        // NO BOX. Used to be a plain black plate the full width of the screen
+        // -- a placeholder the comment here admitted was never meant to ship
+        // -- and it read as a slab dropped over the battlefield. The log now
+        // floats: same position, same reach, just nothing painted behind it.
+        //
+        // Still a Panel rather than the label sitting bare at the top level,
+        // because the portrait and the label need one parent to be pinned and
+        // sized together. A colourless Panel emits no Image at all
+        // (UiNode.EmitsNoGraphic), so this costs nothing to draw and cannot
+        // intercept a click either -- the AsDecor below is about UiAudit's
+        // overlap check, not about hiding a graphic that no longer exists.
         private UiNode BuildBark()
         {
             var portrait = Ui.Sprite("BarkPortrait", null, new UiVec(56f, 56f), Place.At(-880f, -8f)).Inactive();
@@ -637,11 +639,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // the check exists to catch a decorative-looking node accidentally
             // eating real clicks, which AsDecor is the actual fix for, not
             // just the silencer.
-            var bark = Ui.Solid("DialogueBark", "#000000", new UiVec(1920f, BarkHeight),
-                    Place.Pin(new UiVec(0.5f, 1f), new UiVec(0.5f, 1f), UiVec.Zero))
+            var bark = Ui.Panel("DialogueBark", Place.Pin(new UiVec(0.5f, 1f), new UiVec(0.5f, 1f), UiVec.Zero),
+                    UiSize.Fixed(1920f, BarkHeight), portrait, label)
                 .AsDecor();
-            bark.Children.Add(portrait);
-            bark.Children.Add(label);
             BarkPanel = bark;
             return bark;
         }

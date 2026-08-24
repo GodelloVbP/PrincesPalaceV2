@@ -30,4 +30,4 @@ MonoBehaviour:
     hasAgainst: 0
     againstMagical: 1
   sortOrder: 14
-  iconPath: 
+  iconPath: Assets/_Project/Art/Items/Relics/Processed/darrows_buckler.png

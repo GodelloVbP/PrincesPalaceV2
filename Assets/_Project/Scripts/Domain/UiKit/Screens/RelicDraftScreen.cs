@@ -32,12 +32,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef NextPageButton;
         public NodeRef PageLabel;
 
+        // BAKED, not painted -- the same starburst the Reckoning's item offers
+        // wear behind their icon. Copied wholesale rather than re-derived: see
+        // ReckoningScreen.BurstKey for why the generated one won and the
+        // painted attempt did not.
+        public const string BurstKey = "proc:rarity_burst";
+
         public List<NodeRef> Cards = new List<NodeRef>();
         public List<NodeRef> CardNames = new List<NodeRef>();
         public List<NodeRef> CardRarities = new List<NodeRef>();
         public List<NodeRef> CardBodies = new List<NodeRef>();
         public List<NodeRef> CardIcons = new List<NodeRef>();
         public List<NodeRef> CardSelections = new List<NodeRef>();
+        public List<NodeRef> CardHalos = new List<NodeRef>();
+        public List<NodeRef> CardBursts = new List<NodeRef>();
 
         public static RelicDraftScreen Build()
         {
@@ -117,46 +125,79 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return screen;
         }
 
+        // Copied from ReckoningScreen.BuildOffer -- the item-reward card at the
+        // end of a fight -- rather than the draft's own earlier card design.
+        // Easy-paste on purpose, per the ask: halo, burst, icon, name and a
+        // meta line, chromeless, no backing plate. One thing added back on
+        // top of that copy: the description line the reward card has no room
+        // for, because a relic is chosen for its EFFECT and the offer card's
+        // layout alone left that unreadable until Descend.
         private UiNode BuildCard(int index, float x)
         {
-            // The selection ring is a SIBLING layer under the card rather than
-            // a colour on the card itself, so "which is chosen" and "what
-            // rarity is it" stay two channels. v1's item cells carried both on
-            // one Image.color and the two states fought.
+            // The selection ring is the one layer the reward card has no
+            // equivalent for -- an offer there is taken on click and gone, but
+            // a draft round can be reconsidered before Descend, so "which one
+            // is currently chosen" still needs its own channel. Kept as a
+            // sibling ring for the same reason it always was: a colour on the
+            // card itself would fight the rarity read the burst now carries.
             var selection = Ui.Solid($"DraftCard{index}Selection", "#F2DB9E00",
                     Place.Stretch(-6f, -6f, -6f, -6f), UiSize.Fill)
                 .AsDecor()
                 .AllowOverflow("the ring sits 6px OUTSIDE its card on every side - that overhang is the whole signal, since a border drawn inside the card would be competing with the card's own edge rather than framing it");
 
-            var backing = Ui.Solid($"DraftCard{index}Backing", "#2E2244", Place.Stretch(), UiSize.Fill)
-                .AsDecor();
+            // Icon geometry scaled from the offer card's 200x250-in-400 to this
+            // card's 460 height, same top/bottom-margin shape.
+            const float IconTop = 170f;
+            const float IconBottom = -30f;
+            const float IconCentre = (IconTop + IconBottom) * 0.5f;
+
+            var halo = Ui.Sprite($"DraftCard{index}Halo", "proc:radial_glow",
+                    Place.At(0f, IconCentre), UiSize.Fixed(300f, 300f))
+                .Coloured("#FFFFFF00")
+                .AsDecor()
+                .AllowOverflow("the halo is deliberately larger than the icon it sits behind - that bleed IS the rarity signal");
+
+            var burst = Ui.Sprite($"DraftCard{index}Burst", BurstKey,
+                    Place.At(0f, IconCentre), UiSize.Fixed(310f, 310f))
+                .Coloured("#FFFFFF00")
+                .AsDecor()
+                .AllowOverflow("the burst is deliberately larger than the icon it sits behind - that bleed IS the rarity signal");
 
             var icon = Ui.Sprite($"DraftCard{index}Icon", null,
-                    Place.At(0f, 110f), UiSize.Fixed(160f, 160f))
+                    Place.At(0f, IconCentre), UiSize.Fixed(200f, IconTop - IconBottom))
                 .AsDecor();
 
             var name = Ui.Label($"DraftCard{index}Name", UiString.Runtime, new UiVec(340f, 60f), 24,
-                    "#EDE6FF", Place.At(0f, -10f))
+                    "#EDE6FF", Place.At(0f, IconBottom - 6f - 33f))
                 .AsDecor();
+
+            const float RarityY = IconBottom - 6f - 66f - 4f - 13f;
 
             var rarity = Ui.Label($"DraftCard{index}Rarity", UiStrings.DraftRarity, new UiVec(340f, 30f), 16,
-                    "#B8A8D9", Place.At(0f, -60f))
+                    "#B8A8D9", Place.At(0f, RarityY))
                 .AsDecor();
 
-            var body = Ui.Label($"DraftCard{index}Body", UiString.Runtime, new UiVec(330f, 110f), 15,
-                    "#9C8FC4", Place.At(0f, -140f))
+            // Below the rarity line, in the gap the reward card's shorter card
+            // doesn't have: rarity's box bottoms out at RarityY - 15, so this
+            // starts 8px under that and runs to within 8px of the card's own
+            // bottom edge (-CardHeight/2 = -230).
+            var body = Ui.Label($"DraftCard{index}Body", UiString.Runtime, new UiVec(340f, 76f), 14,
+                    "#9C8FC4", Place.At(0f, RarityY - 15f - 8f - 38f))
                 .AsDecor();
 
             var card = Ui.Button($"DraftCard{index}", UiString.Runtime,
-                new UiVec(CardWidth, CardHeight), 12, Place.At(x, 20f));
+                    new UiVec(CardWidth, CardHeight), 12, Place.At(x, 20f))
+                .NoChrome();
 
-            foreach (var layer in new[] { selection, backing, icon, name, rarity, body })
+            foreach (var layer in new[] { selection, halo, burst, icon, name, rarity, body })
             {
                 card.Children.Add(layer);
             }
 
             Cards.Add(card);
             CardSelections.Add(selection);
+            CardHalos.Add(halo);
+            CardBursts.Add(burst);
             CardIcons.Add(icon);
             CardNames.Add(name);
             CardRarities.Add(rarity);

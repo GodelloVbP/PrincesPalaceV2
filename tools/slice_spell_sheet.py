@@ -530,7 +530,7 @@ def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=Non
                      f"Either the wrong sheet was delivered or the entry should be keyed.")
 
         cut = source.convert("RGBA")
-        print("authored alpha: keeping it, and skipping both line-erasing passes")
+        print("authored alpha: keeping it, and skipping the sheet-wide line pass")
 
     os.makedirs(out_dir, exist_ok=True)
 
@@ -543,10 +543,26 @@ def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=Non
         box = (col * cell_w, row * cell_h, (col + 1) * cell_w, (row + 1) * cell_h)
         frame = cut.crop(box)
 
-        if keyed:
-            borders = erase_frame_borders(frame)
-            if borders:
-                print(f"  {name}: erased {borders} cell border line(s)")
+        # RUN FOR AN AUTHORED-ALPHA SHEET TOO, which it used to skip.
+        #
+        # The reasoning for skipping it was that a frame whose alpha the artist
+        # wrote is a frame whose every opaque pixel was meant -- so a pass that
+        # hunts for keying artefacts has nothing to find and can only do harm.
+        # That is right about erase_drawn_lines, which reads LUMINANCE and would
+        # cheerfully blank a bright horizon out of a keyed-then-authored sheet.
+        # It is wrong about this one, and mud_blast is the counterexample: it
+        # arrived with a box drawn around every cell AND with the alpha to make
+        # that box solid, so "the artist authored it" was true of the artefact
+        # as well as of the art. Skipping the pass shipped a rectangle around
+        # every mud burst -- the same complaint Frost Flare produced, arriving
+        # by the one route the fix for Frost Flare did not cover.
+        #
+        # Safe to run unconditionally because it does not ask what a pixel LOOKS
+        # like, only what its row does: edge to edge, with nothing beside it.
+        # Real art that spans a frame has neighbours -- see FRAME_BORDER_ISOLATION.
+        borders = erase_frame_borders(frame)
+        if borders:
+            print(f"  {name}: erased {borders} cell border line(s)")
 
         cells[name] = frame
 

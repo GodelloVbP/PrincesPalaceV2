@@ -1,6 +1,6 @@
 {
   "_readme": "Every relic in the game. Edit this file, then run Prince's Palace > Build Default Content. id and displayName are always required. Everything else is optional and defaulted. RELICS ARE DRAFTED PER RUN: three are offered at the start of a descent, the player keeps one for that run only, and it is gone when the run ends. Nothing here is permanent progression. `rarity` is one of common, uncommon, rare, ultrarare, mythic, godlike (case-insensitive, default common) and is an AUTHORED statement about how often the relic should be offered -- unlike item rarity it is not derived from a tier, because a relic has no numbers to derive it from. Changing a relic's band is this one word and nothing else. `unlockedBy` names an AchievementIds value; empty means available from the very first run, and an unknown id is a content-build failure rather than a relic that silently never appears. `effect` names a PrincesPalace.Domain.Content.RelicEffect value (case-insensitive); OMIT IT for a relic that has no mechanic yet -- it resolves to None, which is exempt from the one-relic-per-effect rule precisely so a pool of named-but-unimplemented relics can exist. Every other effect must still be unique: two relics doing the same thing makes one of them a dead choice in a draft. iconPath is optional and points at Assets/_Project/Art/Items/Relics/Processed/ -- SceneBuilder.LoadSprite leaves the slot blank with a console warning until that file exists.",
-  "_placeholders": "seven_teeth through drowned_lantern are DELIBERATELY MECHANIC-LESS. They exist so the draft, the rarity ladder and the glossary can be seen working against a pool big enough to be a real choice, before anybody has designed what they do. Give one an `effect` when it earns one; until then they are honest about being furniture.",
+  "_placeholders": "forest_wardens_tooth is DELIBERATELY MECHANIC-LESS -- it exists so the draft, the rarity ladder and the glossary can be seen working against a pool big enough to be a real choice, before anybody has designed what it does. It is the only one left; every other relic that used to sit in this state (seven_teeth through drowned_lantern) has since earned an `effect`. Give it one when it earns one; until then it is honest about being furniture.",
   "relics": [
     {
       "id": "dual_wield",
@@ -31,62 +31,71 @@
       "displayName": "Bounty Hunter Contract",
       "description": "Killing an enemy pays gold equal to about 30% of its own experience reward (minimum 1 gold).",
       "rarity": "uncommon",
-      "effect": "BountyHunterContract"
+      "effect": "BountyHunterContract",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/seven_teeth.png"
     },
     {
       "id": "salt_ledger",
       "displayName": "The Salt Ledger",
       "description": "Every attack you land reduces all of your active cooldowns by 1 turn.",
       "rarity": "ultrarare",
-      "effect": "SaltLedger"
+      "effect": "SaltLedger",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/salt_ledger.png"
     },
     {
-      "id": "cold_iron_ring",
+      "id": "toothed_necklace",
       "displayName": "Toothed Necklace",
       "description": "The lower your health, the harder and faster you fight - up to +30% damage and +20% speed at 25% health or below, scaling smoothly in between.",
       "rarity": "common",
-      "effect": "ToothedNecklace"
+      "effect": "ToothedNecklace",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/toothed_necklace.png"
     },
     {
-      "id": "moth_king_crown",
+      "id": "tinfoil_pipe",
       "displayName": "Tin-Foil Pipe of Magic",
       "description": "Casting a spell grants +20% speed for your next turn.",
       "rarity": "rare",
-      "effect": "TinFoilPipe"
+      "effect": "TinFoilPipe",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/tinfoil_pipe.png"
     },
     {
-      "id": "widows_thimble",
+      "id": "ballerinas_slippers",
       "displayName": "Ballerina's Slippers",
       "description": "Each attack you land permanently speeds you up by 10% for the rest of the fight, up to +40% total.",
       "rarity": "common",
-      "effect": "BallerinasSlippers"
+      "effect": "BallerinasSlippers",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/ballerinas_slippers.png"
     },
     {
       "id": "long_count",
       "displayName": "The Long Count",
       "description": "Every third attack you land this fight deals 40% bonus damage.",
       "rarity": "common",
-      "effect": "LongCount"
+      "effect": "LongCount",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/long_count.png"
     },
     {
       "id": "drowned_lantern",
       "displayName": "Drowned Lantern",
       "description": "A spell that lands marks its target; your next attack against a marked target deals 50% bonus damage.",
       "rarity": "ultrarare",
-      "effect": "DrownedLantern"
+      "effect": "DrownedLantern",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/drowned_lantern.png"
     },
     {
       "id": "forest_wardens_tooth",
       "displayName": "The Warden's Tooth",
       "description": "Taken from the thing that guards the first wood. It has no power yet.",
       "rarity": "uncommon",
-      "unlockedBy": "first_forest_boss"
+      "unlockedBy": "first_forest_boss",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/forest_wardens_tooth.png"
     },
     {
       "id": "whetstone_heart",
       "displayName": "Whetstone Heart",
       "description": "Strikes 20% harder, and bruises just as easily.",
       "rarity": "uncommon",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/whetstone_heart.png",
       "modifiers": [
         {
           "type": "AttackPercent",
@@ -103,6 +112,7 @@
       "displayName": "Thick Hide",
       "description": "Forty more health, carried slowly.",
       "rarity": "common",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/thick_hide.png",
       "modifiers": [
         {
           "type": "MaxHealthFlat",
@@ -119,13 +129,15 @@
       "displayName": "Charging Crystal",
       "description": "Every fourth spell you cast this fight deals 50% bonus damage.",
       "effect": "ChargingCrystal",
-      "rarity": "common"
+      "rarity": "common",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/charging_crystal.png"
     },
     {
       "id": "darrows_buckler",
       "displayName": "Darrow's Buckler",
       "description": "+25 physical resistance and +25 magical resistance.",
       "rarity": "common",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/darrows_buckler.png",
       "modifiers": [
         {
           "type": "ResistanceFlat",
@@ -144,21 +156,24 @@
       "displayName": "Sword in a Box",
       "description": "Landing a spell on an enemy immediately follows with a free basic attack against them.",
       "effect": "SwordInABox",
-      "rarity": "ultrarare"
+      "rarity": "ultrarare",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/sword_in_a_box.png"
     },
     {
       "id": "lucky_deck",
       "displayName": "Lucky Deck",
       "description": "Every landed attack rolls one of three outcomes at random - heal 5% health and 10% mana, splash 25% of the damage onto every other enemy, or slow the target by 30% speed for a turn.",
       "effect": "LuckyDeck",
-      "rarity": "ultrarare"
+      "rarity": "ultrarare",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/lucky_deck.png"
     },
     {
       "id": "first_rune",
       "displayName": "The First Rune",
       "description": "A single-target damaging spell you cast repeats itself once more on the same target, for free.",
       "effect": "FirstRune",
-      "rarity": "godlike"
+      "rarity": "godlike",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/first_rune.png"
     }
   ]
 }

@@ -1249,6 +1249,8 @@ public static class ScreenRegistry
         controller.cardNames = draft.CardNames.Select(result.Tmp).ToArray();
         controller.cardRarities = draft.CardRarities.Select(result.Tmp).ToArray();
         controller.cardBodies = draft.CardBodies.Select(result.Tmp).ToArray();
+        controller.cardHalos = draft.CardHalos.Select(result.Image).ToArray();
+        controller.cardBursts = draft.CardBursts.Select(result.Image).ToArray();
 
         controller.emptyHint = result.Go(draft.EmptyHint);
         controller.descendButton = result.Button(draft.DescendButton);
