@@ -1307,7 +1307,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // THE STATS ARE A FOOTER, MEASURED FROM THE BOTTOM, same as
             // before -- retuned smaller and tighter for a box half the height
             // carrying a fifth row (SCALES) the old one didn't.
-            float statBottom = DetailFrameBottom + 16f;
+            // 36, not 16: a live capture showed the fifth row (SCALES) sitting
+            // ON the panel's own ornate bottom border, half-hidden behind its
+            // decoration. DetailFrameBottom already backs off the sprite's
+            // measured transparent bleed, but the DRAWN border line itself
+            // sits further inward than that bleed alone accounts for -- this
+            // margin is empirical, from looking at the actual render, not
+            // derived from the sprite measurement above it.
+            float statBottom = DetailFrameBottom + 36f;
             float statPitch = 18f;
             float dividerY = statBottom + (FightHudSpec.DetailStatRows - 1) * statPitch + 12f;
 
