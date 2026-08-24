@@ -258,23 +258,18 @@ namespace PrincesPalace.Domain.Combat.Session
             return skill.ManaCost > 0 ? skill.ManaCost + " MP" : "FREE";
         }
 
-        // What the POWER stat shows.
-        //
-        // `Power` (per-point-of-resource scaling) reads as 0 for a skill with
-        // authored damage packets -- those replace the attack-scaled formula
-        // with a fixed number entirely, so Power never applies and is never
-        // authored on them either. The sum of the packets is the honest "how
-        // hard does this hit" for those; every other skill keeps showing Power.
-        public static string PowerLabel(ResolvedSkill skill)
-        {
-            if (!skill.HasFixedDamage) return skill.Power.ToString();
+        // What the POWER stat shows: pre-mitigation damage from the caster's
+        // OWN stats/relics/buffs, before the target's armor/resistance/
+        // reduction touches it. Was `skill.Power` printed verbatim, which
+        // reads as 0 for any skill whose damage comes from `flatAmount`
+        // instead of the per-resource-point formula -- mud_burst among them,
+        // shown blank despite dealing real damage. FightSession.PreviewSkillPower
+        // is the actual pre-mitigation figure for every skill shape (fixed
+        // packets, flat, or resource-scaled) with no target and no RNG spent.
+        public static string PowerLabel(FightSession session, CombatantState actor, ResolvedSkill skill) =>
+            session == null ? "0" : session.PreviewSkillPower(actor, skill).ToString();
 
-            int total = 0;
-            foreach (var instance in skill.DamageInstances) total += instance.amount;
-            return total.ToString();
-        }
-
-        public static DetailPanel DetailForSkill(ResolvedSkill skill, string resourceName = null)
+        public static DetailPanel DetailForSkill(FightSession session, CombatantState actor, ResolvedSkill skill, string resourceName = null)
         {
             var panel = new DetailPanel
             {
@@ -283,7 +278,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 Body = skill.Description ?? "",
             };
             panel.Stats.Add(("COST", CostLabel(skill, resourceName)));
-            panel.Stats.Add(("POWER", PowerLabel(skill)));
+            panel.Stats.Add(("POWER", PowerLabel(session, actor, skill)));
 
             // Both of these printed the enum: "SINGLEENEMY" and "DAMAGESINGLE".
             // Same fix as the row's meta line, and it has to be the same words
@@ -307,6 +302,14 @@ namespace PrincesPalace.Domain.Combat.Session
         // The synthetic entry for ATTACK, which has no authored skill behind it.
         // Reads its numbers off the actor so it describes the swing the player
         // is about to take rather than a generic one.
+        //
+        // POWER used to print the raw Attack stat, which is not the damage
+        // number anywhere else on the sheet reads -- CombatMath scales Attack
+        // by weapon scaling first and puts the result on the same x10 scale
+        // every other damage number is on. Scale(ScaledAttack(...)) with no
+        // defense term is exactly ComputeAttackDamage's own formula minus the
+        // target's EffectiveDefense, i.e. the same pre-mitigation reading
+        // PreviewSkillPower gives a cast.
         public static DetailPanel DetailForStrike(CombatantState actor)
         {
             var panel = new DetailPanel
@@ -316,11 +319,101 @@ namespace PrincesPalace.Domain.Combat.Session
                 Body = "A plain swing at one enemy in reach.",
             };
             panel.Stats.Add(("COST", "FREE"));
-            panel.Stats.Add(("POWER", actor == null ? "0" : actor.Attack.ToString()));
+            panel.Stats.Add(("POWER", actor == null ? "0" : CombatMath.Scale(CombatMath.ScaledAttack(actor, actor.WeaponScaling, 1f)).ToString()));
             panel.Stats.Add(("TARGET", "SINGLE"));
             panel.Stats.Add(("EFFECT", "DAMAGE"));
             return panel;
         }
+
+        // ---- buff badges -----------------------------------------------------
+        //
+        // What the icon row above a character reads on hover -- the party
+        // portrait had NOTHING before this (TagLineFor is enemy-only text, no
+        // icon at all), so a player could not tell Ballerina's Slippers had
+        // fired without opening a menu that says nothing about it either.
+        //
+        // A GLYPH short enough for a small circle, a TOOLTIP sentence with the
+        // real numbers, and whether it reads as helping or hurting -- that is
+        // everything the badge needs to know; the icon's actual art (or its
+        // fallback tint) is a painting decision, made by whoever reads this.
+        public readonly struct BuffBadge
+        {
+            public readonly string Glyph;
+            public readonly string Tooltip;
+            public readonly bool IsPositive;
+
+            public BuffBadge(string glyph, string tooltip, bool isPositive)
+            {
+                Glyph = glyph;
+                Tooltip = tooltip;
+                IsPositive = isPositive;
+            }
+        }
+
+        // Every status effect and every relic-granted speed buff/malus
+        // currently on ONE combatant, as badges. Two different stores
+        // (CombatantState.Statuses, FightSession's private speed-buff
+        // dictionary) because that split is real -- see FightSession.
+        // SpeedBuffs's own header -- so this is where they finally become one
+        // list, for the one place a player actually looks: the character
+        // they are about to act with.
+        public static List<BuffBadge> BuffBadgesFor(FightSession session, CombatantState actor)
+        {
+            var badges = new List<BuffBadge>();
+            if (session == null || actor == null) return badges;
+
+            foreach (var status in actor.Statuses)
+            {
+                badges.Add(StatusBadge(status));
+            }
+
+            var kit = session.KitFor(actor);
+            foreach (var buff in session.ActiveSpeedBuffs(actor))
+            {
+                string name = null;
+                if (kit != null)
+                {
+                    foreach (var relic in kit.Relics)
+                    {
+                        if (relic.Effect == buff.Source) { name = relic.DisplayName; break; }
+                    }
+                }
+                name ??= buff.Source.ToString();
+
+                bool positive = buff.Granted > 0;
+                string turns = buff.TurnsLeft < 0 ? "for the rest of the fight" : Plural(buff.TurnsLeft, "turn");
+                string tooltip = $"{name}: {(positive ? "+" : "")}{buff.Granted} speed, {turns}.";
+                badges.Add(new BuffBadge("SPD", tooltip, positive));
+            }
+
+            return badges;
+        }
+
+        private static BuffBadge StatusBadge(ActiveStatus status)
+        {
+            string turns = Plural(status.TurnsRemaining, "turn");
+            switch (status.Type)
+            {
+                case StatusEffectType.Poison:
+                    return new BuffBadge("PSN", $"Poison: {status.Magnitude} damage at the start of your turn, {turns}.", false);
+                case StatusEffectType.Regen:
+                    return new BuffBadge("RGN", $"Regen: {status.Magnitude} healing at the start of your turn, {turns}.", true);
+                case StatusEffectType.Protect:
+                    return new BuffBadge("PRT", $"Protect: incoming damage reduced {status.Magnitude}%, {turns}.", true);
+                case StatusEffectType.Vulnerable:
+                    return new BuffBadge("VLN", $"Vulnerable: incoming damage increased {status.Magnitude}%, {turns}.", false);
+                case StatusEffectType.Stun:
+                    return new BuffBadge("STN", "Stunned: this turn is skipped.", false);
+                case StatusEffectType.Shielded:
+                    return new BuffBadge("SHD", $"Shielded: the next hit taken is reduced {status.Magnitude}%.", true);
+                case StatusEffectType.Provoked:
+                    return new BuffBadge("PRV", $"Provoked: the next attack must target whoever provoked it, for {status.Magnitude}% less damage to them.", false);
+                default:
+                    return new BuffBadge("?", status.Type.ToString(), true);
+            }
+        }
+
+        private static string Plural(int count, string noun) => $"{count} {noun}{(count == 1 ? "" : "s")} left";
 
         public static DetailPanel DetailForItem(SatchelStack stack)
         {

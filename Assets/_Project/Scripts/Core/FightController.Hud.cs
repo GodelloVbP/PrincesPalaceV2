@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Content;
@@ -55,14 +56,25 @@ namespace PrincesPalace
                 foreach (var line in _session.DrainImmediateMessages()) PushLogLine(line);
             }
 
-            RefreshVerbs();
-            RefreshSubmenu();
-            RefreshDetail();
-            RefreshTargetPrompt();
+            RefreshMenuChrome();
             RefreshEnemyPlates();
             RefreshPartyPlate();
             RefreshInitiative();
             RefreshStage();
+        }
+
+        // Just the menu-derived panels -- verbs, submenu, detail card, target
+        // prompt -- none of which read anything FightBeatPlayer paces. Split
+        // out so AfterResolution can hide them the instant the player commits,
+        // without touching the plates/stage/initiative a beat hasn't painted
+        // yet. See AfterResolution's own comment for why that distinction
+        // matters.
+        private void RefreshMenuChrome()
+        {
+            RefreshVerbs();
+            RefreshSubmenu();
+            RefreshDetail();
+            RefreshTargetPrompt();
         }
 
         private void RefreshVerbs()
@@ -256,6 +268,83 @@ namespace PrincesPalace
 
             RefreshManaPreview(actor);
             RefreshWool(actor);
+            RefreshPartyBuffs(actor);
+        }
+
+        // ---- buff badges ------------------------------------------------------
+        //
+        // GREEN for something helping the character, RED for something
+        // hurting them -- IntentHeal and IntentWeaken/HpBright, the same two
+        // tokens the enemy-intent badges already use for the identical
+        // helping/hurting split, reused rather than a third palette for one
+        // idea the HUD already has a colour language for.
+        private static readonly Color BuffPositive = Hex(FightHudPalette.IntentHeal);
+        private static readonly Color BuffNegative = Hex(FightHudPalette.HpBright);
+
+        private TMPro.TMP_Text[] _partyBuffGlyphs;
+
+        private void WirePartyBuffIcons()
+        {
+            if (partyBuffIcons == null) return;
+
+            _partyBuffGlyphs = new TMPro.TMP_Text[partyBuffIcons.Length];
+            for (int i = 0; i < partyBuffIcons.Length; i++)
+            {
+                var icon = partyBuffIcons[i];
+                if (icon == null) continue;
+
+                _partyBuffGlyphs[i] = icon.GetComponentInChildren<TMPro.TMP_Text>(includeInactive: true);
+
+                var hover = icon.GetComponent<HoverIndex>();
+                if (hover == null) hover = icon.AddComponent<HoverIndex>();
+                hover.Index = i;
+                hover.Changed = OnHoverPartyBuff;
+            }
+
+            if (partyBuffTooltip != null) partyBuffTooltip.SetShown(false);
+        }
+
+        private List<FightHudModel.BuffBadge> _currentPartyBuffs = new List<FightHudModel.BuffBadge>();
+
+        private void RefreshPartyBuffs(CombatantState actor)
+        {
+            if (partyBuffIcons == null || _session == null) return;
+            if (_partyBuffGlyphs == null) WirePartyBuffIcons();
+
+            _currentPartyBuffs = FightHudModel.BuffBadgesFor(_session, actor);
+
+            for (int i = 0; i < partyBuffIcons.Length; i++)
+            {
+                bool shown = i < _currentPartyBuffs.Count;
+                partyBuffIcons[i].SetShown(shown);
+                if (!shown) continue;
+
+                var badge = _currentPartyBuffs[i];
+                var image = partyBuffIcons[i].GetComponent<Image>();
+                if (image != null) image.color = badge.IsPositive ? BuffPositive : BuffNegative;
+                if (_partyBuffGlyphs != null && _partyBuffGlyphs[i] != null)
+                {
+                    _partyBuffGlyphs[i].SetContent(badge.Glyph);
+                }
+            }
+        }
+
+        private void OnHoverPartyBuff(int index, bool entered)
+        {
+            if (partyBuffTooltip == null) return;
+
+            if (!entered || index < 0 || index >= _currentPartyBuffs.Count)
+            {
+                partyBuffTooltip.SetShown(false);
+                return;
+            }
+
+            if (partyBuffTooltipText != null)
+            {
+                partyBuffTooltipText.SetContent(_currentPartyBuffs[index].Tooltip);
+            }
+
+            partyBuffTooltip.SetShown(true);
         }
 
         // The cost preview: a lighter segment at the right-hand end of the
@@ -361,7 +450,7 @@ namespace PrincesPalace
             var kit = _session?.KitFor(actor);
             if (kit != null && index < kit.Skills.Count)
             {
-                return FightHudModel.DetailForSkill(kit.Skills[index], actor?.Signature?.DisplayName);
+                return FightHudModel.DetailForSkill(_session, actor, kit.Skills[index], actor?.Signature?.DisplayName);
             }
 
             // The basic spell's row, which has no ResolvedSkill behind it.
@@ -372,7 +461,7 @@ namespace PrincesPalace
                 Body = "The character's own arcane strike.",
             };
             panel.Stats.Add(("COST", rows[index].Cost));
-            panel.Stats.Add(("POWER", "-"));
+            panel.Stats.Add(("POWER", (_session?.PreviewBasicSpellPower(actor) ?? 0).ToString()));
             panel.Stats.Add(("TARGET", "SINGLE"));
             panel.Stats.Add(("EFFECT", "DAMAGE"));
             return panel;

@@ -506,6 +506,43 @@ namespace PrincesPalace.Domain.Combat.Session
             return total;
         }
 
+        // PRE-MITIGATION PREVIEW for the skill-detail card's POWER row: what
+        // this cast would deal from the CASTER'S OWN stats/relics/buffs alone
+        // -- no target, so no defense, no elemental resistance, no variance,
+        // no ward. Read-only: does not touch the RNG stream, does not spend
+        // the resource, does not advance PotencyFor's cast tally or any other
+        // relic bookkeeping.
+        //
+        // SkillResolution.Amount/Damage already do exactly this when handed a
+        // null target -- Damage() only subtracts EffectiveDefense when
+        // `target != null`, so passing null is sufficient on its own; no
+        // separate "pretend defenseless" flag is needed. The fixed-damage
+        // branch mirrors ResolveDamageInstances' own scaling (multiplier,
+        // AwayFromZero, floored at 1 per packet) but skips
+        // DamagePipeline.AfterDefences entirely, since that whole function is
+        // target mitigation.
+        public int PreviewSkillPower(CombatantState actor, ResolvedSkill skill)
+        {
+            if (actor == null) return 0;
+
+            if (skill.HasFixedDamage)
+            {
+                float multiplier = SkillPowerMultiplierFor(actor);
+                int total = 0;
+                foreach (var instance in skill.DamageInstances)
+                {
+                    total += System.Math.Max(1, Rounding.AwayFromZero(instance.amount * multiplier));
+                }
+                return total;
+            }
+
+            int resourceSpent = SkillResolution.ResourceToSpend(actor.Signature, skill.ResourceCost, skill.SpendsAllResource);
+            var castType = ActorAttackType(actor) ?? DamageType.Physical;
+
+            return SkillResolution.Amount(skill.Effect, actor, null, skill.Power,
+                skill.FlatAmount, resourceSpent, skill.IgnoresDefense, castType, skill.ScalingAxis);
+        }
+
         // ---- riders on a resolved skill --------------------------------------
 
         private void ApplySkillRoleEffect(CharacterRole? role, CombatantState actor, CombatantState target, int damage, bool isExecute)
@@ -639,6 +676,14 @@ namespace PrincesPalace.Domain.Combat.Session
 
         public bool CanAffordBasicSpell(CombatantState actor) =>
             SkillResolution.CanAfford(actor, BasicSpellManaCostFor(actor), 0);
+
+        // Same pre-mitigation reading as PreviewSkillPower, for the one spell
+        // that has no ResolvedSkill behind it. ComputeSkillDamage always
+        // subtracts a target's EffectiveDefense, so it cannot serve a
+        // target-free preview directly -- this mirrors its attack-scaling
+        // half only.
+        public int PreviewBasicSpellPower(CombatantState actor) =>
+            actor == null ? 0 : CombatMath.Scale(CombatMath.ScaledAttack(actor, actor.SkillScaling, SkillPowerMultiplierFor(actor)));
 
         private int SkillManaCostFor(CombatantState actor) => BasicSpellManaCostFor(actor);
 

@@ -237,6 +237,29 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
+        public IEnumerator TheDetailCardHidesTheInstantAnActionCommits_NotAfterTheAnimationFinishes()
+        {
+            // The test above only checks AFTER waiting for IsBusy to clear --
+            // which is exactly the gap the real bug lived in. RefreshUi() used
+            // to run once, at OnPlaybackFinished, once the WHOLE beat sequence
+            // was done playing -- so for the entire duration of the swing/cast
+            // animation the skill-detail card (and the target prompt) stayed
+            // on screen showing the choice the player already committed to,
+            // and only vanished at the very end alongside the log line. This
+            // checks the moment the click resolves, while the animation is
+            // still running, which no other test in this file does.
+            yield return LoadFight();
+
+            Click("Verb0");
+            Click("EnemyPlate0");
+
+            Assert.IsTrue(_fight.IsBusy,
+                "fixture: the beat should still be playing right after the click, or this proves nothing");
+            Assert.IsFalse(Active("TargetPrompt"), "the target prompt must not survive into its own animation");
+            Assert.IsFalse(Active("DetailColumn"), "the skill card must not survive into its own animation");
+        }
+
+        [UnityTest]
         public IEnumerator BackingOutOfTargetingCostsNoTurn()
         {
             yield return LoadFight();

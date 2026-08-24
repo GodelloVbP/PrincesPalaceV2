@@ -341,6 +341,19 @@ namespace PrincesPalace
         {
             _menu.Reset();
 
+            // REPAINTED HERE, not left for OnPlaybackFinished. _menu.Reset()
+            // above already closes the domain state, but nothing was telling
+            // the view -- RefreshUi() only ran once the whole beat sequence
+            // finished, so the skill-detail card, submenu list and target
+            // prompt stayed on screen for the full swing/cast animation and
+            // only vanished at the very end. RefreshMenuChrome() is the menu-
+            // only half of RefreshUi(): it skips the plates/stage/initiative,
+            // which stay on their pre-resolution snapshot on purpose until
+            // FightBeatPlayer paints each beat's vitals -- painting those here
+            // would snap health bars to their final value before the
+            // animation plays.
+            RefreshMenuChrome();
+
             foreach (var line in _session.DrainImmediateMessages()) PushLogLine(line);
 
             var beats = _session.DrainBeats();

@@ -389,25 +389,84 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void APacketSpellShowsTheSumOfItsPacketsAsPower()
+        public void APacketSpellShowsTheSumOfItsPacketsScaledByTheCastersOwnTier()
         {
-            // Power is per-point-of-resource scaling, which never applies to a
-            // spell with authored packets and is never authored on one -- so
-            // showing it would print a confident 0.
+            // The packets are the SAME multiplier ResolveDamageInstances
+            // itself applies -- Fight()'s spell tier is 1.5x, so 30 Fire and
+            // 20 Ice read 45 and 30, not the raw 30/20 authored in content.
+            // Showing the raw sum would be exactly the kind of "close but not
+            // the real number" the Strike row had before this fix.
             var packets = new[]
             {
                 new DamageInstance(DamageType.Fire, 30),
                 new DamageInstance(DamageType.Ice, 20),
             };
             var spell = Skill("bolt", "Prismatic Bolt", power: 0, packets: packets);
+            var (session, hero) = Fight(spell);
 
-            Assert.AreEqual("50", FightHudModel.PowerLabel(spell));
+            Assert.AreEqual("75", FightHudModel.PowerLabel(session, hero, spell));
         }
 
         [Test]
-        public void AnOrdinarySkillShowsItsAuthoredPower()
+        public void AFlatAmountOnlySkillShowsRealPowerNotZero()
         {
-            Assert.AreEqual("12", FightHudModel.PowerLabel(Skill("a", "Alpha", power: 12)));
+            // mud_burst's own shape: no authored `power` (it spends only mana,
+            // and power scales per point of a SIGNATURE resource mud_burst
+            // doesn't spend, so SkillEntryResolver refuses power > 0 without
+            // one), no damageInstances, just a flat amount. The old PowerLabel
+            // read `skill.Power` verbatim for anything that wasn't a packet
+            // spell -- 0 for this shape, shown as a blank row on a skill that
+            // deals real damage. flatAmount alone has to produce a non-zero,
+            // pre-mitigation POWER.
+            var skill = new ResolvedSkill("mud_burst", "Mud Burst", "Flings mud.", "hero", 1,
+                SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, manaCost: 8,
+                resourceCost: 0, spendsAllResource: false, power: 0, flatAmount: 12,
+                ignoresDefense: false, damageInstances: null, presentation: SpellPresentation.None, sortOrder: 0);
+            var (session, hero) = Fight(skill);
+
+            string power = FightHudModel.PowerLabel(session, hero, skill);
+
+            Assert.AreNotEqual("0", power, "flatAmount alone must not read as no power");
+            // Hero's Attack (20, scaled) + flatAmount (12), on the x10 scale,
+            // with no target so no defense subtracted: (20 + 12) * 10 = 320.
+            Assert.AreEqual("320", power);
+        }
+
+        [Test]
+        public void APreviewNeverConsumesTheRunsRandomStream()
+        {
+            // A card the player is merely LOOKING at must not roll anything --
+            // the pre-mitigation preview skips DamagePipeline.AfterDefences
+            // entirely (that is where variance/ward would read the RNG), so
+            // calling it twice in a row for the same skill must be perfectly
+            // stable.
+            var packets = new[] { new DamageInstance(DamageType.Fire, 30) };
+            var spell = Skill("bolt", "Prismatic Bolt", power: 0, packets: packets);
+            var (session, hero) = Fight(spell);
+
+            string first = FightHudModel.PowerLabel(session, hero, spell);
+            string second = FightHudModel.PowerLabel(session, hero, spell);
+
+            Assert.AreEqual(first, second);
+        }
+
+        [Test]
+        public void AnOrdinarySkillShowsPreMitigationDamageNotItsRawPowerField()
+        {
+            // POWER used to print `skill.Power` verbatim -- for a skill whose
+            // damage comes from flatAmount instead (mud_burst's actual shape),
+            // that field is 0 and the row reads blank despite the skill
+            // dealing real damage. This pins the fix: the CASTER'S OWN Attack,
+            // scaled and put on the x10 scale every other damage number uses,
+            // with no target and therefore no defense subtracted. Hero's
+            // Attack is 20 and this skill spends no signature resource (no
+            // Signature is set on the test hero), so `power: 12` never
+            // actually contributes -- which is the point: the row now reads
+            // what the caster's own stats produce, not the authored constant.
+            var skill = Skill("a", "Alpha", power: 12);
+            var (session, hero) = Fight(skill);
+
+            Assert.AreEqual("200", FightHudModel.PowerLabel(session, hero, skill));
         }
 
         [Test]
@@ -437,20 +496,29 @@ namespace PrincesPalace.Domain.Tests
         {
             // A verb that jumps straight to targeting would otherwise be the one
             // command with nothing to read about it.
+            //
+            // POWER is Scale(ScaledAttack(...)), not the raw Attack stat --
+            // hero.Attack is 20, and CombatMath puts every damage number on
+            // its own x10 scale, so a swing with nothing else in play reads
+            // 200, matching what ComputeAttackDamage would produce against a
+            // defenseless target.
             var (_, hero) = Fight();
 
             var panel = FightHudModel.DetailForStrike(hero);
 
             Assert.AreEqual("Strike", panel.Name);
             Assert.AreEqual(4, panel.Stats.Count, "the column has four fixed rows");
-            Assert.AreEqual(hero.Attack.ToString(), panel.Stats[1].Value,
+            Assert.AreEqual("200", panel.Stats[1].Value,
                 "it describes THIS actor's swing, not a generic one");
         }
 
         [Test]
         public void ASkillsDetailPanelFillsAllFourStatRows()
         {
-            var panel = FightHudModel.DetailForSkill(Skill("a", "Alpha", manaCost: 5, power: 12));
+            var skill = Skill("a", "Alpha", manaCost: 5, power: 12);
+            var (session, hero) = Fight(skill);
+
+            var panel = FightHudModel.DetailForSkill(session, hero, skill);
 
             Assert.AreEqual("Alpha", panel.Name);
             Assert.AreEqual(4, panel.Stats.Count);
