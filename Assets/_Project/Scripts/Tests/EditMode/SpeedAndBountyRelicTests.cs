@@ -336,6 +336,56 @@ namespace PrincesPalace.Domain.Tests
             Assert.Greater(session.BountyEarned, 0, "the kill should have paid out");
         }
 
+        // THE HALF THAT WAS MISSING, and the reason the two tests above passed
+        // while the relic was worth nothing.
+        //
+        // Both of them assert on session.BountyEarned, which no production code
+        // read: the contract banked gold onto the session, printed a line in the
+        // combat log saying so, and the fight's Payout was computed from the
+        // enemies' own CurrencyReward alone. A player wearing it collected
+        // nothing. Exactly the shape CLAUDE.md's gotcha 5 warns about -- a test
+        // that measures the thing it can reach rather than the thing that
+        // matters -- and exactly the shape of AUDIT #42.
+        //
+        // Asserted against a bounty-less session rather than a literal, because
+        // the base payout rides DifficultyCurve and a pinned number here would
+        // be pinning the curve by accident.
+        [Test]
+        public void TheBountyReachesTheFightsPayout_NotJustTheSession()
+        {
+            int GoldFrom(bool wearingTheContract)
+            {
+                var hero = new CombatantState("Shawn", true, 9999, 999, 999, 0, 20);
+                var foe = new CombatantState("Weakling", false, 1, 0, 0, 0, 1);
+
+                var enemy = new ResolvedEnemy("weakling", "Weakling", new StatBlock(), 200, 5, false,
+                    DamageType.Physical, DamageType.Fire, 0);
+
+                var relics = wearingTheContract
+                    ? new List<ResolvedRelic> { Relic(RelicEffect.BountyHunterContract) }
+                    : new List<ResolvedRelic>();
+
+                var kit = new PlayerKit("hero", CharacterRole.Tank, null, relics, null);
+
+                var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foe }),
+                    new List<PlayerKit> { kit },
+                    new List<EnemyKit> { new EnemyKit(enemy, false) },
+                    new SeededRandom(5)) { DamageVarianceRange = 0f };
+                session.Begin();
+                session.ExecuteAttack(foe);
+
+                Assert.IsTrue(session.Payout.HasValue, "the fight should have ended in a victory");
+                return session.Payout.Value.Gold;
+            }
+
+            int without = GoldFrom(wearingTheContract: false);
+            int with = GoldFrom(wearingTheContract: true);
+
+            Assert.Greater(with, without,
+                "the contract's gold never left the session - the payout the run actually banks " +
+                "is identical with and without the relic");
+        }
+
         [Test]
         public void ABiggerBountyPaysMoreThanASmallerOne()
         {

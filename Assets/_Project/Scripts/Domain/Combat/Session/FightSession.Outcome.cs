@@ -68,7 +68,30 @@ namespace PrincesPalace.Domain.Combat.Session
 
             if (_encounter.PlayerWon)
             {
-                Payout = VictoryRewards.For(_enemyKits.Values, IsEliteFight, DepthStep);
+                // PLUS THE BOUNTY, which nothing collected until now.
+                //
+                // The Bounty Hunter Contract paid into BountyEarned on every
+                // kill, printed "collects on the Giant Rat - 3 gold" in the
+                // log, and stopped there: no production code read the property.
+                // The relic was implemented, covered by EditMode tests that
+                // assert on BountyEarned directly, and worth exactly zero gold
+                // in a real run. Same shape as AUDIT #42 and as the
+                // DifficultyCurve that was written, tested and never called.
+                //
+                // Added to the PAYOUT rather than banked separately, so it
+                // reaches the wallet by the one route every other coin takes
+                // (RunManager.BankPayout) and shows up in the Reckoning's gold
+                // line, which is where a player would look for it.
+                //
+                // NOT put through DifficultyCurve.ScaleReward: the bounty is
+                // already measured off the victim's own expReward, and that
+                // figure is authored per enemy -- scaling it again here would
+                // pay the depth multiplier twice for the same body. Worth
+                // knowing that this makes the relic's absolute value flat with
+                // depth while the base payout climbs; it is a tuning question
+                // for whoever balances the descent, not a wiring one.
+                var earned = VictoryRewards.For(_enemyKits.Values, IsEliteFight, DepthStep);
+                Payout = new VictoryRewards.Payout(earned.Experience, earned.Gold + BountyEarned);
 
                 // NO NUMBERS HERE. The Reckoning expands seconds later saying
                 // exactly this experience and exactly this gold, in larger
