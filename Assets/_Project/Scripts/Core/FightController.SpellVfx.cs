@@ -120,7 +120,7 @@ namespace PrincesPalace
             // The box first: the letterbox measurement below depends on it, and
             // it stopped being a constant when spells got their own sizes.
             var box = BoxFor(beat);
-            float deadSpaceBelow = VfxDeadSpaceBelow(beat.Vfx.path, box);
+            float deadSpaceBelow = VfxDeadSpaceBelow(beat.Vfx.path, box, beat.Vfx.impactFrame);
 
             var rect = targetRect.rect;
             float centreX = parent.InverseTransformPoint(targetRect.TransformPoint(Vector3.zero)).x;
@@ -260,7 +260,7 @@ namespace PrincesPalace
         // the moment it is fully extended. That is the MINIMUM margin across the
         // sheet, and it is the effect's own ground line: correcting by it lands
         // the strike on the feet and still lets the fade retreat upward.
-        private float VfxDeadSpaceBelow(string vfxPath, Vector2 box)
+        private float VfxDeadSpaceBelow(string vfxPath, Vector2 box, int impactFrame)
         {
             var frames = PrimaryPlayer?.Frames(vfxPath);
             if (frames == null || frames.Length == 0 || frames[0] == null) return 0f;
@@ -278,22 +278,39 @@ namespace PrincesPalace
                 : box.x / frameAspect;
             float letterboxBelow = (box.y - renderedHeight) * 0.5f;
 
-            return letterboxBelow + VfxContentPaddingFraction(vfxPath, frames) * renderedHeight;
+            return letterboxBelow + VfxContentPaddingFraction(vfxPath, frames, impactFrame) * renderedHeight;
         }
 
-        // The smallest transparent bottom margin across a sheet, as a fraction of
-        // frame height -- the effect at its fullest extent.
+        // The smallest transparent bottom margin from the IMPACT frame onward,
+        // as a fraction of frame height -- the LANDED effect at its fullest
+        // extent.
+        //
+        // NOT the whole sheet, though it used to be, and that was the bug:
+        // lightning_bolt's pre-impact travel frames (a thin descending bolt
+        // tip) happen to touch the canvas floor harder than the actual impact
+        // burst (a wide starburst that never reaches as low) ever does, so
+        // scanning from frame 0 measured the wind-up's ground line and applied
+        // it to the landed effect -- the strike rendered floating above
+        // whatever it hit instead of on it. Starting the scan one frame before
+        // impactFrame (rather than exactly at it) keeps a frame of lead-in
+        // margin without reintroducing the travel frames that caused this.
+        //
         // Public rather than internal: InternalsVisibleTo names the EDITOR
         // assembly only, and the sheet-margin maths is the part of this file
         // most worth pinning -- every one of its rules came from a bug.
-        public static float VfxContentPaddingFraction(string vfxPath, Sprite[] frames)
+        // impactFrame defaults to 0, which scans the whole sheet -- the
+        // original behaviour, still correct for content whose margin is
+        // consistent across every frame (Shawn's two spells, this file's own
+        // pinned test fixtures).
+        public static float VfxContentPaddingFraction(string vfxPath, Sprite[] frames, int impactFrame = 0)
         {
             if (vfxPath != null && VfxPaddingCache.TryGetValue(vfxPath, out var cached)) return cached;
 
+            int start = Mathf.Clamp(impactFrame - 1, 0, frames.Length - 1);
             float smallest = float.MaxValue;
-            foreach (var frame in frames)
+            for (int i = start; i < frames.Length; i++)
             {
-                float padding = BottomPaddingFraction(frame);
+                float padding = BottomPaddingFraction(frames[i]);
                 if (padding >= 0f && padding < smallest) smallest = padding;
             }
 

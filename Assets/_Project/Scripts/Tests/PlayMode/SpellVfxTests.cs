@@ -312,6 +312,32 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [Test]
+        public void APreImpactFramesMarginIsIgnoredOnceAnImpactFrameIsGiven()
+        {
+            // lightning_bolt's actual shape: a thin pre-impact bolt tip (f1/f2)
+            // grazes the canvas floor harder than the wide impact burst (f4
+            // onward) ever does. Scanning from frame 0 -- the old, unqualified
+            // behaviour -- measures the wind-up's ground line and applies it to
+            // the landed effect, which is why the strike rendered floating
+            // above the target instead of on it. impactFrame is 1-based (frame
+            // 5 authored means index 4), and the scan starts one frame early
+            // (index 3) to keep a frame of lead-in without reintroducing the
+            // travel frames that caused the bug.
+            var frames = new[]
+            {
+                Frame(512, 512, 0.06f),  // f0
+                Frame(512, 512, 0.00f),  // f1 -- the outlier: thin tip touches the floor
+                Frame(512, 512, 0.00f),  // f2 -- same
+                Frame(512, 512, 0.07f),  // f3
+                Frame(512, 512, 0.13f),  // f4 -- impact (impactFrame=5, index 4)
+                Frame(512, 512, 0.09f),  // f5 -- smallest from f3 onward
+                Frame(512, 512, 0.14f),  // f6
+            };
+
+            Assert.AreEqual(0.09f, FightController.VfxContentPaddingFraction(null, frames, impactFrame: 5), 0.005f);
+        }
+
+        [Test]
         public void AnUnreadableFrameReportsUnmeasurableRatherThanZero()
         {
             // The distinction the negative return exists for: "cannot tell" and

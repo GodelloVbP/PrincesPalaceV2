@@ -405,6 +405,38 @@ def discs(cell, pivot, radius):
     return out
 
 
+def feather_edges(frame, width=12.0):
+    """Fade alpha to 0 within `width` px of the canvas edge.
+
+    turned() grows a cell around its own pivot, and an OFF-CENTRE pivot -- the
+    normal case, since a spell's beam or debris reserves the rest of the cell
+    -- pushes that growth asymmetrically toward whichever edge sits closer.
+    When growth reaches the edge, Image.paste clips it: not to a fade, to a
+    hard, fully-opaque, dead-straight line, because the pixels right at the
+    cut are ordinary interior glyph pixels, not a natural falloff. That line
+    is what a held/growing frame showed as a visible rectangular "box" around
+    the effect -- mud_burst's f13 onward measured 511/512 opaque pixels on
+    its bottom row and 512/512 on its right column, a straight cut, not art.
+
+    Feathering every scaled frame's outer ring is cheap insurance against
+    this landing again on a future recipe with its own off-centre pivot, and
+    is not visible on a frame that never actually reached the edge -- there
+    is nothing opaque in that last `width` px to fade in the first place.
+    """
+    w, h = frame.size
+    px = frame.load()
+    for y in range(h):
+        dy = min(y, h - 1 - y)
+        for x in range(w):
+            dx = min(x, w - 1 - x)
+            d = min(dx, dy)
+            if d >= width:
+                continue
+            r, g, b, a = px[x, y]
+            px[x, y] = (r, g, b, int(a * (d / width)))
+    return frame
+
+
 def turned(cell, degrees, pivot, scale):
     """One cell, rotated about `pivot` and scaled about the same point.
 
@@ -421,6 +453,7 @@ def turned(cell, degrees, pivot, scale):
                           Image.LANCZOS)
         frame = Image.new("RGBA", (w, h), (0, 0, 0, 0))
         frame.paste(big, (int(round(cx - cx * scale)), int(round(cy - cy * scale))))
+        frame = feather_edges(frame)
 
     if abs(degrees) < 1e-4:
         return frame
