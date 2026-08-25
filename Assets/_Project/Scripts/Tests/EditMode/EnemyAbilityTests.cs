@@ -406,6 +406,7 @@ namespace PrincesPalace.Domain.Tests
         // rect move would be testing the tween instead of the decision.
         [TestCase(StageApproach.Lunge)]
         [TestCase(StageApproach.Close)]
+        [TestCase(StageApproach.Charge)]
         public void AMeleeSkillTellsTheStageToCloseTheDistance(StageApproach approach)
         {
             var (session, _, monster) = WithAbility(Swing(approach));
@@ -460,6 +461,32 @@ namespace PrincesPalace.Domain.Tests
                 "the authored shake never reached the beat, so the roar is silent on the stage");
         }
 
+        // A SELF-BUFF'S OWN POSE HAS TO BE DRAWN, and it was the one kind of
+        // skill whose stance was silently dropped.
+        //
+        // Reported from play as "no animation for the defense self-buff": the
+        // Beetle's Shell Up is a HealSelf that authors stance "shell_closed",
+        // and HealSelf was one of six effect branches that never honoured the
+        // authored stance -- only the damage and summon paths did. So the beetle
+        // was posed mid-cast while it was supposed to be folding into a ball.
+        // The fix routes every branch's pose through RecordSpellPresentation, so
+        // this pins the self-buff case the way Conjuring pins the damaging one.
+        [Test]
+        public void ASelfBuffIsPosedInItsOwnStanceNotAGenericCast()
+        {
+            var (session, _, monster) = WithAbility(ShellUp());
+
+            session.PrepareEnemyIntents();
+            session.ExecuteAttack(monster);
+
+            var cast = session.DrainBeats().LastOrDefault(b => ReferenceEquals(b.Actor, monster));
+
+            Assert.IsNotNull(cast, "the self-buff produced no beat for the view at all");
+            Assert.AreEqual("shell_closed", cast.Stances[monster],
+                "the self-buff named its own stance and was posed with the generic cast instead - " +
+                "the exact drop that left Shell Up with no animation");
+        }
+
         private static ResolvedSkill Swing(StageApproach approach) =>
             new ResolvedSkill("swing", "Swing", "", "", 1, SkillEffect.DamageSingle,
                 SkillTargeting.SingleEnemy, 0, 0, false, 0, 12, false,
@@ -471,6 +498,13 @@ namespace PrincesPalace.Domain.Tests
             new ResolvedSkill("bellow", "Bellow", "", "", 1, SkillEffect.HealSelf,
                 SkillTargeting.Self, 0, 0, false, 0, 0, false,
                 null, SpellPresentation.None, 0, shake: 0.85f);
+
+        // The Beetle's Shell Up: a HealSelf that folds into an authored pose.
+        // Modelled on the real skill (stance shell_closed, a small flat heal).
+        private static ResolvedSkill ShellUp() =>
+            new ResolvedSkill("shell_up", "Shell Up", "", "beetle", 1, SkillEffect.HealSelf,
+                SkillTargeting.Self, 0, 2, false, 0, 0, false,
+                null, SpellPresentation.None, 0, stance: "shell_closed");
 
         // A damaging skill that states both halves of its presentation: real
         // frames to play, and a pose of its own to play them from.

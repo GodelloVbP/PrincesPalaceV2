@@ -274,8 +274,6 @@ namespace PrincesPalace.Domain.Combat.Session
                 {
                     BeginBeat(actor, target ?? _encounter.OpponentsOf(actor).FirstOrDefault(), isCast: true);
                     RecordSpellPresentation(skill);
-                    SetStance(actor, Stances.Cast);
-
                     int provoked = ApplyProvoke(actor, target);
                     AppendMessage(provoked == 0
                         ? $"{actor.Name} bellows at nothing in particular."
@@ -289,7 +287,6 @@ namespace PrincesPalace.Domain.Combat.Session
                 {
                     BeginBeat(actor, actor, isCast: true);
                     RecordSpellPresentation(skill);
-                    SetStance(actor, Stances.Cast);
                     EnterTransform(actor, skill);
                     break;
                 }
@@ -298,8 +295,6 @@ namespace PrincesPalace.Domain.Combat.Session
                 {
                     BeginBeat(actor, actor, isCast: true);
                     RecordSpellPresentation(skill);
-                    SetStance(actor, Stances.Cast);
-
                     int warded = ApplyWard(actor);
                     AppendMessage(warded <= 1
                         ? $"{actor.Name} pulls the fleece close."
@@ -311,7 +306,6 @@ namespace PrincesPalace.Domain.Combat.Session
                 {
                     BeginBeat(actor, _encounter.OpponentsOf(actor).FirstOrDefault(), isCast: true);
                     RecordSpellPresentation(skill);
-                    SetStance(actor, Stances.Cast);
                     ResolveShatter(actor);
                     break;
                 }
@@ -320,8 +314,6 @@ namespace PrincesPalace.Domain.Combat.Session
                 {
                     BeginBeat(actor, actor, isCast: true);
                     RecordSpellPresentation(skill);
-                    SetStance(actor, Stances.Cast);
-
                     foreach (var ally in _encounter.AlliesOf(actor).ToList())
                     {
                         ApplySkillStatus(skill, ally, actor);
@@ -337,7 +329,6 @@ namespace PrincesPalace.Domain.Combat.Session
                 {
                     BeginBeat(actor, actor, isCast: true);
                     RecordSpellPresentation(skill);
-                    SetStance(actor, Stances.Cast);
                     ResolveGift(actor, skill);
                     break;
                 }
@@ -346,7 +337,6 @@ namespace PrincesPalace.Domain.Combat.Session
                 {
                     BeginBeat(actor, actor, isCast: true);
                     RecordSpellPresentation(skill);
-                    SetStance(actor, StanceFor(skill));
                     ResolveSummon(actor, skill);
                     break;
                 }
@@ -410,16 +400,7 @@ namespace PrincesPalace.Domain.Combat.Session
             BeginBeat(actor, target, isCast: true);
             RecordSpellPresentation(skill);
 
-            // THE SKILL'S OWN POSE, over the plain "cast" BeginBeat just set.
-            // Only Summon honoured RawSkillEntry.stance until now, so a
-            // damaging skill that named a stance -- the Treant's trunk_slam,
-            // the Beetle's turtle_up -- was drawn casting instead. The enemy
-            // path tried to set it before calling in here and could not: see
-            // FightSession.Enemies.ResolveEnemyAction for why that was a
-            // no-op rather than a duplicate.
-            SetStance(actor, StanceFor(skill));
-
-            // AND THE SKILL'S OWN APPROACH, over the "rooted" BeginBeat assumed
+            // THE SKILL'S OWN APPROACH, over the "rooted" BeginBeat assumed
             // for every cast. A melee skill is a swing that happens to be
             // authored as a skill, and until this line it connected from
             // wherever the caster was standing.
@@ -494,7 +475,6 @@ namespace PrincesPalace.Domain.Combat.Session
             BeginBeat(actor, struck.FirstOrDefault(), isCast: true);
             RecordSpellPresentation(skill);
             RecordSplashTargets(struck.Skip(1));
-            SetStance(actor, StanceFor(skill));
 
             // The caster's own type does not change per target, so this reads
             // once -- same reasoning as the single-target branch.
@@ -767,15 +747,37 @@ namespace PrincesPalace.Domain.Combat.Session
         private static bool IsBelowHealthFraction(CombatantState combatant, float fraction) =>
             combatant.MaxHealth > 0 && combatant.CurrentHealth <= combatant.MaxHealth * fraction;
 
-        // Both halves of a skill's presentation, recorded together -- the
-        // frames it draws and the kick it insists on. Every branch of
-        // ResolveCharacterSkillInner already calls this, so a skill's shake
-        // reaches the view through exactly the door its spell does rather than
-        // through a tenth call somebody has to remember.
+        // Every half of a skill's presentation, recorded together -- the frames
+        // it draws, the kick it insists on, and the pose the caster strikes.
+        // Every branch of ResolveCharacterSkillInner already calls this, so all
+        // three reach the view through exactly the door the spell does rather
+        // than through a tenth call somebody has to remember.
+        //
+        // THE CASTER'S POSE IS THE NEWEST OF THE THREE, and it is here because
+        // it kept being forgotten. BeginBeat sets "cast" as the starting pose;
+        // a skill that authored its own stance -- the beetle's turtle_up and
+        // shell_closed, the treant's trunk_slam -- said so, and honouring it
+        // was left to each branch to remember with a SetStance. The damage and
+        // summon paths remembered; the six self-buff effects (HealSelf,
+        // HealParty, Ward, BuffParty, the Gifts, Provoke) did not, so Shell Up
+        // posed the beetle mid-cast while it was supposed to be curling into a
+        // ball -- "no animation for the defense self-buff". The enemy path
+        // could not fix it from its own side either: it once set the stance
+        // before calling in here, which did nothing because the beat this cast
+        // belongs to is not opened until BeginBeat several lines later.
+        //
+        // Posed once, from the door every branch already uses. StanceFor falls
+        // back to "cast", so every skill that left the stance blank is
+        // unchanged.
         private void RecordSpellPresentation(ResolvedSkill skill)
         {
             RecordSpellPresentation(skill.Vfx);
             RecordShake(skill.Shake);
+
+            if (_recordingBeat?.Actor != null)
+            {
+                SetStance(_recordingBeat.Actor, StanceFor(skill));
+            }
         }
     }
 }
