@@ -48,8 +48,15 @@ namespace PrincesPalace
         // must not have it cancelled.
         public readonly bool Steady;
 
+        // Seconds the peak of a ping-pong loop is held on top of the sweep.
+        // Zero is the default symmetric linger. See StanceTiming.EndHoldSeconds
+        // and LoopCycle.FrameAt -- consulted only where FightController loops
+        // this stance, which today is the idle.
+        public readonly float EndHoldSeconds;
+
         public StanceAnimation(Sprite[] frames, float secondsPerFrame, int impactFrame, int soundFrame,
-                               StanceLoop loop = StanceLoop.PingPong, bool steady = false)
+                               StanceLoop loop = StanceLoop.PingPong, bool steady = false,
+                               float endHoldSeconds = 0f)
         {
             Frames = frames;
             SecondsPerFrame = Mathf.Max(0f, secondsPerFrame);
@@ -57,6 +64,7 @@ namespace PrincesPalace
             SoundFrame = Mathf.Max(1, soundFrame);
             Loop = loop;
             Steady = steady;
+            EndHoldSeconds = Mathf.Max(0f, endHoldSeconds);
         }
 
         public bool IsEmpty => Frames == null || Frames.Length == 0;

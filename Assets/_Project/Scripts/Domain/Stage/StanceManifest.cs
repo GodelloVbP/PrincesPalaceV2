@@ -39,14 +39,21 @@ namespace PrincesPalace.Domain.Stage
         // disagrees with the default can say so.
         public readonly bool Steady;
 
+        // Seconds the peak of a ping-pong is held on top of the sweep. Zero is
+        // the default and the old behaviour -- a symmetric linger at both ends.
+        // See RawStanceTiming.endHold and LoopCycle.FrameAt.
+        public readonly float EndHoldSeconds;
+
         public StanceTiming(float secondsPerFrame, int impactFrame, int soundFrame,
-                            StanceLoop loop = StanceLoop.PingPong, bool steady = true)
+                            StanceLoop loop = StanceLoop.PingPong, bool steady = true,
+                            float endHoldSeconds = 0f)
         {
             SecondsPerFrame = secondsPerFrame;
             ImpactFrame = impactFrame;
             SoundFrame = soundFrame;
             Loop = loop;
             Steady = steady;
+            EndHoldSeconds = endHoldSeconds < 0f ? 0f : endHoldSeconds;
         }
     }
 
@@ -103,7 +110,8 @@ namespace PrincesPalace.Domain.Stage
                         stance.impactFrame > 0 ? stance.impactFrame : 0,
                         stance.soundFrame > 0 ? stance.soundFrame : 0,
                         ParseLoop(stance.loop),
-                        ParseSteady(stance.steady, LoopsByDefault(stance.stance)));
+                        ParseSteady(stance.steady, LoopsByDefault(stance.stance)),
+                        stance.endHold > 0f ? stance.endHold : 0f);
                 }
             }
         }
@@ -191,7 +199,8 @@ namespace PrincesPalace.Domain.Stage
                     authored.ImpactFrame > 0 ? authored.ImpactFrame : midpoint,
                     authored.SoundFrame > 0 ? authored.SoundFrame : midpoint,
                     authored.Loop,
-                    authored.Steady);
+                    authored.Steady,
+                    authored.EndHoldSeconds);
             }
 
             return new StanceTiming(
@@ -199,7 +208,8 @@ namespace PrincesPalace.Domain.Stage
                 Math.Min(timing.ImpactFrame, frames),
                 Math.Min(timing.SoundFrame, frames),
                 timing.Loop,
-                timing.Steady);
+                timing.Steady,
+                timing.EndHoldSeconds);
         }
 
         // THE ONE STANCE NAME THIS FILE KNOWS, and it is worth being explicit

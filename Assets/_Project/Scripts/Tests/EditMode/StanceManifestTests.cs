@@ -212,6 +212,33 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(BreathCurve.SheetScale, manifest.BreathFor(null, 6), 0.0001f);
         }
 
+        // ---- the idle peak hold ------------------------------------------------
+
+        // Authored endHold rides through the resolver to the timing the runtime
+        // reads, alongside everything else on the stance. Zero when nobody says
+        // otherwise, which is the symmetric-linger default LoopCycle always had.
+        [Test]
+        public void AnAuthoredEndHold_ReachesTheResolvedTiming()
+        {
+            var manifest = Build(Actor("Enemies/beetle", 8f,
+                new RawStanceTiming { stance = "idle", secondsPerFrame = 0.2f, endHold = 0.5f }));
+
+            var idle = manifest.TimingFor("Enemies/beetle", "idle", 6);
+            Assert.AreEqual(0.5f, idle.EndHoldSeconds, 0.0001f);
+
+            var bare = manifest.TimingFor("Enemies/beetle", "idle", 6);
+            Assert.AreEqual(0.2f, bare.SecondsPerFrame, 0.0001f, "the sweep pace is untouched by the hold");
+        }
+
+        [Test]
+        public void AStanceWithNoEndHold_ResolvesToZeroRatherThanNegative()
+        {
+            var manifest = Build(Actor("Enemies/rat", 12f,
+                new RawStanceTiming { stance = "idle", secondsPerFrame = 0.1f }));
+
+            Assert.AreEqual(0f, manifest.TimingFor("Enemies/rat", "idle", 6).EndHoldSeconds, 0.0001f);
+        }
+
         [Test]
         public void AMalformedEntry_IsSkippedRatherThanThrowing()
         {

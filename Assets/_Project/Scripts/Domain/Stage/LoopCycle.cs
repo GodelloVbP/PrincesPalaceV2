@@ -56,15 +56,26 @@ namespace PrincesPalace.Domain.Stage
         // authored secondsPerFrame as the per-DRAWING pace rather than
         // stretching it to fit is what keeps "0.14" meaning the same thing on
         // a looping stance as on a swing.
-        public static float SecondsForCycle(int frameCount, float secondsPerFrame, StanceLoop loop)
+        //
+        // THE PEAK HOLD IS ADDED, NOT STOLEN. `endHoldSeconds` is a pause at
+        // the top of a ping-pong's arc -- the full-inhale drawing, held a beat
+        // longer before the exhale -- and it lengthens the cycle rather than
+        // slowing the sweep, so a sheet that asked for 0.14s a drawing still
+        // gets it and the hold is extra time on top. Meaningless on a Forward
+        // loop, which wraps rather than reverses and so has no peak to dwell
+        // on; ignored there.
+        public static float SecondsForCycle(int frameCount, float secondsPerFrame, StanceLoop loop,
+                                            float endHoldSeconds = 0f)
         {
             if (frameCount <= 1 || secondsPerFrame <= 0f) return 0f;
 
-            int steps = loop == StanceLoop.PingPong && frameCount > 2
-                ? frameCount * 2 - 2
-                : frameCount;
+            bool pingPong = loop == StanceLoop.PingPong && frameCount > 2;
+            int steps = pingPong ? frameCount * 2 - 2 : frameCount;
 
-            return secondsPerFrame * steps;
+            float sweep = secondsPerFrame * steps;
+            if (pingPong && endHoldSeconds > 0f) sweep += endHoldSeconds;
+
+            return sweep;
         }
 
         // Which drawing to show at `elapsed` seconds into the loop.
@@ -72,11 +83,12 @@ namespace PrincesPalace.Domain.Stage
         // Never throws and never returns an out-of-range index: a clock that
         // has run for an hour is the same as one that has run for a second,
         // which is what makes the caller a one-liner with no bookkeeping.
-        public static int FrameAt(float elapsed, int frameCount, float secondsPerFrame, StanceLoop loop)
+        public static int FrameAt(float elapsed, int frameCount, float secondsPerFrame, StanceLoop loop,
+                                  float endHoldSeconds = 0f)
         {
             if (frameCount <= 1) return 0;
 
-            float cycle = SecondsForCycle(frameCount, secondsPerFrame, loop);
+            float cycle = SecondsForCycle(frameCount, secondsPerFrame, loop, endHoldSeconds);
             if (cycle <= 0f) return 0;
 
             // Phase in [0,1). Negative elapsed is not a real case but must not
@@ -89,15 +101,48 @@ namespace PrincesPalace.Domain.Stage
                 return forward >= frameCount ? frameCount - 1 : forward;
             }
 
-            // (1 - cos)/2 sweeps 0 -> 1 -> 0 across the phase, turning smoothly
-            // at both ends and lingering there. Rounded rather than floored:
-            // the curve is symmetric and flooring would bias every drawing
-            // half a step early on the way up and half a step late on the way
-            // down, which puts a limp in a motion whose whole point is evenness.
-            double swept = (1.0 - Math.Cos(phase * 2.0 * Math.PI)) * 0.5;
+            // A PING-PONG IS A RISE, AN OPTIONAL HELD PEAK, THEN A FALL, and
+            // with no hold it is exactly the single raised cosine this used to
+            // be. Rise() below is (1-cos)/2 over a 0..1 sweep, smooth at both
+            // ends; running it up over the first half and back down over the
+            // last half is algebraically identical to (1-cos(2*pi*phase))/2 --
+            // so endHoldSeconds == 0 leaves every existing frame unchanged, and
+            // a hold simply flattens the very top for a while.
+            float hold = endHoldSeconds > 0f ? endHoldSeconds : 0f;
+            float t = phase * cycle;          // seconds into the cycle
+            float half = (cycle - hold) * 0.5f;   // the rise and the fall are equal
+
+            double swept;
+            if (t < half)
+            {
+                swept = Rise(t / half);                    // 0 -> peak
+            }
+            else if (t < half + hold)
+            {
+                swept = 1.0;                               // held at the peak
+            }
+            else
+            {
+                swept = Rise(1f - (t - half - hold) / half);   // peak -> 0
+            }
+
+            // Rounded rather than floored: the curve is symmetric and flooring
+            // would bias every drawing half a step early on the way up and half
+            // a step late on the way down, which puts a limp in a motion whose
+            // whole point is evenness.
             int index = (int)Math.Round(swept * (frameCount - 1));
 
             return index < 0 ? 0 : index >= frameCount ? frameCount - 1 : index;
+        }
+
+        // 0 -> 1 with both ends flat, the raised cosine LoopCycle has always
+        // swept its frame index along. Shared by the rise and the fall so a
+        // held peak inserted between them turns smoothly into and out of the
+        // dwell rather than cornering.
+        private static double Rise(float t)
+        {
+            float clamped = t < 0f ? 0f : t > 1f ? 1f : t;
+            return (1.0 - Math.Cos(clamped * Math.PI)) * 0.5;
         }
     }
 }

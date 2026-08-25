@@ -101,7 +101,8 @@ namespace PrincesPalace
 
             var timing = StanceManifestLoader.Manifest.TimingFor(folder, stance, frames.Count);
             return new StanceAnimation(frames.ToArray(), timing.SecondsPerFrame,
-                timing.ImpactFrame, timing.SoundFrame, timing.Loop, timing.Steady);
+                timing.ImpactFrame, timing.SoundFrame, timing.Loop, timing.Steady,
+                timing.EndHoldSeconds);
         }
     }
 }

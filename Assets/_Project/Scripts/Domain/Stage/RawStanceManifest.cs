@@ -61,6 +61,15 @@ namespace PrincesPalace.Domain.Stage
         public int impactFrame;
         public int soundFrame;
 
+        // HOW LONG THE PEAK OF A PING-PONG IDLE IS HELD, in seconds, on top of
+        // the sweep. A breath that pauses at the top of the inhale reads as
+        // breathing rather than as a metronome; without this the raised cosine
+        // lingers equally at both ends, so "hold the full breath a beat longer"
+        // could not be said. Zero is unset and means no extra hold -- the
+        // symmetric linger LoopCycle always had. Ignored on anything that does
+        // not ping-pong, which has no single peak to dwell on.
+        public float endHold;
+
         // HOW THIS STANCE PLAYS WHEN IT LOOPS. "forward" or "pingpong", and
         // empty means the default -- ping-pong, because that is what an idle
         // sheet almost always is (see LoopCycle). Only consulted for a stance

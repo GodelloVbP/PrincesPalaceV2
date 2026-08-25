@@ -126,6 +126,119 @@ namespace PrincesPalace.Domain.Tests
                 "a forward loop starts over rather than stopping on its last drawing");
         }
 
+        // ---- the peak hold -----------------------------------------------------
+
+        // The hold is dead time ADDED to the cycle, not stolen from the sweep:
+        // the ten sweep-steps still take their ten secondsPerFrame, and the
+        // hold sits on top. So "hold the full breath half a second longer"
+        // lengthens the whole breath by exactly that half second.
+        [Test]
+        public void ThePeakHoldIsAddedToTheCycleRatherThanSlowingTheSweep()
+        {
+            float sweep = LoopCycle.SecondsForCycle(6, 0.1f, StanceLoop.PingPong);
+            float withHold = LoopCycle.SecondsForCycle(6, 0.1f, StanceLoop.PingPong, 0.5f);
+
+            Assert.AreEqual(sweep + 0.5f, withHold, 0.0001f);
+        }
+
+        // A hold on a Forward loop is meaningless -- it wraps rather than
+        // reverses, so there is no single peak to dwell on -- and is ignored
+        // rather than quietly lengthening the cycle.
+        [Test]
+        public void AForwardLoopIgnoresThePeakHold()
+        {
+            Assert.AreEqual(
+                LoopCycle.SecondsForCycle(6, 0.1f, StanceLoop.Forward),
+                LoopCycle.SecondsForCycle(6, 0.1f, StanceLoop.Forward, 0.5f), 0.0001f);
+        }
+
+        // WITH NO HOLD, NOTHING MOVES. The rewrite that added the hold split the
+        // single raised cosine into a rise and a fall; endHold == 0 has to leave
+        // every drawing exactly where it was, or it is a silent regression to
+        // every idle in the game. Sampled against the bare four-argument call.
+        [Test]
+        public void ZeroHoldIsIdenticalToTheOldSingleCosine()
+        {
+            const int frames = 6;
+            const float perFrame = 0.13f;
+            float cycle = LoopCycle.SecondsForCycle(frames, perFrame, StanceLoop.PingPong);
+
+            for (int step = 0; step < 300; step++)
+            {
+                float t = cycle * step / 300f;
+                Assert.AreEqual(
+                    LoopCycle.FrameAt(t, frames, perFrame, StanceLoop.PingPong),
+                    LoopCycle.FrameAt(t, frames, perFrame, StanceLoop.PingPong, 0f),
+                    $"the hold-aware path disagrees with the old one at {t:F3}s");
+            }
+        }
+
+        // THE HOLD ACTUALLY DWELLS ON THE PEAK. With a hold long against the
+        // sweep, the full-inhale drawing (the last frame) should occupy far more
+        // of the cycle than it does without one -- and more than the rest frame,
+        // which has no hold of its own.
+        [Test]
+        public void ThePeakDrawingIsHeldFarLongerWithAHoldThanWithout()
+        {
+            const int frames = 6;
+            const float perFrame = 0.1f;
+            const float hold = 1.0f;   // long against the 1.0s sweep
+
+            float bare = LoopCycle.SecondsForCycle(frames, perFrame, StanceLoop.PingPong);
+            float held = LoopCycle.SecondsForCycle(frames, perFrame, StanceLoop.PingPong, hold);
+
+            int peakBare = FractionOnFrame(frames - 1, frames, perFrame, 0f, bare);
+            int peakHeld = FractionOnFrame(frames - 1, frames, perFrame, hold, held);
+            int restHeld = FractionOnFrame(0, frames, perFrame, hold, held);
+
+            Assert.Greater(peakHeld, peakBare * 2,
+                "the peak drawing is not dwelt on any longer with a hold than without one");
+            Assert.Greater(peakHeld, restHeld,
+                "the held peak is not shown longer than the unheld rest frame");
+        }
+
+        // The hold flattens the TOP, not the bottom: the loop still reaches
+        // frame 0, and still never jumps more than one drawing, hold or no hold.
+        [Test]
+        public void AHeldPingPongStillReachesBothEndsWithoutJumping()
+        {
+            const int frames = 6;
+            const float perFrame = 0.1f;
+            const float hold = 0.6f;
+            float cycle = LoopCycle.SecondsForCycle(frames, perFrame, StanceLoop.PingPong, hold);
+
+            bool sawFirst = false, sawLast = false;
+            int previous = LoopCycle.FrameAt(0f, frames, perFrame, StanceLoop.PingPong, hold);
+            for (int step = 0; step <= 400; step++)
+            {
+                int here = LoopCycle.FrameAt(cycle * step / 200f, frames, perFrame, StanceLoop.PingPong, hold);
+                Assert.LessOrEqual(System.Math.Abs(here - previous), 1,
+                    $"a held loop jumped from {previous} to {here}");
+                if (here == 0) sawFirst = true;
+                if (here == frames - 1) sawLast = true;
+                previous = here;
+            }
+
+            Assert.IsTrue(sawFirst && sawLast, "a held loop stopped reaching one of its ends");
+        }
+
+        // How many of `samples` evenly-spaced ticks across one cycle land on a
+        // given drawing. A cheap proxy for "how long is this frame shown".
+        private static int FractionOnFrame(int frame, int frames, float perFrame, float hold, float cycle)
+        {
+            const int samples = 3000;
+            int count = 0;
+            for (int step = 0; step < samples; step++)
+            {
+                if (LoopCycle.FrameAt(cycle * step / samples, frames, perFrame, StanceLoop.PingPong, hold) == frame)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
         // ---- the clock ---------------------------------------------------------
 
         // A fight can sit idle for a long time, and an index that walked off the

@@ -938,7 +938,8 @@ namespace PrincesPalace
 
             if (animation.FrameCount <= 1) return false;
 
-            int frame = LoopCycle.FrameAt(clock, animation.FrameCount, perFrame, animation.Loop);
+            int frame = LoopCycle.FrameAt(clock, animation.FrameCount, perFrame, animation.Loop,
+                                          FightBeatPlayer.Scaled(animation.EndHoldSeconds));
             if (FrameFor(combatant) == frame) return false;
 
             // Written straight into the map rather than through SetActorFrame,
