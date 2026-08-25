@@ -339,10 +339,16 @@ which were playtest bugs that read as art problems:
   mistaken floor moves a whole creature off the stage.
 
 `FightBeatPlayer` drives it: each beat applies the poses the session recorded (to
-every combatant it names, not just the actor), lunges the actor unless the beat
-says it holds position, flashes the target if something landed, then returns
-everyone to idle so a pose belongs to the blow that caused it. The defeated stay
-defeated -- that is read from `IsAlive`, not from the beat.
+every combatant it names, not just the actor), moves the actor per its
+`StageApproach` (`Hold`/`Lunge`/`Close`/`Charge` — a charge crosses most of the
+way and arrives on the impact frame so the bump lands with the blow), flashes the
+target if something landed, then returns everyone to idle so a pose belongs to the
+blow that caused it. The defeated stay defeated -- that is read from `IsAlive`, not
+from the beat. A skill authors its approach; a monster's plain attack authors one
+too via `attackApproach` on the enemy entry (both parse through
+`StageApproaches.Parse`). The idle's continuous `BreathCurve` scale and its
+per-actor `endHold` peak dwell (a beat held longer at the top of the ping-pong)
+are both driven from `.StageVisuals`'s idle stepper.
 
 Party art is a **parallel map** (`BindPartyArt`), deliberately not part of
 `PlayerKit`. The kit is what combat needs and a sprite folder is not that; v1
