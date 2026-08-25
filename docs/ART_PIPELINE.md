@@ -437,6 +437,42 @@ drift reads as a smear, a size pulse reads as concentric outlines. Its `--report
 render today's *committed* art as a "before" picture, turning a re-slice
 into a demonstrable before/after rather than an assertion.
 
+#### The redraw ratio
+
+The onion skin shows *that* frames disagree; it cannot show whether the
+disagreement is motion. Six silhouettes that differ in their fringes smear
+much like six that differ in their pose, which is how the Forest Troll's idle
+passed an eyeball check and still played as janky — feet planted to within a
+pixel, centre held to within one, every runtime rule satisfied, and the
+creature's mass moving 3.9% of its height while 13% of its silhouette was
+replaced between adjacent frames.
+
+So each stance row also reports **silhouette churn per step over centroid
+travel**, and the run ends with the roster ranked by it. Around 1 means the
+drawing changes about as much as the pose does. Measured against the roster
+rather than picked: the Rat's attack, a real lunge, scores 0.7; the Beetle's
+sealed shell, still and consistently drawn, scores 1.1; every six-frame idle
+in the game scores near 3.
+
+Travel is the **centroid's**, not the bounding box's — a box grows when a
+branch is redrawn a little wider, and counting that as travel would let a
+stance excuse its own churn. Frames are bottom-centre aligned onto a shared
+canvas first, matching what the stage does, so a ragged crop is not reported
+as movement.
+
+A **looping** stance is held to a tighter bar (amber 1.6, red 2.5) than a
+one-shot (2.5 / 4.0), the same asymmetry `StanceTiming.Steady` draws and for
+the same reason: an idle that redraws twice as much as it moves is doing
+something other than breathing, and an attack that does is an attack. The
+per-band figures beside it say where the churn lives — `feet` is the one worth
+reading, since a planted foot that gains and loses toes is the most legible
+fault in a bad idle and is otherwise buried in a whole-figure average.
+
+`--fail-over <ratio>` turns it into a gate. Off by default, and that is a
+statement about the art rather than about the check: every looping stance on
+the roster is currently over the red bar, so a gate shipped switched on would
+refuse every build until the sheets were re-cut.
+
 ## 5. Wiring checklist (new art → visible in-game)
 
 1. Drop raw source file(s) in the kit's source folder, run the keyer.

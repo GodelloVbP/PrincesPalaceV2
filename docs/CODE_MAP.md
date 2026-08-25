@@ -104,7 +104,7 @@ EditMode-testable):
 | Folder | Covers |
 |---|---|
 | `Audio/` | Adaptive music: `MusicIntensity` (the four tiers), the `music_layers.json` raw shapes and `MusicLayerResolver`, the resolved `MusicLayerSet`/`MusicLayerLibrary`, and `MusicClock` (bar-boundary arithmetic) |
-| `Combat/` | `CombatMath`, `CombatEncounter`, `CombatantState`, damage/effectiveness formulas, plus the talent-rework additions: `TalentEffect` (the closed rule vocabulary a talent can grant), `TalentEffectSet` (a character's rules, flattened once per fight) and `Transformation`/`TransformGrant` (Black Ram Mode) |
+| `Combat/` | `CombatMath` (armour is diminishing returns via `Mitigate`, not a subtraction — see its header for the floor-one-boss-took-130-turns bug this replaced), `CombatEncounter`, `CombatantState`, damage/effectiveness formulas, plus the talent-rework additions: `TalentEffect` (the closed rule vocabulary a talent can grant), `TalentEffectSet` (a character's rules, flattened once per fight) and `Transformation`/`TransformGrant` (Black Ram Mode) |
 | `Content/` | Raw/resolved content shapes + `*EntryResolver`s (validation) for every JSON-authored content type, plus the content enums they parse (`CharacterRole`, `RelicEffect`) |
 | `Dungeon/` | `DifficultyCurve`, room/map generation logic |
 | `Economy/` | `Wallet`, `CurrencyType` |
@@ -112,7 +112,7 @@ EditMode-testable):
 | `Relics/` | `RelicLoadout` (party-wide relic ownership/assignment) |
 | `Rewards/` | `CombatReward`, `CharacterReward`, offer tables |
 | `Rng/` | `SeededRandom` (built, not yet wired — see `AUDIT.md`) |
-| `Stage/` | Stage-side/depth/layout pure geometry, `SpriteFacing`, `StanceManifest` (authored ground lines + stance timing) |
+| `Stage/` | Stage-side/depth/layout pure geometry, `SpriteFacing`, `StanceManifest` (authored ground lines + stance timing + per-actor breath), `BreathCurve` (the continuous scale transform every idle figure gets, sheet-driven or not — see its own header) |
 | `Stats/` | `StatBlock`, `StatType`, `AbilityDerivation` |
 
 ## Core map
@@ -188,7 +188,10 @@ which):
   (not run directly)
 - `actor_stance_qa.py` — visual QA contact sheets + onion skins for actor
   stance art, rendered offline from the committed PNGs without booting Unity
-  (`screenshot.ps1 -Runtime` covers animation that only exists in-engine)
+  (`screenshot.ps1 -Runtime` covers animation that only exists in-engine);
+  also reports the **redraw ratio** — churn per step over how far the figure
+  actually moves — and ranks the roster by it, which is the check that names
+  a sheet whose frames are redrawn rather than animated
 - `trim_wav.py` — audio trimming utility
 
 ---
