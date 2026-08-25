@@ -374,6 +374,21 @@ namespace PrincesPalace
                 // player time to read the damage number.
                 yield return StepActorFrames(beat.Actor, impactFrame, animation.FrameCount, animation);
 
+                // A ONE-SHOT THAT RETURNS plays its frames back down to the
+                // start -- the beetle's Shell Up uncurling out of the sealed
+                // ball it curled into. Without this a curl-and-hold stance
+                // snapped from its last frame straight to idle, which reads as
+                // the shell popping open rather than opening.
+                //
+                // Real extra time, like CloseIn and unlike the hit-stop: the
+                // release is a motion the beat did not previously spend, so it
+                // is added rather than taken out of the settle. From count-1
+                // (the last frame the follow-through just showed) back to 0.
+                if (animation.ReturnsToStart && animation.FrameCount > 1)
+                {
+                    yield return StepActorFramesReverse(beat.Actor, 0, animation.FrameCount - 1, animation);
+                }
+
                 float remaining = SettleAfter(animation.SecondsPerFrame * animation.FrameCount + stop);
                 yield return new WaitForSeconds(Scaled(remaining));
 
@@ -757,6 +772,14 @@ namespace PrincesPalace
             if (actor == null || SetFrame == null) yield break;
 
             yield return StanceStepper.Play(animation, from, to, frame => SetFrame(actor, frame));
+        }
+
+        // The same walk in reverse, for a stance that returns to its start.
+        private IEnumerator StepActorFramesReverse(CombatantState actor, int from, int to, StanceAnimation animation)
+        {
+            if (actor == null || SetFrame == null) yield break;
+
+            yield return StanceStepper.PlayReverse(animation, from, to, frame => SetFrame(actor, frame));
         }
 
         // What the two of them say about the blow.

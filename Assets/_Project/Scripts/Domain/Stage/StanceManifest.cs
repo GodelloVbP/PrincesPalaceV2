@@ -44,9 +44,13 @@ namespace PrincesPalace.Domain.Stage
         // See RawStanceTiming.endHold and LoopCycle.FrameAt.
         public readonly float EndHoldSeconds;
 
+        // Whether this one-shot plays back down to its first frame after
+        // reaching its last -- the shell uncurling. See RawStanceTiming.returns.
+        public readonly bool ReturnsToStart;
+
         public StanceTiming(float secondsPerFrame, int impactFrame, int soundFrame,
                             StanceLoop loop = StanceLoop.PingPong, bool steady = true,
-                            float endHoldSeconds = 0f)
+                            float endHoldSeconds = 0f, bool returnsToStart = false)
         {
             SecondsPerFrame = secondsPerFrame;
             ImpactFrame = impactFrame;
@@ -54,6 +58,7 @@ namespace PrincesPalace.Domain.Stage
             Loop = loop;
             Steady = steady;
             EndHoldSeconds = endHoldSeconds < 0f ? 0f : endHoldSeconds;
+            ReturnsToStart = returnsToStart;
         }
     }
 
@@ -111,7 +116,8 @@ namespace PrincesPalace.Domain.Stage
                         stance.soundFrame > 0 ? stance.soundFrame : 0,
                         ParseLoop(stance.loop),
                         ParseSteady(stance.steady, LoopsByDefault(stance.stance)),
-                        stance.endHold > 0f ? stance.endHold : 0f);
+                        stance.endHold > 0f ? stance.endHold : 0f,
+                        stance.returns);
                 }
             }
         }
@@ -200,7 +206,8 @@ namespace PrincesPalace.Domain.Stage
                     authored.SoundFrame > 0 ? authored.SoundFrame : midpoint,
                     authored.Loop,
                     authored.Steady,
-                    authored.EndHoldSeconds);
+                    authored.EndHoldSeconds,
+                    authored.ReturnsToStart);
             }
 
             return new StanceTiming(
@@ -209,7 +216,8 @@ namespace PrincesPalace.Domain.Stage
                 Math.Min(timing.SoundFrame, frames),
                 timing.Loop,
                 timing.Steady,
-                timing.EndHoldSeconds);
+                timing.EndHoldSeconds,
+                timing.ReturnsToStart);
         }
 
         // THE ONE STANCE NAME THIS FILE KNOWS, and it is worth being explicit

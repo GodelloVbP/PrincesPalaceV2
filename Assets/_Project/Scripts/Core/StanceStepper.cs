@@ -60,5 +60,27 @@ namespace PrincesPalace
         public static IEnumerator Play(StanceAnimation animation, Action<int> show,
                                        Func<bool> abandon = null) =>
             Play(animation, 0, animation.FrameCount, show, abandon);
+
+        // Frames [to-1 .. from], the same walk in reverse -- the shell
+        // uncurling out of the ball it curled into.
+        //
+        // FLAT PACE, not FrameHoldCurve's. The hold curve front-loads a
+        // wind-up and settles after an impact, which is the shape of a swing;
+        // a release is even, and this pass has no impact frame to shape around.
+        // So each drawing is held for a plain SecondsPerFrame on the beat clock.
+        public static IEnumerator PlayReverse(StanceAnimation animation, int from, int to,
+                                              Action<int> show, Func<bool> abandon = null)
+        {
+            if (show == null || animation.FrameCount <= 1) yield break;
+
+            int hi = Math.Min(to, animation.FrameCount) - 1;
+            for (int frame = hi; frame >= from; frame--)
+            {
+                if (abandon != null && abandon()) yield break;
+
+                show(frame);
+                yield return new WaitForSeconds(FightBeatPlayer.Scaled(animation.SecondsPerFrame));
+            }
+        }
     }
 }

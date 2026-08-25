@@ -88,5 +88,18 @@ namespace PrincesPalace.Domain.Stage
         // unset: "on" and "off" are both authored answers and the default
         // differs by whether the stance loops. See StanceTiming.Steady.
         public string steady = "";
+
+        // WHETHER THIS ONE-SHOT PLAYS BACK DOWN TO ITS FIRST FRAME.
+        //
+        // A "there and back" gesture: forward to the last drawing, then the
+        // same drawings in reverse to the first. The beetle's Shell Up curls
+        // into a sealed ball and this is what lets it UNCURL again rather than
+        // snapping from the ball straight to the idle stance.
+        //
+        // A plain bool, not the tri-state `steady` is: the default is off for
+        // every stance and nothing needs "explicitly off over a defaulted-on",
+        // so false-means-unset costs nothing here. Meaningless on a looping
+        // stance, which never ends to play back from.
+        public bool returns;
     }
 }

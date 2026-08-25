@@ -239,6 +239,24 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0f, manifest.TimingFor("Enemies/rat", "idle", 6).EndHoldSeconds, 0.0001f);
         }
 
+        // ---- a one-shot that returns to its start ------------------------------
+
+        // Shell Up curls in and has to uncurl again; `returns` is what the beat
+        // player reads to play the frames back down. Off for everything that
+        // does not say so, which is every existing stance.
+        [Test]
+        public void AnAuthoredReturns_ReachesTheResolvedTiming()
+        {
+            var manifest = Build(Actor("Enemies/beetle", 8f,
+                new RawStanceTiming { stance = "shell_closed", secondsPerFrame = 0.12f, returns = true },
+                new RawStanceTiming { stance = "attack", secondsPerFrame = 0.07f }));
+
+            Assert.IsTrue(manifest.TimingFor("Enemies/beetle", "shell_closed", 6).ReturnsToStart,
+                "the curl must uncurl -- returns did not survive the resolver");
+            Assert.IsFalse(manifest.TimingFor("Enemies/beetle", "attack", 6).ReturnsToStart,
+                "a plain one-shot does not play backwards");
+        }
+
         [Test]
         public void AMalformedEntry_IsSkippedRatherThanThrowing()
         {

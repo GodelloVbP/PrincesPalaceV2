@@ -152,7 +152,9 @@
           "stance": "shell_closed",
           "secondsPerFrame": 0.12,
           "impactFrame": 1,
-          "soundFrame": 1
+          "soundFrame": 1,
+          "returns": true,
+          "_returnsNote": "Shell Up curls into the sealed ball (frames 1-6) then uncurls back to neutral (6-1) rather than snapping from the ball to idle. The uncurl is the curl played backwards -- no extra art. See StanceStepper.PlayReverse."
         },
         {
           "stance": "hurt",

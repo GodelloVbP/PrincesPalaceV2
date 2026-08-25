@@ -54,9 +54,14 @@ namespace PrincesPalace
         // this stance, which today is the idle.
         public readonly float EndHoldSeconds;
 
+        // Whether this one-shot plays back down to its first frame after its
+        // last -- the shell uncurling. See StanceTiming.ReturnsToStart; the
+        // beat player plays the reverse tail.
+        public readonly bool ReturnsToStart;
+
         public StanceAnimation(Sprite[] frames, float secondsPerFrame, int impactFrame, int soundFrame,
                                StanceLoop loop = StanceLoop.PingPong, bool steady = false,
-                               float endHoldSeconds = 0f)
+                               float endHoldSeconds = 0f, bool returnsToStart = false)
         {
             Frames = frames;
             SecondsPerFrame = Mathf.Max(0f, secondsPerFrame);
@@ -65,6 +70,7 @@ namespace PrincesPalace
             Loop = loop;
             Steady = steady;
             EndHoldSeconds = Mathf.Max(0f, endHoldSeconds);
+            ReturnsToStart = returnsToStart;
         }
 
         public bool IsEmpty => Frames == null || Frames.Length == 0;
