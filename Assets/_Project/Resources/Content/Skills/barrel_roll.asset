@@ -59,7 +59,7 @@ MonoBehaviour:
     temporaryHealthPercent: 0
     splashPercent: 0
   stance: turtle_up
-  approach: 1
+  approach: 3
   shake: 0
   summonEnemyId: 
   summonCap: 0

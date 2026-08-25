@@ -130,9 +130,11 @@
       "stances": [
         {
           "stance": "idle",
-          "secondsPerFrame": 0.14,
+          "secondsPerFrame": 0.2,
           "impactFrame": 1,
-          "soundFrame": 1
+          "soundFrame": 1,
+          "endHold": 0.5,
+          "_idleNote": "Slower than the delivered 0.14 (it read as breathing too fast) with a half-second hold on the full-inhale peak -- endHold is dead time at the top of the ping-pong so the breath pauses there rather than lingering equally at both ends. See LoopCycle.FrameAt."
         },
         {
           "stance": "attack",

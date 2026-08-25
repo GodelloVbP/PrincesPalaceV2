@@ -206,6 +206,7 @@
       "resistance": "Physical, Ice",
       "spritePath": "Enemies/beetle",
       "facing": "right",
+      "attackApproach": "charge",
       "active": true,
       "abilities": [
         {

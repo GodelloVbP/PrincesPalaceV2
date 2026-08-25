@@ -331,7 +331,7 @@
       "flatAmount": 2,
       "manaCost": 0,
       "stance": "turtle_up",
-      "approach": "lunge",
+      "approach": "charge",
       "playerSelectable": false
     },
     {

@@ -55,5 +55,6 @@ MonoBehaviour:
   statusDuration: 0
   avoidsFrontSlot: 0
   attackHoldsPosition: 0
+  attackApproach: lunge
   stageScale: 1
   slotSpan: 1
