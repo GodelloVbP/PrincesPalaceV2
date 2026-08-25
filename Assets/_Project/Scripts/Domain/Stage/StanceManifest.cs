@@ -71,11 +71,13 @@ namespace PrincesPalace.Domain.Stage
         public const float DefaultGroundLine = 0f;
 
         private readonly Dictionary<string, float> _groundLines;
+        private readonly Dictionary<string, float> _breaths;
         private readonly Dictionary<string, StanceTiming> _timings;
 
         public StanceManifest(RawStanceManifest raw)
         {
             _groundLines = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
+            _breaths = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
             _timings = new Dictionary<string, StanceTiming>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var actor in raw?.actors ?? new List<RawStanceActor>())
@@ -87,6 +89,7 @@ namespace PrincesPalace.Domain.Stage
 
                 string path = Normalise(actor.spritePath);
                 _groundLines[path] = actor.groundLine;
+                _breaths[path] = actor.breath;
 
                 foreach (var stance in actor.stances ?? new List<RawStanceTiming>())
                 {
@@ -127,6 +130,42 @@ namespace PrincesPalace.Domain.Stage
             }
 
             return DefaultGroundLine;
+        }
+
+        // HOW HARD THIS ACTOR BREATHES, as a multiplier on
+        // BreathCurve.FullAmplitude.
+        //
+        // `idleFrameCount` decides the DEFAULT and nothing else, the same
+        // shape TimingFor takes with its own frameCount: a still drawing gets
+        // the full amplitude because nothing else is moving it, and a sheet
+        // that already breathes gets a third of it so the two do not compete.
+        // That is a rule rather than a table, so a new actor is right without
+        // anybody authoring anything -- and it is only the default, so a sheet
+        // that disagrees says so in the manifest.
+        //
+        // WHY THIS IS NOT MEASURED. The obvious refinement is to look at how
+        // far a sheet's own frames actually move the figure and scale against
+        // that. It is the same reasoning that put the ground line in this file
+        // -- a runtime measurement is confidently wrong where an authored one
+        // is visibly missing -- and the same answer applies: the frame count
+        // is a FACT about the sheet, and how much its drawings move is a
+        // judgement about the art.
+        public float BreathFor(string spritePath, int idleFrameCount)
+        {
+            float fallback = idleFrameCount > 1 ? BreathCurve.SheetScale : 1f;
+
+            if (string.IsNullOrWhiteSpace(spritePath)
+                || !_breaths.TryGetValue(Normalise(spritePath), out var authored)
+                || Math.Abs(authored) < float.Epsilon)
+            {
+                return fallback;
+            }
+
+            // Negative is the authored way to say "none" -- see
+            // RawStanceActor.breath. Returned as zero rather than passed
+            // through, so a caller cannot end up multiplying by a negative
+            // amplitude and breathing the figure inside out.
+            return authored < 0f ? 0f : authored;
         }
 
         // `frameCount` is only consulted to fill in what was not authored, and

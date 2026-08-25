@@ -167,6 +167,156 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
+        // ---- and the breath that needs no drawings at all ----------------------
+
+        // THE FOUR FIGURES THAT NEVER MOVED. FlatArtStaysPutRatherThanFlickering
+        // above is still right -- a single-frame idle must stay on its only
+        // drawing -- and for as long as swapping drawings was the only thing
+        // that could animate anything, "stays put" and "stands perfectly still"
+        // were the same sentence.
+        //
+        // They are not any more, and that is the whole point of the transform
+        // breath. The rat, the golem, the bog witch and Shawn ship one idle.png
+        // each; on a stage where the troll wobbles and everything around it is
+        // frozen, the troll reads as broken rather than as rough.
+        //
+        // ASSERTED ON THE RAT SPECIFICALLY, the mirror of the beetle above: an
+        // enemy picked for having no idle sheet, so this cannot pass by
+        // accident on art that was already animating.
+        [UnityTest]
+        public IEnumerator FlatArtStillBreathesEvenThoughItsDrawingCannot()
+        {
+            yield return AFightAgainst("Enemies/rat");
+
+            var slot = (RectTransform)Named("Enemy0Slot").transform;
+            var animator = slot.GetComponent<StageActorAnimator>();
+            Assert.IsNotNull(animator, "the enemy slot has no animator, so nothing can breathe");
+
+            float baseHeight = animator.BaseScale.y;
+            float tallest = baseHeight;
+
+            // A full period is 2.8s and this is not worth waiting out: the
+            // curve is past a third of its amplitude within half a second, and
+            // BreathCurveTests owns the shape. What this needs to see is that
+            // SOMETHING is driving it.
+            float deadline = Time.realtimeSinceStartup + 3f;
+            while (Time.realtimeSinceStartup < deadline && tallest <= baseHeight * 1.004f)
+            {
+                if (slot.localScale.y > tallest) tallest = slot.localScale.y;
+                yield return null;
+            }
+
+            Assert.Greater(tallest, baseHeight * 1.004f,
+                $"a single-frame idle stood at exactly {baseHeight:F4} for three seconds - it has " +
+                "no second drawing to step to, so the transform breath is the only thing that can " +
+                "move it and nothing is pushing one");
+
+            Assert.AreEqual(0, _fight.FrameFor(_fight.SessionForTest.Encounter.Enemies[0]),
+                "the breath moved the drawing as well - it is supposed to be a transform");
+        }
+
+        // THE OTHER HALF OF THE RULE, and it is about what "authored size"
+        // means rather than about taste. A slot's base scale is the creature's
+        // stageScale times its depth in the formation -- two numbers somebody
+        // chose -- and a breath centred on that would leave every actor
+        // spending half its life smaller than the size it was given.
+        [UnityTest]
+        public IEnumerator ABreathOnlyEverMakesTheFigureTallerThanItsMark()
+        {
+            yield return AFightAgainst("Enemies/rat");
+
+            var slot = (RectTransform)Named("Enemy0Slot").transform;
+            var animator = slot.GetComponent<StageActorAnimator>();
+            float baseHeight = animator.BaseScale.y;
+
+            float deadline = Time.realtimeSinceStartup + 3f;
+            while (Time.realtimeSinceStartup < deadline)
+            {
+                Assert.GreaterOrEqual(slot.localScale.y, baseHeight - 0.0001f,
+                    $"the figure shrank to {slot.localScale.y:F4} below its mark of {baseHeight:F4}");
+                yield return null;
+            }
+        }
+
+        // THE COMPOUNDING BUG, pinned because it is invisible for about a
+        // minute and then obvious.
+        //
+        // AnchorStageSlots re-homes a slot every time the live count changes,
+        // which on a fight with summons or deaths is often. It used to assign
+        // the rect and have the animator read it straight back -- correct only
+        // while nothing else wrote localScale between the two. The breath
+        // writes it every frame, so a re-home landing mid-breath would have
+        // taken base x 1.02 as the base, and the next one base x 1.02 x 1.02,
+        // and the figure would grow a couple of percent per re-home for the
+        // rest of the encounter.
+        [UnityTest]
+        public IEnumerator ReHomingAFigureMidBreathDoesNotFoldTheBreathIntoItsSize()
+        {
+            yield return AFightAgainst("Enemies/rat");
+
+            var slot = (RectTransform)Named("Enemy0Slot").transform;
+            var animator = slot.GetComponent<StageActorAnimator>();
+
+            var mark = animator.Home;
+            var size = animator.BaseScale;
+
+            // Wait until the figure is demonstrably mid-breath, so this is
+            // re-homing over a live deformation rather than over nothing.
+            float deadline = Time.realtimeSinceStartup + 3f;
+            while (Time.realtimeSinceStartup < deadline
+                   && slot.localScale.y <= size.y * 1.004f)
+            {
+                yield return null;
+            }
+
+            Assert.Greater(slot.localScale.y, size.y * 1.004f,
+                "the figure never got far enough into a breath for this test to mean anything");
+
+            for (int i = 0; i < 8; i++)
+            {
+                animator.Rehome();
+                yield return null;
+            }
+
+            Assert.AreEqual(size.y, animator.BaseScale.y, 0.0005f,
+                $"eight re-homes took the base scale from {size.y:F4} to {animator.BaseScale.y:F4} - " +
+                "the breath is being folded into the size the figure returns to");
+            Assert.AreEqual(mark.x, animator.Home.x, 0.5f, "the re-homes moved the mark itself");
+        }
+
+        // A swing and a breath both deform the figure, and they overlap
+        // constantly -- something is always breathing when something else
+        // lands. The failure mode is not subtle: two callers each assigning
+        // localScale means whichever wrote last wins, so a punch would vanish
+        // for a frame every time the breath ticked, and vice versa.
+        [UnityTest]
+        public IEnumerator APunchStillLandsOnAFigureThatIsBreathing()
+        {
+            yield return AFightAgainst("Enemies/rat");
+
+            var slot = (RectTransform)Named("Enemy0Slot").transform;
+            var animator = slot.GetComponent<StageActorAnimator>();
+
+            float deadline = Time.realtimeSinceStartup + 3f;
+            while (Time.realtimeSinceStartup < deadline
+                   && slot.localScale.y <= animator.BaseScale.y * 1.004f)
+            {
+                yield return null;
+            }
+
+            float breathing = slot.localScale.x;
+
+            // Punch narrows and heightens (negative stretch). Against a breath
+            // that is doing a little of the same, the test is that the punch
+            // still dominates the width.
+            animator.Punch(1f);
+            yield return null;
+
+            Assert.Less(slot.localScale.x, breathing * 0.95f,
+                $"the punch left the width at {slot.localScale.x:F4} against {breathing:F4} - a " +
+                "hit landing on a breathing figure did nothing to it");
+        }
+
         private IEnumerator AFightAgainst(string spritePath)
         {
             yield return OpenAFight();

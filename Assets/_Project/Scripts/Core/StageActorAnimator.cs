@@ -50,10 +50,32 @@ namespace PrincesPalace
         // loss twice as strongly as the horizontal gain.
         private const float VolumeRatio = 0.55f;
 
+        // HOW MUCH OF THE BREATH COMES BACK OUT OF THE WIDTH. Smaller than
+        // VolumeRatio because a breath is subtler than a swing, and non-zero
+        // for the reason ApplyStretch's own note gives: a figure that only
+        // gets bigger reads as zooming rather than as moving.
+        private const float BreathVolumeRatio = 0.35f;
+
         private RectTransform _rect;
         private Vector2 _home;
         private Vector3 _baseScale;
         private Coroutine _running;
+
+        // THE TWO DEFORMATIONS, HELD SEPARATELY AND WRITTEN TOGETHER.
+        //
+        // A swing is transient and belongs to a beat; a breath is continuous
+        // and belongs to standing still. They were always going to overlap --
+        // an idle figure is breathing at the instant something hits it -- and
+        // the first arrangement that suggests itself, two callers each writing
+        // localScale, means whichever wrote last wins and the other's
+        // deformation vanishes for a frame. Keeping the AMOUNTS apart and
+        // composing them in one writer costs a field and makes that
+        // impossible.
+        //
+        // Multiplied rather than added in WriteScale, so neither has to know
+        // the other exists or what range it works in.
+        private float _stretch;
+        private float _breath;
 
         public Vector2 Home => _home;
 
@@ -98,14 +120,49 @@ namespace PrincesPalace
         // It bit on the first encounter too, not only after a death: the slots
         // are anchored during setup, which is after Awake.
         //
-        // Called AFTER the slot has been given its new position and scale, so
-        // this reads the new values rather than imposing the old ones.
+        // THE READING FORM: takes the rect as it stands to be where the figure
+        // belongs. Right for Awake, where the scene's own values are the
+        // answer and there is nobody to ask.
+        //
+        // Anything that KNOWS the mark it wants -- AnchorStageSlots is the one
+        // such caller -- should say so through the overload below rather than
+        // assigning the rect and having this read it back.
         public void Rehome()
         {
             // Resolved here as well as in Awake, because a caller can reach
             // this before Unity has run Awake on a freshly activated slot --
             // and a Rehome that silently did nothing would leave the mark at
             // whatever the scene authored.
+            if (_rect == null) _rect = transform as RectTransform;
+            if (_rect == null) return;
+
+            // WITHOUT WHATEVER THIS ANIMATOR IS CURRENTLY APPLYING.
+            //
+            // Reading localScale raw was correct while the only thing that ever
+            // wrote it was a swing, because a swing resets to zero at both ends
+            // and nothing called this mid-arc. A breath broke that: it is on
+            // every frame an idle figure exists for, so "the rect is
+            // undeformed right now" stopped being true and re-homing folded 2%
+            // into the base, to be multiplied again on the next write.
+            //
+            // Divided back out rather than assumed absent, because this
+            // overload's whole job is to read what is there -- and the animator
+            // is the one thing that knows exactly how much of what is there is
+            // its own doing.
+            Rehome(_rect.anchoredPosition, UndeformedScale());
+        }
+
+        // The authoritative form: the caller states the mark and the size, and
+        // this puts the figure on them.
+        //
+        // TOLD, NOT SHOWN, which is the difference that matters. AnchorStageSlots
+        // used to assign the rect and then call the parameterless overload to
+        // have it read back what had just been written -- two writers agreeing
+        // by convention about the order they run in. That convention was
+        // invisible, and a breath running between the two halves would have
+        // broken it silently. One writer cannot be got out of order.
+        public void Rehome(Vector2 mark, Vector3 baseScale)
+        {
             if (_rect == null) _rect = transform as RectTransform;
             if (_rect == null) return;
 
@@ -119,8 +176,38 @@ namespace PrincesPalace
                 _running = null;
             }
 
-            _home = _rect.anchoredPosition;
-            _baseScale = _rect.localScale;
+            _home = mark;
+            _baseScale = baseScale;
+
+            // Cleared, so "after a re-home the figure stands at its authored
+            // size" is true by construction rather than by whoever called it
+            // having got the order right. The idle driver re-establishes the
+            // breath on the next frame, which is not a length of time anybody
+            // can see.
+            _stretch = 0f;
+            _breath = 0f;
+
+            _rect.anchoredPosition = mark;
+            WriteScale();
+        }
+
+        // The live scale with this animator's own deformation taken back out.
+        //
+        // The divisors are (1 + stretch) and its volume partner, all of which
+        // sit within a few percent of one for every value Play, Punch and
+        // SetBreath can produce. Guarded anyway: a divide by something near
+        // zero here would not throw, it would return an infinity and park the
+        // figure at an unrenderable size, which is far harder to recognise than
+        // an exception.
+        private Vector3 UndeformedScale()
+        {
+            float x = (1f + _stretch) * (1f - _breath * BreathVolumeRatio);
+            float y = (1f - _stretch * VolumeRatio) * (1f + _breath);
+
+            return new Vector3(
+                Mathf.Abs(x) < 0.01f ? _rect.localScale.x : _rect.localScale.x / x,
+                Mathf.Abs(y) < 0.01f ? _rect.localScale.y : _rect.localScale.y / y,
+                _rect.localScale.z);
         }
 
         // Convenience overload for a pure sideways move (recoils, and any
@@ -180,6 +267,14 @@ namespace PrincesPalace
                 // self-correcting -- nothing else writes localScale, so it
                 // would simply stay squashed for the rest of the fight.
                 ApplyStretch(0f);
+
+                // AND THE BREATH, for the opposite reason. Nothing STOPS
+                // pushing a breath -- the driver simply stops being called
+                // when the fight ends -- so the last amount pushed would sit
+                // there frozen, leaving the stage parked at whatever point of
+                // the cycle it happened to end on. A stage at rest should be
+                // at its authored size.
+                SetBreath(0f);
             }
         }
 
@@ -341,10 +436,65 @@ namespace PrincesPalace
         {
             if (_rect == null) return;
 
-            _rect.localScale = new Vector3(
-                _baseScale.x * (1f + amount),
-                _baseScale.y * (1f - amount * VolumeRatio),
-                _baseScale.z);
+            _stretch = amount;
+            WriteScale();
+        }
+
+        // ---- the breath a standing figure takes -------------------------------
+
+        // How much taller than its mark this figure is standing, right now.
+        //
+        // PUSHED IN, NOT CLOCKED HERE, and that is deliberate on both counts.
+        // This class has never known what a CombatantState is and must not
+        // start -- whether a figure is idle, and how hard its particular sheet
+        // wants to breathe, are questions only FightController can answer. And
+        // a value pushed from outside is a value a test can pin: an animator
+        // that ran its own clock would make every stage screenshot differ by
+        // when it was taken.
+        //
+        // Domain/Stage/BreathCurve is what produces the number. Nothing here
+        // knows the shape of a breath, only how to wear one.
+        public void SetBreath(float amount)
+        {
+            if (_rect == null) return;
+
+            // A dirty check rather than an unconditional write: this is called
+            // once per idle figure per frame, and assigning localScale marks
+            // the transform and everything under it for a layout pass whether
+            // or not the value changed. The epsilon is far below a pixel on
+            // any figure on this stage.
+            if (Mathf.Abs(_breath - amount) < 0.0001f) return;
+
+            _breath = amount;
+            WriteScale();
+        }
+
+        // THE ONE PLACE localScale IS ASSIGNED.
+        //
+        // Both deformations scale about the slot's (0.5, 0) pivot -- its own
+        // ground line -- so neither can lift the figure off the floor and the
+        // two cannot disagree about where the floor is.
+        //
+        // Multiplied onto the CAPTURED base scale, never assigned outright:
+        // the slot already carries its depth scale from FightStageAnchors, and
+        // writing an absolute value here would flatten the back row to the size
+        // of the front one on the first swing.
+        private void WriteScale()
+        {
+            if (_rect == null) return;
+
+            // The swing: wider and shorter, or the inverse when Punch feeds it
+            // a negative amount.
+            float x = 1f + _stretch;
+            float y = 1f - _stretch * VolumeRatio;
+
+            // The breath: taller, and a little of that taken back out of the
+            // width. Never negative -- see BreathCurve, which only ever grows
+            // from the authored size.
+            x *= 1f - _breath * BreathVolumeRatio;
+            y *= 1f + _breath;
+
+            _rect.localScale = new Vector3(_baseScale.x * x, _baseScale.y * y, _baseScale.z);
         }
     }
 }

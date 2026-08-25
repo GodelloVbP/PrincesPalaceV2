@@ -29,6 +29,22 @@ namespace PrincesPalace.Domain.Stage
         // stop happening by accident.
         public float groundLine;
 
+        // HOW HARD THIS CREATURE BREATHES, as a multiplier on
+        // BreathCurve.FullAmplitude. See BreathCurve for the shape and for
+        // what it is worth in pixels.
+        //
+        // ZERO MEANS UNSET, the same in-band sentinel the three numbers on
+        // RawStanceTiming use and for the same reason: JsonUtility cannot
+        // express absence. The default that fills it in is not a constant --
+        // an actor whose sheet already breathes wants a third of what a single
+        // still drawing wants -- so see StanceManifest.BreathFor.
+        //
+        // A NEGATIVE VALUE MEANS NONE. It is the escape hatch the sentinel
+        // costs: without it there would be no way to author "this thing does
+        // not breathe", because the value that says so is the one that means
+        // unset. Nothing needs it today; a statue would.
+        public float breath;
+
         public List<RawStanceTiming> stances = new List<RawStanceTiming>();
     }
 

@@ -147,6 +147,71 @@ namespace PrincesPalace.Domain.Tests
                 "Frame 1 of 1 means instantly, which is what the flat-file art did before any of this existed.");
         }
 
+        // ---- how hard an actor breathes ---------------------------------------
+
+        // THE DEFAULT IS A RULE, NOT A CONSTANT, and this is the pair that says
+        // so. A single still drawing has nothing else moving it and gets the
+        // full amplitude; a sheet that already steps six frames gets a third,
+        // so the transform carries the eye between drawings instead of
+        // competing with them.
+        //
+        // Same shape as StanceTiming.Steady defaulting off `idle`: a rule
+        // supplies the usual answer so a new actor is right with no authoring
+        // at all, and anything that disagrees says so.
+        [Test]
+        public void AStillDrawingBreathesFullyAndASheetThatMovesBreathesLess()
+        {
+            var manifest = Build(Actor("Enemies/rat", 12f));
+
+            Assert.AreEqual(1f, manifest.BreathFor("Enemies/rat", 1), 0.0001f,
+                "A single idle.png cannot breathe on its own, so the transform is all there is.");
+            Assert.AreEqual(BreathCurve.SheetScale, manifest.BreathFor("Enemies/rat", 6), 0.0001f,
+                "A six-frame idle is already moving the figure; a full breath on top reads as two " +
+                "animations disagreeing.");
+        }
+
+        [Test]
+        public void AnAuthoredBreath_OverridesTheRuleForEitherKindOfSheet()
+        {
+            var manifest = Build(new RawStanceActor
+            {
+                spritePath = "Enemies/forest_warden",
+                groundLine = 14f,
+                breath = 0.7f,
+                stances = new List<RawStanceTiming>(),
+            });
+
+            Assert.AreEqual(0.7f, manifest.BreathFor("Enemies/forest_warden", 6), 0.0001f);
+            Assert.AreEqual(0.7f, manifest.BreathFor("Enemies/forest_warden", 1), 0.0001f);
+        }
+
+        // ZERO IS THE UNSET SENTINEL, so "none" has to be said some other way,
+        // and negative is it -- see RawStanceActor.breath. It comes back as
+        // zero rather than passed through, because a negative amplitude
+        // reaching BreathCurve would breathe the figure inside out.
+        [Test]
+        public void ANegativeBreath_MeansNoneRatherThanAnInvertedOne()
+        {
+            var manifest = Build(new RawStanceActor
+            {
+                spritePath = "Enemies/statue",
+                groundLine = 0f,
+                breath = -1f,
+                stances = new List<RawStanceTiming>(),
+            });
+
+            Assert.AreEqual(0f, manifest.BreathFor("Enemies/statue", 1), 0.0001f);
+        }
+
+        [Test]
+        public void AnUnknownActor_TakesTheRuleRatherThanThrowing()
+        {
+            var manifest = Build(Actor("Enemies/golem", 69f));
+
+            Assert.AreEqual(1f, manifest.BreathFor("Enemies/nobody", 1), 0.0001f);
+            Assert.AreEqual(BreathCurve.SheetScale, manifest.BreathFor(null, 6), 0.0001f);
+        }
+
         [Test]
         public void AMalformedEntry_IsSkippedRatherThanThrowing()
         {

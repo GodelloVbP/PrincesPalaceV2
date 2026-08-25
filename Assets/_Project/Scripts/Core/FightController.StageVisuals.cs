@@ -231,20 +231,31 @@ namespace PrincesPalace
                     continue;
                 }
 
-                slots[i].anchoredPosition = mark;
-                slots[i].localScale = baseScale;
-
-                // AND THE ANIMATOR HAS TO BE TOLD. It holds the mark a figure
-                // returns to after a lunge and the scale its stretch multiplies
-                // onto, and it captured both in Awake -- which was correct only
-                // while these two lines did not exist. Without this every swing
-                // after a re-spread ended by snapping the figure back to where
-                // its slot used to be, at the size it used to be.
+                // THE ANIMATOR HAS TO BE TOLD, and telling it is now the whole
+                // of the write. It holds the mark a figure returns to after a
+                // lunge and the scale its stretch multiplies onto, and it
+                // captured both in Awake -- which was correct only while this
+                // function did not exist. Without this every swing after a
+                // re-spread ended by snapping the figure back to where its slot
+                // used to be, at the size it used to be.
                 //
-                // Told rather than polled: this function is the authority on
-                // where a slot lives, so it is the one thing that always knows
-                // the answer has changed.
-                if (animator != null) animator.Rehome();
+                // ASSIGNING THE RECT HERE AS WELL USED TO BE PART OF IT, and it
+                // is not any more. This wrote the two values and then called a
+                // Rehome that read them straight back, which worked only
+                // because nothing else wrote localScale between the two lines.
+                // The idle breath writes it every frame, so that arrangement
+                // would have folded a breath into the base scale and
+                // multiplied it again on the next one. Handing the values over
+                // leaves one writer, which cannot be got out of order.
+                if (animator != null)
+                {
+                    animator.Rehome(mark, baseScale);
+                }
+                else
+                {
+                    slots[i].anchoredPosition = mark;
+                    slots[i].localScale = baseScale;
+                }
             }
         }
 
@@ -833,6 +844,24 @@ namespace PrincesPalace
             }
         }
 
+        // Hands one figure's breath to the thing that wears it.
+        //
+        // The animator lives on the SLOT, which is what carries the depth
+        // scale and the bottom pivot -- so a breath scales about the figure's
+        // own ground line and cannot lift it off the floor. Same component,
+        // same reasoning, as the lunge and the recoil.
+        //
+        // Silent when there is no slot or no animator: a combatant that is not
+        // on stage (a summon still being held back by _confirmedPresent) has
+        // nothing to breathe, and that is not an error worth a branch upstream.
+        private void BreatheFigure(CombatantState combatant, float amount)
+        {
+            var slot = SlotFor(combatant);
+            if (slot == null) return;
+
+            slot.GetComponent<StageActorAnimator>()?.SetBreath(amount);
+        }
+
         // Advances one figure's breath. True when the drawing changed.
         private bool StepIdleFrame(CombatantState combatant, int index)
         {
@@ -845,11 +874,22 @@ namespace PrincesPalace
             if (StanceOf(combatant) != FightSession.Stances.Idle)
             {
                 _idleClock.Remove(combatant);
+                BreatheFigure(combatant, 0f);
                 return false;
             }
 
             var animation = StanceAnimationFor(combatant, FightSession.Stances.Idle);
-            if (animation.FrameCount <= 1) return false;
+
+            // NO ART, NO BREATH, and the check is IsEmpty rather than
+            // FrameCount because those are now different questions. A figure
+            // with a single drawing is exactly the case the transform breath
+            // exists for; a figure with NO drawing is a fallback plate, and a
+            // UI frame that swells and settles reads as a rendering fault.
+            if (animation.IsEmpty)
+            {
+                BreatheFigure(combatant, 0f);
+                return false;
+            }
 
             // NOT FrameHoldCurve, and not a flat step either.
             //
@@ -860,7 +900,14 @@ namespace PrincesPalace
             // sprites" in the first place. LoopCycle owns both halves of the
             // answer and its header carries the measurements.
             float perFrame = FightBeatPlayer.Scaled(animation.SecondsPerFrame);
-            if (perFrame <= 0f) return false;
+            if (perFrame <= 0f)
+            {
+                // Cleared rather than left alone. Nothing STOPS pushing a
+                // breath, so an early return that skips the push freezes the
+                // figure at whatever point of the cycle it reached.
+                BreatheFigure(combatant, 0f);
+                return false;
+            }
 
             if (!_idleClock.TryGetValue(combatant, out float clock))
             {
@@ -872,6 +919,24 @@ namespace PrincesPalace
             // once when the panel closes.
             clock += Time.unscaledDeltaTime;
             _idleClock[combatant] = clock;
+
+            // THE TRANSFORM HALF OF THE BREATH, and it runs for every idle
+            // figure rather than only for the three with a six-frame sheet.
+            // That is the point of it: the rat, the golem, the bog witch and
+            // Shawn have one drawing each and stood perfectly still through
+            // every fight.
+            //
+            // OFFSET SEPARATELY from the sheet loop, not sharing
+            // IdlePhaseFrames. Two figures' DRAWINGS are separated in units of
+            // their own sheet's pace; their BREATHS are separated against a
+            // fixed period, so deriving one from the other would make a slow
+            // sheet separate its breaths less. See BreathCurve.PhaseFor.
+            BreatheFigure(combatant,
+                BreathCurve.At(clock + BreathCurve.PhaseFor(index),
+                               StanceManifestLoader.Manifest.BreathFor(
+                                   SpriteFolderFor(combatant), animation.FrameCount)));
+
+            if (animation.FrameCount <= 1) return false;
 
             int frame = LoopCycle.FrameAt(clock, animation.FrameCount, perFrame, animation.Loop);
             if (FrameFor(combatant) == frame) return false;
