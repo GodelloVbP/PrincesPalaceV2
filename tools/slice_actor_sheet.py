@@ -252,6 +252,87 @@ ACTORS = {
         "nudge": {},
     },
 
+    # --- Regenerated under docs/STANCE_SHEET_SPEC.md -----------------------
+    #
+    # PLACEHOLDERS. Every "sheets" entry below names a file that does not
+    # exist yet -- these three actors are mid-regeneration (see the spec doc's
+    # own work-order table, section 2). `scale` and `delivery_scale` are left
+    # at 1.0 until Protocol B's delivery step (spec section 8) measures the
+    # real ones; do not guess ahead of that measurement.
+    #
+    # Six SEPARATE sheets each, one per stance -- unlike bog_witch/golem/rat's
+    # single multi-pose sheet, because the spec commissions one full
+    # 3x2-of-six-frames animation sheet PER STANCE (section 5), not six poses
+    # sharing one sheet. `names` is a plain list because every cell in a
+    # Stage-2 sheet belongs to the same stance; there is no `None` skip and no
+    # cross-sheet alias to make here.
+    "beetle": {
+        "sheets": [
+            {"file": "beetle/sheet_idle.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
+             "names": ["idle/f0", "idle/f1", "idle/f2", "idle/f3", "idle/f4", "idle/f5"]},
+            {"file": "beetle/sheet_attack.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
+             "names": ["attack/f0", "attack/f1", "attack/f2", "attack/f3", "attack/f4", "attack/f5"]},
+            {"file": "beetle/sheet_turtle_up.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
+             "names": ["turtle_up/f0", "turtle_up/f1", "turtle_up/f2", "turtle_up/f3", "turtle_up/f4", "turtle_up/f5"]},
+            {"file": "beetle/sheet_shell_closed.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
+             "names": ["shell_closed/f0", "shell_closed/f1", "shell_closed/f2", "shell_closed/f3", "shell_closed/f4", "shell_closed/f5"]},
+            {"file": "beetle/sheet_hurt.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
+             "names": ["hurt/f0", "hurt/f1", "hurt/f2", "hurt/f3", "hurt/f4", "hurt/f5"]},
+            {"file": "beetle/sheet_defeated.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
+             "names": ["defeated/f0", "defeated/f1", "defeated/f2", "defeated/f3", "defeated/f4", "defeated/f5"]},
+        ],
+        "aliases": {},
+        "anchor": "ground_band",
+        "delivery_scale": 1.0,  # measure per spec section 8; target idle f0 height 243px
+        "nudge": {},
+    },
+
+    "treant": {
+        "sheets": [
+            {"file": "treant/sheet_idle.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
+             "names": ["idle/f0", "idle/f1", "idle/f2", "idle/f3", "idle/f4", "idle/f5"]},
+            {"file": "treant/sheet_attack.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
+             "names": ["attack/f0", "attack/f1", "attack/f2", "attack/f3", "attack/f4", "attack/f5"]},
+            {"file": "treant/sheet_trunk_slam.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
+             "names": ["trunk_slam/f0", "trunk_slam/f1", "trunk_slam/f2", "trunk_slam/f3", "trunk_slam/f4", "trunk_slam/f5"]},
+            {"file": "treant/sheet_cast.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
+             "names": ["cast/f0", "cast/f1", "cast/f2", "cast/f3", "cast/f4", "cast/f5"]},
+            {"file": "treant/sheet_hurt.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
+             "names": ["hurt/f0", "hurt/f1", "hurt/f2", "hurt/f3", "hurt/f4", "hurt/f5"]},
+            {"file": "treant/sheet_defeated.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
+             "names": ["defeated/f0", "defeated/f1", "defeated/f2", "defeated/f3", "defeated/f4", "defeated/f5"]},
+        ],
+        "aliases": {},
+        "anchor": "ground_band",
+        "delivery_scale": 1.0,  # measure per spec section 8; target idle f0 height 441px
+        "nudge": {},
+    },
+
+    # Delivered id is "forest_warden" -- the content id enemies.json has
+    # always used -- but the art folder is "forest_troll" and has never been
+    # renamed to match. Not a typo: SOURCE_DIR-relative "file" paths below
+    # point into the folder that actually exists.
+    "forest_warden": {
+        "sheets": [
+            {"file": "forest_troll/sheet_idle.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
+             "names": ["idle/f0", "idle/f1", "idle/f2", "idle/f3", "idle/f4", "idle/f5"]},
+            {"file": "forest_troll/sheet_attack.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
+             "names": ["attack/f0", "attack/f1", "attack/f2", "attack/f3", "attack/f4", "attack/f5"]},
+            {"file": "forest_troll/sheet_attack_roar.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
+             "names": ["attack_roar/f0", "attack_roar/f1", "attack_roar/f2", "attack_roar/f3", "attack_roar/f4", "attack_roar/f5"]},
+            {"file": "forest_troll/sheet_attack_charge.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
+             "names": ["attack_charge/f0", "attack_charge/f1", "attack_charge/f2", "attack_charge/f3", "attack_charge/f4", "attack_charge/f5"]},
+            {"file": "forest_troll/sheet_hurt.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
+             "names": ["hurt/f0", "hurt/f1", "hurt/f2", "hurt/f3", "hurt/f4", "hurt/f5"]},
+            {"file": "forest_troll/sheet_defeated.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
+             "names": ["defeated/f0", "defeated/f1", "defeated/f2", "defeated/f3", "defeated/f4", "defeated/f5"]},
+        ],
+        "aliases": {},
+        "anchor": "ground_band",
+        "delivery_scale": 1.0,  # measure per spec section 8; target idle f0 height 473px
+        "nudge": {},
+    },
+
     # --- Party side ------------------------------------------------------
     # Shawn is the one PC with battle art. Until this entry existed, no
     # committed tool wrote Resources/Characters at ALL -- his six stances
@@ -719,6 +800,15 @@ def process_actor(actor_id, verbose=True, prune=False):
     # before.
     ground_y = PADDING + int(max_above)
     foot_of = {name: foot_y for name, _, foot_y in footed}
+
+    # THE NUMBER StanceManifest.json's per-actor "groundLine" WANTS: pixels
+    # from the canvas's bottom edge up to the ground every frame is placed on.
+    # canvas_h - ground_y rather than a second constant, so it can never drift
+    # from the canvas this function just built -- it is PADDING for anchor
+    # modes that place every foot on the same row (which is every mode here),
+    # printed rather than assumed because a future anchor mode could vary it.
+    if verbose:
+        print(f"  groundLine {canvas_h - ground_y}  (StanceManifest.json wants that number)")
 
     # Pass 3: per-piece anchor_x in LOCAL (post-crop) coordinates.
     anchored = []
