@@ -391,12 +391,22 @@ public static class ScreenRegistry
 
                 slots = result.Attach<SaveSlotController>(screen.SaveSlotPanel);
                 slots.slotButtons = screen.SlotButtons.Select(result.Button).ToArray();
+                slots.slotNumbers = screen.ChooseCards.Select(c => result.Tmp(c.Number)).ToArray();
+                slots.slotTops = screen.ChooseCards.Select(c => result.Tmp(c.Top)).ToArray();
+                slots.slotDetails = screen.ChooseCards.Select(c => result.Tmp(c.Detail)).ToArray();
+                slots.slotGolds = screen.ChooseCards.Select(c => result.Tmp(c.Gold)).ToArray();
+                slots.slotFilledWashes = screen.ChooseCards.Select(c => result.Go(c.FilledWash)).ToArray();
+                slots.slotEmptyWashes = screen.ChooseCards.Select(c => result.Go(c.EmptyWash)).ToArray();
                 slots.manageSavesButton = result.Button(screen.ManageSavesButton);
                 slots.managePanel = result.Go(screen.ManageSavesPanel);
 
                 reset = result.Attach<ResetProgressController>(screen.ManageSavesPanel);
                 reset.deleteButtons = screen.DeleteButtons.Select(result.Button).ToArray();
-                reset.slotLabels = screen.SlotLabels.Select(result.Tmp).ToArray();
+                reset.slotNumbers = screen.ManageCards.Select(c => result.Tmp(c.Number)).ToArray();
+                reset.slotTops = screen.ManageCards.Select(c => result.Tmp(c.Top)).ToArray();
+                reset.slotDetails = screen.ManageCards.Select(c => result.Tmp(c.Detail)).ToArray();
+                reset.slotFilledWashes = screen.ManageCards.Select(c => result.Go(c.FilledWash)).ToArray();
+                reset.slotEmptyWashes = screen.ManageCards.Select(c => result.Go(c.EmptyWash)).ToArray();
                 reset.confirmPanel = result.Go(screen.ResetConfirmPanel);
                 reset.confirmLabel = result.Tmp(screen.ResetConfirmLabel);
                 reset.confirmYesButton = result.Button(screen.ResetConfirmYesButton);
@@ -435,12 +445,6 @@ public static class ScreenRegistry
                     Label = "ResetProgressController.deleteButtons",
                     Declared = screen.DeleteButtons,
                     BoundLength = () => reset.deleteButtons.Length,
-                },
-                new UiCountAudit.Binding
-                {
-                    Label = "ResetProgressController.slotLabels",
-                    Declared = screen.SlotLabels,
-                    BoundLength = () => reset.slotLabels.Length,
                 },
             },
         };

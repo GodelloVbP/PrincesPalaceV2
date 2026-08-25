@@ -61,19 +61,24 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(screen.ResetConfirmPanel.Node.StartInactive);
         }
 
-        // The three parallel arrays UiCountAudit (E4) checks against at build
+        // The two parallel arrays UiCountAudit (E4) checks against at build
         // time -- pinned here too, so a mismatch shows up in the same ~1ms
         // pass as the layout errors rather than only in a full scene build.
+        // ChooseCards/ManageCards are not E4-bound themselves (see
+        // MainMenuScreen.SlotCardRefs's own comment on why), but they are
+        // built off SlotButtons/DeleteButtons in the same loop iteration, so
+        // pinning their counts here catches the same class of drift.
         [TestCase(1)]
         [TestCase(5)]
         [TestCase(8)]
-        public void EverySlotHasAButtonALabelAndADeleteButton(int slotCount)
+        public void EverySlotHasAButtonACardAndADeleteButton(int slotCount)
         {
             var screen = MainMenuScreen.Build(new MainMenuInputs(slotCount));
 
             Assert.AreEqual(slotCount, screen.SlotButtons.Count);
-            Assert.AreEqual(slotCount, screen.SlotLabels.Count);
+            Assert.AreEqual(slotCount, screen.ChooseCards.Count);
             Assert.AreEqual(slotCount, screen.DeleteButtons.Count);
+            Assert.AreEqual(slotCount, screen.ManageCards.Count);
         }
 
         // Continue is BUILT UNCONDITIONALLY -- see its own field comment on

@@ -21,8 +21,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TemplatedEntries_PinTheirRenderedForm()
         {
-            Assert.AreEqual("Slot 1: Empty", UiStrings.SlotEmpty.Format(1));
-            Assert.AreEqual("Slot 3: 42 gold", UiStrings.SlotFilled.Format(3, 42));
+            Assert.AreEqual("Floor 7 - 3h 12m", UiStrings.SlotDetail.Format(7, "3h 12m"));
+            Assert.AreEqual("340 GOLD", UiStrings.SlotGold.Format(340));
             Assert.AreEqual("Delete slot 2? This cannot be undone.", UiStrings.ConfirmDelete.Format(2));
         }
 

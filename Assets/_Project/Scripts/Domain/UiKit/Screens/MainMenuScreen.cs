@@ -86,14 +86,127 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef ResetConfirmYesFill;
         public NodeRef ResetConfirmNoButton;
 
+        // How wide/tall a slot card is, in both lists -- the same footprint
+        // so the two screens read as one vocabulary rather than two.
+        public const float CardWidth = 700f;
+        public const float CardHeight = 92f;
+
+        // One slot's card content: the number badge, its two lines of text,
+        // the gold figure (Choose only -- Gold.IsValid is false on a Manage
+        // Saves card, which shows a Delete button in the same spot instead),
+        // and the two background states a slot switches between.
+        //
+        // A STRUCT PER SLOT rather than six more parallel List<NodeRef>
+        // fields, deliberately: six lists built from the SAME loop iteration
+        // as SlotButtons cannot drift in count from each other the way E4
+        // exists to catch two INDEPENDENTLY built collections drifting -- so
+        // there is nothing for that audit to check here, and six lists that
+        // cannot disagree are just six chances to index one of them wrong.
+        public readonly struct SlotCardRefs
+        {
+            public readonly NodeRef Number;
+            public readonly NodeRef Top;
+            public readonly NodeRef Detail;
+            public readonly NodeRef Gold;
+            public readonly NodeRef FilledWash;
+            public readonly NodeRef EmptyWash;
+
+            public SlotCardRefs(NodeRef number, NodeRef top, NodeRef detail, NodeRef gold,
+                                NodeRef filledWash, NodeRef emptyWash)
+            {
+                Number = number;
+                Top = top;
+                Detail = detail;
+                Gold = gold;
+                FilledWash = filledWash;
+                EmptyWash = emptyWash;
+            }
+        }
+
         public readonly List<NodeRef> SlotButtons = new List<NodeRef>();
-        public readonly List<NodeRef> SlotLabels = new List<NodeRef>();
+        public readonly List<SlotCardRefs> ChooseCards = new List<SlotCardRefs>();
+
         public readonly List<NodeRef> DeleteButtons = new List<NodeRef>();
+        public readonly List<SlotCardRefs> ManageCards = new List<SlotCardRefs>();
+
+        // Builds one slot's card visuals as children of `host` -- the number
+        // badge, two lines of text, the gold figure when `showGold` is true,
+        // and the two background washes a slot switches between. ALL DECOR:
+        // `host` alone carries the click (a Button in the choose list, an
+        // inert Panel in Manage Saves, with its own Delete button added
+        // beside these afterwards), and these are painted on top of it,
+        // positioned relative to its own centre.
+        //
+        // EVERY TEXT NODE IS UiString.Runtime. None of this is known at
+        // build time -- Domain has no SaveSystem to ask which slots are
+        // filled, what a roster's display name is, or what floor a save
+        // reached -- so every line here is set by the controller's own
+        // Refresh(), the same split Continue's own text takes.
+        private static SlotCardRefs AddCardContent(UiNode host, string stem, bool showGold)
+        {
+            // THE WASH, added FIRST so the text paints on top of it -- draw
+            // order is declaration order in this DSL, and a wash added after
+            // its own row's text would cover it.
+            var filledWash = Ui.Solid($"{stem}FilledWash", "#E3C16621", new UiVec(CardWidth, CardHeight),
+                    Place.At(0f, 0f))
+                .AsDecor();
+            var emptyWash = Ui.Solid($"{stem}EmptyWash", "#0E070C4D", new UiVec(CardWidth, CardHeight),
+                    Place.At(0f, 0f))
+                .AsDecor()
+                .Inactive();
+            host.Children.Add(filledWash);
+            host.Children.Add(emptyWash);
+
+            // FOUR COLUMNS, LEFT TO RIGHT, and each one's box is placed by its
+            // own EDGES rather than guessed at from the card's centre -- a
+            // Runtime label has no authored copy for the text-fit audit (E1)
+            // to measure, so a column that drifted into its neighbour would
+            // ship silently instead of failing the build. Numbers here are
+            // the geometry, checked once: number badge to -282, text column
+            // -260 to 150, gold/delete column 165 to 335, all inside the
+            // card's own -350..350.
+            const float NumberBadgeCentreX = -310f;
+            const float TextColumnLeftX = -260f;
+            const float TextColumnRightX = 150f;
+            const float TextColumnWidth = TextColumnRightX - TextColumnLeftX;
+            const float TextColumnCentreX = (TextColumnLeftX + TextColumnRightX) * 0.5f;
+            const float SideColumnCentreX = 250f;
+            const float SideColumnWidth = 170f;
+
+            var number = Ui.Label($"{stem}Number", UiString.Runtime, new UiVec(56f, 48f), 34,
+                    "#E3C166", Place.At(NumberBadgeCentreX, 0f))
+                .AsDecor();
+            host.Children.Add(number);
+
+            var top = Ui.Label($"{stem}Top", UiString.Runtime, new UiVec(TextColumnWidth, 26f), 20,
+                    "#E4DBFF", Place.At(TextColumnCentreX, 15f))
+                .AsDecor()
+                .TextAligned(UiTextAlign.Left);
+            host.Children.Add(top);
+
+            var detail = Ui.Label($"{stem}Detail", UiString.Runtime, new UiVec(TextColumnWidth, 22f), 15,
+                    "#A99BD4", Place.At(TextColumnCentreX, -15f))
+                .AsDecor()
+                .TextAligned(UiTextAlign.Left);
+            host.Children.Add(detail);
+
+            NodeRef gold = default;
+            if (showGold)
+            {
+                var goldLabel = Ui.Label($"{stem}Gold", UiString.Runtime, new UiVec(SideColumnWidth, 28f), 20,
+                        "#E3C166", Place.At(SideColumnCentreX, 0f))
+                    .AsDecor()
+                    .TextAligned(UiTextAlign.Right);
+                host.Children.Add(goldLabel);
+                gold = goldLabel;
+            }
+
+            return new SlotCardRefs(number, top, detail, gold, filledWash, emptyWash);
+        }
 
         public static MainMenuScreen Build(MainMenuInputs inputs)
         {
             var screen = new MainMenuScreen();
-            var slotSize = new UiVec(300f, 60f);
             int slotCount = inputs.SlotCount;
 
             // --- the painted world, and everything that moves on it ----------
@@ -167,8 +280,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             for (int i = 0; i < slotCount; i++)
             {
-                var button = Ui.Button($"Slot{i}Button", UiStrings.SlotButton, slotSize, 20);
+                // CHROMELESS, unlike every other button on this screen. The
+                // shared gold plaque is drawn for a pill-shaped label -- Play,
+                // Exit, Delete -- and stretched across a 700px card it would
+                // read as a smear of gold rather than a border. The card's
+                // own wash (see AddCardContent) is what a plaque would have
+                // been here.
+                var button = Ui.Button($"Slot{i}Button", UiString.Runtime,
+                        new UiVec(CardWidth, CardHeight), 20)
+                    .NoChrome();
                 screen.SlotButtons.Add(button);
+                screen.ChooseCards.Add(AddCardContent(button, $"Slot{i}", showGold: true));
                 slotChildren.Add(button);
             }
 
@@ -197,14 +319,25 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             for (int i = 0; i < slotCount; i++)
             {
-                var label = Ui.Label($"ResetSlot{i}Label", UiStrings.SlotEmpty, new UiVec(300f, 36f), 18);
-                var delete = Ui.Button($"ResetSlot{i}DeleteButton", UiStrings.Delete, new UiVec(140f, 36f), 16);
-                screen.SlotLabels.Add(label);
-                screen.DeleteButtons.Add(delete);
+                // A PANEL, not a Button -- this row is not itself clickable,
+                // only the Delete button inside it is, so there is no click
+                // target to give it. Same card content as the choose list
+                // (see AddCardContent), minus the gold figure: Delete sits
+                // where gold would have been, and a card that is about to be
+                // deleted has no use for a second look at what it is worth.
+                var row = Ui.Panel($"ResetSlot{i}Row", Place.Flow, UiSize.Fixed(CardWidth, CardHeight));
+                var card = AddCardContent(row, $"ResetSlot{i}", showGold: false);
+                screen.ManageCards.Add(card);
 
-                // A Row, so the label and its Delete button cannot drift apart
-                // and cannot collide however long the label gets.
-                manageRows.Add(Ui.Row($"ResetSlot{i}Row", Place.Flow, spacing: 20f, UiAlign.Centre, label, delete));
+                // Centred on the same 250px column AddCardContent's gold
+                // figure uses in the choose list, so the two lists' right-hand
+                // edge lines up whichever one is on screen.
+                var delete = Ui.Button($"ResetSlot{i}DeleteButton", UiStrings.Delete, new UiVec(130f, 44f), 16,
+                    Place.At(250f, 0f));
+                screen.DeleteButtons.Add(delete);
+                row.Children.Add(delete);
+
+                manageRows.Add(row);
             }
 
             var backToSlots = Ui.Button("CloseManageSavesButton", UiStrings.Back, new UiVec(260f, 50f), 20);

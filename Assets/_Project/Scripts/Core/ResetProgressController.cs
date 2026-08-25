@@ -1,6 +1,7 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using PrincesPalace.Domain.Stats;
 using PrincesPalace.Domain.UiKit;
 using PrincesPalace.Domain.UiKit.Screens;
 
@@ -10,14 +11,23 @@ namespace PrincesPalace
     // a confirmation. Reached from Manage Saves, which is opened from the slot
     // list rather than from the main menu directly -- see SaveSlotController.
     //
-    // Two parallel arrays that MUST stay the same length. UiCountAudit (E4)
-    // checks each of them against the node list the screen declared, at build
-    // time, so the pair cannot drift the way v1's builder-count and
-    // controller-count did.
+    // Six parallel arrays that MUST stay the same length as deleteButtons. Only
+    // deleteButtons is bound to UiCountAudit (E4) -- the other five are built in
+    // the SAME loop iteration as it, off the same screen field
+    // (MainMenuScreen.ManageCards), so there is nothing E4 would catch a
+    // second binding that the first does not already cover. No gold array
+    // here: a Manage Saves card shows Delete where the Choose list shows gold
+    // (see MainMenuScreen.AddCardContent's showGold), so there is no gold
+    // NodeRef to wire.
     public class ResetProgressController : MonoBehaviour
     {
         [SerializeField] internal Button[] deleteButtons;
-        [SerializeField] internal TMP_Text[] slotLabels;
+        [SerializeField] internal TMP_Text[] slotNumbers;
+        [SerializeField] internal TMP_Text[] slotTops;
+        [SerializeField] internal TMP_Text[] slotDetails;
+        [SerializeField] internal GameObject[] slotFilledWashes;
+        [SerializeField] internal GameObject[] slotEmptyWashes;
+
         [SerializeField] internal GameObject confirmPanel;
         [SerializeField] internal TMP_Text confirmLabel;
         [SerializeField] internal Button confirmYesButton;
@@ -81,14 +91,28 @@ namespace PrincesPalace
 
         private void OnEnable()
         {
-            if (slotLabels != null) Refresh();
+            if (deleteButtons != null) Refresh();
         }
 
         public void Refresh()
         {
-            for (int i = 0; i < slotLabels.Length; i++)
+            for (int i = 0; i < deleteButtons.Length; i++)
             {
-                slotLabels[i].SetContent(SaveSlotLabel.For(i));
+                var facts = SaveSlotDetail.For(i);
+
+                slotNumbers[i].Set(UiStrings.SlotNumber, i + 1);
+
+                // "Empty" here, not "New Descent" -- see UiStrings.SlotEmpty's
+                // own comment on why Manage Saves states the fact rather than
+                // inviting a run nobody is about to start from a delete screen.
+                slotTops[i].SetContent(facts.Filled ? facts.CharacterName : UiStrings.SlotEmpty.Format());
+
+                slotDetails[i].SetContent(facts.Filled
+                    ? UiStrings.SlotDetail.Format(facts.Floor, PlaytimeFormat.Describe(facts.PlaySeconds))
+                    : "");
+
+                slotFilledWashes[i].SetActive(facts.Filled);
+                slotEmptyWashes[i].SetActive(!facts.Filled);
             }
         }
 

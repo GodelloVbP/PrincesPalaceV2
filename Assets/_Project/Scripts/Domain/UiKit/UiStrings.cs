@@ -469,19 +469,41 @@ namespace PrincesPalace.Domain.UiKit
         // --- save slots -----------------------------------------------------
         public static readonly UiString ChooseSlotHeader =
             UiString.Define("choose_slot_header", "Choose a Slot");
-        public static readonly UiString SlotEmpty =
-            UiString.Define("slot_empty", "Slot {0}: Empty", "Slot 5: Empty");
 
-        // One entry, not "Slot {0}: {1}" wrapping "{0} gold, {1} relics". v1 had
-        // this wording living inside SaveSlotLabel, which is the same thing the
-        // wallet line did wrong - authored copy outside the manifest, where the
-        // Play screen and the Options screen drifted into describing the same
-        // slot differently.
-        public static readonly UiString SlotFilled =
-            UiString.Define("slot_filled", "Slot {0}: {1} gold", "Slot 5: 999999 gold");
+        // What an EMPTY Manage Saves row's Top line says. Not "Slot {0}:
+        // Empty" any more -- the card now carries its own number badge, so
+        // repeating the slot number in the sentence next to it said the same
+        // thing twice. Plain rather than templated for the same reason
+        // NewDescent below is: the badge is where the number lives now.
+        public static readonly UiString SlotEmpty = UiString.Define("slot_empty", "Empty");
 
-        public static readonly UiString SlotButton =
-            UiString.Define("slot_button", "Slot {0}", "Slot 5");
+        // The number badge on a slot card. A template rather than raw text at
+        // the call site for the same Contract A reason every other authored
+        // string is -- a slot's own numeral is UI copy, not content, even
+        // though it looks like nothing more than a digit.
+        public static readonly UiString SlotNumber = UiString.Define("slot_number", "{0}", "9");
+
+        // "Floor 7 - 3h 12m". The character's own name is CONTENT (a roster
+        // member's display name), not authored here -- see UiString.FromContent
+        // at the call site -- so this template covers only the two numbers
+        // that are genuinely this screen's own words.
+        public static readonly UiString SlotDetail =
+            UiString.Define("slot_detail", "Floor {0} - {1}", "Floor 99 - 999h 59m");
+
+        // The card's own gold figure, sitting beside a number badge and two
+        // lines of detail that already say which slot it is -- so this is a
+        // bare amount, not a sentence that names the slot again. Same
+        // template MapGold uses, kept as its own entry rather than reused
+        // across two unrelated screens' names.
+        public static readonly UiString SlotGold =
+            UiString.Define("slot_gold", "{0} GOLD", "99999 GOLD");
+
+        // What an EMPTY slot invites in the CHOOSE list specifically -- not in
+        // Manage Saves, which still just says "Empty" because deleting is not
+        // an invitation to start anything. "Empty" is accurate and does
+        // nothing; this is the same fact stated as the thing an empty slot is
+        // actually FOR.
+        public static readonly UiString NewDescent = UiString.Define("new_descent", "New Descent");
 
         // --- destructive actions -------------------------------------------
         //
@@ -771,7 +793,8 @@ namespace PrincesPalace.Domain.UiKit
             DebugTitle, DebugGiveGold, DebugGiveEmbers, DebugGiveOneEmber, DebugAdd,
             DebugFilterAll, DebugFilterConsumable, DebugFilterWeapon, DebugFilterEquipment,
             DebugRow, DebugPage,
-            ChooseSlotHeader, SlotEmpty, SlotFilled, SlotButton,
+            ChooseSlotHeader, SlotEmpty,
+            SlotNumber, SlotDetail, SlotGold, NewDescent,
             ManageSaves, ManageSavesWarning, Delete, ConfirmDelete,
             CommandTitle, Attack, Back,
             ConfirmSquad,

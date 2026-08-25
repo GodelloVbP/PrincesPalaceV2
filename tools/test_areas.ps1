@@ -43,7 +43,7 @@ $Areas = @{
     # CARRIED BETWEEN ROOMS across a change of maximum, which is run state.
     # A bare pattern would reach into combat, where most of the health in this
     # game lives and where none of it is this.
-    run     = "Dungeon|Map|FullRun|RunState|Currency|MetaProgression|Level|Save|ActiveSquad|Run|Resume|Snapshot|Seed|Descent|Depth|Difficulty|EnemyBand|Wallet|Reward|Reckoning|Ember|Ledger|Settlement|Encounter|Room|GlobalState|CarriedHealth"
+    run     = "Dungeon|Map|FullRun|RunState|Currency|MetaProgression|Level|Save|ActiveSquad|Run|Resume|Snapshot|Seed|Descent|Depth|Difficulty|EnemyBand|Wallet|Reward|Reckoning|Ember|Ledger|Settlement|Encounter|Room|GlobalState|CarriedHealth|Playtime"
     # 'OfferRow' rather than a bare 'Offer': the offer ROW is a layout and
     # belongs here, but ItemOfferTests and ItemOfferRollTests are reward rules
     # that already sit in 'content' and 'run', and a bare pattern would drag
@@ -52,7 +52,12 @@ $Areas = @{
     # 'LoopCycle' rather than widening 'Loop': the idle loop's pacing is art
     # timing and belongs here, and a bare 'Loop' would be a word common enough
     # to drag in anything.
-    art     = "Stance|FrameHold|LoopCycle|Shadow|WhiteQuad|SpriteFacing|BattleBackground|ItemArt|TalentArt|ArtPath|HandAssembled|Flash|Legibility|PostProcessing"
+    #
+    # 'BreathCurve' likewise, and not a bare 'Breath': the curve is the other
+    # half of what LoopCycle started -- how big a figure is at rest, against
+    # which drawing it is showing -- so it belongs in the same area for the
+    # same reason.
+    art     = "Stance|FrameHold|LoopCycle|BreathCurve|Shadow|WhiteQuad|SpriteFacing|BattleBackground|ItemArt|TalentArt|ArtPath|HandAssembled|Flash|Legibility|PostProcessing"
     rng     = "Rng|SeededRandom|Seed"
 }
 

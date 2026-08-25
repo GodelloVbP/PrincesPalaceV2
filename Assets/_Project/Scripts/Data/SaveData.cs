@@ -116,6 +116,18 @@ namespace PrincesPalace
         // per field.
         public int lifetimeDeepestStep;
 
+        // TICKED CONTINUOUSLY BY PlaytimeTracker, not measured between saves.
+        // A wall-clock timestamp pair (last opened, last saved) would count
+        // every minute the game sat alone on a desktop as played; this only
+        // grows while a scene that is actually PLAYING is loaded (see the
+        // tracker's own header for why the main menu itself does not count).
+        //
+        // A float rather than the `long` lifetimeDamageDealt uses: seconds
+        // over any survivable play history stay well inside a float's exact-
+        // integer range, and this is a slot-card display number, never
+        // compared for equality or fed into a formula the way damage is.
+        public float totalPlaySeconds;
+
         // Which relic each character is carrying — RelicDefinition content
         // (a run-long combat effect), NOT the `Relics` currency above. Named
         // after its TYPE rather than the concept, unlike every other field

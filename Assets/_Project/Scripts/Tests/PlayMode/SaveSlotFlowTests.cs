@@ -79,11 +79,18 @@ namespace PrincesPalace.PlayModeTests
             hold.Advance(ResetProgressController.HoldSeconds);
         }
 
-        private static string SlotButtonText(int slot) =>
-            Named($"Slot{slot}Button").GetComponentInChildren<TMP_Text>(true).text;
+        // A slot's card is several TMP_Text nodes now (Number/Top/Detail/Gold,
+        // see MainMenuScreen.AddCardContent), not one label on the button --
+        // so these read one named field each rather than the first TMP_Text
+        // GetComponentInChildren happens to find.
+        private static string SlotTop(int slot) =>
+            Named($"Slot{slot}Top").GetComponent<TMP_Text>().text;
 
-        private static string ResetRowText(int slot) =>
-            Named($"ResetSlot{slot}Label").GetComponent<TMP_Text>().text;
+        private static string SlotGold(int slot) =>
+            Named($"Slot{slot}Gold").GetComponent<TMP_Text>().text;
+
+        private static string ResetTop(int slot) =>
+            Named($"ResetSlot{slot}Top").GetComponent<TMP_Text>().text;
 
         [UnityTest]
         public IEnumerator AnUntouchedSlotReadsAsEmpty()
@@ -95,7 +102,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             yield return null;
 
-            Assert.AreEqual("Slot 1: Empty", SlotButtonText(0));
+            Assert.AreEqual("New Descent", SlotTop(0));
         }
 
         [UnityTest]
@@ -113,7 +120,8 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsTrue(SaveSystem.SlotExists(2), "picking an empty slot should write it immediately");
             Assert.AreEqual(2, SaveSlotManager.CurrentSlot);
-            StringAssert.Contains("gold", SlotButtonText(2), "the label should stop saying Empty");
+            Assert.AreNotEqual("New Descent", SlotTop(2), "the top line should stop inviting a new run");
+            StringAssert.Contains("GOLD", SlotGold(2), "the gold figure should show once the slot is filled");
         }
 
         [UnityTest]
@@ -135,7 +143,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             yield return null;
 
-            Assert.AreEqual(SlotButtonText(1), ResetRowText(1));
+            Assert.AreEqual(SlotTop(1), ResetTop(1));
         }
 
         [UnityTest]
@@ -224,7 +232,7 @@ namespace PrincesPalace.PlayModeTests
             Click("ResetSlot1DeleteButton");
             HoldToDelete("ResetConfirmYesButton");
             Assert.IsFalse(SaveSystem.SlotExists(1), "Delete should actually delete once confirmed");
-            Assert.AreEqual("Slot 2: Empty", ResetRowText(1), "and the row should say so");
+            Assert.AreEqual("Empty", ResetTop(1), "and the row should say so");
         }
 
         [UnityTest]
@@ -275,7 +283,7 @@ namespace PrincesPalace.PlayModeTests
             HoldToDelete("ResetConfirmYesButton");
             Click("CloseManageSavesButton");
 
-            Assert.AreEqual("Slot 5: Empty", SlotButtonText(4));
+            Assert.AreEqual("New Descent", SlotTop(4));
         }
     
         [UnityTest]

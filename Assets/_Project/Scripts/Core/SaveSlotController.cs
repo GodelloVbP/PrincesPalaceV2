@@ -1,6 +1,8 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using PrincesPalace.Domain.Stats;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
 {
@@ -8,13 +10,26 @@ namespace PrincesPalace
     //
     // v1's Store bug was a strip sized off one collection and filled from
     // another. Two things stop that here, and it is worth being precise about
-    // which does what: the screen builds this array straight off the same list
-    // it declared the nodes from, so the counts agree by construction; and
-    // UiCountAudit (E4) fails the BUILD if a future edit binds the array some
-    // other way and the two diverge.
+    // which does what: the screen builds every one of these arrays straight off
+    // the same list it declared the nodes from, so the counts agree by
+    // construction; and UiCountAudit (E4) fails the BUILD if a future edit
+    // binds an array some other way and the two diverge. Only slotButtons is
+    // bound to E4 -- the other five are built in the SAME loop iteration as
+    // it, on the same screen field (MainMenuScreen.ChooseCards), so there is
+    // nothing for a second binding to catch that the first one would not.
     public class SaveSlotController : MonoBehaviour
     {
         [SerializeField] internal Button[] slotButtons;
+
+        // One card's content, per slot -- see MainMenuScreen.AddCardContent
+        // for what each of these is and where it sits. FilledWash/EmptyWash
+        // are the two background states a card switches between, not text.
+        [SerializeField] internal TMP_Text[] slotNumbers;
+        [SerializeField] internal TMP_Text[] slotTops;
+        [SerializeField] internal TMP_Text[] slotDetails;
+        [SerializeField] internal TMP_Text[] slotGolds;
+        [SerializeField] internal GameObject[] slotFilledWashes;
+        [SerializeField] internal GameObject[] slotEmptyWashes;
 
         // The door into Manage Saves, and back out of it. Reached from HERE
         // rather than from the main menu root, on request: deleting a save is
@@ -46,8 +61,8 @@ namespace PrincesPalace
         }
 
         // Refreshed on every OPEN, not only once at Start: a slot deleted
-        // through Options while the game is running would otherwise keep
-        // advertising gold that no longer exists.
+        // through Manage Saves while the game is running would otherwise keep
+        // advertising a character and a gold figure that no longer exist.
         private void OnEnable()
         {
             if (slotButtons != null) Refresh();
@@ -57,10 +72,27 @@ namespace PrincesPalace
         {
             for (int i = 0; i < slotButtons.Length; i++)
             {
-                var label = slotButtons[i].GetComponentInChildren<TMP_Text>(includeInactive: true);
-                // SetContent, not Set: this text is DATA (a slot's gold and
-                // relics), assembled by SaveSlotLabel out of the manifest.
-                label.SetContent(SaveSlotLabel.For(i));
+                var facts = SaveSlotDetail.For(i);
+
+                slotNumbers[i].Set(UiStrings.SlotNumber, i + 1);
+
+                // Top line: the lead character's name for a filled slot --
+                // CONTENT, so SetContent carries it raw -- or the authored
+                // invitation for an empty one. Same TMP_Text either way, so
+                // the branch picks which SOURCE feeds it rather than which
+                // method writes it; SetContent is still the only thing that
+                // ever touches .text, same as TalentController's identical
+                // "authored template into a content-shaped setter" call.
+                slotTops[i].SetContent(facts.Filled ? facts.CharacterName : UiStrings.NewDescent.Format());
+
+                slotDetails[i].SetContent(facts.Filled
+                    ? UiStrings.SlotDetail.Format(facts.Floor, PlaytimeFormat.Describe(facts.PlaySeconds))
+                    : "");
+
+                slotGolds[i].Set(UiStrings.SlotGold, facts.Gold);
+
+                slotFilledWashes[i].SetActive(facts.Filled);
+                slotEmptyWashes[i].SetActive(!facts.Filled);
             }
         }
 
@@ -72,7 +104,7 @@ namespace PrincesPalace
             SaveSlotManager.EnterSlot(slot);
 
             // Refreshed AFTER the write, same ordering this always used: a
-            // freshly-created slot must not still read Empty for whatever
+            // freshly-created slot must not still read empty for whatever
             // frame this panel is visible before the scene actually changes.
             Refresh();
 

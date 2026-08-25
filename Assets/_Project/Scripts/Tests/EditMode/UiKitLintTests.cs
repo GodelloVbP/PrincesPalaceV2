@@ -90,10 +90,13 @@ namespace PrincesPalace.Domain.Tests
             // hidden host, bootstrapped before the first scene, swapping the OS
             // cursor texture. It draws nothing inside any screen tree, so there
             // is no rect for the preamble this rule protects to apply to.
+            // PlaytimeTracker is the same shape again: one hidden host,
+            // bootstrapped before the first scene, ticking a save's playtime
+            // total. No rect, no screen tree, nothing this rule protects.
             string[] allowed =
             {
                 "UiEmitter.cs", "ScreenshotTool.cs", "SceneBuilder.cs", "CanvasCapture.cs",
-                "SoundController.cs", "CursorController.cs",
+                "SoundController.cs", "CursorController.cs", "PlaytimeTracker.cs",
             };
 
             var offenders = Matches(@"new\s+GameObject\s*\(")
