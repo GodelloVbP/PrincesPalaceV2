@@ -31,6 +31,10 @@ namespace PrincesPalace.Domain.Combat
         // max(1, ...) floor along with everything else — x10'ing the stats
         // instead would leave a well-armoured target taking literally 1.
         //
+        // THAT FLOOR IS NO LONGER load-BEARING against armour, because armour
+        // no longer subtracts -- see Mitigate. It survives as what it says on
+        // the tin: a hit is never zero.
+        //
         // Fixed damage authored directly on a skill (a spell's
         // damageInstances) is already written on the new scale and is
         // deliberately NOT routed through here.
@@ -55,8 +59,8 @@ namespace PrincesPalace.Domain.Combat
         // other direction this time.
         public const int DamageScale = 5;
 
-        // Basic attack: attack minus defense, floored at 1 so defense alone
-        // can never make a combatant unhittable.
+        // Basic attack: the swing, softened by whatever armour is in the way.
+        // See Mitigate for why that is a scaling rather than a subtraction.
         //
         // The weapon's SCALING is folded into the attack side, before defense
         // is subtracted, rather than applied to the finished figure. That is
@@ -67,7 +71,7 @@ namespace PrincesPalace.Domain.Combat
         // weapons it most needs to blunt.
         public static int ComputeAttackDamage(CombatantState attacker, CombatantState target)
         {
-            return Scale(ScaledAttack(attacker, attacker.WeaponScaling, 1f) - EffectiveDefense(target, attacker));
+            return Mitigate(ScaledAttack(attacker, attacker.WeaponScaling, 1f), EffectiveDefense(target, attacker));
         }
 
         // The Defense a hit actually has to get through right now.
@@ -221,9 +225,87 @@ namespace PrincesPalace.Domain.Combat
 
         // The one place the floor and the scale are applied, so no formula
         // can pick up one without the other.
+        //
+        // STILL SUBTRACTIVE-SHAPED, and now used only where there is nothing
+        // to subtract: an unmitigated figure being put on the damage scale
+        // (the POWER readout, a talent's splash). Anything with a defender on
+        // the other side goes through Mitigate below instead.
         public static int Scale(int rawDifference)
         {
             return Math.Max(1, rawDifference) * DamageScale;
+        }
+
+        // HOW MUCH OF A SWING GETS PAST ARMOUR.
+        //
+        // THE BUG THIS REPLACES, in the words it was reported in: "The forest
+        // troll (FIRST BOSS) has 2.2k health. How am I supposed to get through
+        // that hitting 5 damage per attack?"
+        //
+        // Damage was max(1, attack - defense) x DamageScale, and the max(1)
+        // is the whole problem. Subtraction has a cliff: while attack exceeds
+        // defense every point of Attack is worth a full DamageScale, and the
+        // moment defense catches up the term goes negative, the floor takes
+        // over, and damage is a CONSTANT. Not small -- constant. More Attack
+        // buys nothing until it climbs all the way back past defense, and
+        // more Defense on the enemy costs nothing either. Two live examples,
+        // both reported as separate complaints and both this one cliff:
+        //
+        //   Shawn ungeared swings for 6 after scaling. The Forest Troll is a
+        //   FLOOR-ONE boss with Defense 9 and 650 health, so first contact was
+        //   6 - 9 -> floor -> 5 damage, 130 turns, before the depth curve
+        //   multiplied anything. By step 16 it was 2129 health and Defense 20:
+        //   the same 5 damage, 425 turns.
+        //
+        //   The Ironback Beetle, Defense 8, was 22 turns at step 0 and 39 by
+        //   step 8 -- "you can't even kill them within 30 turns".
+        //
+        // AND HALVING DamageScale MADE IT WORSE, which is worth recording
+        // because the change looked uniform and was not. Against anything
+        // out-armouring you the floor was ALL you were ever dealing, so
+        // halving 10 to 5 halved the only damage those fights had. It did what
+        // it was asked on ordinary fights and quietly doubled the length of
+        // precisely the ones that were already the worst.
+        //
+        // DIMINISHING RETURNS INSTEAD OF SUBTRACTION. Armour now scales the
+        // swing rather than being taken off it:
+        //
+        //     through = attack x Softening / (Softening + defense)
+        //
+        // The property that matters is not the curve's shape, it is that
+        // damage is PROPORTIONAL TO ATTACK AT EVERY ARMOUR LEVEL. Doubling
+        // Attack doubles damage against a naked rat and against a boss alike,
+        // so gear always pays and there is no threshold to fall off. That is
+        // the failure DifficultyCurve's own calibration walked into: its two
+        // rates were measured on a FULLY GEARED character so hits-to-kill
+        // stays flat, which holds exactly while attack leads defense, and
+        // anyone short of that fell through the floor and could not climb
+        // back out by getting stronger.
+        //
+        // SOFTENING = 12, chosen against the roster rather than picked. It is
+        // the defense at which a swing lands at half strength, so it has to
+        // sit near the armoured end of what enemies actually have (rat 1,
+        // beetle 8, golem 8, troll 9, colossus 9). At 12 a rat still takes
+        // 92% of a swing -- the shallow game is unchanged, which it had to be
+        // -- and the troll takes 57% instead of 12%.
+        public const int ArmourSoftening = 12;
+
+        public static int Mitigate(int attack, int defense)
+        {
+            if (defense <= 0)
+            {
+                return Scale(attack);
+            }
+
+            // ROUNDED BEFORE THE SCALE, not after, so this composes with
+            // Scale's own floor exactly as the subtraction it replaces did --
+            // one place decides what the smallest possible hit is, and it is
+            // still Scale. Rounding after would put the floor on the x5 figure
+            // and quietly make the minimum hit 1 instead of 5.
+            int through = (int)Math.Round(
+                attack * (double)ArmourSoftening / (ArmourSoftening + defense),
+                MidpointRounding.AwayFromZero);
+
+            return Scale(through);
         }
 
         // Skill: costs mana, hits harder than a plain Attack by
@@ -241,7 +323,7 @@ namespace PrincesPalace.Domain.Combat
         // two profiles are separate fields on CombatantState.
         public static int ComputeSkillDamage(CombatantState attacker, CombatantState target, float powerMultiplier)
         {
-            return Scale(ScaledAttack(attacker, attacker.SkillScaling, powerMultiplier) - EffectiveDefense(target, attacker));
+            return Mitigate(ScaledAttack(attacker, attacker.SkillScaling, powerMultiplier), EffectiveDefense(target, attacker));
         }
 
         // Rudimentary weakness/resistance: an attack matching one of the

@@ -12,13 +12,14 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void ComputeAttackDamage_SubtractsDefenseFromAttack()
+        public void ComputeAttackDamage_SoftensTheSwingByDefense()
         {
             var attacker = MakeCombatant(attack: 10);
             var target = MakeCombatant(defense: 3);
 
-            // 10 attack - 3 defense = 7, x5 for the health scale (CombatMath.DamageScale).
-            Assert.AreEqual(35, CombatMath.ComputeAttackDamage(attacker, target));
+            // 10 attack x 12/(12+3) = 8 of it lands, x5 for the health scale
+            // (CombatMath.DamageScale). Was 35 while armour subtracted.
+            Assert.AreEqual(40, CombatMath.ComputeAttackDamage(attacker, target));
         }
 
         [Test]
@@ -145,8 +146,11 @@ namespace PrincesPalace.Domain.Tests
             var attacker = new CombatantState("A", true, 100, 0, attack: 20, defense: 0, speed: 10);
             var target = new CombatantState("B", false, 100, 0, attack: 0, defense: 13, speed: 10);
 
-            // Unchanged from ComputeAttackDamage_SubtractsDefenseFromAttack.
-            Assert.AreEqual(35, CombatMath.ComputeAttackDamage(attacker, target));
+            // 20 attack x 12/(12+13) = 9.6, rounded to 10, x5. The property
+            // is that this equals the UNGRADED figure -- not that it equals
+            // any particular historical one, since a retune moves the number
+            // and must not be able to move it only here.
+            Assert.AreEqual(50, CombatMath.ComputeAttackDamage(attacker, target));
         }
 
         [Test]
@@ -158,24 +162,54 @@ namespace PrincesPalace.Domain.Tests
             attacker.WeaponScaling = ScalingProfile.None.With(AbilityScore.Strength, ScalingGrade.S);
             attacker.AbilityScores = new AbilityScoreBlock(20, 10, 10, 10, 10, 10);
 
-            // S at Strength 20 is 2.00x: 20 attack becomes 40, less 10
-            // defense, times the x5 damage scale.
-            Assert.AreEqual(150, CombatMath.ComputeAttackDamage(attacker, target));
+            // S at Strength 20 is 2.00x: 20 attack becomes 40, of which
+            // 12/(12+10) lands -- 21.8, rounded to 22 -- times the x5 scale.
+            Assert.AreEqual(110, CombatMath.ComputeAttackDamage(attacker, target));
         }
 
-        // Scaling is folded into the ATTACK, before defense — so armour keeps
-        // working against exactly the weapons it most needs to blunt.
+        // PROPORTIONAL MITIGATION, and this REPLACES a test rather than
+        // joining them.
+        //
+        // What stood here pinned "scaling is applied before defense, not
+        // after": 150, "not the 100 that doubling (20 - 10) * 5 would give".
+        // That was a real distinction only while armour SUBTRACTED, because
+        // multiplication does not commute with subtraction -- so where the
+        // multiplier landed changed the answer, and landing it on the finished
+        // figure would have made armour worth half as much against exactly the
+        // swings it most needs to blunt.
+        //
+        // CombatMath.Mitigate scales instead of subtracting, so the two orders
+        // are now the same arithmetic and NO test can tell them apart. Dropped
+        // rather than re-pinned at a new number: a test that cannot fail is
+        // worse than no test, because it reads like cover.
+        //
+        // What replaces it is the property that made the change worth making.
+        // Armour removes a FRACTION, so twice the attack is twice the damage
+        // at every armour level and there is no threshold to fall off -- which
+        // is exactly what subtraction could not do, and why a floor-one boss
+        // with Defense 9 took 130 turns to kill.
         [Test]
-        public void Scaling_IsAppliedBeforeDefenseRatherThanToTheFinishedFigure()
+        public void DoublingTheAttack_DoublesTheDamageAtEveryArmourLevel()
         {
-            var attacker = new CombatantState("A", true, 100, 0, attack: 20, defense: 0, speed: 10);
-            var target = new CombatantState("B", false, 100, 0, attack: 0, defense: 10, speed: 10);
+            var plain = new CombatantState("A", true, 100, 0, attack: 20, defense: 0, speed: 10);
 
-            attacker.WeaponScaling = ScalingProfile.None.With(AbilityScore.Strength, ScalingGrade.S);
-            attacker.AbilityScores = new AbilityScoreBlock(20, 10, 10, 10, 10, 10);
+            var doubled = new CombatantState("B", true, 100, 0, attack: 20, defense: 0, speed: 10);
+            doubled.WeaponScaling = ScalingProfile.None.With(AbilityScore.Strength, ScalingGrade.S);
+            doubled.AbilityScores = new AbilityScoreBlock(20, 10, 10, 10, 10, 10);
 
-            // 150, not the 100 that doubling (20 - 10) * 5 would give.
-            Assert.AreEqual(150, CombatMath.ComputeAttackDamage(attacker, target));
+            // Ordinary armour: 20 x 12/22 = 10.9 -> 11 -> 55, and the doubled
+            // swing 40 x 12/22 = 21.8 -> 22 -> 110.
+            var armoured = new CombatantState("T", false, 100, 0, attack: 0, defense: 10, speed: 10);
+            Assert.AreEqual(55, CombatMath.ComputeAttackDamage(plain, armoured));
+            Assert.AreEqual(110, CombatMath.ComputeAttackDamage(doubled, armoured));
+
+            // A WALL, which is where the old formula died. 20 x 12/112 = 2.1
+            // -> 2 -> 10, and 40 x 12/112 = 4.3 -> 4 -> 20. Subtraction handed
+            // both of them the floor of 5, so the second character's entire
+            // weapon was worth precisely nothing.
+            var wall = new CombatantState("W", false, 100, 0, attack: 0, defense: 100, speed: 10);
+            Assert.AreEqual(10, CombatMath.ComputeAttackDamage(plain, wall));
+            Assert.AreEqual(20, CombatMath.ComputeAttackDamage(doubled, wall));
         }
 
         [Test]

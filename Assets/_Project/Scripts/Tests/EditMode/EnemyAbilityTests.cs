@@ -505,10 +505,10 @@ namespace PrincesPalace.Domain.Tests
 
             var golem = new CombatantState("Golem", false, 350, 0, 6, 8, 3);
 
-            Assert.AreEqual(20, Landed(slam, golem, defence: 4),
-                "against Shawn's base 4 defence the slam should land where the old 1.8x did");
-            Assert.AreEqual(10, Landed(slam, golem, defence: 6),
-                "and hold up through the gear band");
+            Assert.AreEqual(30, Landed(slam, golem, defence: 4),
+                "against Shawn's base 4 defence: raw 8 x 12/(12+4) = 6, x5");
+            Assert.AreEqual(25, Landed(slam, golem, defence: 6),
+                "and through the gear band: raw 8 x 12/(12+6) = 5.3 -> 5, x5");
         }
 
         private static int Landed(ResolvedSkill skill, CombatantState attacker, int defence)

@@ -59,15 +59,28 @@ namespace PrincesPalace.Domain.Combat
             }
         }
 
-        // Defense is subtracted unless the skill explicitly ignores it.
+        // Armour applies unless the skill explicitly ignores it.
         //
-        // That flag is the single most important number in Shawn's kit and
-        // is not a power fantasy: damage is max(1, attack - defense) with no
-        // variance, his Attack is 5, and the Throne Colossus has Defense 9.
-        // Every ordinary action he has bottoms out on the floor against it —
-        // 10 damage into a 950-point pool, i.e. 95 turns of nothing. A
-        // defense-ignoring line is the only thing that answers a wall, which
-        // is why he gets exactly one and his AOE deliberately does not.
+        // WHAT THAT FLAG IS FOR HAS CHANGED, and the old reasoning is worth
+        // keeping because it describes a bug rather than a design:
+        //
+        //   "damage is max(1, attack - defense) with no variance, his Attack
+        //    is 5, and the Throne Colossus has Defense 9. Every ordinary
+        //    action he has bottoms out on the floor against it -- 10 damage
+        //    into a 950-point pool, i.e. 95 turns of nothing. A
+        //    defense-ignoring line is the only thing that answers a wall."
+        //
+        // That was accurate, and it is a description of the subtraction cliff
+        // CombatMath.Mitigate now removes -- the same cliff that later made a
+        // FLOOR-ONE boss take 130 turns. Ignoring defense is no longer the
+        // only answer to a wall, because there is no wall: every point of
+        // Attack pays against every target.
+        //
+        // So the flag is now what it always read as -- a strong property on
+        // one line of Shawn's kit, worth roughly the difference between 57%
+        // and 100% of a swing against the troll, rather than the difference
+        // between playing and not. He still gets exactly one, and his AOE
+        // still deliberately does not.
         private static int Damage(CombatantState actor, CombatantState target, int power, int flatAmount, int resourceSpent, bool ignoresDefense,
             DamageType type, ScalingAxis axis)
         {
@@ -87,6 +100,15 @@ namespace PrincesPalace.Domain.Combat
 
             int scaledAttack = CombatMath.ScaledAttack(actor, scalingSet, 1f);
             int raw = scaledAttack + flatAmount + power * resourceSpent;
+
+            // MITIGATED AS ONE FIGURE, additive terms included. A skill's
+            // flatAmount and its per-resource power are part of the swing
+            // rather than separate packets -- a spell that authors fixed
+            // damage past armour uses damageInstances, which never came
+            // through here at all. Splitting them out to dodge armour would
+            // make every skill in the game a partial armour-ignore by
+            // accident, which is a property exactly one of Shawn's lines is
+            // supposed to have.
             if (!ignoresDefense && target != null)
             {
                 // The attacker-aware overload, so Sharp Horns' armour
@@ -96,12 +118,12 @@ namespace PrincesPalace.Domain.Combat
                 // stopped applying the moment the player pressed a different
                 // button would be the kind of inconsistency AUDIT.md #16 is
                 // about.
-                raw -= CombatMath.EffectiveDefense(target, actor);
+                return CombatMath.Mitigate(raw, CombatMath.EffectiveDefense(target, actor));
             }
 
-            // Floored at 1 and put on the x10 health scale by the same
-            // helper ComputeAttackDamage uses, so a skill and a plain attack
-            // can never end up on different scales.
+            // Nothing in the way, so only the scale is left to apply -- by the
+            // same helper ComputeAttackDamage bottoms out in, so a skill and a
+            // plain attack can never end up on different scales.
             return CombatMath.Scale(raw);
         }
 

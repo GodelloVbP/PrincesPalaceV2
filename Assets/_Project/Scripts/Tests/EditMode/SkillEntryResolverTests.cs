@@ -187,11 +187,12 @@ namespace PrincesPalace.Domain.Tests
 
         // PINNED literals throughout — nothing here recomputes the formula.
         [Test]
-        public void Damage_IsAttackPlusScalingMinusDefense()
+        public void Damage_IsAttackPlusScaling_SoftenedByDefense()
         {
-            // 5 attack + 2 power x 6 spent = 17, minus 8 defense = 9,
-            // x5 for the health scale.
-            Assert.AreEqual(45, SkillResolution.Amount(
+            // 5 attack + 2 power x 6 spent = 17, of which 12/(12+8) lands --
+            // 10.2, rounded to 10 -- x5 for the health scale. Was 45 while
+            // armour subtracted.
+            Assert.AreEqual(50, SkillResolution.Amount(
                 SkillEffect.DamageSingle, Actor(), Target(8), power: 2, flatAmount: 0, resourceSpent: 6, ignoresDefense: false));
         }
 
@@ -203,18 +204,40 @@ namespace PrincesPalace.Domain.Tests
                 SkillEffect.DamageSingle, Actor(), Target(8), power: 2, flatAmount: 0, resourceSpent: 6, ignoresDefense: true));
         }
 
-        // The reason the flag exists. Against Defense 99 every ordinary
-        // action Shawn has bottoms out on the floor.
+        // WHAT A WALL COSTS, and it is no longer everything.
+        //
+        // This used to assert that against Defense 99 an ordinary line does 5
+        // and only the defence-ignoring one does anything. That was true, and
+        // it was the subtraction cliff rather than a design: every ordinary
+        // action bottomed out on max(1, ...) and STAYED there however strong
+        // the attacker got, which is what made a floor-one boss with Defense 9
+        // take 130 turns.
+        //
+        // A wall is still a wall -- 10 against 85 is a heavy penalty and the
+        // defence-ignoring line is still the right answer to one -- but the
+        // ordinary line now scales, so gearing up answers a wall instead of
+        // bouncing off it. That is the half this pins.
         [Test]
-        public void AgainstAWall_OnlyTheDefenceIgnoringLineDoesAnything()
+        public void AWallBluntsAnOrdinaryLineWithoutFlatteningIt()
         {
             int ordinary = SkillResolution.Amount(
                 SkillEffect.DamageSingle, Actor(), Target(99), power: 2, flatAmount: 0, resourceSpent: 6, ignoresDefense: false);
             int ram = SkillResolution.Amount(
                 SkillEffect.DamageSingle, Actor(), Target(99), power: 2, flatAmount: 0, resourceSpent: 6, ignoresDefense: true);
 
-            Assert.AreEqual(5, ordinary, "Floored at 1 before the x5 scale, so defense can never make a target unhittable");
-            Assert.AreEqual(85, ram);
+            // raw 17 x 12/(12+99) = 1.8 -> 2 -> 10, against the ram's whole 85.
+            Assert.AreEqual(10, ordinary);
+            Assert.AreEqual(85, ram, "ignoring defence still skips the wall entirely");
+
+            // AND IT STILL RESPONDS TO GEAR, which is the property the old
+            // formula lacked. Attack 22 makes raw 34, exactly twice the 17
+            // above, and the damage doubles with it: 34 x 12/111 = 3.7 -> 4.
+            int geared = SkillResolution.Amount(
+                SkillEffect.DamageSingle, Actor(22), Target(99), power: 2, flatAmount: 0, resourceSpent: 6, ignoresDefense: false);
+
+            Assert.AreEqual(20, geared,
+                "twice the attack must be twice the damage even against a wall - under the old " +
+                "floor both figures were 5 and the entire difference in gear was worth nothing");
         }
 
         [Test]

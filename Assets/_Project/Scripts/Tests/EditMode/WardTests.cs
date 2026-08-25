@@ -181,24 +181,30 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // Weight of Wool and Gift: Fury both arrive through the same field, so
-        // this is where the "does the multiplier land on the attack side"
-        // question gets answered — before defense, not after.
+        // this is where "does the multiplier reach damage at all" is answered.
+        //
+        // It used to also answer "before defense or after", and that question
+        // has stopped existing: CombatMath.Mitigate scales the swing rather
+        // than subtracting from it, so both orders are the same arithmetic.
+        // What replaced it is a stronger guarantee, not a weaker one -- armour
+        // takes a fixed FRACTION, so it cannot be worth less against the
+        // swings it most needs to blunt whatever order anything lands in.
         [Test]
-        public void TheAttackBonus_IsAppliedBeforeDefenseIsSubtracted()
+        public void TheAttackBonus_MultipliesTheDamageThatLands()
         {
             var attacker = new CombatantState("Shawn", true, 200, 30, 10, 4, 8);
             var target = new CombatantState("Golem", false, 300, 0, 5, 6, 4);
 
-            // (10 - 6) x 5 = 20 with no bonus.
-            Assert.AreEqual(20, CombatMath.ComputeAttackDamage(attacker, target));
+            // 10 x 12/(12+6) = 6.7 -> 7 -> 35 with no bonus.
+            Assert.AreEqual(35, CombatMath.ComputeAttackDamage(attacker, target));
 
             attacker.BonusAttackPercent = 100;
 
-            // Doubling the ATTACK gives (20 - 6) x 5 = 70. Doubling the
-            // finished figure would have given 40 -- and would have made the
-            // golem's armour worth half as much against exactly the swing it
-            // most needs to blunt.
-            Assert.AreEqual(70, CombatMath.ComputeAttackDamage(attacker, target));
+            // Doubling the attack to 20: 20 x 12/18 = 13.3 -> 13 -> 65. Not
+            // exactly twice 35, and that is the integer rounding at the one
+            // step where it happens rather than a second convention creeping
+            // in -- CombatMath.Mitigate rounds once, before the scale.
+            Assert.AreEqual(65, CombatMath.ComputeAttackDamage(attacker, target));
         }
     }
 
