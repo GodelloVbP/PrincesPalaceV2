@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using NUnit.Framework;
 using PrincesPalace.Domain.Combat;
+using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Stats;
 
@@ -364,6 +365,51 @@ namespace PrincesPalace.Domain.Tests
             noResource.CurrentMana = 10;
             Assert.IsFalse(SkillResolution.CanAfford(noResource, 10, 1), "No resource at all cannot pay a resource cost");
             Assert.IsTrue(SkillResolution.CanAfford(noResource, 10, 0), "But a mana-only skill is fine");
+        }
+
+        // ---- how a skill travels to what it hits ------------------------------
+
+        // "charge" is the committed rush the Beetle's Barrel Roll authors, and
+        // it has to survive the resolver as its own approach rather than
+        // collapsing to the Hold a cast defaults to.
+        [Test]
+        public void Approach_Charge_Resolves_RatherThanFallingBackToHold()
+        {
+            var roll = new RawSkillEntry
+            {
+                id = "barrel_roll", displayName = "Barrel Roll", characterId = "beetle",
+                effect = "DamageSingle", stance = "turtle_up", approach = "charge",
+                playerSelectable = false,
+            };
+
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { roll }, out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.AreEqual(StageApproach.Charge, resolved[0].Approach);
+        }
+
+        // A cast that names no approach still holds, and a nonsense one falls
+        // back to hold rather than stopping the catalogue -- the graceful
+        // posture the shared parser takes for every misspelling.
+        [Test]
+        public void Approach_UnsetOrGarbage_HoldsRatherThanThrowing()
+        {
+            var blank = new RawSkillEntry
+            {
+                id = "a", displayName = "A", characterId = "beetle", effect = "HealSelf",
+                flatAmount = 2, playerSelectable = false,
+            };
+            var junk = new RawSkillEntry
+            {
+                id = "b", displayName = "B", characterId = "beetle", effect = "HealSelf", approach = "sideways",
+                flatAmount = 2, playerSelectable = false,
+            };
+
+            bool ok = SkillEntryResolver.TryResolveAll(new List<RawSkillEntry> { blank, junk }, out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.AreEqual(StageApproach.Hold, resolved[0].Approach);
+            Assert.AreEqual(StageApproach.Hold, resolved[1].Approach);
         }
     }
 }

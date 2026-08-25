@@ -439,5 +439,31 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(0f, resolved[0].SkillChance, 0.0001f);
         }
+
+        // --- How the plain attack travels.
+
+        // Every monster authored before this field existed leaves it blank and
+        // must keep lunging, exactly as it always did.
+        [Test]
+        public void AnUnsetAttackApproach_LungesLikeEveryPlainSwingAlwaysHas()
+        {
+            EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { Minimal() }, out var resolved, out _);
+
+            Assert.AreEqual(Combat.Session.StageApproach.Lunge, resolved[0].AttackApproach);
+        }
+
+        // The beetle authors a charge so its plain attack crosses the stage and
+        // bumps the party rather than leaning a third of the way in. Parsed
+        // through the same shared helper the skill approach uses.
+        [Test]
+        public void AnAuthoredChargeAttackApproach_Resolves()
+        {
+            var entry = Minimal(id: "beetle");
+            entry.attackApproach = "charge";
+
+            EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { entry }, out var resolved, out _);
+
+            Assert.AreEqual(Combat.Session.StageApproach.Charge, resolved[0].AttackApproach);
+        }
     }
 }

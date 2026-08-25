@@ -221,7 +221,13 @@ namespace PrincesPalace
         // Vector2 rather than a bare dx because slots sit at different depths:
         // an attacker crossing to a target in the back row has to climb the
         // stage as well as cross it, or it lunges past the target's feet.
-        public void Play(Vector2 offset, float holdSeconds)
+        //
+        // outSeconds < 0 means the default snap (LungeSeconds) that every lunge
+        // and recoil uses. A charge passes its own, longer duration so the
+        // travel reads as a rush across the stage rather than a flick; the
+        // return is always ReturnSeconds either way, since nothing is being
+        // emphasised on the way back.
+        public void Play(Vector2 offset, float holdSeconds, float outSeconds = -1f)
         {
             if (!isActiveAndEnabled)
             {
@@ -238,7 +244,7 @@ namespace PrincesPalace
                 ApplyStretch(0f);
             }
 
-            _running = StartCoroutine(PlayRoutine(offset, holdSeconds));
+            _running = StartCoroutine(PlayRoutine(offset, holdSeconds, outSeconds));
         }
 
         // Snaps home immediately, for a fight ending or the panel closing
@@ -353,7 +359,7 @@ namespace PrincesPalace
             _punching = null;
         }
 
-        private IEnumerator PlayRoutine(Vector2 offset, float holdSeconds)
+        private IEnumerator PlayRoutine(Vector2 offset, float holdSeconds, float outSeconds = -1f)
         {
             // SCALED, through the same seam SpellVfxPlayer and StageHitFlash
             // already use. This one did not, and the mismatch is visible rather
@@ -362,7 +368,8 @@ namespace PrincesPalace
             // mid-stage. Anything driven by a beat has to run on the beat's own
             // clock or it desynchronises from the thing it illustrates.
             var target = _home + offset;
-            yield return TweenOut(_home, target, FightBeatPlayer.Scaled(LungeSeconds));
+            float outFor = outSeconds < 0f ? LungeSeconds : outSeconds;
+            yield return TweenOut(_home, target, FightBeatPlayer.Scaled(outFor));
             if (holdSeconds > 0f)
             {
                 yield return new WaitForSeconds(holdSeconds);

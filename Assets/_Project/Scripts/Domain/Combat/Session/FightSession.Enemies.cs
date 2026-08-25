@@ -453,6 +453,17 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 HoldActorPosition();
             }
+            // AND THE PLAIN ATTACK'S OWN APPROACH, when it is not rooted. The
+            // beat opened on the Lunge default (BeginBeat, isCast:false), which
+            // is what every plain swing has always used; a monster that authored
+            // a charge -- the beetle, so its rush actually reaches the party and
+            // bumps them -- says so here. Hold wins outright above, so this only
+            // fires when the attack moves at all, and it changes nothing for the
+            // roster that left attackApproach blank (parsed to Lunge).
+            else if (!usingSkill && hasSource && source.AttackApproach != StageApproach.Lunge)
+            {
+                ApproachAs(source.AttackApproach);
+            }
 
             int damage = CombatMath.ComputeAttackDamage(enemy, target);
             if (usingSkill)

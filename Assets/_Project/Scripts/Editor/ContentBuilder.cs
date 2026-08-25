@@ -417,6 +417,7 @@ public static class ContentBuilder
             asset.statusDuration = enemy.StatusDuration;
             asset.avoidsFrontSlot = enemy.AvoidsFrontSlot;
             asset.attackHoldsPosition = enemy.AttackHoldsPosition;
+            asset.attackApproach = enemy.AttackApproach.ToString().ToLowerInvariant();
             asset.stageScale = enemy.StageScale;
             asset.slotSpan = enemy.SlotSpan;
             AssetDatabase.CreateAsset(asset, $"{EnemiesPath}/{enemy.Id}.asset");

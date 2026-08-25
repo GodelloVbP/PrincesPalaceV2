@@ -102,6 +102,10 @@ namespace PrincesPalace.Domain.Content
         // See RawEnemyEntry.attackHoldsPosition.
         public readonly bool AttackHoldsPosition;
 
+        // See RawEnemyEntry.attackApproach. How the plain attack travels when it
+        // is not holding position. Lunge is the default and the old behaviour.
+        public readonly PrincesPalace.Domain.Combat.Session.StageApproach AttackApproach;
+
         // See RawEnemyEntry.minFloor.
         public readonly int MinFloor;
 
@@ -120,12 +124,14 @@ namespace PrincesPalace.Domain.Content
             IReadOnlyList<EnemyAbilityRef> abilities = null, float attackWeight = 1f,
             StatusEffectType? appliesStatus = null, int statusMagnitude = 0,
             int statusDuration = 0, bool avoidsFrontSlot = false, bool attackHoldsPosition = false,
-            int minFloor = 1, float stageScale = 1f, int slotSpan = 1)
+            int minFloor = 1, float stageScale = 1f, int slotSpan = 1,
+            PrincesPalace.Domain.Combat.Session.StageApproach attackApproach =
+                PrincesPalace.Domain.Combat.Session.StageApproach.Lunge)
             : this(id, displayName, baseStats, expReward, currencyReward, isBoss,
                    ElementalAffinity.Of(weakness, resistance), sortOrder, spritePath, facing, active,
                    skillName, skillPower, skillChance, breakShieldPoints, presentation, abilities,
                    attackWeight, appliesStatus, statusMagnitude, statusDuration, avoidsFrontSlot,
-                   attackHoldsPosition, minFloor, stageScale, slotSpan)
+                   attackHoldsPosition, minFloor, stageScale, slotSpan, attackApproach)
         {
         }
 
@@ -137,7 +143,9 @@ namespace PrincesPalace.Domain.Content
             IReadOnlyList<EnemyAbilityRef> abilities = null, float attackWeight = 1f,
             StatusEffectType? appliesStatus = null, int statusMagnitude = 0,
             int statusDuration = 0, bool avoidsFrontSlot = false, bool attackHoldsPosition = false,
-            int minFloor = 1, float stageScale = 1f, int slotSpan = 1)
+            int minFloor = 1, float stageScale = 1f, int slotSpan = 1,
+            PrincesPalace.Domain.Combat.Session.StageApproach attackApproach =
+                PrincesPalace.Domain.Combat.Session.StageApproach.Lunge)
         {
             // CLAMPED RATHER THAN TRUSTED, both of them. A zero or negative
             // scale is an invisible monster and a zero span is a room that
@@ -172,6 +180,7 @@ namespace PrincesPalace.Domain.Content
             StatusDuration = statusDuration;
             AvoidsFrontSlot = avoidsFrontSlot;
             AttackHoldsPosition = attackHoldsPosition;
+            AttackApproach = attackApproach;
         }
 
         // "Authored a skill" is a name, not a chance: an enemy with a named

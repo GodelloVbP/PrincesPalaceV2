@@ -104,6 +104,9 @@ namespace PrincesPalace.Content
         [Tooltip("The plain Attack holds position instead of lunging, same as a Skill cast. For a monster whose \"attack\" stance art is aliased from its \"cast\" stance (see slice_actor_sheet.py) -- the pixels are a stationary pose, so lunging toward the target reads as flying rather than striking.")]
         public bool attackHoldsPosition;
 
+        [Tooltip("How the plain Attack travels when it is not holding position: lunge (default lean), close (arrive then strike), or charge (a committed rush that connects on the impact frame). A string rather than the enum for the same reason the timing loop is one -- a generated asset must not repoint if the enum is reordered.")]
+        public string attackApproach = "";
+
         // See RawEnemyEntry.stageScale -- how big this monster stands, on top
         // of the depth scale its slot already carries.
         public float stageScale = 1f;

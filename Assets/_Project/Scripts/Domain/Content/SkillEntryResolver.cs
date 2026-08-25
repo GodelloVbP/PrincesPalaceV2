@@ -515,18 +515,11 @@ namespace PrincesPalace.Domain.Content
                 default: return SkillTargeting.SingleEnemy;
             }
         }
-        // Unrecognised spellings fall back to Hold and say nothing, the same
-        // graceful posture SpellAnchorNames takes for a misspelt anchor: a typo
-        // should change how one skill moves, not stop the catalogue building.
-        private static StageApproach ParseApproach(string approach)
-        {
-            switch (approach?.Trim().ToLowerInvariant())
-            {
-                case "lunge": return StageApproach.Lunge;
-                case "close": return StageApproach.Close;
-                default: return StageApproach.Hold;
-            }
-        }
+        // A cast that names no approach holds -- the rooted default a spell has
+        // always taken. The string map itself lives on StageApproaches so the
+        // enemy plain-attack path cannot disagree with it.
+        private static StageApproach ParseApproach(string approach) =>
+            StageApproaches.Parse(approach, StageApproach.Hold);
 
     }
 }

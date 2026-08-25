@@ -69,7 +69,9 @@ namespace PrincesPalace
                 avoidsFrontSlot: definition.avoidsFrontSlot,
                 attackHoldsPosition: definition.attackHoldsPosition,
                 stageScale: definition.stageScale,
-                slotSpan: definition.slotSpan);
+                slotSpan: definition.slotSpan,
+                attackApproach: PrincesPalace.Domain.Combat.Session.StageApproaches.Parse(
+                    definition.attackApproach, PrincesPalace.Domain.Combat.Session.StageApproach.Lunge));
         }
 
         // DEPTH IS APPLIED HERE, and this is the only place it is applied.

@@ -179,6 +179,19 @@ namespace PrincesPalace.Domain.Content
         // the plain attack as holding position exactly the way a cast does.
         public bool attackHoldsPosition;
 
+        // HOW THIS MONSTER'S PLAIN ATTACK TRAVELS, when it is not holding
+        // position: "lunge" (the default lean), "close" (arrive then strike),
+        // or "charge" (a committed rush that connects on the impact frame).
+        // Empty means lunge, which is what every plain swing has always done,
+        // so nothing that leaves it blank changes.
+        //
+        // A SKILL authors its own approach on the skill itself; this is only
+        // for the basic attack, which has no skill entry to carry one. The two
+        // never collide: attackHoldsPosition still wins outright, since a
+        // stationary slam that also declared a charge is a contradiction the
+        // hold resolves in favour of not moving.
+        public string attackApproach = "";
+
         // HOW BIG THIS MONSTER STANDS, as a multiplier on the depth scale its
         // slot already carries. 0 means unset and reads as 1.
         //

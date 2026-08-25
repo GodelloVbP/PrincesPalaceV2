@@ -278,9 +278,23 @@ namespace PrincesPalace
                 // the game, for a feature three skills use -- caught by two
                 // PlayMode tests that sample exactly one frame after the click,
                 // which is the only reason it was caught at all.
+                var animation = AnimationOf(beat);
+
+                // 1-BASED, matching the vfxImpactFrame convention enemies.json
+                // already uses ("frame 3 of 6"). So the wind-up is frames
+                // [0, impact) and the follow-through is [impact, count).
+                //
+                // COMPUTED BEFORE THE APPROACH FIRES, because a Charge needs it:
+                // its whole point is to arrive on the impact frame, so it has to
+                // know how long the wind-up runs before it dispatches the travel.
+                int impactFrame = animation.IsEmpty
+                    ? 1
+                    : Mathf.Clamp(animation.ImpactFrame, 1, animation.FrameCount);
+
                 if (beat.Approach == StageApproach.Close) yield return CloseIn(beat);
 
                 Lunge(beat);
+                Charge(beat, animation, impactFrame);
                 PlayVfx?.Invoke(beat);
 
                 // A beat's own clip, if it authored one. Unconditional and
@@ -288,15 +302,6 @@ namespace PrincesPalace
                 // no frames should still be audible -- an empty path is a silent
                 // no-op, which is why this needs no guard of its own.
                 SoundController.PlayClip(beat.Vfx.sfxPath);
-
-                var animation = AnimationOf(beat);
-
-                // 1-BASED, matching the vfxImpactFrame convention enemies.json
-                // already uses ("frame 3 of 6"). So the wind-up is frames
-                // [0, impact) and the follow-through is [impact, count).
-                int impactFrame = animation.IsEmpty
-                    ? 1
-                    : Mathf.Clamp(animation.ImpactFrame, 1, animation.FrameCount);
 
                 // Wind-up: the actor's own frames up to and including its impact
                 // frame. A spell instead waits out its VFX's impact fraction --
@@ -459,6 +464,61 @@ namespace PrincesPalace
             animator?.Play(offset, Scaled(BeatHoldSeconds) * 0.45f);
         }
 
+        // THE COMMITTED RUSH. Like Lunge in order -- the travel runs alongside
+        // the swing rather than before it -- but nearly the whole way in, and
+        // timed to be at full extent exactly when the blow lands.
+        //
+        // The two numbers that make it "arrive on the impact frame":
+        //
+        //   OUT takes the wind-up's own length, so the figure is still crossing
+        //   while its frames wind up and plants as the blow connects. The
+        //   wind-up is frames [0, impact) at the sheet's uneven pace, so this
+        //   is the SUM of their holds rather than impact x secondsPerFrame --
+        //   FrameHoldCurve spends that budget front-loaded, and a flat estimate
+        //   would arrive early. The impact delay (a spell's VFX lead, zero for
+        //   a plain rush) is added because the blow lands after it too.
+        //
+        //   HOLD keeps the charger planted against its target through the
+        //   hit-stop, so the bump is a beat of contact rather than an instant
+        //   graze, and the return then plays out over the follow-through.
+        //
+        // Fire-and-forget like Lunge, NOT a coroutine like CloseIn: it costs
+        // the beat no extra time, because it fits inside the wind-up the beat
+        // already spends.
+        private void Charge(CombatBeat beat, StanceAnimation animation, int impactFrame)
+        {
+            if (beat.Approach != StageApproach.Charge) return;
+
+            var (animator, offset) = TravelFor(beat, ChargeFraction);
+            if (animator == null) return;
+
+            float windup = WindupSeconds(animation, impactFrame);
+            float impactDelay = ImpactDelayFor == null ? 0f : ImpactDelayFor(beat);
+            float outSeconds = Mathf.Max(ChargeMinOutSeconds, windup + impactDelay);
+
+            float hold = Scaled(HitStopFor(beat) + ChargeContactSeconds);
+            animator.Play(offset, hold, outSeconds);
+        }
+
+        // How long the wind-up frames [0, impact) actually take, at the sheet's
+        // own uneven pace. Unscaled, because Play scales the out-tween itself --
+        // the one place a duration handed to Play is expected raw rather than
+        // pre-scaled (holdSeconds is the other way round; see PlayRoutine).
+        private static float WindupSeconds(StanceAnimation animation, int impactFrame)
+        {
+            if (animation.IsEmpty || animation.FrameCount <= 1) return 0f;
+
+            int to = Mathf.Clamp(impactFrame, 1, animation.FrameCount);
+            float total = 0f;
+            for (int frame = 0; frame < to; frame++)
+            {
+                total += FrameHoldCurve.HoldFor(frame, animation.FrameCount,
+                                                animation.ImpactFrame, animation.SecondsPerFrame);
+            }
+
+            return total;
+        }
+
         // THE OTHER APPROACH: get there FIRST, then swing.
         //
         // The difference from a lunge is the order rather than the distance. A
@@ -547,6 +607,26 @@ namespace PrincesPalace
         // How long the walk in takes. Long enough to read as a decision and
         // short enough that a fight full of them does not become a parade.
         private const float CloseSeconds = 0.26f;
+
+        // Further than a Close, because a charger is meant to END against what
+        // it hit rather than a step short of it, and the recoil shoves the
+        // target back on contact so the two never actually overlap. Not the
+        // full gap for the same reason Close is not: the nearer, larger figure
+        // would otherwise swallow the one it slammed.
+        private const float ChargeFraction = 0.86f;
+
+        // A floor under the rush's travel time, for the degenerate case of a
+        // charge with flat art (no wind-up to fill): without it the out-tween
+        // would be near-zero and the figure would teleport into the target
+        // rather than cross to it. A real charge overrides this with its own
+        // wind-up length, which is longer.
+        private const float ChargeMinOutSeconds = 0.18f;
+
+        // How long past the hit-stop the charger stays planted against its
+        // target before rolling back -- the difference between a bump that
+        // lands and one that only grazes. Added to HitStopFor, so a heavier
+        // blow already dwells longer and this is the shared minimum on top.
+        private const float ChargeContactSeconds = 0.06f;
 
         // How this beat's actor animates. Falls back to a single instantaneous
         // frame when there is no kit, no art, or no timing -- which is every
