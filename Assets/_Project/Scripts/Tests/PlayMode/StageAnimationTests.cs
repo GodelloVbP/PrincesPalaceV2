@@ -317,6 +317,75 @@ namespace PrincesPalace.PlayModeTests
                 "hit landing on a breathing figure did nothing to it");
         }
 
+        // ---- the afterimage on a fast move -------------------------------------
+
+        // A FAST TRAVEL LEAVES A TRAIL, and a slow one does not. Driven on a
+        // bare animator rather than a whole fight so it is deterministic: the
+        // trail is spaced by distance, so a long committed rush drops ghosts and
+        // a short lean drops none, and both are asserted against the same rig.
+        //
+        // At REAL speed on purpose. The suite runs at 60x, where a 0.14s fade is
+        // two milliseconds and nothing could be caught active; this one move is
+        // worth the wait.
+        [UnityTest]
+        public IEnumerator AFastMoveLeavesAnAfterimageAndASlowOneDoesNot()
+        {
+            FightBeatPlayer.BeatSpeedMultiplier = 1f;
+
+            var stage = new GameObject("Stage", typeof(RectTransform)).GetComponent<RectTransform>();
+            var slot = new GameObject("Slot", typeof(RectTransform), typeof(StageActorAnimator));
+            slot.transform.SetParent(stage, false);
+            var animator = slot.GetComponent<StageActorAnimator>();
+
+            var spriteGo = new GameObject("Sprite", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            spriteGo.transform.SetParent(slot.transform, false);
+            var image = spriteGo.GetComponent<Image>();
+            image.sprite = Sprite.Create(new Texture2D(4, 4), new Rect(0, 0, 4, 4), new Vector2(0.5f, 0f));
+
+            yield return null;   // let Awake resolve the rect
+            animator.Rehome();
+            animator.BindSprite(image);
+
+            // A long committed rush: distance far past the ghost spacing.
+            animator.Play(new Vector2(600f, 0f), 0f, 0.3f);
+
+            bool sawGhost = false;
+            float deadline = Time.realtimeSinceStartup + 2f;
+            while (Time.realtimeSinceStartup < deadline && !sawGhost)
+            {
+                sawGhost = stage.GetComponentsInChildren<Transform>(true)
+                    .Any(t => t.name == "Afterimage" && t.gameObject.activeSelf);
+                yield return null;
+            }
+
+            Assert.IsTrue(sawGhost,
+                "a fast move left no afterimage - the trail's emit is silently off, the exact class " +
+                "of nulled-visual bug this file exists to catch");
+
+            // Let the trail settle, then a move far shorter than one ghost's
+            // spacing must leave nothing behind.
+            yield return new WaitForSeconds(0.3f);
+            foreach (var t in stage.GetComponentsInChildren<Transform>(true))
+            {
+                if (t.name == "Afterimage") t.gameObject.SetActive(false);
+            }
+
+            animator.Play(new Vector2(20f, 0f), 0f, 0.3f);
+            float shortDeadline = Time.realtimeSinceStartup + 1f;
+            bool sawGhostOnShortMove = false;
+            while (Time.realtimeSinceStartup < shortDeadline && !sawGhostOnShortMove)
+            {
+                sawGhostOnShortMove = stage.GetComponentsInChildren<Transform>(true)
+                    .Any(t => t.name == "Afterimage" && t.gameObject.activeSelf);
+                yield return null;
+            }
+
+            Assert.IsFalse(sawGhostOnShortMove,
+                "a 20px lean trailed - the blur is meant for the fast parts, not every twitch");
+
+            Object.Destroy(stage.gameObject);
+        }
+
         private IEnumerator AFightAgainst(string spritePath)
         {
             yield return OpenAFight();

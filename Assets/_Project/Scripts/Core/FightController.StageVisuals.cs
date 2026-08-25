@@ -487,6 +487,12 @@ namespace PrincesPalace
             // looked correct by luck) and obvious on every enemy.
             SyncHitFlash(image, sprite, mirror);
 
+            // The afterimage copies this exact Image, so the animator is handed
+            // it through the same door -- once bound it clones the live node
+            // whenever it trails, picking up the current frame and flip for
+            // free. Same-sprite rebinds are cheap and idempotent.
+            slotRect?.GetComponent<StageActorAnimator>()?.BindSprite(image);
+
             // ACTIVATED, not merely enabled. The sprite node is built inactive
             // (it has no art until a fight exists), and enabling a Graphic whose
             // GameObject is inactive draws exactly nothing -- which is why the

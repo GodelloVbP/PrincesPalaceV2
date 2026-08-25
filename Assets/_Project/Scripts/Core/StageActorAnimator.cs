@@ -1,5 +1,7 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace PrincesPalace
 {
@@ -60,6 +62,38 @@ namespace PrincesPalace
         private Vector2 _home;
         private Vector3 _baseScale;
         private Coroutine _running;
+
+        // THE AFTERIMAGE, a hint of motion blur on the fast parts.
+        //
+        // uGUI cannot blur a sprite honestly -- the atlas neighbours bleed into
+        // any kernel that samples sideways -- so the fast-motion cue is the one
+        // 2D animation has always used: a few faint copies of the drawing left
+        // behind along the path, fading as the figure pulls away. A charge or a
+        // roll leaves a short trail; a slow lean leaves nothing, because the
+        // trail is spaced by DISTANCE travelled and a lean does not cover it.
+        //
+        // The source sprite is bound by FightController through the same door it
+        // syncs the hit flash, because only it knows how to resolve a combatant
+        // to its art. Absent that binding this whole thing is a no-op -- which
+        // is the case for every headless test that never shows a sprite.
+        private Image _spriteImage;
+        private readonly List<Image> _ghosts = new List<Image>();
+        private float _sinceGhost;
+
+        // How far the figure must travel between two afterimages. Wide enough
+        // that a lunge's short lean drops at most one and a cast drops none;
+        // narrow enough that a charge across the stage leaves a readable trail.
+        private const float GhostSpacing = 55f;
+
+        // Faint and brief. A trail that reads as a second figure rather than as
+        // speed is worse than none, so it starts low and is gone within a
+        // couple of frames of real time.
+        private const float GhostStartAlpha = 0.28f;
+        private const float GhostFadeSeconds = 0.14f;
+
+        // A hard cap on how many live at once, so a very long travel cannot
+        // spawn an unbounded crowd. The pool grows to this and then reuses.
+        private const int MaxGhosts = 5;
 
         // THE TWO DEFORMATIONS, HELD SEPARATELY AND WRITTEN TOGETHER.
         //
@@ -208,6 +242,14 @@ namespace PrincesPalace
                 Mathf.Abs(x) < 0.01f ? _rect.localScale.x : _rect.localScale.x / x,
                 Mathf.Abs(y) < 0.01f ? _rect.localScale.y : _rect.localScale.y / y,
                 _rect.localScale.z);
+        }
+
+        // The art the afterimage copies, handed over by FightController whenever
+        // the sprite under this slot changes -- the same seam it syncs the hit
+        // flash through. Null-safe: an unbound animator simply never trails.
+        public void BindSprite(Image spriteImage)
+        {
+            _spriteImage = spriteImage;
         }
 
         // Convenience overload for a pure sideways move (recoils, and any
@@ -386,11 +428,34 @@ namespace PrincesPalace
         // exactly what made it read as gliding rather than striking.
         private IEnumerator TweenOut(Vector2 from, Vector2 to, float seconds)
         {
+            // The afterimage is dropped on the OUTBOUND leg only -- that is the
+            // fast, emphasised half (ease-out, off the mark hard), and the one
+            // the eye reads as the strike. The recovery is slow and unemphasised
+            // and a trail on it would just look like the figure smearing home.
+            //
+            // Accumulated from ZERO, so the first ghost lands one GhostSpacing
+            // into the travel and a move shorter than that spacing -- a cast's
+            // stillness, a small recoil -- leaves nothing behind. The trail is a
+            // property of DISTANCE crossed, which is what makes it a fast-part
+            // cue rather than something on every twitch.
+            _sinceGhost = 0f;
+            Vector2 previous = from;
+
             for (float t = 0f; t < seconds; t += Time.deltaTime)
             {
                 float n = t / seconds;
                 float k = 1f - (1f - n) * (1f - n);
-                _rect.anchoredPosition = Vector2.Lerp(from, to, k);
+                Vector2 at = Vector2.Lerp(from, to, k);
+
+                _sinceGhost += Vector2.Distance(at, previous);
+                if (_sinceGhost >= GhostSpacing)
+                {
+                    EmitGhost();
+                    _sinceGhost = 0f;
+                }
+
+                previous = at;
+                _rect.anchoredPosition = at;
                 ApplyStretch(OutStretch * Arc(n));
                 yield return null;
             }
@@ -414,6 +479,118 @@ namespace PrincesPalace
 
             _rect.anchoredPosition = to;
             ApplyStretch(0f);
+        }
+
+        // ---- the afterimage ----------------------------------------------------
+
+        // Leaves one faint copy of the current drawing where the figure is now
+        // and lets it fade as the figure pulls away. A no-op without a bound
+        // sprite or with no art on it, which is every headless test that never
+        // shows a figure.
+        private void EmitGhost()
+        {
+            if (_spriteImage == null || _spriteImage.sprite == null) return;
+            var stage = _rect != null ? _rect.parent as RectTransform : null;
+            if (stage == null) return;
+
+            var ghost = FreeGhost(stage);
+            if (ghost == null) return;
+
+            var src = _spriteImage.rectTransform;
+
+            // Snap the ghost onto the live sprite in the slot's own space, copy
+            // its exact local transform, then peel it off into the stage with
+            // the world transform PRESERVED. That hands the depth scale and the
+            // mirror flip to Unity's own reparent math instead of recomputing a
+            // lossy scale by hand -- and because the ghost then lives on the
+            // stage rather than the slot, it stays put while the slot moves on.
+            // The lag is the trail.
+            ghost.rectTransform.SetParent(src.parent, worldPositionStays: false);
+            ghost.rectTransform.localPosition = src.localPosition;
+            ghost.rectTransform.localRotation = src.localRotation;
+            ghost.rectTransform.localScale = src.localScale;
+            ghost.rectTransform.pivot = src.pivot;
+            ghost.rectTransform.sizeDelta = src.sizeDelta;
+            ghost.rectTransform.SetParent(stage, worldPositionStays: true);
+            ghost.rectTransform.SetAsFirstSibling();   // behind the figures
+
+            ghost.sprite = _spriteImage.sprite;
+            ghost.preserveAspect = _spriteImage.preserveAspect;
+            ghost.color = new Color(1f, 1f, 1f, GhostStartAlpha);
+            ghost.gameObject.SetActive(true);
+
+            StartCoroutine(FadeGhost(ghost));
+        }
+
+        // An inactive pooled ghost, a fresh clone of the live sprite node while
+        // the pool is under its cap, or the oldest reused once it is full.
+        // Cloning the sprite GameObject inherits its Image, anchoring and
+        // canvas setup for free rather than hand-building a node.
+        private Image FreeGhost(RectTransform stage)
+        {
+            foreach (var g in _ghosts)
+            {
+                if (g != null && !g.gameObject.activeSelf) return g;
+            }
+
+            if (_ghosts.Count < MaxGhosts)
+            {
+                var clone = Instantiate(_spriteImage.gameObject, stage);
+                clone.name = "Afterimage";
+
+                // A ghost is scenery, never a target: it must not eat a click
+                // meant for the figure it trails, and it carries none of the
+                // slot's own behaviours.
+                StripToImage(clone);
+
+                var image = clone.GetComponent<Image>();
+                image.raycastTarget = false;
+                clone.SetActive(false);
+                _ghosts.Add(image);
+                return image;
+            }
+
+            // Full: reuse the oldest by rotating it to the back of the list.
+            var oldest = _ghosts[0];
+            _ghosts.RemoveAt(0);
+            _ghosts.Add(oldest);
+            return oldest;
+        }
+
+        // A clone of the sprite node can drag along whatever else sat on it;
+        // for a ghost none of it should run. Only the Image (and its
+        // RectTransform/CanvasRenderer) is wanted.
+        private static void StripToImage(GameObject clone)
+        {
+            foreach (var child in clone.GetComponentsInChildren<Transform>(true))
+            {
+                if (child != clone.transform) Destroy(child.gameObject);
+            }
+
+            foreach (var behaviour in clone.GetComponents<MonoBehaviour>())
+            {
+                if (!(behaviour is Image)) Destroy(behaviour);
+            }
+        }
+
+        private IEnumerator FadeGhost(Image ghost)
+        {
+            float fade = FightBeatPlayer.Scaled(GhostFadeSeconds);
+            if (fade <= 0f)
+            {
+                ghost.gameObject.SetActive(false);
+                yield break;
+            }
+
+            for (float t = 0f; t < fade; t += Time.deltaTime)
+            {
+                if (ghost == null) yield break;
+                float a = GhostStartAlpha * (1f - t / fade);
+                ghost.color = new Color(1f, 1f, 1f, a);
+                yield return null;
+            }
+
+            if (ghost != null) ghost.gameObject.SetActive(false);
         }
 
         // Zero at both ends, one in the middle. The stretch belongs to the
