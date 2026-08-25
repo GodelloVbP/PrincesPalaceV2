@@ -400,6 +400,7 @@ public static class ScreenRegistry
                 reset.confirmPanel = result.Go(screen.ResetConfirmPanel);
                 reset.confirmLabel = result.Tmp(screen.ResetConfirmLabel);
                 reset.confirmYesButton = result.Button(screen.ResetConfirmYesButton);
+                reset.confirmFill = result.Rect(screen.ResetConfirmYesFill);
                 reset.confirmNoButton = result.Button(screen.ResetConfirmNoButton);
                 reset.backButton = result.Button(screen.CloseManageSavesButton);
                 reset.saveSlotPanel = result.Go(screen.SaveSlotPanel);

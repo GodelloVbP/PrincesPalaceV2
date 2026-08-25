@@ -2,6 +2,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using PrincesPalace.Domain.UiKit;
+using PrincesPalace.Domain.UiKit.Screens;
 
 namespace PrincesPalace
 {
@@ -20,6 +21,7 @@ namespace PrincesPalace
         [SerializeField] internal GameObject confirmPanel;
         [SerializeField] internal TMP_Text confirmLabel;
         [SerializeField] internal Button confirmYesButton;
+        [SerializeField] internal RectTransform confirmFill;
         [SerializeField] internal Button confirmNoButton;
 
         // The way back to the slot list this panel was opened from.
@@ -29,6 +31,14 @@ namespace PrincesPalace
         // Which slot the open confirmation is about. -1 when nothing is pending,
         // so a stray Yes cannot delete slot 0.
         private int _pendingSlot = -1;
+
+        private HoldToConfirm _hold;
+
+        // How long the delete has to be held. Matches ExitsScreen's own
+        // abandon-hold -- the only other irreversible action in the game --
+        // so a player who has already learned that gesture once does not have
+        // to learn a second timing for it here.
+        public const float HoldSeconds = 1.2f;
 
         // No cross-panel event for the Play list. Its own OnEnable re-reads the
         // slots, which covers the only path that matters (delete here, reopen
@@ -48,7 +58,16 @@ namespace PrincesPalace
                 deleteButtons[i].onClick.AddListener(() => AskToDelete(slot));
             }
 
-            confirmYesButton.onClick.AddListener(ConfirmDelete);
+            // NO onClick LISTENER on confirmYesButton, deliberately -- the same
+            // reason ExitsScreen's own abandon-hold has none. A Button plays
+            // its click on RELEASE whatever the press was for, so wiring this
+            // to onClick would delete on a tap, which is the one thing a hold
+            // exists to refuse. The hold decides instead.
+            _hold = confirmYesButton.gameObject.AddComponent<HoldToConfirm>();
+            _hold.Seconds = HoldSeconds;
+            _hold.Progress = SetFill;
+            _hold.Completed = ConfirmDelete;
+
             confirmNoButton.onClick.AddListener(Dismiss);
 
             backButton.onClick.AddListener(() =>
@@ -82,6 +101,16 @@ namespace PrincesPalace
             _pendingSlot = slot;
             confirmLabel.Set(UiStrings.ConfirmDelete, slot + 1);
             confirmPanel.SetActive(true);
+
+            // STATED RATHER THAN INHERITED, the same call ExitsController's own
+            // comment makes about its abandon hold: HoldToConfirm cancels
+            // itself when its GameObject is disabled, which covers every path
+            // OUT of this panel -- but "the hold is not half-pressed the
+            // moment you open it" is a claim THIS panel makes, opening fresh
+            // every time, so it says so rather than trusting a side effect on
+            // a component two hops away.
+            _hold?.Cancel();
+            SetFill(0f);
         }
 
         private void ConfirmDelete()
@@ -116,6 +145,7 @@ namespace PrincesPalace
 
             _pendingSlot = -1;
             confirmPanel.SetActive(false);
+            SetFill(0f);
 
             Refresh();
         }
@@ -124,6 +154,23 @@ namespace PrincesPalace
         {
             _pendingSlot = -1;
             confirmPanel.SetActive(false);
+            _hold?.Cancel();
+            SetFill(0f);
+        }
+
+        // Authored full width and driven to zero on wiring -- UiAudit refuses
+        // a zero-sized graphic, so the fill is built at its real size and
+        // shrunk here rather than the other way round. See MainMenuScreen's
+        // own comment on why it is pivoted to its left edge rather than
+        // centred: growing sizeDelta.x from a pinned edge is what lets one
+        // number track the hold; growing from the centre would grow both ways
+        // at once and paint outside the track.
+        private void SetFill(float progress)
+        {
+            if (confirmFill == null) return;
+
+            confirmFill.sizeDelta = new Vector2(
+                MainMenuScreen.ResetHoldWidth * Mathf.Clamp01(progress), MainMenuScreen.ResetHoldHeight);
         }
     }
 }

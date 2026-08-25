@@ -59,6 +59,26 @@ namespace PrincesPalace.PlayModeTests
 
         private static void Click(string name) => Named(name).GetComponent<Button>().onClick.Invoke();
 
+        // Delete is a HOLD now, not a click -- see ResetProgressController's
+        // own header on why onClick fires on release regardless of what the
+        // press was for. Driven the same way SystemMenuExitsTests already
+        // drives ExitsScreen's identical abandon-hold: through the component's
+        // own public Begin/Advance rather than simulated pointer events, which
+        // is still "pressing what a player presses" and not reaching into
+        // controller state -- HoldToConfirm IS the press, from the button's
+        // point of view.
+        private static void HoldToDelete(string name)
+        {
+            var go = Named(name);
+            Assert.IsNotNull(go, $"no object named '{name}' in the scene");
+
+            var hold = go.GetComponent<HoldToConfirm>();
+            Assert.IsNotNull(hold, $"'{name}' has no hold behaviour attached");
+
+            hold.Begin();
+            hold.Advance(ResetProgressController.HoldSeconds);
+        }
+
         private static string SlotButtonText(int slot) =>
             Named($"Slot{slot}Button").GetComponentInChildren<TMP_Text>(true).text;
 
@@ -143,6 +163,42 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(SaveSystem.SlotExists(0), "the slot must survive until the deletion is confirmed");
         }
 
+        // THE WHOLE POINT of a hold over a click: letting go early must cost
+        // nothing, and two separate partial holds must not add up to a whole
+        // one. Same claim SystemMenuExitsTests.LettingGoEarlyLosesEverything
+        // already pins for ExitsScreen's identical gesture.
+        [UnityTest]
+        public IEnumerator ReleasingTheHoldEarly_DeletesNothing()
+        {
+            yield return LoadMenu();
+            Click("PlayButton");
+            yield return null;
+            yield return null;
+            Click("Slot0Button");
+            Click("ManageSavesButton");
+            yield return null;
+            yield return null;
+
+            Click("ResetSlot0DeleteButton");
+
+            var hold = Named("ResetConfirmYesButton").GetComponent<HoldToConfirm>();
+            Assert.IsNotNull(hold, "the confirm button has no hold behaviour attached");
+
+            hold.Begin();
+            hold.Advance(ResetProgressController.HoldSeconds * 0.9f);
+            hold.Cancel();
+
+            Assert.IsTrue(SaveSystem.SlotExists(0), "a released hold must not delete anything");
+
+            // AND A FRESH HOLD STARTS FROM ZERO, not from where the last one
+            // was let go -- two 90% holds must never sum to one whole one.
+            hold.Begin();
+            hold.Advance(ResetProgressController.HoldSeconds * 0.9f);
+
+            Assert.IsTrue(SaveSystem.SlotExists(0),
+                "a released hold carried its progress into the next one, so two partial holds deleted the slot");
+        }
+
         [UnityTest]
         public IEnumerator ConfirmingActuallyDeletes_AndCancellingDoesNot()
         {
@@ -166,7 +222,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(Named("ResetConfirmPanel").activeSelf, "Cancel should close the confirmation");
 
             Click("ResetSlot1DeleteButton");
-            Click("ResetConfirmYesButton");
+            HoldToDelete("ResetConfirmYesButton");
             Assert.IsFalse(SaveSystem.SlotExists(1), "Delete should actually delete once confirmed");
             Assert.AreEqual("Slot 2: Empty", ResetRowText(1), "and the row should say so");
         }
@@ -216,7 +272,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             yield return null;
             Click("ResetSlot4DeleteButton");
-            Click("ResetConfirmYesButton");
+            HoldToDelete("ResetConfirmYesButton");
             Click("CloseManageSavesButton");
 
             Assert.AreEqual("Slot 5: Empty", SlotButtonText(4));
@@ -319,7 +375,7 @@ namespace PrincesPalace.PlayModeTests
                 "the delete button did not open the confirmation, so its listener was not wired yet " +
                 "and nothing below this line is testing what it claims to");
 
-            ClickByName("ResetConfirmYesButton");
+            HoldToDelete("ResetConfirmYesButton");
 
             // The write that used to resurrect it.
             SaveSlotManager.SaveCurrent();
@@ -406,7 +462,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             Click("ResetSlot0DeleteButton");
-            Click("ResetConfirmYesButton");
+            HoldToDelete("ResetConfirmYesButton");
 
             Assert.IsFalse(continueGo.activeSelf,
                 "the only save just got deleted, so Continue has nothing left to offer");
