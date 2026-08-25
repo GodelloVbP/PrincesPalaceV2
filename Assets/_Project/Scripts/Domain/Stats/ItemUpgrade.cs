@@ -66,11 +66,35 @@ namespace PrincesPalace.Domain.Stats
         //
         // Entirely in integers, for the precision reason on PercentPerPlus.
         //
-        // Floored in BOTH directions rather than truncated toward zero: C#
-        // integer division rounds a negative the opposite way from a
-        // positive, which would make honing a steel platebody quietly reduce
-        // its own speed penalty. Same asymmetry ItemSetEntryResolver.ValueAt
-        // and AbilityDerivation.FloorDiv2 exist to avoid.
+        // ROUNDED AWAY FROM ZERO, in both directions. It used to floor in both
+        // directions, and flooring is what made plus a lie on most of the
+        // catalogue: a stat has to reach 7 before 15% of it is a whole point,
+        // and armour stats on this game's scale are 1 to 18. 406 of the 701
+        // generated items -- 58% -- granted *exactly the same numbers* at +1 as
+        // at +0. Reported from play as finding the +1 Etched Runeplate
+        // Gauntlets (manaRegen 1, and 1 x 1.15 floors straight back to 1) and
+        // being handed an identical item.
+        //
+        // Away-from-zero fixes the whole class rather than that one glove: for
+        // every integer >= 1, ceil(n x 1.15) > n, so a +1 is now strictly
+        // better on every stat its item grants, and the same rounding keeps a
+        // penalty growing rather than shrinking. Under the new rule none of the
+        // 701 items is flat at +1.
+        //
+        // It over-grants by at most one point per stat against the honest
+        // multiplier, which is the price of the guarantee and cheap at these
+        // magnitudes: the +10 ceiling still lands within a point of 2.5x.
+        //
+        // What it does NOT fix, because integers cannot: at amount 1 the whole
+        // plus ladder is 1,2,2,2,2,2,2,3,3,3,3. Adjacent pluses still tie on a
+        // one-point stat. Making every plus level distinct needs bigger stat
+        // numbers, which is a rebalance rather than a rounding rule.
+        //
+        // The direction symmetry is the same one ItemSetEntryResolver.ValueAt
+        // and AbilityDerivation.FloorDiv2 exist to keep: C# integer division
+        // truncates toward zero, which would round a penalty the opposite way
+        // from a bonus and make honing a steel platebody quietly reduce its own
+        // speed penalty.
         public static int Apply(int amount, int plus)
         {
             if (amount == 0 || plus <= 0)
@@ -79,7 +103,7 @@ namespace PrincesPalace.Domain.Stats
             }
 
             int scaled = amount * (100 + PercentPerPlus * Clamp(plus));
-            return scaled >= 0 ? scaled / 100 : (scaled - 99) / 100;
+            return scaled >= 0 ? (scaled + 99) / 100 : (scaled - 99) / 100;
         }
 
         // Plus arrives from save data, which a player can edit and a

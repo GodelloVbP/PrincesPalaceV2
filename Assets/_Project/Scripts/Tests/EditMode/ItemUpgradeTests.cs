@@ -37,13 +37,34 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, ItemUpgrade.Apply(0, 7));
         }
 
-        // 20 * 2.50 = 50 exactly; 17 * 1.75 = 29.75 floors to 29.
+        // 20 * 2.50 = 50 exactly; 17 * 1.75 = 29.75 rounds AWAY FROM ZERO to
+        // 30, and 1 * 2.50 = 2.5 to 3. See Apply's header for why a fraction
+        // of a point may never be dropped on this axis.
         [TestCase(20, 10, 50)]
-        [TestCase(17, 5, 29)]
-        [TestCase(1, 10, 2)]
-        public void Apply_ScalesAndFloors(int amount, int plus, int expected)
+        [TestCase(17, 5, 30)]
+        [TestCase(1, 10, 3)]
+        public void Apply_ScalesAndRoundsAwayFromZero(int amount, int plus, int expected)
         {
             Assert.AreEqual(expected, ItemUpgrade.Apply(amount, plus));
+        }
+
+        // THE GUARANTEE THE ROUNDING EXISTS FOR, and the whole reason it
+        // changed: a +1 copy of an item must be strictly better than a +0 one
+        // on every stat that item grants. Flooring broke this for every amount
+        // below 7, which on this game's stat scale was 58% of the catalogue --
+        // the +1 Etched Runeplate Gauntlets carried manaRegen 1 at both pluses
+        // and the two items were literally indistinguishable.
+        //
+        // Stated over the whole 1..30 range rather than the one glove, because
+        // the instance was never the bug.
+        [Test]
+        public void EveryPlusOneIsWorthAtLeastAPointOnEveryStatItTouches()
+        {
+            for (int amount = 1; amount <= 30; amount++)
+            {
+                Assert.Greater(ItemUpgrade.Apply(amount, 1), amount,
+                    $"a stat of {amount} gains nothing at +1, so the +1 item is the same item");
+            }
         }
 
         // REGRESSION. Apply used to route through MultiplierFor and floor the
@@ -55,7 +76,7 @@ namespace PrincesPalace.Domain.Tests
         // not survive being computed in float32.
         [TestCase(20, 10, 50)]
         [TestCase(50, 10, 125)]
-        [TestCase(25, 5, 43)]
+        [TestCase(20, 5, 35)]
         [TestCase(100, 10, 250)]
         public void Apply_IsExactWhereTheArithmeticIsExact(int amount, int plus, int expected)
         {
@@ -64,13 +85,14 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // Steel is slow on purpose, so items carry negative stats — and a
-        // penalty must floor the SAME DIRECTION as a bonus. A plain (int)
-        // cast truncates toward zero, which would quietly make honing a
-        // steel platebody reduce its own speed penalty. Same asymmetry
+        // penalty must round the SAME DIRECTION as a bonus, which since Apply
+        // rounds away from zero means further from it. A plain (int) cast
+        // truncates toward zero, which would quietly make honing a steel
+        // platebody reduce its own speed penalty. Same asymmetry
         // ItemSetEntryResolver.ValueAt and AbilityDerivation.FloorDiv2 guard.
         [TestCase(-2, 5, -4)]
         [TestCase(-10, 10, -25)]
-        public void Apply_FloorsAPenaltyDownwardsToo(int amount, int plus, int expected)
+        public void Apply_GrowsAPenaltyRatherThanShrinkingIt(int amount, int plus, int expected)
         {
             Assert.AreEqual(expected, ItemUpgrade.Apply(amount, plus));
         }
