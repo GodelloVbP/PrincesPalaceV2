@@ -318,11 +318,21 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("overlay.locked", "Locked in battle");
 
         public static readonly UiString Play = UiString.Define("play", "Play");
-        public static readonly UiString Options = UiString.Define("options", "Options");
         public static readonly UiString Exit = UiString.Define("exit", "Exit");
-        public static readonly UiString OptionsTitle = UiString.Define("options_title", "Options");
         public static readonly UiString Close = UiString.Define("close", "Close");
         public static readonly UiString Cancel = UiString.Define("cancel", "Cancel");
+
+        // The wordmark. One entry rather than a literal in MainMenuScreen,
+        // for the same reason every other piece of authored copy is: a
+        // literal at the call site cannot be told apart from a stray string
+        // that slipped past Contract A.
+        public static readonly UiString GameTitle = UiString.Define("game_title", "Prince's Palace");
+
+        // "Continue - Slot 3". Built with a placeholder at screen-build time
+        // (Domain has no SaveSystem to ask which slot), then set for real by
+        // MainMenuController.RefreshContinue once a save exists to name.
+        public static readonly UiString ContinueSlot =
+            UiString.Define("continue_slot", "Continue - Slot {0}", "Continue - Slot 5");
 
         // --- the Reckoning ------------------------------------------------------
         public static readonly UiString ReckoningTitle = UiString.Define("reckoning.title", "THE RECKONING");
@@ -457,6 +467,8 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("glossary.pick", "CHOOSE AN ENTRY");
 
         // --- save slots -----------------------------------------------------
+        public static readonly UiString ChooseSlotHeader =
+            UiString.Define("choose_slot_header", "Choose a Slot");
         public static readonly UiString SlotEmpty =
             UiString.Define("slot_empty", "Slot {0}: Empty", "Slot 5: Empty");
 
@@ -472,8 +484,16 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("slot_button", "Slot {0}", "Slot 5");
 
         // --- destructive actions -------------------------------------------
-        public static readonly UiString ResetProgressHeader =
-            UiString.Define("reset_progress_header", "Reset Progress");
+        //
+        // Reached from the slot list itself now, not from a separate Options
+        // screen -- ManageSaves serves as both the button that opens it and
+        // the panel's own heading, the same one-entry-two-uses shape SlotButton
+        // already has.
+        public static readonly UiString ManageSaves =
+            UiString.Define("manage_saves", "Manage Saves");
+        public static readonly UiString ManageSavesWarning =
+            UiString.Define("manage_saves_warning",
+                "Deleting a slot removes its run, its wallet and everything unlocked in it. There is no way back.");
         public static readonly UiString Delete = UiString.Define("delete", "Delete");
         public static readonly UiString ConfirmDelete =
             UiString.Define("confirm_delete", "Delete slot {0}? This cannot be undone.",
@@ -736,7 +756,7 @@ namespace PrincesPalace.Domain.UiKit
             OptionsAudio, OptionsSound, OptionsMusic, OptionsMusicNote,
             OptionsDisplay, OptionsResolution, OptionsWindow, OptionsFrameLimit,
             OptionsRestoreDefaults, OptionsAppliesImmediately,
-            Play, Options, Exit, OptionsTitle, Close, Cancel,
+            Play, Exit, Close, Cancel, GameTitle, ContinueSlot,
             ReckoningTitle, ReckoningExperience, ReckoningGold, ReckoningChooseOne,
             ReckoningLevel, ReckoningLevelUp, ReckoningExpGain, ReckoningDowned,
             ReckoningOfferMeta, ReckoningTaken,
@@ -751,8 +771,8 @@ namespace PrincesPalace.Domain.UiKit
             DebugTitle, DebugGiveGold, DebugGiveEmbers, DebugGiveOneEmber, DebugAdd,
             DebugFilterAll, DebugFilterConsumable, DebugFilterWeapon, DebugFilterEquipment,
             DebugRow, DebugPage,
-            SlotEmpty, SlotFilled, SlotButton,
-            ResetProgressHeader, Delete, ConfirmDelete,
+            ChooseSlotHeader, SlotEmpty, SlotFilled, SlotButton,
+            ManageSaves, ManageSavesWarning, Delete, ConfirmDelete,
             CommandTitle, Attack, Back,
             ConfirmSquad,
             HubTitle, HubSubtitle, HubTalents, HubPrincipality, HubCharacterSheet,

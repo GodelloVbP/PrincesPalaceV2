@@ -34,14 +34,36 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef SceneLayer;
         public MainMenuAmbience.Layer Ambience;
 
+        public NodeRef TitleLabel;
+
+        // BUILT UNCONDITIONALLY, shown only sometimes. Domain has no
+        // SaveSystem to ask at build time whether there is anything to
+        // continue into, so the node always exists and MainMenuController
+        // decides at runtime whether to show it -- the same split every other
+        // screen-can't-know-yet fact in this codebase uses.
+        //
+        // NOT a child of the Play/Exit column, on purpose. A flow container's
+        // remaining children do not reflow when one of them is hidden, so a
+        // conditionally-visible element inside one would leave a gap-shaped
+        // hole the size of a button whenever there was nothing to continue.
+        // Positioned on its own instead: hiding it just means the menu opens
+        // on Play, which is the graceful-degradation answer this house
+        // already gives to a missing thing everywhere else.
+        public NodeRef ContinueButton;
+
         public NodeRef PlayButton;
-        public NodeRef OptionsButton;
         public NodeRef ExitButton;
 
         public NodeRef SaveSlotPanel;
-        public NodeRef OptionsPanel;
+        public NodeRef ManageSavesButton;
         public NodeRef CloseSaveSlotButton;
-        public NodeRef CloseOptionsButton;
+
+        // Reset Progress, moved here from a standalone Options screen on
+        // request: deleting a save is something you do from the screen that
+        // shows you the saves, not a separate destination. Opened FROM
+        // SaveSlotPanel and returns to it -- see CloseManageSavesButton.
+        public NodeRef ManageSavesPanel;
+        public NodeRef CloseManageSavesButton;
 
         public NodeRef ResetConfirmPanel;
         public NodeRef ResetConfirmLabel;
@@ -69,19 +91,38 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 screen.Ambience.Root).AsDecor();
             screen.SceneLayer = sceneLayer;
 
+            // --- the wordmark --------------------------------------------------
+            //
+            // Never existed before this: the shipped menu had a painted world
+            // and three buttons floating on it, with nothing saying what game
+            // this is. Gold to match the plaques it sits above.
+            var title = Ui.Label("TitleLabel", UiStrings.GameTitle, new UiVec(760f, 100f), 64,
+                    "#E3C166", Place.At(0f, 260f))
+                .Tracked(5f);
+            screen.TitleLabel = title;
+
             // --- the menu itself ---------------------------------------------
+            //
+            // Continue sits ABOVE the column rather than in it -- see the field
+            // comment on why it is not a fourth Column child.
+            var continueButton = Ui.Button("ContinueButton", UiStrings.Continue,
+                new UiVec(340f, 66f), 24, Place.At(0f, 90f));
+            screen.ContinueButton = continueButton;
+
             var play = Ui.Button("PlayButton", UiStrings.Play, new UiVec(260f, 60f), 24);
-            var options = Ui.Button("OptionsButton", UiStrings.Options, new UiVec(260f, 60f), 24);
             var exit = Ui.Button("ExitButton", UiStrings.Exit, new UiVec(260f, 60f), 24);
             screen.PlayButton = play;
-            screen.OptionsButton = options;
             screen.ExitButton = exit;
 
             var menuColumn = Ui.Column("MenuButtons", Place.At(0f, -60f), spacing: 20f, UiAlign.Centre,
-                play, options, exit);
+                play, exit);
 
             // --- save slots ---------------------------------------------------
-            var slotChildren = new List<UiNode>();
+            var slotChildren = new List<UiNode>
+            {
+                Ui.Label("SaveSlotTitle", UiStrings.ChooseSlotHeader, new UiVec(400f, 44f), 28)
+            };
+
             for (int i = 0; i < slotCount; i++)
             {
                 var button = Ui.Button($"Slot{i}Button", UiStrings.SlotButton, slotSize, 20);
@@ -89,20 +130,27 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 slotChildren.Add(button);
             }
 
-            var cancel = Ui.Button("CloseSaveSlotButton", UiStrings.Cancel, slotSize, 20);
+            var manageSaves = Ui.Button("ManageSavesButton", UiStrings.ManageSaves, new UiVec(200f, 50f), 18);
+            var cancel = Ui.Button("CloseSaveSlotButton", UiStrings.Cancel, new UiVec(200f, 50f), 18);
+            screen.ManageSavesButton = manageSaves;
             screen.CloseSaveSlotButton = cancel;
-            slotChildren.Add(cancel);
+
+            // A Row, so the two footer actions cannot drift onto separate lines
+            // the way two Column entries would once one of their labels grew.
+            slotChildren.Add(Ui.Row("SaveSlotFooter", Place.Flow, spacing: 24f, UiAlign.Centre,
+                manageSaves, cancel));
 
             var saveSlotModal = Ui.Modal("SaveSlotPanel", "#000000D9",
                 Ui.Column("SaveSlotColumn", Place.At(0f, 0f), spacing: 16f, UiAlign.Centre, slotChildren))
                 .Inactive();
             screen.SaveSlotPanel = saveSlotModal;
 
-            // --- options, including the destructive half ----------------------
-            var optionRows = new List<UiNode>
+            // --- manage saves, the destructive half ----------------------------
+            var manageRows = new List<UiNode>
             {
-                Ui.Label("OptionsTitle", UiStrings.OptionsTitle, new UiVec(400f, 50f), 32),
-                Ui.Label("ResetProgressHeader", UiStrings.ResetProgressHeader, new UiVec(400f, 40f), 24),
+                Ui.Label("ManageSavesTitle", UiStrings.ManageSaves, new UiVec(400f, 50f), 32),
+                Ui.Label("ManageSavesWarning", UiStrings.ManageSavesWarning, new UiVec(560f, 60f), 15,
+                    "#A99BD4"),
             };
 
             for (int i = 0; i < slotCount; i++)
@@ -114,22 +162,22 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
                 // A Row, so the label and its Delete button cannot drift apart
                 // and cannot collide however long the label gets.
-                optionRows.Add(Ui.Row($"ResetSlot{i}Row", Place.Flow, spacing: 20f, UiAlign.Centre, label, delete));
+                manageRows.Add(Ui.Row($"ResetSlot{i}Row", Place.Flow, spacing: 20f, UiAlign.Centre, label, delete));
             }
 
-            var closeOptions = Ui.Button("CloseOptionsButton", UiStrings.Close, new UiVec(260f, 50f), 20);
-            screen.CloseOptionsButton = closeOptions;
-            optionRows.Add(closeOptions);
+            var backToSlots = Ui.Button("CloseManageSavesButton", UiStrings.Back, new UiVec(260f, 50f), 20);
+            screen.CloseManageSavesButton = backToSlots;
+            manageRows.Add(backToSlots);
 
-            var optionsModal = Ui.Modal("OptionsPanel", "#000000D9",
-                Ui.Column("OptionsColumn", Place.At(0f, 0f), spacing: 14f, UiAlign.Centre, optionRows))
+            var manageSavesModal = Ui.Modal("ManageSavesPanel", "#000000D9",
+                Ui.Column("ManageSavesColumn", Place.At(0f, 0f), spacing: 14f, UiAlign.Centre, manageRows))
                 .Inactive();
-            screen.OptionsPanel = optionsModal;
+            screen.ManageSavesPanel = manageSavesModal;
 
             // --- the confirmation gate on a destructive action -----------------
             //
-            // A SIBLING of OptionsPanel and built after it, so it draws on top
-            // and its dimmer swallows clicks meant for the Delete buttons
+            // A SIBLING of ManageSavesPanel and built after it, so it draws on
+            // top and its dimmer swallows clicks meant for the Delete buttons
             // underneath. v1 achieved the same by nesting it and relying on
             // sibling order inside the panel; stating it at the root is the same
             // guarantee without the indirection.
@@ -155,7 +203,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.ResetConfirmPanel = confirmModal;
 
             screen.Root = Ui.Panel("MainMenuPanel", UiSize.Fill,
-                sceneLayer, menuColumn, saveSlotModal, optionsModal, confirmModal);
+                sceneLayer, title, continueButton, menuColumn,
+                saveSlotModal, manageSavesModal, confirmModal);
 
             return screen;
         }

@@ -384,23 +384,25 @@ public static class ScreenRegistry
                 // retiring SetField(controller, "playButton", ...).
                 var menu = result.Attach<MainMenuController>(screen.Root);
                 menu.playButton = result.Button(screen.PlayButton);
-                menu.optionsButton = result.Button(screen.OptionsButton);
                 menu.exitButton = result.Button(screen.ExitButton);
                 menu.closeSaveSlotButton = result.Button(screen.CloseSaveSlotButton);
-                menu.closeOptionsButton = result.Button(screen.CloseOptionsButton);
                 menu.saveSlotPanel = result.Go(screen.SaveSlotPanel);
-                menu.optionsPanel = result.Go(screen.OptionsPanel);
+                menu.continueButton = result.Button(screen.ContinueButton);
 
                 slots = result.Attach<SaveSlotController>(screen.SaveSlotPanel);
                 slots.slotButtons = screen.SlotButtons.Select(result.Button).ToArray();
+                slots.manageSavesButton = result.Button(screen.ManageSavesButton);
+                slots.managePanel = result.Go(screen.ManageSavesPanel);
 
-                reset = result.Attach<ResetProgressController>(screen.OptionsPanel);
+                reset = result.Attach<ResetProgressController>(screen.ManageSavesPanel);
                 reset.deleteButtons = screen.DeleteButtons.Select(result.Button).ToArray();
                 reset.slotLabels = screen.SlotLabels.Select(result.Tmp).ToArray();
                 reset.confirmPanel = result.Go(screen.ResetConfirmPanel);
                 reset.confirmLabel = result.Tmp(screen.ResetConfirmLabel);
                 reset.confirmYesButton = result.Button(screen.ResetConfirmYesButton);
                 reset.confirmNoButton = result.Button(screen.ResetConfirmNoButton);
+                reset.backButton = result.Button(screen.CloseManageSavesButton);
+                reset.saveSlotPanel = result.Go(screen.SaveSlotPanel);
 
                 // NOT subscribing SaveSlotController.Refresh to a C# event here.
                 // This Wire step runs at BUILD time and delegates do not
@@ -408,7 +410,10 @@ public static class ScreenRegistry
                 // shipped scene -- and the wiring sweep could not catch it,
                 // because it only sees serialized object references. The Play
                 // panel refreshes in OnEnable instead, which covers the only
-                // path that matters: delete in Options, reopen Play.
+                // path that matters: delete in Manage Saves, reopen Play. The
+                // same reasoning is why ResetProgressController reaches
+                // MainMenuController.RefreshContinue with GetComponentInParent
+                // at runtime rather than a delegate wired here.
                 DressAmbience(result, screen);
             },
 

@@ -16,6 +16,13 @@ namespace PrincesPalace
     {
         [SerializeField] internal Button[] slotButtons;
 
+        // The door into Manage Saves, and back out of it. Reached from HERE
+        // rather than from the main menu root, on request: deleting a save is
+        // now something you do from the screen that shows you the saves, not
+        // a separate destination the main menu offers alongside Play.
+        [SerializeField] internal Button manageSavesButton;
+        [SerializeField] internal GameObject managePanel;
+
         private void Start()
         {
             for (int i = 0; i < slotButtons.Length; i++)
@@ -23,6 +30,17 @@ namespace PrincesPalace
                 int slot = i;
                 slotButtons[i].onClick.AddListener(() => Choose(slot));
             }
+
+            manageSavesButton.onClick.AddListener(() =>
+            {
+                // THIS panel hides itself rather than staying open behind
+                // Manage Saves. The two screens ask two different questions of
+                // the same five rows -- "which do I play" against "which do I
+                // delete" -- and showing both trees at once would mean asking
+                // which one a click was answering.
+                gameObject.SetActive(false);
+                managePanel.SetActive(true);
+            });
 
             Refresh();
         }
@@ -48,29 +66,19 @@ namespace PrincesPalace
 
         private void Choose(int slot)
         {
-            SaveSlotManager.CurrentSlot = slot;
+            // Everything "pick this slot and play it" shares with the main
+            // menu's Continue button now lives on SaveSlotManager -- see
+            // EnterSlot for why it stops short of navigating.
+            SaveSlotManager.EnterSlot(slot);
 
-            // A RUN DOES NOT SURVIVE THE PROCESS, and this is where that rule
-            // can finally be applied to the slot the player actually wants.
-            // RunManager's boot check runs before any scene, when the slot is
-            // still 0, so a descent abandoned by a crash or an alt-F4 in any
-            // other slot came back alive -- and dropped the player back into
-            // the fight they had quit.
-            RunManager.SettleOnOpening();
-
-            // A brand new slot is written immediately rather than on first save.
-            // Picking a slot and finding it still "Empty" next launch is the
-            // sort of thing players read as lost progress.
-            if (!SaveSystem.SlotExists(slot))
-            {
-                SaveSystem.Save(SaveData.CreateNew(), slot);
-            }
-
+            // Refreshed AFTER the write, same ordering this always used: a
+            // freshly-created slot must not still read Empty for whatever
+            // frame this panel is visible before the scene actually changes.
             Refresh();
 
             // Into the hub. The slot is written BEFORE the scene changes, so a
-            // player who picks a slot and immediately quits still finds it there
-            // -- the alternative reads as lost progress.
+            // player who picks a slot and immediately quits still finds it
+            // there.
             Navigation.Go(Navigation.Hub);
         }
     }

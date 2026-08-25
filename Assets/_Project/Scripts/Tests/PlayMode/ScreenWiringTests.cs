@@ -54,7 +54,7 @@ namespace PrincesPalace.PlayModeTests
             yield return LoadMainMenu();
 
             Assert.IsFalse(FindByName("SaveSlotPanel").activeSelf, "the save slot modal should start closed");
-            Assert.IsFalse(FindByName("OptionsPanel").activeSelf, "the options modal should start closed");
+            Assert.IsFalse(FindByName("ManageSavesPanel").activeSelf, "the manage-saves modal should start closed");
         }
 
         [UnityTest]
@@ -71,17 +71,40 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator OptionsTogglesItsModal()
+        public IEnumerator ManageSavesReplacesTheSlotList_AndBackReturnsToIt()
         {
+            // Manage Saves has no door of its own on the main menu root any
+            // more -- it is reached FROM the slot list, and it REPLACES that
+            // list rather than layering on top of it (two panels answering the
+            // same click would be ambiguous about which one it meant).
             yield return LoadMainMenu();
 
-            var panel = FindByName("OptionsPanel");
-            var options = FindByName("OptionsButton").GetComponent<Button>();
+            var slotPanel = FindByName("SaveSlotPanel");
+            var managePanel = FindByName("ManageSavesPanel");
 
-            options.onClick.Invoke();
-            Assert.IsTrue(panel.activeSelf);
-            options.onClick.Invoke();
-            Assert.IsFalse(panel.activeSelf, "a second press should close it");
+            FindByName("PlayButton").GetComponent<Button>().onClick.Invoke();
+            Assert.IsTrue(slotPanel.activeSelf);
+
+            // Start() runs one frame AFTER SetActive, not synchronously, so
+            // SaveSlotController's own listeners -- including this button's --
+            // do not exist yet on the same frame Play opened it.
+            yield return null;
+            yield return null;
+
+            FindByName("ManageSavesButton").GetComponent<Button>().onClick.Invoke();
+            Assert.IsFalse(slotPanel.activeSelf, "Manage Saves should replace the slot list, not sit over it");
+            Assert.IsTrue(managePanel.activeSelf);
+
+            // THIS is Manage Saves' own first-ever activation in this test --
+            // ResetProgressController lives on ManageSavesPanel, which started
+            // inactive, so its Start() (and with it, backButton's listener)
+            // has not run yet on the same frame the panel just opened.
+            yield return null;
+            yield return null;
+
+            FindByName("CloseManageSavesButton").GetComponent<Button>().onClick.Invoke();
+            Assert.IsFalse(managePanel.activeSelf);
+            Assert.IsTrue(slotPanel.activeSelf, "Back should return to the list Manage Saves was opened from");
         }
 
         [UnityTest]

@@ -123,5 +123,38 @@ namespace PrincesPalace
                 File.Delete(path);
             }
         }
+
+        // Which slot the player most recently played, or -1 if none exist yet.
+        //
+        // KEYED OFF THE FILE'S OWN LAST-WRITE TIME, not a field on SaveData.
+        // SaveSlotManager.CurrentSlot is process-static and resets to 0 on
+        // every launch, so it cannot answer "which slot did I play last time" —
+        // and the main menu is the FIRST screen shown, before anything has set
+        // it this session. Adding a timestamp field to SaveData would be a
+        // migration for a fact the filesystem already keeps for free.
+        //
+        // Safe against a torn write: Save() writes to a temp file and commits
+        // with File.Replace/Move, so a slot's mtime always reflects a complete
+        // write, never a partial one.
+        public static int MostRecentSlot()
+        {
+            int best = -1;
+            DateTime bestWrite = DateTime.MinValue;
+
+            for (int slot = 0; slot < SlotCount; slot++)
+            {
+                string path = PathForSlot(slot);
+                if (!File.Exists(path)) continue;
+
+                DateTime written = File.GetLastWriteTimeUtc(path);
+                if (best < 0 || written > bestWrite)
+                {
+                    best = slot;
+                    bestWrite = written;
+                }
+            }
+
+            return best;
+        }
     }
 }

@@ -109,7 +109,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             yield return null;
             Click("Slot1Button");
-            Click("OptionsButton");
+            Click("ManageSavesButton");
             // Start() runs one frame AFTER SetActive, not synchronously, so the
             // panel's listeners do not exist yet (CODE_STANDARDS section 5).
             yield return null;
@@ -128,7 +128,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             yield return null;
             Click("Slot0Button");
-            Click("OptionsButton");
+            Click("ManageSavesButton");
             // Start() runs one frame AFTER SetActive, not synchronously, so the
             // panel's listeners do not exist yet (CODE_STANDARDS section 5).
             yield return null;
@@ -154,7 +154,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             Click("Slot0Button");
             Click("Slot1Button");
-            Click("OptionsButton");
+            Click("ManageSavesButton");
             // Start() runs one frame AFTER SetActive, not synchronously, so the
             // panel's listeners do not exist yet (CODE_STANDARDS section 5).
             yield return null;
@@ -177,7 +177,12 @@ namespace PrincesPalace.PlayModeTests
             // Confirmations that appear when nothing is at stake are how people
             // learn to click through the ones that matter.
             yield return LoadMenu();
-            Click("OptionsButton");
+            Click("PlayButton");
+            // Start() runs one frame AFTER SetActive, not synchronously, so the
+            // panel's listeners do not exist yet (CODE_STANDARDS section 5).
+            yield return null;
+            yield return null;
+            Click("ManageSavesButton");
             // Start() runs one frame AFTER SetActive, not synchronously, so the
             // panel's listeners do not exist yet (CODE_STANDARDS section 5).
             yield return null;
@@ -192,7 +197,9 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator ReopeningPlayAfterADeletion_ShowsTheSlotAsEmptyAgain()
         {
             // No cross-panel event wires these together - the Play list refreshes
-            // in OnEnable. This is the path that makes that sufficient.
+            // in OnEnable, and Manage Saves' own Back button is what triggers
+            // it now: Back re-shows SaveSlotPanel directly rather than handing
+            // the player back to the main menu root to reopen Play themselves.
             yield return LoadMenu();
             Click("PlayButton");
             // Start() runs one frame AFTER SetActive, not synchronously, so the
@@ -202,20 +209,16 @@ namespace PrincesPalace.PlayModeTests
             Click("Slot4Button");
             Click("CloseSaveSlotButton");
 
-            Click("OptionsButton");
-            // Start() runs one frame AFTER SetActive, not synchronously, so the
-            // panel's listeners do not exist yet (CODE_STANDARDS section 5).
+            Click("PlayButton");
+            Click("ManageSavesButton");
+            // First-ever activation of Manage Saves in this test, so its own
+            // listeners need the same one-frame grace Play's did above.
             yield return null;
             yield return null;
             Click("ResetSlot4DeleteButton");
             Click("ResetConfirmYesButton");
-            Click("CloseOptionsButton");
+            Click("CloseManageSavesButton");
 
-            Click("PlayButton");
-            // Start() runs one frame AFTER SetActive, not synchronously, so the
-            // panel's listeners do not exist yet (CODE_STANDARDS section 5).
-            yield return null;
-            yield return null;
             Assert.AreEqual("Slot 5: Empty", SlotButtonText(4));
         }
     
@@ -290,13 +293,16 @@ namespace PrincesPalace.PlayModeTests
             // InternalsVisibleTo is granted to the Editor assembly only -- a
             // PlayMode test is deliberately kept from reaching into controller
             // state, so it has to press what a player presses.
-            // OPEN OPTIONS FIRST, because that is where the reset UI lives and
-            // the panel starts inactive -- so ResetProgressController.Start has
-            // not run and none of its listeners are wired until a player opens
-            // it. Found by this test failing on the assertion below rather than
-            // on the one it was written for, which is why that assertion is
-            // there.
-            ClickByName("OptionsButton");
+            // OPEN PLAY THEN MANAGE SAVES, because that is where the reset UI
+            // lives and both panels start inactive -- so
+            // ResetProgressController.Start has not run and none of its
+            // listeners are wired until a player reaches it. Found by this
+            // test failing on the assertion below rather than on the one it
+            // was written for, which is why that assertion is there.
+            ClickByName("PlayButton");
+            yield return null;
+            yield return null;
+            ClickByName("ManageSavesButton");
             yield return null;
             yield return null;
 
@@ -323,5 +329,87 @@ namespace PrincesPalace.PlayModeTests
                 "everything on it survived being deleted");
         }
 
+        // ---- Manage Saves lives inside the slot flow now, not on the root --
+
+        [UnityTest]
+        public IEnumerator BackFromManageSaves_ReturnsToTheSlotList()
+        {
+            yield return LoadMenu();
+            Click("PlayButton");
+            yield return null;
+            yield return null;
+            Click("ManageSavesButton");
+            yield return null;
+            yield return null;
+
+            Click("CloseManageSavesButton");
+
+            Assert.IsFalse(Named("ManageSavesPanel").activeSelf);
+            Assert.IsTrue(Named("SaveSlotPanel").activeSelf,
+                "Back should return to the list it was opened from, not to the main menu root");
+        }
+
+        // ---- Continue --------------------------------------------------------
+
+        [UnityTest]
+        public IEnumerator WithNoSaveAtAll_ContinueDoesNotShow()
+        {
+            yield return LoadMenu();
+
+            var continueGo = Named("ContinueButton");
+            Assert.IsNotNull(continueGo, "the button is built unconditionally and toggled at runtime");
+            Assert.IsFalse(continueGo.activeSelf, "nothing has ever been saved, so there is nothing to continue");
+        }
+
+        [UnityTest]
+        public IEnumerator WithASave_ContinueNamesItsSlot()
+        {
+            SaveSystem.Save(SaveData.CreateNew(), 2);
+
+            yield return LoadMenu();
+
+            var continueGo = Named("ContinueButton");
+            Assert.IsTrue(continueGo.activeSelf);
+            Assert.AreEqual("Continue - Slot 3", continueGo.GetComponentInChildren<TMP_Text>(true).text);
+        }
+
+        [UnityTest]
+        public IEnumerator ContinueEntersTheSameSlotItNames()
+        {
+            SaveSystem.Save(SaveData.CreateNew(), 1);
+            yield return LoadMenu();
+
+            Click("ContinueButton");
+
+            Assert.AreEqual(1, SaveSlotManager.CurrentSlot);
+            CollectionAssert.Contains(_navigated, Navigation.Hub);
+        }
+
+        [UnityTest]
+        public IEnumerator DeletingTheContinueSlot_HidesContinueOnceItIsGone()
+        {
+            // The one path that makes RefreshContinue's existence worth
+            // asserting: Continue is computed once at Start, and the only
+            // thing that can make it wrong INSIDE one visit to the menu is
+            // deleting the very slot it is offering.
+            SaveSystem.Save(SaveData.CreateNew(), 0);
+            yield return LoadMenu();
+
+            var continueGo = Named("ContinueButton");
+            Assert.IsTrue(continueGo.activeSelf, "fixture: Continue should start visible");
+
+            Click("PlayButton");
+            yield return null;
+            yield return null;
+            Click("ManageSavesButton");
+            yield return null;
+            yield return null;
+
+            Click("ResetSlot0DeleteButton");
+            Click("ResetConfirmYesButton");
+
+            Assert.IsFalse(continueGo.activeSelf,
+                "the only save just got deleted, so Continue has nothing left to offer");
+        }
 }
 }

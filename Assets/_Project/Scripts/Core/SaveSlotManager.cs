@@ -56,5 +56,37 @@ namespace PrincesPalace
             _cached = null;
             _cachedSlot = -1;
         }
+
+        // THE SHARED HALF OF "PICK THIS SLOT AND PLAY IT" -- everything a
+        // caller needs to do BEFORE navigating, in one place rather than
+        // duplicated between the slot list and the main menu's Continue
+        // button. Deliberately does NOT navigate itself: SaveSlotController
+        // refreshes its own labels from the freshly-written file before
+        // leaving, and Continue has no labels to refresh, so the one step
+        // that differs between the two callers is the one step left out here.
+        //
+        // A brand new slot is written immediately rather than on first save —
+        // picking a slot and finding it still "Empty" next launch reads as
+        // lost progress. Harmless for Continue's own caller, which only ever
+        // passes a slot MostRecentSlot found on disk and so always takes the
+        // already-exists branch; kept here rather than split out so the two
+        // callers cannot drift on what "entering a slot" means.
+        public static void EnterSlot(int slot)
+        {
+            CurrentSlot = slot;
+
+            // A RUN DOES NOT SURVIVE THE PROCESS. RunManager's boot check runs
+            // before any scene, when the slot is still 0, so a descent
+            // abandoned by a crash or an alt-F4 in any other slot came back
+            // alive — and dropped the player back into the fight they had
+            // quit. See SaveSlotController, which is where this rule lived
+            // before Continue needed it too.
+            RunManager.SettleOnOpening();
+
+            if (!SaveSystem.SlotExists(slot))
+            {
+                SaveSystem.Save(SaveData.CreateNew(), slot);
+            }
+        }
     }
 }
