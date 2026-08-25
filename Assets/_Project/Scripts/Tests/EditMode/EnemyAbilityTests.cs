@@ -348,6 +348,138 @@ namespace PrincesPalace.Domain.Tests
         }
 
 
+        // ---- what the view is handed ---------------------------------------------
+
+        // A MONSTER'S CAST HAS TO BE DRAWN, and nothing checked that it was.
+        //
+        // THE TEST THAT WOULD HAVE CAUGHT THE DROPPED BEAT, and the reason it
+        // is worth having on top of AndThenActuallyCastsIt just above: that one
+        // asserts the hero lost health, which is model state and landed
+        // perfectly well while every visible part of the cast was being thrown
+        // away. A monster casting a real skill returned out of ResolveEnemyAction
+        // before the CommitBeat at the bottom of it, so the beat holding the
+        // spell frames, the poses, the number and the log line was abandoned.
+        // Reported from play as the Bog Witch not using her Mud Burst animation.
+        //
+        // Asserting on the BEAT rather than on the damage is the whole point:
+        // the beat is the only thing the view is ever handed, so it is the only
+        // place "will the player see this" can be asked.
+        //
+        // THE POSE IS A SECOND BUG in the same three lines. A damaging skill's
+        // authored stance was dropped: the enemy path set it before the beat it
+        // belonged to existed (a silent no-op against a null _recordingBeat)
+        // and ResolveDamageSingle then posed the caster with a flat "cast".
+        [Test]
+        public void AMonstersCastCarriesItsSpellAnimationAndItsOwnPose()
+        {
+            var (session, hero, monster) = WithAbility(Conjuring());
+
+            session.PrepareEnemyIntents();
+            session.ExecuteAttack(monster);
+
+            var cast = session.DrainBeats().LastOrDefault(b => ReferenceEquals(b.Actor, monster));
+
+            Assert.IsNotNull(cast,
+                "the monster's cast never reached the view at all -- the beat was opened and " +
+                "abandoned rather than committed, so its spell, pose, number and log line are gone");
+            Assert.IsTrue(cast.HasSpellAnimation,
+                "the monster's cast reached the view with no spell frames, so nothing would be drawn");
+            Assert.AreEqual("Spells/mud_burst", cast.Vfx.path);
+            Assert.AreSame(hero, cast.Target, "the effect lands on whoever was cast at");
+
+            Assert.AreEqual("attack_charge", cast.Stances[monster],
+                "the skill named its own stance and was posed with the generic cast instead");
+        }
+
+        // A MELEE SKILL HAS TO REACH WHAT IT HITS, and until the approach
+        // vocabulary existed it could not.
+        //
+        // Every cast opens its beat with BeginBeat(isCast: true), which roots
+        // the actor -- correct for a spell and wrong the moment monsters got
+        // melee skills. The Warden's Grapple and the Treant's Trunk Slam both
+        // resolve through the cast path, so both inherited "hold" and both
+        // connected from across the stage without leaving their mark. Reported
+        // from play as the grapple keeping the troll at the same spot.
+        //
+        // Asserted on the BEAT, which is the only thing the view is handed:
+        // the approach is a fact about the action, and a test that watched a
+        // rect move would be testing the tween instead of the decision.
+        [TestCase(StageApproach.Lunge)]
+        [TestCase(StageApproach.Close)]
+        public void AMeleeSkillTellsTheStageToCloseTheDistance(StageApproach approach)
+        {
+            var (session, _, monster) = WithAbility(Swing(approach));
+
+            session.PrepareEnemyIntents();
+            session.ExecuteAttack(monster);
+
+            var cast = session.DrainBeats().LastOrDefault(b => ReferenceEquals(b.Actor, monster));
+
+            Assert.IsNotNull(cast);
+            Assert.AreEqual(approach, cast.Approach);
+            Assert.IsFalse(cast.ActorHoldsPosition,
+                "a swing that stays where it is connects from across the stage");
+        }
+
+        // The default has to stay put, or every spell in the game starts
+        // walking over to its target.
+        [Test]
+        public void ASkillThatSaysNothingAboutMovingStandsStillAsItAlwaysHas()
+        {
+            var (session, _, monster) = WithAbility(Hex());
+
+            session.PrepareEnemyIntents();
+            session.ExecuteAttack(monster);
+
+            var cast = session.DrainBeats().LastOrDefault(b => ReferenceEquals(b.Actor, monster));
+
+            Assert.IsNotNull(cast);
+            Assert.AreEqual(StageApproach.Hold, cast.Approach);
+            Assert.IsTrue(cast.ActorHoldsPosition);
+        }
+
+        // A BLOW THE STAGE HAS TO FEEL WITHOUT LANDING.
+        //
+        // Everything else derives its shake from the damage, which leaves the
+        // Warden's Roar -- the loudest moment in its fight -- as the only
+        // silent one, because a Summon deals nothing. The floor is authored,
+        // and it has to survive the trip to the beat or the skill is decorative.
+        [Test]
+        public void ASkillCanInsistTheStageShakesEvenWhenItLandsNothing()
+        {
+            var (session, _, monster) = WithAbility(Bellow());
+
+            session.PrepareEnemyIntents();
+            session.ExecuteAttack(monster);
+
+            var cast = session.DrainBeats().LastOrDefault(b => ReferenceEquals(b.Actor, monster));
+
+            Assert.IsNotNull(cast);
+            Assert.AreEqual(0, cast.Amount, "fixture: this skill is supposed to land nothing");
+            Assert.AreEqual(0.85f, cast.Shake, 0.001f,
+                "the authored shake never reached the beat, so the roar is silent on the stage");
+        }
+
+        private static ResolvedSkill Swing(StageApproach approach) =>
+            new ResolvedSkill("swing", "Swing", "", "", 1, SkillEffect.DamageSingle,
+                SkillTargeting.SingleEnemy, 0, 0, false, 0, 12, false,
+                null, SpellPresentation.None, 0, approach: approach);
+
+        // Damages nothing on purpose -- a heal on the caster, which is the
+        // nearest thing to the Roar that does not need a summon pool behind it.
+        private static ResolvedSkill Bellow() =>
+            new ResolvedSkill("bellow", "Bellow", "", "", 1, SkillEffect.HealSelf,
+                SkillTargeting.Self, 0, 0, false, 0, 0, false,
+                null, SpellPresentation.None, 0, shake: 0.85f);
+
+        // A damaging skill that states both halves of its presentation: real
+        // frames to play, and a pose of its own to play them from.
+        private static ResolvedSkill Conjuring() =>
+            new ResolvedSkill("conjuring", "Conjuring", "", "", 1, SkillEffect.DamageSingle,
+                SkillTargeting.SingleEnemy, 0, 0, false, 0, 12, false,
+                null, new SpellPresentation { path = "Spells/mud_burst", seconds = 0.65f, impactFrame = 13 }, 0,
+                stance: "attack_charge");
+
         // ---- the golem's slam, pinned -------------------------------------------
         //
         // Boulder Slam was a 1.8x multiplier on the golem's basic attack and is

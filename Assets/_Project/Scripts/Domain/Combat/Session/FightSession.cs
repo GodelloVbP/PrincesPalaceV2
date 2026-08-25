@@ -115,6 +115,17 @@ namespace PrincesPalace.Domain.Combat.Session
         private ElementalAffinity AffinityOf(CombatantState combatant) =>
             SourceFor(combatant)?.Affinity ?? ElementalAffinity.Neutral;
 
+        // How many of one enemy id are still standing on the monsters' side.
+        //
+        // The summon cap is checked TWICE on purpose -- once when the intent is
+        // drawn so the boss does not wind up for a call that fizzles, and again
+        // when it resolves because the field can fill in between (see
+        // ResolveSummon). That double check is the design; the double
+        // EXPRESSION was not, and the two copies were free to drift into
+        // disagreeing about what "still standing" counts as.
+        private int LivingCountOf(string enemyId) =>
+            _encounter.LivingEnemies.Count(e => SourceFor(e)?.Source.Id == enemyId);
+
         public IReadOnlyList<ResolvedSkillOption> SkillOptionsFor(CombatantState actor)
         {
             var kit = KitFor(actor);

@@ -67,7 +67,9 @@ namespace PrincesPalace
                 statusMagnitude: definition.statusMagnitude,
                 statusDuration: definition.statusDuration,
                 avoidsFrontSlot: definition.avoidsFrontSlot,
-                attackHoldsPosition: definition.attackHoldsPosition);
+                attackHoldsPosition: definition.attackHoldsPosition,
+                stageScale: definition.stageScale,
+                slotSpan: definition.slotSpan);
         }
 
         // DEPTH IS APPLIED HERE, and this is the only place it is applied.
@@ -501,7 +503,8 @@ namespace PrincesPalace
                 definition.statusMagnitude, definition.statusDuration,
                 definition.requirements, definition.scalingAxis, definition.queuePushSlots,
                 definition.transform, definition.playerSelectable, definition.cooldownTurns,
-                definition.stance, definition.summonEnemyId, definition.summonCap);
+                definition.stance, definition.summonEnemyId, definition.summonCap,
+                definition.approach, definition.shake);
         }
     }
 }

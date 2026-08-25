@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -35,6 +36,35 @@ namespace PrincesPalace
         // health; this is the same fix applied to the pose.
         private readonly HashSet<CombatantState> _confirmedDefeated = new HashSet<CombatantState>();
 
+        // WHO HAS ACTUALLY ARRIVED, as against who the model already contains.
+        //
+        // The exact mirror of _confirmedDefeated, and it exists for the mirror
+        // bug. A round resolves in full before a single beat plays, so by the
+        // time playback opens its FIRST beat the Warden's Roar has already run
+        // in the model and the rat it called is already in Encounter.Enemies.
+        // The stage draws from that list, so the rat walked on at the top of
+        // the round and the roar that summoned it happened several beats later
+        // -- reported from play as "the rat spawns before the roar".
+        //
+        // Filled from the beat snapshots by PaintVitals, which is the only
+        // thing that sees a moment rather than the present: a combatant in a
+        // played beat's snapshot existed at that beat, and one that is not did
+        // not exist yet.
+        private readonly HashSet<CombatantState> _confirmedPresent = new HashSet<CombatantState>();
+
+        // Same busy/idle split StanceOf draws, and for the same reason: while a
+        // round is playing only what a beat has confirmed counts, and the rest
+        // of the time there is no in-flight animation to get ahead of.
+        private bool IsOnStage(CombatantState combatant) =>
+            combatant != null && (!_isBusy || _confirmedPresent.Contains(combatant));
+
+        // Everyone a beat's snapshot mentions has, by definition, arrived.
+        internal void ConfirmPresent(IReadOnlyDictionary<CombatantState, Vitals> vitals)
+        {
+            if (vitals == null) return;
+            foreach (var pair in vitals) _confirmedPresent.Add(pair.Key);
+        }
+
         // Horizontal centring is MEASURED rather than authored, unlike the
         // ground line -- see RefreshCombatantSprite. Cached because it opens a
         // sprite's pixels, which is far too expensive to do per repaint.
@@ -48,11 +78,29 @@ namespace PrincesPalace
             if (_session == null) return;
 
             var enemies = _session.Encounter.Enemies;
-            AnchorStageSlots(enemySlots, enemies.Count, mirrored: false);
+
+            // THE SHOWN COUNT, not the roster's. Spreading the formation for a
+            // monster nobody can see yet would shuffle the survivors sideways
+            // to make room for it, which gives the arrival away just as loudly
+            // as drawing it early did.
+            //
+            // A hidden newcomer is always the LAST entry -- a summon appends to
+            // the encounter -- so counting them is enough and no re-packing of
+            // the slot indices is needed. Everything else on this stage maps a
+            // combatant to a slot by its index in this same list (SlotFor, the
+            // plates, the intent icons), and re-packing would have to move all
+            // of them together.
+            int onStage = 0;
+            for (int i = 0; i < enemies.Count; i++)
+            {
+                if (IsOnStage(enemies[i])) onStage++;
+            }
+
+            AnchorStageSlots(enemySlots, onStage, mirrored: false, StageScaleForSlot);
 
             for (int i = 0; i < enemySprites.Length; i++)
             {
-                var enemy = i < enemies.Count ? enemies[i] : null;
+                var enemy = i < enemies.Count && IsOnStage(enemies[i]) ? enemies[i] : null;
                 enemySlots[i].gameObject.SetShown(enemy != null);
                 if (enemy == null) continue;
 
@@ -127,7 +175,8 @@ namespace PrincesPalace
         // Applies to the PARTY too. A squad of two had exactly the same problem
         // and nobody had noticed, because two sheep overlapping reads as two
         // sheep standing close together rather than as a layout fault.
-        private static void AnchorStageSlots(RectTransform[] slots, int liveCount, bool mirrored)
+        private static void AnchorStageSlots(RectTransform[] slots, int liveCount, bool mirrored,
+                                            System.Func<int, float> presence = null)
         {
             if (slots == null || liveCount <= 0) return;
 
@@ -139,7 +188,16 @@ namespace PrincesPalace
                 var offset = FightStageAnchors.SlotOffset(i, shown, mirrored);
                 var mark = new Vector2(offset.X, offset.Y);
 
-                float scale = FightStageAnchors.SlotScale(i, shown);
+                // DEPTH FIRST, THEN THE CREATURE. The stage's own scale answers
+                // "how far away is this slot"; the multiplier answers "how big
+                // is the thing standing in it", and those are two different
+                // questions that were previously being given one answer. See
+                // RawEnemyEntry.stageScale.
+                //
+                // Multiplied rather than substituted, so a boss in the back row
+                // is still smaller than the same boss in front and the
+                // perspective the whole stage rests on survives.
+                float scale = FightStageAnchors.SlotScale(i, shown) * (presence?.Invoke(i) ?? 1f);
                 var baseScale = new Vector3(scale, scale, 1f);
 
                 var animator = slots[i].GetComponent<StageActorAnimator>();
@@ -408,7 +466,7 @@ namespace PrincesPalace
             image.rectTransform.localScale = new Vector3(mirror, 1f, 1f);
 
             string folder = SpriteFolderFor(combatant);
-            GroundTheFigure(image, slotRect, folder);
+            GroundTheFigure(image, slotRect, folder, SidewaysDrift(combatant, folder, stance, mirror));
             PlaceShadow(slotRect, folder, mirror);
 
             // Synced AFTER the mirror and carrying it: the flash overlay is a
@@ -474,7 +532,7 @@ namespace PrincesPalace
         // the bug being designed out is a figure MOVING VERTICALLY between
         // stances, and a constant offset cannot do that by construction, where a
         // recomputed one merely usually doesn't.
-        private static void GroundTheFigure(Image image, RectTransform slotRect, string folder)
+        private static void GroundTheFigure(Image image, RectTransform slotRect, string folder, float drift)
         {
             if (slotRect == null) return;
 
@@ -485,9 +543,65 @@ namespace PrincesPalace
             float drop = StanceManifestLoader.Manifest.GroundLineFor(folder);
 
             // The sprite is anchor-stretched across the slot, so it is nudged
-            // with offsetMin/Max rather than anchoredPosition.
-            image.rectTransform.offsetMin = new Vector2(0f, -drop);
-            image.rectTransform.offsetMax = new Vector2(0f, -drop);
+            // with offsetMin/Max rather than anchoredPosition. THE SAME VALUE
+            // ON BOTH, per axis, which is what makes this a translation rather
+            // than a resize -- the drift correction rides the identical
+            // mechanism the ground line already uses, so the two cannot fight
+            // over the rect.
+            image.rectTransform.offsetMin = new Vector2(-drift, -drop);
+            image.rectTransform.offsetMax = new Vector2(-drift, -drop);
+        }
+
+        // HOW FAR THIS PARTICULAR DRAWING SITS OFF THE POSE'S OWN CENTRE.
+        //
+        // Zero for every stance that is not marked steady, which today is
+        // every stance but idle. See StanceTiming.Steady for why cancelling
+        // this in a swing would nail the figure to the spot mid-lunge.
+        //
+        // MEASURED AGAINST FRAME 0 OF THE SAME STANCE, not against the frame's
+        // geometric middle. The question being asked is "has the creature moved
+        // since this pose began"; answering it against the canvas instead would
+        // shove an idle sideways for any sheet whose figure is simply drawn off
+        // centre, which is a property of the art rather than a wobble.
+        private float SidewaysDrift(CombatantState combatant, string folder, string stance, float mirror)
+        {
+            if (combatant == null || string.IsNullOrWhiteSpace(folder)) return 0f;
+
+            var animation = StanceAnimationLibrary.Resolve(folder, stance);
+            if (!animation.Steady || animation.FrameCount <= 1) return 0f;
+
+            int frame = FrameFor(combatant);
+            if (frame <= 0) return 0f;
+
+            var sprite = animation.FrameAt(frame);
+            var first = animation.FrameAt(0);
+            if (sprite == null || first == null) return 0f;
+
+            float here = ContentCentreFor(folder, stance, frame, sprite);
+            float home = ContentCentreFor(folder, stance, 0, first);
+
+            // The centres are fractions of the frame's width, so the pixels come
+            // back out by multiplying by it. Mirrored for the same reason
+            // PlaceShadow is: a figure leaning right appears to lean left once
+            // flipped, and a correction blind to that would double the error
+            // instead of cancelling it.
+            return (here - home) * sprite.rect.width * mirror;
+        }
+
+        // Per-FRAME, unlike ContentCentreFractionForActor, which answers for the
+        // actor as a whole from its idle frame 0 and is what the badge and the
+        // shadow want. Cached for the same reason that one is: the measurement
+        // opens a texture's pixels, which must never happen per repaint.
+        private static readonly Dictionary<string, float> FrameCentreCache = new Dictionary<string, float>();
+
+        private static float ContentCentreFor(string folder, string stance, int frame, Sprite sprite)
+        {
+            string key = folder + "/" + stance + "#" + frame;
+            if (FrameCentreCache.TryGetValue(key, out var cached)) return cached;
+
+            float centre = ContentCentreFraction(sprite);
+            FrameCentreCache[key] = centre;
+            return centre;
         }
 
         // The ring stays ON the ground line. Only its X needs correcting, for art
@@ -574,7 +688,35 @@ namespace PrincesPalace
                 // The pose's own confirmation, alongside the fade's. Same
                 // beat-scoped moment, same reason: this is the first point
                 // "actually dead" is allowed to become visible.
-                _confirmedDefeated.Add(pair.Key);
+                //
+                // The RETURN of Add is the "first time we have seen this
+                // corpse" signal, and it is load-bearing below: a body is in
+                // the snapshot of every beat after the one that killed it, so
+                // everything here is asked repeatedly.
+                bool firstSight = _confirmedDefeated.Add(pair.Key);
+
+                // THE DEATH ANIMATION, which until now never played.
+                //
+                // FightBeatPlayer steps frames for the beat's ACTOR only --
+                // reasonably, since a target's reaction is a recoil and a
+                // flash rather than an animation. But the thing that DIES is
+                // the target, so a corpse held whatever frame PoseCombatant
+                // reset it to, which is 0, and then faded.
+                //
+                // That was invisible for every kit on the roster because their
+                // defeated art opens already collapsed -- frame 0 is a body on
+                // the floor and the remaining frames are it settling. The
+                // Ironback Beetle's does not: its six frames run from standing
+                // through the flip onto its back, so it died by standing
+                // perfectly still and fading out. Reported from play, not
+                // caught here, which is the whole reason it is worth saying
+                // out loud that a multi-frame defeated pose was decorative.
+                //
+                // Timed to fit what StageDeathFade already allows: 0.35s of
+                // hold before the fade starts and 0.6s of fade, against a
+                // six-frame collapse at ~0.11s a frame. The body finishes
+                // falling roughly as it starts to go.
+                if (firstSight) StartCoroutine(PlayDefeatedFrames(pair.Key));
 
                 var slot = SlotFor(pair.Key);
                 var fade = slot == null ? null : slot.GetComponent<StageDeathFade>();
@@ -586,6 +728,161 @@ namespace PrincesPalace
             }
         }
 
+        // Walks a corpse through its own defeated frames.
+        //
+        // Its own coroutine rather than playback's, because it OUTLIVES the
+        // beat that caused it -- the body keeps falling while the next line of
+        // the log is already being written, and a beat owns its own length.
+        // The pacing is shared all the same (StanceStepper): this used to walk
+        // the frames flat, which animated the corpse and still made it read as
+        // a slideshow.
+        //
+        // The abandon check is polled every frame: the fight can end, or the
+        // stage reset, while a body is still going down, and writing frames for
+        // a combatant whose slot the next encounter has reused is how a fresh
+        // fight opens with someone else's corpse in it.
+        private IEnumerator PlayDefeatedFrames(CombatantState combatant) =>
+            StanceStepper.Play(
+                StanceAnimationFor(combatant, FightSession.Stances.Defeated),
+                frame => SetActorFrame(combatant, frame),
+                abandon: () => _session == null);
+
+        // ---- the breath between blows --------------------------------------------
+
+        // NOBODY BREATHED. Every idle sheet in the game was a still.
+        //
+        // Three actors ship a six-frame idle -- the Beetle, the Treant and the
+        // Forest Warden -- and the manifest authors a pace for each of them
+        // (0.12s to 0.14s a frame). Nothing ever stepped those frames, so all
+        // three stood on frame 0 for the whole fight. The art and the timing
+        // were both already there; what was missing was anything to drive them.
+        //
+        // FightBeatPlayer could not be that thing, and its own comment says why
+        // without realising it: "Idle is a single frame today, so this is a
+        // no-op". Playback steps the beat's ACTOR, and the beat's actor is
+        // never idle -- it is swinging. An idle loop is the opposite shape from
+        // everything in that class: it belongs to no beat, it has to run while
+        // the game sits waiting for a click, and it never ends.
+        //
+        // So it lives here, beside the corpse stepper, which is the other
+        // animation the controller owns for the same reason: playback does not
+        // drive it and it outlives the beat.
+        private Coroutine _idling;
+
+        // Where each figure is in its own breath. Cleared per combatant the
+        // moment it stops being idle, which is what makes the loop restart from
+        // frame 0 on the way back rather than resuming mid-inhale from before
+        // the blow.
+        private readonly Dictionary<CombatantState, float> _idleClock =
+            new Dictionary<CombatantState, float>();
+
+        // How far apart two figures' breaths are pushed, in frames.
+        //
+        // Two Ironback Beetles side by side breathing in perfect lockstep read
+        // as one animation drawn twice rather than as two animals -- the same
+        // failure AnchorStageSlots' own note describes for two rats overlapping
+        // into "one monster with a spare tail". Offsetting by slot index is
+        // free and deterministic, which matters: a random phase would make a
+        // capture test's screenshot differ run to run.
+        private const float IdlePhaseFrames = 1.6f;
+
+        private void StartIdleBreathing()
+        {
+            // Cleared on every fight, because the keys are CombatantStates and
+            // the next encounter's are different objects -- the old entries
+            // would otherwise sit here for the session's life.
+            _idleClock.Clear();
+
+            if (_idling != null || !isActiveAndEnabled) return;
+
+            _idling = StartCoroutine(IdleBreathing());
+        }
+
+        // ONE COROUTINE FOR THE WHOLE STAGE, not one per figure.
+        //
+        // Per-figure handles would need starting and stopping on every pose
+        // change, on every death, on every reset, and on a combatant that
+        // joins mid-fight (the Warden's Roar summons rats). Reading the stance
+        // each frame instead means the rule is stated once and cannot fall out
+        // of step: whatever is idle, breathes.
+        //
+        // That rule is also what keeps this off playback's toes. A figure being
+        // driven by a beat is in `attack`, `cast`, `hurt` or `defeated`, never
+        // in `idle`, so the two can never write the same combatant's frame.
+        private IEnumerator IdleBreathing()
+        {
+            while (true)
+            {
+                yield return null;
+
+                if (_session == null) continue;
+
+                // ONE REPAINT FOR THE WHOLE STAGE, and only when a frame
+                // actually turned over. Stepping through SetActorFrame would
+                // refresh once per combatant per frame for a picture that is
+                // drawn once either way.
+                bool moved = false;
+
+                var enemies = _session.Encounter.Enemies;
+                for (int i = 0; i < enemies.Count; i++) moved |= StepIdleFrame(enemies[i], i);
+
+                var party = _session.Encounter.PlayerParty;
+                for (int i = 0; i < party.Count; i++) moved |= StepIdleFrame(party[i], i);
+
+                if (moved) RefreshStage();
+            }
+        }
+
+        // Advances one figure's breath. True when the drawing changed.
+        private bool StepIdleFrame(CombatantState combatant, int index)
+        {
+            if (combatant == null) return false;
+
+            // StanceOf, not _stance, so a corpse is excluded by the same rule
+            // the rest of the stage reads it by -- including the beat-confirmed
+            // one, which is what stops a body twitching between the blow that
+            // killed it and the pose that says so.
+            if (StanceOf(combatant) != FightSession.Stances.Idle)
+            {
+                _idleClock.Remove(combatant);
+                return false;
+            }
+
+            var animation = StanceAnimationFor(combatant, FightSession.Stances.Idle);
+            if (animation.FrameCount <= 1) return false;
+
+            // NOT FrameHoldCurve, and not a flat step either.
+            //
+            // FrameHoldCurve shapes a motion around its impact frame -- a long
+            // wind-up, a snap, a long settle -- which is right for a blow and
+            // wrong for a loop, since an idle authors impactFrame 1 because it
+            // has no impact. A flat step is what made this read as "a loop of 6
+            // sprites" in the first place. LoopCycle owns both halves of the
+            // answer and its header carries the measurements.
+            float perFrame = FightBeatPlayer.Scaled(animation.SecondsPerFrame);
+            if (perFrame <= 0f) return false;
+
+            if (!_idleClock.TryGetValue(combatant, out float clock))
+            {
+                clock = index * perFrame * IdlePhaseFrames;
+            }
+
+            // UNSCALED, like every other clock on this stage. A fight paused
+            // behind a modal should not bank up a breath and spend it all at
+            // once when the panel closes.
+            clock += Time.unscaledDeltaTime;
+            _idleClock[combatant] = clock;
+
+            int frame = LoopCycle.FrameAt(clock, animation.FrameCount, perFrame, animation.Loop);
+            if (FrameFor(combatant) == frame) return false;
+
+            // Written straight into the map rather than through SetActorFrame,
+            // which would repaint the stage per combatant -- see the batching
+            // note in IdleBreathing.
+            _actorFrame[combatant] = frame;
+            return true;
+        }
+
         // Puts every figure back for a fresh encounter. The fade is the reason
         // this has to exist: an actor left at zero alpha would begin the next
         // fight invisible, and its slot is reused rather than rebuilt.
@@ -593,11 +890,34 @@ namespace PrincesPalace
         {
             _confirmedDefeated.Clear();
 
+            // SEEDED WITH WHOEVER IS ALREADY HERE. The reveal rule only ever
+            // has to hold back a monster that arrives DURING a round; the
+            // opening roster is on stage before the first beat exists, and
+            // waiting for a snapshot to say so would blank the stage for the
+            // frame between the player acting and playback starting.
+            _confirmedPresent.Clear();
+            if (_session != null)
+            {
+                foreach (var enemy in _session.Encounter.Enemies) _confirmedPresent.Add(enemy);
+                foreach (var member in _session.Encounter.PlayerParty) _confirmedPresent.Add(member);
+            }
+
+            StartIdleBreathing();
+
             foreach (var slot in enemySlots.Concat(partySlots))
             {
                 if (slot == null) continue;
                 slot.GetComponent<StageDeathFade>()?.ResetToVisible();
                 slot.GetComponent<StageActorAnimator>()?.ResetToHome();
+            }
+
+            // The racks too, for the same reason the figures are: a kick
+            // interrupted by a fight ending would leave the whole stage parked
+            // a few pixels off for the next encounter, and nothing else writes
+            // that position.
+            if (stageShakes != null)
+            {
+                foreach (var shake in stageShakes) shake?.ResetToHome();
             }
         }
 
@@ -633,6 +953,20 @@ namespace PrincesPalace
             // in one dictionary, which is a large part of why its combat logic
             // could not leave the controller.
             return PortraitFolderFor(combatant);
+        }
+
+        // How big whoever is standing in enemy slot `index` should be drawn.
+        //
+        // BY SLOT INDEX, because that is the only thing AnchorStageSlots knows
+        // -- it walks slots, not combatants, and is shared with the party rack
+        // where the question does not arise. Reading the roster back out here
+        // keeps that function's signature honest about what it operates on.
+        private float StageScaleForSlot(int index)
+        {
+            var enemies = _session?.Encounter.Enemies;
+            if (enemies == null || index < 0 || index >= enemies.Count) return 1f;
+
+            return _session.SourceFor(enemies[index])?.Source.StageScale ?? 1f;
         }
 
         private SpriteFacing FacingOf(CombatantState combatant)

@@ -1,5 +1,6 @@
 using System;
 using PrincesPalace.Domain.Combat;
+using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Content
@@ -71,6 +72,16 @@ namespace PrincesPalace.Domain.Content
         // See RawSkillEntry.playerSelectable.
         public readonly bool PlayerSelectable;
 
+        // See RawSkillEntry.shake. Clamped at construction rather than trusted,
+        // because an authored 12 would otherwise throw the whole stage off
+        // screen and the JSON has no schema to stop it.
+        public readonly float Shake;
+
+        // See RawSkillEntry.approach. Hold is the long-standing behaviour and
+        // the default, so a skill that says nothing stands still exactly as it
+        // always has.
+        public readonly StageApproach Approach;
+
         // See RawSkillEntry.stance. Empty means the long-standing default:
         // whoever resolves this skill plays their "cast" pose.
         public readonly string Stance;
@@ -89,7 +100,8 @@ namespace PrincesPalace.Domain.Content
             StatusEffectType? appliesStatus = null, int statusMagnitude = 0, int statusDuration = 0,
             AbilityScoreBlock requirements = default, ScalingAxis scalingAxis = ScalingAxis.Auto,
             int queuePushSlots = 0, TransformGrant transform = null, bool playerSelectable = true,
-            int cooldownTurns = 0, string stance = "", string summonEnemyId = "", int summonCap = 0)
+            int cooldownTurns = 0, string stance = "", string summonEnemyId = "", int summonCap = 0,
+            StageApproach approach = StageApproach.Hold, float shake = 0f)
         {
             CooldownTurns = cooldownTurns < 0 ? 0 : cooldownTurns;
             PlayerSelectable = playerSelectable;
@@ -119,6 +131,8 @@ namespace PrincesPalace.Domain.Content
             Requirements = requirements;
             ScalingAxis = scalingAxis;
             Stance = stance ?? "";
+            Approach = approach;
+            Shake = shake < 0f ? 0f : (shake > 1f ? 1f : shake);
             SummonEnemyId = summonEnemyId ?? "";
             SummonCap = summonCap;
         }

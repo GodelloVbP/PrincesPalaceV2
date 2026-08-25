@@ -36,6 +36,11 @@ namespace PrincesPalace
         [SerializeField] internal Image[] enemyFootShadows;
 
         [SerializeField] internal RectTransform[] partySlots;
+
+        // The two stage racks' shakers. Both kick together: a blow shakes the
+        // stage, not the half of it the victim happens to stand on -- one side
+        // jolting while the other holds still reads as a bug in the layout.
+        [SerializeField] internal StageShake[] stageShakes;
         [SerializeField] internal Image[] partySprites;
         [SerializeField] internal Image[] partyHitFlashes;
         [SerializeField] internal TMP_Text[] partyNameplates;
@@ -332,6 +337,17 @@ namespace PrincesPalace
             beatPlayer.FadeTheFallen = FadeTheFallen;
             beatPlayer.ImpactDelayFor = ImpactDelayFor;
             beatPlayer.StopVfx = StopSpellVfx;
+            beatPlayer.ShakeStage = ShakeStage;
+        }
+
+        // Kicks both stage racks. Playback decides how hard; the view decides
+        // what "the stage" means, which is exactly the split every other
+        // delegate on beatPlayer already draws.
+        private void ShakeStage(float strength)
+        {
+            if (stageShakes == null) return;
+
+            foreach (var shake in stageShakes) shake?.Kick(strength);
         }
 
         // Where a combatant is standing, for the floating number. The view owns
@@ -367,6 +383,14 @@ namespace PrincesPalace
         private void PaintVitals(IReadOnlyDictionary<CombatantState, Vitals> vitals)
         {
             if (vitals == null) return;
+
+            // A SNAPSHOT IS ALSO A GUEST LIST. Anyone it mentions existed at
+            // the moment it was taken, which is the only signal the stage has
+            // for when a summoned monster is allowed to be seen -- see
+            // _confirmedPresent. Done here rather than in a fourth delegate
+            // because this is already the one call that receives a moment.
+            ConfirmPresent(vitals);
+            RefreshStage();
 
             var enemies = Enemies;
             for (int i = 0; i < enemies.Count && i < enemyPlates.Length; i++)

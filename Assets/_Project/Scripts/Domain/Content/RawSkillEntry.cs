@@ -168,6 +168,26 @@ namespace PrincesPalace.Domain.Content
         // rather than three abilities sharing one generic casting pose.
         public string stance = "";
 
+        // HOW THE CASTER GETS TO WHAT IT IS HITTING. "hold", "lunge" or
+        // "close"; empty means hold, which is what every skill did before this
+        // existed and therefore changes nothing for the ones that say nothing.
+        //
+        // A STRING rather than the enum, for the reason `anchor` and
+        // StanceManifest's `loop` are: JsonUtility writes an enum as its
+        // ordinal, so the file would read "approach": 2 and reordering the
+        // enum would silently repoint every skill in the game.
+        //
+        // Worth authoring on any melee skill. A monster's claws going through
+        // the skill path rather than the plain-attack one is not a reason for
+        // them to stop reaching, and until this field existed it was.
+        public string approach = "";
+
+        // How hard this skill kicks the stage on its own account, 0..1. Zero
+        // means "whatever the damage was worth", which is every skill that has
+        // not thought about it. See CombatBeat.Shake for the blow that has to
+        // be felt without landing.
+        public float shake;
+
         // Summon only. The enemy id (Assets/_Project/ContentData/enemies.json)
         // this skill calls in on the caster's own side. Required together
         // with summonCap; empty means this skill does not summon anything,

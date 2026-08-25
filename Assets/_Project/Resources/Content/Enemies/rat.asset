@@ -53,3 +53,5 @@ MonoBehaviour:
   statusDuration: 3
   avoidsFrontSlot: 1
   attackHoldsPosition: 0
+  stageScale: 1
+  slotSpan: 1

@@ -59,6 +59,8 @@ MonoBehaviour:
     temporaryHealthPercent: 0
     splashPercent: 0
   stance: attack_charge
+  approach: 1
+  shake: 0
   summonEnemyId: 
   summonCap: 0
   sortOrder: 20

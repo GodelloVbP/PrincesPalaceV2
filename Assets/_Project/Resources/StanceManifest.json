@@ -22,21 +22,35 @@
     "rather than baked by ContentBuilder, and deliberately NOT under",
     "Resources/Content/, which ContentBuilder deletes wholesale on every run."
   ],
-
   "actors": [
     {
       "spritePath": "Enemies/golem",
       "groundLine": 69,
       "stances": [
-        { "stance": "attack", "secondsPerFrame": 0.08, "impactFrame": 3, "soundFrame": 3 },
-        { "stance": "cast", "secondsPerFrame": 0.08, "impactFrame": 3, "soundFrame": 3 }
+        {
+          "stance": "attack",
+          "secondsPerFrame": 0.08,
+          "impactFrame": 3,
+          "soundFrame": 3
+        },
+        {
+          "stance": "cast",
+          "secondsPerFrame": 0.08,
+          "impactFrame": 3,
+          "soundFrame": 3
+        }
       ]
     },
     {
       "spritePath": "Enemies/rat",
       "groundLine": 12,
       "stances": [
-        { "stance": "attack", "secondsPerFrame": 0.08, "impactFrame": 3, "soundFrame": 3 }
+        {
+          "stance": "attack",
+          "secondsPerFrame": 0.08,
+          "impactFrame": 3,
+          "soundFrame": 3
+        }
       ]
     },
     {
@@ -48,7 +62,12 @@
       "spritePath": "Characters/sheep",
       "groundLine": 43,
       "stances": [
-        { "stance": "attack", "secondsPerFrame": 0.08, "impactFrame": 3, "soundFrame": 3 }
+        {
+          "stance": "attack",
+          "secondsPerFrame": 0.08,
+          "impactFrame": 3,
+          "soundFrame": 3
+        }
       ]
     },
     {
@@ -56,12 +75,131 @@
       "groundLine": 14,
       "_groundLineNote": "Every forest_warden frame was cropped independently to its own content bounding box plus a uniform 14px pad on every side, rather than sliced off one shared-canvas sheet the way golem/rat were -- so this value is that pad, not a measured foot position. It should hold well for idle/attack/attack_roar/attack_charge, where the feet are consistently each frame's lowest point; hurt and defeated change body orientation enough that a small vertical pop between stances is possible and worth an eyeball pass in the editor.",
       "stances": [
-        { "stance": "idle", "secondsPerFrame": 0.12, "impactFrame": 1, "soundFrame": 1 },
-        { "stance": "attack", "secondsPerFrame": 0.08, "impactFrame": 5, "soundFrame": 5 },
-        { "stance": "attack_roar", "secondsPerFrame": 0.1, "impactFrame": 4, "soundFrame": 4 },
-        { "stance": "attack_charge", "secondsPerFrame": 0.07, "impactFrame": 5, "soundFrame": 5 },
-        { "stance": "hurt", "secondsPerFrame": 0.08, "impactFrame": 1, "soundFrame": 1 },
-        { "stance": "defeated", "secondsPerFrame": 0.1, "impactFrame": 1, "soundFrame": 1 }
+        {
+          "stance": "idle",
+          "secondsPerFrame": 0.12,
+          "impactFrame": 1,
+          "soundFrame": 1
+        },
+        {
+          "stance": "attack",
+          "secondsPerFrame": 0.08,
+          "impactFrame": 5,
+          "soundFrame": 5
+        },
+        {
+          "stance": "attack_roar",
+          "_note": "0.2 rather than the 0.1 every other Warden stance runs at, on request -- the roar reads as the fight's turning point and was over faster than its plain swing. Doubling the pace doubles the beat: FightBeatPlayer budgets a beat at secondsPerFrame x FrameCount, so nothing in code had to change for this.",
+          "secondsPerFrame": 0.2,
+          "impactFrame": 4,
+          "soundFrame": 4
+        },
+        {
+          "stance": "attack_charge",
+          "secondsPerFrame": 0.07,
+          "impactFrame": 5,
+          "soundFrame": 5
+        },
+        {
+          "stance": "hurt",
+          "secondsPerFrame": 0.08,
+          "impactFrame": 1,
+          "soundFrame": 1
+        },
+        {
+          "stance": "defeated",
+          "secondsPerFrame": 0.1,
+          "impactFrame": 1,
+          "soundFrame": 1
+        }
+      ]
+    },
+    {
+      "spritePath": "Enemies/beetle",
+      "groundLine": 12,
+      "_loopNote": "The beetle's idle is authored as a COMPLETE cycle -- measured, not assumed: the step from its last drawing back to its first is 18.9 units of mean pixel difference against a 11.8-20.3 spread across the other five, i.e. unremarkable. So it plays forward. The Treant's and the Warden's are half-cycles whose wrap is the biggest step in the sequence, and both stay on the ping-pong default. See Domain/Stage/LoopCycle.",
+      "_groundLineNote": "Delivered by tools/pad_actor_frames.py, which bottom-aligns every frame -- so unlike forest_warden's, this ground line cannot drift between stances. Impact frames below are eyeballed off the art: the beetle's bite lands as the mandibles open (f2, 1-indexed 3) and the roll connects late (f5).",
+      "stances": [
+        {
+          "stance": "idle",
+          "secondsPerFrame": 0.14,
+          "impactFrame": 1,
+          "soundFrame": 1,
+          "loop": "forward"
+        },
+        {
+          "stance": "attack",
+          "secondsPerFrame": 0.07,
+          "impactFrame": 3,
+          "soundFrame": 3
+        },
+        {
+          "stance": "turtle_up",
+          "secondsPerFrame": 0.07,
+          "impactFrame": 5,
+          "soundFrame": 5
+        },
+        {
+          "stance": "shell_closed",
+          "secondsPerFrame": 0.12,
+          "impactFrame": 1,
+          "soundFrame": 1
+        },
+        {
+          "stance": "hurt",
+          "secondsPerFrame": 0.08,
+          "impactFrame": 1,
+          "soundFrame": 1
+        },
+        {
+          "stance": "defeated",
+          "secondsPerFrame": 0.11,
+          "impactFrame": 1,
+          "soundFrame": 1
+        }
+      ]
+    },
+    {
+      "spritePath": "Enemies/treant",
+      "groundLine": 12,
+      "_groundLineNote": "As above. The slam lands when the trunk is fully over (f3) and the spore burst when the arms reach their widest (f4).",
+      "stances": [
+        {
+          "stance": "idle",
+          "secondsPerFrame": 0.14,
+          "impactFrame": 1,
+          "soundFrame": 1
+        },
+        {
+          "stance": "attack",
+          "secondsPerFrame": 0.08,
+          "impactFrame": 4,
+          "soundFrame": 4
+        },
+        {
+          "stance": "trunk_slam",
+          "secondsPerFrame": 0.09,
+          "impactFrame": 3,
+          "soundFrame": 3
+        },
+        {
+          "stance": "cast",
+          "secondsPerFrame": 0.1,
+          "impactFrame": 4,
+          "soundFrame": 4
+        },
+        {
+          "stance": "hurt",
+          "secondsPerFrame": 0.08,
+          "impactFrame": 1,
+          "soundFrame": 1
+        },
+        {
+          "stance": "defeated",
+          "secondsPerFrame": 0.12,
+          "impactFrame": 1,
+          "soundFrame": 1
+        }
       ]
     }
   ]

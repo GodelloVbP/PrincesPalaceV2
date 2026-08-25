@@ -15,7 +15,7 @@ MonoBehaviour:
   id: bog_witch
   displayName: Bog Witch
   baseStats:
-    maxHealth: 160
+    maxHealth: 120
     speed: 8
     attack: 6
     defense: 2
@@ -28,7 +28,7 @@ MonoBehaviour:
   minFloor: 2
   weaknesses: 04000000
   resistances: 03000000
-  breakShieldPoints: 4
+  breakShieldPoints: 3
   spritePath: Enemies/bog_witch
   facing: 1
   sortOrder: 5
@@ -46,7 +46,7 @@ MonoBehaviour:
     impactY: -1
     sfxPath: 
   abilities:
-  - skillId: mud_burst
+  - skillId: bog_mud_burst
     weight: 2
   attackWeight: 3
   appliesStatus: 0
@@ -55,3 +55,5 @@ MonoBehaviour:
   statusDuration: 0
   avoidsFrontSlot: 0
   attackHoldsPosition: 0
+  stageScale: 1
+  slotSpan: 1

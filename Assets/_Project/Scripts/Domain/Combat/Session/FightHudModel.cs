@@ -590,6 +590,17 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             string verb = intent.IsAttack ? "attack" : intent.Label;
 
+            // A SUMMON HAS NO OBJECT. "will Roar itself" is grammatical and
+            // says nothing; what the player needs is that the fight is about to
+            // be one monster bigger. Its own sentence rather than a fourth
+            // `who` case, because the shape of the sentence is what differs --
+            // and BEFORE the switch, which it would otherwise run in full and
+            // then throw away.
+            if (intent.Kind == EnemyIntentKind.Summon)
+            {
+                return $"{enemyName} will {verb}, calling in another monster";
+            }
+
             // WHO, BY SCOPE. A telegraph that names one target for an effect
             // landing on everybody is worse than no telegraph: it is a specific
             // claim, and it is false. See EnemyIntentScope.
@@ -608,15 +619,6 @@ namespace PrincesPalace.Domain.Combat.Session
                 default:
                     who = string.IsNullOrEmpty(intent.TargetName) ? "someone" : intent.TargetName;
                     break;
-            }
-
-            // A SUMMON HAS NO OBJECT. "will Roar itself" is grammatical and
-            // says nothing; what the player needs is that the fight is about to
-            // be one monster bigger. Its own sentence rather than a fourth
-            // `who` case, because the shape of the sentence is what differs.
-            if (intent.Kind == EnemyIntentKind.Summon)
-            {
-                return $"{enemyName} will {verb}, calling in another monster";
             }
 
             string line = $"{enemyName} will {verb} {who}";

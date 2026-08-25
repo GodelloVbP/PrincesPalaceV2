@@ -113,6 +113,79 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
         }
 
+        // ---- the breath between blows ---------------------------------------
+
+        // NOBODY BREATHED, and every test in this file passed.
+        //
+        // Three actors ship a six-frame idle and the manifest authors a pace
+        // for each, and all three stood on frame 0 for the whole fight because
+        // nothing stepped them. This file's own header names the failure mode
+        // exactly -- an animation that is never driven is a silent no-op, not
+        // an error -- and then went on to test the three animations that DO
+        // belong to a beat while the one that belongs to no beat at all had no
+        // driver and no test.
+        //
+        // Asserted on a beetle specifically: the roster is mostly flat art, and
+        // a test that took whatever enemy happened to be handy would pass by
+        // testing a single-frame idle that legitimately never moves.
+        [UnityTest]
+        public IEnumerator AnIdleFigureBreathesWhileNothingIsHappening()
+        {
+            yield return AFightAgainst("Enemies/beetle");
+
+            var foe = _fight.SessionForTest.Encounter.Enemies[0];
+            Assert.AreEqual(FightSession.Stances.Idle, _fight.StanceFor(foe),
+                "the stage is not at rest, so this would be testing playback rather than the idle loop");
+
+            var seen = new HashSet<int>();
+            for (int i = 0; i < 90; i++)
+            {
+                seen.Add(_fight.FrameFor(foe));
+                yield return null;
+            }
+
+            Assert.Greater(seen.Count, 1,
+                "the idle pose never left frame 0 - a six-frame sheet is being shown as a still");
+        }
+
+        // The other half of the rule, and the reason the loop asks the sheet
+        // rather than a flag: flat art has one drawing and must simply sit on
+        // it. A loop that wrapped a single frame would repaint the whole stage
+        // every frame for a picture that never changes.
+        [UnityTest]
+        public IEnumerator FlatArtStaysPutRatherThanFlickering()
+        {
+            yield return AFightAgainst("Enemies/rat");
+
+            var foe = _fight.SessionForTest.Encounter.Enemies[0];
+
+            for (int i = 0; i < 30; i++)
+            {
+                Assert.AreEqual(0, _fight.FrameFor(foe),
+                    "a single-frame idle moved off its only drawing");
+                yield return null;
+            }
+        }
+
+        private IEnumerator AFightAgainst(string spritePath)
+        {
+            yield return OpenAFight();
+
+            var hero = new CombatantState("Shawn", true, 300, 30, 40, 0, 10);
+            var foe = new CombatantState("Front", false, 5000, 10, 8, 0, 4);
+            var encounter = new CombatEncounter(new[] { hero }, new[] { foe });
+            var kit = new PlayerKit("shawn", CharacterRole.Tank, null, null, null,
+                new ResolvedSpellTier(1, "Spark", 6, 1.5f, 0), level: 4);
+            var enemyKit = new EnemyKit(new ResolvedEnemy("front", "Front", new StatBlock(), 5, 3, false,
+                DamageType.Physical, DamageType.Physical, 0, spritePath: spritePath), false);
+
+            var session = new FightSession(encounter, new List<PlayerKit> { kit },
+                new List<EnemyKit> { enemyKit }, new SeededRandom(11));
+            session.Begin();
+            _fight.Bind(session, EncounterClass.Normal);
+            yield return null;
+        }
+
         [UnityTest]
         public IEnumerator AttackingMovesTheAttacker()
         {

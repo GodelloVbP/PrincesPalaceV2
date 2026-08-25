@@ -95,7 +95,7 @@ namespace PrincesPalace
         private static IReadOnlyList<EnemyCandidate> Pool() =>
             ContentDatabase.Enemies
                 .Where(e => e != null && !string.IsNullOrEmpty(e.id))
-                .Select(e => new EnemyCandidate(e.id, e.isBoss, e.avoidsFrontSlot, e.minFloor))
+                .Select(e => new EnemyCandidate(e.id, e.isBoss, e.avoidsFrontSlot, e.minFloor, e.slotSpan))
                 .ToList();
 
         private static Dictionary<string, int> HealthByCharacter(RunSnapshot run)

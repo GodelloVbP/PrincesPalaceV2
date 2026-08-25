@@ -22,12 +22,19 @@ namespace PrincesPalace.Domain.Dungeon
         // into a room goes through Roll, and only one of them builds the pool.
         public readonly int MinFloor;
 
-        public EnemyCandidate(string id, bool isBoss = false, bool avoidsFrontSlot = false, int minFloor = 1)
+        // See RawEnemyEntry.slotSpan. How much of the stage this creature
+        // takes up, counted against the same three positions the stage has --
+        // so a room can never be dealt more monster than there is floor for.
+        public readonly int SlotSpan;
+
+        public EnemyCandidate(string id, bool isBoss = false, bool avoidsFrontSlot = false, int minFloor = 1,
+                              int slotSpan = 1)
         {
             Id = id;
             IsBoss = isBoss;
             AvoidsFrontSlot = avoidsFrontSlot;
             MinFloor = minFloor < 1 ? 1 : minFloor;
+            SlotSpan = slotSpan < 1 ? 1 : slotSpan;
         }
     }
 
@@ -143,10 +150,31 @@ namespace PrincesPalace.Domain.Dungeon
             // legitimate room and v1 drew this way. Drawing without it would
             // also silently cap a room at the pool size, which is a different
             // rule arriving by accident.
+            //
+            // COUNTED IN SLOTS, NOT IN BODIES, which is the whole of what
+            // slotSpan buys. A Treant asks for two of the stage's three
+            // positions, so the room it turns up in fields it and at most one
+            // companion rather than it and two -- and it is the room that
+            // reads as elite, not just the creature.
+            //
+            // A draw that does not fit is DROPPED rather than re-rolled: the
+            // roll is seeded and re-rolling inside it would consume a variable
+            // number of draws, which makes the same room in the same run stop
+            // being the same room. Fewer monsters is the correct answer to "the
+            // big one turned up" anyway.
             var picks = new List<EnemyCandidate>();
+            int spent = 0;
             for (int i = 0; i < count; i++)
             {
-                picks.Add(drawFrom[rng.NextInt(0, drawFrom.Count)]);
+                var pick = drawFrom[rng.NextInt(0, drawFrom.Count)];
+
+                // The first pick always stands, whatever it spans. A creature
+                // wider than the whole stage is a content error, and fielding
+                // an empty room over it would hide that rather than show it.
+                if (picks.Count > 0 && spent + pick.SlotSpan > FightHudSpec.StageSlotsPerSide) continue;
+
+                picks.Add(pick);
+                spent += pick.SlotSpan;
             }
 
             PlaceAvoidingFrontSlot(picks);

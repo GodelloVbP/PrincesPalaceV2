@@ -178,6 +178,32 @@ namespace PrincesPalace.Domain.Content
         // which reads as the monster flying rather than striking. True marks
         // the plain attack as holding position exactly the way a cast does.
         public bool attackHoldsPosition;
+
+        // HOW BIG THIS MONSTER STANDS, as a multiplier on the depth scale its
+        // slot already carries. 0 means unset and reads as 1.
+        //
+        // The stage scales every figure by DEPTH alone, which is correct for
+        // perspective and says nothing about what the creature is. Two monsters
+        // in the same slot are the same size, so a rat and a treant differ only
+        // by however big their sheets happen to have been drawn -- and the
+        // sheets are all cut to a similar canvas, because that is what the
+        // slicing tools do. A thing meant to read as ELITE has no way to.
+        //
+        // MULTIPLIED, not substituted, so the perspective survives: a big
+        // monster in the back row is still smaller than the same monster in
+        // front, which is the whole illusion the stage rests on.
+        public float stageScale;
+
+        // HOW MANY OF THE STAGE'S POSITIONS THIS MONSTER OCCUPIES.
+        //
+        // 0 means unset and reads as 1. A monster that takes two leaves room
+        // for one companion instead of two, which is the difference between "a
+        // big monster" and "a big monster that dominates the room".
+        //
+        // Counted by the encounter builder against the same three slots the
+        // stage has, so a room can never be dealt more creature than there is
+        // floor to stand on.
+        public int slotSpan;
     }
 
     // One line of a monster's ability list.

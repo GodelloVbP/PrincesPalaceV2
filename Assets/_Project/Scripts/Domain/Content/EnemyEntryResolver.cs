@@ -157,7 +157,13 @@ namespace PrincesPalace.Domain.Content
             // it as a weakness and the resistance would silently never apply.
             // Named in full rather than one at a time, so fixing three of them
             // takes one build instead of three.
-            var contradictions = weaknesses.Where(resistances.Contains).ToList();
+            //
+            // ASKED OF THE AFFINITY rather than recomputed here. The same
+            // question is asked again at load time by ContentDatabase.
+            // Validation, and one of the two spellings answering differently is
+            // exactly how content passes a build and fails at runtime.
+            var affinity = ElementalAffinity.Of(weaknesses, resistances);
+            var contradictions = affinity.Contradictions;
             if (contradictions.Count > 0)
             {
                 error = $"{label}: {string.Join(" and ", contradictions)} " +
@@ -232,7 +238,7 @@ namespace PrincesPalace.Domain.Content
 
             var baseStats = new StatBlock(raw.maxHealth, speed, attack, defense);
             resolvedEnemy = new ResolvedEnemy(raw.id, raw.displayName, baseStats, expReward, currencyReward, raw.isBoss,
-                ElementalAffinity.Of(weaknesses, resistances), sortOrder,
+                affinity, sortOrder,
                 (raw.spritePath ?? string.Empty).Trim(), facing, raw.active,
                 (raw.skillName ?? string.Empty).Trim(),
                 raw.skillPower < 0f ? DefaultSkillPower : raw.skillPower,
@@ -241,7 +247,7 @@ namespace PrincesPalace.Domain.Content
                 raw.vfx.Copy(),
                 abilities, raw.attackWeight < 0f ? 1f : raw.attackWeight,
                 appliesStatus, statusMagnitude, statusDuration, raw.avoidsFrontSlot, raw.attackHoldsPosition,
-                raw.minFloor);
+                raw.minFloor, raw.stageScale, raw.slotSpan);
             error = null;
             return true;
         }
@@ -350,9 +356,14 @@ namespace PrincesPalace.Domain.Content
         // Deterministic (same id -> same pair, every regeneration) so
         // omitting weakness/resistance doesn't make the build non-
         // reproducible. Guarantees the two values differ.
+        // One array, not one per call: Enum.GetValues allocates through
+        // reflection and both derivers below run once per authored enemy.
+        private static readonly DamageType[] AllDamageTypes =
+            (DamageType[])Enum.GetValues(typeof(DamageType));
+
         private static void DeriveDamageTypePair(string id, out DamageType weakness, out DamageType resistance)
         {
-            var values = (DamageType[])Enum.GetValues(typeof(DamageType));
+            var values = AllDamageTypes;
             int hash = Math.Abs((id ?? string.Empty).GetHashCode());
             int weaknessIndex = hash % values.Length;
             int resistanceOffset = 1 + hash / values.Length % (values.Length - 1);
@@ -373,7 +384,7 @@ namespace PrincesPalace.Domain.Content
         // terminates with something to return.
         private static DamageType DeriveSingleDamageType(string id, IReadOnlyList<DamageType> exclude)
         {
-            var values = (DamageType[])Enum.GetValues(typeof(DamageType));
+            var values = AllDamageTypes;
             int hash = Math.Abs((id ?? string.Empty).GetHashCode());
             int index = hash % values.Length;
 

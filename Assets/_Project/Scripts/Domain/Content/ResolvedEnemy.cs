@@ -41,6 +41,11 @@ namespace PrincesPalace.Domain.Content
         // 0 means this enemy carries no stagger meter and cannot be broken.
         public readonly int BreakShieldPoints;
 
+        // See RawEnemyEntry.stageScale and .slotSpan. Both default to 1, so a
+        // monster that says nothing stands exactly as it always has.
+        public readonly float StageScale;
+        public readonly int SlotSpan;
+
         // Resources-relative FOLDER holding this monster's stance
         // sprites (e.g. "Enemies/golem", which contains idle.png,
         // attack.png and so on). Empty for the many monsters with no art
@@ -100,11 +105,13 @@ namespace PrincesPalace.Domain.Content
         // See RawEnemyEntry.minFloor.
         public readonly int MinFloor;
 
-        // THE SINGLE-ELEMENT CONVENIENCE, kept because it is still how most of
-        // the roster is authored and how nearly every fixture reads. It is one
-        // line of delegation, not a second definition of anything: both forms
-        // end up in the same Affinity field, so there is no shape here that can
-        // drift out of step with the other.
+        // THE SINGLE-ELEMENT CONVENIENCE, kept because it is how nearly every
+        // fixture reads. NOT because the roster is authored through it -- both
+        // production callers (EnemyEntryResolver and FightEncounterAdapter)
+        // build an ElementalAffinity and use the other constructor, so nothing
+        // shipped reaches this. It is one line of delegation, not a second
+        // definition of anything: both forms end up in the same Affinity field,
+        // so there is no shape here that can drift out of step with the other.
         public ResolvedEnemy(string id, string displayName, StatBlock baseStats, int expReward, int currencyReward,
             bool isBoss, DamageType weakness, DamageType resistance, int sortOrder, string spritePath = "",
             PrincesPalace.Domain.Stage.SpriteFacing facing = PrincesPalace.Domain.Stage.SpriteFacing.Right,
@@ -113,12 +120,12 @@ namespace PrincesPalace.Domain.Content
             IReadOnlyList<EnemyAbilityRef> abilities = null, float attackWeight = 1f,
             StatusEffectType? appliesStatus = null, int statusMagnitude = 0,
             int statusDuration = 0, bool avoidsFrontSlot = false, bool attackHoldsPosition = false,
-            int minFloor = 1)
+            int minFloor = 1, float stageScale = 1f, int slotSpan = 1)
             : this(id, displayName, baseStats, expReward, currencyReward, isBoss,
                    ElementalAffinity.Of(weakness, resistance), sortOrder, spritePath, facing, active,
                    skillName, skillPower, skillChance, breakShieldPoints, presentation, abilities,
                    attackWeight, appliesStatus, statusMagnitude, statusDuration, avoidsFrontSlot,
-                   attackHoldsPosition, minFloor)
+                   attackHoldsPosition, minFloor, stageScale, slotSpan)
         {
         }
 
@@ -130,8 +137,13 @@ namespace PrincesPalace.Domain.Content
             IReadOnlyList<EnemyAbilityRef> abilities = null, float attackWeight = 1f,
             StatusEffectType? appliesStatus = null, int statusMagnitude = 0,
             int statusDuration = 0, bool avoidsFrontSlot = false, bool attackHoldsPosition = false,
-            int minFloor = 1)
+            int minFloor = 1, float stageScale = 1f, int slotSpan = 1)
         {
+            // CLAMPED RATHER THAN TRUSTED, both of them. A zero or negative
+            // scale is an invisible monster and a zero span is a room that
+            // never fills, and neither is worth a crash or a mystery.
+            StageScale = stageScale > 0f ? stageScale : 1f;
+            SlotSpan = slotSpan > 0 ? slotSpan : 1;
             SkillName = skillName ?? string.Empty;
             SkillPower = skillPower;
             SkillChance = skillChance;

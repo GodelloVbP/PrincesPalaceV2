@@ -14,11 +14,39 @@ namespace PrincesPalace.Domain.Stage
         public readonly int ImpactFrame;
         public readonly int SoundFrame;
 
-        public StanceTiming(float secondsPerFrame, int impactFrame, int soundFrame)
+        // How this stance plays when something loops it. Meaningless for a
+        // stance that plays once, which is every stance but idle today.
+        public readonly StanceLoop Loop;
+
+        // WHETHER THE FIGURE IS PINNED SIDEWAYS ACROSS ITS OWN FRAMES.
+        //
+        // A frame is a rectangle and the creature drawn on it is not
+        // necessarily in the middle. Where that varies frame to frame the
+        // figure SLIDES, and on a loop it slides back and forth forever.
+        //
+        // Measured on the Treant's idle, which is the sheet this exists for:
+        // its content centre wanders +12, +3, -16, +12, +7, -10 pixels across
+        // six drawings on a canvas whose figure is 380 wide. That is a 28-pixel
+        // shuffle with no pattern to it, and it is why the pose read as "quite
+        // bad" rather than as breathing -- the creature is not moving, its
+        // frames are.
+        //
+        // ON FOR A LOOP, OFF FOR A SWING, and the asymmetry is the whole rule.
+        // Drift in an idle is a cropping artefact and cancelling it is free.
+        // Drift in an attack is the ANIMATION -- a lunge drawn into the frames
+        // is exactly this signal -- and cancelling it would nail the figure to
+        // the spot mid-swing. Authored per stance either way, so a sheet that
+        // disagrees with the default can say so.
+        public readonly bool Steady;
+
+        public StanceTiming(float secondsPerFrame, int impactFrame, int soundFrame,
+                            StanceLoop loop = StanceLoop.PingPong, bool steady = true)
         {
             SecondsPerFrame = secondsPerFrame;
             ImpactFrame = impactFrame;
             SoundFrame = soundFrame;
+            Loop = loop;
+            Steady = steady;
         }
     }
 
@@ -70,7 +98,9 @@ namespace PrincesPalace.Domain.Stage
                     _timings[Key(path, stance.stance)] = new StanceTiming(
                         stance.secondsPerFrame > 0f ? stance.secondsPerFrame : DefaultSecondsPerFrame,
                         stance.impactFrame > 0 ? stance.impactFrame : 0,
-                        stance.soundFrame > 0 ? stance.soundFrame : 0);
+                        stance.soundFrame > 0 ? stance.soundFrame : 0,
+                        ParseLoop(stance.loop),
+                        ParseSteady(stance.steady, LoopsByDefault(stance.stance)));
                 }
             }
         }
@@ -111,7 +141,8 @@ namespace PrincesPalace.Domain.Stage
             // that happened to be tolerable. Anything that cares now says so.
             int midpoint = Math.Max(1, (int)Math.Ceiling(frames / 2f));
 
-            var timing = new StanceTiming(DefaultSecondsPerFrame, midpoint, midpoint);
+            var timing = new StanceTiming(DefaultSecondsPerFrame, midpoint, midpoint,
+                StanceLoop.PingPong, LoopsByDefault(stance));
             if (!string.IsNullOrWhiteSpace(spritePath)
                 && !string.IsNullOrWhiteSpace(stance)
                 && _timings.TryGetValue(Key(Normalise(spritePath), stance), out var authored))
@@ -119,13 +150,47 @@ namespace PrincesPalace.Domain.Stage
                 timing = new StanceTiming(
                     authored.SecondsPerFrame,
                     authored.ImpactFrame > 0 ? authored.ImpactFrame : midpoint,
-                    authored.SoundFrame > 0 ? authored.SoundFrame : midpoint);
+                    authored.SoundFrame > 0 ? authored.SoundFrame : midpoint,
+                    authored.Loop,
+                    authored.Steady);
             }
 
             return new StanceTiming(
                 timing.SecondsPerFrame,
                 Math.Min(timing.ImpactFrame, frames),
-                Math.Min(timing.SoundFrame, frames));
+                Math.Min(timing.SoundFrame, frames),
+                timing.Loop,
+                timing.Steady);
+        }
+
+        // THE ONE STANCE NAME THIS FILE KNOWS, and it is worth being explicit
+        // about why. `steady` defaults differently for a loop than for a swing
+        // -- cancelling drift is right for one and destroys the other -- so the
+        // default has to be able to tell them apart, and today "does it loop"
+        // and "is it called idle" are the same question. When a second looping
+        // stance arrives this becomes a set, not a heuristic.
+        private static bool LoopsByDefault(string stance) =>
+            string.Equals(stance?.Trim(), "idle", StringComparison.OrdinalIgnoreCase);
+
+        // Unrecognised spellings fall back to the default rather than throwing,
+        // the same graceful posture SpellAnchorNames takes: a typo should
+        // change how one sheet breathes, not stop the fight loading.
+        private static StanceLoop ParseLoop(string loop)
+        {
+            return string.Equals(loop?.Trim(), "forward", StringComparison.OrdinalIgnoreCase)
+                ? StanceLoop.Forward
+                : StanceLoop.PingPong;
+        }
+
+        private static bool ParseSteady(string steady, bool fallback)
+        {
+            string value = steady?.Trim();
+            if (string.IsNullOrEmpty(value)) return fallback;
+
+            if (string.Equals(value, "true", StringComparison.OrdinalIgnoreCase)) return true;
+            if (string.Equals(value, "false", StringComparison.OrdinalIgnoreCase)) return false;
+
+            return fallback;
         }
 
         // Trailing and leading slashes are the difference between a path

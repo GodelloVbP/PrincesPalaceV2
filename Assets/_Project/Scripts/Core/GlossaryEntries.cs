@@ -96,17 +96,22 @@ namespace PrincesPalace
         // like content that failed to load.
         private static string AffinityLine(EnemyDefinition enemy)
         {
+            // READ ONCE EACH. Weaknesses and Resistances materialise a fresh
+            // list on every get (see ElementalAffinity.Listed), so asking twice
+            // per half built four lists to print two sentences.
             var affinity = enemy.Affinity;
+            var weaknesses = affinity.Weaknesses;
+            var resistances = affinity.Resistances;
             var parts = new List<string>();
 
-            if (affinity.Weaknesses.Count > 0)
+            if (weaknesses.Count > 0)
             {
-                parts.Add($"Weak to {Listed(affinity.Weaknesses)}.");
+                parts.Add($"Weak to {Listed(weaknesses)}.");
             }
 
-            if (affinity.Resistances.Count > 0)
+            if (resistances.Count > 0)
             {
-                parts.Add($"Resists {Listed(affinity.Resistances)}.");
+                parts.Add($"Resists {Listed(resistances)}.");
             }
 
             return parts.Count > 0 ? string.Join(" ", parts) : "Takes every element the same way.";

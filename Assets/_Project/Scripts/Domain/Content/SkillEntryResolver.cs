@@ -4,6 +4,8 @@ using System.Linq;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Stats;
 
+using PrincesPalace.Domain.Combat.Session;
+
 namespace PrincesPalace.Domain.Content
 {
     // Validates skills.json. Same collected-not-first-only error reporting as
@@ -257,7 +259,8 @@ namespace PrincesPalace.Domain.Content
                 sortOrder,
                 appliesStatus, statusMagnitude, statusDuration, requirements, scalingAxis,
                 raw.queuePushSlots, transform, raw.playerSelectable, raw.cooldownTurns,
-                raw.stance?.Trim() ?? "", raw.summonEnemyId?.Trim() ?? "", summonCap);
+                raw.stance?.Trim() ?? "", raw.summonEnemyId?.Trim() ?? "", summonCap,
+                ParseApproach(raw.approach), raw.shake);
             error = null;
             return true;
         }
@@ -512,5 +515,18 @@ namespace PrincesPalace.Domain.Content
                 default: return SkillTargeting.SingleEnemy;
             }
         }
+        // Unrecognised spellings fall back to Hold and say nothing, the same
+        // graceful posture SpellAnchorNames takes for a misspelt anchor: a typo
+        // should change how one skill moves, not stop the catalogue building.
+        private static StageApproach ParseApproach(string approach)
+        {
+            switch (approach?.Trim().ToLowerInvariant())
+            {
+                case "lunge": return StageApproach.Lunge;
+                case "close": return StageApproach.Close;
+                default: return StageApproach.Hold;
+            }
+        }
+
     }
 }

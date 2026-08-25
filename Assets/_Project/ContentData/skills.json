@@ -274,6 +274,7 @@
       "manaCost": 0,
       "ignoresDefense": true,
       "stance": "attack",
+      "approach": "close",
       "playerSelectable": false
     },
     {
@@ -287,6 +288,7 @@
       "summonEnemyId": "rat",
       "summonCap": 2,
       "stance": "attack_roar",
+      "shake": 0.85,
       "playerSelectable": false
     },
     {
@@ -301,6 +303,88 @@
       "statusMagnitude": 1,
       "statusDuration": 1,
       "stance": "attack_charge",
+      "approach": "lunge",
+      "playerSelectable": false
+    },
+    {
+      "id": "shell_up",
+      "displayName": "Shell Up",
+      "description": "The plates fold shut and the beetle becomes a stone with legs.",
+      "characterId": "beetle",
+      "unlockLevel": 1,
+      "effect": "HealSelf",
+      "flatAmount": 2,
+      "manaCost": 0,
+      "appliesStatus": "Protect",
+      "statusMagnitude": 50,
+      "statusDuration": 2,
+      "stance": "shell_closed",
+      "playerSelectable": false
+    },
+    {
+      "id": "barrel_roll",
+      "displayName": "Barrel Roll",
+      "description": "Legs in, and the whole armoured weight of it comes through you.",
+      "characterId": "beetle",
+      "unlockLevel": 1,
+      "effect": "DamageSingle",
+      "flatAmount": 2,
+      "manaCost": 0,
+      "stance": "turtle_up",
+      "approach": "lunge",
+      "playerSelectable": false
+    },
+    {
+      "id": "trunk_slam",
+      "displayName": "Trunk Slam",
+      "description": "It brings its whole upper half down like a felled tree.",
+      "characterId": "treant",
+      "unlockLevel": 1,
+      "effect": "DamageSingle",
+      "flatAmount": 3,
+      "manaCost": 0,
+      "stance": "trunk_slam",
+      "approach": "lunge",
+      "playerSelectable": false
+    },
+    {
+      "id": "spore_cloud",
+      "displayName": "Spore Cloud",
+      "description": "The mushrooms along its back burst, and the air turns.",
+      "characterId": "treant",
+      "unlockLevel": 1,
+      "effect": "DamageAll",
+      "flatAmount": 1,
+      "manaCost": 0,
+      "appliesStatus": "Poison",
+      "statusMagnitude": 3,
+      "statusDuration": 3,
+      "stance": "cast",
+      "playerSelectable": false
+    },
+    {
+      "id": "bog_mud_burst",
+      "displayName": "Mud Burst",
+      "description": "The bog answers. It arrives wearing whatever it picked up on the way.",
+      "characterId": "bog_witch",
+      "unlockLevel": 1,
+      "effect": "DamageSingle",
+      "flatAmount": 5,
+      "manaCost": 0,
+      "appliesStatus": "Vulnerable",
+      "statusMagnitude": 25,
+      "statusDuration": 2,
+      "stance": "cast",
+      "vfx": {
+        "path": "Spells/mud_burst",
+        "seconds": 0.65,
+        "impactFrame": 13,
+        "departFrame": 9,
+        "anchor": "travel-centre",
+        "impactX": 0.69,
+        "impactY": 0.52
+      },
+      "cooldownTurns": 2,
       "playerSelectable": false
     }
   ]

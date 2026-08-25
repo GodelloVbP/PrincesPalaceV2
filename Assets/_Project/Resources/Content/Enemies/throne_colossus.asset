@@ -31,7 +31,7 @@ MonoBehaviour:
   breakShieldPoints: 24
   spritePath: 
   facing: 1
-  sortOrder: 15
+  sortOrder: 17
   skillName: 
   skillPower: 1.5
   skillChance: 0.35
@@ -53,3 +53,5 @@ MonoBehaviour:
   statusDuration: 0
   avoidsFrontSlot: 0
   attackHoldsPosition: 0
+  stageScale: 1
+  slotSpan: 1

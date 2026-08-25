@@ -1,4 +1,5 @@
 using UnityEngine;
+using PrincesPalace.Domain.Stage;
 
 namespace PrincesPalace
 {
@@ -32,18 +33,30 @@ namespace PrincesPalace
         // connects.
         public readonly int SoundFrame;
 
-        // Reserved for a future breathing/idle loop. Always false today —
-        // nothing reads it yet, and it exists so that feature is additive
-        // rather than a signature change when it arrives.
-        public readonly bool Loop;
+        // THE FUTURE ARRIVED. This was a bool "reserved for a future
+        // breathing/idle loop", nothing read it, and it was always false --
+        // which is a fair description of the idle animations themselves, since
+        // nothing drove those either. It is now the STYLE of loop, because a
+        // caller that has decided to loop something still has to know how (see
+        // Domain/Stage/LoopCycle), and whether-to-loop is the caller's question
+        // rather than the sheet's: FightController loops the idle stance and
+        // plays every other one once.
+        public readonly StanceLoop Loop;
 
-        public StanceAnimation(Sprite[] frames, float secondsPerFrame, int impactFrame, int soundFrame, bool loop)
+        // Whether the figure's own centre is held still across these frames.
+        // See StanceTiming.Steady for the drift this cancels and why a swing
+        // must not have it cancelled.
+        public readonly bool Steady;
+
+        public StanceAnimation(Sprite[] frames, float secondsPerFrame, int impactFrame, int soundFrame,
+                               StanceLoop loop = StanceLoop.PingPong, bool steady = false)
         {
             Frames = frames;
             SecondsPerFrame = Mathf.Max(0f, secondsPerFrame);
             ImpactFrame = Mathf.Max(1, impactFrame);
             SoundFrame = Mathf.Max(1, soundFrame);
             Loop = loop;
+            Steady = steady;
         }
 
         public bool IsEmpty => Frames == null || Frames.Length == 0;

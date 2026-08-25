@@ -379,7 +379,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 return;
             }
 
-            int living = _encounter.LivingEnemies.Count(e => SourceFor(e)?.Source.Id == skill.SummonEnemyId);
+            int living = LivingCountOf(skill.SummonEnemyId);
             if (living >= skill.SummonCap)
             {
                 AppendMessage($"{actor.Name} calls out, but there is no room left on the field.");
@@ -409,6 +409,21 @@ namespace PrincesPalace.Domain.Combat.Session
 
             BeginBeat(actor, target, isCast: true);
             RecordSpellPresentation(skill);
+
+            // THE SKILL'S OWN POSE, over the plain "cast" BeginBeat just set.
+            // Only Summon honoured RawSkillEntry.stance until now, so a
+            // damaging skill that named a stance -- the Treant's trunk_slam,
+            // the Beetle's turtle_up -- was drawn casting instead. The enemy
+            // path tried to set it before calling in here and could not: see
+            // FightSession.Enemies.ResolveEnemyAction for why that was a
+            // no-op rather than a duplicate.
+            SetStance(actor, StanceFor(skill));
+
+            // AND THE SKILL'S OWN APPROACH, over the "rooted" BeginBeat assumed
+            // for every cast. A melee skill is a swing that happens to be
+            // authored as a skill, and until this line it connected from
+            // wherever the caster was standing.
+            ApproachAs(skill.Approach);
 
             int damage;
             if (skill.HasFixedDamage)
@@ -479,6 +494,7 @@ namespace PrincesPalace.Domain.Combat.Session
             BeginBeat(actor, struck.FirstOrDefault(), isCast: true);
             RecordSpellPresentation(skill);
             RecordSplashTargets(struck.Skip(1));
+            SetStance(actor, StanceFor(skill));
 
             // The caster's own type does not change per target, so this reads
             // once -- same reasoning as the single-target branch.
@@ -751,7 +767,15 @@ namespace PrincesPalace.Domain.Combat.Session
         private static bool IsBelowHealthFraction(CombatantState combatant, float fraction) =>
             combatant.MaxHealth > 0 && combatant.CurrentHealth <= combatant.MaxHealth * fraction;
 
-        private void RecordSpellPresentation(ResolvedSkill skill) =>
+        // Both halves of a skill's presentation, recorded together -- the
+        // frames it draws and the kick it insists on. Every branch of
+        // ResolveCharacterSkillInner already calls this, so a skill's shake
+        // reaches the view through exactly the door its spell does rather than
+        // through a tenth call somebody has to remember.
+        private void RecordSpellPresentation(ResolvedSkill skill)
+        {
             RecordSpellPresentation(skill.Vfx);
+            RecordShake(skill.Shake);
+        }
     }
 }

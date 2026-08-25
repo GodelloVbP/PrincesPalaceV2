@@ -89,7 +89,7 @@
       "id": "bog_witch",
       "minFloor": 2,
       "displayName": "Bog Witch",
-      "maxHealth": 160,
+      "maxHealth": 120,
       "speed": 8,
       "attack": 6,
       "defense": 2,
@@ -101,7 +101,7 @@
       "active": true,
       "abilities": [
         {
-          "skillId": "mud_burst",
+          "skillId": "bog_mud_burst",
           "weight": 2
         }
       ],
@@ -192,6 +192,65 @@
       "active": false
     },
     {
+      "id": "beetle",
+      "minFloor": 1,
+      "displayName": "Ironback Beetle",
+      "maxHealth": 110,
+      "speed": 5,
+      "attack": 4,
+      "defense": 8,
+      "expReward": 24,
+      "currencyReward": 12,
+      "breakShieldPoints": 4,
+      "weakness": "Fire, Arcane",
+      "resistance": "Physical, Ice",
+      "spritePath": "Enemies/beetle",
+      "facing": "right",
+      "active": true,
+      "abilities": [
+        {
+          "skillId": "shell_up",
+          "weight": 1
+        },
+        {
+          "skillId": "barrel_roll",
+          "weight": 2
+        }
+      ],
+      "attackWeight": 3
+    },
+    {
+      "id": "treant",
+      "minFloor": 2,
+      "displayName": "Elder Treant",
+      "maxHealth": 300,
+      "speed": 3,
+      "attack": 6,
+      "defense": 5,
+      "expReward": 40,
+      "currencyReward": 24,
+      "breakShieldPoints": 8,
+      "weakness": "Fire",
+      "resistance": "Ice, Poison",
+      "spritePath": "Enemies/treant",
+      "facing": "right",
+      "active": true,
+      "abilities": [
+        {
+          "skillId": "trunk_slam",
+          "weight": 3
+        },
+        {
+          "skillId": "spore_cloud",
+          "weight": 2
+        }
+      ],
+      "attackWeight": 2,
+      "avoidsFrontSlot": true,
+      "stageScale": 1.45,
+      "slotSpan": 2
+    },
+    {
       "id": "warden",
       "minFloor": 2,
       "displayName": "Dungeon Warden",
@@ -237,9 +296,18 @@
       "spritePath": "Enemies/forest_warden",
       "active": true,
       "abilities": [
-        { "skillId": "overhead_slam", "weight": 3 },
-        { "skillId": "roar", "weight": 2 },
-        { "skillId": "grapple", "weight": 2 }
+        {
+          "skillId": "overhead_slam",
+          "weight": 3
+        },
+        {
+          "skillId": "roar",
+          "weight": 2
+        },
+        {
+          "skillId": "grapple",
+          "weight": 2
+        }
       ],
       "attackWeight": 0
     },

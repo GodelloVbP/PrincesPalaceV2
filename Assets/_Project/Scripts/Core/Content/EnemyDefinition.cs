@@ -104,6 +104,15 @@ namespace PrincesPalace.Content
         [Tooltip("The plain Attack holds position instead of lunging, same as a Skill cast. For a monster whose \"attack\" stance art is aliased from its \"cast\" stance (see slice_actor_sheet.py) -- the pixels are a stationary pose, so lunging toward the target reads as flying rather than striking.")]
         public bool attackHoldsPosition;
 
+        // See RawEnemyEntry.stageScale -- how big this monster stands, on top
+        // of the depth scale its slot already carries.
+        public float stageScale = 1f;
+
+        // See RawEnemyEntry.slotSpan -- how many of the stage's positions it
+        // takes up, which is what stops a room fielding more creature than it
+        // has floor for.
+        public int slotSpan = 1;
+
         // Listed by the authored order ContentBuilder stamped on it.
         public int SortOrder => sortOrder;
     }

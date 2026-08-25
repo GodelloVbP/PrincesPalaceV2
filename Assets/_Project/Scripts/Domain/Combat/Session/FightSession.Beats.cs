@@ -24,7 +24,11 @@ namespace PrincesPalace.Domain.Combat.Session
                 Actor = actor,
                 Target = target,
                 PreSnapshot = SnapshotVitals(),
-                ActorHoldsPosition = isCast,
+                // A cast is rooted and a swing leans in. Either can be
+                // overruled afterwards -- by the skill's own authored approach
+                // (see ResolveDamageSingle) or by HoldActorPosition below --
+                // which is why this is a starting position rather than a fact.
+                Approach = isCast ? StageApproach.Hold : StageApproach.Lunge,
             };
 
             if (isCast)
@@ -71,10 +75,21 @@ namespace PrincesPalace.Domain.Combat.Session
         // pose is itself stationary. Separate from the `isCast` constructor
         // argument because it is decided later -- the intent has to be resolved
         // first -- and because it must NOT also force the cast stance.
+        // The approach a skill authored, applied over whatever BeginBeat
+        // assumed. Separate from the constructor argument for the reason
+        // HoldActorPosition is: the skill is not known until after the beat has
+        // been opened, and opening it later would lose everything recorded in
+        // between.
+        private void ApproachAs(StageApproach approach)
+        {
+            if (_recordingBeat == null) return;
+            _recordingBeat.Approach = approach;
+        }
+
         private void HoldActorPosition()
         {
             if (_recordingBeat == null) return;
-            _recordingBeat.ActorHoldsPosition = true;
+            _recordingBeat.Approach = StageApproach.Hold;
         }
 
         // The extra combatants a multi-target effect should be DRAWN on. Kept
@@ -86,6 +101,13 @@ namespace PrincesPalace.Domain.Combat.Session
 
             var extra = targets.Where(t => t != null).ToList();
             _recordingBeat.SplashTargets = extra.Count == 0 ? null : extra;
+        }
+
+        // How hard this beat insists the stage is kicked, whatever it landed.
+        private void RecordShake(float shake)
+        {
+            if (_recordingBeat == null || shake <= 0f) return;
+            _recordingBeat.Shake = shake;
         }
 
         private void RecordSpellPresentation(SpellPresentation presentation)

@@ -1,0 +1,66 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dace2591de5ca4247a661c0479d541c1, type: 3}
+  m_Name: shell_up
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SkillDefinition
+  id: shell_up
+  displayName: Shell Up
+  description: The plates fold shut and the beetle becomes a stone with legs.
+  characterId: beetle
+  unlockLevel: 1
+  effect: 2
+  targeting: 2
+  manaCost: 0
+  resourceCost: 0
+  spendsAllResource: 0
+  power: 0
+  flatAmount: 2
+  ignoresDefense: 0
+  damageInstances: []
+  cooldownTurns: 0
+  playerSelectable: 0
+  vfx:
+    path: 
+    seconds: 0.6
+    impactFrame: 3
+    anchor: 
+    size: 380
+    departFrame: 0
+    impactX: -1
+    impactY: -1
+    sfxPath: 
+  appliesStatus: 2
+  hasStatus: 1
+  statusMagnitude: 50
+  statusDuration: 2
+  requirements:
+    strength: 0
+    dexterity: 0
+    constitution: 0
+    wisdom: 0
+    intelligence: 0
+    charisma: 0
+  scalingAxis: 0
+  queuePushSlots: 0
+  transform:
+    displayName: 
+    turns: 0
+    attackPercent: 0
+    speedPercent: 0
+    temporaryHealthPercent: 0
+    splashPercent: 0
+  stance: shell_closed
+  approach: 0
+  shake: 0
+  summonEnemyId: 
+  summonCap: 0
+  sortOrder: 21

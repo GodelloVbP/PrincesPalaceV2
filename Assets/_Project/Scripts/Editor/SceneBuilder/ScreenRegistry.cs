@@ -88,6 +88,16 @@ public static class ScreenRegistry
                 fight.bossBackground = SceneBuilder.LoadSpriteByKey(FightScreen.BossBackgroundKey);
 
                 fight.enemySlots = screen.EnemySlots.Select(result.Rect).ToArray();
+
+                // ONE SHAKER PER RACK, not one for the whole screen. The two
+                // stages are separate containers and the HUD is neither of
+                // them, which is the point -- see StageShake on why the
+                // painted frame has to stay nailed down while the fight moves.
+                fight.stageShakes = new[]
+                {
+                    result.Attach<StageShake>(screen.EnemyStage),
+                    result.Attach<StageShake>(screen.PartyStage),
+                };
                 fight.enemySprites = screen.EnemySprites.Select(result.Image).ToArray();
                 fight.enemyHitFlashes = screen.EnemyHitFlashes.Select(result.Image).ToArray();
                 fight.enemyNameplates = screen.EnemyNameplates.Select(result.Tmp).ToArray();

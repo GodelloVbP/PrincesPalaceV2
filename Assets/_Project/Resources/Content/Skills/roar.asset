@@ -59,6 +59,8 @@ MonoBehaviour:
     temporaryHealthPercent: 0
     splashPercent: 0
   stance: attack_roar
+  approach: 0
+  shake: 0.85
   summonEnemyId: rat
   summonCap: 2
   sortOrder: 19

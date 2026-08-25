@@ -1418,6 +1418,75 @@ by `ConstellationScreenTests.EveryEdgesLitCoreSitsOnTheEdgeItLights`.
 reason says why SOME overflow is expected, never how much, so a node carrying
 one has no layout coverage until something asserts the property it still owes.
 
+## Findings from the combat-polish pass, 2026-08-25
+
+Both raised by the author from play, both deferred on purpose rather than
+folded into the polish pass that found them: one is a design decision that has
+not been made yet, and the other is a content question wearing a bug's clothes.
+
+### 57. A boss defeated for the first time should drop an Ember, and nothing does
+
+Asked for directly, and explicitly as a note for later rather than as work:
+"bosses that are defeated for the first time should drop an ember and it should
+feel very rewarding receiving this."
+
+Nothing is broken today -- this is a feature that does not exist. It is filed
+here because it lands squarely on top of **#41**, which records that
+`CurrencyType.Embers` and `Wallet.embers` survive with no live reader, and on
+**#38**'s neighbourhood. Whoever builds this should read #41 first: the currency
+already exists, so the work is a first-kill ledger, a drop moment, and the
+presentation the request is actually about. "Feel very rewarding" is the whole
+requirement and the only part of it that is not already plumbed.
+
+The FIRST-TIME half needs somewhere durable to live -- a per-boss flag in
+`SaveData`, alongside whatever #50's dead `relicLoadout` is eventually replaced
+by -- and needs to survive a wipe, or the reward is farmable.
+
+### 58. Shawn's skills have TWO unlock ladders, and only one of them is the tree
+
+Reported from play: "Shawn still has all his skills without them being
+unlocked. Woolgathering, shear, that should all be removed if it's not part of
+the tree or be locked and hidden until you unlock it in the tree."
+
+**Not a gating bug.** `ContentDatabase.cs:233-237` enforces the gate exactly as
+written -- a skill appears when `unlockLevel <= character.level`, or when the
+character was taught it, or when a talent granted it. Verified rather than
+assumed. What the report is describing is the FIRST of those three routes doing
+its job, and the objection is to the route existing at all.
+
+Shawn's seventeen skills split cleanly in two, and the split is deliberate
+design rather than drift:
+
+| Route | Count | How it is authored |
+|---|---|---|
+| **Character level** | 8 | `unlockLevel` 1-8: shear (1), woolgathering (2), mud_burst (3), static_fleece (4), frost_flare (5), battering_ram (6), lightning_bolt (7), golden_fleece (8) |
+| **Talent tree** | 9 | `unlockLevel: 999` -- deliberately unreachable -- plus a node naming them via `grantsSkillId`: provoke, headbutt, black_ram_mode, fleece_ward, shatter, wail, gift_mana, gift_fury, gift_haste |
+
+Every `grantsSkillId` in `talents.json` resolves to a real sheep skill; there
+are no orphans in either direction. The 999 sentinel is the mechanism that
+keeps the two ladders from overlapping, and `ContentDatabase.cs:222-230`
+documents it as the reason the reworked tree needed no parallel ability system.
+
+**So the decision is the author's and it is a design one, not a fix.** Three
+shapes, in rising order of work:
+
+1. **Leave it.** Eight skills are a levelling reward and nine are a tree
+   reward. Coherent, already built, already tested.
+2. **Move the eight into the tree.** Author a node per skill with
+   `grantsSkillId` and set each `unlockLevel` to 999. No code changes at all --
+   this is entirely `talents.json` and `skills.json`, which is what the 999
+   sentinel bought. The cost is eight new nodes' worth of tree layout and the
+   balance question of what the early game hands out instead.
+3. **Hide rather than remove.** The report offers this as the alternative
+   ("or be locked and hidden until you unlock it"), but note that it is what
+   already happens: an unreached skill is not in the list `SkillsFor` returns,
+   so it is invisible rather than greyed out. If the intent was a visible
+   locked entry the player can see and work towards, that is a fourth option
+   and a UI change rather than a content one.
+
+Recorded rather than actioned because 1 and 2 are different games and the
+choice belongs to the author.
+
 ## Open investigations
 
 ### ~~52. `SystemMenuExitsTests.OnePressOnAnExitDoesNothingButArmIt` flaked once, navigating to `"Hub"` — cause not found~~ — **ROOT CAUSE FOUND AND FIXED, 2026-08-21.** A `HoldToConfirm` left running by an earlier test in the same fixture. `HoldToConfirm` cancels itself `OnDisable`, and its comment explains why — but between two tests nothing disables it: the scene stays loaded until the next `LoadSceneAsync`, so a test that begins a hold and neither completes nor releases it leaves `Update()` advancing that hold into whatever runs next. When it completed it called `Abandon`, which navigates to the hub, and the navigation landed in the *next* test's recorder. The fixture's `TearDown` now cancels every live hold. **What made it findable:** the reward-track panel added ~450 nodes to the Hub scene, frames got long enough that the leftover hold finished inside the very next test every time, and a one-in-four flake became 3-for-3 — including in isolation, which it had never done. The extra nodes did not cause it; they made it reproducible enough to get a stack trace, which named `HoldToConfirm.Update` with no test above it. Guessing had blamed process-wide `Navigation.LoadOverride` state, which was wrong

@@ -59,7 +59,11 @@ namespace PrincesPalace.Domain.Stats
 
         public bool Resists(DamageType type) => (_resistanceMask & Bit(type)) != 0;
 
-        public bool IsNeutral => _weaknessMask == 0 && _resistanceMask == 0;
+        // Private: the only reader is ToString below. Production code asks for
+        // ElementalAffinity.Neutral when it wants the value and IsWeakTo /
+        // Resists when it wants an answer -- neither needs to ask "is this
+        // nothing at all".
+        private bool IsNeutral => _weaknessMask == 0 && _resistanceMask == 0;
 
         // The elements named in each set, in DamageType declaration order so a
         // glossary row reads the same every time it is built. Materialised on
@@ -73,6 +77,12 @@ namespace PrincesPalace.Domain.Stats
         // cannot express its way out of. Returned rather than thrown on, so the
         // content validator can name every offender in one message.
         public IReadOnlyList<DamageType> Contradictions => Listed(_weaknessMask & _resistanceMask);
+
+        // CACHED, because Enum.GetValues is a reflection call that allocates a
+        // fresh array on every invocation -- and Listed is reached from content
+        // validation, which asks it once per enemy per build.
+        private static readonly DamageType[] AllTypes =
+            (DamageType[])Enum.GetValues(typeof(DamageType));
 
         private static int Bit(DamageType type) => 1 << (int)type;
 
@@ -90,7 +100,7 @@ namespace PrincesPalace.Domain.Stats
             if (mask == 0) return Array.Empty<DamageType>();
 
             var listed = new List<DamageType>();
-            foreach (DamageType type in Enum.GetValues(typeof(DamageType)))
+            foreach (var type in AllTypes)
             {
                 if ((mask & Bit(type)) != 0) listed.Add(type);
             }

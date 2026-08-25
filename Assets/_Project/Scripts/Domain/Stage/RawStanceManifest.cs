@@ -44,5 +44,24 @@ namespace PrincesPalace.Domain.Stage
         public float secondsPerFrame;
         public int impactFrame;
         public int soundFrame;
+
+        // HOW THIS STANCE PLAYS WHEN IT LOOPS. "forward" or "pingpong", and
+        // empty means the default -- ping-pong, because that is what an idle
+        // sheet almost always is (see LoopCycle). Only consulted for a stance
+        // something actually loops, which today is idle and nothing else, so
+        // authoring it on a swing is harmless and pointless.
+        //
+        // A STRING rather than the enum, for the reason SpellPresentation.anchor
+        // is one: JsonUtility writes an enum as its ordinal, so the file would
+        // read "loop": 1 and reordering the enum would silently repoint every
+        // sheet in the game.
+        public string loop = "";
+
+        // WHETHER THE FIGURE'S CENTRE IS HELD STILL ACROSS THE FRAMES.
+        //
+        // A three-state bool, because false has to be distinguishable from
+        // unset: "on" and "off" are both authored answers and the default
+        // differs by whether the stance loops. See StanceTiming.Steady.
+        public string steady = "";
     }
 }

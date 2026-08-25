@@ -64,7 +64,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // draw commits to is looked back up against kit.Abilities directly
         // at resolution time (see ResolveEnemyAction), so this can adjust
         // weights but can never reshuffle or drop an entry.
-        private List<EnemyAbility> EffectivePoolFor(IReadOnlyList<EnemyAbility> abilities)
+        private IReadOnlyList<EnemyAbility> EffectivePoolFor(IReadOnlyList<EnemyAbility> abilities)
         {
             if (abilities == null) return null;
 
@@ -74,14 +74,19 @@ namespace PrincesPalace.Domain.Combat.Session
                 var ability = abilities[i];
                 if (!ability.HasSkill || ability.Skill.Effect != SkillEffect.Summon) continue;
 
-                int living = _encounter.LivingEnemies.Count(e => SourceFor(e)?.Source.Id == ability.Skill.SummonEnemyId);
+                int living = LivingCountOf(ability.Skill.SummonEnemyId);
                 if (living < ability.Skill.SummonCap) continue;
 
                 effective ??= new List<EnemyAbility>(abilities);
                 effective[i] = EnemyAbility.Of(ability.Skill, 0f);
             }
 
-            return effective ?? abilities.ToList();
+            // NOT abilities.ToList(). The copy was defensive against nothing:
+            // every consumer takes IReadOnlyList and none of them mutates, so
+            // the only thing it bought was a fresh List per enemy per intent
+            // draw -- which is the allocation the null-until-needed build
+            // directly above exists to avoid.
+            return effective ?? abilities;
         }
 
         private EnemyIntent BuildIntent(CombatantState enemy, CombatantState target,
@@ -393,8 +398,43 @@ namespace PrincesPalace.Domain.Combat.Session
             // implementation of half of it.
             if (chosen.HasValue && chosen.Value.HasSkill)
             {
-                SetStance(enemy, StanceFor(chosen.Value.Skill));
+                // NO SetStance HERE, and there used to be one. It read
+                // SetStance(enemy, StanceFor(skill)) and did nothing at all:
+                // SetStance writes into _recordingBeat, the previous beat was
+                // committed several lines ago, and the beat this cast belongs
+                // to is not opened until BeginBeat inside ResolveCharacterSkill
+                // -- which then poses the caster itself. A skill that named its
+                // own stance was therefore posed "cast" regardless, silently.
+                // The pose now happens where the beat exists; see
+                // ResolveDamageSingle.
                 ResolveCharacterSkill(enemy, chosen.Value.Skill, target, 0);
+
+                // AND COMMITTED, which it was not.
+                //
+                // This branch returned straight out, past the CommitBeat at the
+                // bottom of this method, and ResolveCharacterSkill does not
+                // close its own beat -- the player's two wrappers (UseSkill,
+                // CastSkill) each commit after calling it. So a monster casting
+                // a REAL skill opened a beat and abandoned it: the next
+                // BeginBeat overwrote _recordingBeat and the whole thing went
+                // in the bin.
+                //
+                // Nothing about the fight looked wrong, which is why it lasted.
+                // Damage, statuses and kills are model state and had already
+                // landed; what the discarded beat was carrying was the entire
+                // PRESENTATION -- the spell's frames, the caster's pose, the
+                // target's flinch, the floating number and the log line. Every
+                // monster with an authored skill has been casting invisibly:
+                // the Bog Witch's Mud Burst, the Golem's Boulder Slam, the
+                // Warden's Overhead Slam and Grapple. Reported from play as
+                // "the Bog Witch doesn't use the mud blast animation", which is
+                // exactly what it looks like from the outside.
+                //
+                // The legacy scaled-attack path below never had the problem --
+                // it falls through to the same CommitBeat every plain swing
+                // uses -- which is why enemy VFX worked at all and made this
+                // read as a content-wiring question rather than a dropped beat.
+                CommitBeat();
                 return;
             }
 

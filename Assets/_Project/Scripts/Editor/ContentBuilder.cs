@@ -417,6 +417,8 @@ public static class ContentBuilder
             asset.statusDuration = enemy.StatusDuration;
             asset.avoidsFrontSlot = enemy.AvoidsFrontSlot;
             asset.attackHoldsPosition = enemy.AttackHoldsPosition;
+            asset.stageScale = enemy.StageScale;
+            asset.slotSpan = enemy.SlotSpan;
             AssetDatabase.CreateAsset(asset, $"{EnemiesPath}/{enemy.Id}.asset");
         }
     }
@@ -505,6 +507,8 @@ public static class ContentBuilder
             asset.queuePushSlots = skill.QueuePushSlots;
             asset.transform = skill.Transform;
             asset.stance = skill.Stance;
+            asset.approach = skill.Approach;
+            asset.shake = skill.Shake;
             asset.summonEnemyId = skill.SummonEnemyId;
             asset.summonCap = skill.SummonCap;
             asset.hasStatus = skill.AppliesStatus.HasValue;

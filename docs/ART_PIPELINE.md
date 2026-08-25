@@ -169,6 +169,129 @@ Two rules the tooling doesn't enforce for you:
   without any engine change — see `StanceAnimation`'s own header comment
   for why that seam exists.
 
+### 4b. Commissioning stance sheets from an image model
+
+How the Beetle, Treant and Forest Nymph sheets were produced. Two stages, in
+a project ChatGPT conversation with the reference images attached — never one
+prompt per stance from cold, because nothing then holds the character still
+between stances.
+
+**Stage 1 — one 6-pose sheet.** A single 3x2 grid of six *distinct poses*:
+idle, attack, whatever ability poses the kit needs, hurt, defeated. This
+sheet's only job is to lock the character design. Give abilities that read
+differently their own pose (the Nymph's heal and poison hex share nothing but
+her silhouette, and one shared "cast" would have looked wrong for both).
+
+**Stage 2 — six animation sheets, one per pose.** Upload the *cut single* from
+Stage 1 as the image reference and ask for six frames animating that one pose.
+Doing it from the Stage-1 pose rather than from words is what keeps the six
+stances recognisably the same creature.
+
+Both stages: transparent background, no text/labels/borders, no ground plane,
+no floor or cast shadows, no particles or spell glow (VFX is composited in
+engine later — see §5b), identical scale across frames, one facing direction
+throughout. State the facing explicitly; a sheet came back with two of six
+poses mirrored, which reads in-game as the creature flipping mid-fight.
+
+#### Style: reference the rat, not the most recent sheet
+
+`Art/Enemies/Giant_rat_sheet.png` is the house style — bold uniform dark
+outlines, flat cel shading with two or three tones per colour area, small
+palette, minimal internal texture. **Attach it as an explicit *rendering
+style* reference** (say style only: not its subject, not its grey palette).
+Describing the style in words does not hold; the model's default pull is
+painterly.
+
+The Treant and Beetle sheets came out painterly and over-rendered — soft
+gradients, rim lighting, dense micro-texture — and were kept rather than
+redone. They are the two most recent enemy sheets, so anything reaching for
+"the most recent example" picks up exactly the wrong style. Do not use
+`bog_witch_sheet.png` as a reference either: it is an older artifact with
+baked-in captions, a background, floor shadows and glow, all of which current
+sheets prohibit.
+
+#### Direct the frames individually, or the sheet comes back static
+
+Describing the *motion* ("a fast raking swipe, wind-up then follow-through")
+reliably produces six near-identical copies of one pose. The model collapses
+the whole arc into a single drawing. Describing each *frame* — "FRAME 3: full
+coil, arm drawn all the way back; FRAME 4: THE STRIKE, full extension, the
+biggest pose on the sheet" — forces six distinct drawings.
+
+The difference is not subtle. The Nymph's idle went from 12% to 27% frame-to-
+frame change on the same reference image, purely from the rewrite; her attack
+from a standing pose repeated six times to 50%.
+
+A static sheet is close to invisible in a thumbnail strip and obvious as a
+number, so measure it. `tools/actor_stance_qa.py`'s onion-skin cell is the
+committed way to see it (a static stance composites to one clean silhouette
+instead of a smear). Rough bands from the sheets that animate correctly:
+action ~35-50%, cast ~26-40%, idle ~18-28%.
+
+#### Slicing: cut at the gutters, and reject strays by distance
+
+The generator does **not** lay figures out on an exact grid. Slicing at even
+thirds cut straight through bodies — 1635px of ink sat on the horizontal cut
+line of the Nymph's defeated sheet, whose real gutter was at y=612 against an
+even split of 512, amputating three frames' legs. `sheet_slicing.best_cut`
+already solves this: it searches a bounded window for the emptiest row/column
+and ties break toward the nominal split. **Use it. Do not hand-roll a slicer**
+— this was reinvented from scratch once, badly, before anyone read that
+module.
+
+A neighbouring pose's foot or hand routinely pokes over the boundary into the
+cell. Those fragments are *big* — a severed foot measured 5-10% of the body —
+so a "keep components above N% of the largest" rule keeps them, which is how
+four detached feet and a hand survived into a delivered set. Reject on
+**distance from the main silhouette**, not size: contamination lands in dead
+space (every real stray measured >40px clear), while genuinely detached art —
+a loose leaf, a flying hair lock, the Treant's mushrooms — sits against the
+body. Note also that erasing everything except the single largest component
+is *also* wrong: it eats those mushrooms.
+
+Do **not** reject a component for touching the cell edge. The figure
+legitimately stands on the cell floor, and that rule deletes her.
+
+#### Measuring "is it all the same size"
+
+Cross-pose, use `sqrt(opaque area)` — the proxy `actor_stance_qa.py` captions
+with and `ActorArtAssertions.AssertOneDrawScale` asserts on. Bounding-box
+height is confounded by the pose (a crouch is shorter at identical draw
+scale).
+
+Comparing the *same* pose across sheets, area is the confounded one — it
+balloons when hair or a cape fans out. The Nymph's six neutral frames read as
+6.9% apart by area and 3.2% apart by height, and the height figure was the
+true one. A scale "correction" was applied off the area number and had to be
+discarded. Two further proxies tried and rejected: flower size (occlusion
+changes it, reported 23%) and face width (a bowed head hides the face,
+reported 50%).
+
+Cheap guard against fooling yourself: build the comparison contact sheet with
+**one** scale factor for every frame and a shared baseline. Fitting each
+sprite to its own cell — the obvious way to build a contact sheet — makes
+every frame a different display scale, so the image cannot show a size
+difference even when one exists.
+
+#### Art/ is not delivery
+
+Everything above produces `Art/Enemies/<actor>/<stance>_frames/f0..fN`, each
+frame cropped tight to its own content. That is **not** shippable, for two
+reasons, and both are `pad_actor_frames.py`'s job (see its header):
+
+- **One canvas per actor, not per frame.** `FightController.StageVisuals`
+  sets `slotRect.sizeDelta = sprite.rect.size` with a bottom-centre pivot,
+  and `groundLine` is one authored number for the whole actor. Per-frame
+  crops make that number a different lie in every frame, so the creature bobs
+  and slides as it animates. Every correctly delivered enemy has a single
+  uniform canvas; `forest_warden` has six different ones and its manifest
+  entry admits to the pop.
+- **`delivery_scale`, because pixel size IS on-screen size.** There is no
+  per-enemy scale in content. Both AI kits are generated on the same 512px
+  cells, so delivered raw a beetle stands as tall as a golem. Pick the scale
+  against the delivered roster's idle content heights — rat 226, beetle 241,
+  bog_witch 282, golem 284, treant 423, forest_warden 472 — not by eye.
+
 ### `slice_actor_sheet.py`'s `ACTORS` manifest
 
 Driven by a committed per-actor manifest (`ACTORS` in the script), not

@@ -165,6 +165,12 @@ namespace PrincesPalace
                 _running = null;
             }
 
+            if (_punching != null)
+            {
+                StopCoroutine(_punching);
+                _punching = null;
+            }
+
             if (_rect != null)
             {
                 _rect.anchoredPosition = _home;
@@ -175,6 +181,81 @@ namespace PrincesPalace
                 // would simply stay squashed for the rest of the fight.
                 ApplyStretch(0f);
             }
+        }
+
+        // ---- the squash a struck figure takes ---------------------------------
+
+        // How hard a hit compresses the thing it lands on, and for how long.
+        //
+        // NEGATIVE STRETCH, which is the whole trick: ApplyStretch already
+        // widens on X and takes it back out of Y, so feeding it a negative
+        // amount does the opposite -- narrower and taller, which is what a body
+        // does when something drives into it. One set of arithmetic, one
+        // VolumeRatio, and a punch that cannot disagree with a lunge about what
+        // deformation looks like on this stage.
+        //
+        // BOTH RAISED ON REQUEST after the first pass. -0.13 over 0.13s is a
+        // real deformation on paper and was invisible in play: it is gone
+        // inside eight frames, which is less time than the eye needs to find
+        // the figure that was hit. The longer recovery is doing as much work
+        // here as the deeper squash -- what reads as impact is the SPRING BACK,
+        // and there was not enough of it to see.
+        private const float PunchStretch = -0.26f;
+        private const float PunchSeconds = 0.19f;
+
+        // THE OTHER HALF OF A HIT LANDING. The attacker deforms as it swings
+        // (OutStretch above) and the target only ever moved -- Recoil slides it
+        // back and nothing changed its shape. On art with a six-frame flinch
+        // that was survivable; on the flat single-frame poses most of the
+        // roster still has, a hit moved a rigid cut-out and read as a bump.
+        //
+        // Snap in, ease out: the compression is instant and the recovery is
+        // what the eye actually reads, which is the same asymmetry the lunge
+        // makes between LungeSeconds and ReturnSeconds and for the same reason.
+        //
+        // DELIBERATELY NOT RESTARTING a running lunge. A figure that is
+        // mid-swing when something hits it keeps swinging -- Play's own
+        // stop-and-restart rule is about two MOVES fighting over one position,
+        // and a punch writes only scale, so it can ride along with a move
+        // rather than cancel it.
+        public void Punch(float strength)
+        {
+            if (_rect == null || !isActiveAndEnabled || strength <= 0f) return;
+
+            if (_punching != null) StopCoroutine(_punching);
+            _punching = StartCoroutine(Punching(Mathf.Clamp01(strength)));
+        }
+
+        private Coroutine _punching;
+
+        private IEnumerator Punching(float strength)
+        {
+            float seconds = FightBeatPlayer.Scaled(PunchSeconds);
+            float peak = PunchStretch * strength;
+
+            // The compression itself is one frame -- there is no wind-up on
+            // being hit, and easing into it is exactly what makes a punch read
+            // as a stretch.
+            ApplyStretch(peak);
+
+            float elapsed = 0f;
+            while (elapsed < seconds)
+            {
+                elapsed += Time.unscaledDeltaTime;
+
+                // Ease-out back to shape, so it springs rather than melts.
+                float t = Mathf.Clamp01(elapsed / seconds);
+                ApplyStretch(peak * (1f - t) * (1f - t));
+
+                yield return null;
+            }
+
+            // Only if nothing else has taken the scale in the meantime -- a
+            // lunge that started mid-punch owns the deformation from then on,
+            // and writing zero here would flatten it a frame before its own
+            // arc did.
+            if (_running == null) ApplyStretch(0f);
+            _punching = null;
         }
 
         private IEnumerator PlayRoutine(Vector2 offset, float holdSeconds)

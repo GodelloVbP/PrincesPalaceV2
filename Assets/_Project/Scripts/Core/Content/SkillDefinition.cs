@@ -3,6 +3,8 @@ using PrincesPalace.Domain.Stats;
 using UnityEngine;
 using PrincesPalace.Domain.Content;
 
+using PrincesPalace.Domain.Combat.Session;
+
 namespace PrincesPalace.Content
 {
     // One character's own combat skill, unlocked by levelling.
@@ -93,6 +95,12 @@ namespace PrincesPalace.Content
 
         [Tooltip("Which of the caster's own stance folders plays while this skill resolves. Empty means the default: \"cast\".")]
         public string stance = "";
+
+        [Tooltip("How the caster reaches its target: Hold (rooted, the default and what every spell wants), Lunge (leans in, an ordinary melee swing) or Close (steps in front of the target BEFORE the stance plays, then strikes).")]
+        public StageApproach approach = StageApproach.Hold;
+
+        [Tooltip("A floor under how hard this skill kicks the stage, 0..1. Zero means the shake is whatever the damage was worth - which is nothing at all for a skill that deals none.")]
+        public float shake;
 
         [Tooltip("Summon only: the enemy id this skill calls in on the caster's own side.")]
         public string summonEnemyId = "";

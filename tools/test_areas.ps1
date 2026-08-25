@@ -49,7 +49,10 @@ $Areas = @{
     # that already sit in 'content' and 'run', and a bare pattern would drag
     # them in for the sake of a shared word.
     ui      = "Button|Audio|Splash|PauseMenu|DebugMenu|MainMenu|SystemMenu|Cursor|Dialogue|Bark|Inventory|Equipment|Dossier|Options|Music|Screen|UiKit|Flicker|Ambience|Overlay|OfferRow|Tooltip"
-    art     = "Stance|FrameHold|Shadow|WhiteQuad|SpriteFacing|BattleBackground|ItemArt|TalentArt|ArtPath|HandAssembled|Flash|Legibility|PostProcessing"
+    # 'LoopCycle' rather than widening 'Loop': the idle loop's pacing is art
+    # timing and belongs here, and a bare 'Loop' would be a word common enough
+    # to drag in anything.
+    art     = "Stance|FrameHold|LoopCycle|Shadow|WhiteQuad|SpriteFacing|BattleBackground|ItemArt|TalentArt|ArtPath|HandAssembled|Flash|Legibility|PostProcessing"
     rng     = "Rng|SeededRandom|Seed"
 }
 

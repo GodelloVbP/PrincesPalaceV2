@@ -47,6 +47,45 @@ namespace PrincesPalace.PlayModeTests
                 "the damage number has no still frame to be read against");
         }
 
+        // ---- and what the hit-stop takes out of it ----------------------------
+
+        // THE FREEZE IS SUBTRACTED, NOT ADDED. Hit-stop pauses the beat at the
+        // moment of contact, and the settle that follows gives back exactly
+        // what the pause took -- so a beat costs what it always cost.
+        //
+        // This is the assertion the whole effect hangs on. A stop that simply
+        // appeared would stretch every landed blow by up to a tenth of a
+        // second, which is invisible on one beat and puts the log a full
+        // exchange ahead of the stage over a round. Same failure mode
+        // SettleAfter's own comment records going unnoticed once already.
+        [Test]
+        public void TheHitStopComesOutOfTheSettleRatherThanLengtheningTheBeat()
+        {
+            float stance = ShippedSecondsPerFrame * 1;
+            float stop = HitStop.MaxSeconds;
+
+            float without = FightBeatPlayer.SettleAfter(stance);
+            float with = FightBeatPlayer.SettleAfter(stance + stop);
+
+            Assert.AreEqual(without - stop, with, 0.0001f,
+                "the settle did not give back what the freeze took, so every landed blow now runs long");
+            Assert.AreEqual(stance + without, stance + stop + with, 0.0001f,
+                "and a beat's total length has to be identical with the freeze and without it");
+        }
+
+        // The floor still applies underneath. A stance long enough to eat the
+        // whole budget already clamped; adding a stop on top of it must not
+        // produce a negative wait.
+        [Test]
+        public void AHitStopOnTopOfAnAlreadyLongStanceStillClamps()
+        {
+            float stance = ShippedSecondsPerFrame * ShippedFrameCount;
+
+            Assert.GreaterOrEqual(FightBeatPlayer.SettleAfter(stance + HitStop.MaxSeconds),
+                FightBeatPlayer.MinSettleSeconds,
+                "a long stance plus a freeze fell through the settle floor");
+        }
+
         // The floor must not quietly become the answer for everything: a flat
         // one-frame pose still has most of the beat left over, and shortening
         // that would be fixing the animated actors by rushing the others.

@@ -91,9 +91,38 @@ using PrincesPalace.Domain.Content;
         // means by "the target". This is only ever read by the view.
         public List<CombatantState> SplashTargets;
 
-        // A cast does not cross the stage. Set by the action rather than
-        // inferred, so it is still right for a skill with no art at all.
-        public bool ActorHoldsPosition;
+        // WHETHER THE ACTOR CROSSES THE STAGE, AND HOW FAR.
+        //
+        // Was a bool, ActorHoldsPosition, and a bool could only ever answer one
+        // of the two questions a blow asks. "Does it move" was enough while
+        // every skill was a spell -- a cast stands still, a swing leans in --
+        // and stopped being enough the moment monsters got melee skills: the
+        // Warden's Grapple and the Treant's Trunk Slam both resolve through the
+        // cast path, so both inherited "hold" and both connected from across
+        // the stage without leaving their mark.
+        //
+        // Set by the ACTION rather than inferred, as the bool was and for the
+        // same reason: it must still be right for a skill with no art at all.
+        public StageApproach Approach;
+
+        // Kept as the reading it always was, so the one call site that asks the
+        // yes/no question does not have to learn a third answer it does not
+        // care about.
+        public bool ActorHoldsPosition => Approach == StageApproach.Hold;
+
+        // A FLOOR UNDER HOW HARD THIS BEAT KICKS THE STAGE, 0..1.
+        //
+        // Everything else derives its weight from the damage, which is right
+        // almost always and useless for the case this exists for: the Warden's
+        // Roar deals nothing at all, so it weighed nothing, so the loudest
+        // moment in its fight was also the only silent one. A summon, a
+        // transformation and a taunt are all events the floor has to feel and
+        // the arithmetic cannot see.
+        //
+        // A FLOOR, not an override. A damaging skill that also authors one
+        // still shakes by its damage when that is the larger of the two, so
+        // authoring this can only ever add.
+        public float Shake;
 
         // Vitals as they stood BEFORE this beat's action. Only a spell beat
         // needs it: the bolt takes most of a second to arrive, and dropping the

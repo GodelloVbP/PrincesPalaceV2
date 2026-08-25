@@ -1,0 +1,66 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dace2591de5ca4247a661c0479d541c1, type: 3}
+  m_Name: bog_mud_burst
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SkillDefinition
+  id: bog_mud_burst
+  displayName: Mud Burst
+  description: The bog answers. It arrives wearing whatever it picked up on the way.
+  characterId: bog_witch
+  unlockLevel: 1
+  effect: 0
+  targeting: 0
+  manaCost: 0
+  resourceCost: 0
+  spendsAllResource: 0
+  power: 0
+  flatAmount: 5
+  ignoresDefense: 0
+  damageInstances: []
+  cooldownTurns: 2
+  playerSelectable: 0
+  vfx:
+    path: Spells/mud_burst
+    seconds: 0.65
+    impactFrame: 13
+    anchor: travel-centre
+    size: 380
+    departFrame: 9
+    impactX: 0.69
+    impactY: 0.52
+    sfxPath: 
+  appliesStatus: 3
+  hasStatus: 1
+  statusMagnitude: 25
+  statusDuration: 2
+  requirements:
+    strength: 0
+    dexterity: 0
+    constitution: 0
+    wisdom: 0
+    intelligence: 0
+    charisma: 0
+  scalingAxis: 0
+  queuePushSlots: 0
+  transform:
+    displayName: 
+    turns: 0
+    attackPercent: 0
+    speedPercent: 0
+    temporaryHealthPercent: 0
+    splashPercent: 0
+  stance: cast
+  approach: 0
+  shake: 0
+  summonEnemyId: 
+  summonCap: 0
+  sortOrder: 25
