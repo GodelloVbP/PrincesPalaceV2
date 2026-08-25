@@ -283,7 +283,7 @@ ACTORS = {
         ],
         "aliases": {},
         "anchor": "ground_band",
-        "delivery_scale": 1.0,  # measure per spec section 8; target idle f0 height 243px
+        "delivery_scale": 0.972,  # 243 / measured idle f0 height 250px, per spec section 8
         "nudge": {},
     },
 

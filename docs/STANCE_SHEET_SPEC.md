@@ -66,7 +66,7 @@ into this document before starting the next actor.
 
 | actor | Art folder | delivered id | stances | status |
 |---|---|---|---|---|
-| beetle | `Art/Enemies/beetle/` | `beetle` | idle, attack, turtle_up, shell_closed, hurt, defeated | **not started** |
+| beetle | `Art/Enemies/beetle/` | `beetle` | idle, attack, turtle_up, shell_closed, hurt, defeated | **delivered** (idle over its redraw/travel bars after 3 attempts, see its README) |
 | treant | `Art/Enemies/treant/` | `treant` | idle, attack, trunk_slam, cast, hurt, defeated | not started |
 | forest troll | `Art/Enemies/forest_troll/` | `forest_warden` | idle, attack, attack_roar, attack_charge, hurt, defeated | not started |
 
