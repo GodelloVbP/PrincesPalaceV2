@@ -778,15 +778,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float MetaCentreY =
             NameCentreY - NameHeight * 0.5f - NameToMetaGap - MetaHeight * 0.5f;
 
-        private const float CardTop = IconTop;
+        // The card's top IS the art's top -- there is no chrome above it (see
+        // BuildOffer's "NO PLATE" note), so IconTop is used directly rather
+        // than aliased.
         private const float CardBottom = MetaCentreY - MetaHeight * 0.5f;
-        private const float CardHeight = CardTop - CardBottom;
-        private const float CardCentreY = (CardTop + CardBottom) * 0.5f;
+        private const float CardHeight = IconTop - CardBottom;
+        private const float CardCentreY = (IconTop + CardBottom) * 0.5f;
 
-        // A y measured in the OFFER PHASE, expressed relative to the card that
-        // holds it -- the card is no longer centred on the phase's axis, so the
-        // two spaces differ by exactly its offset.
-        private const float Rebase = CardCentreY;
 
         // One of the items on offer. A button, because picking one is the only
         // decision this screen asks the player to make, and a CARD across the
@@ -826,7 +824,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // The band is declared once at class scope -- see the block above
             // BuildOffer. What is left here is the art's WIDTH, which depends
             // on how many cards share the row and so cannot be a constant.
-            const float IconCentre = IconCentreY - Rebase;
+            // Every y above is measured in the OFFER PHASE and every child is
+            // placed relative to its CARD, so each one is rebased by exactly
+            // the card's own offset from the phase axis.
+            const float IconCentre = IconCentreY - CardCentreY;
 
             // Built at the four-card row for the same reason the card is: the
             // audit solves the emitted tree and cannot see the controller widen
@@ -868,10 +869,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // reads as two unrelated things rather than as a labelled object.
             // 6px is enough to separate them and little enough to bind them.
             var name = Ui.Label($"ReckoningOffer{index}Name", UiString.Runtime, new UiVec(labelWidth, NameHeight), 21,
-                    "#EDE6FF", Place.At(0f, NameCentreY - Rebase))
+                    "#EDE6FF", Place.At(0f, NameCentreY - CardCentreY))
                 .AsDecor();
             var meta = Ui.Label($"ReckoningOffer{index}Meta", UiString.Runtime, new UiVec(labelWidth, MetaHeight), 15,
-                    "#B8A8D9", Place.At(0f, MetaCentreY - Rebase))
+                    "#B8A8D9", Place.At(0f, MetaCentreY - CardCentreY))
                 .AsDecor();
 
             // NO PLATE. The card is its burst, its icon and its two lines --

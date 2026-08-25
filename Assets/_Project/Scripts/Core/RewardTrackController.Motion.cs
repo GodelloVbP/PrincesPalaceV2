@@ -287,6 +287,49 @@ namespace PrincesPalace
                 RewardTrackLayout.NextMarkCentreY - BobPixels * phase);
         }
 
+        // ---- the one gate every animation on this panel goes through ----------
+
+        // WHETHER THIS SCREEN IS IN A POSITION TO ANIMATE ANYTHING.
+        //
+        // Reached from OnDisable, which is the part that is not obvious.
+        // HoverIndex reports an EXIT from its own OnDisable -- deliberately, so
+        // a tooltip anchored to something that vanishes mid-hover cannot stay
+        // open forever -- and on this screen that exit runs the card swap.
+        // Closing the panel with a node hovered therefore asked an object that
+        // is already inactive to start a coroutine, and Unity refuses out loud:
+        //
+        //   Coroutine couldn't be started because the game object
+        //   'RewardTrackPanel' is inactive!
+        //
+        // Reported from play, not caught here.
+        //
+        // OnDisable's own StopAllCoroutines looks like it covers this and does
+        // not. Unity gives no ordering guarantee between a child's OnDisable
+        // and its parent's, so the exit arrives while the panel is already down
+        // and before the controller has torn anything off -- stopping
+        // coroutines does nothing about one that has not started yet.
+        private bool CanAnimate => isActiveAndEnabled && gameObject.activeInHierarchy;
+
+        // Starts a panel animation, or does not.
+        //
+        // EVERY start in this file goes through here rather than the two that
+        // were reachable from a hover, because "which of these can OnDisable
+        // reach" is a question about call graphs that changes whenever somebody
+        // wires a new control -- and the answer for all of them while the panel
+        // is offscreen is the same anyway: there is nothing to animate on a
+        // screen nobody is looking at.
+        //
+        // Returns null so the callers' `_glide`/`_bursts`/`_cardSwap` handles
+        // are cleared rather than left pointing at a coroutine that never ran,
+        // which is what StopCoroutine on the next open would otherwise be
+        // handed.
+        private Coroutine Animate(IEnumerator routine)
+        {
+            if (routine == null || !CanAnimate) return null;
+
+            return StartCoroutine(routine);
+        }
+
         // ---- the fly-in --------------------------------------------------------
 
         // OPENS ON THE PLAYER, not on level 2, and travels there rather than
@@ -303,7 +346,7 @@ namespace PrincesPalace
             if (content == null || viewport == null) return;
 
             CancelGlide();
-            _glide = StartCoroutine(FlyIn());
+            _glide = Animate(FlyIn());
         }
 
         private IEnumerator FlyIn()
@@ -343,7 +386,7 @@ namespace PrincesPalace
             if (content == null || viewport == null) return;
 
             CancelGlide();
-            _glide = StartCoroutine(Glide(
+            _glide = Animate(Glide(
                 RewardTrackLayout.ScrollFor(level, viewport.rect.width), seconds));
         }
 
@@ -388,7 +431,7 @@ namespace PrincesPalace
             if (throughLevel < fromLevel) return;
 
             if (_bursts != null) StopCoroutine(_bursts);
-            _bursts = StartCoroutine(ClaimBursts(fromLevel, throughLevel));
+            _bursts = Animate(ClaimBursts(fromLevel, throughLevel));
         }
 
         // ONE COROUTINE PER LEVEL, on its own rig, which is the opposite of
@@ -408,7 +451,7 @@ namespace PrincesPalace
         {
             for (int level = fromLevel; level <= throughLevel; level++)
             {
-                StartCoroutine(Burst(_nextRig, level));
+                Animate(Burst(_nextRig, level));
                 _nextRig = (_nextRig + 1) % burstRoots.Length;
 
                 // ACCELERATING, slightly. A fixed stagger over thirty-five
@@ -583,14 +626,18 @@ namespace PrincesPalace
         // than as the same one with different words in it.
         private void BeginCardSwap(int level)
         {
-            if (cardRect == null)
+            // The instant repaint is also what an OFFSCREEN swap gets -- see
+            // Animate, which returns null rather than starting anything. The
+            // card still ends on the right content; the 280ms rise it skips was
+            // going to play on a panel nobody can see.
+            if (cardRect == null || !CanAnimate)
             {
                 PaintCard(level);
                 return;
             }
 
             if (_cardSwap != null) StopCoroutine(_cardSwap);
-            _cardSwap = StartCoroutine(CardSwap(level));
+            _cardSwap = Animate(CardSwap(level));
         }
 
         private IEnumerator CardSwap(int level)
@@ -628,7 +675,7 @@ namespace PrincesPalace
         {
             if (railFill != null)
             {
-                StartCoroutine(AdvanceRail(RewardTrackLayout.NodeX(newLevel)));
+                Animate(AdvanceRail(RewardTrackLayout.NodeX(newLevel)));
             }
 
             GlideTo(newLevel, FollowSeconds);
@@ -643,7 +690,7 @@ namespace PrincesPalace
             // takes it away, which the pulse and the seal already say.
             if (burstRoots != null && burstRoots.Length > 0)
             {
-                StartCoroutine(Burst(_nextRig, newLevel));
+                Animate(Burst(_nextRig, newLevel));
                 _nextRig = (_nextRig + 1) % burstRoots.Length;
             }
         }

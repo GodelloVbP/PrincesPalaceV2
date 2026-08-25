@@ -251,7 +251,8 @@ namespace PrincesPalace
             }
 
             if (offerTooltipText != null) offerTooltipText.SetContent(body);
-            PlaceTooltipBeside(index, FitTooltipToBody(body));
+            FitTooltipToBody(body);
+            PlaceTooltipBeside(index);
             offerTooltip.SetShown(true);
         }
 
@@ -271,10 +272,10 @@ namespace PrincesPalace
         // has to solve the case that can fail. A squad of one produces three
         // lines, and leaving the box at its emitted height put 200px of empty
         // violet over the item next door.
-        private float FitTooltipToBody(string body)
+        private void FitTooltipToBody(string body)
         {
             var self = offerTooltip == null ? null : offerTooltip.transform as RectTransform;
-            if (self == null) return ReckoningScreen.TooltipHeight;
+            if (self == null) return;
 
             float height = ReckoningScreen.TooltipHeight;
 
@@ -296,10 +297,12 @@ namespace PrincesPalace
             }
 
             self.sizeDelta = new Vector2(ReckoningScreen.TooltipWidth, height);
-            return height;
         }
 
-        private void PlaceTooltipBeside(int index, float height)
+        // Reads the height off the rect rather than taking it as an argument:
+        // FitTooltipToBody has already written it, and threading it back
+        // through the call was a second copy of a number the object holds.
+        private void PlaceTooltipBeside(int index)
         {
             var self = offerTooltip == null ? null : offerTooltip.transform as RectTransform;
             if (self == null) return;
@@ -320,7 +323,7 @@ namespace PrincesPalace
             const float Margin = 8f;
             var at = TooltipPlacement.Beside(
                 card.anchoredPosition.x, card.anchoredPosition.y, card.sizeDelta.x,
-                ReckoningScreen.TooltipWidth, height,
+                ReckoningScreen.TooltipWidth, self.sizeDelta.y,
                 interiorLeft: -ReckoningScreen.ContentHalfWidth + Margin,
                 interiorRight: ReckoningScreen.ContentHalfWidth - Margin,
                 interiorBottom: ReckoningScreen.ContentBottom + Margin,
@@ -537,8 +540,8 @@ namespace PrincesPalace
                     rect.sizeDelta = size;
                 }
 
-                ResizeLabel(offerNames, i, labelWidth);
-                ResizeLabel(offerMetas, i, labelWidth);
+                SetWidth(RectAt(offerNames, i), labelWidth);
+                SetWidth(RectAt(offerMetas, i), labelWidth);
 
                 // THE ART TOO, which the labels' own comment below explains the
                 // general case of. The icon box is emitted at the four-card
@@ -546,45 +549,54 @@ namespace PrincesPalace
                 // there would mean a three-card row -- every player below level
                 // 50 -- drawing its items 16% smaller than the card can hold,
                 // for no reason but the audit's convenience.
-                ResizeIcon(offerIcons, i, OfferRowLayout.IconWidth(count));
-                ResizeGlow(offerHalos, i, OfferRowLayout.HaloDiameter(count));
-                ResizeGlow(offerBursts, i, OfferRowLayout.BurstDiameter(count));
+                SetWidth(RectAt(offerIcons, i), OfferRowLayout.IconWidth(count));
+                SetSquare(RectAt(offerHalos, i), OfferRowLayout.HaloDiameter(count));
+                SetSquare(RectAt(offerBursts, i), OfferRowLayout.BurstDiameter(count));
             }
         }
 
-        // Width only: the icon's HEIGHT is the band ReckoningScreen fixed, and
+        // ---- resizing one card's parts -----------------------------------------
+        //
+        // THREE METHODS THAT WERE ONE METHOD. Icon, glow and label each had
+        // their own copy of the same bounds check and the same sizeDelta
+        // write, differing only in which array they indexed -- so a fix to the
+        // guard was three edits, and the fourth part somebody adds tomorrow
+        // would be a fourth copy.
+        //
+        // Split by what actually differs instead: WHICH rect and WHAT is
+        // written to it.
+        //
+        // ONE overload, not two. Image and TMP_Text both descend from Graphic,
+        // which is where rectTransform is declared -- so an Image[] and a
+        // TMP_Text[] both pass as Graphic[] through array covariance and the
+        // second copy of this guard was never needed. (The first draft split it
+        // in two on the belief that the types were unrelated. They are
+        // siblings.)
+        private static RectTransform RectAt(Graphic[] items, int index) =>
+            items == null || index < 0 || index >= items.Length || items[index] == null
+                ? null
+                : items[index].rectTransform;
+
+        // Width only. The icon's HEIGHT is the band ReckoningScreen fixed, and
         // ItemIcons.Apply fits the art inside whatever box it is given, so
-        // widening the box is the whole of "make the item bigger".
-        private static void ResizeIcon(Image[] images, int index, float width)
+        // widening the box is the whole of "make the item bigger". The labels
+        // have to follow the card for a different reason -- a long item name in
+        // a narrow row runs under the card next door, and they are decor, so
+        // nothing else would catch it.
+        private static void SetWidth(RectTransform rect, float width)
         {
-            if (images == null || index >= images.Length || images[index] == null) return;
+            if (rect == null) return;
 
-            var rect = images[index].rectTransform;
             var size = rect.sizeDelta;
             size.x = width;
             rect.sizeDelta = size;
         }
 
-        // Square, both axes, because a glow is a disc and stretching one reads
-        // as a smear rather than as light.
-        private static void ResizeGlow(Image[] images, int index, float diameter)
+        // Both axes, because a glow is a disc and stretching one reads as a
+        // smear rather than as light.
+        private static void SetSquare(RectTransform rect, float diameter)
         {
-            if (images == null || index >= images.Length || images[index] == null) return;
-
-            images[index].rectTransform.sizeDelta = new Vector2(diameter, diameter);
-        }
-
-        // The labels have to follow the card or a long item name in a narrow
-        // row runs under the card next door -- they are decor, so nothing else
-        // would catch it.
-        private static void ResizeLabel(TMP_Text[] labels, int index, float width)
-        {
-            if (labels == null || index >= labels.Length || labels[index] == null) return;
-
-            var rect = labels[index].rectTransform;
-            var size = rect.sizeDelta;
-            size.x = width;
-            rect.sizeDelta = size;
+            if (rect != null) rect.sizeDelta = new Vector2(diameter, diameter);
         }
 
         private void PaintOffers()

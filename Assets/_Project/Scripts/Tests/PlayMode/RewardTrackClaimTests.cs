@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
+using PrincesPalace;
 using PrincesPalace.Domain.Progression;
 
 namespace PrincesPalace.PlayModeTests
@@ -94,6 +95,47 @@ namespace PrincesPalace.PlayModeTests
                 .FirstOrDefault(b => b.name == name);
 
         private static Character First() => SaveSlotManager.CurrentSave.ActiveSquad()[0];
+
+        // CLOSING THE PANEL WHILE A NODE IS HOVERED, which threw every time.
+        //
+        // HoverIndex reports an EXIT from its own OnDisable -- deliberately, so
+        // a tooltip anchored to something that vanishes mid-hover does not stay
+        // open forever. On this screen that exit reaches BeginCardSwap, which
+        // starts a coroutine; and by the time a child's OnDisable runs, the
+        // panel it belongs to is already inactive. Unity refuses, loudly:
+        //
+        //   Coroutine couldn't be started because the game object
+        //   'RewardTrackPanel' is inactive!
+        //
+        // Reported from play. The controller's own OnDisable calls
+        // StopAllCoroutines, which looks like it covers this and does not --
+        // Unity gives no ordering guarantee between a child's OnDisable and its
+        // parent's, so the exit can arrive after the panel is down and before
+        // the controller has torn anything off.
+        //
+        // A PlayMode test fails on an unexpected LogError, so the reproduction
+        // IS the assertion -- there is nothing to check afterwards because the
+        // throw leaves no state behind.
+        [UnityTest]
+        public IEnumerator ClosingTheTrackWhileANodeIsHoveredDoesNotThrow()
+        {
+            yield return OpenTheTrack(level: 5, claimed: 5);
+
+            var panel = Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                .FirstOrDefault(t => t.name == "RewardTrackPanel");
+            Assert.IsNotNull(panel, "the hub has no RewardTrackPanel");
+            Assert.IsTrue(panel.gameObject.activeInHierarchy, "fixture: the track should be open");
+
+            // Hovered through the real component, because that is what the
+            // panel's own OnDisable will later report an exit from.
+            var hover = panel.GetComponentsInChildren<HoverIndex>(includeInactive: true).FirstOrDefault();
+            Assert.IsNotNull(hover, "the track's nodes carry no HoverIndex, so this pin is vacuous");
+            hover.OnPointerEnter(null);
+            yield return null;
+
+            panel.gameObject.SetActive(false);
+            yield return null;
+        }
 
         // The migration case, end to end: a character carrying twenty-nine
         // unclaimed levels presses one button and is settled.
