@@ -13,26 +13,25 @@ doc update-rules index.
 
 ## Screens → files
 
-Each screen is: a `SceneBuilder` part that builds it, a controller (+ its own
-parts, for Fight), its tests, and its content data (where applicable).
+Each screen is: a tree in `Domain/UiKit/Screens/` that declares it, a
+controller (+ its own parts, for Fight), its tests, and its content data
+(where applicable). Wiring for every screen goes through `ScreenRegistry.cs`
+(see "The UI construction layer" below) — the `Run Map` row still names v1's
+per-screen `SceneBuilder.*.cs` files, which is a known, deliberately
+unrepaired staleness (see the note further down this file).
 
-| Screen | SceneBuilder part | Controller | Content |
+| Screen | Screen tree | Controller | Content |
 |---|---|---|---|
-| Main Menu / Save Slots / Character Select | `SceneBuilder/SceneBuilder.MainMenu.cs` + `.MainMenuAmbience.cs` | `MainMenuController.cs`, `SaveSlotController.cs`, `CharacterSelectController.cs`, `MenuIntroStagger.cs` | `characters.json` |
+| Main Menu / Save Slots | `Domain/UiKit/Screens/MainMenuScreen.cs` + `MainMenuAmbience.cs` | `MainMenuController.cs`, `SaveSlotController.cs` | `characters.json` |
 | Run Map | `SceneBuilder/SceneBuilder.Map.cs` | `DescentMapView.cs`, `MapController` (see `GameplayManager.cs`) | `enemies.json` (room pools) |
-| Fight (combat) | `SceneBuilder/SceneBuilder.Fight.cs` + `.FightStage.cs` | `FightController.cs` (root) + its 7 parts, see below | `skills.json`, `spells.json`, `enemies.json`, `weapons.json` |
-| Item Choice ("pick 1 of 3") | `SceneBuilder/SceneBuilder.Rewards.cs` | `ItemChoiceController.cs` | `items.json`, `itemsets.json` |
-| Rewards ("The Reckoning") | `SceneBuilder/SceneBuilder.Rewards.cs` | `RewardsController.cs` | — |
-| Inventory | `SceneBuilder/SceneBuilder.Equipment.cs` (`BuildInventoryPanel`) | `InventoryController.cs` (legacy roster+weapon overlay) | — |
-| Equipment (bag + paperdoll) | `SceneBuilder/SceneBuilder.Equipment.cs` (`BuildEquipmentScreens`) | `EquipmentController.cs` | — |
-| Shop / Store | `SceneBuilder/SceneBuilder.Store.cs` | `StoreController.cs` | `items.json` (Upgrades/Consumables) |
-| Hub | `SceneBuilder/SceneBuilder.Hub.cs` | `HubController.cs` | — |
+| Fight (combat) | `Domain/UiKit/Screens/FightScreen.cs` | `FightController.cs` (root) + its 4 parts, see below | `skills.json`, `spells.json`, `enemies.json`, `weapons.json` |
+| Rewards / Item Choice ("The Reckoning") | `Domain/UiKit/Screens/ReckoningScreen.cs` (wired as `fight.reckoning` inside the Fight scene via `ScreenRegistry.cs`) | `ReckoningController.cs` | `items.json`, `itemsets.json` |
+| Character Dossier (sheet + bag + paperdoll) | `Domain/UiKit/Screens/CharacterDossierScreen.cs` (wired as a System Menu tab via `ScreenRegistry.cs`) | `CharacterDossierController.cs` | `characters.json`, `items.json` |
+| Shop / Store | — (unbuilt; `RoomResolver` clears Shop rooms while saying so, see "Rooms that are not fights" below) | — | `items.json` (Upgrades/Consumables) |
+| Hub | `Domain/UiKit/Screens/HubScreen.cs` + `HubAmbience.cs` | `HubController.cs`, `HubBuildingLooper.cs` | — |
 | Talents | `Domain/UiKit/Screens/TalentScreen.cs` + `Domain/UiKit/ConstellationLayout.cs` | `TalentController.cs` + `.Motion.cs` | `talents.json` |
-| Relics | `SceneBuilder/SceneBuilder.Relics.cs` | `RelicsController.cs` | `relics.json` |
-| Character Sheet | `SceneBuilder/SceneBuilder.CharacterSheet.cs` | `CharacterSheetController.cs` | `characters.json` |
-| Pause Menu | `SceneBuilder/SceneBuilder.Overlays.cs` (`BuildPauseMenu`/`BuildPauseLayer`) | `PauseMenuController.cs` | — |
-| Dialogue Bark (always-on layer) | `SceneBuilder/SceneBuilder.Overlays.cs` (`BuildBarkController`) | `BarkController.cs` | — |
-| Dialogue (full-screen) | `SceneBuilder/SceneBuilder.Dialogue.cs` | `DialogueController.cs` | — |
+| Relics (start-of-run draft) | `Domain/UiKit/Screens/RelicDraftScreen.cs` (wired into Hub via `ScreenRegistry.cs`) | `RelicDraftController.cs` | `relics.json` |
+| System Menu (Pause replacement — tabs: Dossier/RewardTrack/Options/RunStats/Exits) | `Domain/UiKit/Screens/SystemMenuScreen.cs` (wired into Fight/Map/Hub via `ScreenRegistry.cs`) | `SystemMenuController.cs` | — |
 
 Generic building-block primitives (`CreateButtonStrip`, `AssertColumnClears`,
 `CreateFramedPanel`, the `Hud*`/`Suite*` color palette, `CreateGearCell`/`Icon`/`Text`, etc.) live
@@ -69,27 +68,30 @@ and the post-processing profile under `Assets/_Project/Rendering/`.
 to `ScreenRegistry.All`. That one entry gives it scene building, build-time
 audits and screenshot support — there is no second list to update.
 
-## `FightController` — full part list
+## `FightController` — current part list
+
+> This section described a pre-rebuild shape (`.Encounter.cs`/`.Actions.cs`/
+> `.Turns.cs`/`.Outcome.cs`/`.HudMenu.cs`/`.Beats.cs`/`.Talents.cs`) that no
+> longer exists on disk — the Fight-screen rebuild documented in "The Fight
+> screen (v2)" below moved that logic to Domain. Corrected to the actual
+> current files rather than left to rot beside its own replacement section.
 
 Root stays at `Assets/_Project/Scripts/Core/FightController.cs` — this IS a
 MonoBehaviour the generated scene binds by this file's script GUID, so its
-name/path/`.meta` are frozen. Holds every `[SerializeField]` field, every
-const, all other runtime state, both menu enums (`MenuDepth`/`MenuBranch`),
-lifecycle (`Start`/`Update`/`OnEnable`), and all menu-input handling
-(`AddHover`/`OnSubmenuRowHovered`/`OpenBranch`/`GoBack`/`ResetMenu`/etc).
-Parts live beside it, same folder:
+name/path/`.meta` are frozen. Parts live beside it, same folder:
 
 | Part | Covers |
 |---|---|
-| `FightController.Encounter.cs` | `BuildEncounter`, `AddEnemyCombatant`, `WriteBackHealth` |
-| `.Actions.cs` | The player action-resolution path: `BeginTargetedAction` → `OnContinuePressed` — attack/skill/item/run resolution, both `AfterDefences` overloads, relic/role effects |
-| `.Turns.cs` | `AdvanceAfterAction`, signature/status/mana ticks, enemy AI turn resolution (`AutoResolveEnemyTurns`) |
-| `.Outcome.cs` | `EndFight`, victory/boss resolution, reward/drop rolls |
-| `.Hud.cs` | `RefreshUi` and the world-state half it drives — party plate, enemy plates, party stage, initiative tracker, `SetCombatantStance` |
-| `.HudMenu.cs` | The command-menu half: `RefreshCommandColumns`, submenu rows, the detail panel |
-| `.Beats.cs` | The `StageBeat` nested class, `PlaySpellEffects`/`TimeUntilImpact`/`ImpactFraction`, and the whole record/commit/playback beat system |
-| `.StageVisuals.cs` | Damage popups, lunges, stage-slot lookups, stance sprite loading/caching, grounding figures on the slot's ground line (from `StanceManifest`) |
-| `.Talents.cs` | Every talent-granted rule that happens at a MOMENT: wool owed at a turn start (all three engines), the defense shred, both splashes, Trample's extra action, entering/ticking/extending a transform, and Provoke. The PASSIVE half deliberately lives in `CombatMath` instead — see the part's own header |
+| `FightController.Hud.cs` | Painting, and nothing else |
+| `.Input.cs` | Clicks in, session commands out; `CanAct` asked in ONE place |
+| `.SpellVfx.cs` | Spell VFX playback — see "Spell VFX" below |
+| `.StageVisuals.cs` | Actors, poses and grounding — see "The stage" below |
+
+The menu/turn/encounter/outcome/talent logic this table used to list here now
+lives in Domain (`Domain/Combat/Session/FightSession*.cs`,
+`Domain/.../FightMenuState.cs`, `Domain/.../FightHudModel.cs`) and in
+`Core/FightBeatPlayer.cs` — see "The Fight screen (v2)" below for the full,
+current breakdown.
 
 `namespace PrincesPalace { public partial class FightController }` (root adds
 `: MonoBehaviour`). Both asmdef-visible from `PrincesPalace.Core`.
@@ -127,10 +129,8 @@ does this character actually have right now" family), same
 `public static partial class ContentDatabase` in all three, no namespace-
 binding constraint since it's a static class, not a MonoBehaviour),
 `GameplayManager.cs` (run lifecycle, screen switching via `OverlayState`),
-`ItemIcons.cs` / `PortraitIcons.cs` (shared id→sprite lookup, see
-`docs/CODE_STANDARDS.md` §2), `RarityColors.cs`, `CharacterTabStrip.cs`
-(the character-switcher tab row shared by CharacterSheetController/
-RelicsController/TalentController), VFX primitives (`RadialGlowImage`,
+`ItemIcons.cs` (shared id→sprite lookup, also used for portraits — see
+`docs/CODE_STANDARDS.md` §2), `RarityColors.cs`, VFX primitives (`RadialGlowImage`,
 `BeaconPulse`, `SolidCircleImage`, `SpellVfxPlayer`), the ambient-motion
 primitives (`StarTwinkle`, `LanternFlicker`, `SlowDrift`, `MoteDrift`,
 `KenBurnsDrift` — see `docs/CODE_STANDARDS.md` §2), and
@@ -155,7 +155,7 @@ every ScriptableObject from `ContentData/*.json`), `ScreenshotTool.cs`
 usage text in sync with it), `EnemySpriteImportPostprocessor.cs`,
 `StanceSpriteImporter.cs` (forces Sprite import under `Resources/Enemies`,
 `Resources/Characters` AND `Resources/Spells` — anything runtime-loaded as a
-Sprite must be listed there or it silently loads as null), `PanelPreview.cs`.
+Sprite must be listed there or it silently loads as null).
 
 `tools/` (all PowerShell/Python, see `docs/WORKFLOW.md` §8 for when to use
 which):
