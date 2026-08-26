@@ -283,6 +283,23 @@ namespace PrincesPalace.Domain.Combat.Session
                 rng: _rng,
                 resolveWard: ResolveWard);
 
+            // Swift: the swing missed outright. Everything below this line
+            // is a rider on a LANDED hit -- BreakShield depletion, the mark
+            // bonus, Lucky Deck's own splash (via RelicsAfterSwing), the
+            // message that names a number, the actor's hit grunt, and every
+            // rider inside ApplyFinalDamage (elemental procs, lifesteal,
+            // Hardened's push, splash/kill-splash, status application) --
+            // so a miss returns here, before any of it, rather than trying
+            // to gate each one individually. See DamagePipeline's own
+            // header for why the roll already happened inside AfterDefences
+            // rather than needing a second check here.
+            if (outcome.IsMiss)
+            {
+                RecordMiss();
+                AppendMessage($"{target.Name} dodges {actor.Name}'s attack!");
+                return 0;
+            }
+
             DepleteBreakShield(target, outcome.Effectiveness);
 
             if (outcome.PoisonDetonation > 0)
@@ -300,7 +317,28 @@ namespace PrincesPalace.Domain.Combat.Session
             RecordActorVoice(actor);
             ApplyFinalDamage(actor, target, damage);
 
+            // Runic's tempo rider: a PLAIN swing (this method, never a skill
+            // cast -- see ExecuteSkillInner/CastSkill, which never call this)
+            // arms a one-shot mana discount for the actor's NEXT skill.
+            // Armed here rather than inside ApplyFinalDamage because
+            // ApplyFinalDamage is shared with both skill paths and has no
+            // way to tell "this damage came from a plain swing" apart from
+            // "this damage came from a skill" -- the one thing only the
+            // plain-swing call site actually knows.
+            ArmRunicManaDiscount(actor);
+
             return damage;
+        }
+
+        // See ResolveAttackSwing's own call site for why this is armed only
+        // from a plain swing. 0 when the actor carries no
+        // NextSkillManaDiscountPercent modifier -- ChargeSkillMana already
+        // treats 0 as "nothing armed", the same convention every other
+        // percent field here uses.
+        private void ArmRunicManaDiscount(CombatantState actor)
+        {
+            if (actor == null) return;
+            actor.PendingManaDiscountPercent = actor.ModifierEffects.Best(ModifierEffectType.NextSkillManaDiscountPercent);
         }
 
         // The part that never differs once a damage figure and its own message
@@ -322,6 +360,11 @@ namespace PrincesPalace.Domain.Combat.Session
             // from a different strand and can legitimately fire on the same blow.
             ApplyTransformSplash(actor, target, damage);
 
+            // Every item-modifier on-hit rider (elemental damage, lifesteal,
+            // chance-to-push) -- see the method's own header for why these
+            // three share one block rather than three separate call sites.
+            ApplyModifierOnHitRiders(actor, target, damage);
+
             if (!target.IsAlive)
             {
                 AppendMessage($"{target.Name} is defeated!");
@@ -334,15 +377,188 @@ namespace PrincesPalace.Domain.Combat.Session
                 // read better as "he went down, and so did the one next to him"
                 // than the reverse.
                 ApplyKillSplash(actor, target);
+                ApplyModifierKillSplash(actor, target);
                 ExtendTransformOnKill(actor);
             }
+        }
+
+        // Everything an item modifier grants ON A LANDED HIT, from EITHER a
+        // plain swing or a skill cast -- both funnel through ApplyFinalDamage,
+        // which is exactly why this lives here rather than duplicated at both
+        // call sites. Fires for the ACTOR's own modifiers only: a target's
+        // gear does not react to being hit (that is what
+        // FlatPhysicalDamageReduction/BreakShieldDepletionResistPercent are
+        // for, both read defensively inside the damage pipeline instead).
+        //
+        // ONE METHOD for three riders rather than three, because all three
+        // read the same actor.ModifierEffects bag off the same landed hit and
+        // none of them can fail the others -- a target already reduced to 0
+        // HP by the elemental tick still gets lifestolen-from and can still be
+        // pushed (harmlessly; PushBack on a combatant about to be removed
+        // from the order is a no-op the queue already tolerates).
+        private void ApplyModifierOnHitRiders(CombatantState actor, CombatantState target, int damage)
+        {
+            if (actor == null || target == null || damage <= 0) return;
+
+            var effects = actor.ModifierEffects;
+            if (effects.IsEmpty) return;
+
+            // Elemental on-hit damage -- the player-side mirror of the
+            // Poison-on-hit template at FightSession.Enemies.cs:548. One
+            // extra damage INSTANCE per landed hit, typed by whichever
+            // element the modifier names, dealt through the same DealDamage
+            // funnel every other hit uses so it counts on the ledger.
+            foreach (var effect in effects.All)
+            {
+                if (effect.Type != ModifierEffectType.ElementalDamageOnHitPercent || !effect.Against.HasValue)
+                {
+                    continue;
+                }
+
+                // NOT CombatMath.Scale -- see this method's own header note
+                // above and CombatMath.Scale's own header: the x5 DamageScale
+                // it applies was deleted from the mitigated-combat path on
+                // 2026-08-26 and this rider is part of that path (it is bonus
+                // damage riding a landed hit, not one of the handful of
+                // deliberately-still-x5 splash sites CombatMath.Scale's own
+                // header names). "X% of Attack" uses the same
+                // Rounding.AwayFromZero(value * pct / 100f) convention every
+                // other percent-of-a-computed-figure call in this file uses
+                // (see DepleteBreakShield's resistPercent a few methods
+                // down), floored at 1 the same way ScaledAttack's own raw
+                // Attack term is.
+                int elementalRaw = Math.Max(1, Rounding.AwayFromZero(actor.Attack * effect.Magnitude / 100f));
+
+                // Routed through DamagePipeline.AfterDefences' TYPED overload
+                // -- the SAME funnel a spell's own damageInstances resolve
+                // through (FightSession.Skills.ResolveDamageInstances) --
+                // rather than straight through DealDamage. This is bonus
+                // damage of a DIFFERENT type than the swing that triggered it
+                // (Fire riding a Physical sword, say), so it owes its own
+                // typed-resistance/defense check the way any other typed hit
+                // does; it is absent from DamagePipeline's own documented
+                // exemption list (Trample/Explosive/Shatter/Lucky Deck
+                // splash), which is exactly why skipping mitigation here was
+                // a bug and not a design choice.
+                //
+                // dodgeAlreadyResolved: true -- NOT a second dodge roll. This
+                // rider only ever runs from ApplyFinalDamage, which only runs
+                // once the parent swing already landed (a miss returns out of
+                // ResolveAttackSwing/ExecuteSkillInner/etc. long before
+                // ApplyFinalDamage is reached). The blade already connected;
+                // "the elemental charge on the blade separately whiffs" is
+                // not a distinct event this combat model has a concept for,
+                // the same reasoning ResolveDamageInstances' own multi-packet
+                // spell already established for a second authored packet.
+                var elementalOutcome = DamagePipeline.AfterDefences(
+                    elementalRaw, effect.Against.Value, target,
+                    affinity: AffinityOf(target),
+                    varianceRange: DamageVarianceRange,
+                    rng: _rng,
+                    resolveWard: ResolveWard,
+                    attacker: actor,
+                    dodgeAlreadyResolved: true);
+
+                int elementalDamage = elementalOutcome.Damage;
+                if (elementalDamage <= 0) continue;
+
+                DealDamage(actor, target, elementalDamage, effect.Against.Value);
+                AppendMessage($"{target.Name} takes {elementalDamage} bonus {effect.Against.Value} damage!");
+
+                if (!target.IsAlive) break;
+            }
+
+            // Vampiric: heal the wielder for a percent of what they just dealt.
+            // `damage` here is already the final, post-mitigation landed-hit
+            // figure -- NOT CombatMath.Scale, same reasoning and the same
+            // Rounding.AwayFromZero(value * pct / 100f) convention as the
+            // elemental rider just above.
+            int lifestealPercent = effects.Best(ModifierEffectType.LifestealPercent);
+            if (lifestealPercent > 0)
+            {
+                int healed = Rounding.AwayFromZero(damage * lifestealPercent / 100f);
+                if (healed > 0)
+                {
+                    CombatMath.Heal(actor, healed);
+                    AppendMessage($"{actor.Name} drains {healed} health from the blow.");
+                }
+            }
+
+            // Hardened's push: a CHANCE, not a guarantee, to knock the target
+            // back in turn order -- reuses CombatEncounter.PushBack, the same
+            // pass-through the Black Ram's Headbutt already drives.
+            int pushChance = effects.Best(ModifierEffectType.PushBackOnHitChancePercent);
+            if (pushChance > 0 && target.IsAlive && RollPercent(pushChance))
+            {
+                if (_encounter.PushBack(target, FightTuning.ModifierPushBackSlots))
+                {
+                    AppendMessage($"{target.Name} is knocked off balance!");
+                }
+            }
+
+            // Frosty's chill: a CHANCE, on this landed hit, to slow the
+            // target -- reuses ApplyChilled (FightSession.SpeedBuffs.cs),
+            // the exact call Lucky Deck's own migrated slow now goes
+            // through. See ModifierEffectType.ChilledOnHitChancePercent for
+            // why the chance is authored per-modifier but the chill's own
+            // speed-reduction magnitude and duration are fixed constants.
+            int chillChance = effects.Best(ModifierEffectType.ChilledOnHitChancePercent);
+            if (chillChance > 0 && target.IsAlive && RollPercent(chillChance))
+            {
+                int lost = ApplyChilled(target, FightTuning.ChilledOnHitSpeedPercent,
+                    FightTuning.ChilledOnHitTurns, actor);
+
+                if (lost < 0)
+                {
+                    AppendMessage($"{target.Name} is chilled to the bone - slower now!");
+                }
+            }
+
+            // Sylvan's root: a CHANCE, on this landed hit, to root the
+            // target -- StatusEffectType.Rooted via StatusEffects.Apply
+            // directly, the same status-list entry point ApplyChilled itself
+            // sits on top of. No speed bookkeeping to mirror here (Chilled's
+            // whole complication), so this needs no ApplyRooted wrapper --
+            // Apply is already the correct, complete call. `actor` is the
+            // Source so a rooted enemy's forfeited-turn message and any
+            // future "who rooted you" query can attribute it, matching
+            // Poison/Provoked/every other sourced status in this file.
+            int rootChance = effects.Best(ModifierEffectType.RootChancePercent);
+            if (rootChance > 0 && target.IsAlive && RollPercent(rootChance))
+            {
+                StatusEffects.Apply(target.Statuses, StatusEffectType.Rooted,
+                    magnitude: 0, turns: FightTuning.RootOnHitTurns, source: actor);
+                AppendMessage($"{target.Name} is rooted in place!");
+            }
+        }
+
+        // A single shared percent roll for on-hit modifier riders -- kept as
+        // one method rather than inlined at each call site so every chance
+        // effect in this vocabulary rolls the SAME way (>= this session's own
+        // _rng, never a second independent random source).
+        private bool RollPercent(int percentChance)
+        {
+            return RandomOps.RollPercent(_rng, percentChance);
         }
 
         private void DepleteBreakShield(CombatantState target, float effectiveness)
         {
             if (target?.BreakShield == null) return;
 
-            if (target.BreakShield.Deplete(BreakShield.DepletionFor(effectiveness > 1f)))
+            int amount = BreakShield.DepletionFor(effectiveness > 1f);
+
+            // Stalwart's shield resistance: shrinks the amount BEFORE
+            // BreakShield.Deplete ever sees it, rather than reducing Deplete's
+            // own return -- Deplete's bool answers "did THIS hit break it",
+            // and shrinking the input is what actually changes that answer
+            // rather than merely lying about it after the fact.
+            int resistPercent = target.ModifierEffects.Best(ModifierEffectType.BreakShieldDepletionResistPercent);
+            if (resistPercent > 0)
+            {
+                amount = Rounding.AwayFromZero(amount * (100 - Math.Min(100, resistPercent)) / 100f);
+            }
+
+            if (target.BreakShield.Deplete(amount))
             {
                 AppendMessage($"{target.Name}'s guard breaks!");
             }

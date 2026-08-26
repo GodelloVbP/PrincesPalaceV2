@@ -8,7 +8,7 @@ namespace PrincesPalace.Domain.Tests
     {
         private static CombatantState MakeCombatant(int maxHealth = 1000)
         {
-            return new CombatantState("Test", true, maxHealth, 10, 5, 2, 5);
+            return new CombatantState("Test", true, maxHealth, 10, 5, 5);
         }
 
         [Test]

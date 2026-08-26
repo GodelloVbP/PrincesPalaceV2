@@ -564,9 +564,15 @@ namespace PrincesPalace.Domain.UiKit
 
         // Taller, because the list is what closes column C. At 34 the nine
         // derived stats ended 184px above the floor and the column read as
-        // half-drawn; at 48 they reach within 78px of it, which MaxStatRows
-        // still leaves room to grow into.
-        public const float StatRowHeight = 48f;
+        // half-drawn; at 48 they reached within 78px of it. The balance
+        // redesign's Phase 1 dropped the Defence row (the old single generic
+        // `defense` stat, removed rather than folded into either broad
+        // Defense -- see StatType's own header), leaving eight rows instead
+        // of nine; 48 at eight rows regressed to 126px above the floor
+        // (SystemMenuPaneTests.EveryPaneUsesMostOfItsHeight). Raised to 56 so
+        // eight rows still close the column, with MaxStatRows still leaving
+        // one row of headroom to grow into.
+        public const float StatRowHeight = 56f;
 
         public static float StatRowCentreY(int index) =>
             StatListTop - StatRowHeight * (index + 0.5f);

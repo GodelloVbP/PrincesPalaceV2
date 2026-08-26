@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Equipment
@@ -32,6 +33,12 @@ namespace PrincesPalace.Domain.Equipment
         // Every non-zero "+N ABBR" this grants, in a fixed order: flat combat
         // stats first, then ability scores. Both joiners below use this rather
         // than walking the fields again, so they cannot list different things.
+        //
+        // BALANCE REDESIGN PHASE 6 (D7.1): each ability-score line now names
+        // what it actually derives -- "+2 WIS (+4 Mana, +4 Mag Def)" -- rather
+        // than leaving "what does this even do" for the player to remember
+        // from the glossary. See AppendAbilityGrant for which scores get an
+        // exact figure and which get a named destination instead.
         public static List<string> BonusParts(StatBlock stats, AbilityScoreBlock scores)
         {
             var parts = new List<string>();
@@ -39,14 +46,13 @@ namespace PrincesPalace.Domain.Equipment
             Append(parts, "HP", stats.maxHealth);
             Append(parts, "SPD", stats.speed);
             Append(parts, "ATK", stats.attack);
-            Append(parts, "DEF", stats.defense);
             Append(parts, "MP/turn", stats.manaRegen);
-            Append(parts, "phys res", stats.physicalResistance);
-            Append(parts, "magic res", stats.magicalResistance);
+            Append(parts, "phys def", stats.physicalDefense);
+            Append(parts, "magic def", stats.magicalDefense);
 
             foreach (AbilityScore score in AbilityScores.All)
             {
-                Append(parts, AbilityScores.ShortName(score), scores[score]);
+                AppendAbilityGrant(parts, score, scores[score]);
             }
 
             return parts;
@@ -62,14 +68,70 @@ namespace PrincesPalace.Domain.Equipment
             return bonuses.Length == 0 ? $"- scales {scaling}" : $"{bonuses} - scales {scaling}";
         }
 
-        // Bonuses on one line, SCALES on its own beneath -- printed even when
+        // DMG first (if this is a weapon a viewer is looking at), bonuses on
+        // their own line, SCALES on its own beneath -- printed even when
         // there are no bonuses, because for a weapon the grades ARE the item.
-        // For a card with room for two lines.
-        public static string Card(StatBlock stats, AbilityScoreBlock scores, string scaling)
+        // For a card with room for a few lines.
+        //
+        // BALANCE REDESIGN PHASE 6 (D7.2): `weaponDamage` is optional and
+        // null for anything that is not a weapon (or has no viewer to score
+        // it against) -- see ItemDescription.CardSummary/ComparisonBody in
+        // Core, which are the only callers with a WeaponPower and a viewer's
+        // ability scores in hand to compute it from. The SCALES line stays
+        // exactly as it was: this ADDS the number a weapon's grade only
+        // implies, it does not replace it.
+        //
+        // ITEM-MODIFIER PLAN PHASE E: `modifierLines`, LAST, after a blank
+        // separator -- rolled affixes are a distinct fact from the item's own
+        // flat stats/scaling, the same reason VS. EQUIPPED gets its own
+        // blank-then-heading break in Body below rather than running straight
+        // into the deltas. Optional and null for the vast majority of items,
+        // which have rolled none -- see ModifierSection for why an empty/null
+        // list prints nothing at all rather than an empty heading.
+        public static string Card(StatBlock stats, AbilityScoreBlock scores, string scaling,
+            string weaponDamage = null, IReadOnlyList<string> modifierLines = null)
         {
+            var lines = new List<string>();
+            if (!string.IsNullOrEmpty(weaponDamage)) lines.Add(weaponDamage);
+
             string bonuses = string.Join("  ", BonusParts(stats, scores));
-            if (string.IsNullOrEmpty(scaling)) return bonuses;
-            return bonuses.Length == 0 ? $"SCALES  {scaling}" : $"{bonuses}\nSCALES  {scaling}";
+            if (bonuses.Length > 0) lines.Add(bonuses);
+
+            if (!string.IsNullOrEmpty(scaling)) lines.Add($"SCALES  {scaling}");
+
+            string modifiers = ModifierSection(modifierLines);
+            if (modifiers.Length > 0)
+            {
+                lines.Add("");
+                lines.Add(modifiers);
+            }
+
+            return string.Join("\n", lines);
+        }
+
+        // "AFFIXES" heading over one line per rolled modifier -- shared by
+        // Card (a single character's hover) and SquadBody (the Reckoning's
+        // squad-wide hover), so the two screens cannot describe the same
+        // roll two different ways. Each entry in `modifierLines` is already a
+        // COMPLETE "DisplayName -- fragment[, fragment]" line -- see
+        // ItemDescription.ModifierLines in Core, the adapter that turns a
+        // resolved modifier id list into this shape by calling
+        // ModifierEffectText.Describe once per scaled effect.
+        //
+        // Empty or null prints NOTHING, not an empty heading -- the vast
+        // majority of items roll no modifiers at all, and "AFFIXES" over a
+        // blank line would read as a content gap rather than as "this item
+        // has none".
+        public static string ModifierSection(IReadOnlyList<string> modifierLines)
+        {
+            if (modifierLines == null || modifierLines.Count == 0)
+            {
+                return "";
+            }
+
+            var lines = new List<string> { Coloured(HeadingHex, "AFFIXES") };
+            lines.AddRange(modifierLines);
+            return string.Join("\n", lines);
         }
 
         // One coloured "+/-N Label" per non-zero field of the delta.
@@ -80,10 +142,9 @@ namespace PrincesPalace.Domain.Equipment
             AppendDelta(lines, "Max HP", comparison.StatDelta.maxHealth);
             AppendDelta(lines, "Speed", comparison.StatDelta.speed);
             AppendDelta(lines, "Attack", comparison.StatDelta.attack);
-            AppendDelta(lines, "Defense", comparison.StatDelta.defense);
             AppendDelta(lines, "Mana/turn", comparison.StatDelta.manaRegen);
-            AppendDelta(lines, "Phys res", comparison.StatDelta.physicalResistance);
-            AppendDelta(lines, "Magic res", comparison.StatDelta.magicalResistance);
+            AppendDelta(lines, "Phys def", comparison.StatDelta.physicalDefense);
+            AppendDelta(lines, "Magic def", comparison.StatDelta.magicalDefense);
 
             foreach (AbilityScore score in AbilityScores.All)
             {
@@ -105,11 +166,24 @@ namespace PrincesPalace.Domain.Equipment
         // A member with no movement still gets a line saying so. Dropping them
         // would make the box change height per hover and, worse, read as though
         // that character had not been considered.
-        public static string SquadBody(IReadOnlyList<(string Name, ItemComparison Comparison)> squad)
+        // ITEM-MODIFIER PLAN PHASE E: `modifierLines`, FIRST, before any
+        // member's own block. The roll belongs to the CANDIDATE item, not to
+        // any one squad member -- printing it once above the per-member
+        // deltas says so, rather than repeating (or worse, letting it drift)
+        // across every member's own line.
+        public static string SquadBody(IReadOnlyList<(string Name, ItemComparison Comparison)> squad,
+            IReadOnlyList<string> modifierLines = null)
         {
             if (squad == null || squad.Count == 0) return "";
 
             var blocks = new List<string>();
+
+            string modifiers = ModifierSection(modifierLines);
+            if (modifiers.Length > 0)
+            {
+                blocks.Add(modifiers);
+            }
+
             foreach (var member in squad)
             {
                 blocks.Add($"{member.Name}\n   {LineFor(member.Comparison)}");
@@ -176,13 +250,17 @@ namespace PrincesPalace.Domain.Equipment
 
         // The whole hover panel: what it grants, what it demands, what changes,
         // and what else moves as a side effect.
+        //
+        // `weaponDamage` threads straight through to Card -- see its own
+        // header for why this is optional and who computes it.
         public static string Body(StatBlock bonus, AbilityScoreBlock scoreBonus, string scaling,
                                   AbilityScoreBlock required, AbilityScoreBlock have,
-                                  in ItemComparison comparison)
+                                  in ItemComparison comparison, string weaponDamage = null,
+                                  IReadOnlyList<string> modifierLines = null)
         {
             var lines = new List<string>();
 
-            string card = Card(bonus, scoreBonus, scaling);
+            string card = Card(bonus, scoreBonus, scaling, weaponDamage, modifierLines);
             if (card.Length > 0) lines.Add(card);
 
             string requirement = RequirementLine(required, have, comparison.CandidateIsLive);
@@ -222,6 +300,93 @@ namespace PrincesPalace.Domain.Equipment
         private static void Append(List<string> parts, string abbreviation, int value)
         {
             if (value != 0) parts.Add($"{Signed(value)} {abbreviation}");
+        }
+
+        // "+2 WIS (+4 Mana, +4 Mag Def)" -- what a flat ability-score grant
+        // ACTUALLY DOES, not just its raw number. Omitted entirely at zero,
+        // same as every other line here.
+        private static void AppendAbilityGrant(List<string> parts, AbilityScore score, int value)
+        {
+            if (value == 0) return;
+            parts.Add($"{Signed(value)} {AbilityScores.ShortName(score)} ({AbilityGrantAnnotation(score, value)})");
+        }
+
+        // CON and WIS are pure multiplication in AbilityDerivation (score
+        // minus 10, times a flat rate) -- which means a flat grant's effect
+        // is EXACT and ORDER-INDEPENDENT: N granted points are always worth
+        // exactly N x rate, whatever the wearer's own score already is. Safe
+        // to print a real number for those two, so this does.
+        //
+        // STR and INT derive no flat stat at all -- weapon/spell GRADES
+        // answer "how hard do I hit" instead (see AbilityDerivation's own
+        // header) -- so there is no number to print for either, only where
+        // the point actually goes.
+        //
+        // DEX and CHA are NOT safe the same way CON/WIS are: both divide
+        // ((score - 10) / 2 and / 4, see AbilityDerivation.SpeedBonus /
+        // SignatureGainBonus), and integer division means a flat grant's
+        // marginal effect depends on the wearer's own remainder -- a +2 DEX
+        // item can be worth +1 Speed on one character and +0 on another,
+        // and this function has no wearer to check. Naming what the point
+        // feeds, without a number it cannot promise, is the honest version;
+        // SheetStats.PerPointSummary is where the exact figure belongs,
+        // because it DOES have a wearer to measure against.
+        private static string AbilityGrantAnnotation(AbilityScore score, int delta)
+        {
+            switch (score)
+            {
+                case AbilityScore.Constitution:
+                    return $"{Signed(delta * AbilityDerivation.HealthPerPoint)} HP, " +
+                           $"{Signed(delta * AbilityDerivation.PhysicalDefensePerPoint)} Phys Def";
+                case AbilityScore.Wisdom:
+                    return $"{Signed(delta * AbilityDerivation.ManaPerPoint)} Mana, " +
+                           $"{Signed(delta * AbilityDerivation.MagicalDefensePerPoint)} Mag Def";
+                case AbilityScore.Strength:
+                    return "weapon scaling";
+                case AbilityScore.Intelligence:
+                    return "spell scaling";
+                case AbilityScore.Dexterity:
+                    return "Speed, weapon scaling";
+                default: // Charisma
+                    return "Signature Gain";
+            }
+        }
+
+        // THE mitigation curve, read as a percentage -- D/(D+Softener), the
+        // exact fraction DamagePipeline.AfterDefences runs on every hit, via
+        // CombatMath.AfterResistance. ONE function so the dossier's own
+        // Defense rows (SheetStats.DisplayText) and the glossary's worked
+        // examples (GlossaryEntries.Mechanics()) cannot round the same number
+        // two different ways -- or drift apart outright if the curve is ever
+        // retuned.
+        //
+        // TRUNCATING integer division, matching CombatMath.AfterResistance
+        // exactly rather than rounding away-from-zero on a float -- this is a
+        // DISPLAY of what that function actually does, not an independent
+        // formula, so it has to share its convention rather than its own. It
+        // still lands on the design doc's own pinned examples exactly: 25 ->
+        // 20%, 50 -> 33%, 100 -> 50%, 300 -> 75% (all four happen to divide
+        // evenly, so truncation does not move them).
+        public static int DamageReductionPercent(int defense)
+        {
+            if (defense <= 0) return 0;
+            return 100 * defense / (defense + CombatMath.ResistanceSoftener);
+        }
+
+        // "DMG 87", or "DMG 87 -> 104" against whatever is currently
+        // equipped -- see WeaponPower.DisplayDamage for how each side is
+        // computed. No arrow glyph (this file's own header explains why:
+        // legacy uGUI Text drops a glyph the font does not carry), and no
+        // delta printed at all when the two numbers already agree -- hovering
+        // the weapon already in the slot should not claim it upgrades itself.
+        public static string WeaponDamageText(int damage, int? equippedDamage = null)
+        {
+            if (equippedDamage.HasValue && equippedDamage.Value != damage)
+            {
+                return $"DMG {equippedDamage.Value} -> {damage}";
+            }
+
+            return $"DMG {damage}";
         }
 
         private static void AppendDelta(List<string> lines, string label, int value)

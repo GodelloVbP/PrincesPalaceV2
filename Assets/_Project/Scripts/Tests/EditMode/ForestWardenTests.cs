@@ -21,8 +21,12 @@ namespace PrincesPalace.Domain.Tests
     public class ForestWardenTests
     {
         private static CombatantState Fighter(string name, bool isPlayerSide, int maxHealth = 100,
-            int attack = 7, int defense = 0, int speed = 5) =>
-            new CombatantState(name, isPlayerSide, maxHealth, 0, attack, defense, speed);
+            int attack = 7, int defense = 0, int speed = 5)
+        {
+            var fighter = new CombatantState(name, isPlayerSide, maxHealth, 0, attack, speed);
+            fighter.PhysicalDefense = defense;
+            return fighter;
+        }
 
         private static ResolvedEnemy Source(string id, IReadOnlyList<EnemyAbilityRef> abilities = null) =>
             new ResolvedEnemy(id, id, new StatBlock(), 0, 0, isBoss: true,
@@ -141,9 +145,14 @@ namespace PrincesPalace.Domain.Tests
             int raw = SkillResolution.Amount(skill.Effect, attacker, victim,
                 skill.Power, skill.FlatAmount, 0, skill.IgnoresDefense);
 
+            // ignoresDefense now has to be threaded to the pipeline
+            // explicitly -- SkillResolution.Amount no longer mitigates at
+            // all (see its own header), so this is the one place the flag
+            // still does anything.
             return DamagePipeline.AfterDefences(raw, attacker, victim,
                 attackType: null, affinity: ElementalAffinity.Neutral,
-                varianceRange: 0f, rng: null, resolveWard: null).Damage;
+                varianceRange: 0f, rng: null, resolveWard: null,
+                ignoresDefense: skill.IgnoresDefense).Damage;
         }
 
         // ---- Grapple: the first authored use of Stun ---------------------------

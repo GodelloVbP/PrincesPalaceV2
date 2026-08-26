@@ -6,25 +6,28 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Content
 {
-    // Expands weapons.json into finished weapons across two axes: tier, and
-    // modifier.
+    // Expands weapons.json into finished weapons across ONE axis: tier.
     //
     // The armour-set resolver next door generates eleven items from one
-    // authored piece. This generates eleven PER MODIFIER, and the extra axis
-    // is the feature rather than an implementation detail — the same sword
-    // exists as a Sturdy one that rewards Strength and a Nimble one that
-    // rewards Dexterity, so what a run hands you is a real question ("is this
-    // for me?") instead of a strictly-better number.
+    // authored piece; this generates eleven per family the identical way —
+    // item-modifier plan Phase B collapsed the second (modifier) axis this
+    // file used to iterate (sturdy/nimble/hallowed/arcane/verdant/heavy/
+    // quick/cunning, all eight gone). What used to make a Sturdy sword a
+    // different pick from a Nimble one is now a ROLLED RIFT MODIFIER on the
+    // item instance, drawn from modifiers.json, not a second baked family
+    // variant here. A base weapon still carries a single default scaling
+    // identity (Sword->STR, Staff->INT, Dagger->DEX, per the plan's Q2) so
+    // it is a coherent pick even with zero modifiers rolled.
     //
-    // GRADES ARE INTERPOLATED, not tabulated. A modifier says what it reaches
-    // at tier 0 and at max tier and every level between falls out, which is
+    // GRADE IS INTERPOLATED, not tabulated. A family says what its scaling
+    // reaches at tier 0 and at max tier and every level between falls out,
     // the same both-ends anchoring ItemSetEntryResolver uses for stats and it
     // buys the same three things: retuning is two words, raising maxTier
     // stretches the curve instead of running out of ladder, and a designer
     // never hand-writes eleven letters that later drift out of order.
     //
-    // Grades belong to TIER and only to tier. The instance-level PLUS scales
-    // a weapon's flat Attack and nothing else — letting it move grades too
+    // Grade belongs to TIER and only to tier. The instance-level PLUS scales
+    // a weapon's flat Attack and nothing else — letting it move the grade too
     // would put two axes in charge of the same number.
     public static class WeaponEntryResolver
     {
@@ -55,7 +58,7 @@ namespace PrincesPalace.Domain.Content
 
             foreach (string duplicate in resolved.GroupBy(w => w.Id).Where(g => g.Count() > 1).Select(g => g.Key))
             {
-                errors.Add($"Two generated weapons share the id '{duplicate}'. Family ids and modifier ids must be unique, since the item id is built from both.");
+                errors.Add($"Two generated weapons share the id '{duplicate}'. Family ids must be unique, since the item id is built from it.");
             }
 
             return errors.Count == 0;
@@ -81,12 +84,6 @@ namespace PrincesPalace.Domain.Content
             if (maxTier > ItemSetEntryResolver.HighestSupportedTier)
             {
                 errors.Add($"{label}: maxTier is {maxTier}, above the supported ceiling of {ItemSetEntryResolver.HighestSupportedTier}. Raising the ceiling is a one-line change, but this is usually a typo.");
-                return;
-            }
-
-            if (raw.modifiers == null || raw.modifiers.Length == 0)
-            {
-                errors.Add($"{label}: has no modifiers, so it would generate nothing. A family with only one way to be balanced still needs one modifier entry.");
                 return;
             }
 
@@ -131,82 +128,60 @@ namespace PrincesPalace.Domain.Content
             int familyOrder = raw.sortOrder >= 0 ? raw.sortOrder : index;
             int iconLevels = raw.iconLevels > 0 ? raw.iconLevels : ItemSetEntryResolver.DefaultIconLevels;
 
-            var seenModifierIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            for (int m = 0; m < raw.modifiers.Length; m++)
+            if (!TryResolveAxis(raw.primary, raw.primaryAtZero, raw.primaryAtMax,
+                    label, "primary", required: true, out var primary, errors))
             {
-                var modifier = raw.modifiers[m];
-                string modifierLabel = $"{label}, modifier #{m}";
+                return;
+            }
 
-                if (modifier == null || string.IsNullOrWhiteSpace(modifier.id))
-                {
-                    errors.Add($"{modifierLabel}: id is required.");
-                    continue;
-                }
+            if (!TryResolveAxis(raw.secondary, raw.secondaryAtZero, raw.secondaryAtMax,
+                    label, "secondary", required: false, out var secondary, errors))
+            {
+                return;
+            }
 
-                modifierLabel = $"{label}, modifier '{modifier.id}'";
+            var extraErrors = new List<string>();
+            if (!ScalingLineParser.TryParse(raw.alsoScalesWith, label, out var extra, extraErrors))
+            {
+                errors.AddRange(extraErrors);
+                return;
+            }
 
-                if (!seenModifierIds.Add(modifier.id.Trim()))
-                {
-                    errors.Add($"{modifierLabel}: appears twice in the same family.");
-                    continue;
-                }
+            var spellErrors = new List<string>();
+            if (!ScalingLineParser.TryParse(raw.spellScalesWith, label, out var spellScaling, spellErrors))
+            {
+                errors.AddRange(spellErrors);
+                return;
+            }
 
-                if (string.IsNullOrWhiteSpace(modifier.displayName))
-                {
-                    errors.Add($"{modifierLabel}: displayName is required — it is the adjective that leads the name.");
-                    continue;
-                }
+            var requirementErrors = new List<string>();
+            if (!AbilityScoreLineParser.TryParse(raw.requiresAtZero, label, out var reqAtZero, requirementErrors)
+                | !AbilityScoreLineParser.TryParse(raw.requiresAtMax, label, out var reqAtMax, requirementErrors))
+            {
+                errors.AddRange(requirementErrors);
+                return;
+            }
 
-                if (!TryResolveAxis(modifier.primary, modifier.primaryAtZero, modifier.primaryAtMax,
-                        modifierLabel, "primary", required: true, out var primary, errors))
-                {
-                    continue;
-                }
+            if (secondary.HasValue && primary.Value.Score == secondary.Value.Score)
+            {
+                errors.Add($"{label}: primary and secondary are both {AbilityScores.ShortName(primary.Value.Score)}, so the secondary curve would silently overwrite the primary one.");
+                return;
+            }
 
-                if (!TryResolveAxis(modifier.secondary, modifier.secondaryAtZero, modifier.secondaryAtMax,
-                        modifierLabel, "secondary", required: false, out var secondary, errors))
-                {
-                    continue;
-                }
-
-                var extraErrors = new List<string>();
-                if (!ScalingLineParser.TryParse(modifier.alsoScalesWith, modifierLabel, out var extra, extraErrors))
-                {
-                    errors.AddRange(extraErrors);
-                    continue;
-                }
-
-                var spellErrors = new List<string>();
-                if (!ScalingLineParser.TryParse(modifier.spellScalesWith, modifierLabel, out var spellScaling, spellErrors))
-                {
-                    errors.AddRange(spellErrors);
-                    continue;
-                }
-
-                var requirementErrors = new List<string>();
-                if (!AbilityScoreLineParser.TryParse(modifier.requiresAtZero, modifierLabel, out var reqAtZero, requirementErrors)
-                    | !AbilityScoreLineParser.TryParse(modifier.requiresAtMax, modifierLabel, out var reqAtMax, requirementErrors))
-                {
-                    errors.AddRange(requirementErrors);
-                    continue;
-                }
-
-                if (secondary.HasValue && primary.Value.Score == secondary.Value.Score)
-                {
-                    errors.Add($"{modifierLabel}: primary and secondary are both {AbilityScores.ShortName(primary.Value.Score)}, so the secondary curve would silently overwrite the primary one.");
-                    continue;
-                }
-
-                for (int tier = 0; tier <= maxTier; tier++)
-                {
-                    resolved.Add(BuildWeapon(raw, modifier, slot, tier, maxTier, primary.Value, secondary, extra,
-                        ItemSetEntryResolver.ValueAt(attackAtZero, attackAtMax, tier, maxTier),
-                        cost + costPerTier * tier,
-                        familyOrder * 10000 + m * 100 + tier,
-                        iconLevels, spellScaling,
-                        ItemSetEntryResolver.InterpolateScores(reqAtZero, reqAtMax, tier, maxTier)));
-                }
+            for (int tier = 0; tier <= maxTier; tier++)
+            {
+                resolved.Add(BuildWeapon(raw, slot, tier, maxTier, primary.Value, secondary, extra,
+                    // WEAPON GROWTH, not armour's -- balance redesign
+                    // Phase 3 (D3). This is the ONLY interpolation in
+                    // this file that moves off GearScaling.TierGrowth;
+                    // GradeAt below (the scaling letters) deliberately
+                    // stays on the default so a weapon's grade ladder is
+                    // untouched by how steeply its flat Attack climbs.
+                    ItemSetEntryResolver.ValueAt(attackAtZero, attackAtMax, tier, maxTier, GearScaling.WeaponTierGrowth),
+                    cost + costPerTier * tier,
+                    familyOrder * 10000 + tier,
+                    iconLevels, spellScaling,
+                    ItemSetEntryResolver.InterpolateScores(reqAtZero, reqAtMax, tier, maxTier)));
             }
         }
 
@@ -222,7 +197,7 @@ namespace PrincesPalace.Domain.Content
             {
                 if (required)
                 {
-                    errors.Add($"{label}: {which} is required — a modifier that favours no stat is not a way of being balanced.");
+                    errors.Add($"{label}: {which} is required — a weapon family that favours no stat is not a way of being balanced.");
                     return false;
                 }
 
@@ -262,18 +237,16 @@ namespace PrincesPalace.Domain.Content
             return ScalingGrades.FromIndex(ItemSetEntryResolver.ValueAt((int)atZero, (int)atMax, tier, maxTier));
         }
 
-        // "Nimble Keen Sword".
+        // "Keen Sword". The tier adjective leads the family noun; no modifier
+        // segment any more (item-modifier plan Phase B) — a rolled Rift
+        // modifier is what tells one drop apart from another now, and its
+        // name is composed at display time, not baked here.
         //
-        // Modifier, then tier adjective, then the family noun. The adjective
-        // carries how good it is and the modifier carries who it is for, so
-        // the two halves of what a weapon IS are both in its name and a
-        // player can tell two drops apart without opening anything.
-        //
-        // The plus is NOT part of this. It belongs to the instance, and the
-        // UI appends it via ItemNaming.WithPlus at display time.
-        private static string NameFor(RawWeaponEntry family, RawWeaponModifier modifier, int tier)
+        // The plus is NOT part of this either. It belongs to the instance,
+        // and the UI appends it via ItemNaming.WithPlus at display time.
+        private static string NameFor(RawWeaponEntry family, int tier)
         {
-            return ItemNaming.Compose(modifier.displayName, AdjectiveFor(family, tier), family.displayName);
+            return ItemNaming.Compose(AdjectiveFor(family, tier), family.displayName);
         }
 
         // The last adjective covers every tier past the end of a short list,
@@ -285,7 +258,7 @@ namespace PrincesPalace.Domain.Content
             return ItemNaming.AdjectiveAt(family.tierAdjectives, tier, FallbackAdjective);
         }
 
-        private static ResolvedWeapon BuildWeapon(RawWeaponEntry family, RawWeaponModifier modifier, EquipmentSlot slot,
+        private static ResolvedWeapon BuildWeapon(RawWeaponEntry family, EquipmentSlot slot,
             int tier, int maxTier,
             (AbilityScore Score, ScalingGrade AtZero, ScalingGrade AtMax) primary,
             (AbilityScore Score, ScalingGrade AtZero, ScalingGrade AtMax)? secondary,
@@ -301,19 +274,13 @@ namespace PrincesPalace.Domain.Content
             }
 
             string familyId = family.id.Trim();
-            string modifierId = modifier.id.Trim();
-
-            string description = !string.IsNullOrWhiteSpace(modifier.description)
-                ? modifier.description
-                : family.description ?? "";
 
             return new ResolvedWeapon(
-                $"{familyId}_{modifierId}_p{tier}",
-                NameFor(family, modifier, tier),
-                description,
+                $"{familyId}_p{tier}",
+                NameFor(family, tier),
+                family.description ?? "",
                 slot,
                 familyId,
-                modifierId,
                 tier,
                 attackBonus,
                 scaling,

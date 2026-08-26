@@ -17,7 +17,10 @@ namespace PrincesPalace.Content
 
         public string displayName;
 
-        public StatBlock baseStats = new StatBlock(10, 5, 3, 1);
+        public StatBlock baseStats = new StatBlock(10, 5, 3);
+
+        [Tooltip("The damage type this monster's own attacks and abilities carry. Defaults to Physical, same as an unauthored character's attackType.")]
+        public DamageType attackType = DamageType.Physical;
 
         [Tooltip("Experience awarded to every surviving party member on victory.")]
         public int expReward = 20;

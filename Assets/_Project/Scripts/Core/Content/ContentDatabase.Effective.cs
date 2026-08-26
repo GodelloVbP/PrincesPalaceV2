@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using PrincesPalace.Domain.Combat;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Stats;
 using UnityEngine;
@@ -176,7 +177,26 @@ namespace PrincesPalace.Content
             var loadout = ActiveLoadout(character);
             foreach (var (entry, item) in loadout.LiveEntries)
             {
-                total += item.StatBonusAt(entry.plus);
+                var bonus = item.StatBonusAt(entry.plus);
+
+                // PHASE 3 of the balance redesign (D3): gear no longer grants
+                // flat Attack. A weapon's own Attack now enters combat as
+                // WeaponPower, at the FightEncounterAdapter seam, computed
+                // from the weapon's own attackAtTier and hone alone -- never
+                // summed with a character's base Attack or with anything
+                // else worn. Zeroed HERE rather than at the source (item.
+                // StatBonusAt/attackBonus) so a weapon's DEFINITION still
+                // honestly reports what it grants -- the store and the
+                // tooltip still want that number -- while EffectiveStats,
+                // the one place real combat actually reads, stops treating
+                // it as a swing contribution. This
+                // also quietly retires the handful of hand-authored
+                // "attack N" lines still sitting in itemsets.json (Phase 4
+                // rewrites that schema; until then they are authored but
+                // inert, which is the correct reading now that armour is
+                // not supposed to swing for you).
+                bonus.attack = 0;
+                total += bonus;
             }
 
             // Ability scores, LAST — the SAME resolve ActiveLoadout already
@@ -192,7 +212,19 @@ namespace PrincesPalace.Content
             // points (see Character.bonusMaxHealth).
             total.maxHealth += character?.bonusMaxHealth ?? 0;
 
-            return total.ClampedAtLeast(0);
+            // THE single clamp point (see AbilityDerivation's own header --
+            // every derivation above this is deliberately signed and
+            // unclamped). Floor 0 everywhere, EXCEPT two stats that must
+            // never reach it: a combatant with 0 max health is already
+            // dead before the fight starts, and 0 Speed cannot take a turn
+            // at all (SpeedScale divides by it downstream). Neither is a
+            // build the game should ever produce, even off a very low
+            // CON/DEX spread stacked with the worst gear on offer, so both
+            // get their own floor of 1 on top of the general one.
+            var clamped = total.ClampedAtLeast(0);
+            clamped.maxHealth = Mathf.Max(1, clamped.maxHealth);
+            clamped.speed = Mathf.Max(1, clamped.speed);
+            return clamped;
         }
 
         // A fresh signature resource for this character, or null if they have
@@ -285,6 +317,110 @@ namespace PrincesPalace.Content
             return found == null ? TalentEffectSet.Empty : new TalentEffectSet(found);
         }
 
+        // Every rule this character's equipped items' ROLLED MODIFIERS
+        // contribute, flattened into the shape combat reads — the gear-side
+        // mirror of TalentEffects just above, same "resolved once per fight,
+        // unknown ids skipped" reasoning.
+        //
+        // PHASE A2: real working code, not a stub, even though it returns
+        // ModifierEffectSet.Empty for every character in every real save
+        // today — see ModifierEffectSetAlwaysEmptyForRealCharactersTests.
+        // Phase A1 already gave EquipmentSlotEntry.modifierIds a real (if
+        // always-empty-today) list to walk, and Phase A3's roll has nothing
+        // to change here when it lands: it only starts populating
+        // modifierIds with real ids, which this method already reads.
+        //
+        // READS ActiveLoadout, NOT the raw equipment walk TalentEffects has
+        // no equivalent of. A worn item whose ability-score requirement is
+        // unmet already contributes no stats (see ActiveLoadout's own
+        // header, "an inert item is inert everywhere at once") — a modifier
+        // riding an inert item granting its effect anyway would be exactly
+        // the class of bug that comment was written to prevent, so this
+        // reads LiveEntries specifically rather than EquippedEntries().
+        public static ModifierEffectSet ModifierEffects(Character character)
+        {
+            EnsureLoaded();
+
+            if (character == null)
+            {
+                return ModifierEffectSet.Empty;
+            }
+
+            List<ModifierEffect> found = null;
+            foreach (var (entry, item) in ActiveLoadout(character).LiveEntries)
+            {
+                foreach (var scaled in ScaledModifierEffectsForItem(item.tier, (RiftTier)entry.riftTier, entry.modifierIds))
+                {
+                    found = found ?? new List<ModifierEffect>();
+                    found.Add(scaled.Effect);
+                }
+            }
+
+            return found == null ? ModifierEffectSet.Empty : new ModifierEffectSet(found);
+        }
+
+        // ONE ITEM INSTANCE's rolled modifiers, scaled -- the shared seam
+        // ModifierEffects(character) above and the UI layer's tooltip text
+        // (Core.ItemDescription.ModifierLines) both walk through, so there is
+        // exactly one place `base x TierMultiplier(itemTier) x
+        // RiftMultiplier(riftTier)` is ever computed (see ModifierMagnitude's
+        // own header). A character-wide caller sums this across every worn
+        // slot into one flattened ModifierEffectSet; a UI caller wants each
+        // effect kept beside the MODIFIER it came from (which ModifierEffects'
+        // flattened bag deliberately does not preserve — see
+        // ModifierEffectSet's own "MAX, NOT SUM" header), which is why this
+        // yields the pair rather than the bare effect.
+        //
+        // PUBLIC as ModifierEffectsForItem below, for exactly one item at a
+        // time with no CombatantState/Character in scope at all — a Reckoning
+        // offer or an unequipped bag stack has never been "worn" and has no
+        // ActiveLoadout entry to walk.
+        private static IEnumerable<(ModifierDefinition Modifier, ModifierEffect Effect)> ScaledModifierEffectsForItem(
+            int itemTier, RiftTier riftTier, IReadOnlyList<string> modifierIds)
+        {
+            if (modifierIds == null || modifierIds.Count == 0)
+            {
+                yield break;
+            }
+
+            double scale = ModifierMagnitude.Scale(itemTier, riftTier);
+
+            foreach (string modifierId in modifierIds)
+            {
+                var modifier = GetModifier(modifierId);
+                if (modifier == null)
+                {
+                    continue;
+                }
+
+                foreach (var raw in modifier.ResolvedEffects())
+                {
+                    // Threshold/Against/AgainstMagical pass through UNSCALED
+                    // -- Threshold is a health-gate percentage, not a power
+                    // number, and Against/AgainstMagical are selectors, not
+                    // magnitudes. Only Magnitude itself rides the tier/rift
+                    // curve.
+                    int scaledMagnitude = Rounding.AwayFromZero((float)(raw.Magnitude * scale));
+                    yield return (modifier, new ModifierEffect(raw.Type, scaledMagnitude, raw.Threshold, raw.Against, raw.AgainstMagical));
+                }
+            }
+        }
+
+        // The UI-facing door into ScaledModifierEffectsForItem above — every
+        // rolled modifier ONE item copy carries, each already scaled to that
+        // copy's own tier and rolled RiftTier, kept paired with the
+        // ModifierDefinition it came from so a caller can group by
+        // displayName (Core.ItemDescription.ModifierLines does exactly this).
+        // Never recomputes the tier/rift formula itself — see this method's
+        // private helper for why that would be the one thing never allowed to
+        // have two copies.
+        public static IReadOnlyList<(ModifierDefinition Modifier, ModifierEffect Effect)> ModifierEffectsForItem(
+            int itemTier, RiftTier riftTier, IReadOnlyList<string> modifierIds)
+        {
+            EnsureLoaded();
+            return ScaledModifierEffectsForItem(itemTier, riftTier, modifierIds).ToList();
+        }
+
         // The skills a character's unlocked talents have put on their combat
         // strip, in the same authored order the level-unlocked ones use.
         //
@@ -353,6 +489,41 @@ namespace PrincesPalace.Content
 
             var item = GetItem(character.equipment.Get(EquipmentSlot.Weapon1));
             return item != null && item.kind == ItemKind.Weapon ? item : null;
+        }
+
+        // THE damage number -- balance redesign Phase 3 (D3). The honed
+        // WeaponPower of whatever is LIVE in the main hand right now, or
+        // null when the hand is empty / inert / holds something that is not
+        // a Weapon -- see EquippedWeapon's own header for why "live" matters
+        // here, and ItemDefinition.WeaponPowerAt for the formula itself.
+        //
+        // Null, not zero, on purpose: FightEncounterAdapter reads null as
+        // "fall back to the character's own authored Attack, unmultiplied"
+        // (the unarmed case) rather than as "this character hits for
+        // nothing", which a 0 would silently read as if the caller forgot
+        // to check it.
+        //
+        // Reads the SAME ActiveLoadout resolve every other Effective*
+        // reader here shares, rather than a second independent walk of
+        // equipment.
+        public static int? EquippedWeaponPower(Character character)
+        {
+            EnsureLoaded();
+
+            if (character?.equipment == null)
+            {
+                return null;
+            }
+
+            foreach (var (entry, item) in ActiveLoadout(character).LiveEntries)
+            {
+                if (entry.slot == EquipmentSlot.Weapon1 && item.kind == ItemKind.Weapon)
+                {
+                    return item.WeaponPowerAt(entry.plus);
+                }
+            }
+
+            return null;
         }
 
         // A character's ability scores including every talent they've

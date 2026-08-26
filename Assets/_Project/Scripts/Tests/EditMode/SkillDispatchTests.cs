@@ -18,10 +18,10 @@ namespace PrincesPalace.Domain.Tests
     public class SkillDispatchTests
     {
         private static CombatantState Hero(string name = "Hero", int health = 500, int mana = 50, int speed = 10) =>
-            new CombatantState(name, true, health, mana, 40, 0, speed);
+            new CombatantState(name, true, health, mana, 40, speed);
 
         private static CombatantState Foe(string name = "Foe", int health = 1000) =>
-            new CombatantState(name, false, health, 10, 5, 0, 1);
+            new CombatantState(name, false, health, 10, 5, 1);
 
         private static ResolvedSkill Skill(
             SkillEffect effect,
@@ -168,7 +168,8 @@ namespace PrincesPalace.Domain.Tests
             var skill = Skill(SkillEffect.DamageAll, "Firestorm");
             var soft = Foe("Soft");
             var armoured = Foe("Armoured");
-            armoured.Defense = 20;
+            armoured.PhysicalDefense = 20;
+            armoured.MagicalDefense = 20;
             var (session, _, _) = Fight(Kit(skills: new[] { skill }), null, soft, armoured);
 
             session.CastSkill(0, null);
@@ -431,16 +432,21 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(Messages(session).Any(m => m.Contains("recovers")));
         }
 
+        // Shreds BOTH broad Defenses now, by the same flat amount each --
+        // see FightSession.Skills.cs's CrowdControl case for why there is no
+        // longer one generic `Defense` field for this to write to.
         [Test]
         public void CrowdControlShredsTheTargetsGuard()
         {
             var foe = Foe();
-            foe.Defense = 10;
+            foe.PhysicalDefense = 10;
+            foe.MagicalDefense = 10;
             var (session, _, _) = Fight(Kit(CharacterRole.CrowdControl), null, foe);
 
             session.ExecuteSkill(foe);
 
-            Assert.AreEqual(10 - FightTuning.CrowdControlDefenseShred, foe.Defense);
+            Assert.AreEqual(10 - FightTuning.CrowdControlDefenseShred, foe.PhysicalDefense);
+            Assert.AreEqual(10 - FightTuning.CrowdControlDefenseShred, foe.MagicalDefense);
         }
 
         [Test]
@@ -449,12 +455,14 @@ namespace PrincesPalace.Domain.Tests
             // Below zero it would start ADDING damage through the subtraction in
             // the damage formula, which is a different mechanic entirely.
             var foe = Foe();
-            foe.Defense = 1;
+            foe.PhysicalDefense = 1;
+            foe.MagicalDefense = 1;
             var (session, _, _) = Fight(Kit(CharacterRole.CrowdControl), null, foe);
 
             session.ExecuteSkill(foe);
 
-            Assert.AreEqual(0, foe.Defense);
+            Assert.AreEqual(0, foe.PhysicalDefense);
+            Assert.AreEqual(0, foe.MagicalDefense);
         }
 
         [Test]

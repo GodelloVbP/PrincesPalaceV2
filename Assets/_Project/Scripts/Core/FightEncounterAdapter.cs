@@ -71,8 +71,21 @@ namespace PrincesPalace
                 stageScale: definition.stageScale,
                 slotSpan: definition.slotSpan,
                 attackApproach: PrincesPalace.Domain.Combat.Session.StageApproaches.Parse(
-                    definition.attackApproach, PrincesPalace.Domain.Combat.Session.StageApproach.Lunge));
+                    definition.attackApproach, PrincesPalace.Domain.Combat.Session.StageApproach.Lunge),
+                attackType: definition.attackType);
         }
+
+        // PHASE 5B (D6): closes AUDIT #54. An Elite pack's stats used to be
+        // the authored baseStats verbatim -- StatBlock.ScaledForElite existed,
+        // had its multipliers reasoned about in its own header, and had NO
+        // production caller anywhere in the game. Elite is HP x1.40 / ATK
+        // x1.15 / both broad Defenses x1.15, applied to the AUTHORED stats
+        // before depth scaling -- so an Elite fought at any depth is that
+        // depth's normal encounter scaled up by the same fixed ratio, not a
+        // ratio that itself drifts with depth.
+        private const float EliteHealthMultiplier = 1.40f;
+        private const float EliteAttackMultiplier = 1.15f;
+        private const float EliteDefenseMultiplier = 1.15f;
 
         // DEPTH IS APPLIED HERE, and this is the only place it is applied.
         //
@@ -84,24 +97,40 @@ namespace PrincesPalace
         //
         // Health and attack take DIFFERENT rates because the player's own two
         // axes grow at different speeds. See DifficultyCurve.
-        private static CombatantState ToCombatant(EnemyDefinition definition, int depthStep)
+        private static CombatantState ToCombatant(EnemyDefinition definition, int depthStep, bool isElite)
         {
             var stats = definition.baseStats;
+            if (isElite)
+            {
+                stats = stats.ScaledForElite(EliteHealthMultiplier, EliteDefenseMultiplier, EliteAttackMultiplier);
+            }
 
             // Mana is NOT part of StatBlock -- it is derived from ability scores
             // for a character, and monsters have none. They get the default pool
             // so a monster skill that costs mana can still be paid for, rather
             // than a zero that would silently make every such skill unusable.
-            // Speed is NOT scaled. It is a rate, feeding a scheduler that
+            // Speed is NOT depth-scaled. It is a rate, feeding a scheduler that
             // clamps at 2.5x anyway, and the same reasoning AbilityDerivation
             // applies to the player's Dexterity applies to a monster: an enemy
-            // at 40,000 Speed does not act more often, it acts always.
+            // at 40,000 Speed does not act more often, it acts always. (An
+            // Elite's speed DOES ride the elite multiplier above, same as its
+            // health and mana regen -- ScaledForElite's own main `multiplier`
+            // parameter, unchanged behaviour from before this phase.)
             var state = new CombatantState(definition.displayName, false,
                 DifficultyCurve.ScaleHealth(stats.maxHealth, depthStep),
                 GameplayConstants.DefaultMaxMana,
                 DifficultyCurve.ScaleAttack(stats.attack, depthStep),
-                DifficultyCurve.ScaleAttack(stats.defense, depthStep),
                 stats.speed);
+
+            // PHASE 5B (D6): enemy defenses no longer depth-scale at all --
+            // used at their AUTHORED (step-0) value, only elite-scaled above
+            // when this encounter is an Elite. The R_broad/(100+R_broad)
+            // mitigation curve (DamagePipeline) is already asymptotic, so
+            // scaling a defense on top of it double-dips and was running boss
+            // time-to-kill away past floor 4. See DifficultyCurve.ScaleAttack's
+            // own note.
+            state.PhysicalDefense = stats.physicalDefense;
+            state.MagicalDefense = stats.magicalDefense;
 
             if (definition.breakShieldPoints > 0)
             {
@@ -156,11 +185,19 @@ namespace PrincesPalace
             var stats = ContentDatabase.EffectiveStats(character);
             var scores = ContentDatabase.EffectiveAbilityScores(character);
 
+            // THE WEAPON MODEL -- balance redesign Phase 3 (D3). A LIVE
+            // main-hand weapon's honed WeaponPower REPLACES base+gear+ability
+            // Attack entirely; EffectiveStats.attack no longer carries a gear
+            // contribution at all (see its own note), so `stats.attack` here
+            // is already exactly the unarmed fallback the plan calls for --
+            // the character's own authored figure, no multiplier -- and this
+            // is the one place the two are chosen between.
+            int attack = ContentDatabase.EquippedWeaponPower(character) ?? stats.attack;
+
             var state = new CombatantState(definition.displayName, true,
                 RelicModifiers.Apply(stats.maxHealth, RelicStat.MaxHealth, modifiers),
                 RelicModifiers.Apply(ContentDatabase.EffectiveMaxMana(character), RelicStat.MaxMana, modifiers),
-                RelicModifiers.Apply(stats.attack, RelicStat.Attack, modifiers),
-                RelicModifiers.Apply(stats.defense, RelicStat.Defence, modifiers),
+                RelicModifiers.Apply(attack, RelicStat.Attack, modifiers),
                 RelicModifiers.Apply(stats.speed, RelicStat.Speed, modifiers));
 
             state.ManaRegen = stats.manaRegen;
@@ -178,8 +215,14 @@ namespace PrincesPalace
             // breastplate was written to the save, shown on the sheet, folded
             // into EffectiveStats -- and then dropped on the way into the one
             // system it exists for.
-            state.PhysicalResistance = stats.physicalResistance;
-            state.MagicalResistance = stats.magicalResistance;
+            //
+            // RelicStat.Defence APPLIES TO BOTH broad Defenses now -- there is
+            // no longer one generic Defense stat for a relic modifier to name,
+            // so "Defence" reads as "both of them", exactly the reading
+            // whetstone_heart's -10% needs to keep meaning what it always
+            // meant.
+            state.PhysicalDefense = RelicModifiers.Apply(stats.physicalDefense, RelicStat.Defence, modifiers);
+            state.MagicalDefense = RelicModifiers.Apply(stats.magicalDefense, RelicStat.Defence, modifiers);
 
             // And whatever a relic adds against ONE element, on top of those.
             state.TypedResistance = RelicModifiers.ApplyResistance(state.TypedResistance, modifiers);
@@ -188,6 +231,64 @@ namespace PrincesPalace
             // widened arrives at that width. Its single call site until now was
             // its own definition.
             state.Signature = ContentDatabase.BuildSignatureResource(character);
+
+            // Every TalentEffectType-gated rule a character's unlocked
+            // talents grant -- Sharp Horns' penetration/shred, Last Stand's
+            // below-health bonuses, Provoke's damage reduction, Trample's
+            // execute/splash/extra-attack, every Wool income hook, the whole
+            // Fragile Lamb ward tree -- read this via target.Talents.Best/
+            // BestBelowHealth/Has (CombatMath, FightSession.Talents.cs,
+            // FightSession.Enemies.cs/.Riders.cs/.Skills.cs, StatusEffects).
+            // Until now nothing at this seam ever set it, so every one of
+            // those rules resolved against the shared CombatantState default
+            // (TalentEffectSet.Empty) in every real fight -- a player who
+            // sank Embers into a talent node with a TalentEffectType effect
+            // got exactly nothing from it in play. Only test fixtures ever
+            // assigned .Talents, which is why nothing caught the gap.
+            state.Talents = ContentDatabase.TalentEffects(character);
+
+            // Real, droppable content as of Phase C — every equipped item's
+            // rolled modifiers, already scaled by tier/riftTier (see
+            // ContentDatabase.ModifierEffects' own header).
+            state.ModifierEffects = ContentDatabase.ModifierEffects(character);
+
+            // Runic's mana pool -- the SAME seam a relic's flat MaxMana/
+            // ManaRegen bonus reaches CombatantState through, just summed
+            // AFTER relics rather than inside RelicModifiers.Apply (which
+            // only ever reads RelicModifier, not ModifierEffect). MaxMana is
+            // bumped by the identical amount CurrentMana is, so a Runic
+            // wearer starts the fight with a genuinely full pool rather than
+            // full-relative-to-the-pre-modifier number the constructor
+            // already set CurrentMana from.
+            int bonusMaxMana = state.ModifierEffects.Best(ModifierEffectType.FlatMaxManaBonus);
+            if (bonusMaxMana > 0)
+            {
+                state.MaxMana += bonusMaxMana;
+                state.CurrentMana += bonusMaxMana;
+            }
+
+            state.ManaRegen += state.ModifierEffects.Best(ModifierEffectType.FlatManaRegenBonus);
+
+            // The elemental family's typed-resistance half -- the SAME seam
+            // relic-granted typed resistance already reaches state.TypedResistance
+            // through, just walked over ModifierEffects.All (see
+            // ModifierEffectSet.Best's own header on why a resistance
+            // consumer must read .All rather than Best, which would collapse
+            // every element down to whichever one is strongest) instead of
+            // RelicModifiers.ApplyResistance, which only ever reads
+            // RelicModifier. Summed ON TOP of whatever a relic already
+            // granted -- the two sources stack, same as PhysicalDefense/
+            // MagicalDefense already do for relics vs gear stats.
+            foreach (var effect in state.ModifierEffects.All)
+            {
+                if (effect.Type != ModifierEffectType.TypedResistanceFlat) continue;
+
+                state.TypedResistance = effect.AgainstMagical
+                    ? state.TypedResistance.WithMagical(effect.Magnitude)
+                    : effect.Against.HasValue
+                        ? state.TypedResistance.With(effect.Against.Value, effect.Magnitude)
+                        : state.TypedResistance;
+            }
 
             return state;
         }
@@ -212,15 +313,33 @@ namespace PrincesPalace
             // Relic modifiers land on the FINAL figures, after the ability
             // scores have contributed -- a +15% attack relic is 15% of what the
             // character actually swings with, not of a base nobody sees.
+            //
+            // Attack carries NO ability-score term any more (Strength derives
+            // nothing until Phase 3 wires weapon power in -- see
+            // AbilityDerivation's header); `stats.attack` alone is what this
+            // path swings for, same as the save-backed overload's `total`
+            // already reflects via DerivedStats.
             var state = new CombatantState(definition.displayName, true,
                 RelicModifiers.Apply(maxHealth, RelicStat.MaxHealth, modifiers),
                 RelicModifiers.Apply(maxMana, RelicStat.MaxMana, modifiers),
-                RelicModifiers.Apply(stats.attack + AbilityDerivation.AttackBonus(scores), RelicStat.Attack, modifiers),
-                RelicModifiers.Apply(stats.defense, RelicStat.Defence, modifiers),
+                RelicModifiers.Apply(stats.attack, RelicStat.Attack, modifiers),
                 RelicModifiers.Apply(stats.speed + AbilityDerivation.SpeedBonus(scores), RelicStat.Speed, modifiers));
 
             state.ManaRegen = stats.manaRegen;
             state.AbilityScores = scores;
+
+            // Same "Defence applies to both broad Defenses" reading the
+            // save-backed overload above uses -- and, like health/mana above,
+            // BASE PLUS DERIVED: Constitution/Wisdom now feed these two
+            // (AbilityDerivation D2), and the save-backed overload picks that
+            // up automatically through DerivedStats. This overload builds the
+            // CombatantState by hand instead of through a summed StatBlock, so
+            // it has to add the same two terms explicitly or a tooling-only
+            // fight would under-mitigate relative to a real one.
+            state.PhysicalDefense = RelicModifiers.Apply(
+                stats.physicalDefense + AbilityDerivation.PhysicalDefenseBonus(scores), RelicStat.Defence, modifiers);
+            state.MagicalDefense = RelicModifiers.Apply(
+                stats.magicalDefense + AbilityDerivation.MagicalDefenseBonus(scores), RelicStat.Defence, modifiers);
 
             // The same relic-typed-resistance line the save-backed overload
             // has -- missed here even though every other relic modifier above
@@ -240,6 +359,32 @@ namespace PrincesPalace
                     definition.signatureGainOnAttack, definition.signatureGainOnDamageTaken,
                     absorbsDamage: definition.signatureAbsorbsDamage);
             }
+
+            // NO EQUIVALENT ModifierEffects LINE HERE, EXPLICITLY. This
+            // overload has no Character — only a CharacterDefinition — and
+            // ContentDatabase.ModifierEffects reads a character's live
+            // equipment loadout (modifierIds on each worn EquipmentSlotEntry)
+            // to build the set. There is no equipment to read here, so
+            // state.ModifierEffects is left at its CombatantState default,
+            // ModifierEffectSet.Empty, which is the correct answer rather
+            // than an omission — the tooling party never had gear-derived
+            // effects to represent. Recorded explicitly (rather than left
+            // silent) per the plan's own note that a prior redesign phase
+            // found and fixed exactly this class of bug — the save-backed
+            // and tooling-only overloads quietly disagreeing about what a
+            // seam applies — for TypedResistance and EffectiveWeaponScaling.
+
+            // SAME REASONING, for Talents. ContentDatabase.TalentEffects
+            // reads a Character's unlockedTalentIds, and this overload has
+            // no Character -- only a bare CharacterDefinition, which has no
+            // concept of "unlocked" (a definition-only fight has nothing a
+            // player could have invested Embers into). state.Talents is left
+            // explicitly at TalentEffectSet.Empty rather than silently
+            // inheriting the CombatantState default with no comment marking
+            // the decision -- this is the tooling path (no-save fights,
+            // screenshot tooling), so there is no save to derive talents
+            // from, and that is correct, not a gap.
+            state.Talents = TalentEffectSet.Empty;
 
             return state;
         }
@@ -315,7 +460,7 @@ namespace PrincesPalace
                 var definition = ContentDatabase.Enemies.FirstOrDefault(e => e.id == id);
                 if (definition == null) continue;
 
-                enemies.Add(ToCombatant(definition, depthStep));
+                enemies.Add(ToCombatant(definition, depthStep, isElite));
                 enemyKits.Add(EnemyKitFor(definition, isElite));
             }
 
@@ -338,7 +483,7 @@ namespace PrincesPalace
                     return false;
                 }
 
-                state = ToCombatant(definition, depthStep);
+                state = ToCombatant(definition, depthStep, isElite);
                 kit = EnemyKitFor(definition, isElite);
                 return true;
             }

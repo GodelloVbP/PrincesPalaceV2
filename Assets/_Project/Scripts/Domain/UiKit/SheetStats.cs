@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.UiKit
@@ -26,13 +27,16 @@ namespace PrincesPalace.Domain.UiKit
         Charisma,
 
         // What those turn into, plus whatever gear and talents added.
+        //
+        // Defence (the old single generic mitigation stat) is GONE, not
+        // renamed to either PhysicalDefense or MagicalDefense — see
+        // StatType's own header.
         MaxHealth,
         Attack,
-        Defence,
         Speed,
         ManaRegen,
-        PhysicalResistance,
-        MagicalResistance,
+        PhysicalDefense,
+        MagicalDefense,
 
         // ADDED so the attribute-to-stat link is not dead for half the sheet.
         // Wisdom and Charisma both feed something real -- the mana pool and the
@@ -62,11 +66,10 @@ namespace PrincesPalace.Domain.UiKit
         {
             SheetStat.MaxHealth,
             SheetStat.Attack,
-            SheetStat.Defence,
             SheetStat.Speed,
             SheetStat.ManaRegen,
-            SheetStat.PhysicalResistance,
-            SheetStat.MagicalResistance,
+            SheetStat.PhysicalDefense,
+            SheetStat.MagicalDefense,
             SheetStat.MaxMana,
             SheetStat.SignatureGain,
         };
@@ -96,13 +99,12 @@ namespace PrincesPalace.Domain.UiKit
                 case SheetStat.Charisma: return UiStrings.StatCharisma;
                 case SheetStat.MaxHealth: return UiStrings.StatMaxHealth;
                 case SheetStat.Attack: return UiStrings.StatAttack;
-                case SheetStat.Defence: return UiStrings.StatDefence;
                 case SheetStat.Speed: return UiStrings.StatSpeed;
                 case SheetStat.ManaRegen: return UiStrings.StatManaRegen;
-                case SheetStat.PhysicalResistance: return UiStrings.StatPhysicalResistance;
+                case SheetStat.PhysicalDefense: return UiStrings.StatPhysicalDefense;
                 case SheetStat.MaxMana: return UiStrings.StatMaxMana;
                 case SheetStat.SignatureGain: return UiStrings.StatSignatureGain;
-                default: return UiStrings.StatMagicalResistance;
+                default: return UiStrings.StatMagicalDefense;
             }
         }
 
@@ -113,29 +115,45 @@ namespace PrincesPalace.Domain.UiKit
         // TRUE rather than plausible. It is read off AbilityDerivation, which
         // is the only thing that actually converts a score into a stat:
         //
-        //   Strength     -> Attack          Constitution -> Health
-        //   Dexterity    -> Speed           Wisdom       -> Max Mana
+        //   Constitution -> Health, Physical Defense
+        //   Wisdom       -> Max Mana, Magical Defense
+        //   Dexterity    -> Speed
         //   Charisma     -> signature gain
         //
-        // Three rows are fed by NOTHING and that is not an omission: Defence,
-        // both resistances and mana regen come from gear and talents only. A
-        // handover that assigned Physical DEF to Constitution was describing a
-        // game where armour is a stat you roll, and lighting that row from CON
-        // would be a lie the player could not check.
+        // PHASE 2 OF THE BALANCE REDESIGN moved Physical/Magical Defense off
+        // "fed by nothing" and onto Constitution/Wisdom respectively (see
+        // AbilityDerivation.PhysicalDefenseBonus/MagicalDefenseBonus) -- armour
+        // is no longer the only source of either, ability scores are too.
         //
-        // INTELLIGENCE FEEDS NO ROW AT ALL. It is not derived into anything --
-        // it rides weapon and skill scaling through ScalingProfile instead, so
-        // it changes what a WEAPON does rather than what the character is.
-        // Hovering it highlights nothing, which is honest and also a gap worth
-        // closing with a scaling row later.
+        // ATTACK IS FED BY NOTHING, PERMANENTLY -- not a placeholder pending a
+        // later phase. AbilityDerivation.AttackBonus was deleted for good:
+        // Strength no longer derives a flat Attack bonus, because offense
+        // lives at weapon grades instead (D3, Phase 3, landed -- see
+        // WeaponPower.DisplayDamage and FightEncounterAdapter.ToCombatant) to
+        // kill the double-dip where both a stat AND a weapon rewarded the
+        // same score. Hovering Strength on the sheet lights no row, and that
+        // stays true: a stat row is "what does this DERIVE", and STR derives
+        // nothing -- it multiplies a weapon's own number instead, which is a
+        // different question with a different, honest answer (see an item's
+        // own tooltip -- ItemStatLines.BonusParts -- for where that answer
+        // actually lives: "weapon scaling", not a row here). Same reasoning
+        // applies to Intelligence below.
+        //
+        // INTELLIGENCE FEEDS NO ROW AT ALL, for the same permanent reason. It
+        // is not derived into anything -- it rides weapon and skill scaling
+        // through ScalingProfile instead, so it changes what a WEAPON or
+        // SPELL does rather than what the character is. Hovering it
+        // highlights nothing, and PerPointSummary says so explicitly rather
+        // than printing a misleading "+0".
         public static AbilityScore[] FedBy(SheetStat stat)
         {
             switch (stat)
             {
                 case SheetStat.MaxHealth: return new[] { AbilityScore.Constitution };
-                case SheetStat.Attack: return new[] { AbilityScore.Strength };
+                case SheetStat.PhysicalDefense: return new[] { AbilityScore.Constitution };
                 case SheetStat.Speed: return new[] { AbilityScore.Dexterity };
                 case SheetStat.MaxMana: return new[] { AbilityScore.Wisdom };
+                case SheetStat.MagicalDefense: return new[] { AbilityScore.Wisdom };
                 case SheetStat.SignatureGain: return new[] { AbilityScore.Charisma };
                 default: return System.Array.Empty<AbilityScore>();
             }
@@ -198,11 +216,16 @@ namespace PrincesPalace.Domain.UiKit
         {
             switch (stat)
             {
-                case SheetStat.Attack: return AbilityDerivation.AttackBonus(scores);
                 case SheetStat.Speed: return AbilityDerivation.SpeedBonus(scores);
                 case SheetStat.MaxHealth: return AbilityDerivation.MaxHealthBonus(scores);
+                case SheetStat.PhysicalDefense: return AbilityDerivation.PhysicalDefenseBonus(scores);
                 case SheetStat.MaxMana: return AbilityDerivation.MaxManaBonus(scores);
+                case SheetStat.MagicalDefense: return AbilityDerivation.MagicalDefenseBonus(scores);
                 case SheetStat.SignatureGain: return AbilityDerivation.SignatureGainBonus(scores);
+
+                // Attack: no case, falls to 0 below -- AttackBonus is deleted
+                // for good, and Strength derives nothing here, permanently.
+                // See FedBy's header.
                 default: return 0;
             }
         }
@@ -226,18 +249,48 @@ namespace PrincesPalace.Domain.UiKit
                 case SheetStat.Charisma: return scores.charisma;
                 case SheetStat.MaxHealth: return stats.maxHealth;
                 case SheetStat.Attack: return stats.attack;
-                case SheetStat.Defence: return stats.defense;
                 case SheetStat.Speed: return stats.speed;
                 case SheetStat.ManaRegen: return stats.manaRegen;
-                case SheetStat.PhysicalResistance: return stats.physicalResistance;
+                case SheetStat.PhysicalDefense: return stats.physicalDefense;
 
                 // Neither lives on StatBlock -- max mana and the signature are
                 // resolved per character in Core -- so the caller supplies them
                 // and this returns 0 rather than inventing a number.
                 case SheetStat.MaxMana: return 0;
                 case SheetStat.SignatureGain: return 0;
-                default: return stats.magicalResistance;
+                default: return stats.magicalDefense;
             }
+        }
+
+        // The value AS SHOWN on the sheet, not just its raw number.
+        //
+        // BALANCE REDESIGN PHASE 6 (D7.3): Physical/Magical Defense mean
+        // nothing on their own -- nobody outside this codebase knows what
+        // "50" buys -- so their row carries the same read of the mitigation
+        // curve every real hit runs on. `value` is whatever the caller
+        // already resolved (ValueOf for most rows, Core's own path for the
+        // two rows StatBlock does not carry), so this never re-derives a
+        // number it was just handed, only decides how to WORD it.
+        //
+        // "50 (33%)", not a full "33% less physical damage" sentence --
+        // DEDUCED, not a style choice: this row is CharacterDossierScreen's
+        // DossierStatValue{i} label, a single line 76px wide at font 15 (see
+        // its own declaration), and that box was never widened for this
+        // phase (every spare pixel in that row is already spent on the name
+        // and preview columns beside it, and widening any of the three
+        // collides with its neighbour at every one of the four audited
+        // canvas aspects). Built off ItemStatLines.DamageReductionPercent --
+        // the one shared formula for the whole curve -- so a retuned
+        // mitigation equation cannot leave this row disagreeing with the
+        // glossary's own worked examples (GlossaryEntries.Mechanics()).
+        public static string DisplayText(SheetStat stat, int value)
+        {
+            if (stat == SheetStat.PhysicalDefense || stat == SheetStat.MagicalDefense)
+            {
+                return $"{value} ({ItemStatLines.DamageReductionPercent(value)}%)";
+            }
+
+            return value.ToString();
         }
     }
 }

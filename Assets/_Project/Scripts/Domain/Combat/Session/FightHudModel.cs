@@ -362,11 +362,24 @@ namespace PrincesPalace.Domain.Combat.Session
         //
         // POWER used to print the raw Attack stat, which is not the damage
         // number anywhere else on the sheet reads -- CombatMath scales Attack
-        // by weapon scaling first and puts the result on the same x10 scale
-        // every other damage number is on. Scale(ScaledAttack(...)) with no
-        // defense term is exactly ComputeAttackDamage's own formula minus the
-        // target's EffectiveDefense, i.e. the same pre-mitigation reading
+        // by weapon scaling first. This is the same pre-mitigation reading
         // PreviewSkillPower gives a cast.
+        //
+        // BALANCE REDESIGN PHASE 3 (D3): `actor.Attack` IS WeaponPower now
+        // for any player with a weapon equipped (FightEncounterAdapter.
+        // ToCombatant sets it there, once, at combatant-build time) and the
+        // character's own unarmed figure otherwise -- ScaledAttack reads
+        // whichever is already sitting on Attack, so this reads WeaponPower
+        // x ScalingMultiplier, raw, no defense, exactly the plan's "same
+        // intent, right inputs" ask.
+        //
+        // 2026-08-26 (D1 fix): now calls ComputeAttackDamage directly instead
+        // of duplicating Scale(ScaledAttack(...)) by hand -- the two entry
+        // points every real swing goes through stopped multiplying by
+        // CombatMath.DamageScale (see ComputeAttackDamage's own header), and
+        // this readout has to keep reading exactly what a real Strike deals
+        // or it goes stale the moment the production formula moves again.
+        // `target` is unread by ComputeAttackDamage, so null is safe.
         public static DetailPanel DetailForStrike(CombatantState actor)
         {
             var panel = new DetailPanel
@@ -376,7 +389,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 Body = "A plain swing at one enemy in reach.",
             };
             panel.Stats.Add(("COST", "FREE"));
-            panel.Stats.Add(("POWER", actor == null ? "0" : CombatMath.Scale(CombatMath.ScaledAttack(actor, actor.WeaponScaling, 1f)).ToString()));
+            panel.Stats.Add(("POWER", actor == null ? "0" : CombatMath.ComputeAttackDamage(actor, null).ToString()));
             panel.Stats.Add(("TARGET", "SINGLE"));
             panel.Stats.Add(("EFFECT", "DAMAGE"));
             panel.Stats.Add(("SCALES", actor == null ? "-" : ScalingLabel(actor.WeaponScaling)));
@@ -428,12 +441,27 @@ namespace PrincesPalace.Domain.Combat.Session
             var kit = session.KitFor(actor);
             foreach (var buff in session.ActiveSpeedBuffs(actor))
             {
+                // A STATUS-DRIVEN entry (Chilled, as of Phase D2) is already
+                // shown by the `foreach (var status in actor.Statuses)` loop
+                // above -- StatusBadge prints its own "Chilled: ..." tooltip
+                // straight off the ActiveStatus. Showing it again here as a
+                // second, generic "SPD" badge would be the same fact twice;
+                // this dictionary entry exists so the SPEED NUMBER stays
+                // correct (TrueBaseSpeed composes it with every relic buff),
+                // not so it gets its own badge on top of the status's own.
+                if (buff.Source is StatusEffectType) continue;
+
                 string name = null;
-                if (kit != null)
+                if (kit != null && buff.Source is RelicEffect relicSource)
                 {
                     foreach (var relic in kit.Relics)
                     {
-                        if (relic.Effect == buff.Source) { name = relic.DisplayName; break; }
+                        // Equals(...), not ==, now that Source is `object` --
+                        // see FightSession.SpeedBuffs.ActiveSpeedBuffs' own
+                        // comment on why `==` between a boxed enum and
+                        // `object` would silently compare by reference
+                        // instead of by value.
+                        if (relic.Effect == relicSource) { name = relic.DisplayName; break; }
                     }
                 }
                 name ??= buff.Source.ToString();
@@ -466,6 +494,10 @@ namespace PrincesPalace.Domain.Combat.Session
                     return new BuffBadge("SHD", $"Shielded: the next hit taken is reduced {status.Magnitude}%.", true);
                 case StatusEffectType.Provoked:
                     return new BuffBadge("PRV", $"Provoked: the next attack must target whoever provoked it, for {status.Magnitude}% less damage to them.", false);
+                case StatusEffectType.Chilled:
+                    return new BuffBadge("CHL", $"Chilled: speed reduced {status.Magnitude}%, {turns}.", false);
+                case StatusEffectType.Rooted:
+                    return new BuffBadge("ROT", $"Rooted: cannot plain-attack, must cast a skill or forfeit, {turns}.", false);
                 default:
                     return new BuffBadge("?", status.Type.ToString(), true);
             }
@@ -599,6 +631,17 @@ namespace PrincesPalace.Domain.Combat.Session
             if (intent.Kind == EnemyIntentKind.Summon)
             {
                 return $"{enemyName} will {verb}, calling in another monster";
+            }
+
+            // PHASE D3 FIX: a Rooted enemy with nothing left to cast. Its own
+            // sentence, before the switch below, for the same reason Summon's
+            // is -- "will Forfeits Turn itself" is what the generic template
+            // would produce, and that is not a sentence. FightSession.IntentForfeit
+            // is compared against as a sentinel, matching how TelegraphSuffix
+            // already compares Label against FightSession.IntentAttack.
+            if (intent.Label == FightSession.IntentForfeit)
+            {
+                return $"{enemyName} has nothing left to cast and will forfeit its turn";
             }
 
             // WHO, BY SCOPE. A telegraph that names one target for an effect

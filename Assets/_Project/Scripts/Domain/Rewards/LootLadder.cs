@@ -68,16 +68,22 @@ namespace PrincesPalace.Domain.Rewards
             return step > MaxStep ? MaxStep : step;
         }
 
-        // How many rungs this roll climbs, 0..MaxRungs.
+        // How many rungs this roll climbs, 0..maxRungs.
         //
-        // Draws a FIXED MaxRungs times and counts the leading successes rather
+        // Draws a FIXED maxRungs times and counts the leading successes rather
         // than stopping at the first failure. Distributionally identical, and
         // it costs the same number of draws whatever the outcome -- which is
         // what keeps a seeded run reproducible when these odds are retuned.
         // The same reasoning as RarityTable.Pick taking exactly one draw.
-        public static int Climb(float stepChance, Func<int, int> nextIndex)
+        //
+        // maxRungs is a PARAMETER rather than always MaxRungs so a shorter
+        // ladder (ModifierTable's 3-rung RiftTier climb) can reuse this exact
+        // draw-and-count rule instead of duplicating it -- the shorter ladder
+        // still draws its OWN fixed count, which is what keeps it reproducible
+        // too, just at 3 draws instead of 5 rather than wasting two.
+        public static int Climb(float stepChance, int maxRungs, Func<int, int> nextIndex)
         {
-            if (nextIndex == null || stepChance <= 0f) return 0;
+            if (nextIndex == null || stepChance <= 0f || maxRungs <= 0) return 0;
 
             int threshold = (int)(stepChance * Resolution);
             if (threshold <= 0) return 0;
@@ -85,7 +91,7 @@ namespace PrincesPalace.Domain.Rewards
 
             int rungs = 0;
             bool climbing = true;
-            for (int i = 0; i < MaxRungs; i++)
+            for (int i = 0; i < maxRungs; i++)
             {
                 int roll = nextIndex(Resolution);
                 if (roll < 0) roll = 0;
@@ -98,7 +104,10 @@ namespace PrincesPalace.Domain.Rewards
             return rungs;
         }
 
+        public static int Climb(float stepChance, Func<int, int> nextIndex) =>
+            Climb(stepChance, MaxRungs, nextIndex);
+
         public static int Climb(EncounterClass encounter, int favor, Func<int, int> nextIndex) =>
-            Climb(StepChanceFor(encounter, favor), nextIndex);
+            Climb(StepChanceFor(encounter, favor), MaxRungs, nextIndex);
     }
 }

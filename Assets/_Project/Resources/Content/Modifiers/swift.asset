@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8eb37102d2241c54eae4db6c08bbb7c5, type: 3}
+  m_Name: swift
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
+  id: swift
+  displayName: Swift
+  description: 'Phase D1''s dodge family. A step too quick for a swing or a cast
+    to reliably land -- Magnitude is a flat percent chance, rolled fresh against
+    every real attack the wearer is the target of, to make the whole thing miss outright
+    (see ModifierEffectType.DodgeChancePercent and DamagePipeline.RollDodge for the
+    full mechanics: zero damage, and every on-hit rider skipped with it). Base 12%
+    at Ordinary/tier-0 is deliberately modest -- TierMultiplier alone reaches roughly
+    9x by tier 10, and a percent-chance effect has a hard ceiling a flat-damage effect
+    does not, so a high base here would race toward ''always dodges'' long before
+    a Fiery or Vampiric counterpart reaches its own comparable power; see DamagePipeline.RollDodge''s
+    own note on the >=100 clamp this relies on as a backstop, not a design target.'
+  effects:
+  - type: 15
+    magnitude: 12
+    threshold: 0
+    against: 0
+    hasAgainst: 0
+    againstMagical: 0
+  sortOrder: 11

@@ -4,15 +4,17 @@ namespace PrincesPalace.Domain.Content
 {
     // One weapon family as authored in weapons.json, before validation.
     //
-    // A family is a GENERATOR over two axes, and the second one is what this
-    // file exists for. Armour sets vary along tier alone; a weapon varies
-    // along tier AND modifier, so one authored "Sword" turns into a Sturdy
-    // one and a Nimble one at every tier — the same blade, differently
-    // balanced, wanting a different character to hold it.
-    //
-    // That is the whole point of the modifier axis: a run should be able to
-    // hand you a sword that is wrong for you, so that the one that is right
-    // for you feels like a find rather than an entitlement.
+    // A family is a GENERATOR over tier alone, exactly like an armour set —
+    // item-modifier plan Phase B collapsed the second (modifier) axis this
+    // file used to carry. One authored "Sword" turns into eleven real
+    // weapons, tier 0 through maxTier, each the same steel at a different
+    // level of make. What used to differentiate one sword from another (a
+    // Sturdy one wanting Strength, a Nimble one wanting Dexterity) is now a
+    // ROLLED RIFT MODIFIER on the item instance (modifiers.json), not a
+    // second baked family variant — see the item-modifier plan's "model at a
+    // glance". A family still carries a single default scaling identity
+    // (Sword->STR, Staff->INT, Dagger->DEX) so a weapon with zero rolled
+    // modifiers is still a coherent pick, not an inert stick.
     //
     // Public fields and no properties, because UnityEngine.JsonUtility only
     // populates fields — same shape as every other Raw*Entry here.
@@ -24,14 +26,13 @@ namespace PrincesPalace.Domain.Content
         // anyone was holding.
         public string id;
 
-        // The noun in every generated name: "Sword" gives "Nimble Keen
-        // Sword".
+        // The noun in every generated name: "Sword" gives "Keen Sword".
         public string displayName;
 
         public string description = "";
 
-        // The highest tier this family goes to. Every modifier is generated
-        // at tier 0 through tier this, inclusive.
+        // The highest tier this family goes to. Every tier from 0 through
+        // this, inclusive, generates one weapon.
         public int maxTier = -1;
 
         public int cost = -1;
@@ -43,15 +44,13 @@ namespace PrincesPalace.Domain.Content
         public string slot = "Weapon";
 
         // Attack at tier 0 and at maxTier, interpolated between. This is the
-        // FLAT half of a weapon's power; the scaling grades are the other
+        // FLAT half of a weapon's power; the scaling grade is the other
         // half, and the two are deliberately separate so a low-tier weapon
-        // with the right grades can still be the right pick.
+        // with the right grade can still be the right pick.
         public int attackAtZero = -1;
         public int attackAtMax = -1;
 
         // Folder of per-level art, as sliced by tools/slice_item_sheet.py.
-        // Shared by every modifier of the family — a Sturdy sword and a
-        // Nimble one are the same steel.
         public string iconSheet = "";
         public int iconLevels;
 
@@ -71,54 +70,40 @@ namespace PrincesPalace.Domain.Content
         // the end of the list rather than failing.
         public string[] tierAdjectives = Array.Empty<string>();
 
-        public RawWeaponModifier[] modifiers = Array.Empty<RawWeaponModifier>();
-    }
-
-    // One way a family can be balanced: which stat it favours, which it
-    // merely tolerates, and what it is called.
-    [Serializable]
-    public class RawWeaponModifier
-    {
-        // Unique within its family only — the generated id is
-        // "<family>_<modifier>_p<tier>". The "p" is historical (it stood for
-        // plus); ids are save-file contracts, so it stays.
-        public string id;
-
-        // The adjective that leads the name: "Sturdy", "Nimble".
-        public string displayName;
-
-        public string description = "";
-
-        // The stat this modifier is built around, and the grade it reaches
-        // at tier 0 and at maxTier. ANCHORED AT BOTH ENDS and interpolated
-        // between, exactly like a set piece's stats — so "C at the bottom, S
-        // at the top" is two words rather than eleven letters that drift, and
-        // raising maxTier stretches the curve instead of running out of
-        // ladder partway up.
+        // The family's default scaling identity — the ONE ability score a
+        // base weapon of this family rides (Sword->STR, Staff->INT,
+        // Dagger->DEX, per the item-modifier plan's Q2), and the grade it
+        // reaches at tier 0 and at maxTier. ANCHORED AT BOTH ENDS and
+        // interpolated between, exactly like a set piece's stats — so "C at
+        // the bottom, S at the top" is two words rather than eleven letters
+        // that drift, and raising maxTier stretches the curve instead of
+        // running out of ladder partway up.
         public string primary;
         public string primaryAtZero = "";
         public string primaryAtMax = "";
 
-        // The stat it still works with, on the same two-ended curve. This is
-        // what stops a mismatched weapon from being literally unusable: a
-        // Nimble sword in a Strength build's hands is worse, not dead.
+        // An optional second stat, on the same two-ended curve, for a family
+        // that wants to ride more than one score. Unauthored by every family
+        // as of Phase B — the collapse deliberately leaves each base weapon
+        // with a single "sole scaling score" identity — but the resolver
+        // still supports it for whatever wants it later.
         public string secondary = "";
         public string secondaryAtZero = "";
         public string secondaryAtMax = "";
 
         // Anything else it rides, as flat "<score> <grade>" lines that do not
-        // move with plus. For a weapon whose character is a third stat
+        // move with tier. For a weapon whose character is a third stat
         // entirely rather than a primary/secondary split.
         public string[] alsoScalesWith = Array.Empty<string>();
 
-        // What this weapon contributes to SPELL power (the Skill action),
-        // as the same flat "<score> <grade>" lines as alsoScalesWith --
-        // deliberately NOT a tiered primary/secondary curve like the plain
-        // Attack axis above: a staff's whole point is "does not improve your
-        // swing, but is genuinely good at casting," a single flat grade
-        // says that in one line, and nothing here needs to move with tier
-        // independently of the weapon's own attackAtZero/attackAtMax curve.
-        // See ItemDefinition.spellScaling.
+        // What this weapon contributes to SPELL power (the Skill action), as
+        // the same flat "<score> <grade>" lines as alsoScalesWith --
+        // deliberately NOT a tiered curve like the plain Attack axis above: a
+        // staff's whole point is "does not improve your swing, but is
+        // genuinely good at casting," a single flat grade says that in one
+        // line, and nothing here needs to move with tier independently of
+        // the weapon's own attackAtZero/attackAtMax curve. See
+        // ItemDefinition.spellScaling.
         public string[] spellScalesWith = Array.Empty<string>();
 
         // What a character needs, from everything ELSE worn plus base scores

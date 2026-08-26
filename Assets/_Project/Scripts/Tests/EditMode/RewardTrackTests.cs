@@ -258,35 +258,35 @@ namespace PrincesPalace.Domain.Tests
                 "the track refreshes a second life before granting one");
         }
 
-        // Level 80 grants exactly one CharacterBand's worth of points, and that
-        // is why it is 10 rather than a round number that looked generous.
+        // Level 80 grants ten stat points. It USED TO be sized to exactly one
+        // AbilityDerivation.CharacterBand -- the edge past which a point
+        // stopped paying a flat rate and started paying the square of the
+        // excess, making the tenth point the last "cheap" one. Phase 2 of the
+        // balance redesign (D2) deleted that piecewise curve: every derivation
+        // is a straight line now, so there is no band edge left for this
+        // milestone to be exactly sized to. See RewardTrack.cs's own comment
+        // at this milestone for the fuller account.
         //
-        // AbilityDerivation pays a flat rate per point inside the band and
-        // switches to a SQUARE OF THE EXCESS outside it -- which starts far
-        // lower and only overtakes the flat rate about eight points later. So
-        // the band edge is where a point stops being worth 20 health and starts
-        // being worth 1, and ten points into one ability is the most efficient
-        // spend the game offers rather than merely a large one.
-        //
-        // CharacterBand is private, so this asserts the BEHAVIOUR that defines
-        // it: every point up to the milestone's amount is worth the same, and
-        // the one after falls off a cliff.
+        // What is left to assert is simpler and still true: every point,
+        // inside the old band or past it, is worth exactly the same amount --
+        // a flat line has no cliff, by construction. Pinned as a literal
+        // (gotcha 5) rather than computed, so a future formula change has to
+        // touch this number on purpose.
         [Test]
-        public void TheLevelEightyGrantIsExactlyOneBandOfPoints()
+        public void TheLevelEightyGrantIsTenPoints_AndEveryPointIsWorthTheSameFlatAmount()
         {
             Assert.AreEqual(TrackReward.StatPoint, RewardTrack.At(80).Reward);
-            int points = RewardTrack.At(80).Amount;
+            Assert.AreEqual(10, RewardTrack.At(80).Amount);
 
             int firstStep = HealthAt(1) - HealthAt(0);
-            int lastStepInside = HealthAt(points) - HealthAt(points - 1);
-            int firstStepOutside = HealthAt(points + 1) - HealthAt(points);
+            int tenthStep = HealthAt(10) - HealthAt(9);
+            int eleventhStep = HealthAt(11) - HealthAt(10);
 
-            Assert.AreEqual(firstStep, lastStepInside,
-                $"the {points}th point is worth a different amount than the first, so the grant " +
-                "already runs past the band it is sized to");
-            Assert.Less(firstStepOutside, lastStepInside,
-                $"the point after {points} is worth as much as the ones inside, so {points} is " +
-                "not the band edge and the milestone's size means nothing");
+            Assert.AreEqual(20, firstStep, "Constitution's flat rate is +20 health a point");
+            Assert.AreEqual(firstStep, tenthStep,
+                "the 10th point is worth a different amount than the first -- the curve is no longer flat");
+            Assert.AreEqual(firstStep, eleventhStep,
+                "the 11th point is worth a different amount than the first -- a band edge has crept back in");
         }
 
         private static int HealthAt(int investedConstitution) =>
@@ -515,11 +515,13 @@ namespace PrincesPalace.Domain.Tests
 
         // 50 stat points across the whole track: 40 filler plus level 80's ten.
         //
-        // Under the 60 that would fill all six ability bands
-        // (AbilityDerivation.CharacterBand is 10, six scores), which is the
-        // right side of that line to be on: a track that filled every band
-        // exactly would leave a fully-levelled character with no decision left
-        // about where the last points go.
+        // Under the 60 that would be six scores' worth of ten points each --
+        // ten no longer names a formula band (AbilityDerivation.CharacterBand
+        // is gone, Phase 2/D2), but it is still the natural per-score unit
+        // this milestone grants, and staying under six of them is the right
+        // side of that line: a track generous enough to max every score would
+        // leave a fully-levelled character with no decision left about where
+        // the last points go.
         [Test]
         public void AFullTrackCannotFillEveryAbilityBand()
         {

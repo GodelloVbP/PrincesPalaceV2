@@ -50,6 +50,12 @@ namespace PrincesPalace
         [SerializeField] internal Image[] offerHalos;
         [SerializeField] internal Image[] offerBursts;
         [SerializeField] internal Image[] offerIcons;
+
+        // ITEM-MODIFIER PLAN PHASE E: the RiftTier ring, distinct from the
+        // rarity-coloured halo/burst pair above. See RiftTierColors' own
+        // header for why this reads a separate table, and PaintOffers for
+        // why it stays hidden at RiftTier.Ordinary.
+        [SerializeField] internal Image[] offerRiftGlows;
         [SerializeField] internal RectTransform[] offerBurstRects;
 
         // The offer CARDS' own rects, so a narrower row can be re-centred.
@@ -243,7 +249,14 @@ namespace PrincesPalace
                 return;
             }
 
-            string body = ItemDescription.SquadComparisonBody(save.ActiveSquad(), item, _offers[index].Plus);
+            // ITEM-MODIFIER PLAN PHASE E: read straight off the OFFER, not
+            // off anything claimed -- an offer's Modifiers/RiftTier are set
+            // the moment ItemOfferRoll rolls it (see ItemOffer's own
+            // header), well before Take() ever writes an InventoryEntry, so
+            // the hover has real data to show for all three unclaimed cards.
+            var offer = _offers[index];
+            string body = ItemDescription.SquadComparisonBody(
+                save.ActiveSquad(), item, offer.Plus, offer.RiftTier, offer.Modifiers);
             if (string.IsNullOrEmpty(body))
             {
                 offerTooltip.SetShown(false);
@@ -659,6 +672,25 @@ namespace PrincesPalace
                     offerHalos[i].color = soft;
                 }
 
+                // ITEM-MODIFIER PLAN PHASE E: the RiftTier ring, a SEPARATE
+                // colour from the rarity-toned halo/burst above -- offer.
+                // RiftTier and item.Rarity are two independent axes (see
+                // RiftTierColors' own header). Fully transparent at
+                // RiftTier.Ordinary rather than gameObject-deactivated,
+                // matching how the halo/burst pair themselves stay always-
+                // active and alpha-only in this screen (unlike the dossier's
+                // Inactive()+SetShown() pattern) -- the offer is offered
+                // regardless of whether it rolled anything, alpha zero is
+                // "no visual change" here.
+                if (offerRiftGlows != null && i < offerRiftGlows.Length && offerRiftGlows[i] != null)
+                {
+                    var ring = RiftTierColors.ShouldGlow(offer.RiftTier)
+                        ? RiftTierColors.For(offer.RiftTier)
+                        : Color.clear;
+                    ring.a *= _taken ? 0.4f : 1f;
+                    offerRiftGlows[i].color = ring;
+                }
+
                 // Every offer stays visible after one is taken, and all of them
                 // stop responding. Hiding the two not chosen would erase the
                 // decision the player just made from the screen that asked for
@@ -680,8 +712,12 @@ namespace PrincesPalace
             _taken = true;
 
             // Straight to the meta stash, which is the single live bag -- the
-            // same one the character overlay and the fight satchel read.
-            InventoryOps.Add(save.stockpiledItems, offer.ItemId, 1, offer.Plus);
+            // same one the character overlay and the fight satchel read. The
+            // roll's affix slots travel with it: offer.Modifiers is an
+            // IReadOnlyList, InventoryOps.Add wants a List<string> to copy
+            // from, so ToList() rather than a cast.
+            InventoryOps.Add(save.stockpiledItems, offer.ItemId, 1, offer.Plus,
+                offer.Modifiers?.ToList(), (int)offer.RiftTier);
 
             // AUTO-EQUIP INTO AN EMPTY SLOT. A reward picked for a slot nobody
             // is wearing anything in went to the bag and sat there until the
@@ -745,8 +781,14 @@ namespace PrincesPalace
                 // health is a fraction OF.
                 int maxBefore = ContentDatabase.EffectiveStats(character).maxHealth;
 
+                // modifierIds/riftTier travel through the same way plus does --
+                // InventoryOps.TryRemoveAt inside TryEquip keys on the full
+                // (itemId, plus, modifierIds, riftTier) stack, so omitting them
+                // here would look for the WRONG stack (the plain, unrolled one)
+                // and silently fail to find the copy Take() just added.
                 if (!EquipMove.TryEquip(character.equipment, save.stockpiledItems, offer.ItemId,
-                                        itemDef.equipSlot, itemDef.IsEquippable, plus: offer.Plus))
+                                        itemDef.equipSlot, itemDef.IsEquippable, plus: offer.Plus,
+                                        modifierIds: offer.Modifiers?.ToList(), riftTier: (int)offer.RiftTier))
                 {
                     return;
                 }

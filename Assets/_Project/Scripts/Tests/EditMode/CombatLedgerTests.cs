@@ -24,8 +24,8 @@ namespace PrincesPalace.Domain.Tests
         private static (FightSession session, CombatantState hero, CombatantState foe) Fight(
             int foeHealth = 5000, DamageType? attackType = null, int foeSpeed = 1)
         {
-            var hero = new CombatantState("Shawn", true, 400, 40, 25, 0, 10);
-            var foe = new CombatantState("Rat", false, foeHealth, 10, 5, 0, foeSpeed);
+            var hero = new CombatantState("Shawn", true, 400, 40, 25, 10);
+            var foe = new CombatantState("Rat", false, foeHealth, 10, 5, foeSpeed);
 
             var encounter = new CombatEncounter(new[] { hero }, new[] { foe });
             var kit = new PlayerKit(HeroId, CharacterRole.Tank, null, null, attackType);

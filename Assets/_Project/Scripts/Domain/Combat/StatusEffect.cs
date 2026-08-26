@@ -4,13 +4,14 @@ namespace PrincesPalace.Domain.Combat
 {
     // What a status effect DOES, independent of who has it or how long.
     //
-    // Deliberately five, not the usual JRPG dozen, and deliberately missing
-    // Slow/Haste — see StatusEffects' own header for why. Every one of these
-    // five rides a hook the combat pipeline already has: Poison and Regen
-    // are CombatMath.ApplyDamage/Heal on a timer, Protect and Vulnerable are
-    // one more multiplier in the same slot EffectivenessMultiplier already
-    // occupies, and Stun reuses the exact turn-skip mechanism BreakShield
-    // proved out. Nothing here needed a new engine hook.
+    // Started at five, not the usual JRPG dozen, and originally missing
+    // Slow/Haste on purpose — see StatusEffects' own header for the history
+    // of why, and Chilled's own comment below for why that changed. Poison
+    // and Regen are CombatMath.ApplyDamage/Heal on a timer, Protect and
+    // Vulnerable are one more multiplier in the same slot
+    // EffectivenessMultiplier already occupies, and Stun reuses the exact
+    // turn-skip mechanism BreakShield proved out — nothing there needed a
+    // new engine hook.
     //
     // Shielded is the sixth, added for the Magical Shield relic, and it did
     // NOT fit any of the five existing shapes. Protect looked closest but is
@@ -77,6 +78,53 @@ namespace PrincesPalace.Domain.Combat
         // decay by turn count and read passively on every hit, and a gift is
         // one swing whenever it happens to arrive.
         Empowered,
+
+        // Incoming Speed reduced by Magnitude percent while this stands.
+        // Decays by turn count exactly like Protect/Vulnerable — no
+        // spent-on-one-hit shape here, this is a standing malus.
+        //
+        // THE NINTH, and the first that touches Speed at all — see
+        // StatusEffects' own header for why every status above this one
+        // deliberately left Speed alone, and why that no longer holds.
+        // Magnitude/TurnsRemaining live here exactly like every other
+        // status (refresh-not-stack via StatusEffects.Apply, ticked down by
+        // StatusEffects.Tick's generic per-status countdown — Chilled needs
+        // no special case there, unlike Poison/Regen/Provoked). What IS
+        // special is where the number actually gets read: not a new hook
+        // inside SpeedScale or DamageTakenMultiplier, but the EXISTING
+        // relic-driven speed-buff bookkeeping in
+        // FightSession.SpeedBuffs.cs, which already knew how to grant a
+        // percent-of-true-base malus and revert it exactly on expiry (Lucky
+        // Deck's slow proved that arithmetic correct first). See
+        // FightSession.SpeedBuffs.RefreshChilledSpeed/ApplyChilled for the
+        // wiring, and FightSession.Riders.TickStatuses for where an expired
+        // Chilled hands its malus back.
+        Chilled,
+
+        // The holder's plain-attack (melee) option is gone while this
+        // stands; it must act through a skill (ranged) instead, or forfeit
+        // the turn if none is legal. Decays by turn count exactly like
+        // Protect/Vulnerable/Chilled -- a standing malus, not a spent-on-one-
+        // occurrence status like Stun/Shielded/Empowered. Magnitude is
+        // ignored, the same "present or absent" shape Protect/Vulnerable's
+        // own Magnitude is NOT (those read it) but GuaranteedFirstAction/
+        // ManaToWardOnTurnStartPercent (ModifierEffectType) already are.
+        //
+        // THE TENTH, item-modifier plan Phase D3, and the one enemy-only by
+        // construction rather than by convention: it builds on
+        // CombatEncounter.CanMeleeReach/FightController.Input's existing
+        // front-rank rule, which is itself one-directional (it only ever
+        // gated a PLAYER's plain attack against an enemy target; an enemy's
+        // swing at the party was never reach-checked). Nothing in the game
+        // authors an enemy ability that applies Rooted to a PLAYER combatant
+        // today, so the gate this gets read by
+        // (FightSession.Enemies.EffectivePoolFor) only ever runs for an
+        // enemy's own turn -- see that method's own comment for where the
+        // plain-attack entry actually gets excluded from the draw, and
+        // ResolveSkippedTurn for the no-legal-skill forfeit, which reuses
+        // Stun's exact turn-skip mechanism rather than inventing a second
+        // one.
+        Rooted,
     }
 
     // One active affliction or boon on a combatant: what it is, how strong,

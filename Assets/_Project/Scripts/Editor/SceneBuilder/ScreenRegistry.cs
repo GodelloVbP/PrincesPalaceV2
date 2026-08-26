@@ -1065,10 +1065,12 @@ public static class ScreenRegistry
         controller.attributeKeys = dossier.AttributeKeys.Select(result.Tmp).ToArray();
 
         controller.slotRarityTicks = dossier.SlotRarityTicks.Select(result.Image).ToArray();
+        controller.slotRiftGlows = dossier.SlotRiftGlows.Select(result.Image).ToArray();
 
         controller.packCells = dossier.PackCells.Select(result.Button).ToArray();
         controller.packIcons = dossier.PackIcons.Select(result.Image).ToArray();
         controller.packRarityTicks = dossier.PackRarityTicks.Select(result.Image).ToArray();
+        controller.packRiftGlows = dossier.PackRiftGlows.Select(result.Image).ToArray();
         controller.packCounts = dossier.PackCounts.Select(result.Tmp).ToArray();
         controller.packNames = dossier.PackNames.Select(result.Tmp).ToArray();
         controller.packSortTabs = dossier.PackFilterTabs.Select(result.Button).ToArray();
@@ -1136,6 +1138,7 @@ public static class ScreenRegistry
         controller.offerBursts = screen.OfferBursts.Select(result.Image).ToArray();
         controller.offerBurstRects = screen.OfferBursts.Select(result.Rect).ToArray();
         controller.offerIcons = screen.OfferIcons.Select(result.Image).ToArray();
+        controller.offerRiftGlows = screen.OfferRiftGlows.Select(result.Image).ToArray();
 
         // Every item that authored an icon, baked as two parallel arrays.
         // Resolved here rather than at runtime because Resources loading and

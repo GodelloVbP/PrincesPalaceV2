@@ -15,7 +15,7 @@ namespace PrincesPalace.Domain.Tests
     public class FightSessionTests
     {
         private static CombatantState Fighter(string name, bool isPlayerSide, int maxHealth = 100, int attack = 20, int speed = 5) =>
-            new CombatantState(name, isPlayerSide, maxHealth, 10, attack, 0, speed);
+            new CombatantState(name, isPlayerSide, maxHealth, 10, attack, speed);
 
         // Variance off everywhere below, so a damage assertion is a fact rather
         // than a range. The roll has its own tests.

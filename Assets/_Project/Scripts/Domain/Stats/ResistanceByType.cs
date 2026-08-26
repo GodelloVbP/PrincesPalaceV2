@@ -5,9 +5,10 @@ namespace PrincesPalace.Domain.Stats
     // RESISTANCE TO ONE SPECIFIC KIND OF HARM, on top of the two-way split.
     //
     // The game already resists by type, and the split is two ways: physical,
-    // and everything else. CombatMath.ResistanceAgainst reads one or the other,
-    // and the value reduces damage on a softening curve (R/(R+100)), so 100
-    // resistance is exactly half.
+    // and everything else. CombatMath.TotalDefense sums the broad answer
+    // (physical or magical) with this struct's typed one, and the total
+    // reduces damage on a softening curve (R/(R+100)), so 100 resistance is
+    // exactly half.
     //
     // Two ways is enough to say "armoured" or "warded" and not enough to say
     // anything else. A cloak against fire and a mask against poison are the
@@ -35,6 +36,17 @@ namespace PrincesPalace.Domain.Stats
         public int Nature;
         public int Poison;
 
+        // ADDED FOR THE ITEM-MODIFIER PLAN'S PHASE C: Astral (Arcane) typed
+        // resistance is one of the six elemental-family modifiers, and until
+        // this field existed `For`/`With` silently dropped anything rolled
+        // against Arcane -- the struct's own header used to read "Arcane
+        // exists in the enum and nothing deals it yet" as the justification
+        // for having no field, which stopped being true the moment a real,
+        // droppable modifier could grant resistance to it. Zero for every
+        // relic and every modifier authored before this field existed, same
+        // as every other stat this codebase adds fields to.
+        public int Arcane;
+
         public int For(DamageType type)
         {
             switch (type)
@@ -44,10 +56,7 @@ namespace PrincesPalace.Domain.Stats
                 case DamageType.Ice: return Ice;
                 case DamageType.Nature: return Nature;
                 case DamageType.Poison: return Poison;
-
-                // A type with no field of its own -- Arcane exists in the enum
-                // and nothing deals it yet. Zero rather than a guess: it falls
-                // through to the two-way split, which still answers for it.
+                case DamageType.Arcane: return Arcane;
                 default: return 0;
             }
         }
@@ -62,6 +71,7 @@ namespace PrincesPalace.Domain.Stats
                 case DamageType.Ice: copy.Ice += amount; break;
                 case DamageType.Nature: copy.Nature += amount; break;
                 case DamageType.Poison: copy.Poison += amount; break;
+                case DamageType.Arcane: copy.Arcane += amount; break;
             }
 
             return copy;
@@ -74,6 +84,9 @@ namespace PrincesPalace.Domain.Stats
         // harm: nothing in the game deals damage of a type called magic. A
         // relic offering it is offering four things at once, and saying that
         // once here beats saying it in every relic that offers it.
+        //
+        // NOW FIVE, not four -- Arcane joins Fire/Ice/Nature/Poison the
+        // moment it has its own field to add to.
         public ResistanceByType WithMagical(int amount)
         {
             var copy = this;
@@ -81,10 +94,11 @@ namespace PrincesPalace.Domain.Stats
             copy.Ice += amount;
             copy.Nature += amount;
             copy.Poison += amount;
+            copy.Arcane += amount;
             return copy;
         }
 
         public bool IsEmpty =>
-            Physical == 0 && Fire == 0 && Ice == 0 && Nature == 0 && Poison == 0;
+            Physical == 0 && Fire == 0 && Ice == 0 && Nature == 0 && Poison == 0 && Arcane == 0;
     }
 }

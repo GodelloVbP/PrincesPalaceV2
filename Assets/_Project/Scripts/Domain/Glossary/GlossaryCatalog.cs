@@ -16,6 +16,15 @@ namespace PrincesPalace.Domain.Glossary
         Spells,
         Items,
         Talents,
+
+        // BALANCE REDESIGN PHASE 6 (D7.4): the six ability scores, the
+        // Physical/Magical Defense curve, and honing -- none of them a
+        // ScriptableObject, so nothing else on this rail has ever needed a
+        // category that is not "one row per asset". See GlossaryEntries.
+        // Mechanics() for why its rows are hand-authored rather than swept
+        // off ContentDatabase like every other category here.
+        Mechanics,
+
         Achievements,
     }
 
@@ -85,6 +94,7 @@ namespace PrincesPalace.Domain.Glossary
                 case GlossaryCategory.Spells: return "SPELLS";
                 case GlossaryCategory.Items: return "ITEMS";
                 case GlossaryCategory.Talents: return "TALENTS";
+                case GlossaryCategory.Mechanics: return "MECHANICS";
                 default: return "DEEDS";
             }
         }

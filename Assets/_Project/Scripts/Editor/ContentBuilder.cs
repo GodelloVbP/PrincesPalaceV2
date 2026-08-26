@@ -23,6 +23,7 @@ public static class ContentBuilder
     private const string SkillsPath = ContentRoot + "/Skills";
     private const string RelicsPath = ContentRoot + "/Relics";
     private const string AchievementsPath = ContentRoot + "/Achievements";
+    private const string ModifiersPath = ContentRoot + "/Modifiers";
 
     // The talent grid's shape is not declared here, and must not be written
     // out here either. The tree's size has one home -- TalentPage.PathCount
@@ -48,6 +49,7 @@ public static class ContentBuilder
         EnsureFolder(SkillsPath);
         EnsureFolder(RelicsPath);
         EnsureFolder(AchievementsPath);
+        EnsureFolder(ModifiersPath);
 
         BuildCharacters();
         BuildTalents();
@@ -56,6 +58,7 @@ public static class ContentBuilder
         BuildItems();
         BuildSpellTiers();
         BuildSkills();
+        BuildModifiers();
 
         // ACHIEVEMENTS BEFORE RELICS, and the order is load-bearing: relics
         // are validated against the achievement ids this returns, so building
@@ -420,6 +423,7 @@ public static class ContentBuilder
             asset.attackApproach = enemy.AttackApproach.ToString().ToLowerInvariant();
             asset.stageScale = enemy.StageScale;
             asset.slotSpan = enemy.SlotSpan;
+            asset.attackType = enemy.AttackType;
             AssetDatabase.CreateAsset(asset, $"{EnemiesPath}/{enemy.Id}.asset");
         }
     }
@@ -634,6 +638,56 @@ public static class ContentBuilder
         }
 
         Debug.Log($"BuildWeapons: generated {resolved.Count} weapon(s) from {file.families.Length} famil(y/ies).");
+    }
+
+    // Item modifiers ("Rift affixes"), generated from
+    // Assets/_Project/ContentData/modifiers.json. Same pattern as
+    // BuildTalents/BuildItems/BuildRelics: the Domain-layer
+    // ModifierEntryResolver validates, and this is the thin Editor-only glue
+    // that turns a ResolvedModifier into a ModifierDefinition asset.
+    //
+    // ITS OWN FOLDER (Resources/Content/Modifiers), unlike BuildWeapons/
+    // BuildItemSets — those generate ItemDefinition assets that live beside
+    // items.json's own output and need the collision check that implies. A
+    // modifier is a different asset type in a different folder with its own
+    // id space, so there is nothing for it to collide with.
+    private static void BuildModifiers()
+    {
+        const string jsonPath = "Assets/_Project/ContentData/modifiers.json";
+        if (!File.Exists(jsonPath))
+        {
+            Debug.LogError($"BuildModifiers: no file at '{jsonPath}' — no modifiers were created.");
+            return;
+        }
+
+        var file = JsonUtility.FromJson<RawModifierFile>(File.ReadAllText(jsonPath));
+        if (!ModifierEntryResolver.TryResolveAll(file.modifiers, out var resolved, out var errors))
+        {
+            Debug.LogError($"BuildModifiers: {jsonPath} has {errors.Count} problem(s) — no modifiers were created:\n" +
+                            string.Join("\n", errors));
+            return;
+        }
+
+        foreach (var modifier in resolved)
+        {
+            var asset = ScriptableObject.CreateInstance<ModifierDefinition>();
+            asset.id = modifier.Id;
+            asset.displayName = modifier.DisplayName;
+            asset.description = modifier.Description;
+            asset.effects = modifier.Effects.Select(e => new ModifierDefinition.ModifierEffectEntry
+            {
+                type = e.Type,
+                magnitude = e.Magnitude,
+                threshold = e.Threshold,
+                against = e.Against ?? default,
+                hasAgainst = e.Against.HasValue,
+                againstMagical = e.AgainstMagical,
+            }).ToArray();
+            asset.sortOrder = modifier.SortOrder;
+            AssetDatabase.CreateAsset(asset, $"{ModifiersPath}/{modifier.Id}.asset");
+        }
+
+        Debug.Log($"BuildModifiers: generated {resolved.Count} modifier(s) from {file.modifiers.Length} entr(y/ies).");
     }
 
     // Armour sets, generated from Assets/_Project/ContentData/itemsets.json.

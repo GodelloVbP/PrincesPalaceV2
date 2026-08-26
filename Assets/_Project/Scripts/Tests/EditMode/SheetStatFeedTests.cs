@@ -32,14 +32,18 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // Every derived figure a score could move, by the ONLY thing that
-        // actually converts scores into stats.
+        // actually converts scores into stats. Attack is deliberately absent
+        // -- AbilityDerivation.AttackBonus was deleted in Phase 2 (D2);
+        // Strength derives no stat at all until Phase 3 wires weapon power
+        // in, so there is nothing here for raising it to move.
         private static Dictionary<SheetStat, int> Derive(AbilityScoreBlock scores) =>
             new Dictionary<SheetStat, int>
             {
-                { SheetStat.Attack, AbilityDerivation.AttackBonus(scores) },
                 { SheetStat.Speed, AbilityDerivation.SpeedBonus(scores) },
                 { SheetStat.MaxHealth, AbilityDerivation.MaxHealthBonus(scores) },
+                { SheetStat.PhysicalDefense, AbilityDerivation.PhysicalDefenseBonus(scores) },
                 { SheetStat.MaxMana, AbilityDerivation.MaxManaBonus(scores) },
+                { SheetStat.MagicalDefense, AbilityDerivation.MagicalDefenseBonus(scores) },
                 { SheetStat.SignatureGain, AbilityDerivation.SignatureGainBonus(scores) },
             };
 
@@ -69,23 +73,22 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
-        // The gear-only rows. Claiming a score feeds armour would light a row
-        // that no attribute can ever move -- the handover for this screen did
-        // exactly that, giving Physical DEF to Constitution.
+        // The one truly gear-only row left. Physical/Magical Defense moved
+        // OFF this list in Phase 2 -- Constitution and Wisdom derive them now
+        // (AbilityDerivation.PhysicalDefenseBonus/MagicalDefenseBonus) -- so
+        // only ManaRegen remains fed by nothing but gear and talents.
         [Test]
-        public void ArmourAndRegenAreFedByNoAttribute()
+        public void ManaRegenIsFedByNoAttribute()
         {
-            foreach (var stat in new[] { SheetStat.Defence, SheetStat.PhysicalResistance,
-                                         SheetStat.MagicalResistance, SheetStat.ManaRegen })
-            {
-                CollectionAssert.IsEmpty(SheetStats.FedBy(stat),
-                    $"{stat} comes from gear and talents only; no attribute derives it.");
-            }
+            CollectionAssert.IsEmpty(SheetStats.FedBy(SheetStat.ManaRegen),
+                "ManaRegen comes from gear and talents only; no attribute derives it.");
         }
 
-        // Recorded rather than asserted away: Intelligence is the one score with
-        // no row, because it rides weapon/skill scaling instead of deriving a
-        // stat. If a scaling row is ever added this test is what should change.
+        // Recorded rather than asserted away: Intelligence and (as of Phase 2)
+        // Strength are the two scores with no row right now, because both
+        // ride weapon/skill scaling instead of deriving a stat directly, and
+        // that wiring is Phase 3 (D3), not yet landed. If either gains a row
+        // this test is what should change.
         [Test]
         public void IntelligenceFeedsNoRowYet()
         {
@@ -94,11 +97,19 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void EveryAttributeButIntelligenceLightsSomething()
+        public void StrengthFeedsNoRowYet()
+        {
+            CollectionAssert.IsEmpty(SheetStats.Feeds(AbilityScore.Strength),
+                "Strength has gained a derived row - update the sheet's hover copy with it " +
+                "(expected once Phase 3 wires weapon power in).");
+        }
+
+        [Test]
+        public void EveryAttributeButIntelligenceAndStrengthLightsSomething()
         {
             foreach (AbilityScore score in AbilityScores.All)
             {
-                if (score == AbilityScore.Intelligence) continue;
+                if (score == AbilityScore.Intelligence || score == AbilityScore.Strength) continue;
 
                 CollectionAssert.IsNotEmpty(SheetStats.Feeds(score),
                     $"{score} lights no row, so hovering it on the sheet does nothing");

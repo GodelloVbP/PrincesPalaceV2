@@ -70,8 +70,8 @@ namespace PrincesPalace.PlayModeTests
             // find the art (see FightController.SpriteFolderFor); a synthetic
             // enemy without one poses as a fallback plate and the capture shows
             // a spell going off next to a grey rectangle.
-            var hero = new CombatantState("Shawn", true, 300, 30, 40, 0, 10);
-            var foe = new CombatantState("Giant Rat", false, 5000, 10, 8, 0, 4);
+            var hero = new CombatantState("Shawn", true, 300, 30, 40, 10);
+            var foe = new CombatantState("Giant Rat", false, 5000, 10, 8, 4);
             var encounter = new CombatEncounter(new[] { hero }, new[] { foe });
             var kit = new PlayerKit("shawn", CharacterRole.Tank, null, null, null,
                 new ResolvedSpellTier(1, "Spark", 6, 1.5f, 0), level: 4);

@@ -13,7 +13,7 @@ namespace PrincesPalace.Domain.Tests
     {
         private static CombatantState Fighter(string name, bool isPlayerSide, int speed, int maxHealth = 20)
         {
-            return new CombatantState(name, isPlayerSide, maxHealth, 10, 5, 2, speed);
+            return new CombatantState(name, isPlayerSide, maxHealth, 10, 5, speed);
         }
 
         [Test]

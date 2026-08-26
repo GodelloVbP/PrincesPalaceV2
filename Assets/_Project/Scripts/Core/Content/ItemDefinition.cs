@@ -69,7 +69,7 @@ namespace PrincesPalace.Content
         [Tooltip("Set pieces only: which armour set this came from. Empty for a one-off item. Kept so a future set bonus can group pieces without parsing ids.")]
         public string setId;
 
-        [Tooltip("Generated weapons only: which family this came from (e.g. 'sword'). Empty for a hand-authored weapon or a non-weapon. Kept so every modifier of a family can be found and compared without parsing ids — see ItemPowerBudget.")]
+        [Tooltip("Generated weapons only: which family this came from (e.g. 'sword'). Empty for a hand-authored weapon or a non-weapon. Kept so every generated weapon's family can be identified without parsing its id — see ContentDatabase.Offerable.")]
         public string weaponFamilyId;
 
         [Tooltip("Generated items only: which rung of the ladder this is — 0 for the weakest, 10 for the best. Drives the icon, the base stats, the scaling grades, the tier adjective in the name and the rarity colour. NOT the same as an instance's plus, which lives on the InventoryEntry.")]
@@ -118,7 +118,7 @@ namespace PrincesPalace.Content
         // anything that reads a derived value.
         public StatBlock StatBonusAt(int plus)
         {
-            var withAttack = statBonus + new StatBlock(0, 0, kind == ItemKind.Weapon ? attackBonus : 0, 0);
+            var withAttack = statBonus + new StatBlock(0, 0, kind == ItemKind.Weapon ? attackBonus : 0);
             if (plus <= 0)
             {
                 return withAttack;
@@ -144,6 +144,17 @@ namespace PrincesPalace.Content
         public AbilityScoreBlock AbilityScoreBonusAt(int plus)
         {
             return abilityScoreBonus;
+        }
+
+        // Weapons only: WeaponPower -- balance redesign Phase 3 (D3). THE
+        // damage number. `attackBonus` on a generated weapon IS attackAtTier
+        // already (see WeaponEntryResolver); the formula itself lives in
+        // Domain.Stats.WeaponPower (engine-free, unit-tested from EditMode)
+        // rather than here -- see its own header for why, and for why this
+        // is not simply StatBonusAt/ItemUpgrade.Apply.
+        public int WeaponPowerAt(int plus)
+        {
+            return WeaponPower.Compute(attackBonus, plus);
         }
 
         // Listed by the authored order ContentBuilder stamped on it.

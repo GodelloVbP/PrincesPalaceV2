@@ -40,27 +40,48 @@ namespace PrincesPalace
                 .ToList();
         }
 
+        // Every modifier id in the pool, authored order. The Core-side
+        // bridge ModifierTable.PickModifiers needs -- Domain cannot see
+        // ContentDatabase or ModifierDefinition, the same reason Candidates()
+        // exists above for items rather than ItemOfferTable reading
+        // ContentDatabase itself.
+        private static IReadOnlyList<string> ModifierPool()
+        {
+            return ContentDatabase.Modifiers
+                .Where(m => m != null && !string.IsNullOrEmpty(m.id))
+                .Select(m => m.id)
+                .ToList();
+        }
+
         // What one character's Favor is worth: what they were AUTHORED with,
-        // plus what the reward track has GRANTED them.
+        // plus what the reward track has GRANTED them, plus what THIS RUN has
+        // granted them.
         //
-        // The two halves live in different places because they have different
-        // lifetimes -- CharacterDefinition.princesFavor is content, rebuilt
-        // from characters.json by ContentBuilder and the same for every save;
-        // Character.earnedFavor is progress, and belongs to one profile's one
-        // character. This is the only place they meet, which is deliberate: a
-        // second place that added them would be a second place that could
+        // Three halves living in three different places because they have
+        // three different lifetimes -- CharacterDefinition.princesFavor is
+        // content, rebuilt from characters.json by ContentBuilder and the
+        // same for every save; Character.earnedFavor is permanent progress,
+        // and belongs to one profile's one character; runFavor
+        // (Data/RunSnapshot.cs) belongs to the CURRENT DESCENT and is gone
+        // the moment it ends -- the plan's Fortunate modifier writes it per
+        // fight won, nothing does yet (Phase A3 only adds the plumbing).
+        // This is the only place all three meet, which is deliberate: a
+        // second place that summed them would be a second place that could
         // forget to.
         //
-        // Tolerant of either side being missing, the house style: a character
+        // Tolerant of every side being missing, the house style: a character
         // whose definition has gone (content edited under a live save) still
-        // contributes what they earned, and a character who has earned nothing
-        // still contributes what they were authored with.
-        public static int FavorOf(Character character, CharacterDefinition definition)
+        // contributes what they earned, and a character who has earned
+        // nothing still contributes what they were authored with. runFavor
+        // defaults to 0 -- an in-progress or absent run contributes nothing,
+        // and today's two-way sum is exactly what a 0 run-Favor reproduces.
+        public static int FavorOf(Character character, CharacterDefinition definition, int runFavor = 0)
         {
             int authored = definition == null ? 0 : definition.princesFavor;
             int earned = character == null ? 0 : character.earnedFavor;
+            if (runFavor < 0) runFavor = 0;
 
-            int total = authored + earned;
+            int total = authored + earned + runFavor;
             return total < 0 ? 0 : total;
         }
 
@@ -103,9 +124,15 @@ namespace PrincesPalace
             var save = SaveSlotManager.CurrentSave;
             if (save == null) return 0;
 
+            // activeRun is never null (see RunSnapshot.hasRun's own header --
+            // JsonUtility cannot round-trip a null reference field), so
+            // runFavor reads as 0 with no run in progress, which is the
+            // "contributes nothing" case FavorOf's default already handles.
+            int runFavor = save.activeRun?.runFavor ?? 0;
+
             return SquadFavor(save.ActiveSquad()
                 .Select(c => FavorOf(c, ContentDatabase.Characters
-                    .FirstOrDefault(d => d != null && d.id == c.definitionId))));
+                    .FirstOrDefault(d => d != null && d.id == c.definitionId), runFavor)));
         }
 
         // The offers, each with its own independently rolled plus.
@@ -128,14 +155,22 @@ namespace PrincesPalace
 
             int maxTier = MaxTier;
             int targetTier = RarityTable.RollTier(encounter, depthStep, maxTier, favor, nextIndex);
+            var modifierPool = ModifierPool();
 
-            // Tier is rolled ONCE for the offer set and plus is rolled PER
-            // ITEM. Rolling the tier per item would quietly widen the spread
-            // ItemOfferTable.TierSpread already controls, and make the three
-            // offers three separate difficulty statements rather than one.
+            // Tier is rolled ONCE for the offer set and plus/RiftTier/which-
+            // modifiers are rolled PER ITEM. Rolling tier per item would
+            // quietly widen the spread ItemOfferTable.TierSpread already
+            // controls, and make the three offers three separate difficulty
+            // statements rather than one; RiftTier is a property of the one
+            // copy on the card, exactly like plus, so it belongs at the same
+            // granularity as plus rather than tier's.
             foreach (var offer in ItemOfferTable.Choose(candidates, targetTier, maxTier, nextIndex, count))
             {
-                offers.Add(offer.WithPlus(RarityTable.RollPlus(encounter, favor, nextIndex)));
+                int plus = RarityTable.RollPlus(encounter, favor, nextIndex);
+                var riftTier = ModifierTable.RollRiftTier(encounter, favor, nextIndex);
+                var modifiers = ModifierTable.PickModifiers(modifierPool, (int)riftTier, nextIndex);
+
+                offers.Add(offer.WithPlus(plus).WithModifiers(riftTier, modifiers));
             }
 
             return offers;

@@ -61,11 +61,10 @@ namespace PrincesPalace.Domain.Tests
         {
             maxHealth = 101,
             attack = 102,
-            defense = 103,
             speed = 104,
             manaRegen = 105,
-            physicalResistance = 106,
-            magicalResistance = 107,
+            physicalDefense = 106,
+            magicalDefense = 107,
         };
 
         private static AbilityScoreBlock Scores() => new AbilityScoreBlock
@@ -86,11 +85,10 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(SheetStat.Charisma, 16)]
         [TestCase(SheetStat.MaxHealth, 101)]
         [TestCase(SheetStat.Attack, 102)]
-        [TestCase(SheetStat.Defence, 103)]
         [TestCase(SheetStat.Speed, 104)]
         [TestCase(SheetStat.ManaRegen, 105)]
-        [TestCase(SheetStat.PhysicalResistance, 106)]
-        [TestCase(SheetStat.MagicalResistance, 107)]
+        [TestCase(SheetStat.PhysicalDefense, 106)]
+        [TestCase(SheetStat.MagicalDefense, 107)]
         public void EachRowReadsItsOwnField(SheetStat stat, int expected)
         {
             Assert.AreEqual(expected, SheetStats.ValueOf(stat, Stats(), Scores()));
@@ -102,8 +100,36 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ResistancesAreShownRatherThanQuietlyOmitted()
         {
-            CollectionAssert.Contains(SheetStats.All, SheetStat.PhysicalResistance);
-            CollectionAssert.Contains(SheetStats.All, SheetStat.MagicalResistance);
+            CollectionAssert.Contains(SheetStats.All, SheetStat.PhysicalDefense);
+            CollectionAssert.Contains(SheetStats.All, SheetStat.MagicalDefense);
+        }
+
+        // ---- what the row actually shows (D7.3) ------------------------------
+
+        [Test]
+        public void PhysicalDefenseRendersTheMitigationCurve()
+        {
+            // Same pinned figure the design doc and ItemStatLinesTests both
+            // use: 50 Defense is 33% less damage. Compact ("50 (33%)")
+            // rather than a full sentence -- see DisplayText's own header
+            // for why this one row cannot afford the longer text.
+            Assert.AreEqual("50 (33%)", SheetStats.DisplayText(SheetStat.PhysicalDefense, 50));
+        }
+
+        [Test]
+        public void MagicalDefenseRendersTheMitigationCurveTheSameWay()
+        {
+            Assert.AreEqual("50 (33%)", SheetStats.DisplayText(SheetStat.MagicalDefense, 50));
+        }
+
+        [Test]
+        public void EveryOtherRowIsJustTheBareNumber()
+        {
+            // The percentage read is specific to the two Defense rows -- a
+            // sheet where every number grew a parenthetical would bury the
+            // two that actually need one.
+            Assert.AreEqual("104", SheetStats.DisplayText(SheetStat.MaxHealth, 104));
+            Assert.AreEqual("14", SheetStats.DisplayText(SheetStat.Wisdom, 14));
         }
     }
 }

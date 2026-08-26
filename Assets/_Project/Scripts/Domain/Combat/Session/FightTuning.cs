@@ -97,5 +97,58 @@ namespace PrincesPalace.Domain.Combat.Session
         // rule), so recasting while it stands never compounds.
         public const int MagicalShieldReductionPercent = 50;
         public const int MagicalShieldDurationTurns = 99;
+
+        // ---- item modifiers (Rift affixes, Phase C) ---------------------------
+
+        // How many turn-order slots Hardened's on-hit push knocks a target
+        // back -- the same unit TurnOrder.PushBack itself takes. One,
+        // matching the Black Ram's Headbutt (the talent this reuses the
+        // mechanism from): "one slot later" needs no calibration against the
+        // scheduler's own arbitrary charge units (see PushBack's own header).
+        public const int ModifierPushBackSlots = 1;
+
+        // RUNIC'S MANA->WARD CONVERSION IS DELIBERATELY WEAK -- the plan's
+        // own words for it. It turns a resource the wearer was merely
+        // HOLDING (not spent, not committed to anything) into flat damage
+        // reduction at the start of every one of their own turns, for free.
+        // A generous rate here would make "hoard mana, never cast" the
+        // correct answer to "how do I tank", which is backwards for a
+        // resource whose entire other purpose is being spent. Percent Ward
+        // granted per point of UNSPENT mana at turn start.
+        public const float RunicWardConversionRate = 0.25f;
+
+        // However deep a mana pool gets, the conversion never grants more
+        // than a quarter damage reduction -- keeps a high-mana build from
+        // turning "never cast" into near-immunity.
+        public const int RunicWardMagnitudeCapPercent = 25;
+
+        // ---- chilled (Phase D2, item-modifier plan) ----------------------------
+        //
+        // Frosty's own chill, on a successful ChilledOnHitChancePercent
+        // proc. NOT authored per-modifier -- see that enum member's own
+        // comment for why the chance is the one number modifiers.json
+        // tunes and this pair stays a fixed constant, the same split
+        // ModifierPushBackSlots already draws for Hardened's push.
+        //
+        // Deliberately its OWN numbers rather than reusing
+        // LuckyDeckSlowPercent/LuckyDeckSlowTurns even though both procs
+        // now land through the identical ApplyChilled call -- Frosty is a
+        // droppable item modifier balanced against RiftTier/item tier the
+        // way every other on-hit rider in this table is (Vampiric's
+        // LifestealPercent, Hardened's push chance), Lucky Deck is a fixed
+        // relic with its own long-shipped balance; tying the two together
+        // would mean retuning one every time the other needed to move.
+        public const int ChilledOnHitSpeedPercent = 20;
+        public const int ChilledOnHitTurns = 2;
+
+        // ---- rooted (Phase D3, item-modifier plan) -----------------------------
+        //
+        // Sylvan's own root, on a successful RootChancePercent proc. Same
+        // split as ChilledOnHitSpeedPercent/ChilledOnHitTurns just above:
+        // the CHANCE is the one number modifiers.json tunes, this stays a
+        // fixed constant. No sibling "strength" constant -- Rooted has no
+        // Magnitude of its own to author (ModifierEffectType.RootChancePercent's
+        // own comment), only a duration.
+        public const int RootOnHitTurns = 2;
     }
 }

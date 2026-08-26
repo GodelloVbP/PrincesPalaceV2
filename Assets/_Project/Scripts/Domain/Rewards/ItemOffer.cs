@@ -1,34 +1,58 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using PrincesPalace.Domain.Content;
 
 namespace PrincesPalace.Domain.Rewards
 {
     // One item on the end-of-combat "choose one of three" screen.
     //
-    // Carries both axes. TIER is which item is being offered and is the one
+    // Carries three axes. TIER is which item is being offered and is the one
     // this table scales by depth; PLUS is how honed that particular copy is,
     // rolled separately and independently (see RarityTable.RollPlus) because
-    // it is the long-tail excitement rather than the progression.
+    // it is the long-tail excitement rather than the progression; RIFTTIER
+    // and MODIFIERS are the third axis (see ModifierTable), rolled per item
+    // exactly like Plus.
     public readonly struct ItemOffer
     {
         public readonly string ItemId;
         public readonly int Tier;
         public readonly int Plus;
+        public readonly RiftTier RiftTier;
 
-        public ItemOffer(string itemId, int tier, int plus = 0)
+        // Never null -- an offer with nothing rolled carries the same empty
+        // list the "absent and empty read the same way" convention uses
+        // everywhere else in this codebase (InventoryEntry.modifierIds,
+        // EquipmentSlotEntry.modifierIds), so a caller can foreach this
+        // without a null guard.
+        public readonly IReadOnlyList<string> Modifiers;
+
+        public ItemOffer(string itemId, int tier, int plus = 0,
+            RiftTier riftTier = RiftTier.Ordinary, IReadOnlyList<string> modifiers = null)
         {
             ItemId = itemId;
             Tier = tier;
             Plus = plus;
+            RiftTier = riftTier;
+            Modifiers = modifiers ?? new List<string>();
         }
 
         // The same offer at a different plus. Used by the reward roll, which
         // picks WHICH item from the candidate pool and HOW HONED it is in two
-        // separate steps.
+        // separate steps. Preserves whatever RiftTier/Modifiers this offer
+        // already carried -- With* methods each move ONE axis, never the
+        // others, which is what lets ItemOfferRoll chain WithPlus and
+        // WithModifiers on the same offer without one clobbering the other.
         public ItemOffer WithPlus(int plus)
         {
-            return new ItemOffer(ItemId, Tier, plus);
+            return new ItemOffer(ItemId, Tier, plus, RiftTier, Modifiers);
+        }
+
+        // The same offer with its rolled affix slots filled in. See WithPlus
+        // above for why this preserves Plus rather than resetting it.
+        public ItemOffer WithModifiers(RiftTier riftTier, IReadOnlyList<string> modifiers)
+        {
+            return new ItemOffer(ItemId, Tier, Plus, riftTier, modifiers);
         }
     }
 
@@ -106,17 +130,10 @@ namespace PrincesPalace.Domain.Rewards
                     continue;
                 }
 
-                while (pool.Count > 0 && chosen.Count < count)
-                {
-                    int index = nextIndex(pool.Count);
-                    if (index < 0 || index >= pool.Count)
-                    {
-                        index = 0;
-                    }
-
-                    chosen.Add(pool[index]);
-                    pool.RemoveAt(index);
-                }
+                // The core no-repeat draw, shared with ModifierTable.PickModifiers
+                // (see SamplingOps' own header) -- this loop only owns the
+                // band-widening wrapped around it.
+                chosen.AddRange(SamplingOps.SampleWithoutReplacement(pool, count - chosen.Count, nextIndex));
             }
 
             return chosen;

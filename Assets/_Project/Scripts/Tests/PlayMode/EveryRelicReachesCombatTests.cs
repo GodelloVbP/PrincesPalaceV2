@@ -98,8 +98,15 @@ namespace PrincesPalace.PlayModeTests
 
             int baseAttack = FightEncounterAdapter.Build(OneParty(), OneEnemy(),
                 new Domain.Rng.SeededRandom(11)).Party[0].Attack;
-            int baseDefense = FightEncounterAdapter.Build(OneParty(), OneEnemy(),
-                new Domain.Rng.SeededRandom(11)).Party[0].Defense;
+            // Both broad Defenses, not compared against zero: characters.json
+            // now authors real physicalDefense/magicalDefense on the base
+            // character (Shawn's own base stats, unrelated to any relic), so
+            // the baseline has to be MEASURED the same way Attack/Health/
+            // Speed already are rather than assumed to start at 0.
+            int basePhysicalDefense = FightEncounterAdapter.Build(OneParty(), OneEnemy(),
+                new Domain.Rng.SeededRandom(11)).Party[0].PhysicalDefense;
+            int baseMagicalDefense = FightEncounterAdapter.Build(OneParty(), OneEnemy(),
+                new Domain.Rng.SeededRandom(11)).Party[0].MagicalDefense;
             int baseHealth = FightEncounterAdapter.Build(OneParty(), OneEnemy(),
                 new Domain.Rng.SeededRandom(11)).Party[0].MaxHealth;
             int baseSpeed = FightEncounterAdapter.Build(OneParty(), OneEnemy(),
@@ -113,9 +120,10 @@ namespace PrincesPalace.PlayModeTests
                     new Domain.Rng.SeededRandom(11), relicIds: new[] { relic.id });
                 var actor = built.Party[0];
 
-                bool moved = actor.Attack != baseAttack || actor.Defense != baseDefense
+                bool moved = actor.Attack != baseAttack
+                             || actor.PhysicalDefense != basePhysicalDefense
+                             || actor.MagicalDefense != baseMagicalDefense
                              || actor.MaxHealth != baseHealth || actor.Speed != baseSpeed
-                             || actor.PhysicalResistance != 0 || actor.MagicalResistance != 0
                              || !actor.TypedResistance.IsEmpty;
 
                 if (!moved) inert.Add(relic.id);

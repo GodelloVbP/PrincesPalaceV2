@@ -219,6 +219,107 @@ namespace PrincesPalace.PlayModeTests
                 "the pick never reached the file");
         }
 
+        // Three offers, each also carrying a real rolled RiftTier/Modifiers
+        // set -- ThreeOffers() above stays plus-only so every OTHER test in
+        // this file is unaffected by this axis existing.
+        private static List<ItemOffer> ThreeOffersWithRolls()
+        {
+            var pool = Content.ContentDatabase.Modifiers.Select(m => m.id).ToList();
+            Assert.IsNotEmpty(pool, "fixture: content has at least one modifier to roll");
+
+            var candidates = ItemOfferRoll.Candidates();
+            Assert.IsNotEmpty(candidates, "fixture: content has equippable items");
+
+            return candidates.Take(3)
+                .Select(c => c.WithPlus(2)
+                    .WithModifiers(Domain.Content.RiftTier.Convergent, pool.Take(System.Math.Min(3, pool.Count)).ToList()))
+                .ToList();
+        }
+
+        // Whether `itemId` at `plus` with EXACTLY this modifier roll ended up
+        // anywhere the save can hold it -- the bag, or auto-equipped into a
+        // squad member's slot. Mirrors ItemLandedSomewhere, extended to the
+        // full stacking key rather than just (itemId, plus): a claim that
+        // dropped the roll on the floor would still pass the plus-only check,
+        // which is exactly the gap this test closes.
+        private static bool RolledItemLandedSomewhere(string itemId, int plus, List<string> modifierIds, int riftTier)
+        {
+            bool SameRoll(List<string> a) => new HashSet<string>(a ?? new List<string>()).SetEquals(modifierIds);
+
+            if (Save.stockpiledItems.Any(e => e.itemId == itemId && e.plus == plus
+                    && e.riftTier == riftTier && SameRoll(e.modifierIds)))
+            {
+                return true;
+            }
+
+            foreach (var character in Save.ActiveSquad())
+            {
+                if (character?.equipment == null) continue;
+                foreach (var slot in Domain.Equipment.EquipmentSlots.All)
+                {
+                    if (character.equipment.Get(slot) == itemId && character.equipment.GetPlus(slot) == plus
+                        && character.equipment.GetRiftTier(slot) == riftTier
+                        && SameRoll(character.equipment.GetModifierIds(slot)))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        [UnityTest]
+        public IEnumerator TakingAnOfferPutsItsRollInTheSaveToo()
+        {
+            var offers = ThreeOffersWithRolls();
+            yield return ShowIt(Reward(rows: Row("shawn", "Shawn")), offers);
+
+            var taken = offers[0];
+            var modifierIds = taken.Modifiers.ToList();
+
+            Assert.IsFalse(RolledItemLandedSomewhere(taken.ItemId, taken.Plus, modifierIds, (int)taken.RiftTier),
+                "fixture: should not exist anywhere in a fresh save before it is taken");
+
+            Named("ReckoningOffer0").GetComponent<Button>().onClick.Invoke();
+            yield return null;
+
+            Assert.IsTrue(RolledItemLandedSomewhere(taken.ItemId, taken.Plus, modifierIds, (int)taken.RiftTier),
+                "the offer's rolled modifiers/riftTier did not survive into the save, wherever it landed");
+        }
+
+        // AutoEquipIntoAnEmptySlot moves the item out of the bag via
+        // EquipMove.TryEquip, which keys its removal on the FULL
+        // (itemId, plus, modifierIds, riftTier) stack now that modifiers
+        // exist. Passing only `plus` there would look for the wrong stack
+        // and silently leave a rolled item stuck in the bag on a fresh
+        // character who should have auto-equipped it -- this pins that the
+        // roll specifically does not break auto-equip.
+        [UnityTest]
+        public IEnumerator ARolledOfferStillAutoEquipsIntoAnEmptySlot()
+        {
+            var offers = ThreeOffersWithRolls();
+            var taken = offers[0];
+            yield return ShowIt(Reward(rows: Row("shawn", "Shawn")), offers);
+
+            Named("ReckoningOffer0").GetComponent<Button>().onClick.Invoke();
+            yield return null;
+
+            // Same fixture guarantee ThreeOffers()/TakingAnOfferPutsItInThe-
+            // SaveAtItsPlusAndSavesIt already relies on: a fresh Shawn has an
+            // empty slot for every offer, so this always auto-equips rather
+            // than sitting in the bag.
+            bool equipped = Save.ActiveSquad().Any(character =>
+                character?.equipment != null && Domain.Equipment.EquipmentSlots.All.Any(slot =>
+                    character.equipment.Get(slot) == taken.ItemId
+                    && character.equipment.GetPlus(slot) == taken.Plus
+                    && character.equipment.GetRiftTier(slot) == (int)taken.RiftTier));
+
+            Assert.IsTrue(equipped,
+                "a rolled item did not auto-equip -- TryEquip likely could not find its stack in the bag " +
+                "because its modifierIds/riftTier were not passed through to the removal key");
+        }
+
         [UnityTest]
         public IEnumerator OnlyOneOfferCanBeTaken()
         {

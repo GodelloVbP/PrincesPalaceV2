@@ -233,8 +233,8 @@ namespace PrincesPalace.PlayModeTests
                 "the beetle's defeated pose is a single frame, so this pin proves nothing");
 
             // One swing kills it, and Shawn goes first.
-            var hero = new CombatantState("Shawn", true, 300, 30, 400, 0, 20);
-            var doomed = new CombatantState(beetle.displayName, false, 1, 0, 1, 0, 1);
+            var hero = new CombatantState("Shawn", true, 300, 30, 400, 20);
+            var doomed = new CombatantState(beetle.displayName, false, 1, 0, 1, 1);
 
             var encounter = new CombatEncounter(new[] { hero }, new[] { doomed });
             var session = new FightSession(encounter,
@@ -297,8 +297,8 @@ namespace PrincesPalace.PlayModeTests
             int frames = StanceAnimationLibrary.Resolve(beetle.spritePath, "hurt").FrameCount;
             Assert.Greater(frames, 1, "the beetle's hurt pose is a single frame, so this pin proves nothing");
 
-            var hero = new CombatantState("Shawn", true, 300, 30, 20, 0, 20);
-            var struck = new CombatantState(beetle.displayName, false, 9000, 0, 1, 0, 1);
+            var hero = new CombatantState("Shawn", true, 300, 30, 20, 20);
+            var struck = new CombatantState(beetle.displayName, false, 9000, 0, 1, 1);
 
             var encounter = new CombatEncounter(new[] { hero }, new[] { struck });
             var session = new FightSession(encounter,
@@ -353,9 +353,9 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(beetle, "beetle is not in the content database");
             Assert.IsNotNull(treant, "treant is not in the content database");
 
-            var hero = new CombatantState("Shawn", true, 300, 30, 40, 0, 10);
-            var one = new CombatantState(beetle.displayName, false, 5000, 0, 4, 0, 5);
-            var two = new CombatantState(treant.displayName, false, 5000, 0, 6, 0, 3);
+            var hero = new CombatantState("Shawn", true, 300, 30, 40, 10);
+            var one = new CombatantState(beetle.displayName, false, 5000, 0, 4, 5);
+            var two = new CombatantState(treant.displayName, false, 5000, 0, 6, 3);
 
             var encounter = new CombatEncounter(new[] { hero }, new[] { one, two });
             var session = new FightSession(encounter,

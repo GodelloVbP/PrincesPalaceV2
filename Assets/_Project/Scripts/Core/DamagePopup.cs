@@ -50,6 +50,14 @@ namespace PrincesPalace
         private static readonly Color DamageColor = new Color(0.93f, 0.26f, 0.24f, 1f);
         private static readonly Color HealColor = new Color(0.42f, 0.86f, 0.45f, 1f);
 
+        // PHASE D1: a dodge's own colour -- neither the alarm-red of damage
+        // nor the relief-green of a heal, because a miss is neither. Pale
+        // and cool on purpose so "Miss" reads as a DIFFERENT kind of news
+        // from a number, not a quiet or a loud version of the same one --
+        // see FightBeatPlayer.ShowAmount's own comment on why this must
+        // never look like "0 damage from armour" landed instead.
+        private static readonly Color MissColor = new Color(0.78f, 0.82f, 0.88f, 1f);
+
         [SerializeField] internal TMP_Text label;
 
         private RectTransform _rect;
@@ -62,7 +70,19 @@ namespace PrincesPalace
             _rect = (RectTransform)transform;
         }
 
-        public void Play(Vector2 anchoredStart, int amount, bool isHealing)
+        public void Play(Vector2 anchoredStart, int amount, bool isHealing) =>
+            PlayContent(anchoredStart, (isHealing ? "+" : "-") + Mathf.Abs(amount), isHealing ? HealColor : DamageColor);
+
+        // PHASE D1: the dodge/miss reading -- "Miss" rather than a number, so
+        // a dodged attack cannot be mistaken for "0 damage from armour" (see
+        // DamagePipeline.Outcome.IsMiss's own header on why those two must
+        // never look like the same information to the player). Shares the
+        // exact same rise/punch/fade motion as a real number, deliberately:
+        // the DIFFERENCE the player needs to read is the colour and the
+        // word, not a second animation language to learn.
+        public void PlayMiss(Vector2 anchoredStart) => PlayContent(anchoredStart, "Miss", MissColor);
+
+        private void PlayContent(Vector2 anchoredStart, string text, Color color)
         {
             if (_rect == null) _rect = (RectTransform)transform;
 
@@ -83,8 +103,8 @@ namespace PrincesPalace
 
             if (label != null)
             {
-                label.SetContent((isHealing ? "+" : "-") + Mathf.Abs(amount));
-                label.color = isHealing ? HealColor : DamageColor;
+                label.SetContent(text);
+                label.color = color;
                 ApplyGlow(GlowAt(0f));
             }
 

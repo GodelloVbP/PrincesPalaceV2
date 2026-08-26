@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8eb37102d2241c54eae4db6c08bbb7c5, type: 3}
+  m_Name: runic
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
+  id: runic
+  displayName: Runic
+  description: A deeper well of mana, a faster trickle, a cheaper follow-up cast,
+    and nothing wasted -- unspent mana becomes a ward at the top of the wearer's
+    own turn. The ward conversion is intentionally the WEAK half of this modifier
+    (see FightTuning.RunicWardConversionRate's own comment) -- the mana pool and
+    regen bonuses, and the mana-discount tempo rider, are Runic's real payoff; the
+    ward is a safety net for mana a caster was going to leave on the table anyway,
+    not a build-around tank strategy.
+  effects:
+  - type: 10
+    magnitude: 10
+    threshold: 0
+    against: 0
+    hasAgainst: 0
+    againstMagical: 0
+  - type: 11
+    magnitude: 2
+    threshold: 0
+    against: 0
+    hasAgainst: 0
+    againstMagical: 0
+  - type: 12
+    magnitude: 25
+    threshold: 0
+    against: 0
+    hasAgainst: 0
+    againstMagical: 0
+  - type: 13
+    magnitude: 0
+    threshold: 0
+    against: 0
+    hasAgainst: 0
+    againstMagical: 0
+  sortOrder: 10

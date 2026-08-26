@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using PrincesPalace.Domain.Content;
 
 namespace PrincesPalace.Domain.Equipment
 {
@@ -26,8 +27,16 @@ namespace PrincesPalace.Domain.Equipment
         public readonly string IconPath;
         public readonly bool IsEquippable;
 
+        // The rolled affix ids and glow tier this STACK carries (item-modifier
+        // plan Phase E). Never null -- same "empty and absent read the same
+        // way" convention InventoryEntry.modifierIds itself uses, so a caller
+        // can foreach ModifierIds without a guard.
+        public readonly IReadOnlyList<string> ModifierIds;
+        public readonly RiftTier RiftTier;
+
         public BagItem(string id, string name, int kind, EquipmentSlot slot,
-                       int tier, int plus, int count, string iconPath, bool isEquippable)
+                       int tier, int plus, int count, string iconPath, bool isEquippable,
+                       IReadOnlyList<string> modifierIds = null, int riftTier = 0)
         {
             Id = id;
             Name = name;
@@ -38,6 +47,8 @@ namespace PrincesPalace.Domain.Equipment
             Count = count;
             IconPath = iconPath;
             IsEquippable = isEquippable;
+            ModifierIds = modifierIds ?? new List<string>();
+            RiftTier = (RiftTier)riftTier;
         }
     }
 

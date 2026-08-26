@@ -15,20 +15,20 @@ MonoBehaviour:
   id: forest_warden
   displayName: Forest Troll
   baseStats:
-    maxHealth: 420
+    maxHealth: 110
     speed: 4
-    attack: 7
-    defense: 6
+    attack: 40
     manaRegen: 0
-    physicalResistance: 0
-    magicalResistance: 0
+    physicalDefense: 30
+    magicalDefense: 10
+  attackType: 0
   expReward: 100
   currencyReward: 60
   isBoss: 1
   minFloor: 1
   weaknesses: 0100000002000000
   resistances: 0000000004000000
-  breakShieldPoints: 10
+  breakShieldPoints: 3
   spritePath: Enemies/forest_warden
   facing: 1
   sortOrder: 16

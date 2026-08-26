@@ -16,17 +16,16 @@ namespace PrincesPalace.Domain.Tests
     // and a reader does not.
     public class ItemStatLinesTests
     {
-        private static StatBlock Stats(int hp = 0, int spd = 0, int atk = 0, int def = 0,
-                                       int regen = 0, int pres = 0, int mres = 0)
+        private static StatBlock Stats(int hp = 0, int spd = 0, int atk = 0,
+                                       int regen = 0, int pdef = 0, int mdef = 0)
         {
             var block = StatBlock.Zero;
             block.maxHealth = hp;
             block.speed = spd;
             block.attack = atk;
-            block.defense = def;
             block.manaRegen = regen;
-            block.physicalResistance = pres;
-            block.magicalResistance = mres;
+            block.physicalDefense = pdef;
+            block.magicalDefense = mdef;
             return block;
         }
 
@@ -41,25 +40,153 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void EveryStatFieldGetsALine_WhichIsTheWholePointOfTheClass()
         {
-            // The v1 bug: one caller listed maxHealth/speed/attack/defense and
-            // silently omitted manaRegen and both resistances, so a leather
+            // The v1 bug: one caller listed maxHealth/speed/attack and
+            // silently omitted manaRegen and both defenses, so a leather
             // torso's largest contribution never appeared. Every field, or the
-            // class has failed at its only job.
+            // class has failed at its only job. Six stat fields now (the old
+            // `defense` is gone, not replaced one-for-one) plus six scores.
+            //
+            // BALANCE REDESIGN PHASE 6 (D7.1): each score's line now names
+            // what it derives -- see AWisdomGrantNamesWhatItDerives and its
+            // neighbours below for that annotation pinned in isolation.
             var parts = ItemStatLines.BonusParts(
-                Stats(hp: 1, spd: 2, atk: 3, def: 4, regen: 5, pres: 6, mres: 7),
+                Stats(hp: 1, spd: 2, atk: 3, regen: 5, pdef: 6, mdef: 7),
                 Scores(str: 8, dex: 9, con: 10, wis: 11, intel: 12, cha: 13));
 
-            Assert.AreEqual(13, parts.Count, "a field stopped being listed: " + string.Join(", ", parts));
+            Assert.AreEqual(12, parts.Count, "a field stopped being listed: " + string.Join(", ", parts));
 
             foreach (string expected in new[]
                      {
-                         "+1 HP", "+2 SPD", "+3 ATK", "+4 DEF", "+5 MP/turn",
-                         "+6 phys res", "+7 magic res",
-                         "+8 STR", "+9 DEX", "+10 CON", "+11 WIS", "+12 INT", "+13 CHA",
+                         "+1 HP", "+2 SPD", "+3 ATK", "+5 MP/turn",
+                         "+6 phys def", "+7 magic def",
+                         "+8 STR (weapon scaling)",
+                         "+9 DEX (Speed, weapon scaling)",
+                         "+10 CON (+200 HP, +20 Phys Def)",
+                         "+11 WIS (+22 Mana, +22 Mag Def)",
+                         "+12 INT (spell scaling)",
+                         "+13 CHA (Signature Gain)",
                      })
             {
                 CollectionAssert.Contains(parts, expected);
             }
+        }
+
+        // ---- ability-score grant annotations (D7.1) -------------------------
+
+        [Test]
+        public void AWisdomGrantNamesWhatItDerives()
+        {
+            // The plan's own worked example: +2 WIS is 2 x AbilityDerivation's
+            // ManaPerPoint and MagicalDefensePerPoint (both 2), exactly,
+            // regardless of the wearer's own Wisdom -- see
+            // AbilityGrantAnnotation's header for why that exactness holds.
+            var parts = ItemStatLines.BonusParts(StatBlock.Zero, Scores(wis: 2));
+
+            CollectionAssert.AreEqual(new[] { "+2 WIS (+4 Mana, +4 Mag Def)" }, parts);
+        }
+
+        [Test]
+        public void AConstitutionGrantNamesWhatItDerives()
+        {
+            var parts = ItemStatLines.BonusParts(StatBlock.Zero, Scores(con: 3));
+
+            CollectionAssert.AreEqual(new[] { "+3 CON (+60 HP, +6 Phys Def)" }, parts);
+        }
+
+        [Test]
+        public void ANegativeGrantKeepsItsSignThroughTheAnnotation()
+        {
+            var parts = ItemStatLines.BonusParts(StatBlock.Zero, Scores(con: -1));
+
+            CollectionAssert.AreEqual(new[] { "-1 CON (-20 HP, -2 Phys Def)" }, parts);
+        }
+
+        [Test]
+        public void StrengthAndIntelligenceNameTheScalingAxisRatherThanANumber()
+        {
+            // Neither derives a flat stat any more -- weapon/spell GRADES
+            // answer "how hard do I hit" instead, so there is no number this
+            // function could honestly print for either.
+            CollectionAssert.AreEqual(new[] { "+4 STR (weapon scaling)" },
+                ItemStatLines.BonusParts(StatBlock.Zero, Scores(str: 4)));
+            CollectionAssert.AreEqual(new[] { "+4 INT (spell scaling)" },
+                ItemStatLines.BonusParts(StatBlock.Zero, Scores(intel: 4)));
+        }
+
+        [Test]
+        public void DexterityAndCharismaNameWhatTheyFeedWithoutClaimingAnExactNumber()
+        {
+            // Both divide ((score - 10) / 2 and / 4 in AbilityDerivation), so
+            // a flat grant's marginal effect depends on the wearer's own
+            // remainder -- this function has no wearer to check, so it names
+            // the destination rather than guessing a figure.
+            CollectionAssert.AreEqual(new[] { "+2 DEX (Speed, weapon scaling)" },
+                ItemStatLines.BonusParts(StatBlock.Zero, Scores(dex: 2)));
+            CollectionAssert.AreEqual(new[] { "+4 CHA (Signature Gain)" },
+                ItemStatLines.BonusParts(StatBlock.Zero, Scores(cha: 4)));
+        }
+
+        // ---- the defense-percentage formatter (D7.1) ------------------------
+
+        [Test]
+        public void TheDefenseCurveReadsAsThePlansOwnPinnedExamples()
+        {
+            // Straight off the design doc's own "communicable rendering"
+            // line: DEF 25 = 20% less, DEF 50 = 33%, DEF 100 = 50%, DEF 300 =
+            // 75%. Pinned literally rather than recomputed (CLAUDE.md gotcha
+            // 5) -- these four also happen to land on exact or near-exact
+            // percentages, which is what makes them good boundary cases.
+            Assert.AreEqual(20, ItemStatLines.DamageReductionPercent(25));
+            Assert.AreEqual(33, ItemStatLines.DamageReductionPercent(50));
+            Assert.AreEqual(50, ItemStatLines.DamageReductionPercent(100));
+            Assert.AreEqual(75, ItemStatLines.DamageReductionPercent(300));
+        }
+
+        [Test]
+        public void ZeroOrLessDefenseReducesNothing()
+        {
+            Assert.AreEqual(0, ItemStatLines.DamageReductionPercent(0));
+            Assert.AreEqual(0, ItemStatLines.DamageReductionPercent(-5));
+        }
+
+        // ---- the weapon DMG line (D7.2) --------------------------------------
+
+        [Test]
+        public void AWeaponWithNoEquippedComparisonJustShowsItsNumber()
+        {
+            Assert.AreEqual("DMG 87", ItemStatLines.WeaponDamageText(87));
+        }
+
+        [Test]
+        public void AWeaponComparedAgainstEquippedShowsBothNumbers()
+        {
+            Assert.AreEqual("DMG 87 -> 104", ItemStatLines.WeaponDamageText(104, equippedDamage: 87));
+        }
+
+        [Test]
+        public void HoveringWhatIsAlreadyEquippedDoesNotClaimAnUpgrade()
+        {
+            // Comparing an item to itself nets identical numbers -- the line
+            // should read as a plain figure, not "DMG 87 -> 87".
+            Assert.AreEqual("DMG 87", ItemStatLines.WeaponDamageText(87, equippedDamage: 87));
+        }
+
+        [Test]
+        public void TheDmgLineLeadsTheCardWhenPresent()
+        {
+            string card = ItemStatLines.Card(Stats(atk: 3), Scores(), "STR B", weaponDamage: "DMG 87 -> 104");
+
+            Assert.AreEqual("DMG 87 -> 104\n+3 ATK\nSCALES  STR B", card);
+        }
+
+        [Test]
+        public void TheCardOmitsTheDmgLineWhenThereIsNone()
+        {
+            // Every existing caller with no viewer in scope keeps compiling
+            // and simply loses the DMG line -- this is the "no change" case.
+            string card = ItemStatLines.Card(Stats(atk: 3), Scores(), "STR B");
+
+            Assert.AreEqual("+3 ATK\nSCALES  STR B", card);
         }
 
         [Test]
@@ -87,7 +214,7 @@ namespace PrincesPalace.Domain.Tests
         {
             string compact = ItemStatLines.Compact(Stats(atk: 3), Scores(str: 1), "STR B");
 
-            Assert.AreEqual("+3 ATK, +1 STR - scales STR B", compact);
+            Assert.AreEqual("+3 ATK, +1 STR (weapon scaling) - scales STR B", compact);
         }
 
         [Test]
@@ -98,6 +225,65 @@ namespace PrincesPalace.Domain.Tests
             // pick it up.
             Assert.AreEqual("SCALES  STR A", ItemStatLines.Card(StatBlock.Zero, Scores(), "STR A"));
             Assert.AreEqual("", ItemStatLines.Card(StatBlock.Zero, Scores(), ""));
+        }
+
+        // ---- item-modifier plan Phase E: the AFFIXES section ----------------
+
+        [Test]
+        public void ModifierSection_WithNoLines_PrintsNothingAtAll()
+        {
+            // The vast majority of items roll no modifiers. "AFFIXES" over a
+            // blank line would read as a content gap rather than "none".
+            Assert.AreEqual("", ItemStatLines.ModifierSection(null));
+            Assert.AreEqual("", ItemStatLines.ModifierSection(new List<string>()));
+        }
+
+        [Test]
+        public void ModifierSection_ListsEachLineUnderOneHeading()
+        {
+            string section = ItemStatLines.ModifierSection(new[]
+            {
+                "Fiery -- deals 20% bonus Fire damage on hit",
+                "Swift -- 12% chance to dodge an attack outright",
+            });
+
+            Assert.AreEqual(
+                "<color=#A695BC>AFFIXES</color>\n" +
+                "Fiery -- deals 20% bonus Fire damage on hit\n" +
+                "Swift -- 12% chance to dodge an attack outright",
+                section);
+        }
+
+        [Test]
+        public void Card_AppendsTheAffixesSectionAfterABlankLine_OnlyWhenThereAreModifiers()
+        {
+            string withoutModifiers = ItemStatLines.Card(Stats(atk: 3), Scores(), "STR B");
+            Assert.AreEqual("+3 ATK\nSCALES  STR B", withoutModifiers);
+
+            string withModifiers = ItemStatLines.Card(Stats(atk: 3), Scores(), "STR B",
+                modifierLines: new[] { "Fiery -- deals 20% bonus Fire damage on hit" });
+
+            StringAssert.Contains("+3 ATK\nSCALES  STR B\n\n<color=#A695BC>AFFIXES</color>\n" +
+                "Fiery -- deals 20% bonus Fire damage on hit", withModifiers);
+        }
+
+        [Test]
+        public void SquadBody_PrintsTheAffixesSectionOnceBeforeAnyMember_NotPerMember()
+        {
+            var squad = new (string, ItemComparison)[]
+            {
+                ("Shawn", Comparison(Stats(atk: 2))),
+                ("Wool", Comparison(candidateIsLive: false)),
+            };
+
+            string body = ItemStatLines.SquadBody(squad,
+                new[] { "Fiery -- deals 20% bonus Fire damage on hit" });
+
+            StringAssert.StartsWith("<color=#A695BC>AFFIXES</color>\nFiery -- deals 20% bonus Fire damage on hit", body);
+
+            int firstOccurrence = body.IndexOf("Fiery", System.StringComparison.Ordinal);
+            int secondOccurrence = body.IndexOf("Fiery", firstOccurrence + 1, System.StringComparison.Ordinal);
+            Assert.AreEqual(-1, secondOccurrence, "the roll belongs to the item, not to any one squad member");
         }
 
         // ---- requirements --------------------------------------------------

@@ -22,24 +22,23 @@ MonoBehaviour:
   attackBonus: 0
   equipSlot: 2
   statBonus:
-    maxHealth: 0
+    maxHealth: 83
     speed: 0
     attack: 0
-    defense: 0
     manaRegen: 0
-    physicalResistance: 26
-    magicalResistance: 15
+    physicalDefense: 22
+    magicalDefense: 16
   abilityScoreBonus:
     strength: 0
     dexterity: 0
-    constitution: 37
+    constitution: 4
     wisdom: 0
     intelligence: 0
     charisma: 0
   requirements:
     strength: 0
     dexterity: 0
-    constitution: 74
+    constitution: 18
     wisdom: 0
     intelligence: 0
     charisma: 0

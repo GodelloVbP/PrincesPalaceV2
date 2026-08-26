@@ -23,7 +23,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void Indexer_CoversEveryStatType()
         {
-            var block = new StatBlock(1, 2, 3, 4);
+            var block = new StatBlock(1, 2, 3, 4, 5, 6);
 
             foreach (StatType stat in Enum.GetValues(typeof(StatType)))
             {
@@ -34,12 +34,14 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void Indexer_ReturnsTheMatchingField()
         {
-            var block = new StatBlock(20, 11, 7, 3);
+            var block = new StatBlock(20, 11, 7, manaRegen: 3, physicalDefense: 9, magicalDefense: 15);
 
             Assert.AreEqual(20, block[StatType.MaxHealth]);
             Assert.AreEqual(11, block[StatType.Speed]);
             Assert.AreEqual(7, block[StatType.Attack]);
-            Assert.AreEqual(3, block[StatType.Defense]);
+            Assert.AreEqual(3, block[StatType.ManaRegen]);
+            Assert.AreEqual(9, block[StatType.PhysicalDefense]);
+            Assert.AreEqual(15, block[StatType.MagicalDefense]);
         }
 
         [Test]
@@ -57,11 +59,11 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void Indexer_ReturnsTheThreeSetStats()
         {
-            var block = new StatBlock(0, 0, 0, 0, manaRegen: 2, physicalResistance: 5, magicalResistance: 9);
+            var block = new StatBlock(0, 0, 0, manaRegen: 2, physicalDefense: 5, magicalDefense: 9);
 
             Assert.AreEqual(2, block[StatType.ManaRegen]);
-            Assert.AreEqual(5, block[StatType.PhysicalResistance]);
-            Assert.AreEqual(9, block[StatType.MagicalResistance]);
+            Assert.AreEqual(5, block[StatType.PhysicalDefense]);
+            Assert.AreEqual(9, block[StatType.MagicalDefense]);
         }
 
         // ForStat is the authoring bridge — the item-set resolver builds a
@@ -80,9 +82,9 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ForStat_SetsOnlyTheNamedStat()
         {
-            var block = StatBlock.ForStat(StatType.PhysicalResistance, 7);
+            var block = StatBlock.ForStat(StatType.PhysicalDefense, 7);
 
-            Assert.AreEqual(new StatBlock(0, 0, 0, 0, physicalResistance: 7), block);
+            Assert.AreEqual(new StatBlock(0, 0, 0, physicalDefense: 7), block);
         }
 
         [Test]
@@ -109,14 +111,14 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void Addition_SumsTheThreeSetStatsToo()
         {
-            var hat = new StatBlock(0, 0, 0, 0, manaRegen: 2, physicalResistance: 3, magicalResistance: 7);
-            var robe = new StatBlock(0, 0, 0, 0, manaRegen: 1, physicalResistance: 8, magicalResistance: 20);
+            var hat = new StatBlock(0, 0, 0, manaRegen: 2, physicalDefense: 3, magicalDefense: 7);
+            var robe = new StatBlock(0, 0, 0, manaRegen: 1, physicalDefense: 8, magicalDefense: 20);
 
             var total = hat + robe;
 
             Assert.AreEqual(3, total.manaRegen);
-            Assert.AreEqual(11, total.physicalResistance);
-            Assert.AreEqual(27, total.magicalResistance);
+            Assert.AreEqual(11, total.physicalDefense);
+            Assert.AreEqual(27, total.magicalDefense);
         }
 
         [Test]
@@ -194,23 +196,30 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(new StatBlock(3, 3, 3, 3), block.Scaled(0.5f));
         }
 
+        // Phase 5B (D6): PhysicalDefense and MagicalDefense now ride
+        // `defenseMultiplier`, not the main multiplier — an Elite's
+        // mitigation is meant to climb at the gentler DEF rate (x1.15),
+        // not at the same rate as its health pool (x1.56 in this test,
+        // deliberately different from defenseMultiplier so the two could
+        // never accidentally agree).
         [Test]
-        public void ScaledForElite_AppliesTheDefenseMultiplierOnlyToDefense()
+        public void ScaledForElite_DefensesRideTheDefenseMultiplier_NotTheMainMultiplier()
         {
-            var block = new StatBlock(20, 9, 7, 8);
+            var block = new StatBlock(20, 9, 7, manaRegen: 0, physicalDefense: 8, magicalDefense: 10);
 
             var scaled = block.ScaledForElite(1.56f, 1.15f, 1.15f);
 
             Assert.AreEqual((int)Math.Round(20 * 1.56f), scaled.maxHealth);
             Assert.AreEqual((int)Math.Round(9 * 1.56f), scaled.speed);
-            Assert.AreEqual((int)Math.Round(7 * 1.15f), scaled.attack);
-            Assert.AreEqual((int)Math.Round(8 * 1.15f), scaled.defense);
+            Assert.AreEqual((int)Math.Round(7 * 1.15f), scaled.attack, "attack still rides attackMultiplier");
+            Assert.AreEqual((int)Math.Round(8 * 1.15f), scaled.physicalDefense, "physicalDefense rides defenseMultiplier, not the main multiplier");
+            Assert.AreEqual((int)Math.Round(10 * 1.15f), scaled.magicalDefense, "magicalDefense rides defenseMultiplier, not the main multiplier");
         }
 
         [Test]
         public void ScaledForElite_WithEqualMultipliers_MatchesScaled()
         {
-            var block = new StatBlock(20, 9, 7, 3, manaRegen: 2, physicalResistance: 4, magicalResistance: 6);
+            var block = new StatBlock(20, 9, 7, 3, physicalDefense: 4, magicalDefense: 6);
 
             Assert.AreEqual(block.Scaled(1.3f), block.ScaledForElite(1.3f, 1.3f, 1.3f));
         }

@@ -159,6 +159,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef OfferTooltipText;
         public List<NodeRef> OfferHalos = new List<NodeRef>();
         public List<NodeRef> OfferBursts = new List<NodeRef>();
+
+        // ITEM-MODIFIER PLAN PHASE E: the RiftTier ring, distinct from the
+        // halo/burst pair above -- those two carry the item's RARITY colour
+        // (see BuildOffer's own header on why), and RiftTier is a second,
+        // independent axis (see RiftTierColors' own header). Inset within
+        // the icon's own bounds rather than bled past it, same reasoning as
+        // the dossier's pack/slot glows.
+        public List<NodeRef> OfferRiftGlows = new List<NodeRef>();
         public List<NodeRef> OfferIcons = new List<NodeRef>();
         public List<NodeRef> OfferNames = new List<NodeRef>();
         public List<NodeRef> OfferMetas = new List<NodeRef>();
@@ -678,7 +686,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // short lines, and a 300px box holding three lines reads as a slab
         // dropped on the card next door rather than as a label belonging to
         // the one being hovered.
-        public const float TooltipHeight = 300f;
+        //
+        // ITEM-MODIFIER PLAN PHASE E: 300 -> 400. SquadComparisonBody now
+        // prepends an AFFIXES heading and up to three modifier lines ahead of
+        // the per-member deltas (ItemStatLines.SquadBody) -- a full squad
+        // with a fully-rolled offer could already brush the old ceiling on
+        // deltas alone, and the modifier section adds height no earlier
+        // build of this screen had to plan for. ContentTop/ContentBottom
+        // leave about 615px of vertical interior (see their own consts), so
+        // 400 has plenty of room to still fit beside a card.
+        public const float TooltipHeight = 400f;
 
         // And the shortest, so a one-line body still looks like a considered
         // box rather than a strip.
@@ -864,6 +881,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     Place.At(0f, IconCentre), UiSize.Fixed(iconWidth, IconTop - IconBottom))
                 .AsDecor();
 
+            // ITEM-MODIFIER PLAN PHASE E: the RiftTier ring. Sized to the ART
+            // BOX itself (iconWidth x its own height), not larger -- unlike
+            // the halo/burst pair, which are deliberately oversized and
+            // bleed past the icon on purpose (see their own AllowOverflow
+            // reasons), this one stays inside the icon's own bounds so it
+            // needs no exemption of its own. Coloured and shown at runtime
+            // by ReckoningController.PaintOffers; hidden whenever the offer
+            // rolled Ordinary, the regression guard every other glow node
+            // this phase adds shares.
+            var riftGlow = Ui.Sprite($"ReckoningOffer{index}RiftGlow", "proc:ring_hairline",
+                    Place.At(0f, IconCentre), UiSize.Fixed(iconWidth, IconTop - IconBottom))
+                .Coloured("#FFFFFF00")
+                .AsDecor();
+
             // THE NAME BELONGS TO THE ITEM, so it sits directly under it. It
             // used to float 57px below the icon with nothing in the gap, which
             // reads as two unrelated things rather than as a labelled object.
@@ -899,6 +930,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             button.Children.Add(halo);
             button.Children.Add(burst);
             button.Children.Add(icon);
+            button.Children.Add(riftGlow);
             button.Children.Add(name);
             button.Children.Add(meta);
 
@@ -906,6 +938,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             OfferHalos.Add(halo);
             OfferBursts.Add(burst);
             OfferIcons.Add(icon);
+            OfferRiftGlows.Add(riftGlow);
             OfferNames.Add(name);
             OfferMetas.Add(meta);
             return button;

@@ -22,7 +22,13 @@ namespace PrincesPalace.Domain.Content
         // get its omitted stats adjusted by hand afterward if the default
         // profile doesn't fit, same as any other first draft.
         private const float AttackPerHealth = 1f / 3f;
-        private const float DefensePerHealth = 1f / 12f;
+
+        // D5's own derivation formula (Balance Redesign plan, §D5): an
+        // omitted physicalDefense is maxHealth / 8, not the 1/12 this used
+        // during the Phase 1 architecture-only migration -- that ratio was
+        // never a balance claim, just what kept placeholder content bootable
+        // while the schema was being rebuilt. This is the real spec value.
+        private const float DefensePerHealth = 1f / 8f;
         private const int DefaultSpeed = 8;
         private const float ExpPerHealth = 1.2f;
         private const float ExpPerAttack = 2f;
@@ -105,7 +111,24 @@ namespace PrincesPalace.Domain.Content
             }
 
             int attack = raw.attack >= 0 ? raw.attack : (int)MathF.Round(raw.maxHealth * AttackPerHealth);
-            int defense = raw.defense >= 0 ? raw.defense : (int)MathF.Round(raw.maxHealth * DefensePerHealth);
+
+            // physicalDefense derives off maxHealth exactly as the old single
+            // `defense` field did; magicalDefense, when ALSO omitted, derives
+            // as half of that -- the same 2:1 ratio the Phase 1 content
+            // conversion used everywhere else (defense d => physicalDefense
+            // 8d, magicalDefense 4d), so an unauthored monster's two defenses
+            // stay in the same proportion an authored one's do.
+            int physicalDefense = raw.physicalDefense >= 0
+                ? raw.physicalDefense
+                : (int)MathF.Round(raw.maxHealth * DefensePerHealth);
+            int magicalDefense = raw.magicalDefense >= 0 ? raw.magicalDefense : physicalDefense / 2;
+
+            if (!TryParseEnum(raw.attackType, out DamageType attackType, DamageType.Physical))
+            {
+                error = $"{label}: attackType '{raw.attackType}' is not a DamageType. Valid: {string.Join(", ", Enum.GetNames(typeof(DamageType)))}.";
+                return false;
+            }
+
             int speed = raw.speed >= 0 ? raw.speed : DefaultSpeed;
             int expReward = raw.expReward >= 0 ? raw.expReward : (int)MathF.Round(raw.maxHealth * ExpPerHealth + attack * ExpPerAttack);
             int currencyReward = raw.currencyReward >= 0 ? raw.currencyReward : (int)MathF.Round(expReward * CurrencyPerExp);
@@ -236,7 +259,8 @@ namespace PrincesPalace.Domain.Content
             if (!ArtPathConvention.Check(label, "vfx.path", raw.vfx.path, out error)) return false;
             if (!ArtPathConvention.Check(label, "vfx.sfxPath", raw.vfx.sfxPath, out error)) return false;
 
-            var baseStats = new StatBlock(raw.maxHealth, speed, attack, defense);
+            var baseStats = new StatBlock(raw.maxHealth, speed, attack,
+                physicalDefense: physicalDefense, magicalDefense: magicalDefense);
             resolvedEnemy = new ResolvedEnemy(raw.id, raw.displayName, baseStats, expReward, currencyReward, raw.isBoss,
                 affinity, sortOrder,
                 (raw.spritePath ?? string.Empty).Trim(), facing, raw.active,
@@ -248,7 +272,8 @@ namespace PrincesPalace.Domain.Content
                 abilities, raw.attackWeight < 0f ? 1f : raw.attackWeight,
                 appliesStatus, statusMagnitude, statusDuration, raw.avoidsFrontSlot, raw.attackHoldsPosition,
                 raw.minFloor, raw.stageScale, raw.slotSpan,
-                Combat.Session.StageApproaches.Parse(raw.attackApproach, Combat.Session.StageApproach.Lunge));
+                Combat.Session.StageApproaches.Parse(raw.attackApproach, Combat.Session.StageApproach.Lunge),
+                attackType: attackType);
             error = null;
             return true;
         }
@@ -359,6 +384,22 @@ namespace PrincesPalace.Domain.Content
         // reproducible. Guarantees the two values differ.
         // One array, not one per call: Enum.GetValues allocates through
         // reflection and both derivers below run once per authored enemy.
+        // Empty means "leave it at the sensible default" rather than
+        // "invalid" -- an unauthored monster should not have to spell out
+        // Physical. Same shape as CharacterEntryResolver's own overload of
+        // the same name, kept separate because each resolver is
+        // deliberately self-contained.
+        private static bool TryParseEnum<T>(string raw, out T value, T fallback) where T : struct, Enum
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                value = fallback;
+                return true;
+            }
+
+            return Enum.TryParse(raw, ignoreCase: true, out value) && Enum.IsDefined(typeof(T), value);
+        }
+
         private static readonly DamageType[] AllDamageTypes =
             (DamageType[])Enum.GetValues(typeof(DamageType));
 

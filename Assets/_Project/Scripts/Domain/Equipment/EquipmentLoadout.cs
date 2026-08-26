@@ -23,15 +23,39 @@ namespace PrincesPalace.Domain.Equipment
         // the correct reading of it and is why no migration step exists.
         public int plus;
 
+        // The rolled affix ids on THIS copy — "Fiery", "Swift", and so on
+        // (Phase A of the item-modifier plan; nothing populates this list
+        // yet). Same additive-JsonUtility posture as plus: a save written
+        // before modifiers existed deserialises this as the empty list the
+        // field initializer below already provides, never null, so every
+        // reader can foreach it without a guard.
+        //
+        // A REAL empty List<string>, not left null — JsonUtility needs a
+        // concrete instance to write into on load, and "empty" and "absent"
+        // must read the same way here for the same reason Get() never
+        // returns null for an empty slot.
+        public List<string> modifierIds = new List<string>();
+
+        // How many modifier slots this copy rolled, 0-3. Decoupled from item
+        // tier (which weapon/armour asset this is) on purpose — a common-tier
+        // sword can roll Convergent and a rare one can roll Ordinary, and the
+        // glow is meant to read the ROLL, not the base item. Zero on a save
+        // written before this field existed, same reasoning as plus and
+        // modifierIds above.
+        public int riftTier;
+
         public EquipmentSlotEntry()
         {
         }
 
-        public EquipmentSlotEntry(EquipmentSlot slot, string itemId, int plus = 0)
+        public EquipmentSlotEntry(EquipmentSlot slot, string itemId, int plus = 0,
+            List<string> modifierIds = null, int riftTier = 0)
         {
             this.slot = slot;
             this.itemId = itemId;
             this.plus = plus;
+            this.modifierIds = CollectionOps.CopyOrEmpty(modifierIds);
+            this.riftTier = riftTier;
         }
     }
 
@@ -77,6 +101,30 @@ namespace PrincesPalace.Domain.Equipment
             return entry == null || string.IsNullOrEmpty(entry.itemId) ? 0 : entry.plus;
         }
 
+        // The rolled modifier ids worn in `slot`, or a fresh empty list when
+        // the slot is empty. Always a NEW list — the caller can hold onto or
+        // mutate what comes back without reaching into the entry's own
+        // backing list, same reasoning as Clone().
+        //
+        // Read BEFORE Set displaces anything, same rule GetPlus's own comment
+        // states: by the time Set has returned, the displaced copy's rolled
+        // affixes are gone from here.
+        public List<string> GetModifierIds(EquipmentSlot slot)
+        {
+            var entry = Find(slot);
+            return entry == null || string.IsNullOrEmpty(entry.itemId)
+                ? new List<string>()
+                : new List<string>(entry.modifierIds ?? new List<string>());
+        }
+
+        // How many modifier slots the copy in `slot` rolled, or 0 when the
+        // slot is empty.
+        public int GetRiftTier(EquipmentSlot slot)
+        {
+            var entry = Find(slot);
+            return entry == null || string.IsNullOrEmpty(entry.itemId) ? 0 : entry.riftTier;
+        }
+
         // Puts `itemId` in `slot`, replacing whatever was there, and returns
         // the id it displaced ("" if the slot was free). Callers use that
         // return value to put the old item back in the bag — which is why
@@ -85,7 +133,13 @@ namespace PrincesPalace.Domain.Equipment
         //
         // A null/empty itemId clears the slot, so Set and Clear are the same
         // operation and cannot disagree.
-        public string Set(EquipmentSlot slot, string itemId, int plus = 0)
+        //
+        // `modifierIds`/`riftTier` name WHICH ROLL is being worn, the same
+        // way `plus` names which honing level is — every caller that reads
+        // GetModifierIds/GetRiftTier before displacing has to pass them back
+        // in here or the roll is lost the moment the item changes slots.
+        public string Set(EquipmentSlot slot, string itemId, int plus = 0,
+            List<string> modifierIds = null, int riftTier = 0)
         {
             string previous = Get(slot);
             var entry = Find(slot);
@@ -102,12 +156,17 @@ namespace PrincesPalace.Domain.Equipment
 
             if (entry == null)
             {
-                slots.Add(new EquipmentSlotEntry(slot, itemId, plus));
+                slots.Add(new EquipmentSlotEntry(slot, itemId, plus, modifierIds, riftTier));
             }
             else
             {
                 entry.itemId = itemId;
                 entry.plus = plus;
+                // Copied, not assigned — see CollectionOps.CopyOrEmpty for
+                // why a shared reference here would be the aliasing bug
+                // Clone()'s tests exist to catch.
+                entry.modifierIds = CollectionOps.CopyOrEmpty(modifierIds);
+                entry.riftTier = riftTier;
             }
 
             return previous;
@@ -235,9 +294,10 @@ namespace PrincesPalace.Domain.Equipment
         public void Clear() => slots.Clear();
 
         // Drops every worn id the caller rejects and returns the WHOLE ENTRY --
-        // id and plus together.
+        // id, plus, and (once anything populates them) the rolled modifierIds
+        // and riftTier together.
         //
-        // The ids-only overload below loses the plus, and SaveData.Reconcile
+        // The ids-only overload below loses all of that, and SaveData.Reconcile
         // used it: a +5 orphan came back to the stash as a +0. Exactly the
         // item-destroying bug class EquipMove reads the displaced plus to
         // avoid, sitting in the one path nobody looks at because it only fires
@@ -304,7 +364,12 @@ namespace PrincesPalace.Domain.Equipment
             {
                 if (entry != null)
                 {
-                    copy.slots.Add(new EquipmentSlotEntry(entry.slot, entry.itemId, entry.plus));
+                    // The EquipmentSlotEntry constructor copies modifierIds
+                    // into a NEW list rather than taking the reference, so
+                    // this is a real deep copy — mutating the clone's list
+                    // can never reach back into `entry.modifierIds`.
+                    copy.slots.Add(new EquipmentSlotEntry(entry.slot, entry.itemId, entry.plus,
+                        entry.modifierIds, entry.riftTier));
                 }
             }
 

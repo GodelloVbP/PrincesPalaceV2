@@ -372,8 +372,8 @@ namespace PrincesPalace.PlayModeTests
         }
 
         private static int Sum(PrincesPalace.Domain.Stats.StatBlock s) =>
-            s.maxHealth + s.attack + s.defense + s.speed + s.manaRegen
-            + s.physicalResistance + s.magicalResistance;
+            s.maxHealth + s.attack + s.speed + s.manaRegen
+            + s.physicalDefense + s.magicalDefense;
         // ---- the kindling beat ---------------------------------------------------
         //
         // WHAT REPLACED THE REVEAL MASK. The mask grew a lit medallion out of

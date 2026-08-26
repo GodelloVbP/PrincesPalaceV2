@@ -59,15 +59,40 @@ namespace PrincesPalace.Domain.Content
         // integer-parsed like every other stat line in it.
         //
         // GearScaling turns them into real numbers — the weight times the
-        // slot's share times the global base, then up the tier curve — so a
-        // piece needs no baseStats or topStats at all unless it wants to say
-        // something the formula cannot.
+        // slot's share times the global base, then up the tier curve. Every
+        // ability score a piece grants comes from here; nothing is
+        // hand-authored per piece any more (balance redesign Phase 4, D4).
         //
         // The SUM is the set's budget, and the one number to watch when
         // balancing: 1.00 is point-neutral against a pure single-stat style,
         // and the dual sets deliberately run at 1.10, because breadth is worth
         // less than reaching a threshold.
         public string[] styleWeights = Array.Empty<string>();
+
+        // WHAT THIS MATERIAL PROTECTS WITH, as a percentage share per combat
+        // stat -- balance redesign Phase 4 (D4). The other half of the same
+        // idea styleWeights is: instead of every piece hand-authoring its
+        // own physicalDefense/maxHealth numbers (which is how the same-tier
+        // budgets drifted apart in the first place), a set names ONE profile
+        // and GearScaling spends it, at each slot's own share of the budget,
+        // the same way styleWeights spends the ability-score half.
+        //
+        // Lines read "<stat> <percent>": "physicalDefense 35" is 35%. The
+        // five lines (maxHealth, physicalDefense, magicalDefense, speed,
+        // manaRegen) MUST sum to exactly 100 -- there is no such thing as an
+        // unspent budget point, on purpose, for the same reason a style's
+        // weights summing to something meaningful mattered before. attack is
+        // not a legal name here: gear stopped granting flat attack in Phase
+        // 3, and this profile only ever spends the 60% combat-stat share of
+        // a piece's budget (the other 40% is styleWeights, unchanged).
+        //
+        // ONE profile per SET, shared by all five of its slot pieces -- a
+        // piece's own budget differs only through its slot's weight, not
+        // through a different split of stats. baseStats/topStats used to let
+        // a piece override this by hand; they are GONE from the schema. A
+        // piece naming either is a content-build error now, not a silent
+        // override -- see ItemSetEntryResolver.
+        public string[] statProfile = Array.Empty<string>();
 
         public RawSetPiece[] pieces = Array.Empty<RawSetPiece>();
     }
@@ -91,28 +116,26 @@ namespace PrincesPalace.Domain.Content
         // Head, Necklace, Torso, Legs, Shoes, Gloves, Weapon1, Weapon2.
         public string slot;
 
-        // What this piece grants at tier 0, and at maxTier. Everything in
-        // between is interpolated, so a set is described by its two ends
-        // rather than by eleven rows of numbers.
-        //
-        // Each entry is "<stat> <amount>" — for example "dexterity 1" or
-        // "physicalResistance 9". Any ability score (strength, dexterity,
-        // constitution, wisdom, intelligence, charisma) or any StatType
-        // (maxHealth, speed, attack, defense, manaRegen, physicalResistance,
-        // magicalResistance) may be named, matched case-insensitively.
-        //
-        // A flat list of strings rather than nested objects on purpose:
-        // adding a stat to the game means adding one enum member, and every
-        // set can use it that same day with no schema change here. A stat
-        // named in `top` but not in `base` simply starts at zero.
+        // REMOVED from the schema, balance redesign Phase 4 (D4) -- "derive
+        // everything, hand-author nothing per-piece". Every combat stat a
+        // piece grants now comes from its set's statProfile (above) and its
+        // own slot's share of the budget; every ability score still comes
+        // from styleWeights, unchanged. These two fields are kept here ONLY
+        // so a stale JSON file with either key still deserializes into
+        // something the resolver can see and reject LOUDLY, with a message
+        // pointing at statProfile, instead of the key silently vanishing the
+        // way an unrecognised JsonUtility field always does. Do not author
+        // either one; ItemSetEntryResolver refuses any piece where they are
+        // non-empty.
         public string[] baseStats = Array.Empty<string>();
         public string[] topStats = Array.Empty<string>();
 
         // What a character needs, from everything ELSE worn plus base scores
-        // and talents, before this piece counts as worn -- same two-ended
-        // interpolation as baseStats/topStats, but pure ability-score lines
-        // only (see AbilityScoreLineParser). A legendary piece is high-tier,
-        // and tier interpolation is what makes it demand a high score.
+        // and talents, before this piece counts as worn -- two authored ends,
+        // interpolated the same way every other stat here is, but pure
+        // ability-score lines only (see AbilityScoreLineParser). A legendary
+        // piece is high-tier, and tier interpolation is what makes it demand
+        // a high score.
         public string[] requiresAtZero = Array.Empty<string>();
         public string[] requiresAtMax = Array.Empty<string>();
 

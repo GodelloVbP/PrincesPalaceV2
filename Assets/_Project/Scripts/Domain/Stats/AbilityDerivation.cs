@@ -1,299 +1,162 @@
-using System;
-
 namespace PrincesPalace.Domain.Stats
 {
     // Turns the six ability scores into things combat actually reads.
     //
-    // Until now STR/DEX/CON/WIS/INT/CHA were text on the Character Sheet and
-    // nothing else: every character carried an identical 10/10/10/10/10/10,
-    // no character definition ever authored them, and no field of them was
-    // referenced anywhere under Domain/Combat. A talent or a pair of gloves
-    // could move a number on a screen and change nothing about the game.
+    // PHASE 2 OF THE BALANCE REDESIGN (see the plan's D2): this file used to
+    // be piecewise -- linear inside a character's own authored range, then
+    // quadratic (pools) or root-shaped (rates) on whatever gear piled on top,
+    // because gear used to hand out hundreds of ability-score points and a
+    // flat rate that size would have gone supernova. Gear no longer works
+    // that way (see GearScaling's own header for the current budget), so the
+    // piecewise split -- CharacterBand, Pool, Rate, and the AttackBonus they
+    // fed -- is gone. Every derivation below is a single straight line
+    // through zero at score 10, for every score at every value, forever.
     //
-    // THE DESIGN RULE, and the reason this can ship without rebalancing
-    // anything: every derivation is a function of (score - 10), and returns
-    // an exact zero at 10. A character nobody has authored scores for
-    // therefore derives nothing at all, and plays exactly as it did before.
-    // Differentiation is opt-in, per character, one at a time.
+    // THE DESIGN RULE, unchanged from before this rewrite and still the
+    // reason this can ship without rebalancing anything else: every
+    // derivation is a function of (score - 10) and returns an exact zero at
+    // 10. A character nobody has authored scores for derives nothing at all.
     //
     // Engine-free and pure, so the whole layer is unit-testable in EditMode
-    // with no scene and no ScriptableObject — which is the point of Domain.
+    // with no scene and no ScriptableObject -- which is the point of Domain.
     //
-    // Five derivations, not six. INTELLIGENCE DOES NOT LIVE HERE, and that is
-    // a deliberate removal rather than an oversight — it used to be a sixth,
-    // SkillPowerBonus, added flat onto whatever the caster's spell tier
-    // supplied. That was a second, uncoordinated answer to the same question
-    // ScalingProfile.SkillScaling already answers (see CombatMath.
-    // ComputeSkillDamage): both moved Skill damage in response to
-    // Intelligence, at the same time, with nobody deciding how they should
-    // compose. WeaponScaling never had this problem — AttackBonus below sets
-    // the character's baseline Attack, and a weapon's own grades multiply on
-    // top of THAT, which is one clean layering. Skill had two competing
-    // layers doing the same job. This file keeps the "ability scores set a
-    // baseline" half; ScalingProfile keeps the "gear/spell rides a score"
-    // half — the same split every other derivation here already respects.
+    // STRENGTH AND INTELLIGENCE DERIVE NOTHING HERE, and that is deliberate,
+    // not a gap this file forgot to fill. Both used to feed a stat directly
+    // (STR -> Attack, and before that a since-deleted INT -> SkillPowerBonus)
+    // and both were deleted for the same reason: weapon/spell GRADES already
+    // answer "how hard do I hit", via ScalingProfile reading STR/INT off the
+    // caster at the moment of the swing/cast (see CombatMath.ScaledAttack /
+    // ComputeSkillDamage). A second, uncoordinated answer to the same
+    // question here would double-dip exactly the way the old AttackBonus did
+    // against weapon scaling. STR and INT are real ability scores that do
+    // real things -- they just do them at the weapon/spell layer, not here.
+    // That wiring is Phase 3 (D3), landed: WeaponPower/ScalingProfile read
+    // STR/INT off the wielder at the moment of the swing/cast (see
+    // FightEncounterAdapter.ToCombatant and WeaponPower.DisplayDamage).
+    // Raising STR or INT still moves nothing THIS FILE returns, and that
+    // stays permanent rather than a placeholder: SheetStats.FedBy leaves
+    // both rows unlit for the same reason, on purpose, not as a gap to
+    // close later.
     public static class AbilityDerivation
     {
         // The score at which every derivation is neutral.
         public const int NeutralScore = 10;
 
-        // TWO FAMILIES, and this is the whole shape of the file.
+        // One point of Constitution: health and physical mitigation both.
+        // PUBLIC rather than private -- ItemStatLines' tooltip annotation
+        // ("+2 WIS (+4 Mana, +4 Mag Def)") reads these directly rather than
+        // hand-copying the rate, so a retuned point value cannot drift
+        // between what a stat does and what a tooltip claims it does.
+        public const int HealthPerPoint = 20;
+        public const int PhysicalDefensePerPoint = 2;
+
+        // One point of Wisdom: mana and magical mitigation both.
+        public const int ManaPerPoint = 2;
+        public const int MagicalDefensePerPoint = 2;
+
+        // Dexterity buys Speed at one point per two, Charisma buys signature
+        // gain at one point per four -- see SpeedBonus/SignatureGainBonus for
+        // the division-direction note that makes these divisors matter below
+        // neutral. PUBLIC for the same reason as the four constants above --
+        // GlossaryEntries.Mechanics() reads these rather than retyping "2"
+        // and "4" into prose that could then disagree with the code.
+        public const int SpeedDivisor = 2;
+        public const int SignatureGainDivisor = 4;
+
+        // FLOOR-DIVISION CONVENTION, PINNED HERE BECAUSE IT IS A REAL
+        // DECISION, NOT AN ACCIDENT OF C#'S `/` OPERATOR.
         //
-        // These five derivations used to be linear in (score - 10) with small
-        // per-point constants, because gear granted +1 to +4 and a character's
-        // own scores ran 6 to 16. GearScaling changed the input by two orders
-        // of magnitude: a full tier-10 set now grants 187 points of its style's
-        // stat, against the 11 the old hand-authored steel set gave. Linear
-        // constants big enough to matter at 187 are catastrophic at -3, which
-        // is where Shawn's Strength actually sits — his Attack would go
-        // negative before he found a single item.
+        // "+1 Speed per 2 points" (and "+1 signature gain per 4") has to mean
+        // something specific below neutral, where the division no longer
+        // lands on a whole number. Two conventions disagree there:
         //
-        // So the old constants did not move at all; a second segment was added
-        // beyond them.
+        //   mathematical floor (round toward -infinity): (-3) / 2 = -2
+        //   truncation toward zero:                      (-3) / 2 = -1
         //
-        // POOLS (health, mana, attack) are quantities that should grow with
-        // gear. They keep their original per-point rate inside CharacterBand
-        // and grow QUADRATICALLY outside it. Squaring only what gear
-        // contributes is what lets one curve be gentle where characters are
-        // authored and enormous at the top: it compounds with the tier ladder
-        // in the intended direction, so gear growing 9.3x across the ladder
-        // makes a pool riding it grow about 87x, which is what puts the last
-        // floor in six figures.
+        // The plan's own worked example settles it: Shawn's DEX 7 (d = -3)
+        // is specified to derive -1 Speed, not -2. That is truncation toward
+        // zero -- which is ALSO exactly what C#'s built-in integer `/`
+        // already does, so the code below is plain `d / divisor` with no
+        // helper method standing in for it. (This is the opposite choice
+        // from the old FloorDiv2 this file used to carry, which deliberately
+        // took mathematical floor to keep the old classic-RPG modifier
+        // symmetric around 10.5. That helper served a different, now-deleted
+        // formula; it does not carry over.)
         //
-        // RATES (speed, signature gain) are how OFTEN something happens, and
-        // they grow as a SQUARE ROOT. A rate that scaled like a pool would not
-        // read as power, it would break the scheduler: an actor at 40,000
-        // Speed does not take more turns, it takes all of them. Both of these
-        // are also consumed by systems with hard ceilings — SpeedScale clamps
-        // its tick rate at 2.5x, and a signature pool holds 10 — so a runaway
-        // input does not even buy anything, it just saturates and goes dead.
-        //
-        // Both families split at the SAME seam, CharacterBand, so every score
-        // any character is authored with derives exactly what it always did.
-        // Nothing on the character sheet changes; only what gear stacks on top
-        // of it does.
-        //
-        // Numerators and denominators rather than floats, because this feeds
-        // integer stat blocks and CLAUDE.md gotcha 5 is about exactly the
-        // rounding drift that creeps in otherwise.
+        // Worth being honest about the one place this bites: it makes the
+        // penalty side of these two derivations very slightly SHALLOWER than
+        // the bonus side would mirror (score 9, d=-1, truncates to 0 instead
+        // of flooring to -1 -- a below-neutral point can cost nothing right
+        // at the boundary where an above-neutral point already pays). That
+        // is accepted here because it is what the plan's pinned example
+        // requires, not an oversight; AbilityDerivationTests' boundary table
+        // pins the exact behaviour at every score this matters for.
 
-        // Health. 20 a point inside the character band, unchanged from
-        // before, then 1.2 x excess^2 on gear. A full tier-10 Bulwark set is
-        // 187 points of Constitution, landing a character around 40,000 HP.
-        private const int HealthPerPoint = 20;
-        private const int HealthNumerator = 12;
-        private const int HealthDenominator = 10;
-
-        // Attack, and every other number here is anchored to this one. The
-        // old 1-per-2-points holds inside the band; beyond it, 0.0875 x
-        // excess^2. Damage is (attack - defense) x DamageScale(10), so a
-        // tier-10 Harness set's 187 Strength is about 2,650 Attack and about
-        // 26,000 damage a swing. The heaviest skill in skills.json is power 4,
-        // which puts an ultimate just past 100,000.
-        private const int AttackPerPoint = 1;      // applied through FloorDiv2
-        private const int AttackNumerator = 7;
-        private const int AttackDenominator = 80;
-
-        // Mana. 2 a point inside the band as before, then 0.05 x excess^2 --
-        // deliberately the shallowest of the three pools. A tier-10 Wool set
-        // reaches about 1,650, which is real progression without pretending
-        // mana is a damage stat.
-        //
-        // WORTH KNOWING: SkillManaCost is a flat 10 and does not move with
-        // this. At 1,650 mana that is 165 casts, so mana stops being a
-        // constraint long before the last floor. Scaling costs is a content
-        // decision rather than an arithmetic one, so it is named here and left.
-        private const int ManaPerPoint = 2;
-        private const int ManaNumerator = 1;
-        private const int ManaDenominator = 20;
-
-        // FLOOR division, not C# truncation. `(-1) / 2` is 0 in C#, which
-        // would make DEX 9 and DEX 10 behave identically while DEX 8 and 9
-        // differ — an asymmetry around the neutral point that reads as a bug
-        // and gets "fixed" into a real one later. Penalties have to mirror
-        // bonuses exactly.
-        public static int FloorDiv2(int value)
-        {
-            return value >= 0 ? value / 2 : (value - 1) / 2;
-        }
-
-        // The same rule for any divisor. FloorDiv2 stays as it is because it
-        // is public and called from elsewhere; this is what the piecewise
-        // curves below use so they cannot round a penalty the other way.
-        private static int FloorDiv(int value, int divisor)
-        {
-            return value >= 0 ? value / divisor : -((-value + divisor - 1) / divisor);
-        }
-
-        // The classic modifier: +1 per two points above neutral, -1 per two
-        // below.
-        public static int Modifier(int score)
-        {
-            return FloorDiv2(score - NeutralScore);
-        }
-
-        // How far from neutral a CHARACTER can be. The six scores are authored
-        // against a 60-point budget, so nobody is more than a few points off
-        // 10 and 10 is a generous ceiling on that.
-        //
-        // This is the seam between the two things that feed a score, and it is
-        // the whole reason the curve is piecewise. Inside the band, the value
-        // is a character's identity and moves LINEARLY at exactly the rates it
-        // always did. Outside it, the value can only have come from gear, and
-        // that part is squared.
-        //
-        // A single quadratic across the whole range was tried first and was
-        // wrong in a way worth recording: squaring is tiny near neutral, so
-        // Shawn's Constitution 16 fell from +120 health to +43 and his Wisdom
-        // 14 from +8 mana to nothing. It made the endgame land correctly by
-        // deleting the character sheet, and a 60-point budget nobody can feel
-        // is not a budget.
-        private const int CharacterBand = 10;
-
-        // A POOL: linear within a character's own range, quadratic on whatever
-        // gear piles on top.
-        //
-        // long internally because the excess reaches ~185 and a numerator of 12
-        // puts the intermediate near half a million -- fine for int today, and
-        // one maxTier raise away from not being.
-        //
-        // Sign is applied to the SQUARE rather than carried through it, so a
-        // deficit mirrors a surplus exactly and the value is still zero at
-        // neutral. Floored, not truncated, for the reason FloorDiv2 states.
-        private static int Pool(int difference, int perPoint, int numerator, int denominator)
-        {
-            int inBand = difference;
-            if (inBand > CharacterBand) inBand = CharacterBand;
-            if (inBand < -CharacterBand) inBand = -CharacterBand;
-
-            long total = (long)inBand * perPoint;
-
-            int excess = difference - inBand;
-            if (excess != 0)
-            {
-                long squared = (long)excess * excess;
-                long scaled = (excess >= 0 ? squared : -squared) * numerator;
-                total += scaled >= 0
-                    ? scaled / denominator
-                    : (scaled - denominator + 1) / denominator;
-            }
-
-            return (int)total;
-        }
-
-        // A RATE: the character's own curve inside the band, a square root on
-        // whatever gear adds beyond it. Same seam as Pool, different shape
-        // outside it.
-        //
-        // PIECEWISE FOR THE SAME REASON, and it was not optional. A bare
-        // floor(sqrt(2|d|)) was tried first on the claim that it agreed with
-        // floor(|d|/2) across the authored range. It does not: it agrees at
-        // 4, 6, 8 and 9 and is a full point high at 1, 2 and 3, so Dexterity
-        // 12 bought two Speed where it had always bought one. Splitting at the
-        // band makes the in-band half exactly the old function rather than an
-        // approximation of it that happens to match at the values someone
-        // checked.
-        private static int Rate(int difference, int bandDivisor, int numerator, int denominator)
-        {
-            int band = difference;
-            if (band > CharacterBand) band = CharacterBand;
-            if (band < -CharacterBand) band = -CharacterBand;
-
-            // FloorDiv, not C# division. Writing this as -((-band) / divisor)
-            // truncates toward zero, which makes DEX 9 derive 0 where it has
-            // always derived -1 -- the precise asymmetry the FloorDiv2 comment
-            // above exists to forbid, reintroduced by hand while generalising
-            // it. Caught by the two tests that pin Shawn's spread.
-            int value = FloorDiv(band, bandDivisor);
-
-            int excess = difference - band;
-            if (excess != 0)
-            {
-                int magnitude = excess >= 0 ? excess : -excess;
-                int root = (int)Math.Sqrt(magnitude) * numerator / denominator;
-                value += excess >= 0 ? root : -root;
-            }
-
-            return value;
-        }
-
-        public static int AttackBonus(AbilityScoreBlock scores)
-        {
-            int difference = scores.strength - NeutralScore;
-            int band = difference > CharacterBand ? CharacterBand
-                     : difference < -CharacterBand ? -CharacterBand : difference;
-
-            // FloorDiv2 for the in-band half, so a character's own Strength
-            // reads exactly as it always did rather than as a rounding of it.
-            return FloorDiv2(band * AttackPerPoint)
-                 + Pool(difference, 0, AttackNumerator, AttackDenominator);
-        }
-
-        // A RATE, not a pool: Speed is how often an actor acts, and
-        // SpeedScale.TickRate clamps at 2.5x anyway.
-        //
-        // The clamp is reached at Speed 62.5, which the old linear curve hit at
-        // about 113 gear points -- roughly TIER 7. Every point past that bought
-        // nothing, so Dexterity gear went dead for the last three floors of the
-        // ladder while still costing a slot. The root reaches +19 at tier 10,
-        // which leaves the tick rate at about 1.6 and therefore keeps Leather
-        // worth wearing the whole way up.
-        public static int SpeedBonus(AbilityScoreBlock scores)
-        {
-            return Rate(scores.dexterity - NeutralScore, 2, 1, 1);
-        }
-
+        // Constitution: max health, +20 a point, signed.
         public static int MaxHealthBonus(AbilityScoreBlock scores)
         {
-            return Pool(scores.constitution - NeutralScore, HealthPerPoint, HealthNumerator, HealthDenominator);
+            return (scores.constitution - NeutralScore) * HealthPerPoint;
         }
 
+        // Constitution: physical mitigation, +2 a point, signed.
+        public static int PhysicalDefenseBonus(AbilityScoreBlock scores)
+        {
+            return (scores.constitution - NeutralScore) * PhysicalDefensePerPoint;
+        }
+
+        // Wisdom: max mana, +2 a point, signed. Read by EffectiveMaxMana
+        // rather than folded into DerivedStats -- StatBlock carries no mana
+        // field, mana lives beside it in ContentDatabase.Effective.cs.
         public static int MaxManaBonus(AbilityScoreBlock scores)
         {
-            return Pool(scores.wisdom - NeutralScore, ManaPerPoint, ManaNumerator, ManaDenominator);
+            return (scores.wisdom - NeutralScore) * ManaPerPoint;
         }
 
-        // Charisma feeds a character's signature resource — how fast their own
-        // private gauge fills each turn.
-        //
-        // A RATE, and the most sharply bounded of the five, because the thing
-        // it fills is TINY: Shawn's Wool holds 10 and gains 1 a turn. Under the
-        // old floor(d/4) a tier-10 Court set granted +48 a turn into that pool,
-        // which is not a bonus, it is a different game — the gauge would be
-        // full before the first enemy acted.
-        //
-        // Root over 3 lands it at +6 at tier 10: still the largest
-        // proportional swing of any derivation here, and about the most a
-        // 10-capacity pool can absorb while the bank-or-spend decision stays a
-        // decision.
-        //
-        // The divisor is 3 rather than 2 or 4 because it is the one that keeps
-        // the authored range closest to the old floor(d/4) — a Charisma 16
-        // character still gets exactly its +1. The agreement is approximate
-        // either side of that, which a root against a quarter-step cannot
-        // avoid, and it only matters for scores no character currently has.
-        //
-        // Still worth being honest that it does nothing at all for a character
-        // with no signature resource, which today is four of the five. That is
-        // the loose end behind Court and Regalia, and it is a content problem
-        // rather than an arithmetic one.
+        // Wisdom: magical mitigation, +2 a point, signed.
+        public static int MagicalDefenseBonus(AbilityScoreBlock scores)
+        {
+            return (scores.wisdom - NeutralScore) * MagicalDefensePerPoint;
+        }
+
+        // Dexterity: Speed, +1 per 2 points, signed -- see the convention
+        // note above for what "per 2" means below neutral.
+        public static int SpeedBonus(AbilityScoreBlock scores)
+        {
+            return (scores.dexterity - NeutralScore) / SpeedDivisor;
+        }
+
+        // Charisma: how fast a character's own signature resource fills each
+        // turn, +1 per 4 points, signed. Read by BuildSignatureResource
+        // rather than folded into DerivedStats, for the same reason mana
+        // is separate -- StatBlock has no signature-gain field, and a
+        // character with no signature resource simply never calls this.
         public static int SignatureGainBonus(AbilityScoreBlock scores)
         {
-            return Rate(scores.charisma - NeutralScore, 4, 1, 3);
+            return (scores.charisma - NeutralScore) / SignatureGainDivisor;
         }
 
-        // The three stat-block contributions as one block, so callers add
-        // once rather than remembering which three of the six land here.
-        // Defense is deliberately absent: no ability score feeds it, because
-        // defense is already the stat that flat-subtraction damage is most
-        // sensitive to and it belongs to gear and talents.
+        // The StatBlock-shaped contributions as one block, so callers add
+        // once rather than remembering which of the six scores land here.
+        //
+        // Attack is deliberately 0: Strength no longer derives it (see this
+        // file's header) -- weapon power reaches Attack at the
+        // FightEncounterAdapter seam instead, starting Phase 3 (D3). Until
+        // that lands, a character's basic Attack is whatever their base
+        // stats and gear say, unmoved by Strength.
+        //
+        // MaxMana and SignatureGain are NOT here even though Wisdom and
+        // Charisma derive them -- see MaxManaBonus/SignatureGainBonus above
+        // for why: StatBlock has no field for either, so their callers read
+        // those two methods directly instead of through this block.
         public static StatBlock DerivedStats(AbilityScoreBlock scores)
         {
             return new StatBlock(
                 MaxHealthBonus(scores),
                 SpeedBonus(scores),
-                AttackBonus(scores),
-                0);
+                attack: 0,
+                manaRegen: 0,
+                physicalDefense: PhysicalDefenseBonus(scores),
+                magicalDefense: MagicalDefenseBonus(scores));
         }
     }
 }

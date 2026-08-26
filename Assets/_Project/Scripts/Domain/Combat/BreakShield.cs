@@ -4,7 +4,7 @@ namespace PrincesPalace.Domain.Combat
 {
     // A monster's stagger meter: depletes on every hit, faster on a hit that
     // matches its elemental weakness, and hitting zero BREAKS it. A broken
-    // combatant skips its next turn and — see CombatMath.EffectiveDefense —
+    // combatant skips its next turn and — see CombatMath.BroadDefense —
     // its armour stops counting for as long as it stays broken, which is
     // exactly one turn: FightController resets the shield the moment that
     // turn is actually skipped, so the window is always the same length

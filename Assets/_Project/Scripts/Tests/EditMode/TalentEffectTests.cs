@@ -3,6 +3,7 @@ using System.Linq;
 using NUnit.Framework;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Tests
 {
@@ -30,7 +31,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(empty.Has(TalentEffectType.CheatDeathOncePerFight));
             Assert.AreEqual(0, empty.Best(TalentEffectType.IgnoreDefensePercent));
             Assert.AreEqual(0, empty.BestBelowHealth(TalentEffectType.WoolPerTurnBelowHealth,
-                new CombatantState("nobody", true, 10, 0, 1, 0, 1)));
+                new CombatantState("nobody", true, 10, 0, 1, 1)));
         }
 
         // The single most load-bearing rule in the file. A strand is one idea
@@ -59,7 +60,7 @@ namespace PrincesPalace.Domain.Tests
             var engine = Set(
                 new TalentEffect(TalentEffectType.WoolPerTurnBelowHealth, 2, 67),
                 new TalentEffect(TalentEffectType.WoolPerTurnBelowHealth, 3, 33));
-            var ram = new CombatantState("Shawn", true, 100, 10, 5, 2, 8);
+            var ram = new CombatantState("Shawn", true, 100, 10, 5, 8);
 
             Assert.AreEqual(0, engine.BestBelowHealth(TalentEffectType.WoolPerTurnBelowHealth, ram),
                 "At full health neither tier is satisfied, so the baseline stands alone");
@@ -82,7 +83,7 @@ namespace PrincesPalace.Domain.Tests
         public void AHealthGate_IsSatisfiedExactlyAtItsThreshold()
         {
             var engine = Set(new TalentEffect(TalentEffectType.WoolPerTurnBelowHealth, 2, 67));
-            var ram = new CombatantState("Shawn", true, 100, 10, 5, 2, 8) { CurrentHealth = 67 };
+            var ram = new CombatantState("Shawn", true, 100, 10, 5, 8) { CurrentHealth = 67 };
 
             Assert.AreEqual(2, engine.BestBelowHealth(TalentEffectType.WoolPerTurnBelowHealth, ram),
                 "Exactly at the gate counts — the float form of this comparison used to miss it");
@@ -101,7 +102,7 @@ namespace PrincesPalace.Domain.Tests
         public void IsBelowThreshold_ReadsTheHoldersOwnHealth()
         {
             var wrath = Set(new TalentEffect(TalentEffectType.TransformHoldsBelowHealth, 0, 33));
-            var ram = new CombatantState("Shawn", true, 100, 10, 5, 2, 8);
+            var ram = new CombatantState("Shawn", true, 100, 10, 5, 8);
 
             Assert.IsFalse(wrath.IsBelowThreshold(TalentEffectType.TransformHoldsBelowHealth, ram));
 
@@ -115,7 +116,9 @@ namespace PrincesPalace.Domain.Tests
     {
         private static CombatantState Fighter(int maxHealth = 100, int attack = 10, int defense = 4)
         {
-            return new CombatantState("Fighter", true, maxHealth, 10, attack, defense, 8);
+            var fighter = new CombatantState("Fighter", true, maxHealth, 10, attack, 8);
+            fighter.PhysicalDefense = defense;
+            return fighter;
         }
 
         private static void Give(CombatantState combatant, params TalentEffect[] effects)
@@ -123,17 +126,21 @@ namespace PrincesPalace.Domain.Tests
             combatant.Talents = new TalentEffectSet(effects);
         }
 
+        // CombatMath.EffectiveDefense is gone -- this now reads
+        // CombatMath.BroadDefense, the D_broad term of DamagePipeline's
+        // canonical mitigation equation (see its own header). Same
+        // arithmetic, new name and new home.
         [Test]
         public void SharpHorns_IgnoresItsShareOfTheTargetsDefense()
         {
             var attacker = Fighter();
             var target = Fighter(defense: 8);
 
-            Assert.AreEqual(8, CombatMath.EffectiveDefense(target, attacker), "No talent, no penetration");
+            Assert.AreEqual(8, CombatMath.BroadDefense(target, DamageType.Physical, attacker, false), "No talent, no penetration");
 
             Give(attacker, new TalentEffect(TalentEffectType.IgnoreDefensePercent, 50));
 
-            Assert.AreEqual(4, CombatMath.EffectiveDefense(target, attacker));
+            Assert.AreEqual(4, CombatMath.BroadDefense(target, DamageType.Physical, attacker, false));
         }
 
         // Penetration and the low-health armour bonus have to compose in a
@@ -150,9 +157,9 @@ namespace PrincesPalace.Domain.Tests
             Give(target, new TalentEffect(TalentEffectType.DefenseBonusPercentBelowHealth, 50, 50));
             target.CurrentHealth = 40;
 
-            Assert.AreEqual(15, CombatMath.EffectiveDefense(target),
+            Assert.AreEqual(15, CombatMath.BroadDefense(target, DamageType.Physical, null, false),
                 "Last Stand should have raised 10 to 15 while he is under half");
-            Assert.AreEqual(8, CombatMath.EffectiveDefense(target, attacker),
+            Assert.AreEqual(8, CombatMath.BroadDefense(target, DamageType.Physical, attacker, false),
                 "And Sharp Horns should ignore half of the 15 that is in the way (integer-floored to 7), not half of the base 10");
         }
 
@@ -162,7 +169,7 @@ namespace PrincesPalace.Domain.Tests
             var target = Fighter(defense: 10);
             Give(target, new TalentEffect(TalentEffectType.DefenseBonusPercentBelowHealth, 25, 50));
 
-            Assert.AreEqual(10, CombatMath.EffectiveDefense(target));
+            Assert.AreEqual(10, CombatMath.BroadDefense(target, DamageType.Physical, null, false));
         }
 
         [Test]
@@ -259,7 +266,7 @@ namespace PrincesPalace.Domain.Tests
             var attacker = Fighter();
             plain.CurrentHealth = 5;
 
-            Assert.AreEqual(6, CombatMath.EffectiveDefense(plain, attacker));
+            Assert.AreEqual(6, CombatMath.BroadDefense(plain, DamageType.Physical, attacker, false));
             Assert.AreEqual(50, CombatMath.ApplyExecuteBonus(50, attacker, plain));
             Assert.AreEqual(999, CombatMath.CapSpikeDamage(999, plain));
 
@@ -274,7 +281,7 @@ namespace PrincesPalace.Domain.Tests
     {
         private static CombatantState Ram()
         {
-            return new CombatantState("Shawn", true, 200, 10, 10, 4, 10);
+            return new CombatantState("Shawn", true, 200, 10, 10, 10);
         }
 
         [Test]
@@ -347,7 +354,7 @@ namespace PrincesPalace.Domain.Tests
     {
         private static CombatantState Combatant(string name)
         {
-            return new CombatantState(name, false, 100, 10, 5, 2, 8);
+            return new CombatantState(name, false, 100, 10, 5, 8);
         }
 
         [Test]

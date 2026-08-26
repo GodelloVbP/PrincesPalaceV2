@@ -59,10 +59,20 @@ namespace PrincesPalace.Domain.Combat
             }
         }
 
-        // Armour applies unless the skill explicitly ignores it.
+        // Armour no longer applies HERE at all, regardless of `ignoresDefense`
+        // — mitigation is a DamagePipeline-only concern now (see its own
+        // header for the canonical equation), so this always returns the
+        // raw, scaled figure. `target` and `ignoresDefense` are kept as
+        // parameters for call-site stability (SkillEntryResolverTests and
+        // FightSession.Enemies.cs/Skills.cs already have both in hand at
+        // every call site) even though neither is read below any more —
+        // `ignoresDefense` in particular still matters, just one layer up:
+        // every caller of this method also calls DamagePipeline.
+        // AfterDefences with the SAME flag, which is the one place it is now
+        // actually consulted.
         //
-        // WHAT THAT FLAG IS FOR HAS CHANGED, and the old reasoning is worth
-        // keeping because it describes a bug rather than a design:
+        // WHAT THE FLAG USED TO ANSWER is worth keeping because it describes
+        // a bug rather than a design:
         //
         //   "damage is max(1, attack - defense) with no variance, his Attack
         //    is 5, and the Throne Colossus has Defense 9. Every ordinary
@@ -70,17 +80,12 @@ namespace PrincesPalace.Domain.Combat
         //    into a 950-point pool, i.e. 95 turns of nothing. A
         //    defense-ignoring line is the only thing that answers a wall."
         //
-        // That was accurate, and it is a description of the subtraction cliff
-        // CombatMath.Mitigate now removes -- the same cliff that later made a
-        // FLOOR-ONE boss take 130 turns. Ignoring defense is no longer the
-        // only answer to a wall, because there is no wall: every point of
-        // Attack pays against every target.
-        //
-        // So the flag is now what it always read as -- a strong property on
-        // one line of Shawn's kit, worth roughly the difference between 57%
-        // and 100% of a swing against the troll, rather than the difference
-        // between playing and not. He still gets exactly one, and his AOE
-        // still deliberately does not.
+        // That described the subtraction cliff the diminishing-returns curve
+        // (now DamagePipeline.AfterDefences) already removed once, long
+        // before this rename -- there is no wall any more, so the flag is
+        // what it always read as: a strong property on one line of Shawn's
+        // kit, not the difference between playing and not. He still gets
+        // exactly one, and his AOE still deliberately does not.
         private static int Damage(CombatantState actor, CombatantState target, int power, int flatAmount, int resourceSpent, bool ignoresDefense,
             DamageType type, ScalingAxis axis)
         {
@@ -101,30 +106,18 @@ namespace PrincesPalace.Domain.Combat
             int scaledAttack = CombatMath.ScaledAttack(actor, scalingSet, 1f);
             int raw = scaledAttack + flatAmount + power * resourceSpent;
 
-            // MITIGATED AS ONE FIGURE, additive terms included. A skill's
-            // flatAmount and its per-resource power are part of the swing
-            // rather than separate packets -- a spell that authors fixed
-            // damage past armour uses damageInstances, which never came
-            // through here at all. Splitting them out to dodge armour would
-            // make every skill in the game a partial armour-ignore by
-            // accident, which is a property exactly one of Shawn's lines is
-            // supposed to have.
-            if (!ignoresDefense && target != null)
-            {
-                // The attacker-aware overload, so Sharp Horns' armour
-                // penetration applies to a character SKILL exactly as it does
-                // to a plain swing. "Attacks ignore 25% of the target's
-                // defense" reads as every attack, and a rule that quietly
-                // stopped applying the moment the player pressed a different
-                // button would be the kind of inconsistency AUDIT.md #16 is
-                // about.
-                return CombatMath.Mitigate(raw, CombatMath.EffectiveDefense(target, actor));
-            }
-
-            // Nothing in the way, so only the scale is left to apply -- by the
-            // same helper ComputeAttackDamage bottoms out in, so a skill and a
-            // plain attack can never end up on different scales.
-            return CombatMath.Scale(raw);
+            // FLOORED AT 1, NOT SCALED — this is a wool/authored-skill cast
+            // (DamageSingle/DamageAll with no fixed damageInstances), and it
+            // flows into the exact same DamagePipeline.AfterDefences funnel
+            // ComputeAttackDamage/ComputeSkillDamage do (FightSession.
+            // Skills.cs's ResolveDamageSingle/ResolveDamageAll, both real
+            // production casts, not just PreviewSkillPower). Scaling it by
+            // CombatMath.DamageScale while the other two entry points do not
+            // would leave every wool skill hitting 5x harder than a plain
+            // swing of the same nominal size -- exactly the bug D1 removed
+            // from ComputeAttackDamage/ComputeSkillDamage, just one call site
+            // over. See CombatMath.ComputeAttackDamage's own header.
+            return Math.Max(1, raw);
         }
 
         // How much of the resource a cast should actually consume. A skill

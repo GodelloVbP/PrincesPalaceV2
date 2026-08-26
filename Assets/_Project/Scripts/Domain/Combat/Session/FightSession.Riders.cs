@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Combat.Session
 {
@@ -244,6 +246,7 @@ namespace PrincesPalace.Domain.Combat.Session
             if (actor == null) return;
 
             RegenerateMana(actor);
+            ApplyRunicWardConversion(actor);
             TickStatuses(actor);
             TickCooldowns(actor);
             TickSpeedBuffs(actor);
@@ -277,6 +280,37 @@ namespace PrincesPalace.Domain.Combat.Session
             CombatMath.RestoreMana(actor, actor.ManaRegen);
         }
 
+        // Runic's mana->Ward conversion: at the start of the wearer's own
+        // turn, whatever mana is sitting UNSPENT (including the regen this
+        // very turn-start just granted -- "unspent right now", not "unspent
+        // before this turn began") becomes a Shielded status. See
+        // FightTuning.RunicWardConversionRate's own comment for why the rate
+        // is a fixed, deliberately weak constant rather than an authored
+        // number, and ModifierEffectType.ManaToWardOnTurnStartPercent's own
+        // comment for why this is gated on Has() (a flag) rather than a
+        // magnitude.
+        //
+        // REFRESHES rather than stacks -- StatusEffects.Apply's own rule,
+        // the same one every other repeatable buff in this game already
+        // relies on, so recasting (re-triggering, here) never compounds.
+        // 99 turns is "for the rest of the fight" spelled as a duration, the
+        // same convention the Magical Shield relic already uses
+        // (FightTuning.MagicalShieldDurationTurns) -- ordinary turn-start
+        // ticking must never expire this before ConsumeWard spends it.
+        private void ApplyRunicWardConversion(CombatantState actor)
+        {
+            if (actor == null || actor.CurrentMana <= 0) return;
+            if (!actor.ModifierEffects.Has(ModifierEffectType.ManaToWardOnTurnStartPercent)) return;
+
+            int wardPercent = Math.Min(FightTuning.RunicWardMagnitudeCapPercent,
+                Rounding.AwayFromZero(actor.CurrentMana * FightTuning.RunicWardConversionRate));
+            if (wardPercent <= 0) return;
+
+            StatusEffects.Apply(actor.Statuses, StatusEffectType.Shielded, wardPercent,
+                FightTuning.MagicalShieldDurationTurns, actor);
+            AppendMessage($"{actor.Name}'s runes catch the leftover mana as a ward.");
+        }
+
         // StatusEffects.Tick applies the numbers and reports WHAT happened;
         // turning that into log lines is this layer's job, because the wording
         // belongs to the fight rather than to the status system.
@@ -285,6 +319,21 @@ namespace PrincesPalace.Domain.Combat.Session
             if (actor == null) return;
 
             var report = StatusEffects.Tick(actor);
+
+            // Chilled's malus is booked in FightSession.SpeedBuffs' own
+            // dictionary, not on the status itself -- StatusEffects.Tick just
+            // removed the EXPIRED ActiveStatus entry (generic per-status
+            // countdown, no special case needed there), but nothing has told
+            // Speed yet. Placed ahead of the report.IsEmpty early-return
+            // below on purpose, even though Expired containing anything
+            // already implies !IsEmpty -- keeping the Speed-honesty step
+            // unconditional here means a future change to IsEmpty's own
+            // definition can never silently start skipping it.
+            if (report.Expired.Contains(StatusEffectType.Chilled))
+            {
+                RevokeSpeedBuff(actor, StatusEffectType.Chilled);
+            }
+
             if (report.IsEmpty) return;
 
             if (report.PoisonDamage > 0)
@@ -309,6 +358,17 @@ namespace PrincesPalace.Domain.Combat.Session
                 AppendMessage($"{actor.Name}'s {expired} wears off.");
             }
         }
+
+        // ---- seams for tests -------------------------------------------------
+        //
+        // Same reasoning as FightSession.SpeedBuffs' own TickSpeedBuffsForTest:
+        // a turn-start tick's observable effect (Chilled's malus reverting
+        // exactly on expiry) is real production arithmetic, but driving it
+        // through a full round trip means racing this ACTOR's own real turn
+        // order against whatever else is in the fight. Calling the same
+        // private method directly removes the race without touching what it
+        // exercises.
+        public void TickStatusesForTest(CombatantState actor) => TickStatuses(actor);
 
     }
 }

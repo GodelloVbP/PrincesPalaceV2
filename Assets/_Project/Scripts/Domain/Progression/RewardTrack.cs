@@ -124,18 +124,20 @@ namespace PrincesPalace.Domain.Progression
             (50,  TrackReward.WiderOffer, 4),
             (60,  TrackReward.StartingRelics, 4),
             (70,  TrackReward.ChosenStartingRelics, 0),
-            // A BAND'S WORTH OF POINTS, and 10 is not a round number picked
-            // for looking generous -- it is exactly AbilityDerivation's
-            // CharacterBand.
-            //
-            // That constant is where a point stops being worth a flat 20 max
-            // health and starts being worth the SQUARE OF THE EXCESS, which
-            // begins at 1 and does not overtake the flat rate for another eight
-            // points. So ten points into one ability is not merely a big spend,
-            // it is the most efficient one the game offers -- and the eleventh
-            // is where it falls off a cliff. Pinned by
-            // TheLevelEightyGrantIsExactlyOneBandOfPoints rather than left to
-            // this paragraph.
+            // TEN IS A KEPT HISTORICAL VALUE, not a live formula link. This
+            // used to be sized to exactly match AbilityDerivation's
+            // CharacterBand -- the point past which a piecewise curve stopped
+            // paying a flat rate and started paying the square of the excess,
+            // making ten points into one ability the single most efficient
+            // spend the game offered. AbilityDerivation's balance redesign
+            // (Phase 2/D2) deleted that piecewise curve entirely: every
+            // derivation is now a straight line through zero, with no band
+            // edge and no efficiency cliff for this milestone to size itself
+            // against. The number stays 10 anyway -- it is still a fine round
+            // grant on its own terms -- but nothing in AbilityDerivation
+            // computes or constrains it any more; if it ever needs to move,
+            // move it here, not by hunting for a constant that no longer
+            // exists.
             //
             // This level used to grant "elites always drop a relic". Cut as too
             // strong: relics are run-scoped and uncapped (AUDIT #51), elites

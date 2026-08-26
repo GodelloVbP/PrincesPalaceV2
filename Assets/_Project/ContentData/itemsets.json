@@ -1,5 +1,5 @@
 {
-  "_readme": "Armour sets. Each entry here is a GENERATOR, not an item: it names a material, the pieces that material comes in, and what each piece is worth at tier 0 and at maxTier. ContentBuilder expands that into one real item per TIER — three sets of five pieces at maxTier 10 is 165 items from 15 pieces of authoring. Edit this file, then run Prince's Palace > Build Default Content. TIER IS NOT PLUS. Tier is which coif this is (its art, its stats, its rarity band) and is baked here, one asset each. Plus is how honed one particular copy is, it lives on the InventoryEntry at runtime, and it only ever multiplies what the tier already grants (see Domain/Stats/ItemUpgrade.cs). That split is why this file generates 165 assets rather than 1,815. REQUIRED per set: id (goes into every generated item id, and item ids live in save files, so never rename it), displayName, and pieces. Optional: description, tierAdjectives (one word per tier, lowest first — 'Ragged' through 'Sovereign'; the last entry covers every tier past the end of a short list, and a set with none just keeps the bare piece name), maxTier (default 10), cost and costPerTier (gold for the tier-0 piece and per further tier), sortOrder. REQUIRED per piece: id (unique within its set only), displayName, slot (Head, Necklace, Torso, Legs, Shoes, Gloves, Weapon1, Weapon2, or the alias Weapon). Optional per piece: iconSheet, the folder of art that tools/slice_item_sheet.py wrote — 'Assets/_Project/Art/Items/armor_leather_sheet' and so on, holding level_1.png upward. A sheet holds TEN drawings and a maxTier-10 set has ELEVEN tiers, so levels are spread proportionally rather than mapped one to one: both ends get their own picture and tiers 5 and 6 share one in the middle. Plus never changes the art. Set iconLevels if a sheet holds some other number. A piece with no iconSheet shows no icon, which is a supported state rather than a hole. baseStats and topStats are lists of '<stat> <amount>' strings — for example 'dexterity 1' or 'physicalResistance 9'. Any ability score (strength, dexterity, constitution, wisdom, intelligence, charisma) or any stat (maxHealth, speed, attack, defense, manaRegen, physicalResistance, magicalResistance) may be named, case-insensitively; a stat named in one end but not the other simply starts or ends at zero, and negative amounts are fine (steel is slow on purpose). Everything between the two ends is interpolated and floored. Anchoring at both ends is what makes this safe to retune: raising maxTier stretches the curve instead of inflating the tiers that already exist, and a stat added to the game is authorable here the same day with no schema change. Resistance is in POINTS, not percent — see CombatMath.AfterResistance for the curve, which halves damage at 100 points and can never reach immunity. STYLE WEIGHTS, and the reason most pieces here author almost nothing. A set may declare styleWeights -- lines like 'strength 40', in HUNDREDTHS, so 40 is a weight of 0.40 -- which says what the material is FOR. GearScaling turns that into real numbers: weight x the slot's share of a set (torso 1.25 down to gloves 0.85, summing to 5.0) x a global base, then up a GEOMETRIC tier curve of 1.25 a tier, so tier 10 is 9.3x tier 0. A set that declares weights must NOT also name an ability score in a piece's baseStats/topStats; that is rejected rather than merged, because an AbilityScoreBlock cannot tell 'authored as zero' from 'not authored'. Non-ability stats -- resistances, maxHealth, speed, attack, manaRegen -- stay hand-authored either way, and are what a material says BEYOND its weights. The SUM of a set's weights is its budget: 1.00 is point-neutral against a pure single-stat style, and the dual sets run at 1.10 on purpose, because breadth is worth less than reaching a threshold. Retuning the whole economy is one number in GearScaling; retuning one material is one line here.",
+  "_readme": "Armour sets. Each entry here is a GENERATOR, not an item: it names a material, the pieces that material comes in, and a BUDGET the whole set spends -- ContentBuilder expands that into one real item per TIER. Edit this file, then run Prince's Palace > Build Default Content. TIER IS NOT PLUS. Tier is which coif this is (its art, its stats, its rarity band) and is baked here, one asset each. Plus is how honed one particular copy is, it lives on the InventoryEntry at runtime, and it only ever multiplies what the tier already grants (see Domain/Stats/ItemUpgrade.cs). REQUIRED per set: id (goes into every generated item id, and item ids live in save files, so never rename it), displayName, and pieces. Optional: description, tierAdjectives (one word per tier, lowest first), maxTier (default 10), cost and costPerTier, sortOrder. REQUIRED per piece: id (unique within its set only), displayName, slot (Head, Necklace, Torso, Legs, Shoes, Gloves, Weapon1, Weapon2, or the alias Weapon). Optional per piece: iconSheet, the folder of art that tools/slice_item_sheet.py wrote, holding level_1.png upward (ten drawings across eleven tiers, spread proportionally -- see ItemSetEntryResolver.IconLevelFor). baseStats and topStats NO LONGER EXIST here -- balance redesign Phase 4 (D4) removed per-piece hand-authored numbers entirely, because that is exactly how same-tier sets drifted to unequal budgets: a designer typing 'physicalDefense 14' on one torso and 'physicalDefense 18' on another, with nothing tying the two together. A piece naming either now fails the content build with a loud error. EVERY set instead authors two things, and GearScaling derives every stat and every score from them: styleWeights (unchanged mechanism, still lines like 'strength 40' in HUNDREDTHS -- what the material is FOR, spent through the ability-score half of the budget) and statProfile (NEW, lines like 'physicalDefense 35' also in whole percent, but the five MUST sum to exactly 100 -- what the material PROTECTS WITH, spent through the combat-stat half). Both are set-level and shared by all five slot pieces; a piece's own budget differs only by its slot's weight (torso 1.25 down to gloves 0.85, summing to 5.0), never by a different split. The budget itself is Points(slot, tier) = 10 x SlotWeight x 1.25^tier, split 60% combat stats / 40% ability scores -- see GearScaling for the named constants (Base, CombatStatShare, the five *PerBudgetPoint unit costs) and why several of them differ from the balance-redesign plan's first-draft numbers (the T5 power-band test, not guesswork). statProfile's five legal names are maxHealth, physicalDefense, magicalDefense, speed, manaRegen -- NOT attack, which gear stopped granting in Phase 3. Defense is in POINTS, not percent -- see DamagePipeline's canonical mitigation equation, which halves damage at 100 points and can never reach immunity.",
   "sets": [
     {
       "id": "leather",
@@ -26,68 +26,41 @@
         "dexterity 100",
         "constitution 15"
       ],
+      "statProfile": [
+        "maxHealth 15",
+        "physicalDefense 35",
+        "speed 50"
+      ],
       "pieces": [
         {
           "id": "coif",
           "displayName": "Coif",
           "slot": "Head",
-          "iconSheet": "Assets/_Project/Art/Items/headwear_leather_sheet",
-          "baseStats": [
-            "physicalResistance 2"
-          ],
-          "topStats": [
-            "physicalResistance 7"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/headwear_leather_sheet"
         },
         {
           "id": "torso",
           "displayName": "Torso",
           "slot": "Torso",
-          "iconSheet": "Assets/_Project/Art/Items/armor_leather_sheet",
-          "baseStats": [
-            "physicalResistance 5",
-            "maxHealth 20"
-          ],
-          "topStats": [
-            "physicalResistance 14",
-            "maxHealth 80"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/armor_leather_sheet"
         },
         {
           "id": "leggings",
           "displayName": "Leggings",
           "slot": "Legs",
-          "iconSheet": "Assets/_Project/Art/Items/leggings_leather_sheet",
-          "baseStats": [
-            "physicalResistance 4"
-          ],
-          "topStats": [
-            "physicalResistance 11"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/leggings_leather_sheet"
         },
         {
           "id": "gloves",
           "displayName": "Gloves",
           "slot": "Gloves",
-          "iconSheet": "Assets/_Project/Art/Items/gloves_leather_sheet",
-          "baseStats": [
-            "attack 1"
-          ],
-          "topStats": [
-            "attack 3"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/gloves_leather_sheet"
         },
         {
           "id": "boots",
           "displayName": "Boots",
           "slot": "Shoes",
-          "iconSheet": "Assets/_Project/Art/Items/leather_boots_sheet",
-          "baseStats": [
-            "speed 1"
-          ],
-          "topStats": [
-            "speed 3"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/leather_boots_sheet"
         }
       ]
     },
@@ -116,72 +89,41 @@
         "strength 40",
         "constitution 70"
       ],
+      "statProfile": [
+        "maxHealth 35",
+        "physicalDefense 55",
+        "magicalDefense 10"
+      ],
       "pieces": [
         {
           "id": "helmet",
           "displayName": "Helmet",
           "slot": "Head",
-          "iconSheet": "Assets/_Project/Art/Items/helmets_str",
-          "baseStats": [
-            "physicalResistance 6"
-          ],
-          "topStats": [
-            "physicalResistance 13"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/helmets_str"
         },
         {
           "id": "platebody",
           "displayName": "Platebody",
           "slot": "Torso",
-          "iconSheet": "Assets/_Project/Art/Items/steel_platebody_sheet",
-          "baseStats": [
-            "physicalResistance 10",
-            "maxHealth 30"
-          ],
-          "topStats": [
-            "physicalResistance 22",
-            "maxHealth 120",
-            "speed -2"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/steel_platebody_sheet"
         },
         {
           "id": "platelegs",
           "displayName": "Platelegs",
           "slot": "Legs",
-          "iconSheet": "Assets/_Project/Art/Items/steel_legs_sheet",
-          "baseStats": [
-            "physicalResistance 8"
-          ],
-          "topStats": [
-            "physicalResistance 17"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/steel_legs_sheet"
         },
         {
           "id": "gauntlets",
           "displayName": "Gauntlets",
           "slot": "Gloves",
-          "iconSheet": "Assets/_Project/Art/Items/steel_gloves_sheet",
-          "baseStats": [
-            "physicalResistance 4",
-            "attack 1"
-          ],
-          "topStats": [
-            "physicalResistance 9",
-            "attack 3"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/steel_gloves_sheet"
         },
         {
           "id": "greaves",
           "displayName": "Greaves",
           "slot": "Shoes",
-          "iconSheet": "Assets/_Project/Art/Items/steel_boots_sheet",
-          "baseStats": [
-            "physicalResistance 5"
-          ],
-          "topStats": [
-            "physicalResistance 11",
-            "speed -1"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/steel_boots_sheet"
         }
       ]
     },
@@ -210,78 +152,41 @@
         "intelligence 100",
         "constitution 10"
       ],
+      "statProfile": [
+        "physicalDefense 15",
+        "magicalDefense 55",
+        "manaRegen 30"
+      ],
       "pieces": [
         {
           "id": "pointed_hat",
           "displayName": "Pointed Hat",
           "slot": "Head",
-          "iconSheet": "Assets/_Project/Art/Items/silk_hats_sheet",
-          "baseStats": [
-            "manaRegen 1",
-            "physicalResistance 2",
-            "magicalResistance 4"
-          ],
-          "topStats": [
-            "manaRegen 5",
-            "physicalResistance 6",
-            "magicalResistance 15"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/silk_hats_sheet"
         },
         {
           "id": "robe_top",
           "displayName": "Robe Top",
           "slot": "Torso",
-          "iconSheet": "Assets/_Project/Art/Items/robe_top_silk_sheet",
-          "baseStats": [
-            "physicalResistance 3",
-            "magicalResistance 6"
-          ],
-          "topStats": [
-            "physicalResistance 8",
-            "magicalResistance 20"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/robe_top_silk_sheet"
         },
         {
           "id": "robe_bottom",
           "displayName": "Robe Bottom",
           "slot": "Legs",
-          "iconSheet": "Assets/_Project/Art/Items/rob_bottom_silk_sheet",
-          "baseStats": [
-            "physicalResistance 2",
-            "magicalResistance 5"
-          ],
-          "topStats": [
-            "physicalResistance 7",
-            "magicalResistance 17"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/rob_bottom_silk_sheet"
         },
         {
           "id": "gloves",
           "displayName": "Gloves",
           "slot": "Gloves",
-          "iconSheet": "Assets/_Project/Art/Items/gloves_silk_sheet",
-          "baseStats": [
-            "manaRegen 1",
-            "magicalResistance 3"
-          ],
-          "topStats": [
-            "manaRegen 3",
-            "magicalResistance 10"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/gloves_silk_sheet"
         },
         {
           "id": "boots",
           "displayName": "Boots",
           "slot": "Shoes",
-          "iconSheet": "Assets/_Project/Art/Items/boots_silk_sheet",
-          "baseStats": [
-            "speed 1",
-            "magicalResistance 3"
-          ],
-          "topStats": [
-            "speed 2",
-            "magicalResistance 10"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/boots_silk_sheet"
         }
       ]
     },
@@ -310,66 +215,42 @@
         "strength 100",
         "constitution 10"
       ],
+      "statProfile": [
+        "maxHealth 20",
+        "physicalDefense 30",
+        "magicalDefense 10",
+        "speed 40"
+      ],
       "pieces": [
         {
           "id": "warmask",
           "displayName": "Warmask",
           "slot": "Head",
-          "iconSheet": "Assets/_Project/Art/Items/harness_warmask_sheet",
-          "baseStats": [
-            "attack 1"
-          ],
-          "topStats": [
-            "attack 4"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/harness_warmask_sheet"
         },
         {
           "id": "harness",
           "displayName": "Chest Straps",
           "slot": "Torso",
-          "iconSheet": "Assets/_Project/Art/Items/harness_body_sheet",
-          "baseStats": [
-            "attack 3"
-          ],
-          "topStats": [
-            "attack 9"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/harness_body_sheet"
         },
         {
           "id": "warskirt",
           "displayName": "War Kilt",
           "slot": "Legs",
-          "iconSheet": "Assets/_Project/Art/Items/harness_kilt_sheet",
-          "baseStats": [
-            "attack 2"
-          ],
-          "topStats": [
-            "attack 6"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/harness_kilt_sheet"
         },
         {
           "id": "bracers",
           "displayName": "Spiked Bracers",
           "slot": "Gloves",
-          "iconSheet": "Assets/_Project/Art/Items/harness_bracers_sheet",
-          "baseStats": [
-            "attack 1"
-          ],
-          "topStats": [
-            "attack 4"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/harness_bracers_sheet"
         },
         {
           "id": "treads",
           "displayName": "Heavy Treads",
           "slot": "Shoes",
-          "iconSheet": "Assets/_Project/Art/Items/harness_boots_sheet",
-          "baseStats": [
-            "attack 1"
-          ],
-          "topStats": [
-            "attack 2"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/harness_boots_sheet"
         }
       ]
     },
@@ -397,76 +278,41 @@
       "styleWeights": [
         "constitution 100"
       ],
+      "statProfile": [
+        "maxHealth 30",
+        "physicalDefense 40",
+        "magicalDefense 30"
+      ],
       "pieces": [
         {
           "id": "greathelm",
           "displayName": "Great Helm",
           "slot": "Head",
-          "iconSheet": "Assets/_Project/Art/Items/siege_cuirass_helmet",
-          "baseStats": [
-            "physicalResistance 8",
-            "magicalResistance 5"
-          ],
-          "topStats": [
-            "physicalResistance 18",
-            "magicalResistance 11"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/siege_cuirass_helmet"
         },
         {
           "id": "bulwark",
           "displayName": "Cuirass",
           "slot": "Torso",
-          "iconSheet": "Assets/_Project/Art/Items/siege_cuirass_sheet",
-          "baseStats": [
-            "physicalResistance 14",
-            "magicalResistance 8"
-          ],
-          "topStats": [
-            "physicalResistance 30",
-            "magicalResistance 18"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/siege_cuirass_sheet"
         },
         {
           "id": "tassets",
           "displayName": "Tassets",
           "slot": "Legs",
-          "iconSheet": "Assets/_Project/Art/Items/siege_tassets_sheet",
-          "baseStats": [
-            "physicalResistance 11",
-            "magicalResistance 7"
-          ],
-          "topStats": [
-            "physicalResistance 24",
-            "magicalResistance 14"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/siege_tassets_sheet"
         },
         {
           "id": "vambraces",
           "displayName": "Vambraces",
           "slot": "Gloves",
-          "iconSheet": "Assets/_Project/Art/Items/siege_gloves_sheets",
-          "baseStats": [
-            "physicalResistance 6",
-            "magicalResistance 4"
-          ],
-          "topStats": [
-            "physicalResistance 12",
-            "magicalResistance 7"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/siege_gloves_sheets"
         },
         {
           "id": "sabatons",
           "displayName": "Sabatons",
           "slot": "Shoes",
-          "iconSheet": "Assets/_Project/Art/Items/siege_sabatons_sheet",
-          "baseStats": [
-            "physicalResistance 7",
-            "magicalResistance 4"
-          ],
-          "topStats": [
-            "physicalResistance 15",
-            "magicalResistance 9"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/siege_sabatons_sheet"
         }
       ]
     },
@@ -496,66 +342,41 @@
         "strength 50",
         "constitution 20"
       ],
+      "statProfile": [
+        "maxHealth 25",
+        "physicalDefense 45",
+        "speed 30"
+      ],
       "pieces": [
         {
           "id": "cap",
           "displayName": "Studded Cap",
           "slot": "Head",
-          "iconSheet": "Assets/_Project/Art/Items/brigandine_helmet_sheet",
-          "baseStats": [
-            "physicalResistance 4"
-          ],
-          "topStats": [
-            "physicalResistance 8"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/brigandine_helmet_sheet"
         },
         {
           "id": "brigandine",
           "displayName": "Jack",
           "slot": "Torso",
-          "iconSheet": "Assets/_Project/Art/Items/brigandine_body_sheet",
-          "baseStats": [
-            "physicalResistance 6"
-          ],
-          "topStats": [
-            "physicalResistance 14"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/brigandine_body_sheet"
         },
         {
           "id": "chausses",
           "displayName": "Chausses",
           "slot": "Legs",
-          "iconSheet": "Assets/_Project/Art/Items/brigandine_legs_sheet",
-          "baseStats": [
-            "physicalResistance 5"
-          ],
-          "topStats": [
-            "physicalResistance 11"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/brigandine_legs_sheet"
         },
         {
           "id": "gloves",
           "displayName": "Gloves",
           "slot": "Gloves",
-          "iconSheet": "Assets/_Project/Art/Items/brigandine_gloves_sheet",
-          "baseStats": [
-            "attack 1"
-          ],
-          "topStats": [
-            "attack 2"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/brigandine_gloves_sheet"
         },
         {
           "id": "boots",
           "displayName": "Boots",
           "slot": "Shoes",
-          "iconSheet": "Assets/_Project/Art/Items/brigandine_boots_sheet",
-          "baseStats": [
-            "speed 1"
-          ],
-          "topStats": [
-            "speed 2"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/brigandine_boots_sheet"
         }
       ]
     },
@@ -585,66 +406,41 @@
         "intelligence 50",
         "constitution 25"
       ],
+      "statProfile": [
+        "maxHealth 25",
+        "physicalDefense 45",
+        "magicalDefense 30"
+      ],
       "pieces": [
         {
           "id": "runehelm",
           "displayName": "Helm",
           "slot": "Head",
-          "iconSheet": "Assets/_Project/Art/Items/arcane_helmet_sheet",
-          "baseStats": [
-            "magicalResistance 3"
-          ],
-          "topStats": [
-            "magicalResistance 7"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/arcane_helmet_sheet"
         },
         {
           "id": "runeplate",
           "displayName": "Cuirass",
           "slot": "Torso",
-          "iconSheet": "Assets/_Project/Art/Items/arcane_cuirass_sheet",
-          "baseStats": [
-            "physicalResistance 8"
-          ],
-          "topStats": [
-            "physicalResistance 18"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/arcane_cuirass_sheet"
         },
         {
           "id": "runelegs",
           "displayName": "Legguards",
           "slot": "Legs",
-          "iconSheet": "Assets/_Project/Art/Items/arcane_sabatons_sheet",
-          "baseStats": [
-            "physicalResistance 6"
-          ],
-          "topStats": [
-            "physicalResistance 14"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/arcane_sabatons_sheet"
         },
         {
           "id": "runefists",
           "displayName": "Gauntlets",
           "slot": "Gloves",
-          "iconSheet": "Assets/_Project/Art/Items/arcane_gauntlets_sheet",
-          "baseStats": [
-            "manaRegen 1"
-          ],
-          "topStats": [
-            "manaRegen 2"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/arcane_gauntlets_sheet"
         },
         {
           "id": "runeshod",
           "displayName": "Sabatons",
           "slot": "Shoes",
-          "iconSheet": "Assets/_Project/Art/Items/arcane_boots_sheet",
-          "baseStats": [
-            "magicalResistance 2"
-          ],
-          "topStats": [
-            "magicalResistance 6"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/arcane_boots_sheet"
         }
       ]
     },
@@ -674,66 +470,41 @@
         "wisdom 50",
         "constitution 10"
       ],
+      "statProfile": [
+        "maxHealth 10",
+        "magicalDefense 55",
+        "manaRegen 35"
+      ],
       "pieces": [
         {
           "id": "hood",
           "displayName": "Scribe's Hood",
           "slot": "Head",
-          "iconSheet": "Assets/_Project/Art/Items/vellum_hood_sheet",
-          "baseStats": [
-            "manaRegen 2"
-          ],
-          "topStats": [
-            "manaRegen 5"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/vellum_hood_sheet"
         },
         {
           "id": "mantle",
           "displayName": "Mantle",
           "slot": "Torso",
-          "iconSheet": "Assets/_Project/Art/Items/vellum_robe_sheet",
-          "baseStats": [
-            "magicalResistance 7"
-          ],
-          "topStats": [
-            "magicalResistance 20"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/vellum_robe_sheet"
         },
         {
           "id": "wrap",
           "displayName": "Wrap",
           "slot": "Legs",
-          "iconSheet": "Assets/_Project/Art/Items/vellum_skirts_sheet",
-          "baseStats": [
-            "magicalResistance 6"
-          ],
-          "topStats": [
-            "magicalResistance 16"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/vellum_skirts_sheet"
         },
         {
           "id": "gloves",
           "displayName": "Ink-stained Gloves",
           "slot": "Gloves",
-          "iconSheet": "Assets/_Project/Art/Items/vellum_gloves_sheet",
-          "baseStats": [
-            "manaRegen 1"
-          ],
-          "topStats": [
-            "manaRegen 3"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/vellum_gloves_sheet"
         },
         {
           "id": "shoes",
           "displayName": "Scholar's Shoes",
           "slot": "Shoes",
-          "iconSheet": "Assets/_Project/Art/Items/vellum_slippers_sheet",
-          "baseStats": [
-            "magicalResistance 4"
-          ],
-          "topStats": [
-            "magicalResistance 10"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/vellum_slippers_sheet"
         }
       ]
     },
@@ -763,66 +534,42 @@
         "wisdom 50",
         "constitution 10"
       ],
+      "statProfile": [
+        "maxHealth 20",
+        "physicalDefense 10",
+        "magicalDefense 50",
+        "speed 20"
+      ],
       "pieces": [
         {
           "id": "mask",
           "displayName": "Summoner's Mask",
           "slot": "Head",
-          "iconSheet": "Assets/_Project/Art/Items/regalia_ritualmask_sheet",
-          "baseStats": [
-            "magicalResistance 4"
-          ],
-          "topStats": [
-            "magicalResistance 10"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/regalia_ritualmask_sheet"
         },
         {
           "id": "mantle",
           "displayName": "Regal Mantle",
           "slot": "Torso",
-          "iconSheet": "Assets/_Project/Art/Items/regalia_robes_sheet",
-          "baseStats": [
-            "magicalResistance 6"
-          ],
-          "topStats": [
-            "magicalResistance 16"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/regalia_robes_sheet"
         },
         {
           "id": "skirt",
           "displayName": "Ceremonial Skirt",
           "slot": "Legs",
-          "iconSheet": "Assets/_Project/Art/Items/regalia_skirt_sheet",
-          "baseStats": [
-            "magicalResistance 5"
-          ],
-          "topStats": [
-            "magicalResistance 13"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/regalia_skirt_sheet"
         },
         {
           "id": "gloves",
           "displayName": "Belled Gloves",
           "slot": "Gloves",
-          "iconSheet": "Assets/_Project/Art/Items/regalia_gloves_sheet",
-          "baseStats": [
-            "manaRegen 1"
-          ],
-          "topStats": [
-            "manaRegen 2"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/regalia_gloves_sheet"
         },
         {
           "id": "slippers",
           "displayName": "Ritual Slippers",
           "slot": "Shoes",
-          "iconSheet": "Assets/_Project/Art/Items/regalia_slippers_sheet",
-          "baseStats": [
-            "magicalResistance 3"
-          ],
-          "topStats": [
-            "magicalResistance 8"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/regalia_slippers_sheet"
         }
       ]
     },
@@ -851,66 +598,41 @@
         "charisma 100",
         "constitution 8"
       ],
+      "statProfile": [
+        "maxHealth 20",
+        "magicalDefense 45",
+        "speed 35"
+      ],
       "pieces": [
         {
           "id": "coronet",
           "displayName": "Coronet",
           "slot": "Head",
-          "iconSheet": "Assets/_Project/Art/Items/court_coronet_sheet",
-          "baseStats": [
-            "magicalResistance 2"
-          ],
-          "topStats": [
-            "magicalResistance 7"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/court_coronet_sheet"
         },
         {
           "id": "doublet",
           "displayName": "Doublet",
           "slot": "Torso",
-          "iconSheet": "Assets/_Project/Art/Items/court_doublet_sheet",
-          "baseStats": [
-            "magicalResistance 4"
-          ],
-          "topStats": [
-            "magicalResistance 12"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/court_doublet_sheet"
         },
         {
           "id": "hose",
           "displayName": "Hose",
           "slot": "Legs",
-          "iconSheet": "Assets/_Project/Art/Items/court_pantalon_sheets",
-          "baseStats": [
-            "magicalResistance 3"
-          ],
-          "topStats": [
-            "magicalResistance 10"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/court_pantalon_sheets"
         },
         {
           "id": "gloves",
           "displayName": "Silk Gloves",
           "slot": "Gloves",
-          "iconSheet": "Assets/_Project/Art/Items/court_gloves_sheet",
-          "baseStats": [
-            "magicalResistance 2"
-          ],
-          "topStats": [
-            "magicalResistance 5"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/court_gloves_sheet"
         },
         {
           "id": "shoes",
           "displayName": "Shoes",
           "slot": "Shoes",
-          "iconSheet": "Assets/_Project/Art/Items/court_boots_sheet",
-          "baseStats": [
-            "speed 1"
-          ],
-          "topStats": [
-            "speed 2"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/court_boots_sheet"
         }
       ]
     },
@@ -939,66 +661,42 @@
         "wisdom 80",
         "constitution 30"
       ],
+      "statProfile": [
+        "maxHealth 60",
+        "physicalDefense 10",
+        "magicalDefense 20",
+        "manaRegen 10"
+      ],
       "pieces": [
         {
           "id": "hood",
           "displayName": "Hood",
           "slot": "Head",
-          "iconSheet": "Assets/_Project/Art/Items/wool_hood_sheet",
-          "baseStats": [
-            "maxHealth 11"
-          ],
-          "topStats": [
-            "maxHealth 42"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/wool_hood_sheet"
         },
         {
           "id": "jumper",
           "displayName": "Jumper",
           "slot": "Torso",
-          "iconSheet": "Assets/_Project/Art/Items/wool_robes_sheet",
-          "baseStats": [
-            "maxHealth 18"
-          ],
-          "topStats": [
-            "maxHealth 70"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/wool_robes_sheet"
         },
         {
           "id": "leggings",
           "displayName": "Leggings",
           "slot": "Legs",
-          "iconSheet": "Assets/_Project/Art/Items/wool_pants_sheet",
-          "baseStats": [
-            "maxHealth 14"
-          ],
-          "topStats": [
-            "maxHealth 56"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/wool_pants_sheet"
         },
         {
           "id": "mittens",
           "displayName": "Mittens",
           "slot": "Gloves",
-          "iconSheet": "Assets/_Project/Art/Items/wool_gloves_sheet",
-          "baseStats": [
-            "manaRegen 1"
-          ],
-          "topStats": [
-            "manaRegen 2"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/wool_gloves_sheet"
         },
         {
           "id": "booties",
           "displayName": "Booties",
           "slot": "Shoes",
-          "iconSheet": "Assets/_Project/Art/Items/wool_booties_sheet",
-          "baseStats": [
-            "maxHealth 9"
-          ],
-          "topStats": [
-            "maxHealth 35"
-          ]
+          "iconSheet": "Assets/_Project/Art/Items/wool_booties_sheet"
         }
       ]
     }

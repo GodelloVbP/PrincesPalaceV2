@@ -16,7 +16,7 @@ namespace PrincesPalace.Content
         public CharacterRole role;
 
         [Tooltip("Stats before any talents are applied.")]
-        public StatBlock baseStats = new StatBlock(20, 10, 5, 3);
+        public StatBlock baseStats = new StatBlock(20, 10, 5);
 
         [Tooltip("Classic D&D-style ability scores before any talents are applied.")]
         public AbilityScoreBlock baseAbilityScores = new AbilityScoreBlock(10, 10, 10, 10, 10, 10);

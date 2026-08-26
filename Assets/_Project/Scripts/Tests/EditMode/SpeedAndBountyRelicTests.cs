@@ -25,8 +25,8 @@ namespace PrincesPalace.Domain.Tests
         private static (FightSession session, CombatantState hero, CombatantState foe) Fight(
             RelicEffect relic, int heroSpeed = 20, int heroHealth = 200)
         {
-            var hero = new CombatantState("Shawn", true, heroHealth, 999, 20, 0, heroSpeed);
-            var foe = new CombatantState("Dummy", false, 999999, 0, 1, 0, 1);
+            var hero = new CombatantState("Shawn", true, heroHealth, 999, 20, heroSpeed);
+            var foe = new CombatantState("Dummy", false, 999999, 0, 1, 1);
 
             var kit = new PlayerKit("hero", CharacterRole.Tank, null,
                 new List<ResolvedRelic> { Relic(relic) }, null);
@@ -138,8 +138,8 @@ namespace PrincesPalace.Domain.Tests
         {
             int EnemyActionsOver(RelicEffect? relic, int rounds)
             {
-                var hero = new CombatantState("Shawn", true, 999999, 999, 5, 0, 10);
-                var foe = new CombatantState("Dummy", false, 999999, 0, 10, 0, 11);
+                var hero = new CombatantState("Shawn", true, 999999, 999, 5, 10);
+                var foe = new CombatantState("Dummy", false, 999999, 0, 10, 11);
 
                 var bolt = new ResolvedSkill("bolt", "Bolt", "", "hero", 1,
                     SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, 0, 0, false, 0, 1, true,
@@ -282,8 +282,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TwoSpeedRelicsBothMeasureAgainstTheSameTrueBase()
         {
-            var hero = new CombatantState("Shawn", true, 999999, 999, 20, 0, 100);
-            var foe = new CombatantState("Dummy", false, 999999, 0, 1, 0, 1);
+            var hero = new CombatantState("Shawn", true, 999999, 999, 20, 100);
+            var foe = new CombatantState("Dummy", false, 999999, 0, 1, 1);
 
             var relics = new List<ResolvedRelic>
             {
@@ -314,8 +314,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void KillingSomethingPaysWithTheContract()
         {
-            var hero = new CombatantState("Shawn", true, 9999, 999, 999, 0, 20);
-            var foe = new CombatantState("Weakling", false, 1, 0, 0, 0, 1);
+            var hero = new CombatantState("Shawn", true, 9999, 999, 999, 20);
+            var foe = new CombatantState("Weakling", false, 1, 0, 0, 1);
 
             var enemy = new ResolvedEnemy("weakling", "Weakling", new StatBlock(), 30, 5, false,
                 DamageType.Physical, DamageType.Physical, 0);
@@ -355,8 +355,8 @@ namespace PrincesPalace.Domain.Tests
         {
             int GoldFrom(bool wearingTheContract)
             {
-                var hero = new CombatantState("Shawn", true, 9999, 999, 999, 0, 20);
-                var foe = new CombatantState("Weakling", false, 1, 0, 0, 0, 1);
+                var hero = new CombatantState("Shawn", true, 9999, 999, 999, 20);
+                var foe = new CombatantState("Weakling", false, 1, 0, 0, 1);
 
                 var enemy = new ResolvedEnemy("weakling", "Weakling", new StatBlock(), 200, 5, false,
                     DamageType.Physical, DamageType.Fire, 0);
@@ -391,8 +391,8 @@ namespace PrincesPalace.Domain.Tests
         {
             int Payout(int expReward)
             {
-                var hero = new CombatantState("Shawn", true, 9999, 999, 999, 0, 20);
-                var foe = new CombatantState("Target", false, 1, 0, 0, 0, 1);
+                var hero = new CombatantState("Shawn", true, 9999, 999, 999, 20);
+                var foe = new CombatantState("Target", false, 1, 0, 0, 1);
 
                 var enemy = new ResolvedEnemy("target", "Target", new StatBlock(), expReward, 5, false,
                     DamageType.Physical, DamageType.Physical, 0);
@@ -422,9 +422,9 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ADamageAllSpellStillGetsThePotencyBonus()
         {
-            var hero = new CombatantState("Shawn", true, 999999, 999, 20, 0, 10);
-            var foeA = new CombatantState("A", false, 999999, 0, 1, 0, 1);
-            var foeB = new CombatantState("B", false, 999999, 0, 1, 0, 1);
+            var hero = new CombatantState("Shawn", true, 999999, 999, 20, 10);
+            var foeA = new CombatantState("A", false, 999999, 0, 1, 1);
+            var foeB = new CombatantState("B", false, 999999, 0, 1, 1);
 
             var sweep = new ResolvedSkill("sweep", "Sweep", "", "hero", 1,
                 SkillEffect.DamageAll, SkillTargeting.AllEnemies, 0, 0, false, 0, 50, true,

@@ -19,10 +19,9 @@ MonoBehaviour:
     maxHealth: 200
     speed: 10
     attack: 7
-    defense: 4
     manaRegen: 0
-    physicalResistance: 0
-    magicalResistance: 0
+    physicalDefense: 32
+    magicalDefense: 16
   baseAbilityScores:
     strength: 7
     dexterity: 7

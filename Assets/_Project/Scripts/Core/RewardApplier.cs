@@ -35,6 +35,34 @@ namespace PrincesPalace
             var squad = save.ActiveSquad();
             var fielded = new HashSet<string>(fieldedIds ?? new List<string>());
 
+            // FORTUNATE: writes the item-modifier plan's run-scoped favour
+            // the moment a fight is WON. This method's only caller
+            // (FightBootstrap) reaches it exclusively on the won path -- a
+            // loss returns via RunManager.EndRun before a payout is ever
+            // computed -- so "Apply ran" already means "the fight was won".
+            //
+            // Gated on the FIELDED squad only, the same set XP is paid to
+            // just below, and takes the STRONGEST Fortunate item across
+            // them rather than summing every wearer -- matching
+            // ItemOfferRoll.SquadFavor's own "highest, never total" rule for
+            // the exact same resource, so a player cannot inflate their
+            // Favor income by fielding more Fortunate-wearers rather than
+            // fielding the right five.
+            if (save.activeRun != null)
+            {
+                int favorGain = 0;
+                foreach (var member in squad)
+                {
+                    if (member == null || !fielded.Contains(member.definitionId)) continue;
+
+                    int granted = Content.ContentDatabase.ModifierEffects(member)
+                        .Best(Domain.Combat.ModifierEffectType.FortunateFavorOnWin);
+                    if (granted > favorGain) favorGain = granted;
+                }
+
+                if (favorGain > 0) save.activeRun.runFavor += favorGain;
+            }
+
             for (int slot = 0; slot < squad.Count; slot++)
             {
                 var character = squad[slot];

@@ -91,7 +91,28 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.AreEqual(definition.baseStats.maxHealth, enemy.MaxHealth);
             Assert.AreEqual(definition.baseStats.attack, enemy.Attack);
-            Assert.AreEqual(definition.baseStats.defense, enemy.Defense);
+            // Defenses aren't on the depth curve at all any more (see the
+            // next test), so at step 0 this is trivially the authored value
+            // -- kept here anyway so this test still fully pins the surface.
+            Assert.AreEqual(definition.baseStats.physicalDefense, enemy.PhysicalDefense);
+            Assert.AreEqual(definition.baseStats.magicalDefense, enemy.MagicalDefense);
+        }
+
+        // PHASE 5B (D6): enemy defenses no longer depth-scale at all -- used
+        // at their authored, step-0 value regardless of how deep the fight
+        // is. The R_broad/(100+R_broad) mitigation curve is already
+        // asymptotic on its own; scaling a defense on top of it double-dips
+        // and was running boss time-to-kill away past floor 4.
+        [Test]
+        public void DefensesAreNotScaledByDepth()
+        {
+            var surface = Enemy(0);
+            var deep = Enemy(80);
+
+            Assert.AreEqual(surface.PhysicalDefense, deep.PhysicalDefense,
+                "PhysicalDefense has been put back on the depth curve; D6 says it must not be");
+            Assert.AreEqual(surface.MagicalDefense, deep.MagicalDefense,
+                "MagicalDefense has been put back on the depth curve; D6 says it must not be");
         }
 
         // Non-vacuity, stated rather than assumed: if the curve were flat this

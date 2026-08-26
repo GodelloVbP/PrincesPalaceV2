@@ -3,7 +3,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
-using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
@@ -502,14 +501,21 @@ namespace PrincesPalace
             if (enemy.BreakShield != null && enemy.BreakShield.IsBroken) tags.Add("REELING");
             foreach (var status in enemy.Statuses) tags.Add(status.Type.ToString().ToUpperInvariant());
 
-            // SLOWED and MARKED are not StatusEffectType entries -- see
-            // FightSession.Relics.LuckyDeckSlow and .ApplyMark for why each
-            // stays outside that system. This is the display half of both,
-            // read back from the session that actually holds the mechanical
-            // truth rather than duplicated onto the combatant itself.
+            // MARKED is not a StatusEffectType entry -- see
+            // FightSession.Relics.ApplyMark for why it stays outside that
+            // system. This is its display half, read back from the session
+            // that actually holds the mechanical truth rather than
+            // duplicated onto the combatant itself.
+            //
+            // SLOWED used to live here the same way, reading
+            // SpeedBonusFrom(enemy, RelicEffect.LuckyDeck) < 0 -- Lucky
+            // Deck's slow was not a status either, before Phase D2 (item-
+            // modifier plan) migrated it onto StatusEffectType.Chilled. Now
+            // that it IS one, the `foreach` above already adds a "CHILLED"
+            // tag from enemy.Statuses directly; a second, differently-named
+            // SLOWED tag here would just be the same fact shown twice.
             if (session != null)
             {
-                if (session.SpeedBonusFrom(enemy, RelicEffect.LuckyDeck) < 0) tags.Add("SLOWED");
                 if (session.IsMarked(enemy)) tags.Add("MARKED");
             }
 

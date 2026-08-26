@@ -6,39 +6,57 @@ namespace PrincesPalace.Domain.Tests
 {
     public class CombatMathTests
     {
-        private static CombatantState MakeCombatant(int attack = 5, int defense = 2, int maxHealth = 20, int maxMana = 10, int speed = 5)
+        private static CombatantState MakeCombatant(int attack = 5, int physicalDefense = 2, int magicalDefense = 2,
+            int maxHealth = 20, int maxMana = 10, int speed = 5)
         {
-            return new CombatantState("Test", true, maxHealth, maxMana, attack, defense, speed);
+            var combatant = new CombatantState("Test", true, maxHealth, maxMana, attack, speed);
+            combatant.PhysicalDefense = physicalDefense;
+            combatant.MagicalDefense = magicalDefense;
+            return combatant;
         }
 
+        // ---- ComputeAttackDamage / ComputeSkillDamage: RAW, no mitigation --
+        //
+        // Phase 1 of the balance redesign moved every defense term out of
+        // CombatMath and into DamagePipeline's single canonical equation
+        // (see its own header) — these two functions never read the target
+        // for anything but its type signature (kept for call-site
+        // stability).
+        //
+        // NO LONGER SCALED (fixed 2026-08-26): D1 always said
+        // CombatMath.DamageScale's x5 was deleted from these two entry
+        // points; two prior implementation passes left it in regardless.
+        // They now return Math.Max(1, ScaledAttack(...)) -- see
+        // ComputeAttackDamage's own header for the full story.
+
         [Test]
-        public void ComputeAttackDamage_SoftensTheSwingByDefense()
+        public void ComputeAttackDamage_IsUnaffectedByTheTargetsDefense()
         {
             var attacker = MakeCombatant(attack: 10);
-            var target = MakeCombatant(defense: 3);
+            var lightlyArmoured = MakeCombatant(physicalDefense: 3);
+            var heavilyArmoured = MakeCombatant(physicalDefense: 500);
 
-            // 10 attack x 12/(12+3) = 8 of it lands, x5 for the health scale
-            // (CombatMath.DamageScale). Was 35 while armour subtracted.
-            Assert.AreEqual(40, CombatMath.ComputeAttackDamage(attacker, target));
+            // 10 attack, no grades -> 1.0x, regardless of either target.
+            Assert.AreEqual(10, CombatMath.ComputeAttackDamage(attacker, lightlyArmoured));
+            Assert.AreEqual(10, CombatMath.ComputeAttackDamage(attacker, heavilyArmoured));
         }
 
         [Test]
-        public void ComputeAttackDamage_NeverGoesBelowTheFlooredMinimum()
+        public void ComputeAttackDamage_FlooredAtOneBeforeTheScale()
         {
-            var attacker = MakeCombatant(attack: 2);
-            var target = MakeCombatant(defense: 50);
+            var attacker = MakeCombatant(attack: 0);
+            var target = MakeCombatant();
 
-            // Floored at 1 BEFORE the scale, so the worst case is a scaled 5
-            // rather than a scaled 0 — defense can never make a target
-            // unhittable, at either end of the multiplication.
-            Assert.AreEqual(5, CombatMath.ComputeAttackDamage(attacker, target));
+            // Floored at 1 directly -- see ComputeAttackDamage's own header —
+            // so a zero attack still lands for 1, never 0.
+            Assert.AreEqual(1, CombatMath.ComputeAttackDamage(attacker, target));
         }
 
         [Test]
         public void ComputeSkillDamage_HitsHarderThanABasicAttack()
         {
             var attacker = MakeCombatant(attack: 10);
-            var target = MakeCombatant(defense: 3);
+            var target = MakeCombatant(physicalDefense: 3);
 
             int attackDamage = CombatMath.ComputeAttackDamage(attacker, target);
             int skillDamage = CombatMath.ComputeSkillDamage(attacker, target, powerMultiplier: 1.5f);
@@ -46,55 +64,144 @@ namespace PrincesPalace.Domain.Tests
             Assert.Greater(skillDamage, attackDamage);
         }
 
-        // ---- EffectiveDefense / Break -------------------------------------
+        [Test]
+        public void ComputeSkillDamage_FlooredAtOneBeforeTheScale()
+        {
+            var attacker = MakeCombatant(attack: 0);
+            var target = MakeCombatant();
+
+            Assert.AreEqual(1, CombatMath.ComputeSkillDamage(attacker, target, powerMultiplier: 1.5f));
+        }
+
+        // ---- BroadDefense / TotalDefense -- the D_broad and D_broad+D_typed
+        // terms of DamagePipeline's canonical equation. See its own header
+        // for the full formula; these pin each modifier in isolation.
 
         [Test]
-        public void EffectiveDefense_NoBreakShield_IsJustDefense()
+        public void BroadDefense_NoModifiers_ReadsThePhysicalOrMagicalStatByType()
         {
-            var target = MakeCombatant(defense: 7);
-            Assert.AreEqual(7, CombatMath.EffectiveDefense(target));
+            var target = MakeCombatant(physicalDefense: 7, magicalDefense: 15);
+
+            Assert.AreEqual(7, CombatMath.BroadDefense(target, DamageType.Physical, null, false));
+            Assert.AreEqual(15, CombatMath.BroadDefense(target, DamageType.Fire, null, false));
+            Assert.AreEqual(15, CombatMath.BroadDefense(target, DamageType.Ice, null, false), "every non-Physical type reads MagicalDefense");
         }
 
         [Test]
-        public void EffectiveDefense_BreakShieldPresentButNotBroken_IsStillJustDefense()
+        public void BroadDefense_IgnoresDefenseFlag_IsZeroRegardlessOfTheStat()
         {
-            var target = MakeCombatant(defense: 7);
+            var target = MakeCombatant(physicalDefense: 40);
+
+            Assert.AreEqual(0, CombatMath.BroadDefense(target, DamageType.Physical, null, ignoresDefense: true));
+        }
+
+        [Test]
+        public void BroadDefense_NullTarget_IsZeroRatherThanThrowing()
+        {
+            Assert.AreEqual(0, CombatMath.BroadDefense(null, DamageType.Physical, null, false));
+        }
+
+        [Test]
+        public void BroadDefense_BreakShieldPresentButNotBroken_IsStillJustTheStat()
+        {
+            var target = MakeCombatant(physicalDefense: 40);
             target.BreakShield = new BreakShield(10);
 
-            Assert.AreEqual(7, CombatMath.EffectiveDefense(target));
+            Assert.AreEqual(40, CombatMath.BroadDefense(target, DamageType.Physical, null, false));
         }
 
         [Test]
-        public void EffectiveDefense_Broken_IsZero()
+        public void BroadDefense_Broken_IsZero()
         {
-            var target = MakeCombatant(defense: 7);
+            var target = MakeCombatant(physicalDefense: 40);
             target.BreakShield = new BreakShield(3);
             target.BreakShield.Deplete(3);
 
             Assert.IsTrue(target.BreakShield.IsBroken, "Sanity check on the fixture");
-            Assert.AreEqual(0, CombatMath.EffectiveDefense(target));
+            Assert.AreEqual(0, CombatMath.BroadDefense(target, DamageType.Physical, null, false));
         }
 
         [Test]
-        public void EffectiveDefense_NullTarget_IsZeroRatherThanThrowing()
+        public void BroadDefense_LastStandBonusBelowHealth_IncreasesTheFigure()
         {
-            Assert.AreEqual(0, CombatMath.EffectiveDefense(null));
+            var target = MakeCombatant(physicalDefense: 40, maxHealth: 100);
+            target.CurrentHealth = 20; // 20% -- at or below the 25% threshold below
+            target.Talents = new TalentEffectSet(new[]
+            {
+                new TalentEffect(TalentEffectType.DefenseBonusPercentBelowHealth, 50, 25),
+            });
+
+            // +50% of 40 = 20, so 40 + 20 = 60.
+            Assert.AreEqual(60, CombatMath.BroadDefense(target, DamageType.Physical, null, false));
         }
 
-        // The whole point: a broken target actually takes more damage than
-        // the same hit would deal against it undamaged, through the same
-        // ComputeAttackDamage formula every other attack uses — no special
-        // "Break bonus damage" branch anywhere in the pipeline.
         [Test]
-        public void ComputeAttackDamage_AgainstABrokenTarget_IgnoresDefenseEntirely()
+        public void BroadDefense_BreakOverridesTheLastStandBonus()
         {
-            var attacker = MakeCombatant(attack: 10);
-            var target = MakeCombatant(defense: 8);
-            target.BreakShield = new BreakShield(5);
-            target.BreakShield.Deplete(5);
+            var target = MakeCombatant(physicalDefense: 40, maxHealth: 100);
+            target.CurrentHealth = 20;
+            target.Talents = new TalentEffectSet(new[]
+            {
+                new TalentEffect(TalentEffectType.DefenseBonusPercentBelowHealth, 50, 25),
+            });
+            target.BreakShield = new BreakShield(3);
+            target.BreakShield.Deplete(3);
 
-            // 10 attack - 0 effective defense = 10, x5 for the health scale.
-            Assert.AreEqual(50, CombatMath.ComputeAttackDamage(attacker, target));
+            Assert.AreEqual(0, CombatMath.BroadDefense(target, DamageType.Physical, null, false));
+        }
+
+        [Test]
+        public void BroadDefense_AttackerPenetration_ReducesWhatIsLeft()
+        {
+            var target = MakeCombatant(physicalDefense: 40);
+            var attacker = MakeCombatant();
+            attacker.Talents = new TalentEffectSet(new[]
+            {
+                new TalentEffect(TalentEffectType.IgnoreDefensePercent, 25),
+            });
+
+            // 40 minus 25% = 30.
+            Assert.AreEqual(30, CombatMath.BroadDefense(target, DamageType.Physical, attacker, false));
+        }
+
+        [Test]
+        public void BroadDefense_NoAttacker_SkipsPenetrationRatherThanThrowing()
+        {
+            var target = MakeCombatant(physicalDefense: 40);
+
+            Assert.AreEqual(40, CombatMath.BroadDefense(target, DamageType.Physical, null, false));
+        }
+
+        [Test]
+        public void TotalDefense_SumsBroadAndTyped()
+        {
+            var target = MakeCombatant(magicalDefense: 10);
+            target.TypedResistance = target.TypedResistance.With(DamageType.Fire, 15);
+
+            Assert.AreEqual(25, CombatMath.TotalDefense(target, DamageType.Fire, null, false));
+        }
+
+        [Test]
+        public void TotalDefense_TypedResistance_SurvivesABrokenBreakShield()
+        {
+            var target = MakeCombatant(magicalDefense: 10);
+            target.TypedResistance = target.TypedResistance.With(DamageType.Fire, 15);
+            target.BreakShield = new BreakShield(3);
+            target.BreakShield.Deplete(3);
+
+            // The broad term zeroes on break; the typed term does not -- see
+            // TotalDefense's own header.
+            Assert.AreEqual(15, CombatMath.TotalDefense(target, DamageType.Fire, null, false));
+        }
+
+        [Test]
+        public void TotalDefense_IgnoresDefenseFlag_StillAppliesTypedResistance()
+        {
+            var target = MakeCombatant(magicalDefense: 10);
+            target.TypedResistance = target.TypedResistance.With(DamageType.Fire, 15);
+
+            // The broad term is skipped by the flag; typed is not.
+            Assert.AreEqual(15, CombatMath.TotalDefense(target, DamageType.Fire, null, ignoresDefense: true));
         }
 
         // ---- ApplyStatusEffects ---------------------------------------------
@@ -141,91 +248,66 @@ namespace PrincesPalace.Domain.Tests
         // without scaling, so a combatant nobody has authored grades for must
         // hit for exactly what it always did.
         [Test]
-        public void ACombatantWithNoGrades_HitsForExactlyWhatItAlwaysDid()
+        public void ACombatantWithNoGrades_HitsForAttackTimesTheScale()
         {
-            var attacker = new CombatantState("A", true, 100, 0, attack: 20, defense: 0, speed: 10);
-            var target = new CombatantState("B", false, 100, 0, attack: 0, defense: 13, speed: 10);
+            var attacker = new CombatantState("A", true, 100, 0, attack: 20, speed: 10);
+            var target = new CombatantState("B", false, 100, 0, attack: 0, speed: 10);
 
-            // 20 attack x 12/(12+13) = 9.6, rounded to 10, x5. The property
-            // is that this equals the UNGRADED figure -- not that it equals
-            // any particular historical one, since a retune moves the number
-            // and must not be able to move it only here.
-            Assert.AreEqual(50, CombatMath.ComputeAttackDamage(attacker, target));
+            // No WeaponScaling authored -> neutral 1.0x. 20 attack, raw.
+            Assert.AreEqual(20, CombatMath.ComputeAttackDamage(attacker, target));
         }
 
         [Test]
         public void WeaponScaling_MultipliesABasicAttack()
         {
-            var attacker = new CombatantState("A", true, 100, 0, attack: 20, defense: 0, speed: 10);
-            var target = new CombatantState("B", false, 100, 0, attack: 0, defense: 10, speed: 10);
+            var attacker = new CombatantState("A", true, 100, 0, attack: 20, speed: 10);
+            var target = new CombatantState("B", false, 100, 0, attack: 0, speed: 10);
 
             attacker.WeaponScaling = ScalingProfile.None.With(AbilityScore.Strength, ScalingGrade.S);
             attacker.AbilityScores = new AbilityScoreBlock(20, 10, 10, 10, 10, 10);
 
-            // S at Strength 20 is 2.00x: 20 attack becomes 40, of which
-            // 12/(12+10) lands -- 21.8, rounded to 22 -- times the x5 scale.
-            Assert.AreEqual(110, CombatMath.ComputeAttackDamage(attacker, target));
+            // S at Strength 20 is 2.00x: 20 attack becomes 40, raw. No
+            // defense term and no DamageScale touch this any more.
+            Assert.AreEqual(40, CombatMath.ComputeAttackDamage(attacker, target));
         }
 
-        // PROPORTIONAL MITIGATION, and this REPLACES a test rather than
-        // joining them.
-        //
-        // What stood here pinned "scaling is applied before defense, not
-        // after": 150, "not the 100 that doubling (20 - 10) * 5 would give".
-        // That was a real distinction only while armour SUBTRACTED, because
-        // multiplication does not commute with subtraction -- so where the
-        // multiplier landed changed the answer, and landing it on the finished
-        // figure would have made armour worth half as much against exactly the
-        // swings it most needs to blunt.
-        //
-        // CombatMath.Mitigate scales instead of subtracting, so the two orders
-        // are now the same arithmetic and NO test can tell them apart. Dropped
-        // rather than re-pinned at a new number: a test that cannot fail is
-        // worse than no test, because it reads like cover.
-        //
-        // What replaces it is the property that made the change worth making.
-        // Armour removes a FRACTION, so twice the attack is twice the damage
-        // at every armour level and there is no threshold to fall off -- which
-        // is exactly what subtraction could not do, and why a floor-one boss
-        // with Defense 9 took 130 turns to kill.
+        // PROPORTIONAL MITIGATION used to be a property of ComputeAttackDamage
+        // itself, back when it applied Mitigate internally. That step moved to
+        // DamagePipeline.AfterDefences (see DamagePipelineTests for the
+        // property test that replaces this one) — ComputeAttackDamage no
+        // longer reads the target for anything, which is exactly what this
+        // now pins instead.
         [Test]
-        public void DoublingTheAttack_DoublesTheDamageAtEveryArmourLevel()
+        public void ComputeAttackDamage_IsIndependentOfTheTargetsArmour()
         {
-            var plain = new CombatantState("A", true, 100, 0, attack: 20, defense: 0, speed: 10);
+            var attacker = new CombatantState("A", true, 100, 0, attack: 20, speed: 10);
+            attacker.WeaponScaling = ScalingProfile.None.With(AbilityScore.Strength, ScalingGrade.S);
+            attacker.AbilityScores = new AbilityScoreBlock(20, 10, 10, 10, 10, 10);
 
-            var doubled = new CombatantState("B", true, 100, 0, attack: 20, defense: 0, speed: 10);
-            doubled.WeaponScaling = ScalingProfile.None.With(AbilityScore.Strength, ScalingGrade.S);
-            doubled.AbilityScores = new AbilityScoreBlock(20, 10, 10, 10, 10, 10);
+            var naked = new CombatantState("Naked", false, 100, 0, attack: 0, speed: 10);
+            var wall = new CombatantState("Wall", false, 100, 0, attack: 0, speed: 10);
+            wall.PhysicalDefense = 500;
+            wall.MagicalDefense = 500;
 
-            // Ordinary armour: 20 x 12/22 = 10.9 -> 11 -> 55, and the doubled
-            // swing 40 x 12/22 = 21.8 -> 22 -> 110.
-            var armoured = new CombatantState("T", false, 100, 0, attack: 0, defense: 10, speed: 10);
-            Assert.AreEqual(55, CombatMath.ComputeAttackDamage(plain, armoured));
-            Assert.AreEqual(110, CombatMath.ComputeAttackDamage(doubled, armoured));
-
-            // A WALL, which is where the old formula died. 20 x 12/112 = 2.1
-            // -> 2 -> 10, and 40 x 12/112 = 4.3 -> 4 -> 20. Subtraction handed
-            // both of them the floor of 5, so the second character's entire
-            // weapon was worth precisely nothing.
-            var wall = new CombatantState("W", false, 100, 0, attack: 0, defense: 100, speed: 10);
-            Assert.AreEqual(10, CombatMath.ComputeAttackDamage(plain, wall));
-            Assert.AreEqual(20, CombatMath.ComputeAttackDamage(doubled, wall));
+            Assert.AreEqual(
+                CombatMath.ComputeAttackDamage(attacker, naked),
+                CombatMath.ComputeAttackDamage(attacker, wall));
         }
 
         [Test]
         public void AWeaponTheWielderIsWrongFor_HitsSofterThanNoScalingAtAll()
         {
-            var target = new CombatantState("B", false, 100, 0, attack: 0, defense: 5, speed: 10);
+            var target = new CombatantState("B", false, 100, 0, attack: 0, speed: 10);
 
-            var matched = new CombatantState("A", true, 100, 0, attack: 20, defense: 0, speed: 10);
+            var matched = new CombatantState("A", true, 100, 0, attack: 20, speed: 10);
             matched.WeaponScaling = ScalingProfile.None.With(AbilityScore.Strength, ScalingGrade.A);
             matched.AbilityScores = new AbilityScoreBlock(18, 10, 10, 10, 10, 10);
 
-            var mismatched = new CombatantState("C", true, 100, 0, attack: 20, defense: 0, speed: 10);
+            var mismatched = new CombatantState("C", true, 100, 0, attack: 20, speed: 10);
             mismatched.WeaponScaling = matched.WeaponScaling;
             mismatched.AbilityScores = new AbilityScoreBlock(6, 10, 10, 10, 10, 10);
 
-            var plain = new CombatantState("D", true, 100, 0, attack: 20, defense: 0, speed: 10);
+            var plain = new CombatantState("D", true, 100, 0, attack: 20, speed: 10);
 
             int matchedHit = CombatMath.ComputeAttackDamage(matched, target);
             int plainHit = CombatMath.ComputeAttackDamage(plain, target);
@@ -239,48 +321,39 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void SkillScaling_IsASeparateAxisFromTheWeapon()
         {
-            var attacker = new CombatantState("A", true, 100, 0, attack: 20, defense: 0, speed: 10);
-            var target = new CombatantState("B", false, 100, 0, attack: 0, defense: 0, speed: 10);
+            var attacker = new CombatantState("A", true, 100, 0, attack: 20, speed: 10);
+            var target = new CombatantState("B", false, 100, 0, attack: 0, speed: 10);
 
             attacker.WeaponScaling = ScalingProfile.None.With(AbilityScore.Strength, ScalingGrade.S);
             attacker.SkillScaling = ScalingProfile.None.With(AbilityScore.Intelligence, ScalingGrade.S);
             // Strong, and not at all clever.
             attacker.AbilityScores = new AbilityScoreBlock(20, 10, 10, 10, 10, 10);
 
-            // The swing gets the Strength: 20 * 2.00 = 40, x5.
-            Assert.AreEqual(200, CombatMath.ComputeAttackDamage(attacker, target));
+            // The swing gets the Strength: 20 * 2.00 = 40, raw.
+            Assert.AreEqual(40, CombatMath.ComputeAttackDamage(attacker, target));
             // The cast does not: Intelligence is neutral, so only the tier's
-            // 1.5x applies. 20 * 1.5 = 30, x5.
-            Assert.AreEqual(150, CombatMath.ComputeSkillDamage(attacker, target, powerMultiplier: 1.5f));
+            // 1.5x applies. 20 * 1.5 = 30, raw.
+            Assert.AreEqual(30, CombatMath.ComputeSkillDamage(attacker, target, powerMultiplier: 1.5f));
         }
 
         [Test]
         public void SkillScaling_MultipliesAlongsideTheTierRatherThanReplacingIt()
         {
-            var attacker = new CombatantState("A", true, 100, 0, attack: 20, defense: 0, speed: 10);
-            var target = new CombatantState("B", false, 100, 0, attack: 0, defense: 0, speed: 10);
+            var attacker = new CombatantState("A", true, 100, 0, attack: 20, speed: 10);
+            var target = new CombatantState("B", false, 100, 0, attack: 0, speed: 10);
 
             attacker.SkillScaling = ScalingProfile.None.With(AbilityScore.Intelligence, ScalingGrade.S);
             attacker.AbilityScores = new AbilityScoreBlock(10, 10, 10, 10, 20, 10);
 
-            // 2.00x scaling on top of the tier's 1.5x: 20 * 3.0 = 60, x5.
-            Assert.AreEqual(300, CombatMath.ComputeSkillDamage(attacker, target, powerMultiplier: 1.5f));
-        }
-
-        [Test]
-        public void ComputeSkillDamage_NeverGoesBelowTheFlooredMinimum()
-        {
-            var attacker = MakeCombatant(attack: 1);
-            var target = MakeCombatant(defense: 50);
-
-            Assert.AreEqual(5, CombatMath.ComputeSkillDamage(attacker, target, powerMultiplier: 1.5f));
+            // 2.00x scaling on top of the tier's 1.5x: 20 * 3.0 = 60, raw.
+            Assert.AreEqual(60, CombatMath.ComputeSkillDamage(attacker, target, powerMultiplier: 1.5f));
         }
 
         [Test]
         public void ComputeSkillDamage_HigherPowerMultiplier_DealsMoreDamage()
         {
             var attacker = MakeCombatant(attack: 10);
-            var target = MakeCombatant(defense: 3);
+            var target = MakeCombatant(physicalDefense: 3);
 
             int lowTierDamage = CombatMath.ComputeSkillDamage(attacker, target, powerMultiplier: 1.5f);
             int highTierDamage = CombatMath.ComputeSkillDamage(attacker, target, powerMultiplier: 4.2f);
@@ -544,32 +617,5 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(CombatMath.IsPhysical(DamageType.Arcane));
         }
 
-        [Test]
-        public void ResistanceAgainst_PhysicalDamage_ReadsPhysicalResistance()
-        {
-            var target = MakeCombatant();
-            target.PhysicalResistance = 12;
-            target.MagicalResistance = 40;
-
-            Assert.AreEqual(12, CombatMath.ResistanceAgainst(target, DamageType.Physical));
-        }
-
-        [Test]
-        public void ResistanceAgainst_AnyElement_ReadsMagicalResistance()
-        {
-            var target = MakeCombatant();
-            target.PhysicalResistance = 12;
-            target.MagicalResistance = 40;
-
-            Assert.AreEqual(40, CombatMath.ResistanceAgainst(target, DamageType.Fire));
-            Assert.AreEqual(40, CombatMath.ResistanceAgainst(target, DamageType.Ice));
-            Assert.AreEqual(40, CombatMath.ResistanceAgainst(target, DamageType.Arcane));
-        }
-
-        [Test]
-        public void ResistanceAgainst_NullTarget_IsZero()
-        {
-            Assert.AreEqual(0, CombatMath.ResistanceAgainst(null, DamageType.Physical));
-        }
     }
 }

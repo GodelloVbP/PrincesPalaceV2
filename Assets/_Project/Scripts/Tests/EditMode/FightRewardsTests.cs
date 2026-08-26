@@ -189,8 +189,8 @@ namespace PrincesPalace.Domain.Tests
         private static (FightSession session, CombatantState hero, CombatEncounter encounter) WinnableFight(
             PlayerKit kit = null)
         {
-            var hero = new CombatantState("Hero", true, 500, 10, 50, 0, 10);
-            var doomed = new CombatantState("Doomed", false, 1, 10, 5, 0, 1);
+            var hero = new CombatantState("Hero", true, 500, 10, 50, 10);
+            var doomed = new CombatantState("Doomed", false, 1, 10, 5, 1);
             var encounter = new CombatEncounter(new[] { hero }, new[] { doomed });
             var session = new FightSession(encounter,
                 kit == null ? null : new List<PlayerKit> { kit }, null, new SeededRandom(1))
@@ -242,8 +242,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void NobodyCelebratesAFightThatIsStillRunning()
         {
-            var hero = new CombatantState("Hero", true, 500, 10, 20, 0, 10);
-            var tank = new CombatantState("Tank", false, 1000, 10, 5, 0, 1);
+            var hero = new CombatantState("Hero", true, 500, 10, 20, 10);
+            var tank = new CombatantState("Tank", false, 1000, 10, 5, 1);
             var encounter = new CombatEncounter(new[] { hero }, new[] { tank });
             var session = new FightSession(encounter,
                 new List<PlayerKit> { new PlayerKit("shawn", CharacterRole.Tank, null, null, null) },
@@ -258,8 +258,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ALostFightIsNotAVictory()
         {
-            var doomedHero = new CombatantState("Hero", true, 1, 10, 1, 0, 1);
-            var killer = new CombatantState("Killer", false, 1000, 10, 500, 0, 10);
+            var doomedHero = new CombatantState("Hero", true, 1, 10, 1, 1);
+            var killer = new CombatantState("Killer", false, 1000, 10, 500, 10);
             var encounter = new CombatEncounter(new[] { doomedHero }, new[] { killer });
             var session = new FightSession(encounter, null,
                 new List<EnemyKit> { Kit(0, 0, "Killer") }, new SeededRandom(1))

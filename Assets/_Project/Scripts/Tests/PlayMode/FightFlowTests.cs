@@ -91,13 +91,13 @@ namespace PrincesPalace.PlayModeTests
             _fight = Object.FindAnyObjectByType<FightController>();
             Assert.IsNotNull(_fight, "the Fight scene has no FightController");
 
-            var hero = new CombatantState("Shawn", true, 300, heroMana, 40, 0, 10);
+            var hero = new CombatantState("Shawn", true, 300, heroMana, 40, 10);
             hero.Signature = new SignatureResource("wool", "Wool", 16, 0, 2, 0);
 
             var foes = new[]
             {
-                new CombatantState("Front", false, foeHealth, 10, 8, 0, 4),
-                new CombatantState("Back", false, foeHealth, 10, 8, 0, 3),
+                new CombatantState("Front", false, foeHealth, 10, 8, 4),
+                new CombatantState("Back", false, foeHealth, 10, 8, 3),
             };
 
             _front = foes[0];

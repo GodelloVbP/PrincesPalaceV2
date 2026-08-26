@@ -7,7 +7,7 @@ namespace PrincesPalace.Domain.Tests
     public class CombatBeatTests
     {
         private static CombatantState Fighter(string name, bool isPlayerSide, int maxHealth = 20) =>
-            new CombatantState(name, isPlayerSide, maxHealth, 10, 5, 2, 5);
+            new CombatantState(name, isPlayerSide, maxHealth, 10, 5, 5);
 
         // --- ImpactFraction -------------------------------------------------
 

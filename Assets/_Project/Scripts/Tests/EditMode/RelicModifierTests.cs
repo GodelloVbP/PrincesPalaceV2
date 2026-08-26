@@ -62,7 +62,7 @@ namespace PrincesPalace.Domain.Tests
         public void AModifierForAnotherStatIsIgnored()
         {
             int result = RelicModifiers.Apply(100, RelicStat.Attack,
-                new[] { Mod(RelicModifierType.DefencePercent, 500) });
+                new[] { Mod(RelicModifierType.DefensePercent, 500) });
 
             Assert.AreEqual(100, result);
         }

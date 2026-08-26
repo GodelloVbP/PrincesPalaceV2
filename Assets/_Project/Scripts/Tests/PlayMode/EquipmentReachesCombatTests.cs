@@ -56,13 +56,23 @@ namespace PrincesPalace.PlayModeTests
         // An item that actually moves a combat stat, whatever the content is
         // called today. Weapons and armour both qualify; what matters is that
         // its bonus is non-zero, or the test would pass on a no-op.
+        //
+        // ATTACK ONLY COUNTS FOR A WEAPON -- balance redesign Phase 3 (D3).
+        // Gear no longer grants flat Attack at all (EffectiveStats zeroes a
+        // worn item's attack contribution now), so an Equipment-kind piece
+        // whose only authored line is "attack N" (itemsets.json's leather
+        // gloves, still authored -- Phase 4 rewrites that schema) moves
+        // nothing any more and would make this helper pick a no-op fixture.
+        // A live main-hand WEAPON still moves Attack, just via WeaponPower
+        // instead of the deleted gear-summing path, so it still qualifies.
         private static ItemDefinition AStatItem()
         {
             return ContentDatabase.Items.FirstOrDefault(i =>
                 i != null
                 && i.kind != ItemKind.Consumable
-                && (i.StatBonusAt(0).attack != 0
-                    || i.StatBonusAt(0).defense != 0
+                && ((i.kind == ItemKind.Weapon && i.StatBonusAt(0).attack != 0)
+                    || i.StatBonusAt(0).physicalDefense != 0
+                    || i.StatBonusAt(0).magicalDefense != 0
                     || i.StatBonusAt(0).maxHealth != 0));
         }
 
@@ -92,14 +102,37 @@ namespace PrincesPalace.PlayModeTests
             var gearedState = BuildFor(geared).Party[0];
 
             var bonus = item.StatBonusAt(0);
+            // A weapon still moves Attack (via WeaponPower), a non-weapon
+            // item's attack bonus does not (Phase 3, D3) -- see AStatItem's
+            // own header.
+            bool attackShouldMove = item.kind == ItemKind.Weapon && bonus.attack != 0;
             bool moved =
-                (bonus.attack != 0 && gearedState.Attack != bareState.Attack)
-                || (bonus.defense != 0 && gearedState.Defense != bareState.Defense)
+                (attackShouldMove && gearedState.Attack != bareState.Attack)
+                || (bonus.physicalDefense != 0 && gearedState.PhysicalDefense != bareState.PhysicalDefense)
+                || (bonus.magicalDefense != 0 && gearedState.MagicalDefense != bareState.MagicalDefense)
                 || (bonus.maxHealth != 0 && gearedState.MaxHealth != bareState.MaxHealth);
 
             Assert.IsTrue(moved,
                 "equipping " + item.id + " changed nothing on the stage -- the adapter is "
                 + "building from CharacterDefinition again and equipment is inert in combat");
+        }
+
+        // A non-weapon item with a stat bonus EffectiveStats actually
+        // carries. Used specifically where the assertion is that
+        // EffectiveStats agrees with the stage -- a WEAPON's Attack does
+        // NOT flow through EffectiveStats any more (balance redesign Phase
+        // 3, D3): it becomes WeaponPower at the adapter seam instead, a
+        // deliberate divergence from the sheet's bare figure that
+        // AWornItemChangesWhatTheCombatantBringsToTheStage already accounts
+        // for. This test's claim is only true for a non-weapon item.
+        private static ItemDefinition ANonWeaponStatItem()
+        {
+            return ContentDatabase.Items.FirstOrDefault(i =>
+                i != null
+                && i.kind == ItemKind.Equipment
+                && (i.StatBonusAt(0).physicalDefense != 0
+                    || i.StatBonusAt(0).magicalDefense != 0
+                    || i.StatBonusAt(0).maxHealth != 0));
         }
 
         // The stat path must agree with the sheet's. If these two ever diverge
@@ -109,7 +142,8 @@ namespace PrincesPalace.PlayModeTests
         public void TheStageAgreesWithTheCharacterSheet()
         {
             var definition = FirstCharacter();
-            var item = AStatItem();
+            var item = ANonWeaponStatItem();
+            Assert.IsNotNull(item, "fixture: content has a non-weapon item with a stat bonus");
             var character = new Character(definition.id);
             character.equipment.Set(item.equipSlot, item.id);
 
@@ -151,8 +185,33 @@ namespace PrincesPalace.PlayModeTests
 
             var state = BuildFor(character).Party[0];
 
-            Assert.AreEqual(expected.physicalResistance, state.PhysicalResistance);
-            Assert.AreEqual(expected.magicalResistance, state.MagicalResistance);
+            Assert.AreEqual(expected.physicalDefense, state.PhysicalDefense);
+            Assert.AreEqual(expected.magicalDefense, state.MagicalDefense);
+        }
+
+        // Phase 2 of the balance redesign (D2) made every ability derivation
+        // signed and unclamped, then added exactly two floors on top of the
+        // general one at EffectiveStats' single clamp point: max health and
+        // speed must never reach 0, because a 0-max-health combatant is dead
+        // before the fight starts and 0 Speed can never take a turn. This is
+        // a realistic path to it, not a synthetic one: a heavily negative
+        // Constitution/Dexterity investment (still floored at 0 by
+        // AbilityScoreBlock's own clamp, same as any other ability score) can
+        // cancel out a low-HP/low-speed character's base figures exactly, and
+        // without these two floors the result would be a StatBlock nothing
+        // downstream can safely act on.
+        [Test]
+        public void MaxHealthAndSpeedNeverReachZero_EvenOffAWorstCaseInvestment()
+        {
+            var definition = FirstCharacter();
+            var character = new Character(definition.id);
+            character.investedAbilityScores.constitution = -999;
+            character.investedAbilityScores.dexterity = -999;
+
+            var stats = ContentDatabase.EffectiveStats(character);
+
+            Assert.GreaterOrEqual(stats.maxHealth, 1, "a combatant must never enter a fight already dead");
+            Assert.GreaterOrEqual(stats.speed, 1, "a combatant at 0 Speed could never take a turn");
         }
 
         // ---- the spell ladder ----------------------------------------------

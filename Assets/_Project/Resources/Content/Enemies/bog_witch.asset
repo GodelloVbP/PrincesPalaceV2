@@ -15,20 +15,20 @@ MonoBehaviour:
   id: bog_witch
   displayName: Bog Witch
   baseStats:
-    maxHealth: 120
+    maxHealth: 48
     speed: 8
-    attack: 6
-    defense: 2
+    attack: 15
     manaRegen: 0
-    physicalResistance: 0
-    magicalResistance: 0
+    physicalDefense: 5
+    magicalDefense: 20
+  attackType: 4
   expReward: 22
   currencyReward: 14
   isBoss: 0
   minFloor: 2
   weaknesses: 04000000
   resistances: 03000000
-  breakShieldPoints: 3
+  breakShieldPoints: 2
   spritePath: Enemies/bog_witch
   facing: 1
   sortOrder: 5

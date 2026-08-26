@@ -299,16 +299,19 @@ namespace PrincesPalace.Domain.UiKit
 
         public static readonly UiString StatMaxHealth = UiString.Define("stat.health", "Health");
         public static readonly UiString StatAttack = UiString.Define("stat.attack", "Attack");
-        public static readonly UiString StatDefence = UiString.Define("stat.defence", "Defence");
         public static readonly UiString StatSpeed = UiString.Define("stat.speed", "Speed");
         public static readonly UiString StatMaxMana = UiString.Define("stat.maxmana", "Max Mana");
         public static readonly UiString StatSignatureGain =
             UiString.Define("stat.signaturegain", "Focus / turn");
         public static readonly UiString StatManaRegen = UiString.Define("stat.manaregen", "Mana Regen");
-        public static readonly UiString StatPhysicalResistance =
-            UiString.Define("stat.physres", "Physical DEF");
-        public static readonly UiString StatMagicalResistance =
-            UiString.Define("stat.magres", "Magical DEF");
+
+        // Formerly stat.physres/stat.magres, keyed to PhysicalResistance/
+        // MagicalResistance -- renamed with the fields, not the display text
+        // ("Physical DEF"/"Magical DEF" already read as Defense).
+        public static readonly UiString StatPhysicalDefense =
+            UiString.Define("stat.physdef", "Physical DEF");
+        public static readonly UiString StatMagicalDefense =
+            UiString.Define("stat.magdef", "Magical DEF");
 
         // Shown on the action button, and on the compare box, when a fight is
         // in progress. Gear is locked for the duration of a battle -- being
@@ -814,8 +817,8 @@ namespace PrincesPalace.Domain.UiKit
             SheetTabCharacter, SheetTabInventory, SheetStatValue, OverlayLockedInFight,
             StatStrength, StatDexterity, StatConstitution, StatWisdom,
             StatIntelligence, StatCharisma,
-            StatMaxHealth, StatAttack, StatDefence, StatSpeed, StatManaRegen,
-            StatPhysicalResistance, StatMagicalResistance, StatMaxMana, StatSignatureGain,
+            StatMaxHealth, StatAttack, StatSpeed, StatManaRegen,
+            StatPhysicalDefense, StatMagicalDefense, StatMaxMana, StatSignatureGain,
             HubWallet, HubBeginDescent, HubResumeFloor,
             OverlayCount, OverlayPlus, OverlayPage, DossierSpendPoint,
             TrackRow, TrackClose, TrackLevelWord, TrackNextAt, TrackNextAtComplete,

@@ -18,7 +18,6 @@ namespace PrincesPalace.Domain.Combat
         public int CurrentMana;
 
         public int Attack;
-        public int Defense;
         public int Speed;
 
         // Equipment-set stats. Zero for anyone wearing nothing, which is
@@ -30,8 +29,13 @@ namespace PrincesPalace.Domain.Combat
         // sources, and a seven-argument constructor growing to ten is how the
         // wrong number ends up in the wrong slot.
         public int ManaRegen;
-        public int PhysicalResistance;
-        public int MagicalResistance;
+
+        // The only two defensive stats — the old single generic `Defense`
+        // field is gone, not renamed to either of these. Formerly
+        // PhysicalResistance/MagicalResistance, renamed in place. See
+        // DamagePipeline.AfterDefences for the one place either is read.
+        public int PhysicalDefense;
+        public int MagicalDefense;
 
         // Resistance to ONE element, on top of the two-way split above. Empty
         // for everything that has not been given any, which is why adding it
@@ -57,6 +61,30 @@ namespace PrincesPalace.Domain.Combat
         // the old stat-bump vocabulary), so no call site has to null-check
         // before asking a question.
         public TalentEffectSet Talents = TalentEffectSet.Empty;
+
+        // Every rule this combatant's worn items' ROLLED MODIFIERS
+        // contribute to the fight, flattened once at encounter build time —
+        // see ModifierEffectSet, which mirrors Talents just above field for
+        // field and reasoning for reasoning. Never null: the shared Empty
+        // instance is the normal case for literally every combatant today,
+        // more so than Talents — Phase A1 (EquipmentSlotEntry/InventoryEntry
+        // modifierIds) landed the storage, but Phase A3 has not wired the
+        // roll yet, so no equipped item's modifierIds is ever non-empty in a
+        // real save. No call site has to null-check before asking a
+        // question either way.
+        public ModifierEffectSet ModifierEffects = ModifierEffectSet.Empty;
+
+        // Runic's one-shot tempo rider: armed (to the discount PERCENT, not
+        // just a bool -- the consuming call site needs the number, and
+        // reading it back off ModifierEffects a second time would mean
+        // re-deriving "which swing armed this" logic there too) the moment a
+        // plain swing lands for a wearer of NextSkillManaDiscountPercent,
+        // consumed and zeroed the next time mana is charged for ANY skill
+        // cast (FightSession.ChargeSkillMana) -- whether that happens on the
+        // very next action or three turns later. Zero is always "nothing
+        // armed", the same "0 and absent mean the same thing" convention
+        // every percent field in this vocabulary already uses.
+        public int PendingManaDiscountPercent;
 
         // The timed transform this combatant is currently under, or null —
         // which is every combatant on nearly every turn. Nullable for the
@@ -140,7 +168,7 @@ namespace PrincesPalace.Domain.Combat
 
         public bool IsAlive => CurrentHealth > 0;
 
-        public CombatantState(string name, bool isPlayerSide, int maxHealth, int maxMana, int attack, int defense, int speed)
+        public CombatantState(string name, bool isPlayerSide, int maxHealth, int maxMana, int attack, int speed)
         {
             Name = name;
             IsPlayerSide = isPlayerSide;
@@ -149,7 +177,6 @@ namespace PrincesPalace.Domain.Combat
             MaxMana = maxMana;
             CurrentMana = maxMana;
             Attack = attack;
-            Defense = defense;
             Speed = speed;
         }
     }

@@ -48,6 +48,57 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.AreEquivalent(new[] { 0, 5 }, bag.Select(e => e.plus).ToArray());
         }
 
+        // ---- rolled modifiers (Phase A1: storage only) -------------------------
+
+        [Test]
+        public void TwoEntriesWithIdenticalRolledModifiers_MergeIntoOneStack()
+        {
+            // Structural-equality stacking: two drops that happened to roll
+            // the EXACT same affixes at the EXACT same rift tier are
+            // functionally identical, so merging them is correct -- the same
+            // reasoning that already lets two +5 plain swords stack.
+            var bag = Bag();
+
+            InventoryOps.Add(bag, "sword", 1, plus: 0, modifierIds: new List<string> { "fiery", "swift" }, riftTier: 2);
+            InventoryOps.Add(bag, "sword", 1, plus: 0, modifierIds: new List<string> { "swift", "fiery" }, riftTier: 2);
+
+            Assert.AreEqual(1, bag.Count, "same roll, order-independent -- one stack");
+            Assert.AreEqual(2, bag[0].count);
+        }
+
+        [Test]
+        public void ADifferentRoll_NeverMergesEvenAtTheSamePlus()
+        {
+            var bag = Bag();
+
+            InventoryOps.Add(bag, "sword", 1, plus: 0, modifierIds: new List<string> { "fiery" }, riftTier: 1);
+            InventoryOps.Add(bag, "sword", 1, plus: 0, modifierIds: new List<string> { "swift" }, riftTier: 1);
+
+            Assert.AreEqual(2, bag.Count, "different affixes -- must not merge");
+        }
+
+        [Test]
+        public void ADifferentRiftTier_NeverMergesEvenWithTheSameModifiers()
+        {
+            var bag = Bag();
+
+            InventoryOps.Add(bag, "sword", 1, plus: 0, modifierIds: new List<string> { "fiery" }, riftTier: 1);
+            InventoryOps.Add(bag, "sword", 1, plus: 0, modifierIds: new List<string> { "fiery" }, riftTier: 2);
+
+            Assert.AreEqual(2, bag.Count, "same affixes, different rift tier -- must not merge");
+        }
+
+        [Test]
+        public void APlainItem_NeverMergesWithAModifiedOneAtTheSamePlus()
+        {
+            var bag = Bag();
+
+            InventoryOps.Add(bag, "sword", 1, plus: 3);
+            InventoryOps.Add(bag, "sword", 1, plus: 3, modifierIds: new List<string> { "fiery" }, riftTier: 1);
+
+            Assert.AreEqual(2, bag.Count, "an empty modifierIds list is its own key, not a wildcard");
+        }
+
         [Test]
         public void CountSumsEveryPlusLevel()
         {

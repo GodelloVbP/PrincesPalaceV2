@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using PrincesPalace.Content;
+using PrincesPalace.Domain.Combat;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Stats;
 
@@ -18,10 +20,98 @@ namespace PrincesPalace
             return ItemStatLines.Compact(item.StatBonusAt(plus), item.abilityScoreBonus, ScalingDescription(item));
         }
 
-        public static string CardSummary(ItemDefinition item, int plus = 0)
+        // `viewer`, when given, is who this card is being shown TO -- not
+        // necessarily who has the item equipped. For a weapon it is what
+        // turns WeaponPower (a property of the item alone) into DMG (what it
+        // would actually deal in this character's hands), per D7.2. Optional
+        // and defaulted to null so every existing caller with no viewer in
+        // scope keeps compiling and simply loses the DMG line, same as
+        // before this phase.
+        // ITEM-MODIFIER PLAN PHASE E: `riftTier`/`modifierIds` name WHICH
+        // ROLL this particular copy carries -- optional and defaulted to
+        // Ordinary/null so every existing caller with no roll in scope keeps
+        // compiling and simply shows no AFFIXES section, same as before this
+        // phase (the overwhelming majority of items).
+        public static string CardSummary(ItemDefinition item, int plus = 0, Character viewer = null,
+            RiftTier riftTier = RiftTier.Ordinary, IReadOnlyList<string> modifierIds = null)
         {
             if (item == null) return "";
-            return ItemStatLines.Card(item.StatBonusAt(plus), item.abilityScoreBonus, ScalingDescription(item));
+            return ItemStatLines.Card(item.StatBonusAt(plus), item.abilityScoreBonus, ScalingDescription(item),
+                WeaponDamageLine(item, plus, viewer), ModifierLines(item, riftTier, modifierIds));
+        }
+
+        // "Fiery -- deals 24% bonus Fire damage on hit", one line per rolled
+        // modifier -- the adapter half of ModifierEffectText.Describe: pulls
+        // this ONE item copy's scaled effects off ContentDatabase (the exact
+        // seam ContentDatabase.ModifierEffects itself reads, never a second
+        // formula), groups them by the ModifierDefinition they came from
+        // (preserving each modifier's own authored effect order), and joins
+        // each modifier's fragments onto one line behind its display name.
+        //
+        // GroupBy over the already-ordered ModifierEffectsForItem list
+        // preserves first-seen order (LINQ-to-objects' own documented
+        // behaviour), so modifiers print in the same order the item's
+        // modifierIds were rolled/authored in, not resorted.
+        private static IReadOnlyList<string> ModifierLines(ItemDefinition item, RiftTier riftTier,
+            IReadOnlyList<string> modifierIds)
+        {
+            if (item == null || modifierIds == null || modifierIds.Count == 0)
+            {
+                return null;
+            }
+
+            var scaled = ContentDatabase.ModifierEffectsForItem(item.tier, riftTier, modifierIds);
+            if (scaled.Count == 0)
+            {
+                return null;
+            }
+
+            var lines = new List<string>();
+            foreach (var group in scaled.GroupBy(pair => pair.Modifier))
+            {
+                string fragments = string.Join(", ", group
+                    .Select(pair => ModifierEffectText.Describe(pair.Effect))
+                    .Where(fragment => fragment.Length > 0));
+
+                if (fragments.Length == 0) continue;
+                lines.Add($"{group.Key.displayName} -- {fragments}");
+            }
+
+            return lines;
+        }
+
+        // "DMG 87", or "DMG 87 -> 104" against whatever `viewer` currently
+        // has equipped in the main hand -- null for anything that is not a
+        // weapon, or when there is no viewer to score it against (WeaponPower
+        // means nothing without a wielder's ability scores).
+        //
+        // Reads the SAME EquippedWeapon/EquippedWeaponPower every other
+        // Effective* consumer does, rather than re-deriving the equipped
+        // weapon's plus by hand -- see ContentDatabase.EquippedWeaponPower's
+        // own header for why null there means "empty hand", not "hits for
+        // nothing".
+        private static string WeaponDamageLine(ItemDefinition item, int plus, Character viewer)
+        {
+            if (item == null || item.kind != ItemKind.Weapon || viewer == null)
+            {
+                return null;
+            }
+
+            var viewerScores = ContentDatabase.EffectiveAbilityScores(viewer);
+            int damage = WeaponPower.DisplayDamage(item.WeaponPowerAt(plus), item.scaling, viewerScores);
+
+            int? equippedDamage = null;
+            var equipped = ContentDatabase.EquippedWeapon(viewer);
+            if (equipped != null && equipped.id != item.id)
+            {
+                int? equippedPower = ContentDatabase.EquippedWeaponPower(viewer);
+                if (equippedPower.HasValue)
+                {
+                    equippedDamage = WeaponPower.DisplayDamage(equippedPower.Value, equipped.scaling, viewerScores);
+                }
+            }
+
+            return ItemStatLines.WeaponDamageText(damage, equippedDamage);
         }
 
         // Both scaling axes on one line: the plain Attack grade first, the
@@ -127,7 +217,9 @@ namespace PrincesPalace
         // is accounted for per character, which is exactly the case a
         // "best candidate only" summary would hide.
         public static string SquadComparisonBody(IReadOnlyList<Character> squad,
-                                                 ItemDefinition candidate, int candidatePlus = 0)
+                                                 ItemDefinition candidate, int candidatePlus = 0,
+                                                 RiftTier riftTier = RiftTier.Ordinary,
+                                                 IReadOnlyList<string> modifierIds = null)
         {
             if (squad == null || candidate == null) return "";
 
@@ -142,10 +234,12 @@ namespace PrincesPalace
                 rows.Add((name, Compare(member, candidate, candidatePlus)));
             }
 
-            return ItemStatLines.SquadBody(rows);
+            return ItemStatLines.SquadBody(rows, ModifierLines(candidate, riftTier, modifierIds));
         }
 
-        public static string ComparisonBody(Character character, ItemDefinition candidate, int candidatePlus = 0)
+        public static string ComparisonBody(Character character, ItemDefinition candidate, int candidatePlus = 0,
+                                            RiftTier riftTier = RiftTier.Ordinary,
+                                            IReadOnlyList<string> modifierIds = null)
         {
             if (character == null || candidate == null) return "";
 
@@ -162,7 +256,9 @@ namespace PrincesPalace
                 // hand-written copy of a method that already existed.
                 RequirementCurve.ApplyGear(candidate.requirements),
                 ContentDatabase.EffectiveAbilityScores(character),
-                comparison);
+                comparison,
+                WeaponDamageLine(candidate, candidatePlus, character),
+                ModifierLines(candidate, riftTier, modifierIds));
         }
     }
 }

@@ -6,9 +6,17 @@ namespace PrincesPalace.Domain.Tests
     // Every expectation here is a PINNED LITERAL. Nothing in this file
     // recomputes a production formula, calls the method under test to build
     // its own expected value, or reaches for a constant from
-    // AbilityDerivation — all three are ways a test moves in lockstep with
+    // AbilityDerivation -- all three are ways a test moves in lockstep with
     // the code and stops being able to fail (CLAUDE.md gotcha #5,
     // AUDIT.md #18).
+    //
+    // PHASE 2 REWRITE: the old piecewise curves (a flat rate inside a
+    // character's authored range, quadratic/root beyond it, split at
+    // CharacterBand) are gone along with AttackBonus, CharacterBand, Pool and
+    // Rate. Every derivation is a single straight line through zero at score
+    // 10, for every score at every value, forever -- so this file no longer
+    // needs a separate "what does gear do out past 187 points" section. A
+    // boundary table at a handful of scores says everything there is to say.
     public class AbilityDerivationTests
     {
         private static AbilityScoreBlock Scores(int str = 10, int dex = 10, int con = 10, int wis = 10, int intel = 10, int cha = 10)
@@ -19,210 +27,219 @@ namespace PrincesPalace.Domain.Tests
         // THE compatibility guarantee, and the reason this layer could be
         // added to a shipping game without rebalancing anything. Every
         // character in the game currently carries a flat 10 across the
-        // board; if any of these stopped being zero, all five would silently
-        // change stats at once.
+        // board; if any of these stopped being zero, every derived stat
+        // would silently change at once.
         [Test]
         public void AllTens_DeriveExactlyZeroOnEveryStat()
         {
             var neutral = Scores();
 
-            Assert.AreEqual(0, AbilityDerivation.AttackBonus(neutral));
-            Assert.AreEqual(0, AbilityDerivation.SpeedBonus(neutral));
             Assert.AreEqual(0, AbilityDerivation.MaxHealthBonus(neutral));
+            Assert.AreEqual(0, AbilityDerivation.PhysicalDefenseBonus(neutral));
             Assert.AreEqual(0, AbilityDerivation.MaxManaBonus(neutral));
+            Assert.AreEqual(0, AbilityDerivation.MagicalDefenseBonus(neutral));
+            Assert.AreEqual(0, AbilityDerivation.SpeedBonus(neutral));
+            Assert.AreEqual(0, AbilityDerivation.SignatureGainBonus(neutral));
             Assert.AreEqual(StatBlock.Zero, AbilityDerivation.DerivedStats(neutral));
         }
 
-        [TestCase(4, -3)]
-        [TestCase(5, -3)]
-        [TestCase(6, -2)]
-        [TestCase(7, -2)]
-        [TestCase(8, -1)]
-        [TestCase(9, -1)]
+        // ---- the boundary table -------------------------------------------
+        //
+        // Six scores (0, 5, 9, 10, 11, 20), six derived stats. d = score - 10
+        // in every case. HP/PDEF ride Constitution, Mana/MDEF ride Wisdom --
+        // both linear multiplications, unambiguous at every d. Speed and
+        // SignatureGain divide (by 2 and 4 respectively), which is where a
+        // rounding convention actually matters below neutral -- see the two
+        // FloorConvention tests further down for why these particular
+        // literals are correct and not mathematical floor.
+
+        [TestCase(0, -200)]
+        [TestCase(5, -100)]
+        [TestCase(9, -20)]
+        [TestCase(10, 0)]
+        [TestCase(11, 20)]
+        [TestCase(20, 200)]
+        public void MaxHealthBonus_IsPinnedAcrossTheBoundaryTable(int con, int expected)
+        {
+            Assert.AreEqual(expected, AbilityDerivation.MaxHealthBonus(Scores(con: con)));
+        }
+
+        [TestCase(0, -20)]
+        [TestCase(5, -10)]
+        [TestCase(9, -2)]
+        [TestCase(10, 0)]
+        [TestCase(11, 2)]
+        [TestCase(20, 20)]
+        public void PhysicalDefenseBonus_IsPinnedAcrossTheBoundaryTable(int con, int expected)
+        {
+            Assert.AreEqual(expected, AbilityDerivation.PhysicalDefenseBonus(Scores(con: con)));
+        }
+
+        [TestCase(0, -20)]
+        [TestCase(5, -10)]
+        [TestCase(9, -2)]
+        [TestCase(10, 0)]
+        [TestCase(11, 2)]
+        [TestCase(20, 20)]
+        public void MaxManaBonus_IsPinnedAcrossTheBoundaryTable(int wis, int expected)
+        {
+            Assert.AreEqual(expected, AbilityDerivation.MaxManaBonus(Scores(wis: wis)));
+        }
+
+        [TestCase(0, -20)]
+        [TestCase(5, -10)]
+        [TestCase(9, -2)]
+        [TestCase(10, 0)]
+        [TestCase(11, 2)]
+        [TestCase(20, 20)]
+        public void MagicalDefenseBonus_IsPinnedAcrossTheBoundaryTable(int wis, int expected)
+        {
+            Assert.AreEqual(expected, AbilityDerivation.MagicalDefenseBonus(Scores(wis: wis)));
+        }
+
+        // d/2 truncated toward zero: -10/2=-5, -5/2=-2, -1/2=0, 0/2=0, 1/2=0,
+        // 10/2=5. See the FloorConvention test below for why 9 lands on 0
+        // rather than -1.
+        [TestCase(0, -5)]
+        [TestCase(5, -2)]
+        [TestCase(9, 0)]
         [TestCase(10, 0)]
         [TestCase(11, 0)]
-        [TestCase(12, 1)]
-        [TestCase(13, 1)]
-        [TestCase(14, 2)]
-        [TestCase(15, 2)]
-        [TestCase(16, 3)]
         [TestCase(20, 5)]
-        public void Modifier_IsPinnedAcrossTheAuthorableRange(int score, int expected)
+        public void SpeedBonus_IsPinnedAcrossTheBoundaryTable(int dex, int expected)
         {
-            Assert.AreEqual(expected, AbilityDerivation.Modifier(score));
+            Assert.AreEqual(expected, AbilityDerivation.SpeedBonus(Scores(dex: dex)));
         }
 
-        // C# integer division truncates toward zero, so a naive (score-10)/2
-        // gives 0 for both 9 and 10 while giving -1 for 8 — bonuses would
-        // step every two points but penalties every two points offset by
-        // one. The asymmetry is invisible until someone authors a
-        // below-neutral score, which is exactly what Shawn does.
+        // d/4 truncated toward zero: -10/4=-2, -5/4=-1, -1/4=0, 0/4=0, 1/4=0,
+        // 10/4=2.
+        [TestCase(0, -2)]
+        [TestCase(5, -1)]
+        [TestCase(9, 0)]
+        [TestCase(10, 0)]
+        [TestCase(11, 0)]
+        [TestCase(20, 2)]
+        public void SignatureGainBonus_IsPinnedAcrossTheBoundaryTable(int cha, int expected)
+        {
+            Assert.AreEqual(expected, AbilityDerivation.SignatureGainBonus(Scores(cha: cha)));
+        }
+
+        // ---- the floor/truncation convention, pinned as its own fact ------
+        //
+        // AbilityDerivation.cs documents the choice at length: SpeedBonus and
+        // SignatureGainBonus use C#'s native `/`, which TRUNCATES TOWARD ZERO
+        // rather than taking the mathematical floor. The two conventions only
+        // disagree on an odd difference below neutral, so score 9 (d = -1) is
+        // the smallest case that actually distinguishes them: truncation
+        // gives 0, mathematical floor would give -1.
         [Test]
-        public void Modifier_FloorsBelowNeutralRatherThanTruncatingTowardZero()
+        public void SpeedBonus_TruncatesTowardZero_RatherThanMathematicalFloor()
         {
-            Assert.AreEqual(-1, AbilityDerivation.Modifier(9), "9 must be a penalty, not a rounding-to-zero");
-
-            // The curve is symmetric about 10.5, NOT about 10 — scores pair
-            // up as (10,11) -> 0, (12,13) -> +1, (8,9) -> -1. That is the
-            // classic modifier and it is deliberate; do not "fix" 11 into a
-            // bonus to make it look balanced around 10.
-            Assert.AreEqual(AbilityDerivation.Modifier(10), AbilityDerivation.Modifier(11), "10 and 11 pair");
-            Assert.AreEqual(AbilityDerivation.Modifier(8), AbilityDerivation.Modifier(9), "8 and 9 pair");
-
-            // Monotonic, and stepping exactly once per two points. Truncation
-            // breaks this: it produces a three-wide plateau at 9/10/11 while
-            // every other step is two wide.
-            for (int score = 3; score <= 20; score++)
-            {
-                int step = AbilityDerivation.Modifier(score) - AbilityDerivation.Modifier(score - 1);
-                Assert.IsTrue(step == 0 || step == 1, $"Modifier jumped by {step} between {score - 1} and {score}");
-            }
-
-            for (int k = -3; k <= 5; k++)
-            {
-                Assert.AreEqual(k, AbilityDerivation.Modifier(10 + 2 * k), $"Every even offset should land exactly on {k}");
-            }
-        }
-
-        [TestCase(-3, -2)]
-        [TestCase(-2, -1)]
-        [TestCase(-1, -1)]
-        [TestCase(0, 0)]
-        [TestCase(1, 0)]
-        [TestCase(2, 1)]
-        [TestCase(3, 1)]
-        public void FloorDiv2_IsPinned(int value, int expected)
-        {
-            Assert.AreEqual(expected, AbilityDerivation.FloorDiv2(value));
+            Assert.AreEqual(0, AbilityDerivation.SpeedBonus(Scores(dex: 9)),
+                "d=-1 truncated toward zero is 0; mathematical floor would give -1");
+            Assert.AreEqual(-1, AbilityDerivation.SpeedBonus(Scores(dex: 7)),
+                "d=-3 truncated toward zero is -1; mathematical floor would give -2 -- " +
+                "this is the exact value the plan's Shawn example pins");
         }
 
         [Test]
-        public void Strength_MovesAttackByOnePerTwoPoints()
+        public void SignatureGainBonus_TruncatesTowardZero_RatherThanMathematicalFloor()
         {
-            Assert.AreEqual(0, AbilityDerivation.AttackBonus(Scores(str: 11)), "One point alone buys nothing");
-            Assert.AreEqual(1, AbilityDerivation.AttackBonus(Scores(str: 12)));
-            Assert.AreEqual(-1, AbilityDerivation.AttackBonus(Scores(str: 8)));
+            Assert.AreEqual(0, AbilityDerivation.SignatureGainBonus(Scores(cha: 9)),
+                "d=-1 truncated toward zero is 0; mathematical floor would give -1");
+            Assert.AreEqual(-1, AbilityDerivation.SignatureGainBonus(Scores(cha: 5)),
+                "d=-5 truncated toward zero is -1; mathematical floor would give -2");
         }
 
-        [Test]
-        public void Dexterity_MovesSpeedByOnePerTwoPoints()
+        // ---- Strength and Intelligence: zero, deliberately -----------------
+        //
+        // Not a boundary table -- there is no curve to have a boundary in.
+        // Both scores derive nothing at all here; they ride weapon/spell
+        // grades instead (Phase 3/D3, not yet wired). Extreme values included
+        // specifically to rule out "it happens to be zero near 10" -- STR/INT
+        // do not even have a private constant that could accidentally fire.
+        [TestCase(0)]
+        [TestCase(9)]
+        [TestCase(10)]
+        [TestCase(11)]
+        [TestCase(200)]
+        public void StrengthDerivesNothing_AtAnyScore(int str)
         {
-            Assert.AreEqual(1, AbilityDerivation.SpeedBonus(Scores(dex: 12)));
-            Assert.AreEqual(-1, AbilityDerivation.SpeedBonus(Scores(dex: 9)));
+            Assert.AreEqual(StatBlock.Zero, AbilityDerivation.DerivedStats(Scores(str: str, dex: 10, con: 10, wis: 10, intel: 10, cha: 10)));
         }
 
-        // 20 per point, not 2: HP pools moved to a x10 scale, and Constitution
-        // had to move with them or the score would have stopped mattering.
-        [Test]
-        public void Constitution_MovesMaxHealthByTwentyPerPoint()
+        [TestCase(0)]
+        [TestCase(9)]
+        [TestCase(10)]
+        [TestCase(11)]
+        [TestCase(200)]
+        public void IntelligenceDerivesNothing_AtAnyScore(int intel)
         {
-            Assert.AreEqual(120, AbilityDerivation.MaxHealthBonus(Scores(con: 16)));
-            Assert.AreEqual(-40, AbilityDerivation.MaxHealthBonus(Scores(con: 8)));
+            Assert.AreEqual(StatBlock.Zero, AbilityDerivation.DerivedStats(Scores(str: 10, dex: 10, con: 10, wis: 10, intel: intel, cha: 10)));
         }
 
-        [Test]
-        public void Wisdom_MovesMaxManaByTwoPerPoint()
-        {
-            Assert.AreEqual(10, AbilityDerivation.MaxManaBonus(Scores(wis: 15)));
-            Assert.AreEqual(-6, AbilityDerivation.MaxManaBonus(Scores(wis: 7)));
-        }
-
+        // ---- DerivedStats combines correctly, attack always 0 -------------
+        //
         // The scores are independent inputs; moving one must not disturb
         // another's output. Cheap to assert, and the kind of thing a
-        // copy-paste slip between six near-identical methods breaks silently.
+        // copy-paste slip between near-identical methods breaks silently.
         [Test]
-        public void DerivedStats_CombinesTheThreeStatScoresAndTouchesNothingElse()
+        public void DerivedStats_CombinesTheFourFeedingScoresAndTouchesNothingElse()
         {
             var block = AbilityDerivation.DerivedStats(Scores(str: 14, dex: 8, con: 16, wis: 20, intel: 20, cha: 20));
 
-            Assert.AreEqual(120, block.maxHealth, "CON 16");
-            Assert.AreEqual(-1, block.speed, "DEX 8");
-            Assert.AreEqual(2, block.attack, "STR 14");
-            Assert.AreEqual(0, block.defense, "No ability score feeds Defense");
+            Assert.AreEqual(120, block.maxHealth, "CON 16: (16-10)*20");
+            Assert.AreEqual(12, block.physicalDefense, "CON 16: (16-10)*2");
+            Assert.AreEqual(20, block.magicalDefense, "WIS 20: (20-10)*2");
+            Assert.AreEqual(-1, block.speed, "DEX 8: (8-10)/2 truncated");
+            Assert.AreEqual(0, block.attack, "Attack derives from no ability score until Phase 3 (weapon grades)");
+            Assert.AreEqual(0, block.manaRegen, "No score feeds ManaRegen -- gear and talents only");
         }
 
         // Shawn's authored spread, pinned here so his identity is a fact the
         // suite protects rather than a number in a builder someone can
-        // adjust without noticing what it does to him.
+        // adjust without noticing what it does to him. Matches the plan's
+        // worked example exactly: +120 HP, +12 PDEF, -1 Speed, +8 Mana,
+        // +8 MDEF, +0 Signature Gain.
         [Test]
-        public void ShawnsSpread_DerivesHisIntendedProfile()
+        public void ShawnsSpread_DerivesTheProfileThePlanPins()
         {
-            var shawn = Scores(str: 8, dex: 9, con: 16, wis: 15, intel: 10, cha: 14);
+            var shawn = Scores(str: 7, dex: 7, con: 16, wis: 14, intel: 6, cha: 10);
 
-            Assert.AreEqual(-1, AbilityDerivation.AttackBonus(shawn), "STR 8: he is a sheep");
-            Assert.AreEqual(-1, AbilityDerivation.SpeedBonus(shawn), "DEX 9: woolly and unhurried");
-            Assert.AreEqual(120, AbilityDerivation.MaxHealthBonus(shawn), "CON 16: his defining stat");
-            Assert.AreEqual(10, AbilityDerivation.MaxManaBonus(shawn), "WIS 15: shepherd's patience");
+            Assert.AreEqual(120, AbilityDerivation.MaxHealthBonus(shawn), "CON 16: d=6, 6*20");
+            Assert.AreEqual(12, AbilityDerivation.PhysicalDefenseBonus(shawn), "CON 16: d=6, 6*2");
+            Assert.AreEqual(-1, AbilityDerivation.SpeedBonus(shawn), "DEX 7: d=-3, truncated toward zero");
+            Assert.AreEqual(8, AbilityDerivation.MaxManaBonus(shawn), "WIS 14: d=4, 4*2");
+            Assert.AreEqual(8, AbilityDerivation.MagicalDefenseBonus(shawn), "WIS 14: d=4, 4*2");
+            Assert.AreEqual(0, AbilityDerivation.SignatureGainBonus(shawn), "CHA 10: d=0");
+
+            var block = AbilityDerivation.DerivedStats(shawn);
+            Assert.AreEqual(120, block.maxHealth);
+            Assert.AreEqual(12, block.physicalDefense);
+            Assert.AreEqual(-1, block.speed);
+            Assert.AreEqual(8, block.magicalDefense);
+            Assert.AreEqual(0, block.attack);
         }
 
-        // ---- what gear does, out past where a character can reach ----------
-
-        // A full tier-10 set of a pure single-stat style grants 187 points of
-        // that stat: GearScaling's five slots sum to 5.0, base 4, times the
-        // 9.31 tier multiplier. That is the input every number below is for.
-        //
-        // PINNED LITERALS, like the rest of this file. Nothing here recomputes
-        // the curve to produce its own expected value — these are the figures
-        // the rebalance was designed to land on, so moving any of them has to
-        // be a decision taken here.
-        private const int GearedScore = AbilityDerivation.NeutralScore + 187;
+        // ---- signed, and symmetric now that the curve is a straight line --
 
         [Test]
-        public void AFullTierTenSet_LandsThePoolsWhereTheDesignAsked()
+        public void APenaltyMirrorsABonusExactly_BecauseTheCurveIsLinearNow()
         {
-            var geared = Scores(str: GearedScore, con: GearedScore, wis: GearedScore);
-
-            // Damage is (attack - defense) x CombatMath.DamageScale(10), so
-            // 2,746 Attack is about a 27,000 swing — and the heaviest skill in
-            // skills.json is power 4, putting an ultimate just past 100,000.
-            Assert.AreEqual(2746, AbilityDerivation.AttackBonus(geared));
-            Assert.AreEqual(37794, AbilityDerivation.MaxHealthBonus(geared));
-            Assert.AreEqual(1586, AbilityDerivation.MaxManaBonus(geared));
-        }
-
-        [Test]
-        public void TheRatesStayBoundedWhereThePoolsDoNot()
-        {
-            // The two-family split in one assertion. Given the SAME 187
-            // points, a pool reaches five figures and a rate reaches double
-            // digits — because Speed is how often you act and a signature
-            // gauge holds 10, and neither means anything at 37,000.
-            var geared = Scores(dex: GearedScore, cha: GearedScore);
-
-            Assert.AreEqual(18, AbilityDerivation.SpeedBonus(geared));
-            Assert.AreEqual(6, AbilityDerivation.SignatureGainBonus(geared));
-
-            // Speed specifically has to stay under the tick-rate clamp, which
-            // SpeedScale reaches at 62.5. The old linear curve granted +93
-            // here, saturating it with three floors of the ladder still to go
-            // and making Dexterity gear worthless for all of them.
-            Assert.Less(AbilityDerivation.NeutralScore + AbilityDerivation.SpeedBonus(geared), 62,
-                "Dexterity has gone back to saturating the tick-rate clamp before the last tier");
-        }
-
-        [Test]
-        public void TheSeamIsFlatRatherThanAStep()
-        {
-            // Two curves meeting at CharacterBand could easily jump. One point
-            // either side has to differ by about one point's worth, not by a
-            // cliff — otherwise score 20 and score 21 are a different game.
-            Assert.AreEqual(200, AbilityDerivation.MaxHealthBonus(Scores(con: 20)));
-            Assert.AreEqual(201, AbilityDerivation.MaxHealthBonus(Scores(con: 21)));
-            Assert.AreEqual(204, AbilityDerivation.MaxHealthBonus(Scores(con: 22)));
-        }
-
-        [Test]
-        public void APenaltyStillMirrorsABonusOutsideTheBandToo()
-        {
-            // The asymmetry FloorDiv2 exists to prevent, checked on the new
-            // segment. Generalising that floor division by hand got it wrong
-            // once already: DEX 9 derived 0 where it has to derive -1, and only
-            // ShawnsSpread caught it.
-            Assert.AreEqual(-AbilityDerivation.MaxHealthBonus(Scores(con: 60)),
-                AbilityDerivation.MaxHealthBonus(Scores(con: -40)),
-                "a 50-point deficit must cost exactly what a 50-point surplus pays");
-            Assert.AreEqual(-1, AbilityDerivation.SpeedBonus(Scores(dex: 9)));
-            Assert.AreEqual(-1, AbilityDerivation.AttackBonus(Scores(str: 8)));
+            // No band, no square, no root left to break the mirror -- a
+            // straight line through zero is symmetric by construction. Still
+            // worth pinning: it is the property the old piecewise curve had
+            // to work hard for (see AbilityDerivationTests' Phase-1-era
+            // history in git blame) and a future re-introduction of a curve
+            // would break it silently otherwise.
+            Assert.AreEqual(-AbilityDerivation.MaxHealthBonus(Scores(con: 16)),
+                AbilityDerivation.MaxHealthBonus(Scores(con: 4)));
+            Assert.AreEqual(-AbilityDerivation.PhysicalDefenseBonus(Scores(con: 16)),
+                AbilityDerivation.PhysicalDefenseBonus(Scores(con: 4)));
+            Assert.AreEqual(-AbilityDerivation.MaxManaBonus(Scores(wis: 16)),
+                AbilityDerivation.MaxManaBonus(Scores(wis: 4)));
+            Assert.AreEqual(-AbilityDerivation.MagicalDefenseBonus(Scores(wis: 16)),
+                AbilityDerivation.MagicalDefenseBonus(Scores(wis: 4)));
         }
     }
 }

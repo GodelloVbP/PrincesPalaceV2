@@ -15,20 +15,20 @@ MonoBehaviour:
   id: golem
   displayName: Stone Golem
   baseStats:
-    maxHealth: 350
+    maxHealth: 80
     speed: 3
-    attack: 6
-    defense: 8
+    attack: 15
     manaRegen: 0
-    physicalResistance: 0
-    magicalResistance: 0
+    physicalDefense: 45
+    magicalDefense: 10
+  attackType: 0
   expReward: 35
   currencyReward: 20
   isBoss: 0
   minFloor: 5
   weaknesses: 03000000
   resistances: 00000000
-  breakShieldPoints: 9
+  breakShieldPoints: 2
   spritePath: Enemies/golem
   facing: 1
   sortOrder: 3

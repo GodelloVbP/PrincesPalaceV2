@@ -319,24 +319,34 @@ namespace PrincesPalace.Domain.Combat.Session
             }
         }
 
-        // -30% SPEED FOR ONE TURN, on the real Speed stat -- not a status
-        // effect. Speed already has its own machinery (it decides turn order
-        // directly), so a StatusEffectType entry that ALSO tried to mean "slow"
-        // would be a second system claiming the same authority the first
-        // already has, and the two could disagree about how slow "slowed"
-        // actually is. GrantSpeedMalusPercent reuses the exact SpeedBuff
-        // bookkeeping the player-side speed relics use, just with a negative
-        // grant -- refresh-not-stack and exact-reversal on expiry come for
-        // free from code already proven correct.
+        // -30% SPEED FOR ONE TURN -- MIGRATED ONTO Chilled in Phase D2 (the
+        // item-modifier plan). This used to read "Speed already has its own
+        // machinery, so a StatusEffectType entry that ALSO tried to mean
+        // 'slow' would be a second system claiming the same authority the
+        // first already has" -- true right up until Chilled's own design
+        // resolved exactly that worry: Chilled is NOT a second authority, it
+        // is a status whose sole job is to drive the SAME GrantSpeedMalusPercent/
+        // RevokeSpeedBuff bookkeeping this call already used, through
+        // ApplyChilled (FightSession.SpeedBuffs.cs). Nothing about the
+        // arithmetic changed -- same percent, same turns, same true-base
+        // measurement, same exact reversal on expiry, all proven correct
+        // before this migration ever touched it -- only WHERE the "how long"
+        // and "how strong" now live: on a real ActiveStatus
+        // (CombatantState.Statuses), visible and tickable through the same
+        // machinery every other status already rides, rather than a private
+        // number only this one relic's own code knew how to name. Frosty's
+        // on-hit Chill (FightSession.ApplyModifierOnHitRiders) now lands the
+        // identical status through the identical call.
         //
-        // SHOWN even so -- see TagLineFor in FightController.Hud.cs, which
-        // reads SpeedBonusFrom(target, LuckyDeck) < 0 to print "SLOWED" on the
-        // enemy plate. Cosmetic tag, mechanical truth; the two are wired
-        // separately on purpose.
+        // STILL SHOWN via SpeedBonusFrom -- see TagLineFor in
+        // FightController.Hud.cs, which reads
+        // SpeedBonusFrom(target, StatusEffectType.Chilled) < 0 to print
+        // "SLOWED" on the enemy plate now that Chilled, not RelicEffect.LuckyDeck,
+        // is the dictionary key the malus actually lands under.
         private void LuckyDeckSlow(CombatantState actor, CombatantState target)
         {
-            int lost = GrantSpeedMalusPercent(target, RelicEffect.LuckyDeck,
-                FightTuning.LuckyDeckSlowPercent, FightTuning.LuckyDeckSlowTurns);
+            int lost = ApplyChilled(target, FightTuning.LuckyDeckSlowPercent,
+                FightTuning.LuckyDeckSlowTurns, actor);
 
             if (lost < 0)
             {

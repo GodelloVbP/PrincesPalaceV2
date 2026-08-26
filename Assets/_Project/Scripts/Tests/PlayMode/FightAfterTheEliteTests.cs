@@ -24,9 +24,13 @@ namespace PrincesPalace.PlayModeTests
     // cant do anything anymore" was invisible: the tests were entering a fight
     // by a door the player never uses.
     //
-    // The leg boundary is the interesting part. The elite is the last room of
-    // leg 1, so winning it advances the leg -- and everything after that runs
-    // against a freshly generated map with a new legStartStep.
+    // The leg boundary is the interesting part. Every leg ends on its boss now
+    // (D6/Phase 5B: "boss every floor"; the elite sits mid-leg instead), so
+    // winning the boss advances the leg -- and everything after that runs
+    // against a freshly generated map with a new legStartStep. Several tests
+    // below still call AdvanceLeg directly rather than walking to the actual
+    // forced room first, which is deliberate: AdvanceLeg's own seam does not
+    // care which room forced the boundary.
     public class FightAfterTheEliteTests
     {
         private string _root;
@@ -161,8 +165,8 @@ namespace PrincesPalace.PlayModeTests
             // Narrow speed gap: the monster opens and takes ONE turn. A wide one
             // gives it a run of consecutive turns and kills the hero, which
             // asserts something else -- see FightSessionTests for that mistake.
-            var hero = new CombatantState("Hero", true, 500, 20, 20, 0, 10);
-            var quick = new CombatantState("Quick", false, 200, 10, 1, 0, 11);
+            var hero = new CombatantState("Hero", true, 500, 20, 20, 10);
+            var quick = new CombatantState("Quick", false, 200, 10, 1, 11);
             var session = new FightSession(
                 new CombatEncounter(new[] { hero }, new[] { quick }), null, null, new SeededRandom(3));
 
@@ -290,10 +294,11 @@ namespace PrincesPalace.PlayModeTests
         // then be dismissed, there is nothing left on screen to press at all --
         // "it just hangs and you cant do anything anymore".
         //
-        // The elite is where this bites first: it is the last room of leg 1 and
-        // the fight whose reward carries a choice, so it is the first time the
-        // Reckoning opens on its offer phase rather than straight onto the
-        // summary.
+        // The elite is where this bites first: it is the first fight in a
+        // fresh run whose reward carries a choice (VictoryRewards.
+        // GuaranteesWeapon fires for boss or elite alike), so it is the
+        // first time the Reckoning opens on its offer phase rather than
+        // straight onto the summary.
         [UnityTest]
         public IEnumerator TheEliteCanBeLeftWhenItIsOver()
         {
@@ -301,8 +306,9 @@ namespace PrincesPalace.PlayModeTests
 
             RunManager.StartRun(639228196442867409UL);
 
-            // Stand the party in leg 1's elite -- step 8, the forced room the
-            // leg ends on.
+            // Stand the party in leg 1's elite -- step 4, the forced room
+            // mid-leg (D6/Phase 5B: the boss now takes the leg-ending slot
+            // at step 8; the elite moved to the midpoint).
             var map = RunManager.Map;
             var elite = map.Nodes.FirstOrDefault(n => n.Type == RoomType.EliteFight);
             Assert.IsNotNull(elite, "leg 1 has no elite, so this test is not testing what it says");

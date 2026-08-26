@@ -19,6 +19,15 @@ namespace PrincesPalace.Domain.Combat.Session
         // a label.
         public const string IntentAttack = "Attack";
 
+        // PHASE D3 FIX: what BuildIntent telegraphs for a ROOTED enemy that
+        // drew -1 because Rooted zeroed the only entry its pool had, rather
+        // than the "attack" fallback below. Same sentinel-before-label
+        // status as IntentAttack -- IntentTooltip compares against it to
+        // phrase the honest sentence instead of the generic "will {label}
+        // {who}" template, which would otherwise read as nonsense ("will
+        // Forfeits Turn itself").
+        public const string IntentForfeit = "Forfeits Turn";
+
         private readonly Dictionary<CombatantState, EnemyIntent> _intents = new Dictionary<CombatantState, EnemyIntent>();
 
         // Called whenever it becomes the player's turn, so every living enemy
@@ -45,7 +54,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 // run keeps its shape -- but it now chooses among everything the
                 // monster can do rather than between its two hardcoded options.
                 var kit = SourceFor(enemy);
-                var pool = EffectivePoolFor(kit?.Abilities);
+                var pool = EffectivePoolFor(enemy, kit?.Abilities);
                 int chosen = EnemyAbilityDraw.Pick(pool, _rng?.NextFloat() ?? 0f);
 
                 var target = PickRandomLivingPlayerTarget();
@@ -64,21 +73,46 @@ namespace PrincesPalace.Domain.Combat.Session
         // draw commits to is looked back up against kit.Abilities directly
         // at resolution time (see ResolveEnemyAction), so this can adjust
         // weights but can never reshuffle or drop an entry.
-        private IReadOnlyList<EnemyAbility> EffectivePoolFor(IReadOnlyList<EnemyAbility> abilities)
+        //
+        // PHASE D3: also where Rooted excludes the plain-attack entry. A
+        // rooted enemy loses its melee option and must draw from whatever
+        // skills remain -- the exact mirror of CanMeleeReach gating the
+        // PLAYER's own plain attack against a living front rank, just read
+        // off the ACTOR instead of the target. `IsPlainSwing` (not
+        // `IsLegacyAttack`) is the right predicate here: it is the same
+        // "ranged" line ResolveEnemyAction already draws for `usingSkill`
+        // (`!chosen.Value.IsPlainSwing`), which also treats a legacy scaled
+        // attack (authored SkillPower != 1, no real ResolvedSkill) as a
+        // skill rather than a melee swing. Zeroed with LegacyAttack, not
+        // EnemyAbility.Of, to keep HasSkill/Power intact for that entry --
+        // only its Weight moves.
+        private IReadOnlyList<EnemyAbility> EffectivePoolFor(CombatantState enemy, IReadOnlyList<EnemyAbility> abilities)
         {
             if (abilities == null) return null;
 
+            bool rooted = StatusEffects.HasRooted(enemy.Statuses);
             List<EnemyAbility> effective = null;
+
             for (int i = 0; i < abilities.Count; i++)
             {
                 var ability = abilities[i];
-                if (!ability.HasSkill || ability.Skill.Effect != SkillEffect.Summon) continue;
 
-                int living = LivingCountOf(ability.Skill.SummonEnemyId);
-                if (living < ability.Skill.SummonCap) continue;
+                if (ability.HasSkill && ability.Skill.Effect == SkillEffect.Summon)
+                {
+                    int living = LivingCountOf(ability.Skill.SummonEnemyId);
+                    if (living >= ability.Skill.SummonCap)
+                    {
+                        effective ??= new List<EnemyAbility>(abilities);
+                        effective[i] = EnemyAbility.Of(ability.Skill, 0f);
+                        continue;
+                    }
+                }
 
-                effective ??= new List<EnemyAbility>(abilities);
-                effective[i] = EnemyAbility.Of(ability.Skill, 0f);
+                if (rooted && ability.IsPlainSwing)
+                {
+                    effective ??= new List<EnemyAbility>(abilities);
+                    effective[i] = EnemyAbility.LegacyAttack(ability.Label, ability.Power, 0f);
+                }
             }
 
             // NOT abilities.ToList(). The copy was defensive against nothing:
@@ -89,15 +123,80 @@ namespace PrincesPalace.Domain.Combat.Session
             return effective ?? abilities;
         }
 
+        // Whether a ROOTED enemy has any legal skill left to draw from, once
+        // its plain attack is excluded by EffectivePoolFor above. Recomputes
+        // the same effective pool rather than caching one from intent time --
+        // Rooted (and a Summon cap) can change between when an intent was
+        // committed and when the turn actually resolves, and ResolveSkippedTurn
+        // asks this question fresh, the same way it re-checks HasStun fresh
+        // rather than trusting whatever the telegraph assumed.
+        //
+        // Pick(pool, 0f) rather than a hand-rolled "any weight > 0" scan: it
+        // is the exact function the real draw uses, so "no legal option"
+        // means precisely what the draw itself would find, and passing a
+        // literal 0f (not _rng.NextFloat()) costs nothing from the seeded
+        // stream -- this is a query, not a commitment.
+        private bool RootedEnemyHasNoLegalAction(CombatantState enemy)
+        {
+            var kit = SourceFor(enemy);
+            var pool = EffectivePoolFor(enemy, kit?.Abilities);
+            return EnemyAbilityDraw.Pick(pool, 0f) < 0;
+        }
+
         private EnemyIntent BuildIntent(CombatantState enemy, CombatantState target,
                                         IReadOnlyList<EnemyAbility> pool, int chosen)
         {
             var source = SourceFor(enemy)?.Source;
 
+            // PHASE D3b FIX: a STUNNED enemy forfeits UNCONDITIONALLY --
+            // ResolveSkippedTurn's isStunned check (see its own header) never
+            // consults the pool at all, unlike isRootedHelpless just below it,
+            // which only fires when RootedEnemyHasNoLegalAction says the pool
+            // is genuinely empty. A stunned enemy that drew a perfectly legal,
+            // fully-affordable skill still forfeits, so this cannot be folded
+            // into the "nothing to draw from" branch below the way Rooted's
+            // check is -- it has to run BEFORE `pool`/`chosen` are consulted
+            // at all, and unconditionally, not gated on them being empty.
+            //
+            // Before this, a stunned monster with a real skill in its pool
+            // was telegraphed that skill's full preview here (see
+            // EnemyIntentTests.AStunnedEnemyWithARealSkill_TelegraphsAForfeit_NotAFakeSkill)
+            // and then silently did nothing when AutoResolveEnemyTurns
+            // actually reached it -- the player planned around an attack
+            // that was never coming, the same class of bug Rooted had.
+            if (StatusEffects.HasStun(enemy.Statuses))
+            {
+                return new EnemyIntent(IntentForfeit, EnemyIntentKind.Skill, target, 0,
+                    scope: EnemyIntentScope.Self);
+            }
+
             // Nothing to draw from: a monster that joined mid-round, or one
-            // whose whole pool was weighted out. It swings.
+            // whose whole pool was weighted out. It swings -- EXCEPT when the
+            // -1 is because Rooted zeroed the only entry the pool had and
+            // nothing else was authored to replace it. That case is not a
+            // content mistake, it is the enemy genuinely having no legal
+            // action, and ResolveSkippedTurn (see its own header) already
+            // forfeits the turn for exactly this reason when it resolves.
+            //
+            // RootedEnemyHasNoLegalAction is called here rather than
+            // re-derived: it is the SAME check ResolveSkippedTurn asks at
+            // resolution time, over the SAME recomputed pool (Pick's result
+            // does not depend on which roll is passed once the pool sums to
+            // zero -- see EnemyAbilityDraw.Pick's own comment), so the
+            // telegraph and the resolution can never disagree about whether
+            // this enemy is helpless. Before this, BuildIntent had no such
+            // check at all: a Rooted enemy with an empty pool was telegraphed
+            // a full-power "Attack" here and then silently had its turn
+            // forfeited when AutoResolveEnemyTurns actually reached it -- the
+            // player planned around damage that was never coming.
             if (pool == null || chosen < 0 || chosen >= pool.Count)
             {
+                if (StatusEffects.HasRooted(enemy.Statuses) && RootedEnemyHasNoLegalAction(enemy))
+                {
+                    return new EnemyIntent(IntentForfeit, EnemyIntentKind.Skill, target, 0,
+                        scope: EnemyIntentScope.Self);
+                }
+
                 return new EnemyIntent(IntentAttack, EnemyIntentKind.Attack, target,
                     PreviewDamage(enemy, target, false, source, 1f));
             }
@@ -165,7 +264,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 raw, enemy, against,
                 attackType: castType,
                 affinity: AffinityOf(against),
-                varianceRange: 0f, rng: null, resolveWard: null).Damage;
+                varianceRange: 0f, rng: null, resolveWard: null,
+                ignoresDefense: skill.IgnoresDefense).Damage;
         }
 
         // What the blow would land for, with NOTHING that mutates and NOTHING
@@ -187,9 +287,12 @@ namespace PrincesPalace.Domain.Combat.Session
                 damage = System.Math.Max(1, Rounding.AwayFromZero(damage * power));
             }
 
+            // The enemy's own authored attackType, same as the real swing
+            // now reads (see ActorAttackType's comment) -- a monster with
+            // none stays Physical via the null fallback, exactly as before.
             return DamagePipeline.AfterDefences(
                 damage, enemy, target,
-                attackType: null, affinity: ElementalAffinity.Neutral,
+                attackType: source?.AttackType, affinity: ElementalAffinity.Neutral,
                 varianceRange: 0f, rng: null, resolveWard: null).Damage;
         }
 
@@ -301,19 +404,43 @@ namespace PrincesPalace.Domain.Combat.Session
             return !_encounter.IsOver;
         }
 
-        // Two independent reasons a turn is skipped outright rather than
-        // resolving a weakened version of it -- a broken stagger meter and a
-        // Stun status -- reported together, since either or both can be true at
+        // Three independent reasons a turn is skipped outright rather than
+        // resolving a weakened version of it -- a broken stagger meter, a
+        // Stun status, and (PHASE D3) a Rooted enemy with no legal skill left
+        // to cast -- reported together, since more than one can be true at
         // once and the player should see why.
+        //
+        // The Rooted check is gated behind HasRooted first and short-circuits
+        // on isStunned: RootedEnemyHasNoLegalAction recomputes a pool, which
+        // is wasted work when the turn is already forfeit for a cheaper
+        // reason, and Stun's own message already covers "cannot act" without
+        // needing to know why the pool would have been empty too.
+        //
+        // ALSO GATED ON `!enemy.IsPlayerSide` -- ResolveSkippedTurn runs for
+        // BOTH sides (a stunned PLAYER's turn is skipped through this exact
+        // path too, per AutoResolveEnemyTurns' own header), but Rooted's pool
+        // machinery (SourceFor/EffectivePoolFor) only ever tracks an ENEMY's
+        // ability kit. SourceFor(player) is always null, which would make
+        // RootedEnemyHasNoLegalAction read as "helpless" unconditionally --
+        // forfeiting a player's ENTIRE turn, not merely disabling their
+        // plain-attack option, the moment anything ever applied Rooted to
+        // one. Nothing today does (see StatusEffectType.Rooted's own
+        // comment), but this guard is what keeps that true by construction
+        // rather than by accident.
         //
         // Reset and ConsumeStun both happen HERE, the instant the skip is
         // actually spent, rather than inside Deplete/Tick or on a timer, so
         // either one always costs exactly one turn however it was reached.
+        // Rooted is NOT consumed here -- it decays by turn count like Chilled
+        // (StatusEffects.Tick's generic countdown), not spent like Stun, so a
+        // forfeited turn does not erase turns of Rooted still owed.
         private bool ResolveSkippedTurn(CombatantState enemy)
         {
             bool isBroken = enemy.BreakShield != null && enemy.BreakShield.IsBroken;
             bool isStunned = StatusEffects.HasStun(enemy.Statuses);
-            if (!isBroken && !isStunned) return false;
+            bool isRootedHelpless = !isStunned && !enemy.IsPlayerSide && StatusEffects.HasRooted(enemy.Statuses)
+                                     && RootedEnemyHasNoLegalAction(enemy);
+            if (!isBroken && !isStunned && !isRootedHelpless) return false;
 
             BeginBeat(enemy, enemy);
 
@@ -328,7 +455,9 @@ namespace PrincesPalace.Domain.Combat.Session
                 ? $"{enemy.Name} is stunned AND still reeling - it cannot act!"
                 : isBroken
                     ? $"{enemy.Name} is still reeling and cannot act!"
-                    : $"{enemy.Name} is stunned and cannot act!");
+                    : isStunned
+                        ? $"{enemy.Name} is stunned and cannot act!"
+                        : $"{enemy.Name} is rooted with nothing to cast - it cannot act!");
 
             CommitBeat();
             return true;
@@ -389,6 +518,36 @@ namespace PrincesPalace.Domain.Combat.Session
                          && committed.Value.AbilityIndex < pool.Count
                 ? pool[committed.Value.AbilityIndex]
                 : (EnemyAbility?)null;
+
+            // PHASE D3: a plain-attack commitment made BEFORE this enemy was
+            // rooted is no longer legal by the time it resolves -- and this
+            // is the ORDINARY case, not a corner one. Sylvan's Root lands as
+            // an on-hit rider on a swing the PLAYER just took, which happens
+            // DURING the player's own turn, immediately ahead of
+            // AutoResolveEnemyTurns resolving this exact enemy's already-
+            // telegraphed reply -- the intent for THIS turn was drawn back
+            // when PrepareEnemyIntents last ran, before the hit that rooted
+            // it. ResolveSkippedTurn's own Rooted check already recomputes
+            // fresh (RootedEnemyHasNoLegalAction never reads the committed
+            // intent), so the no-legal-skill forfeit is unaffected by this
+            // staleness -- only the "has a legal skill, but the stale
+            // commitment says plain swing" gap needs handling here.
+            //
+            // Re-drawing (not merely refusing) is safe specifically for a
+            // PLAIN SWING: TelegraphSuffix never shows one ("only SKILLS are
+            // telegraphed" -- see its own header), so nothing was promised
+            // to the player for this turn, and honouring a promise that was
+            // never shown is not a promise worth keeping. A committed SKILL
+            // is never touched here, matching every other path in this
+            // method that honours the telegraph outright.
+            if (chosen.HasValue && chosen.Value.IsPlainSwing && StatusEffects.HasRooted(enemy.Statuses))
+            {
+                var effective = EffectivePoolFor(enemy, pool);
+                int redraw = EnemyAbilityDraw.Pick(effective, _rng?.NextFloat() ?? 0f);
+                chosen = effective != null && redraw >= 0 && redraw < effective.Count
+                    ? effective[redraw]
+                    : (EnemyAbility?)null;
+            }
 
             _intents.Remove(enemy);
 
@@ -472,16 +631,47 @@ namespace PrincesPalace.Domain.Combat.Session
             }
 
             // The player's armour, on the one path where it matters most: this
-            // is the only damage the player ever takes. No enemy authors an
-            // attack type, so the funnel reads their claws as untyped and
-            // physical resistance stops them, which is the sensible reading of
-            // "hits you with whatever it has".
-            damage = DamagePipeline.AfterDefences(
+            // is the only damage the player ever takes. An enemy with no
+            // authored attackType still reads as untyped Physical here (the
+            // null fallback) — one WITH one now actually meets the matching
+            // MagicalDefense instead, which used to be a dead stat against
+            // every monster in the game. See ActorAttackType's own comment.
+            var outcome = DamagePipeline.AfterDefences(
                 damage, enemy, target,
-                attackType: null, affinity: ElementalAffinity.Neutral,
+                attackType: ActorAttackType(enemy), affinity: ElementalAffinity.Neutral,
                 varianceRange: DamageVarianceRange,
                 rng: _rng,
-                resolveWard: ResolveWard).Damage;
+                resolveWard: ResolveWard);
+
+            // The enemy's own pose (and cast VFX) is recorded regardless of
+            // whether the blow connects -- the monster still visibly swings
+            // or casts, it is the PLAYER who evades the result. Moved ahead
+            // of the goaded multiplier/miss check for that reason (it does
+            // not depend on either).
+            SetStance(enemy, usingSkill ? Stances.Cast : Stances.Attack);
+            if (usingSkill)
+            {
+                RecordSpellPresentation(source.Vfx);
+            }
+
+            // Swift: the player dodged. No damage, no signature grant, no
+            // absorbed/CheatedDeath message, no applied status, no Hurt pose
+            // -- every one of those is a rider on a landed hit. A taunt is
+            // still spent: the enemy DID act on it, the target simply
+            // evaded the result, which is not the same thing as the enemy
+            // never having gone for the taunter at all.
+            if (outcome.IsMiss)
+            {
+                RecordMiss();
+                StatusEffects.ConsumeProvoke(enemy.Statuses);
+                AppendMessage(usingSkill
+                    ? $"{enemy.Name} uses {source.SkillName} on {target.Name}, but it misses!"
+                    : $"{enemy.Name} attacks {target.Name}, but it misses!");
+                CommitBeat();
+                return;
+            }
+
+            damage = outcome.Damage;
 
             // Provoke T2: a goaded enemy swings wide. Applied to the PAIR rather
             // than through the target's own DamageTakenMultiplier, so it blunts
@@ -490,18 +680,6 @@ namespace PrincesPalace.Domain.Combat.Session
             if (goaded < 1f)
             {
                 damage = System.Math.Max(1, Rounding.AwayFromZero(damage * goaded));
-            }
-
-            SetStance(enemy, usingSkill ? Stances.Cast : Stances.Attack);
-
-            // A skill's own VFX, recorded the instant the pose is decided --
-            // same resolved-now, played-back-later split every other beat field
-            // uses. Not gated on the monster actually having art: an unauthored
-            // vfxPath just leaves HasSpellAnimation false, the same graceful
-            // posture as everywhere else.
-            if (usingSkill)
-            {
-                RecordSpellPresentation(source.Vfx);
             }
 
             // Through the ledger's funnel, like every other damage path.

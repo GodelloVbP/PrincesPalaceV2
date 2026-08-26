@@ -15,13 +15,13 @@ MonoBehaviour:
   id: rat
   displayName: Giant Rat
   baseStats:
-    maxHealth: 90
+    maxHealth: 40
     speed: 7
-    attack: 3
-    defense: 1
+    attack: 10
     manaRegen: 0
-    physicalResistance: 0
-    magicalResistance: 0
+    physicalDefense: 5
+    magicalDefense: 0
+  attackType: 0
   expReward: 15
   currencyReward: 8
   isBoss: 0

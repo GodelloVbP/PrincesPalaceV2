@@ -15,20 +15,20 @@ MonoBehaviour:
   id: warden
   displayName: Dungeon Warden
   baseStats:
-    maxHealth: 600
+    maxHealth: 105
     speed: 8
-    attack: 6
-    defense: 5
+    attack: 30
     manaRegen: 0
-    physicalResistance: 0
-    magicalResistance: 0
+    physicalDefense: 20
+    magicalDefense: 20
+  attackType: 0
   expReward: 100
   currencyReward: 60
   isBoss: 1
   minFloor: 2
   weaknesses: 05000000
   resistances: 01000000
-  breakShieldPoints: 15
+  breakShieldPoints: 3
   spritePath: 
   facing: 1
   sortOrder: 14

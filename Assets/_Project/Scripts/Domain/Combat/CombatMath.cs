@@ -32,8 +32,9 @@ namespace PrincesPalace.Domain.Combat
         // instead would leave a well-armoured target taking literally 1.
         //
         // THAT FLOOR IS NO LONGER load-BEARING against armour, because armour
-        // no longer subtracts -- see Mitigate. It survives as what it says on
-        // the tin: a hit is never zero.
+        // no longer subtracts -- see DamagePipeline.AfterDefences, the canonical
+        // mitigation equation. It survives as what it says on the tin: a hit is
+        // never zero.
         //
         // Fixed damage authored directly on a skill (a spell's
         // damageInstances) is already written on the new scale and is
@@ -59,88 +60,103 @@ namespace PrincesPalace.Domain.Combat
         // other direction this time.
         public const int DamageScale = 5;
 
-        // Basic attack: the swing, softened by whatever armour is in the way.
-        // See Mitigate for why that is a scaling rather than a subtraction.
+        // Basic attack: the raw, unmitigated swing. Mitigation is no longer
+        // applied here — see DamagePipeline.AfterDefences, the single place
+        // any defense term is ever subtracted, for the canonical equation.
         //
-        // The weapon's SCALING is folded into the attack side, before defense
-        // is subtracted, rather than applied to the finished figure. That is
-        // the same place a spell's power multiplier goes in ComputeSkillDamage
-        // below, and putting it anywhere else breaks armour: multiplying the
-        // final number means a 2x weapon doubles the damage that got through,
-        // so heavy armour would be worth half as much against exactly the
-        // weapons it most needs to blunt.
+        // The weapon's SCALING is folded into the attack side, exactly as
+        // before; only the subsequent Mitigate step has moved. `target` is
+        // kept as a parameter for call-site stability (every production and
+        // test call site already hands one in) even though nothing here
+        // reads it any more — the target only ever mattered for the defense
+        // term that used to live in this function.
+        //
+        // NO LONGER SCALED. D1 says so explicitly ("DamageScale x5 ... are
+        // deleted") and a balance-validation pass (2026-08-26) proved why:
+        // §P's own worked example was hand-derived by feeding WP x M straight
+        // into the mitigation equation with NO x5 — every one of its pinned
+        // "after DEF" figures only reproduces without the multiplier. Two
+        // prior implementation passes left the x5 live here regardless (one
+        // called it out of scope, the other built around it), which meant
+        // every real fight resolved in 2-5 actions instead of the designed
+        // 10-20 for a boss. Floored at 1 rather than run through Scale(),
+        // which still exists and still serves callers OUTSIDE the mitigated-
+        // combat path — see its own header.
         public static int ComputeAttackDamage(CombatantState attacker, CombatantState target)
         {
-            return Mitigate(ScaledAttack(attacker, attacker.WeaponScaling, 1f), EffectiveDefense(target, attacker));
+            return Math.Max(1, ScaledAttack(attacker, attacker.WeaponScaling, 1f));
         }
 
-        // The Defense a hit actually has to get through right now.
+        // How much of a target's broad Defense (PhysicalDefense or
+        // MagicalDefense, picked by damage type) actually stands between an
+        // attack and its target right now — the D_broad term of
+        // DamagePipeline's canonical mitigation equation.
         //
-        // Exactly target.Defense, EXCEPT while a BreakShield is broken — for
-        // that one turn's window, armour stops counting entirely. This is the
-        // single place that rule lives, so every formula that subtracts
-        // Defense (a plain Attack, a Skill, SkillResolution's own damage
-        // case) reads THROUGH it rather than each deciding for itself whether
-        // to check BreakShield, which is exactly the kind of duplicated
-        // judgment call that has already produced a real bug once in this
-        // pipeline (AUDIT.md #16, three different rounding conventions in one
-        // pipeline because no one function owned the decision).
+        // `ignoresDefense` (a skill flag) skips this entirely, returning 0 —
+        // Sharp Horns' penetration and Last Stand's bonus never get a look
+        // in, because there is nothing left for either to act on. Typed
+        // Resistance (target.TypedResistance, summed in TotalDefense below)
+        // is a SEPARATE term that is never skipped this way — "ignores
+        // defense" means the broad stat, not a suit of elemental wards.
         //
-        // Fixed damageInstances packets never subtracted Defense to begin
-        // with (they are "exactly what it says"), so Break's bonus is
-        // naturally a non-event there rather than something that needed a
-        // special case.
-        public static int EffectiveDefense(CombatantState target)
+        // BreakShield overrides everything else: for one turn's window after
+        // it breaks, this returns 0 regardless of Last Stand or penetration,
+        // which is the single place that rule lives so every damage path
+        // reads through it rather than each deciding for itself whether to
+        // check BreakShield (AUDIT.md #16 is three different rounding
+        // conventions in one pipeline because no one function owned a
+        // decision like this one).
+        //
+        // Order matters and is exactly the plan's: Last Stand's bonus first
+        // (it is a property of the target alone), then BreakShield's zero
+        // (which wins outright over any bonus just computed), then the
+        // attacker's penetration last, against whatever survived the first
+        // two steps.
+        public static int BroadDefense(CombatantState target, DamageType type, CombatantState attacker, bool ignoresDefense)
         {
-            if (target?.BreakShield != null && target.BreakShield.IsBroken)
+            if (ignoresDefense || target == null)
             {
                 return 0;
             }
 
-            if (target == null)
-            {
-                return 0;
-            }
+            int broad = IsPhysical(type) ? target.PhysicalDefense : target.MagicalDefense;
 
-            // Last Stand T1: armour that only exists once he is hurt. Folded
-            // in HERE, in the one function every formula that subtracts
-            // Defense reads through, for exactly the reason that function's
-            // own header already gives — a bonus applied at the call sites
-            // would apply to a plain Attack and silently not to a Skill.
+            // Last Stand T1: armour that only exists once he is hurt.
             int bonusPercent = target.Talents.BestBelowHealth(
                 TalentEffectType.DefenseBonusPercentBelowHealth, target);
-
-            return bonusPercent <= 0
-                ? target.Defense
-                : target.Defense + target.Defense * bonusPercent / 100;
-        }
-
-        // The same, minus whatever the ATTACKER is authored to ignore —
-        // Sharp Horns' armour penetration.
-        //
-        // A second overload rather than a parameter on the existing one,
-        // because the two questions are genuinely different and nearly every
-        // caller only has the first. "What armour does this target have right
-        // now" is a property of the target (the break window, Last Stand);
-        // "how much of it does this particular swing get through" needs both
-        // sides. SkillResolution.Damage asks the first and cannot answer the
-        // second, so making the attacker a required parameter would have
-        // meant handing it a null there and hoping.
-        //
-        // Penetration applies to the POST-bonus figure: Sharp Horns ignores a
-        // fraction of the armour actually in the way, which is the reading
-        // that keeps the two strands composing sensibly instead of racing to
-        // be applied first.
-        public static int EffectiveDefense(CombatantState target, CombatantState attacker)
-        {
-            int defense = EffectiveDefense(target);
-            if (defense <= 0 || attacker == null)
+            if (bonusPercent > 0)
             {
-                return defense;
+                broad += broad * bonusPercent / 100;
             }
 
-            int ignorePercent = attacker.Talents.Best(TalentEffectType.IgnoreDefensePercent);
-            return ignorePercent <= 0 ? defense : defense - defense * ignorePercent / 100;
+            if (target.BreakShield != null && target.BreakShield.IsBroken)
+            {
+                broad = 0;
+            }
+
+            // Sharp Horns' armour penetration, against whatever is left.
+            if (attacker != null && broad > 0)
+            {
+                int ignorePercent = attacker.Talents.Best(TalentEffectType.IgnoreDefensePercent);
+                if (ignorePercent > 0)
+                {
+                    broad -= broad * ignorePercent / 100;
+                }
+            }
+
+            return Math.Max(0, broad);
+        }
+
+        // D_broad + D_typed — the full defense figure DamagePipeline's
+        // canonical equation subtracts a swing's way through. Typed
+        // Resistance is summed on top and is NEVER broken or penetrated —
+        // BroadDefense above is where BreakShield and penetration act, and
+        // neither reaches the typed term added here.
+        public static int TotalDefense(CombatantState target, DamageType type, CombatantState attacker, bool ignoresDefense)
+        {
+            int broad = BroadDefense(target, type, attacker, ignoresDefense);
+            int typed = target?.TypedResistance.For(type) ?? 0;
+            return broad + typed;
         }
 
         // Trample T1: more damage against a target already on its way down.
@@ -223,89 +239,39 @@ namespace PrincesPalace.Domain.Combat
             return Rounding.AwayFromZero(attacker.Attack * scaled);
         }
 
-        // The one place the floor and the scale are applied, so no formula
-        // can pick up one without the other.
+        // NOT part of the mitigated-combat path any more. ComputeAttackDamage
+        // and ComputeSkillDamage — the two entry points every real player and
+        // enemy swing/cast reaches DamagePipeline through — stopped calling
+        // this on 2026-08-26 (see their own headers): D1 always said the x5
+        // was deleted, but two prior implementation passes left it live here
+        // regardless, which meant every fight in the game resolved in 2-5
+        // actions instead of the designed 10-20 for a boss. Confirmed root
+        // cause by a dedicated balance-validation pass (2026-08-26): feeding
+        // §P's own WP x M straight into the mitigation equation with no x5
+        // reproduces every one of its pinned "after DEF" figures exactly.
         //
-        // STILL SUBTRACTIVE-SHAPED, and now used only where there is nothing
-        // to subtract: an unmitigated figure being put on the damage scale
-        // (the POWER readout, a talent's splash). Anything with a defender on
-        // the other side goes through Mitigate below instead.
+        // KEPT rather than deleted outright, because it still legitimately
+        // serves callers that are NOT on the mitigated-combat path and were
+        // never part of the bug: FightHudModel's POWER/PreviewBasicSpellPower
+        // readouts read ComputeAttackDamage/ComputeSkillDamage directly now
+        // instead, but FightSession.Talents.cs's two unmitigated splash
+        // sites (Shatter, Trample's kill splash) still call this directly —
+        // a percent of raw Attack, never mitigated, deliberately left on the
+        // old x5 scale by the same designer call that fixed the two entry
+        // points above (see the session report for why that is worth a
+        // second look before the next playtest: those two abilities now hit
+        // for roughly 5x a plain swing of the same nominal size, which used
+        // to not be true).
+        //
+        // NO LONGER SUBTRACTIVE-SHAPED in the sense its name once implied —
+        // "raw difference" is history from when this took (attack - defense)
+        // directly. Mitigation — HOW MUCH OF A SWING GETS PAST ARMOUR — now
+        // lives entirely in DamagePipeline.AfterDefences, via TotalDefense/
+        // BroadDefense above and AfterResistance below, which is what
+        // replaced this file's own Mitigate/ArmourSoftening (deleted).
         public static int Scale(int rawDifference)
         {
             return Math.Max(1, rawDifference) * DamageScale;
-        }
-
-        // HOW MUCH OF A SWING GETS PAST ARMOUR.
-        //
-        // THE BUG THIS REPLACES, in the words it was reported in: "The forest
-        // troll (FIRST BOSS) has 2.2k health. How am I supposed to get through
-        // that hitting 5 damage per attack?"
-        //
-        // Damage was max(1, attack - defense) x DamageScale, and the max(1)
-        // is the whole problem. Subtraction has a cliff: while attack exceeds
-        // defense every point of Attack is worth a full DamageScale, and the
-        // moment defense catches up the term goes negative, the floor takes
-        // over, and damage is a CONSTANT. Not small -- constant. More Attack
-        // buys nothing until it climbs all the way back past defense, and
-        // more Defense on the enemy costs nothing either. Two live examples,
-        // both reported as separate complaints and both this one cliff:
-        //
-        //   Shawn ungeared swings for 6 after scaling. The Forest Troll is a
-        //   FLOOR-ONE boss with Defense 9 and 650 health, so first contact was
-        //   6 - 9 -> floor -> 5 damage, 130 turns, before the depth curve
-        //   multiplied anything. By step 16 it was 2129 health and Defense 20:
-        //   the same 5 damage, 425 turns.
-        //
-        //   The Ironback Beetle, Defense 8, was 22 turns at step 0 and 39 by
-        //   step 8 -- "you can't even kill them within 30 turns".
-        //
-        // AND HALVING DamageScale MADE IT WORSE, which is worth recording
-        // because the change looked uniform and was not. Against anything
-        // out-armouring you the floor was ALL you were ever dealing, so
-        // halving 10 to 5 halved the only damage those fights had. It did what
-        // it was asked on ordinary fights and quietly doubled the length of
-        // precisely the ones that were already the worst.
-        //
-        // DIMINISHING RETURNS INSTEAD OF SUBTRACTION. Armour now scales the
-        // swing rather than being taken off it:
-        //
-        //     through = attack x Softening / (Softening + defense)
-        //
-        // The property that matters is not the curve's shape, it is that
-        // damage is PROPORTIONAL TO ATTACK AT EVERY ARMOUR LEVEL. Doubling
-        // Attack doubles damage against a naked rat and against a boss alike,
-        // so gear always pays and there is no threshold to fall off. That is
-        // the failure DifficultyCurve's own calibration walked into: its two
-        // rates were measured on a FULLY GEARED character so hits-to-kill
-        // stays flat, which holds exactly while attack leads defense, and
-        // anyone short of that fell through the floor and could not climb
-        // back out by getting stronger.
-        //
-        // SOFTENING = 12, chosen against the roster rather than picked. It is
-        // the defense at which a swing lands at half strength, so it has to
-        // sit near the armoured end of what enemies actually have (rat 1,
-        // beetle 8, golem 8, troll 9, colossus 9). At 12 a rat still takes
-        // 92% of a swing -- the shallow game is unchanged, which it had to be
-        // -- and the troll takes 57% instead of 12%.
-        public const int ArmourSoftening = 12;
-
-        public static int Mitigate(int attack, int defense)
-        {
-            if (defense <= 0)
-            {
-                return Scale(attack);
-            }
-
-            // ROUNDED BEFORE THE SCALE, not after, so this composes with
-            // Scale's own floor exactly as the subtraction it replaces did --
-            // one place decides what the smallest possible hit is, and it is
-            // still Scale. Rounding after would put the floor on the x5 figure
-            // and quietly make the minimum hit 1 instead of 5.
-            int through = (int)Math.Round(
-                attack * (double)ArmourSoftening / (ArmourSoftening + defense),
-                MidpointRounding.AwayFromZero);
-
-            return Scale(through);
         }
 
         // Skill: costs mana, hits harder than a plain Attack by
@@ -321,9 +287,12 @@ namespace PrincesPalace.Domain.Combat
         // rides its own stats (Intelligence for arcane, Wisdom for nature)
         // rather than the sword in the caster's other hand, which is why the
         // two profiles are separate fields on CombatantState.
+        // NO LONGER SCALED — see ComputeAttackDamage's own header for why.
+        // Floored at 1 the same way, so a skill and a plain swing can never
+        // end up on different conventions for a zero-or-negative input.
         public static int ComputeSkillDamage(CombatantState attacker, CombatantState target, float powerMultiplier)
         {
-            return Mitigate(ScaledAttack(attacker, attacker.SkillScaling, powerMultiplier), EffectiveDefense(target, attacker));
+            return Math.Max(1, ScaledAttack(attacker, attacker.SkillScaling, powerMultiplier));
         }
 
         // Rudimentary weakness/resistance: an attack matching one of the
@@ -438,26 +407,6 @@ namespace PrincesPalace.Domain.Combat
         public static bool IsPhysical(DamageType type)
         {
             return type == DamageType.Physical;
-        }
-
-        public static int ResistanceAgainst(CombatantState target, DamageType type)
-        {
-            if (target == null)
-            {
-                return 0;
-            }
-
-            // THE BROAD ANSWER PLUS THE SPECIFIC ONE. Physical-or-magical is
-            // what gear rolls and the sheet shows; the typed block is what a
-            // cloak worn against fire adds on top of it.
-            //
-            // Summed rather than taking the larger, because they are different
-            // claims: generic warding and a fire cloak both genuinely stand
-            // between you and a fire bolt. The softening curve stops that
-            // running away -- R/(R+100) means the second hundred is worth much
-            // less than the first.
-            int broad = IsPhysical(type) ? target.PhysicalResistance : target.MagicalResistance;
-            return broad + target.TypedResistance.For(type);
         }
 
         // Returns how much a signature resource soaked before health was

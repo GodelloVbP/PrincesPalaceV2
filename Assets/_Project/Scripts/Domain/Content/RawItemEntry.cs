@@ -39,7 +39,8 @@ namespace PrincesPalace.Domain.Content
         public string slot = "";
 
         // Equipment/Weapons: granted for as long as the item is worn.
-        // statBonus moves the combat stats (maxHealth/speed/attack/defense);
+        // statBonus moves the combat stats (maxHealth/speed/attack/
+        // manaRegen/physicalDefense/magicalDefense);
         // abilityScoreBonus moves the six sheet scores (strength/dexterity/
         // constitution/wisdom/intelligence/charisma). Both are optional, but
         // a piece of Equipment granting neither is rejected — same rule, and

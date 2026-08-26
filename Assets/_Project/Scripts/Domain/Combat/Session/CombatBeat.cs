@@ -37,6 +37,22 @@ using PrincesPalace.Domain.Content;
         public int Amount;
         public bool IsHealing;
 
+        // PHASE D1: the single-target swing or cast this beat represents was
+        // DODGED — Amount stays 0 (RecordBeatAmount already no-ops for a
+        // non-positive amount, so nothing here forces it) but that 0 must
+        // not read as "landed for nothing", which is what a beat with no
+        // damage source at all also looks like today (a Hold Back turn, a
+        // non-damaging cast). A DISTINCT flag rather than overloading
+        // Amount == 0 for the same reason DamagePipeline.Outcome.IsMiss is
+        // its own field and not inferred from Damage == 0 — see that
+        // struct's own comment. Left false and unset for a multi-target
+        // beat (ResolveDamageAll) where one enemy of several dodges and the
+        // rest do not — that AOE shape already reports per-enemy results as
+        // text in Messages rather than through this single beat-wide
+        // Amount/stance pair, so a per-enemy miss reads the same way a
+        // per-enemy damage number already does: in the log line, not here.
+        public bool Missed;
+
         // The turn queue as it stood when this beat resolved. Same reasoning as
         // the vitals snapshot: live state has already run the entire chain by
         // the time any beat is played, so reading it during playback shows the

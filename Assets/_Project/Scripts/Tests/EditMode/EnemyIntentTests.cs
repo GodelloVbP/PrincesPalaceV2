@@ -18,10 +18,10 @@ namespace PrincesPalace.Domain.Tests
     public class EnemyIntentTests
     {
         private static CombatantState Hero() =>
-            new CombatantState("Hero", true, 500, 10, 20, 0, 10);
+            new CombatantState("Hero", true, 500, 10, 20, 10);
 
         private static CombatantState Monster(string name, int health = 1000) =>
-            new CombatantState(name, false, health, 10, 5, 0, 9);
+            new CombatantState(name, false, health, 10, 5, 9);
 
         private static ResolvedEnemy Source(string id, string skillName, float skillChance) =>
             new ResolvedEnemy(id, id, new StatBlock(), 0, 0, false,
@@ -180,19 +180,138 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ASkippedTurnAlsoSpendsTheCommitment()
         {
-            // The monster declared it and then could not deliver, so re-rolling
-            // next turn is honest -- the alternative is a telegraph the player
-            // has already watched fail to happen.
+            // NOTE ON THIS TEST'S RELATIONSHIP TO THE STUN TELEGRAPH FIX
+            // (see FightSession.Enemies.cs's PHASE D3b comment, and
+            // AStunnedEnemyWithARealSkill_TelegraphsAForfeit_NotAFakeSkill
+            // below): Stun lands here AFTER session.Begin() has already
+            // committed "Boulder Slam" via BuildIntent, at a moment the
+            // monster genuinely was not yet stunned -- so that commitment was
+            // truthful when it was made, and this test was never actually
+            // pinning the fraudulent-telegraph bug (verified by reading, not
+            // assumed). What it DOES validly test, and still does after the
+            // fix: a mid-round Stun still forces the skip, still messages the
+            // player, and still discards the stale commitment rather than
+            // leaving it to be reused -- confirmed below by re-checking the
+            // NEXT intent is a freshly-rolled real one (Stun is fully consumed
+            // by one skip, per StatusEffects.ConsumeStun's own comment, so the
+            // monster is telegraphed truthfully again for its next turn).
             var (session, encounter) = Fight(skillChance: 1f);
             var monster = encounter.Enemies[0];
 
             session.Begin();
+            Assert.AreEqual("Boulder Slam", session.IntentFor(monster),
+                "true when committed -- the monster was not yet stunned");
+
             StatusEffects.Apply(monster.Statuses, StatusEffectType.Stun, 0, 2);
             session.ExecuteAttack(monster);
 
             Assert.IsTrue(session.DrainBeats()
                 .SelectMany(b => b.Messages)
                 .Any(m => m.Contains("stunned")));
+
+            Assert.AreEqual("Boulder Slam", session.IntentFor(monster),
+                "the stale commitment was spent, not reused -- this is a fresh roll for a " +
+                "monster Stun has now fully released (ConsumeStun removes it outright)");
+        }
+
+        // ---- PHASE D3b FIX: BuildIntent and Stun -------------------------------
+        //
+        // Stun forfeits a turn UNCONDITIONALLY (ResolveSkippedTurn's isStunned
+        // check never looks at the enemy's pool), unlike Rooted, which only
+        // forfeits when the pool is genuinely empty. BuildIntent had no Stun
+        // check at all: an enemy stunned BEFORE its intent was ever drawn
+        // still had a real skill/attack rolled and telegraphed here, promising
+        // an attack that ResolveSkippedTurn was always going to cancel. See
+        // FightSession.Enemies.cs's own comment on the fix.
+
+        [Test]
+        public void AStunnedEnemyWithARealSkill_TelegraphsAForfeit_NotAFakeSkill()
+        {
+            // skillChance 1f, matching ASkippedTurnAlsoSpendsTheCommitment's own
+            // setup: a real, affordable, certain-to-be-picked skill sits in the
+            // pool. The only difference is WHEN Stun lands -- here, before the
+            // draw ever happens, which is the case BuildIntent must catch.
+            var (session, encounter) = Fight(skillChance: 1f);
+            var monster = encounter.Enemies[0];
+            StatusEffects.Apply(monster.Statuses, StatusEffectType.Stun, 0, 2);
+
+            session.PrepareEnemyIntents();
+
+            Assert.AreEqual(FightSession.IntentForfeit, session.IntentFor(monster),
+                "a stunned enemy must telegraph a forfeit, not the real skill it would " +
+                "otherwise have drawn -- Stun forfeits the turn regardless of what is in the pool");
+
+            var detail = session.IntentDetailFor(monster);
+            Assert.IsTrue(detail.HasValue, "a forfeit is still a committed intent, not a missing one");
+            Assert.AreEqual(0, detail.Value.ExpectedDamage,
+                "no damage may be previewed for a turn that will not actually happen");
+            Assert.AreNotEqual(EnemyIntentKind.Attack, detail.Value.Kind,
+                "the badge must not read as an ordinary threat when nothing is coming");
+        }
+
+        // ---- PHASE D3 FIX: BuildIntent's -1 fallback ---------------------------
+        //
+        // EnemyAbilityDraw.Pick returns -1 for two DIFFERENT reasons: a genuinely
+        // mis-authored pool (every weight zeroed by content mistake), and a
+        // Rooted enemy whose only entry EffectivePoolFor itself zeroed. BuildIntent
+        // used to treat both the same way -- swing anyway -- which telegraphed a
+        // full-power Attack for a turn Rooted was always going to forfeit at
+        // resolution. See FightSession.Enemies.cs's own comment on the fix.
+
+        [Test]
+        public void ARootedEnemyWithNoLegalSkill_TelegraphsAForfeit_NotAFakeAttack()
+        {
+            var (session, encounter) = Fight(skillChance: 0f);
+            var monster = encounter.Enemies[0];
+            StatusEffects.Apply(monster.Statuses, StatusEffectType.Rooted, 0, 5);
+
+            session.PrepareEnemyIntents();
+
+            Assert.AreEqual(FightSession.IntentForfeit, session.IntentFor(monster),
+                "a Rooted enemy with nothing else to cast must telegraph a forfeit, not \"Attack\"");
+
+            var detail = session.IntentDetailFor(monster);
+            Assert.IsTrue(detail.HasValue, "a forfeit is still a committed intent, not a missing one");
+            Assert.AreEqual(0, detail.Value.ExpectedDamage,
+                "no damage may be previewed for a turn that will not actually happen");
+            Assert.AreNotEqual(EnemyIntentKind.Attack, detail.Value.Kind,
+                "the badge must not read as an ordinary threat when nothing is coming");
+        }
+
+        [Test]
+        public void AGenuinelyMisauthoredZeroWeightPool_StillSwingsAnyway()
+        {
+            // The ORIGINAL case the -1 fallback exists for -- no Rooted
+            // involved, just an author who zeroed every weight in the pool.
+            // The fix must not remove this safety net, only gate a new branch
+            // ahead of it: a monster standing frozen for a content bug reads
+            // as the fight being broken, which is worse than the swing being
+            // wrong.
+            var monster = Monster("Golem");
+            var encounter = new CombatEncounter(new[] { Hero() }, new[] { monster });
+            var skill = new ResolvedSkill("thorn", "Thorn", "", "monster", 1,
+                SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, 0, 0, false, 0, 0, false,
+                null, SpellPresentation.None, 0);
+            var kits = new List<EnemyKit>
+            {
+                new EnemyKit(Source("golem", "unused", 0f), false, new List<EnemyAbility>
+                {
+                    EnemyAbility.LegacyAttack(FightSession.IntentAttack, 1f, 0f),
+                    EnemyAbility.Of(skill, 0f),
+                }),
+            };
+            var session = Session(encounter, kits);
+
+            session.PrepareEnemyIntents();
+
+            Assert.AreEqual(FightSession.IntentAttack, session.IntentFor(monster),
+                "not Rooted -- the original 'swing anyway' safety net must still fire");
+
+            var detail = session.IntentDetailFor(monster);
+            Assert.IsTrue(detail.HasValue);
+            Assert.AreEqual(EnemyIntentKind.Attack, detail.Value.Kind);
+            Assert.Greater(detail.Value.ExpectedDamage, 0,
+                "the safety-net swing must still preview real damage, exactly as before this fix");
         }
     }
 }

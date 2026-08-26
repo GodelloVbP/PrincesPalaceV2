@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using NUnit.Framework;
 using PrincesPalace.Domain.Equipment;
 
@@ -223,12 +224,12 @@ namespace PrincesPalace.Domain.Tests
         public void Clone_CopiesEverySlot_AsIndependentEntries()
         {
             var original = new EquipmentLoadout();
-            original.Set(EquipmentSlot.Weapon1, "sword_sturdy_p0", plus: 3);
+            original.Set(EquipmentSlot.Weapon1, "sword_p0", plus: 3);
             original.Set(EquipmentSlot.Head, "iron_helm");
 
             var clone = original.Clone();
 
-            Assert.AreEqual("sword_sturdy_p0", clone.Get(EquipmentSlot.Weapon1));
+            Assert.AreEqual("sword_p0", clone.Get(EquipmentSlot.Weapon1));
             Assert.AreEqual(3, clone.GetPlus(EquipmentSlot.Weapon1));
             Assert.AreEqual("iron_helm", clone.Get(EquipmentSlot.Head));
         }
@@ -237,18 +238,84 @@ namespace PrincesPalace.Domain.Tests
         public void Clone_MutatingTheClone_NeverTouchesTheOriginal()
         {
             var original = new EquipmentLoadout();
-            original.Set(EquipmentSlot.Weapon1, "sword_sturdy_p0");
+            original.Set(EquipmentSlot.Weapon1, "sword_p0");
 
             var clone = original.Clone();
-            clone.Set(EquipmentSlot.Weapon1, "staff_arcane_p0");
+            clone.Set(EquipmentSlot.Weapon1, "staff_p0");
             clone.Set(EquipmentSlot.Head, "iron_helm");
 
-            Assert.AreEqual("sword_sturdy_p0", original.Get(EquipmentSlot.Weapon1),
+            Assert.AreEqual("sword_p0", original.Get(EquipmentSlot.Weapon1),
                 "Mutating the clone's entry object must not mutate the original's");
             Assert.IsTrue(original.IsEmpty(EquipmentSlot.Head),
                 "Adding a slot to the clone must not add it to the original");
         }
-    
+
+        // Same premise as the test above, for the list-typed axis: a shared
+        // List<string> reference between the original and the clone would be
+        // exactly this aliasing bug, just invisible until something calls
+        // .Add on it rather than replacing the whole slot.
+        [Test]
+        public void Clone_CopiesModifierIdsAsAnIndependentList()
+        {
+            var original = new EquipmentLoadout();
+            original.Set(EquipmentSlot.Weapon1, "sword_p0",
+                modifierIds: new List<string> { "fiery" }, riftTier: 1);
+
+            var clone = original.Clone();
+
+            // Reach past Get/Set's own defensive copies into the entries
+            // directly -- that is what actually exercises whether Clone()
+            // shared the backing List<string> instance between the two
+            // loadouts' EquipmentSlotEntry objects.
+            var clonedEntry = clone.slots.Find(e => e.slot == EquipmentSlot.Weapon1);
+            clonedEntry.modifierIds.Add("swift");
+
+            var originalEntry = original.slots.Find(e => e.slot == EquipmentSlot.Weapon1);
+            CollectionAssert.AreEquivalent(new[] { "fiery" }, originalEntry.modifierIds,
+                "Clone() must give each entry its own modifierIds list, not share the original's");
+            Assert.AreEqual(1, original.GetRiftTier(EquipmentSlot.Weapon1));
+        }
+
+        // ---- rolled modifiers (Phase A1: storage only) -------------------------
+
+        [Test]
+        public void Set_ThenGet_RoundTripsModifierIdsAndRiftTier()
+        {
+            var loadout = new EquipmentLoadout();
+
+            loadout.Set(EquipmentSlot.Weapon1, "sword_p0", plus: 2,
+                modifierIds: new List<string> { "fiery", "swift" }, riftTier: 2);
+
+            CollectionAssert.AreEquivalent(new[] { "fiery", "swift" },
+                loadout.GetModifierIds(EquipmentSlot.Weapon1));
+            Assert.AreEqual(2, loadout.GetRiftTier(EquipmentSlot.Weapon1));
+        }
+
+        [Test]
+        public void AnEmptySlot_ReportsNoModifiersAndZeroRiftTier()
+        {
+            var loadout = new EquipmentLoadout();
+
+            CollectionAssert.IsEmpty(loadout.GetModifierIds(EquipmentSlot.Weapon1));
+            Assert.AreEqual(0, loadout.GetRiftTier(EquipmentSlot.Weapon1));
+        }
+
+        // THE aliasing bug this whole axis is at risk of: GetModifierIds must
+        // never hand back the entry's own backing list, or a caller mutating
+        // what it got back would silently corrupt the loadout.
+        [Test]
+        public void GetModifierIds_MutatingTheReturnedList_NeverTouchesTheLoadout()
+        {
+            var loadout = new EquipmentLoadout();
+            loadout.Set(EquipmentSlot.Weapon1, "sword_p0", modifierIds: new List<string> { "fiery" });
+
+            var returned = loadout.GetModifierIds(EquipmentSlot.Weapon1);
+            returned.Add("swift");
+
+            CollectionAssert.AreEquivalent(new[] { "fiery" }, loadout.GetModifierIds(EquipmentSlot.Weapon1),
+                "the list handed to the caller must be a copy, not the entry's own list");
+        }
+
         [Test]
         public void RemoveEntriesWhere_HandsBackThePlusAsWellAsTheId()
         {
@@ -266,6 +333,24 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("cuirass", removed[0].itemId);
             Assert.AreEqual(5, removed[0].plus, "the honing has to survive being handed back");
             Assert.AreEqual("helm", loadout.Get(EquipmentSlot.Head), "and nothing else moved");
+        }
+
+        [Test]
+        public void RemoveEntriesWhere_HandsBackModifierIdsAndRiftTierToo()
+        {
+            // Same rule as the plus test above, extended to the two fields
+            // this phase adds: an orphan's roll must survive being handed
+            // back, or a renamed content id would quietly strip a
+            // Convergent item's affixes on the way to the stash.
+            var loadout = new EquipmentLoadout();
+            loadout.Set(EquipmentSlot.Torso, "cuirass", 5,
+                modifierIds: new List<string> { "fiery", "swift" }, riftTier: 2);
+
+            var removed = loadout.RemoveEntriesWhere(id => id == "cuirass");
+
+            Assert.AreEqual(1, removed.Count);
+            CollectionAssert.AreEquivalent(new[] { "fiery", "swift" }, removed[0].modifierIds);
+            Assert.AreEqual(2, removed[0].riftTier);
         }
 
         [Test]

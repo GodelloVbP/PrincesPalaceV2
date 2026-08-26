@@ -7,7 +7,7 @@ namespace PrincesPalace.Domain.Tests
     public class FightHudSpecTests
     {
         private static CombatantState Fighter(string name, bool isPlayerSide, int speed = 5) =>
-            new CombatantState(name, isPlayerSide, 20, 10, 5, 2, speed);
+            new CombatantState(name, isPlayerSide, 20, 10, 5, speed);
 
         [Test]
         public void CapacitiesMatchV1()

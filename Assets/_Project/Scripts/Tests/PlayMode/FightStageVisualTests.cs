@@ -63,8 +63,8 @@ namespace PrincesPalace.PlayModeTests
             _fight = Object.FindAnyObjectByType<FightController>();
             Assert.IsNotNull(_fight);
 
-            _hero = new CombatantState("Shawn", true, 300, 30, 40, 0, 10);
-            _front = new CombatantState("Front", false, 5000, 10, 8, 0, 4);
+            _hero = new CombatantState("Shawn", true, 300, 30, 40, 10);
+            _front = new CombatantState("Front", false, 5000, 10, 8, 4);
 
             var encounter = new CombatEncounter(new[] { _hero }, new[] { _front });
             var kit = new PlayerKit("shawn", CharacterRole.Tank, null, null, null,
@@ -92,9 +92,9 @@ namespace PrincesPalace.PlayModeTests
             _fight = Object.FindAnyObjectByType<FightController>();
             Assert.IsNotNull(_fight);
 
-            _hero = new CombatantState("Shawn", true, 300, 30, 40, 0, 10);
-            _front = new CombatantState("Front", false, 5000, 10, 8, 0, 4);
-            var back = new CombatantState("Back", false, 5000, 10, 8, 0, 4);
+            _hero = new CombatantState("Shawn", true, 300, 30, 40, 10);
+            _front = new CombatantState("Front", false, 5000, 10, 8, 4);
+            var back = new CombatantState("Back", false, 5000, 10, 8, 4);
 
             var encounter = new CombatEncounter(new[] { _hero }, new[] { _front, back });
             var kit = new PlayerKit("shawn", CharacterRole.Tank, null, null, null,

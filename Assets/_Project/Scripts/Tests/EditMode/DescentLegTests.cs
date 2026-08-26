@@ -13,32 +13,38 @@ namespace PrincesPalace.Domain.Tests
     {
         private const int Seeds = 60;
 
-        // PINNED. Every 8th step an elite, every 16th a boss, boss wins.
+        // PINNED. D6/decision #3, "boss every floor": a boss ends every
+        // 8-step leg (step ≡ 0 mod 8) and an elite lands at its midpoint
+        // (step ≡ 4 mod 8). Was every 16th step for a boss and every 8th for
+        // an elite, from-zero, before the D6 retune.
         [TestCase(1, null)]
+        [TestCase(3, null)]
+        [TestCase(4, RoomType.EliteFight)]
         [TestCase(7, null)]
-        [TestCase(8, RoomType.EliteFight)]
+        [TestCase(8, RoomType.Boss)]
         [TestCase(9, null)]
+        [TestCase(12, RoomType.EliteFight)]
         [TestCase(16, RoomType.Boss)]
-        [TestCase(24, RoomType.EliteFight)]
+        [TestCase(20, RoomType.EliteFight)]
+        [TestCase(24, RoomType.Boss)]
+        [TestCase(28, RoomType.EliteFight)]
         [TestCase(32, RoomType.Boss)]
-        [TestCase(40, RoomType.EliteFight)]
-        [TestCase(48, RoomType.Boss)]
-        public void ForcedTypeAt_PutsAnEliteEveryEighthStepAndABossEverySixteenth(int step, RoomType? expected)
+        public void ForcedTypeAt_PutsAnEliteMidLegAndABossAtTheEndOfEveryLeg(int step, RoomType? expected)
         {
             Assert.AreEqual(expected, DescentMapGenerator.ForcedTypeAt(step));
         }
 
         // ---- level 30: a rest before every boss ----------------------------------
 
+        [TestCase(7, RoomType.Rest)]
         [TestCase(15, RoomType.Rest)]
-        [TestCase(31, RoomType.Rest)]
-        [TestCase(47, RoomType.Rest)]
+        [TestCase(23, RoomType.Rest)]
+        [TestCase(8, RoomType.Boss)]
         [TestCase(16, RoomType.Boss)]
-        [TestCase(32, RoomType.Boss)]
-        [TestCase(8, RoomType.EliteFight)]
-        [TestCase(24, RoomType.EliteFight)]
-        [TestCase(14, null)]
-        [TestCase(17, null)]
+        [TestCase(4, RoomType.EliteFight)]
+        [TestCase(12, RoomType.EliteFight)]
+        [TestCase(6, null)]
+        [TestCase(9, null)]
         public void TheRestLandsOnTheStepBeforeEachBoss(int step, RoomType? expected)
         {
             Assert.AreEqual(expected, DescentMapGenerator.ForcedTypeAt(step, restBeforeBoss: true));
@@ -63,8 +69,8 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // THE COLLISION THAT DOES NOT HAPPEN, pinned so a cadence retune cannot
-        // introduce it quietly. Rests land where step % 16 == 15 and elites
-        // where step % 8 == 0, so no step is ever both -- and a boss wins
+        // introduce it quietly. Rests land where step % 8 == 7 and elites
+        // where step % 8 == 4, so no step is ever both -- and a boss wins
         // outright wherever it applies.
         [Test]
         public void ARestNeverStealsAnEliteOrABossStep()
@@ -117,23 +123,23 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // Step 0 is the entry the player is standing in rather than a room
-        // they chose. Without the guard, 0 % 16 == 0 would make the very
+        // they chose. Without the guard, 0 % 8 == 0 would make the very
         // first column of the run a boss.
         [Test]
         public void StepZero_ForcesNothing()
         {
             Assert.IsNull(DescentMapGenerator.ForcedTypeAt(0));
-            Assert.IsNull(DescentMapGenerator.ForcedTypeAt(-16));
+            Assert.IsNull(DescentMapGenerator.ForcedTypeAt(-8));
         }
 
-        // Leg 1 ends in an elite, leg 2 in a boss, leg 3 in an elite, and so
-        // on without end. None of that is special-cased in the generator —
-        // it falls out of the leg length matching the elite period.
-        [TestCase(0, RoomType.EliteFight)]
+        // Every leg ends in a boss now — "boss every floor" (D6/decision #3).
+        // None of that is special-cased in the generator — it falls out of
+        // the leg length matching the boss period exactly.
+        [TestCase(0, RoomType.Boss)]
         [TestCase(8, RoomType.Boss)]
-        [TestCase(16, RoomType.EliteFight)]
+        [TestCase(16, RoomType.Boss)]
         [TestCase(24, RoomType.Boss)]
-        [TestCase(64, RoomType.EliteFight)]
+        [TestCase(64, RoomType.Boss)]
         [TestCase(72, RoomType.Boss)]
         public void EveryLeg_EndsOnItsForcedRoom(int startStep, RoomType expected)
         {
@@ -186,11 +192,10 @@ namespace PrincesPalace.Domain.Tests
                 endings.Add(map.AtDepth(map.DepthCount - 1).First().Type);
             }
 
-            // Alternating elite, boss, elite, boss …
+            // Every leg ends in a boss now, not just every other one.
             for (int i = 0; i < endings.Count; i++)
             {
-                Assert.AreEqual(i % 2 == 0 ? RoomType.EliteFight : RoomType.Boss, endings[i],
-                    $"leg {i + 1} ended on the wrong room");
+                Assert.AreEqual(RoomType.Boss, endings[i], $"leg {i + 1} ended on the wrong room");
             }
         }
 

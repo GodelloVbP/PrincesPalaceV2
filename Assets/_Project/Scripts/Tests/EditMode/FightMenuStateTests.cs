@@ -261,8 +261,8 @@ namespace PrincesPalace.Domain.Tests
 
         private static (FightSession session, CombatantState hero) Fight(params ResolvedSkill[] skills)
         {
-            var hero = new CombatantState("Hero", true, 200, 30, 20, 0, 10);
-            var foe = new CombatantState("Foe", false, 1000, 10, 5, 0, 1);
+            var hero = new CombatantState("Hero", true, 200, 30, 20, 10);
+            var foe = new CombatantState("Foe", false, 1000, 10, 5, 1);
             var encounter = new CombatEncounter(new[] { hero }, new[] { foe });
             var kit = new PlayerKit("hero", CharacterRole.Tank, skills, null, null,
                 new ResolvedSpellTier(1, "Spark", 6, 1.5f, 0));
@@ -427,9 +427,9 @@ namespace PrincesPalace.Domain.Tests
             string power = FightHudModel.PowerLabel(session, hero, skill);
 
             Assert.AreNotEqual("0", power, "flatAmount alone must not read as no power");
-            // Hero's Attack (20, scaled) + flatAmount (12), on the x5 scale,
-            // with no target so no defense subtracted: (20 + 12) * 5 = 160.
-            Assert.AreEqual("160", power);
+            // Hero's Attack (20, scaled) + flatAmount (12), raw, with no
+            // target so no defense subtracted: 20 + 12 = 32.
+            Assert.AreEqual("32", power);
         }
 
         [Test]
@@ -456,17 +456,18 @@ namespace PrincesPalace.Domain.Tests
             // POWER used to print `skill.Power` verbatim -- for a skill whose
             // damage comes from flatAmount instead (mud_burst's actual shape),
             // that field is 0 and the row reads blank despite the skill
-            // dealing real damage. This pins the fix: the CASTER'S OWN Attack,
-            // scaled and put on the x5 scale every other damage number uses,
-            // with no target and therefore no defense subtracted. Hero's
-            // Attack is 20 and this skill spends no signature resource (no
-            // Signature is set on the test hero), so `power: 12` never
-            // actually contributes -- which is the point: the row now reads
-            // what the caster's own stats produce, not the authored constant.
+            // dealing real damage. This pins the fix: the CASTER'S OWN
+            // Attack, scaled and read raw (no DamageScale, fixed 2026-08-26 --
+            // see SkillResolution.Damage's own header), with no target and
+            // therefore no defense subtracted. Hero's Attack is 20 and this
+            // skill spends no signature resource (no Signature is set on the
+            // test hero), so `power: 12` never actually contributes -- which
+            // is the point: the row now reads what the caster's own stats
+            // produce, not the authored constant.
             var skill = Skill("a", "Alpha", power: 12);
             var (session, hero) = Fight(skill);
 
-            Assert.AreEqual("100", FightHudModel.PowerLabel(session, hero, skill));
+            Assert.AreEqual("20", FightHudModel.PowerLabel(session, hero, skill));
         }
 
         [Test]
@@ -497,18 +498,19 @@ namespace PrincesPalace.Domain.Tests
             // A verb that jumps straight to targeting would otherwise be the one
             // command with nothing to read about it.
             //
-            // POWER is Scale(ScaledAttack(...)), not the raw Attack stat --
-            // hero.Attack is 20, and CombatMath puts every damage number on
-            // its own x5 scale, so a swing with nothing else in play reads
-            // 100, matching what ComputeAttackDamage would produce against a
-            // defenseless target.
+            // POWER is CombatMath.ComputeAttackDamage(actor, null), not the
+            // raw Attack stat verbatim -- hero.Attack is 20, no grades
+            // authored, so a swing with nothing else in play reads 20 (no
+            // DamageScale multiplies it any more; fixed 2026-08-26, see
+            // ComputeAttackDamage's own header), matching exactly what a real
+            // Strike against this hero would deal before mitigation.
             var (_, hero) = Fight();
 
             var panel = FightHudModel.DetailForStrike(hero);
 
             Assert.AreEqual("Strike", panel.Name);
             Assert.AreEqual(5, panel.Stats.Count, "the column has five fixed rows");
-            Assert.AreEqual("100", panel.Stats[1].Value,
+            Assert.AreEqual("20", panel.Stats[1].Value,
                 "it describes THIS actor's swing, not a generic one");
         }
 
@@ -597,7 +599,7 @@ namespace PrincesPalace.Domain.Tests
         public void AnActorWithNoKitGetsAnEmptyListRatherThanAThrow()
         {
             var (session, _) = Fight();
-            var stranger = new CombatantState("Stranger", true, 10, 10, 1, 0, 1);
+            var stranger = new CombatantState("Stranger", true, 10, 10, 1, 1);
 
             var rows = FightHudModel.SkillRows(session, stranger);
 
@@ -652,6 +654,6 @@ namespace PrincesPalace.Domain.Tests
         }
 
         private static CombatantState Foe(string name) =>
-            new CombatantState(name, false, 40, 0, 5, 0, 3);
+            new CombatantState(name, false, 40, 0, 5, 3);
     }
 }

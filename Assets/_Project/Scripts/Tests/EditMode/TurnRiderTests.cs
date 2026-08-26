@@ -27,10 +27,10 @@ namespace PrincesPalace.Domain.Tests
         private const int FoeSpeed = 9;
 
         private static CombatantState Hero(int maxMana = 10) =>
-            new CombatantState("Hero", true, 200, maxMana, 20, 0, HeroSpeed);
+            new CombatantState("Hero", true, 200, maxMana, 20, HeroSpeed);
 
         private static CombatantState Foe(string name, int health) =>
-            new CombatantState(name, false, health, 10, 5, 0, FoeSpeed);
+            new CombatantState(name, false, health, 10, 5, FoeSpeed);
 
         private static readonly ResolvedRelic BloodlustRelic =
             new ResolvedRelic("bloodlust", "Bloodlust", "One more turn.", RelicEffect.Bloodlust, 0);

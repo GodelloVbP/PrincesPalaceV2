@@ -88,6 +88,52 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, InventoryOps.CountAt(bag, "cuirass", 0), "it did not come back plain");
         }
 
+        // ---- rolled modifiers survive the same moves plus already does ---------
+
+        [Test]
+        public void ADisplacedRollComesBackWithItsModifiersAndRiftTierIntact()
+        {
+            // Same bug class as ADisplacedPlusFiveComesBackAsAPlusFive, for
+            // the two fields this phase adds: reading only the id (or only
+            // the id and plus) and re-adding at the defaults would silently
+            // strip a Convergent item's affixes the moment something else
+            // gets equipped into its slot.
+            var bag = Bag(Entry("plate", 1));
+            var worn = new EquipmentLoadout();
+            worn.Set(Torso, "cuirass", 5, modifierIds: new List<string> { "fiery", "swift" }, riftTier: 2);
+
+            EquipMove.TryEquip(worn, bag, "plate", Torso, isEquippable: true);
+
+            var displacedEntry = bag.First(e => e.itemId == "cuirass");
+            CollectionAssert.AreEquivalent(new[] { "fiery", "swift" }, displacedEntry.modifierIds);
+            Assert.AreEqual(2, displacedEntry.riftTier);
+            Assert.AreEqual(5, displacedEntry.plus);
+        }
+
+        [Test]
+        public void EquipUnequipReequip_PreservesModifierIdsAndRiftTierWithNoDuplication()
+        {
+            var bag = Bag(Entry("sword", 1));
+            bag[0].modifierIds = new List<string> { "astral" };
+            bag[0].riftTier = 3;
+            var worn = new EquipmentLoadout();
+
+            Assert.IsTrue(EquipMove.TryEquip(worn, bag, "sword", Weapon1, isEquippable: true,
+                modifierIds: new List<string> { "astral" }, riftTier: 3));
+            Assert.IsTrue(EquipMove.TryUnequip(worn, bag, Weapon1));
+
+            Assert.AreEqual(1, bag.Count, "no duplication across the round trip");
+            CollectionAssert.AreEquivalent(new[] { "astral" }, bag[0].modifierIds);
+            Assert.AreEqual(3, bag[0].riftTier);
+            Assert.AreEqual(0, bag[0].plus);
+
+            Assert.IsTrue(EquipMove.TryEquip(worn, bag, "sword", Weapon1, isEquippable: true,
+                modifierIds: bag[0].modifierIds, riftTier: bag[0].riftTier));
+
+            CollectionAssert.AreEquivalent(new[] { "astral" }, worn.GetModifierIds(Weapon1));
+            Assert.AreEqual(3, worn.GetRiftTier(Weapon1));
+        }
+
         [Test]
         public void EquippingASpecificCopyWearsThatCopy()
         {

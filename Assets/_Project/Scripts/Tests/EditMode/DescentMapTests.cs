@@ -143,6 +143,11 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
+        // The one middle column that is exempt is the forced elite (D6:
+        // every leg carries one at its midpoint, step ≡ 4 mod 8) — a forced
+        // column is always a single room by design (AForcedColumn_IsAlways
+        // ASingleRoom in DescentLegTests), same as the boss already excluded
+        // by this loop's own range.
         [Test]
         public void MiddleColumnsAlwaysOfferAtLeastTwoRooms()
         {
@@ -151,7 +156,13 @@ namespace PrincesPalace.Domain.Tests
                 var map = Generate(seed);
                 for (int d = 1; d < map.DepthCount - 1; d++)
                 {
-                    Assert.GreaterOrEqual(map.AtDepth(d).Count(), 2, $"seed {seed}, depth {d} is a corridor");
+                    var column = map.AtDepth(d).ToList();
+                    if (column.Count == 1 && column[0].Type == RoomType.EliteFight)
+                    {
+                        continue;
+                    }
+
+                    Assert.GreaterOrEqual(column.Count, 2, $"seed {seed}, depth {d} is a corridor");
                 }
             }
         }
@@ -202,10 +213,12 @@ namespace PrincesPalace.Domain.Tests
         //
         // EliteFight is excluded on purpose — it is no longer in the weighted
         // table at all (see MiddleRooms' own comment), only ForcedTypeAt's
-        // cadence, and this fixture's own BossEndingStartStep (8..16) never
-        // crosses a forced-elite step. DescentLegTests covers both halves of
-        // that: that it still shows up at the cadence, and that it never
-        // shows up anywhere else.
+        // cadence, and every leg this fixture generates (8..16) DOES cross
+        // that forced-elite step now (D6: step ≡ 4 mod 8, so step 12 within
+        // this range) — it just isn't asserted here because it is not a
+        // rolled type. DescentLegTests covers both halves of the elite
+        // question directly: that it still shows up at the cadence, and that
+        // it never shows up anywhere else.
         [Test]
         public void EveryMiddleRoomType_ShowsUpAcrossManySeeds()
         {

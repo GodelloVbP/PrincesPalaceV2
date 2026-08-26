@@ -1,3 +1,4 @@
+using System.Linq;
 using NUnit.Framework;
 using PrincesPalace.Domain.Combat;
 
@@ -7,7 +8,7 @@ namespace PrincesPalace.Domain.Tests
     {
         private static CombatantState MakeCombatant(int maxHealth = 1000)
         {
-            return new CombatantState("Test", true, maxHealth, 10, 5, 2, 5);
+            return new CombatantState("Test", true, maxHealth, 10, 5, 5);
         }
 
         // ---- Apply / stacking ----------------------------------------------
@@ -111,6 +112,54 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(1, target.Statuses.Count);
             Assert.AreEqual(StatusEffectType.Poison, target.Statuses[0].Type);
+        }
+
+        // ---- Rooted (Phase D3, item-modifier plan) ----------------------------
+        //
+        // The mechanism-level coverage (the plain-attack gate, the no-legal-
+        // skill forfeit, coexistence with Chilled/Dodge) lives in
+        // RootedStatusTests -- these mirror HasStun's own small, direct
+        // shape: Rooted is queried like Stun, but decays by turn count like
+        // Chilled/Protect/Vulnerable, so there is no ConsumeRooted to test.
+
+        [Test]
+        public void HasRooted_FalseWithoutOne()
+        {
+            var target = MakeCombatant();
+            Assert.IsFalse(StatusEffects.HasRooted(target.Statuses));
+        }
+
+        [Test]
+        public void HasRooted_TrueOnceApplied()
+        {
+            var target = MakeCombatant();
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Rooted, 0, 3);
+
+            Assert.IsTrue(StatusEffects.HasRooted(target.Statuses));
+        }
+
+        [Test]
+        public void Rooted_ExpiresAfterItsDuration_LikeAnyOtherTurnCountedStatus()
+        {
+            var target = MakeCombatant();
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Rooted, 0, 1);
+
+            var report = StatusEffects.Tick(target);
+
+            Assert.IsFalse(StatusEffects.HasRooted(target.Statuses), "a one-turn Rooted must be gone after one tick");
+            Assert.IsTrue(report.Expired.Contains(StatusEffectType.Rooted));
+        }
+
+        [Test]
+        public void Rooted_SurvivesATickWithTurnsRemaining_UnlikeStunWhichIsSpentOutright()
+        {
+            var target = MakeCombatant();
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Rooted, 0, 2);
+
+            StatusEffects.Tick(target);
+
+            Assert.IsTrue(StatusEffects.HasRooted(target.Statuses), "a two-turn Rooted must survive one tick");
+            Assert.AreEqual(1, target.Statuses[0].TurnsRemaining);
         }
 
         // ---- DamageTakenMultiplier --------------------------------------------

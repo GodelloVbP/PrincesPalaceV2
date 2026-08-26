@@ -29,10 +29,73 @@ namespace PrincesPalace.Domain.Tests
 
             var stats = resolved[0].BaseStats;
             Assert.Greater(stats.attack, 0, "attack should be derived from maxHealth, not left at 0");
-            Assert.GreaterOrEqual(stats.defense, 0);
+            Assert.GreaterOrEqual(stats.physicalDefense, 0);
+            Assert.GreaterOrEqual(stats.magicalDefense, 0);
             Assert.Greater(stats.speed, 0);
             Assert.Greater(resolved[0].ExpReward, 0);
             Assert.Greater(resolved[0].CurrencyReward, 0);
+        }
+
+        // The old single `defense` field derived one number for both broad
+        // defenses; now there are two, and an omitted magicalDefense derives
+        // as half of physicalDefense (the same 2:1 ratio the Phase 1 content
+        // conversion used everywhere else) rather than independently.
+        [Test]
+        public void MinimalEntry_DerivesMagicalDefenseAsHalfOfPhysicalDefense()
+        {
+            EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { Minimal(maxHealth: 120) }, out var resolved, out _);
+
+            // 120 * (1/8) = 15 physicalDefense (DefensePerHealth, D5's own
+            // derivation formula), half of that is 7 (7.5 rounds down)
+            // magicalDefense -- pinned literals, not a recomputation of the
+            // formula (CLAUDE.md gotcha 5).
+            var stats = resolved[0].BaseStats;
+            Assert.AreEqual(15, stats.physicalDefense);
+            Assert.AreEqual(7, stats.magicalDefense);
+        }
+
+        // Optional; blank means Physical -- same default an unauthored
+        // character's attackType gets (CharacterEntryResolver).
+        [Test]
+        public void MinimalEntry_DefaultsAttackTypeToPhysical()
+        {
+            EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { Minimal() }, out var resolved, out _);
+
+            Assert.AreEqual(DamageType.Physical, resolved[0].AttackType);
+        }
+
+        [Test]
+        public void AnAuthoredAttackType_IsCarriedThrough()
+        {
+            var entry = Minimal();
+            entry.attackType = "Fire";
+
+            EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { entry }, out var resolved, out _);
+
+            Assert.AreEqual(DamageType.Fire, resolved[0].AttackType);
+        }
+
+        [Test]
+        public void AnAuthoredAttackType_IsCaseInsensitive()
+        {
+            var entry = Minimal();
+            entry.attackType = "arcane";
+
+            EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { entry }, out var resolved, out _);
+
+            Assert.AreEqual(DamageType.Arcane, resolved[0].AttackType);
+        }
+
+        [Test]
+        public void AnUnrecognizedAttackType_ProducesAClearError()
+        {
+            var entry = Minimal();
+            entry.attackType = "Lightning";
+
+            bool ok = EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { entry }, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            StringAssert.Contains("Lightning", errors[0]);
         }
 
         [Test]
@@ -105,7 +168,8 @@ namespace PrincesPalace.Domain.Tests
         {
             var entry = Minimal();
             entry.attack = 99;
-            entry.defense = 42;
+            entry.physicalDefense = 42;
+            entry.magicalDefense = 21;
             entry.speed = 7;
             entry.expReward = 500;
             entry.currencyReward = 300;
@@ -114,7 +178,8 @@ namespace PrincesPalace.Domain.Tests
 
             var stats = resolved[0].BaseStats;
             Assert.AreEqual(99, stats.attack);
-            Assert.AreEqual(42, stats.defense);
+            Assert.AreEqual(42, stats.physicalDefense);
+            Assert.AreEqual(21, stats.magicalDefense);
             Assert.AreEqual(7, stats.speed);
             Assert.AreEqual(500, resolved[0].ExpReward);
             Assert.AreEqual(300, resolved[0].CurrencyReward);
@@ -124,11 +189,13 @@ namespace PrincesPalace.Domain.Tests
         public void ExplicitZero_IsRespected_NotTreatedAsOmitted()
         {
             var entry = Minimal();
-            entry.defense = 0;
+            entry.physicalDefense = 0;
+            entry.magicalDefense = 0;
 
             EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { entry }, out var resolved, out _);
 
-            Assert.AreEqual(0, resolved[0].BaseStats.defense);
+            Assert.AreEqual(0, resolved[0].BaseStats.physicalDefense);
+            Assert.AreEqual(0, resolved[0].BaseStats.magicalDefense);
         }
 
         [Test]

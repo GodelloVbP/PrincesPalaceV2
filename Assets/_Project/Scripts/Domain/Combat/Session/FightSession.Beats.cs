@@ -71,6 +71,17 @@ namespace PrincesPalace.Domain.Combat.Session
             _recordingBeat.IsHealing = isHealing;
         }
 
+        // PHASE D1: marks the beat currently recording as a dodge. Called
+        // instead of RecordBeatAmount, never alongside it -- a swing either
+        // lands for a number or it misses, never both, so the two calls
+        // never have reason to share a beat. See CombatBeat.Missed's own
+        // header for why this is a distinct flag rather than a 0 amount.
+        private void RecordMiss()
+        {
+            if (_recordingBeat == null) return;
+            _recordingBeat.Missed = true;
+        }
+
         // Roots the actor in place for this beat, for art whose plain-attack
         // pose is itself stationary. Separate from the `isCast` constructor
         // argument because it is decided later -- the intent has to be resolved

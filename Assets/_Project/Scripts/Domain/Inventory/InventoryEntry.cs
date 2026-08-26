@@ -1,14 +1,24 @@
 using System;
+using System.Collections.Generic;
 
 namespace PrincesPalace
 {
     // One stack of a held item. Matches ItemDefinition.id.
     //
-    // A stack is keyed by (itemId, plus), not by itemId alone: a +3 coif and
-    // a +5 coif are the same DEFINITION but not the same object, and stacking
-    // them would silently upgrade one of them. `count` still means "how many
-    // identical ones", it is just that identical now includes how honed they
-    // are.
+    // A stack is keyed by (itemId, plus, modifierIds, riftTier), not by
+    // itemId alone: a +3 coif and a +5 coif are the same DEFINITION but not
+    // the same object, and stacking them would silently upgrade one of them.
+    // `count` still means "how many identical ones", it is just that
+    // identical now also includes which affixes rolled and how many slots
+    // they filled.
+    //
+    // In PRACTICE, `count` is almost always 1 the moment modifierIds is
+    // non-empty: a rolled item is drop-unique, so two entries only merge when
+    // two separate drops happened to roll the exact same set of modifiers at
+    // the exact same rift tier -- rare, but not a bug when it happens, the
+    // same way two +5 plain swords legitimately stack today. Nothing here
+    // enforces count == 1 for a modified entry; InventoryOps' merge predicate
+    // is the only place that decision is made; see its own header.
     [Serializable]
     public class InventoryEntry
     {
@@ -24,15 +34,37 @@ namespace PrincesPalace
         // reading of such a save and is why there is no migration code.
         public int plus;
 
+        // The rolled affix ids on this stack (Phase A of the item-modifier
+        // plan; nothing populates this list yet). Same additive-JsonUtility
+        // posture as plus: a save written before modifiers existed
+        // deserialises this as the empty list the field initializer below
+        // already provides, never null.
+        //
+        // A REAL empty List<string>, not left null — matching the same
+        // "empty and absent read the same way" convention
+        // unlockedTalentIds/EquipmentLoadout use for their own list fields.
+        public List<string> modifierIds = new List<string>();
+
+        // How many modifier slots this stack rolled, 0-3. See
+        // EquipmentSlotEntry.riftTier for why this is decoupled from item
+        // tier. Zero on a save written before this field existed.
+        public int riftTier;
+
         public InventoryEntry()
         {
         }
 
-        public InventoryEntry(string itemId, int count, int plus = 0)
+        public InventoryEntry(string itemId, int count, int plus = 0,
+            List<string> modifierIds = null, int riftTier = 0)
         {
             this.itemId = itemId;
             this.count = count;
             this.plus = plus;
+            // Copied rather than assigned by reference -- see
+            // CollectionOps.CopyOrEmpty for why a caller's own list must not
+            // end up shared with this entry's backing list.
+            this.modifierIds = CollectionOps.CopyOrEmpty(modifierIds);
+            this.riftTier = riftTier;
         }
     }
 }

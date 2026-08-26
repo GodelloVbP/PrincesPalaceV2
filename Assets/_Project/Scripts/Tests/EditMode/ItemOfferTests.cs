@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Rewards;
 
 namespace PrincesPalace.Domain.Tests
@@ -151,6 +152,42 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(4, offer.Tier);
             Assert.AreEqual(3, offer.Plus);
             Assert.AreEqual(0, new ItemOffer("leather_coif_p4", 4).Plus, "An offer is unhoned unless said otherwise");
+        }
+
+        // A fresh offer is Ordinary with no modifiers -- the same "unrolled
+        // by default" posture Plus already has.
+        [Test]
+        public void AFreshOfferIsOrdinaryWithNoModifiers()
+        {
+            var offer = new ItemOffer("leather_coif_p4", 4);
+
+            Assert.AreEqual(RiftTier.Ordinary, offer.RiftTier);
+            Assert.IsNotNull(offer.Modifiers, "absent modifiers should read as an empty list, never null");
+            Assert.IsEmpty(offer.Modifiers);
+        }
+
+        // WithPlus and WithModifiers each move ONE axis. Chaining them must
+        // not let the second call clobber the first -- that was the actual
+        // bug shape this pins against (an early WithPlus implementation that
+        // rebuilt the struct from only ItemId/Tier would have silently
+        // dropped whatever WithModifiers had just set).
+        [Test]
+        public void WithPlusAndWithModifiersComposeWithoutClobberingEachOther()
+        {
+            var offer = new ItemOffer("leather_coif_p4", 4)
+                .WithModifiers(RiftTier.Convergent, new List<string> { "fiery_test", "swift_test" })
+                .WithPlus(3);
+
+            Assert.AreEqual(3, offer.Plus, "WithPlus after WithModifiers must not lose the plus");
+            Assert.AreEqual(RiftTier.Convergent, offer.RiftTier, "WithPlus must not reset the rift tier");
+            CollectionAssert.AreEqual(new[] { "fiery_test", "swift_test" }, offer.Modifiers);
+
+            var reordered = new ItemOffer("leather_coif_p4", 4)
+                .WithPlus(3)
+                .WithModifiers(RiftTier.Convergent, new List<string> { "fiery_test", "swift_test" });
+
+            Assert.AreEqual(3, reordered.Plus, "WithModifiers after WithPlus must not lose the plus");
+            Assert.AreEqual(RiftTier.Convergent, reordered.RiftTier);
         }
     }
 

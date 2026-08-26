@@ -25,9 +25,28 @@ $AreasTestsRoot = Join-Path $AreasProjectRoot "Assets\_Project\Scripts\Tests"
 # imprecise area. Overlap between areas is fine and already happens (a class
 # can and often does belong to two subjects at once).
 $Areas = @{
-    combat  = "Fight|Wool|Spell|Combat|Enemy|Party|Stage|Boss|Turn|Skill|Damage|Defeat|Teardown|BreakShield|Status|Signature|Ward|Gift|Empower|Cooldown|Relic"
+    # 'Balance' for BalanceSheetTests (Phase 5D) -- the combat-math validation
+    # suite over §P's canonical profiles. It also needs real resolved enemy
+    # content and DifficultyCurve, which is why it lives in PlayMode, but
+    # combat is its subject, same reasoning as everything else in this area.
+    # 'Modifier' for the item-modifier effect bag (Phase A2, ModifierEffect/
+    # ModifierEffectSet) -- it lives in Domain/Combat and mirrors
+    # TalentEffectType/TalentEffectSet exactly, so it belongs beside them
+    # rather than in 'content' (where ModifierEntryResolverTests already
+    # matches on its own via 'Resolver' -- the overlap is fine).
+    combat  = "Fight|Wool|Spell|Combat|Enemy|Party|Stage|Boss|Turn|Skill|Damage|Defeat|Teardown|BreakShield|Status|Signature|Ward|Gift|Empower|Cooldown|Relic|Balance|Modifier"
     hub     = "Hub|Talent|Principality|CharacterSheet|SheetStat|Store|Constellation|Glossary"
-    content = "Content|ItemSet|Item|Resolver|ArtPath|AbilityScore|StatBlock|StatPoint|Invest|Character|Enemy|Scaling|Requirement|Rounding|AbilityDerivation|Weapon|Relic|Rarity|Achievement|RoundTrip"
+    # 'ModifierTable' explicitly, alongside the bare 'Modifier' already
+    # matching combat above -- ModifierTableTests (Phase A3) covers the
+    # RiftTier/which-modifiers ROLL, which lives in Domain/Rewards beside
+    # RarityTable and is a content/reward-economy subject, not a combat
+    # effect. The overlap with combat's 'Modifier' is fine per this file's
+    # own header; this is what makes "content,run" actually cover it too.
+    # 'RiftTier' alongside 'Rarity' -- RiftTierColorsTests (item-modifier plan
+    # Phase E) is the Unity-facing colour table for the ROLL, the exact same
+    # relationship RarityColorsTests already has to Rarity, so it belongs in
+    # the same area for the same reason.
+    content = "Content|ItemSet|Item|Resolver|ArtPath|AbilityScore|StatBlock|StatPoint|Invest|Character|Enemy|Scaling|Gear|Budget|Requirement|Rounding|AbilityDerivation|Weapon|Relic|Rarity|RiftTier|Achievement|RoundTrip|ModifierTable"
     # GlobalState: the lint that keeps a test from leaving a static flipped for
     # the rest of the process. It belongs to no single subject -- the statics it
     # guards are save roots, the run, navigation and two tuning knobs -- and
@@ -43,7 +62,11 @@ $Areas = @{
     # CARRIED BETWEEN ROOMS across a change of maximum, which is run state.
     # A bare pattern would reach into combat, where most of the health in this
     # game lives and where none of it is this.
-    run     = "Dungeon|Map|FullRun|RunState|Currency|MetaProgression|Level|Save|ActiveSquad|Run|Resume|Snapshot|Seed|Descent|Depth|Difficulty|EnemyBand|Wallet|Reward|Reckoning|Ember|Ledger|Settlement|Encounter|Room|GlobalState|CarriedHealth|Playtime"
+    # 'Favor' for FortunateFavorTests (item-modifier plan Phase C) -- the
+    # Fortunate modifier's write to RunSnapshot.runFavor, a run-scoped
+    # economy value exactly like Wallet/Reward/Ember rather than a combat
+    # rule (its own hook, RewardApplier.Apply, already lives in 'run').
+    run     = "Dungeon|Map|FullRun|RunState|Currency|MetaProgression|Level|Save|ActiveSquad|Run|Resume|Snapshot|Seed|Descent|Depth|Difficulty|EnemyBand|Wallet|Reward|Reckoning|Ember|Ledger|Settlement|Encounter|Room|GlobalState|CarriedHealth|Playtime|Favor"
     # 'OfferRow' rather than a bare 'Offer': the offer ROW is a layout and
     # belongs here, but ItemOfferTests and ItemOfferRollTests are reward rules
     # that already sit in 'content' and 'run', and a bare pattern would drag

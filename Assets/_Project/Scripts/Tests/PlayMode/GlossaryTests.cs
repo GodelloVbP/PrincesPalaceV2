@@ -10,6 +10,7 @@ using UnityEngine.UI;
 using PrincesPalace;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Glossary;
+using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -200,6 +201,52 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotEmpty(TextOf("GlossaryDetailName"), "a locked entry still has a name");
             StringAssert.Contains("NOT YET FOUND", TextOf("GlossaryDetailBody"));
             StringAssert.Contains("Unlocked by", TextOf("GlossaryDetailLockedBy"));
+        }
+
+        // BALANCE REDESIGN PHASE 6 (D7.4): the Mechanics category is the one
+        // where every row is hand-authored prose rather than swept off a
+        // ScriptableObject (GlossaryEntries.Mechanics()'s own header), which
+        // is exactly the kind of category a purely structural test (every
+        // other GlossaryScreenTests/GlossaryTests check here) would not
+        // catch going stale or empty -- this checks the actual content
+        // reaches the plate.
+        [UnityTest]
+        public IEnumerator TheMechanicsCategoryExplainsTheAbilityScoresAndTheDefenseCurve()
+        {
+            yield return OpenTheGlossary();
+
+            int index = GlossaryCatalog.Categories.ToList().IndexOf(GlossaryCategory.Mechanics);
+            Assert.GreaterOrEqual(index, 0, "GlossaryCategory.Mechanics is missing from the rail entirely");
+
+            Click($"GlossaryCategory{index}");
+            yield return null;
+
+            // Eight rows: STR, DEX, CON, INT, WIS, CHA, the Defense curve,
+            // and Honing -- the exact count GlossaryEntries.Mechanics()
+            // authors. Pinned so a row silently dropped from that list (or
+            // silently duplicated) shows up here rather than only in a diff
+            // of hand-typed prose nobody re-reads.
+            for (int row = 0; row < 8; row++)
+            {
+                Assert.IsTrue(Named($"GlossaryRow{row}").activeSelf, $"Mechanics row {row} is missing");
+            }
+
+            Assert.IsFalse(Named("GlossaryRow8").activeSelf, "Mechanics listed a ninth row nobody authored");
+
+            Click("GlossaryRow0");
+            yield return null;
+
+            Assert.AreEqual("Strength", TextOf("GlossaryDetailName"));
+            StringAssert.Contains("weapon", TextOf("GlossaryDetailBody"));
+
+            Click("GlossaryRow2");
+            yield return null;
+
+            // Constitution: the one entry whose numbers are read straight off
+            // AbilityDerivation's own constants rather than typed by hand --
+            // if the rate is ever retuned, this line is the canary.
+            Assert.AreEqual("Constitution", TextOf("GlossaryDetailName"));
+            StringAssert.Contains($"+{AbilityDerivation.HealthPerPoint} Max Health", TextOf("GlossaryDetailBody"));
         }
 
         [UnityTest]

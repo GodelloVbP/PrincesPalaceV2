@@ -19,12 +19,12 @@ namespace PrincesPalace.Domain.Tests
         private static (FightSession session, CombatantState hero, CombatantState foe) Fight(
             int health = 300, int mana = 30)
         {
-            var hero = new CombatantState("Shawn", true, health, mana, 20, 0, 10);
+            var hero = new CombatantState("Shawn", true, health, mana, 20, 10);
             // Speed 9 against the hero's 10, so the monster genuinely replies
             // to every action. At speed 1 it barely acts and "the potion cost
             // the turn" becomes unobservable -- a fixture that quietly removes
             // the thing under test.
-            var foe = new CombatantState("Rat", false, 5000, 10, 5, 0, 9);
+            var foe = new CombatantState("Rat", false, 5000, 10, 5, 9);
 
             var encounter = new CombatEncounter(new[] { hero }, new[] { foe });
             var kit = new PlayerKit("shawn", CharacterRole.Tank, null, null, null);

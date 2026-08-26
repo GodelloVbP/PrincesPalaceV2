@@ -118,6 +118,67 @@ namespace PrincesPalace.PlayModeTests
                 "a benched character's earned Favor reached the fielded squad's roll");
         }
 
+        // ---- run-scoped favour (item-modifier plan, Phase A3) -------------------
+        //
+        // A THIRD source, alongside authored princesFavor and permanent
+        // earnedFavor -- see ItemOfferRoll.FavorOf's own header. Nothing
+        // writes RunSnapshot.runFavor yet (that is the Fortunate modifier,
+        // Phase C); this only proves the plumbing: a fresh run starts at
+        // zero, and the three-way sum with zero reproduces today's two-way
+        // sum exactly.
+
+        [Test]
+        public void AFreshRunStartsWithNoRunFavor()
+        {
+            Assert.AreEqual(0, new RunSnapshot().runFavor);
+            Assert.AreEqual(0, SaveSlotManager.CurrentSave.activeRun.runFavor,
+                "a save's own fresh run should start at zero too");
+        }
+
+        // The regression guard: with runFavor at its default of zero, the
+        // three-way sum must be IDENTICAL to what FavorOf produced before
+        // this axis existed -- authored + earned, nothing more.
+        [Test]
+        public void RunFavorAtZeroChangesNothingAboutTheExistingSum()
+        {
+            var character = SaveSlotManager.CurrentSave.ActiveSquad()[0];
+            var definition = DefinitionFor(character);
+            character.earnedFavor = 7;
+
+            int twoWay = AuthoredFavorOf(character) + character.earnedFavor;
+
+            Assert.AreEqual(twoWay, ItemOfferRoll.FavorOf(character, definition),
+                "calling FavorOf without a runFavor argument must keep today's behaviour");
+            Assert.AreEqual(twoWay, ItemOfferRoll.FavorOf(character, definition, runFavor: 0),
+                "an explicit runFavor of zero must also reproduce today's sum");
+        }
+
+        [Test]
+        public void RunFavorAddsToTheOtherTwoSources()
+        {
+            var character = SaveSlotManager.CurrentSave.ActiveSquad()[0];
+            var definition = DefinitionFor(character);
+            character.earnedFavor = 7;
+
+            int twoWay = AuthoredFavorOf(character) + character.earnedFavor;
+
+            Assert.AreEqual(twoWay + 15, ItemOfferRoll.FavorOf(character, definition, runFavor: 15),
+                "run-scoped favour did not add to the authored+earned total");
+        }
+
+        // The squad roll has to see it too, through the save's active run --
+        // not just the helper beside it.
+        [Test]
+        public void RunFavorReachesTheRollThroughTheActiveRun()
+        {
+            int before = ItemOfferRoll.CurrentSquadFavor();
+
+            SaveSlotManager.CurrentSave.activeRun.runFavor = 12;
+
+            Assert.AreEqual(before + 12, ItemOfferRoll.CurrentSquadFavor(),
+                "granting run-scoped favour did not reach the squad roll");
+        }
+
         // ---- the wider offer, level 50 -----------------------------------------
 
         [Test]

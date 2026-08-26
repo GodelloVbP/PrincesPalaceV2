@@ -24,8 +24,12 @@ namespace PrincesPalace.Domain.Content
 
         // Percent of the character's own base, applied once when the fight
         // builds their kit. 15 means +15%.
+        //
+        // DefensePercent/DefenseFlat below apply to BOTH broad Defenses —
+        // there is no longer one generic Defense stat for either to name
+        // alone. See RelicStat.Defence's own comment.
         AttackPercent,
-        DefencePercent,
+        DefensePercent,
         MaxHealthPercent,
         MaxManaPercent,
         SpeedPercent,
@@ -46,7 +50,7 @@ namespace PrincesPalace.Domain.Content
 
         // Flat additions, applied the same way.
         AttackFlat,
-        DefenceFlat,
+        DefenseFlat,
         MaxHealthFlat,
         MaxManaFlat,
         SpeedFlat,
@@ -94,7 +98,7 @@ namespace PrincesPalace.Domain.Content
                 switch (Type)
                 {
                     case RelicModifierType.AttackPercent:
-                    case RelicModifierType.DefencePercent:
+                    case RelicModifierType.DefensePercent:
                     case RelicModifierType.MaxHealthPercent:
                     case RelicModifierType.MaxManaPercent:
                     case RelicModifierType.SpeedPercent:
@@ -118,8 +122,8 @@ namespace PrincesPalace.Domain.Content
                     case RelicModifierType.AttackPercent:
                     case RelicModifierType.AttackFlat:
                         return RelicStat.Attack;
-                    case RelicModifierType.DefencePercent:
-                    case RelicModifierType.DefenceFlat:
+                    case RelicModifierType.DefensePercent:
+                    case RelicModifierType.DefenseFlat:
                         return RelicStat.Defence;
                     case RelicModifierType.MaxHealthPercent:
                     case RelicModifierType.MaxHealthFlat:
@@ -141,6 +145,14 @@ namespace PrincesPalace.Domain.Content
     {
         None = 0,
         Attack,
+
+        // Not renamed to match DefensePercent/DefenseFlat above — the British
+        // spelling survives here on purpose, as a visible seam: this ONE
+        // value now means "apply to BOTH PhysicalDefense and MagicalDefense",
+        // since there is no longer a single generic Defense stat it could
+        // target alone. FightEncounterAdapter.ToCombatant calls
+        // RelicModifiers.Apply(_, RelicStat.Defence, _) twice, once per
+        // broad Defense, reading the same modifier list both times.
         Defence,
         MaxHealth,
         MaxMana,

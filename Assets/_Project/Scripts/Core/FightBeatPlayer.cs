@@ -424,7 +424,14 @@ namespace PrincesPalace
 
         private void ShowAmount(CombatBeat beat)
         {
-            if (beat.Amount <= 0 || beat.Target == null) return;
+            // PHASE D1: a miss shows its OWN popup even though Amount stays
+            // 0 -- the exact case FlashCombatant/Recoil/Punch above still
+            // correctly skip (nothing landed, so no hit reaction), but the
+            // player still needs to be TOLD nothing landed, or a dodge reads
+            // as no different from a Hold Back turn or a non-damaging cast.
+            // See CombatBeat.Missed and DamagePopup.PlayMiss's own headers.
+            if (beat.Target == null) return;
+            if (!beat.Missed && beat.Amount <= 0) return;
 
             var popup = FreePopup();
             if (popup == null) return;   // every one still in flight; the number is dropped, not queued
@@ -449,7 +456,14 @@ namespace PrincesPalace
                      + new Vector2(0f, slot.rect.height * 0.5f + PopupHeadroom);
             }
 
-            popup.Play(at, beat.Amount, beat.IsHealing);
+            if (beat.Missed)
+            {
+                popup.PlayMiss(at);
+            }
+            else
+            {
+                popup.Play(at, beat.Amount, beat.IsHealing);
+            }
         }
 
         private DamagePopup FreePopup()

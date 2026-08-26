@@ -116,25 +116,28 @@ namespace PrincesPalace.Domain.Dungeon
         // A LEG is one map's worth of descent: an entry column the player is
         // standing in, then this many columns of rooms.
         //
-        // Eight, so a leg always ends on a forced room — leg 1 on an elite,
-        // leg 2 on a boss, and so on without end. The run is one continuous
-        // step counter now rather than a series of self-contained floors;
-        // what is displayed as "floor" is cosmetic.
+        // Eight, so a leg always ends on a forced BOSS ROOM — "boss every
+        // floor" (D6/decision #3) — with a forced elite mid-leg and a forced
+        // rest the step before the boss. The run is one continuous step
+        // counter now rather than a series of self-contained floors; what is
+        // displayed as "floor" is cosmetic.
         public const int DefaultLegLength = 8;
 
         // Kept as the old name's value for anything still thinking in
         // columns: a leg of 8 is 9 columns including the entry.
         public const int DefaultDepth = DefaultLegLength + 1;
 
-        // Every 8th step is an elite, every 16th a boss, and the boss rule
-        // wins where both apply.
+        // Every leg ends on a boss (step ≡ 0 mod StepsPerBoss) and carries a
+        // forced elite at its midpoint (step ≡ EliteOffsetInLeg mod
+        // StepsPerBoss). Both are POSITIONAL overrides rather than weights,
+        // the same shape the generator already used for the entry and boss
+        // columns — the difference is only that the position is now an
+        // ABSOLUTE step rather than "first" and "last".
         //
-        // Positional overrides rather than weights, which is the same shape
-        // the generator already used for the entry and boss columns — the
-        // difference is only that the position is now an ABSOLUTE step
-        // rather than "first" and "last".
-        private const int StepsPerElite = 8;
-        private const int StepsPerBoss = 16;
+        // Was 16 (bosses every OTHER leg); D6 moved it to 8 so every leg
+        // closes on its own boss instead of alternating boss/elite legs.
+        private const int StepsPerBoss = 8;
+        private const int EliteOffsetInLeg = 4;
 
         // Widest a middle column gets. Three reads as a real fork without the
         // columns becoming a wall of rooms the player skims instead of reads.
@@ -158,8 +161,9 @@ namespace PrincesPalace.Domain.Dungeon
         // before earning a single level or a single piece of gear is not a
         // hard start, it is a wall — confirmed by an actual playtest that
         // could not survive the first room. Elites are exclusively the
-        // ForcedTypeAt cadence now (every StepsPerElite), so the player's
-        // first one always arrives after real levelling room to prepare.
+        // ForcedTypeAt cadence now (step ≡ EliteOffsetInLeg within each leg),
+        // so the player's first one always arrives after real levelling room
+        // to prepare.
         private static readonly (RoomType Type, int Weight)[] MiddleRooms =
         {
             (RoomType.Fight, 44),
@@ -173,10 +177,12 @@ namespace PrincesPalace.Domain.Dungeon
         // What an absolute step is FORCED to be, or null when it rolls
         // normally.
         //
-        // Boss wins where both apply, so step 16 is a boss rather than an
-        // elite. Step 0 is the entry a player is standing in rather than a
-        // room they chose, so it forces nothing — without that guard the
-        // very first column of the run would be a boss.
+        // Boss wins where both apply (moot now that StepsPerBoss and the
+        // elite/rest residues share one modulus and cannot collide, but kept
+        // as the explicit ordering so that stays true by construction rather
+        // than by accident). Step 0 is the entry a player is standing in
+        // rather than a room they chose, so it forces nothing — without that
+        // guard the very first column of the run would be a boss.
         public static RoomType? ForcedTypeAt(int absoluteStep, bool restBeforeBoss = false)
         {
             if (absoluteStep <= 0)
@@ -200,8 +206,9 @@ namespace PrincesPalace.Domain.Dungeon
             // that matters.
             //
             // Cannot collide with the elite cadence: rests land where
-            // step % 16 == 15 and elites where step % 8 == 0, so no step is
-            // ever both. Boss still wins outright, which keeps step 16 a boss
+            // step % StepsPerBoss == StepsPerBoss - 1 (≡ 7) and elites where
+            // step % StepsPerBoss == EliteOffsetInLeg (≡ 4), so no step is
+            // ever both. Boss still wins outright, which keeps step 8 a boss
             // rather than anything else.
             //
             // A parameter rather than a lookup, because Domain is engine-free
@@ -212,7 +219,7 @@ namespace PrincesPalace.Domain.Dungeon
                 return RoomType.Rest;
             }
 
-            return absoluteStep % StepsPerElite == 0 ? RoomType.EliteFight : (RoomType?)null;
+            return absoluteStep % StepsPerBoss == EliteOffsetInLeg ? RoomType.EliteFight : (RoomType?)null;
         }
 
         // One leg of the descent: an entry column, then `legLength` columns
@@ -222,8 +229,8 @@ namespace PrincesPalace.Domain.Dungeon
         // because the descent no longer ends — there is always another leg,
         // and "floor" is a label rather than a structure. Legs align to the
         // 8-step grid, so a leg generated at a multiple of 8 always ENDS on
-        // its forced room; that is what makes leg 1 finish on an elite and
-        // leg 2 on a boss without either being special-cased here.
+        // its forced boss room (and carries its forced elite at the
+        // midpoint) without either being special-cased here.
         public static DescentMap GenerateLeg(SeededRandom random, int startStep,
             int legLength = DefaultLegLength, bool restBeforeBoss = false)
         {

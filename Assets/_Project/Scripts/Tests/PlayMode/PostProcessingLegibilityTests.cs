@@ -80,9 +80,9 @@ namespace PrincesPalace.PlayModeTests
             // A bound session, not the resting scene: the plate has to be
             // showing real text for a text-contrast measurement to mean
             // anything.
-            var hero = new CombatantState("Shawn", true, 300, 30, 40, 0, 10);
+            var hero = new CombatantState("Shawn", true, 300, 30, 40, 10);
             hero.Signature = new SignatureResource("wool", "Wool", 16, 0, 2, 0);
-            var foe = new CombatantState("Front", false, 5000, 10, 8, 0, 4);
+            var foe = new CombatantState("Front", false, 5000, 10, 8, 4);
 
             var encounter = new CombatEncounter(new[] { hero }, new[] { foe });
             var kit = new PlayerKit("shawn", CharacterRole.Tank, null, null, null,

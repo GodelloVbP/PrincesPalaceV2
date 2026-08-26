@@ -222,6 +222,15 @@ namespace PrincesPalace.Content
                 }
             }
 
+            foreach (var modifier in _modifiers)
+            {
+                CheckId(modifier.id, "Modifier");
+                if (string.IsNullOrWhiteSpace(modifier.displayName))
+                {
+                    errors.Add($"Modifier '{modifier.id}' has no displayName; a tooltip line would show a blank row.");
+                }
+            }
+
             foreach (var enemy in _enemies)
             {
                 CheckId(enemy.id, "Enemy");

@@ -20,10 +20,10 @@ namespace PrincesPalace.Domain.Tests
         // Slow enough that the hero always opens, fast enough that a single
         // hero action is always followed by exactly one monster reply.
         private static CombatantState Hero(string name = "Hero", int health = 500, int speed = 10) =>
-            new CombatantState(name, true, health, 20, 20, 0, speed);
+            new CombatantState(name, true, health, 20, 20, speed);
 
         private static CombatantState Monster(string name = "Golem", int health = 1000, int attack = 30) =>
-            new CombatantState(name, false, health, 10, attack, 0, 9);
+            new CombatantState(name, false, health, 10, attack, 9);
 
         private static ResolvedEnemy Source(
             string id,
@@ -35,13 +35,15 @@ namespace PrincesPalace.Domain.Tests
             int statusDuration = 0,
             bool attackHoldsPosition = false,
             string vfxPath = "",
-            string sfxPath = "") =>
+            string sfxPath = "",
+            DamageType attackType = DamageType.Physical) =>
             new ResolvedEnemy(id, id, new StatBlock(), 0, 0, false,
                 DamageType.Physical, DamageType.Physical, 0,
                 skillName: skillName, skillPower: skillPower, skillChance: skillChance,
                 presentation: SpellPresentation.Of(vfxPath, 0.6f, 3, sfxPath),
                 appliesStatus: appliesStatus, statusMagnitude: statusMagnitude,
-                statusDuration: statusDuration, attackHoldsPosition: attackHoldsPosition);
+                statusDuration: statusDuration, attackHoldsPosition: attackHoldsPosition,
+                attackType: attackType);
 
         // Variance off so a damage assertion is a fact. The roll has its own
         // tests, and a monster's swing is the one hit the player ever takes.
@@ -88,6 +90,56 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(FightSession.Stances.Attack, beats[0].Stances[beats[0].Actor]);
             Assert.AreEqual(FightSession.Stances.Hurt, beats[0].Stances[hero],
                 "a hit taken is visible on the stage, not only in the log");
+        }
+
+        // THE ATTACK-TYPE INTEGRATION TEST the balance-redesign plan's D1
+        // calls for: an enemy authored with a non-Physical attackType must,
+        // in a resolved fight, have its swing reduced by the target's
+        // MagicalDefense and NOT PhysicalDefense. Before Phase 1, an enemy
+        // had no way to reach MagicalDefense at all -- every monster's
+        // attack was untyped Physical regardless of what it was authored as
+        // -- which made MagicalDefense a dead stat against every enemy in
+        // the game. See ActorAttackType's own comment, FightSession.Skills.cs.
+        [Test]
+        public void AnEnemyWithAnAuthoredAttackType_IsMetByMagicalDefenseNotPhysical()
+        {
+            var heavyPhysical = Hero();
+            heavyPhysical.PhysicalDefense = 500;
+            heavyPhysical.MagicalDefense = 0;
+            var (physicalRun, _, _) = OneOnOne(Source("imp", attackType: DamageType.Fire), heavyPhysical);
+            physicalRun.ExecuteAttack(physicalRun.Encounter.Enemies[0]);
+            int damageAgainstAPhysicalWall = EnemyBeats(physicalRun)[0].Amount;
+
+            var heavyMagical = Hero();
+            heavyMagical.PhysicalDefense = 0;
+            heavyMagical.MagicalDefense = 500;
+            var (magicalRun, _, _) = OneOnOne(Source("imp", attackType: DamageType.Fire), heavyMagical);
+            magicalRun.ExecuteAttack(magicalRun.Encounter.Enemies[0]);
+            int damageAgainstAMagicalWall = EnemyBeats(magicalRun)[0].Amount;
+
+            Assert.Less(damageAgainstAMagicalWall, damageAgainstAPhysicalWall,
+                "a Fire-typed enemy's swing must be blunted by a wall of MagicalDefense, not shrug " +
+                "it off the way it shrugs off a wall of PhysicalDefense -- if both walls blunted it " +
+                "equally, MagicalDefense would still be the dead stat this integration test exists " +
+                "to catch");
+        }
+
+        // The companion fact: an enemy that authors NOTHING still reads as
+        // Physical, exactly as every enemy always did before this field
+        // existed — the default this whole mechanism has to fall back to.
+        [Test]
+        public void AnEnemyWithNoAuthoredAttackType_IsStillMetByPhysicalDefense()
+        {
+            var heavyPhysical = Hero();
+            heavyPhysical.PhysicalDefense = 500;
+            var (session, _, _) = OneOnOne(Source("golem"), heavyPhysical);
+
+            session.ExecuteAttack(session.Encounter.Enemies[0]);
+
+            // Monster()'s default Attack (30) raw, softened by
+            // PhysicalDefense 500: 30 x 100/(500+100) = 5.
+            Assert.AreEqual(5, EnemyBeats(session)[0].Amount,
+                "an untyped/Physical swing should be stopped by a wall of PhysicalDefense");
         }
 
         [Test]

@@ -78,6 +78,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> PackCounts = new List<NodeRef>();
         public List<NodeRef> PackRarityTicks = new List<NodeRef>();
 
+        // ITEM-MODIFIER PLAN PHASE E: the RiftTier ring, inset within the
+        // icon's own bounds (see BuildPack's own comment on why) rather than
+        // bleeding past the cell the way the Reckoning's halo/burst do --
+        // the pack cell has almost no padding left to bleed into.
+        public List<NodeRef> PackRiftGlows = new List<NodeRef>();
+
         // The name beside each icon, which two-abreast rows have room for and
         // a four-across grid of squares did not.
         public List<NodeRef> PackNames = new List<NodeRef>();
@@ -95,6 +101,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> SlotIcons = new List<NodeRef>();
         public List<NodeRef> SlotLabels = new List<NodeRef>();
         public List<NodeRef> SlotRarityTicks = new List<NodeRef>();
+
+        // ITEM-MODIFIER PLAN PHASE E: see PackRiftGlows' own comment.
+        public List<NodeRef> SlotRiftGlows = new List<NodeRef>();
         public List<NodeRef> SlotBlockedCaptions = new List<NodeRef>();
 
         // Six cells, filled highest-first at runtime -- which attribute lands
@@ -388,6 +397,23 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 var tick = Ui.Solid($"DossierPackTick{i}", "#7F8EA3", new UiVec(12f, 12f),
                     Place.At(-cellW * 0.5f + 9f, cellH * 0.5f - 9f)).Inactive().AsDecor();
 
+                // ITEM-MODIFIER PLAN PHASE E: the RiftTier ring. Sized to the
+                // ICON itself (not larger) and centred on it -- proc:ring_
+                // hairline draws its stroke well inside its own bounds (see
+                // ProceduralSpriteBaker's own Radius 0.94), so this reads as
+                // a thin coloured frame around the art without needing an
+                // AllowOverflow the way the Reckoning's bleeding halo does:
+                // PackIconSize already spends nearly the whole cell width
+                // (PackIconPadX is 4px), so there is no room to bleed into.
+                // Coloured and shown at runtime by
+                // CharacterDossierController.BindPackWindow; inactive here
+                // the same way every other per-item decoration in this loop
+                // starts, so an empty window slot draws nothing.
+                var riftGlow = Ui.Sprite($"DossierPackRiftGlow{i}", "proc:ring_hairline",
+                        new UiVec(DossierLayout.PackIconSize, DossierLayout.PackIconSize),
+                        Place.At(0f, DossierLayout.PackIconCentreY))
+                    .Inactive().AsDecor();
+
                 // UNDER the icon and the full width of the cell, which is the
                 // whole point of the change: beside a 44px icon this had about
                 // 110px, and a generated item's name does not fit in 110px at a
@@ -412,12 +438,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .AllowOverlap("an entry's icon, name and count sit inside their own row by construction");
 
                 button.Children.Add(icon);
+                button.Children.Add(riftGlow);
                 button.Children.Add(tick);
                 button.Children.Add(name);
                 button.Children.Add(count);
 
                 PackCells.Add(button);
                 PackIcons.Add(icon);
+                PackRiftGlows.Add(riftGlow);
                 PackRarityTicks.Add(tick);
                 PackNames.Add(name);
                 PackCounts.Add(count);
@@ -545,6 +573,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 Place.At(-DossierLayout.SlotSize * 0.5f + 7f, DossierLayout.SlotSize * 0.5f - 7f))
                 .Inactive().AsDecor();
 
+            // ITEM-MODIFIER PLAN PHASE E: see BuildPack's identical comment
+            // on why this is sized to the icon rather than bled past it.
+            var riftGlow = Ui.Sprite($"DossierSlotRiftGlow{key}", "proc:ring_hairline",
+                    new UiVec(iconSize, iconSize),
+                    Place.At(0f, CaptionBand * 0.5f))
+                .Inactive().AsDecor();
+
             // The blocked caption. A two-handed weapon must never leave the off
             // hand looking merely empty -- the player has to see WHY.
             var blocked = Ui.Label($"DossierSlotBlocked{key}", UiStrings.OverlayTwoHanded,
@@ -558,6 +593,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Hovers(1.05f)
                 .AllowOverlap("a slot stands on the mannequin and its own leader line");
             cell.Children.Add(icon);
+            cell.Children.Add(riftGlow);
             cell.Children.Add(tick);
             cell.Children.Add(blocked);
 
@@ -595,6 +631,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             SlotCells.Add(cell);
             SlotIcons.Add(icon);
+            SlotRiftGlows.Add(riftGlow);
             SlotRarityTicks.Add(tick);
             SlotBlockedCaptions.Add(blocked);
             SlotLabels.Add(label);
@@ -726,20 +763,27 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // ---- the shared tooltip --------------------------------------------------------
 
-        // 280x280, not 290x130. It used to hold a one-line item summary and a
+        // 300x380, not 280x280. It used to hold a one-line item summary and a
         // wide-short box suited that; a pack item's tooltip is
         // ItemDescription.ComparisonBody now (bonuses, requirement, a
         // VS.-EQUIPPED delta per changed stat, cascade notes) -- the same
         // content routinely runs to eight or ten lines, and the old 84px-tall
         // body clipped or overflowed almost everything it was asked to show.
-        // Square rather than wider-still, on request, and because a taller
-        // box is what the longer text actually needs -- width was never the
-        // constraint.
+        //
+        // ITEM-MODIFIER PLAN PHASE E: grown again, from 280x280, for the new
+        // AFFIXES section ComparisonBody/CardSummary can now append -- a
+        // three-slot Convergent item can add a heading plus up to three
+        // modifier lines on top of the content that already ran to ten
+        // lines, and the box that already regularly ran close to full would
+        // have started clipping the moment the first real modifier dropped.
+        // Grown in BOTH axes (280->300 wide, 280->380 tall): width buys back
+        // some of the extra wrap a modifier's longer sentences cost, height
+        // buys the extra lines outright.
         private UiNode BuildTooltip()
         {
-            var title = Ui.Label("DossierTooltipTitle", UiString.Runtime, new UiVec(260f, 26f), 18, AccentHi,
-                Place.At(0f, 118f)).AsDecor();
-            var body = Ui.Label("DossierTooltipBody", UiString.Runtime, new UiVec(260f, 220f), 13, TextDim,
+            var title = Ui.Label("DossierTooltipTitle", UiString.Runtime, new UiVec(280f, 26f), 18, AccentHi,
+                Place.At(0f, 168f)).AsDecor();
+            var body = Ui.Label("DossierTooltipBody", UiString.Runtime, new UiVec(280f, 320f), 13, TextDim,
                     Place.At(0f, -14f)).AsDecor()
                 .TextAligned(UiTextAlign.TopLeft);
 
@@ -748,7 +792,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // a tooltip floats over whatever it has to - it is transient and
             // takes no clicks
-            var panel = Ui.Sprite("DossierTooltip", null, Place.At(0f, 0f), UiSize.Fixed(280f, 280f))
+            var panel = Ui.Sprite("DossierTooltip", null, Place.At(0f, 0f), UiSize.Fixed(300f, 380f))
                 .Coloured("#1D1226F2")
                 .Inactive()
                 .AsDecor();

@@ -116,6 +116,54 @@ namespace PrincesPalace.PlayModeTests
             CollectionAssert.IsEmpty(ItemOfferRoll.Roll(EncounterClass.Normal, 4, 0, null));
         }
 
+        // ---- RiftTier / modifiers -------------------------------------------
+
+        [Test]
+        public void EveryOfferCarriesAtMostThreeDistinctModifiers()
+        {
+            for (int depth = 0; depth < 40; depth += 7)
+            {
+                foreach (var offer in ItemOfferRoll.Roll(EncounterClass.Boss, depth, 500, n => 0))
+                {
+                    Assert.LessOrEqual(offer.Modifiers.Count, 3, $"at depth {depth}");
+                    CollectionAssert.AllItemsAreUnique(offer.Modifiers.ToList(), $"at depth {depth}");
+                    Assert.AreEqual(offer.Modifiers.Count, (int)offer.RiftTier,
+                        "the number of rolled modifiers should equal the rift tier that was rolled");
+                }
+            }
+        }
+
+        [Test]
+        public void AnOrdinaryOfferCarriesNoModifiers()
+        {
+            // A source that never succeeds a climb (out-of-range roll clamps
+            // to the top of [0, Resolution), which is always >= threshold)
+            // never leaves RiftTier.Ordinary.
+            foreach (var offer in ItemOfferRoll.Roll(EncounterClass.Normal, 0, 0, n => n - 1))
+            {
+                Assert.AreEqual(Domain.Content.RiftTier.Ordinary, offer.RiftTier);
+                Assert.IsEmpty(offer.Modifiers);
+            }
+        }
+
+        [Test]
+        public void RiftTierAndModifiersAreRolledPerItemRatherThanOncePerSet()
+        {
+            // Same shape as PlusIsRolledPerItemRatherThanOncePerSet: walking
+            // the randomness source rather than handing back a constant, so a
+            // per-item roll and a per-set roll produce visibly different data.
+            var seen = new List<Domain.Content.RiftTier>();
+            int calls = 0;
+            System.Func<int, int> walking = bound => (calls++) % System.Math.Max(1, bound);
+
+            foreach (var offer in ItemOfferRoll.Roll(EncounterClass.Boss, 30, 0, walking))
+            {
+                seen.Add(offer.RiftTier);
+            }
+
+            Assert.AreEqual(ItemOfferTable.OfferCount, seen.Count);
+        }
+
         [Test]
         public void PlusIsRolledPerItemRatherThanOncePerSet()
         {

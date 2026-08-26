@@ -19,7 +19,11 @@ namespace PrincesPalace.Domain.Equipment
         // `plus` names WHICH COPY is being worn. It has to be passed rather than
         // looked up: the bag can hold several stacks of one item id at different
         // plus levels, and only the caller -- which knows which row the player
-        // clicked -- can say which one they meant.
+        // clicked -- can say which one they meant. `modifierIds`/`riftTier` name
+        // the same thing for the rolled-affix axis, and travel through this
+        // method for the identical reason plus does (see EquipmentLoadout.Set's
+        // own comment) -- nothing populates them yet, but the plumbing has to
+        // exist before Phase A3 content can ride it.
         public static bool TryEquip(
             EquipmentLoadout loadout,
             List<InventoryEntry> bag,
@@ -27,7 +31,9 @@ namespace PrincesPalace.Domain.Equipment
             EquipmentSlot itemSlot,
             bool isEquippable,
             EquipmentSlot? preferredSlot = null,
-            int plus = 0)
+            int plus = 0,
+            List<string> modifierIds = null,
+            int riftTier = 0)
         {
             if (loadout == null || bag == null || string.IsNullOrEmpty(itemId)) return false;
             if (!isEquippable) return false;
@@ -36,23 +42,26 @@ namespace PrincesPalace.Domain.Equipment
 
             // Checked before anything is mutated: an equip that cannot be paid
             // for must not half-happen.
-            if (!InventoryOps.TryRemoveAt(bag, itemId, plus)) return false;
+            if (!InventoryOps.TryRemoveAt(bag, itemId, plus, modifierIds, riftTier)) return false;
 
             var slot = preferredSlot ?? loadout.ResolveTargetSlot(itemSlot);
 
-            // BOTH HALVES of what is being displaced are read BEFORE Set
-            // overwrites the slot. Taking only the id would put a +5 sword back
-            // in the bag as a +0 one -- an item-destroying bug that no
-            // count-based assertion would ever catch, because the count is
-            // still right.
+            // ALL of what is being displaced is read BEFORE Set overwrites the
+            // slot. Taking only the id would put a +5 sword back in the bag as a
+            // +0 one -- an item-destroying bug that no count-based assertion
+            // would ever catch, because the count is still right. The same
+            // applies to a displaced item's rolled affixes once anything rolls
+            // them.
             string displaced = loadout.Get(slot);
             int displacedPlus = loadout.GetPlus(slot);
+            List<string> displacedModifierIds = loadout.GetModifierIds(slot);
+            int displacedRiftTier = loadout.GetRiftTier(slot);
 
-            loadout.Set(slot, itemId, plus);
+            loadout.Set(slot, itemId, plus, modifierIds, riftTier);
 
             if (displaced.Length > 0)
             {
-                InventoryOps.Add(bag, displaced, 1, displacedPlus);
+                InventoryOps.Add(bag, displaced, 1, displacedPlus, displacedModifierIds, displacedRiftTier);
             }
 
             return true;
@@ -65,12 +74,14 @@ namespace PrincesPalace.Domain.Equipment
             if (loadout == null || bag == null) return false;
 
             // Read before the clear, for the same reason the equip path reads
-            // the displaced plus before Set.
+            // the displaced plus (and now modifierIds/riftTier) before Set.
             int removedPlus = loadout.GetPlus(slot);
+            List<string> removedModifierIds = loadout.GetModifierIds(slot);
+            int removedRiftTier = loadout.GetRiftTier(slot);
             string removed = loadout.Clear(slot);
             if (removed.Length == 0) return false;
 
-            InventoryOps.Add(bag, removed, 1, removedPlus);
+            InventoryOps.Add(bag, removed, 1, removedPlus, removedModifierIds, removedRiftTier);
             return true;
         }
     }

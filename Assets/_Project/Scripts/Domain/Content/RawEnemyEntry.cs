@@ -16,7 +16,14 @@ namespace PrincesPalace.Domain.Content
         public string displayName;
         public int maxHealth = -1;
         public int attack = -1;
-        public int defense = -1;
+
+        // The old single `defense` field is GONE, not renamed to either of
+        // these — see StatType's own header. Both optional; -1 means
+        // "derive it" (EnemyEntryResolver.DefensePerHealth and its half),
+        // same sentinel convention as every other omittable stat here.
+        public int physicalDefense = -1;
+        public int magicalDefense = -1;
+
         public int speed = -1;
         public int expReward = -1;
         public int currencyReward = -1;
@@ -48,6 +55,17 @@ namespace PrincesPalace.Domain.Content
         // 0 or absent means floor 1, so an unbanded enemy is available from the
         // start rather than never -- content should degrade into the game.
         public int minFloor;
+
+        // The damage type this monster's own attacks and abilities carry.
+        // Optional; blank means Physical, same default an unauthored
+        // character's attackType gets (CharacterEntryResolver). Enemies
+        // have no CombatantKit the way a player's PlayerKit carries an
+        // AttackType, so without this MagicalDefense was a dead stat
+        // against every monster in the game -- nothing a monster did was
+        // ever typed. Case-insensitive, parsed the same way
+        // CharacterEntryResolver parses a character's own attackType.
+        public string attackType = "";
+
         // WHAT THIS MONSTER TAKES BADLY AND WHAT IT SHRUGS OFF.
         //
         // A COMMA-SEPARATED LIST, not a single element: "Fire" and

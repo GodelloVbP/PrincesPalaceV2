@@ -26,8 +26,8 @@ namespace PrincesPalace.Domain.Tests
         private static (FightSession session, CombatantState hero, CombatantState foe) Fight(
             ResolvedSkill skill, RelicEffect? relic = null)
         {
-            var hero = new CombatantState("Shawn", true, 999999, 999, 20, 0, 10);
-            var foe = new CombatantState("Dummy", false, 999999, 0, 1, 0, 1);
+            var hero = new CombatantState("Shawn", true, 999999, 999, 20, 10);
+            var foe = new CombatantState("Dummy", false, 999999, 0, 1, 1);
 
             var relics = relic.HasValue
                 ? new List<ResolvedRelic> { new ResolvedRelic("r", "r", "", relic.Value, 0) }

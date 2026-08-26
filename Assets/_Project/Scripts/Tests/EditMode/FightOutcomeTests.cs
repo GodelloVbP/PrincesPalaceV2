@@ -23,12 +23,12 @@ namespace PrincesPalace.Domain.Tests
         private static (FightSession session, CombatantState hero, CombatantState foe) Fight(
             int foeHealth = 1, int heroHealth = 300, bool isElite = false, int depth = 0)
         {
-            var hero = new CombatantState("Shawn", true, heroHealth, 30, 40, 0, 10);
+            var hero = new CombatantState("Shawn", true, heroHealth, 30, 40, 10);
             // Speed 9 against the hero's 10: fast enough that the monster
             // genuinely replies to every action. At speed 1 it barely ever acts,
             // which quietly made the defeat cases untestable -- the hero simply
             // never got hit.
-            var foe = new CombatantState("Rat", false, foeHealth, 10, 8, 0, 9);
+            var foe = new CombatantState("Rat", false, foeHealth, 10, 8, 9);
 
             var encounter = new CombatEncounter(new[] { hero }, new[] { foe });
             var kit = new PlayerKit("shawn", CharacterRole.Tank, null, null, null);

@@ -30,6 +30,7 @@ namespace PrincesPalace.Content
         private const string SkillResourcePath = "Content/Skills";
         private const string RelicResourcePath = "Content/Relics";
         private const string AchievementResourcePath = "Content/Achievements";
+        private const string ModifierResourcePath = "Content/Modifiers";
 
         private static List<CharacterDefinition> _characters;
         private static List<TalentDefinition> _talents;
@@ -40,6 +41,7 @@ namespace PrincesPalace.Content
         private static List<SkillDefinition> _skills;
         private static List<RelicDefinition> _relics;
         private static List<AchievementDefinition> _achievements;
+        private static List<ModifierDefinition> _modifiers;
 
         // Characters in authored roster order.
         public static IReadOnlyList<CharacterDefinition> Characters
@@ -65,6 +67,15 @@ namespace PrincesPalace.Content
         public static IReadOnlyList<AchievementDefinition> Achievements
         {
             get { EnsureLoaded(); return _achievements; }
+        }
+
+        // Every item modifier ("Rift affix") in the pool, authored order.
+        // Phase A2 only -- nothing rolls one onto an item yet (Phase A3), so
+        // this is read today only by ModifierEffects below and by content
+        // tooling (the future modifier browser).
+        public static IReadOnlyList<ModifierDefinition> Modifiers
+        {
+            get { EnsureLoaded(); return _modifiers; }
         }
 
         // The talents a given character can actually see and take: their own
@@ -249,7 +260,8 @@ namespace PrincesPalace.Content
             IEnumerable<ItemDefinition> items = null,
             IEnumerable<SpellTierDefinition> spellTiers = null,
             IEnumerable<SkillDefinition> skills = null,
-            IEnumerable<RelicDefinition> relics = null)
+            IEnumerable<RelicDefinition> relics = null,
+            IEnumerable<ModifierDefinition> modifiers = null)
         {
             // THROUGH THE SAME ORDERING AS THE REAL LOAD, which it did not used
             // to be. This held its own copy of all eight sorts, including the
@@ -265,6 +277,7 @@ namespace PrincesPalace.Content
             _spellTiers = Ordered(spellTiers);
             _skills = Ordered(skills);
             _relics = Ordered(relics);
+            _modifiers = Ordered(modifiers);
         }
 
         // Drops the cache so the next access reloads from Resources.
@@ -279,6 +292,7 @@ namespace PrincesPalace.Content
             _skills = null;
             _relics = null;
             _achievements = null;
+            _modifiers = null;
         }
 
         public static CharacterDefinition GetCharacter(string id)
@@ -297,6 +311,12 @@ namespace PrincesPalace.Content
         {
             EnsureLoaded();
             return _relics.FirstOrDefault(r => r.id == id);
+        }
+
+        public static ModifierDefinition GetModifier(string id)
+        {
+            EnsureLoaded();
+            return _modifiers.FirstOrDefault(m => m.id == id);
         }
 
         public static UpgradeDefinition GetUpgrade(string id)
@@ -650,6 +670,7 @@ namespace PrincesPalace.Content
             _skills = LoadOrdered<SkillDefinition>(SkillResourcePath);
             _achievements = LoadOrdered<AchievementDefinition>(AchievementResourcePath);
             _relics = LoadOrdered<RelicDefinition>(RelicResourcePath);
+            _modifiers = LoadOrdered<ModifierDefinition>(ModifierResourcePath);
         }
 
         // THE ONLY PLACE CONTENT IS LOADED, and the constraint is what makes

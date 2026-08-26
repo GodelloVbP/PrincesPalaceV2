@@ -159,10 +159,22 @@ namespace PrincesPalace.Domain.Content
             int setOrder = raw.sortOrder >= 0 ? raw.sortOrder : index;
 
             // The style's weights, in hundredths. Empty is legal and means
-            // this set is hand-authored the old way.
-            bool derives = raw.styleWeights != null && raw.styleWeights.Length > 0;
+            // this set grants no ability scores at all.
+            bool derivesScores = raw.styleWeights != null && raw.styleWeights.Length > 0;
             var weights = default(AbilityScoreBlock);
-            if (derives && !AbilityScoreLineParser.TryParse(raw.styleWeights, $"{label} styleWeights", out weights, errors))
+            if (derivesScores && !AbilityScoreLineParser.TryParse(raw.styleWeights, $"{label} styleWeights", out weights, errors))
+            {
+                return;
+            }
+
+            // The combat-stat profile, in percent -- Phase 4 (D4). Empty is
+            // legal and means this set grants no combat stats at all (a
+            // score-only material, if one is ever authored). Parsed ONCE per
+            // set, same reasoning as styleWeights: every piece spends the
+            // same profile, just at its own slot's share of the budget.
+            bool derivesStats = raw.statProfile != null && raw.statProfile.Length > 0;
+            var profile = StatBlock.Zero;
+            if (derivesStats && !TryParseStatProfile(raw.statProfile, $"{label} statProfile", out profile, errors))
             {
                 return;
             }
@@ -209,53 +221,49 @@ namespace PrincesPalace.Domain.Content
                     continue;
                 }
 
-                if (!TryParseStats(piece.baseStats, pieceLabel, "base", out var baseStat, out var baseScore, errors)
-                    | !TryParseStats(piece.topStats, pieceLabel, "top", out var topStat, out var topScore, errors)
-                    | !AbilityScoreLineParser.TryParse(piece.requiresAtZero, pieceLabel, out var reqAtZero, errors)
+                // baseStats/topStats are GONE from the schema (D4) -- reject
+                // loudly rather than silently ignore, so a stale JSON file
+                // fails the content build with a sentence rather than quietly
+                // losing the numbers someone typed. Both are checked (note
+                // the non-shortcircuiting |) so one edit shows every stale
+                // piece at once.
+                bool staleBase = piece.baseStats != null && piece.baseStats.Length > 0;
+                bool staleTop = piece.topStats != null && piece.topStats.Length > 0;
+                if (staleBase | staleTop)
+                {
+                    errors.Add($"{pieceLabel}: authors baseStats/topStats, which the Phase 4 budget rewrite (D4) " +
+                               $"removed from the schema -- every combat stat is now derived from the set's " +
+                               $"statProfile (and every ability score from styleWeights). Remove this piece's " +
+                               $"baseStats/topStats and put the intent in the set's statProfile instead.");
+                    continue;
+                }
+
+                if (!AbilityScoreLineParser.TryParse(piece.requiresAtZero, pieceLabel, out var reqAtZero, errors)
                     | !AbilityScoreLineParser.TryParse(piece.requiresAtMax, pieceLabel, out var reqAtMax, errors))
                 {
-                    // Every side is parsed before bailing (note the
-                    // non-shortcircuiting |) so one edit shows every bad
-                    // stat name at once rather than one per rebuild.
                     continue;
                 }
 
-                // A set that declares what it is FOR owns its ability scores,
-                // and a piece may not also hand-author them.
-                //
-                // Rejected rather than merged, because a merge has no honest
-                // answer: an AbilityScoreBlock cannot tell "authored as zero"
-                // from "not authored", so a piece writing "strength 0" would
-                // either be ignored or would silently delete the style's own
-                // weighting, and which of those happened would depend on a
-                // field nobody can see. Non-ability stats — resistances,
-                // health, the speed penalty — stay authorable either way,
-                // because those are what a material says beyond its weights.
-                if (derives && (!IsEmpty(baseScore) || !IsEmpty(topScore)))
-                {
-                    errors.Add($"{pieceLabel}: names an ability score in baseStats/topStats, but its set already " +
-                               $"declares styleWeights. Two sources for the same number is exactly what styleWeights " +
-                               $"exists to end — move the intent into the set's weights, or drop the set's weights " +
-                               $"and author every piece by hand.");
-                    continue;
-                }
-
-                if (derives)
+                var baseScore = AbilityScoreBlock.Zero;
+                var topScore = AbilityScoreBlock.Zero;
+                if (derivesScores)
                 {
                     baseScore = DeriveScores(weights, slot, maxTier, atTop: false);
                     topScore = DeriveScores(weights, slot, maxTier, atTop: true);
                 }
 
+                var baseStat = StatBlock.Zero;
+                var topStat = StatBlock.Zero;
+                if (derivesStats)
+                {
+                    baseStat = DeriveCombatStats(profile, slot, maxTier, atTop: false);
+                    topStat = DeriveCombatStats(profile, slot, maxTier, atTop: true);
+                }
+
                 // Requirements derive too, unless the piece states its own.
-                //
-                // AUTHORED WINS HERE, where an authored ability score in
-                // baseStats is REJECTED above, and the difference is not
-                // inconsistency. requiresAtZero is its own string[]: empty
-                // means "said nothing" and is distinguishable from "asked for
-                // zero". baseStats is a mixed list where an ability score
-                // lands in a block that cannot tell those two apart, which is
-                // why that one has to refuse rather than guess.
-                if (derives && piece.requiresAtZero.Length == 0 && piece.requiresAtMax.Length == 0)
+                // requiresAtZero is its own string[]: empty means "said
+                // nothing" and is distinguishable from "asked for zero".
+                if (derivesScores && piece.requiresAtZero.Length == 0 && piece.requiresAtMax.Length == 0)
                 {
                     reqAtZero = DeriveRequirements(weights, maxTier, atTop: false);
                     reqAtMax = DeriveRequirements(weights, maxTier, atTop: true);
@@ -334,10 +342,27 @@ namespace PrincesPalace.Domain.Content
         // FLOORED, and via Math.Floor rather than integer division. C#
         // integer division truncates toward zero, which would round a
         // descending stat the opposite way from an ascending one and put a
-        // quiet asymmetry into every set that carries a penalty — the same
-        // trap AbilityDerivation.FloorDiv2 exists to avoid, and steel's
-        // negative speed is a live instance of it.
+        // quiet asymmetry into every set that carries a penalty — steel's
+        // negative speed is a live instance of it. (AbilityDerivation used to
+        // carry a FloorDiv2 helper guarding the identical trap; Phase 2 of
+        // the balance redesign deleted it along with the piecewise curve it
+        // served — see that file's header. The trap itself is unchanged and
+        // still worth guarding here.)
         public static int ValueAt(int atZero, int atMax, int tier, int maxTier)
+        {
+            return ValueAt(atZero, atMax, tier, maxTier, GearScaling.TierGrowth);
+        }
+
+        // The same interpolation, on an arbitrary growth rate. Balance
+        // redesign Phase 3 (D3): weapons climb GearScaling.WeaponTierGrowth
+        // (1.35) instead of armour's TierGrowth (1.25), and this is the one
+        // place both curves are actually walked, so the two must not
+        // silently share a rate again by one of them forgetting to pass its
+        // own. Every existing caller (armour stats, weapon/armour
+        // requirements, weapon grades) keeps calling the no-arg overload
+        // above and stays on 1.25 — only WeaponEntryResolver's own
+        // attackAtZero/attackAtMax interpolation passes WeaponTierGrowth.
+        public static int ValueAt(int atZero, int atMax, int tier, int maxTier, double growth)
         {
             if (maxTier <= 0 || tier <= 0)
             {
@@ -350,7 +375,7 @@ namespace PrincesPalace.Domain.Content
             }
 
             int span = atMax - atZero;
-            double moved = span * GearScaling.CurveFraction(tier, maxTier);
+            double moved = span * GearScaling.CurveFraction(tier, maxTier, growth);
             return atZero + (int)Math.Floor(moved);
         }
 
@@ -430,20 +455,70 @@ namespace PrincesPalace.Domain.Content
                 ValueAt(atZero.charisma, atMax.charisma, tier, maxTier));
         }
 
-        // "dexterity 1" / "physicalResistance 9". One vocabulary covering
-        // both StatType and AbilityScore, so an author names the stat they
-        // mean and does not have to know which of the two blocks it lives in.
-        private static bool TryParseStats(string[] lines, string pieceLabel, string which,
-            out StatBlock stats, out AbilityScoreBlock scores, List<string> errors)
+        // One end of a derived piece's combat stats: every budget stat the
+        // set's statProfile weights, scaled by the slot and the 60% combat
+        // share -- the StatBlock sibling of DeriveScores above. Phase 4 (D4).
+        private static StatBlock DeriveCombatStats(StatBlock profilePercent, EquipmentSlot slot, int maxTier, bool atTop)
         {
-            stats = StatBlock.Zero;
-            scores = AbilityScoreBlock.Zero;
-            bool ok = true;
-
-            if (lines == null)
+            var result = StatBlock.Zero;
+            foreach (StatType stat in ProfileStats)
             {
-                return true;
+                int percent = profilePercent[stat];
+                if (percent == 0)
+                {
+                    continue;
+                }
+
+                double weight = percent / 100.0;
+                double unitCost = UnitCostFor(stat);
+                int value = atTop
+                    ? GearScaling.CombatStatAt(slot, weight, unitCost, maxTier)
+                    : GearScaling.CombatStatAt(slot, weight, unitCost, 0);
+                result = result + StatBlock.ForStat(stat, value);
             }
+
+            return result;
+        }
+
+        // The five stats a statProfile may spend on -- everything StatType
+        // has EXCEPT Attack, which gear stopped granting in Phase 3.
+        private static readonly StatType[] ProfileStats =
+        {
+            StatType.MaxHealth, StatType.PhysicalDefense, StatType.MagicalDefense,
+            StatType.Speed, StatType.ManaRegen,
+        };
+
+        private static bool IsProfileStat(StatType stat)
+        {
+            return Array.IndexOf(ProfileStats, stat) >= 0;
+        }
+
+        private static double UnitCostFor(StatType stat)
+        {
+            switch (stat)
+            {
+                case StatType.MaxHealth: return GearScaling.HpPerBudgetPoint;
+                case StatType.PhysicalDefense: return GearScaling.PhysicalDefensePerBudgetPoint;
+                case StatType.MagicalDefense: return GearScaling.MagicalDefensePerBudgetPoint;
+                case StatType.Speed: return GearScaling.SpeedPerBudgetPoint;
+                case StatType.ManaRegen: return GearScaling.ManaRegenPerBudgetPoint;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(stat), stat, "Not a statProfile stat -- see IsProfileStat.");
+            }
+        }
+
+        // "physicalDefense 35" -- a set's combat-stat budget, in percent of
+        // the 60% combat share. Phase 4 (D4). A sibling to
+        // AbilityScoreLineParser, but for the five budget stats rather than
+        // the six ability scores, and REQUIRED to sum to 100: there is no
+        // such thing as an unspent budget point here, on purpose -- an
+        // author who wants a stat to get nothing writes nothing, or "0".
+        private static bool TryParseStatProfile(string[] lines, string label, out StatBlock percentages, List<string> errors)
+        {
+            percentages = StatBlock.Zero;
+            bool ok = true;
+            int sum = 0;
+            var seen = new HashSet<StatType>();
 
             foreach (string line in lines)
             {
@@ -455,50 +530,44 @@ namespace PrincesPalace.Domain.Content
                 var parts = line.Trim().Split(new[] { ' ', '\t', ':', '=' }, StringSplitOptions.RemoveEmptyEntries);
                 if (parts.Length != 2)
                 {
-                    errors.Add($"{pieceLabel}: {which} entry '{line}' should read '<stat> <amount>', for example 'dexterity 1'.");
+                    errors.Add($"{label}: entry '{line}' should read '<stat> <percent>', for example 'physicalDefense 35'.");
                     ok = false;
                     continue;
                 }
 
-                if (!int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int amount))
+                if (!Enum.TryParse<StatType>(parts[0], ignoreCase: true, out var stat) || !IsProfileStat(stat))
                 {
-                    errors.Add($"{pieceLabel}: {which} entry '{line}' has '{parts[1]}' where a whole number should be.");
+                    errors.Add($"{label}: entry names '{parts[0]}', which is not one of the budget stats " +
+                               $"(maxHealth, physicalDefense, magicalDefense, speed, manaRegen).");
                     ok = false;
                     continue;
                 }
 
-                if (Enum.TryParse<AbilityScore>(parts[0], ignoreCase: true, out var score))
+                if (!int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int percent))
                 {
-                    scores = scores + AbilityScoreBlockFor(score, amount);
+                    errors.Add($"{label}: entry '{line}' has '{parts[1]}' where a whole number should be.");
+                    ok = false;
                     continue;
                 }
 
-                if (Enum.TryParse<StatType>(parts[0], ignoreCase: true, out var stat))
+                if (!seen.Add(stat))
                 {
-                    stats = stats + StatBlock.ForStat(stat, amount);
+                    errors.Add($"{label}: names {stat} twice.");
+                    ok = false;
                     continue;
                 }
 
-                errors.Add($"{pieceLabel}: {which} entry names '{parts[0]}', which is neither an ability score ({Names<AbilityScore>()}) nor a stat ({Names<StatType>()}).");
+                percentages = percentages + StatBlock.ForStat(stat, percent);
+                sum += percent;
+            }
+
+            if (ok && sum != 100)
+            {
+                errors.Add($"{label}: sums to {sum}, not 100 -- the whole point of a budget is that it is spent completely.");
                 ok = false;
             }
 
             return ok;
-        }
-
-        private static AbilityScoreBlock AbilityScoreBlockFor(AbilityScore score, int value)
-        {
-            switch (score)
-            {
-                case AbilityScore.Strength: return new AbilityScoreBlock(value, 0, 0, 0, 0, 0);
-                case AbilityScore.Dexterity: return new AbilityScoreBlock(0, value, 0, 0, 0, 0);
-                case AbilityScore.Constitution: return new AbilityScoreBlock(0, 0, value, 0, 0, 0);
-                case AbilityScore.Wisdom: return new AbilityScoreBlock(0, 0, 0, value, 0, 0);
-                case AbilityScore.Intelligence: return new AbilityScoreBlock(0, 0, 0, 0, value, 0);
-                case AbilityScore.Charisma: return new AbilityScoreBlock(0, 0, 0, 0, 0, value);
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(score), score, "No AbilityScoreBlock field for this score.");
-            }
         }
 
         private static string Names<T>() where T : Enum

@@ -15,20 +15,20 @@ MonoBehaviour:
   id: throne_colossus
   displayName: Throne Colossus
   baseStats:
-    maxHealth: 950
+    maxHealth: 140
     speed: 3
-    attack: 8
-    defense: 9
+    attack: 45
     manaRegen: 0
-    physicalResistance: 0
-    magicalResistance: 0
+    physicalDefense: 40
+    magicalDefense: 15
+  attackType: 0
   expReward: 135
   currencyReward: 82
   isBoss: 1
   minFloor: 3
   weaknesses: 04000000
   resistances: 00000000
-  breakShieldPoints: 24
+  breakShieldPoints: 4
   spritePath: 
   facing: 1
   sortOrder: 17

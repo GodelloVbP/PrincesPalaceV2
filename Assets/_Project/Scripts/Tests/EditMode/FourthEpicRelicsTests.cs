@@ -27,9 +27,9 @@ namespace PrincesPalace.Domain.Tests
         private static (FightSession session, CombatantState hero, CombatantState foe) Fight(
             RelicEffect relic, ResolvedSkill? skill = null, int foeCount = 1, int heroSpeed = 10)
         {
-            var hero = new CombatantState("Shawn", true, 999999, 999, 20, 0, heroSpeed);
+            var hero = new CombatantState("Shawn", true, 999999, 999, 20, heroSpeed);
             var foes = Enumerable.Range(0, foeCount)
-                .Select(i => new CombatantState($"Foe{i}", false, 999999, 0, 1, 0, 1))
+                .Select(i => new CombatantState($"Foe{i}", false, 999999, 0, 1, 1))
                 .ToArray();
 
             var relics = new List<ResolvedRelic> { Relic(relic) };
@@ -276,8 +276,15 @@ namespace PrincesPalace.Domain.Tests
             session.LuckyDeckSlowForTest(hero, foe);
 
             Assert.Less(foe.Speed, before, "the slow should reduce the real Speed stat, not a cosmetic copy");
-            Assert.IsTrue(session.SpeedBonusFrom(foe, RelicEffect.LuckyDeck) < 0,
-                "the malus should be tracked under the relic that granted it");
+
+            // Tracked under StatusEffectType.Chilled, not RelicEffect.LuckyDeck,
+            // since Phase D2 (item-modifier plan) migrated this slow onto the
+            // unified Chilled status -- see FightSession.Relics.LuckyDeckSlow's
+            // own comment. The net Speed change this test already asserted
+            // above is the actual regression guard on Lucky Deck's balance;
+            // ChilledStatusTests pins the exact figure.
+            Assert.IsTrue(session.SpeedBonusFrom(foe, StatusEffectType.Chilled) < 0,
+                "the malus should be tracked under Chilled now that Lucky Deck's slow is migrated onto it");
         }
 
         // THE WIRING: a real swing with the relic equipped should reach one of
@@ -292,9 +299,9 @@ namespace PrincesPalace.Domain.Tests
 
             for (int seed = 0; seed < 30 && !anyEffect; seed++)
             {
-                var hero = new CombatantState("Shawn", true, 999999, 999, 5, 0, 10);
-                var foeA = new CombatantState("A", false, 999999, 0, 1, 0, 1);
-                var foeB = new CombatantState("B", false, 999999, 0, 1, 0, 1);
+                var hero = new CombatantState("Shawn", true, 999999, 999, 5, 10);
+                var foeA = new CombatantState("A", false, 999999, 0, 1, 1);
+                var foeB = new CombatantState("B", false, 999999, 0, 1, 1);
 
                 var kit = new PlayerKit("hero", CharacterRole.Tank, null,
                     new List<ResolvedRelic> { Relic(RelicEffect.LuckyDeck) }, null);

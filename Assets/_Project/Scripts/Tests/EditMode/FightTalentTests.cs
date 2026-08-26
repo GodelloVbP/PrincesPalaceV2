@@ -19,7 +19,7 @@ namespace PrincesPalace.Domain.Tests
     public class FightTalentTests
     {
         private static CombatantState Hero(string name = "Hero", int health = 500, int attack = 40, int speed = 10) =>
-            new CombatantState(name, true, health, 50, attack, 0, speed);
+            new CombatantState(name, true, health, 50, attack, speed);
 
         // Deliberately sluggish. A cast is a full turn, so with a foe fast
         // enough to reply the monsters would act between the two halves of every
@@ -27,7 +27,7 @@ namespace PrincesPalace.Domain.Tests
         // transform -- and each assertion would be measuring the reply instead of
         // the talent. Speed 1 against 10 keeps the turn with the player.
         private static CombatantState Foe(string name = "Foe", int health = 1000, int attack = 30, int speed = 1) =>
-            new CombatantState(name, false, health, 10, attack, 0, speed);
+            new CombatantState(name, false, health, 10, attack, speed);
 
         private static void Talents(CombatantState actor, params TalentEffect[] effects) =>
             actor.Talents = new TalentEffectSet(effects);
@@ -265,19 +265,24 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- the Black Ram --------------------------------------------------------
 
+        // A flat write to BOTH broad Defenses now -- see ApplyDefenseShred's
+        // own comment (FightSession.Talents.cs) for why there is no longer
+        // one generic `Defense` field for this to write to.
         [Test]
         public void SharpHornsLeaveTheGuardPermanentlyThinner()
         {
             var ram = Hero("Ram");
             Talents(ram, new TalentEffect(TalentEffectType.ShredDefenseOnHit, 3));
             var foe = Foe();
-            foe.Defense = 10;
+            foe.PhysicalDefense = 10;
+            foe.MagicalDefense = 10;
 
             var (session, _) = Fight(new[] { ram }, new[] { foe }, Kit());
 
             session.ExecuteAttack(foe);
 
-            Assert.AreEqual(7, foe.Defense);
+            Assert.AreEqual(7, foe.PhysicalDefense);
+            Assert.AreEqual(7, foe.MagicalDefense);
             Assert.IsTrue(Messages(session).Any(m => m.Contains("permanently")));
         }
 
@@ -287,14 +292,16 @@ namespace PrincesPalace.Domain.Tests
             var ram = Hero("Ram");
             Talents(ram, new TalentEffect(TalentEffectType.ShredDefenseOnHit, 3));
             var frail = Foe("Frail", health: 1);
-            frail.Defense = 10;
+            frail.PhysicalDefense = 10;
+            frail.MagicalDefense = 10;
 
             var (session, _) = Fight(new[] { ram }, new[] { frail, Foe("Tank") }, Kit());
 
             session.ExecuteAttack(frail);
 
             Assert.IsFalse(frail.IsAlive);
-            Assert.AreEqual(10, frail.Defense);
+            Assert.AreEqual(10, frail.PhysicalDefense);
+            Assert.AreEqual(10, frail.MagicalDefense);
         }
 
         [Test]

@@ -17,7 +17,7 @@ namespace PrincesPalace.Domain.Tests
     {
         private static CombatantState Fighter(string name = "Shawn", int maxHealth = 200)
         {
-            return new CombatantState(name, true, maxHealth, 30, 10, 4, 8);
+            return new CombatantState(name, true, maxHealth, 30, 10, 8);
         }
 
         private static void Give(CombatantState combatant, params TalentEffect[] effects)
@@ -160,7 +160,7 @@ namespace PrincesPalace.Domain.Tests
     {
         private static CombatantState Fighter()
         {
-            return new CombatantState("Owl", true, 100, 10, 10, 2, 8);
+            return new CombatantState("Owl", true, 100, 10, 10, 8);
         }
 
         [Test]
@@ -183,28 +183,29 @@ namespace PrincesPalace.Domain.Tests
         // Weight of Wool and Gift: Fury both arrive through the same field, so
         // this is where "does the multiplier reach damage at all" is answered.
         //
-        // It used to also answer "before defense or after", and that question
-        // has stopped existing: CombatMath.Mitigate scales the swing rather
-        // than subtracting from it, so both orders are the same arithmetic.
-        // What replaced it is a stronger guarantee, not a weaker one -- armour
-        // takes a fixed FRACTION, so it cannot be worth less against the
-        // swings it most needs to blunt whatever order anything lands in.
+        // It used to also answer "before defense or after". That question has
+        // stopped existing a second time over: mitigation moved entirely out
+        // of CombatMath and into DamagePipeline (Phase 1 of the balance
+        // redesign), so ComputeAttackDamage no longer reads the target AT
+        // ALL any more -- the bonus folds into the attack side, is scaled,
+        // and that is the whole function. See CombatMathTests.
+        // ComputeAttackDamage_IsIndependentOfTheTargetsArmour for the
+        // property this now is.
         [Test]
         public void TheAttackBonus_MultipliesTheDamageThatLands()
         {
-            var attacker = new CombatantState("Shawn", true, 200, 30, 10, 4, 8);
-            var target = new CombatantState("Golem", false, 300, 0, 5, 6, 4);
+            var attacker = new CombatantState("Shawn", true, 200, 30, 10, 8);
+            var target = new CombatantState("Golem", false, 300, 0, 5, 4);
 
-            // 10 x 12/(12+6) = 6.7 -> 7 -> 35 with no bonus.
-            Assert.AreEqual(35, CombatMath.ComputeAttackDamage(attacker, target));
+            // 10 attack, raw, with no bonus.
+            Assert.AreEqual(10, CombatMath.ComputeAttackDamage(attacker, target));
 
             attacker.BonusAttackPercent = 100;
 
-            // Doubling the attack to 20: 20 x 12/18 = 13.3 -> 13 -> 65. Not
-            // exactly twice 35, and that is the integer rounding at the one
-            // step where it happens rather than a second convention creeping
-            // in -- CombatMath.Mitigate rounds once, before the scale.
-            Assert.AreEqual(65, CombatMath.ComputeAttackDamage(attacker, target));
+            // Doubling the attack to 20, folded in before the (now absent)
+            // scale, same place weapon scaling lands: exactly double, since
+            // nothing sits between the bonus and the raw figure any more.
+            Assert.AreEqual(20, CombatMath.ComputeAttackDamage(attacker, target));
         }
     }
 

@@ -13,17 +13,36 @@ namespace PrincesPalace.Domain.Combat
     // rules about which skills apply which statuses live in Content and
     // Core, not here.
     //
-    // SLOW AND HASTE ARE NOT HERE, on purpose. Every other status in this
-    // file rides a hook the combat pipeline already has — Poison/Regen are
-    // CombatMath.ApplyDamage/Heal on a schedule, Protect/Vulnerable are one
-    // more multiplier next to EffectivenessMultiplier, Stun reuses
-    // BreakShield's turn-skip. A speed-modifying status has no such hook: it
-    // means reaching into TurnOrder's charge RATE, which SpeedScale spent
-    // real, documented care tuning a sub-linear curve and a hard ceiling for
-    // specifically to make "eternal turn cheese" impossible. Retrofitting a
-    // dynamic per-status rate modifier onto that is a real change to a
-    // deliberately delicate system and deserves its own pass, not to ride in
-    // on a phase whose actual point is duration and ticking.
+    // CHILLED (Slow) IS HERE NOW; HASTE STILL IS NOT. For a long time neither
+    // was, on purpose — every other status in this file rides a hook the
+    // combat pipeline already had: Poison/Regen are CombatMath.ApplyDamage/
+    // Heal on a schedule, Protect/Vulnerable are one more multiplier next to
+    // EffectivenessMultiplier, Stun reuses BreakShield's turn-skip. A
+    // speed-modifying status has no such hook lying around: it means
+    // reaching into TurnOrder's charge RATE, which SpeedScale spent real,
+    // documented care tuning a sub-linear curve and a hard ceiling for
+    // specifically to make "eternal turn cheese" impossible.
+    //
+    // Chilled's own pass (item-modifier plan, Phase D2) deliberately did NOT
+    // retrofit a read inside SpeedScale.TickRate or TurnOrder itself — that
+    // would have meant a signature change rippling to every caller of a
+    // function the codebase already calls "tuned with real care" for a
+    // single new status. Instead Chilled rides FightSession.SpeedBuffs.cs's
+    // EXISTING relic-driven speed-buff bookkeeping (GrantSpeedMalusPercent/
+    // RevokeSpeedBuff), which already solved "grant a percent-of-true-base
+    // malus and revert it exactly on expiry" for Lucky Deck's bespoke slow.
+    // Chilled is that same malus, just granted/revoked from a status
+    // (Magnitude/TurnsRemaining, refresh-not-stack, ticked by Tick below)
+    // instead of from a bare relic proc — see FightSession.SpeedBuffs'
+    // header for the dictionary-widening this required and why. SpeedScale
+    // and TurnOrder are UNCHANGED by any of this: Speed is still just an
+    // int, Chilled only ever moves that int by the same flat-points-handed-
+    // over arithmetic every speed relic already used.
+    //
+    // Haste (a status that speeds someone up) still has no member and no
+    // hook — nothing in this pass needed one, and the day it does, it reads
+    // as GrantSpeedPercent's mirror the exact same way Chilled reads as
+    // GrantSpeedMalusPercent's.
     public static class StatusEffects
     {
         // A fresh application of a type ALREADY on the list refreshes
@@ -154,6 +173,15 @@ namespace PrincesPalace.Domain.Combat
         public static bool HasStun(List<ActiveStatus> statuses)
         {
             return statuses.Any(s => s.Type == StatusEffectType.Stun);
+        }
+
+        // Rooted is queried, never consumed -- unlike Stun it decays by turn
+        // count (StatusEffects.Tick's generic countdown already handles it,
+        // the same way Chilled needs no special case there), so there is no
+        // ConsumeRooted to sit beside ConsumeStun.
+        public static bool HasRooted(List<ActiveStatus> statuses)
+        {
+            return statuses.Any(s => s.Type == StatusEffectType.Rooted);
         }
 
         // Consumes the Stun rather than merely reporting it — the skip it

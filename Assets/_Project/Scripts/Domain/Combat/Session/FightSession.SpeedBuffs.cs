@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using PrincesPalace.Domain.Content;
 
 namespace PrincesPalace.Domain.Combat.Session
@@ -25,6 +26,27 @@ namespace PrincesPalace.Domain.Combat.Session
     // ceiling; the ceiling has to be checked against what the relic has given
     // SO FAR, not against the combatant's current speed, or a character who is
     // fast for some other reason would hit the cap having gained nothing.
+    //
+    // KEYED BY `object`, NOT JUST RelicEffect, since Phase D2 (item-modifier
+    // plan). Every source here used to be a relic; Chilled is the first
+    // that is not one — it is a STATUS (StatusEffectType.Chilled), and its
+    // malus has to compose against the exact same TrueBaseSpeed every relic
+    // grant already measures against, or it reopens the precise bug
+    // TrueBaseSpeed's own comment documents (a second source reading a base
+    // the first source already inflated). A second, PARALLEL dictionary
+    // just for status-driven speed changes was considered and rejected for
+    // that reason: two independent "true base" computations over the same
+    // combatant's Speed is exactly the shape that bug came from, just
+    // reintroduced one level up. Widening the key instead costs one type
+    // change here (and a boxed-enum-equality fix at the one display call
+    // site that compared sources with `==` — see FightHudModel.
+    // BuffBadgesFor) and touches no other call site's source code: every
+    // existing caller passes a RelicEffect literal, which boxes to `object`
+    // implicitly, so GrantSpeedPercent/GrantSpeedMalusPercent's own
+    // arithmetic and every relic that already uses them are unchanged.
+    // Chilled needs no per-source sub-keying of its own even so — see
+    // RefreshChilledSpeed below on why StatusEffectType.Chilled alone is
+    // key enough.
     public partial class FightSession
     {
         private sealed class SpeedBuff
@@ -34,11 +56,13 @@ namespace PrincesPalace.Domain.Combat.Session
 
             // Turns left, or -1 for "until this fight ends". The Slippers are
             // permanent within a fight; the Pipe lasts until the next turn.
+            // Chilled's own entry is always -1 here — see RefreshChilledSpeed
+            // for why its lifetime is owned by the status list instead.
             public int TurnsLeft;
         }
 
-        private readonly Dictionary<CombatantState, Dictionary<RelicEffect, SpeedBuff>> _speedBuffs =
-            new Dictionary<CombatantState, Dictionary<RelicEffect, SpeedBuff>>();
+        private readonly Dictionary<CombatantState, Dictionary<object, SpeedBuff>> _speedBuffs =
+            new Dictionary<CombatantState, Dictionary<object, SpeedBuff>>();
 
         // THE TRUE BASE every grant measures against -- what this combatant's
         // Speed would be with NONE of the relic buffs and maluses in this
@@ -59,7 +83,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // "against the true base" actually true regardless of how many speed
         // relics a character is carrying -- and past level 25 a character
         // carries more than one relic at all, so this is not an edge case.
-        private int TrueBaseSpeed(CombatantState actor, Dictionary<RelicEffect, SpeedBuff> forActor)
+        private int TrueBaseSpeed(CombatantState actor, Dictionary<object, SpeedBuff> forActor)
         {
             int granted = 0;
             foreach (var buff in forActor.Values) granted += buff.Granted;
@@ -70,14 +94,14 @@ namespace PrincesPalace.Domain.Combat.Session
         // to flat points immediately. Returns what was actually given, which is
         // 0 when the cap is already reached -- the caller uses that to decide
         // whether there is anything worth saying.
-        private int GrantSpeedPercent(CombatantState actor, RelicEffect source, int percent,
+        private int GrantSpeedPercent(CombatantState actor, object source, int percent,
                                       int turns, int capPercent = 0)
         {
             if (actor == null || percent <= 0 || actor.Speed <= 0) return 0;
 
             if (!_speedBuffs.TryGetValue(actor, out var forActor))
             {
-                forActor = new Dictionary<RelicEffect, SpeedBuff>();
+                forActor = new Dictionary<object, SpeedBuff>();
                 _speedBuffs[actor] = forActor;
             }
 
@@ -133,13 +157,13 @@ namespace PrincesPalace.Domain.Combat.Session
         // Returns the (negative) amount actually taken, so a caller can tell
         // whether anything happened -- 0 for a combatant with no Speed to
         // take from.
-        private int GrantSpeedMalusPercent(CombatantState actor, RelicEffect source, int percent, int turns)
+        private int GrantSpeedMalusPercent(CombatantState actor, object source, int percent, int turns)
         {
             if (actor == null || percent <= 0 || actor.Speed <= 0) return 0;
 
             if (!_speedBuffs.TryGetValue(actor, out var forActor))
             {
-                forActor = new Dictionary<RelicEffect, SpeedBuff>();
+                forActor = new Dictionary<object, SpeedBuff>();
                 _speedBuffs[actor] = forActor;
             }
 
@@ -180,7 +204,7 @@ namespace PrincesPalace.Domain.Combat.Session
         }
 
         // Hands back exactly what was given and forgets the buff.
-        private void RevokeSpeedBuff(CombatantState actor, RelicEffect source)
+        private void RevokeSpeedBuff(CombatantState actor, object source)
         {
             if (actor == null || !_speedBuffs.TryGetValue(actor, out var forActor)) return;
             if (!forActor.TryGetValue(source, out var buff)) return;
@@ -197,7 +221,7 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (actor == null || !_speedBuffs.TryGetValue(actor, out var forActor)) return;
 
-            var sources = new List<RelicEffect>(forActor.Keys);
+            var sources = new List<object>(forActor.Keys);
 
             foreach (var source in sources)
             {
@@ -211,9 +235,13 @@ namespace PrincesPalace.Domain.Combat.Session
             }
         }
 
-        // What a relic has given this combatant so far, for tests and for the
-        // cap. Zero for everyone carrying nothing.
-        public int SpeedBonusFrom(CombatantState actor, RelicEffect source) =>
+        // What a relic (or, since Phase D2, Chilled) has given this combatant
+        // so far, for tests and for the cap. Zero for everyone carrying
+        // nothing. `object` so a RelicEffect literal keeps compiling
+        // unchanged at every existing call site (an implicit boxing
+        // conversion, not a source change) while StatusEffectType.Chilled
+        // can key the same dictionary -- see this file's own header.
+        public int SpeedBonusFrom(CombatantState actor, object source) =>
             actor != null
             && _speedBuffs.TryGetValue(actor, out var forActor)
             && forActor.TryGetValue(source, out var buff)
@@ -221,11 +249,19 @@ namespace PrincesPalace.Domain.Combat.Session
                 : 0;
 
         // EVERY speed buff/malus currently on a combatant, for a display that
-        // cannot afford to hard-code which RelicEffect to ask about the way
+        // cannot afford to hard-code which source to ask about the way
         // TagLineFor does. Empty rather than null for a combatant carrying
         // nothing, so a caller never needs its own null check on top of the
         // empty-collection one.
-        public IEnumerable<(RelicEffect Source, int Granted, int TurnsLeft)> ActiveSpeedBuffs(CombatantState actor)
+        //
+        // Source is `object`, not RelicEffect, as of Phase D2 -- see this
+        // file's own header. FightHudModel.BuffBadgesFor is the one caller
+        // that used to compare Source with `==` against a RelicEffect; that
+        // comparison had to move to Equals(...) because `==` between a
+        // boxed value type and `object` is REFERENCE equality, not the
+        // value equality two separately-boxed equal enums need -- a real
+        // footgun this widening could otherwise have introduced silently.
+        public IEnumerable<(object Source, int Granted, int TurnsLeft)> ActiveSpeedBuffs(CombatantState actor)
         {
             if (actor == null || !_speedBuffs.TryGetValue(actor, out var forActor))
             {
@@ -236,6 +272,71 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 yield return (pair.Key, pair.Value.Granted, pair.Value.TurnsLeft);
             }
+        }
+
+        // ---- Chilled (Phase D2, item-modifier plan) ---------------------------
+        //
+        // THE READ HOOK. Chilled's percent speed malus is granted/revoked
+        // through the exact same GrantSpeedMalusPercent/RevokeSpeedBuff
+        // arithmetic Lucky Deck's bespoke slow already used -- proven
+        // correct (refresh-not-stack, exact reversal against the TRUE base)
+        // before this pass ever touched it. The alternative the plan itself
+        // named -- a status-aware read inside SpeedScale.TickRate -- was
+        // rejected: that function's signature is read by TurnOrder.SetSpeed
+        // and every caller of it, and its header says it was "tuned with
+        // real care"; changing what it takes would ripple to all of them
+        // for one new status. Reusing this file's bookkeeping needed no
+        // signature change anywhere near SpeedScale or TurnOrder at all --
+        // Speed stays a plain int the whole way through.
+        //
+        // NO PER-SOURCE KEYING NEEDED for Chilled specifically, unlike every
+        // relic above: StatusEffects.Apply already guarantees at most ONE
+        // Chilled entry per combatant (refresh-not-stack, the same rule
+        // every status in this game follows), so StatusEffectType.Chilled
+        // itself is a sufficient dictionary key -- there is never a second
+        // "instance" of Chilled to distinguish it from.
+        //
+        // GRANTED WITH turns: 0 (-> TurnsLeft -1, "until revoked"), NOT the
+        // status's own duration. Duration is already owned by
+        // CombatantState.Statuses -- ActiveStatus.TurnsRemaining, ticked by
+        // StatusEffects.Tick -- and letting THIS dictionary also count down
+        // the same duration would be the identical double-bookkeeping
+        // TrueBaseSpeed's own header warns against, one layer up: two
+        // clocks for one status can drift. FightSession.Riders.TickStatuses
+        // revokes the malus explicitly, the turn StatusEffects.Tick reports
+        // Chilled as expired -- see that method's own comment.
+        private int RefreshChilledSpeed(CombatantState target)
+        {
+            if (target == null) return 0;
+
+            // Revoke-then-regrant rather than adjust-in-place, the same
+            // shape RefreshNecklaceSpeed already uses and for the same
+            // reason: Magnitude can only move on a refresh (Math.Max, never
+            // down), so recomputing from scratch against the current true
+            // base is simpler than reasoning about a delta.
+            RevokeSpeedBuff(target, StatusEffectType.Chilled);
+
+            var chilled = target.Statuses.FirstOrDefault(s => s.Type == StatusEffectType.Chilled);
+            if (chilled == null) return 0;
+
+            return GrantSpeedMalusPercent(target, StatusEffectType.Chilled, chilled.Magnitude, turns: 0);
+        }
+
+        // Applies (or refreshes) Chilled AND pushes its Speed effect through
+        // in the same call -- StatusEffects.Apply on its own is pure Domain
+        // and cannot touch Speed, so every caller that wants Chilled to
+        // actually slow anyone goes through here rather than calling
+        // StatusEffects.Apply directly and risking a forgotten follow-up.
+        // Returns the (non-positive) amount of Speed actually taken, the
+        // same convention GrantSpeedMalusPercent itself returns, so a
+        // caller can gate a message on "did this actually do anything" the
+        // same way LuckyDeckSlow always could.
+        private int ApplyChilled(CombatantState target, int magnitude, int turns, CombatantState source)
+        {
+            if (target == null || magnitude <= 0) return 0;
+
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Chilled, magnitude, turns, source);
+            return RefreshChilledSpeed(target);
         }
 
         // ---- seams for tests -------------------------------------------------
@@ -257,10 +358,19 @@ namespace PrincesPalace.Domain.Combat.Session
         // pattern FightController uses for PlaySpellVfxForTest and
         // SlotForTest, for the same reason: some things are only checkable with
         // the turn-resolution loop held open.
-        public bool GrantSpeedPercentForTest(CombatantState actor, RelicEffect source, int percent,
+        public bool GrantSpeedPercentForTest(CombatantState actor, object source, int percent,
                                              int turns, int capPercent = 0) =>
             GrantSpeedPercent(actor, source, percent, turns, capPercent) > 0;
 
         public void TickSpeedBuffsForTest(CombatantState actor) => TickSpeedBuffs(actor);
+
+        // Chilled's own seam, for the same reason the buff seams above
+        // exist: a one-status application's Speed effect is fully
+        // observable synchronously (ApplyChilled already pushes it through
+        // before returning), but tests still want the two production
+        // methods directly rather than routing through a specific relic or
+        // modifier proc that happens to call them.
+        public int ApplyChilledForTest(CombatantState target, int magnitude, int turns, CombatantState source = null) =>
+            ApplyChilled(target, magnitude, turns, source);
     }
 }

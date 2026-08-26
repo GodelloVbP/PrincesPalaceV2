@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Dungeon;
 
 namespace PrincesPalace.Domain.Tests
@@ -6,24 +7,30 @@ namespace PrincesPalace.Domain.Tests
     public class DifficultyCurveTests
     {
         // PINNED LITERALS. The curve is the design decision; recomputing
-        // 1.077^step here would assert only that the method is deterministic
+        // 1.075^step here would assert only that the method is deterministic
         // (CLAUDE.md gotcha 5, AUDIT.md #18).
         //
-        // Step 8 is one tier, 80 is the whole gear ladder.
+        // PHASE 5B (D6) RETUNE: 77 -> 75 permille. Step 8 is one leg/floor,
+        // 80 is the whole gear ladder.
         [TestCase(0, 1.000f)]
-        [TestCase(8, 1.810f)]
-        [TestCase(16, 3.277f)]
-        [TestCase(40, 19.437f)]
-        [TestCase(80, 377.795f)]
+        [TestCase(8, 1.783f)]
+        [TestCase(16, 3.181f)]
+        [TestCase(40, 18.044f)]
+        [TestCase(80, 325.595f)]
         public void HealthMultiplier_TracksThePlayersDamage(int step, float expected)
         {
             Assert.AreEqual(expected, DifficultyCurve.HealthMultiplier(step), expected * 0.001f);
         }
 
+        // PHASE 5B (D6) RETUNE: 52 -> 38 permille -- the attack rate moved
+        // further than health's did, because enemy DEFENSE came off the
+        // depth curve entirely in the same retune (see ScaleAttack's own
+        // header) and the old 52 was tuned for a world where a growing
+        // defense partly absorbed it.
         [TestCase(0, 1.000f)]
-        [TestCase(8, 1.500f)]
-        [TestCase(16, 2.250f)]
-        [TestCase(80, 57.711f)]
+        [TestCase(8, 1.348f)]
+        [TestCase(16, 1.816f)]
+        [TestCase(80, 19.760f)]
         public void AttackMultiplier_TracksThePlayersHealth(int step, float expected)
         {
             Assert.AreEqual(expected, DifficultyCurve.AttackMultiplier(step), expected * 0.001f);
@@ -35,8 +42,8 @@ namespace PrincesPalace.Domain.Tests
         // for the game it was written in: a fully honed top-tier set was worth
         // about 4x a starting one, so a compounding dungeon outran the player.
         // GearScaling and AbilityDerivation together now put a geared
-        // character's damage at 374x across the ladder. A straight line
-        // reaching 5.4x is no longer a difficulty curve.
+        // character's power at orders of magnitude across the ladder. A
+        // straight line is no longer a difficulty curve.
         [Test]
         public void TheCurveCompounds_RatherThanClimbingInAStraightLine()
         {
@@ -67,17 +74,20 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(37, DifficultyCurve.ScaleHealth(37, -12), "A negative step is the surface, not a discount");
         }
 
-        [TestCase(100, 8, 181)]
-        [TestCase(90, 80, 34001)]
-        [TestCase(350, 80, 132228)]
+        // PHASE 5B (D6) RETUNE literals, hand-floored from the pinned
+        // multipliers above -- never the production Math.Pow rerun
+        // (CLAUDE.md gotcha 5).
+        [TestCase(100, 8, 178)]
+        [TestCase(90, 80, 29303)]
+        [TestCase(350, 80, 113958)]
         public void ScaleHealth_LandsWhereTheCurveSays(int amount, int step, int expected)
         {
             Assert.AreEqual(expected, DifficultyCurve.ScaleHealth(amount, step));
         }
 
-        [TestCase(3, 80, 173)]
-        [TestCase(9, 80, 519)]
-        [TestCase(10, 8, 15)]
+        [TestCase(3, 80, 59)]
+        [TestCase(9, 80, 177)]
+        [TestCase(10, 8, 13)]
         public void ScaleAttack_LandsWhereTheCurveSays(int amount, int step, int expected)
         {
             Assert.AreEqual(expected, DifficultyCurve.ScaleAttack(amount, step));
@@ -104,7 +114,7 @@ namespace PrincesPalace.Domain.Tests
         // multiplication would overflow into a NEGATIVE enemy — one with
         // negative health, which every combat check would read as already
         // dead. Compounding reaches that far sooner than a straight line did:
-        // 7.7% a step passes two billion around step 300.
+        // 7.5% a step passes two billion well before step 300.
         [Test]
         public void AnAbsurdStep_IsClampedRatherThanOverflowing()
         {
@@ -130,62 +140,105 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // THE INVARIANT THE WHOLE RETUNE EXISTS FOR, stated in the terms it
-        // was designed in: a fight should take about as many swings deep as it
-        // does at the surface. The rates were measured off AbilityDerivation
-        // to make this true, so if either drifts this is what says so.
+        // was designed in: a fight should take roughly the same ORDER OF
+        // MAGNITUDE of swings deep as it does at the surface -- not exactly
+        // the same count. §P's own non-boss TTK bands say trash attrition is
+        // meant to DRIFT UP across floors by design (rat 2.6 @F1 -> 3.6 @F5),
+        // so this is deliberately a wide sanity bound, not the tight §P
+        // literal pin -- that pin is BalanceSheetTests' job (Phase 5D), which
+        // asserts the exact per-row bands against real content and the real
+        // weapon-driven damage pipeline. This test only has to catch
+        // DifficultyCurve's own two rates drifting apart by an order of
+        // magnitude.
         //
-        // A golem holds 350 and defends at 8. A fully-geared character's ATTACK
-        // is 16 at tier 0 and 2,646 at tier 10 — base 7 plus the figures
-        // AbilityDerivationTests pins, not recomputed here. Damage is
-        // (attack - defense) x CombatMath.DamageScale.
+        // ROUTED THROUGH CombatMath.AfterResistance (fixed 2026-08-26) --
+        // `Swings` used to hand-roll the mitigation division itself
+        // (`Math.Max(1, raw * 100 / (100 + defense))`), deliberately NOT
+        // going through CombatMath.ComputeAttackDamage, because that function
+        // still multiplied by CombatMath.DamageScale (x5) at the time this
+        // was written, and this file has no authority over the weapon model
+        // that constant belonged to. ComputeAttackDamage no longer scales at
+        // all (see its own header), so that reason is gone -- but this test
+        // still constructs no real weapon/CombatantState (that stays Phase
+        // 3/4's job), so it now calls the real AfterResistance function
+        // directly instead of duplicating its formula by hand, which is the
+        // "route through the actual production function" this file can offer
+        // without adopting the weapon model wholesale.
+        //
+        // PHASE 5B (D6): the golem's own defense is now UNSCALED at every
+        // depth (defense no longer rides DifficultyCurve at all) -- only its
+        // HEALTH pool (via ScaleHealth) changes with step. `playerRawDamage`
+        // stands in for the player's own weapon-driven progression, which
+        // this file has no authority to compute (that is Phase 3/4's
+        // WeaponDamageTests/WeaponEntryResolverTests); the same two
+        // magnitude-only literals from before the D3 weapon-model rewrite
+        // are kept here because this test only needs a "grows a lot" input,
+        // not an exact figure -- neither was ever on the DamageScale path,
+        // so neither needed to change when that bug was fixed.
         [Test]
-        public void AGolemTakesAboutTheSameNumberOfSwingsAtEveryDepth()
+        public void AGolemTakesAboutTheSameOrderOfMagnitudeOfSwingsAtEveryDepth()
         {
             const int GolemHealth = 350;
             const int GolemDefense = 8;
-            const int PlayerAttackAtTierZero = 16;
-            const int PlayerAttackAtTierTen = 2753;
+            const int PlayerRawDamageAtTheSurface = 16;
+            const int PlayerRawDamageAtTheDepth = 2753;
 
-            float atSurface = Swings(GolemHealth, GolemDefense, PlayerAttackAtTierZero, 0);
-            float atDepth = Swings(GolemHealth, GolemDefense, PlayerAttackAtTierTen, 80);
+            float atSurface = Swings(GolemHealth, GolemDefense, PlayerRawDamageAtTheSurface, 0);
+            float atDepth = Swings(GolemHealth, GolemDefense, PlayerRawDamageAtTheDepth, 80);
 
-            Assert.AreEqual(atSurface, atDepth, atSurface * 0.6f,
+            // A full 100% relative band (i.e. up to 2x either way) -- wide on
+            // purpose, see the header above. Anything past that means one of
+            // the two permille rates is off by more than a rounding error.
+            Assert.AreEqual(atSurface, atDepth, atSurface * 1.0f,
                 $"a golem takes {atSurface:0.0} swings at the surface and {atDepth:0.0} at step 80 - " +
-                $"one of the two rates in DifficultyCurve is wrong");
+                $"one of the two rates in DifficultyCurve has drifted an order of magnitude");
         }
 
-        private static float Swings(int health, int defense, int playerAttack, int step)
+        // The canonical mitigation equation (D1/DamagePipeline's own header),
+        // via the real CombatMath.AfterResistance rather than a hand-rolled
+        // copy of its formula -- see the header above for why this no longer
+        // needs to dodge CombatMath.ComputeAttackDamage. Defense is passed
+        // through UNSCALED, per D6.
+        private static float Swings(int health, int defense, int playerRawDamage, int step)
         {
-            int hit = System.Math.Max(1, playerAttack - DifficultyCurve.ScaleAttack(defense, step)) * 10;
+            int hit = CombatMath.AfterResistance(playerRawDamage, defense);
             return DifficultyCurve.ScaleHealth(health, step) / (float)hit;
         }
 
         // THE MISSING HALF OF THE INVARIANT ABOVE. AGolemTakesAboutTheSame...
-        // pins player-attacks-enemy; nothing pinned enemy-attacks-player, which
-        // is exactly the gap a user report walked through: Dungeon Warden's
-        // authored attack (9, before this) scaled to 2.25x at step 16 -- the
-        // EARLIEST a boss room can ever appear (DescentMapGenerator.
-        // StepsPerBoss=16) -- for 160 damage against Shawn's starting Defense
-        // (4, no ability-score bonus; see AbilityDerivation's own header on
-        // why Defense is gear-only). That is exactly half of his starting
-        // effective max health (320 = base 200 + CON 16's +120) in one
-        // unmitigated plain swing, from a boss with no special ability at
-        // all. The Hollow Choir's authored attack (12) was worse: 72%.
+        // pins player-attacks-enemy; this pins enemy-attacks-player, which is
+        // exactly the gap a user report walked through under the OLD (pre-D6)
+        // cadence and formula: Dungeon Warden's authored attack scaled to
+        // 2.25x at step 16 -- the EARLIEST a boss room could appear under the
+        // old StepsPerBoss=16 -- for a devastating hit against a starting
+        // player's flat `Defense` stat, back when that single subtractive
+        // stat existed.
+        //
+        // PHASE 5B (D6) REWRITE: the earliest a boss can appear is now step 8
+        // (DescentMapGenerator: boss forced at step ≡ 0 mod 8), `Defense` no
+        // longer exists (split into PhysicalDefense/MagicalDefense), and
+        // mitigation is the canonical percentage equation, not the old
+        // subtractive one. `bossAttack`/`startingPlayerDefense` are still
+        // hand-authored magnitude stand-ins (this file has no authority over
+        // real enemy or gear content, D5/D4's job respectively) — the two
+        // pairs below are chosen to sit in the same neighbourhood as §P's own
+        // "Noob @F1" profile (PDEF 34, MDEF 8) and its earliest-boss row
+        // (hollow_choir @ step 8), without asserting this test is that pin.
         //
         // 35% is not a tuned number, it is a sanity ceiling -- comfortably
         // above what a genuinely tense early boss hit should cost (roughly a
         // quarter of a health bar) and comfortably below "half your health
         // bar from one swing nothing warned you about."
-        [TestCase(6, "warden")]
-        [TestCase(7, "hollow_choir")]
-        public void ABossDoesNotDevastateAStartingPlayerAtItsOwnEarliestStep(int bossAttack, string id)
+        [TestCase(24, 8, "hollow_choir (Arcane, meets Magical Defense)")]
+        [TestCase(40, 34, "forest_warden (Physical, meets Physical Defense)")]
+        public void ABossDoesNotDevastateAStartingPlayerAtItsOwnEarliestStep(
+            int bossAttack, int startingPlayerDefense, string id)
         {
-            const int EarliestBossStep = 16;
-            const int StartingPlayerDefense = 4;
-            const int StartingPlayerMaxHealth = 320;
+            const int EarliestBossStep = 8;
+            const int StartingPlayerMaxHealth = 350;
 
             int scaledAttack = DifficultyCurve.ScaleAttack(bossAttack, EarliestBossStep);
-            int damage = System.Math.Max(1, scaledAttack - StartingPlayerDefense) * 10;
+            int damage = CombatMath.AfterResistance(scaledAttack, startingPlayerDefense);
 
             Assert.LessOrEqual(damage, StartingPlayerMaxHealth * 0.35f,
                 $"{id}'s own earliest legal boss fight (step {EarliestBossStep}) deals {damage} against a " +

@@ -94,9 +94,11 @@ namespace PrincesPalace.Domain.Combat.Session
             RelicsOnEachKill(actor, target);
         }
 
-        // The damage type a combatant's ordinary swing carries. Only player
-        // kits declare one; an enemy without one is swinging a weapon.
+        // The damage type a combatant's ordinary swing carries. Player kits
+        // declare one directly; an enemy falls through to its own authored
+        // attackType (see ActorAttackType's own comment, FightSession.
+        // Skills.cs) and anything with neither is swinging a weapon.
         private DamageType AttackTypeOf(CombatantState actor) =>
-            KitFor(actor)?.AttackType ?? DamageType.Physical;
+            KitFor(actor)?.AttackType ?? SourceFor(actor)?.Source.AttackType ?? DamageType.Physical;
     }
 }

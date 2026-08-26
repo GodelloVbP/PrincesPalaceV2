@@ -106,7 +106,7 @@ namespace PrincesPalace.Domain.Tests
     {
         private static CombatantState Fighter(int maxHealth = 30)
         {
-            return new CombatantState("Shawn", true, maxHealth, 10, 5, 2, 8);
+            return new CombatantState("Shawn", true, maxHealth, 10, 5, 8);
         }
 
         [Test]

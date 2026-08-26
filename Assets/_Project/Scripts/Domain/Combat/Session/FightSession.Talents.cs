@@ -433,13 +433,22 @@ namespace PrincesPalace.Domain.Combat.Session
         private void ApplyDefenseShred(CombatantState actor, CombatantState target)
         {
             int shred = actor?.Talents.Best(TalentEffectType.ShredDefenseOnHit) ?? 0;
-            if (shred <= 0 || target == null || !target.IsAlive || target.Defense <= 0) return;
+            if (shred <= 0 || target == null || !target.IsAlive) return;
+            if (target.PhysicalDefense <= 0 && target.MagicalDefense <= 0) return;
 
-            int before = target.Defense;
-            target.Defense = System.Math.Max(0, target.Defense - shred);
-            if (target.Defense < before)
+            // A FLAT WRITE TO BOTH broad Defenses, floored at 0 each -- there
+            // is no longer one generic `Defense` field for this to shred, so
+            // the same magnitude lands on both PhysicalDefense and
+            // MagicalDefense rather than being split or doubled.
+            int beforePhysical = target.PhysicalDefense;
+            int beforeMagical = target.MagicalDefense;
+            target.PhysicalDefense = System.Math.Max(0, target.PhysicalDefense - shred);
+            target.MagicalDefense = System.Math.Max(0, target.MagicalDefense - shred);
+
+            int shredded = (beforePhysical - target.PhysicalDefense) + (beforeMagical - target.MagicalDefense);
+            if (shredded > 0)
             {
-                AppendMessage($"{actor.Name}'s horns leave {target.Name}'s guard {before - target.Defense} thinner - permanently.");
+                AppendMessage($"{actor.Name}'s horns leave {target.Name}'s guard {shredded} thinner - permanently.");
             }
         }
 
@@ -451,6 +460,21 @@ namespace PrincesPalace.Domain.Combat.Session
 
             SplashOntoNeighbours(actor, victim, CombatMath.Scale(actor.Attack * percent / 100),
                 $"{victim.Name} goes down hard");
+        }
+
+        // Explosive's on-kill splash -- the identical mechanism as
+        // ApplyKillSplash just above, read from ModifierEffects instead of
+        // Talents. A SEPARATE method rather than folding into ApplyKillSplash
+        // -- see ModifierEffectType.OnKillSplashPercent's own comment for why
+        // two independently-magnituded sources stay two calls rather than one
+        // that silently sums them.
+        private void ApplyModifierKillSplash(CombatantState actor, CombatantState victim)
+        {
+            int percent = actor?.ModifierEffects.Best(ModifierEffectType.OnKillSplashPercent) ?? 0;
+            if (percent <= 0) return;
+
+            SplashOntoNeighbours(actor, victim, CombatMath.Scale(actor.Attack * percent / 100),
+                $"{victim.Name} goes down in a blast");
         }
 
         // Black Ram Mode's own splash: while the transform is running, every

@@ -26,40 +26,48 @@ namespace PrincesPalace.Domain.Dungeon
     // rather than sampled by playing.
     public static class DifficultyCurve
     {
-        // GEOMETRIC, and the previous comment here argued at length for the
-        // opposite. It was right at the time and is worth quoting, because
-        // what changed is the premise and not the reasoning:
-        //
-        //   "A geometric curve is the obvious first instinct and is wrong
-        //    here [...] which outruns anything the item ladder can answer (a
-        //    fully honed top-tier set is worth roughly 4x a starting one)."
-        //
-        // The item ladder now answers a great deal more than 4x. GearScaling
-        // put tier 10 at 9.31x tier 0, AbilityDerivation squares whatever gear
-        // contributes, and the two compose: a fully geared character's DAMAGE
-        // grows 374x across the ladder and their HEALTH 57x. Against that, a
-        // straight line reaching 5.4x at step 80 is not a difficulty curve, it
-        // is a rounding error.
+        // GEOMETRIC, and an earlier comment here argued at length for the
+        // opposite before this curve had ever been wired up to anything. It
+        // was right for the game it was written against: a straight line is
+        // the honest curve when the item ladder only answers a modest
+        // multiple of itself. It stopped being honest once GearScaling and
+        // AbilityDerivation started compounding a geared character's power by
+        // two-plus orders of magnitude across the ladder -- see
+        // FightEncounterAdapter.ToCombatant for where this actually reaches
+        // an enemy, wired now rather than measured-and-discarded.
         //
         // TWO RATES, NOT ONE, and that is the substance of the retune. The
         // player's two axes grow at very different speeds, so a single
         // multiplier cannot keep both halves of a fight honest:
         //
-        //   enemy HEALTH tracks the player's DAMAGE   (x1.81 a tier, 7.7%/step)
-        //   enemy ATTACK tracks the player's HEALTH   (x1.50 a tier, 5.2%/step)
+        //   enemy HEALTH tracks the player's DAMAGE
+        //   enemy ATTACK tracks the player's HEALTH
         //
-        // Both were MEASURED off AbilityDerivation rather than chosen, by
-        // walking a fully-geared character up the tier ladder. Their whole
-        // purpose is that hits-to-kill and hits-to-die stay put: a rat dies in
-        // 1.3 swings at tier 0 and 1.3 swings at tier 10, a golem in 5 and 5.
-        // If either number drifts, one of these two rates is wrong.
+        // Their whole purpose is that hits-to-kill and hits-to-die stay
+        // roughly put across the descent -- if either drifts noticeably, one
+        // of these two rates is wrong. The exact multiples were re-measured
+        // for the 5B retune below rather than carried forward from an older
+        // pre-weapon-model measurement, because the player's own damage
+        // source changed entirely under D3/D4 (weapon-driven, not
+        // ability-derived) since these rates were first set.
         //
         // Held as integer permille per STEP, and applied per step rather than
         // per tier so difficulty climbs smoothly instead of stepping every
-        // eighth room. Eight steps of 77 permille compound to 1.81, which is
-        // one tier.
-        private const int HealthPermillePerStep = 77;
-        private const int AttackPermillePerStep = 52;
+        // eighth room.
+        //
+        // PHASE 5B (D6) RETUNE: 77 -> 75 health, 52 -> 38 attack, against the
+        // §P derived-target table. The attack rate moved the furthest because
+        // of D6's other finding, that enemy DEFENSE no longer depth-scales at
+        // all (see FightEncounterAdapter.ToCombatant) -- the old 52 permille
+        // was tuned for a curve where attack climbed against a defense that
+        // was climbing too and partly absorbing it. Against a flat, authored
+        // defense the same attack rate overshoots the §P boss-damage-per-hit
+        // targets, so it was retuned down. These are pinned tuning values
+        // (§T), not derived from a formula here -- when a playtest says they
+        // are wrong, they move again, in this file and in BalanceSheetTests,
+        // together.
+        private const int HealthPermillePerStep = 75;
+        private const int AttackPermillePerStep = 38;
 
         // What one step multiplies enemy health by. Exposed for the same
         // reason the old EnemyMultiplier was: "is this curve doing anything"
@@ -71,10 +79,20 @@ namespace PrincesPalace.Domain.Dungeon
         // Enemy health, and anything else that is a POOL to be chewed through.
         public static int ScaleHealth(int amount, int step) => Scale(amount, step, HealthPermillePerStep);
 
-        // Enemy attack and defense. Defense rides the attack rate rather than
-        // the health one deliberately: it is subtracted from the player's
-        // swing, so on the health curve it would outgrow the player's Attack
-        // and eventually floor every hit at the max(1, ...) clamp.
+        // Enemy attack.
+        //
+        // PHASE 5B (D6): enemy DEFENSE no longer rides this curve at all --
+        // physicalDefense/magicalDefense are used at their authored, step-0
+        // value regardless of depth. This used to scale defense on the same
+        // rate as attack (the reasoning: it is subtracted from the player's
+        // swing, so scaling it on the steeper health rate would eventually
+        // floor every hit at the max(1, ...) clamp), but D6 found that
+        // reasoning double-dips: the D_broad/(100+D_broad) mitigation curve
+        // (DamagePipeline) is already asymptotic on its own, so ANY defense
+        // growth with depth compounds against an already-diminishing-returns
+        // curve and runs boss time-to-kill away past floor 4. See
+        // FightEncounterAdapter.ToCombatant, the only place enemy stats are
+        // assembled for a fight, for where the old scaling call was removed.
         public static int ScaleAttack(int amount, int step) => Scale(amount, step, AttackPermillePerStep);
 
         // A break shield is a pool, so it chews like health.
@@ -91,7 +109,7 @@ namespace PrincesPalace.Domain.Dungeon
         //
         // On the HEALTH rate, which is the bigger of the two now that there
         // are two -- and worth saying out loud that this makes a step-80 fight
-        // pay roughly 370x a step-0 one, against a shop whose prices climb
+        // pay roughly 325x a step-0 one, against a shop whose prices climb
         // linearly with tier. That is AUDIT #2's economy, an order of
         // magnitude further out. Left coupled rather than quietly rebased,
         // because decoupling pay from threat is exactly the deliberate edit
@@ -132,7 +150,7 @@ namespace PrincesPalace.Domain.Dungeon
 
             // Clamped hard. `step` comes off a save, nothing else bounds it,
             // and a compounding curve overflows int far faster than a linear
-            // one did -- 7.7% a step passes two billion around step 300.
+            // one did -- 7.5% a step passes two billion around step 300.
             if (scaled > MaxScaledValue) return MaxScaledValue;
             if (scaled < -MaxScaledValue) return -MaxScaledValue;
 
@@ -142,8 +160,8 @@ namespace PrincesPalace.Domain.Dungeon
         // A run cannot descend forever in practice, but `step` comes off a
         // save and nothing else bounds it.
         //
-        // 200 rather than the old 400: at 7.7% compounding, step 200 is
-        // already 3.4 million times a step-0 enemy, and the descent stops
+        // 200 rather than the old 400: at 7.5% compounding, step 200 is
+        // already ~1.9 million times a step-0 enemy, and the descent stops
         // getting meaningfully harder well before that because the player's
         // own gear ladder ends at tier 10, which is step 80. Everything past
         // there is the endless descent doing what it is for -- the player's

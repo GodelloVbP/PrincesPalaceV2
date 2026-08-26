@@ -109,6 +109,16 @@ namespace PrincesPalace.Domain.Content
         // See RawEnemyEntry.minFloor.
         public readonly int MinFloor;
 
+        // The damage type this monster's own attacks and abilities carry —
+        // see RawEnemyEntry.attackType. Defaults to Physical, same as an
+        // unauthored player character's attackType (CharacterEntryResolver).
+        // Enemies have no CombatantKit the way players' PlayerKit carries
+        // one, so this is what FightSession.ActorAttackType/AttackTypeOf
+        // fall through to for a combatant with no player kit registered —
+        // without it, MagicalDefense was a dead stat against every enemy in
+        // the game, since nothing an enemy did was ever typed.
+        public readonly DamageType AttackType;
+
         // THE SINGLE-ELEMENT CONVENIENCE, kept because it is how nearly every
         // fixture reads. NOT because the roster is authored through it -- both
         // production callers (EnemyEntryResolver and FightEncounterAdapter)
@@ -126,12 +136,13 @@ namespace PrincesPalace.Domain.Content
             int statusDuration = 0, bool avoidsFrontSlot = false, bool attackHoldsPosition = false,
             int minFloor = 1, float stageScale = 1f, int slotSpan = 1,
             PrincesPalace.Domain.Combat.Session.StageApproach attackApproach =
-                PrincesPalace.Domain.Combat.Session.StageApproach.Lunge)
+                PrincesPalace.Domain.Combat.Session.StageApproach.Lunge,
+            DamageType attackType = DamageType.Physical)
             : this(id, displayName, baseStats, expReward, currencyReward, isBoss,
                    ElementalAffinity.Of(weakness, resistance), sortOrder, spritePath, facing, active,
                    skillName, skillPower, skillChance, breakShieldPoints, presentation, abilities,
                    attackWeight, appliesStatus, statusMagnitude, statusDuration, avoidsFrontSlot,
-                   attackHoldsPosition, minFloor, stageScale, slotSpan, attackApproach)
+                   attackHoldsPosition, minFloor, stageScale, slotSpan, attackApproach, attackType)
         {
         }
 
@@ -145,7 +156,8 @@ namespace PrincesPalace.Domain.Content
             int statusDuration = 0, bool avoidsFrontSlot = false, bool attackHoldsPosition = false,
             int minFloor = 1, float stageScale = 1f, int slotSpan = 1,
             PrincesPalace.Domain.Combat.Session.StageApproach attackApproach =
-                PrincesPalace.Domain.Combat.Session.StageApproach.Lunge)
+                PrincesPalace.Domain.Combat.Session.StageApproach.Lunge,
+            DamageType attackType = DamageType.Physical)
         {
             // CLAMPED RATHER THAN TRUSTED, both of them. A zero or negative
             // scale is an invisible monster and a zero span is a room that
@@ -181,6 +193,7 @@ namespace PrincesPalace.Domain.Content
             AvoidsFrontSlot = avoidsFrontSlot;
             AttackHoldsPosition = attackHoldsPosition;
             AttackApproach = attackApproach;
+            AttackType = attackType;
         }
 
         // "Authored a skill" is a name, not a chance: an enemy with a named

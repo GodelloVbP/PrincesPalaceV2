@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8eb37102d2241c54eae4db6c08bbb7c5, type: 3}
+  m_Name: astral
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
+  id: astral
+  displayName: Astral
+  description: 'A sliver of the Rift rides every hit home, and the same sliver turns
+    aside whatever comes back. Elemental family: Arcane.'
+  effects:
+  - type: 1
+    magnitude: 20
+    threshold: 0
+    against: 5
+    hasAgainst: 1
+    againstMagical: 0
+  - type: 2
+    magnitude: 15
+    threshold: 0
+    against: 5
+    hasAgainst: 1
+    againstMagical: 0
+  sortOrder: 4

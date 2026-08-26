@@ -43,11 +43,11 @@ namespace PrincesPalace.Domain.Tests
         private static (FightSession session, CombatantState hero, CombatantState foe) Fight(
             RelicEffect? relic, ResolvedSkill? skill = null)
         {
-            var hero = new CombatantState("Shawn", true, 999999, 300, 20, 0, 10);
+            var hero = new CombatantState("Shawn", true, 999999, 300, 20, 10);
             // BIG ENOUGH TO SURVIVE EVERY BLOW THE TEST LANDS. A dummy that
             // dies partway reports the last hit as its remaining health, which
             // reads as the relic misfiring.
-            var foe = new CombatantState("Dummy", false, 999999, 0, 5, 0, 1);
+            var foe = new CombatantState("Dummy", false, 999999, 0, 5, 1);
 
             var relics = relic.HasValue
                 ? new List<ResolvedRelic> { Relic(relic.Value) }

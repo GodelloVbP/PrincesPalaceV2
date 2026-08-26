@@ -3,6 +3,7 @@ using System.Linq;
 using NUnit.Framework;
 using PrincesPalace;
 using PrincesPalace.Content;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Equipment;
 
 namespace PrincesPalace.PlayModeTests
@@ -74,6 +75,40 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotEmpty(body, "the squad comparison produced no text at all");
             StringAssert.DoesNotContain("cannot equip yet", body,
                 "the easiest item in the game reports as unequippable");
+        }
+
+        // ITEM-MODIFIER PLAN PHASE E: an offer's rolled modifiers must show
+        // on the hover BEFORE the player takes it -- ItemOffer.Modifiers/
+        // RiftTier are set the moment ItemOfferRoll rolls the offer (see
+        // ItemOffer's own header), well before Take() ever writes an
+        // InventoryEntry, and ReckoningController.OnOfferHover reads
+        // straight off the offer rather than off anything claimed. This
+        // pins that at the model layer, the same "screen half is a
+        // screenshot question" posture this whole file takes.
+        [Test]
+        public void AnOfferWithRolledModifiers_ShowsThemBeforeItIsEverTaken()
+        {
+            var item = EasiestItem();
+            Assert.IsNotNull(item, "content has no equippable items at all");
+
+            string body = ItemDescription.SquadComparisonBody(
+                SaveSlotManager.CurrentSave.ActiveSquad(), item, candidatePlus: 0,
+                riftTier: RiftTier.RiftForged,
+                modifierIds: new System.Collections.Generic.List<string> { "fiery" });
+
+            StringAssert.Contains("AFFIXES", body, "an unclaimed offer's rolled modifiers must already show on the hover");
+            StringAssert.Contains("Fiery", body);
+        }
+
+        [Test]
+        public void AnOfferWithNoRolledModifiers_ShowsNoAffixesSection()
+        {
+            var item = EasiestItem();
+            Assert.IsNotNull(item, "content has no equippable items at all");
+
+            string body = ItemDescription.SquadComparisonBody(SaveSlotManager.CurrentSave.ActiveSquad(), item);
+
+            StringAssert.DoesNotContain("AFFIXES", body);
         }
 
         // The distinction the box exists to make. Collapsing these two was the

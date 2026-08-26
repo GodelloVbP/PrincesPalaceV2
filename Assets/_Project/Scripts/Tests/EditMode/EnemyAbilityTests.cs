@@ -196,7 +196,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheSummonTooltipSaysWhatIsComing_NotWhoItIsComingFor()
         {
-            var shawn = new CombatantState("Shawn", true, 100, 0, 10, 0, 5);
+            var shawn = new CombatantState("Shawn", true, 100, 0, 10, 5);
             var intent = new EnemyIntent("Roar", EnemyIntentKind.Summon, shawn, 0, 0,
                 EnemyIntentIcons.ScopeFor(SkillEffect.Summon));
 
@@ -222,7 +222,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheTooltipNamesOneTargetForASingleTargetBlow()
         {
-            var shawn = new CombatantState("Shawn", true, 100, 0, 10, 0, 5);
+            var shawn = new CombatantState("Shawn", true, 100, 0, 10, 5);
             var intent = new EnemyIntent("Mud Burst", EnemyIntentKind.Weaken, shawn, 42, 0);
 
             StringAssert.Contains("Shawn", FightHudModel.IntentTooltip("Bog Witch", intent));
@@ -234,7 +234,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheTooltipSaysWholePartyForASweep()
         {
-            var shawn = new CombatantState("Shawn", true, 100, 0, 10, 0, 5);
+            var shawn = new CombatantState("Shawn", true, 100, 0, 10, 5);
             var intent = new EnemyIntent("Wail", EnemyIntentKind.Skill, shawn, 18, 0,
                 EnemyIntentScope.AllOpponents);
 
@@ -252,7 +252,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheTooltipSaysHealingRatherThanDamageForAMend()
         {
-            var witch = new CombatantState("Witch", false, 100, 0, 10, 0, 5);
+            var witch = new CombatantState("Witch", false, 100, 0, 10, 5);
             var intent = new EnemyIntent("Mend", EnemyIntentKind.Heal, witch, 40, 0,
                 EnemyIntentScope.AllAllies, heals: true);
 
@@ -283,7 +283,7 @@ namespace PrincesPalace.Domain.Tests
             // held, so a hero who dies to the cast reports the damage as exactly
             // their remaining HP -- which reads as the preview being wrong when
             // it is the assertion that cannot see past zero.
-            var hero = new CombatantState("Shawn", true, 5000, 30, 40, 0, 10);
+            var hero = new CombatantState("Shawn", true, 5000, 30, 40, 10);
             // SLOWER THAN THE HERO, and tough enough to survive being hit.
             //
             // The turn order is what drives this: ExecuteAttack's argument is
@@ -291,7 +291,7 @@ namespace PrincesPalace.Domain.Tests
             // only resolves when the turn advances past the hero. A witch that
             // dies to Shawn's opening swing never gets to cast the thing this
             // test is about.
-            var monster = new CombatantState("Witch", false, 5000, 0, 12, 2, 9);
+            var monster = new CombatantState("Witch", false, 5000, 0, 12, 9);
             var source = new ResolvedEnemy("witch", "Witch", new StatBlockOf(), 5, 3, false,
                 DamageType.Physical, DamageType.Physical, 0);
 
@@ -530,6 +530,22 @@ namespace PrincesPalace.Domain.Tests
         // LITERAL EXPECTED VALUES, not a recomputation of the formula -- see
         // CLAUDE.md. These are what the numbers ARE, so a retune has to come
         // here and say so.
+        //
+        // REWRITTEN for Phase 1 of the balance redesign: SkillResolution.
+        // Damage no longer mitigates at all (it always returns
+        // Math.Max(1, raw)); DamagePipeline.AfterDefences is now the
+        // single place a defense term is ever subtracted, reading the
+        // target's PhysicalDefense (this is the untyped/attackType:null
+        // path, which reads physical armour) on the new R/(R+100) curve
+        // rather than the old, now-deleted 12/(12+R) one. The two literals
+        // below are therefore new numbers, not a port of the old ones.
+        //
+        // NO LONGER SCALED (fixed 2026-08-26): SkillResolution.Damage
+        // stopped multiplying by CombatMath.DamageScale for the same reason
+        // ComputeAttackDamage/ComputeSkillDamage did -- see its own header.
+        // Raw dropped from 40 to 8, which is small enough now that both
+        // defence values below floor-divide to the same landed figure --
+        // that is a real property of the new numbers, not a copy-paste.
         [Test]
         public void TheGolemsSlamLandsWhereItUsedTo()
         {
@@ -537,17 +553,21 @@ namespace PrincesPalace.Domain.Tests
                 SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, 0, 0, false, 0, 2, false,
                 null, SpellPresentation.None, 0);
 
-            var golem = new CombatantState("Golem", false, 350, 0, 6, 8, 3);
+            var golem = new CombatantState("Golem", false, 350, 0, 6, 3);
 
-            Assert.AreEqual(30, Landed(slam, golem, defence: 4),
-                "against Shawn's base 4 defence: raw 8 x 12/(12+4) = 6, x5");
-            Assert.AreEqual(25, Landed(slam, golem, defence: 6),
-                "and through the gear band: raw 8 x 12/(12+6) = 5.3 -> 5, x5");
+            // raw = SkillResolution.Amount: scaledAttack 6 (no grade) +
+            // flatAmount 2 = 8 -- unmitigated, so this does not move with
+            // `defence` any more.
+            Assert.AreEqual(7, Landed(slam, golem, defence: 4),
+                "8 raw x 100/(100+4) = 7.69 -> 7");
+            Assert.AreEqual(7, Landed(slam, golem, defence: 6),
+                "8 raw x 100/(100+6) = 7.54 -> 7");
         }
 
         private static int Landed(ResolvedSkill skill, CombatantState attacker, int defence)
         {
-            var victim = new CombatantState("Shawn", true, 5000, 30, 7, defence, 10);
+            var victim = new CombatantState("Shawn", true, 5000, 30, 7, 10);
+            victim.PhysicalDefense = defence;
 
             int raw = SkillResolution.Amount(skill.Effect, attacker, victim,
                 skill.Power, skill.FlatAmount, 0, skill.IgnoresDefense);

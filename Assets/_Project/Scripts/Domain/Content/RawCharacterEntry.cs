@@ -23,11 +23,16 @@ namespace PrincesPalace.Domain.Content
         // left empty, which is what an unauthored character should be.
         public string attackType = "";
 
-        // Base stats, before any talents.
+        // Base stats, before any talents. The old single `defense` field is
+        // GONE, not renamed to either of these — see StatType's own header.
+        // Defaults carry the old default (defense 3) through the Phase 1
+        // placeholder-conversion formula (8x/4x) rather than dropping to
+        // zero, so an unauthored character still starts with SOME armour.
         public int maxHealth = 20;
         public int speed = 10;
         public int attack = 5;
-        public int defense = 3;
+        public int physicalDefense = 24;
+        public int magicalDefense = 12;
 
         // The six ability scores. They must total exactly
         // CharacterEntryResolver.AbilityScoreBudget — see its comment for why

@@ -404,6 +404,20 @@ namespace PrincesPalace
 
             stockpiledItems.RemoveAll(entry => entry == null || ContentDatabase.GetItem(entry.itemId) == null);
 
+            // No modifierIds pruning here yet, and that is correct for now --
+            // Phase A (this one) adds only the storage, and no path in the
+            // game today can write a real id into modifierIds, so there is no
+            // content to have gone stale. A populated-but-unresolvable
+            // modifierIds list (the future case: a modifier renamed or
+            // removed from modifiers.json) is still perfectly safe to load --
+            // it just sits there meaning nothing until something reads it --
+            // so this does not crash or misbehave either way. Once Phase A2
+            // ships modifiers.json, this needs the same tolerant-prune
+            // treatment stockpiledItems and character.equipment already get
+            // above: drop ids ContentDatabase no longer resolves, same
+            // posture, not yet written because there is nothing to prune
+            // against.
+
             // A saved run gets the same tolerant pruning as the stockpile: a
             // content update between quitting and resuming can remove an item
             // or a character the run was carrying, and a run is not worth
@@ -461,12 +475,19 @@ namespace PrincesPalace
                 // content id quietly turned a +5 heirloom into a plain one --
                 // with the item count still correct, which is why nothing
                 // caught it.
+                // AT THE PLUS AND ROLL IT LEFT WITH -- orphan.modifierIds and
+                // orphan.riftTier travel back with it for the identical
+                // reason orphan.plus does above them. Nothing in Phase A ever
+                // puts a real id into modifierIds, so this is inert today;
+                // it exists so the plumbing is already correct once Phase A2
+                // ships modifiers.json.
                 foreach (var orphan in character.equipment.RemoveEntriesWhere(
                              id => ContentDatabase.GetItem(id)?.IsEquippable != true))
                 {
                     if (ContentDatabase.GetItem(orphan.itemId) != null)
                     {
-                        InventoryOps.Add(stockpiledItems, orphan.itemId, 1, orphan.plus);
+                        InventoryOps.Add(stockpiledItems, orphan.itemId, 1, orphan.plus,
+                            orphan.modifierIds, orphan.riftTier);
                     }
                 }
 

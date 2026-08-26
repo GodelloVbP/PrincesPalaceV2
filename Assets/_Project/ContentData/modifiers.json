@@ -1,0 +1,114 @@
+{
+  "_readme": "Item modifiers ('Rift affixes') -- see the item-modifier system plan for the full design. PHASE C: real, droppable content, replacing Phase A2's five test-fixture-only placeholders (fiery_test/hardened_test/swift_test/vampiric_test/fortunate_test, all retired -- see git history for the placeholders' own descriptions of what shape each was exercising). Every modifier below is authored against a real combat hook: `effects[].type` is a ModifierEffectType member name (case-insensitive; see Domain/Combat/ModifierEffect.cs for what each one means and which of magnitude/threshold/damageType it reads). Magnitudes here are the UNSCALED base -- the actual number a fight reads is `base x TierMultiplier(itemTier) x RiftMultiplier(riftTier)`, applied once at ContentDatabase.ModifierEffects (see Domain/Content/ModifierMagnitude.cs). One modifier per family from the plan's Phase C table (Fiery/Frosty/Sylvan/Venomous/Astral/Hardened/Vampiric/Stalwart/Explosive/Fortunate/Runic); every family's effect(s) apply wherever the modifier happens to roll, since the pool is shared across every item slot (a Fiery pair of boots still burns on hit, same as a Fiery sword). None of the magnitudes below are final balance -- they are deliberately round starting numbers for a designer to retune once real drops are played; see each entry's own description for the design call behind its shape.",
+  "modifiers": [
+    {
+      "id": "fiery",
+      "displayName": "Fiery",
+      "description": "Burns on every landed hit and shrugs off flame in return. Elemental family: Fire.",
+      "effects": [
+        { "type": "ElementalDamageOnHitPercent", "magnitude": 20, "damageType": "Fire" },
+        { "type": "TypedResistanceFlat", "magnitude": 15, "damageType": "Fire" }
+      ]
+    },
+    {
+      "id": "frosty",
+      "displayName": "Frosty",
+      "description": "Every hit carries a bite of frost, and frost does not bite back. A lucky strike leaves the target chilled to the bone. Elemental family: Ice.",
+      "effects": [
+        { "type": "ElementalDamageOnHitPercent", "magnitude": 20, "damageType": "Ice" },
+        { "type": "TypedResistanceFlat", "magnitude": 15, "damageType": "Ice" },
+        { "type": "ChilledOnHitChancePercent", "magnitude": 20 }
+      ]
+    },
+    {
+      "id": "sylvan",
+      "displayName": "Sylvan",
+      "description": "Thorns answer every blow, and the wearer's own hide grows thicker for it. A lucky strike tangles the target in root and vine. Elemental family: Nature.",
+      "effects": [
+        { "type": "ElementalDamageOnHitPercent", "magnitude": 20, "damageType": "Nature" },
+        { "type": "TypedResistanceFlat", "magnitude": 15, "damageType": "Nature" },
+        { "type": "RootChancePercent", "magnitude": 20 }
+      ]
+    },
+    {
+      "id": "venomous",
+      "displayName": "Venomous",
+      "description": "Every strike leaves a sting behind, and the wearer has long since built up a tolerance. Elemental family: Poison.",
+      "effects": [
+        { "type": "ElementalDamageOnHitPercent", "magnitude": 20, "damageType": "Poison" },
+        { "type": "TypedResistanceFlat", "magnitude": 15, "damageType": "Poison" }
+      ]
+    },
+    {
+      "id": "astral",
+      "displayName": "Astral",
+      "description": "A sliver of the Rift rides every hit home, and the same sliver turns aside whatever comes back. Elemental family: Arcane.",
+      "effects": [
+        { "type": "ElementalDamageOnHitPercent", "magnitude": 20, "damageType": "Arcane" },
+        { "type": "TypedResistanceFlat", "magnitude": 15, "damageType": "Arcane" }
+      ]
+    },
+    {
+      "id": "hardened",
+      "displayName": "Hardened",
+      "description": "A brute, physical edge on every hit, plating to match, and enough weight behind the swing to stagger whatever it lands on. Elemental family: Physical -- the one member of the family with a third effect (the push), since Physical has no typed-resistance twin worth calling out on its own the way the other five elements do.",
+      "effects": [
+        { "type": "ElementalDamageOnHitPercent", "magnitude": 20, "damageType": "Physical" },
+        { "type": "TypedResistanceFlat", "magnitude": 15, "damageType": "Physical" },
+        { "type": "PushBackOnHitChancePercent", "magnitude": 15 }
+      ]
+    },
+    {
+      "id": "vampiric",
+      "displayName": "Vampiric",
+      "description": "Every hit landed feeds the wearer a little of what it took. Base 15% at Ordinary tier 0 -- deliberately modest; Vampiric compounds with the healer role rather than replacing it, and the tier/rift curve is where a build actually gets scary.",
+      "effects": [
+        { "type": "LifestealPercent", "magnitude": 15 }
+      ]
+    },
+    {
+      "id": "stalwart",
+      "displayName": "Stalwart",
+      "description": "Armour plating a percentage curve cannot express, and a guard that gives less ground under pressure. FlatPhysicalDamageReduction's base (3) is small on purpose at Ordinary/tier-0 -- it is a FLAT subtraction, so it matters far more against the many small hits of a swarm than against one boss-sized blow, which is the intended shape (a Stalwart wearer shrugs off chip damage, not a haymaker). BreakShieldDepletionResistPercent (30) is forward-looking infrastructure -- no player combatant carries a BreakShield today, only some bosses/elites do, so this is inert on the wearer until a future fight puts one on the player's own side.",
+      "effects": [
+        { "type": "FlatPhysicalDamageReduction", "magnitude": 3 },
+        { "type": "BreakShieldDepletionResistPercent", "magnitude": 30 }
+      ]
+    },
+    {
+      "id": "explosive",
+      "displayName": "Explosive",
+      "description": "Whatever the wearer finishes off does not go quietly -- the kill splashes onto whoever was standing next to it. The exact mechanism Trample already uses, so a Black Ram wearing this alongside his own talent gets two independent splashes off one kill rather than one doubled splash -- see OnKillSplashPercent's own comment on why that is deliberate, not a bug to fix later.",
+      "effects": [
+        { "type": "OnKillSplashPercent", "magnitude": 30 }
+      ]
+    },
+    {
+      "id": "fortunate",
+      "displayName": "Fortunate",
+      "description": "The Prince remembers a fight won while this was worn. Grants run-scoped Favor -- separate from and additional to a character's permanent earnedFavor -- gone the moment the current descent ends. Base 5 favour per win at Ordinary/tier-0 is a small, steady nudge toward better drops for the rest of THIS run; it does not persist past it, which is the whole point of run-scoped favour (Q4 of the plan's locked decisions).",
+      "effects": [
+        { "type": "FortunateFavorOnWin", "magnitude": 5 }
+      ]
+    },
+    {
+      "id": "runic",
+      "displayName": "Runic",
+      "description": "A deeper well of mana, a faster trickle, a cheaper follow-up cast, and nothing wasted -- unspent mana becomes a ward at the top of the wearer's own turn. The ward conversion is intentionally the WEAK half of this modifier (see FightTuning.RunicWardConversionRate's own comment) -- the mana pool and regen bonuses, and the mana-discount tempo rider, are Runic's real payoff; the ward is a safety net for mana a caster was going to leave on the table anyway, not a build-around tank strategy.",
+      "effects": [
+        { "type": "FlatMaxManaBonus", "magnitude": 10 },
+        { "type": "FlatManaRegenBonus", "magnitude": 2 },
+        { "type": "NextSkillManaDiscountPercent", "magnitude": 25 },
+        { "type": "ManaToWardOnTurnStartPercent", "magnitude": 0 }
+      ]
+    },
+    {
+      "id": "swift",
+      "displayName": "Swift",
+      "description": "Phase D1's dodge family. A step too quick for a swing or a cast to reliably land -- Magnitude is a flat percent chance, rolled fresh against every real attack the wearer is the target of, to make the whole thing miss outright (see ModifierEffectType.DodgeChancePercent and DamagePipeline.RollDodge for the full mechanics: zero damage, and every on-hit rider skipped with it). Base 12% at Ordinary/tier-0 is deliberately modest -- TierMultiplier alone reaches roughly 9x by tier 10, and a percent-chance effect has a hard ceiling a flat-damage effect does not, so a high base here would race toward 'always dodges' long before a Fiery or Vampiric counterpart reaches its own comparable power; see DamagePipeline.RollDodge's own note on the >=100 clamp this relies on as a backstop, not a design target.",
+      "effects": [
+        { "type": "DodgeChancePercent", "magnitude": 12 }
+      ]
+    }
+  ]
+}

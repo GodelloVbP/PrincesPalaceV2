@@ -319,10 +319,10 @@ namespace PrincesPalace
         // The leg is over when there is nowhere left to go.
         //
         // A LEG IS NOT A RUN. A leg is eight steps and ends in whatever the
-        // curve forces there -- an elite at step 8, a boss at 16. Running out of
-        // choices therefore means "start the next leg", not "the run is over",
-        // and conflating the two would have ended every descent at the first
-        // elite.
+        // cadence forces there -- an elite mid-leg (step 4 within it), a boss
+        // at the end (step 8). Running out of choices therefore means "start
+        // the next leg", not "the run is over", and conflating the two would
+        // have ended every descent at the first elite.
         public static bool LegIsOver() => Choices().Count == 0;
 
         // Opens the next leg, carrying the run's own seed forward.
@@ -361,16 +361,20 @@ namespace PrincesPalace
             //
             // The elite itself was not the spike, which is worth saying because
             // it is where the report points: an elite room fields two enemies
-            // where a normal room fields one or two, and StatBlock.ScaledForElite
-            // -- the multiplier its own comment says made elites "completely
-            // clap you" in playtesting -- HAS NO CALLER (AUDIT #54). What comes
-            // after the elite is the problem, not the elite.
+            // where a normal room fields one or two. At the time this was
+            // written, StatBlock.ScaledForElite -- the multiplier its own
+            // comment said made elites "completely clap you" in playtesting --
+            // HAD NO CALLER (AUDIT #54); FightEncounterAdapter.ToCombatant now
+            // wires it in for elite encounters (Phase 5B), so an elite's own
+            // stats are the deliberate spike they were always meant to be, and
+            // what came after the elite was the separate, unrelated problem
+            // this heal fixes.
             //
-            // A leg is the natural place: it ends on an elite or a boss, so
-            // this reads as the beat after a set piece rather than as a free
-            // heal in the middle of one. The reward track's level 30 is
-            // untouched -- it forces a rest on the step BEFORE a boss, and this
-            // fires after.
+            // A leg is the natural place: it now always ends on a boss (with a
+            // forced elite mid-leg), so this reads as the beat after a set
+            // piece rather than as a free heal in the middle of one. The
+            // reward track's level 30 is untouched -- it forces a rest on the
+            // step BEFORE a boss, and this fires after.
             RunEncounter.HealPartyToFull(run);
 
             Forget();

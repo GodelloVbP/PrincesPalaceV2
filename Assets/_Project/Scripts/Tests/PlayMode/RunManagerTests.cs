@@ -198,19 +198,22 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [Test]
-        public void TheFirstLegEndsAtAnElite_NotABoss()
+        public void TheFirstLegEndsAtItsBoss()
         {
             // A LEG IS NOT A RUN, and this is the correction that matters: a leg
-            // is eight steps and bosses fall every sixteen, so leg 0 finishes on
-            // an ELITE. Treating "no choices left" as the end of the run would
-            // have stopped every descent here.
+            // is eight steps and, since the D6/Phase 5B retune ("boss every
+            // floor"), a boss falls every eight -- so leg 0 finishes on a BOSS,
+            // with a forced elite already passed at its midpoint. Treating "no
+            // choices left" as the end of the run would have stopped every
+            // descent here. Was EliteFight (leg 0) then Boss (leg 1) before the
+            // retune, when bosses only fell every sixteen steps.
             RunManager.StartRun(Seed);
 
-            Assert.AreEqual(RoomType.EliteFight, WalkToTheEndOfTheLeg());
+            Assert.AreEqual(RoomType.Boss, WalkToTheEndOfTheLeg());
         }
 
         [Test]
-        public void TheSecondLegEndsAtTheBoss()
+        public void TheSecondLegEndsAtItsBossToo()
         {
             RunManager.StartRun(Seed);
             WalkToTheEndOfTheLeg();
@@ -350,21 +353,25 @@ namespace PrincesPalace.PlayModeTests
                 "the abandoned run was discarded rather than settled - its bosses paid nothing");
         }
 
-        // ---- the room after the elite -------------------------------------------
+        // ---- the room after the leg boundary ------------------------------------
         //
-        // PROBE for "after the elite, going into a fight it just hangs and you
-        // cant do anything anymore". FightBootstrap returns a null session when
-        // the roster is empty, which leaves an empty stage and no way to act --
-        // a hang. This walks a run over the leg boundary the elite sits on and
-        // asks what the next room would field.
+        // PROBE for "after the leg's set piece, going into a fight it just hangs
+        // and you cant do anything anymore". FightBootstrap returns a null
+        // session when the roster is empty, which leaves an empty stage and no
+        // way to act -- a hang. This walks a run over a leg boundary and asks
+        // what the next room would field. Named for the elite it used to be
+        // (leg 0 ended on one, before the D6/Phase 5B retune made every leg end
+        // on its boss instead) -- what it actually exercises is AdvanceLeg's own
+        // seam, which does not care which room forced the boundary.
         [Test]
         public void TheRoomAfterTheEliteFieldsAFight()
         {
             RunManager.StartRun(Seed);
             var save = SaveSlotManager.CurrentSave;
 
-            // Finish the elite: the leg's last room, which is what triggers
-            // AdvanceLeg in FightBootstrap.
+            // Finish the leg: AdvanceLeg does not require the walk to have
+            // actually reached the forced room, which is what triggers
+            // AdvanceLeg in FightBootstrap for a real player.
             RunManager.AdvanceLeg();
 
             var run = RunManager.Run;
@@ -527,7 +534,7 @@ namespace PrincesPalace.PlayModeTests
             RunManager.AdvanceLeg();
 
             Assert.Greater(LowestHealth(), 3,
-                "crossing into the next leg left the party on what the elite took off them");
+                "crossing into the next leg left the party on what the leg's fights took off them");
 
             foreach (var character in SaveSlotManager.CurrentSave.ActiveSquad())
             {
@@ -537,21 +544,25 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
-        // The reported case exactly: walk leg 1 to its elite, cross over, and
-        // check the party does not start leg 2 already spent.
+        // The reported case exactly: walk leg 1 to its boss, cross over, and
+        // check the party does not start leg 2 already spent. (Originally
+        // walked to leg 1's ELITE, back when bosses only fell every sixteen
+        // steps and leg 1 ended on the elite instead -- the D6/Phase 5B
+        // retune moved the boss to every leg's end, so this now exercises
+        // the same "party crosses a leg beat up" case against a boss.)
         [Test]
-        public void TheLegAfterTheFirstEliteStartsWhole()
+        public void TheLegAfterTheFirstBossStartsWhole()
         {
             RunManager.StartRun(Seed);
             WalkToTheEndOfTheLeg();
-            Assert.AreEqual(RoomType.EliteFight, RunManager.CurrentNode.Type,
-                "leg 1 did not end on the elite, so this is not the reported case");
+            Assert.AreEqual(RoomType.Boss, RunManager.CurrentNode.Type,
+                "leg 1 did not end on its boss, so this is not the reported case");
 
             HurtTheSquad(1);
             RunManager.AdvanceLeg();
 
             Assert.Greater(LowestHealth(), 1,
-                "the party begins leg 2 on the health the elite left them");
+                "the party begins leg 2 on the health the boss fight left them");
         }
 
         // A heal that only fired for a full squad would quietly skip anyone

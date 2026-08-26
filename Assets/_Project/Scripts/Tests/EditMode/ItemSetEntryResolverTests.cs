@@ -8,6 +8,12 @@ namespace PrincesPalace.Domain.Tests
 {
     public class ItemSetEntryResolverTests
     {
+        // Phase 4 (D4): every stat is derived, nothing is hand-authored per
+        // piece. statProfile (combat stats) and styleWeights (ability
+        // scores) both live on the SET and are shared by every piece --
+        // this one piece ends up granting Speed (from the profile) and
+        // Dexterity (from the weights), the same two stats the pre-Phase-4
+        // version of this fixture hand-authored on the piece directly.
         private static RawItemSetEntry Minimal(int maxTier = 10)
         {
             return new RawItemSetEntry
@@ -17,6 +23,8 @@ namespace PrincesPalace.Domain.Tests
                 maxTier = maxTier,
                 cost = 30,
                 costPerTier = 20,
+                statProfile = new[] { "speed 100" },
+                styleWeights = new[] { "dexterity 100" },
                 pieces = new[]
                 {
                     new RawSetPiece
@@ -24,8 +32,6 @@ namespace PrincesPalace.Domain.Tests
                         id = "boots",
                         displayName = "Boots",
                         slot = "Shoes",
-                        baseStats = new[] { "dexterity 1", "speed 1" },
-                        topStats = new[] { "dexterity 3", "speed 3" },
                     }
                 }
             };
@@ -178,13 +184,12 @@ namespace PrincesPalace.Domain.Tests
         // authored span behaves differently depending on its sign. C#
         // integer division truncates toward zero and would get this wrong.
         //
-        // Floor is not symmetric about zero (floor(-0.2) is -1, not 0 —
-        // the same reason AbilityDerivation.Modifier is asymmetric about its
-        // centre rather than truncating), so a descending span reaches its
-        // first negative step at plus 1, not at the same plus an ascending
-        // span of equal magnitude would first move. That is correct floor
-        // behaviour, not a bug: the assertions below are real floor(-0.2),
-        // floor(-1.0), floor(-1.8) and the exact top, not a truncated guess.
+        // Floor is not symmetric about zero (floor(-0.2) is -1, not 0), so a
+        // descending span reaches its first negative step at plus 1, not at
+        // the same plus an ascending span of equal magnitude would first
+        // move. That is correct floor behaviour, not a bug: the assertions
+        // below are real floor(-0.2), floor(-1.0), floor(-1.8) and the exact
+        // top, not a truncated guess.
         [Test]
         public void ValueAt_FloorsDescendingStatsTheSameWayAsAscendingOnes()
         {
@@ -284,35 +289,77 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(30 + 20 * 7, byTier[7].Cost);
         }
 
-        // Stats named as strings land in whichever of the two blocks owns
-        // them, which is the whole reason one flat vocabulary exists.
+        // statProfile (combat stats) and styleWeights (ability scores) are
+        // two independent channels on the same piece, the D4 replacement for
+        // the old baseStats/topStats "both blocks in one flat list" scheme.
         [Test]
-        public void AbilityScoresAndStats_AreBothAuthorableInTheSameList()
+        public void StatProfileAndStyleWeights_AreBothAuthorableOnTheSameSet()
         {
             var set = Minimal();
-            set.pieces[0].baseStats = new[] { "constitution 2", "physicalResistance 6", "manaRegen 1" };
-            set.pieces[0].topStats = new[] { "constitution 4", "physicalResistance 13", "manaRegen 5" };
+            set.statProfile = new[] { "physicalDefense 60", "manaRegen 40" };
+            set.styleWeights = new[] { "constitution 100" };
 
             var top = Resolve(set).First(p => p.Tier == 10);
 
-            Assert.AreEqual(4, top.AbilityScoreBonus.constitution);
-            Assert.AreEqual(13, top.StatBonus.physicalResistance);
-            Assert.AreEqual(5, top.StatBonus.manaRegen);
+            Assert.AreEqual(3, top.AbilityScoreBonus.constitution);
+            Assert.AreEqual(30, top.StatBonus.physicalDefense);
+            Assert.AreEqual(3, top.StatBonus.manaRegen);
         }
 
-        // A stat present at one end only starts (or finishes) at zero rather
-        // than being an error — it is how "this piece only gets slow once it
-        // is heavily reinforced" is written.
+        // ---- Phase 4 (D4): the budget derivation, pinned literals ---------
+        //
+        // Bulwark's torso, hand-computed through the full chain: budget ->
+        // 60% combat share -> statProfile percent -> unit cost -> round away
+        // from zero at each authored end -> floor-interpolate between them
+        // exactly like every other armour stat (ValueAt). Also pinned,
+        // independently, as the raw GearScaling calls in GearScalingTests.
         [Test]
-        public void AStatNamedAtOneEndOnly_StartsFromZero()
+        public void BulwarkTorso_MatchesTheHandComputedBudgetAtEveryPinnedTier()
         {
-            var set = Minimal();
-            set.pieces[0].topStats = new[] { "dexterity 3", "speed 3", "magicalResistance 10" };
+            var set = new RawItemSetEntry
+            {
+                id = "bulwark",
+                displayName = "Bulwark",
+                maxTier = 10,
+                cost = 70,
+                costPerTier = 45,
+                statProfile = new[] { "maxHealth 30", "physicalDefense 40", "magicalDefense 30" },
+                styleWeights = new[] { "constitution 100" },
+                pieces = new[]
+                {
+                    new RawSetPiece { id = "cuirass", displayName = "Cuirass", slot = "Torso" },
+                }
+            };
 
             var byTier = Resolve(set).ToDictionary(p => p.Tier);
 
-            Assert.AreEqual(0, byTier[0].StatBonus.magicalResistance);
-            Assert.AreEqual(10, byTier[10].StatBonus.magicalResistance);
+            Assert.AreEqual(11, byTier[0].StatBonus.maxHealth);
+            Assert.AreEqual(3, byTier[0].StatBonus.physicalDefense);
+            Assert.AreEqual(2, byTier[0].StatBonus.magicalDefense);
+
+            Assert.AreEqual(34, byTier[5].StatBonus.maxHealth);
+            Assert.AreEqual(9, byTier[5].StatBonus.physicalDefense);
+            Assert.AreEqual(6, byTier[5].StatBonus.magicalDefense);
+
+            Assert.AreEqual(105, byTier[10].StatBonus.maxHealth);
+            Assert.AreEqual(28, byTier[10].StatBonus.physicalDefense);
+            Assert.AreEqual(21, byTier[10].StatBonus.magicalDefense);
+        }
+
+        // A stat with no weight in the profile stays zero at every tier --
+        // there is no "one end only" concept any more (statProfile is a
+        // single authored thing, applied at both ends), so this is the D4
+        // replacement for the old AStatNamedAtOneEndOnly_StartsFromZero.
+        [Test]
+        public void AStatWithZeroProfileWeight_StaysZeroAtEveryTier()
+        {
+            var set = Minimal();
+            set.statProfile = new[] { "speed 60", "physicalDefense 40" };
+
+            var byTier = Resolve(set).ToDictionary(p => p.Tier);
+
+            Assert.AreEqual(0, byTier[0].StatBonus.magicalDefense);
+            Assert.AreEqual(0, byTier[10].StatBonus.magicalDefense);
         }
 
         // ---- rejections --------------------------------------------------
@@ -323,55 +370,93 @@ namespace PrincesPalace.Domain.Tests
             return errors;
         }
 
+        // baseStats/topStats are GONE from the schema (D4) -- any content in
+        // either one is rejected loudly and unconditionally, regardless of
+        // what it says.
         [Test]
-        public void AnUnknownStatName_IsRejectedAndSaysWhatIsAvailable()
+        public void APieceWithStaleBaseStats_IsRejectedLoudly()
         {
             var set = Minimal();
-            set.pieces[0].baseStats = new[] { "luck 3" };
+            set.pieces[0].baseStats = new[] { "physicalDefense 6" };
+
+            StringAssert.Contains("statProfile", Errors(set)[0]);
+        }
+
+        [Test]
+        public void APieceWithStaleTopStats_IsRejectedLoudly()
+        {
+            var set = Minimal();
+            set.pieces[0].topStats = new[] { "physicalDefense 6" };
+
+            StringAssert.Contains("statProfile", Errors(set)[0]);
+        }
+
+        [Test]
+        public void AnUnknownStatProfileName_IsRejectedAndSaysWhatIsAvailable()
+        {
+            var set = Minimal();
+            set.statProfile = new[] { "luck 100" };
 
             var errors = Errors(set);
 
             StringAssert.Contains("luck", errors[0]);
-            StringAssert.Contains("dexterity", errors[0], "The error should list the vocabulary it does accept");
-            StringAssert.Contains("physicalResistance", errors[0]);
+            StringAssert.Contains("physicalDefense", errors[0], "The error should list the vocabulary it does accept");
+            StringAssert.Contains("manaRegen", errors[0]);
         }
 
         [Test]
-        public void AMalformedStatLine_IsRejected()
+        public void AMalformedStatProfileLine_IsRejected()
         {
             var set = Minimal();
-            set.pieces[0].baseStats = new[] { "dexterity" };
+            set.statProfile = new[] { "physicalDefense" };
 
-            StringAssert.Contains("<stat> <amount>", Errors(set)[0]);
+            StringAssert.Contains("<stat> <percent>", Errors(set)[0]);
         }
 
         [Test]
-        public void ANonNumericAmount_IsRejected()
+        public void ANonNumericStatProfilePercent_IsRejected()
         {
             var set = Minimal();
-            set.pieces[0].baseStats = new[] { "dexterity lots" };
+            set.statProfile = new[] { "physicalDefense lots" };
 
             StringAssert.Contains("whole number", Errors(set)[0]);
         }
 
-        // Both ends are parsed before bailing, so one rebuild shows every
+        // Both lines are parsed before bailing, so one rebuild shows every
         // typo instead of one per attempt.
         [Test]
-        public void EveryBadStatName_IsReported_NotJustTheFirst()
+        public void EveryBadStatProfileName_IsReported_NotJustTheFirst()
         {
             var set = Minimal();
-            set.pieces[0].baseStats = new[] { "luck 3" };
-            set.pieces[0].topStats = new[] { "swagger 9" };
+            set.statProfile = new[] { "luck 3", "swagger 9" };
 
             Assert.AreEqual(2, Errors(set).Count);
+        }
+
+        [Test]
+        public void AStatProfileThatDoesNotSumToOneHundred_IsRejected()
+        {
+            var set = Minimal();
+            set.statProfile = new[] { "physicalDefense 50" };
+
+            StringAssert.Contains("100", Errors(set)[0]);
+        }
+
+        [Test]
+        public void AStatProfileNamingTheSameStatTwice_IsRejected()
+        {
+            var set = Minimal();
+            set.statProfile = new[] { "physicalDefense 50", "physicalDefense 50" };
+
+            StringAssert.Contains("twice", Errors(set)[0]);
         }
 
         [Test]
         public void APieceThatGrantsNothing_IsRejected()
         {
             var set = Minimal();
-            set.pieces[0].baseStats = new string[0];
-            set.pieces[0].topStats = new string[0];
+            set.statProfile = new string[0];
+            set.styleWeights = new string[0];
 
             StringAssert.Contains("grants nothing", Errors(set)[0]);
         }

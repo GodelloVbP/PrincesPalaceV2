@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8eb37102d2241c54eae4db6c08bbb7c5, type: 3}
+  m_Name: explosive
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
+  id: explosive
+  displayName: Explosive
+  description: Whatever the wearer finishes off does not go quietly -- the kill splashes
+    onto whoever was standing next to it. The exact mechanism Trample already uses,
+    so a Black Ram wearing this alongside his own talent gets two independent splashes
+    off one kill rather than one doubled splash -- see OnKillSplashPercent's own
+    comment on why that is deliberate, not a bug to fix later.
+  effects:
+  - type: 8
+    magnitude: 30
+    threshold: 0
+    against: 0
+    hasAgainst: 0
+    againstMagical: 0
+  sortOrder: 8

@@ -25,10 +25,9 @@ MonoBehaviour:
     maxHealth: 0
     speed: 0
     attack: 0
-    defense: 0
     manaRegen: 0
-    physicalResistance: 0
-    magicalResistance: 0
+    physicalDefense: 0
+    magicalDefense: 0
   abilityScoreBonus:
     strength: 1
     dexterity: 0

@@ -178,67 +178,64 @@ namespace PrincesPalace.Domain.Tests
     {
         private static CombatantState Actor(int attack = 5)
         {
-            return new CombatantState("Shawn", true, 32, 38, attack, 4, 8);
+            return new CombatantState("Shawn", true, 32, 38, attack, 8);
         }
 
         private static CombatantState Target(int defense)
         {
-            return new CombatantState("Wall", false, 100, 0, 6, defense, 5);
+            var target = new CombatantState("Wall", false, 100, 0, 6, 5);
+            target.PhysicalDefense = defense;
+            return target;
         }
 
         // PINNED literals throughout — nothing here recomputes the formula.
+        //
+        // REWRITTEN for Phase 1 of the balance redesign: SkillResolution.
+        // Damage no longer mitigates at all — it always returns
+        // Math.Max(1, raw) — so neither the target's defense nor
+        // `ignoresDefense` has any effect on this return value any more.
+        // DamagePipeline.AfterDefences is the single place a defense term is
+        // ever subtracted now; see DamagePipelineTests for that half.
+        //
+        // NO LONGER SCALED (fixed 2026-08-26): this raw figure feeds the same
+        // mitigated-combat path ComputeAttackDamage/ComputeSkillDamage do
+        // (FightSession.Skills.cs's real DamageSingle/DamageAll casts), so it
+        // stopped multiplying by CombatMath.DamageScale in the same fix --
+        // see SkillResolution.Damage's own header.
         [Test]
-        public void Damage_IsAttackPlusScaling_SoftenedByDefense()
+        public void Damage_IsAttackPlusScaling_RawAndUnaffectedByTheTargetOrTheFlag()
         {
-            // 5 attack + 2 power x 6 spent = 17, of which 12/(12+8) lands --
-            // 10.2, rounded to 10 -- x5 for the health scale. Was 45 while
-            // armour subtracted.
-            Assert.AreEqual(50, SkillResolution.Amount(
+            // 5 attack + 2 power x 6 spent = 17.
+            Assert.AreEqual(17, SkillResolution.Amount(
                 SkillEffect.DamageSingle, Actor(), Target(8), power: 2, flatAmount: 0, resourceSpent: 6, ignoresDefense: false));
-        }
-
-        [Test]
-        public void Damage_IgnoringDefense_SkipsItEntirely()
-        {
-            // Same 17, and the target's 8 defense simply does not apply.
-            Assert.AreEqual(85, SkillResolution.Amount(
+            Assert.AreEqual(17, SkillResolution.Amount(
                 SkillEffect.DamageSingle, Actor(), Target(8), power: 2, flatAmount: 0, resourceSpent: 6, ignoresDefense: true));
         }
 
-        // WHAT A WALL COSTS, and it is no longer everything.
-        //
-        // This used to assert that against Defense 99 an ordinary line does 5
-        // and only the defence-ignoring one does anything. That was true, and
-        // it was the subtraction cliff rather than a design: every ordinary
-        // action bottomed out on max(1, ...) and STAYED there however strong
-        // the attacker got, which is what made a floor-one boss with Defense 9
-        // take 130 turns.
-        //
-        // A wall is still a wall -- 10 against 85 is a heavy penalty and the
-        // defence-ignoring line is still the right answer to one -- but the
-        // ordinary line now scales, so gearing up answers a wall instead of
-        // bouncing off it. That is the half this pins.
+        // WHAT A WALL COSTS is now nothing at all, at THIS layer — see the
+        // header above. A heavily defended target and an undefended one
+        // produce the identical raw figure; only Attack moves it. The
+        // property this used to pin (a wall blunting a swing proportionally
+        // rather than flattening it) still holds, just one layer further
+        // down — see DamagePipelineTests and CombatMathTests.AfterResistance*.
         [Test]
-        public void AWallBluntsAnOrdinaryLineWithoutFlatteningIt()
+        public void ADefendedTarget_NoLongerChangesTheRawFigureAtAll()
         {
-            int ordinary = SkillResolution.Amount(
+            int againstAWall = SkillResolution.Amount(
                 SkillEffect.DamageSingle, Actor(), Target(99), power: 2, flatAmount: 0, resourceSpent: 6, ignoresDefense: false);
-            int ram = SkillResolution.Amount(
-                SkillEffect.DamageSingle, Actor(), Target(99), power: 2, flatAmount: 0, resourceSpent: 6, ignoresDefense: true);
+            int againstNothing = SkillResolution.Amount(
+                SkillEffect.DamageSingle, Actor(), Target(0), power: 2, flatAmount: 0, resourceSpent: 6, ignoresDefense: false);
 
-            // raw 17 x 12/(12+99) = 1.8 -> 2 -> 10, against the ram's whole 85.
-            Assert.AreEqual(10, ordinary);
-            Assert.AreEqual(85, ram, "ignoring defence still skips the wall entirely");
+            Assert.AreEqual(17, againstAWall);
+            Assert.AreEqual(againstNothing, againstAWall);
 
-            // AND IT STILL RESPONDS TO GEAR, which is the property the old
-            // formula lacked. Attack 22 makes raw 34, exactly twice the 17
-            // above, and the damage doubles with it: 34 x 12/111 = 3.7 -> 4.
+            // AND IT STILL RESPONDS TO GEAR: Attack 22 makes raw 34, exactly
+            // twice the 17 above, and the returned figure doubles with it --
+            // no floor anywhere near this range to blunt the difference.
             int geared = SkillResolution.Amount(
                 SkillEffect.DamageSingle, Actor(22), Target(99), power: 2, flatAmount: 0, resourceSpent: 6, ignoresDefense: false);
 
-            Assert.AreEqual(20, geared,
-                "twice the attack must be twice the damage even against a wall - under the old " +
-                "floor both figures were 5 and the entire difference in gear was worth nothing");
+            Assert.AreEqual(34, geared, "twice the attack (17 -> 34 raw) is twice the damage (17 -> 34)");
         }
 
         [Test]
@@ -254,7 +251,7 @@ namespace PrincesPalace.Domain.Tests
 
         private static CombatantState ScaledActor(ScalingAxis? weaponAxisRides = null)
         {
-            var actor = new CombatantState("Caster", true, 100, 20, 5, 0, 8)
+            var actor = new CombatantState("Caster", true, 100, 20, 5, 8)
             {
                 AbilityScores = new AbilityScoreBlock(20, 10, 10, 10, 10, 10),
             };
@@ -276,7 +273,7 @@ namespace PrincesPalace.Domain.Tests
                 power: 0, flatAmount: 0, resourceSpent: 0, ignoresDefense: false,
                 type: DamageType.Physical, axis: ScalingAxis.Auto);
 
-            Assert.AreEqual(50, damage, "5 Attack x 2.00 (WeaponScaling S) = 10, x5 health scale = 50");
+            Assert.AreEqual(10, damage, "5 Attack x 2.00 (WeaponScaling S) = 10, raw");
         }
 
         // Non-physical + Auto resolves to the SPELL axis — A grade at +10
@@ -290,7 +287,7 @@ namespace PrincesPalace.Domain.Tests
                 power: 0, flatAmount: 0, resourceSpent: 0, ignoresDefense: false,
                 type: DamageType.Nature, axis: ScalingAxis.Auto);
 
-            Assert.AreEqual(45, damage, "5 Attack x 1.70 (SkillScaling A) = 8.5, rounded away from zero to 9, x5 health scale = 45");
+            Assert.AreEqual(9, damage, "5 Attack x 1.70 (SkillScaling A) = 8.5, rounded away from zero to 9, raw");
         }
 
         // An explicit override wins regardless of the damage type — this is
@@ -304,7 +301,7 @@ namespace PrincesPalace.Domain.Tests
                 power: 0, flatAmount: 0, resourceSpent: 0, ignoresDefense: false,
                 type: DamageType.Nature, axis: ScalingAxis.Weapon);
 
-            Assert.AreEqual(50, damage, "Weapon override should read WeaponScaling (2.00x) even though the type is Nature");
+            Assert.AreEqual(10, damage, "Weapon override should read WeaponScaling (2.00x) even though the type is Nature");
         }
 
         [Test]
@@ -315,7 +312,7 @@ namespace PrincesPalace.Domain.Tests
                 power: 0, flatAmount: 0, resourceSpent: 0, ignoresDefense: false,
                 type: DamageType.Physical, axis: ScalingAxis.None);
 
-            Assert.AreEqual(25, damage, "None should leave Attack completely unscaled: 5 x5 = 25");
+            Assert.AreEqual(5, damage, "None should leave Attack completely unscaled: 5, raw");
         }
 
         // "Multiply only the actor.Attack term" — power/resourceSpent must
@@ -330,10 +327,10 @@ namespace PrincesPalace.Domain.Tests
                 type: DamageType.Physical, axis: ScalingAxis.Weapon);
 
             // Scaled attack 10 (as in the first test above) + flatAmount 3 +
-            // power 2 x resourceSpent 4 = 8, total 21, x5 = 105 — NOT
-            // (5 + 3 + 8) x 2.00 x 5 = 160, which is what scaling the whole
+            // power 2 x resourceSpent 4 = 8, total 21 — NOT
+            // (5 + 3 + 8) x 2.00 = 32, which is what scaling the whole
             // sum would produce.
-            Assert.AreEqual(105, damage);
+            Assert.AreEqual(21, damage);
         }
 
         [Test]

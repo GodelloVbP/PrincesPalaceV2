@@ -46,7 +46,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // cannot go stale.
             RefreshAttackBonus(actor, spendingGift: true);
 
-            CombatMath.SpendMana(actor, SkillManaCostFor(actor));
+            ChargeSkillMana(actor, SkillManaCostFor(actor));
 
             ExecuteSkillInner(actor, target);
 
@@ -76,6 +76,18 @@ namespace PrincesPalace.Domain.Combat.Session
                 varianceRange: DamageVarianceRange,
                 rng: _rng,
                 resolveWard: ResolveWard);
+
+            // Swift: same short-circuit ResolveAttackSwing's own miss branch
+            // documents -- everything past this point (the role effect, the
+            // shared ApplyFinalDamage riders, the Drowned Lantern's mark) is
+            // a rider on a landed hit.
+            if (outcome.IsMiss)
+            {
+                RecordMiss();
+                AppendMessage($"{target.Name} dodges {actor.Name}'s {SkillDisplayNameFor(actor)}!");
+                SetStance(actor, Stances.Cast);
+                return;
+            }
 
             DepleteBreakShield(target, outcome.Effectiveness);
 
@@ -142,7 +154,7 @@ namespace PrincesPalace.Domain.Combat.Session
             _actionCanBrave = true;
 
             int resourceSpent = SkillResolution.ResourceToSpend(actor.Signature, skill.ResourceCost, skill.SpendsAllResource);
-            CombatMath.SpendMana(actor, skill.ManaCost);
+            ChargeSkillMana(actor, skill.ManaCost);
 
             // Spent alongside the mana, and for the same reason it is spent
             // here rather than at the end: the cast is committed at this point.
@@ -412,7 +424,19 @@ namespace PrincesPalace.Domain.Combat.Session
                 // A spell with authored packets deals exactly what it says, per
                 // element, and reports the split.
                 var detail = new StringBuilder();
-                damage = ResolveDamageInstances(actor, skill, target, detail);
+                damage = ResolveDamageInstances(actor, skill, target, detail, out bool dodgedInstances);
+
+                // Swift: rolled ONCE for the whole multi-packet cast inside
+                // ResolveDamageInstances -- see that method's own header and
+                // DamagePipeline.AfterDefences' dodgeAlreadyResolved param
+                // for why a packet spell does not roll per packet.
+                if (dodgedInstances)
+                {
+                    RecordMiss();
+                    AppendMessage($"{target.Name} dodges {actor.Name}'s {skill.DisplayName}!");
+                    return;
+                }
+
                 AppendMessage($"{actor.Name} casts {skill.DisplayName} on {target.Name} for {damage}! -{detail}");
             }
             else
@@ -434,7 +458,15 @@ namespace PrincesPalace.Domain.Combat.Session
                     affinity: AffinityOf(target),
                     varianceRange: DamageVarianceRange,
                     rng: _rng,
-                    resolveWard: ResolveWard);
+                    resolveWard: ResolveWard,
+                    ignoresDefense: skill.IgnoresDefense);
+
+                if (outcome.IsMiss)
+                {
+                    RecordMiss();
+                    AppendMessage($"{target.Name} dodges {actor.Name}'s {skill.DisplayName}!");
+                    return;
+                }
 
                 damage = TotalDamage(actor, baseAmount, outcome.Damage);
                 DepleteBreakShield(target, outcome.Effectiveness);
@@ -497,7 +529,23 @@ namespace PrincesPalace.Domain.Combat.Session
                     affinity: AffinityOf(enemy),
                     varianceRange: DamageVarianceRange,
                     rng: _rng,
-                    resolveWard: ResolveWard);
+                    resolveWard: ResolveWard,
+                    ignoresDefense: skill.IgnoresDefense);
+
+                // Swift: EACH enemy in an AOE independently rolls its own
+                // dodge -- it is a genuinely separate target reacting to the
+                // same cast, not one shared roll for the whole sweep. A
+                // dodged enemy skips damage/riders/kill-check for itself and
+                // the loop continues to the rest; this beat is multi-target
+                // already (SplashTargets), so "some hit, some dodged" is
+                // reported per enemy in the summary text rather than via
+                // CombatBeat.Missed, which only ever describes a single-
+                // target beat's own one Amount -- see that field's header.
+                if (outcome.IsMiss)
+                {
+                    summary.Append($" {enemy.Name} dodges!");
+                    continue;
+                }
 
                 DepleteBreakShield(enemy, outcome.Effectiveness);
                 // Through the ONE FUNNEL now -- see FightSession.Relics.TotalDamage
@@ -533,10 +581,45 @@ namespace PrincesPalace.Domain.Combat.Session
             AppendMessage(summary.ToString());
         }
 
-        private int ResolveDamageInstances(CombatantState actor, ResolvedSkill skill, CombatantState target, StringBuilder detail)
+        // Balance redesign Phase 3 (D3): the caster's own SkillScaling
+        // multiplier (INT/WIS grades against their ACTUAL ability scores) --
+        // the same "M" a spell's Attack-scaled formula already rides via
+        // CombatMath.ScaledAttack -- applied to a FIXED damageInstances
+        // packet too (frost_flare, lightning_bolt), so it keeps pace with a
+        // caster's ability-score investment instead of staying flat forever.
+        // Spell TIER's own powerMultiplier (SkillPowerMultiplierFor) is a
+        // SEPARATE axis, already applied alongside this one -- the two never
+        // stood in for each other and neither replaces the other here.
+        //
+        // Exactly 1f for every enemy caster: an enemy CombatantState's
+        // SkillScaling is never assigned (only FightEncounterAdapter's
+        // Character-based ToCombatant sets it), so it stays ScalingSet.None
+        // and MultiplierFor short-circuits to 1 regardless of AbilityScores
+        // — a monster's frost_flare-style hit is unchanged by this.
+        private static float SpellScalingMultiplierFor(CombatantState actor) =>
+            actor.SkillScaling.MultiplierFor(actor.AbilityScores);
+
+        // `dodged` is true when the WHOLE cast was evaded -- rolled exactly
+        // ONCE here, before the packet loop, rather than once per packet.
+        // See DamagePipeline.AfterDefences' `dodgeAlreadyResolved` param for
+        // the full reasoning: a multi-element spell is one swing the target
+        // either evades entirely or is hit by, so every packet below reuses
+        // this single roll (dodgeAlreadyResolved: true) instead of each
+        // rolling its own. `total` is 0 and `detail` is left untouched on a
+        // dodge -- the caller must check `dodged` rather than infer a miss
+        // from `total == 0`, the identical discipline
+        // DamagePipeline.Outcome.IsMiss already enforces one level down.
+        private int ResolveDamageInstances(CombatantState actor, ResolvedSkill skill, CombatantState target,
+            StringBuilder detail, out bool dodged)
         {
+            dodged = DamagePipeline.RollDodge(target, actor, _rng);
+            if (dodged)
+            {
+                return 0;
+            }
+
             int total = 0;
-            float multiplier = SkillPowerMultiplierFor(actor);
+            float multiplier = SkillPowerMultiplierFor(actor) * SpellScalingMultiplierFor(actor);
 
             foreach (var instance in skill.DamageInstances)
             {
@@ -546,7 +629,9 @@ namespace PrincesPalace.Domain.Combat.Session
                     affinity: AffinityOf(target),
                     varianceRange: DamageVarianceRange,
                     rng: _rng,
-                    resolveWard: ResolveWard);
+                    resolveWard: ResolveWard,
+                    attacker: actor,
+                    dodgeAlreadyResolved: true);
 
                 DepleteBreakShield(target, outcome.Effectiveness);
                 total += outcome.Damage;
@@ -563,21 +648,20 @@ namespace PrincesPalace.Domain.Combat.Session
         // the resource, does not advance PotencyFor's cast tally or any other
         // relic bookkeeping.
         //
-        // SkillResolution.Amount/Damage already do exactly this when handed a
-        // null target -- Damage() only subtracts EffectiveDefense when
-        // `target != null`, so passing null is sufficient on its own; no
-        // separate "pretend defenseless" flag is needed. The fixed-damage
+        // SkillResolution.Amount/Damage never mitigate at all any more (see
+        // Damage's own header) -- mitigation is DamagePipeline's alone now --
+        // so passing a null target changes nothing there; this preview simply
+        // never calls DamagePipeline.AfterDefences at all, which is the one
+        // and only place a defense term is subtracted. The fixed-damage
         // branch mirrors ResolveDamageInstances' own scaling (multiplier,
-        // AwayFromZero, floored at 1 per packet) but skips
-        // DamagePipeline.AfterDefences entirely, since that whole function is
-        // target mitigation.
+        // AwayFromZero, floored at 1 per packet), for the same reason.
         public int PreviewSkillPower(CombatantState actor, ResolvedSkill skill)
         {
             if (actor == null) return 0;
 
             if (skill.HasFixedDamage)
             {
-                float multiplier = SkillPowerMultiplierFor(actor);
+                float multiplier = SkillPowerMultiplierFor(actor) * SpellScalingMultiplierFor(actor);
                 int total = 0;
                 foreach (var instance in skill.DamageInstances)
                 {
@@ -616,7 +700,12 @@ namespace PrincesPalace.Domain.Combat.Session
                     break;
 
                 case CharacterRole.CrowdControl:
-                    target.Defense = System.Math.Max(0, target.Defense - FightTuning.CrowdControlDefenseShred);
+                    // A flat write to BOTH broad Defenses -- see
+                    // ApplyDefenseShred's own comment (FightSession.Talents.cs)
+                    // for why the same magnitude lands on each rather than
+                    // being split between them.
+                    target.PhysicalDefense = System.Math.Max(0, target.PhysicalDefense - FightTuning.CrowdControlDefenseShred);
+                    target.MagicalDefense = System.Math.Max(0, target.MagicalDefense - FightTuning.CrowdControlDefenseShred);
                     AppendMessage($"{target.Name}'s defenses are shredded!");
                     break;
 
@@ -713,7 +802,15 @@ namespace PrincesPalace.Domain.Combat.Session
         // Public: FightHudModel's SCALES row needs to resolve the same
         // Weapon-vs-Spell axis SkillResolution.Damage resolves at cast time,
         // and that resolution starts here.
-        public DamageType? ActorAttackType(CombatantState actor) => KitFor(actor)?.AttackType;
+        //
+        // ENEMIES FALL THROUGH TO THEIR OWN AUTHORED TYPE now, via SourceFor
+        // -- KitFor only ever answers for player kits (see its own header),
+        // so before this an enemy's swing had no attack type at all and
+        // MagicalDefense was consequently a dead stat against every monster
+        // in the game. See ResolvedEnemy.AttackType and RawEnemyEntry's own
+        // comment on the field.
+        public DamageType? ActorAttackType(CombatantState actor) =>
+            KitFor(actor)?.AttackType ?? SourceFor(actor)?.Source.AttackType;
 
         // The generic Skill verb's numbers come from the character's basic
         // spell tier, if their level grants one, and fall back to plain
@@ -731,14 +828,50 @@ namespace PrincesPalace.Domain.Combat.Session
             SkillResolution.CanAfford(actor, BasicSpellManaCostFor(actor), 0);
 
         // Same pre-mitigation reading as PreviewSkillPower, for the one spell
-        // that has no ResolvedSkill behind it. ComputeSkillDamage always
-        // subtracts a target's EffectiveDefense, so it cannot serve a
-        // target-free preview directly -- this mirrors its attack-scaling
-        // half only.
+        // that has no ResolvedSkill behind it. ComputeSkillDamage itself is
+        // raw and target-free now too (see its own header), so this just
+        // calls it directly -- written out as a straight passthrough rather
+        // than duplicating its formula, which is what let this readout go
+        // stale (still multiplying by CombatMath.DamageScale) when
+        // ComputeSkillDamage itself stopped, on 2026-08-26.
         public int PreviewBasicSpellPower(CombatantState actor) =>
-            actor == null ? 0 : CombatMath.Scale(CombatMath.ScaledAttack(actor, actor.SkillScaling, SkillPowerMultiplierFor(actor)));
+            actor == null ? 0 : CombatMath.ComputeSkillDamage(actor, null, SkillPowerMultiplierFor(actor));
 
         private int SkillManaCostFor(CombatantState actor) => BasicSpellManaCostFor(actor);
+
+        // THE ONE PLACE mana is charged for a skill cast -- both the plain
+        // Skill action (ExecuteSkill) and an authored character skill
+        // (CastSkill) route through here now, which is what lets Runic's
+        // one-shot discount live in a single spot instead of being
+        // duplicated at both call sites. Consumes and clears
+        // PendingManaDiscountPercent unconditionally, whether or not this
+        // particular cast had anything armed -- an unarmed discount is
+        // already 0, so "consume" is a no-op the same way spending 0 gold
+        // is.
+        //
+        // NOTE: SkillResolution.CanAfford, at both call sites, is checked
+        // BEFORE this runs, against the UNDISCOUNTED cost -- a cast the
+        // discount would have made affordable but the raw cost does not is
+        // still refused. Conservative rather than wrong: the discount is a
+        // bonus on a cast the player could already pay for, not a new way
+        // to afford one they could not.
+        private void ChargeSkillMana(CombatantState actor, int baseCost)
+        {
+            if (actor == null) return;
+
+            int discountPercent = actor.PendingManaDiscountPercent;
+            actor.PendingManaDiscountPercent = 0;
+
+            int cost = baseCost;
+            if (discountPercent > 0)
+            {
+                cost = Rounding.AwayFromZero(baseCost * (100 - System.Math.Min(100, discountPercent)) / 100f);
+                if (cost < 0) cost = 0;
+                AppendMessage($"{actor.Name}'s cast costs less, still charged from the last swing.");
+            }
+
+            CombatMath.SpendMana(actor, cost);
+        }
 
         private float SkillPowerMultiplierFor(CombatantState actor) => KitFor(actor)?.BasicSpell?.PowerMultiplier ?? 1f;
 

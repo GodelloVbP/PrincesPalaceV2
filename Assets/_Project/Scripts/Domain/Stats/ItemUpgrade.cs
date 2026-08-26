@@ -91,10 +91,14 @@ namespace PrincesPalace.Domain.Stats
         // numbers, which is a rebalance rather than a rounding rule.
         //
         // The direction symmetry is the same one ItemSetEntryResolver.ValueAt
-        // and AbilityDerivation.FloorDiv2 exist to keep: C# integer division
-        // truncates toward zero, which would round a penalty the opposite way
-        // from a bonus and make honing a steel platebody quietly reduce its own
-        // speed penalty.
+        // exists to keep: C# integer division truncates toward zero, which
+        // would round a penalty the opposite way from a bonus and make honing
+        // a steel platebody quietly reduce its own speed penalty. (Note the
+        // trade the other direction: AbilityDerivation's own SpeedBonus/
+        // SignatureGainBonus deliberately DO use plain truncating division as
+        // of Phase 2 -- the plan's pinned Shawn example calls for it. The
+        // "guard against truncation" rule below is local to hone/gear math,
+        // not a rule AbilityDerivation follows everywhere.)
         public static int Apply(int amount, int plus)
         {
             if (amount == 0 || plus <= 0)

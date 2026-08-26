@@ -89,7 +89,7 @@ namespace PrincesPalace.Domain.Tests
         // rounds away from zero means further from it. A plain (int) cast
         // truncates toward zero, which would quietly make honing a steel
         // platebody reduce its own speed penalty. Same asymmetry
-        // ItemSetEntryResolver.ValueAt and AbilityDerivation.FloorDiv2 guard.
+        // ItemSetEntryResolver.ValueAt guards.
         [TestCase(-2, 5, -4)]
         [TestCase(-10, 10, -25)]
         public void Apply_GrowsAPenaltyRatherThanShrinkingIt(int amount, int plus, int expected)

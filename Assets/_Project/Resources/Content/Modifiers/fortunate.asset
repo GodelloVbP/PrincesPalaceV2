@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8eb37102d2241c54eae4db6c08bbb7c5, type: 3}
+  m_Name: fortunate
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
+  id: fortunate
+  displayName: Fortunate
+  description: The Prince remembers a fight won while this was worn. Grants run-scoped
+    Favor -- separate from and additional to a character's permanent earnedFavor
+    -- gone the moment the current descent ends. Base 5 favour per win at Ordinary/tier-0
+    is a small, steady nudge toward better drops for the rest of THIS run; it does
+    not persist past it, which is the whole point of run-scoped favour (Q4 of the
+    plan's locked decisions).
+  effects:
+  - type: 14
+    magnitude: 5
+    threshold: 0
+    against: 0
+    hasAgainst: 0
+    againstMagical: 0
+  sortOrder: 9

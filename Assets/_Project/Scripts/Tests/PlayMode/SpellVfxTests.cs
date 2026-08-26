@@ -416,12 +416,12 @@ namespace PrincesPalace.PlayModeTests
             // was never wired" rather than "it is asleep".
             _player = _fight.GetComponentInChildren<SpellVfxPlayer>(includeInactive: true);
 
-            var hero = new CombatantState("Shawn", true, 300, 30, 40, 0, 10);
+            var hero = new CombatantState("Shawn", true, 300, 30, 40, 10);
             // The first stays "Front": a sibling test looks its stage slot up
             // by name, and renaming the fixture's enemy was a change this did
             // not need to make.
             var foes = Enumerable.Range(0, Mathf.Max(1, enemyCount))
-                .Select(i => new CombatantState(i == 0 ? "Front" : $"Foe{i}", false, 5000, 10, 8, 0, 4))
+                .Select(i => new CombatantState(i == 0 ? "Front" : $"Foe{i}", false, 5000, 10, 8, 4))
                 .ToArray();
             var encounter = new CombatEncounter(new[] { hero }, foes);
             var kit = new PlayerKit("shawn", CharacterRole.Tank, null, null, null,

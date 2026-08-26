@@ -74,9 +74,18 @@ namespace PrincesPalace
 
         [SerializeField] internal Image[] slotRarityTicks;
 
+        // ITEM-MODIFIER PLAN PHASE E: a rolled item's RiftTier, distinct from
+        // its Rarity tick above -- an inset ring drawn ON the icon rather
+        // than a corner tick, so the two axes never compete for the same
+        // pixel. Hidden (SetShown false) at RiftTier.Ordinary, which is the
+        // regression guard: an item that rolled nothing must look EXACTLY
+        // as it did before this phase. See RiftTierColors.ShouldGlow.
+        [SerializeField] internal Image[] slotRiftGlows;
+
         [SerializeField] internal Button[] packCells;
         [SerializeField] internal Image[] packIcons;
         [SerializeField] internal Image[] packRarityTicks;
+        [SerializeField] internal Image[] packRiftGlows;
         [SerializeField] internal TMP_Text[] packCounts;
         [SerializeField] internal TMP_Text[] packNames;
         [SerializeField] internal Button[] packSortTabs;
@@ -468,6 +477,16 @@ namespace PrincesPalace
                     if (item.HasValue) packRarityTicks[i].color = TierColour(item.Value.Tier);
                 }
 
+                // ITEM-MODIFIER PLAN PHASE E: see RefreshSlots' identical
+                // block for why this is its own node rather than a repaint
+                // of packRarityTicks above.
+                if (packRiftGlows != null && i < packRiftGlows.Length)
+                {
+                    bool glows = item.HasValue && RiftTierColors.ShouldGlow(item.Value.RiftTier);
+                    packRiftGlows[i].gameObject.SetShown(glows);
+                    if (glows) packRiftGlows[i].color = RiftTierColors.For(item.Value.RiftTier);
+                }
+
                 // THE NAME, which is what two abreast bought. Through
                 // RarityColors so a Legendary reads the same here as everywhere
                 // else, and carrying its own plus so two stacks of the same item
@@ -559,7 +578,8 @@ namespace PrincesPalace
             }
 
             return new BagItem(item.id, RarityColors.NameOf(item, entry.plus), (int)item.kind,
-                item.equipSlot, item.tier, entry.plus, entry.count, item.iconPath, item.IsEquippable);
+                item.equipSlot, item.tier, entry.plus, entry.count, item.iconPath, item.IsEquippable,
+                entry.modifierIds, entry.riftTier);
         }
 
         private static Color TierColour(int tier) => Hex(RarityBands.HexColorForTier(tier));
@@ -818,7 +838,7 @@ namespace PrincesPalace
         // here where the Character is in hand.
         private static string DisplayValue(Character character, SheetStat stat,
                                            StatBlock stats, AbilityScoreBlock scores) =>
-            TryCurrentValue(character, stat, stats, scores, out int value) ? value.ToString() : "-";
+            TryCurrentValue(character, stat, stats, scores, out int value) ? SheetStats.DisplayText(stat, value) : "-";
 
         // What a stat reads as RIGHT NOW, from the model.
         //
@@ -904,6 +924,20 @@ namespace PrincesPalace
                     if (item != null) slotRarityTicks[i].color = TierColour(item.tier);
                 }
 
+                // ITEM-MODIFIER PLAN PHASE E: the RiftTier ring, a SEPARATE
+                // node from the rarity tick above so the two axes never
+                // fight for one colour. Hidden whenever the roll is Ordinary
+                // -- see RiftTierColors.ShouldGlow's own header -- which is
+                // what keeps every item that has never touched this system
+                // drawing exactly as it did before it existed.
+                if (slotRiftGlows != null && i < slotRiftGlows.Length)
+                {
+                    var riftTier = (RiftTier)(character.equipment?.GetRiftTier(slot) ?? 0);
+                    bool glows = item != null && RiftTierColors.ShouldGlow(riftTier);
+                    slotRiftGlows[i].gameObject.SetShown(glows);
+                    if (glows) slotRiftGlows[i].color = RiftTierColors.For(riftTier);
+                }
+
                 // A slot a two-hander has taken must never read as merely empty
                 // -- the player has to see WHY it cannot be used.
                 // INERT, not empty. A slot a two-hander has taken carries an
@@ -938,8 +972,16 @@ namespace PrincesPalace
             // current health is a fraction OF -- see ScaleCarriedHealth.
             int maxBefore = ContentDatabase.EffectiveStats(character).maxHealth;
 
+            // modifierIds/riftTier travel through the same way plus does --
+            // InventoryOps.TryRemoveAt inside TryEquip keys on the full
+            // (itemId, plus, modifierIds, riftTier) stack (see
+            // ReckoningController.AutoEquipIntoAnEmptySlot's identical note),
+            // so omitting them here would look for the wrong stack and
+            // silently strip a rolled item's affixes the moment it is worn
+            // from the pack.
             if (!EquipMove.TryEquip(character.equipment, save.stockpiledItems, item.Id, item.Slot,
-                                    item.IsEquippable, plus: item.Plus))
+                                    item.IsEquippable, plus: item.Plus,
+                                    modifierIds: item.ModifierIds?.ToList(), riftTier: (int)item.RiftTier))
             {
                 return;
             }
@@ -1058,11 +1100,10 @@ namespace PrincesPalace
             {
                 case SheetStat.MaxHealth: return comparison.StatDelta.maxHealth;
                 case SheetStat.Attack: return comparison.StatDelta.attack;
-                case SheetStat.Defence: return comparison.StatDelta.defense;
                 case SheetStat.Speed: return comparison.StatDelta.speed;
                 case SheetStat.ManaRegen: return comparison.StatDelta.manaRegen;
-                case SheetStat.PhysicalResistance: return comparison.StatDelta.physicalResistance;
-                case SheetStat.MagicalResistance: return comparison.StatDelta.magicalResistance;
+                case SheetStat.PhysicalDefense: return comparison.StatDelta.physicalDefense;
+                case SheetStat.MagicalDefense: return comparison.StatDelta.magicalDefense;
 
                 // These two are derived from WISDOM and CHARISMA, so an item
                 // that shifts an ability score shifts them as well -- which a
@@ -1113,7 +1154,24 @@ namespace PrincesPalace
                 return;
             }
 
-            ShowTooltip(RarityColors.NameOf(item), ItemDescription.CardSummary(item), RectOf(slotCells, index));
+            // PLUS, NOT JUST THE ITEM: found while wiring the DMG line
+            // (D7.2) -- this used to call CardSummary(item) with no plus at
+            // all, so an equipped slot's OWN hover silently showed the
+            // unhoned figure for every stat, weapon included. Pre-existing
+            // and out of D7's scope to have gone looking for, but the DMG
+            // line this phase adds would have made it worse (a honed sword's
+            // card understating its own damage), not merely stayed wrong.
+            int plus = character.equipment?.GetPlus(slot) ?? 0;
+
+            // ITEM-MODIFIER PLAN PHASE E: read BEFORE anything displaces this
+            // entry, same rule EquipmentLoadout.GetModifierIds/GetRiftTier's
+            // own header states for GetPlus.
+            var modifierIds = character.equipment?.GetModifierIds(slot);
+            var riftTier = (RiftTier)(character.equipment?.GetRiftTier(slot) ?? 0);
+
+            ShowTooltip(RarityColors.NameOf(item),
+                ItemDescription.CardSummary(item, plus, character, riftTier, modifierIds),
+                RectOf(slotCells, index));
         }
 
         private void OnPackHover(int index, bool entered)
@@ -1133,8 +1191,8 @@ namespace PrincesPalace
             // stat ROWS and not everything a body of text can say (cascade
             // notes, requirement lines).
             string body = item == null ? ""
-                : squad.Count > 0 ? ItemDescription.ComparisonBody(squad[_index], item, entry.Plus)
-                : ItemDescription.CardSummary(item, entry.Plus);
+                : squad.Count > 0 ? ItemDescription.ComparisonBody(squad[_index], item, entry.Plus, entry.RiftTier, entry.ModifierIds)
+                : ItemDescription.CardSummary(item, entry.Plus, riftTier: entry.RiftTier, modifierIds: entry.ModifierIds);
 
             ShowTooltip(entry.Name, body, RectOf(packCells, index));
             ShowPreviewFor(entry);
