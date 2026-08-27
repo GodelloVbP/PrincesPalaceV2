@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.U2D.Animation;
+using PrincesPalace.Core.Rig;
 
 namespace PrincesPalace.Editor.Rigging
 {
@@ -22,7 +23,10 @@ namespace PrincesPalace.Editor.Rigging
     // own transform.
     public static class RigPrefabBuilder
     {
-        public const float PixelsPerUnit = 100f;
+        // Shared with Core/Rig/RigLibrary.cs, which is what actually
+        // positions a rig instance at runtime -- one constant, not two
+        // copies that can drift apart.
+        public const float PixelsPerUnit = RigLibrary.PixelsPerUnit;
 
         public static void BuildRat() => Build("Enemies", "rat");
 
@@ -72,6 +76,7 @@ namespace PrincesPalace.Editor.Rigging
             }
 
             var go = new GameObject(id);
+            go.AddComponent<RigMeta>().ReferenceHeightPx = referenceHeightPx;
             var bonesHolder = new GameObject("bones");
             bonesHolder.transform.SetParent(go.transform, false);
             var partsHolder = new GameObject("parts");

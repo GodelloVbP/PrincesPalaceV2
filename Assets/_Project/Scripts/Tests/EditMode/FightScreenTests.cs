@@ -448,17 +448,34 @@ namespace PrincesPalace.Domain.Tests
         // uGUI, where sibling order is the only stacking rule.
         private static IEnumerable<SolvedNode> PanelsDrawnOverTheStage(SolvedNode root)
         {
-            int lastStage = -1;
-            for (int i = 0; i < root.Children.Count; i++)
+            // The stages moved one level deeper (into "FightHud", a
+            // world-interleaved nested canvas sandwiched between the
+            // backdrop and a rig actor's own SpriteRenderers -- see
+            // FightScreen.Build) without changing their RELATIVE order
+            // against everything that used to occlude them: FightHud's own
+            // children still run stage-then-HUD-panels in the exact same
+            // sequence root's children used to. Scan whichever level
+            // actually holds a "...Stage" node, so this test's real
+            // invariant (nothing declared after the stage stands on a
+            // figure's feet) survives the nesting change unchanged.
+            var scope = root;
+            if (!scope.Children.Any(c => c.Name.EndsWith("Stage")))
             {
-                if (root.Children[i].Name.EndsWith("Stage")) lastStage = i;
+                var hud = root.Children.FirstOrDefault(c => c.Name == "FightHud");
+                if (hud != null) scope = hud;
+            }
+
+            int lastStage = -1;
+            for (int i = 0; i < scope.Children.Count; i++)
+            {
+                if (scope.Children[i].Name.EndsWith("Stage")) lastStage = i;
             }
 
             Assert.Greater(lastStage, -1, "no stage found in the fight tree");
 
-            for (int i = lastStage + 1; i < root.Children.Count; i++)
+            for (int i = lastStage + 1; i < scope.Children.Count; i++)
             {
-                foreach (var node in DrawnAndVisible(root.Children[i]))
+                foreach (var node in DrawnAndVisible(scope.Children[i]))
                 {
                     yield return node;
                 }

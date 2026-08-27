@@ -136,8 +136,18 @@ namespace PrincesPalace.Domain.UiKit
         public string AllowOverlapReason;
         public string AllowOverflowReason;
 
-        // NestedCanvas only.
+        // NestedCanvas only. Overlay (the default every existing caller gets)
+        // composites after ALL camera rendering unconditionally -- it can
+        // never sit BEHIND a SpriteRenderer, only ever in front of one,
+        // regardless of SortingOrder. WorldInterleaved switches to
+        // ScreenSpaceCamera instead, which genuinely interleaves with
+        // camera-rendered content (SpriteRenderers, Renderer2D) by
+        // SortingLayer then SortingOrder like everything else on that
+        // camera -- the only way to sandwich a nested canvas BETWEEN two
+        // pieces of world-space content rather than always in front of both.
         public int SortingOrder;
+        public bool WorldInterleaved;
+        public string SortingLayerName;
 
         public List<UiNode> Children = new List<UiNode>();
 

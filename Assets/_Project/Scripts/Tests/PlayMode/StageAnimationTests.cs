@@ -39,6 +39,22 @@ namespace PrincesPalace.PlayModeTests
             _fight.GetComponentsInChildren<Transform>(includeInactive: true)
                 .FirstOrDefault(t => t.name == name)?.gameObject;
 
+        // The uGUI slots this whole file is about -- NOT the WorldSlot
+        // anchors a rig actor's world-space SpriteRenderers sit under
+        // (FightScreen.BuildWorldSlots). Those are a genuinely different
+        // category by design: Phase 4 landed a rig actor's STATIC bind
+        // pose only, deliberately before lunge/flash/fade exist for it (see
+        // the plan's own phasing) -- excluding "WorldSlot" here keeps this
+        // file's real regression guard (every uGUI slot can actually be
+        // moved/flashed/faded) from firing on a gap that is documented and
+        // intentional rather than the exact silent-failure class this file
+        // exists to catch.
+        private List<Transform> AnimatableSlots() =>
+            _fight.GetComponentsInChildren<Transform>(includeInactive: true)
+                .Where(t => t.name.EndsWith("Slot") && !t.name.EndsWith("WorldSlot")
+                            && (t.name.StartsWith("Enemy") || t.name.StartsWith("Party")))
+                .ToList();
+
         private IEnumerator OpenAFight()
         {
             yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
@@ -58,9 +74,7 @@ namespace PrincesPalace.PlayModeTests
             // The regression this file exists for.
             yield return OpenAFight();
 
-            var slots = _fight.GetComponentsInChildren<Transform>(includeInactive: true)
-                .Where(t => t.name.EndsWith("Slot") && (t.name.StartsWith("Enemy") || t.name.StartsWith("Party")))
-                .ToList();
+            var slots = AnimatableSlots();
 
             Assert.IsNotEmpty(slots, "the stage has no slots at all - the naming convention moved");
 
@@ -79,9 +93,7 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return OpenAFight();
 
-            var slots = _fight.GetComponentsInChildren<Transform>(includeInactive: true)
-                .Where(t => t.name.EndsWith("Slot") && (t.name.StartsWith("Enemy") || t.name.StartsWith("Party")))
-                .ToList();
+            var slots = AnimatableSlots();
 
             var unflashable = slots
                 .Where(s => s.GetComponentInChildren<StageHitFlash>(includeInactive: true) == null)
@@ -505,9 +517,7 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return OpenAFight();
 
-            var slots = _fight.GetComponentsInChildren<Transform>(includeInactive: true)
-                .Where(t => t.name.EndsWith("Slot") && (t.name.StartsWith("Enemy") || t.name.StartsWith("Party")))
-                .ToList();
+            var slots = AnimatableSlots();
 
             var unfadable = slots
                 .Where(s => s.GetComponent<StageDeathFade>() == null)

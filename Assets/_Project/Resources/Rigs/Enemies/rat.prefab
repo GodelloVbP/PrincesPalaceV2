@@ -628,6 +628,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7281767121540273201}
+  - component: {fileID: 1064255251011867604}
   m_Layer: 0
   m_Name: rat
   m_TagString: Untagged
@@ -652,6 +653,19 @@ Transform:
   - {fileID: 2178855893965430555}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1064255251011867604
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7715904579235949816}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 986c9bb626ea4cd4bbf23bd5b7fb7f73, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Core.Rig.RigMeta
+  ReferenceHeightPx: 756
 --- !u!1 &7881848937129491787
 GameObject:
   m_ObjectHideFlags: 0

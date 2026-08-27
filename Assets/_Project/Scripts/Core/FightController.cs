@@ -35,6 +35,13 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text[] enemyNameplates;
         [SerializeField] internal Image[] enemyFootShadows;
 
+        // Positioning-only anchors, no Graphic -- a rig actor's world-space
+        // SpriteRenderers are instantiated as children of these instead of
+        // an Image, same slot index, same FightStageAnchors position/scale.
+        // See FightScreen.BuildWorldSlots.
+        [SerializeField] internal RectTransform[] enemyWorldSlots;
+        [SerializeField] internal RectTransform[] partyWorldSlots;
+
         [SerializeField] internal RectTransform[] partySlots;
 
         // The two stage racks' shakers. Both kick together: a blow shakes the

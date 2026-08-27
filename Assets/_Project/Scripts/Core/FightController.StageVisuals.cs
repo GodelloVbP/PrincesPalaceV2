@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
+using PrincesPalace.Core.Rig;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Stage;
@@ -97,14 +98,19 @@ namespace PrincesPalace
             }
 
             AnchorStageSlots(enemySlots, onStage, mirrored: false, StageScaleForSlot);
+            AnchorStageSlots(enemyWorldSlots, onStage, mirrored: false, StageScaleForSlot);
 
             for (int i = 0; i < enemySprites.Length; i++)
             {
                 var enemy = i < enemies.Count && IsOnStage(enemies[i]) ? enemies[i] : null;
                 enemySlots[i].gameObject.SetShown(enemy != null);
+                // Deactivating the world slot also deactivates whatever rig
+                // instance is parented under it -- same lifecycle as the
+                // uGUI slot, no separate rig-instance cleanup needed.
+                WorldSlotAt(enemyWorldSlots, i)?.gameObject.SetShown(enemy != null);
                 if (enemy == null) continue;
 
-                RefreshCombatantSprite(enemySprites[i], enemy, StageSide.Right, StanceOf(enemy));
+                RefreshCombatantSprite(enemySprites[i], WorldSlotAt(enemyWorldSlots, i), enemy, StageSide.Right, StanceOf(enemy));
                 RefreshNameplate(enemyNameplates[i], enemy);
             }
 
@@ -112,17 +118,27 @@ namespace PrincesPalace
 
             var party = _session.Encounter.PlayerParty;
             AnchorStageSlots(partySlots, party.Count, mirrored: true);
+            AnchorStageSlots(partyWorldSlots, party.Count, mirrored: true);
 
             for (int i = 0; i < partySprites.Length; i++)
             {
                 var member = i < party.Count ? party[i] : null;
                 partySlots[i].gameObject.SetShown(member != null);
+                WorldSlotAt(partyWorldSlots, i)?.gameObject.SetShown(member != null);
                 if (member == null) continue;
 
-                RefreshCombatantSprite(partySprites[i], member, StageSide.Left, StanceOf(member));
+                RefreshCombatantSprite(partySprites[i], WorldSlotAt(partyWorldSlots, i), member, StageSide.Left, StanceOf(member));
                 RefreshNameplate(partyNameplates[i], member);
             }
         }
+
+        // Defensive against index mismatch rather than a bare array index --
+        // enemyWorldSlots/partyWorldSlots are declared to always match
+        // enemySlots/partySlots 1:1 (E4's own count audit enforces it at
+        // build time), but a null here should degrade to "no rig for this
+        // slot" rather than throw and take the whole stage refresh down.
+        private static RectTransform WorldSlotAt(RectTransform[] worldSlots, int i) =>
+            worldSlots != null && i < worldSlots.Length ? worldSlots[i] : null;
 
         // What pose a combatant is holding. Public so a PlayMode test can assert
         // the round ended idle rather than stuck on an attack frame -- there is
@@ -449,11 +465,37 @@ namespace PrincesPalace
 
         // ---- one combatant ----------------------------------------------------
 
-        private void RefreshCombatantSprite(Image image, CombatantState combatant, StageSide side, string stance)
+        // One rig instance per combatant that has one, reused across
+        // refreshes rather than instantiated fresh every repaint (this runs
+        // every frame during an attack animation -- see AnchorStageSlots).
+        // Never removed on its own: a combatant leaving the stage hides it
+        // via its world slot's SetShown(false) instead (see RefreshStage),
+        // so a returning combatant (a summon re-shown, a flee that comes
+        // back) reuses the same instance rather than re-instantiating.
+        private readonly Dictionary<CombatantState, GameObject> _rigInstances = new Dictionary<CombatantState, GameObject>();
+
+        // Cached alongside the instance itself, computed once on first
+        // instantiation rather than re-read from RigMeta every repaint.
+        private readonly Dictionary<CombatantState, float> _rigScale = new Dictionary<CombatantState, float>();
+
+        private void RefreshCombatantSprite(Image image, RectTransform worldSlot, CombatantState combatant, StageSide side, string stance)
         {
             if (image == null) return;
 
             var slotRect = image.transform.parent as RectTransform;
+
+            // Graceful degradation, per-combatant: only a resolvable folder
+            // gets the rig path (today, only "Enemies/rat" during the
+            // pilot); everything else falls straight through to the
+            // existing frame-sheet Image path completely unchanged below.
+            var rigPrefab = worldSlot != null ? RigLibrary.Resolve(SpriteFolderFor(combatant)) : null;
+            if (rigPrefab != null)
+            {
+                RefreshRigActor(rigPrefab, worldSlot, combatant, side);
+                image.gameObject.SetShown(false);
+                return;
+            }
+
             var sprite = LoadStanceSprite(combatant, stance);
 
             if (sprite == null)
@@ -496,6 +538,58 @@ namespace PrincesPalace
             // headless assertion about "the sprite loaded" passed.
             image.gameObject.SetShown(true);
             image.enabled = true;
+        }
+
+        // Instantiates (or reuses) a rig actor under its world slot, sized
+        // and mirrored to match what the frame-sheet Image path does for
+        // everyone else. Static bind pose only for now -- no stance/frame
+        // sampling yet, that's the animation-data phase this pilot lands
+        // before.
+        private void RefreshRigActor(GameObject prefab, RectTransform worldSlot, CombatantState combatant, StageSide side)
+        {
+            GameObject instance;
+            bool fresh = !_rigInstances.TryGetValue(combatant, out instance) || instance == null;
+            if (fresh)
+            {
+                instance = Object.Instantiate(prefab, worldSlot, worldPositionStays: false);
+                _rigInstances[combatant] = instance;
+            }
+            else if (instance.transform.parent != worldSlot)
+            {
+                instance.transform.SetParent(worldSlot, worldPositionStays: false);
+            }
+
+            instance.transform.localPosition = Vector3.zero;
+            instance.transform.localRotation = Quaternion.identity;
+
+            // RigLibrary.ScaleFor undoes the rig's own bind-pose-pixel-to-
+            // Unity-unit conversion (RigPrefabBuilder's PixelsPerUnit) AND
+            // corrects for the bind pose's own content height disagreeing
+            // with what this creature rendered at before it had a rig (see
+            // RigLibrary's own comment) -- landing back at "1 unit = 1
+            // canvas pixel, at the RIGHT apparent size" under a world slot
+            // whose OWN scale already carries SlotScale (AnchorStageSlots),
+            // so this multiplier is exactly what the world slot's local
+            // space needs, nothing more. Mirror flips the same way the
+            // frame-sheet Image path already does (StageFacing.MirrorScaleX),
+            // just as a negative X scale here instead of on an
+            // Image.rectTransform.
+            //
+            // RigMeta lookup only on a freshly-instantiated instance -- a
+            // reused one already carries the right scale from last time,
+            // and GetComponent on every repaint (this runs every frame
+            // during an attack, see AnchorStageSlots) is needless work.
+            if (fresh)
+            {
+                var meta = instance.GetComponent<RigMeta>();
+                _rigScale[combatant] = RigLibrary.ScaleFor(SpriteFolderFor(combatant), meta != null ? meta.ReferenceHeightPx : 0f);
+            }
+            float scale = _rigScale.TryGetValue(combatant, out var s) ? s : RigLibrary.PixelsPerUnit;
+
+            float mirror = StageFacing.MirrorScaleX(FacingOf(combatant), side);
+            instance.transform.localScale = new Vector3(scale * mirror, scale, 1f);
+
+            instance.SetActive(true);
         }
 
         // No authored art: fall back to the plain plate so the slot still reads
@@ -978,6 +1072,24 @@ namespace PrincesPalace
                 slot.GetComponent<StageDeathFade>()?.ResetToVisible();
                 slot.GetComponent<StageActorAnimator>()?.ResetToHome();
             }
+
+            // Rig instances are keyed by CombatantState, and a new Bind()
+            // means every existing CombatantState this fight ever cached an
+            // instance for is about to become unreachable -- nothing will
+            // look those dictionary entries up again, but nothing was
+            // destroying the GameObjects either. World slots are fixed
+            // scene objects, not per-session, so a re-bind without this
+            // left the PREVIOUS fight's rig actor still parented under the
+            // same world slot as the new fight's, doubling its rendered
+            // parts (confirmed: RigStageTests caught this at 14 renderers
+            // under Enemy0WorldSlot instead of 7, the exact "two stale
+            // copies" signature).
+            foreach (var instance in _rigInstances.Values)
+            {
+                if (instance != null) Destroy(instance);
+            }
+            _rigInstances.Clear();
+            _rigScale.Clear();
 
             // The racks too, for the same reason the figures are: a kick
             // interrupted by a fight ending would leave the whole stage parked

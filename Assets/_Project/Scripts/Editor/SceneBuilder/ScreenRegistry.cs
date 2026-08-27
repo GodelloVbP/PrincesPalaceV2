@@ -88,6 +88,7 @@ public static class ScreenRegistry
                 fight.bossBackground = SceneBuilder.LoadSpriteByKey(FightScreen.BossBackgroundKey);
 
                 fight.enemySlots = screen.EnemySlots.Select(result.Rect).ToArray();
+                fight.enemyWorldSlots = screen.EnemyWorldSlots.Select(result.Rect).ToArray();
 
                 // ONE SHAKER PER RACK, not one for the whole screen. The two
                 // stages are separate containers and the HUD is neither of
@@ -104,6 +105,7 @@ public static class ScreenRegistry
                 fight.enemyFootShadows = screen.EnemyFootShadows.Select(result.Image).ToArray();
 
                 fight.partySlots = screen.PartySlots.Select(result.Rect).ToArray();
+                fight.partyWorldSlots = screen.PartyWorldSlots.Select(result.Rect).ToArray();
                 fight.partySprites = screen.PartySprites.Select(result.Image).ToArray();
                 fight.partyHitFlashes = screen.PartyHitFlashes.Select(result.Image).ToArray();
                 fight.partyNameplates = screen.PartyNameplates.Select(result.Tmp).ToArray();
@@ -303,6 +305,8 @@ public static class ScreenRegistry
             {
                 Count("FightController.enemySlots", screen.EnemySlots, () => fight.enemySlots.Length),
                 Count("FightController.partySlots", screen.PartySlots, () => fight.partySlots.Length),
+                Count("FightController.enemyWorldSlots", screen.EnemyWorldSlots, () => fight.enemyWorldSlots.Length),
+                Count("FightController.partyWorldSlots", screen.PartyWorldSlots, () => fight.partyWorldSlots.Length),
                 Count("FightController.initiativeIcons", screen.InitiativeIcons, () => fight.initiativeIcons.Length),
                 Count("FightController.enemyPlates", screen.EnemyPlates, () => fight.enemyPlates.Length),
                 Count("FightController.woolPips", screen.WoolPips, () => fight.woolPips.Length),

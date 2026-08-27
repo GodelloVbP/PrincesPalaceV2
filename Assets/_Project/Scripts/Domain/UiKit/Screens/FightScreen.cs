@@ -77,6 +77,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // detail behind it.
         public List<NodeRef> EnemyIntentIcons = new List<NodeRef>();
         public List<NodeRef> EnemyFootShadows = new List<NodeRef>();
+        // Positioning-only anchors (no Graphic) mirroring EnemySlots/PartySlots
+        // at the same FightStageAnchors position, for a rig actor's
+        // world-space SpriteRenderers to be parented under instead of an
+        // Image -- see BuildWorldSlots. Indexed by slot exactly like their
+        // uGUI counterparts; a slot with no rig-resolvable combatant simply
+        // never gets a child instantiated under its anchor.
+        public List<NodeRef> EnemyWorldSlots = new List<NodeRef>();
+        public List<NodeRef> PartyWorldSlots = new List<NodeRef>();
         public List<NodeRef> PartySlots = new List<NodeRef>();
         public List<NodeRef> PartySprites = new List<NodeRef>();
         public List<NodeRef> PartyHitFlashes = new List<NodeRef>();
@@ -169,10 +177,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // ---------------------------------------------------------------------
 
+        // The layer name a rig's SpriteRenderers render on -- must match
+        // StageActorsSortingLayer.LayerName exactly (Domain can't reference
+        // that Editor-assembly constant directly, noEngineReferences), which
+        // is why it's a literal here rather than a shared symbol. Grep both
+        // if one ever changes.
+        private const string StageActorsSortingLayer = "StageActors";
+
         public static FightScreen Build()
         {
             var s = new FightScreen();
             var children = new List<UiNode>();
+            var hud = new List<UiNode>();
 
             var background = Ui.Sprite("Background", BackgroundKey, Place.Stretch(), UiSize.Fill).AsDecor();
             s.Background = background;
@@ -181,7 +197,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // BETWEEN the backdrop and the stages, which is the entire point:
             // declared after the background and before the actors, so it knocks
             // the painting down without touching the figures standing on it.
+            // Stays in the ROOT canvas (Default sorting layer), same as
+            // background -- Default sorts before StageActors regardless of
+            // sibling order, so this is still behind a rig actor for free.
             children.AddRange(s.BuildScrim());
+
+            // World-space anchors for rig actors -- see BuildWorldSlots.
+            // Also root-canvas children: the anchor itself has no Graphic,
+            // so which canvas it lives under is irrelevant to depth; only
+            // what gets instantiated under it at runtime (a rig's own
+            // SpriteRenderers, on their own sorting layer) has a depth.
+            children.AddRange(s.BuildWorldSlots("Party", mirrored: true, s.PartyWorldSlots));
+            children.AddRange(s.BuildWorldSlots("Enemy", mirrored: false, s.EnemyWorldSlots));
 
             // Party stage FIRST so enemies, built after and therefore later
             // siblings, paint over it where the two halves meet near the shared
@@ -194,24 +221,24 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 s.EnemyNameplates, s.EnemyFootShadows, s.EnemyIntentIcons, s.EnemyHitAreas);
             s.PartyStage = partyStage;
             s.EnemyStage = enemyStage;
-            children.Add(partyStage);
-            children.Add(enemyStage);
+            hud.Add(partyStage);
+            hud.Add(enemyStage);
 
-            children.Add(s.BuildInitiativeTracker());
-            children.Add(s.BuildBark());
-            children.AddRange(s.BuildEnemiesHeading());
-            children.AddRange(s.BuildEnemyPlates());
-            children.Add(s.BuildPartyPlate());
-            children.AddRange(s.BuildVerbColumn());
-            children.Add(s.BuildBreadcrumb());
-            children.Add(s.BuildContinueButton());
-            children.Add(s.BuildSubmenuColumn());
-            children.Add(s.BuildDetailColumn());
-            children.Add(s.BuildTargetPrompt());
-            children.Add(s.BuildIntentTooltip());
-            children.Add(s.BuildPartyBuffTooltip());
-            children.Add(s.BuildSpellVfx());
-            children.Add(s.BuildDamagePopups());
+            hud.Add(s.BuildInitiativeTracker());
+            hud.Add(s.BuildBark());
+            hud.AddRange(s.BuildEnemiesHeading());
+            hud.AddRange(s.BuildEnemyPlates());
+            hud.Add(s.BuildPartyPlate());
+            hud.AddRange(s.BuildVerbColumn());
+            hud.Add(s.BuildBreadcrumb());
+            hud.Add(s.BuildContinueButton());
+            hud.Add(s.BuildSubmenuColumn());
+            hud.Add(s.BuildDetailColumn());
+            hud.Add(s.BuildTargetPrompt());
+            hud.Add(s.BuildIntentTooltip());
+            hud.Add(s.BuildPartyBuffTooltip());
+            hud.Add(s.BuildSpellVfx());
+            hud.Add(s.BuildDamagePopups());
 
             // The character sheet, reachable mid-fight.
             //
@@ -233,19 +260,59 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // LAST, so they draw over the whole stage they dim.
             var reckoning = ReckoningScreen.Build();
             s.Reckoning = reckoning;
-            children.Add(reckoning.Root);
+            hud.Add(reckoning.Root);
 
             var defeat = DefeatScreen.Build();
             s.Defeat = defeat;
-            children.Add(defeat.Root);
+            hud.Add(defeat.Root);
 
             // The overarching menu is the LAST child of all: it can be opened
             // on top of the reckoning and the defeat screen, so it has to draw
             // over them too.
-            children.Add(systemMenu.Root);
+            hud.Add(systemMenu.Root);
+
+            // Everything from the stages down moves into a WORLD-INTERLEAVED
+            // nested canvas, sharing the rig's OWN sorting layer at a
+            // sortingOrder (1000) comfortably above any rig part's z (a
+            // handful of small ints, see RigPrefabBuilder) -- an Overlay
+            // canvas (the plain NestedCanvas every other screen uses)
+            // composites after ALL camera rendering unconditionally and so
+            // can only ever sit in front of a SpriteRenderer, never sandwich
+            // between two of them the way this needs to (a rig actor's own
+            // nameplate has to sit in front of ITS SpriteRenderers, while
+            // those SpriteRenderers sit in front of the background two
+            // panels up). Everything that moved here was already visually
+            // "in front of the actors" by declaration order before this
+            // split -- this makes that relationship a sorting fact instead
+            // of a fact about the OLD single canvas's child order, which a
+            // world-space actor cannot participate in at all.
+            children.Add(Ui.WorldInterleavedCanvas("FightHud", StageActorsSortingLayer, 1000, hud.ToArray()));
 
             s.Root = Ui.Panel("FightPanel", UiSize.Fill, children);
             return s;
+        }
+
+        // World-space slot anchors, exactly mirroring BuildStage's own
+        // FightStageAnchors position/scale math and far-to-near declaration
+        // order (painter's algorithm -- see BuildStage's own comment) --
+        // just with no Graphic, since a rig actor's world-space
+        // SpriteRenderers carry their own visible content and sort order.
+        private IEnumerable<UiNode> BuildWorldSlots(string prefix, bool mirrored, List<NodeRef> slots)
+        {
+            int count = FightHudSpec.StageSlotsPerSide;
+            for (int i = 0; i < count; i++) slots.Add(default);
+
+            for (int sibling = 0; sibling < count; sibling++)
+            {
+                int slot = count - 1 - sibling;
+                var offset = FightStageAnchors.SlotOffset(slot, count, mirrored);
+                float scale = FightStageAnchors.SlotScale(slot, count);
+                var node = Ui.Panel($"{prefix}{slot}WorldSlot",
+                    Place.At(offset.X, offset.Y, new UiVec(0.5f, 0f)),
+                    UiSize.Fixed(1f, 1f)).WithScale(new UiVec(scale, scale));
+                slots[slot] = node;
+                yield return node;
+            }
         }
 
         // ---- the scrim ---------------------------------------------------------

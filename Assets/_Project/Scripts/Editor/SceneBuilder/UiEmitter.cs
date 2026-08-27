@@ -328,14 +328,45 @@ public static class UiEmitter
     private static void EmitNestedCanvas(GameObject go, UiNode node)
     {
         var canvas = go.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+
+        if (node.WorldInterleaved)
+        {
+            // ScreenSpaceCamera, not Overlay: this canvas needs to genuinely
+            // interleave with camera-rendered content (a rig's
+            // SpriteRenderers) by SortingLayer+SortingOrder, which an
+            // Overlay canvas cannot do -- Overlay composites after ALL
+            // camera rendering unconditionally, so it can only ever sit in
+            // front of a SpriteRenderer, never behind one, no matter what
+            // SortingOrder says. worldCamera/planeDistance are wired in a
+            // post-pass (SceneBuilder.WireWorldInterleavedCanvases) once the
+            // scene's real camera exists -- this method only builds the
+            // node, it doesn't have that reference.
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+        }
+        else
+        {
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        }
 
         // ALWAYS set, never optional. A nested Canvas ignores sortingOrder
         // without it, which is why v1's BarkCanvas sat at an inert 500 and
         // rendered on top only by call-order accident. Setting it here kills
         // that bug as a category rather than as an instance.
+        //
+        // sortingLayerName MUST be set AFTER overrideSorting, not before --
+        // Unity silently no-ops a Canvas's sortingLayerName/sortingOrder
+        // writes until overrideSorting is true, so setting the layer first
+        // (the order this used to be in) left sortingLayerID at 0 (Default)
+        // no matter what name was assigned, while sortingOrder -- set after
+        // overrideSorting in both orderings -- looked like it was working.
+        // Caught by checking the actual emitted scene, not by reasoning
+        // about the API.
         canvas.overrideSorting = true;
         canvas.sortingOrder = node.SortingOrder;
+        if (node.WorldInterleaved && !string.IsNullOrEmpty(node.SortingLayerName))
+        {
+            canvas.sortingLayerName = node.SortingLayerName;
+        }
 
         go.AddComponent<GraphicRaycaster>();
     }
