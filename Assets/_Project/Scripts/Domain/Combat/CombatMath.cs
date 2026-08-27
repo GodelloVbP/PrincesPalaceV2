@@ -378,6 +378,23 @@ namespace PrincesPalace.Domain.Combat
         // reduction = R / (R + Softener), so R == Softener is exactly half.
         public const int ResistanceSoftener = 100;
 
+        // The R/(R+Softener) shape itself, factored out once both
+        // AfterResistance and DodgePercentFrom below turned out to be the
+        // IDENTICAL curve read two different ways. Written as `scale *
+        // numerator / (numerator + denominatorAddend)` rather than a plain
+        // two-argument "rating, softener" pair because the two callers put
+        // DIFFERENT halves of the curve in the numerator: AfterResistance
+        // reads the curve's COMPLEMENT (Softener is the numerator -- "how
+        // much of a hit gets through"), DodgePercentFrom reads the curve
+        // DIRECTLY (the rating is the numerator, scaled to a percent).
+        // Long arithmetic and integer division throughout, matching what
+        // both call sites already did -- this only moves the one division
+        // that appeared twice, it does not change how either rounds.
+        private static long DiminishingReturns(long scale, long numerator, long denominatorAddend)
+        {
+            return scale * numerator / (numerator + denominatorAddend);
+        }
+
         // Applies a resistance value to a damage figure.
         //
         // Integer arithmetic throughout, and floored at 1 for the same reason
@@ -395,8 +412,53 @@ namespace PrincesPalace.Domain.Combat
                 return damage;
             }
 
-            long reduced = (long)damage * ResistanceSoftener / (resistance + ResistanceSoftener);
+            long reduced = DiminishingReturns(damage, ResistanceSoftener, resistance);
             return (int)Math.Max(1, reduced);
+        }
+
+        // Swift's dodge curve — the IDENTICAL R/(R+Softener) shape
+        // ResistanceSoftener/AfterResistance above already uses, just read
+        // as a probability instead of a damage multiplier. Designer's own
+        // spec, verbatim: "100 dodge = 50% chance to dodge". Same argument
+        // as ResistanceSoftener's own comment for why this shape and not a
+        // direct percent: every point of dodge rating helps, later points
+        // help less, and no amount of stacking ever lets a modifier's raw
+        // magnitude alone reach a guaranteed dodge — see
+        // DamagePipeline.RollDodge's own header for why a direct-percent
+        // reading of DodgeRating let a maxed Swift item exceed 100 outright
+        // (an unavoidable, guaranteed dodge) before this curve existed.
+        //
+        // A SEPARATE named constant from ResistanceSoftener even though
+        // today's value is numerically identical — "how much dodge rating
+        // buys 50%" is a different tuning knob than "how much defense buys
+        // 50% mitigation", and a designer retuning one must never
+        // accidentally retune the other by sharing a constant.
+        public const int DodgeSoftener = 100;
+
+        // Applies the dodge curve to a raw dodge rating (Swift's own scaled
+        // ModifierEffect.Magnitude, NOT a direct percent — see
+        // ModifierEffectType.DodgeRating's own header), returning the
+        // percent chance DamagePipeline.RollDodge actually rolls against.
+        //
+        // Integer division, floored — matching AfterResistance's own
+        // rounding convention immediately above rather than inventing a
+        // second one: this is the same shape of number (a percent read off
+        // an R/(R+Softener) curve), and there is no reason for dodge to
+        // round any differently than mitigation already does. Floored
+        // rather than rounded also means the returned percent can NEVER
+        // read as 100 for any finite rating (100 * R / (R + 100) is
+        // strictly less than 100 for every finite R >= 0), which is exactly
+        // the point of this curve existing: RandomOps.RollPercent's
+        // `chance >= 100` guaranteed-dodge short-circuit is now reachable
+        // only by an infinite rating, i.e. never by content.
+        public static int DodgePercentFrom(int dodgeRating)
+        {
+            if (dodgeRating <= 0)
+            {
+                return 0;
+            }
+
+            return (int)DiminishingReturns(100, dodgeRating, DodgeSoftener);
         }
 
         // Which of a target's two resistances answers a given damage type.

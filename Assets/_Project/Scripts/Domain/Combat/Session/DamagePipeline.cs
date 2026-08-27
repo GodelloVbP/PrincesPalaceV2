@@ -94,7 +94,7 @@ namespace PrincesPalace.Domain.Combat.Session
     // the tick is not a swing the target is reacting to, it is the
     // continuing cost of a status that was already applied (and that
     // application, if it rode in on a landed hit, was already dodgeable at
-    // THAT hit). See ModifierEffectType.DodgeChancePercent's own comment
+    // THAT hit). See ModifierEffectType.DodgeRating's own comment
     // for the fuller argument for why this split is correct rather than
     // arbitrary.
     public static class DamagePipeline
@@ -127,7 +127,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // rely on it staying true, to tell "armour reduced this to
             // nearly nothing" apart from "nothing happened at all" — see
             // this file's own header, and ModifierEffectType.
-            // DodgeChancePercent's comment, for why those two have to read
+            // DodgeRating's comment, for why those two have to read
             // as different information to the player.
             public readonly bool IsMiss;
 
@@ -162,15 +162,28 @@ namespace PrincesPalace.Domain.Combat.Session
                 return false;
             }
 
-            int dodgeChance = target.ModifierEffects.Best(ModifierEffectType.DodgeChancePercent);
+            // DodgeRating is a RATING through CombatMath's dodge curve, NOT
+            // a direct percent -- see ModifierEffectType.DodgeRating's own
+            // header for the full "why" and CombatMath.DodgePercentFrom's
+            // own header for the formula (100 * R / (R + 100), the
+            // designer's spec: "100 dodge = 50% chance to dodge"). This
+            // used to be a straight percent read off the modifier, which
+            // let a maxed Swift item (base 12 x up to ~18.6x combined
+            // tier/rift scaling) exceed 100 outright -- a guaranteed,
+            // unavoidable dodge, flagged as a real balance problem and
+            // fixed by inserting this curve conversion right here, between
+            // reading the raw rating and rolling against it.
+            int dodgeRating = target.ModifierEffects.Best(ModifierEffectType.DodgeRating);
+            int dodgeChance = CombatMath.DodgePercentFrom(dodgeRating);
 
             // Delegates to the same RandomOps.RollPercent every other chance
             // effect in this vocabulary rolls through -- see its own header
-            // for the <=0/>=100 short-circuits, kept identical here so a
-            // modifier authored (or scaled up) past 100% behaves the same
-            // way any other over-100 percent chance already does in this
-            // codebase, rather than inventing a second rule for one effect
-            // type.
+            // for the <=0/>=100 short-circuits. The >=100 short-circuit is
+            // dead code for THIS caller specifically now (DodgePercentFrom
+            // can never return 100 for a finite rating -- see its own
+            // header), kept anyway so RollDodge stays exactly as defensive
+            // as every other RollPercent caller rather than assuming its
+            // one upstream conversion can never change.
             return RandomOps.RollPercent(rng, dodgeChance);
         }
 

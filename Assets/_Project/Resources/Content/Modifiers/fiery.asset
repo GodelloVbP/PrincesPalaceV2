@@ -14,17 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
   id: fiery
   displayName: Fiery
-  description: 'Burns on every landed hit and shrugs off flame in return. Elemental
-    family: Fire.'
+  description: 'Burns on every landed hit. Elemental family: Fire, the damage half
+    -- Emberguard is Fire''s separate resistance affix; a Fiery item does not also
+    resist fire the way the original bundled Fiery/Frosty/etc. modifiers used to.'
   effects:
   - type: 1
     magnitude: 20
-    threshold: 0
-    against: 1
-    hasAgainst: 1
-    againstMagical: 0
-  - type: 2
-    magnitude: 15
     threshold: 0
     against: 1
     hasAgainst: 1

@@ -14,8 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
   id: astral
   displayName: Astral
-  description: 'A sliver of the Rift rides every hit home, and the same sliver turns
-    aside whatever comes back. Elemental family: Arcane.'
+  description: 'A sliver of the Rift rides every hit home. Elemental family: Arcane,
+    the damage half -- Moonveil is Arcane''s separate resistance affix, split off
+    this modifier''s old two-effect bundle.'
   effects:
   - type: 1
     magnitude: 20
@@ -23,10 +24,4 @@ MonoBehaviour:
     against: 5
     hasAgainst: 1
     againstMagical: 0
-  - type: 2
-    magnitude: 15
-    threshold: 0
-    against: 5
-    hasAgainst: 1
-    againstMagical: 0
-  sortOrder: 4
+  sortOrder: 10

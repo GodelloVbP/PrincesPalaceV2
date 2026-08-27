@@ -168,24 +168,5 @@ namespace PrincesPalace
         //
         // Purely additive, so CurrentVersion does not move.
         public int secondLivesUsed;
-
-        // ---- run-scoped favour (item-modifier plan, Phase A3) -----------------
-        //
-        // A THIRD source of Prince's Favor, alongside CharacterDefinition.
-        // princesFavor (authored) and Character.earnedFavor (permanent
-        // progress) -- see ItemOfferRoll.FavorOf's own header for how the
-        // three meet. This one belongs to THIS DESCENT and is gone the
-        // moment it ends, the same lifetime as relicIds/offerRerollsUsed
-        // above and for the same reason: StartRun replaces the whole
-        // snapshot, so resetting it is free rather than something a new-run
-        // path has to remember to do.
-        //
-        // NOTHING WRITES THIS YET. The plan's Fortunate modifier grants it
-        // per fight won (Phase C); Phase A3 only adds the field and wires it
-        // into the favour sum so that work has somewhere to land. Purely
-        // additive, so CurrentVersion does not move: an older save's
-        // in-flight run has no such field and JsonUtility leaves it at zero,
-        // which is exactly "this run has not granted any yet".
-        public int runFavor;
     }
 }

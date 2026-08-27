@@ -11,7 +11,7 @@ namespace PrincesPalace.Domain.Tests
 {
     // PHASE D1. The exhaustive per-path proof the plan's own risk callout
     // demands: every REAL damage path in this codebase that ever reaches
-    // DamagePipeline.AfterDefences must honour a target's DodgeChancePercent,
+    // DamagePipeline.AfterDefences must honour a target's DodgeRating,
     // and a dodge must silence every on-hit rider that would otherwise fire
     // off that same landed hit -- not just zero the damage number.
     //
@@ -41,7 +41,18 @@ namespace PrincesPalace.Domain.Tests
         private static void Give(CombatantState combatant, params ModifierEffect[] effects) =>
             combatant.ModifierEffects = new ModifierEffectSet(effects);
 
-        private static ModifierEffect AlwaysDodge => new ModifierEffect(ModifierEffectType.DodgeChancePercent, 100);
+        // No finite DodgeRating is a TRUE guarantee any more -- see
+        // CombatMath.DodgePercentFrom's own header for why (100 * R /
+        // (R + 100) is strictly less than 100 for every finite R). 100_000
+        // curves to 99%, the highest this curve can produce under integer
+        // floor rounding, which every path test below combines with the
+        // SAME fixed SeededRandom(3) this file's own Session() helper
+        // always builds, on a fresh, otherwise-empty fixture -- confirmed
+        // (by actually running this suite, not by hand-deriving the PRNG
+        // stream) to dodge on every path exercised here. Named "Always" for
+        // what it does across this file's own fixtures, not as a claim
+        // about the curve.
+        private static ModifierEffect AlwaysDodge => new ModifierEffect(ModifierEffectType.DodgeRating, 100_000);
 
         private static ResolvedSkill Skill(
             SkillEffect effect,
@@ -69,7 +80,7 @@ namespace PrincesPalace.Domain.Tests
         // ---- 1. the plain swing (FightSession.cs ResolveAttackSwing) ---------
 
         [Test]
-        public void PlainSwing_Against100PercentDodge_DealsNoDamage_AndSkipsEveryOnHitRider()
+        public void PlainSwing_AgainstAVeryHighDodgeChance_DealsNoDamage_AndSkipsEveryOnHitRider()
         {
             var hero = Hero(attack: 20);
             hero.CurrentHealth = 400; // room to prove lifesteal did not heal it back up
@@ -112,7 +123,7 @@ namespace PrincesPalace.Domain.Tests
         // ---- 2. the basic Skill action (ExecuteSkillInner) --------------------
 
         [Test]
-        public void BasicSkillAction_Against100PercentDodge_DealsNoDamage()
+        public void BasicSkillAction_AgainstAVeryHighDodgeChance_DealsNoDamage()
         {
             var hero = Hero(attack: 20, mana: 100);
             var foe = Foe();
@@ -128,7 +139,7 @@ namespace PrincesPalace.Domain.Tests
         // ---- 3. a character skill, single target (ResolveDamageSingle) -------
 
         [Test]
-        public void CharacterSkill_SingleTarget_Against100PercentDodge_DealsNoDamage_AndAppliesNoStatus()
+        public void CharacterSkill_SingleTarget_AgainstAVeryHighDodgeChance_DealsNoDamage_AndAppliesNoStatus()
         {
             var hero = Hero(attack: 20);
             var foe = Foe(health: 2000);
@@ -160,14 +171,14 @@ namespace PrincesPalace.Domain.Tests
             var session = Session(new CombatEncounter(new[] { hero }, new[] { dodger, sitter }), Kit(new[] { skill }));
             session.CastSkill(0, null);
 
-            Assert.AreEqual(1000, dodger.CurrentHealth, "the enemy with 100% dodge must take zero damage from the sweep");
+            Assert.AreEqual(1000, dodger.CurrentHealth, "the enemy with a very high dodge chance must take zero damage from the sweep");
             Assert.Less(sitter.CurrentHealth, 1000, "a sibling with no dodge chance must still be hit by the SAME cast");
         }
 
         // ---- 5. a fixed-packet spell (ResolveDamageInstances) -----------------
 
         [Test]
-        public void FixedPacketSpell_Against100PercentDodge_NoPacketLands()
+        public void FixedPacketSpell_AgainstAVeryHighDodgeChance_NoPacketLands()
         {
             var hero = Hero(attack: 20);
             var foe = Foe(health: 2000);
@@ -204,7 +215,7 @@ namespace PrincesPalace.Domain.Tests
             // result exactly once, not twice.
             var hero = Hero(attack: 20);
             var foe = Foe(health: 2000);
-            Give(foe, new ModifierEffect(ModifierEffectType.DodgeChancePercent, 50));
+            Give(foe, new ModifierEffect(ModifierEffectType.DodgeRating, 50));
             var skill = Skill(SkillEffect.DamageSingle, "Prismatic Bolt", damageInstances: new[]
             {
                 new DamageInstance(DamageType.Fire, 30),
@@ -225,7 +236,7 @@ namespace PrincesPalace.Domain.Tests
         // ---- 6. an enemy's real swing (FightSession.Enemies.cs) --------------
 
         [Test]
-        public void EnemySwing_AgainstAPlayerWith100PercentDodge_DealsNoDamage_AndAppliesNoStatus()
+        public void EnemySwing_AgainstAPlayerWithAVeryHighDodgeChance_DealsNoDamage_AndAppliesNoStatus()
         {
             // Speed 9 against the hero's 10 -- close enough that exactly one
             // hero action is always followed by exactly one monster reply
@@ -280,12 +291,12 @@ namespace PrincesPalace.Domain.Tests
         {
             var heroA = Hero(attack: 20, speed: 50);
             var foeA = Foe(speed: 1);
-            Give(foeA, new ModifierEffect(ModifierEffectType.DodgeChancePercent, 40));
+            Give(foeA, new ModifierEffect(ModifierEffectType.DodgeRating, 40));
             var sessionA = Session(new CombatEncounter(new[] { heroA }, new[] { foeA }));
 
             var heroB = Hero(attack: 20, speed: 50);
             var foeB = Foe(speed: 1);
-            Give(foeB, new ModifierEffect(ModifierEffectType.DodgeChancePercent, 40));
+            Give(foeB, new ModifierEffect(ModifierEffectType.DodgeRating, 40));
             var sessionB = Session(new CombatEncounter(new[] { heroB }, new[] { foeB }));
 
             var missSequenceA = new List<bool>();
@@ -314,9 +325,9 @@ namespace PrincesPalace.Domain.Tests
         //
         // None of the three below call DamagePipeline.AfterDefences at all --
         // see DamagePipeline's own header and ModifierEffectType.
-        // DodgeChancePercent's comment for the reasoning. These tests prove
-        // the CONSEQUENCE of that design (a 100%-dodge target still takes the
-        // hit) rather than merely re-asserting the comment.
+        // DodgeRating's comment for the reasoning. These tests prove
+        // the CONSEQUENCE of that design (a very-high-dodge target still
+        // takes the hit) rather than merely re-asserting the comment.
 
         [Test]
         public void OnKillSplash_Explosive_IgnoresTheNeighboursDodgeChance()
@@ -332,7 +343,7 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsFalse(victim.IsAlive, "fixture check: the swing must kill the target");
             Assert.Less(neighbour.CurrentHealth, 100,
-                "kill-splash bypasses DamagePipeline entirely and so must land even on a guaranteed dodge");
+                "kill-splash bypasses DamagePipeline entirely and so must land even against a very high dodge chance");
         }
 
         [Test]
@@ -362,7 +373,7 @@ namespace PrincesPalace.Domain.Tests
             session.CastSkill(1, null);
 
             Assert.Less(foe.CurrentHealth, 1000,
-                "Shatter applies raw damage directly and must land even on a guaranteed dodge");
+                "Shatter applies raw damage directly and must land even against a very high dodge chance");
         }
 
         [Test]

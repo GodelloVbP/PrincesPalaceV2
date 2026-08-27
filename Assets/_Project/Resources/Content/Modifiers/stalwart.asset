@@ -14,15 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
   id: stalwart
   displayName: Stalwart
-  description: Armour plating a percentage curve cannot express, and a guard that
-    gives less ground under pressure. FlatPhysicalDamageReduction's base (3) is small
-    on purpose at Ordinary/tier-0 -- it is a FLAT subtraction, so it matters far
-    more against the many small hits of a swarm than against one boss-sized blow,
-    which is the intended shape (a Stalwart wearer shrugs off chip damage, not a
-    haymaker). BreakShieldDepletionResistPercent (30) is forward-looking infrastructure
-    -- no player combatant carries a BreakShield today, only some bosses/elites do,
-    so this is inert on the wearer until a future fight puts one on the player's
-    own side.
+  description: Armour plating a percentage curve cannot express. FlatPhysicalDamageReduction's
+    base (3) is small on purpose at Ordinary/tier-0 -- it is a FLAT subtraction,
+    so it matters far more against the many small hits of a swarm than against one
+    boss-sized blow, which is the intended shape (a Stalwart wearer shrugs off chip
+    damage, not a haymaker). Bulwark is this affix's split-off sibling -- the guard
+    that gives less ground under pressure, split into its own roll so the two can
+    no longer only ever be found together.
   effects:
   - type: 6
     magnitude: 3
@@ -30,10 +28,4 @@ MonoBehaviour:
     against: 0
     hasAgainst: 0
     againstMagical: 0
-  - type: 7
-    magnitude: 30
-    threshold: 0
-    against: 0
-    hasAgainst: 0
-    againstMagical: 0
-  sortOrder: 7
+  sortOrder: 16

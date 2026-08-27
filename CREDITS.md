@@ -46,6 +46,20 @@ Regenerate it with `python tools/art/make_summon_icon.py` from the project root.
 It is committed as a PNG like every other icon; the script is kept so the shape
 can be retuned rather than redrawn by hand.
 
+### Status badge icons — also not third-party
+
+`Assets/_Project/Resources/Status/chilled.png` and `.../rooted.png` are drawn
+by this project, by `tools/art/make_status_icons.py`, same template as
+`summon.png` above (white silhouette, 128x128, 4x supersample + LANCZOS) and
+carrying no third-party licence either. These are party STATUS badges, not
+enemy-intent badges, hence the separate `Status/` folder rather than another
+row in the table above -- see `FightHudModel.StatusBadgeIcons`. The script's
+own header records the shapes rejected for each (a full dendritic snowflake
+for Chilled, a curling vine for Rooted) and why they would not survive
+downsampling to badge size.
+
+Regenerate with `python tools/art/make_status_icons.py` from the project root.
+
 ### What this obliges
 
 CC BY 3.0 requires attribution wherever the work is distributed. A build of this

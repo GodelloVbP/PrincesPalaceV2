@@ -892,11 +892,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // relic granted was visible nowhere except a menu that does not even
         // say it fired (see FightHudModel's BuffBadge comment).
         //
-        // No icon art exists for any of this yet, so each badge is the same
+        // Two of these ten statuses have real icon art now (Chilled, Rooted
+        // -- see FightHudModel.StatusBadgeIcons and
+        // tools/art/make_status_icons.py); the rest are still the same
         // "no art authored" shape the rest of this project already uses for
         // that state -- a plain button face, tinted at runtime rather than
-        // switching sprites (see RefreshPartyBuffs). Four is a guess at how
-        // many a character plausibly carries at once, not a measured limit.
+        // switching sprites. RefreshPartyBuffs decides per-badge which one
+        // applies; no structural change was needed here to carry a sprite,
+        // because Ui.Button already gives this node the same Image + synthesised
+        // TMP caption pairing the enemy-intent badges use. Four is a guess
+        // at how many a character plausibly carries at once, not a measured
+        // limit.
         private const int PartyBuffSlots = 4;
 
         private IEnumerable<UiNode> BuildPartyBuffIcons()

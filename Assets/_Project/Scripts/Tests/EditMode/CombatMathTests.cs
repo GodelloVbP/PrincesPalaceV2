@@ -609,6 +609,66 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, CombatMath.AfterResistance(0, 50));
         }
 
+        // ---- Swift's dodge curve --------------------------------------------
+        //
+        // dodgePercent = R / (R + DodgeSoftener) -- the IDENTICAL shape as
+        // AfterResistance above, just read as a probability. PINNED literals
+        // throughout, same rule as the block above: nothing here recomputes
+        // the formula. Floored, matching AfterResistance's own integer-
+        // division rounding (see DodgePercentFrom's own header for why).
+
+        [Test]
+        public void DodgePercentFrom_ZeroRating_IsZero()
+        {
+            Assert.AreEqual(0, CombatMath.DodgePercentFrom(0));
+        }
+
+        [Test]
+        public void DodgePercentFrom_NegativeRating_IsZero()
+        {
+            // A rating can never legitimately go negative in content, but a
+            // defensive floor here matches AfterResistance's own <=0
+            // short-circuit rather than letting a stray negative wrap into
+            // undefined integer-division behaviour.
+            Assert.AreEqual(0, CombatMath.DodgePercentFrom(-5));
+        }
+
+        // The one number worth memorising about this curve, same landmark
+        // AfterResistance's own test calls out: rating equal to the softener
+        // is exactly a 50% chance. The designer's own spec, verbatim: "100
+        // dodge = 50% chance to dodge".
+        [Test]
+        public void DodgePercentFrom_AtTheSoftenerValue_IsExactlyHalf()
+        {
+            Assert.AreEqual(100, CombatMath.DodgeSoftener, "The rest of this test assumes the softener is 100");
+            Assert.AreEqual(50, CombatMath.DodgePercentFrom(100));
+        }
+
+        [Test]
+        public void DodgePercentFrom_50Rating_IsThirtyThreePercent()
+        {
+            Assert.AreEqual(33, CombatMath.DodgePercentFrom(50), "50 * 100 / 150 = 33.33..., floored");
+        }
+
+        [Test]
+        public void DodgePercentFrom_200Rating_IsSixtySixPercent()
+        {
+            Assert.AreEqual(66, CombatMath.DodgePercentFrom(200), "200 * 100 / 300 = 66.66..., floored");
+        }
+
+        [Test]
+        public void DodgePercentFrom_MoreRating_IncreasesTheChance_ButNeverReaches100()
+        {
+            int lightRating = CombatMath.DodgePercentFrom(20);
+            int heavyRating = CombatMath.DodgePercentFrom(100000);
+
+            Assert.Less(lightRating, heavyRating, "more rating should always increase the chance");
+            Assert.Less(heavyRating, 100,
+                "no finite rating may ever reach a literal 100 -- that is the entire point of this curve " +
+                "existing (see DodgePercentFrom's own header): a maxed Swift item under the OLD direct-percent " +
+                "reading could exceed 100 outright, an unavoidable guaranteed dodge, which this curve prevents");
+        }
+
         [Test]
         public void IsPhysical_TrueOnlyForThePhysicalType()
         {

@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
   id: sylvan
   displayName: Sylvan
-  description: 'Thorns answer every blow, and the wearer''s own hide grows thicker
-    for it. A lucky strike tangles the target in root and vine. Elemental family:
-    Nature.'
+  description: 'Thorns answer every blow. Elemental family: Nature, the damage half
+    -- Thornhide is Nature''s resistance affix and Entangling is Nature''s root-proc
+    affix, both split off this modifier''s old three-effect bundle.'
   effects:
   - type: 1
     magnitude: 20
@@ -24,16 +24,4 @@ MonoBehaviour:
     against: 3
     hasAgainst: 1
     againstMagical: 0
-  - type: 2
-    magnitude: 15
-    threshold: 0
-    against: 3
-    hasAgainst: 1
-    againstMagical: 0
-  - type: 17
-    magnitude: 20
-    threshold: 0
-    against: 0
-    hasAgainst: 0
-    againstMagical: 0
-  sortOrder: 2
+  sortOrder: 5

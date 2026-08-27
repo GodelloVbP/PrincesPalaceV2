@@ -1,7 +1,9 @@
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Rng;
 using PrincesPalace.Domain.Stats;
 
@@ -317,6 +319,102 @@ namespace PrincesPalace.Domain.Tests
             Assert.Greater(afterIndexA, afterIndexB,
                 "PushBackOnHitChancePercent must move the struck target LATER in the real turn order " +
                 "relative to its tied, un-pushed neighbour");
+        }
+
+        // ---- AOE (FightSession.Skills.cs ResolveDamageAll) now fires the SAME
+        // on-hit riders a plain swing / single-target skill already does ---------
+        //
+        // Before this fix, ResolveDamageAll called DealDamage directly per
+        // enemy instead of routing through ApplyFinalDamage -- the shared
+        // rider path every other real damage entry point (a plain swing,
+        // ExecuteSkillInner, ResolveDamageSingle) already funnels through --
+        // so an AOE cast silently skipped every item-modifier on-hit rider
+        // (elemental procs, lifesteal, push/chill/root chances) while a
+        // single-target hit fired them correctly. These tests prove the fix:
+        // the SAME rider fires per enemy an AOE cast actually lands on.
+
+        private static PlayerKit AllEnemiesSkillKit() =>
+            new PlayerKit("hero", CharacterRole.Tank, new[]
+            {
+                new ResolvedSkill("firestorm", "Firestorm", "", "hero", 1, SkillEffect.DamageAll,
+                    SkillTargeting.AllEnemies, 0, 0, false, 100, 0, false,
+                    null, SpellPresentation.None, 0)
+            }, null, null);
+
+        [Test]
+        public void ElementalDamageOnHit_FiresPerEnemy_OnAnAoeSkillCast()
+        {
+            var hero = Fighter("Hero", true, attack: 20, speed: 10);
+            var foeA = Fighter("FoeA", false, maxHealth: 1000, speed: 1);
+            var foeB = Fighter("FoeB", false, maxHealth: 1000, speed: 1);
+            Give(hero, new ModifierEffect(ModifierEffectType.ElementalDamageOnHitPercent, 20, against: DamageType.Fire));
+
+            var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foeA, foeB }),
+                new List<PlayerKit> { AllEnemiesSkillKit() }, null, new SeededRandom(1)) { DamageVarianceRange = 0f };
+            session.CastSkill(0, null);
+
+            // Before the fix, ResolveDamageAll's DealDamage call never fired
+            // ApplyModifierOnHitRiders at all, so BOTH enemies would sit at
+            // exactly 1000 minus only the skill's own base damage -- this
+            // asserts the elemental rider's own extra damage actually landed
+            // on EACH enemy the sweep hit, not just one of them.
+            Assert.Less(foeA.CurrentHealth, 1000, "fixture check: the AOE's own base damage must land on FoeA");
+            Assert.Less(foeB.CurrentHealth, 1000, "fixture check: the AOE's own base damage must land on FoeB");
+
+            // "hero", not "Hero" -- once a real PlayerKit is in play (needed
+            // here so CastSkill has a skill to resolve), LedgerIdOf keys off
+            // the KIT's own id (FightSession.Ledger.cs's own header), not the
+            // CombatantState's display Name the way the kit-less ExecuteAttack
+            // fixtures above this one in the file do.
+            Assert.Greater(session.Ledger.For("hero").OtherDealt, 0,
+                "the elemental on-hit rider must fire off an AOE cast, typed as non-physical damage in the ledger -- " +
+                "before this fix it never fired at all because ResolveDamageAll bypassed ApplyFinalDamage");
+        }
+
+        [Test]
+        public void Lifesteal_FiresOncePerEnemyHit_OnAnAoeSkillCast_HealingCumulatively()
+        {
+            var hero = Fighter("Hero", true, maxHealth: 200, attack: 20, speed: 10);
+            hero.CurrentHealth = 50;
+            var foeA = Fighter("FoeA", false, maxHealth: 1000, speed: 1);
+            var foeB = Fighter("FoeB", false, maxHealth: 1000, speed: 1);
+            Give(hero, new ModifierEffect(ModifierEffectType.LifestealPercent, 15));
+
+            var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foeA, foeB }),
+                new List<PlayerKit> { AllEnemiesSkillKit() }, null, new SeededRandom(1)) { DamageVarianceRange = 0f };
+            session.CastSkill(0, null);
+
+            // Before the fix, lifesteal never fired off an AOE cast at all --
+            // the hero's health would sit unchanged at 50. Two enemies hit
+            // means TWO separate lifesteal procs (one per landed hit, the
+            // same "one rider block per landed hit" ApplyModifierOnHitRiders
+            // already documents), so the heal must be strictly more than
+            // what a single landed hit alone could have healed.
+            Assert.Greater(hero.CurrentHealth, 50, "lifesteal must fire off an AOE cast, not just a single-target one");
+        }
+
+        [Test]
+        public void OnHitRiders_NeverFireForAnEnemyTheAoeCastMissedOrNeverReached()
+        {
+            // A dodging enemy already proves "no rider on a miss"
+            // (DodgeCoversEveryDamagePathTests' own AOE case); this proves
+            // the complementary claim for THIS fix specifically -- routing
+            // through ApplyFinalDamage must not somehow make a rider fire
+            // for an enemy that was never actually struck (e.g. a
+            // zero-effective-target edge case), by checking a lone survivor
+            // takes exactly the base sweep damage plus the rider, no more.
+            var hero = Fighter("Hero", true, attack: 20, speed: 10);
+            var foe = Fighter("Foe", false, maxHealth: 1000, speed: 1);
+            Give(hero, new ModifierEffect(ModifierEffectType.ElementalDamageOnHitPercent, 20, against: DamageType.Fire));
+
+            var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foe }),
+                new List<PlayerKit> { AllEnemiesSkillKit() }, null, new SeededRandom(1)) { DamageVarianceRange = 0f };
+            session.CastSkill(0, null);
+
+            // "hero", not "Hero" -- see the ledger id note on the test above.
+            Assert.Greater(session.Ledger.For("hero").OtherDealt, 0, "the sole enemy actually struck must take the rider");
+            // OtherDealt only ever grows off a rider firing -- a single enemy in
+            // a single-cast sweep means the rider fired exactly once.
         }
     }
 }

@@ -197,20 +197,26 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("names damageType", errors[0]);
         }
 
-        // Two DIFFERENT elements on one modifier is allowed -- it is the
-        // whole point of the (Type, Against, AgainstMagical) grouping key
-        // rather than plain Type (see ModifierEntryResolver's own comment).
+        // POST-AFFIX-SPLIT: two DIFFERENT elements on one modifier used to be
+        // explicitly allowed -- the whole point of the (Type, Against,
+        // AgainstMagical) grouping key rather than plain Type (see
+        // ModifierEntryResolver's own comment on that grouping). The
+        // designer's later "exactly one effect, always" rule (see
+        // AModifierAuthoringMoreThanOneEffect_IsRejected below) supersedes
+        // that: a Fire+Ice dual-resistance modifier is now rejected for
+        // authoring two effects, same as any other multi-effect entry, even
+        // though neither effect is individually a duplicate of the other.
         [Test]
-        public void TwoDifferentResistanceElementsOnOneModifier_AreBothKept()
+        public void TwoDifferentResistanceElementsOnOneModifier_IsRejectedByTheOneEffectRule()
         {
             var entry = Modifier("dual_resist_test",
                 Effect("TypedResistanceFlat", magnitude: 10, damageType: "Fire"),
                 Effect("TypedResistanceFlat", magnitude: 8, damageType: "Ice"));
 
-            bool ok = ModifierEntryResolver.TryResolveAll(new List<RawModifierEntry> { entry }, out var resolved, out var errors);
+            bool ok = ModifierEntryResolver.TryResolveAll(new List<RawModifierEntry> { entry }, out _, out var errors);
 
-            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
-            Assert.AreEqual(2, resolved[0].Effects.Count);
+            Assert.IsFalse(ok);
+            StringAssert.Contains("authors 2 effects, but a modifier may grant exactly one", errors[0]);
         }
 
         // The SAME element twice is dead weight -- ModifierEffectSet takes
@@ -250,6 +256,66 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsFalse(ok);
             StringAssert.Contains("grants no effects at all", errors[0]);
+        }
+
+        // ---- exactly one effect, always -------------------------------------
+        //
+        // The designer's rule after the Phase C bundles (Fiery granting both
+        // a burn AND a fire resistance off one roll, Runic granting four
+        // rules at once): a modifier now grants EXACTLY one effect, never
+        // more, structurally enforced here rather than left as an authoring
+        // convention -- see ModifierEntryResolver's own comment on the check.
+
+        [Test]
+        public void AModifierAuthoringMoreThanOneEffect_IsRejected()
+        {
+            // Two entirely unrelated effect types -- not a duplicate, not a
+            // resistance-vs-resistance clash, just plainly two rules on one
+            // id, the exact bundled shape the rule exists to make impossible
+            // to author.
+            var entry = Modifier("bundle_test",
+                Effect("FlatSpeedBonus", magnitude: 5),
+                Effect("LifestealPercent", magnitude: 10));
+
+            bool ok = ModifierEntryResolver.TryResolveAll(new List<RawModifierEntry> { entry }, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            StringAssert.Contains("authors 2 effects, but a modifier may grant exactly one", errors[0]);
+            StringAssert.Contains("Split this into separate modifiers.json entries", errors[0]);
+        }
+
+        [Test]
+        public void AModifierAuthoringFourEffects_IsRejected_WithTheActualCountNamed()
+        {
+            // Mirrors the old Runic bundle's shape (FlatMaxManaBonus +
+            // FlatManaRegenBonus + NextSkillManaDiscountPercent +
+            // ManaToWardOnTurnStartPercent, all four under one id) -- the
+            // error message names the actual count authored, not just "more
+            // than one", so a content author sees exactly how far over the
+            // line they are.
+            var entry = Modifier("runic_bundle_test",
+                Effect("FlatMaxManaBonus", magnitude: 10),
+                Effect("FlatManaRegenBonus", magnitude: 2),
+                Effect("NextSkillManaDiscountPercent", magnitude: 25),
+                Effect("ManaToWardOnTurnStartPercent"));
+
+            bool ok = ModifierEntryResolver.TryResolveAll(new List<RawModifierEntry> { entry }, out _, out var errors);
+
+            Assert.IsFalse(ok);
+            StringAssert.Contains("authors 4 effects, but a modifier may grant exactly one", errors[0]);
+        }
+
+        [Test]
+        public void AModifierWithExactlyOneEffect_ResolvesCleanly()
+        {
+            // The regression guard: the one-effect rule must not reject the
+            // normal, valid case every real modifiers.json entry is today.
+            var entry = Modifier("single_test", Effect("LifestealPercent", magnitude: 10));
+
+            bool ok = ModifierEntryResolver.TryResolveAll(new List<RawModifierEntry> { entry }, out var resolved, out var errors);
+
+            Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
+            Assert.AreEqual(1, resolved[0].Effects.Count);
         }
 
         [Test]

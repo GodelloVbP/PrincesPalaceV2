@@ -110,13 +110,14 @@ namespace PrincesPalace.Domain.Equipment
         }
 
         // "AFFIXES" heading over one line per rolled modifier -- shared by
-        // Card (a single character's hover) and SquadBody (the Reckoning's
-        // squad-wide hover), so the two screens cannot describe the same
-        // roll two different ways. Each entry in `modifierLines` is already a
-        // COMPLETE "DisplayName -- fragment[, fragment]" line -- see
-        // ItemDescription.ModifierLines in Core, the adapter that turns a
-        // resolved modifier id list into this shape by calling
-        // ModifierEffectText.Describe once per scaled effect.
+        // Card (a single character's hover) and SquadBody (called once per
+        // member there, PHASE F), so no screen can describe the same roll a
+        // different way. Each entry in `modifierLines` is already a COMPLETE
+        // line -- either "DisplayName -- fragment[, fragment]" from
+        // ItemDescription.ModifierLines, or that same text coloured
+        // GainHex/left plain, plus trailing "Losing: DisplayName" lines in
+        // LossHex, from ItemDescription.ModifierComparisonLines once there is
+        // something currently equipped to diff against.
         //
         // Empty or null prints NOTHING, not an empty heading -- the vast
         // majority of items roll no modifiers at all, and "AFFIXES" over a
@@ -166,27 +167,38 @@ namespace PrincesPalace.Domain.Equipment
         // A member with no movement still gets a line saying so. Dropping them
         // would make the box change height per hover and, worse, read as though
         // that character had not been considered.
-        // ITEM-MODIFIER PLAN PHASE E: `modifierLines`, FIRST, before any
-        // member's own block. The roll belongs to the CANDIDATE item, not to
-        // any one squad member -- printing it once above the per-member
-        // deltas says so, rather than repeating (or worse, letting it drift)
-        // across every member's own line.
-        public static string SquadBody(IReadOnlyList<(string Name, ItemComparison Comparison)> squad,
-            IReadOnlyList<string> modifierLines = null)
+        // ITEM-MODIFIER PLAN PHASE E: `ModifierLines` used to be one list
+        // shared by the whole squad, printed once above every member's own
+        // block -- correct back when a roll was the same fact for everyone.
+        // PHASE F makes it per-member instead: each line is now coloured
+        // against what THAT member currently has equipped in the slot (a
+        // gain, a loss, or unchanged -- see Core.ItemDescription's
+        // ModifierComparisonLines), so two members can legitimately see
+        // different colours, or a different set of lines outright, for the
+        // exact same candidate item. Folding that back into one shared list
+        // would silently pick one member's answer and print it for all of
+        // them.
+        public static string SquadBody(IReadOnlyList<(string Name, ItemComparison Comparison, IReadOnlyList<string> ModifierLines)> squad)
         {
             if (squad == null || squad.Count == 0) return "";
 
             var blocks = new List<string>();
 
-            string modifiers = ModifierSection(modifierLines);
-            if (modifiers.Length > 0)
-            {
-                blocks.Add(modifiers);
-            }
-
             foreach (var member in squad)
             {
-                blocks.Add($"{member.Name}\n   {LineFor(member.Comparison)}");
+                string block = $"{member.Name}\n   {LineFor(member.Comparison)}";
+
+                // Indented under the member's own block, same "   " prefix
+                // LineFor's own lines get -- an AFFIXES heading at the
+                // squad's own indentation would read as though it belonged
+                // to nobody.
+                string modifiers = ModifierSection(member.ModifierLines);
+                if (modifiers.Length > 0)
+                {
+                    block += "\n   " + modifiers.Replace("\n", "\n   ");
+                }
+
+                blocks.Add(block);
             }
 
             return string.Join("\n", blocks);
@@ -295,7 +307,11 @@ namespace PrincesPalace.Domain.Equipment
             return string.Join(", ", slots.Select(EquipmentSlots.DisplayName));
         }
 
-        private static string Coloured(string hex, string text) => $"<color={hex}>{text}</color>";
+        // PUBLIC: Core.ItemDescription's affix comparison (ITEM-MODIFIER PLAN
+        // PHASE F) wraps individual AFFIXES lines in this same markup rather
+        // than hand-writing a second "<color=#HEX>text</color>" literal --
+        // there is no second convention to invent, only this one to reuse.
+        public static string Coloured(string hex, string text) => $"<color={hex}>{text}</color>";
 
         private static void Append(List<string> parts, string abbreviation, int value)
         {

@@ -272,8 +272,24 @@ namespace PrincesPalace.Domain.Tests
             var skill = Skill();
             var hero = Hero();
             var monster = Monster();
+            // DodgeRating 100_000 curves to 99% (100*100000/100100, floored)
+            // -- the highest CombatMath.DodgePercentFrom's curve can ever
+            // produce (no finite rating reaches a TRUE guarantee, see its
+            // own header), so this fixture leans on the fixed
+            // SeededRandom(1) stream this class always uses instead: Begin()
+            // spends this session's first TWO draws -- one picking the
+            // monster's telegraphed intent, one inside
+            // PickRandomLivingPlayerTarget's NextInt (which advances the
+            // stream even with a single living player, since range-1 still
+            // calls NextUlong) -- before the swing below spends the THIRD on
+            // its own dodge roll. Confirmed by running this suite (not by
+            // trusting the hand-derivation alone) that this third draw lands
+            // just under 99%, so the dodge fires reliably for this exact
+            // seed/rating pair -- this test is about Rooted/Chilled
+            // coexistence, not about pinning the dodge curve itself (that
+            // lives in CombatMathTests).
             monster.ModifierEffects = new ModifierEffectSet(
-                new[] { new ModifierEffect(ModifierEffectType.DodgeChancePercent, 100) });
+                new[] { new ModifierEffect(ModifierEffectType.DodgeRating, 100_000) });
 
             var encounter = new CombatEncounter(new[] { hero }, new[] { monster });
             var session = Session(encounter,
@@ -304,7 +320,7 @@ namespace PrincesPalace.Domain.Tests
 
             var heroBeat = beats.First(b => ReferenceEquals(b.Actor, hero));
             Assert.IsTrue(heroBeat.Missed,
-                "a guaranteed 100% DodgeChancePercent must still fire on the incoming swing, unaffected by " +
+                "a high DodgeRating must still fire on the incoming swing, unaffected by " +
                 "the target also carrying Rooted and Chilled");
             Assert.AreEqual(monsterHealthBefore, monster.CurrentHealth, "the dodged swing must deal no damage");
 

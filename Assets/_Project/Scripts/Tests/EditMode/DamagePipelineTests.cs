@@ -327,36 +327,70 @@ namespace PrincesPalace.Domain.Tests
             for (int i = 0; i < 100; i++)
             {
                 Assert.IsFalse(DamagePipeline.RollDodge(target, null, rng),
-                    "a target with no DodgeChancePercent modifier must never dodge");
+                    "a target with no DodgeRating modifier must never dodge");
             }
         }
 
         [Test]
-        public void RollDodge_At100Percent_AlwaysDodges_WithoutConsumingADraw()
+        public void RollDodge_AtZeroRating_NeverConsumesADraw()
         {
+            // The chance<=0 short-circuit is the only "free ride" left on
+            // this roll -- see RollDodge_NoFiniteRatingEverGuaranteesADodge
+            // below for why the >=100 side of that same short-circuit is
+            // now unreachable by any finite DodgeRating.
             var target = Fighter("Target", false);
-            Give(target, new ModifierEffect(ModifierEffectType.DodgeChancePercent, 100));
+            Give(target, new ModifierEffect(ModifierEffectType.DodgeRating, 0));
 
             var rng = new PrincesPalace.Domain.Rng.SeededRandom(1);
             ulong stateBefore = rng.State;
 
             for (int i = 0; i < 50; i++)
             {
-                Assert.IsTrue(DamagePipeline.RollDodge(target, null, rng));
+                Assert.IsFalse(DamagePipeline.RollDodge(target, null, rng));
             }
 
-            // The >=100 short-circuit never touches the stream at all -- the
-            // same convention RollPercent already uses -- so 50 calls must
-            // leave the generator's own state untouched.
             Assert.AreEqual(stateBefore, rng.State,
-                "a guaranteed dodge must not consume any draws from the shared rng stream");
+                "a rating of 0 curves to 0% and RandomOps.RollPercent's <=0 short-circuit must not touch the stream");
         }
 
         [Test]
-        public void RollDodge_AboveZeroBelow100_LandsBothOutcomesOverManyRolls()
+        public void RollDodge_NoFiniteRatingEverGuaranteesADodge()
         {
+            // THE point of the curve: CombatMath.DodgePercentFrom's own
+            // header proves 100 * R / (R + 100) is strictly less than 100
+            // for every finite R, so RandomOps.RollPercent's own >=100
+            // guaranteed-dodge short-circuit is unreachable by content no
+            // matter how extreme the authored rating -- unlike before this
+            // phase, when a raw percent past 100 (a maxed Swift item could
+            // already exceed it) guaranteed an unavoidable dodge. An
+            // extreme rating still lands BOTH outcomes over enough rolls,
+            // proving the roll is genuinely being consulted rather than
+            // short-circuited.
             var target = Fighter("Target", false);
-            Give(target, new ModifierEffect(ModifierEffectType.DodgeChancePercent, 50));
+            Give(target, new ModifierEffect(ModifierEffectType.DodgeRating, 1_000_000));
+            var rng = new PrincesPalace.Domain.Rng.SeededRandom(2024);
+
+            int dodged = 0, landed = 0;
+            for (int i = 0; i < 400; i++)
+            {
+                if (DamagePipeline.RollDodge(target, null, rng)) dodged++; else landed++;
+            }
+
+            Assert.Greater(dodged, 0, "an extreme rating should dodge the overwhelming majority of the time");
+            Assert.Greater(landed, 0,
+                "...but even an extreme rating must still land SOME swings -- no finite rating guarantees a dodge");
+        }
+
+        [Test]
+        public void RollDodge_AboveZeroBelow100Percent_LandsBothOutcomesOverManyRolls()
+        {
+            // DodgeRating 50 curves to 33% (100*50/150, floored) -- comfortably
+            // inside (0, 100) either way the curve rounds, so this is really
+            // exercising the SAME property RollDodge_NoFiniteRatingEverGuaranteesADodge
+            // does at the other end of the scale: a genuine roll, not a
+            // short-circuit.
+            var target = Fighter("Target", false);
+            Give(target, new ModifierEffect(ModifierEffectType.DodgeRating, 50));
             var rng = new PrincesPalace.Domain.Rng.SeededRandom(2024);
 
             int dodged = 0, hit = 0;
@@ -365,8 +399,8 @@ namespace PrincesPalace.Domain.Tests
                 if (DamagePipeline.RollDodge(target, null, rng)) dodged++; else hit++;
             }
 
-            Assert.Greater(dodged, 0, "a 50% chance must land at least once in 400 rolls");
-            Assert.Greater(hit, 0, "a 50% chance must also MISS landing at least once in 400 rolls");
+            Assert.Greater(dodged, 0, "a 33% chance must land at least once in 400 rolls");
+            Assert.Greater(hit, 0, "a 33% chance must also MISS landing at least once in 400 rolls");
         }
 
         [Test]
@@ -376,18 +410,18 @@ namespace PrincesPalace.Domain.Tests
             // convention ApplyVariance already uses, and the reason a
             // PREVIEW call (PreviewDamage/PreviewSkill, both of which pass
             // rng: null on purpose) never shows a dodge even for a target
-            // with a guaranteed one: preview shows the hit that WOULD land if
+            // with a very high one: preview shows the hit that WOULD land if
             // it connects, the same posture it already takes toward the ward
             // and toward variance, and does not attempt to represent a
-            // probabilistic (or even guaranteed) miss.
+            // probabilistic miss.
             var target = Fighter("Target", false);
-            Give(target, new ModifierEffect(ModifierEffectType.DodgeChancePercent, 99));
+            Give(target, new ModifierEffect(ModifierEffectType.DodgeRating, 99));
             Assert.IsFalse(DamagePipeline.RollDodge(target, null, null),
-                "a sub-100 chance with no rng stream must never dodge");
+                "a low-ish rating with no rng stream must never dodge");
 
-            Give(target, new ModifierEffect(ModifierEffectType.DodgeChancePercent, 100));
+            Give(target, new ModifierEffect(ModifierEffectType.DodgeRating, 1_000_000));
             Assert.IsFalse(DamagePipeline.RollDodge(target, null, null),
-                "even a GUARANTEED dodge must not fire with no rng stream -- preview mode never dodges");
+                "even an extreme rating must not fire with no rng stream -- preview mode never dodges");
         }
 
         [Test]
@@ -405,7 +439,14 @@ namespace PrincesPalace.Domain.Tests
         {
             var target = Fighter("Target", false);
             target.PhysicalDefense = 0; // would otherwise pass 100 straight through
-            Give(target, new ModifierEffect(ModifierEffectType.DodgeChancePercent, 100));
+            // DodgeRating 100_000 curves to 99% (100*100000/100100, floored)
+            // -- close enough to certain, combined with SeededRandom(1)'s
+            // known first draw (~56.66 out of 100), that this specific
+            // seed/rating pair dodges deterministically. Not a guaranteed
+            // dodge any more (see CombatMath.DodgePercentFrom's own
+            // header) -- this pins ONE concrete outcome of that roll, the
+            // same way every other seeded-rng test in this file does.
+            Give(target, new ModifierEffect(ModifierEffectType.DodgeRating, 100_000));
             StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 20, 3);
 
             bool wardWasAsked = false;
@@ -434,7 +475,7 @@ namespace PrincesPalace.Domain.Tests
             // parallel stream that only ever calls RollDodge once per swing.
             var actor = Fighter("Actor", true);
             var target = Fighter("Target", false);
-            Give(target, new ModifierEffect(ModifierEffectType.DodgeChancePercent, 50));
+            Give(target, new ModifierEffect(ModifierEffectType.DodgeRating, 50));
 
             var rngA = new PrincesPalace.Domain.Rng.SeededRandom(777);
             var rngB = new PrincesPalace.Domain.Rng.SeededRandom(777);
@@ -457,14 +498,19 @@ namespace PrincesPalace.Domain.Tests
             // other of the two places RollDodge is actually called from.
             var actor = Fighter("Actor", false);
             var target = Fighter("Target", true);
-            Give(target, new ModifierEffect(ModifierEffectType.DodgeChancePercent, 100));
+            // DodgeRating 200 curves to 66% (100*200/300, floored).
+            // SeededRandom(1)'s first draw is ~56.66 out of 100, which is
+            // below 66 -- a deterministic dodge for this specific
+            // seed/rating pair (no finite rating short-circuits any more,
+            // see CombatMath.DodgePercentFrom's own header).
+            Give(target, new ModifierEffect(ModifierEffectType.DodgeRating, 200));
 
             var outcome = DamagePipeline.AfterDefences(
                 50, actor, target, attackType: null,
                 affinity: ElementalAffinity.Neutral, varianceRange: 0f,
                 rng: new PrincesPalace.Domain.Rng.SeededRandom(1), resolveWard: null);
 
-            Assert.IsTrue(outcome.IsMiss, "the untyped, type-less tail must also honour a 100% dodge chance");
+            Assert.IsTrue(outcome.IsMiss, "the untyped, type-less tail must also honour a high dodge chance");
         }
 
         [Test]
@@ -472,11 +518,13 @@ namespace PrincesPalace.Domain.Tests
         {
             // ResolveDamageInstances' own escape hatch: a multi-packet spell
             // rolls dodge ONCE outside the loop and hands dodgeAlreadyResolved:
-            // true to every packet inside it, so a target with 100% dodge
-            // chance must still take damage here when the caller has already
-            // (falsely, for this test) declared the roll resolved as "hit".
+            // true to every packet inside it, so a target with a very high
+            // dodge rating must still take damage here when the caller has
+            // already (falsely, for this test) declared the roll resolved
+            // as "hit". The rating's exact value is irrelevant -- the roll
+            // never runs at all with dodgeAlreadyResolved: true.
             var target = Fighter("Target", false);
-            Give(target, new ModifierEffect(ModifierEffectType.DodgeChancePercent, 100));
+            Give(target, new ModifierEffect(ModifierEffectType.DodgeRating, 100_000));
 
             var outcome = DamagePipeline.AfterDefences(
                 30, DamageType.Fire, target, ElementalAffinity.Neutral,
@@ -492,8 +540,8 @@ namespace PrincesPalace.Domain.Tests
         {
             var targetA = Fighter("TargetA", false);
             var targetB = Fighter("TargetB", false);
-            Give(targetA, new ModifierEffect(ModifierEffectType.DodgeChancePercent, 35));
-            Give(targetB, new ModifierEffect(ModifierEffectType.DodgeChancePercent, 35));
+            Give(targetA, new ModifierEffect(ModifierEffectType.DodgeRating, 35));
+            Give(targetB, new ModifierEffect(ModifierEffectType.DodgeRating, 35));
 
             var rngA = new PrincesPalace.Domain.Rng.SeededRandom(9001);
             var rngB = new PrincesPalace.Domain.Rng.SeededRandom(9001);
@@ -513,25 +561,38 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void Dodge_IsRolledBeforeVariance_OnTheSameStream()
         {
-            // Both roll off the SAME rng parameter, never a second source --
-            // proven by checking the dodge roll consumes the stream's FIRST
-            // draw: an rng that would dodge on its very first draw must
-            // short-circuit the whole call before variance ever gets a turn,
-            // which only holds if dodge is checked first.
+            // Both roll off the SAME rng parameter, never a second source.
+            //
+            // Proven by STATE rather than by a guaranteed-dodge free ride --
+            // no finite DodgeRating short-circuits the roll any more (see
+            // CombatMath.DodgePercentFrom's own header), so a 100%-and-
+            // zero-draws trick is no longer available. Instead: replay the
+            // identical seed through RollDodge and then -- only if it
+            // missed -- ApplyVariance, in that exact order, on an
+            // INDEPENDENT rng. If AfterDefences really checks dodge first,
+            // both streams must land on the identical final state and agree
+            // on IsMiss. If variance ran first inside AfterDefences instead,
+            // it would consume a draw regardless of what dodge would have
+            // done, and the two streams would diverge.
             var target = Fighter("Target", false);
-            Give(target, new ModifierEffect(ModifierEffectType.DodgeChancePercent, 100));
+            Give(target, new ModifierEffect(ModifierEffectType.DodgeRating, 200));
 
-            // 100% short-circuits without consuming the stream at all (see
-            // RollDodge_At100Percent... above), so use a fresh untouched rng
-            // and confirm the outcome is a miss with the raw figure entirely
-            // discarded -- if variance ran first here it would still produce
-            // SOME number, never IsMiss.
+            var rngA = new PrincesPalace.Domain.Rng.SeededRandom(55);
             var outcome = DamagePipeline.AfterDefences(
                 999, DamageType.Fire, target, ElementalAffinity.Neutral,
-                varianceRange: 0.2f, rng: new PrincesPalace.Domain.Rng.SeededRandom(55), resolveWard: null);
+                varianceRange: 0.2f, rng: rngA, resolveWard: null);
 
-            Assert.IsTrue(outcome.IsMiss);
-            Assert.AreEqual(0, outcome.Damage);
+            var rngB = new PrincesPalace.Domain.Rng.SeededRandom(55);
+            bool expectedMiss = DamagePipeline.RollDodge(target, null, rngB);
+            if (!expectedMiss)
+            {
+                DamagePipeline.ApplyVariance(999, 0.2f, rngB);
+            }
+
+            Assert.AreEqual(expectedMiss, outcome.IsMiss);
+            Assert.AreEqual(rngB.State, rngA.State,
+                "dodge must be the FIRST draw off this stream -- if variance ran before it inside " +
+                "AfterDefences, these two independently-replayed streams would end up in different states");
         }
     }
 }

@@ -15,15 +15,18 @@ MonoBehaviour:
   id: swift
   displayName: Swift
   description: 'Phase D1''s dodge family. A step too quick for a swing or a cast
-    to reliably land -- Magnitude is a flat percent chance, rolled fresh against
-    every real attack the wearer is the target of, to make the whole thing miss outright
-    (see ModifierEffectType.DodgeChancePercent and DamagePipeline.RollDodge for the
-    full mechanics: zero damage, and every on-hit rider skipped with it). Base 12%
-    at Ordinary/tier-0 is deliberately modest -- TierMultiplier alone reaches roughly
-    9x by tier 10, and a percent-chance effect has a hard ceiling a flat-damage effect
-    does not, so a high base here would race toward ''always dodges'' long before
-    a Fiery or Vampiric counterpart reaches its own comparable power; see DamagePipeline.RollDodge''s
-    own note on the >=100 clamp this relies on as a backstop, not a design target.'
+    to reliably land -- Magnitude is a dodge RATING, not a direct percent, run through
+    CombatMath.DodgePercentFrom''s curve (100 * R / (R + 100), the same R/(R+100)
+    shape as armour mitigation -- ''100 dodge = 50% chance to dodge'') before DamagePipeline.RollDodge
+    rolls against it (see ModifierEffectType.DodgeRating for the full mechanics:
+    zero damage, and every on-hit rider skipped with it). RENAMED from DodgeChancePercent,
+    and the curve inserted, 2026-08-26: at a direct-percent reading, a maxed Swift
+    item (base 12 x up to ~18.6x combined tier/rift scaling, ~223 raw) would have
+    exceeded 100 outright -- a guaranteed, unavoidable dodge, which is exactly what
+    the curve now prevents (that same ~223 rating instead reads as ~69%, per DamagePipeline''s
+    own hand-computed table). Base 12 at Ordinary/tier-0 curves to ~10.7%, close
+    enough to the old flat 12% that it was left as-is rather than retuned. Already
+    single-effect since Phase C; untouched by the affix split.'
   effects:
   - type: 15
     magnitude: 12
@@ -31,4 +34,4 @@ MonoBehaviour:
     against: 0
     hasAgainst: 0
     againstMagical: 0
-  sortOrder: 11
+  sortOrder: 24

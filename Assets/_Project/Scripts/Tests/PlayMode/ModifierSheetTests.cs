@@ -71,6 +71,15 @@ namespace PrincesPalace.PlayModeTests
         // ModifierMagnitudeTests) times modifiers.json's own authored base --
         // never ModifierMagnitude.Scale called from inside this test.
 
+        // POST-AFFIX-SPLIT: this used to roll "fiery"+"vampiric"+"hardened"
+        // (2+1+3 = 6 effects off 3 ids). Every modifier now grants exactly
+        // one effect (ModifierEntryResolver rejects anything else -- see its
+        // own comment), so a 3-id roll -- the real game's own cap, RiftTier
+        // Convergent's 3 rungs -- now carries 3 effects, not 6. Chosen to
+        // still span three genuinely different effect TYPES (an on-hit
+        // proc, a resistance, a percent-of-damage heal) rather than three
+        // of the same shape, which is what "none of the three silently
+        // overrides another" actually needs to prove.
         [Test]
         public void AConvergentThreeModifierWeapon_ResolvesAllThreeModifiersAtTheirCorrectlyScaledMagnitudes()
         {
@@ -78,7 +87,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(weapon, "fixture: content has a tier-0 weapon");
 
             var character = FreshCharacterWearing(weapon, RiftTier.Convergent,
-                new List<string> { "fiery", "vampiric", "hardened" });
+                new List<string> { "fiery", "ironclad", "vampiric" });
             Assert.IsTrue(ContentDatabase.ActiveLoadout(character).IsLive(weapon.equipSlot),
                 "fixture check: the item must be LIVE or ModifierEffects reads nothing");
 
@@ -90,42 +99,38 @@ namespace PrincesPalace.PlayModeTests
                 e.Type == ModifierEffectType.ElementalDamageOnHitPercent && e.Against == DamageType.Fire);
             Assert.AreEqual(40, fireOnHit.Magnitude, "fiery: 20 x 2.0");
 
-            var fireResist = effects.All.Single(e =>
-                e.Type == ModifierEffectType.TypedResistanceFlat && e.Against == DamageType.Fire);
-            Assert.AreEqual(30, fireResist.Magnitude, "fiery: 15 x 2.0");
-
-            Assert.AreEqual(30, effects.Best(ModifierEffectType.LifestealPercent), "vampiric: 15 x 2.0");
-
-            var physicalOnHit = effects.All.Single(e =>
-                e.Type == ModifierEffectType.ElementalDamageOnHitPercent && e.Against == DamageType.Physical);
-            Assert.AreEqual(40, physicalOnHit.Magnitude, "hardened: 20 x 2.0");
-
             var physicalResist = effects.All.Single(e =>
                 e.Type == ModifierEffectType.TypedResistanceFlat && e.Against == DamageType.Physical);
-            Assert.AreEqual(30, physicalResist.Magnitude, "hardened: 15 x 2.0");
+            Assert.AreEqual(30, physicalResist.Magnitude, "ironclad: 15 x 2.0");
 
-            Assert.AreEqual(30, effects.Best(ModifierEffectType.PushBackOnHitChancePercent), "hardened: 15 x 2.0");
+            Assert.AreEqual(30, effects.Best(ModifierEffectType.LifestealPercent), "vampiric: 15 x 2.0");
         }
 
+        // POST-AFFIX-SPLIT: "stalwart" used to carry both
+        // FlatPhysicalDamageReduction and BreakShieldDepletionResistPercent;
+        // the latter split off into its own id, "bulwark". Equipping both
+        // proves the two still coexist on one character -- the same claim
+        // the old bundled "stalwart" made on its own, now via two affix
+        // slots instead of one.
         [Test]
-        public void ARiftTouchedOneModifierArmorPiece_ResolvesItsSingleModifierAtTheRiftTouchedScale()
+        public void ARiftTouchedTwoModifierArmorPiece_ResolvesBothModifiersAtTheRiftTouchedScale()
         {
             var armor = TierZeroItemInSlot(EquipmentSlot.Torso);
             Assert.IsNotNull(armor, "fixture: content has a tier-0 torso piece");
 
-            var character = FreshCharacterWearing(armor, RiftTier.RiftTouched, new List<string> { "stalwart" });
+            var character = FreshCharacterWearing(armor, RiftTier.RiftTouched, new List<string> { "stalwart", "bulwark" });
             Assert.IsTrue(ContentDatabase.ActiveLoadout(character).IsLive(armor.equipSlot),
                 "fixture check: the item must be LIVE or ModifierEffects reads nothing");
 
             var effects = ContentDatabase.ModifierEffects(character);
-            Assert.IsFalse(effects.IsEmpty, "a RiftTouched roll with one real modifier must produce a real effect");
+            Assert.IsFalse(effects.IsEmpty, "a RiftTouched roll with two real modifiers must produce real effects");
 
             // Scale = 1.0 x 1.3 = 1.3. 3 x 1.3 = 3.9, away-from-zero -> 4;
             // 30 x 1.3 = 39.0 exactly.
             Assert.AreEqual(4, effects.Best(ModifierEffectType.FlatPhysicalDamageReduction),
                 "stalwart: 3 x 1.3 = 3.9, rounded away from zero");
             Assert.AreEqual(39, effects.Best(ModifierEffectType.BreakShieldDepletionResistPercent),
-                "stalwart: 30 x 1.3 = 39.0 exactly");
+                "bulwark: 30 x 1.3 = 39.0 exactly");
         }
 
         [Test]
@@ -158,13 +163,15 @@ namespace PrincesPalace.PlayModeTests
         // missing link, via a with/without diff (the same pattern
         // RunicModifier_ScalesAndReachesMaxManaAndManaRegen already uses for a
         // clean comparison with no hand-derived arithmetic required).
+        // "emberguard", not "fiery" -- Fire's resistance half split off into
+        // its own id; see modifiers.json's own entries.
         [Test]
-        public void FieryResistance_FromARealFightBuiltCharacter_MeasurablyReducesFireDamage_ButLeavesIceUntouched()
+        public void EmberguardResistance_FromARealFightBuiltCharacter_MeasurablyReducesFireDamage_ButLeavesIceUntouched()
         {
             var weapon = TierZeroItemInSlot(EquipmentSlot.Weapon1);
             Assert.IsNotNull(weapon, "fixture: content has a tier-0 weapon");
 
-            var resisted = FreshCharacterWearing(weapon, RiftTier.RiftForged, new List<string> { "fiery" });
+            var resisted = FreshCharacterWearing(weapon, RiftTier.RiftForged, new List<string> { "emberguard" });
             var bare = new Character(resisted.definitionId);
 
             var enemyId = ContentDatabase.Enemies.Select(e => e.id).FirstOrDefault();
@@ -181,8 +188,8 @@ namespace PrincesPalace.PlayModeTests
             var resistedState = builtResisted.Party[0];
             var bareState = builtBare.Party[0];
 
-            // fiery's own scaled TypedResistanceFlat (Fire): 15 x 1.0 x 1.6 =
-            // 24 -- already pinned in ItemModifierScalingReachesCombatTests,
+            // emberguard's own scaled TypedResistanceFlat (Fire): 15 x 1.0 x
+            // 1.6 = 24 -- already pinned in ItemModifierScalingReachesCombatTests,
             // reused here rather than recomputed.
             Assert.AreEqual(24, resistedState.TypedResistance.Fire);
             Assert.AreEqual(0, bareState.TypedResistance.Fire, "fixture check: the bare control wears nothing");
@@ -199,7 +206,7 @@ namespace PrincesPalace.PlayModeTests
             var frozen = DamagePipeline.AfterDefences(100, DamageType.Ice, resistedState,
                 affinity: ElementalAffinity.Neutral, varianceRange: 0f, rng: null, resolveWard: null);
             Assert.AreEqual(unresistedBurn.Damage, frozen.Damage,
-                "fiery only named Fire -- an untargeted element must pass through exactly as if nothing were equipped");
+                "emberguard only named Fire -- an untargeted element must pass through exactly as if nothing were equipped");
         }
 
         // ---- C: THE FULL CHAIN --------------------------------------------------
@@ -230,7 +237,14 @@ namespace PrincesPalace.PlayModeTests
             var itemDef = ContentDatabase.GetItem(weaponCandidate.ItemId);
 
             // ---- ROLL ----
-            var rolledModifierIds = new List<string> { "fiery", "vampiric", "hardened" };
+            // POST-AFFIX-SPLIT: "hardened" (Physical) swapped for "astral"
+            // (Arcane) so this still rolls TWO independent
+            // ElementalDamageOnHitPercent riders on different elements --
+            // the actual claim this section proves ("two on-hit procs fire
+            // off the same swing, neither silently overriding the other") --
+            // now via three single-effect ids rather than fiery's/hardened's
+            // old two/three-effect bundles.
+            var rolledModifierIds = new List<string> { "fiery", "vampiric", "astral" };
             var offer = weaponCandidate.WithPlus(2).WithModifiers(RiftTier.Convergent, rolledModifierIds);
 
             // ---- CLAIM ----
@@ -259,10 +273,10 @@ namespace PrincesPalace.PlayModeTests
 
             // ---- FIGHT ----
             // The toughest real enemy content has, by max health -- headroom
-            // for TWO on-hit elemental procs (fiery's Fire, hardened's
-            // Physical) plus the base swing to all land without the target
-            // dying before the second rider gets its turn to fire, which
-            // would make this a test of "one rider fires" rather than "three
+            // for TWO on-hit elemental procs (fiery's Fire, astral's Arcane)
+            // plus the base swing to all land without the target dying
+            // before the second rider gets its turn to fire, which would
+            // make this a test of "one rider fires" rather than "three
             // rolled modifiers compose".
             var toughestEnemyId = ContentDatabase.Enemies
                 .OrderByDescending(e => e.baseStats.maxHealth)
@@ -290,9 +304,9 @@ namespace PrincesPalace.PlayModeTests
             var fireOnHit = hero.ModifierEffects.All.Single(e =>
                 e.Type == ModifierEffectType.ElementalDamageOnHitPercent && e.Against == DamageType.Fire);
             Assert.AreEqual(40, fireOnHit.Magnitude, "fiery: 20 x 2.0, reached through the real roll/claim/equip chain");
-            var physicalOnHit = hero.ModifierEffects.All.Single(e =>
-                e.Type == ModifierEffectType.ElementalDamageOnHitPercent && e.Against == DamageType.Physical);
-            Assert.AreEqual(40, physicalOnHit.Magnitude, "hardened: 20 x 2.0, reached through the same chain");
+            var arcaneOnHit = hero.ModifierEffects.All.Single(e =>
+                e.Type == ModifierEffectType.ElementalDamageOnHitPercent && e.Against == DamageType.Arcane);
+            Assert.AreEqual(40, arcaneOnHit.Magnitude, "astral: 20 x 2.0, reached through the same chain");
             Assert.AreEqual(30, hero.ModifierEffects.Best(ModifierEffectType.LifestealPercent), "vampiric: 15 x 2.0");
 
             // A known, round Attack so the elemental on-hit damage is a
@@ -329,7 +343,7 @@ namespace PrincesPalace.PlayModeTests
             // elementalRaw = max(1, Rounding.AwayFromZero(Attack x Magnitude / 100f))
             //              = max(1, Rounding.AwayFromZero(10 x 40 / 100f))
             //              = max(1, 4) = 4, for BOTH fiery's Fire rider and
-            // hardened's Physical rider, BEFORE each is routed through
+            // astral's Arcane rider, BEFORE each is routed through
             // DamagePipeline.AfterDefences' own typed mitigation against the
             // toughest real enemy's own Magical/PhysicalDefense and
             // TypedResistance -- content data this test does not want to
@@ -347,8 +361,8 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(FiredInRange("Fire"),
                 "fiery's on-hit proc must fire and land in [1,4] -- three rolled modifiers on one item, none " +
                 "silently overriding another, reached by the roll this test actually rolled");
-            Assert.IsTrue(FiredInRange("Physical"),
-                "hardened's on-hit proc must ALSO fire alongside fiery's, and land in [1,4] the same way");
+            Assert.IsTrue(FiredInRange("Arcane"),
+                "astral's on-hit proc must ALSO fire alongside fiery's, and land in [1,4] the same way");
 
             // The message text, not a net CurrentHealth delta or the ledger's
             // Healed total -- lifesteal calls CombatMath.Heal directly

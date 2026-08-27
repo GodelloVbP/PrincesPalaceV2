@@ -14,8 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
   id: frosty
   displayName: Frosty
-  description: 'Every hit carries a bite of frost, and frost does not bite back.
-    A lucky strike leaves the target chilled to the bone. Elemental family: Ice.'
+  description: 'Every hit carries a bite of frost. Elemental family: Ice, the damage
+    half -- Permafrost is Ice''s resistance affix and Frostbite is Ice''s chill-proc
+    affix, both split off this modifier''s old three-effect bundle.'
   effects:
   - type: 1
     magnitude: 20
@@ -23,16 +24,4 @@ MonoBehaviour:
     against: 2
     hasAgainst: 1
     againstMagical: 0
-  - type: 2
-    magnitude: 15
-    threshold: 0
-    against: 2
-    hasAgainst: 1
-    againstMagical: 0
-  - type: 16
-    magnitude: 20
-    threshold: 0
-    against: 0
-    hasAgainst: 0
-    againstMagical: 0
-  sortOrder: 1
+  sortOrder: 2

@@ -109,6 +109,86 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
+        // ---- ModifierTable's own step-chance table --------------------------
+
+        // PINNED literals. A silent retune here would quietly walk affix
+        // rarity somewhere else, and unlike RarityTable's table this one is
+        // NOT shared with anything -- see ModifierTable's own header for the
+        // worked distribution these five numbers were chosen against.
+        [Test]
+        public void TheStepChanceConstants_AreThePinnedTunedValues()
+        {
+            Assert.AreEqual(0.12f, ModifierTable.NormalStep);
+            Assert.AreEqual(0.15f, ModifierTable.EliteStep);
+            Assert.AreEqual(0.18f, ModifierTable.BossStep);
+            Assert.AreEqual(0.002f, ModifierTable.FavorPerPoint);
+            Assert.AreEqual(0.22f, ModifierTable.MaxStep);
+        }
+
+        // ---- the designer's rarity ask, verified against the worked table ---
+        //
+        // "1 should be uncommon, 2 rare, 3 very rare (depending on favor)".
+        // Bounds are LITERALS measured off the model in ModifierTable's own
+        // header, never recomputed from the production formula (CLAUDE.md
+        // gotcha 5) -- Samples=40000 keeps sampling noise well under a tenth
+        // of a percent even for the 3-affix tail, so these bounds are about
+        // the distribution, not about a lucky run.
+
+        [Test]
+        public void OneAffix_ReadsUncommon_OnANormalFightAtZeroFavor()
+        {
+            double share = Share(SampleRiftTiers(EncounterClass.Normal), t => t == RiftTier.RiftTouched);
+
+            Assert.GreaterOrEqual(share, 0.08, "1 affix should not be so rare it never shows up");
+            Assert.LessOrEqual(share, 0.12, "1 affix should not be so common it stops reading as a find");
+        }
+
+        [Test]
+        public void TwoAffixes_ReadsRare_OnANormalFightAtZeroFavor()
+        {
+            double share = Share(SampleRiftTiers(EncounterClass.Normal), t => t == RiftTier.RiftForged);
+
+            Assert.GreaterOrEqual(share, 0.01, "2 affixes should still happen often enough to be a real event");
+            Assert.LessOrEqual(share, 0.02, "2 affixes should stop well short of 'happens most runs'");
+        }
+
+        [Test]
+        public void ThreeAffixes_ReadsVeryRare_OnANormalFightAtZeroFavor()
+        {
+            double share = Share(SampleRiftTiers(EncounterClass.Normal), t => t == RiftTier.Convergent);
+
+            Assert.GreaterOrEqual(share, 0.001, "3 affixes should not vanish entirely -- it must stay reachable");
+            Assert.LessOrEqual(share, 0.003, "3 affixes should read as a genuine jackpot, not a frequent bonus");
+        }
+
+        // ---- the anti-saturation guarantee, ModifierTable's own version -----
+        //
+        // Mirrors RarityTableTests'
+        // TheJackpotCanNeverBecomeTheDefault_HoweverGenerousTheOdds: a 3-rung
+        // ladder with FavorPerPoint tuned wrong could still let Favor walk
+        // 3-affix odds past "very rare" long before a save maxes out. Checked
+        // at 55 -- the highest Favor a real save can actually carry, see
+        // ModifierTable's header for where that number comes from -- and
+        // again at an absurd stress value, the same two checkpoints
+        // RarityTableTests uses for its own version of this guarantee.
+        [Test]
+        public void ThreeAffixes_StaysVeryRare_EvenAtTheRealisticFavorCeiling()
+        {
+            double share = Share(SampleRiftTiers(EncounterClass.Boss, favor: 55), t => t == RiftTier.Convergent);
+
+            Assert.Less(share, 0.02,
+                "3 affixes has stopped reading as very rare even at the highest Favor a real save can reach");
+        }
+
+        [Test]
+        public void ThreeAffixes_NeverBecomesTheDefault_HoweverGenerousFavorGets()
+        {
+            double share = Share(SampleRiftTiers(EncounterClass.Boss, favor: 500), t => t == RiftTier.Convergent);
+
+            Assert.Less(share, 0.02,
+                "the cap should hold even at an absurd Favor value, not just at the realistic ceiling");
+        }
+
         // Boundary behaviour, pinned rather than sampled -- a source that
         // always reports "succeeded" climbs every rung available; a source
         // that always reports "failed" never leaves the bottom. Neither

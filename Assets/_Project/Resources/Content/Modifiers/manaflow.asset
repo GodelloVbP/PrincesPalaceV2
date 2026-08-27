@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8eb37102d2241c54eae4db6c08bbb7c5, type: 3}
+  m_Name: manaflow
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
+  id: manaflow
+  displayName: Manaflow
+  description: A faster trickle of mana each turn. Runic's old bundle split four
+    ways -- see Runic, Quickcast and Wardrune's own descriptions for the rest of
+    the family.
+  effects:
+  - type: 11
+    magnitude: 2
+    threshold: 0
+    against: 0
+    hasAgainst: 0
+    againstMagical: 0
+  sortOrder: 21

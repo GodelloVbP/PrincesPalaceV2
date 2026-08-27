@@ -4,12 +4,12 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Combat
 {
-    // "Fiery -- deals 24% bonus Fire damage on hit", not
-    // "ElementalDamageOnHitPercent: 24". ONE shared formatter for every screen
-    // that lists a rolled modifier's effects, mirroring how ItemStatLines'
-    // DamageReductionPercent is the one place resistance ever becomes a
-    // percentage rather than every caller rounding R/(R+100) by hand --
-    // the item-modifier plan's Phase E asks for exactly this shape.
+    // "+20% Fire dmg on hit", not "deals 20% bonus Fire damage on hit" and
+    // not "ElementalDamageOnHitPercent: 20". ONE shared formatter for every
+    // screen that lists a rolled modifier's effects, mirroring how
+    // ItemStatLines' DamageReductionPercent is the one place resistance ever
+    // becomes a percentage rather than every caller rounding R/(R+100) by
+    // hand -- the item-modifier plan's Phase E asks for exactly this shape.
     //
     // TAKES AN ALREADY-SCALED EFFECT. Every Magnitude here is read as the
     // final number a combat hook would see -- base x TierMultiplier x
@@ -23,6 +23,26 @@ namespace PrincesPalace.Domain.Combat
     // so a caller can prefix "{DisplayName} -- " (ItemStatLines.ModifierLines
     // does exactly this) without carrying two conventions.
     //
+    // TERSE, ITEM-TOOLTIP DENSITY, not prose -- rewritten 2026-08-27 per
+    // designer complaint: the pre-rewrite fragments read as full sentence
+    // fragments ("deals 24% bonus Fire damage on hit", "converts 25% of
+    // unspent mana to a Ward at the start of your turn") rather than the
+    // clipped "+N ABBR" register ItemStatLines.BonusParts/AppendDelta already
+    // use one line above every AFFIXES section in the same card. Every
+    // fragment here now matches that economy: no "deals", no repeated "on
+    // hit" filler, no restating "while equipped" that the AFFIXES heading
+    // already implies.
+    //
+    // KEYWORD COLOUR: every fragment's own rolled number (the one fact this
+    // effect grants) is wrapped in KeywordHex via ItemStatLines.Coloured --
+    // the ONLY rich-text convention this codebase has (see ItemStatLines'
+    // own header: confirmed zero <b> usage anywhere, no confirmed bold glyph
+    // in the TMPro SDF atlas). This nests safely inside the whole-line
+    // GainHex/LossHex wrap ModifierComparisonLines already applies for a
+    // gained/lost affix -- TMP's rich-text colour tags are a stack, so the
+    // inner KeywordHex span reverts to the outer colour on its own close tag
+    // rather than leaking past it.
+    //
     // A few members here name a FIXED TUNING CONSTANT alongside the authored,
     // scaled Magnitude (Chilled's own speed/duration, Root's own duration,
     // Hardened's push distance, Runic's ward conversion rate) -- those
@@ -32,61 +52,86 @@ namespace PrincesPalace.Domain.Combat
     // exact posture FightSession's own on-hit riders already take.
     public static class ModifierEffectText
     {
+        // Dedicated to affix keyword emphasis rather than reusing GainHex --
+        // GainHex/LossHex already carry a SPECIFIC meaning elsewhere in this
+        // same tooltip (a stat that moved up/down in a VS. EQUIPPED diff, or
+        // an affix gained/lost against what's currently worn), and every
+        // affix line's own rolled number is not itself a gain/loss signal --
+        // it is the fact the line exists to state, gained or not. A third,
+        // fixed colour keeps "this is the number to notice" from colliding
+        // with "this is better/worse than what you have equipped".
+        public const string KeywordHex = "#E0B84D";
+
         public static string Describe(ModifierEffect effect)
         {
             switch (effect.Type)
             {
                 case ModifierEffectType.ElementalDamageOnHitPercent:
-                    return $"deals {effect.Magnitude}% bonus {ElementName(effect)} damage on hit";
+                    return $"{Keyword($"+{effect.Magnitude}%")} {ElementName(effect)} dmg on hit";
 
                 case ModifierEffectType.TypedResistanceFlat:
-                    return $"reduces {ElementName(effect)} damage taken by {ItemStatLines.DamageReductionPercent(effect.Magnitude)}%";
+                    return $"{Keyword($"-{ItemStatLines.DamageReductionPercent(effect.Magnitude)}%")} {ElementName(effect)} dmg taken";
 
                 case ModifierEffectType.FlatSpeedBonus:
-                    return $"+{effect.Magnitude} Speed";
+                    return $"{Keyword($"+{effect.Magnitude}")} Speed";
 
                 case ModifierEffectType.LifestealPercent:
-                    return $"heals for {effect.Magnitude}% of damage dealt";
+                    return $"{Keyword($"+{effect.Magnitude}%")} lifesteal";
 
                 case ModifierEffectType.GuaranteedFirstAction:
-                    return "always acts first in turn order";
+                    return Keyword("always acts first");
 
                 case ModifierEffectType.FlatPhysicalDamageReduction:
-                    return $"-{effect.Magnitude} flat Physical damage taken";
+                    return $"{Keyword($"-{effect.Magnitude}")} Physical dmg taken";
 
                 case ModifierEffectType.BreakShieldDepletionResistPercent:
-                    return $"{effect.Magnitude}% less Break Shield depletion taken";
+                    return $"{Keyword($"-{effect.Magnitude}%")} Break Shield depletion taken";
 
                 case ModifierEffectType.OnKillSplashPercent:
-                    return $"kills splash {effect.Magnitude}% Attack onto nearby enemies";
+                    return $"{Keyword($"+{effect.Magnitude}%")} ATK splash on kill";
 
                 case ModifierEffectType.PushBackOnHitChancePercent:
-                    return $"{effect.Magnitude}% chance on hit to push the target back {FightTuning.ModifierPushBackSlots} in turn order";
+                    return $"{Keyword($"{effect.Magnitude}%")} on hit: push back {FightTuning.ModifierPushBackSlots} in turn order";
 
                 case ModifierEffectType.FlatMaxManaBonus:
-                    return $"+{effect.Magnitude} Max Mana";
+                    return $"{Keyword($"+{effect.Magnitude}")} Max Mana";
 
                 case ModifierEffectType.FlatManaRegenBonus:
-                    return $"+{effect.Magnitude} Mana Regen";
+                    // "MP/turn", not "Mana Regen" -- matching the exact
+                    // abbreviation ItemStatLines.BonusParts already prints
+                    // one line above this in the same card for the flat stat
+                    // bonus, not the longer label UiStrings.StatManaRegen
+                    // uses on the character sheet (a different screen with
+                    // room for the fuller word).
+                    return $"{Keyword($"+{effect.Magnitude}")} MP/turn";
 
                 case ModifierEffectType.NextSkillManaDiscountPercent:
-                    return $"next skill after a plain hit costs {effect.Magnitude}% less mana";
+                    return $"{Keyword($"-{effect.Magnitude}%")} next skill cost after a hit";
 
                 case ModifierEffectType.ManaToWardOnTurnStartPercent:
-                    return $"converts {RatePercent(FightTuning.RunicWardConversionRate)}% of unspent mana to a Ward at the start of your turn";
+                    return $"{Keyword($"{RatePercent(FightTuning.RunicWardConversionRate)}%")} unspent mana -> Ward each turn";
 
-                case ModifierEffectType.FortunateFavorOnWin:
-                    return $"+{effect.Magnitude} Favor (this run only) on a fight won";
+                case ModifierEffectType.FortunateFavorBonusFlat:
+                    return $"{Keyword($"+{effect.Magnitude}")} Favor";
 
-                case ModifierEffectType.DodgeChancePercent:
-                    return $"{effect.Magnitude}% chance to dodge an attack outright";
+                case ModifierEffectType.DodgeRating:
+                    // Magnitude is a RATING, not a direct percent -- see
+                    // ModifierEffectType.DodgeRating's own header. The
+                    // player-facing line names the actual chance the curve
+                    // produces (CombatMath.DodgePercentFrom), the same
+                    // posture TypedResistanceFlat above already takes
+                    // toward ItemStatLines.DamageReductionPercent for the
+                    // identical reason: showing the raw authored number
+                    // here would just be a different way of restating the
+                    // exact misreading this rename exists to prevent.
+                    return $"{Keyword($"+{CombatMath.DodgePercentFrom(effect.Magnitude)}%")} dodge chance";
 
                 case ModifierEffectType.ChilledOnHitChancePercent:
-                    return $"{effect.Magnitude}% chance on hit to Chill the target " +
-                           $"(-{FightTuning.ChilledOnHitSpeedPercent}% Speed for {FightTuning.ChilledOnHitTurns} turns)";
+                    return $"{Keyword($"{effect.Magnitude}%")} on hit: Chill " +
+                           $"(-{FightTuning.ChilledOnHitSpeedPercent}% Speed, {FightTuning.ChilledOnHitTurns} turns)";
 
                 case ModifierEffectType.RootChancePercent:
-                    return $"{effect.Magnitude}% chance on hit to Root the target for {FightTuning.RootOnHitTurns} turns";
+                    return $"{Keyword($"{effect.Magnitude}%")} on hit: Root ({FightTuning.RootOnHitTurns} turns)";
 
                 // None, and any future member this formatter has not caught up
                 // with yet: an empty fragment rather than a thrown exception,
@@ -98,6 +143,12 @@ namespace PrincesPalace.Domain.Combat
                     return "";
             }
         }
+
+        // ONE place a fragment's own rolled number gets wrapped in
+        // KeywordHex, so every case above reads the same "highlight this"
+        // call rather than six copies of the same ItemStatLines.Coloured
+        // literal.
+        private static string Keyword(string text) => ItemStatLines.Coloured(KeywordHex, text);
 
         // 0.25 -> "25", not "0.25%". A rate constant is authored as a
         // fraction (FightTuning.RunicWardConversionRate's own doc comment

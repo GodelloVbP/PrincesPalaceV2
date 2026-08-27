@@ -243,14 +243,14 @@ namespace PrincesPalace.Domain.Tests
         {
             string section = ItemStatLines.ModifierSection(new[]
             {
-                "Fiery -- deals 20% bonus Fire damage on hit",
-                "Swift -- 12% chance to dodge an attack outright",
+                "Fiery -- <color=#E0B84D>+20%</color> Fire dmg on hit",
+                "Swift -- <color=#E0B84D>+12%</color> dodge chance",
             });
 
             Assert.AreEqual(
                 "<color=#A695BC>AFFIXES</color>\n" +
-                "Fiery -- deals 20% bonus Fire damage on hit\n" +
-                "Swift -- 12% chance to dodge an attack outright",
+                "Fiery -- <color=#E0B84D>+20%</color> Fire dmg on hit\n" +
+                "Swift -- <color=#E0B84D>+12%</color> dodge chance",
                 section);
         }
 
@@ -261,29 +261,52 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("+3 ATK\nSCALES  STR B", withoutModifiers);
 
             string withModifiers = ItemStatLines.Card(Stats(atk: 3), Scores(), "STR B",
-                modifierLines: new[] { "Fiery -- deals 20% bonus Fire damage on hit" });
+                modifierLines: new[] { "Fiery -- <color=#E0B84D>+20%</color> Fire dmg on hit" });
 
             StringAssert.Contains("+3 ATK\nSCALES  STR B\n\n<color=#A695BC>AFFIXES</color>\n" +
-                "Fiery -- deals 20% bonus Fire damage on hit", withModifiers);
+                "Fiery -- <color=#E0B84D>+20%</color> Fire dmg on hit", withModifiers);
         }
 
+        // ITEM-MODIFIER PLAN PHASE F: this used to assert the AFFIXES section
+        // printed ONCE, above every member, because the roll used to be one
+        // fact shared by the whole squad. It no longer is -- PHASE F diffs
+        // each member's line against what THAT member currently has
+        // equipped in the slot (see Core.ItemDescription.ModifierComparisonLines),
+        // so two members can legitimately see different colours for the
+        // exact same candidate. Each member now carries and prints its own
+        // AFFIXES block.
         [Test]
-        public void SquadBody_PrintsTheAffixesSectionOnceBeforeAnyMember_NotPerMember()
+        public void SquadBody_PrintsEachMembersOwnAffixesUnderTheirOwnBlock()
         {
-            var squad = new (string, ItemComparison)[]
+            var squad = new (string, ItemComparison, IReadOnlyList<string>)[]
             {
-                ("Shawn", Comparison(Stats(atk: 2))),
-                ("Wool", Comparison(candidateIsLive: false)),
+                ("Shawn", Comparison(Stats(atk: 2)), new[] { "Fiery -- <color=#E0B84D>+20%</color> Fire dmg on hit" }),
+                ("Wool", Comparison(candidateIsLive: false), new[] { "Fiery -- <color=#E0B84D>+20%</color> Fire dmg on hit" }),
             };
 
-            string body = ItemStatLines.SquadBody(squad,
-                new[] { "Fiery -- deals 20% bonus Fire damage on hit" });
-
-            StringAssert.StartsWith("<color=#A695BC>AFFIXES</color>\nFiery -- deals 20% bonus Fire damage on hit", body);
+            string body = ItemStatLines.SquadBody(squad);
 
             int firstOccurrence = body.IndexOf("Fiery", System.StringComparison.Ordinal);
             int secondOccurrence = body.IndexOf("Fiery", firstOccurrence + 1, System.StringComparison.Ordinal);
-            Assert.AreEqual(-1, secondOccurrence, "the roll belongs to the item, not to any one squad member");
+            Assert.AreNotEqual(-1, secondOccurrence,
+                "each member's own comparison can differ, so each member prints its own AFFIXES block");
+
+            StringAssert.Contains($"Shawn\n   <color={ItemStatLines.GainHex}>+2 Attack</color>\n" +
+                "   <color=#A695BC>AFFIXES</color>\n" +
+                "   Fiery -- <color=#E0B84D>+20%</color> Fire dmg on hit", body);
+        }
+
+        [Test]
+        public void SquadBody_OmitsAffixesForAMemberWithNoRolledLines()
+        {
+            var squad = new (string, ItemComparison, IReadOnlyList<string>)[]
+            {
+                ("Shawn", Comparison(Stats(atk: 2)), null),
+            };
+
+            string body = ItemStatLines.SquadBody(squad);
+
+            StringAssert.DoesNotContain("AFFIXES", body);
         }
 
         // ---- requirements --------------------------------------------------

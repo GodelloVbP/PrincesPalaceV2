@@ -127,6 +127,23 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            // EXACTLY ONE EFFECT PER MODIFIER, STRUCTURALLY ENFORCED — the
+            // designer's rule after the Phase C bundles (Fiery granting both
+            // a burn AND a fire resistance off one roll, Runic granting four
+            // rules at once) turned out to feel like one affix pretending to
+            // be several rather than several genuine finds. A modifier that
+            // wants to grant N rules is now always N separate modifiers.json
+            // entries, each a distinct rollable id — never one entry with an
+            // effects array of length > 1. Checked here, not left as an
+            // authoring convention, so a future bundle is impossible to
+            // author rather than merely discouraged.
+            if (effects.Count > 1)
+            {
+                error = $"{label}: authors {effects.Count} effects, but a modifier may grant exactly one. " +
+                        "Split this into separate modifiers.json entries, one id per effect.";
+                return false;
+            }
+
             resolvedModifier = new ResolvedModifier(raw.id, raw.displayName, raw.description ?? "", sortOrder, effects);
             error = null;
             return true;
@@ -230,14 +247,28 @@ namespace PrincesPalace.Domain.Content
 
             // Two entries of the same (type, target) on ONE modifier are
             // always a mistake: ModifierEffectSet takes the strongest of a
-            // type, so a duplicate is dead weight — except for
-            // TypedResistanceFlat, where TWO DIFFERENT elements on one
-            // modifier is the whole point (a Hardened-style modifier
-            // resisting both Fire and Ice, say). Grouping by (type, against,
-            // againstMagical) rather than type alone is what tells those two
-            // cases apart without a special case: every non-resistance
+            // type, so a duplicate is dead weight. Grouping by (type,
+            // against, againstMagical) rather than plain type is what lets a
+            // TRUE duplicate (the same element twice) share this check with
+            // a same-type-different-target case -- every non-resistance
             // member always carries the same (null, false) target, so the
             // grouping key degrades to plain type equality for them.
+            //
+            // TWO DIFFERENT elements on one TypedResistanceFlat modifier (a
+            // Hardened-style modifier resisting both Fire and Ice) used to
+            // be this grouping's deliberate exception — see git history and
+            // ModifierEntryResolverTests' own
+            // TwoDifferentResistanceElementsOnOneModifier_IsRejectedByTheOne
+            // EffectRule. The "exactly one effect" rule below (checked one
+            // level up, in TryResolveOne, once this function returns) now
+            // rejects THAT case too, on authoring more than one effect at
+            // all — so there is no longer any multi-effect entry this loop
+            // actually lets through. It still runs and still earns its
+            // keep: for a genuine duplicate (the same type AND target twice)
+            // it reports the sharper "only the strongest would ever apply"
+            // here, before the generic "may grant exactly one" ever gets a
+            // chance to fire — the more useful diagnosis for what is usually
+            // a copy-paste mistake rather than an attempted bundle.
             foreach (var clash in effects.GroupBy(e => (e.Type, e.Against, e.AgainstMagical)).Where(g => g.Count() > 1))
             {
                 if (UsesThreshold.Contains(clash.Key.Item1))

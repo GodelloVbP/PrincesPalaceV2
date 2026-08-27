@@ -106,7 +106,7 @@ namespace PrincesPalace.Domain.Combat
         // CheatDeathOncePerFight, ...): present or absent, no number
         // attached, documented here rather than left for a reader to guess.
         // Kept as real infrastructure from Phase A2; unclaimed by Phase C's
-        // table (Fortunate's own effect is FortunateFavorOnWin below, not
+        // table (Fortunate's own effect is FortunateFavorBonusFlat below, not
         // this), ready for a future modifier.
         GuaranteedFirstAction,
 
@@ -181,27 +181,55 @@ namespace PrincesPalace.Domain.Combat
         // "power" is being rare, not a bigger number.
         ManaToWardOnTurnStartPercent,
 
-        // Fortunate's whole effect: Magnitude flat Prince's Favor written to
-        // the run's RunSnapshot.runFavor the moment a fight is WON, gated on
-        // whether the winning, FIELDED squad has this equipped anywhere
-        // (RewardApplier.Apply). Never fires on a loss — EndRun already
-        // discards the run before RewardApplier is ever reached on that path.
-        FortunateFavorOnWin,
+        // Fortunate's whole effect: a flat +Magnitude Prince's Favor bonus,
+        // read LIVE off whatever the character currently has equipped, every
+        // time Favor is queried for the loot roll (ItemOfferRoll.FavorOf,
+        // via ContentDatabase.ModifierEffects(character).Best(...)). NO
+        // stored state anywhere — unequip Fortunate and the bonus is gone on
+        // the very next query, because ModifierEffects only ever reflects
+        // the currently-equipped, currently-live loadout (ActiveLoadout).
+        //
+        // REPLACES an earlier shape (FortunateFavorOnWin) that wrote a
+        // one-time chunk of favour to RunSnapshot.runFavor on every fight
+        // WON — an accumulating currency that only ever grew across a run,
+        // which was not the design: Fortunate is meant to be a passive
+        // bonus that is only "on" while worn, not a chest of favour that
+        // outlives the item. See git history for the retired shape.
+        FortunateFavorBonusFlat,
 
-        // PHASE D1. Swift's whole effect: Magnitude percent chance for the
-        // WEARER, as the TARGET of an incoming swing or cast, to dodge it
-        // outright — zero damage, and every on-hit rider (elemental procs,
-        // lifesteal, status application, splash/kill-splash triggers) never
-        // fires, because none of them run at all once the swing that would
-        // have triggered them never landed. Read by
-        // DamagePipeline.RollDodge, baked into the top of BOTH
-        // DamagePipeline.AfterDefences overloads — the one funnel every real
-        // damage path shares — rather than as a separate call site each
-        // path has to remember, which is the actual fix for the class of
-        // bug a prior balance-redesign phase hit when a multiplier removal
-        // reached two of three real damage entry points and silently missed
-        // the third. See DamagePipeline's own header for the full "why here"
-        // argument.
+        // PHASE D1. Swift's whole effect: a dodge RATING for the WEARER, as
+        // the TARGET of an incoming swing or cast, to dodge it outright —
+        // zero damage, and every on-hit rider (elemental procs, lifesteal,
+        // status application, splash/kill-splash triggers) never fires,
+        // because none of them run at all once the swing that would have
+        // triggered them never landed. Read by DamagePipeline.RollDodge,
+        // baked into the top of BOTH DamagePipeline.AfterDefences
+        // overloads — the one funnel every real damage path shares —
+        // rather than as a separate call site each path has to remember,
+        // which is the actual fix for the class of bug a prior
+        // balance-redesign phase hit when a multiplier removal reached two
+        // of three real damage entry points and silently missed the third.
+        // See DamagePipeline's own header for the full "why here" argument.
+        //
+        // NOT A DIRECT PERCENT, despite Magnitude otherwise reading as one
+        // for every other *Percent-suffixed member in this enum — RENAMED
+        // from DodgeChancePercent (2026-08-26) specifically to stop that
+        // misreading. Magnitude here is a RATING run through
+        // CombatMath.DodgePercentFrom's curve (100 * R / (R + 100), the
+        // designer's own spec: "100 dodge = 50% chance to dodge") — the
+        // IDENTICAL R/(R+100) shape CombatMath.AfterResistance already uses
+        // for armour mitigation, just read as a probability instead of a
+        // damage multiplier. Same reasoning as that curve's own header:
+        // every point of rating helps, later points help less, and no
+        // amount of stacking ever reaches a guaranteed dodge. Before this
+        // curve existed, Magnitude WAS read as a direct percent, and a
+        // maxed-out Swift item (base 12 x up to ~18.6x combined
+        // tier/rift scaling) could already exceed 100 — a guaranteed,
+        // unavoidable dodge, which is exactly the balance problem this
+        // curve (and the rename) fixes. A content author authoring a new
+        // *Rating member against this curve should expect "50" to mean
+        // 33% dodge, not 50% — see CombatMath.DodgePercentFrom for the
+        // exact numbers at a few landmark ratings.
         //
         // DELIBERATELY NOT read by splash/AoE-adjacent damage (Trample's
         // kill splash, Explosive's OnKillSplashPercent, the Black Ram's
@@ -225,7 +253,7 @@ namespace PrincesPalace.Domain.Combat
         // hit, or off the DOT tick's own prior, already-resolved
         // application (which was itself dodgeable, if it came from a
         // landed hit — see StatusEffects.Apply's callers).
-        DodgeChancePercent,
+        DodgeRating,
 
         // PHASE D2. Frosty's distinguishing extra effect (see
         // modifiers.json): Magnitude percent CHANCE, on a landed hit, to

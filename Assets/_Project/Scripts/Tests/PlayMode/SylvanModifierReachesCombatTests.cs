@@ -11,19 +11,27 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // PHASE D3, end to end: the real "sylvan" modifiers.json entry's new
+    // PHASE D3, end to end: the real "entangling" modifiers.json entry's
     // RootChancePercent rider reaches a real fight and actually roots a real
     // enemy -- not just a number sitting unread on ModifierEffectSet.
     //
+    // POST-AFFIX-SPLIT: Nature's family used to be one bundled "sylvan" id
+    // (ElementalDamageOnHitPercent + TypedResistanceFlat + RootChancePercent,
+    // all three at once). A designer pass split it into three single-effect
+    // ids -- "sylvan" (damage), "thornhide" (resistance), "entangling" (this
+    // file's root proc) -- so this file's own equip helper now reaches for
+    // "entangling" specifically, the id that actually carries
+    // RootChancePercent today.
+    //
     // Mirrors FrostyModifierReachesCombatTests' own real-content pattern:
-    // equip a REAL item with the REAL "sylvan" id at a known tier/riftTier,
-    // never a hand-built ModifierEffect fixture. Sylvan is a PLAYER-worn
-    // weapon modifier, so this always roots an ENEMY the wearer hits --
-    // never the reverse (see ModifierEffectType.RootChancePercent's own
-    // comment on why the direction is one-way by construction). The hand-
-    // built-fixture half of this rider (exact mechanism: the plain-attack
-    // gate, the no-legal-skill forfeit, coexistence with Chilled/Dodge)
-    // lives in RootedStatusTests (EditMode).
+    // equip a REAL item with a REAL id at a known tier/riftTier, never a
+    // hand-built ModifierEffect fixture. Sylvan's family is PLAYER-worn
+    // weapon gear, so this always roots an ENEMY the wearer hits -- never
+    // the reverse (see ModifierEffectType.RootChancePercent's own comment on
+    // why the direction is one-way by construction). The hand-built-fixture
+    // half of this rider (exact mechanism: the plain-attack gate, the
+    // no-legal-skill forfeit, coexistence with Chilled/Dodge) lives in
+    // RootedStatusTests (EditMode).
     public class SylvanModifierReachesCombatTests
     {
         private string _root;
@@ -49,13 +57,29 @@ namespace PrincesPalace.PlayModeTests
         private static ItemDefinition TierZeroEquippable() =>
             ContentDatabase.Items.FirstOrDefault(i => i != null && i.IsEquippable && i.tier == 0);
 
+        // "entangling" -- the split-off id that carries Nature's root proc;
+        // see this file's own header for why it is no longer "sylvan" itself.
         private static Character FreshCharacterWearing(ItemDefinition item, RiftTier riftTier)
         {
             var definition = ContentDatabase.Characters.FirstOrDefault();
             Assert.IsNotNull(definition, "fixture: content has at least one character");
 
             var character = new Character(definition.id);
-            character.equipment.Set(item.equipSlot, item.id, modifierIds: new List<string> { "sylvan" }, riftTier: (int)riftTier);
+            character.equipment.Set(item.equipSlot, item.id, modifierIds: new List<string> { "entangling" }, riftTier: (int)riftTier);
+            return character;
+        }
+
+        // All three of Nature's split affixes at once -- for the one test
+        // below that proves they can still coexist on one character, the way
+        // one bundled "sylvan" roll used to grant all three at once.
+        private static Character FreshCharacterWearingWholeNatureFamily(ItemDefinition item, RiftTier riftTier)
+        {
+            var definition = ContentDatabase.Characters.FirstOrDefault();
+            Assert.IsNotNull(definition, "fixture: content has at least one character");
+
+            var character = new Character(definition.id);
+            character.equipment.Set(item.equipSlot, item.id,
+                modifierIds: new List<string> { "sylvan", "thornhide", "entangling" }, riftTier: (int)riftTier);
             return character;
         }
 
@@ -70,9 +94,9 @@ namespace PrincesPalace.PlayModeTests
                 "fixture check: the item must be LIVE or ModifierEffects reads nothing");
 
             var effects = ContentDatabase.ModifierEffects(character);
-            Assert.IsFalse(effects.IsEmpty, "a real, live-equipped sylvan modifier must produce a real effect");
+            Assert.IsFalse(effects.IsEmpty, "a real, live-equipped entangling modifier must produce a real effect");
 
-            // sylvan's authored base: RootChancePercent 20. Scale =
+            // entangling's authored base: RootChancePercent 20. Scale =
             // TierMultiplier(0) x RiftMultiplier(RiftForged) = 1.0 x 1.6 = 1.6.
             var root = effects.All.Single(e => e.Type == ModifierEffectType.RootChancePercent);
             Assert.AreEqual(32, root.Magnitude, "20 x 1.6 = 32.0 exactly");
@@ -108,29 +132,33 @@ namespace PrincesPalace.PlayModeTests
             var state = built.Party[0];
 
             Assert.AreEqual(32, state.ModifierEffects.Best(ModifierEffectType.RootChancePercent),
-                "the real, scaled sylvan root chance must reach the combatant the fight actually runs on");
+                "the real, scaled entangling root chance must reach the combatant the fight actually runs on");
         }
 
-        // sylvan ALSO still carries its elemental family's damage-on-hit and
-        // typed resistance (Phase C) -- this Root rider is meant to ADD to
-        // those, never replace them. A quick, cheap check that the family's
-        // original effects are still authored on the same modifier.
+        // The Nature family's damage-on-hit ("sylvan"), resistance
+        // ("thornhide") and root proc ("entangling") are three SEPARATE
+        // affixes post-split -- a single item can still carry all three at
+        // once (three affix slots, three ids), which is what this test
+        // proves. It is no longer one guarantee a single "sylvan" roll makes
+        // on its own; see FreshCharacterWearingWholeNatureFamily's own header.
         [Test]
-        public void SylvanModifier_StillCarriesItsElementalDamageAndResistance_AlongsideTheNewRootRider()
+        public void SylvanThornhideAndEntangling_CanAllBeEquippedTogether_AndAllThreeStillApply()
         {
             var item = TierZeroEquippable();
             Assert.IsNotNull(item, "fixture: content has a tier-0 equippable item");
 
-            var character = FreshCharacterWearing(item, RiftTier.Ordinary);
+            var character = FreshCharacterWearingWholeNatureFamily(item, RiftTier.Ordinary);
             var effects = ContentDatabase.ModifierEffects(character);
 
             Assert.Greater(effects.Best(ModifierEffectType.ElementalDamageOnHitPercent), 0,
-                "sylvan must still deal its own elemental damage-on-hit -- the root rider ADDS, it does not replace");
+                "sylvan's own damage-on-hit must still apply when equipped alongside its siblings");
             Assert.IsTrue(effects.All.Any(e => e.Type == ModifierEffectType.TypedResistanceFlat && e.Against == DamageType.Nature),
-                "sylvan must still resist Nature");
+                "thornhide's own Nature resistance must still apply when equipped alongside its siblings");
+            Assert.Greater(effects.Best(ModifierEffectType.RootChancePercent), 0,
+                "entangling's own root chance must still apply when equipped alongside its siblings");
         }
 
-        // THE REAL END-TO-END CLAIM: equip sylvan on the highest-tier real
+        // THE REAL END-TO-END CLAIM: equip entangling on the highest-tier real
         // equippable item content has, at Convergent RiftTier (the richest
         // combination the roll can ever produce), and prove a real
         // FightSession actually roots a real enemy off it -- not a
@@ -160,7 +188,7 @@ namespace PrincesPalace.PlayModeTests
             if (scaledChance < 100)
             {
                 Assert.Inconclusive(
-                    $"fixture: content's highest equippable item tier ({item.tier}) only scales sylvan's root " +
+                    $"fixture: content's highest equippable item tier ({item.tier}) only scales entangling's root " +
                     $"chance to {scaledChance}%, short of the guaranteed-proc threshold this test relies on for a " +
                     "deterministic assertion -- SylvanModifier_ScalesItsRootChanceByTierAndRiftTier already " +
                     "pins the scaling formula itself at a lower tier.");

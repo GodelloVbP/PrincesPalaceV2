@@ -52,20 +52,33 @@ namespace PrincesPalace.Domain.Rewards
         public const float FavorPerPoint = 0.006f;
         public const float MaxStep = 0.55f;
 
-        public static float StepChanceFor(EncounterClass encounter, int favor)
+        public static float StepChanceFor(EncounterClass encounter, int favor) =>
+            StepChanceFor(encounter, favor, NormalStep, EliteStep, BossStep, FavorPerPoint, MaxStep);
+
+        // The shared shape behind every "how likely is one rung" question
+        // this file and ModifierTable both ask: pick a base rate by
+        // encounter class, add favor at some per-point rate, cap it. Only
+        // the WIRING is shared here -- every constant is still a parameter,
+        // so ModifierTable's own step/favor/cap dials (deliberately
+        // different from this table's, see ModifierTable's own header for
+        // why) stay exactly as tunable as they were before this existed, and
+        // neither table can accidentally retune the other by sharing a
+        // constant.
+        public static float StepChanceFor(EncounterClass encounter, int favor,
+            float normalStep, float eliteStep, float bossStep, float favorPerPoint, float maxStep)
         {
             float baseStep;
             switch (encounter)
             {
-                case EncounterClass.Elite: baseStep = EliteStep; break;
-                case EncounterClass.Boss: baseStep = BossStep; break;
-                default: baseStep = NormalStep; break;
+                case EncounterClass.Elite: baseStep = eliteStep; break;
+                case EncounterClass.Boss: baseStep = bossStep; break;
+                default: baseStep = normalStep; break;
             }
 
             if (favor < 0) favor = 0;
 
-            float step = baseStep + favor * FavorPerPoint;
-            return step > MaxStep ? MaxStep : step;
+            float step = baseStep + favor * favorPerPoint;
+            return step > maxStep ? maxStep : step;
         }
 
         // How many rungs this roll climbs, 0..maxRungs.

@@ -17,7 +17,7 @@ MonoBehaviour:
   description: Every hit landed feeds the wearer a little of what it took. Base 15%
     at Ordinary tier 0 -- deliberately modest; Vampiric compounds with the healer
     role rather than replacing it, and the tier/rift curve is where a build actually
-    gets scary.
+    gets scary. Already single-effect since Phase C; untouched by the affix split.
   effects:
   - type: 4
     magnitude: 15
@@ -25,4 +25,4 @@ MonoBehaviour:
     against: 0
     hasAgainst: 0
     againstMagical: 0
-  sortOrder: 6
+  sortOrder: 15

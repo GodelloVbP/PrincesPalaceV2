@@ -763,7 +763,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // ---- the shared tooltip --------------------------------------------------------
 
-        // 300x380, not 280x280. It used to hold a one-line item summary and a
+        // 300x480, not 280x280. It used to hold a one-line item summary and a
         // wide-short box suited that; a pack item's tooltip is
         // ItemDescription.ComparisonBody now (bonuses, requirement, a
         // VS.-EQUIPPED delta per changed stat, cascade notes) -- the same
@@ -779,12 +779,25 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // Grown in BOTH axes (280->300 wide, 280->380 tall): width buys back
         // some of the extra wrap a modifier's longer sentences cost, height
         // buys the extra lines outright.
+        //
+        // ITEM-MODIFIER PLAN PHASE F: 380 -> 480. The AFFIXES section is a
+        // comparison now (ItemDescription.ModifierComparisonLines) -- a
+        // three-slot Convergent candidate swapped against a fully different
+        // three-slot Convergent item currently worn can print its own three
+        // lines PLUS three trailing "Losing: <name>" lines, where before the
+        // section topped out at three lines total. The loss lines are short
+        // (a single "Losing: Frosty", not a wrapped effect sentence), so the
+        // body only needed 50px more (320->370) to hold them -- but the panel
+        // grows by 100 because it is centred on Place.At(0,0) and the extra
+        // 50px has to come out of BOTH edges to keep the body's own top
+        // anchored where it already was, next to the title. The other 50px
+        // is unused headroom above the title, not a second helping of text.
         private UiNode BuildTooltip()
         {
             var title = Ui.Label("DossierTooltipTitle", UiString.Runtime, new UiVec(280f, 26f), 18, AccentHi,
                 Place.At(0f, 168f)).AsDecor();
-            var body = Ui.Label("DossierTooltipBody", UiString.Runtime, new UiVec(280f, 320f), 13, TextDim,
-                    Place.At(0f, -14f)).AsDecor()
+            var body = Ui.Label("DossierTooltipBody", UiString.Runtime, new UiVec(280f, 370f), 13, TextDim,
+                    Place.At(0f, -39f)).AsDecor()
                 .TextAligned(UiTextAlign.TopLeft);
 
             TooltipTitle = title;
@@ -792,7 +805,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // a tooltip floats over whatever it has to - it is transient and
             // takes no clicks
-            var panel = Ui.Sprite("DossierTooltip", null, Place.At(0f, 0f), UiSize.Fixed(300f, 380f))
+            var panel = Ui.Sprite("DossierTooltip", null, Place.At(0f, 0f), UiSize.Fixed(300f, 480f))
                 .Coloured("#1D1226F2")
                 .Inactive()
                 .AsDecor();

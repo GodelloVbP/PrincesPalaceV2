@@ -695,7 +695,31 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // build of this screen had to plan for. ContentTop/ContentBottom
         // leave about 615px of vertical interior (see their own consts), so
         // 400 has plenty of room to still fit beside a card.
-        public const float TooltipHeight = 400f;
+        //
+        // ITEM-MODIFIER PLAN PHASE F: 400 -> 590. The AFFIXES section moved
+        // from ONE shared block above every member to its OWN block inside
+        // EACH member's (ItemStatLines.SquadBody, ModifierComparisonLines) --
+        // the max squad is two (SaveData.BaseMaxSquadSize + the one
+        // purchasable extra slot), and a fully different three-slot
+        // Convergent item on both sides can now print a heading, up to three
+        // gain lines, AND up to three "Losing: <name>" lines PER MEMBER,
+        // where before the whole squad shared one heading and three lines
+        // total.
+        //
+        // 590, not the ~598 the ~615px interior would allow: the panel is
+        // AUTHORED at Place.At(0,0) -- the panel's centre -- specifically so
+        // the containment audit can solve it (see BuildOfferTooltip's own
+        // header), which means its authored half-height cannot exceed
+        // ContentTop (298.368, the tighter of the two bounds; see
+        // NothingSitsOnThePaintedBorder). 600 tried that and lost by 1.6px.
+        // 590 (half 295) leaves a real margin rather than shaving it to the
+        // audit's own +1f tolerance. This does not cover the absolute
+        // theoretical maximum (every stat/score field moving AND every affix
+        // slot rolled AND fully disjoint, on both members at once) -- that
+        // combination is not a real drop a player will see, and
+        // FitTooltipToBody already clamps and shrinks to whatever the actual
+        // body needs, same as before.
+        public const float TooltipHeight = 590f;
 
         // And the shortest, so a one-line body still looks like a considered
         // box rather than a strip.

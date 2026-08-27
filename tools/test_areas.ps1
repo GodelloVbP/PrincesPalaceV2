@@ -62,10 +62,11 @@ $Areas = @{
     # CARRIED BETWEEN ROOMS across a change of maximum, which is run state.
     # A bare pattern would reach into combat, where most of the health in this
     # game lives and where none of it is this.
-    # 'Favor' for FortunateFavorTests (item-modifier plan Phase C) -- the
-    # Fortunate modifier's write to RunSnapshot.runFavor, a run-scoped
-    # economy value exactly like Wallet/Reward/Ember rather than a combat
-    # rule (its own hook, RewardApplier.Apply, already lives in 'run').
+    # 'Favor' for FortunateFavorTests and ItemOfferFavorTests -- Prince's
+    # Favor is a run-economy value exactly like Wallet/Reward/Ember (it feeds
+    # the loot roll via ItemOfferRoll.FavorOf/CurrentSquadFavor, both in
+    # Core, not a combat rule), even though Fortunate's own bonus is now read
+    # live off equipment rather than written anywhere.
     run     = "Dungeon|Map|FullRun|RunState|Currency|MetaProgression|Level|Save|ActiveSquad|Run|Resume|Snapshot|Seed|Descent|Depth|Difficulty|EnemyBand|Wallet|Reward|Reckoning|Ember|Ledger|Settlement|Encounter|Room|GlobalState|CarriedHealth|Playtime|Favor"
     # 'OfferRow' rather than a bare 'Offer': the offer ROW is a layout and
     # belongs here, but ItemOfferTests and ItemOfferRollTests are reward rules
@@ -270,6 +271,14 @@ $PathAreas = @(
     @{ Pattern = '^Assets/_Project/Scripts/Editor/ProceduralSpriteBaker'; Areas = @('art', 'ui') }
     @{ Pattern = '^Assets/_Project/Scripts/Editor/SceneBuilder'; Areas = @('ui', 'hub') }
     @{ Pattern = '^Assets/_Project/Scripts/Editor/ContentBuilder'; Areas = @('content') }
+    # Import-time texture coercion (Enemy/Item/Intent/Status sprite folders).
+    # None of these had a $PathAreas row before StatusIconImportPostprocessor
+    # was added alongside this file, which meant -Changed would have refused
+    # to run at all while any of the three sat uncommitted. One broad pattern
+    # rather than one row per postprocessor -- overlap across combat/ui/art/
+    # content is fine per this file's own header, and it is precise enough
+    # that a real UNMAPPED editor file still refuses loudly.
+    @{ Pattern = '^Assets/_Project/Scripts/Editor/.*ImportPostprocessor'; Areas = @('combat', 'ui', 'art', 'content') }
     @{ Pattern = '^Assets/_Project/ContentData/'; Areas = @('content') }
     # Runtime-loaded config that is NOT baked by ContentBuilder -- the two
     # audio tables (audio_levels.json, music_layers.json) and the generated
@@ -282,6 +291,12 @@ $PathAreas = @(
     # every kind resolves to a sprite that actually imported -- the one test that
     # would catch a new icon dropped in with the wrong texture type.
     @{ Pattern = '^Assets/_Project/Resources/Intent/';   Areas = @('combat', 'ui') }
+    # The party status badges (Chilled/Rooted so far). Same reasoning as
+    # Intent/ immediately above, one folder over: 'combat' for the lookup
+    # table that names them (FightHudModel.StatusBadgeIcons) and 'ui' for
+    # StatusBadgeIconTests, which checks every iconised kind resolves to a
+    # sprite that actually imported.
+    @{ Pattern = '^Assets/_Project/Resources/Status/';   Areas = @('combat', 'ui') }
     # Runtime-loaded ART: the stance folders a monster's spritePath names, the
     # f0..fN spell sequences, and the manifest that measures both. Unmapped
     # until a whole boss's worth of frames landed at once and -Changed refused;

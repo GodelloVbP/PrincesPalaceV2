@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Combat.Session
@@ -413,11 +414,21 @@ namespace PrincesPalace.Domain.Combat.Session
             public readonly string Tooltip;
             public readonly bool IsPositive;
 
-            public BuffBadge(string glyph, string tooltip, bool isPositive)
+            // Null for badges with no status behind them at all (the relic
+            // speed-buff "SPD" entry below) and for every status that has no
+            // authored icon -- StatusBadgeIcons.ResourceFor resolves to a
+            // real sprite only for Chilled and Rooted today, and
+            // Resources.Load returning null for the rest is exactly the
+            // icon-first/glyph-fallback path this field exists to drive, the
+            // same way EnemyIntentIcons drives the enemy telegraph badges.
+            public readonly StatusEffectType? Kind;
+
+            public BuffBadge(string glyph, string tooltip, bool isPositive, StatusEffectType? kind = null)
             {
                 Glyph = glyph;
                 Tooltip = tooltip;
                 IsPositive = isPositive;
+                Kind = kind;
             }
         }
 
@@ -494,16 +505,79 @@ namespace PrincesPalace.Domain.Combat.Session
                     return new BuffBadge("SHD", $"Shielded: the next hit taken is reduced {status.Magnitude}%.", true);
                 case StatusEffectType.Provoked:
                     return new BuffBadge("PRV", $"Provoked: the next attack must target whoever provoked it, for {status.Magnitude}% less damage to them.", false);
+
+                // KEYWORDS, not sentences -- the two statuses with real icon
+                // art (StatusBadgeIcons.ResourceFor) also get the terse
+                // hover text the designer actually asked for: "a symbol
+                // under a character... hovering over this symbol shows what
+                // it does (again, in keywords)". The other statuses above
+                // keep their existing sentence tooltips; retexting all eight
+                // is out of scope for this change.
+                //
+                // The number is coloured with the SAME hex the affix-text
+                // rewrite uses for a stat loss (ItemStatLines.LossHex) --
+                // the one rich-text precedent this codebase has, so a
+                // player who has already learned "red numbers are bad" from
+                // gear tooltips reads the same colour the same way here.
                 case StatusEffectType.Chilled:
-                    return new BuffBadge("CHL", $"Chilled: speed reduced {status.Magnitude}%, {turns}.", false);
+                    return new BuffBadge("CHL",
+                        $"Chilled -- {ItemStatLines.Coloured(ItemStatLines.LossHex, $"-{status.Magnitude}% Speed")}, {PluralTerse(status.TurnsRemaining, "turn")}",
+                        false, StatusEffectType.Chilled);
                 case StatusEffectType.Rooted:
-                    return new BuffBadge("ROT", $"Rooted: cannot plain-attack, must cast a skill or forfeit, {turns}.", false);
+                    return new BuffBadge("ROT",
+                        $"Rooted -- {ItemStatLines.Coloured(ItemStatLines.LossHex, "Skill Only")}, {PluralTerse(status.TurnsRemaining, "turn")}",
+                        false, StatusEffectType.Rooted);
                 default:
                     return new BuffBadge("?", status.Type.ToString(), true);
             }
         }
 
         private static string Plural(int count, string noun) => $"{count} {noun}{(count == 1 ? "" : "s")} left";
+
+        // Same count/pluralisation as Plural, without the trailing "left" --
+        // a keyword tooltip reads "2 turns", not "2 turns left, full stop".
+        private static string PluralTerse(int count, string noun) => $"{count} {noun}{(count == 1 ? "" : "s")}";
+
+        // Real artwork for a status badge, exactly EnemyIntentIcons' shape
+        // one shelf over -- ResourceFor is RESOURCES-relative and
+        // extension-free for the identical reason: Resources.Load returns
+        // null (silently) for an Assets/ path or one carrying ".png", and
+        // these are swapped at runtime as a combatant's statuses change.
+        //
+        // Only Chilled and Rooted have art today (Status/chilled.png,
+        // Status/rooted.png -- see tools/art/make_status_icons.py). Every
+        // other status deliberately has NO slug below, so ResourceFor for
+        // e.g. Poison resolves to "Status/poison" -- a path nothing on disk
+        // answers to -- and Resources.Load returns null for it exactly like
+        // it would for a typo. That null IS the fallback mechanism: the
+        // caller (FightController.Hud's RefreshPartyBuffs) already has an
+        // icon-first/glyph-fallback-if-null priority, the same one
+        // StageVisuals uses for enemy intents, so a status with no art on
+        // disk degrades to its three-letter glyph with no special-casing
+        // anywhere -- the glyph was always the fallback, adding an icon for
+        // two kinds just gives the fallback something to fall back FROM.
+        public static class StatusBadgeIcons
+        {
+            public static string ResourceFor(StatusEffectType kind) => "Status/" + Slug(kind);
+
+            private static string Slug(StatusEffectType kind)
+            {
+                switch (kind)
+                {
+                    case StatusEffectType.Chilled: return "chilled";
+                    case StatusEffectType.Rooted: return "rooted";
+
+                    // No art authored for anything else. The slug still has
+                    // to be SOME string (ResourceFor is unconditional so the
+                    // caller never has to ask "does this kind even have a
+                    // resource path" before loading), but it must never
+                    // collide with a real file -- lower-casing the enum name
+                    // keeps every future status equally not-found until art
+                    // actually lands for it.
+                    default: return kind.ToString().ToLowerInvariant();
+                }
+            }
+        }
 
         public static DetailPanel DetailForItem(SatchelStack stack)
         {

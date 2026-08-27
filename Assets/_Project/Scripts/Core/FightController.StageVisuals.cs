@@ -290,20 +290,16 @@ namespace PrincesPalace
         private Image[] _intentImages;
 
         // Resources.Load every frame would be wasteful and, worse, hides a
-        // missing file behind a per-frame retry. Resolved once per kind, and a
-        // null stays null so the text fallback takes over permanently rather
-        // than flickering.
-        private static readonly Dictionary<EnemyIntentKind, Sprite> IntentSprites =
-            new Dictionary<EnemyIntentKind, Sprite>();
+        // missing file behind a per-frame retry. Resolved once per kind,
+        // through the same IconCache<TKind> StatusSprites in
+        // FightController.Hud.cs now uses -- see that type's own header for
+        // the one deliberate behavioural difference between the two icon
+        // systems (this one disables its Image on a miss; that one restores
+        // a captured default sprite instead).
+        private static readonly IconCache<EnemyIntentKind> IntentSprites = new IconCache<EnemyIntentKind>();
 
-        private static Sprite IntentSpriteFor(EnemyIntentKind kind)
-        {
-            if (IntentSprites.TryGetValue(kind, out var cached)) return cached;
-
-            var loaded = Resources.Load<Sprite>(Domain.Combat.Session.EnemyIntentIcons.ResourceFor(kind));
-            IntentSprites[kind] = loaded;
-            return loaded;
-        }
+        private static Sprite IntentSpriteFor(EnemyIntentKind kind) =>
+            IntentSprites.Resolve(kind, Domain.Combat.Session.EnemyIntentIcons.ResourceFor);
 
         // Called once, from Start. The caption of a button is a child the
         // emitter synthesises and holds no NodeRef for, so it is found here
@@ -366,12 +362,12 @@ namespace PrincesPalace
 
                 if (_intentImages != null && _intentImages[i] != null)
                 {
-                    _intentImages[i].sprite = art;
                     _intentImages[i].color = Hex(Domain.Combat.Session.EnemyIntentIcons.TintFor(kind));
                     // Nothing to draw is worse than a plain plate: an Image with
                     // no sprite paints a filled RECTANGLE, which is the white
-                    // quad this project has hunted eleven times.
-                    _intentImages[i].enabled = art != null;
+                    // quad this project has hunted eleven times. IconCache<TKind>.
+                    // Apply's `disableOnMiss: true` is what enforces that here.
+                    IconCache<EnemyIntentKind>.Apply(_intentImages[i], art, disableOnMiss: true);
                 }
 
                 // The three-letter word only when the art did not load, so the

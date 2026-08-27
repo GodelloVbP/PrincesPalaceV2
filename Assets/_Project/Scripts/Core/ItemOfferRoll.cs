@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using PrincesPalace.Content;
+using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Rewards;
 
 namespace PrincesPalace
@@ -54,34 +55,33 @@ namespace PrincesPalace
         }
 
         // What one character's Favor is worth: what they were AUTHORED with,
-        // plus what the reward track has GRANTED them, plus what THIS RUN has
-        // granted them.
+        // plus what the reward track has GRANTED them, plus whatever their
+        // CURRENTLY EQUIPPED gear grants LIVE right now (Fortunate).
         //
-        // Three halves living in three different places because they have
-        // three different lifetimes -- CharacterDefinition.princesFavor is
-        // content, rebuilt from characters.json by ContentBuilder and the
-        // same for every save; Character.earnedFavor is permanent progress,
-        // and belongs to one profile's one character; runFavor
-        // (Data/RunSnapshot.cs) belongs to the CURRENT DESCENT and is gone
-        // the moment it ends -- the plan's Fortunate modifier writes it per
-        // fight won, nothing does yet (Phase A3 only adds the plumbing).
-        // This is the only place all three meet, which is deliberate: a
-        // second place that summed them would be a second place that could
-        // forget to.
+        // Three parts, but only two are stored state: CharacterDefinition.
+        // princesFavor is content, rebuilt from characters.json by
+        // ContentBuilder and the same for every save; Character.earnedFavor
+        // is permanent progress belonging to one profile's one character.
+        // The third part is never stored anywhere -- it is read fresh off
+        // ContentDatabase.ModifierEffects(character) every time this is
+        // called, which already reflects only the character's currently
+        // equipped, currently LIVE loadout (ActiveLoadout). Unequip
+        // Fortunate and the very next call to this method already sees it
+        // gone; nothing has to be reset, decremented or expired.
         //
         // Tolerant of every side being missing, the house style: a character
         // whose definition has gone (content edited under a live save) still
-        // contributes what they earned, and a character who has earned
-        // nothing still contributes what they were authored with. runFavor
-        // defaults to 0 -- an in-progress or absent run contributes nothing,
-        // and today's two-way sum is exactly what a 0 run-Favor reproduces.
-        public static int FavorOf(Character character, CharacterDefinition definition, int runFavor = 0)
+        // contributes what they earned, and a character with nothing
+        // equipped still contributes what they were authored with.
+        public static int FavorOf(Character character, CharacterDefinition definition)
         {
             int authored = definition == null ? 0 : definition.princesFavor;
             int earned = character == null ? 0 : character.earnedFavor;
-            if (runFavor < 0) runFavor = 0;
+            int liveBonus = character == null
+                ? 0
+                : ContentDatabase.ModifierEffects(character).Best(ModifierEffectType.FortunateFavorBonusFlat);
 
-            int total = authored + earned + runFavor;
+            int total = authored + earned + liveBonus;
             return total < 0 ? 0 : total;
         }
 
@@ -124,15 +124,9 @@ namespace PrincesPalace
             var save = SaveSlotManager.CurrentSave;
             if (save == null) return 0;
 
-            // activeRun is never null (see RunSnapshot.hasRun's own header --
-            // JsonUtility cannot round-trip a null reference field), so
-            // runFavor reads as 0 with no run in progress, which is the
-            // "contributes nothing" case FavorOf's default already handles.
-            int runFavor = save.activeRun?.runFavor ?? 0;
-
             return SquadFavor(save.ActiveSquad()
                 .Select(c => FavorOf(c, ContentDatabase.Characters
-                    .FirstOrDefault(d => d != null && d.id == c.definitionId), runFavor)));
+                    .FirstOrDefault(d => d != null && d.id == c.definitionId))));
         }
 
         // The offers, each with its own independently rolled plus.

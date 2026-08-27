@@ -14,8 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
   id: venomous
   displayName: Venomous
-  description: 'Every strike leaves a sting behind, and the wearer has long since
-    built up a tolerance. Elemental family: Poison.'
+  description: 'Every strike leaves a sting behind. Elemental family: Poison, the
+    damage half -- Antivenom is Poison''s separate resistance affix, split off this
+    modifier''s old two-effect bundle.'
   effects:
   - type: 1
     magnitude: 20
@@ -23,10 +24,4 @@ MonoBehaviour:
     against: 4
     hasAgainst: 1
     againstMagical: 0
-  - type: 2
-    magnitude: 15
-    threshold: 0
-    against: 4
-    hasAgainst: 1
-    againstMagical: 0
-  sortOrder: 3
+  sortOrder: 8

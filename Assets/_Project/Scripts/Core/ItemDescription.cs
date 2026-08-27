@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using PrincesPalace.Content;
-using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Stats;
@@ -11,7 +10,8 @@ namespace PrincesPalace
 {
     // The thin half of item description: pulling numbers off a ScriptableObject
     // and simulating a swap. Every rule about how those numbers READ lives in
-    // Domain.ItemStatLines, where a test can reach it.
+    // Domain.ItemStatLines (flat stats) and Domain.ModifierAffixLines
+    // (rolled affixes), where a test can reach it.
     public static class ItemDescription
     {
         public static string CompactSummary(ItemDefinition item, int plus = 0)
@@ -40,20 +40,28 @@ namespace PrincesPalace
                 WeaponDamageLine(item, plus, viewer), ModifierLines(item, riftTier, modifierIds));
         }
 
-        // "Fiery -- deals 24% bonus Fire damage on hit", one line per rolled
-        // modifier -- the adapter half of ModifierEffectText.Describe: pulls
-        // this ONE item copy's scaled effects off ContentDatabase (the exact
-        // seam ContentDatabase.ModifierEffects itself reads, never a second
-        // formula), groups them by the ModifierDefinition they came from
-        // (preserving each modifier's own authored effect order), and joins
-        // each modifier's fragments onto one line behind its display name.
-        //
-        // GroupBy over the already-ordered ModifierEffectsForItem list
-        // preserves first-seen order (LINQ-to-objects' own documented
-        // behaviour), so modifiers print in the same order the item's
-        // modifierIds were rolled/authored in, not resorted.
+        // "Fiery -- <Keyword>+20%</Keyword> Fire dmg on hit", one line per
+        // rolled modifier. Thin wrapper over Domain.ModifierAffixLines.LinePairs
+        // -- the plain, no-comparison listing CardSummary still wants, and
+        // the case ModifierComparisonLines itself degrades to when there is
+        // nothing currently equipped to diff against.
         private static IReadOnlyList<string> ModifierLines(ItemDefinition item, RiftTier riftTier,
             IReadOnlyList<string> modifierIds)
+        {
+            return ModifierAffixLines.LinePairs(ResolvedModifierEffects(item, riftTier, modifierIds))
+                ?.Select(pair => pair.Line).ToList();
+        }
+
+        // ONE item copy's rolled modifiers, scaled -- pulled off
+        // ContentDatabase.ModifierEffectsForItem (the ScriptableObject seam)
+        // and flattened into the plain (id, displayName, effect) shape
+        // Domain.ModifierAffixLines takes. This is the ONLY place in this
+        // file that reaches ContentDatabase for modifier data; everything
+        // downstream (grouping by id, formatting fragments, gain/loss/
+        // unchanged classification) is Domain.ModifierAffixLines' job, so a
+        // Domain-only EditMode suite can exercise it directly.
+        private static IReadOnlyList<ModifierAffixLines.Effect> ResolvedModifierEffects(ItemDefinition item,
+            RiftTier riftTier, IReadOnlyList<string> modifierIds)
         {
             if (item == null || modifierIds == null || modifierIds.Count == 0)
             {
@@ -66,18 +74,63 @@ namespace PrincesPalace
                 return null;
             }
 
-            var lines = new List<string>();
-            foreach (var group in scaled.GroupBy(pair => pair.Modifier))
-            {
-                string fragments = string.Join(", ", group
-                    .Select(pair => ModifierEffectText.Describe(pair.Effect))
-                    .Where(fragment => fragment.Length > 0));
+            return scaled
+                .Select(pair => new ModifierAffixLines.Effect(pair.Modifier.id, pair.Modifier.displayName, pair.Effect))
+                .ToList();
+        }
 
-                if (fragments.Length == 0) continue;
-                lines.Add($"{group.Key.displayName} -- {fragments}");
+        // The display name for every id currently worn in the slot a
+        // candidate would occupy -- resolved off ContentDatabase.GetModifier
+        // (the ScriptableObject seam), same graceful-degradation posture the
+        // pre-move code took: an id with no matching ModifierDefinition (or
+        // no displayName) prints the raw id rather than dropping the line.
+        private static IReadOnlyList<ModifierAffixLines.EquippedModifier> ResolvedEquippedModifiers(
+            IReadOnlyList<string> equippedModifierIds)
+        {
+            if (equippedModifierIds == null || equippedModifierIds.Count == 0)
+            {
+                return null;
             }
 
-            return lines;
+            return equippedModifierIds.Select(id =>
+            {
+                var modifier = ContentDatabase.GetModifier(id);
+                string name = modifier == null || string.IsNullOrEmpty(modifier.displayName) ? id : modifier.displayName;
+                return new ModifierAffixLines.EquippedModifier(id, name);
+            }).ToList();
+        }
+
+        // The AFFIXES section, compared against whatever is CURRENTLY
+        // EQUIPPED in the slot the candidate would occupy -- the same
+        // "VS. EQUIPPED" posture the numeric stat delta already takes
+        // (ItemStatLines.DeltaLines), extended to affixes rather than left as
+        // a plain listing. Thin wrapper: resolves both sides off
+        // ContentDatabase and hands the plain result to
+        // Domain.ModifierAffixLines.ComparisonLines, which owns the actual
+        // gain/loss/unchanged classification -- see that method's own header
+        // for the full rule.
+        private static IReadOnlyList<string> ModifierComparisonLines(ItemDefinition item, RiftTier riftTier,
+            IReadOnlyList<string> modifierIds, IReadOnlyList<string> equippedModifierIds)
+        {
+            return ModifierAffixLines.ComparisonLines(
+                ResolvedModifierEffects(item, riftTier, modifierIds),
+                ResolvedEquippedModifiers(equippedModifierIds));
+        }
+
+        // The rolled modifier ids on whatever is CURRENTLY worn in the slot
+        // `candidate` would occupy, or null when that slot is empty -- the
+        // affix half of "VS. EQUIPPED", reading the SAME
+        // EquipmentLoadout.ResolveTargetSlot(candidate.equipSlot) Compare's
+        // own clone-and-resolve runs, rather than a second rule for "which
+        // slot". Called against the character's REAL equipment, which
+        // Compare never mutates (only its clone is), so this can run before
+        // or after Compare with an identical answer either way.
+        private static IReadOnlyList<string> EquippedModifierIds(Character character, ItemDefinition candidate)
+        {
+            if (character?.equipment == null) return null;
+
+            var targetSlot = character.equipment.ResolveTargetSlot(candidate.equipSlot);
+            return character.equipment.IsEmpty(targetSlot) ? null : character.equipment.GetModifierIds(targetSlot);
         }
 
         // "DMG 87", or "DMG 87 -> 104" against whatever `viewer` currently
@@ -223,7 +276,7 @@ namespace PrincesPalace
         {
             if (squad == null || candidate == null) return "";
 
-            var rows = new List<(string, ItemComparison)>();
+            var rows = new List<(string, ItemComparison, IReadOnlyList<string>)>();
             foreach (var member in squad)
             {
                 if (member == null) continue;
@@ -231,10 +284,12 @@ namespace PrincesPalace
                 string name = definition == null || string.IsNullOrWhiteSpace(definition.displayName)
                     ? member.definitionId
                     : definition.displayName;
-                rows.Add((name, Compare(member, candidate, candidatePlus)));
+                var equippedModifierIds = EquippedModifierIds(member, candidate);
+                rows.Add((name, Compare(member, candidate, candidatePlus),
+                    ModifierComparisonLines(candidate, riftTier, modifierIds, equippedModifierIds)));
             }
 
-            return ItemStatLines.SquadBody(rows, ModifierLines(candidate, riftTier, modifierIds));
+            return ItemStatLines.SquadBody(rows);
         }
 
         public static string ComparisonBody(Character character, ItemDefinition candidate, int candidatePlus = 0,
@@ -244,6 +299,7 @@ namespace PrincesPalace
             if (character == null || candidate == null) return "";
 
             var comparison = Compare(character, candidate, candidatePlus);
+            var equippedModifierIds = EquippedModifierIds(character, candidate);
 
             return ItemStatLines.Body(
                 candidate.StatBonusAt(candidatePlus),
@@ -258,7 +314,7 @@ namespace PrincesPalace
                 ContentDatabase.EffectiveAbilityScores(character),
                 comparison,
                 WeaponDamageLine(candidate, candidatePlus, character),
-                ModifierLines(candidate, riftTier, modifierIds));
+                ModifierComparisonLines(candidate, riftTier, modifierIds, equippedModifierIds));
         }
     }
 }

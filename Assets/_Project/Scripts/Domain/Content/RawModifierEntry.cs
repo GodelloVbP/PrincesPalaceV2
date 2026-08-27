@@ -16,14 +16,25 @@ namespace PrincesPalace.Domain.Content
         public string displayName;
         public string description = "";
 
-        // Rules this modifier grants. `type` is a
+        // The rule this modifier grants. `type` is a
         // Domain.Combat.ModifierEffectType member name, matched
         // case-insensitively — see that enum for what each one means and
-        // which of magnitude/threshold/damageType it reads. A LIST rather
-        // than one entry for the same reason RawTalentEntry.effects is: a
-        // future modifier granting two rules at once (a Fiery/Frosty hybrid,
-        // say) is one modifier expressed as two entries rather than two
-        // modifiers.
+        // which of magnitude/threshold/damageType it reads.
+        //
+        // A LIST for the same shape RawTalentEntry.effects uses, but
+        // ModifierEntryResolver rejects anything longer than one — see its
+        // own comment. This USED TO be genuinely multi-effect (Phase C's
+        // Fiery bundled a burn AND a fire resistance under one roll, Runic
+        // bundled four rules); a later designer pass decided that read as
+        // one affix pretending to be several, so every modifier now grants
+        // exactly one rule and a family that wants several rules is several
+        // separate ids (Fiery + Emberguard, not one two-effect Fiery). The
+        // field stays an array rather than shrinking to one bare
+        // RawModifierEffect because the resolver, not the JSON shape, is
+        // what should refuse a bundle — a length check errors with a clear
+        // message; a scalar field would silently make a second effect
+        // impossible to even attempt, which hides the rule instead of
+        // stating it.
         public RawModifierEffect[] effects = Array.Empty<RawModifierEffect>();
     }
 

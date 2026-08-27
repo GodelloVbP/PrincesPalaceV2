@@ -67,9 +67,9 @@ namespace PrincesPalace.PlayModeTests
             var effects = ContentDatabase.ModifierEffects(character);
             Assert.IsFalse(effects.IsEmpty, "a real, live-equipped swift modifier must produce a real effect");
 
-            // swift's authored base: DodgeChancePercent 12. Scale =
+            // swift's authored base: DodgeRating 12. Scale =
             // TierMultiplier(0) x RiftMultiplier(RiftForged) = 1.0 x 1.6 = 1.6.
-            var dodge = effects.All.Single(e => e.Type == ModifierEffectType.DodgeChancePercent);
+            var dodge = effects.All.Single(e => e.Type == ModifierEffectType.DodgeRating);
             Assert.AreEqual(19, dodge.Magnitude, "12 x 1.6 = 19.2, away-from-zero rounded");
         }
 
@@ -82,7 +82,7 @@ namespace PrincesPalace.PlayModeTests
             var character = FreshCharacterWearing(item, RiftTier.Ordinary);
             var effects = ContentDatabase.ModifierEffects(character);
 
-            var dodge = effects.All.Single(e => e.Type == ModifierEffectType.DodgeChancePercent);
+            var dodge = effects.All.Single(e => e.Type == ModifierEffectType.DodgeRating);
             Assert.AreEqual(12, dodge.Magnitude, "tier 0, RiftTier Ordinary: scale is exactly 1.0, unscaled base survives untouched");
         }
 
@@ -102,31 +102,42 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(built, "fixture: a real fight must build");
             var state = built.Party[0];
 
-            Assert.AreEqual(19, state.ModifierEffects.Best(ModifierEffectType.DodgeChancePercent),
+            Assert.AreEqual(19, state.ModifierEffects.Best(ModifierEffectType.DodgeRating),
                 "the real, scaled swift dodge chance must reach the combatant the fight actually runs on");
         }
 
         // THE REAL END-TO-END CLAIM: equip swift on the highest-tier real
         // equippable item content has, at Convergent RiftTier (the richest
         // combination the roll can ever produce), and prove a real
-        // FightSession actually produces misses off it -- not a synthetic
-        // ModifierEffect fixture, the genuine content -> roll -> equip ->
-        // combat chain this whole phase exists to protect.
+        // FightSession actually reads it into fewer landed hits -- not a
+        // synthetic ModifierEffect fixture, the genuine content -> roll ->
+        // equip -> combat chain this whole phase exists to protect.
         //
         // Swift protects its WEARER as the TARGET of an incoming swing, so
         // this fight runs the ENEMY's real attacks against the hero (via
         // FightSession.ExecuteAttack's own auto-reply, the identical
-        // mechanism EnemyAiTests relies on) and asserts the hero's health,
-        // not the enemy's.
+        // mechanism EnemyAiTests relies on) and tracks the hero's own
+        // cumulative damage taken, not the enemy's.
         //
-        // A high enough tier pushes swift's scaled dodge chance to (or past)
-        // 100% outright -- TierMultiplier alone reaches ~9.3x by tier 10 --
-        // which turns "does dodge actually fire at the expected rate" into a
-        // DETERMINISTIC claim (every enemy swing must miss) rather than a
-        // statistical one, and a deterministic real-content assertion is a
-        // strictly stronger proof than sampling a rate would be.
+        // NO LONGER A DETERMINISTIC "every swing must miss" CLAIM. Before
+        // the dodge curve existed, a high enough tier pushed swift's scaled
+        // Magnitude to (or past) a literal 100, which the OLD direct-percent
+        // reading treated as a guaranteed dodge. Under CombatMath.
+        // DodgePercentFrom, no finite rating is EVER a true guarantee (its
+        // own header proves 100 * R / (R + 100) < 100 for every finite R)
+        // -- which is the entire point of the fix this phase implements, so
+        // a test that still demanded a deterministic zero-damage outcome
+        // would be asserting the exact bug this phase exists to remove.
+        //
+        // Proven instead by COMPARISON: the IDENTICAL real content (item,
+        // tier, enemy, seed) fought over the same number of rounds twice,
+        // once with swift equipped and once with no modifier at all -- if
+        // the content -> roll -> equip -> combat chain is genuinely wiring
+        // a scaled dodge rating into real combat, the swift-wearing hero
+        // must take substantially less cumulative damage than the
+        // identical fight with nothing granting it any dodge at all.
         [Test]
-        public void SwiftModifier_OnAHighTierItem_ActuallyCausesRealMisses_InARealFight()
+        public void SwiftModifier_OnAHighTierItem_MeaningfullyReducesRealDamageTaken_InARealFight()
         {
             var item = ContentDatabase.Items
                 .Where(i => i != null && i.IsEquippable)
@@ -134,47 +145,48 @@ namespace PrincesPalace.PlayModeTests
                 .FirstOrDefault();
             Assert.IsNotNull(item, "fixture: content has at least one equippable item");
 
-            var character = FreshCharacterWearing(item, RiftTier.Convergent);
-            Assert.IsTrue(ContentDatabase.ActiveLoadout(character).IsLive(item.equipSlot),
-                "fixture check: the item must be LIVE or ModifierEffects reads nothing");
-
-            var effects = ContentDatabase.ModifierEffects(character);
-            int scaledDodge = effects.Best(ModifierEffectType.DodgeChancePercent);
-
-            if (scaledDodge < 100)
+            int TotalDamageTakenOverRounds(List<string> modifierIds, int rounds)
             {
-                Assert.Inconclusive(
-                    $"fixture: content's highest equippable item tier ({item.tier}) only scales swift to " +
-                    $"{scaledDodge}%, short of the guaranteed-miss threshold this test relies on for a " +
-                    "deterministic assertion -- SwiftModifier_ScalesItsDodgeChanceByTierAndRiftTier already " +
-                    "pins the scaling formula itself at a lower tier.");
-                return;
+                var definition = ContentDatabase.Characters.FirstOrDefault();
+                var character = new Character(definition.id);
+                character.equipment.Set(item.equipSlot, item.id, modifierIds: modifierIds, riftTier: (int)RiftTier.Convergent);
+                Assert.IsTrue(ContentDatabase.ActiveLoadout(character).IsLive(item.equipSlot),
+                    "fixture check: the item must be LIVE or ModifierEffects reads nothing");
+
+                var built = FightEncounterAdapter.Build(
+                    new List<string> { character.definitionId },
+                    ContentDatabase.Enemies.Take(1).Select(e => e.id).ToList(),
+                    new SeededRandom(11),
+                    partyCharacters: new List<Character> { character });
+                Assert.IsNotNull(built, "fixture: a real fight must build");
+
+                var session = built.Session;
+                var hero = built.Party[0];
+                var foe = session.Encounter.Enemies.FirstOrDefault();
+                Assert.IsNotNull(foe, "fixture: the built fight has at least one enemy");
+
+                session.DamageVarianceRange = 0f;
+                session.Begin();
+
+                int totalTaken = 0;
+                for (int i = 0; i < rounds && hero.IsAlive && foe.IsAlive; i++)
+                {
+                    int before = hero.CurrentHealth;
+                    session.ExecuteAttack(foe);
+                    totalTaken += before - hero.CurrentHealth;
+                }
+
+                return totalTaken;
             }
 
-            var built = FightEncounterAdapter.Build(
-                new List<string> { character.definitionId },
-                ContentDatabase.Enemies.Take(1).Select(e => e.id).ToList(),
-                new SeededRandom(11),
-                partyCharacters: new List<Character> { character });
-            Assert.IsNotNull(built, "fixture: a real fight must build");
+            const int rounds = 40;
+            int withSwift = TotalDamageTakenOverRounds(new List<string> { "swift" }, rounds);
+            int withoutSwift = TotalDamageTakenOverRounds(new List<string>(), rounds);
 
-            var session = built.Session;
-            var hero = built.Party[0];
-            var foe = session.Encounter.Enemies.FirstOrDefault();
-            Assert.IsNotNull(foe, "fixture: the built fight has at least one enemy");
-
-            session.DamageVarianceRange = 0f;
-            session.Begin();
-
-            int startingHealth = hero.CurrentHealth;
-            for (int i = 0; i < 10 && hero.IsAlive && foe.IsAlive; i++)
-            {
-                session.ExecuteAttack(foe);
-            }
-
-            Assert.AreEqual(startingHealth, hero.CurrentHealth,
-                "with swift scaled to a guaranteed dodge chance, every real enemy swing against the hero " +
-                "must miss -- if even one landed, dodge is not actually gating this real content's combat");
+            Assert.Less(withSwift, withoutSwift,
+                "the real swift-equipped hero must take LESS cumulative damage over the same number of rounds " +
+                "than the identical fight with no dodge-granting modifier equipped -- if not, dodge is not " +
+                "actually gating this real content's combat");
         }
     }
 }

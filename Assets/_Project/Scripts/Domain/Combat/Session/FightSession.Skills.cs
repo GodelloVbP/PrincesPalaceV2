@@ -512,8 +512,28 @@ namespace PrincesPalace.Domain.Combat.Session
             // once -- same reasoning as the single-target branch.
             var castType = ActorAttackType(actor) ?? DamageType.Physical;
 
+            // One beat shows one number, so an AOE reports its largest single
+            // hit rather than a total that matches no one enemy's HP drop --
+            // tracked as a plain local rather than re-read off the recording
+            // beat (LargestAmountSoFar), because ApplyFinalDamage below
+            // OVERWRITES the beat's Amount to that one enemy's own `landed`
+            // on every call (RecordBeatAmount assigns, it does not
+            // accumulate) -- reading the beat back after that call would see
+            // only the most recent hit, not the sweep's running max. The
+            // LEDGER takes the full amount per enemy regardless, which is
+            // why it cannot be derived from the beats either way.
+            int largestLanded = 0;
+
             foreach (var enemy in _encounter.OpponentsOf(actor).ToList())
             {
+                // An earlier enemy THIS SAME SWEEP already fell to might have
+                // splashed a kill onto this one (ApplyKillSplash/
+                // ApplyModifierKillSplash, now reachable from an AOE hit --
+                // see ApplyFinalDamage below). `enemy` was snapshotted alive
+                // when the loop began; re-check rather than swing again at a
+                // corpse.
+                if (!enemy.IsAlive) continue;
+
                 // Effectiveness is resolved PER ENEMY: one cast can be super
                 // effective against one target and resisted by another in the
                 // same fight.
@@ -551,28 +571,37 @@ namespace PrincesPalace.Domain.Combat.Session
                 // Through the ONE FUNNEL now -- see FightSession.Relics.TotalDamage
                 // for why this call site is the reason it exists.
                 int landed = TotalDamage(actor, baseAmount, outcome.Damage);
-                // Counted with the CAST's type, not the caster's swing: a
-                // physical character throwing a fire skill dealt fire.
-                DealDamage(actor, enemy, landed, castType);
 
-                // One beat shows one number, so an AOE reports its largest
-                // single hit rather than a total that matches no one enemy's HP
-                // drop. The LEDGER takes the full amount per enemy, which is
-                // why it cannot be derived from the beats.
-                RecordBeatAmount(System.Math.Max(landed, LargestAmountSoFar));
-                SetStance(enemy, enemy.IsAlive ? Stances.Hurt : Stances.Defeated);
+                // THE SAME RIDER PATH a plain swing and a single-target skill
+                // already funnel through -- see ApplyFinalDamage's own
+                // header. Before this, ResolveDamageAll called DealDamage
+                // directly, which meant an AOE cast silently skipped every
+                // item-modifier on-hit rider (elemental procs, lifesteal,
+                // push/chill/root chances), Sharp Horns' defence shred, the
+                // Black Ram's transform splash, and both kill-splash sources
+                // -- all of which fire for a single-target hit. Routing
+                // through here is the fix: whatever a landed hit triggers,
+                // an AOE's landed hits trigger too, per enemy.
+                //
+                // castType, not AttackTypeOf(actor): ApplyFinalDamage's own
+                // internal DealDamage call reads AttackTypeOf(actor), which
+                // resolves identically to castType above (both fall through
+                // KitFor(actor)?.AttackType -> SourceFor(actor)?.Source.
+                // AttackType -> Physical) -- so this still counts as the
+                // CAST's type, not the caster's swing, exactly as before.
+                ApplyFinalDamage(actor, enemy, landed);
+
+                largestLanded = System.Math.Max(landed, largestLanded);
+                RecordBeatAmount(largestLanded);
                 summary.Append($" {enemy.Name} takes {landed}{EffectivenessSuffix(outcome.Effectiveness)}");
 
                 // The Drowned Lantern: a sweep marks everyone it actually hits.
                 ApplyMark(actor, enemy);
 
-                if (!enemy.IsAlive)
-                {
-                    summary.Append($" {enemy.Name} is defeated!");
-                    _killedThisAction = true;
-                    RecordKill(actor, enemy);
-                }
-                else
+                // The kill message, _killedThisAction and RecordKill all now
+                // happen INSIDE ApplyFinalDamage -- this only still needs its
+                // own AOE-specific call, the status a SURVIVOR takes.
+                if (enemy.IsAlive)
                 {
                     ApplySkillStatus(skill, enemy, actor);
                 }

@@ -11,17 +11,25 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // PHASE D2, end to end: the real "frosty" modifiers.json entry's new
+    // PHASE D2, end to end: the real "frostbite" modifiers.json entry's
     // ChilledOnHitChancePercent rider reaches a real fight and actually
     // chills a real target -- not just a number sitting unread on
     // ModifierEffectSet.
     //
+    // POST-AFFIX-SPLIT: Ice's family used to be one bundled "frosty" id
+    // (ElementalDamageOnHitPercent + TypedResistanceFlat + ChilledOnHitChancePercent,
+    // all three at once). A designer pass split it into three single-effect
+    // ids -- "frosty" (damage), "permafrost" (resistance), "frostbite" (this
+    // file's chill proc) -- so this file's own equip helper now reaches for
+    // "frostbite" specifically, the id that actually carries
+    // ChilledOnHitChancePercent today.
+    //
     // Mirrors SwiftModifierReachesCombatTests/ItemModifierScalingReachesCombatTests'
-    // own real-content pattern: equip a REAL item with the REAL "frosty" id
-    // at a known tier/riftTier, never a hand-built ModifierEffect fixture.
-    // The hand-built-fixture half of this rider (exact arithmetic, refresh-
-    // not-stack, composition with the Necklace ramp) lives in
-    // ChilledStatusTests (EditMode).
+    // own real-content pattern: equip a REAL item with a REAL id at a known
+    // tier/riftTier, never a hand-built ModifierEffect fixture. The hand-
+    // built-fixture half of this rider (exact arithmetic, refresh-not-stack,
+    // composition with the Necklace ramp) lives in ChilledStatusTests
+    // (EditMode).
     public class FrostyModifierReachesCombatTests
     {
         private string _root;
@@ -47,13 +55,29 @@ namespace PrincesPalace.PlayModeTests
         private static ItemDefinition TierZeroEquippable() =>
             ContentDatabase.Items.FirstOrDefault(i => i != null && i.IsEquippable && i.tier == 0);
 
+        // "frostbite" -- the split-off id that carries Ice's chill proc; see
+        // this file's own header for why it is no longer "frosty" itself.
         private static Character FreshCharacterWearing(ItemDefinition item, RiftTier riftTier)
         {
             var definition = ContentDatabase.Characters.FirstOrDefault();
             Assert.IsNotNull(definition, "fixture: content has at least one character");
 
             var character = new Character(definition.id);
-            character.equipment.Set(item.equipSlot, item.id, modifierIds: new List<string> { "frosty" }, riftTier: (int)riftTier);
+            character.equipment.Set(item.equipSlot, item.id, modifierIds: new List<string> { "frostbite" }, riftTier: (int)riftTier);
+            return character;
+        }
+
+        // All three of Ice's split affixes at once -- for the one test below
+        // that proves they can still coexist on one character, the way one
+        // bundled "frosty" roll used to grant all three at once.
+        private static Character FreshCharacterWearingWholeIceFamily(ItemDefinition item, RiftTier riftTier)
+        {
+            var definition = ContentDatabase.Characters.FirstOrDefault();
+            Assert.IsNotNull(definition, "fixture: content has at least one character");
+
+            var character = new Character(definition.id);
+            character.equipment.Set(item.equipSlot, item.id,
+                modifierIds: new List<string> { "frosty", "permafrost", "frostbite" }, riftTier: (int)riftTier);
             return character;
         }
 
@@ -68,9 +92,9 @@ namespace PrincesPalace.PlayModeTests
                 "fixture check: the item must be LIVE or ModifierEffects reads nothing");
 
             var effects = ContentDatabase.ModifierEffects(character);
-            Assert.IsFalse(effects.IsEmpty, "a real, live-equipped frosty modifier must produce a real effect");
+            Assert.IsFalse(effects.IsEmpty, "a real, live-equipped frostbite modifier must produce a real effect");
 
-            // frosty's authored base: ChilledOnHitChancePercent 20. Scale =
+            // frostbite's authored base: ChilledOnHitChancePercent 20. Scale =
             // TierMultiplier(0) x RiftMultiplier(RiftForged) = 1.0 x 1.6 = 1.6.
             var chill = effects.All.Single(e => e.Type == ModifierEffectType.ChilledOnHitChancePercent);
             Assert.AreEqual(32, chill.Magnitude, "20 x 1.6 = 32.0 exactly");
@@ -106,36 +130,40 @@ namespace PrincesPalace.PlayModeTests
             var state = built.Party[0];
 
             Assert.AreEqual(32, state.ModifierEffects.Best(ModifierEffectType.ChilledOnHitChancePercent),
-                "the real, scaled frosty chill chance must reach the combatant the fight actually runs on");
+                "the real, scaled frostbite chill chance must reach the combatant the fight actually runs on");
         }
 
-        // frosty ALSO still carries its elemental family's damage-on-hit and
-        // typed resistance (Phase C) -- this Chill rider is meant to ADD to
-        // those, never replace them. A quick, cheap check that the family's
-        // original effects are still authored on the same modifier.
+        // The Ice family's damage-on-hit ("frosty"), resistance
+        // ("permafrost") and chill proc ("frostbite") are three SEPARATE
+        // affixes post-split -- a single item can still carry all three at
+        // once (three affix slots, three ids), which is what this test
+        // proves. It is no longer one guarantee a single "frosty" roll makes
+        // on its own; see FreshCharacterWearingWholeIceFamily's own header.
         [Test]
-        public void FrostyModifier_StillCarriesItsElementalDamageAndResistance_AlongsideTheNewChillRider()
+        public void FrostyPermafrostAndFrostbite_CanAllBeEquippedTogether_AndAllThreeStillApply()
         {
             var item = TierZeroEquippable();
             Assert.IsNotNull(item, "fixture: content has a tier-0 equippable item");
 
-            var character = FreshCharacterWearing(item, RiftTier.Ordinary);
+            var character = FreshCharacterWearingWholeIceFamily(item, RiftTier.Ordinary);
             var effects = ContentDatabase.ModifierEffects(character);
 
             Assert.Greater(effects.Best(ModifierEffectType.ElementalDamageOnHitPercent), 0,
-                "frosty must still deal its own elemental damage-on-hit -- the chill rider ADDS, it does not replace");
+                "frosty's own damage-on-hit must still apply when equipped alongside its siblings");
             Assert.IsTrue(effects.All.Any(e => e.Type == ModifierEffectType.TypedResistanceFlat && e.Against == DamageType.Ice),
-                "frosty must still resist Ice");
+                "permafrost's own Ice resistance must still apply when equipped alongside its siblings");
+            Assert.Greater(effects.Best(ModifierEffectType.ChilledOnHitChancePercent), 0,
+                "frostbite's own chill chance must still apply when equipped alongside its siblings");
         }
 
-        // THE REAL END-TO-END CLAIM: equip frosty on the highest-tier real
+        // THE REAL END-TO-END CLAIM: equip frostbite on the highest-tier real
         // equippable item content has, at Convergent RiftTier (the richest
         // combination the roll can ever produce), and prove a real
         // FightSession actually chills a real enemy off it -- not a
         // synthetic ModifierEffect fixture, the genuine content -> roll ->
         // equip -> combat chain this whole phase exists to protect.
         //
-        // A high enough tier pushes frosty's scaled chill chance to (or
+        // A high enough tier pushes frostbite's scaled chill chance to (or
         // past) 100% outright, which turns "does the rider actually fire"
         // into a DETERMINISTIC claim rather than a statistical one.
         [Test]
@@ -157,7 +185,7 @@ namespace PrincesPalace.PlayModeTests
             if (scaledChance < 100)
             {
                 Assert.Inconclusive(
-                    $"fixture: content's highest equippable item tier ({item.tier}) only scales frosty's chill " +
+                    $"fixture: content's highest equippable item tier ({item.tier}) only scales frostbite's chill " +
                     $"chance to {scaledChance}%, short of the guaranteed-proc threshold this test relies on for a " +
                     "deterministic assertion -- FrostyModifier_ScalesItsChillChanceByTierAndRiftTier already " +
                     "pins the scaling formula itself at a lower tier.");

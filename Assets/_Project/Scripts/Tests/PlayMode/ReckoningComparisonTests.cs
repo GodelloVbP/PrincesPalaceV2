@@ -111,6 +111,52 @@ namespace PrincesPalace.PlayModeTests
             StringAssert.DoesNotContain("AFFIXES", body);
         }
 
+        // ITEM-MODIFIER PLAN PHASE F: SquadComparisonBody's own version of
+        // the AFFIXES comparison -- PER MEMBER, since two squad members can
+        // have different rolls (or nothing at all) currently worn in the
+        // same slot.
+        //
+        // Built as two standalone Character instances rather than
+        // ActiveSquad() -- per this project's own convention, only Shawn is
+        // a real character and a fresh profile's active squad is not
+        // guaranteed to hold two, so a fixture asserting "at least two
+        // members" would be pinning something this codebase does not
+        // promise. SquadComparisonBody takes any IReadOnlyList<Character>;
+        // it does not care whether they came from a save.
+        //
+        // Uses the same item id for "currently worn" and "candidate" that
+        // ItemModifierTooltipTests' ComparisonBody tests do, for the same
+        // reason: Compare's own header notes hovering a candidate already
+        // worn is safe, and it means this test needs only one
+        // ItemDefinition rather than hunting for two that share a slot.
+        [Test]
+        public void SquadComparisonBody_DiffersPerMember_WhenMembersHaveDifferentAffixesEquipped()
+        {
+            var definition = ContentDatabase.Characters.FirstOrDefault();
+            Assert.IsNotNull(definition, "fixture: content has at least one character");
+
+            var item = EasiestItem();
+            Assert.IsNotNull(item, "content has no equippable items at all");
+
+            var wearsFrosty = new Character(definition.id);
+            wearsFrosty.equipment.Set(item.equipSlot, item.id,
+                modifierIds: new System.Collections.Generic.List<string> { "frosty" });
+
+            var wearsNothing = new Character(definition.id);
+
+            var squad = new System.Collections.Generic.List<Character> { wearsFrosty, wearsNothing };
+
+            string body = ItemDescription.SquadComparisonBody(squad, item, candidatePlus: 0,
+                riftTier: RiftTier.Ordinary,
+                modifierIds: new System.Collections.Generic.List<string> { "fiery" });
+
+            StringAssert.Contains($"<color={ItemStatLines.GainHex}>Fiery", body,
+                "the candidate's own affix is a gain for the member with nothing worn there yet, and for the " +
+                "member losing a different affix, so it must show as a gain somewhere in the body");
+            StringAssert.Contains($"<color={ItemStatLines.LossHex}>Losing: Frosty</color>", body,
+                "the member who currently wears Frosty must see it named as a loss");
+        }
+
         // The distinction the box exists to make. Collapsing these two was the
         // first cut of this feature: an inert item's deltas are all legitimately
         // zero, so it reported "no change" and told the player the item was
@@ -122,7 +168,8 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(none.CandidateIsLive);
 
             var lines = ItemStatLines.SquadBody(
-                new[] { ("Shawn", none) });
+                new (string, ItemComparison, System.Collections.Generic.IReadOnlyList<string>)[]
+                    { ("Shawn", none, null) });
 
             StringAssert.Contains("cannot equip", lines);
             StringAssert.DoesNotContain("no change", lines);

@@ -18,7 +18,8 @@ MonoBehaviour:
     onto whoever was standing next to it. The exact mechanism Trample already uses,
     so a Black Ram wearing this alongside his own talent gets two independent splashes
     off one kill rather than one doubled splash -- see OnKillSplashPercent's own
-    comment on why that is deliberate, not a bug to fix later.
+    comment on why that is deliberate, not a bug to fix later. Already single-effect
+    since Phase C; untouched by the affix split.
   effects:
   - type: 8
     magnitude: 30
@@ -26,4 +27,4 @@ MonoBehaviour:
     against: 0
     hasAgainst: 0
     againstMagical: 0
-  sortOrder: 8
+  sortOrder: 18

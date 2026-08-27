@@ -298,18 +298,92 @@ namespace PrincesPalace
         private static readonly Color BuffNegative = Hex(FightHudPalette.HpBright);
 
         private TMPro.TMP_Text[] _partyBuffGlyphs;
+        private Image[] _partyBuffImages;
+
+        // The face each button was BUILT with -- SceneBuilder leaves
+        // PartyBuff{i}'s SpriteKey unset, which UiNode's own comment says
+        // means "use the shared button frame", so this is a real sprite
+        // reference, not a blank one. Captured once, before anything ever
+        // swaps `.sprite`, so RefreshPartyBuffs can restore it for the eight
+        // statuses with no icon of their own instead of leaving the Image
+        // with whatever the PREVIOUS badge in that slot happened to be
+        // wearing (or, worse, null -- which paints Unity's default white
+        // square, not this game's button chrome).
+        private Sprite[] _partyBuffDefaultSprites;
+
+        // ---- shared icon cache --------------------------------------------------
+        //
+        // The exact same system twice: a sprite resolved once per enum kind
+        // via Resources.Load and kept in a dictionary that only ever grows,
+        // with a MISS cached right alongside a HIT so a kind with no
+        // authored art stops asking Resources for a file that will never
+        // exist. StatusSprites below and IntentSprites in
+        // FightController.StageVisuals.cs used to each hand-roll this; both
+        // now go through one instance of this generic cache instead.
+        //
+        // Applying the result to an Image is the ONE place the two systems
+        // still deliberately disagree, so that stays a parameter rather
+        // than getting folded in here too: an enemy-intent badge with no
+        // art is a BUG and disables its Image outright (a blank slot beats
+        // a filled white rectangle -- see RefreshIntentIcons' own comment),
+        // where eight of ten status kinds having no art is that badge's
+        // INTENDED steady state and restores whatever sprite the button was
+        // built with instead (see RefreshPartyBuffs' own comment). Neither
+        // caller's colour or glyph-fallback logic belongs here either --
+        // those differ per system and are not the part that was duplicated.
+        private class IconCache<TKind>
+        {
+            private readonly Dictionary<TKind, Sprite> _sprites = new Dictionary<TKind, Sprite>();
+
+            public Sprite Resolve(TKind kind, System.Func<TKind, string> resourcePath)
+            {
+                if (_sprites.TryGetValue(kind, out var cached)) return cached;
+
+                var loaded = Resources.Load<Sprite>(resourcePath(kind));
+                _sprites[kind] = loaded;
+                return loaded;
+            }
+
+            public static void Apply(Image image, Sprite art, bool disableOnMiss, Sprite defaultSprite = null)
+            {
+                if (image == null) return;
+
+                if (disableOnMiss)
+                {
+                    image.sprite = art;
+                    image.enabled = art != null;
+                }
+                else
+                {
+                    image.sprite = art != null ? art : defaultSprite;
+                }
+            }
+        }
+
+        // Resolved once per status kind, through the SAME cache shape
+        // IntentSprites in FightController.StageVisuals.cs uses -- see
+        // IconCache<TKind>'s own header just above for the one deliberate
+        // behavioural difference between the two systems.
+        private static readonly IconCache<StatusEffectType> StatusSprites = new IconCache<StatusEffectType>();
+
+        private static Sprite StatusSpriteFor(StatusEffectType kind) =>
+            StatusSprites.Resolve(kind, FightHudModel.StatusBadgeIcons.ResourceFor);
 
         private void WirePartyBuffIcons()
         {
             if (partyBuffIcons == null) return;
 
             _partyBuffGlyphs = new TMPro.TMP_Text[partyBuffIcons.Length];
+            _partyBuffImages = new Image[partyBuffIcons.Length];
+            _partyBuffDefaultSprites = new Sprite[partyBuffIcons.Length];
             for (int i = 0; i < partyBuffIcons.Length; i++)
             {
                 var icon = partyBuffIcons[i];
                 if (icon == null) continue;
 
                 _partyBuffGlyphs[i] = icon.GetComponentInChildren<TMPro.TMP_Text>(includeInactive: true);
+                _partyBuffImages[i] = icon.GetComponent<Image>();
+                _partyBuffDefaultSprites[i] = _partyBuffImages[i] != null ? _partyBuffImages[i].sprite : null;
 
                 var hover = icon.GetComponent<HoverIndex>();
                 if (hover == null) hover = icon.AddComponent<HoverIndex>();
@@ -336,11 +410,39 @@ namespace PrincesPalace
                 if (!shown) continue;
 
                 var badge = _currentPartyBuffs[i];
-                var image = partyBuffIcons[i].GetComponent<Image>();
-                if (image != null) image.color = badge.IsPositive ? BuffPositive : BuffNegative;
+
+                // ICON FIRST. badge.Kind is null for the generic "SPD" relic
+                // badge and for every status StatusBadgeIcons has no art
+                // for, so `art` stays null for all of those.
+                Sprite art = badge.Kind.HasValue ? StatusSpriteFor(badge.Kind.Value) : null;
+
+                var image = _partyBuffImages != null ? _partyBuffImages[i] : partyBuffIcons[i].GetComponent<Image>();
+                if (image != null)
+                {
+                    // Unlike RefreshIntentIcons, a null `art` here does NOT
+                    // mean "disable the Image" -- an enemy-intent badge with
+                    // no art is a BUG (every kind is meant to load one
+                    // eventually) and degrades to bare text over a blank; a
+                    // buff badge with no art is eight statuses' EXISTING,
+                    // intended look, a plain tinted button face, so the
+                    // fallback restores the SAME sprite the button was built
+                    // with (_partyBuffDefaultSprites) rather than clearing
+                    // it to null, which would strip the shared button frame
+                    // and paint Unity's default white square instead. See
+                    // IconCache<TKind>.Apply's own header for how this
+                    // `disableOnMiss: false` reads against RefreshIntentIcons'
+                    // `true`.
+                    Sprite fallback = _partyBuffDefaultSprites != null ? _partyBuffDefaultSprites[i] : null;
+                    IconCache<StatusEffectType>.Apply(image, art, disableOnMiss: false, fallback);
+                    image.color = badge.IsPositive ? BuffPositive : BuffNegative;
+                }
+
                 if (_partyBuffGlyphs != null && _partyBuffGlyphs[i] != null)
                 {
-                    _partyBuffGlyphs[i].SetContent(badge.Glyph);
+                    // The glyph only when the art did not load, same
+                    // icon-first/glyph-fallback priority RefreshIntentIcons
+                    // uses for enemy intents.
+                    _partyBuffGlyphs[i].SetContent(art == null ? badge.Glyph : "");
                 }
             }
         }
