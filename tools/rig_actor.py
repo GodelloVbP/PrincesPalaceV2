@@ -146,26 +146,29 @@ SOURCE_DIR_DEFAULT = "Assets/_Project/Art/Rigs"
 
 # Default atlas padding (px) between packed parts.
 ATLAS_PADDING_DEFAULT = 4
-# Simplified-outline vertex-count target band.
-# Raised twice now. (8,20) clipped ears/teeth/fur outright. (24,60) still
-# wasn't enough for the teeth specifically: simplify_closed only ever pushes
-# epsilon FINER while the current count sits below the LOWER bound, so head's
-# outline settled at 51 (comfortably inside 24-60) and stopped -- the fangs'
-# two points and the gap between them lost out to the much larger-deviation
-# fur spikes under Douglas-Peucker's max-perpendicular-distance metric, which
-# has no notion of "this small feature still matters." Verified directly:
-# rendering rig.json's actual outline vertices over the head tile showed the
-# polygon cutting a near-straight line across both teeth.
+# Simplified-outline max deviation, in source-image px.
 #
-# (50,90) STILL didn't move the needle: head landed at 51 both times,
-# because 51 already satisfied the OLD (24,60) range too, so the epsilon
-# search just returned the same answer -- raising a ceiling nobody was
-# hitting changes nothing. The lower bound has to sit ABOVE wherever the
-# search naturally stalls, or it never has a reason to shrink epsilon even
-# once. Confirmed the fix actually bites before spending a Unity round trip:
-# re-rendered the outline over the head tile and checked verts land on the
-# teeth/far-ear-notch, not just that the total count went up.
-SIMPLIFY_TARGET_DEFAULT = (150, 220)
+# Used to be a vertex-COUNT target band, searched by adjusting epsilon until
+# the count landed inside it. That was chasing the wrong variable: a count
+# is only a proxy for "how far can the simplified line stray from the true
+# silhouette," and a large, mostly-simple part (body) could land inside its
+# target band while still bulging several px past its own true edge in one
+# locally-complex spot -- invisible to the global vertex count, and to the
+# fidelity check's global IoU too (a few hundred stray px is nothing against
+# a 100,000+ px part), but highly visible wherever that bulge lands on top
+# of a smaller, differently-coloured neighbour. Found exactly this way: body
+# passed its IoU threshold at 0.9977 while still painting a visible dark
+# band over far_hindleg's hip; confirmed by isolating the leg alone and
+# seeing it render perfectly clean with nothing else on.
+#
+# epsilon is what Douglas-Peucker actually guarantees: no point on the
+# simplified outline deviates from the true traced contour by more than
+# epsilon, in EITHER direction (undershoot -- clipping a real feature like
+# the fangs -- or overshoot -- bulging into a neighbour). Setting epsilon
+# directly bounds both failure modes with one number instead of chasing them
+# with two different band-aids (raising a vertex ceiling for undershoot,
+# shrinking backing_px for overshoot).
+SIMPLIFY_EPSILON_DEFAULT = 1.5
 
 
 # ---------------------------------------------------------------------------
@@ -196,13 +199,45 @@ RIGS = {
         # Explicit per-part pivots, in the cropped source frame. Not needed
         # for "legs" (procedural rule below) or for parts with no natural
         # single point (there are none in this pilot).
-        # 40, not 16 -- this is what actually needs to be large. body_mask is
-        # "whatever's left after removing dilated legs/head/tail", so growing
-        # dilate_px on those SHRINKS body's own starting point at the same
-        # rate it grows them; backing_px is body's own independent reach back
-        # outward from wherever that shrunk edge ends up, and it has to
-        # clearly outreach dilate_px (4) to win the overlap at every seam.
-        "body": {"pivot": (820, 760), "backing_px": 40},
+        # 20, not 40 and not 16. 16 left a visible seam gap (dilate_px=4 on
+        # the legs was outrunning it). 40 overcorrected: body draws ON TOP
+        # of the two FAR legs (z=0,1, below body's z=3), and backing_px
+        # dilates in every direction by exactly that many px -- so 40
+        # reached 40px into far_hindleg's own hip territory and painted
+        # body's dark fur over what should have been visible leg colour,
+        # confirmed by measuring the actual mask overlap (4870px, y-extent
+        # ~40px -- matches backing_px almost exactly, not a coincidence).
+        # 20 nets ~16px of reach past dilate_px=4, comfortably more than
+        # the few px the seam needed, without reaching deep enough into a
+        # far leg's own territory to visibly paint over it.
+        # 20 still overshot into the far legs (2932px overlap, still a
+        # visible if smaller dark band -- confirmed against a real Unity
+        # render, not just the offline coverage number, which reports
+        # gap=0 at every value tried here and so cannot be used alone to
+        # pick this). The "40 was needed" finding was measured under a
+        # DIFFERENT dilate_px (2, then 10) earlier in this file's history;
+        # never directly re-tested at the current dilate_px=4. The actual
+        # render-time margin needed is sub-pixel rounding in bone/pivot
+        # placement, not tens of pixels -- trying a much smaller value.
+        # 10 still showed a visible (smaller) dark band -- confirmed against
+        # the TRUE source art at that exact spot (source_hindleg_exact.png):
+        # completely uniform fur colour there, no natural shading crease at
+        # all, so this is 100% a pipeline artifact, not art being
+        # faithfully reproduced. Going to 6, just 2px past dilate_px=4 --
+        # deliberately close to the theoretical floor, to find where the
+        # real trade-off boundary is rather than keep bisecting one step
+        # at a time.
+        # Still banded at backing_px=6, and the raw mask-overlap number
+        # (921px, ~5px tall) never matched the rendered band's actual
+        # height (~60px) -- the gap between those two numbers was the tell
+        # that backing_px wasn't the real variable. body's SIMPLIFIED
+        # outline could bulge past its own dilated mask by more than the
+        # count-targeted simplify_closed ever bounded, independent of how
+        # small backing_px got. See simplify_epsilon: bounding Douglas-
+        # Peucker deviation directly is the actual fix; backing_px stays
+        # at the floor found here and should be re-verified, not re-grown,
+        # once epsilon-bounded output is confirmed clean.
+        "body": {"pivot": (820, 760), "backing_px": 6},
         "parts": {
             "head": {
                 # Traces up the near ear's outer edge to its tip, down into
@@ -250,7 +285,7 @@ RIGS = {
                 # closed, which a bigger vertex budget could never fix
                 # (trace_contour only ever follows ONE, the LARGEST,
                 # connected component -- a disconnected island is
-                # structurally invisible to it regardless of simplify_target).
+                # structurally invisible to it regardless of simplify epsilon).
                 "outset_px": 8,
                 "pivot": (1080, 290),
             },
@@ -319,7 +354,7 @@ RIGS = {
         "dilate_px": 4,
         "dilate_skip": ["tail"],
 
-        "simplify_target": SIMPLIFY_TARGET_DEFAULT,
+        "simplify_epsilon": SIMPLIFY_EPSILON_DEFAULT,
         "atlas_padding": ATLAS_PADDING_DEFAULT,
 
         # Bone parent per non-root part. Exactly one part must be absent
@@ -642,15 +677,32 @@ def _rdp(points, epsilon):
     return [a, b]
 
 
-def simplify_closed(contour, target_range):
-    """Douglas-Peucker on a closed contour, epsilon-searched to land the
-    vertex count in `target_range` (lo, hi). Splits the loop at the point
-    farthest from contour[0] so each half is simplified as an open
-    polyline with fixed endpoints, then rejoins -- the standard trick for
-    running an open-polyline algorithm on a closed one."""
-    lo, hi = target_range
+def simplify_closed(contour, max_epsilon):
+    """Douglas-Peucker on a closed contour, epsilon applied DIRECTLY rather
+    than searched-for via a target vertex-count range.
+
+    That used to be backwards, and it hid a real bug: a target COUNT is
+    only ever a proxy for "how far can the simplified line stray from the
+    true silhouette" -- and the two are not the same question. epsilon IS
+    that distance, directly (DP's actual guarantee: no simplified point
+    ever deviates from the true contour by more than epsilon, in EITHER
+    direction). Chasing a vertex count instead meant a part with a large,
+    mostly-simple silhouette (body) could land inside its target band
+    while still bulging several px past its own true edge in one small
+    spot where the contour happened to be locally complex -- invisible to
+    the fidelity check's global IoU (a few hundred stray px is nothing
+    against a 100,000+ px part) but highly visible where that bulge lands
+    on top of a much smaller, differently-coloured neighbour (found this
+    exact way: body at IoU 0.9977 -- passing -- was still painting a
+    visible dark band over far_hindleg's hip, confirmed by isolating the
+    leg alone and seeing it render perfectly clean with nothing else on).
+
+    Splits the loop at the point farthest from contour[0] so each half is
+    simplified as an open polyline with fixed endpoints, then rejoins --
+    the standard trick for running an open-polyline algorithm on a closed
+    one."""
     n = len(contour)
-    if n <= lo:
+    if n <= 3:
         return list(contour)
     arr = np.asarray(contour, dtype=float)
     d = np.hypot(arr[:, 0] - arr[0, 0], arr[:, 1] - arr[0, 1])
@@ -659,19 +711,7 @@ def simplify_closed(contour, target_range):
         i1 = n // 2
     chain_a = contour[: i1 + 1]
     chain_b = contour[i1:] + [contour[0]]
-
-    eps = 1.0
-    best = None
-    for _ in range(40):
-        simp = _rdp(chain_a, eps)[:-1] + _rdp(chain_b, eps)[:-1]
-        best = simp
-        if len(simp) > hi:
-            eps *= 1.6
-        elif len(simp) < lo and eps > 0.05:
-            eps *= 0.6
-        else:
-            return simp
-    return best
+    return _rdp(chain_a, max_epsilon)[:-1] + _rdp(chain_b, max_epsilon)[:-1]
 
 
 # ---------------------------------------------------------------------------
@@ -943,7 +983,7 @@ def build_rig(rig_id, source_override=None):
 
     # ---- per-part RGBA tiles -----------------------------------------
     bone_parents = spec.get("bone_parents", {})
-    simplify_target = spec.get("simplify_target", SIMPLIFY_TARGET_DEFAULT)
+    simplify_epsilon = spec.get("simplify_epsilon", SIMPLIFY_EPSILON_DEFAULT)
     atlas_padding = spec.get("atlas_padding", ATLAS_PADDING_DEFAULT)
 
     tiles = []
@@ -966,7 +1006,7 @@ def build_rig(rig_id, source_override=None):
         contour = trace_contour(mask)
         if contour is None:
             sys.exit(f"[{rig_id}] part '{name}' produced no contour")
-        simplified = simplify_closed(contour, simplify_target)
+        simplified = simplify_closed(contour, simplify_epsilon)
         local = [(px - tx0, py - ty0) for (px, py) in simplified]
         outline_pts, triangles = ear_clip(local)
 
@@ -1047,7 +1087,16 @@ def report_stray_files(rig_id, output_base, written, prune, verbose=True):
     if not os.path.isdir(out_dir):
         return
     existing = set(os.listdir(out_dir))
-    stray = sorted(existing - written)
+    # Unity owns each output file's .meta (that's where its GUID lives --
+    # deleting one silently reassigns the GUID on next import and orphans
+    # every reference to it, CLAUDE.md gotcha #2). This tool never writes
+    # .meta files itself, so one sitting next to a file it DOES write is
+    # Unity's, not a stray -- spare it from the same prune that clears out
+    # genuinely obsolete output. Bit ourselves on this: --prune deleted
+    # atlas.png.meta/rig.json.meta out from under a live rebuild before
+    # this exclusion existed.
+    owned_metas = {name + ".meta" for name in written}
+    stray = sorted(existing - written - owned_metas)
     if not stray:
         return
     if prune:
