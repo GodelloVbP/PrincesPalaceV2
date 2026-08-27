@@ -230,13 +230,18 @@ RIGS = {
         # Still banded at backing_px=6, and the raw mask-overlap number
         # (921px, ~5px tall) never matched the rendered band's actual
         # height (~60px) -- the gap between those two numbers was the tell
-        # that backing_px wasn't the real variable. body's SIMPLIFIED
-        # outline could bulge past its own dilated mask by more than the
-        # count-targeted simplify_closed ever bounded, independent of how
-        # small backing_px got. See simplify_epsilon: bounding Douglas-
-        # Peucker deviation directly is the actual fix; backing_px stays
-        # at the floor found here and should be re-verified, not re-grown,
-        # once epsilon-bounded output is confirmed clean.
+        # that backing_px wasn't the real variable. The actual cause and
+        # fix live at SIMPLIFY_EPSILON_DEFAULT, not here; backing_px stays
+        # at the floor found here and should not be re-grown to chase a
+        # seam issue -- growing it back reintroduces exactly the far-leg
+        # overshoot this trail just walked back down from.
+        # Re-verifying this no longer means eyeballing a fresh Unity
+        # render every time: verify_rig's OVERLAP check catches a part's
+        # outline claiming more of an earlier part's territory than
+        # dilate_px/backing_px's own design margin already accounts for.
+        # It's not a substitute for the real render (it can't see what
+        # animation does off bind pose), but a regression here fails the
+        # build instead of waiting to be spotted by eye.
         "body": {"pivot": (820, 760), "backing_px": 6},
         "parts": {
             "head": {
@@ -349,8 +354,11 @@ RIGS = {
         # Kept modest -- growing this ALSO shrinks body_mask (body is defined
         # as "whatever's left after removing dilated legs/head"), which
         # eats into body's own backing_px margin at the same rate it grows
-        # the legs'. Bumping this alone doesn't close a seam; see body's
-        # backing_px below, which is the side actually worth growing.
+        # the legs'. Bumping this alone doesn't close a seam by itself.
+        # backing_px below is NOT the lever to reach for either, despite
+        # what an earlier version of this comment said -- see its own
+        # comment for why growing it caused the exact overshoot bug this
+        # file's simplify_epsilon fix now handles instead.
         "dilate_px": 4,
         "dilate_skip": ["tail"],
 
@@ -662,40 +670,54 @@ def _point_seg_distance(p, a, b):
 
 
 def _rdp(points, epsilon):
+    """Douglas-Peucker, iterative (explicit stack, no Python call recursion).
+
+    Used to recurse once per retained split point, so recursion depth
+    tracked OUTPUT size rather than input size -- harmless while
+    simplify_closed's old vertex-count search implicitly kept output
+    near ~220 points, but that cap is gone now that epsilon is applied
+    directly (see simplify_closed), so a long, high-deviation chain (a
+    dense fur-spike outline at a small epsilon) could in principle push
+    recursion toward Python's default limit with nothing in this file to
+    raise it. An explicit stack removes the whole risk class rather than
+    padding the ceiling."""
     if len(points) < 3:
         return list(points)
-    a, b = points[0], points[-1]
-    dmax, idx = -1.0, -1
-    for i in range(1, len(points) - 1):
-        d = _point_seg_distance(points[i], a, b)
-        if d > dmax:
-            dmax, idx = d, i
-    if dmax > epsilon:
-        left = _rdp(points[: idx + 1], epsilon)
-        right = _rdp(points[idx:], epsilon)
-        return left[:-1] + right
-    return [a, b]
+    keep = [False] * len(points)
+    keep[0] = keep[-1] = True
+    stack = [(0, len(points) - 1)]
+    while stack:
+        lo, hi = stack.pop()
+        if hi - lo < 2:
+            continue
+        a, b = points[lo], points[hi]
+        dmax, idx = -1.0, -1
+        for i in range(lo + 1, hi):
+            d = _point_seg_distance(points[i], a, b)
+            if d > dmax:
+                dmax, idx = d, i
+        if dmax > epsilon:
+            keep[idx] = True
+            stack.append((lo, idx))
+            stack.append((idx, hi))
+    return [p for p, k in zip(points, keep) if k]
 
 
 def simplify_closed(contour, max_epsilon):
     """Douglas-Peucker on a closed contour, epsilon applied DIRECTLY rather
-    than searched-for via a target vertex-count range.
+    than searched-for via a target vertex-count range -- see
+    SIMPLIFY_EPSILON_DEFAULT's comment for why direct epsilon is the fix
+    and what bug the old count-band search hid.
 
-    That used to be backwards, and it hid a real bug: a target COUNT is
-    only ever a proxy for "how far can the simplified line stray from the
-    true silhouette" -- and the two are not the same question. epsilon IS
-    that distance, directly (DP's actual guarantee: no simplified point
-    ever deviates from the true contour by more than epsilon, in EITHER
-    direction). Chasing a vertex count instead meant a part with a large,
-    mostly-simple silhouette (body) could land inside its target band
-    while still bulging several px past its own true edge in one small
-    spot where the contour happened to be locally complex -- invisible to
-    the fidelity check's global IoU (a few hundred stray px is nothing
-    against a 100,000+ px part) but highly visible where that bulge lands
-    on top of a much smaller, differently-coloured neighbour (found this
-    exact way: body at IoU 0.9977 -- passing -- was still painting a
-    visible dark band over far_hindleg's hip, confirmed by isolating the
-    leg alone and seeing it render perfectly clean with nothing else on).
+    n<=3 (not the old count-band's n<=lo, which was as high as 150) is
+    the only early-out now: DP handles a small input fine on its own
+    merits (a handful of points barely costs anything to check), and
+    whatever epsilon lets through is caught the same way everything else
+    is -- verify_rig's FIDELITY/OVERLAP checks gate the actual outline
+    that ships, not the input size that produced it. Skipping small
+    contours entirely, the old code's real reason for n<=lo, existed
+    only to short-circuit the OLD search loop cheaply; there's no search
+    loop left to short-circuit.
 
     Splits the loop at the point farthest from contour[0] so each half is
     simplified as an open polyline with fixed endpoints, then rejoins --
@@ -777,6 +799,20 @@ def ear_clip(polygon):
             idxs.pop(0)
     if len(idxs) == 3:
         tris.append((idxs[0], idxs[1], idxs[2]))
+    elif len(idxs) > 3:
+        # guard exhausted (5000 clips) before reaching a triangle -- used
+        # to fall through silently here and ship a mesh with a hole where
+        # the un-triangulated fan should be. simplify_closed no longer
+        # bounds its own output size (see its docstring), so this guard
+        # can now actually be reached by a future rig with a small
+        # simplify_epsilon on dense/noisy art; fail loud like every other
+        # triangulation problem in this function does, instead of
+        # quietly shipping less mesh than the outline promised.
+        sys.exit(
+            f"ear_clip could not fully triangulate a {len(pts)}-point outline "
+            f"within {guard} clips ({len(idxs)} vertices left unclipped) -- "
+            f"the outline is likely too dense; raise simplify_epsilon for this part."
+        )
 
     good = []
     for (ia, ib, ic) in tris:
@@ -986,6 +1022,25 @@ def build_rig(rig_id, source_override=None):
     simplify_epsilon = spec.get("simplify_epsilon", SIMPLIFY_EPSILON_DEFAULT)
     atlas_padding = spec.get("atlas_padding", ATLAS_PADDING_DEFAULT)
 
+    # One epsilon per rig was the whole fix for THIS bug (one small part
+    # overshooting under an epsilon tuned for a much larger one sharing
+    # it), but nothing stops the next creature from needing the reverse
+    # split too -- an outsized simple part next to a tiny detailed one.
+    # A per-part override closes that generally instead of leaving only
+    # "lower the whole rig's epsilon until the smallest part is happy,
+    # and hope the largest part doesn't need its old vertex-count-band
+    # detail back" as the escape hatch. Defaults to the rig-wide value
+    # everywhere; "legs" (components kind) shares one override across
+    # all its derived names since they're the same scale as each other.
+    per_part_epsilon = {"body": body_spec.get("simplify_epsilon", simplify_epsilon)}
+    for pname, pspec in parts_spec.items():
+        eps = pspec.get("simplify_epsilon", simplify_epsilon)
+        if pspec["kind"] == "components":
+            for leg_name in pspec["names"]:
+                per_part_epsilon[leg_name] = eps
+        else:
+            per_part_epsilon[pname] = eps
+
     tiles = []
     tile_origins = {}
     parts_json = []
@@ -1006,7 +1061,7 @@ def build_rig(rig_id, source_override=None):
         contour = trace_contour(mask)
         if contour is None:
             sys.exit(f"[{rig_id}] part '{name}' produced no contour")
-        simplified = simplify_closed(contour, simplify_epsilon)
+        simplified = simplify_closed(contour, per_part_epsilon.get(name, simplify_epsilon))
         local = [(px - tx0, py - ty0) for (px, py) in simplified]
         outline_pts, triangles = ear_clip(local)
 
@@ -1179,19 +1234,45 @@ def render_preview(build):
 # fidelity check passes it (the wrong-but-internally-consistent head
 # polygon simplifies fine), and it never shows up until something actually
 # MOVES the part that should carry those pixels and doesn't. Three
-# different failure classes, three different checks:
+# different failure classes, four different checks:
 #
 #   1. COVERAGE   -- does every true-alpha pixel belong to at least one
 #                     final part mask? A gap here is a seam.
 #   2. FIDELITY    -- does each part's simplified outline still match its
 #                     OWN pre-simplification mask closely? A miss here is
 #                     Douglas-Peucker cutting across a thin feature that
-#                     WAS correctly owned but got smoothed away.
-#   3. WIGGLE      -- rotate each non-root part about its own bone, one at
-#                     a time, and look. This is the only one of the three
+#                     WAS correctly owned but got smoothed away (undershoot)
+#                     or bulging past it (overshoot) -- IoU falls either way,
+#                     but see check 3 for why IoU alone isn't enough.
+#   3. OVERLAP     -- does a part's simplified outline claim MORE of an
+#                     earlier-order (lower-z) part's own territory than
+#                     dilate_px/backing_px's design margin already
+#                     intends? That design margin is large and deliberate
+#                     (so a part still covers its own outline once it
+#                     rotates off bind pose) -- flagging it directly would
+#                     refuse every build. What FIDELITY's per-part IoU
+#                     can't see is a big, mostly-simple part's outline
+#                     bulging into a small neighbour's space without
+#                     moving its own IoU enough to fail: this is exactly
+#                     how body passed FIDELITY at IoU=0.9977 while
+#                     visibly painting over far_hindleg's hip (see
+#                     SIMPLIFY_EPSILON_DEFAULT's comment) -- a few hundred
+#                     stray px barely register against a 100,000+ px
+#                     part's own area, but they're highly visible sitting
+#                     on top of a leg. This check isolates the part of
+#                     that overlap simplification is actually responsible
+#                     for (poly vs. the neighbour's true mask, MINUS
+#                     what the raw, pre-simplification masks already
+#                     overlapped by design) and looks at it as a
+#                     CONNECTED BLOB rather than a total pixel count, so
+#                     harmless single-px noise scattered along a long
+#                     fur-spike outline can't accumulate into a false
+#                     FAIL the way a raw total would.
+#   4. WIGGLE      -- rotate each non-root part about its own bone, one at
+#                     a time, and look. This is the only one of the four
 #                     that can catch an OWNERSHIP bug (pixels that are
 #                     present, and correctly shaped, but attached to the
-#                     wrong part) -- coverage and fidelity are both
+#                     wrong part) -- the other three are all
 #                     mathematically blind to "whose bone should this
 #                     move with," because that question is anatomical, not
 #                     geometric. Not a numeric gate: a rendered contact
@@ -1199,8 +1280,8 @@ def render_preview(build):
 #                     every time, before a cut is called done.
 # ---------------------------------------------------------------------------
 
-def verify_rig(build, iou_threshold=0.985):
-    """Runs checks 1 and 2 (hard, numeric). Returns (ok, report_lines)."""
+def verify_rig(build, iou_threshold=0.985, max_local_overlap_px=40):
+    """Runs checks 1-3 (hard, numeric). Returns (ok, report_lines)."""
     ok = True
     report = []
     H, W = build.alpha.shape
@@ -1220,11 +1301,14 @@ def verify_rig(build, iou_threshold=0.985):
     else:
         report.append("COVERAGE OK: every silhouette pixel is owned by at least one part.")
 
-    for p in build.rig_json["parts"]:
+    poly_masks = {}
+    parts = build.rig_json["parts"]
+    for p in parts:
         name = p["name"]
         tx0, ty0 = build.tile_origins[name]
         poly_full = [(px + tx0, py + ty0) for px, py in p["outline"]]
         poly_mask = rasterize_polygon(poly_full, W, H)
+        poly_masks[name] = poly_mask
         true_mask = build.masks[name]
         inter = int((poly_mask & true_mask).sum())
         union_px = int((poly_mask | true_mask).sum())
@@ -1232,13 +1316,38 @@ def verify_rig(build, iou_threshold=0.985):
         if iou < iou_threshold:
             ok = False
             lost_px = int((true_mask & ~poly_mask).sum())
+            gained_px = int((poly_mask & ~true_mask).sum())
             report.append(
                 f"FIDELITY FAIL: '{name}' outline IoU={iou:.4f} < {iou_threshold} -- "
-                f"simplification lost {lost_px}px this part should own "
-                f"(a thin/pointy feature likely got cut across)."
+                f"lost {lost_px}px this part should own (a thin/pointy feature likely "
+                f"got cut across) and gained {gained_px}px it shouldn't (the outline "
+                f"bulged past its true edge)."
             )
         else:
             report.append(f"FIDELITY OK: '{name}' outline IoU={iou:.4f}")
+
+    overlap_clean = True
+    for i, p in enumerate(parts):
+        name = p["name"]
+        for earlier in parts[:i]:
+            e_name = earlier["name"]
+            raw_overlap = build.masks[name] & build.masks[e_name]
+            excess = poly_masks[name] & build.masks[e_name] & ~raw_overlap
+            if not excess.any():
+                continue
+            labels, count = label_components(excess)
+            max_blob = int(np.bincount(labels.ravel())[1:].max()) if count else 0
+            if max_blob > max_local_overlap_px:
+                ok = False
+                overlap_clean = False
+                report.append(
+                    f"OVERLAP FAIL: '{name}' outline paints a {max_blob}px connected patch "
+                    f"over '{e_name}''s territory beyond what dilate_px/backing_px's design "
+                    f"margin already accounts for -- simplification bulged into a lower-z "
+                    f"neighbour, not just past its own edge."
+                )
+    if overlap_clean:
+        report.append("OVERLAP OK: no part's outline bulges into a lower-z neighbour's territory.")
 
     return ok, report
 
