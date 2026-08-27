@@ -33,6 +33,14 @@ namespace PrincesPalace.Editor.Rigging
             string atlasPath = $"{folder}/atlas.png";
             string prefabPath = $"Assets/_Project/Resources/Rigs/{root}/{id}.prefab";
 
+            // The fight stage sandwiches a rig's SpriteRenderers between the
+            // backdrop and the HUD by sortingOrder alone (Spike B), which
+            // only works if they sit on their own sorting layer rather than
+            // Default -- ensure it exists before any part below is assigned
+            // to it. Idempotent, so rebuilding a rig that isn't the first
+            // one costs nothing extra.
+            StageActorsSortingLayer.Ensure();
+
             var rig = MiniJson.Parse(File.ReadAllText(jsonPath));
             float referenceHeightPx = (float)rig["referenceHeightPx"].AsNumber();
 
@@ -110,6 +118,7 @@ namespace PrincesPalace.Editor.Rigging
                 partGo.transform.SetParent(partsHolder.transform, false);
                 var sr = partGo.AddComponent<SpriteRenderer>();
                 sr.sprite = sprite;
+                sr.sortingLayerName = StageActorsSortingLayer.LayerName;
                 sr.sortingOrder = z;
                 var skin = partGo.AddComponent<SpriteSkin>();
                 skin.SetRootBone(ownBone);
