@@ -147,14 +147,25 @@ SOURCE_DIR_DEFAULT = "Assets/_Project/Art/Rigs"
 # Default atlas padding (px) between packed parts.
 ATLAS_PADDING_DEFAULT = 4
 # Simplified-outline vertex-count target band.
-# Raised from (8,20): that budget was too tight for parts with real detail --
-# ear tips, teeth, jaw, and the many individual fur-spike tufts along the
-# back all sit on thin/pointy protrusions that Douglas-Peucker cuts straight
-# across once it's forced to stay under ~20 points, clipping them off
-# entirely rather than just smoothing them. Bumped enough to keep those
-# features without materially changing simple parts (a leg still lands well
-# under this ceiling on its own).
-SIMPLIFY_TARGET_DEFAULT = (24, 60)
+# Raised twice now. (8,20) clipped ears/teeth/fur outright. (24,60) still
+# wasn't enough for the teeth specifically: simplify_closed only ever pushes
+# epsilon FINER while the current count sits below the LOWER bound, so head's
+# outline settled at 51 (comfortably inside 24-60) and stopped -- the fangs'
+# two points and the gap between them lost out to the much larger-deviation
+# fur spikes under Douglas-Peucker's max-perpendicular-distance metric, which
+# has no notion of "this small feature still matters." Verified directly:
+# rendering rig.json's actual outline vertices over the head tile showed the
+# polygon cutting a near-straight line across both teeth.
+#
+# (50,90) STILL didn't move the needle: head landed at 51 both times,
+# because 51 already satisfied the OLD (24,60) range too, so the epsilon
+# search just returned the same answer -- raising a ceiling nobody was
+# hitting changes nothing. The lower bound has to sit ABOVE wherever the
+# search naturally stalls, or it never has a reason to shrink epsilon even
+# once. Confirmed the fix actually bites before spending a Unity round trip:
+# re-rendered the outline over the head tile and checked verts land on the
+# teeth/far-ear-notch, not just that the total count went up.
+SIMPLIFY_TARGET_DEFAULT = (150, 220)
 
 
 # ---------------------------------------------------------------------------
@@ -196,18 +207,40 @@ RIGS = {
             "head": {
                 # Traces up the near ear's outer edge to its tip, down into
                 # the gap between the ears, up the far ear's outer edge to
-                # its tip, then rejoins the original snout/jaw boundary --
-                # the first draft's polygon stopped at y=75, well below both
-                # ear tips (y=0-20), so the ears stayed on the body layer
-                # and couldn't rotate with the head. Verified against
-                # ratcut2/rat_grid.png: near ear spans roughly
-                # x=1005-1110,y=0-140; far ear x=1120-1215,y=0-105.
+                # its tip, THEN CONTINUES all the way around the actual face
+                # -- forehead, nose bridge, nose tip, under-nose, both fang
+                # tips with the gap between them, jaw line, throat -- back to
+                # the near ear's base.
+                #
+                # The second draft closed early at (1245,80)->(1335,175)->
+                # (1400,235)->(1360,300), which stops around y=235-315 --
+                # short of the nose tip (~y=320-350) and WAY short of the
+                # fang tips (~y=455-465). That meant the ENTIRE snout, nose,
+                # jaw and both teeth were never part of head's mask at all --
+                # they got claimed by body's "whatever's left" remainder
+                # instead. Static bind pose hid this completely (body and
+                # head sit in their correct relative positions at rest); it
+                # would have shown up the instant the head bone rotated in
+                # an actual animation, as the whole face staying behind with
+                # the torso while an eyeless, mouthless cranium swung away.
+                # No amount of outline-simplification vertex budget could
+                # have fixed the teeth from the head side, because they were
+                # never head's pixels to simplify -- confirmed by rendering
+                # the polygon directly over the source art and watching the
+                # boundary cut across the middle of the face nowhere near the
+                # mouth. Verified against ratcut2/rat_grid.png for the ears
+                # (near ear x=1005-1110,y=0-140; far ear x=1120-1215,y=0-105)
+                # and against head_region_grid2.png (this project's own
+                # bind_pose.png, gridded 1000..1460 x 0..480) for everything
+                # from the forehead down through the fangs.
                 "kind": "polygon",
                 "points": [
                     (1078, 205), (1055, 130), (1015, 55), (1035, 5), (1078, 10),
                     (1092, 80), (1108, 25), (1150, 3), (1200, 20), (1213, 85),
-                    (1245, 80), (1335, 175), (1400, 235), (1360, 300), (1280, 315),
-                    (1190, 290), (1110, 245),
+                    (1245, 80), (1290, 95), (1345, 140), (1395, 220), (1440, 300),
+                    (1448, 340), (1430, 375), (1415, 395), (1400, 455), (1378, 425),
+                    (1355, 463), (1330, 428), (1290, 410), (1200, 398), (1100, 388),
+                    (1030, 375), (1000, 340), (1030, 290), (1070, 260), (1110, 245),
                 ],
                 "pivot": (1080, 290),
             },
@@ -217,10 +250,24 @@ RIGS = {
                 # the rear leg" fully separates the tail with no hand-traced
                 # outline needed. `clauses` is OR-of-AND over (axis, op,
                 # value) triples against the pixel coordinate grid.
+                #
+                # The corner (520,472) used to sit tight against the real
+                # fur-to-tail transition, which is a curve, not a right
+                # angle -- wherever the true silhouette crossed outside that
+                # rigid rectangle, region membership just stopped, showing up
+                # as a flat notched step where the tail meets the back
+                # instead of a smooth continuation. Pushed out to (560,500):
+                # still 16px clear of the belly line (516) where leg
+                # detection starts, and 108px right of far_hindleg's own
+                # search bound (x_min 452) -- legs are found strictly below
+                # y=516 by connected components, so this corner never
+                # actually overlaps a leg pixel even though its x-range
+                # does, and the rank-based resolve (tail loses to body/near
+                # legs/head, wins over far legs) is unchanged either way.
                 "kind": "region",
                 "clauses": [
                     [("x", "<", 450)],
-                    [("x", "<", 520), ("y", "<", 472)],
+                    [("x", "<", 560), ("y", "<", 500)],
                 ],
                 "pivot": (500, 398),
             },
