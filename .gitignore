@@ -18,6 +18,12 @@ test-results*.xml
 tools/screenshots/
 *.log
 
+# rig_actor.py's review artifacts -- regenerated every run, meant to be
+# looked at locally before trusting a cut, never committed (same posture
+# as preview.png already had by convention before this line existed).
+Assets/_Project/Resources/Rigs/**/preview.png
+Assets/_Project/Resources/Rigs/**/wiggle.png
+
 # IDE
 .vs/
 .idea/

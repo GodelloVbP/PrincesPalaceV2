@@ -242,6 +242,16 @@ RIGS = {
                     (1355, 463), (1330, 428), (1290, 410), (1200, 398), (1100, 388),
                     (1030, 375), (1000, 340), (1030, 290), (1070, 260), (1110, 245),
                 ],
+                # Found by verify_rig, not by eye: a hand-traced polygon
+                # sits a few px inside the true edge almost everywhere, not
+                # just at one bad corner -- see the comment on this option's
+                # implementation in build_rig for the two disconnected
+                # slivers (far ear tip, nose bridge) this specifically
+                # closed, which a bigger vertex budget could never fix
+                # (trace_contour only ever follows ONE, the LARGEST,
+                # connected component -- a disconnected island is
+                # structurally invisible to it regardless of simplify_target).
+                "outset_px": 8,
                 "pivot": (1080, 290),
             },
             "tail": {
@@ -816,10 +826,11 @@ class RigBuild:
     """Everything a build produced, so --preview can render without
     re-running the pipeline and the writer/verifier can share one result."""
 
-    def __init__(self, rig_id, cropped_rgb, masks, pivots, order, bone_parents,
+    def __init__(self, rig_id, cropped_rgb, alpha, masks, pivots, order, bone_parents,
                  atlas, rects, rig_json, tile_origins):
         self.rig_id = rig_id
         self.cropped_rgb = cropped_rgb   # H,W,3 uint8 -- keyed+cropped source
+        self.alpha = alpha               # H,W bool -- TRUE silhouette, ground truth for verify_rig
         self.masks = masks               # name -> bool mask, full cropped-canvas size (post resolve+dilate; body = backed)
         self.pivots = pivots             # name -> (x,y) in cropped-canvas space
         self.order = order
@@ -874,7 +885,19 @@ def build_rig(rig_id, source_override=None):
     pivots = {}
     for name, pspec in parts_spec.items():
         if pspec["kind"] == "polygon":
-            masks[name] = rasterize_polygon(pspec["points"], W, H) & alpha
+            poly_mask = rasterize_polygon(pspec["points"], W, H)
+            # A hand-drawn polygon systematically undershoots the true edge
+            # by a few px almost everywhere (found by verify_rig: two
+            # disconnected slivers at the far ear tip and the nose bridge,
+            # plus a dozen 5-18px ones along individual fur-spike tips --
+            # the same failure mode repeated, not one bad corner). Chasing
+            # each one by hand doesn't generalise; dilating the RASTERIZED
+            # mask by a uniform margin does, and it's the same primitive
+            # already used for every other part's seam margin.
+            outset_px = pspec.get("outset_px", 0)
+            if outset_px:
+                poly_mask = binary_dilation(poly_mask, outset_px)
+            masks[name] = poly_mask & alpha
             pivots[name] = tuple(pspec["pivot"])
         elif pspec["kind"] == "region":
             masks[name] = eval_region(pspec["clauses"], X, Y) & alpha
@@ -992,7 +1015,7 @@ def build_rig(rig_id, source_override=None):
         "parts": parts_json,
     }
 
-    return RigBuild(rig_id, rgb, masks, pivots, order, bone_parents, atlas, rects, rig_json, tile_origins)
+    return RigBuild(rig_id, rgb, alpha, masks, pivots, order, bone_parents, atlas, rects, rig_json, tile_origins)
 
 
 # ---------------------------------------------------------------------------
@@ -1094,6 +1117,133 @@ def render_preview(build):
 
 
 # ---------------------------------------------------------------------------
+# Verification -- three checks, because "pixel perfect" turned out to be
+# three different questions and the earlier tool only ever answered the
+# easy one (is the mesh well-formed: non-degenerate triangles, no atlas
+# overlap). None of that checks whether the cut is CORRECT. Found by hand,
+# on the rat, after it had already shipped once: a seam gap (coverage), a
+# clipped ear-notch and clipped teeth (simplification losing a thin/pointy
+# feature), and a head polygon that didn't reach the jaw at all -- so the
+# whole snout/nose/mouth was silently owned by body's "whatever's left"
+# remainder instead of head. That last one is the one worth naming loudly:
+# a coverage check passes it (every pixel is still owned by SOME part), a
+# fidelity check passes it (the wrong-but-internally-consistent head
+# polygon simplifies fine), and it never shows up until something actually
+# MOVES the part that should carry those pixels and doesn't. Three
+# different failure classes, three different checks:
+#
+#   1. COVERAGE   -- does every true-alpha pixel belong to at least one
+#                     final part mask? A gap here is a seam.
+#   2. FIDELITY    -- does each part's simplified outline still match its
+#                     OWN pre-simplification mask closely? A miss here is
+#                     Douglas-Peucker cutting across a thin feature that
+#                     WAS correctly owned but got smoothed away.
+#   3. WIGGLE      -- rotate each non-root part about its own bone, one at
+#                     a time, and look. This is the only one of the three
+#                     that can catch an OWNERSHIP bug (pixels that are
+#                     present, and correctly shaped, but attached to the
+#                     wrong part) -- coverage and fidelity are both
+#                     mathematically blind to "whose bone should this
+#                     move with," because that question is anatomical, not
+#                     geometric. Not a numeric gate: a rendered contact
+#                     sheet, meant to actually be looked at, every joint,
+#                     every time, before a cut is called done.
+# ---------------------------------------------------------------------------
+
+def verify_rig(build, iou_threshold=0.985):
+    """Runs checks 1 and 2 (hard, numeric). Returns (ok, report_lines)."""
+    ok = True
+    report = []
+    H, W = build.alpha.shape
+
+    union = np.zeros((H, W), dtype=bool)
+    for m in build.masks.values():
+        union |= m
+    gap = build.alpha & ~union
+    gap_px = int(gap.sum())
+    if gap_px > 0:
+        ok = False
+        ys, xs = np.where(gap)
+        report.append(
+            f"COVERAGE FAIL: {gap_px}px of true silhouette not covered by any part "
+            f"(bbox x={int(xs.min())}-{int(xs.max())} y={int(ys.min())}-{int(ys.max())}) -- a seam gap."
+        )
+    else:
+        report.append("COVERAGE OK: every silhouette pixel is owned by at least one part.")
+
+    for p in build.rig_json["parts"]:
+        name = p["name"]
+        tx0, ty0 = build.tile_origins[name]
+        poly_full = [(px + tx0, py + ty0) for px, py in p["outline"]]
+        poly_mask = rasterize_polygon(poly_full, W, H)
+        true_mask = build.masks[name]
+        inter = int((poly_mask & true_mask).sum())
+        union_px = int((poly_mask | true_mask).sum())
+        iou = inter / union_px if union_px else 1.0
+        if iou < iou_threshold:
+            ok = False
+            lost_px = int((true_mask & ~poly_mask).sum())
+            report.append(
+                f"FIDELITY FAIL: '{name}' outline IoU={iou:.4f} < {iou_threshold} -- "
+                f"simplification lost {lost_px}px this part should own "
+                f"(a thin/pointy feature likely got cut across)."
+            )
+        else:
+            report.append(f"FIDELITY OK: '{name}' outline IoU={iou:.4f}")
+
+    return ok, report
+
+
+def render_wiggle(build, test_angle_deg=20):
+    """One row per non-root part: rest pose beside that part's bone rotated
+    by test_angle_deg about its own pivot, everything else held still.
+    Pure PIL/numpy -- no Unity round trip, so this is cheap enough to run
+    (and to actually look at) every single time, not just when something
+    already looks wrong."""
+    H, W = build.cropped_rgb.shape[:2]
+    root_name = build.rig_json["bones"][0]["name"]
+
+    def composite(rotated_name, angle):
+        canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        for name in build.order:
+            mask = build.masks[name]
+            layer_rgba = np.dstack([build.cropped_rgb, np.where(mask, 255, 0).astype(np.uint8)])
+            layer = Image.fromarray(layer_rgba, "RGBA")
+            if name == rotated_name and angle:
+                px, py = build.pivots[name]
+                layer = layer.rotate(-angle, center=(px, py), resample=Image.BICUBIC)
+            canvas.alpha_composite(layer)
+        bg = Image.new("RGB", (W, H), (210, 213, 217))
+        bg.paste(canvas, (0, 0), canvas)
+        return bg
+
+    rest = composite(None, 0)
+    rows = []
+    for name in build.order:
+        if name == root_name:
+            continue  # rotating the root moves everything -- not an isolation test
+        wiggled = composite(name, test_angle_deg)
+        pair = Image.new("RGB", (W * 2 + 10, H + 22), (25, 25, 25))
+        pair.paste(rest, (0, 20))
+        pair.paste(wiggled, (W + 10, 20))
+        d = ImageDraw.Draw(pair)
+        try:
+            font = ImageFont.truetype("arialbd.ttf", 15)
+        except Exception:
+            font = ImageFont.load_default()
+        d.text((4, 2), f"{name}: rest  |  +{test_angle_deg} deg about its own bone", fill=(255, 255, 0), font=font)
+        rows.append(pair)
+
+    sheet_w = rows[0].width
+    sheet = Image.new("RGB", (sheet_w, sum(r.height for r in rows) + 4 * (len(rows) + 1)), (15, 15, 15))
+    y = 4
+    for r in rows:
+        sheet.paste(r, (0, y))
+        y += r.height + 4
+    return sheet
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -1121,6 +1271,16 @@ def main():
         preview_path = os.path.join(out_dir, "preview.png")
         render_preview(build).save(preview_path)
         print(f"[{args.preview}] preview -> {preview_path}")
+
+        # Non-fatal here (nothing's being written to Resources/ yet), but
+        # printed every time -- --preview is exactly the moment to catch a
+        # coverage/fidelity problem, before it's ever synced into Unity.
+        ok, report = verify_rig(build)
+        for line in report:
+            print(f"[{args.preview}] {line}")
+        wiggle_path = os.path.join(out_dir, "wiggle.png")
+        render_wiggle(build).save(wiggle_path)
+        print(f"[{args.preview}] wiggle -> {wiggle_path}  (look at every row before trusting this cut)")
         return
 
     ids = list(RIGS.keys()) if args.all else args.creatures
@@ -1131,8 +1291,30 @@ def main():
 
     for rig_id in ids:
         build = build_rig(rig_id, source_override=args.source)
+
+        # Hard gate, always on -- not behind a flag, so it cannot be
+        # forgotten the way a one-off --preview glance can. Refuses to
+        # write atlas.png/rig.json at all on a coverage or fidelity
+        # failure, matching UiAudit's "refuse rather than warn" posture.
+        ok, report = verify_rig(build)
+        for line in report:
+            print(f"[{rig_id}] {line}")
+        if not ok:
+            sys.exit(f"[{rig_id}] verify FAILED -- fix the manifest entry before this can write. "
+                      f"See the FAIL line(s) above.")
+
         written = write_rig(build, output_base, verbose=not args.quiet)
         report_stray_files(rig_id, output_base, written, args.prune, verbose=not args.quiet)
+
+        # The wiggle sheet is not a numeric gate (whether a rotated part
+        # "looks anatomically right" isn't reliably a number) -- it is the
+        # mandatory review artifact instead. Written every run, same as
+        # atlas.png, so there is always a fresh one to actually look at
+        # before calling a cut done.
+        out_dir = output_dir_for(rig_id, output_base)
+        wiggle_path = os.path.join(out_dir, "wiggle.png")
+        render_wiggle(build).save(wiggle_path)
+        print(f"[{rig_id}] wiggle -> {wiggle_path}  (look at every row before calling this done)")
 
 
 if __name__ == "__main__":
