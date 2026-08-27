@@ -337,8 +337,7 @@ namespace PrincesPalace
             beatPlayer.PaintVitals = PaintVitals;
             beatPlayer.PushLine = PushLogLine;
             beatPlayer.SetStance = PoseCombatant;
-            beatPlayer.SetFrame = SetActorFrame;
-            beatPlayer.AnimationFor = StanceAnimationFor;
+            beatPlayer.PlaybackFor = PlaybackFor;
             beatPlayer.FlashTarget = FlashCombatant;
             beatPlayer.PlayVfx = PlaySpellVfx;
             beatPlayer.FadeTheFallen = FadeTheFallen;

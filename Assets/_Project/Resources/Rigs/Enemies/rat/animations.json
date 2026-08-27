@@ -1,0 +1,116 @@
+{
+  "clips": [
+    {
+      "stance": "idle",
+      "durationSeconds": 1.6,
+      "impactAt": 0,
+      "soundAt": 0,
+      "loop": true,
+      "tracks": [
+        { "bone": "body", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.8, "deg": -1.5 }, { "t": 1.6, "deg": 0.0 } ] },
+        { "bone": "head", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.8, "deg": 2.0 }, { "t": 1.6, "deg": 0.0 } ] },
+        { "bone": "tail", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.8, "deg": 4.0 }, { "t": 1.6, "deg": 0.0 } ] }
+      ]
+    },
+    {
+      "stance": "attack",
+      "durationSeconds": 0.5,
+      "impactAt": 0.32,
+      "soundAt": 0.28,
+      "loop": false,
+      "tracks": [
+        {
+          "bone": "body",
+          "keyframes": [
+            { "t": 0.0, "deg": 0.0 },
+            { "t": 0.2, "deg": 6.0 },
+            { "t": 0.32, "deg": -9.0 },
+            { "t": 0.5, "deg": -2.0 }
+          ]
+        },
+        {
+          "bone": "head",
+          "keyframes": [
+            { "t": 0.0, "deg": 0.0 },
+            { "t": 0.2, "deg": 8.0 },
+            { "t": 0.32, "deg": -16.0 },
+            { "t": 0.5, "deg": -3.0 }
+          ]
+        },
+        {
+          "bone": "tail",
+          "keyframes": [
+            { "t": 0.0, "deg": 0.0 },
+            { "t": 0.2, "deg": -10.0 },
+            { "t": 0.32, "deg": 14.0 },
+            { "t": 0.5, "deg": 3.0 }
+          ]
+        },
+        {
+          "bone": "far_hindleg",
+          "keyframes": [
+            { "t": 0.0, "deg": 0.0 },
+            { "t": 0.2, "deg": 14.0 },
+            { "t": 0.32, "deg": -8.0 },
+            { "t": 0.5, "deg": 0.0 }
+          ]
+        },
+        {
+          "bone": "near_hindleg",
+          "keyframes": [
+            { "t": 0.0, "deg": 0.0 },
+            { "t": 0.2, "deg": 14.0 },
+            { "t": 0.32, "deg": -8.0 },
+            { "t": 0.5, "deg": 0.0 }
+          ]
+        },
+        {
+          "bone": "far_foreleg",
+          "keyframes": [
+            { "t": 0.0, "deg": 0.0 },
+            { "t": 0.2, "deg": -6.0 },
+            { "t": 0.32, "deg": 10.0 },
+            { "t": 0.5, "deg": 0.0 }
+          ]
+        },
+        {
+          "bone": "near_foreleg",
+          "keyframes": [
+            { "t": 0.0, "deg": 0.0 },
+            { "t": 0.2, "deg": -6.0 },
+            { "t": 0.32, "deg": 10.0 },
+            { "t": 0.5, "deg": 0.0 }
+          ]
+        }
+      ]
+    },
+    {
+      "stance": "hurt",
+      "durationSeconds": 0.35,
+      "impactAt": 0.1,
+      "soundAt": 0.1,
+      "loop": false,
+      "tracks": [
+        { "bone": "body", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.1, "deg": 8.0 }, { "t": 0.35, "deg": 0.0 } ] },
+        { "bone": "head", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.1, "deg": 10.0 }, { "t": 0.35, "deg": 0.0 } ] },
+        { "bone": "tail", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.1, "deg": -6.0 }, { "t": 0.35, "deg": 0.0 } ] }
+      ]
+    },
+    {
+      "stance": "defeated",
+      "durationSeconds": 0.5,
+      "impactAt": 0.5,
+      "soundAt": 0.0,
+      "loop": false,
+      "tracks": [
+        { "bone": "body", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.5, "deg": 78.0 } ] },
+        { "bone": "head", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.5, "deg": -10.0 } ] },
+        { "bone": "tail", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.5, "deg": 20.0 } ] },
+        { "bone": "far_hindleg", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.5, "deg": 25.0 } ] },
+        { "bone": "near_hindleg", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.5, "deg": 25.0 } ] },
+        { "bone": "far_foreleg", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.5, "deg": -15.0 } ] },
+        { "bone": "near_foreleg", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.5, "deg": -15.0 } ] }
+      ]
+    }
+  ]
+}

@@ -91,5 +91,64 @@ namespace PrincesPalace.PlayModeTests
             // be what's actually enabled and visible.
             Assert.IsTrue(rigRenderers.All(r => r.enabled), "every rig part's SpriteRenderer should be enabled");
         }
+
+        // Phase 5 checkpoint: a real beat actually drives the rig's BONES,
+        // not just its bind pose. A hit on the rat poses it "hurt" and
+        // FlinchFrames resolves that through PlaybackFor -- if the seam
+        // is wired correctly this should be a RigStancePlayback sampling
+        // animations.json's hurt clip, which rotates head/body/tail away
+        // from the bind pose's 0deg. Sampled mid-flight for the same
+        // reason FightPlayableTests.AMultiFrameStanceActuallyAnimates is:
+        // the round settles back on the bind pose (ResetToRest) before it
+        // ends, so checking afterwards would pass whether or not anything
+        // ever moved.
+        [UnityTest]
+        public IEnumerator AHitOnTheRatActuallyRotatesItsBones()
+        {
+            if (!CanvasCapture.IsSupported)
+            {
+                Assert.Ignore("No graphics device (-nographics). Run: tools/graphics_tests.ps1 -Filter PrincesPalace.PlayModeTests.RigStageTests");
+            }
+
+            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            _fight = Object.FindAnyObjectByType<FightController>();
+            var hero = ContentDatabase.Characters.FirstOrDefault(c => c != null);
+            var built = FightEncounterAdapter.Build(
+                new System.Collections.Generic.List<string> { hero.id },
+                new System.Collections.Generic.List<string> { "rat" },
+                new SeededRandom(7), isBoss: false, isElite: false);
+            built.Session.Begin();
+            _fight.Bind(built.Session, EncounterClass.Normal);
+            yield return null;
+            yield return null;
+
+            var worldSlot = Named("Enemy0WorldSlot");
+            var head = worldSlot.GetComponentsInChildren<Transform>(includeInactive: true)
+                .FirstOrDefault(t => t.name == "head");
+            Assert.IsNotNull(head, "expected a 'head' bone Transform under the rat's world slot");
+
+            var verb = Named("Verb0")?.GetComponent<Button>();
+            var target = Named("EnemyPlate0")?.GetComponent<Button>();
+            Assert.IsNotNull(verb, "no Verb0 button to click");
+            Assert.IsNotNull(target, "no EnemyPlate0 button to click");
+            verb.onClick.Invoke();
+            target.onClick.Invoke();
+
+            float furthestFromRest = 0f;
+            float deadline = Time.realtimeSinceStartup + 10f;
+            while (_fight.IsBusy && Time.realtimeSinceStartup < deadline)
+            {
+                float deviation = Mathf.Abs(Mathf.DeltaAngle(0f, head.localRotation.eulerAngles.z));
+                if (deviation > furthestFromRest) furthestFromRest = deviation;
+                yield return null;
+            }
+
+            Assert.Greater(furthestFromRest, 1f,
+                "the rat's head bone never rotated more than 1deg away from bind pose during the whole round -- " +
+                "either the hurt clip has no head track, or the flinch never reached RigStancePlayback at all");
+        }
     }
 }

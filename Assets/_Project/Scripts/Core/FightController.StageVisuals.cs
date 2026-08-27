@@ -6,6 +6,7 @@ using UnityEngine.UI;
 using PrincesPalace.Core.Rig;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
+using PrincesPalace.Domain.Rig;
 using PrincesPalace.Domain.Stage;
 
 namespace PrincesPalace
@@ -553,6 +554,14 @@ namespace PrincesPalace
             {
                 instance = Object.Instantiate(prefab, worldSlot, worldPositionStays: false);
                 _rigInstances[combatant] = instance;
+
+                // Added at instantiation time rather than baked into the
+                // prefab -- see RigActor's own header for why. "bones" is
+                // the holder GameObject RigPrefabBuilder creates as a
+                // direct child of the prefab root, one level above the
+                // named bone Transforms themselves.
+                var rigActor = instance.AddComponent<RigActor>();
+                rigActor.Initialize(instance.transform.Find("bones"));
             }
             else if (instance.transform.parent != worldSlot)
             {
@@ -848,11 +857,17 @@ namespace PrincesPalace
         // stage reset, while a body is still going down, and writing frames for
         // a combatant whose slot the next encounter has reused is how a fresh
         // fight opens with someone else's corpse in it.
-        private IEnumerator PlayDefeatedFrames(CombatantState combatant) =>
-            StanceStepper.Play(
-                StanceAnimationFor(combatant, FightSession.Stances.Defeated),
-                frame => SetActorFrame(combatant, frame),
-                abandon: () => _session == null);
+        private IEnumerator PlayDefeatedFrames(CombatantState combatant)
+        {
+            // Through the same seam Windup/FollowThrough always used, rather
+            // than StanceStepper directly -- what makes a rig-resolved
+            // combatant's own defeated clip (a collapse, once one is
+            // authored) play here too, instead of this coroutine only ever
+            // driving the frame-sheet path.
+            var playback = PlaybackFor(combatant, FightSession.Stances.Defeated, () => _session == null);
+            yield return playback.Windup();
+            yield return playback.FollowThrough();
+        }
 
         // ---- the breath between blows --------------------------------------------
 
@@ -883,6 +898,17 @@ namespace PrincesPalace
         private readonly Dictionary<CombatantState, float> _idleClock =
             new Dictionary<CombatantState, float>();
 
+        // The rig twin of _idleClock, kept SEPARATE rather than shared: a
+        // rig-resolved combatant runs both this clock (StepRigIdlePose, the
+        // bone-driven clip) and _idleClock itself (the frame-sheet transform
+        // breath still plays on top -- see StepIdleFrame's own comment) in
+        // the same call, and the two clocks are not interchangeable units --
+        // one wraps against a clip's DurationSeconds, the other against a
+        // frame sheet's SecondsPerFrame. Sharing the dictionary would have
+        // each overwrite the other's accumulation and double-advance both.
+        private readonly Dictionary<CombatantState, float> _rigIdleClock =
+            new Dictionary<CombatantState, float>();
+
         // How far apart two figures' breaths are pushed, in frames.
         //
         // Two Ironback Beetles side by side breathing in perfect lockstep read
@@ -899,6 +925,7 @@ namespace PrincesPalace
             // the next encounter's are different objects -- the old entries
             // would otherwise sit here for the session's life.
             _idleClock.Clear();
+            _rigIdleClock.Clear();
 
             if (_idling != null || !isActiveAndEnabled) return;
 
@@ -958,6 +985,63 @@ namespace PrincesPalace
             slot.GetComponent<StageActorAnimator>()?.SetBreath(amount);
         }
 
+        // Phase offset between two identical rigs breathing side by side, as
+        // a fraction of their own clip's length -- the rig twin of
+        // IdlePhaseFrames, which is stated in frames a rig clip does not
+        // have. See AnchorStageSlots' own note on why two identical figures
+        // in lockstep read as one animation drawn twice.
+        private const float RigIdlePhaseFraction = 0.28f;
+
+        // Drives a rig's idle clip continuously rather than per beat, on top
+        // of (not instead of) the frame-sheet transform breath below -- see
+        // StepIdleFrame's own comment for why both run.
+        //
+        // Its own clock (_rigIdleClock), not _idleClock: the frame-sheet
+        // breath below runs unconditionally for every idle combatant,
+        // rig-resolved or not, and would otherwise fight this over the
+        // same dictionary entry. NO REPAINT: nothing here writes
+        // _actorFrame, so there is no frame index for FrameFor/RefreshStage
+        // to disagree about -- the rig's own bone Transforms are what
+        // actually moved, and SpriteSkin reads them directly every render.
+        private void StepRigIdlePose(CombatantState combatant, int index, GameObject rigInstance)
+        {
+            var rigActor = rigInstance.GetComponent<RigActor>();
+            if (rigActor == null) return;
+
+            var clip = RigManifestLoader.ClipFor(SpriteFolderFor(combatant), FightSession.Stances.Idle);
+            if (clip.IsEmpty)
+            {
+                // NO CLIP, NO POSE TO DRIVE: back to bind pose rather than
+                // leaving whatever a previous beat's swing left the bones
+                // in -- this only runs while StanceOf is already Idle, so
+                // nothing else is animating this rig right now either.
+                _rigIdleClock.Remove(combatant);
+                rigActor.ResetToRest();
+                return;
+            }
+
+            // UNSCALED, like the frame-sheet clock below, so a fight paused
+            // behind a modal does not bank up a breath. Multiplied by
+            // BeatSpeedMultiplier rather than scaling the clip's own
+            // duration (RigSampler has no seam for that) -- algebraically
+            // the same effect: the clock crosses the clip's length that
+            // many times faster, which is what makes a PlayMode test's
+            // 60x-speed fight also breathe at 60x rather than stand frozen
+            // for the whole (real-time-short) test.
+            float multiplier = FightBeatPlayer.BeatSpeedMultiplier;
+            float dt = multiplier <= 0f ? 0f : Time.unscaledDeltaTime * multiplier;
+
+            if (!_rigIdleClock.TryGetValue(combatant, out float clock))
+            {
+                clock = index * clip.DurationSeconds * RigIdlePhaseFraction;
+            }
+
+            clock += dt;
+            _rigIdleClock[combatant] = clock;
+
+            rigActor.ApplyPose(RigSampler.Sample(clip, clock));
+        }
+
         // Advances one figure's breath. True when the drawing changed.
         private bool StepIdleFrame(CombatantState combatant, int index)
         {
@@ -970,8 +1054,23 @@ namespace PrincesPalace
             if (StanceOf(combatant) != FightSession.Stances.Idle)
             {
                 _idleClock.Remove(combatant);
+                _rigIdleClock.Remove(combatant);
                 BreatheFigure(combatant, 0f);
                 return false;
+            }
+
+            // The rig path ALSO breathes through its own authored idle clip
+            // -- a bob/sway/tail-flick played on top of, not instead of, the
+            // transform-scale breath below. The two animate different
+            // things entirely (this combatant's bone Transforms under its
+            // world slot, versus the uGUI slot's own localScale, which
+            // still matters for a rig-resolved combatant: it is the SAME
+            // slot Lunge/Recoil/Charge move, and the same slot
+            // StageAnimationTests asserts a flat-art actor breathes on --
+            // rig-resolved or not, that contract does not change here.
+            if (_rigInstances.TryGetValue(combatant, out var rigInstance) && rigInstance != null)
+            {
+                StepRigIdlePose(combatant, index, rigInstance);
             }
 
             var animation = StanceAnimationFor(combatant, FightSession.Stances.Idle);
@@ -1169,6 +1268,33 @@ namespace PrincesPalace
 
             int frame = _actorFrame.TryGetValue(combatant, out var f) ? f : 0;
             return animation.FrameAt(frame);
+        }
+
+        // The seam FightBeatPlayer actually drives: how this combatant's
+        // chosen stance plays, regardless of which art style is underneath.
+        //
+        // A rig-resolved combatant only counts if RefreshRigActor has
+        // actually run for it -- which every beat guarantees, because
+        // PlayBeats poses every combatant in beat.Stances (SetStance ->
+        // PoseCombatant -> RefreshStage) BEFORE it asks for a playback, for
+        // both the beat's own actor and every victim FlinchFrames later
+        // resolves. A combatant with no rig instance yet (never posed this
+        // fight, or resolves to the frame-sheet path) falls straight
+        // through to FrameStancePlayback, identical to before this seam.
+        private IStancePlayback PlaybackFor(CombatantState combatant, string stance, System.Func<bool> abandon)
+        {
+            if (combatant != null && _rigInstances.TryGetValue(combatant, out var instance) && instance != null)
+            {
+                var rigActor = instance.GetComponent<RigActor>();
+                if (rigActor != null)
+                {
+                    var clip = RigManifestLoader.ClipFor(SpriteFolderFor(combatant), stance);
+                    return new RigStancePlayback(rigActor, clip, abandon);
+                }
+            }
+
+            var animation = StanceAnimationFor(combatant, stance);
+            return new FrameStancePlayback(combatant, animation, SetActorFrame, abandon);
         }
 
         // Falls back through requested stance -> idle. A sheet is allowed to be

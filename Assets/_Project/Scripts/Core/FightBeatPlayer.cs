@@ -132,11 +132,6 @@ namespace PrincesPalace
         // lookup; playback only says WHO holds WHAT and WHEN.
         internal Action<CombatantState, string> SetStance;
 
-        // Advances a combatant to frame N of its current pose. Separate from
-        // SetStance because a pose is chosen once and then STEPPED -- collapsing
-        // the two would re-resolve the animation on every frame.
-        internal Action<CombatantState, int> SetFrame;
-
         // How hard to kick the stage, 0..1. The view owns which transforms
         // that means -- see FightController.ShakeStage -- and playback owns
         // when and how hard, because only it knows where the impact is.
@@ -145,10 +140,15 @@ namespace PrincesPalace
         // Raised by Flush, read by every reaction coroutine. See Flinch.
         private bool _flushed;
 
-        // How a combatant's pose is timed: how many frames it has, how long each
-        // holds, and which one is the impact. Resolved by the controller, which
-        // is the only thing that can load the sheet.
-        internal Func<CombatantState, string, StanceAnimation> AnimationFor;
+        // How a combatant's chosen stance actually PLAYS -- windup, impact
+        // timing, follow-through, whether it returns to rest -- regardless
+        // of whether it is a frame sheet or a rig underneath. Resolved by
+        // the controller, the only thing that knows which art style a
+        // combatant wears; the `abandon` param is threaded straight through
+        // to whichever StanceStepper/RigStancePlayer call ends up driving
+        // it, so a flinch on a victim can still be cut short mid-beat the
+        // way it always could.
+        internal Func<CombatantState, string, Func<bool>, IStancePlayback> PlaybackFor;
         internal Action<CombatBeat> FlashTarget;
 
         public void Play(IReadOnlyList<CombatBeat> beats, Action onFinished)
@@ -278,23 +278,15 @@ namespace PrincesPalace
                 // the game, for a feature three skills use -- caught by two
                 // PlayMode tests that sample exactly one frame after the click,
                 // which is the only reason it was caught at all.
-                var animation = AnimationOf(beat);
-
-                // 1-BASED, matching the vfxImpactFrame convention enemies.json
-                // already uses ("frame 3 of 6"). So the wind-up is frames
-                // [0, impact) and the follow-through is [impact, count).
-                //
                 // COMPUTED BEFORE THE APPROACH FIRES, because a Charge needs it:
                 // its whole point is to arrive on the impact frame, so it has to
                 // know how long the wind-up runs before it dispatches the travel.
-                int impactFrame = animation.IsEmpty
-                    ? 1
-                    : Mathf.Clamp(animation.ImpactFrame, 1, animation.FrameCount);
+                var playback = PlaybackOf(beat);
 
                 if (beat.Approach == StageApproach.Close) yield return CloseIn(beat);
 
                 Lunge(beat);
-                Charge(beat, animation, impactFrame);
+                Charge(beat, playback);
                 PlayVfx?.Invoke(beat);
 
                 // A beat's own clip, if it authored one. Unconditional and
@@ -303,11 +295,11 @@ namespace PrincesPalace
                 // no-op, which is why this needs no guard of its own.
                 SoundController.PlayClip(beat.Vfx.sfxPath);
 
-                // Wind-up: the actor's own frames up to and including its impact
-                // frame. A spell instead waits out its VFX's impact fraction --
-                // whichever of the two this beat has, only one of them is
-                // non-zero, so they add rather than compete.
-                yield return StepActorFrames(beat.Actor, 0, impactFrame, animation);
+                // Wind-up: the actor's own performance up to and including its
+                // impact moment. A spell instead waits out its VFX's impact
+                // fraction -- whichever of the two this beat has, only one of
+                // them is non-zero, so they add rather than compete.
+                yield return playback.Windup();
 
                 float impact = ImpactDelayFor == null ? 0f : ImpactDelayFor(beat);
                 if (impact > 0f) yield return new WaitForSeconds(Scaled(impact));
@@ -372,24 +364,23 @@ namespace PrincesPalace
                 // it one continuous motion and leaves the beat's total length
                 // untouched, which matters because the hold is what gives the
                 // player time to read the damage number.
-                yield return StepActorFrames(beat.Actor, impactFrame, animation.FrameCount, animation);
+                yield return playback.FollowThrough();
 
-                // A ONE-SHOT THAT RETURNS plays its frames back down to the
-                // start -- the beetle's Shell Up uncurling out of the sealed
-                // ball it curled into. Without this a curl-and-hold stance
-                // snapped from its last frame straight to idle, which reads as
-                // the shell popping open rather than opening.
+                // A ONE-SHOT THAT RETURNS plays back down to the start -- the
+                // beetle's Shell Up uncurling out of the sealed ball it curled
+                // into. Without this a curl-and-hold stance snapped from its
+                // last frame straight to idle, which reads as the shell popping
+                // open rather than opening.
                 //
                 // Real extra time, like CloseIn and unlike the hit-stop: the
                 // release is a motion the beat did not previously spend, so it
-                // is added rather than taken out of the settle. From count-1
-                // (the last frame the follow-through just showed) back to 0.
-                if (animation.ReturnsToStart && animation.FrameCount > 1)
+                // is added rather than taken out of the settle.
+                if (playback.ReturnsToStart)
                 {
-                    yield return StepActorFramesReverse(beat.Actor, 0, animation.FrameCount - 1, animation);
+                    yield return playback.Release();
                 }
 
-                float remaining = SettleAfter(animation.SecondsPerFrame * animation.FrameCount + stop);
+                float remaining = SettleAfter(playback.TotalSeconds + stop);
                 yield return new WaitForSeconds(Scaled(remaining));
 
                 // Back to idle before the next beat opens, so a pose belongs to
@@ -409,7 +400,7 @@ namespace PrincesPalace
                 // from here on. PoseCombatant already zeroes the frame on a
                 // pose CHANGE, so this is belt and braces for the case where
                 // the actor was idle all along.
-                if (beat.Actor != null) SetFrame?.Invoke(beat.Actor, 0);
+                if (beat.Actor != null) playback.ResetToRest();
 
                 yield return new WaitForSeconds(Scaled(BeatGapSeconds));
             }
@@ -514,38 +505,22 @@ namespace PrincesPalace
         // Fire-and-forget like Lunge, NOT a coroutine like CloseIn: it costs
         // the beat no extra time, because it fits inside the wind-up the beat
         // already spends.
-        private void Charge(CombatBeat beat, StanceAnimation animation, int impactFrame)
+        private void Charge(CombatBeat beat, IStancePlayback playback)
         {
             if (beat.Approach != StageApproach.Charge) return;
 
             var (animator, offset) = TravelFor(beat, ChargeFraction);
             if (animator == null) return;
 
-            float windup = WindupSeconds(animation, impactFrame);
+            // Unscaled, because Play scales the out-tween itself -- the one
+            // place a duration handed to Play is expected raw rather than
+            // pre-scaled (holdSeconds is the other way round; see PlayRoutine).
+            float windup = playback?.WindupSeconds ?? 0f;
             float impactDelay = ImpactDelayFor == null ? 0f : ImpactDelayFor(beat);
             float outSeconds = Mathf.Max(ChargeMinOutSeconds, windup + impactDelay);
 
             float hold = Scaled(HitStopFor(beat) + ChargeContactSeconds);
             animator.Play(offset, hold, outSeconds);
-        }
-
-        // How long the wind-up frames [0, impact) actually take, at the sheet's
-        // own uneven pace. Unscaled, because Play scales the out-tween itself --
-        // the one place a duration handed to Play is expected raw rather than
-        // pre-scaled (holdSeconds is the other way round; see PlayRoutine).
-        private static float WindupSeconds(StanceAnimation animation, int impactFrame)
-        {
-            if (animation.IsEmpty || animation.FrameCount <= 1) return 0f;
-
-            int to = Mathf.Clamp(impactFrame, 1, animation.FrameCount);
-            float total = 0f;
-            for (int frame = 0; frame < to; frame++)
-            {
-                total += FrameHoldCurve.HoldFor(frame, animation.FrameCount,
-                                                animation.ImpactFrame, animation.SecondsPerFrame);
-            }
-
-            return total;
         }
 
         // THE OTHER APPROACH: get there FIRST, then swing.
@@ -657,19 +632,20 @@ namespace PrincesPalace
         // blow already dwells longer and this is the shared minimum on top.
         private const float ChargeContactSeconds = 0.06f;
 
-        // How this beat's actor animates. Falls back to a single instantaneous
-        // frame when there is no kit, no art, or no timing -- which is every
-        // combatant with flat-file art, and is why the stepping below vanishes
-        // rather than misbehaving for them.
-        private StanceAnimation AnimationOf(CombatBeat beat)
+        // How this beat's actor plays its pose. Falls back to a no-op
+        // performance when there is no controller wired at all, or no actor
+        // -- the bare fixture FightBeatPacingTests.NewPlayer() exercises,
+        // and the same graceful posture AnimationOf always took for a
+        // combatant with no kit, no art or no timing.
+        private IStancePlayback PlaybackOf(CombatBeat beat)
         {
-            if (AnimationFor == null || beat?.Actor == null) return StanceAnimation.Empty;
+            if (PlaybackFor == null || beat?.Actor == null) return EmptyStancePlayback.Instance;
 
             string stance = beat.Stances.TryGetValue(beat.Actor, out var pose)
                 ? pose
                 : FightSession.Stances.Idle;
 
-            return AnimationFor(beat.Actor, stance);
+            return PlaybackFor(beat.Actor, stance, null) ?? EmptyStancePlayback.Instance;
         }
 
         // The squash a struck figure takes, scaled by how hard it was hit.
@@ -726,15 +702,15 @@ namespace PrincesPalace
         // The beat owns its own length; these are decoration inside it.
         private void FlinchFrames(CombatBeat beat)
         {
-            if (beat == null || SetFrame == null || AnimationFor == null) return;
+            if (beat == null || PlaybackFor == null) return;
 
             foreach (var posed in beat.Stances)
             {
                 var victim = posed.Key;
 
-                // The actor's frames are the beat's own timing, stepped either
-                // side of the impact by StepActorFrames -- and nobody flinches
-                // away from themselves, which is the rule Recoil also states.
+                // The actor's own performance is driven by playback above --
+                // and nobody flinches away from themselves, which is the rule
+                // Recoil also states.
                 if (victim == null || ReferenceEquals(victim, beat.Actor)) continue;
 
                 // A body is the CONTROLLER's to animate: FightController's
@@ -743,7 +719,7 @@ namespace PrincesPalace
                 // fight over the frame index.
                 if (posed.Value == FightSession.Stances.Defeated) continue;
 
-                Flinch(victim, AnimationFor(victim, posed.Value));
+                Flinch(victim, PlaybackFor(victim, posed.Value, () => _flushed));
             }
         }
 
@@ -757,9 +733,9 @@ namespace PrincesPalace
         private readonly Dictionary<CombatantState, Coroutine> _flinching =
             new Dictionary<CombatantState, Coroutine>();
 
-        private void Flinch(CombatantState victim, StanceAnimation animation)
+        private void Flinch(CombatantState victim, IStancePlayback playback)
         {
-            if (animation.FrameCount <= 1) return;
+            if (playback == null || !playback.HasMotion) return;
 
             if (_flinching.TryGetValue(victim, out var running) && running != null)
             {
@@ -770,30 +746,18 @@ namespace PrincesPalace
             // had since it was written and this did not. A reaction outlives
             // nothing -- but Flush() stops only the main playback coroutine, so
             // a fight abandoned mid-beat left these writing frames into the
-            // next encounter's slots.
-            _flinching[victim] = StartCoroutine(StanceStepper.Play(
-                animation,
-                frame => SetFrame(victim, frame),
-                abandon: () => _flushed));
+            // next encounter's slots. The abandon check lives INSIDE playback
+            // now (threaded through PlaybackFor's third argument above), polled
+            // every frame the same way it always was; the check between the two
+            // phases here is belt to that same braces.
+            _flinching[victim] = StartCoroutine(FlinchRoutine(playback));
         }
 
-        // Walks an actor through frames [from, to). The pacing lives in
-        // StanceStepper, shared with the bodies playback does not drive -- see
-        // its header for why having two copies of this loop was a bug rather
-        // than merely untidy.
-        private IEnumerator StepActorFrames(CombatantState actor, int from, int to, StanceAnimation animation)
+        private IEnumerator FlinchRoutine(IStancePlayback playback)
         {
-            if (actor == null || SetFrame == null) yield break;
-
-            yield return StanceStepper.Play(animation, from, to, frame => SetFrame(actor, frame));
-        }
-
-        // The same walk in reverse, for a stance that returns to its start.
-        private IEnumerator StepActorFramesReverse(CombatantState actor, int from, int to, StanceAnimation animation)
-        {
-            if (actor == null || SetFrame == null) yield break;
-
-            yield return StanceStepper.PlayReverse(animation, from, to, frame => SetFrame(actor, frame));
+            yield return playback.Windup();
+            if (_flushed) yield break;
+            yield return playback.FollowThrough();
         }
 
         // What the two of them say about the blow.
