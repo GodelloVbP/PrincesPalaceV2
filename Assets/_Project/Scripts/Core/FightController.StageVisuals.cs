@@ -562,6 +562,8 @@ namespace PrincesPalace
                 // named bone Transforms themselves.
                 var rigActor = instance.AddComponent<RigActor>();
                 rigActor.Initialize(instance.transform.Find("bones"));
+                instance.AddComponent<RigHitFlash>();
+                instance.AddComponent<RigDeathFade>();
             }
             else if (instance.transform.parent != worldSlot)
             {
@@ -841,6 +843,11 @@ namespace PrincesPalace
                 // every beat after the one that killed it, so this is asked
                 // repeatedly and must only ever fade once.
                 fade?.PlayIfNotAlready();
+
+                if (_rigInstances.TryGetValue(pair.Key, out var rigInstance) && rigInstance != null)
+                {
+                    rigInstance.GetComponent<RigDeathFade>()?.PlayIfNotAlready();
+                }
             }
         }
 
@@ -1208,14 +1215,29 @@ namespace PrincesPalace
             // stop meaning anything.
             if (beat == null || beat.Amount <= 0) return;
 
+            // Read off the BEAT, not off the target's health -- by the time this
+            // plays, live health has already moved through the rest of the round.
+            //
+            // Both paths get a chance to fire: a rig-resolved combatant's
+            // Image is hidden, so its (harmless, invisible) StageHitFlash
+            // firing costs nothing, and the reverse holds if a target ever
+            // has no rig instance yet.
+            if (beat.Target != null && _rigInstances.TryGetValue(beat.Target, out var rigInstance) && rigInstance != null)
+            {
+                var rigFlash = rigInstance.GetComponent<RigHitFlash>();
+                if (rigFlash != null)
+                {
+                    if (beat.IsHealing) rigFlash.FlashHeal();
+                    else rigFlash.Flash();
+                }
+            }
+
             var slot = SlotFor(beat.Target);
             if (slot == null) return;
 
             var flash = slot.GetComponentInChildren<StageHitFlash>(includeInactive: true);
             if (flash == null) return;
 
-            // Read off the BEAT, not off the target's health -- by the time this
-            // plays, live health has already moved through the rest of the round.
             if (beat.IsHealing) flash.FlashHeal();
             else flash.Flash();
         }

@@ -329,6 +329,10 @@ $PathAreas = @(
     # Rig outputs (atlas.png/rig.json/the generated prefab) -- same
     # reasoning as Enemies/Spells immediately above, one folder over.
     @{ Pattern = '^Assets/_Project/Resources/Rigs/'; Areas = @('art', 'combat') }
+    # Runtime-loaded shaders/materials. Today that's UIHitFlash and
+    # RigHitFlash -- both stage hit reactions -- so 'combat'+'art' rather
+    # than a bespoke 'shader' area of its own for two files.
+    @{ Pattern = '^Assets/_Project/Resources/(Shaders|Materials)/'; Areas = @('art', 'combat') }
     @{ Pattern = '^Assets/_Project/Art/';         Areas = @('art') }
     # TMP font assets. 'ui' rather than 'art': the thing that breaks when one
     # of these changes is text metrics -- a re-baked atlas shifts glyph
