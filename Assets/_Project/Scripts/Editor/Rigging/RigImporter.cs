@@ -73,6 +73,36 @@ namespace PrincesPalace.Editor.Rigging
             var dp = factories.GetSpriteEditorDataProviderFromObject(importer);
             dp.InitSpriteEditorDataProvider();
 
+            // Re-running this importer against an atlas it has already
+            // authored (every rig.json edit, every backing_px/epsilon
+            // tuning pass) does NOT cleanly replace the previous sprite
+            // sheet -- SetSpriteRects/Apply further down is documented as a
+            // full replace, but in practice stale mesh/bone/rect entries
+            // from earlier imports of the SAME deterministic spriteIDs kept
+            // surviving underneath the new ones. Caught the hard way: the
+            // rat's committed atlas.png.meta had grown to carry 9500+ dead
+            // lines of old sprite data, and one part ("tail") ended up with
+            // a rect so stale it fell outside the CURRENT atlas bounds --
+            // Unity silently dropped the sprite entirely, passing every
+            // test that happened to run in the SAME live session that had
+            // just re-authored it (correct in memory, wrong on disk) while
+            // being broken for any fresh process loading the committed file
+            // cold, which is exactly what a real player's first import
+            // does. Explicitly replacing with an EMPTY rect set first, via
+            // this same data-provider API, forces that stale per-sprite
+            // state out before the real rects go back in -- tried toggling
+            // SpriteImportMode.Single/Multiple instead first, but
+            // RigAtlasImportPostprocessor forces Multiple back on every
+            // reimport before the toggle can take effect, so it never
+            // actually cleared anything.
+            if (dp.GetSpriteRects().Length > 0)
+            {
+                dp.SetSpriteRects(Array.Empty<SpriteRect>());
+                dp.Apply();
+                importer.SaveAndReimport();
+                dp.InitSpriteEditorDataProvider();
+            }
+
             var partsJson = rig["parts"].AsArray();
             var spriteIds = new Dictionary<string, GUID>();
             var rects = new List<SpriteRect>();

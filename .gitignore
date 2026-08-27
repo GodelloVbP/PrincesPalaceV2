@@ -21,8 +21,14 @@ tools/screenshots/
 # rig_actor.py's review artifacts -- regenerated every run, meant to be
 # looked at locally before trusting a cut, never committed (same posture
 # as preview.png already had by convention before this line existed).
+# Their .meta siblings too -- Unity auto-imports anything it finds under
+# Resources/, including these, and a git-tracked PNG-but-not-its-.meta
+# would fail CLAUDE.md gotcha #2's own rule the moment someone committed
+# it by habit; simplest to keep both out entirely, same as the PNGs.
 Assets/_Project/Resources/Rigs/**/preview.png
+Assets/_Project/Resources/Rigs/**/preview.png.meta
 Assets/_Project/Resources/Rigs/**/wiggle.png
+Assets/_Project/Resources/Rigs/**/wiggle.png.meta
 
 # IDE
 .vs/

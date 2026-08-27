@@ -93,10 +93,18 @@ namespace PrincesPalace.Domain.Tests
             // PlaytimeTracker is the same shape again: one hidden host,
             // bootstrapped before the first scene, ticking a save's playtime
             // total. No rect, no screen tree, nothing this rule protects.
+            // RigPrefabBuilder builds a generated SKELETAL ACTOR prefab --
+            // bone Transforms and SpriteRenderer/SpriteSkin part GameObjects
+            // for a world-space rig -- a different kind of object entirely
+            // from a uGUI screen widget. No RectTransform, no anchor/size
+            // preamble, never a child of any screen tree UiEmitter builds,
+            // so the rule this lint protects does not apply to it any more
+            // than it applies to SoundController's audio host.
             string[] allowed =
             {
                 "UiEmitter.cs", "ScreenshotTool.cs", "SceneBuilder.cs", "CanvasCapture.cs",
                 "SoundController.cs", "CursorController.cs", "PlaytimeTracker.cs",
+                "RigPrefabBuilder.cs",
             };
 
             var offenders = Matches(@"new\s+GameObject\s*\(")

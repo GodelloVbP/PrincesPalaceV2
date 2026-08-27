@@ -12,11 +12,20 @@ namespace PrincesPalace.PlayModeTests
     //   renders correctly here => authored mesh + UVs are fine, the fault is
     //                             in SpriteSkin deformation;
     //   still fragments here    => the fault is in the authored sprite mesh.
+    //
+    // GRAPHICS-GATED, same reasoning as RigImportIntegrityTests -- self-skips
+    // under the headless commit gate (-nographics), run via
+    // tools/graphics_tests.ps1 -Filter PrincesPalace.PlayModeTests.RigRawSpriteTests.
     public class RigRawSpriteTests
     {
         [UnityTest]
         public IEnumerator RawSprites_RenderWithoutSkinning()
         {
+            if (!CanvasCapture.IsSupported)
+            {
+                Assert.Ignore("No graphics device (-nographics). Run: tools/graphics_tests.ps1 -Filter PrincesPalace.PlayModeTests.RigRawSpriteTests");
+            }
+
             var atlas = Resources.Load<Texture2D>("Rigs/Enemies/rat/atlas");
             Sprite[] sprites;
 #if UNITY_EDITOR
@@ -74,9 +83,10 @@ namespace PrincesPalace.PlayModeTests
             tex.Apply();
             RenderTexture.active = prev;
 
-            string outDir = @"C:\Users\Godel\AppData\Local\Temp\claude\C--Games-Prince-s-Palace-v2\b969cb95-02e9-45fc-a0e4-b6567a692cc2\scratchpad";
+            string outDir = Path.GetFullPath(Path.Combine(
+                Directory.GetParent(Application.dataPath).FullName, "tools", "screenshots", "rigs"));
             Directory.CreateDirectory(outDir);
-            File.WriteAllBytes(Path.Combine(outDir, "rig_raw_sprites.png"), tex.EncodeToPNG());
+            File.WriteAllBytes(Path.Combine(outDir, "rat_raw_sprites.png"), tex.EncodeToPNG());
 
             var px = tex.GetPixels32();
             int distinct = px.Count(p => p.a > 200 && !(p.r > 200 && p.g > 205 && p.b > 210));
