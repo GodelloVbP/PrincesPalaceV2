@@ -273,6 +273,32 @@ are plain logic; only the PAINTING needs Unity.
 | `Core/DamagePopup.cs` | the rise-and-fade, with `Reclaim` |
 | `Core/StageHitFlash.cs` | the white silhouette, over `Resources/Shaders/UIHitFlash.shader` |
 
+**Skeletal rig pilot (the Giant Rat) — hybrid world-space actors alongside
+the frame-sheet Image path above.** `RigLibrary.Resolve(folder)` returns
+null for anything that has no rig, so every file below is invisible to
+every other creature. Full workflow: `docs/ART_PIPELINE.md` §9.
+
+| File | What it owns |
+|---|---|
+| `Domain/Rig/RigStanceClip.cs` | `RigKeyframe`/`RigBoneTrack`/`RigStanceClip` — engine-free rig clip data |
+| `Domain/Rig/RigSampler.cs` | what every bone is worth at a moment in a clip's playback |
+| `Domain/Rig/RawRigManifest.cs` + `RigAnimationResolver.cs` | animations.json's on-disk shape, resolved |
+| `Core/Rig/RigActor.cs` | a rig instance's bone-name → Transform map, `ApplyPose`/`ResetToRest` |
+| `Core/Rig/RigStancePlayer.cs` | the rig twin of `StanceStepper` — samples a clip over real time |
+| `Core/Rig/RigManifestLoader.cs` | `Resources.Load` + cache for `animations.json`, per folder |
+| `Core/Rig/RigLibrary.cs` | resolves a spritePath to its rig prefab; the pilot's scale-calibration table |
+| `Core/Rig/RigHitFlash.cs` | material-swap flash, over `Resources/Shaders/RigHitFlash.shader` |
+| `Core/Rig/RigDeathFade.cs` | the alpha fade — no shader needed, unlike the flash |
+| `Core/StancePerformance.cs` | `IStancePlayback` — the seam `FightBeatPlayer` drives regardless of art style |
+| `Editor/Rigging/RigImporter.cs` + `RigPrefabBuilder.cs` | `rig.json` + atlas → the generated prefab |
+| `Editor/SceneBuilder/SceneBuilder.cs` | world-interleaved canvas sandwich, `StageActorsSortingLayer` |
+
+`FightBeatPlayer` no longer knows which art style it drives: `PlayBeats`
+calls only `IStancePlayback.Windup()`/`FollowThrough()`/`Release()`, and
+`FightController.PlaybackFor` is what picks `FrameStancePlayback` or
+`RigStancePlayback` per combatant — the same branch
+`RefreshCombatantSprite` already draws for which sprite path to paint.
+
 Two measurements the plan said to make rather than predict, both now made --
 and the first one found a defect that had made every previous visual judgement
 in this project worthless.
