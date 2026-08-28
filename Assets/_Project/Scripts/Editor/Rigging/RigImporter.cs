@@ -229,6 +229,21 @@ namespace PrincesPalace.Editor.Rigging
             importer.SaveAndReimport();
             AssetDatabase.SaveAssets();
 
+            // Second explicit synchronous reimport, forced. In a cold batch-mode
+            // process the asset-import WORKER (a separate process Unity spawns
+            // lazily) was still starting up while the calls above ran -- its own
+            // log line ("Worker ready: AssetImportWorkerHW0") showed up AFTER
+            // SaveAndReimport() had already returned, on the run that first hit
+            // this. The in-memory read-back below (AssetDatabase.LoadAllAssetsAtPath)
+            // passed anyway, because it reads whatever the CURRENT process already
+            // has cached -- but the .meta file on disk kept whatever sprite sheet
+            // was there before this run, silently. Any FRESH process loading that
+            // file cold (a real test run, a real player) sees the stale one. Forcing
+            // a second ForceUpdate import here gives the worker a synchronization
+            // point to actually catch up before this method returns.
+            AssetDatabase.ImportAsset(atlasPath, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+            AssetDatabase.SaveAssets();
+
             // Compare what we SENT against what Unity actually STORED. If these
             // disagree, Unity re-tessellated or rejected the authored mesh and
             // the bug is upstream of anything the prefab/stage does.

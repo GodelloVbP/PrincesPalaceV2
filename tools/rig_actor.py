@@ -337,12 +337,50 @@ RIGS = {
                 # actually overlaps a leg pixel even though its x-range
                 # does, and the rank-based resolve (tail loses to body/near
                 # legs/head, wins over far legs) is unchanged either way.
-                "kind": "region",
+                # CHAIN, not a single rigid part: one bone can only rotate
+                # about its own pivot, so a single "tail" bone can never
+                # bend along its own length -- it swings as one stiff rod
+                # no matter what the keyframes say. Three bones in
+                # sequence (base/mid/tip) let a wave actually travel down
+                # the tail, the same way a real segmented tail animates,
+                # at the cost of a visible facet at each joint instead of
+                # a smooth curve (true smooth blending needs Unity's own
+                # bounded-biharmonic weight generator, which turned out to
+                # be uncallable from outside the Sprite Editor's own UI --
+                # see the rig-pipeline plan file's own notes on that dead
+                # end).
+                #
+                # cuts_x splits the SAME clause-region mask this part used
+                # when it was a single "region" entry, by x-band, base
+                # (high x, near the body) -> tip (low x). See
+                # build_chain_masks for why splitting before the rank-carve
+                # step below is equivalent to splitting the final shape.
+                "kind": "chain",
                 "clauses": [
                     [("x", "<", 450)],
                     [("x", "<", 560), ("y", "<", 500)],
                 ],
                 "pivot": (500, 398),
+                "segments": ["tail_1", "tail_2", "tail_3"],
+                "cuts_x": [350, 180],
+                # tail_3 (the tip) is the smallest, most detailed segment
+                # now that it's isolated from the rest of the tail's own
+                # length -- the rig-wide default epsilon cut across its
+                # curl and failed FIDELITY (IoU 0.9826 < 0.985). Tighter
+                # for the whole chain; tail_1/tail_2 had comfortable
+                # margin already (0.99+) so this doesn't cost them
+                # anything, just gives tail_3 more vertex budget.
+                "simplify_epsilon": 0.6,
+                # tail_1 backs under tail_2, tail_2 backs under tail_3 --
+                # the exact same mechanism body uses to back under head,
+                # applied one joint at a time down the chain. Radii
+                # measured against a real build (see build log / commit
+                # message for the seam-distance numbers this was sized
+                # from), not guessed.
+                "segment_backing_px": {
+                    "tail_1": {"default": 0, "tail_2": 40},
+                    "tail_2": {"default": 0, "tail_3": 40},
+                },
             },
             "legs": {
                 # Connected components of the silhouette below the belly
@@ -364,16 +402,27 @@ RIGS = {
         # Paint order, back to front. Doubles as the z-resolve priority for
         # pixel overlap between parts (a later entry wins the overlap) and
         # as the "z" field written per part in rig.json.
+        # tail_1/tail_2/tail_3 replace the old single "tail" slot, in
+        # base->tip order -- ascending z within the chain so each parent
+        # segment's backing patch (see segment_backing_px above) sits
+        # BEHIND its child at bind pose, hidden until the child rotates
+        # away, the same relationship body/head already has one level up.
         "order": [
-            "far_hindleg", "far_foreleg", "tail", "body",
+            "far_hindleg", "far_foreleg", "tail_1", "tail_2", "tail_3", "body",
             "near_hindleg", "near_foreleg", "head",
         ],
 
         # 2px growth so a moving part owns its own outline pixels instead of
         # ending exactly where the body silhouette does (leaves a hairline
-        # gap the instant it rotates away from bind pose). Tail excluded --
-        # it is not a separate silhouette carved out of the body the way a
-        # limb is, so growing it would eat into the body itself.
+        # gap the instant it rotates away from bind pose). The tail chain is
+        # excluded for the same reason the old single "tail" part was:
+        # tail_1 is not a separate silhouette carved out of the body the way
+        # a limb is (it's the same clause-region the old part used, just
+        # banded), so growing it would eat into the body itself -- and
+        # tail_2/tail_3 are excluded to match rather than re-litigate the
+        # dilate_px/backing_px trade-off the comment below already settled
+        # once. segment_backing_px above is what actually hides their own
+        # internal joints, not this.
         # Kept modest -- growing this ALSO shrinks body_mask (body is defined
         # as "whatever's left after removing dilated legs/head"), which
         # eats into body's own backing_px margin at the same rate it grows
@@ -383,7 +432,7 @@ RIGS = {
         # comment for why growing it caused the exact overshoot bug this
         # file's simplify_epsilon fix now handles instead.
         "dilate_px": 4,
-        "dilate_skip": ["tail"],
+        "dilate_skip": ["tail_1", "tail_2", "tail_3"],
 
         "simplify_epsilon": SIMPLIFY_EPSILON_DEFAULT,
         "atlas_padding": ATLAS_PADDING_DEFAULT,
@@ -394,7 +443,8 @@ RIGS = {
         # part is weighted to a bone it doesn't own, defaults to its own
         # name).
         "bone_parents": {
-            "head": "body", "tail": "body",
+            "head": "body",
+            "tail_1": "body", "tail_2": "tail_1", "tail_3": "tail_2",
             "far_hindleg": "body", "near_hindleg": "body",
             "far_foreleg": "body", "near_foreleg": "body",
         },
@@ -634,6 +684,70 @@ def detect_legs(alpha, X, Y, spec, rig_id):
         top = int(ys.min())
         band = ys < top + band_px
         pivots[name] = (int(round(float(xs[band].mean()))), top + dy)
+    return masks, pivots
+
+
+def build_chain_masks(pspec, alpha, X, Y, rig_id):
+    """One 'region'-shaped part split into a base->tip CHAIN of rigid
+    segments, for a limb that needs to bend along its own length rather
+    than swing as one stiff rod (see the rat's own tail entry: one bone
+    can only rotate about a single pivot, so a wave can never travel
+    through it -- three bones in sequence can, even without any per-vertex
+    weight blending across them).
+
+    Splitting the RAW region mask by x-band BEFORE the rank-carving step
+    in build_rig is safe and equivalent to splitting the final resolved
+    shape: set operations commute, so (full_mask & x_band) carved against
+    a later part is pixel-identical to (full_mask carved) & x_band. Each
+    segment ends up exactly as trimmed by body/legs/head as the original
+    single part would have been -- the carving loop doesn't need to know
+    or care that "tail" became three names instead of one.
+
+    cuts_x lists thresholds base -> tip in the same direction the rig's
+    OWN pivot -> tip sweep runs (descending x for the rat, whose tail
+    starts near the body at high x and extends toward low x) -- ascending
+    for a rig whose tail sweeps the other way, no code change needed.
+    """
+    full_mask = eval_region(pspec["clauses"], X, Y) & alpha
+    segments = pspec["segments"]
+    cuts = pspec["cuts_x"]
+    if len(cuts) != len(segments) - 1:
+        sys.exit(f"[{rig_id}] chain part needs len(cuts_x) == len(segments)-1, "
+                  f"got {len(cuts)} cuts for {len(segments)} segments")
+
+    descending = cuts == sorted(cuts, reverse=True)
+    if not descending and cuts != sorted(cuts):
+        sys.exit(f"[{rig_id}] chain part's cuts_x must be monotonic (all ascending or all descending)")
+
+    bounds = [None] + list(cuts) + [None]
+    masks = {}
+    for i, seg_name in enumerate(segments):
+        a, b = bounds[i], bounds[i + 1]
+        band = full_mask.copy()
+        if a is not None:
+            band &= (X < a) if descending else (X >= a)
+        if b is not None:
+            band &= (X >= b) if descending else (X < b)
+        if not band.any():
+            sys.exit(f"[{rig_id}] chain segment '{seg_name}' is empty -- cuts_x doesn't intersect this part's mask")
+        masks[seg_name] = band
+
+    pivots = {segments[0]: tuple(pspec["pivot"])}
+    band_px = pspec.get("joint_band_px", 6)
+    for i in range(1, len(segments)):
+        # Joint pivot = mean position of the PARENT segment's own pixels
+        # right at the cut line -- "where the previous segment ends", the
+        # same "at the join, not a bbox corner" rule detect_legs' own
+        # pivot_rule already follows for hip pivots.
+        cut = cuts[i - 1]
+        parent_mask = masks[segments[i - 1]]
+        near_cut = parent_mask & (X >= cut - band_px) & (X < cut + band_px)
+        ys, xs = np.nonzero(near_cut)
+        if len(xs) == 0:
+            sys.exit(f"[{rig_id}] chain segment '{segments[i]}' joint has no parent pixels "
+                      f"near x={cut} to seed a pivot -- widen joint_band_px or move the cut")
+        pivots[segments[i]] = (int(round(float(xs.mean()))), int(round(float(ys.mean()))))
+
     return masks, pivots
 
 
@@ -1005,6 +1119,10 @@ def build_rig(rig_id, source_override=None):
             leg_masks, leg_pivots = detect_legs(alpha, X, Y, pspec, rig_id)
             masks.update(leg_masks)
             pivots.update(leg_pivots)
+        elif pspec["kind"] == "chain":
+            chain_masks, chain_pivots = build_chain_masks(pspec, alpha, X, Y, rig_id)
+            masks.update(chain_masks)
+            pivots.update(chain_pivots)
         else:
             sys.exit(f"[{rig_id}] unknown part kind '{pspec['kind']}' for '{name}'")
 
@@ -1028,41 +1146,61 @@ def build_rig(rig_id, source_override=None):
     body_mask = alpha & ~moving
 
     body_spec = spec["body"]
-    backing_spec = body_spec.get("backing_px", 0)
 
-    # A plain int is still every existing rig's shape (one radius, applied
-    # everywhere) -- {"default": N} is the same thing spelled as a dict.
-    # A per-part key OVERRIDES that default's reach for that one joint,
-    # clipped to the named part's own (already dilate_px-grown) mask, so a
-    # big number for a joint that needs it structurally cannot bleed into
-    # an unrelated part's territory -- see the rat's own "head" override
-    # and its comment for why that clip is what makes a large radius safe.
-    if isinstance(backing_spec, dict):
-        default_backing = backing_spec.get("default", 0)
-        overrides = {k: v for k, v in backing_spec.items() if k != "default"}
-    else:
-        default_backing = backing_spec
-        overrides = {}
+    # Any part that owns a moving neighbour can back UNDER it, the same
+    # reason and the same mechanism -- body backs under head (a
+    # remainder-shaped part with no silhouette of its own), and a chain
+    # segment backs under its own child link (a segment with a perfectly
+    # real silhouette that still needs the same treatment at its OUTGOING
+    # joint). One name -> backing_px map covers both: body's own entry
+    # plus whatever the "tail" chain spec declares per segment.
+    backing_owners = {"body": (body_mask, body_spec.get("backing_px", 0))}
+    for pspec in parts_spec.values():
+        if pspec.get("kind") != "chain":
+            continue
+        for seg_name, seg_backing in pspec.get("segment_backing_px", {}).items():
+            if seg_name not in masks:
+                sys.exit(f"[{rig_id}] segment_backing_px names unknown segment '{seg_name}'")
+            backing_owners[seg_name] = (masks[seg_name], seg_backing)
 
-    for part_name in overrides:
-        if part_name not in masks:
-            sys.exit(f"[{rig_id}] backing_px override for unknown part '{part_name}'")
+    backed_rgb = {}
+    for owner_name, (owner_mask, backing_spec) in backing_owners.items():
+        # A plain int is still every existing rig's shape (one radius,
+        # applied everywhere) -- {"default": N} is the same thing spelled
+        # as a dict. A per-part key OVERRIDES that default's reach for
+        # one joint, clipped to the named part's own (already
+        # dilate_px-grown) mask, so a big number for a joint that needs
+        # it structurally cannot bleed into an unrelated part's territory
+        # -- see the rat's own "head" override and its comment for why
+        # that clip is what makes a large radius safe.
+        if isinstance(backing_spec, dict):
+            default_backing = backing_spec.get("default", 0)
+            overrides = {k: v for k, v in backing_spec.items() if k != "default"}
+        else:
+            default_backing = backing_spec
+            overrides = {}
 
-    # ONE fill, run out to the LARGEST radius any override asks for -- the
-    # colour wavefront has to have actually reached a pixel before it can
-    # be sampled, regardless of which part's dilation ends up claiming
-    # that pixel for `back` below.
-    max_radius = max([default_backing, *overrides.values()], default=0)
-    filled_rgb, _ = nearest_fill(rgb, body_mask, max_radius)
+        for part_name in overrides:
+            if part_name not in masks:
+                sys.exit(f"[{rig_id}] '{owner_name}' backing_px override for unknown part '{part_name}'")
 
-    back = binary_dilation(body_mask, default_backing) & alpha
-    for part_name, radius in overrides.items():
-        back |= binary_dilation(body_mask, radius) & alpha & masks[part_name]
+        # ONE fill, run out to the LARGEST radius any override asks for --
+        # the colour wavefront has to have actually reached a pixel
+        # before it can be sampled, regardless of which part's dilation
+        # ends up claiming that pixel for `back` below.
+        max_radius = max([default_backing, *overrides.values()], default=0)
+        filled_rgb, _ = nearest_fill(rgb, owner_mask, max_radius)
 
-    body_rgb = rgb.copy()
-    extra = back & ~body_mask
-    body_rgb[extra] = filled_rgb[extra]
-    masks["body"] = back
+        back = binary_dilation(owner_mask, default_backing) & alpha
+        for part_name, radius in overrides.items():
+            back |= binary_dilation(owner_mask, radius) & alpha & masks[part_name]
+
+        owner_rgb = rgb.copy()
+        extra = back & ~owner_mask
+        owner_rgb[extra] = filled_rgb[extra]
+        masks[owner_name] = back
+        backed_rgb[owner_name] = owner_rgb
+
     pivots["body"] = tuple(body_spec["pivot"])
 
     if set(masks) != set(order):
@@ -1089,6 +1227,9 @@ def build_rig(rig_id, source_override=None):
         if pspec["kind"] == "components":
             for leg_name in pspec["names"]:
                 per_part_epsilon[leg_name] = eps
+        elif pspec["kind"] == "chain":
+            for seg_name in pspec["segments"]:
+                per_part_epsilon[seg_name] = eps
         else:
             per_part_epsilon[pname] = eps
 
@@ -1097,7 +1238,7 @@ def build_rig(rig_id, source_override=None):
     parts_json = []
     for name in order:
         mask = masks[name]
-        part_rgb = body_rgb if name == "body" else rgb
+        part_rgb = backed_rgb.get(name, rgb)
         m_ys, m_xs = np.nonzero(mask)
         if len(m_xs) == 0:
             sys.exit(f"[{rig_id}] part '{name}' is empty after masking/dilation")
@@ -1220,7 +1361,8 @@ def report_stray_files(rig_id, output_base, written, prune, verbose=True):
 # ---------------------------------------------------------------------------
 
 _PREVIEW_TINTS = {
-    "body": (255, 255, 255), "head": (255, 120, 120), "tail": (120, 200, 255),
+    "body": (255, 255, 255), "head": (255, 120, 120),
+    "tail_1": (120, 200, 255), "tail_2": (90, 160, 230), "tail_3": (60, 120, 200),
     "near_foreleg": (140, 255, 140), "far_foreleg": (80, 180, 80),
     "near_hindleg": (255, 210, 120), "far_hindleg": (210, 150, 60),
 }

@@ -194,7 +194,8 @@ namespace PrincesPalace.Domain.Tests
             // and a miss is a no-op rather than a thrown exception.
             var knownBones = new System.Collections.Generic.HashSet<string>
             {
-                "body", "far_hindleg", "far_foreleg", "tail", "near_hindleg", "near_foreleg", "head",
+                "body", "far_hindleg", "far_foreleg", "near_hindleg", "near_foreleg", "head",
+                "tail_1", "tail_2", "tail_3",
             };
 
             foreach (var pair in _clips)
