@@ -242,7 +242,30 @@ RIGS = {
         # It's not a substitute for the real render (it can't see what
         # animation does off bind pose), but a regression here fails the
         # build instead of waiting to be spotted by eye.
-        "body": {"pivot": (820, 760), "backing_px": 6},
+        #
+        # backing_px IS NOW A DICT, and that is the actual fix for the
+        # trail this whole comment block records -- not a reversal of it.
+        # Every value above was found chasing ONE global dilation radius
+        # trying to serve two unrelated jobs at once: hide the bind-pose
+        # seam under EVERY moving part, and not paint over the far legs
+        # sitting right next to body in the SAME flat dilation. 6 was where
+        # that trade-off landed, and 6px of arc is exactly what the neck
+        # hole reported during a real attack proves it wasn't enough for.
+        #
+        # "head" backs ONLY head's own already-resolved territory
+        # (`& masks["head"]`, see build_rig) -- the far legs are
+        # geometrically nowhere near the head, so this cannot reintroduce
+        # the overshoot no matter how large it is, and it does not have to
+        # serve every other joint's much smaller need at the same time.
+        # 130 is not a guess: measured directly against a real build_rig()
+        # run (this file's own seam is the ground truth, not the source
+        # art's silhouette) -- the head/body cut runs from behind the ear
+        # down to the throat, and its farthest point sits 240px from the
+        # head pivot (1080, 290). The attack clip's head track peaks at
+        # -26 degrees; arc = 240 * 26 * (pi/180) =~ 109px. 130 is that
+        # plus ~20px margin for a future clip authoring a bigger swing
+        # without silently reopening this.
+        "body": {"pivot": (820, 760), "backing_px": {"default": 6, "head": 130}},
         "parts": {
             "head": {
                 # Traces up the near ear's outer edge to its tip, down into
@@ -1005,9 +1028,37 @@ def build_rig(rig_id, source_override=None):
     body_mask = alpha & ~moving
 
     body_spec = spec["body"]
-    backing_px = body_spec.get("backing_px", 0)
-    filled_rgb, _ = nearest_fill(rgb, body_mask, backing_px)
-    back = binary_dilation(body_mask, backing_px) & alpha
+    backing_spec = body_spec.get("backing_px", 0)
+
+    # A plain int is still every existing rig's shape (one radius, applied
+    # everywhere) -- {"default": N} is the same thing spelled as a dict.
+    # A per-part key OVERRIDES that default's reach for that one joint,
+    # clipped to the named part's own (already dilate_px-grown) mask, so a
+    # big number for a joint that needs it structurally cannot bleed into
+    # an unrelated part's territory -- see the rat's own "head" override
+    # and its comment for why that clip is what makes a large radius safe.
+    if isinstance(backing_spec, dict):
+        default_backing = backing_spec.get("default", 0)
+        overrides = {k: v for k, v in backing_spec.items() if k != "default"}
+    else:
+        default_backing = backing_spec
+        overrides = {}
+
+    for part_name in overrides:
+        if part_name not in masks:
+            sys.exit(f"[{rig_id}] backing_px override for unknown part '{part_name}'")
+
+    # ONE fill, run out to the LARGEST radius any override asks for -- the
+    # colour wavefront has to have actually reached a pixel before it can
+    # be sampled, regardless of which part's dilation ends up claiming
+    # that pixel for `back` below.
+    max_radius = max([default_backing, *overrides.values()], default=0)
+    filled_rgb, _ = nearest_fill(rgb, body_mask, max_radius)
+
+    back = binary_dilation(body_mask, default_backing) & alpha
+    for part_name, radius in overrides.items():
+        back |= binary_dilation(body_mask, radius) & alpha & masks[part_name]
+
     body_rgb = rgb.copy()
     extra = back & ~body_mask
     body_rgb[extra] = filled_rgb[extra]
