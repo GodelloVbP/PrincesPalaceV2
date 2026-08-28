@@ -14,11 +14,15 @@ namespace PrincesPalace.Domain.Rig
         {
             public readonly string BoneName;
             public readonly float RotationDegrees;
+            public readonly float DxPixels;
+            public readonly float DyPixels;
 
-            public BonePose(string boneName, float rotationDegrees)
+            public BonePose(string boneName, float rotationDegrees, float dxPixels = 0f, float dyPixels = 0f)
             {
                 BoneName = boneName;
                 RotationDegrees = rotationDegrees;
+                DxPixels = dxPixels;
+                DyPixels = dyPixels;
             }
         }
 
@@ -36,7 +40,7 @@ namespace PrincesPalace.Domain.Rig
             for (int i = 0; i < clip.Tracks.Length; i++)
             {
                 var track = clip.Tracks[i];
-                poses[i] = new BonePose(track.BoneName, track.RotationAt(at));
+                poses[i] = new BonePose(track.BoneName, track.RotationAt(at), track.DxAt(at), track.DyAt(at));
             }
 
             return poses;

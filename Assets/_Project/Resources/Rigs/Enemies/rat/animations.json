@@ -2,14 +2,36 @@
   "clips": [
     {
       "stance": "idle",
-      "durationSeconds": 1.6,
+      "durationSeconds": 1.8,
       "impactAt": 0,
       "soundAt": 0,
       "loop": true,
       "tracks": [
-        { "bone": "body", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.8, "deg": -4.0 }, { "t": 1.6, "deg": 0.0 } ] },
-        { "bone": "head", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.8, "deg": 6.0 }, { "t": 1.6, "deg": 0.0 } ] },
-        { "bone": "tail", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.8, "deg": 10.0 }, { "t": 1.6, "deg": 0.0 } ] }
+        {
+          "bone": "body",
+          "keyframes": [
+            { "t": 0.0, "deg": 0.0, "dy": 0.0 },
+            { "t": 1.0, "deg": -1.0, "dy": 3.0 },
+            { "t": 1.8, "deg": 0.0, "dy": 0.0 }
+          ]
+        },
+        {
+          "bone": "head",
+          "keyframes": [
+            { "t": 0.0, "deg": 0.0, "dy": 0.0 },
+            { "t": 1.15, "deg": 2.5, "dy": 1.0 },
+            { "t": 1.8, "deg": 0.0, "dy": 0.0 }
+          ]
+        },
+        {
+          "bone": "tail",
+          "keyframes": [
+            { "t": 0.0, "deg": 2.0 },
+            { "t": 0.7, "deg": 9.0 },
+            { "t": 1.5, "deg": -1.0 },
+            { "t": 1.8, "deg": 2.0 }
+          ]
+        }
       ]
     },
     {

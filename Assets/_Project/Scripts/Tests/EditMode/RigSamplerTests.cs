@@ -33,12 +33,26 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void BetweenTwoKeyframesTheRotationIsLinearlyInterpolated()
+        public void BetweenTwoKeyframesTheRotationEasesWithSmoothstep()
         {
             var clip = Clip(false, 1f, ("head", new[] { (0f, 0f), (1f, 10f) }));
 
             Assert.AreEqual(5f, RigSampler.Sample(clip, 0.5f)[0].RotationDegrees, 0.0001f,
-                "halfway between a 0deg keyframe and a 10deg keyframe one second apart should read 5deg");
+                "smoothstep is symmetric about its own midpoint, so exactly halfway between a 0deg and a 10deg " +
+                "keyframe should still read 5deg -- this pin alone can't tell smoothstep from linear");
+        }
+
+        [Test]
+        public void OffCentreTheEaseIsNotLinear()
+        {
+            var clip = Clip(false, 1f, ("head", new[] { (0f, 0f), (1f, 10f) }));
+
+            // smoothstep(0.25) = 0.25^2 * (3 - 2*0.25) = 0.15625, not the
+            // linear 0.25 -- this is the pin that actually distinguishes the
+            // curve, and the reason a keyframe's velocity approaches zero
+            // rather than snapping (see TheIdleClipHasNoMechanicalCorner).
+            Assert.AreEqual(1.5625f, RigSampler.Sample(clip, 0.25f)[0].RotationDegrees, 0.0001f,
+                "a quarter of the way from 0deg to 10deg should ease to 1.5625deg under smoothstep");
         }
 
         [Test]
@@ -96,6 +110,35 @@ namespace PrincesPalace.Domain.Tests
                 "an impact authored past the clip's own duration cannot be honoured -- the blow has to land inside the stance it belongs to");
             Assert.AreEqual(0f, clip.SoundAt, 0.0001f,
                 "a negative sound cue is not a real moment in the clip; it should clamp to the start rather than go negative");
+        }
+
+        [Test]
+        public void TranslationEasesWithTheSameSmoothstepCurveAsRotation()
+        {
+            var track = new RigBoneTrack("body", new[]
+            {
+                new RigKeyframe(0f, 0f, 0f, 0f),
+                new RigKeyframe(1f, 0f, 10f, -6f),
+            });
+            var clip = new RigStanceClip(1f, 0f, 0f, false, new[] { track });
+
+            var pose = RigSampler.Sample(clip, 0.25f)[0];
+            Assert.AreEqual(1.5625f, pose.DxPixels, 0.0001f,
+                "dx should ease along the same smoothstep curve as rotation -- one interpolation, three channels");
+            Assert.AreEqual(-0.9375f, pose.DyPixels, 0.0001f,
+                "dy eases the same way, including sign -- 0.15625 of the way from 0 to -6");
+        }
+
+        [Test]
+        public void ATrackAuthoredWithNoTranslationStaysAtZero()
+        {
+            var clip = Clip(false, 1f, ("head", new[] { (0f, 0f), (1f, 10f) }));
+
+            var pose = RigSampler.Sample(clip, 0.5f)[0];
+            Assert.AreEqual(0f, pose.DxPixels, 0.0001f,
+                "a track built from (t, deg) tuples alone should read dx as zero, not garbage -- every clip authored " +
+                "before translation existed still parses as rotation-only");
+            Assert.AreEqual(0f, pose.DyPixels, 0.0001f);
         }
 
         [Test]

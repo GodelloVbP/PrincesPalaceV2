@@ -54,6 +54,32 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
+        // A looping clip that ends on a different value than it started
+        // wraps with a pop -- RigSampler.Wrap just mods the clock, it does
+        // not know or care whether frame 0 and the last frame agree, so
+        // this has to be checked as content rather than relied on as an
+        // engine guarantee. Every channel: a track can wrap cleanly on
+        // rotation and still pop on dy if only one was checked.
+        [Test]
+        public void LoopingClipTracksStartAndEndOnTheSameValues()
+        {
+            foreach (var pair in _clips)
+            {
+                var clip = pair.Value;
+                if (clip.IsEmpty || !clip.Loops) continue;
+
+                foreach (var track in clip.Tracks)
+                {
+                    Assert.AreEqual(track.RotationAt(0f), track.RotationAt(clip.DurationSeconds), 0.01f,
+                        $"'{pair.Key}'/{track.BoneName} rotates to a different pose at t=0 than at its own duration -- a looping clip wraps between these two moments every cycle, so a mismatch is a visible pop");
+                    Assert.AreEqual(track.DxAt(0f), track.DxAt(clip.DurationSeconds), 0.01f,
+                        $"'{pair.Key}'/{track.BoneName} dx mismatches between t=0 and its own duration");
+                    Assert.AreEqual(track.DyAt(0f), track.DyAt(clip.DurationSeconds), 0.01f,
+                        $"'{pair.Key}'/{track.BoneName} dy mismatches between t=0 and its own duration");
+                }
+            }
+        }
+
         [Test]
         public void TheIdleClipLoops()
         {
@@ -94,26 +120,30 @@ namespace PrincesPalace.Domain.Tests
         // as a mechanical tick rather than a breath, which is the exact
         // "drunk sway" defect this content shipped with once already.
         //
-        // Samples every idle track's RotationAt through the REAL RigSampler
-        // math at 60Hz (not a reimplementation -- a second copy of this
-        // arithmetic is a drift risk the moment the interpolation changes)
-        // and pins the largest single-frame change in angular VELOCITY
-        // (not position) under a literal threshold. A piecewise-linear
-        // track's velocity is constant within a segment and jumps only at
-        // a keyframe, so this catches exactly a corner and nothing else.
+        // Samples every idle track's RotationAt/DxAt/DyAt through the REAL
+        // RigSampler math at 60Hz (not a reimplementation -- a second copy
+        // of this arithmetic is a drift risk the moment the interpolation
+        // changes) and pins the largest single-frame change in VELOCITY
+        // (not position) on each channel under a literal threshold. Under
+        // smoothstep a piecewise curve's velocity is continuous everywhere
+        // and zero exactly at every keyframe, so a real jump here means the
+        // curve got a genuine corner, not that a keyframe merely exists.
         //
-        // 40deg/s, not tight: today's linear idle clip already reaches
-        // ~25deg/s at its own keyframes (a real, if small, jump) and this
-        // guards against a WORSE regression, not zero. It is expected to
-        // tighten considerably once the sampler moves off linear
-        // interpolation -- a smooth curve's velocity approaches zero at
-        // its own keyframes by construction, and this threshold should
-        // shrink to match whatever that curve actually produces rather
-        // than sit here as a number nobody revisits.
+        // Thresholds computed empirically (see the plan file / commit
+        // message) against the shipped staggered idle clip's own peak
+        // per-channel jump under this exact sampling, then given roughly a
+        // 2-4x margin: 6deg/s for rotation (observed peak ~3.0deg/s, on the
+        // tail's larger-amplitude track) and 2px/s for translation
+        // (observed peak ~0.45px/s, on the body's breathing bob). Tight by
+        // design -- this is the regression guard for the exact "drunk sway"
+        // defect this content shipped with once already, and the whole
+        // point of moving off linear interpolation was for these numbers to
+        // shrink to match what a smooth curve actually produces.
         [Test]
         public void TheIdleClipHasNoMechanicalCorner()
         {
-            const float MaxVelocityJumpDegPerSecond = 40f;
+            const float MaxRotationVelocityJumpDegPerSecond = 6f;
+            const float MaxTranslationVelocityJumpPxPerSecond = 2f;
             const float SampleHz = 60f;
 
             var idle = _clips["idle"];
@@ -121,26 +151,37 @@ namespace PrincesPalace.Domain.Tests
 
             foreach (var track in idle.Tracks)
             {
-                float previousVelocity = float.NaN;
-                float previousAngle = track.RotationAt(0f);
+                CheckNoVelocityCorner(track.BoneName, "rotation", track.RotationAt, idle.DurationSeconds, steps, SampleHz,
+                    MaxRotationVelocityJumpDegPerSecond, "deg/s");
+                CheckNoVelocityCorner(track.BoneName, "dx", track.DxAt, idle.DurationSeconds, steps, SampleHz,
+                    MaxTranslationVelocityJumpPxPerSecond, "px/s");
+                CheckNoVelocityCorner(track.BoneName, "dy", track.DyAt, idle.DurationSeconds, steps, SampleHz,
+                    MaxTranslationVelocityJumpPxPerSecond, "px/s");
+            }
+        }
 
-                for (int i = 1; i <= steps; i++)
+        private static void CheckNoVelocityCorner(string boneName, string channel, System.Func<float, float> valueAt,
+            float durationSeconds, int steps, float sampleHz, float maxJump, string unit)
+        {
+            float previousVelocity = float.NaN;
+            float previousValue = valueAt(0f);
+
+            for (int i = 1; i <= steps; i++)
+            {
+                float t = durationSeconds * i / steps;
+                float value = valueAt(t);
+                float velocity = (value - previousValue) * sampleHz;
+
+                if (!float.IsNaN(previousVelocity))
                 {
-                    float t = idle.DurationSeconds * i / steps;
-                    float angle = track.RotationAt(t);
-                    float velocity = (angle - previousAngle) * SampleHz;
-
-                    if (!float.IsNaN(previousVelocity))
-                    {
-                        float jump = Mathf.Abs(velocity - previousVelocity);
-                        Assert.LessOrEqual(jump, MaxVelocityJumpDegPerSecond,
-                            $"idle/{track.BoneName} changes angular velocity by {jump:F1}deg/s in one 60Hz step " +
-                            $"near t={t:F3}s -- that reads as a mechanical tick, not a breath");
-                    }
-
-                    previousVelocity = velocity;
-                    previousAngle = angle;
+                    float jump = Mathf.Abs(velocity - previousVelocity);
+                    Assert.LessOrEqual(jump, maxJump,
+                        $"idle/{boneName}'s {channel} changes velocity by {jump:F2}{unit} in one 60Hz step near " +
+                        $"t={t:F3}s -- that reads as a mechanical tick, not a breath");
                 }
+
+                previousVelocity = velocity;
+                previousValue = value;
             }
         }
 

@@ -16,9 +16,16 @@ namespace PrincesPalace.Core.Rig
     {
         private readonly Dictionary<string, Transform> _bones = new Dictionary<string, Transform>();
 
+        // Each bone's own bind localPosition, captured once at instantiation
+        // -- a translated pose is always this PLUS the sampled offset, never
+        // the offset alone, so a bone whose rig art sits off-origin (any
+        // non-root bone) still ends up in the right place.
+        private readonly Dictionary<string, Vector3> _bindPositions = new Dictionary<string, Vector3>();
+
         public void Initialize(Transform bonesHolder)
         {
             _bones.Clear();
+            _bindPositions.Clear();
             if (bonesHolder == null) return;
 
             CollectBones(bonesHolder);
@@ -29,19 +36,25 @@ namespace PrincesPalace.Core.Rig
             foreach (Transform child in t)
             {
                 _bones[child.name] = child;
+                _bindPositions[child.name] = child.localPosition;
                 CollectBones(child);
             }
         }
 
-        // Bind pose: every known bone back to zero rotation. What a beat
-        // returns an actor to between blows -- the rig twin of
-        // SetFrame(actor, 0) on the frame-sheet path (see
-        // RigStancePlayback.ResetToRest).
+        // Bind pose: every known bone back to zero rotation AND its own
+        // bind position. What a beat returns an actor to between blows --
+        // the rig twin of SetFrame(actor, 0) on the frame-sheet path (see
+        // RigStancePlayback.ResetToRest). Position must be restored too,
+        // not just rotation -- a bone left at its last sampled translation
+        // is exactly the stale mid-swing angle this method exists to rule
+        // out, just on a different channel.
         public void ResetToRest()
         {
-            foreach (var bone in _bones.Values)
+            foreach (var pair in _bones)
             {
-                if (bone != null) bone.localRotation = Quaternion.identity;
+                if (pair.Value == null) continue;
+                pair.Value.localRotation = Quaternion.identity;
+                if (_bindPositions.TryGetValue(pair.Key, out var bind)) pair.Value.localPosition = bind;
             }
         }
 
@@ -59,6 +72,10 @@ namespace PrincesPalace.Core.Rig
                 if (_bones.TryGetValue(poses[i].BoneName, out var bone) && bone != null)
                 {
                     bone.localRotation = Quaternion.Euler(0f, 0f, poses[i].RotationDegrees);
+                    if (_bindPositions.TryGetValue(poses[i].BoneName, out var bind))
+                    {
+                        bone.localPosition = bind + new Vector3(poses[i].DxPixels, poses[i].DyPixels, 0f) / RigLibrary.PixelsPerUnit;
+                    }
                 }
             }
         }

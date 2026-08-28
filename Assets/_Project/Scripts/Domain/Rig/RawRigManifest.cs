@@ -42,5 +42,13 @@ namespace PrincesPalace.Domain.Rig
     {
         public float t;
         public float deg;
+
+        // Translation, in source pixels, +y up -- matching RigPrefabBuilder's
+        // own y-flip so an authored dy reads the same "up" a human expects
+        // when looking at the sheet. Optional: JsonUtility reads an absent
+        // field as 0, so every clip authored before this existed still
+        // parses as rotation-only, exactly as it always has.
+        public float dx;
+        public float dy;
     }
 }

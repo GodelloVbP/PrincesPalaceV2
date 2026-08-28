@@ -22,7 +22,7 @@ namespace PrincesPalace.Domain.Rig
                 var tracks = (rawClip.tracks ?? new List<RawRigTrack>())
                     .Where(t => t != null && !string.IsNullOrWhiteSpace(t.bone))
                     .Select(t => new RigBoneTrack(t.bone, (t.keyframes ?? new List<RawRigKeyframe>())
-                        .Select(k => new RigKeyframe(k.t, k.deg))
+                        .Select(k => new RigKeyframe(k.t, k.deg, k.dx, k.dy))
                         .OrderBy(k => k.TimeSeconds)
                         .ToArray()))
                     .ToArray();
