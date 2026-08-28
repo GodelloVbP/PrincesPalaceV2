@@ -41,18 +41,25 @@ namespace PrincesPalace.PlayModeTests
 
         // The uGUI slots this whole file is about -- NOT the WorldSlot
         // anchors a rig actor's world-space SpriteRenderers sit under
-        // (FightScreen.BuildWorldSlots). Those are a genuinely different
-        // category by design: Phase 4 landed a rig actor's STATIC bind
-        // pose only, deliberately before lunge/flash/fade exist for it (see
-        // the plan's own phasing) -- excluding "WorldSlot" here keeps this
-        // file's real regression guard (every uGUI slot can actually be
-        // moved/flashed/faded) from firing on a gap that is documented and
-        // intentional rather than the exact silent-failure class this file
+        // (FightScreen.BuildWorldSlots). A world slot DOES carry a
+        // StageActorAnimator now (see EveryWorldSlotCanActuallyBeMoved
+        // below) -- Recoil/Punch/TravelFor drive both mirrors with
+        // identical args. What a world slot still does NOT carry is
+        // StageHitFlash/StageDeathFade: a rig actor uses RigHitFlash/
+        // RigDeathFade instead (different Transforms, different
+        // components, by design), so excluding "WorldSlot" from THIS
+        // file's flash/fade checks keeps them from firing on a gap that is
+        // intentional rather than the silent-failure class this file
         // exists to catch.
         private List<Transform> AnimatableSlots() =>
             _fight.GetComponentsInChildren<Transform>(includeInactive: true)
                 .Where(t => t.name.EndsWith("Slot") && !t.name.EndsWith("WorldSlot")
                             && (t.name.StartsWith("Enemy") || t.name.StartsWith("Party")))
+                .ToList();
+
+        private List<Transform> WorldSlots() =>
+            _fight.GetComponentsInChildren<Transform>(includeInactive: true)
+                .Where(t => t.name.EndsWith("WorldSlot"))
                 .ToList();
 
         private IEnumerator OpenAFight()
@@ -86,6 +93,52 @@ namespace PrincesPalace.PlayModeTests
             CollectionAssert.IsEmpty(unmovable,
                 "these slots have no animator, so Lunge silently does nothing for them: " +
                 string.Join(", ", unmovable));
+        }
+
+        [UnityTest]
+        public IEnumerator EveryWorldSlotCanActuallyBeMoved()
+        {
+            // The world-space twin of EveryStageSlotCanActuallyBeMoved,
+            // and the exact same regression class: FightController.
+            // WorldAnimatorFor does a GetComponent on the world slot and
+            // returns null silently if nothing is there, so a rig-resolved
+            // combatant's own Recoil/Punch/lunge-travel would be a no-op
+            // that no test noticed -- the ScreenRegistry attach loop that
+            // fixes this carries the same warning in its own comment.
+            yield return OpenAFight();
+
+            var slots = WorldSlots();
+            Assert.IsNotEmpty(slots, "the stage has no world slots at all - the naming convention moved");
+
+            var unmovable = slots
+                .Where(s => s.GetComponent<StageActorAnimator>() == null)
+                .Select(s => s.name)
+                .ToList();
+
+            CollectionAssert.IsEmpty(unmovable,
+                "these world slots have no animator, so a rig actor's Recoil/Punch/lunge-travel mirror silently " +
+                "does nothing for them: " + string.Join(", ", unmovable));
+        }
+
+        [UnityTest]
+        public IEnumerator FourStageRacksCanBeShaken()
+        {
+            // Two uGUI (EnemyStage/PartyStage) + two world (EnemyWorldStage/
+            // PartyWorldStage) -- see ScreenRegistry's own comment on why a
+            // rig-resolved combatant needs its own shaker, the same reason
+            // it needs its own StageActorAnimator above. A length pin
+            // rather than a name check: ShakeStage iterates the array
+            // positionally and does not care what each entry is called,
+            // only that a kick actually reaches every rack that has a
+            // visible figure standing on it.
+            yield return OpenAFight();
+
+            Assert.AreEqual(4, _fight.StageShakesForTest.Length,
+                "expected one StageShake per rack (uGUI enemy, uGUI party, world enemy, world party) -- " +
+                "a rack with no shaker stands nailed down while ShakeStage kicks every OTHER rack around it");
+
+            CollectionAssert.DoesNotContain(_fight.StageShakesForTest, null,
+                "a null entry in stageShakes is a rack nothing was ever attached to");
         }
 
         [UnityTest]

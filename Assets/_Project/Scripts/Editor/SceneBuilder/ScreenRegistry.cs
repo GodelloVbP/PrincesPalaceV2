@@ -94,10 +94,19 @@ public static class ScreenRegistry
                 // stages are separate containers and the HUD is neither of
                 // them, which is the point -- see StageShake on why the
                 // painted frame has to stay nailed down while the fight moves.
+                //
+                // FOUR, not two -- the world-space racks get their own
+                // shakers too. Before this a kick moved a rig-resolved
+                // combatant's (hidden) shadow/nameplate rack while the rig
+                // itself, the only thing actually visible, stood nailed
+                // down -- the same defect Recoil/Punch/TravelFor's own
+                // world-animator wiring below exists to fix, one layer up.
                 fight.stageShakes = new[]
                 {
                     result.Attach<StageShake>(screen.EnemyStage),
                     result.Attach<StageShake>(screen.PartyStage),
+                    result.Attach<StageShake>(screen.EnemyWorldStage),
+                    result.Attach<StageShake>(screen.PartyWorldStage),
                 };
                 fight.enemySprites = screen.EnemySprites.Select(result.Image).ToArray();
                 fight.enemyHitFlashes = screen.EnemyHitFlashes.Select(result.Image).ToArray();
@@ -270,7 +279,16 @@ public static class ScreenRegistry
                 // nothing, so the whole feature was a no-op that no test noticed:
                 // the class existed, the call site existed, and the two were
                 // never introduced.
-                foreach (var slotRef in screen.EnemySlots.Concat(screen.PartySlots))
+                //
+                // WORLD SLOTS TOO, now -- the exact same silent no-op this
+                // comment already warns about, one layer up: a rig-resolved
+                // combatant's world slot had no StageActorAnimator at all,
+                // so FightController.WorldAnimatorFor's GetComponent always
+                // returned null and every hit reaction landed only on the
+                // (hidden) uGUI slot's shadow/nameplate rack while the rig
+                // itself stood bolt still.
+                foreach (var slotRef in screen.EnemySlots.Concat(screen.PartySlots)
+                             .Concat(screen.EnemyWorldSlots).Concat(screen.PartyWorldSlots))
                 {
                     result.Attach<StageActorAnimator>(slotRef);
                 }

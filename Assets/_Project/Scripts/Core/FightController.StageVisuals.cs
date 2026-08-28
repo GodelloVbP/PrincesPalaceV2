@@ -987,9 +987,13 @@ namespace PrincesPalace
         private void BreatheFigure(CombatantState combatant, float amount)
         {
             var slot = SlotFor(combatant);
-            if (slot == null) return;
+            if (slot != null) slot.GetComponent<StageActorAnimator>()?.SetBreath(amount);
 
-            slot.GetComponent<StageActorAnimator>()?.SetBreath(amount);
+            // The world-space mirror too -- see WorldAnimatorFor's own
+            // header. A rig actor ALSO breathes through its own idle clip
+            // (StepRigIdlePose below), on a completely different Transform;
+            // the two do not compete.
+            WorldAnimatorFor(combatant)?.SetBreath(amount);
         }
 
         // Phase offset between two identical rigs breathing side by side, as
@@ -1176,6 +1180,16 @@ namespace PrincesPalace
             {
                 if (slot == null) continue;
                 slot.GetComponent<StageDeathFade>()?.ResetToVisible();
+                slot.GetComponent<StageActorAnimator>()?.ResetToHome();
+            }
+
+            // World slots have no StageDeathFade (rigs use RigDeathFade) but
+            // DO carry a StageActorAnimator now -- same re-home, so a hit
+            // that landed mid-lunge just before the fight ended does not
+            // leave the next encounter's rig starting off its own mark.
+            foreach (var slot in enemyWorldSlots.Concat(partyWorldSlots))
+            {
+                if (slot == null) continue;
                 slot.GetComponent<StageActorAnimator>()?.ResetToHome();
             }
 

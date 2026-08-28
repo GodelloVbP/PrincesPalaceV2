@@ -455,11 +455,24 @@ namespace PrincesPalace.Domain.Tests
             // against everything that used to occlude them: FightHud's own
             // children still run stage-then-HUD-panels in the exact same
             // sequence root's children used to. Scan whichever level
-            // actually holds a "...Stage" node, so this test's real
-            // invariant (nothing declared after the stage stands on a
-            // figure's feet) survives the nesting change unchanged.
+            // actually holds one of the two uGUI stage nodes, so this
+            // test's real invariant (nothing declared after the stage
+            // stands on a figure's feet) survives the nesting change
+            // unchanged.
+            //
+            // EXACT NAME, not EndsWith("Stage") -- EnemyWorldStage and
+            // PartyWorldStage also end in "Stage" (see FightScreen's own
+            // BuildWorldSlots) and live at ROOT, one level above FightHud.
+            // A substring match found THOSE at root and concluded root was
+            // already the right scope, which skipped the drill-down into
+            // FightHud entirely and scanned the wrong panels against the
+            // wrong bands -- caught by this test itself going from "no
+            // offenders" to a wall of spurious ones the moment the world
+            // stages existed, not by anything targeting this file.
+            bool IsUiStage(string name) => name == "EnemyStage" || name == "PartyStage";
+
             var scope = root;
-            if (!scope.Children.Any(c => c.Name.EndsWith("Stage")))
+            if (!scope.Children.Any(c => IsUiStage(c.Name)))
             {
                 var hud = root.Children.FirstOrDefault(c => c.Name == "FightHud");
                 if (hud != null) scope = hud;
@@ -468,7 +481,7 @@ namespace PrincesPalace.Domain.Tests
             int lastStage = -1;
             for (int i = 0; i < scope.Children.Count; i++)
             {
-                if (scope.Children[i].Name.EndsWith("Stage")) lastStage = i;
+                if (IsUiStage(scope.Children[i].Name)) lastStage = i;
             }
 
             Assert.Greater(lastStage, -1, "no stage found in the fight tree");

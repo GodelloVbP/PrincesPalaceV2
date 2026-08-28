@@ -85,6 +85,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // never gets a child instantiated under its anchor.
         public List<NodeRef> EnemyWorldSlots = new List<NodeRef>();
         public List<NodeRef> PartyWorldSlots = new List<NodeRef>();
+
+        // The world-slot RACKS -- exactly EnemyStage/PartyStage's own role,
+        // one level over. A StageShake attaches HERE (see ScreenRegistry),
+        // and BuildWorldSlots returns this wrapper rather than a flat list
+        // of slots for the same reason BuildStage does: a kick or a re-home
+        // needs one container to move ALL of one side's world slots at once.
+        public NodeRef EnemyWorldStage;
+        public NodeRef PartyWorldStage;
         public List<NodeRef> PartySlots = new List<NodeRef>();
         public List<NodeRef> PartySprites = new List<NodeRef>();
         public List<NodeRef> PartyHitFlashes = new List<NodeRef>();
@@ -207,8 +215,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // so which canvas it lives under is irrelevant to depth; only
             // what gets instantiated under it at runtime (a rig's own
             // SpriteRenderers, on their own sorting layer) has a depth.
-            children.AddRange(s.BuildWorldSlots("Party", mirrored: true, s.PartyWorldSlots));
-            children.AddRange(s.BuildWorldSlots("Enemy", mirrored: false, s.EnemyWorldSlots));
+            var partyWorldStage = s.BuildWorldSlots("Party", mirrored: true, s.PartyWorldSlots);
+            var enemyWorldStage = s.BuildWorldSlots("Enemy", mirrored: false, s.EnemyWorldSlots);
+            s.PartyWorldStage = partyWorldStage;
+            s.EnemyWorldStage = enemyWorldStage;
+            children.Add(partyWorldStage);
+            children.Add(enemyWorldStage);
 
             // Party stage FIRST so enemies, built after and therefore later
             // siblings, paint over it where the two halves meet near the shared
@@ -297,11 +309,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // order (painter's algorithm -- see BuildStage's own comment) --
         // just with no Graphic, since a rig actor's world-space
         // SpriteRenderers carry their own visible content and sort order.
-        private IEnumerable<UiNode> BuildWorldSlots(string prefix, bool mirrored, List<NodeRef> slots)
+        //
+        // Returns the STAGE WRAPPER, not a flat list of slots -- the exact
+        // shape BuildStage returns, and for the same reason: a StageShake
+        // or a re-home needs one container that moves every slot on this
+        // side at once, and EnemyWorldStage/PartyWorldStage is that
+        // container (see ScreenRegistry's animator/shake wiring).
+        private UiNode BuildWorldSlots(string prefix, bool mirrored, List<NodeRef> slots)
         {
             int count = FightHudSpec.StageSlotsPerSide;
             for (int i = 0; i < count; i++) slots.Add(default);
 
+            var children = new List<UiNode>();
             for (int sibling = 0; sibling < count; sibling++)
             {
                 int slot = count - 1 - sibling;
@@ -311,8 +330,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     Place.At(offset.X, offset.Y, new UiVec(0.5f, 0f)),
                     UiSize.Fixed(1f, 1f)).WithScale(new UiVec(scale, scale));
                 slots[slot] = node;
-                yield return node;
+                children.Add(node);
             }
+
+            return Ui.Panel($"{prefix}WorldStage", Place.At(0f, 0f),
+                UiSize.Fixed(FightStageAnchors.StageSize.X, FightStageAnchors.StageSize.Y), children.ToArray());
         }
 
         // ---- the scrim ---------------------------------------------------------

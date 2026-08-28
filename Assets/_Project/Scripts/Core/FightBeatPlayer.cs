@@ -115,6 +115,16 @@ namespace PrincesPalace
         // Set by the controller so playback can find where a combatant is
         // standing without knowing anything about stages or slots.
         internal Func<CombatantState, RectTransform> SlotFor;
+
+        // The world-space MIRROR of SlotFor -- a rig-resolved combatant's
+        // own animator, so a lunge/recoil/punch moves the rig itself and
+        // not only the (hidden) uGUI slot's shadow/nameplate rack. Returns
+        // null for a combatant with no world slot animator resolvable,
+        // which every AlsoPlay*/AlsoPunch* call below already treats as
+        // "nothing to do" via the null-conditional -- see
+        // FightController.WorldAnimatorFor for why this is safe to call
+        // unconditionally rather than gated on "is this rig-resolved".
+        internal Func<CombatantState, StageActorAnimator> WorldAnimatorFor;
         // Paints a set of vitals. Called TWICE per beat -- once with what stood
         // before the blow, once with what stood after.
         internal Action<IReadOnlyDictionary<CombatantState, Vitals>> PaintVitals;
@@ -481,7 +491,24 @@ namespace PrincesPalace
             if (beat.Approach != StageApproach.Lunge) return;
 
             var (animator, offset) = TravelFor(beat, LungeFraction);
-            animator?.Play(offset, Scaled(BeatHoldSeconds) * 0.45f);
+            float hold = Scaled(BeatHoldSeconds) * 0.45f;
+            animator?.Play(offset, hold);
+            AlsoPlayWorld(beat.Actor, offset, hold);
+        }
+
+        // Plays the SAME travel on the world-space mirror of `who`'s slot.
+        // Never gated on the uGUI animator existing -- a combatant can be
+        // rig-resolved with no uGUI StageActorAnimator doing anything
+        // visible, and the two are independent lookups (SlotFor vs
+        // WorldAnimatorFor), so this always tries on its own.
+        private void AlsoPlayWorld(CombatantState who, Vector2 offset, float holdSeconds, float outSeconds = -1f)
+        {
+            WorldAnimatorFor?.Invoke(who)?.Play(offset, holdSeconds, outSeconds);
+        }
+
+        private void AlsoPunchWorld(CombatantState who, float strength)
+        {
+            WorldAnimatorFor?.Invoke(who)?.Punch(strength);
         }
 
         // THE COMMITTED RUSH. Like Lunge in order -- the travel runs alongside
@@ -521,6 +548,7 @@ namespace PrincesPalace
 
             float hold = Scaled(HitStopFor(beat) + ChargeContactSeconds);
             animator.Play(offset, hold, outSeconds);
+            AlsoPlayWorld(beat.Actor, offset, hold, outSeconds);
         }
 
         // THE OTHER APPROACH: get there FIRST, then swing.
@@ -553,7 +581,9 @@ namespace PrincesPalace
             // Play returns the figure to its mark when the hold expires, and a
             // hold that ended at the top of the stance would walk the creature
             // home again halfway through its own slam.
-            animator.Play(offset, Scaled(BeatHoldSeconds + CloseSeconds));
+            float hold = Scaled(BeatHoldSeconds + CloseSeconds);
+            animator.Play(offset, hold);
+            AlsoPlayWorld(beat.Actor, offset, hold);
             yield return new WaitForSeconds(Scaled(CloseSeconds));
         }
 
@@ -597,7 +627,10 @@ namespace PrincesPalace
             if (animator == null) return;
 
             float dx = beat.Target.IsPlayerSide ? -RecoilDistance : RecoilDistance;
-            animator.Play(new Vector2(dx, 0f), Scaled(BeatHoldSeconds) * 0.45f);
+            var offset = new Vector2(dx, 0f);
+            float hold = Scaled(BeatHoldSeconds) * 0.45f;
+            animator.Play(offset, hold);
+            AlsoPlayWorld(beat.Target, offset, hold);
         }
 
         private const float LungeFraction = 0.35f;
@@ -669,7 +702,9 @@ namespace PrincesPalace
             // barely there is honest about a small hit; a squash that is
             // barely there just looks like the sprite is vibrating, so a hit
             // either deforms the target properly or leaves it alone.
-            animator?.Punch(Mathf.Max(0.55f, strength));
+            float squash = Mathf.Max(0.55f, strength);
+            animator?.Punch(squash);
+            AlsoPunchWorld(beat.Target, squash);
         }
 
         // EVERY POSED VICTIM'S OWN FRAMES, which nothing stepped until now.

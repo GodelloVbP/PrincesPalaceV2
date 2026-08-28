@@ -150,5 +150,80 @@ namespace PrincesPalace.PlayModeTests
                 "the rat's head bone never rotated more than 1deg away from bind pose during the whole round -- " +
                 "either the hurt clip has no head track, or the flinch never reached RigStancePlayback at all");
         }
+
+        // Phase C checkpoint: a real hit actually MOVES the world slot
+        // itself, not just the rig's bones. Before this fix, Recoil/Punch/
+        // TravelFor drove only the uGUI slot's StageActorAnimator -- which
+        // still exists and still recoils, but its only remaining visible
+        // children are the shadow, glow and nameplate, since the rig's own
+        // Image is hidden. The rat itself stood bolt still while everything
+        // around its feet flinched. This checks the actual world slot's
+        // own anchoredPosition/localScale, which RigStageTests' own bone
+        // test above cannot see -- a bone rotating and a slot translating
+        // are two different Transforms, and this fix is specifically about
+        // the second one.
+        //
+        // Sampled mid-flight for the same reason the bone test above is:
+        // AnchorStageSlots' own guard re-homes a slot back to its mark once
+        // the round settles, so checking afterwards would pass whether or
+        // not the slot ever actually moved.
+        [UnityTest]
+        public IEnumerator AHitOnTheRatActuallyMovesItsWorldSlot()
+        {
+            if (!CanvasCapture.IsSupported)
+            {
+                Assert.Ignore("No graphics device (-nographics). Run: tools/graphics_tests.ps1 -Filter PrincesPalace.PlayModeTests.RigStageTests");
+            }
+
+            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            _fight = Object.FindAnyObjectByType<FightController>();
+            var hero = ContentDatabase.Characters.FirstOrDefault(c => c != null);
+            var built = FightEncounterAdapter.Build(
+                new System.Collections.Generic.List<string> { hero.id },
+                new System.Collections.Generic.List<string> { "rat" },
+                new SeededRandom(7), isBoss: false, isElite: false);
+            built.Session.Begin();
+            _fight.Bind(built.Session, EncounterClass.Normal);
+            yield return null;
+            yield return null;
+
+            var rat = built.Session.Encounter.Enemies[0];
+            var worldSlot = _fight.WorldSlotForTest(rat);
+            Assert.IsNotNull(worldSlot, "expected a world slot for the rat");
+
+            var animator = worldSlot.GetComponent<StageActorAnimator>();
+            Assert.IsNotNull(animator, "the rat's world slot has no StageActorAnimator -- ScreenRegistry's attach loop should cover world slots now");
+
+            var restMark = animator.Home;
+            var restScale = animator.BaseScale;
+
+            var verb = Named("Verb0")?.GetComponent<Button>();
+            var target = Named("EnemyPlate0")?.GetComponent<Button>();
+            verb.onClick.Invoke();
+            target.onClick.Invoke();
+
+            float furthestFromMark = 0f;
+            float scaleDeviation = 0f;
+            float deadline = Time.realtimeSinceStartup + 10f;
+            while (_fight.IsBusy && Time.realtimeSinceStartup < deadline)
+            {
+                float dist = Vector2.Distance(worldSlot.anchoredPosition, restMark);
+                if (dist > furthestFromMark) furthestFromMark = dist;
+
+                float scaleDist = Vector2.Distance(
+                    new Vector2(worldSlot.localScale.x, worldSlot.localScale.y),
+                    new Vector2(restScale.x, restScale.y));
+                if (scaleDist > scaleDeviation) scaleDeviation = scaleDist;
+
+                yield return null;
+            }
+
+            Assert.Greater(furthestFromMark, 0.001f,
+                "the rat's world slot never moved away from its own mark during the whole round -- Recoil/Punch/" +
+                "TravelFor's world-space mirror never actually reached it");
+        }
     }
 }
