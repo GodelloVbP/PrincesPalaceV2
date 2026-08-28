@@ -351,7 +351,7 @@ def draw_frame_cell(base_size, thumb_h, im, stat, ratio, ground_y_full, draw_gui
     return thumb
 
 
-def render_creature(creature_id, creature_dir, out_path):
+def render_creature(creature_id, creature_dir, out_path, draw_guides=True):
     stances = discover_creature(creature_dir)
     if not stances:
         print(f"[{creature_id}] no stance art found in {creature_dir} -- skipped")
@@ -389,7 +389,7 @@ def render_creature(creature_id, creature_dir, out_path):
         cells = []
         for i, (frame, stat) in enumerate(zip(frames, stats)):
             ratio = (stat["sqrt"] / median) if (stat is not None and median > 0) else None
-            cells.append(draw_frame_cell(canvas_size, THUMB_H, frame, stat, ratio, ground_y_full))
+            cells.append(draw_frame_cell(canvas_size, THUMB_H, frame, stat, ratio, ground_y_full, draw_guides))
             if stat is not None:
                 table_lines.append(
                     f"  {stance:10s} f{i}  box={stat['box'][2]-stat['box'][0]}x{stat['box'][3]-stat['box'][1]}"
@@ -404,7 +404,7 @@ def render_creature(creature_id, creature_dir, out_path):
             )
 
         skin = onion_skin(frames, canvas_size)
-        cells.append(draw_frame_cell(canvas_size, THUMB_H, skin, None, None, ground_y_full, draw_guides=True))
+        cells.append(draw_frame_cell(canvas_size, THUMB_H, skin, None, None, ground_y_full, draw_guides))
         rows.append((stance, cells))
 
     non_prone_frames = [f for stance, frames in stances.items() if stance not in PRONE_STANCES for f in frames]
@@ -442,7 +442,7 @@ def render_creature(creature_id, creature_dir, out_path):
 
     if all_skin is not None:
         draw.text((8, y + THUMB_H // 2), "all stances\n(onion skin,\nexcl. defeated)", fill=TEXT, font=_font())
-        cell = draw_frame_cell(canvas_size, THUMB_H, all_skin, None, None, ground_y_full)
+        cell = draw_frame_cell(canvas_size, THUMB_H, all_skin, None, None, ground_y_full, draw_guides)
         sheet.paste(cell, (LABEL_W, y), cell)
 
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
@@ -462,6 +462,17 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--report", required=True, help="Path to Resources/Enemies (or any folder of <id>/ subfolders)")
     ap.add_argument("--only", nargs="*", default=None, help="Limit to these creature ids")
+    ap.add_argument("--out-dir", default=OUT_DIR,
+                    help="Where to write <id>.png sheets. Defaults to tools/screenshots/actor_qa -- "
+                         "override this for a --report directory that is NOT Resources/Enemies "
+                         "(e.g. tools/screenshots/rigs/Enemies), or a rig capture with the same "
+                         "creature id would silently overwrite that creature's frame-sheet sheet.")
+    ap.add_argument("--no-guides", action="store_true",
+                    help="Suppress the ground line and per-frame scale caption. Both are measured "
+                         "against PADDING/the roster median, which assume a sliced frame-sheet "
+                         "canvas -- meaningless (not wrong, just noise) on camera-rendered rig "
+                         "frames, whose canvas is a fixed orthographic capture size. The redraw "
+                         "ratio and onion skin are unaffected either way.")
     ap.add_argument("--fail-over", type=float, default=None, metavar="RATIO",
                     help="Exit non-zero if any stance's redraw ratio reaches RATIO. "
                          "Off by default: this is a report, and every six-frame idle on the "
@@ -492,7 +503,8 @@ def main():
     findings = []
     for creature_id in creature_ids:
         findings += render_creature(creature_id, os.path.join(args.report, creature_id),
-                                    os.path.join(OUT_DIR, f"{creature_id}.png"))
+                                    os.path.join(args.out_dir, f"{creature_id}.png"),
+                                    draw_guides=not args.no_guides)
 
     # ---- the roster ranked by how much of it is redrawing --------------------
     #

@@ -84,6 +84,66 @@ namespace PrincesPalace.Domain.Tests
                 "the attack's impact sits at the very end of the clip -- there is no follow-through left to play");
         }
 
+        // THE MECHANICAL-CORNER REGRESSION GUARD.
+        //
+        // Scoped to idle only, deliberately -- attack and hurt WANT a sharp
+        // corner at their impact keyframe (that snap is what reads as a
+        // blow landing; today's attack head track jumps 403deg/s there and
+        // that is correct, not a bug). Idle is the opposite case: a
+        // breathing loop that changes VELOCITY abruptly at a keyframe reads
+        // as a mechanical tick rather than a breath, which is the exact
+        // "drunk sway" defect this content shipped with once already.
+        //
+        // Samples every idle track's RotationAt through the REAL RigSampler
+        // math at 60Hz (not a reimplementation -- a second copy of this
+        // arithmetic is a drift risk the moment the interpolation changes)
+        // and pins the largest single-frame change in angular VELOCITY
+        // (not position) under a literal threshold. A piecewise-linear
+        // track's velocity is constant within a segment and jumps only at
+        // a keyframe, so this catches exactly a corner and nothing else.
+        //
+        // 40deg/s, not tight: today's linear idle clip already reaches
+        // ~25deg/s at its own keyframes (a real, if small, jump) and this
+        // guards against a WORSE regression, not zero. It is expected to
+        // tighten considerably once the sampler moves off linear
+        // interpolation -- a smooth curve's velocity approaches zero at
+        // its own keyframes by construction, and this threshold should
+        // shrink to match whatever that curve actually produces rather
+        // than sit here as a number nobody revisits.
+        [Test]
+        public void TheIdleClipHasNoMechanicalCorner()
+        {
+            const float MaxVelocityJumpDegPerSecond = 40f;
+            const float SampleHz = 60f;
+
+            var idle = _clips["idle"];
+            int steps = Mathf.Max(2, Mathf.RoundToInt(idle.DurationSeconds * SampleHz));
+
+            foreach (var track in idle.Tracks)
+            {
+                float previousVelocity = float.NaN;
+                float previousAngle = track.RotationAt(0f);
+
+                for (int i = 1; i <= steps; i++)
+                {
+                    float t = idle.DurationSeconds * i / steps;
+                    float angle = track.RotationAt(t);
+                    float velocity = (angle - previousAngle) * SampleHz;
+
+                    if (!float.IsNaN(previousVelocity))
+                    {
+                        float jump = Mathf.Abs(velocity - previousVelocity);
+                        Assert.LessOrEqual(jump, MaxVelocityJumpDegPerSecond,
+                            $"idle/{track.BoneName} changes angular velocity by {jump:F1}deg/s in one 60Hz step " +
+                            $"near t={t:F3}s -- that reads as a mechanical tick, not a breath");
+                    }
+
+                    previousVelocity = velocity;
+                    previousAngle = angle;
+                }
+            }
+        }
+
         [Test]
         public void EveryTrackedBoneNameIsARealRatBone()
         {
