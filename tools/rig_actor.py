@@ -1047,9 +1047,34 @@ def build_rig(rig_id, source_override=None):
     # territory and verify_rig's COVERAGE check stays honest (this atlas
     # simply does not contain those pixels, by design, rather than needing
     # a special-cased exemption from a check meant to catch real gaps).
+    #
+    # NOT a hard cut, though -- a TAIL_EXCLUSION_MARGIN_PX-wide band right at
+    # the boundary with body's own fur is given back, so body's silhouette
+    # does not end in a dead-straight line exactly where the tail's own crop
+    # began. The tail's root bone rotating even the few degrees idle authors
+    # (see animations.json's bone_1 track) swings that straight edge just
+    # far enough to open a real gap -- confirmed as an actual hole in the
+    # rendered PNG (connected-component analysis on several idle frames, not
+    # eyeballed: a 2-11px enclosed hole around (220,266) at bind-adjacent
+    # rotation, absent at true bind pose), the same seam class Phase B's
+    # head backing_px exists to prevent, one joint over.
+    #
+    # NOT a plain erosion of `excluded` -- tried that first, and it shrank
+    # the WHOLE tail-shaped region by the margin from every direction,
+    # including its own far tip nowhere near body, because the tail is a
+    # long THIN shape (comparable in width to twice the margin in places) --
+    # an erosion depends on the shape's own width, eating a thin region away
+    # fast regardless of which edge actually needs covering. What actually
+    # wants covering is only the boundary AGAINST BODY'S OWN FUR, so the
+    # margin is measured from there specifically: dilate everything else
+    # that's already opaque (which is body, since head/legs sit nowhere near
+    # this region) by the margin, and only give back the part of `excluded`
+    # that band actually reaches.
     if rig_id in TAIL_REGION:
         excluded = eval_region(TAIL_REGION[rig_id]["clauses"], X, Y) & alpha
-        alpha = alpha & ~excluded
+        other_alpha = alpha & ~excluded
+        reclaimed = binary_dilation(other_alpha, TAIL_EXCLUSION_MARGIN_PX) & excluded
+        alpha = alpha & ~(excluded & ~reclaimed)
 
     reference_height_px = int(ys.max() - ys.min()) + 1
 
@@ -1572,6 +1597,19 @@ TAIL_REGION = {
         ],
     },
 }
+
+# How far body's own fur is allowed to survive INSIDE the tail's excluded
+# region, at the shared boundary -- see build_rig's own comment on where
+# this is used. 20px was tried first and measured insufficient once idle's
+# own bone_1 amplitude grew to a 7deg total swing (-1 to +6) to actually
+# read as a wiggle -- a real render still showed a 5-13px hole at the same
+# spot. 40px: the observed hole scales with rotation the same way Phase B's
+# head-backing arc did (arc ~= lever_arm * angle_radians; a ~100-150px
+# lever arm at 7deg predicts roughly the 12-18px this margin needs to beat,
+# not guessed from nothing), with real margin on top the same way
+# backing_px:head kept ~20px over its own measured arc rather than sitting
+# at the exact floor.
+TAIL_EXCLUSION_MARGIN_PX = 40
 
 
 def export_tail_for_skinning(rig_id, pad_px=12):

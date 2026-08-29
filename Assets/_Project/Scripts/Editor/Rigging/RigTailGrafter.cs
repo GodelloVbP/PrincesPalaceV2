@@ -66,10 +66,21 @@ namespace PrincesPalace.Editor.Rigging
         private const float CropOriginY = 184f;
         private const float ReferenceHeightPx = 756f;
 
-        // Sits between "far_foreleg"(z=1) and "body"(z=2) in the auto-built
-        // order -- exactly where the old "tail" part used to render,
-        // before this file existed.
-        private const int SortingOrder = 2;
+        // ABOVE body (z=2 in the current 6-part order), not tied with it.
+        // Was 2 -- copied from the OLD 7-part order (where "tail" sat at
+        // index 2, "body" at 3) without noticing body's own index shifted
+        // down to 2 once "tail" was removed from that array, leaving tail
+        // and body TIED at the same sortingOrder with an undefined draw
+        // order at their shared boundary. Confirmed as the cause of a real
+        // seam report at the tail/body attachment, not just a theoretical
+        // bug: body's own silhouette is a hard flat cut where the tail's
+        // territory was excluded from `alpha` (see tools/rig_actor.py's
+        // TAIL_REGION exclusion) -- nothing backs that cut the way
+        // backing_px backs body under head, so the tail's own sprite (which
+        // bakes in a small margin of body's fur at its own base, from the
+        // crop) has to draw ON TOP to cover it. Tied or behind, whichever
+        // way the tie happened to resolve, could expose that cut.
+        private const int SortingOrder = 3;
 
         public static void GraftOntoRat(GameObject rigGo, Dictionary<string, Transform> boneTransforms,
             Dictionary<string, Vector3> boneAbsPos, GameObject partsHolder)
