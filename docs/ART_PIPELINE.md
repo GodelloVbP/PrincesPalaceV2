@@ -915,17 +915,18 @@ material already blends that correctly.
 
 ### Outstanding on the rig pipeline
 
-- **The rat's rig is temporarily disabled (2026-08-29).** It is mid-overhaul
-  (a from-scratch hand-skinned replacement was attempted and set aside; the
-  checked-in prefab is the older auto-cut-parts one), and the rat shipped a
-  new flat 12-frame idle sheet in the meantime
-  (`Giant_rat_idle_sheet_12_frame.png`, sliced via `tools/slice_actor_sheet.py`
-  into `Resources/Enemies/rat/idle/f0..f11`). `RigLibrary._temporarilyDisabled`
-  forces `Resolve("Enemies/rat")` to null, so the rat renders through §4's
-  frame-sheet path like every other creature until an entry is removed.
-  Nothing under `Resources/Rigs/Enemies/rat/` was touched. `RigStageTests`,
-  `RigCaptureTests`, `RigRawSpriteTests` and `RigImportIntegrityTests` are
-  `[Ignore]`d for the same reason.
+- **A flat 12-frame idle sheet was evaluated as a rig replacement and
+  rejected, same day (2026-08-29).** `Giant_rat_idle_sheet_12_frame.png`
+  (sliced via `tools/slice_actor_sheet.py` into
+  `Resources/Enemies/rat/idle/f0..f11`, kept on disk as dormant fallback
+  art) turned out to have real frame-to-frame silhouette inconsistency --
+  measured as a 27.5px ground-anchor wobble (nudge-corrected to 1.0px, see
+  the actor's own `nudge` entry) plus a separate, uncorrectable ~10%
+  content-height swing. That second one is exactly the "flicker outruns
+  motion" ceiling this section's own opening paragraph describes, on the
+  one creature it was already known to affect. `RigLibrary` briefly gained
+  a `_temporarilyDisabled` entry to compare the two side by side in a real
+  fight; removed once the comparison was made.
 - **Rig visual QA is built (`tools/rig_qa.ps1`, see the workflow above),
   but the redraw-ratio bars it inherited from §4 were calibrated on
   frame-sheet content.** The rat's re-authored idle scores amber (2.1 vs a

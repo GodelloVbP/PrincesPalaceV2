@@ -21,9 +21,6 @@ namespace PrincesPalace.PlayModeTests
     // exactly as RuntimeScreenshotTests does. Run via
     // tools/graphics_tests.ps1 -Filter PrincesPalace.PlayModeTests.RigImportIntegrityTests,
     // which deliberately omits the flag.
-    [Ignore("Rat rig temporarily disabled (2026-08-29, see RigLibrary._temporarilyDisabled) -- " +
-            "verifies the checked-in prefab directly, unrelated to Resolve(), but the rig itself " +
-            "is mid-overhaul and not worth verifying while it's off. Re-enable alongside it.")]
     public class RigImportIntegrityTests
     {
         [UnityTest]
@@ -47,7 +44,24 @@ namespace PrincesPalace.PlayModeTests
                 var skin = r.GetComponent<SpriteSkin>();
                 Assert.IsNotNull(skin, $"{r.name} has no SpriteSkin");
                 Assert.IsNotNull(skin.rootBone, $"{r.name}'s SpriteSkin has no root bone");
-                Assert.AreEqual(1, skin.boneTransforms.Length, $"{r.name} should be rigid to exactly 1 bone");
+
+                // Every part is rigid-to-one-bone EXCEPT the tail, which
+                // RigTailGrafter later re-binds to its own smooth multi-bone
+                // chain (real bend instead of one stiff rod -- see its own
+                // header and the rat's rig commits). This test predates that
+                // graft (Phase 3 checkpoint, single-bone auto-cut parts
+                // only); asserting rigidity on part_tail here was pinning
+                // the OLD design after a later, intentional change already
+                // superseded it for this one part.
+                if (r.name == "part_tail")
+                {
+                    Assert.Greater(skin.boneTransforms.Length, 1,
+                        "part_tail should be smooth-skinned to its own multi-bone chain, not rigid");
+                }
+                else
+                {
+                    Assert.AreEqual(1, skin.boneTransforms.Length, $"{r.name} should be rigid to exactly 1 bone");
+                }
             }
 
             // sorting order should be strictly increasing back-to-front,

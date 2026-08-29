@@ -16,9 +16,6 @@ namespace PrincesPalace.PlayModeTests
     // GRAPHICS-GATED, same reasoning as RigImportIntegrityTests -- self-skips
     // under the headless commit gate (-nographics), run via
     // tools/graphics_tests.ps1 -Filter PrincesPalace.PlayModeTests.RigRawSpriteTests.
-    [Ignore("Rat rig temporarily disabled (2026-08-29, see RigLibrary._temporarilyDisabled) -- " +
-            "this exercises the rig atlas directly, unrelated to Resolve(), but the rig itself " +
-            "is mid-overhaul and not worth verifying while it's off. Re-enable alongside it.")]
     public class RigRawSpriteTests
     {
         [UnityTest]
