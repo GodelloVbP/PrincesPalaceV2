@@ -50,8 +50,15 @@
     },
     {
       "spritePath": "Enemies/rat",
-      "groundLine": 12,
+      "groundLine": 8,
+      "_groundLineNote": "Dropped from 12 to 8 when the flat single-drawing idle was replaced by the 12-frame idle sheet (tools/slice_actor_sheet.py's rat entry) -- re-slicing the whole actor together moved every stance onto one new shared canvas, and 8 is what that canvas actually measures (all 23 poses agree within 1px).",
       "stances": [
+        {
+          "stance": "idle",
+          "secondsPerFrame": 0.08,
+          "impactFrame": 1,
+          "soundFrame": 1
+        },
         {
           "stance": "attack",
           "secondsPerFrame": 0.08,

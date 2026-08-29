@@ -21,6 +21,23 @@ namespace PrincesPalace.Core.Rig
 
         private static readonly Dictionary<string, GameObject> _cache = new Dictionary<string, GameObject>();
 
+        // TEMPORARILY DISABLED (2026-08-29) -- the rat's rig is mid-overhaul
+        // (a from-scratch hand-skinned replacement was attempted and set
+        // aside; the checked-in prefab is the older auto-cut-parts one) and
+        // a new flat 12-frame idle sheet just shipped for this creature
+        // (Assets/_Project/Art/Enemies/Giant_rat_idle_sheet_12_frame.png,
+        // sliced into Resources/Enemies/rat/idle/f0..f11). Resolve() short-
+        // circuits any folder in here to null -- exactly the "no rig" miss
+        // every other creature's folder already produces, so
+        // RefreshCombatantSprite/PlaybackFor need no branch of their own to
+        // fall back to the frame-sheet Image path. Nothing about rig.json,
+        // animations.json or rat.prefab is touched; remove the entry once a
+        // rig is ready to come back.
+        private static readonly HashSet<string> _temporarilyDisabled = new HashSet<string>
+        {
+            "Enemies/rat",
+        };
+
         // A rig's bind-pose art was drawn at whatever resolution/zoom the
         // source generation happened to produce -- rig.json's
         // referenceHeightPx (the bind pose's own tight content height in
@@ -67,6 +84,7 @@ namespace PrincesPalace.Core.Rig
         public static GameObject Resolve(string folder)
         {
             if (string.IsNullOrWhiteSpace(folder)) return null;
+            if (_temporarilyDisabled.Contains(folder)) return null;
 
             if (_cache.TryGetValue(folder, out var cached)) return cached;
 

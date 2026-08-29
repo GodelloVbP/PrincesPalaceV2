@@ -41,6 +41,8 @@ namespace PrincesPalace.PlayModeTests
     // frame-sheet actors, so pointing --report at this tool's output
     // directory gets the onion-skin/redraw-ratio analysis on a RIG'S
     // motion for free, no changes to that tool needed.
+    [Ignore("Rat rig temporarily disabled via RigLibrary._temporarilyDisabled (2026-08-29) -- " +
+            "RigLibrary.Resolve now misses 'Enemies/rat' on purpose; re-enable once a rig is back.")]
     public class RigCaptureTests
     {
         private const float SamplesPerSecond = 12f;

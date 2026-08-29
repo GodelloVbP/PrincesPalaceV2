@@ -36,6 +36,36 @@ namespace PrincesPalace
         // No-run path only; in a run the count comes from the room.
         [SerializeField] internal int enemyCount = 3;
 
+        // EDITOR/DEV ONLY -- set by QuickFightMenu just before it opens the
+        // Fight scene in Play mode, never by ScreenRegistry/SceneBuilder and
+        // never serialized on this component. When set, BuildPlaceholderFight
+        // fields exactly this one enemy instead of its usual sortOrder pick,
+        // which is how "hop straight into a fight against just the giant
+        // rat" works without a second generated scene (a full SceneBuilder
+        // rebuild reassigns every scene's fileIDs -- too much for a dev
+        // convenience). Consumed (cleared) the moment BuildPlaceholderFight
+        // reads it, so a forced fight can never survive a scene reload or
+        // leak into a normal no-run placeholder.
+        //
+        // Backed by SessionState, not a plain static field -- entering Play
+        // mode runs a domain reload (by default) that resets every static
+        // field BEFORE Start() ever runs, which would silently drop a value
+        // QuickFightMenu set an instant earlier. SessionState is the
+        // standard survives-a-domain-reload channel for exactly this.
+        // #if'd out of player builds, where UnityEditor isn't linked; the
+        // plain-field fallback there is always null, so BuildPlaceholderFight
+        // needs no #if of its own at the call site.
+#if UNITY_EDITOR
+        private const string DevForcedEnemyIdKey = "PrincesPalace.Dev.ForcedEnemyId";
+        internal static string DevForcedEnemyId
+        {
+            get => UnityEditor.SessionState.GetString(DevForcedEnemyIdKey, "");
+            set => UnityEditor.SessionState.SetString(DevForcedEnemyIdKey, value ?? "");
+        }
+#else
+        internal static string DevForcedEnemyId;
+#endif
+
         private void Start()
         {
             if (fight == null) fight = GetComponent<FightController>();
@@ -193,16 +223,30 @@ namespace PrincesPalace
             // Resources.LoadAll's incidental order -- which is exactly the trap
             // CLAUDE.md gotcha 4 names. Filtering on ART first is what makes the
             // selection stable regardless, because only three qualify.
-            var enemies = ContentDatabase.Enemies
-                .Where(HasArt)
-                .OrderBy(e => e.sortOrder)
-                .Take(enemyCount)
-                .Select(e => e.id)
-                .ToList();
-
-            if (enemies.Count == 0)
+            //
+            // DevForcedEnemyId overrides all of that with exactly one named
+            // enemy -- see its own field comment. Consumed here, not left for
+            // next time.
+            List<string> enemies;
+            string forcedId = DevForcedEnemyId;
+            DevForcedEnemyId = null;
+            if (!string.IsNullOrEmpty(forcedId) && ContentDatabase.Enemies.Any(e => e.id == forcedId))
             {
-                enemies = ContentDatabase.Enemies.Take(enemyCount).Select(e => e.id).ToList();
+                enemies = new List<string> { forcedId };
+            }
+            else
+            {
+                enemies = ContentDatabase.Enemies
+                    .Where(HasArt)
+                    .OrderBy(e => e.sortOrder)
+                    .Take(enemyCount)
+                    .Select(e => e.id)
+                    .ToList();
+
+                if (enemies.Count == 0)
+                {
+                    enemies = ContentDatabase.Enemies.Take(enemyCount).Select(e => e.id).ToList();
+                }
             }
 
             if (party.Count == 0 || enemies.Count == 0) return null;

@@ -870,6 +870,17 @@ material already blends that correctly.
 
 ### Outstanding on the rig pipeline
 
+- **The rat's rig is temporarily disabled (2026-08-29).** It is mid-overhaul
+  (a from-scratch hand-skinned replacement was attempted and set aside; the
+  checked-in prefab is the older auto-cut-parts one), and the rat shipped a
+  new flat 12-frame idle sheet in the meantime
+  (`Giant_rat_idle_sheet_12_frame.png`, sliced via `tools/slice_actor_sheet.py`
+  into `Resources/Enemies/rat/idle/f0..f11`). `RigLibrary._temporarilyDisabled`
+  forces `Resolve("Enemies/rat")` to null, so the rat renders through §4's
+  frame-sheet path like every other creature until an entry is removed.
+  Nothing under `Resources/Rigs/Enemies/rat/` was touched. `RigStageTests`,
+  `RigCaptureTests`, `RigRawSpriteTests` and `RigImportIntegrityTests` are
+  `[Ignore]`d for the same reason.
 - **Rig visual QA is built (`tools/rig_qa.ps1`, see the workflow above),
   but the redraw-ratio bars it inherited from §4 were calibrated on
   frame-sheet content.** The rat's re-authored idle scores amber (2.1 vs a

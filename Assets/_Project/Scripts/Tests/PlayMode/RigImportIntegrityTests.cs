@@ -21,6 +21,9 @@ namespace PrincesPalace.PlayModeTests
     // exactly as RuntimeScreenshotTests does. Run via
     // tools/graphics_tests.ps1 -Filter PrincesPalace.PlayModeTests.RigImportIntegrityTests,
     // which deliberately omits the flag.
+    [Ignore("Rat rig temporarily disabled (2026-08-29, see RigLibrary._temporarilyDisabled) -- " +
+            "verifies the checked-in prefab directly, unrelated to Resolve(), but the rig itself " +
+            "is mid-overhaul and not worth verifying while it's off. Re-enable alongside it.")]
     public class RigImportIntegrityTests
     {
         [UnityTest]

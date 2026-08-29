@@ -229,11 +229,23 @@ ACTORS = {
                 # re-derivation, not a reproduction (see the risk table in
                 # the design plan). Cell r0c2 (484x266) carries no pose
                 # any shipped output uses and is intentionally skipped.
+                #
+                # Cell 0 (idle) is superseded by the dedicated 12-frame idle
+                # sheet below -- same relationship golem's base sheet has
+                # with its earth-shard cast sequence -- because this flat
+                # single-drawing idle is what the rig pipeline (ART_PIPELINE
+                # #9) was built to replace in the first place. Kept here as
+                # None, not deleted, per that section's "keep a creature's
+                # old art even after it ships a rig" rule -- the rig is
+                # currently disabled (mid-overhaul on another rig, see
+                # RigLibrary), so this flat art is exactly the fallback that
+                # rule exists for; the new animated idle just fell in ahead
+                # of it because it happened to ship first.
                 "file": "Giant_rat_sheet.png",
                 "key": "white_flood",
                 "grid": (2, 3),
                 "scale": 1.0,  # the reference sheet for this creature
-                "names": ["idle", "cast", None, "hurt", "defeated", "extra"],
+                "names": [None, "cast", None, "hurt", "defeated", "extra"],
             },
             {
                 # Poses occupy y=112..489 and y=560..880 -- NOT a nominal
@@ -244,6 +256,30 @@ ACTORS = {
                 "scale": 0.766,  # drawn ~1.306x larger (linear) than the base
                                  # sheet; always scale the LARGER sheet down.
                 "names": ["attack/f0", "attack/f1", "attack/f2", "attack/f3", "attack/f4", "attack/f5"],
+            },
+            {
+                # New 12-frame idle (2026-08-29), flat cel style, actual
+                # green (~hue-dominant, not a literal #00FF00 flood) rather
+                # than this creature's usual white-backed sheets -- "green"
+                # key mode (key_out_green) rather than "white_flood".
+                # Even 2x6 grid, cells cleanly gapped -- no bands needed.
+                "file": "Giant_rat_idle_sheet_12_frame.png",
+                "key": "green",
+                "grid": (2, 6),
+                "scale": 1.208,  # measured via --suggest-scales rat (median
+                                 # sqrt-mass 189.5 vs the reference sheet's 228.9)
+                                 # -- this sheet is drawn SMALLER than the other two,
+                                 # so matching it means upscaling rather than the
+                                 # module docstring's usual "always shrink the
+                                 # larger sheet" (Giant_rat_sheet.png is fixed at
+                                 # 1.0 as every other rat stance's anchor; rescaling
+                                 # IT down would move cast/hurt/defeated/extra,
+                                 # which nobody asked to change). A mild 1.2x
+                                 # softens the upscaled sheet slightly -- acceptable
+                                 # for this flat cel style; revisit if idle reads
+                                 # noticeably softer than the rat's other stances.
+                "names": ["idle/f0", "idle/f1", "idle/f2", "idle/f3", "idle/f4", "idle/f5",
+                          "idle/f6", "idle/f7", "idle/f8", "idle/f9", "idle/f10", "idle/f11"],
             },
         ],
         "aliases": {"guard": "extra"},

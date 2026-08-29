@@ -266,13 +266,25 @@ def discover_creature(creature_dir):
     single-frame list; a "<stance>/f0.png, f1.png, ..." folder is probed in
     order until a gap, matching StanceAnimationLibrary's own convention so
     this tool sees exactly what the game would load.
+
+    A stance folder always wins over a same-named flat file -- this is what
+    StanceAnimationLibrary.Build actually does (probes the frame folder via
+    FrameSequenceLoader FIRST, only falling back to the flat file when that
+    probe is empty), and ART_PIPELINE.md's "keep a creature's old f0..fN
+    folders / old flat file even after it's superseded" convention means
+    both routinely exist at once. A single dict keyed by name and filled by
+    `sorted(os.listdir(...))` order used to let ALPHABETICAL LUCK decide the
+    winner instead -- "idle" (dir) sorts before "idle.png" (file), so the
+    stale flat file silently clobbered the real 12-frame idle here, and this
+    tool reported the OLD art's canvas size and metrics with nothing but one
+    easy-to-miss WARNING line to say so.
     """
-    stances = {}
+    flats = {}
+    folders = {}
     for entry in sorted(os.listdir(creature_dir)):
         full = os.path.join(creature_dir, entry)
         if entry.lower().endswith(".png") and os.path.isfile(full):
-            stance = entry[:-4]
-            stances[stance] = [Image.open(full).convert("RGBA")]
+            flats[entry[:-4]] = [Image.open(full).convert("RGBA")]
         elif os.path.isdir(full):
             frames = []
             i = 0
@@ -283,7 +295,10 @@ def discover_creature(creature_dir):
                 frames.append(Image.open(frame_path).convert("RGBA"))
                 i += 1
             if frames:
-                stances[entry] = frames
+                folders[entry] = frames
+
+    stances = dict(flats)
+    stances.update(folders)  # folder shape wins on a name collision
     return stances
 
 

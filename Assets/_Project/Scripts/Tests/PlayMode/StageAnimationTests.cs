@@ -217,10 +217,15 @@ namespace PrincesPalace.PlayModeTests
         // rather than a flag: flat art has one drawing and must simply sit on
         // it. A loop that wrapped a single frame would repaint the whole stage
         // every frame for a picture that never changes.
+        //
+        // Asserted on the golem, not the rat -- the rat shipped a 12-frame
+        // idle sheet (tools/slice_actor_sheet.py, 2026-08-29) and is no
+        // longer a single-frame-idle creature. The golem is: see the comment
+        // below on which of the roster still qualifies.
         [UnityTest]
         public IEnumerator FlatArtStaysPutRatherThanFlickering()
         {
-            yield return AFightAgainst("Enemies/rat");
+            yield return AFightAgainst("Enemies/golem");
 
             var foe = _fight.SessionForTest.Encounter.Enemies[0];
 
@@ -234,24 +239,26 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- and the breath that needs no drawings at all ----------------------
 
-        // THE FOUR FIGURES THAT NEVER MOVED. FlatArtStaysPutRatherThanFlickering
+        // THE FIGURES THAT NEVER MOVED. FlatArtStaysPutRatherThanFlickering
         // above is still right -- a single-frame idle must stay on its only
         // drawing -- and for as long as swapping drawings was the only thing
         // that could animate anything, "stays put" and "stands perfectly still"
         // were the same sentence.
         //
         // They are not any more, and that is the whole point of the transform
-        // breath. The rat, the golem, the bog witch and Shawn ship one idle.png
-        // each; on a stage where the troll wobbles and everything around it is
-        // frozen, the troll reads as broken rather than as rough.
+        // breath. The golem, the bog witch and Shawn ship one idle.png each
+        // (the rat did too, until its 12-frame idle sheet shipped 2026-08-29
+        // -- see StanceManifest.json and tools/slice_actor_sheet.py); on a
+        // stage where the troll wobbles and everything around it is frozen,
+        // the troll reads as broken rather than as rough.
         //
-        // ASSERTED ON THE RAT SPECIFICALLY, the mirror of the beetle above: an
-        // enemy picked for having no idle sheet, so this cannot pass by
+        // ASSERTED ON THE GOLEM SPECIFICALLY, the mirror of the beetle above:
+        // an enemy picked for having no idle sheet, so this cannot pass by
         // accident on art that was already animating.
         [UnityTest]
         public IEnumerator FlatArtStillBreathesEvenThoughItsDrawingCannot()
         {
-            yield return AFightAgainst("Enemies/rat");
+            yield return AFightAgainst("Enemies/golem");
 
             var slot = (RectTransform)Named("Enemy0Slot").transform;
             var animator = slot.GetComponent<StageActorAnimator>();

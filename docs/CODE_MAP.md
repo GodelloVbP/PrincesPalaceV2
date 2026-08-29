@@ -278,6 +278,16 @@ the frame-sheet Image path above.** `RigLibrary.Resolve(folder)` returns
 null for anything that has no rig, so every file below is invisible to
 every other creature. Full workflow: `docs/ART_PIPELINE.md` §9.
 
+**Temporarily disabled (2026-08-29).** `RigLibrary._temporarilyDisabled`
+forces `Resolve("Enemies/rat")` to null unconditionally while the rat's rig
+is mid-overhaul, so the rat renders through the frame-sheet path above —
+its new 12-frame idle sheet (`Resources/Enemies/rat/idle/f0..f11`,
+`tools/slice_actor_sheet.py`) instead of the rig's own idle clip. Nothing
+under `Resources/Rigs/Enemies/rat/` or the files below was touched; remove
+the one entry to bring the rig back. `RigStageTests`/`RigCaptureTests`/
+`RigRawSpriteTests`/`RigImportIntegrityTests` are `[Ignore]`d for the same
+reason and need re-enabling alongside it.
+
 | File | What it owns |
 |---|---|
 | `Domain/Rig/RigStanceClip.cs` | `RigKeyframe`/`RigBoneTrack`/`RigStanceClip` — engine-free rig clip data |
@@ -452,6 +462,15 @@ same every time or `screenshot.ps1` cannot compare captures. (Filtering on art
 also sidesteps `sortOrder` being unset across all of enemies.json -- CLAUDE.md
 gotcha 4. The in-run path deliberately does **not** filter on art, or
 enemies.json would decide the encounter table by which sheets were finished.)
+
+`FightBootstrap.DevForcedEnemyId` overrides the placeholder pick with exactly
+one named enemy, and is what `Editor/QuickFightMenu.cs`'s **Prince's Palace >
+Dev > Fight Giant Rat** menu item sets before opening `Fight.unity` in Play
+mode -- a one-click way to see a specific enemy's combat art without a save
+slot or a run. Backed by `SessionState`, not a plain static field, because
+entering Play mode runs a domain reload that would otherwise wipe the value
+between the menu item setting it and `Start()` reading it. Editor-only
+(`#if UNITY_EDITOR`); a player build always takes the normal sortOrder pick.
 
 ### Rooms that are not fights (`RoomResolution`, `RoomResolver`)
 

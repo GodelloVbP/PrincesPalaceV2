@@ -287,6 +287,10 @@ $PathAreas = @(
     @{ Pattern = '^Assets/_Project/Scripts/Editor/ProceduralSpriteBaker'; Areas = @('art', 'ui') }
     @{ Pattern = '^Assets/_Project/Scripts/Editor/SceneBuilder'; Areas = @('ui', 'hub') }
     @{ Pattern = '^Assets/_Project/Scripts/Editor/ContentBuilder'; Areas = @('content') }
+    # Dev-only menu item that opens Fight.unity and forces FightBootstrap's
+    # placeholder-fight enemy pick -- exercises the same combat bootstrap
+    # path as everything else under Core/, nothing UI- or content-specific.
+    @{ Pattern = '^Assets/_Project/Scripts/Editor/QuickFightMenu'; Areas = @('combat') }
     # Editor/Rigging -- RigImporter/RigPrefabBuilder/RigBuildPilot/MiniJson/
     # StageActorsSortingLayer. RigAtlasImportPostprocessor.cs also already
     # matches the broader ImportPostprocessor row below; the overlap is fine
