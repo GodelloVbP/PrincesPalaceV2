@@ -285,7 +285,27 @@ ACTORS = {
         "aliases": {"guard": "extra"},
         "anchor": "ground_band",
         "delivery_scale": 1.0,
-        "nudge": {},
+        # Measured (2026-08-29) off the delivered idle/f0..f11 bbox centres,
+        # which swung 309.0-336.5px (27.5px) around a 314px median -- visible
+        # in play as the rat rocking side to side on every idle loop.
+        # ground_band's per-frame anchor tracks whichever ground-contact
+        # silhouette survives that frame's paw/whisker pose, and the AI-
+        # generated sheet does not hold that silhouette consistent frame to
+        # frame (see the actor_stance_qa.py redraw-ratio note in
+        # ART_PIPELINE.md #9's Outstanding section -- 1.6, amber, and this is
+        # exactly the churn that number was measuring). A per-frame dx nudge
+        # recentres each frame on the roster median; it cannot fix the
+        # SEPARATE ~10% content-height swing (271-302px) the same
+        # inconsistency causes, because scaling an individual frame is what
+        # this tool refuses to do on principle (see module docstring) -- that
+        # part is real art variance, not a slicing defect, and needs either a
+        # tighter-drawn sheet or the rig back.
+        "nudge": {
+            "idle/f0": (4, 0), "idle/f1": (-20, 0), "idle/f2": (-23, 0),
+            "idle/f3": (-15, 0), "idle/f4": (-14, 0), "idle/f5": (5, 0),
+            "idle/f6": (4, 0), "idle/f7": (-23, 0), "idle/f8": (1, 0),
+            "idle/f9": (0, 0), "idle/f10": (1, 0), "idle/f11": (4, 0),
+        },
     },
 
     # --- Regenerated under docs/STANCE_SHEET_SPEC.md -----------------------

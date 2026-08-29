@@ -473,6 +473,51 @@ statement about the art rather than about the check: every looping stance on
 the roster is currently over the red bar, so a gate shipped switched on would
 refuse every build until the sheets were re-cut.
 
+#### Do not wire a new looping stance on the QA number alone
+
+The check above measures **shape churn against motion**. It does not measure
+**the figure rocking sideways frame to frame**, which is a separate failure
+mode with its own separate number, and shipping the Giant Rat's 12-frame idle
+without checking it (2026-08-29) is why the rat visibly wobbled in a real
+fight the moment someone actually played it, despite the redraw ratio (1.6,
+amber but not red) having already been read and reported as "not perfect."
+An amber number that gets mentioned in passing is not a gate; a number
+nobody looked at twice is not a check.
+
+Before calling a new or re-cut LOOPING stance done, in this order:
+
+1. **Reproduce it, don't eyeball it.** Slice with `slice_actor_sheet.py <id>`,
+   then `actor_stance_qa.py --report Resources/Enemies --only <id>` and
+   actually open `tools/screenshots/actor_qa/<id>.png` — the onion-skin
+   column and the per-frame anchor line are what a "looks fine to me" verdict
+   is standing in for if you skip this.
+2. **Check the anchor line is a single vertical line, not a smear.** This is
+   the side-to-side check the redraw ratio does NOT make. Measure it
+   directly if the picture is ambiguous — per-frame opaque bbox centre-x
+   across the delivered PNGs (`im.getchannel("A").getbbox()`, average the
+   left/right edges) should agree within a couple of px. The rat's idle
+   measured a 27.5px spread before correction, 1.0px after — that gap is
+   exactly what reads as "wiggly."
+3. **If it fails step 2, nudge — don't rescale.** Recentre each outlier frame
+   on the roster median with a per-frame `("stance/fN": (dx, 0))` entry in
+   the actor's `nudge` table (dx = median_cx − that frame's own cx, rounded
+   to an int). This is a horizontal reposition, not a resize, so it cannot
+   introduce the pulsing a per-frame `scale` correction would — see the
+   rat's own `nudge` entry for the worked example, with the measurement that
+   produced every value recorded beside it. Re-slice and re-measure step 2
+   after — a nudge is arithmetic, not a guess, and should close the gap
+   close to fully.
+4. **Read the redraw ratio, and say what it means out loud if it is not
+   green.** Amber (1.6-2.5 for a loop) means "will probably still be visible
+   as flicker/bob in motion" — say exactly that in the report handed to
+   whoever asked for the art, not just the number. Red means don't ship it
+   without saying so explicitly and getting a decision. A ratio this checks
+   cannot fix (a genuine per-frame silhouette-height swing, distinct from
+   the sideways drift step 2-3 fixes) needs new art or a different pipeline
+   (see the rig, §9) — not a nudge, and not silence.
+5. **Only then** add/update the stance's `StanceManifest.json` entry and
+   consider the stance shippable.
+
 ## 5. Wiring checklist (new art → visible in-game)
 
 1. Drop raw source file(s) in the kit's source folder, run the keyer.
