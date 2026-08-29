@@ -188,14 +188,21 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void EveryTrackedBoneNameIsARealRatBone()
         {
-            // The exact set rig.json authors (see RigPrefabBuilder's own
-            // header) -- a track for any other name silently animates
-            // nothing, because RigActor.ApplyPose looks bones up by name
-            // and a miss is a no-op rather than a thrown exception.
+            // body/far_hindleg/far_foreleg/near_hindleg/near_foreleg/head:
+            // the exact set rig.json authors (see RigPrefabBuilder's own
+            // header). bone_1..bone_14: the hand-skinned tail's own chain,
+            // authored by a person in Unity's Sprite Editor and grafted on
+            // at build time by RigTailGrafter.cs -- NOT in rig.json at all,
+            // since the tail is deliberately not cut from the shared atlas
+            // (see tools/rig_actor.py's own comment on the removed "tail"
+            // part entry). A track for any name outside either set silently
+            // animates nothing, because RigActor.ApplyPose looks bones up
+            // by name and a miss is a no-op rather than a thrown exception.
             var knownBones = new System.Collections.Generic.HashSet<string>
             {
                 "body", "far_hindleg", "far_foreleg", "near_hindleg", "near_foreleg", "head",
-                "tail_1", "tail_2", "tail_3",
+                "bone_1", "bone_2", "bone_3", "bone_4", "bone_5", "bone_6", "bone_7",
+                "bone_8", "bone_9", "bone_10", "bone_11", "bone_12", "bone_13", "bone_14",
             };
 
             foreach (var pair in _clips)

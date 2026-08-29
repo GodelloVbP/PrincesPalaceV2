@@ -131,6 +131,20 @@ namespace PrincesPalace.Editor.Rigging
                 skin.alwaysUpdate = true;
             }
 
+            // The rat's tail is not among partsJson at all -- see
+            // tools/rig_actor.py's own comment on the removed "tail" part
+            // entry. RigTailGrafter reads its bone chain from the hand-
+            // skinned sprite's own Editor Data Provider records and grafts
+            // it onto "body" directly, adding its own entries to
+            // boneTransforms so RigActor's bone-name lookup (a plain
+            // recursive walk of the whole "bones" hierarchy) finds them
+            // exactly like every other bone, no special-casing needed
+            // downstream.
+            if (root == "Enemies" && id == "rat")
+            {
+                RigTailGrafter.GraftOntoRat(go, boneTransforms, boneAbsPos, partsHolder);
+            }
+
             Directory.CreateDirectory(Path.GetDirectoryName(prefabPath));
             var saved = PrefabUtility.SaveAsPrefabAsset(go, prefabPath, out bool success);
             Object.DestroyImmediate(go);

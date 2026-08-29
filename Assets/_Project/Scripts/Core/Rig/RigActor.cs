@@ -16,16 +16,28 @@ namespace PrincesPalace.Core.Rig
     {
         private readonly Dictionary<string, Transform> _bones = new Dictionary<string, Transform>();
 
-        // Each bone's own bind localPosition, captured once at instantiation
-        // -- a translated pose is always this PLUS the sampled offset, never
-        // the offset alone, so a bone whose rig art sits off-origin (any
-        // non-root bone) still ends up in the right place.
+        // Each bone's own bind localPosition/localRotation, captured once at
+        // instantiation. Position: a translated pose is always this PLUS the
+        // sampled offset, never the offset alone, so a bone whose rig art
+        // sits off-origin (any non-root bone) still ends up in the right
+        // place. Rotation: identity for every bone RigPrefabBuilder builds
+        // (it never sets localRotation, so the default IS identity) -- but
+        // NOT for a hand-skinned chain a grafter builds from its own
+        // authored SpriteBone data (see RigTailGrafter.cs), where a child
+        // bone's bind rotation is the tail's own natural curl and is very
+        // much not zero. Assuming identity there would snap the tail
+        // straight on every ResetToRest -- caching the REAL bind rotation
+        // per bone, the same way position already was, is what keeps this
+        // correct for a bone RigActor didn't build and knows nothing else
+        // about.
         private readonly Dictionary<string, Vector3> _bindPositions = new Dictionary<string, Vector3>();
+        private readonly Dictionary<string, Quaternion> _bindRotations = new Dictionary<string, Quaternion>();
 
         public void Initialize(Transform bonesHolder)
         {
             _bones.Clear();
             _bindPositions.Clear();
+            _bindRotations.Clear();
             if (bonesHolder == null) return;
 
             CollectBones(bonesHolder);
@@ -37,12 +49,14 @@ namespace PrincesPalace.Core.Rig
             {
                 _bones[child.name] = child;
                 _bindPositions[child.name] = child.localPosition;
+                _bindRotations[child.name] = child.localRotation;
                 CollectBones(child);
             }
         }
 
-        // Bind pose: every known bone back to zero rotation AND its own
-        // bind position. What a beat returns an actor to between blows --
+        // Bind pose: every known bone back to its OWN bind rotation and
+        // position (see the field comments above for why rotation is not
+        // simply identity). What a beat returns an actor to between blows --
         // the rig twin of SetFrame(actor, 0) on the frame-sheet path (see
         // RigStancePlayback.ResetToRest). Position must be restored too,
         // not just rotation -- a bone left at its last sampled translation
@@ -53,7 +67,7 @@ namespace PrincesPalace.Core.Rig
             foreach (var pair in _bones)
             {
                 if (pair.Value == null) continue;
-                pair.Value.localRotation = Quaternion.identity;
+                pair.Value.localRotation = _bindRotations.TryGetValue(pair.Key, out var bindRot) ? bindRot : Quaternion.identity;
                 if (_bindPositions.TryGetValue(pair.Key, out var bind)) pair.Value.localPosition = bind;
             }
         }
@@ -63,6 +77,14 @@ namespace PrincesPalace.Core.Rig
         // the last pose or ResetToRest put it, which is always one or the
         // other and never a stale mid-swing angle -- see RigStancePlayback's
         // own ResetToRest call between beats.
+        //
+        // RotationDegrees is authored RELATIVE TO THE BIND POSE (see
+        // RigStanceClip's own header: "0 degrees IS the bind pose"), so it
+        // is applied ON TOP OF the bone's own bind rotation, not in place
+        // of it -- identical to the old `Quaternion.Euler(...)` alone for
+        // every bone RigPrefabBuilder builds (bind rotation there is always
+        // identity, so bindRot * delta == delta), and correct for a
+        // hand-skinned chain's own non-identity bind rotations too.
         public void ApplyPose(RigSampler.BonePose[] poses)
         {
             if (poses == null) return;
@@ -71,7 +93,8 @@ namespace PrincesPalace.Core.Rig
             {
                 if (_bones.TryGetValue(poses[i].BoneName, out var bone) && bone != null)
                 {
-                    bone.localRotation = Quaternion.Euler(0f, 0f, poses[i].RotationDegrees);
+                    var bindRot = _bindRotations.TryGetValue(poses[i].BoneName, out var br) ? br : Quaternion.identity;
+                    bone.localRotation = bindRot * Quaternion.Euler(0f, 0f, poses[i].RotationDegrees);
                     if (_bindPositions.TryGetValue(poses[i].BoneName, out var bind))
                     {
                         bone.localPosition = bind + new Vector3(poses[i].DxPixels, poses[i].DyPixels, 0f) / RigLibrary.PixelsPerUnit;

@@ -317,71 +317,31 @@ RIGS = {
                 "outset_px": 8,
                 "pivot": (1080, 290),
             },
-            "tail": {
-                # Region, not polygon: nothing else in the drawing lives in
-                # the lower-left, so "left of the legs, plus the wedge above
-                # the rear leg" fully separates the tail with no hand-traced
-                # outline needed. `clauses` is OR-of-AND over (axis, op,
-                # value) triples against the pixel coordinate grid.
-                #
-                # The corner (520,472) used to sit tight against the real
-                # fur-to-tail transition, which is a curve, not a right
-                # angle -- wherever the true silhouette crossed outside that
-                # rigid rectangle, region membership just stopped, showing up
-                # as a flat notched step where the tail meets the back
-                # instead of a smooth continuation. Pushed out to (560,500):
-                # still 16px clear of the belly line (516) where leg
-                # detection starts, and 108px right of far_hindleg's own
-                # search bound (x_min 452) -- legs are found strictly below
-                # y=516 by connected components, so this corner never
-                # actually overlaps a leg pixel even though its x-range
-                # does, and the rank-based resolve (tail loses to body/near
-                # legs/head, wins over far legs) is unchanged either way.
-                # CHAIN, not a single rigid part: one bone can only rotate
-                # about its own pivot, so a single "tail" bone can never
-                # bend along its own length -- it swings as one stiff rod
-                # no matter what the keyframes say. Three bones in
-                # sequence (base/mid/tip) let a wave actually travel down
-                # the tail, the same way a real segmented tail animates,
-                # at the cost of a visible facet at each joint instead of
-                # a smooth curve (true smooth blending needs Unity's own
-                # bounded-biharmonic weight generator, which turned out to
-                # be uncallable from outside the Sprite Editor's own UI --
-                # see the rig-pipeline plan file's own notes on that dead
-                # end).
-                #
-                # cuts_x splits the SAME clause-region mask this part used
-                # when it was a single "region" entry, by x-band, base
-                # (high x, near the body) -> tip (low x). See
-                # build_chain_masks for why splitting before the rank-carve
-                # step below is equivalent to splitting the final shape.
-                "kind": "chain",
-                "clauses": [
-                    [("x", "<", 450)],
-                    [("x", "<", 560), ("y", "<", 500)],
-                ],
-                "pivot": (500, 398),
-                "segments": ["tail_1", "tail_2", "tail_3"],
-                "cuts_x": [350, 180],
-                # tail_3 (the tip) is the smallest, most detailed segment
-                # now that it's isolated from the rest of the tail's own
-                # length -- the rig-wide default epsilon cut across its
-                # curl and failed FIDELITY (IoU 0.9826 < 0.985). Tighter
-                # for the whole chain; tail_1/tail_2 had comfortable
-                # margin already (0.99+) so this doesn't cost them
-                # anything, just gives tail_3 more vertex budget.
-                "simplify_epsilon": 0.6,
-                # tail_1 backs under tail_2, tail_2 backs under tail_3 --
-                # the exact same mechanism body uses to back under head,
-                # applied one joint at a time down the chain. Radii
-                # measured against a real build (see build log / commit
-                # message for the seam-distance numbers this was sized
-                # from), not guessed.
-                "segment_backing_px": {
-                    "tail_1": {"default": 0, "tail_2": 40},
-                    "tail_2": {"default": 0, "tail_3": 40},
-                },
-            },
+            # NO "tail" ENTRY. Tried single-rigid (one bone, can't bend
+            # along its length), then a 3-bone rigid chain (visible facets
+            # at each joint, and the base->tip amplitude gradient needed to
+            # even see the joints move fought the tail's own bind-pose
+            # curl -- see the rig-pipeline plan file's dead-end notes and
+            # the commit history around "tail chain" for the measurements).
+            # Both are the wrong primitive for a part that needs to bend
+            # smoothly, not swing as N rigid pieces.
+            #
+            # The tail is now a HAND-SKINNED sprite instead: a real bone
+            # chain with SMOOTHLY BLENDED per-vertex weights (Unity's own
+            # bounded-biharmonic solver, run through the Sprite Editor's
+            # normal UI by a person -- scripting that solver from outside
+            # the UI was tried and failed 3 times with zero diagnostic
+            # information, a genuine dead end, not skipped for convenience).
+            # That skinning lives in its own file
+            # (Assets/_Project/Art/Rigs/rat/tail_standalone_for_skinning.png
+            # + its own .meta, hand-maintained like the bind pose art
+            # itself) and is grafted onto this auto-built rig afterward by
+            # RigTailGrafter.cs -- never cut from this shared atlas, so
+            # re-running this script for an unrelated part never touches
+            # it. TAIL_REGION below is kept ONLY so a future re-export of
+            # that standalone crop (export_tail_for_skinning below) can
+            # find the same source pixels again; it is not consulted by
+            # build_rig at all.
             "legs": {
                 # Connected components of the silhouette below the belly
                 # line and right of the tail, sorted left -> right and
@@ -401,28 +361,19 @@ RIGS = {
 
         # Paint order, back to front. Doubles as the z-resolve priority for
         # pixel overlap between parts (a later entry wins the overlap) and
-        # as the "z" field written per part in rig.json.
-        # tail_1/tail_2/tail_3 replace the old single "tail" slot, in
-        # base->tip order -- ascending z within the chain so each parent
-        # segment's backing patch (see segment_backing_px above) sits
-        # BEHIND its child at bind pose, hidden until the child rotates
-        # away, the same relationship body/head already has one level up.
+        # as the "z" field written per part in rig.json. No "tail" entry --
+        # it is not cut from this atlas at all (see the comment on the
+        # removed "tail" part entry above). RigTailGrafter.cs assigns it
+        # its own sortingOrder directly, matching where "tail" used to sit
+        # in this list (behind body, ahead of the far legs).
         "order": [
-            "far_hindleg", "far_foreleg", "tail_1", "tail_2", "tail_3", "body",
+            "far_hindleg", "far_foreleg", "body",
             "near_hindleg", "near_foreleg", "head",
         ],
 
         # 2px growth so a moving part owns its own outline pixels instead of
         # ending exactly where the body silhouette does (leaves a hairline
-        # gap the instant it rotates away from bind pose). The tail chain is
-        # excluded for the same reason the old single "tail" part was:
-        # tail_1 is not a separate silhouette carved out of the body the way
-        # a limb is (it's the same clause-region the old part used, just
-        # banded), so growing it would eat into the body itself -- and
-        # tail_2/tail_3 are excluded to match rather than re-litigate the
-        # dilate_px/backing_px trade-off the comment below already settled
-        # once. segment_backing_px above is what actually hides their own
-        # internal joints, not this.
+        # gap the instant it rotates away from bind pose).
         # Kept modest -- growing this ALSO shrinks body_mask (body is defined
         # as "whatever's left after removing dilated legs/head"), which
         # eats into body's own backing_px margin at the same rate it grows
@@ -432,7 +383,7 @@ RIGS = {
         # comment for why growing it caused the exact overshoot bug this
         # file's simplify_epsilon fix now handles instead.
         "dilate_px": 4,
-        "dilate_skip": ["tail_1", "tail_2", "tail_3"],
+        "dilate_skip": [],
 
         "simplify_epsilon": SIMPLIFY_EPSILON_DEFAULT,
         "atlas_padding": ATLAS_PADDING_DEFAULT,
@@ -441,10 +392,10 @@ RIGS = {
         # here -- that part is the root. Rigid pilot: bone name == part
         # name for every part (a part's `bone` field, only needed the day a
         # part is weighted to a bone it doesn't own, defaults to its own
-        # name).
+        # name). No "tail" entry -- RigTailGrafter.cs parents the hand-rigged
+        # tail's own root bone under "body" directly, outside this manifest.
         "bone_parents": {
             "head": "body",
-            "tail_1": "body", "tail_2": "tail_1", "tail_3": "tail_2",
             "far_hindleg": "body", "near_hindleg": "body",
             "far_foreleg": "body", "near_foreleg": "body",
         },
@@ -1090,6 +1041,16 @@ def build_rig(rig_id, source_override=None):
     H, W = alpha.shape
     Y, X = np.indices((H, W))
 
+    # A hand-skinned part (TAIL_REGION) is not cut from this atlas at all --
+    # its pixels are removed from `alpha` itself, BEFORE any part mask is
+    # computed, so "body" (alpha minus every named part) never reclaims that
+    # territory and verify_rig's COVERAGE check stays honest (this atlas
+    # simply does not contain those pixels, by design, rather than needing
+    # a special-cased exemption from a check meant to catch real gaps).
+    if rig_id in TAIL_REGION:
+        excluded = eval_region(TAIL_REGION[rig_id]["clauses"], X, Y) & alpha
+        alpha = alpha & ~excluded
+
     reference_height_px = int(ys.max() - ys.min()) + 1
 
     # ---- part masks -------------------------------------------------
@@ -1593,6 +1554,85 @@ def render_wiggle(build, test_angle_deg=20):
         y += r.height + 4
     return sheet
 
+# ---------------------------------------------------------------------------
+# Hand-skinned tail export -- see the comment on the removed "tail" part
+# entry in RIGS["rat"]["parts"] for why this exists outside build_rig
+# entirely. Re-run this (not build_rig) if the bind pose art itself ever
+# changes; RigTailGrafter.cs expects the output at a fixed path.
+# ---------------------------------------------------------------------------
+
+# Same region clauses the old "tail" part entry used, kept here as the one
+# place this creature's tail boundary is still defined -- not read by
+# build_rig, only by export_tail_for_skinning below.
+TAIL_REGION = {
+    "rat": {
+        "clauses": [
+            [("x", "<", 450)],
+            [("x", "<", 560), ("y", "<", 500)],
+        ],
+    },
+}
+
+
+def export_tail_for_skinning(rig_id, pad_px=12):
+    """Crops the tail out of the bind pose, alone on a transparent
+    background, for a person to open in Unity's Sprite Editor and skin by
+    hand -- see docs/ART_PIPELINE.md's rig section. Uses the SAME
+    key+content_pad crop build_rig itself uses, so the output lines up with
+    rig.json's own coordinate space; RigTailGrafter.cs relies on this
+    exact alignment, not just on the image looking right."""
+    if rig_id not in TAIL_REGION:
+        sys.exit(f"[{rig_id}] no TAIL_REGION entry -- this export is rat-specific for now")
+
+    spec = RIGS[rig_id]
+    src_path = _resolve_source_path(spec, None)
+    image = Image.open(src_path)
+    keyed = key_source(image, spec["key"])
+    alpha_full = keyed[..., 3] > 0
+    ys, xs = np.nonzero(alpha_full)
+    if len(xs) == 0:
+        sys.exit(f"[{rig_id}] keyed source has no opaque content: {src_path}")
+    pad = spec.get("content_pad", 8)
+    H0, W0 = keyed.shape[:2]
+    x0 = max(0, int(xs.min()) - pad)
+    y0 = max(0, int(ys.min()) - pad)
+    x1 = min(W0, int(xs.max()) + pad + 1)
+    y1 = min(H0, int(ys.max()) + pad + 1)
+    crop = keyed[y0:y1, x0:x1]
+    rgb = crop[..., :3].copy()
+    alpha = crop[..., 3] > ALPHA_THRESHOLD
+    H, W = alpha.shape
+    Y, X = np.indices((H, W))
+
+    mask = eval_region(TAIL_REGION[rig_id]["clauses"], X, Y) & alpha
+    tys, txs = np.where(mask)
+    if len(txs) == 0:
+        sys.exit(f"[{rig_id}] TAIL_REGION clauses match no pixels")
+
+    tx0 = max(0, int(txs.min()) - pad_px)
+    ty0 = max(0, int(tys.min()) - pad_px)
+    tx1 = min(W, int(txs.max()) + pad_px + 1)
+    ty1 = min(H, int(tys.max()) + pad_px + 1)
+
+    out_rgba = np.zeros((ty1 - ty0, tx1 - tx0, 4), dtype=np.uint8)
+    crop_mask = mask[ty0:ty1, tx0:tx1]
+    out_rgba[..., :3] = rgb[ty0:ty1, tx0:tx1]
+    out_rgba[..., 3] = np.where(crop_mask, 255, 0)
+
+    reference_height_px = int(ys.max() - ys.min()) + 1
+    out_dir = os.path.join(SOURCE_DIR_DEFAULT, rig_id)
+    out_path = os.path.join(out_dir, "tail_standalone_for_skinning.png")
+    Image.fromarray(out_rgba, "RGBA").save(out_path)
+
+    # RigTailGrafter.cs needs (tx0, ty0) and referenceHeightPx to place the
+    # hand-rigged bones back into the rest of the rig's coordinate space --
+    # printed rather than written to a file, since this only needs to be
+    # re-run (and re-read by a human updating the grafter's constants) on
+    # the rare occasion the bind pose art itself changes.
+    print(f"[{rig_id}] tail crop -> {out_path}")
+    print(f"[{rig_id}] crop origin in rig.json space: tx0={tx0} ty0={ty0}")
+    print(f"[{rig_id}] referenceHeightPx={reference_height_px}")
+
 
 # ---------------------------------------------------------------------------
 # CLI
@@ -1603,6 +1643,8 @@ def main():
     ap.add_argument("creatures", nargs="*", help="Rig ids to process (default: all)")
     ap.add_argument("--all", action="store_true", help="Process every rig in RIGS")
     ap.add_argument("--preview", metavar="ID", help="Render cut+bone overlay for ID and stop (no atlas/rig.json write)")
+    ap.add_argument("--export-tail-for-skinning", metavar="ID",
+                     help="Crop ID's tail out for hand-skinning in Unity's Sprite Editor and stop -- see TAIL_REGION")
     ap.add_argument("--prune", action="store_true", help="Delete output files the manifest no longer produces")
     ap.add_argument("--output-root", metavar="PATH",
                      help="Override the output base (default Assets/_Project/Resources/Rigs, or "
@@ -1614,6 +1656,10 @@ def main():
     args = ap.parse_args()
 
     output_base = args.output_root or os.environ.get("RIG_ACTOR_OUTPUT_ROOT") or RIGS_OUTPUT_BASE
+
+    if args.export_tail_for_skinning:
+        export_tail_for_skinning(args.export_tail_for_skinning)
+        return
 
     if args.preview:
         build = build_rig(args.preview, source_override=args.source)

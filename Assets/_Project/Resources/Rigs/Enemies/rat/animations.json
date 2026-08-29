@@ -24,7 +24,7 @@
           ]
         },
         {
-          "bone": "tail_1",
+          "bone": "bone_1",
           "keyframes": [
             { "t": 0.0, "deg": 1.0 },
             { "t": 0.7, "deg": 4.0 },
@@ -33,7 +33,7 @@
           ]
         },
         {
-          "bone": "tail_2",
+          "bone": "bone_7",
           "keyframes": [
             { "t": 0.0, "deg": 1.5 },
             { "t": 0.85, "deg": 7.0 },
@@ -42,7 +42,7 @@
           ]
         },
         {
-          "bone": "tail_3",
+          "bone": "bone_14",
           "keyframes": [
             { "t": 0.0, "deg": 2.0 },
             { "t": 1.0, "deg": 11.0 },
@@ -78,7 +78,7 @@
           ]
         },
         {
-          "bone": "tail_1",
+          "bone": "bone_1",
           "keyframes": [
             { "t": 0.0, "deg": 0.0 },
             { "t": 0.2, "deg": -8.0 },
@@ -87,7 +87,7 @@
           ]
         },
         {
-          "bone": "tail_2",
+          "bone": "bone_7",
           "keyframes": [
             { "t": 0.0, "deg": 0.0 },
             { "t": 0.2, "deg": -16.0 },
@@ -96,7 +96,7 @@
           ]
         },
         {
-          "bone": "tail_3",
+          "bone": "bone_14",
           "keyframes": [
             { "t": 0.0, "deg": 0.0 },
             { "t": 0.2, "deg": -24.0 },
@@ -151,9 +151,9 @@
       "tracks": [
         { "bone": "body", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.1, "deg": 14.0 }, { "t": 0.35, "deg": 0.0 } ] },
         { "bone": "head", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.1, "deg": 18.0 }, { "t": 0.35, "deg": 0.0 } ] },
-        { "bone": "tail_1", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.1, "deg": -6.0 }, { "t": 0.35, "deg": 0.0 } ] },
-        { "bone": "tail_2", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.1, "deg": -12.0 }, { "t": 0.35, "deg": 0.0 } ] },
-        { "bone": "tail_3", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.1, "deg": -18.0 }, { "t": 0.35, "deg": 0.0 } ] }
+        { "bone": "bone_1", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.1, "deg": -6.0 }, { "t": 0.35, "deg": 0.0 } ] },
+        { "bone": "bone_7", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.1, "deg": -12.0 }, { "t": 0.35, "deg": 0.0 } ] },
+        { "bone": "bone_14", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.1, "deg": -18.0 }, { "t": 0.35, "deg": 0.0 } ] }
       ]
     },
     {
@@ -165,9 +165,9 @@
       "tracks": [
         { "bone": "body", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.5, "deg": 78.0 } ] },
         { "bone": "head", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.5, "deg": -10.0 } ] },
-        { "bone": "tail_1", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.5, "deg": 10.0 } ] },
-        { "bone": "tail_2", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.5, "deg": 20.0 } ] },
-        { "bone": "tail_3", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.5, "deg": 30.0 } ] },
+        { "bone": "bone_1", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.5, "deg": 10.0 } ] },
+        { "bone": "bone_7", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.5, "deg": 20.0 } ] },
+        { "bone": "bone_14", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.5, "deg": 30.0 } ] },
         { "bone": "far_hindleg", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.5, "deg": 25.0 } ] },
         { "bone": "near_hindleg", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.5, "deg": 25.0 } ] },
         { "bone": "far_foreleg", "keyframes": [ { "t": 0.0, "deg": 0.0 }, { "t": 0.5, "deg": -15.0 } ] },
