@@ -21,17 +21,21 @@ namespace PrincesPalace.Core.Rig
 
         private static readonly Dictionary<string, GameObject> _cache = new Dictionary<string, GameObject>();
 
-        // Re-enabled (2026-08-29, same day it was switched off) -- the rig
-        // is the actual fix for the flat 12-frame idle sheet's frame-to-
-        // frame inconsistency (bones can't redraw a different silhouette
-        // per frame the way a generated sheet did), not the sheet with a
-        // nudge correction bolted on. Kept as a HashSet, not deleted
-        // outright, because this is exactly the kind of one-line toggle
-        // that is worth being able to flip again without archaeology if a
-        // future rig rework needs a temporary fallback the same way this
-        // one did.
+        // TEMPORARILY DISABLED (2026-08-29) -- the rat's rig is mid-overhaul
+        // (a from-scratch hand-skinned replacement was attempted and set
+        // aside; the checked-in prefab is the older auto-cut-parts one) and
+        // a new flat 12-frame idle sheet just shipped for this creature
+        // (Assets/_Project/Art/Enemies/Giant_rat_idle_sheet_12_frame.png,
+        // sliced into Resources/Enemies/rat/idle/f0..f11). Resolve() short-
+        // circuits any folder in here to null -- exactly the "no rig" miss
+        // every other creature's folder already produces, so
+        // RefreshCombatantSprite/PlaybackFor need no branch of their own to
+        // fall back to the frame-sheet Image path. Nothing about rig.json,
+        // animations.json or rat.prefab is touched; remove the entry once a
+        // rig is ready to come back.
         private static readonly HashSet<string> _temporarilyDisabled = new HashSet<string>
         {
+            "Enemies/rat",
         };
 
         // A rig's bind-pose art was drawn at whatever resolution/zoom the

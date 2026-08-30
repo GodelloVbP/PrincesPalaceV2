@@ -24,6 +24,9 @@ namespace PrincesPalace.PlayModeTests
     // rendered by the scene's own camera every frame regardless of whether
     // this test calls Camera.Render() itself -- same crash risk under
     // -nographics as RigImportIntegrityTests, self-skips the same way.
+    [Ignore("Rat rig temporarily disabled via RigLibrary._temporarilyDisabled (2026-08-29) -- " +
+            "the checked-in rig is mid-overhaul and the rat now ships a new flat-sheet idle " +
+            "instead. Every assertion here expects the rig path; re-enable once a rig is back.")]
     public class RigStageTests
     {
         private FightController _fight;

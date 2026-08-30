@@ -278,14 +278,15 @@ the frame-sheet Image path above.** `RigLibrary.Resolve(folder)` returns
 null for anything that has no rig, so every file below is invisible to
 every other creature. Full workflow: `docs/ART_PIPELINE.md` §9.
 
-Briefly disabled and re-enabled the same day (2026-08-29) via
-`RigLibrary._temporarilyDisabled` while a new flat 12-frame idle sheet was
-being evaluated as a possible replacement — the sheet's own per-frame
-inconsistency (see the redraw-ratio note in `docs/ART_PIPELINE.md` §4) is
-exactly the flicker-outruns-motion failure mode the rig exists to avoid, so
-the rig stayed. The sheet's output is kept under
-`Resources/Enemies/rat/idle/f0..f11` as dormant fallback art regardless
-(nothing deletes it), per this section's own "keep old art" rule.
+**Temporarily disabled (2026-08-29).** `RigLibrary._temporarilyDisabled`
+forces `Resolve("Enemies/rat")` to null unconditionally while the rat's rig
+is mid-overhaul, so the rat renders through the frame-sheet path above —
+its new 12-frame idle sheet (`Resources/Enemies/rat/idle/f0..f11`,
+`tools/slice_actor_sheet.py`) instead of the rig's own idle clip. Nothing
+under `Resources/Rigs/Enemies/rat/` or the files below was touched; remove
+the one entry to bring the rig back. `RigStageTests`/`RigCaptureTests`/
+`RigRawSpriteTests`/`RigImportIntegrityTests` are `[Ignore]`d for the same
+reason and need re-enabling alongside it.
 
 | File | What it owns |
 |---|---|
