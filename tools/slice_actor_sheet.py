@@ -274,19 +274,21 @@ ACTORS = {
                 "names": [None, None, None, None, None, None],
             },
             {
-                # New 12-frame attack (2026-08-30), flat cel style, white-
-                # backed (253/243-ish near-white, not a literal #FFFFFF
-                # flood -- same "white_flood" mode as Giant_rat_sheet.png,
-                # not the idle sheet's green key). Even 2x6 grid.
+                # 12-frame attack. REGENERATED 2026-08-30 in the same 3x4
+                # 1448x1086 layout as the idle sheet, replacing the earlier
+                # 2x6 1774x887 one at the same filename. The grid here MUST
+                # match the file on disk: it was left at (2, 6) for one
+                # slice after the new art landed, which cut a 3x4 sheet on
+                # 2x6 lines and shredded a third of the frames into
+                # ~90x110px fragments (attack f1/f4/f7/f10). Nothing warned
+                # -- the slicer has no way to know the intended layout, and
+                # every frame still "sliced successfully".
                 "file": "Giant_rat_attack_sheet_12_frame.png",
                 "key": "white_flood",
-                "grid": (2, 6),
-                "scale": 1.276,  # measured via --suggest-scales rat (median
-                                 # sqrt-mass 179.4 vs the reference sheet's
-                                 # 228.9) -- drawn smaller than the reference
-                                 # sheet, same direction as the idle sheet
-                                 # (1.208), so upscaling again rather than
-                                 # shrinking the fixed reference.
+                "grid": (3, 4),
+                "scale": 1.247,  # re-measured via --suggest-scales rat for
+                                 # the regenerated sheet (median sqrt-mass
+                                 # 183.5 vs the reference sheet's 228.9).
                 "drop_far_components_px": 0,  # 6 of 12 cells carry a
                                  # detached fragment that bled in from a
                                  # neighbouring cell (a floating tail-tip on
@@ -355,6 +357,17 @@ ACTORS = {
                 # key at all; it is a mitigation for a Protocol A #9 failure
                 # that is now confined to one boundary instead of all five.
                 "drop_far_components_px": 0,
+                # Row 3's two right-hand rats OVERLAP by 9px (766..1099 and
+                # 1090..1422), so no empty column exists between them and
+                # best_cut's "emptiest column near the split" lands at 1155,
+                # inside the fourth rat -- it severed 65px of its tail and
+                # left f11 a stub with its anchor shifted 40px right, which
+                # is the "last frame cuts out of the box" that was reported.
+                # Rows 1 and 2 have real gutters and cut correctly at ~1100
+                # on their own, so only row 2 (0-indexed) is overridden.
+                # 1095 splits the overlap: rat 3 loses 4px, rat 4 loses 5px,
+                # against 65px lost to the automatic choice.
+                "col_cuts": {2: [383, 740, 1095]},
             },
         ],
         "aliases": {"guard": "extra"},
@@ -565,13 +578,28 @@ def alpha_centroid_x(mask, box):
     return box[0] + weighted / total
 
 
-def cut_cells(mask, sheet_w, sheet_h, cols, rows=None, bands=None):
+def cut_cells(mask, sheet_w, sheet_h, cols, rows=None, bands=None, col_cuts=None):
     """Row-major list of tight ABSOLUTE boxes (or None for an empty cell).
 
     Either `rows` (nominal even grid, each row cut nudged to the emptiest
     gutter) or `bands` (explicit [(y0,y1), ...] row ranges, used verbatim)
     must be given. Column cuts are always computed PER ROW/BAND and always
     nudged -- bleed on one row says nothing about another.
+
+    `col_cuts` overrides that search for specific rows, and exists because
+    `best_cut` assumes A GUTTER EXISTS. It finds the emptiest column near
+    the nominal split, which is right whenever the artist left a gap and
+    catastrophically wrong when two figures actually OVERLAP: every column
+    between them has ink from both, so the emptiest column in the window is
+    somewhere INSIDE one of the figures, and the cut lands there. On the
+    rat's regenerated idle that severed 65px of a tail (row 3 cut at 1155
+    instead of ~1095, because its two right-hand rats overlap by 9px and
+    rows 1-2 -- which do have gutters -- cut cleanly at ~1100).
+
+    Shape: {row_index: [x1, x2, ...]} giving the INTERIOR cuts for that row
+    verbatim, `cols - 1` of them. Rows absent from the dict keep the normal
+    search. Same posture as `bands`: state it explicitly when the automatic
+    choice cannot be right, and only for the rows that need it.
     """
     if bands is not None:
         row_ranges = list(bands)
@@ -587,14 +615,21 @@ def cut_cells(mask, sheet_w, sheet_h, cols, rows=None, bands=None):
 
     cell_w = sheet_w // cols
     x_search = int(cell_w * SEARCH_FRACTION)
+    col_cuts = col_cuts or {}
 
     cells = []
-    for (y0, y1) in row_ranges:
-        weights = column_weights(mask, 0, sheet_w, y0, y1)
-        x_cuts = [0]
-        for c in range(1, cols):
-            x_cuts.append(best_cut(weights, 0, c * cell_w, x_search))
-        x_cuts.append(sheet_w)
+    for row_index, (y0, y1) in enumerate(row_ranges):
+        override = col_cuts.get(row_index)
+        if override is not None:
+            if len(override) != cols - 1:
+                sys.exit(f"col_cuts[{row_index}] has {len(override)} cuts, expected {cols - 1}")
+            x_cuts = [0] + list(override) + [sheet_w]
+        else:
+            weights = column_weights(mask, 0, sheet_w, y0, y1)
+            x_cuts = [0]
+            for c in range(1, cols):
+                x_cuts.append(best_cut(weights, 0, c * cell_w, x_search))
+            x_cuts.append(sheet_w)
         for c in range(cols):
             box = (x_cuts[c], y0, x_cuts[c + 1], y1)
             sub = mask.crop(box).getbbox()
@@ -618,6 +653,39 @@ def key_sheet(image, mode):
         rgba = image.convert("RGBA")
         arr = np.array(rgba)
         is_bg = flood_fill_background_mask(arr[:, :, :3], tolerance=35.0)
+        # BLEED THE SPRITE'S OWN COLOUR OUTWARD BEFORE FEATHERING THE ALPHA.
+        #
+        # The blur below deliberately softens the alpha edge, which means the
+        # boundary pixels end up PARTLY transparent -- and a partly
+        # transparent pixel still shows its own RGB. On a white-backed sheet
+        # that RGB is the white background, so every softened edge composites
+        # as a pale fringe over the dark stage: the "white outline" reported
+        # on the rat's regenerated idle, worst in the notches of its fur
+        # fringe where the edge is most convoluted.
+        #
+        # Dilating the nearest real colour into the background band first
+        # means the feathered pixels carry the creature's own outline colour
+        # instead, so softening reads as a soft edge rather than a halo. Two
+        # passes covers a 1.2px blur with margin. Background pixels far from
+        # the art keep their white but are fully transparent, so nothing sees
+        # them.
+        rgb = arr[:, :, :3].astype(np.float32)
+        known = ~is_bg
+        for _ in range(2):
+            if known.all():
+                break
+            acc = np.zeros_like(rgb)
+            cnt = np.zeros(known.shape, np.float32)
+            for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                shifted_rgb = np.roll(rgb, (dy, dx), axis=(0, 1))
+                shifted_known = np.roll(known, (dy, dx), axis=(0, 1))
+                acc += shifted_rgb * shifted_known[:, :, None]
+                cnt += shifted_known
+            fill = (~known) & (cnt > 0)
+            rgb[fill] = acc[fill] / cnt[fill][:, None]
+            known = known | fill
+        arr[:, :, :3] = np.clip(rgb, 0, 255).astype(np.uint8)
+
         alpha = np.where(is_bg, 0, 255).astype(np.uint8)
         alpha = np.array(Image.fromarray(alpha, "L").filter(ImageFilter.GaussianBlur(1.2)))
         arr[:, :, 3] = alpha
@@ -843,9 +911,10 @@ def resize_premultiplied(image, new_size):
 
 def _cells_for_sheet(mask, sheet_w, sheet_h, sheet_spec):
     if "bands" in sheet_spec:
-        return cut_cells(mask, sheet_w, sheet_h, cols=sheet_spec["bands"]["cols"], bands=sheet_spec["bands"]["rows"])
+        return cut_cells(mask, sheet_w, sheet_h, cols=sheet_spec["bands"]["cols"],
+                         bands=sheet_spec["bands"]["rows"], col_cuts=sheet_spec.get("col_cuts"))
     rows, cols = sheet_spec["grid"]
-    return cut_cells(mask, sheet_w, sheet_h, cols=cols, rows=rows)
+    return cut_cells(mask, sheet_w, sheet_h, cols=cols, rows=rows, col_cuts=sheet_spec.get("col_cuts"))
 
 
 def _load_and_key(sheet_spec, source_dir=SOURCE_DIR):
