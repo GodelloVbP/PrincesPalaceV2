@@ -334,23 +334,45 @@ ACTORS = {
                 # "names" list comment.
                 "names": ["idle/f5", "idle/f6", "idle/f10", "idle/f8", "idle/f7", "idle/f9",
                           "idle/f11", "idle/f1", "idle/f0", "idle/f2", "idle/f3", "idle/f4"],
+                "drop_far_components_px": 0,  # 7 of 12 cells carry a fully
+                                 # detached tail chunk bled in from a
+                                 # neighbouring cell -- up to 3363px, the
+                                 # single biggest defect on this creature,
+                                 # confirmed on an actual capture (a whole
+                                 # tail curl floating well clear of the
+                                 # rat's feet with nothing connecting it).
+                                 # Never caught before because every
+                                 # measurement taken so far (bbox centre,
+                                 # content height, the redraw ratio) is
+                                 # computed over the WHOLE piece including
+                                 # this fragment, so none of them could see
+                                 # it as anything other than a slightly
+                                 # bigger silhouette -- it takes actually
+                                 # looking at a frame, or per-component
+                                 # analysis like this, to notice a piece is
+                                 # missing a body part entirely. Same
+                                 # reasoning as the attack sheet's own entry:
+                                 # nothing separate is ever legitimate here.
             },
         ],
         "aliases": {"guard": "extra"},
         "anchor": "ground_band",
         "delivery_scale": 1.0,
-        # Measured (2026-08-29) off the delivered idle bbox centres, which
-        # swung 27.5px around their median -- visible in play as the rat
-        # rocking side to side on every idle loop. ground_band's per-frame
-        # anchor tracks whichever ground-contact silhouette survives that
-        # frame's paw/whisker pose, and the AI-generated sheet does not hold
-        # that silhouette consistent frame to frame (see the
-        # actor_stance_qa.py redraw-ratio note in ART_PIPELINE.md #9's
-        # Outstanding section -- 1.6, amber, and this is exactly the churn
-        # that number was measuring). A per-frame dx nudge recentres each
-        # frame on the roster median -- down to 1.0px measured -- without
-        # rescaling any pixel, which is what this tool refuses to do on
-        # principle (see module docstring).
+        # Originally measured (2026-08-29) off the delivered idle bbox
+        # centres BEFORE drop_far_components_px existed, which swung 27.5px
+        # around their median and looked exactly like ground_band's anchor
+        # being unstable frame to frame -- it was nudged flat to 1.0px and
+        # reported fixed. It was not: the actual cause was the stray tail
+        # chunk above dragging each frame's tight-crop bbox sideways by a
+        # different amount depending on which side it landed on, while the
+        # REAL anchor (ground_band already measures off the largest
+        # component, stray excluded) had been stable the entire time. Once
+        # the stray was actually removed, the bbox-centre spread dropped to
+        # 6px with EVERY nudge at (0,0) -- these values are what's left
+        # after correcting that residual, not a fix for the drift this
+        # comment used to describe. Left as a cautionary note: a measurement
+        # that moves when you nudge it is not proof the nudge fixed the
+        # right thing, only that it changed the number being watched.
         #
         # The SAME inconsistency also swings each frame's own content height
         # ~10% (271-302px, cell order) -- a nudge cannot touch that (it's a
@@ -365,10 +387,10 @@ ACTORS = {
         # Nudge values below are keyed by f-index AFTER that reassignment
         # (each cell keeps the same dx it measured under its old name).
         "nudge": {
-            "idle/f0": (1, 0), "idle/f1": (-23, 0), "idle/f2": (0, 0),
-            "idle/f3": (1, 0), "idle/f4": (4, 0), "idle/f5": (4, 0),
-            "idle/f6": (-20, 0), "idle/f7": (-14, 0), "idle/f8": (-15, 0),
-            "idle/f9": (5, 0), "idle/f10": (-23, 0), "idle/f11": (4, 0),
+            "idle/f0": (-1, 0), "idle/f1": (-2, 0), "idle/f2": (-3, 0),
+            "idle/f3": (-2, 0), "idle/f4": (1, 0), "idle/f5": (3, 0),
+            "idle/f6": (-1, 0), "idle/f7": (1, 0), "idle/f8": (0, 0),
+            "idle/f9": (3, 0), "idle/f10": (0, 0), "idle/f11": (1, 0),
         },
     },
 
