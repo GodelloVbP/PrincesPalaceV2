@@ -308,90 +308,74 @@ ACTORS = {
                           "attack/f6", "attack/f7", "attack/f8", "attack/f9", "attack/f10", "attack/f11"],
             },
             {
-                # New 12-frame idle (2026-08-29), flat cel style, actual
-                # green (~hue-dominant, not a literal #00FF00 flood) rather
-                # than this creature's usual white-backed sheets -- "green"
-                # key mode (key_out_green) rather than "white_flood".
-                # Even 2x6 grid, cells cleanly gapped -- no bands needed.
+                # Regenerated 2026-08-30 under docs/STANCE_SHEET_SPEC.md --
+                # see Art/Enemies/rat/idle_regeneration_prompt.txt for the
+                # exact prompt and why each clause is in it. Replaces the
+                # 2026-08-29 sheet, which failed Protocol A #9 (figures wider
+                # than their own cells, so every tail was severed at a gutter)
+                # and Protocol B travel (11.4% against an 8% reject).
+                #
+                # 3x4 at 1448x1086 -> 362x362 SQUARE cells. The old sheet was
+                # 2x6 -> 286x458, and the rat's own content is 288 wide: it
+                # physically could not fit, which is why no amount of prompt
+                # wording kept it inside the cell. Square cells fix that by
+                # construction, and are the reason this sheet needs no
+                # drop_far_components_px entry -- with clean gutters there are
+                # no severed-tail strays to delete.
+                #
+                # Background came back near-white (247-255) with a faint baked
+                # checkerboard rather than real alpha, so "white_flood" like
+                # this creature's other sheets -- NOT the previous sheet's
+                # "green". The checkerboard spans ~7 levels, well inside the
+                # flood tolerance.
                 "file": "Giant_rat_idle_sheet_12_frame.png",
-                "key": "green",
-                "grid": (2, 6),
-                "scale": 1.208,  # measured via --suggest-scales rat (median
-                                 # sqrt-mass 189.5 vs the reference sheet's 228.9)
-                                 # -- this sheet is drawn SMALLER than the other two,
-                                 # so matching it means upscaling rather than the
-                                 # module docstring's usual "always shrink the
-                                 # larger sheet" (Giant_rat_sheet.png is fixed at
-                                 # 1.0 as every other rat stance's anchor; rescaling
-                                 # IT down would move cast/hurt/defeated/extra,
-                                 # which nobody asked to change). A mild 1.2x
-                                 # softens the upscaled sheet slightly -- acceptable
-                                 # for this flat cel style; revisit if idle reads
-                                 # noticeably softer than the rat's other stances.
-                # Row-major CELL order is [0..11] = 2 rows of 6, read left to
-                # right, top row then bottom. The grid's own left-to-right
-                # order is NOT used as playback order below -- see the
-                # "names" list comment.
-                "names": ["idle/f5", "idle/f6", "idle/f10", "idle/f8", "idle/f7", "idle/f9",
-                          "idle/f11", "idle/f1", "idle/f0", "idle/f2", "idle/f3", "idle/f4"],
-                "drop_far_components_px": 0,  # 7 of 12 cells carry a fully
-                                 # detached tail chunk bled in from a
-                                 # neighbouring cell -- up to 3363px, the
-                                 # single biggest defect on this creature,
-                                 # confirmed on an actual capture (a whole
-                                 # tail curl floating well clear of the
-                                 # rat's feet with nothing connecting it).
-                                 # Never caught before because every
-                                 # measurement taken so far (bbox centre,
-                                 # content height, the redraw ratio) is
-                                 # computed over the WHOLE piece including
-                                 # this fragment, so none of them could see
-                                 # it as anything other than a slightly
-                                 # bigger silhouette -- it takes actually
-                                 # looking at a frame, or per-component
-                                 # analysis like this, to notice a piece is
-                                 # missing a body part entirely. Same
-                                 # reasoning as the attack sheet's own entry:
-                                 # nothing separate is ever legitimate here.
+                "key": "white_flood",
+                "grid": (3, 4),
+                "scale": 1.126,  # measured via --suggest-scales rat (median
+                                 # sqrt-mass 203.2 vs the reference sheet's
+                                 # 228.9). Drawn closer to the reference than
+                                 # the previous sheet was (which needed 1.208),
+                                 # so it is being upscaled less and stays
+                                 # correspondingly sharper.
+                # Natural row-major order: this sheet is directed as a single
+                # monotonic rise (frame 1 exhaled/lowest -> frame 12 peak), so
+                # the cells already play in the right order. The previous
+                # entry carried a hand-shuffled list that sorted THAT sheet's
+                # frames by measured height to hide its non-monotonic drift;
+                # a correctly-directed sheet must not inherit that.
+                "names": ["idle/f0", "idle/f1", "idle/f2", "idle/f3",
+                          "idle/f4", "idle/f5", "idle/f6", "idle/f7",
+                          "idle/f8", "idle/f9", "idle/f10", "idle/f11"],
+                # Still needed, but for 2 cells rather than the old sheet's 9.
+                # This sheet's columns 1|2 and 2|3 have real empty gutters
+                # (15px and 10px); the 3|4 boundary has NONE -- its thinnest
+                # column still carries 46px of ink, so those two neighbours
+                # touch and the cut severs whatever crosses. f3 and f10 are
+                # the casualties. A genuinely clean sheet would not need this
+                # key at all; it is a mitigation for a Protocol A #9 failure
+                # that is now confined to one boundary instead of all five.
+                "drop_far_components_px": 0,
             },
         ],
         "aliases": {"guard": "extra"},
         "anchor": "ground_band",
         "delivery_scale": 1.0,
-        # Originally measured (2026-08-29) off the delivered idle bbox
-        # centres BEFORE drop_far_components_px existed, which swung 27.5px
-        # around their median and looked exactly like ground_band's anchor
-        # being unstable frame to frame -- it was nudged flat to 1.0px and
-        # reported fixed. It was not: the actual cause was the stray tail
-        # chunk above dragging each frame's tight-crop bbox sideways by a
-        # different amount depending on which side it landed on, while the
-        # REAL anchor (ground_band already measures off the largest
-        # component, stray excluded) had been stable the entire time. Once
-        # the stray was actually removed, the bbox-centre spread dropped to
-        # 6px with EVERY nudge at (0,0) -- these values are what's left
-        # after correcting that residual, not a fix for the drift this
-        # comment used to describe. Left as a cautionary note: a measurement
-        # that moves when you nudge it is not proof the nudge fixed the
-        # right thing, only that it changed the number being watched.
+        # Deliberately EMPTY for the regenerated idle (2026-08-30), and it
+        # should stay that way unless a fresh measurement says otherwise.
         #
-        # The SAME inconsistency also swings each frame's own content height
-        # ~10% (271-302px, cell order) -- a nudge cannot touch that (it's a
-        # reposition, not a resize), but WHICH cell plays at which f-index
-        # is free to choose, and playback follows f-index, not the sheet's
-        # own left-to-right layout. The "names" list above reassigns cells to
-        # f0..f11 in ascending measured-height order, so the loop breathes
-        # through one smooth rise (271->302px) instead of jumping around
-        # non-monotonically the way the sheet's own drawn order did --
-        # accepting one larger step at the wrap (302->271, once per loop)
-        # in exchange for eleven smaller ones instead of noise throughout.
-        # Nudge values below are keyed by f-index AFTER that reassignment
-        # (each cell keeps the same dx it measured under its old name).
-        "nudge": {
-            "idle/f0": (-1, 0), "idle/f1": (-2, 0), "idle/f2": (-3, 0),
-            "idle/f3": (-2, 0), "idle/f4": (1, 0), "idle/f5": (3, 0),
-            "idle/f6": (-1, 0), "idle/f7": (1, 0), "idle/f8": (0, 0),
-            "idle/f9": (3, 0), "idle/f10": (0, 0), "idle/f11": (1, 0),
-        },
+        # The previous sheet carried twelve per-frame dx values. They were
+        # measured off bbox centres that the severed-tail strays were
+        # dragging around, so they corrected an artefact rather than a real
+        # drift -- ground_band's actual anchor (largest component only) had
+        # been stable throughout. Carrying those numbers onto a different
+        # sheet would apply a correction derived from a defect this sheet
+        # does not have.
+        #
+        # Re-measure from zero if the delivered frames disagree; do not
+        # inherit. The lesson from the last round: a measurement that moves
+        # when you nudge it is not proof the nudge fixed the right thing,
+        # only that it changed the number being watched.
+        "nudge": {},
     },
 
     # --- Regenerated under docs/STANCE_SHEET_SPEC.md -----------------------

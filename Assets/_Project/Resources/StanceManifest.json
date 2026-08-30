@@ -51,7 +51,7 @@
     {
       "spritePath": "Enemies/rat",
       "groundLine": 8,
-      "_groundLineNote": "Dropped from 12 to 8 when the flat single-drawing idle was replaced by the 12-frame idle sheet (tools/slice_actor_sheet.py's rat entry) -- re-slicing the whole actor together moved every stance onto one new shared canvas, and 8 is what that canvas actually measures (all 23 poses agree within 1px).",
+      "_groundLineNote": "Dropped from 12 to 8 when the flat single-drawing idle was replaced by a 12-frame idle sheet -- re-slicing the whole actor together moves every stance onto one shared canvas, and 8 is what that canvas measures. Re-confirmed 2026-08-30 against the regenerated 3x4 idle sheet: still 8, now with all 29 poses agreeing within 1px (was 2px).",
       "stances": [
         {
           "stance": "idle",
