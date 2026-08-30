@@ -154,6 +154,15 @@ GROUND_BAND_STEP = 0.04
 # "thin contact" (one toe) -- widen before trusting it.
 GROUND_BAND_MIN_MASS_FRACTION = 0.005
 
+# Enclosed background pockets (see key_sheet's "white_flood" branch).
+# A pocket is NEUTRAL (channels within this many levels of each other) --
+# the art's own light pixels on these sheets are warm by comparison --
+# BRIGHT, and SMALL, since a pocket trapped inside a silhouette cannot be
+# large without being a real hole in the drawing.
+NEUTRAL_SATURATION_MAX = 12
+POCKET_MIN_BRIGHTNESS = 195
+POCKET_MAX_AREA = 200
+
 # Two sheets of one creature disagreeing by more than this in corrected
 # LCC-median mass, with neither carrying an explicit `scale`, is refused
 # rather than silently written mismatched.
@@ -384,11 +393,21 @@ ACTORS = {
         # sheet would apply a correction derived from a defect this sheet
         # does not have.
         #
-        # Re-measure from zero if the delivered frames disagree; do not
-        # inherit. The lesson from the last round: a measurement that moves
-        # when you nudge it is not proof the nudge fixed the right thing,
-        # only that it changed the number being watched.
-        "nudge": {},
+        # Re-measured 2026-08-30 on the PLANTED PAWS, not the whole-figure
+        # bbox centre. That distinction is the point: this sheet's tail
+        # sweeps by design, so a bbox centre moves with the tail and
+        # "correcting" it would translate the body to cancel intended motion
+        # -- exactly the mistake FightController.SidewaysDrift was making at
+        # runtime until it was scoped to per-frame-cropped art. The paws are
+        # pinned by the sheet's own direction, so spread there is genuine
+        # misregistration and is what a nudge should remove. 6.8px measured
+        # across the twelve frames; these close it.
+        "nudge": {
+            "idle/f0": (-2, 0), "idle/f1": (-3, 0), "idle/f2": (0, 0),
+            "idle/f3": (3, 0), "idle/f4": (0, 0), "idle/f5": (0, 0),
+            "idle/f6": (0, 0), "idle/f7": (3, 0), "idle/f8": (1, 0),
+            "idle/f9": (1, 0), "idle/f10": (0, 0), "idle/f11": (2, 0),
+        },
     },
 
     # --- Regenerated under docs/STANCE_SHEET_SPEC.md -----------------------
@@ -653,6 +672,35 @@ def key_sheet(image, mode):
         rgba = image.convert("RGBA")
         arr = np.array(rgba)
         is_bg = flood_fill_background_mask(arr[:, :, :3], tolerance=35.0)
+
+        # ALSO clear background POCKETS the border flood cannot reach.
+        #
+        # flood_fill_background_mask starts at the border and spreads, so it
+        # only ever finds background that is connected to the outside. Any
+        # pocket enclosed by the art -- the gaps between the rat's fur tufts,
+        # the inside of its tail curl -- stays opaque, and renders as a white
+        # speck on the creature. 141 such pockets across the twelve idle
+        # frames, which is the "white spots" that survived the edge fix.
+        #
+        # Distinguished from the art's own light pixels by SATURATION, not by
+        # brightness: this sheet's background is neutral (r==g==b to within a
+        # few levels) while every legitimately light thing on the rat is warm
+        # -- cream fangs and highlights measure 28-52 levels of spread
+        # between their channels against the background's 2-4. Brightness
+        # alone would eat the fangs.
+        #
+        # Bounded by size as well, so a large neutral highlight (a grey
+        # metal, a white belly) cannot be deleted wholesale by this: a real
+        # background pocket trapped inside a silhouette is small by
+        # construction.
+        rgb_i = arr[:, :, :3].astype(np.int16)
+        neutral = (rgb_i.max(axis=2) - rgb_i.min(axis=2)) < NEUTRAL_SATURATION_MAX
+        pocket = (rgb_i.min(axis=2) > POCKET_MIN_BRIGHTNESS) & neutral & (~is_bg)
+        if pocket.any():
+            labelled = _all_components(pocket)
+            for comp in labelled:
+                if comp.sum() <= POCKET_MAX_AREA:
+                    is_bg = is_bg | comp
         # BLEED THE SPRITE'S OWN COLOUR OUTWARD BEFORE FEATHERING THE ALPHA.
         #
         # The blur below deliberately softens the alpha edge, which means the

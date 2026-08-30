@@ -55,9 +55,10 @@
       "stances": [
         {
           "stance": "idle",
-          "secondsPerFrame": 0.08,
+          "secondsPerFrame": 0.16,
           "impactFrame": 1,
-          "soundFrame": 1
+          "soundFrame": 1,
+          "_paceNote": "Doubled from 0.08 (2026-08-30) -- reported as breathing much too fast. 0.08 was inherited from the 6-frame sheet this stance used to have, where it meant 0.48s per half-breath; the 12-frame sheet kept the per-FRAME number and so ran the same motion in the same time with twice the frames, which is not the same animation. At 0.16 a half-breath is 1.92s and the full ping-pong cycle 3.84s, the slowest idle on the roster -- correct for a creature that is standing still and waiting. Compare beetle 6x0.20 (2.40s full) and treant 6x0.14 (1.68s full)."
         },
         {
           "stance": "attack",
