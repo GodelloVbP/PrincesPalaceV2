@@ -1160,6 +1160,27 @@ namespace PrincesPalace
         // fight invisible, and its slot is reused rather than rebuilt.
         private void ResetStagePresentation()
         {
+            // These three are `static readonly Dictionary`s keyed by folder
+            // (+stance+frame) -- they cache a PIXEL MEASUREMENT taken the
+            // first time each key is asked for, and nothing ever invalidated
+            // them. Resources.Load happily picks up a re-sliced/re-ordered
+            // sprite the moment its .meta reimports, but these dictionaries
+            // do not know that happened -- a script recompile clears them
+            // (new static instances on domain reload), but an ASSET-ONLY
+            // edit (repainting/re-slicing/re-nudging an enemy's frames,
+            // exactly what iterating on stage art actually is) does not
+            // recompile anything, so a long-lived Editor session can carry
+            // a stale measurement for hours after the art it was taken from
+            // is gone. Symptom: a frame-drift fix that is provably correct
+            // on disk (measured directly off the delivered PNGs) still
+            // wobbles on stage, because SidewaysDrift/PlaceShadow/the badge
+            // are all still positioning off the OLD numbers. Clearing once
+            // per fight costs a few pixel-scans (a handful of enemies, a
+            // few frames each) against never risking this again.
+            ContentCentreCache.Clear();
+            ContentTopCache.Clear();
+            FrameCentreCache.Clear();
+
             _confirmedDefeated.Clear();
 
             // SEEDED WITH WHOEVER IS ALREADY HERE. The reveal rule only ever
