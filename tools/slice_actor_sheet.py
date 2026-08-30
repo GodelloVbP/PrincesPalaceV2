@@ -163,6 +163,12 @@ NEUTRAL_SATURATION_MAX = 12
 POCKET_MIN_BRIGHTNESS = 195
 POCKET_MAX_AREA = 200
 
+# Resample ringing (see despeckle_resample_ringing). A pixel must be this
+# bright, this much brighter than its own neighbourhood, and essentially
+# alone among bright pixels, before it is pulled back.
+RINGING_MIN_BRIGHTNESS = 195
+RINGING_MIN_EXCESS = 40
+
 # Two sheets of one creature disagreeing by more than this in corrected
 # LCC-median mass, with neither carrying an explicit `scale`, is refused
 # rather than silently written mismatched.
@@ -403,10 +409,10 @@ ACTORS = {
         # misregistration and is what a nudge should remove. 6.8px measured
         # across the twelve frames; these close it.
         "nudge": {
-            "idle/f0": (-2, 0), "idle/f1": (-3, 0), "idle/f2": (0, 0),
-            "idle/f3": (3, 0), "idle/f4": (0, 0), "idle/f5": (0, 0),
-            "idle/f6": (0, 0), "idle/f7": (3, 0), "idle/f8": (1, 0),
-            "idle/f9": (1, 0), "idle/f10": (0, 0), "idle/f11": (2, 0),
+            "idle/f0": (-11, 0), "idle/f1": (-15, 0), "idle/f2": (-1, 0),
+            "idle/f3": (6, 0), "idle/f4": (1, 0), "idle/f5": (0, 0),
+            "idle/f6": (-3, 0), "idle/f7": (6, 0), "idle/f8": (-3, 0),
+            "idle/f9": (-4, 0), "idle/f10": (-7, 0), "idle/f11": (2, 0),
         },
     },
 
@@ -933,6 +939,57 @@ def ground_band_anchor(mask_bool, canvas_h):
 # Resampling
 # ---------------------------------------------------------------------------
 
+def despeckle_resample_ringing(image):
+    """Darken isolated bright pixels a sharp resample overshot into.
+
+    LANCZOS is chosen for the piece resize because it holds a cel edge
+    crisply, and its cost is RINGING: at a hard dark/light boundary it
+    overshoots past both ends, which on this art leaves single near-white
+    pixels sitting inside the creature. They are not background -- keying
+    already ran on the source sheet, before any resize -- so no keying
+    change can reach them; they are manufactured afterwards, which is why
+    the pocket pass upstream cleared 141 specks and left these behind.
+
+    Only a pixel that is BOTH much brighter than its own neighbourhood and
+    neutral (the ringing inherits the near-white background's lack of hue,
+    while the creature's own light pixels -- cream fangs, warm highlights --
+    carry 28-52 levels of channel spread) is pulled back to the local
+    median. Isolated by construction: an overshoot spans a pixel or two,
+    so anything with bright company is real art and is left alone.
+    """
+    arr = np.asarray(image.convert("RGBA")).copy()
+    rgb = arr[:, :, :3].astype(np.int16)
+    alpha = arr[:, :, 3]
+
+    bright = rgb.min(axis=2) > RINGING_MIN_BRIGHTNESS
+    neutral = (rgb.max(axis=2) - rgb.min(axis=2)) < NEUTRAL_SATURATION_MAX
+    inside = alpha > 200
+    candidate = bright & neutral & inside
+    if not candidate.any():
+        return image
+
+    # Local median over the 8-neighbourhood, and how many neighbours are
+    # themselves bright -- a real highlight has bright company.
+    h, w = alpha.shape
+    stack = []
+    bright_neighbours = np.zeros((h, w), np.int16)
+    for dy in (-1, 0, 1):
+        for dx in (-1, 0, 1):
+            if dy == 0 and dx == 0:
+                continue
+            stack.append(np.roll(np.roll(rgb, dy, axis=0), dx, axis=1))
+            bright_neighbours += np.roll(np.roll(bright, dy, axis=0), dx, axis=1)
+    local_median = np.median(np.stack(stack, axis=0), axis=0)
+
+    overshoot = candidate & (bright_neighbours <= 1)
+    overshoot &= (rgb.min(axis=2) - local_median.min(axis=2)) > RINGING_MIN_EXCESS
+    if not overshoot.any():
+        return image
+
+    arr[:, :, :3][overshoot] = local_median[overshoot].astype(np.uint8)
+    return Image.fromarray(arr, "RGBA")
+
+
 def resize_premultiplied(image, new_size):
     """LANCZOS resize with alpha premultiplied first, so a transparent
     pixel's own RGB (often black) cannot bleed a dark fringe into the
@@ -1077,6 +1134,7 @@ def process_actor(actor_id, verbose=True, prune=False):
             if total_scale != 1.0:
                 new_size = (max(1, round(piece.width * total_scale)), max(1, round(piece.height * total_scale)))
                 piece = resize_premultiplied(piece, new_size)
+                piece = despeckle_resample_ringing(piece)
             mask_img = opaque_mask(piece)
             bbox = mask_img.getbbox()
             if bbox is None:
