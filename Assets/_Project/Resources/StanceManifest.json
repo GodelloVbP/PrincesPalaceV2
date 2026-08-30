@@ -62,8 +62,9 @@
         {
           "stance": "attack",
           "secondsPerFrame": 0.08,
-          "impactFrame": 3,
-          "soundFrame": 3
+          "impactFrame": 7,
+          "soundFrame": 7,
+          "_impactFrameNote": "Re-measured (2026-08-30) for the new 12-frame attack sheet -- was 3 of 6, the unauthored Math.Ceiling(frames/2) midpoint the old 6-frame swing never moved past. f6 (0-indexed, so frame 7 here) has the furthest claw reach of all 12 delivered frames (bbox right edge 519px, next-highest 504px) and is also where the cx measured furthest from the standing frames -- both agree on the same frame as the actual strike, not a guessed middle."
         }
       ]
     },

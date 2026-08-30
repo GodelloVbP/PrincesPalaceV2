@@ -50,6 +50,16 @@ is added, and it is unreviewed.
                     "names": ["idle", None, "cast/f0", ...],  # row-major,
                               # None skips that cell; "x/f0" writes an
                               # animated-stance frame at <out>/x/f0.png
+                    "drop_far_components_px": 40,  # OPTIONAL. A neighbouring
+                              # cell's stray paw/tail-tip bled across the cut
+                              # line and survived as its own disconnected
+                              # component -- keep the largest component plus
+                              # anything within this many px of it (a raised
+                              # limb, detail that legitimately reaches away
+                              # from the body), zero out anything further
+                              # (contamination, which lands alone in dead
+                              # space). Absent means off -- every existing
+                              # sheet reproduces byte-identically without it.
                 },
                 ...
             ],
@@ -250,12 +260,52 @@ ACTORS = {
             {
                 # Poses occupy y=112..489 and y=560..880 -- NOT a nominal
                 # even 2-row split (that lands at y=750, inside a pose).
+                #
+                # Superseded (2026-08-30) by the dedicated 12-frame attack
+                # sheet below -- same "keep the old art, supersede with
+                # None" rule as the flat idle cell above. This 6-frame swing
+                # is still a real, usable attack; the new one just has more
+                # frames drawn in the same house style as the new idle.
                 "file": "giant_rat_attack_sheet.png",
                 "key": "alpha",
                 "bands": {"rows": [(112, 490), (560, 881)], "cols": 3},
                 "scale": 0.766,  # drawn ~1.306x larger (linear) than the base
                                  # sheet; always scale the LARGER sheet down.
-                "names": ["attack/f0", "attack/f1", "attack/f2", "attack/f3", "attack/f4", "attack/f5"],
+                "names": [None, None, None, None, None, None],
+            },
+            {
+                # New 12-frame attack (2026-08-30), flat cel style, white-
+                # backed (253/243-ish near-white, not a literal #FFFFFF
+                # flood -- same "white_flood" mode as Giant_rat_sheet.png,
+                # not the idle sheet's green key). Even 2x6 grid.
+                "file": "Giant_rat_attack_sheet_12_frame.png",
+                "key": "white_flood",
+                "grid": (2, 6),
+                "scale": 1.276,  # measured via --suggest-scales rat (median
+                                 # sqrt-mass 179.4 vs the reference sheet's
+                                 # 228.9) -- drawn smaller than the reference
+                                 # sheet, same direction as the idle sheet
+                                 # (1.208), so upscaling again rather than
+                                 # shrinking the fixed reference.
+                "drop_far_components_px": 0,  # 6 of 12 cells carry a
+                                 # detached fragment that bled in from a
+                                 # neighbouring cell (a floating tail-tip on
+                                 # f1/f2/f3/f4/f6, a stray claw on f8; f6 and
+                                 # f11 also each carry a sub-20px keying
+                                 # speck) -- confirmed by eye, then measured:
+                                 # every one sits a clear 24-67px from the
+                                 # main silhouette with nothing in between,
+                                 # never touching or nearly touching it the
+                                 # way a real attached limb would. 0 keeps
+                                 # ONLY whatever the largest component is per
+                                 # frame and drops every other one outright
+                                 # -- deliberately not a nonzero "keep what's
+                                 # close" margin here, because unlike the
+                                 # mushroom/raised-limb case this key exists
+                                 # for generally, nothing separate on THIS
+                                 # sheet is ever legitimate.
+                "names": ["attack/f0", "attack/f1", "attack/f2", "attack/f3", "attack/f4", "attack/f5",
+                          "attack/f6", "attack/f7", "attack/f8", "attack/f9", "attack/f10", "attack/f11"],
             },
             {
                 # New 12-frame idle (2026-08-29), flat cel style, actual
@@ -575,10 +625,13 @@ def key_sheet(image, mode):
 # Largest connected component -- row-run union-find, no scipy dependency.
 # ---------------------------------------------------------------------------
 
-def largest_connected_component(mask_bool):
-    """4-connected LCC of a boolean 2D numpy array. O(number of runs), not
+def _label_components(mask_bool):
+    """4-connected component labelling of a boolean 2D numpy array, shared by
+    largest_connected_component and _all_components. O(number of runs), not
     per-pixel BFS -- a per-row run extraction plus union-find against the
-    previous row's overlapping runs.
+    previous row's overlapping runs. Returns (row_runs, row_ids, find, size)
+    -- callers walk row_runs/row_ids and call find(gid) to get each run's
+    component root.
     """
     h = mask_bool.shape[0]
     parent = []
@@ -624,10 +677,17 @@ def largest_connected_component(mask_bool):
         row_runs.append(runs)
         row_ids.append(ids)
 
-    if not parent:
+    return row_runs, row_ids, find, size
+
+
+def largest_connected_component(mask_bool):
+    """4-connected LCC of a boolean 2D numpy array -- see _label_components."""
+    row_runs, row_ids, find, size = _label_components(mask_bool)
+    if not size:
         return np.zeros_like(mask_bool, dtype=bool)
 
-    best_root = max((find(g) for g in range(len(parent))), key=lambda r: size[r])
+    roots = set(find(g) for g in range(len(size)))
+    best_root = max(roots, key=lambda r: size[r])
 
     out = np.zeros_like(mask_bool, dtype=bool)
     for y, (runs, ids) in enumerate(zip(row_runs, row_ids)):
@@ -635,6 +695,84 @@ def largest_connected_component(mask_bool):
             if find(gid) == best_root:
                 out[y, x0:x1] = True
     return out
+
+
+def _all_components(mask_bool):
+    """Every 4-connected component as its own boolean mask, largest first."""
+    row_runs, row_ids, find, size = _label_components(mask_bool)
+    if not size:
+        return []
+
+    root_total = {}
+    for y, (runs, ids) in enumerate(zip(row_runs, row_ids)):
+        for (x0, x1), gid in zip(runs, ids):
+            root_total[find(gid)] = root_total.get(find(gid), 0) + (x1 - x0)
+
+    masks = {r: np.zeros_like(mask_bool, dtype=bool) for r in root_total}
+    for y, (runs, ids) in enumerate(zip(row_runs, row_ids)):
+        for (x0, x1), gid in zip(runs, ids):
+            masks[find(gid)][y, x0:x1] = True
+
+    ordered = sorted(root_total.items(), key=lambda kv: kv[1], reverse=True)
+    return [masks[r] for r, _ in ordered]
+
+
+def _boundary_points(mask_bool):
+    """(row, col) of every True pixel that has at least one False (or
+    out-of-bounds) 4-neighbour -- a component's outline, at a small fraction
+    of its full pixel count. What actually separates two components in
+    space is how close their OUTLINES get, not their interiors; a tail
+    curling back under a body's own bounding box is nowhere near touching it
+    in pixels despite the boxes overlapping, which is exactly why a bbox-gap
+    check (tried first here) measured 0px for every real stray on this sheet
+    and had to be replaced.
+    """
+    interior = np.ones_like(mask_bool)
+    interior[:-1, :] &= mask_bool[1:, :]
+    interior[1:, :] &= mask_bool[:-1, :]
+    interior[:, :-1] &= mask_bool[:, 1:]
+    interior[:, 1:] &= mask_bool[:, :-1]
+    boundary = mask_bool & ~interior
+    ys, xs = np.nonzero(boundary)
+    return np.stack([ys, xs], axis=1).astype(np.float32)
+
+
+def _nearest_gap(mask_a, mask_b):
+    """Minimum Euclidean distance between any pixel of mask_a and any pixel
+    of mask_b, measured outline-to-outline (see _boundary_points). Brute-
+    force pairwise distance over boundary points only -- offline art
+    tooling, run per cell at slice time, not per frame at runtime, so a few
+    thousand x a few hundred points is cheap enough without pulling in
+    scipy's KD-tree (largest_connected_component already avoids that
+    dependency on purpose -- see its own docstring).
+    """
+    pa, pb = _boundary_points(mask_a), _boundary_points(mask_b)
+    if len(pa) == 0 or len(pb) == 0:
+        return float("inf")
+    d2 = ((pa[:, None, :] - pb[None, :, :]) ** 2).sum(axis=2)
+    return float(np.sqrt(d2.min()))
+
+
+def drop_far_components(mask_bool, threshold_px):
+    """Keeps the largest component plus any other component within
+    threshold_px of it (nearest-pixel distance); zeroes every component
+    further away. See docs/ART_PIPELINE.md's slicing section: a
+    neighbouring pose's stray foot/hand routinely pokes into a cell, and the
+    tell is DISTANCE from the main silhouette, not size -- real detail that
+    legitimately reaches away from the body (a raised limb, a loose
+    tail-tip still inked in) sits close against it; contamination lands
+    alone in dead space.
+    """
+    components = _all_components(mask_bool)
+    if len(components) <= 1:
+        return mask_bool
+
+    main = components[0]
+    kept = main.copy()
+    for extra in components[1:]:
+        if _nearest_gap(main, extra) <= threshold_px:
+            kept |= extra
+    return kept
 
 
 def ground_band_anchor(mask_bool, canvas_h):
@@ -824,6 +962,20 @@ def process_actor(actor_id, verbose=True, prune=False):
                 continue
             piece = piece.crop(bbox)
             mask_bool = np.array(opaque_mask(piece)) > 0
+
+            drop_px = sheet_spec.get("drop_far_components_px")
+            if drop_px is not None:
+                cleaned = drop_far_components(mask_bool, drop_px)
+                if not np.array_equal(cleaned, mask_bool):
+                    arr = np.asarray(piece.convert("RGBA")).copy()
+                    arr[~cleaned, 3] = 0
+                    piece = Image.fromarray(arr, "RGBA")
+                    tight = opaque_mask(piece).getbbox()
+                    piece = piece.crop(tight)
+                    mask_bool = np.array(opaque_mask(piece)) > 0
+                    if verbose:
+                        print(f"  '{name}': dropped a stray component beyond {drop_px}px")
+
             pieces.append((name, piece, mask_bool))
 
     if not pieces:
