@@ -88,8 +88,42 @@ namespace PrincesPalace.Domain.Stage
         {
             if (frameCount <= 1) return 0;
 
+            float position = FramePositionAt(elapsed, frameCount, secondsPerFrame, loop, endHoldSeconds);
+
+            if (loop == StanceLoop.Forward || frameCount <= 2)
+            {
+                int forward = (int)position;
+                return forward >= frameCount ? frameCount - 1 : forward < 0 ? 0 : forward;
+            }
+
+            // Rounded rather than floored: the curve is symmetric and flooring
+            // would bias every drawing half a step early on the way up and half
+            // a step late on the way down, which puts a limp in a motion whose
+            // whole point is evenness.
+            int index = (int)Math.Round(position);
+            return index < 0 ? 0 : index >= frameCount ? frameCount - 1 : index;
+        }
+
+        // WHERE THE LOOP IS BETWEEN TWO DRAWINGS, not which drawing is nearest.
+        //
+        // FrameAt is this value rounded (ping-pong) or floored (forward), and
+        // is deliberately expressed in terms of it so the two can never
+        // disagree about where the animation has got to. The fractional part is
+        // what a cross-dissolve needs: at 12 frames on a 0.16s pace a sheet
+        // shows about six drawings a second, which is visibly a slideshow when
+        // each one is simply swapped in, and the missing information is not
+        // more frames but the position BETWEEN them, which was already being
+        // computed here and thrown away by the rounding.
+        //
+        // Range is [0, frameCount-1] for a ping-pong and [0, frameCount) for a
+        // forward loop, matching what each mode's own index means.
+        public static float FramePositionAt(float elapsed, int frameCount, float secondsPerFrame,
+                                            StanceLoop loop, float endHoldSeconds = 0f)
+        {
+            if (frameCount <= 1) return 0f;
+
             float cycle = SecondsForCycle(frameCount, secondsPerFrame, loop, endHoldSeconds);
-            if (cycle <= 0f) return 0;
+            if (cycle <= 0f) return 0f;
 
             // Phase in [0,1). Negative elapsed is not a real case but must not
             // produce a negative index if it ever happens.
@@ -97,8 +131,7 @@ namespace PrincesPalace.Domain.Stage
 
             if (loop == StanceLoop.Forward || frameCount <= 2)
             {
-                int forward = (int)(phase * frameCount);
-                return forward >= frameCount ? frameCount - 1 : forward;
+                return phase * frameCount;
             }
 
             // A PING-PONG IS A RISE, AN OPTIONAL HELD PEAK, THEN A FALL, and
@@ -126,13 +159,7 @@ namespace PrincesPalace.Domain.Stage
                 swept = Rise(1f - (t - half - hold) / half);   // peak -> 0
             }
 
-            // Rounded rather than floored: the curve is symmetric and flooring
-            // would bias every drawing half a step early on the way up and half
-            // a step late on the way down, which puts a limp in a motion whose
-            // whole point is evenness.
-            int index = (int)Math.Round(swept * (frameCount - 1));
-
-            return index < 0 ? 0 : index >= frameCount ? frameCount - 1 : index;
+            return (float)(swept * (frameCount - 1));
         }
 
         // 0 -> 1 with both ends flat, the raised cosine LoopCycle has always

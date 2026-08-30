@@ -70,6 +70,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> EnemyHitAreas = new List<NodeRef>();
         public List<NodeRef> EnemySprites = new List<NodeRef>();
         public List<NodeRef> EnemyHitFlashes = new List<NodeRef>();
+        public List<NodeRef> EnemyBlends = new List<NodeRef>();
         public List<NodeRef> EnemyNameplates = new List<NodeRef>();
 
         // One per enemy STAGE slot (not per plate): the icon that says what this
@@ -96,6 +97,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> PartySlots = new List<NodeRef>();
         public List<NodeRef> PartySprites = new List<NodeRef>();
         public List<NodeRef> PartyHitFlashes = new List<NodeRef>();
+        public List<NodeRef> PartyBlends = new List<NodeRef>();
         public List<NodeRef> PartyNameplates = new List<NodeRef>();
         public List<NodeRef> PartyFootShadows = new List<NodeRef>();
 
@@ -227,9 +229,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // vanishing point at centre.
             var partyStage = s.BuildStage("Party", mirrored: true,
                 FightStageAnchors.AllyShadowColor, s.PartySlots, s.PartySprites, s.PartyHitFlashes,
+                s.PartyBlends,
                 s.PartyNameplates, s.PartyFootShadows);
             var enemyStage = s.BuildStage("Enemy", mirrored: false,
                 FightStageAnchors.EnemyShadowColor, s.EnemySlots, s.EnemySprites, s.EnemyHitFlashes,
+                s.EnemyBlends,
                 s.EnemyNameplates, s.EnemyFootShadows, s.EnemyIntentIcons, s.EnemyHitAreas);
             s.PartyStage = partyStage;
             s.EnemyStage = enemyStage;
@@ -419,6 +423,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // what the controller and every test index by.
         private UiNode BuildStage(string prefix, bool mirrored, string shadowHex,
                                   List<NodeRef> slots, List<NodeRef> sprites, List<NodeRef> flashes,
+                                  List<NodeRef> blends,
                                   List<NodeRef> nameplates, List<NodeRef> shadows,
                                   List<NodeRef> intentIcons = null,
                                   List<NodeRef> hitAreas = null)
@@ -429,6 +434,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 slots.Add(default);
                 sprites.Add(default);
                 flashes.Add(default);
+                blends.Add(default);
                 nameplates.Add(default);
                 shadows.Add(default);
                 intentIcons?.Add(default);
@@ -495,6 +501,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 shadow.Children.Add(glow);
 
                 var sprite = Ui.Sprite($"{prefix}{slot}Sprite", null, Place.Stretch(), UiSize.Fill)
+                    .Inactive()
+                    .AsDecor();
+
+                // THE OUTGOING DRAWING OF A CROSS-DISSOLVE, sharing the
+                // sprite's box exactly as the flash does. A stance sheet shows
+                // about six drawings a second, and swapping them reads as a
+                // slideshow; holding the previous drawing underneath and fading
+                // this one in over it turns each swap into a blend. Declared
+                // AFTER the sprite so uGUI draws it on top, and BEFORE the
+                // flash so a hit still whites out both.
+                var blend = Ui.Sprite($"{prefix}{slot}SpriteBlend", null, Place.Stretch(), UiSize.Fill)
                     .Inactive()
                     .AsDecor();
 
@@ -588,7 +605,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     intentIcons[slot] = intent;
                 }
 
-                var kids = new List<UiNode> { shadow, sprite, flash, nameplate };
+                var kids = new List<UiNode> { shadow, sprite, blend, flash, nameplate };
                 if (hitArea != null) kids.Add(hitArea);
                 if (intent != null) kids.Add(intent);
 
@@ -603,6 +620,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 slots[slot] = slotNode;
                 sprites[slot] = sprite;
                 flashes[slot] = flash;
+                blends[slot] = blend;
                 nameplates[slot] = nameplate;
                 shadows[slot] = shadow;
                 children.Add(slotNode);

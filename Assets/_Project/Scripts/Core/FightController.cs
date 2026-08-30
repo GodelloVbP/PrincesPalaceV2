@@ -32,6 +32,7 @@ namespace PrincesPalace
         [SerializeField] internal RectTransform[] enemySlots;
         [SerializeField] internal Image[] enemySprites;
         [SerializeField] internal Image[] enemyHitFlashes;
+        [SerializeField] internal Image[] enemyBlends;
         [SerializeField] internal TMP_Text[] enemyNameplates;
         [SerializeField] internal Image[] enemyFootShadows;
 
@@ -50,6 +51,7 @@ namespace PrincesPalace
         [SerializeField] internal StageShake[] stageShakes;
         [SerializeField] internal Image[] partySprites;
         [SerializeField] internal Image[] partyHitFlashes;
+        [SerializeField] internal Image[] partyBlends;
         [SerializeField] internal TMP_Text[] partyNameplates;
         [SerializeField] internal Image[] partyFootShadows;
 
@@ -387,6 +389,27 @@ namespace PrincesPalace
         // visible, but the component itself is on every world slot
         // (ScreenRegistry), so moving one costs nothing and a second rigged
         // creature needs zero wiring here to start working.
+        // The cross-dissolve layer for this combatant, or null. Indexed the
+        // same way SlotFor is -- position in the encounter's own list.
+        private Image BlendFor(CombatantState combatant)
+        {
+            if (_session == null || combatant == null) return null;
+
+            var enemies = _session.Encounter.Enemies;
+            for (int i = 0; i < enemies.Count && enemyBlends != null && i < enemyBlends.Length; i++)
+            {
+                if (ReferenceEquals(enemies[i], combatant)) return enemyBlends[i];
+            }
+
+            var party = _session.Encounter.PlayerParty;
+            for (int i = 0; i < party.Count && partyBlends != null && i < partyBlends.Length; i++)
+            {
+                if (ReferenceEquals(party[i], combatant)) return partyBlends[i];
+            }
+
+            return null;
+        }
+
         private RectTransform WorldSlotFor(CombatantState combatant)
         {
             if (_session == null || combatant == null) return null;

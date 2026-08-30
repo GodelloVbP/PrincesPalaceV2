@@ -494,6 +494,10 @@ namespace PrincesPalace
             {
                 RefreshRigActor(rigPrefab, worldSlot, combatant, side);
                 image.gameObject.SetShown(false);
+                // A rig samples its bones continuously -- there are no discrete
+                // frames to dissolve between, and a stale layer left showing
+                // would be a second rat.
+                HideBlend(combatant);
                 return;
             }
 
@@ -502,6 +506,7 @@ namespace PrincesPalace
             if (sprite == null)
             {
                 ShowFallbackPlate(image, slotRect);
+                HideBlend(combatant);
                 return;
             }
 
@@ -530,6 +535,21 @@ namespace PrincesPalace
             // it through the same door -- once bound it clones the live node
             // whenever it trails, picking up the current frame and flip for
             // free. Same-sprite rebinds are cheap and idempotent.
+            // The dissolve layer must sit EXACTLY where the sprite does, or a
+            // blend reads as a double image rather than one drawing becoming
+            // another. It is a stretch sibling, so it inherits the slot's box
+            // for free, but the mirror and the ground offset are written onto
+            // the sprite's own rect and have to be copied across.
+            var blend = BlendFor(combatant);
+            if (blend != null)
+            {
+                blend.preserveAspect = true;
+                blend.rectTransform.localScale = image.rectTransform.localScale;
+                blend.rectTransform.offsetMin = image.rectTransform.offsetMin;
+                blend.rectTransform.offsetMax = image.rectTransform.offsetMax;
+                blend.raycastTarget = false;
+            }
+
             slotRect?.GetComponent<StageActorAnimator>()?.BindSprite(image);
 
             // ACTIVATED, not merely enabled. The sprite node is built inactive
@@ -1039,6 +1059,69 @@ namespace PrincesPalace
             }
         }
 
+        // ---- the cross-dissolve between two drawings ---------------------------
+
+        // A stance sheet is shown at its authored pace -- the rat's idle is
+        // twelve drawings over 1.92s, about six a second -- and swapping one
+        // sprite for the next at that rate reads as a slideshow no matter how
+        // well the frames are registered. Fixing it with more frames is an art
+        // problem; fixing it with a dissolve is a rendering one, and the
+        // information needed was already being computed and discarded:
+        // LoopCycle rounds a continuous position to pick an index, and the
+        // fraction it throws away is exactly how far between two drawings the
+        // loop has got.
+        //
+        // The base drawing stays on the sprite at full opacity and its
+        // NEIGHBOUR is faded in on top, so alpha never exceeds 0.5 and the
+        // composite is a true lerp between the two. Which neighbour depends on
+        // which way the loop is travelling, which is what keeps it continuous
+        // across the point where the rounded index flips: at exactly halfway
+        // the two drawings are 50/50 whichever of them is currently "the"
+        // frame.
+        //
+        // Deliberately NOT applied to a rig actor: its bones are already
+        // sampled continuously, so there are no discrete frames to blend and
+        // the layer stays hidden (RefreshCombatantSprite returns before ever
+        // touching it).
+        private void StepIdleBlend(CombatantState combatant, StanceAnimation animation,
+                                   float clock, float perFrame, int frame)
+        {
+            var blend = BlendFor(combatant);
+            if (blend == null) return;
+
+            float position = LoopCycle.FramePositionAt(clock, animation.FrameCount, perFrame,
+                                                       animation.Loop,
+                                                       FightBeatPlayer.Scaled(animation.EndHoldSeconds));
+
+            int neighbour = position > frame ? frame + 1 : frame - 1;
+            if (neighbour < 0 || neighbour >= animation.FrameCount)
+            {
+                HideBlend(combatant);
+                return;
+            }
+
+            float amount = Mathf.Clamp(Mathf.Abs(position - frame), 0f, 0.5f);
+            var sprite = animation.FrameAt(neighbour);
+            if (sprite == null || amount <= 0.001f)
+            {
+                HideBlend(combatant);
+                return;
+            }
+
+            blend.sprite = sprite;
+            var c = blend.color;
+            blend.color = new Color(c.r, c.g, c.b, amount);
+            blend.gameObject.SetShown(true);
+            blend.enabled = true;
+        }
+
+        private void HideBlend(CombatantState combatant)
+        {
+            var blend = BlendFor(combatant);
+            if (blend == null) return;
+            if (blend.gameObject.activeSelf) blend.gameObject.SetShown(false);
+        }
+
         // Hands one figure's breath to the thing that wears it.
         //
         // The animator lives on the SLOT, which is what carries the depth
@@ -1132,6 +1215,7 @@ namespace PrincesPalace
                 _idleClock.Remove(combatant);
                 _rigIdleClock.Remove(combatant);
                 BreatheFigure(combatant, 0f);
+                HideBlend(combatant);
                 return false;
             }
 
@@ -1159,6 +1243,7 @@ namespace PrincesPalace
             if (animation.IsEmpty)
             {
                 BreatheFigure(combatant, 0f);
+                HideBlend(combatant);
                 return false;
             }
 
@@ -1207,10 +1292,22 @@ namespace PrincesPalace
                                StanceManifestLoader.Manifest.BreathFor(
                                    SpriteFolderFor(combatant), animation.FrameCount)));
 
-            if (animation.FrameCount <= 1) return false;
+            if (animation.FrameCount <= 1)
+            {
+                HideBlend(combatant);
+                return false;
+            }
 
             int frame = LoopCycle.FrameAt(clock, animation.FrameCount, perFrame, animation.Loop,
                                           FightBeatPlayer.Scaled(animation.EndHoldSeconds));
+
+            // EVERY TICK, not only when the index turns over -- the whole point
+            // is the motion BETWEEN two drawings, so this cannot be gated on
+            // `moved` the way the repaint below is. Cheap enough to run
+            // unconditionally: one sprite assignment and one colour write per
+            // idle figure, no layout and no RefreshStage.
+            StepIdleBlend(combatant, animation, clock, perFrame, frame);
+
             if (FrameFor(combatant) == frame) return false;
 
             // Written straight into the map rather than through SetActorFrame,

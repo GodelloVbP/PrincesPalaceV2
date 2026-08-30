@@ -110,6 +110,7 @@ public static class ScreenRegistry
                 };
                 fight.enemySprites = screen.EnemySprites.Select(result.Image).ToArray();
                 fight.enemyHitFlashes = screen.EnemyHitFlashes.Select(result.Image).ToArray();
+                fight.enemyBlends = screen.EnemyBlends.Select(result.Image).ToArray();
                 fight.enemyNameplates = screen.EnemyNameplates.Select(result.Tmp).ToArray();
                 fight.enemyFootShadows = screen.EnemyFootShadows.Select(result.Image).ToArray();
 
@@ -117,6 +118,7 @@ public static class ScreenRegistry
                 fight.partyWorldSlots = screen.PartyWorldSlots.Select(result.Rect).ToArray();
                 fight.partySprites = screen.PartySprites.Select(result.Image).ToArray();
                 fight.partyHitFlashes = screen.PartyHitFlashes.Select(result.Image).ToArray();
+                fight.partyBlends = screen.PartyBlends.Select(result.Image).ToArray();
                 fight.partyNameplates = screen.PartyNameplates.Select(result.Tmp).ToArray();
                 fight.partyFootShadows = screen.PartyFootShadows.Select(result.Image).ToArray();
 
