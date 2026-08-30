@@ -688,6 +688,34 @@ namespace PrincesPalace
             var animation = StanceAnimationLibrary.Resolve(folder, stance);
             if (!animation.Steady || animation.FrameCount <= 1) return 0f;
 
+            // ONLY for art that was cropped per FRAME. See SharesOneCanvas.
+            //
+            // This correction exists to cancel a CROPPING ARTEFACT -- its
+            // originating commit measured a "28px shuffle with no pattern"
+            // across six drawings and called it exactly that. It cannot tell
+            // a cropping artefact from real motion, because both move the
+            // content's bounding box, so it must only run where the artefact
+            // is actually possible.
+            //
+            // It is not possible on a shared canvas: slice_actor_sheet.py
+            // aligns every frame of an actor onto ONE canvas by its
+            // ground-contact silhouette ("ground_band"), so those frames are
+            // already registered and a runtime re-registration on a
+            // different, weaker basis (whole-figure bbox centre) can only
+            // undo correct work. On the Giant Rat's re-authored idle -- whose
+            // tail sweeps on purpose -- it was translating the whole creature
+            // up to 18px per frame and reading in play as the rat gliding
+            // around the floor, which is the bug that led here. Measured
+            // across the roster's idles: rat 18.0px, treant 28.5px, beetle
+            // 15.5px, all on one canvas, all animation rather than artefact.
+            //
+            // forest_warden is the one actor that still needs it: its six
+            // idle frames are on six DIFFERENT canvases (documented in
+            // docs/ART_PIPELINE.md, and its own manifest entry admits to the
+            // pop), which is precisely the per-frame cropping this was
+            // written for.
+            if (SharesOneCanvas(animation, folder, stance)) return 0f;
+
             int frame = FrameFor(combatant);
             if (frame <= 0) return 0f;
 
@@ -704,6 +732,43 @@ namespace PrincesPalace
             // flipped, and a correction blind to that would double the error
             // instead of cancelling it.
             return (here - home) * sprite.rect.width * mirror;
+        }
+
+        // Do every frame of this stance sit on one identically-sized canvas?
+        //
+        // That is the runtime-visible signature of art the slicer registered
+        // for us: slice_actor_sheet.py composites a whole actor onto a single
+        // shared canvas, aligned on each pose's ground contact, so equal
+        // frame sizes mean equal registration. Per-frame-cropped art
+        // (forest_warden) has a different size per frame and cannot make that
+        // promise.
+        //
+        // Cached per folder+stance: it opens no pixels (Sprite.rect is
+        // metadata) but it is asked once per idle frame per combatant, and
+        // the answer is a property of the art rather than of the moment.
+        private static readonly Dictionary<string, bool> OneCanvasCache = new Dictionary<string, bool>();
+
+        private static bool SharesOneCanvas(StanceAnimation animation, string folder, string stance)
+        {
+            if (animation.IsEmpty || animation.FrameCount <= 1) return true;
+
+            string key = folder + "/" + stance;
+            if (OneCanvasCache.TryGetValue(key, out var cached)) return cached;
+
+            var first = animation.FrameAt(0);
+            bool shared = first != null;
+            if (shared)
+            {
+                var size = first.rect.size;
+                for (int i = 1; i < animation.FrameCount; i++)
+                {
+                    var f = animation.FrameAt(i);
+                    if (f == null || f.rect.size != size) { shared = false; break; }
+                }
+            }
+
+            OneCanvasCache[key] = shared;
+            return shared;
         }
 
         // Per-FRAME, unlike ContentCentreFractionForActor, which answers for the
@@ -1180,6 +1245,7 @@ namespace PrincesPalace
             ContentCentreCache.Clear();
             ContentTopCache.Clear();
             FrameCentreCache.Clear();
+            OneCanvasCache.Clear();
 
             _confirmedDefeated.Clear();
 
