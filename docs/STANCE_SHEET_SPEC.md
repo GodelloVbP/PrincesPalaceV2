@@ -69,6 +69,28 @@ into this document before starting the next actor.
 | beetle | `Art/Enemies/beetle/` | `beetle` | idle, attack, turtle_up, shell_closed, hurt, defeated | **delivered** (idle over its redraw/travel bars after 3 attempts, see its README) |
 | treant | `Art/Enemies/treant/` | `treant` | idle, attack, trunk_slam, cast, hurt, defeated | not started |
 | forest troll | `Art/Enemies/forest_troll/` | `forest_warden` | idle, attack, attack_roar, attack_charge, hurt, defeated | not started |
+| rat | sheets in `Art/Enemies/`, record in `Art/Enemies/rat/` | `rat` | idle, attack (12 frames each) | **idle needs regeneration** — fails Protocol A #9 and Protocol B travel; prompt written, see its README |
+
+> **The rat was not part of this work order and now is.** It is the project's
+> style reference, so it was never queued for regeneration — but 12-frame idle
+> and attack sheets were commissioned for it (2026-08-29/30) *without* running
+> this document, and the idle came back with exactly the fault §0 describes.
+> Its README carries the measurements, the Detail Inventory and a 12-frame
+> restatement of §5a's idle direction.
+>
+> Two things learned there are worth applying to the three actors above before
+> their sheets are commissioned:
+>
+> - **A 12-frame sheet does not change any rule here, only the arithmetic.**
+>   §5a's "about 4% above frame 1" is a total for the whole sheet, so at 12
+>   frames each step is ~0.4%, not ~0.8%. Say the per-frame increment *and*
+>   the total in the prompt; a sheet directed only by per-frame increments
+>   drifted to 11.4% total.
+> - **State the gutter rule in the frame directions, not only in RULES.**
+>   Protocol A #9 has been failed by every 12-frame sheet commissioned so far,
+>   on a prompt that did carry the standard RULES block. A figure whose tail
+>   crosses the cut line gets that tail severed by the slicer, and the piece
+>   reappears in the neighbouring cell as a stray.
 
 Per actor the sequence is: **Stage 1** (one design sheet) → **inventory** →
 **Stage 2** (six animation sheets, one at a time) → **delivery**. Update the

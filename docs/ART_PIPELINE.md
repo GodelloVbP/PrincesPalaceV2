@@ -289,8 +289,26 @@ reasons, and both are `pad_actor_frames.py`'s job (see its header):
 - **`delivery_scale`, because pixel size IS on-screen size.** There is no
   per-enemy scale in content. Both AI kits are generated on the same 512px
   cells, so delivered raw a beetle stands as tall as a golem. Pick the scale
-  against the delivered roster's idle content heights — rat 226, beetle 241,
-  bog_witch 282, golem 284, treant 423, forest_warden 472 — not by eye.
+  against the delivered roster's idle content heights — **and measure them,
+  do not copy a number out of this file.**
+
+  > **The table that used to live here was stale and caused a real
+  > near-miss (2026-08-30).** It read `rat 226, beetle 241, bog_witch 282,
+  > golem 284, treant 423, forest_warden 472`. Re-measured against the art
+  > actually on disk, four of the six were wrong — bog_witch 313, golem 337,
+  > treant 441, forest_warden 483 — by up to 19%. Acting on the stale `rat
+  > 226` produced a `delivery_scale` of 0.834 that would have shrunk a
+  > correctly-sized rat by a fifth; it was caught only because the number
+  > was checked against the actual committed art before being applied
+  > (that art measures 288, so the live 12-frame idle at 271–302 was
+  > already right). A hardcoded measurement in a doc rots silently the
+  > moment any actor is re-sliced, and every re-slice moves these. Measure
+  > the target off the art you are matching, in the same command you set
+  > the scale in:
+  >
+  > ```bash
+  > python -c "from PIL import Image; im=Image.open(P).convert('RGBA'); b=im.getchannel('A').getbbox(); print(b[3]-b[1])"
+  > ```
 
 ### `slice_actor_sheet.py`'s `ACTORS` manifest
 
