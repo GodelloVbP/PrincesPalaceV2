@@ -55,38 +55,59 @@ change size, or change shape between frames:
 - palette: near-black outline, 3 charcoal-grey fur tones, 2 salmon-pink skin
   tones (tail/paws/ears/snout), cream-white fangs, one pure red eye
 
-THE TWELVE FRAMES - this is one slow breath IN, and nothing else. The rat is
-standing still. Its feet do not move, its tail does not swing, its head does
-not turn, and it does not lean, shift its weight, or travel across the cell.
+THE TWELVE FRAMES - a living STANDING LOOP: the rat holds its ground, breathing,
+with its tail sweeping slowly. It is alive and waiting, not frozen.
 
-FRAME 1: the resting pose. Fully exhaled, torso at its lowest.
-FRAMES 2-11: the SAME DRAWING, rising by a further 0.4% of body height each
-  frame. Nothing changes except that the torso, shoulders and head move
-  straight upward together as one rigid piece.
-FRAME 12: full inhale, the peak - torso, shoulders and head at their highest,
-  4% of body height above frame 1, chest very slightly expanded. This is
-  frame 1's silhouette moved upward, not a new drawing.
+This sheet is played back and forth (1-12, then 12-1), so frame 1 and frame 12
+are the two ENDS of each motion, and the playback swings between them. Every
+motion below therefore runs in ONE direction across the sheet and does not
+return - the ping-pong is what brings it back.
 
-THE TOTAL RISE ACROSS THE WHOLE SHEET IS 4% OF BODY HEIGHT - about the height
-of the rat's eye, and no more. Each individual step is 0.4%, which is a few
-pixels. This is a VERY SMALL movement. If frame 12 looks obviously different
-from frame 1 at a glance, or if any frame looks obviously different from its
-neighbour, the movement is far too large - halve it and redraw. A previous
-version of this sheet moved 11% and was rejected for it.
+Three things move, and nothing else does:
 
-The rat's HORIZONTAL position is identical in all twelve frames. It rises
-straight up. It does not drift left or right, and it does not rock side to
-side.
+1. THE BREATH. Frame 1 is fully exhaled, torso at its lowest. Each frame the
+   torso, shoulders and head rise a further 0.4% of body height, as one rigid
+   piece, straight up. By frame 12 they are 4% above frame 1, chest slightly
+   expanded. 4% is about the height of the rat's eye - a SMALL movement.
+
+2. THE TAIL SWEEP - this is where most of the life is. The tail is a single
+   rigid rope that PIVOTS at the hip. In frame 1 it curls low and close to
+   the body. Across the twelve frames it swings smoothly outward and slightly
+   upward, each frame a small further rotation of THE SAME ROPE, reaching its
+   widest, most extended arc at frame 12.
+   CRITICAL: this is one drawing being rotated and bent, not twelve different
+   tails. Every frame has the same number of ring segments, the same
+   thickness, the same taper, and the same overall length. If you find
+   yourself drawing a NEW tail shape - a hook in one frame, an open loop in
+   another - stop: it is the same rope, moved.
+
+3. THE HEAD. It drifts up very slightly with the breath and the muzzle tips a
+   few degrees upward by frame 12. The head does not turn, rotate to face the
+   viewer, or change expression.
+
+The rat's HORIZONTAL position is identical in all twelve frames. Its body does
+not drift left or right, does not rock side to side, and does not travel
+across the cell. Only the tail reaches outward.
 
 PINNED - traced identically in all twelve frames: same outline, same position
 in the cell, copied and not redrawn:
-- both hind feet and both forepaws, including every claw and toe
-- the entire tail, every ring segment, in exactly the same arc
-- THE SHAGGY FUR FRINGE along the back, shoulders and haunch. This is the most
-  important one and the one the previous sheet got wrong. Trace the outer fur
-  outline identically frame to frame. Do not redraw the fringe, do not change
-  which tufts stick out, do not vary their number, length or direction.
-- the ears, fangs, eye and snout
+- both hind feet, including every toe. They are planted on the floor and are
+  the anchor of the whole animation. They must be pixel-identical in all
+  twelve frames. THIS IS THE MOST IMPORTANT ONE - the previous sheet's feet
+  were redrawn every frame and it was rejected for exactly that.
+- both forepaws and their claws: they ride up and down with the chest, but
+  their shape, their claw count and their angle never change.
+- THE SHAGGY FUR FRINGE along the back, shoulders and haunch. Trace the outer
+  fur outline identically frame to frame. Do not change which tufts stick out,
+  or vary their number, length or direction. The fringe moves with the body it
+  sits on; it is never redrawn.
+- the ears, fangs, eye and snout: same shapes, same sizes, same angles.
+
+WHAT "REDRAWN" MEANS, since it is the one failure this sheet keeps hitting:
+if you laid any two adjacent frames on top of each other on a lightbox, every
+line except the breathing torso and the sweeping tail should sit exactly on
+top of its twin. The two frames should differ by a few pixels of rise and a
+few degrees of tail, and by nothing else at all.
 
 GUTTERS - THIS SHEET IS REJECTED IF IT FAILS THIS. Each rat must sit COMPLETELY
 inside its own 512x512 cell with clear empty space on all four sides. The TAIL
@@ -118,6 +139,15 @@ looping idle:
   travel         target 2-6%     reject < 1.5% (static) or > 8% (wandering)
   feet churn     target <= 8%    reject > 12%
   draw scale     0.90-1.10 green
+
+READ THE FEET BAND FIRST, NOT THE OVERALL RATIO. This sheet is directed to
+have real secondary motion (a tail sweep), and a swaying tail and a flickering
+tail raise whole-figure churn by exactly the same amount - the redraw ratio
+cannot tell them apart, which is a genuine blind spot in it. The feet band
+can: feet are pinned by the direction, so any churn there is redrawing and
+nothing else. If feet churn is low and the overall ratio is high, look at the
+onion skin before rejecting - a coherent tail arc reads as a clean fan, while
+a redrawn tail reads as a scribble.
 
 The manifest changes that go with a new sheet, so they are not forgotten:
   - tools/slice_actor_sheet.py, rat entry, idle sheet:
