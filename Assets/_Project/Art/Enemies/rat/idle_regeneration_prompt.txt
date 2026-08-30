@@ -1,0 +1,134 @@
+GIANT RAT — IDLE SHEET REGENERATION PROMPT
+Generated 2026-08-30 per docs/STANCE_SHEET_SPEC.md §5 + §5a.
+
+ATTACH, and nothing else:
+  Assets/_Project/Art/Enemies/Giant_rat_sheet.png     (style + design reference)
+
+SAVE THE RESULT AS:
+  Assets/_Project/Art/Enemies/Giant_rat_idle_sheet_12_frame.png
+  (overwrite; the current file is the one being replaced)
+
+GRID CHANGED from the previous sheet: 3 rows x 4 columns, NOT 2 x 6.
+The old sheet's cells were 286 wide x 458 tall while the rat itself is 288
+wide — it could not fit, so every tail crossed into the neighbouring cell and
+the slicer severed it. Square 512x512 cells fix that by construction.
+
+======================= PASTE EVERYTHING BELOW THIS LINE =======================
+
+You are producing a video-game sprite sheet. ONE image, 2048x1536, a 3x4 grid
+of twelve cells (512x512 each), read row-major: top row = frames 1-4, middle
+row = frames 5-8, bottom row = frames 9-12. Leave clear empty gutters between
+cells.
+
+STYLE - match the attached reference image's RENDERING STYLE ONLY. Do not copy
+its poses. The style is: bold, uniform-weight dark outlines around every shape;
+flat cel shading with exactly 2-3 tones per colour area; a small palette; no
+gradients, no rim light, no soft airbrushing, no dense micro-texture. Big
+readable shapes.
+
+SUBJECT - the same giant rat as the attached reference: a hunched, menacing
+dark-grey rat standing on its hind legs, forepaws raised in front of its chest,
+a long segmented pink tail curving behind it. Facing RIGHT.
+
+THIS IS ANIMATION, NOT TWELVE ILLUSTRATIONS. Imagine frame 1 was drawn once,
+and then that single drawing was physically POSED for each later frame, like a
+puppet. Between any two adjacent frames, every part of the body that is not
+moving must have an IDENTICAL outline and identical interior detail - copied,
+not redrawn. Only the moving parts change, and they move as rigid connected
+pieces.
+
+DETAIL INVENTORY - these features exist in EXACTLY these counts and positions in
+EVERY frame. They are solid objects attached to the body: they move with the
+body part they sit on, and they NEVER appear, disappear, multiply, change count,
+change size, or change shape between frames:
+- exactly 2 ears: one near ear shown full with a pink inner cup, one far ear
+  behind the skull showing only its outer edge
+- exactly 1 visible eye: a red almond eye on the near side of the head, with a
+  single dark brow crease above it
+- exactly 2 long upper fangs, curving down outside the lower jaw, cream-white,
+  the near one fully drawn and the far one slightly shorter behind it
+- exactly 1 pink snout pad at the tip of the muzzle
+- exactly 4 limbs: 2 forelegs (raised, held in front of the chest) and 2 hind
+  legs (planted). 4 claws on each forepaw, 4 toes on each hind foot
+- exactly 1 tail: one continuous pink segmented rope leaving the body low at
+  the rear, drawn with 11-13 visible ring segments, curving in ONE smooth arc
+- palette: near-black outline, 3 charcoal-grey fur tones, 2 salmon-pink skin
+  tones (tail/paws/ears/snout), cream-white fangs, one pure red eye
+
+THE TWELVE FRAMES - this is one slow breath IN, and nothing else. The rat is
+standing still. Its feet do not move, its tail does not swing, its head does
+not turn, and it does not lean, shift its weight, or travel across the cell.
+
+FRAME 1: the resting pose. Fully exhaled, torso at its lowest.
+FRAMES 2-11: the SAME DRAWING, rising by a further 0.4% of body height each
+  frame. Nothing changes except that the torso, shoulders and head move
+  straight upward together as one rigid piece.
+FRAME 12: full inhale, the peak - torso, shoulders and head at their highest,
+  4% of body height above frame 1, chest very slightly expanded. This is
+  frame 1's silhouette moved upward, not a new drawing.
+
+THE TOTAL RISE ACROSS THE WHOLE SHEET IS 4% OF BODY HEIGHT - about the height
+of the rat's eye, and no more. Each individual step is 0.4%, which is a few
+pixels. This is a VERY SMALL movement. If frame 12 looks obviously different
+from frame 1 at a glance, or if any frame looks obviously different from its
+neighbour, the movement is far too large - halve it and redraw. A previous
+version of this sheet moved 11% and was rejected for it.
+
+The rat's HORIZONTAL position is identical in all twelve frames. It rises
+straight up. It does not drift left or right, and it does not rock side to
+side.
+
+PINNED - traced identically in all twelve frames: same outline, same position
+in the cell, copied and not redrawn:
+- both hind feet and both forepaws, including every claw and toe
+- the entire tail, every ring segment, in exactly the same arc
+- THE SHAGGY FUR FRINGE along the back, shoulders and haunch. This is the most
+  important one and the one the previous sheet got wrong. Trace the outer fur
+  outline identically frame to frame. Do not redraw the fringe, do not change
+  which tufts stick out, do not vary their number, length or direction.
+- the ears, fangs, eye and snout
+
+GUTTERS - THIS SHEET IS REJECTED IF IT FAILS THIS. Each rat must sit COMPLETELY
+inside its own 512x512 cell with clear empty space on all four sides. The TAIL
+especially must stay inside the cell - do not let it cross, touch, or extend
+past a cell boundary into a neighbouring frame. Draw the rat smaller within its
+cell if that is what it takes. The previous sheet failed this on every cell
+boundary and its tails were cut off.
+
+RULES:
+- Transparent background (real alpha, not white, not green).
+- The creature FACES RIGHT in every frame. Never mirrored.
+- Identical creature scale in every frame; the feet stay planted on one implied
+  floor line at the same height in every cell.
+- No text, labels, numbers, or borders around cells.
+- No ground plane, no floor shadow, no cast shadow.
+- No particles, dust, glow, or magic effects of any kind.
+
+======================= PASTE EVERYTHING ABOVE THIS LINE =======================
+
+WHEN THE SHEET COMES BACK — hand it to Claude, which will run:
+
+  python tools/slice_actor_sheet.py rat
+  python tools/actor_stance_qa.py --report "Assets/_Project/Resources/Enemies" --only rat
+
+and check it against Protocol A (§6) and Protocol B (§7). Accept bands for a
+looping idle:
+
+  redraw ratio   target < 1.6    hard reject at 2.5
+  travel         target 2-6%     reject < 1.5% (static) or > 8% (wandering)
+  feet churn     target <= 8%    reject > 12%
+  draw scale     0.90-1.10 green
+
+The manifest changes that go with a new sheet, so they are not forgotten:
+  - tools/slice_actor_sheet.py, rat entry, idle sheet:
+      "grid": (2, 6)  ->  (3, 4)
+  - the "names" list goes back to NATURAL row-major order
+      ["idle/f0", "idle/f1", ... "idle/f11"]
+    The current list is deliberately shuffled to sort the old sheet's frames by
+    height; a correctly-directed monotonic sheet does not need that and must
+    not keep it.
+  - the "nudge" block for idle/f0..f11 should be deleted and re-measured from
+    zero, for the same reason.
+  - "drop_far_components_px": 0 can be REMOVED from the idle sheet entry if the
+    new sheet passes Protocol A #9 — it exists only to delete severed-tail
+    strays, and a sheet with correct gutters produces none.
