@@ -278,33 +278,47 @@ ACTORS = {
                                  # softens the upscaled sheet slightly -- acceptable
                                  # for this flat cel style; revisit if idle reads
                                  # noticeably softer than the rat's other stances.
-                "names": ["idle/f0", "idle/f1", "idle/f2", "idle/f3", "idle/f4", "idle/f5",
-                          "idle/f6", "idle/f7", "idle/f8", "idle/f9", "idle/f10", "idle/f11"],
+                # Row-major CELL order is [0..11] = 2 rows of 6, read left to
+                # right, top row then bottom. The grid's own left-to-right
+                # order is NOT used as playback order below -- see the
+                # "names" list comment.
+                "names": ["idle/f5", "idle/f6", "idle/f10", "idle/f8", "idle/f7", "idle/f9",
+                          "idle/f11", "idle/f1", "idle/f0", "idle/f2", "idle/f3", "idle/f4"],
             },
         ],
         "aliases": {"guard": "extra"},
         "anchor": "ground_band",
         "delivery_scale": 1.0,
-        # Measured (2026-08-29) off the delivered idle/f0..f11 bbox centres,
-        # which swung 309.0-336.5px (27.5px) around a 314px median -- visible
-        # in play as the rat rocking side to side on every idle loop.
-        # ground_band's per-frame anchor tracks whichever ground-contact
-        # silhouette survives that frame's paw/whisker pose, and the AI-
-        # generated sheet does not hold that silhouette consistent frame to
-        # frame (see the actor_stance_qa.py redraw-ratio note in
-        # ART_PIPELINE.md #9's Outstanding section -- 1.6, amber, and this is
-        # exactly the churn that number was measuring). A per-frame dx nudge
-        # recentres each frame on the roster median; it cannot fix the
-        # SEPARATE ~10% content-height swing (271-302px) the same
-        # inconsistency causes, because scaling an individual frame is what
-        # this tool refuses to do on principle (see module docstring) -- that
-        # part is real art variance, not a slicing defect, and needs either a
-        # tighter-drawn sheet or the rig back.
+        # Measured (2026-08-29) off the delivered idle bbox centres, which
+        # swung 27.5px around their median -- visible in play as the rat
+        # rocking side to side on every idle loop. ground_band's per-frame
+        # anchor tracks whichever ground-contact silhouette survives that
+        # frame's paw/whisker pose, and the AI-generated sheet does not hold
+        # that silhouette consistent frame to frame (see the
+        # actor_stance_qa.py redraw-ratio note in ART_PIPELINE.md #9's
+        # Outstanding section -- 1.6, amber, and this is exactly the churn
+        # that number was measuring). A per-frame dx nudge recentres each
+        # frame on the roster median -- down to 1.0px measured -- without
+        # rescaling any pixel, which is what this tool refuses to do on
+        # principle (see module docstring).
+        #
+        # The SAME inconsistency also swings each frame's own content height
+        # ~10% (271-302px, cell order) -- a nudge cannot touch that (it's a
+        # reposition, not a resize), but WHICH cell plays at which f-index
+        # is free to choose, and playback follows f-index, not the sheet's
+        # own left-to-right layout. The "names" list above reassigns cells to
+        # f0..f11 in ascending measured-height order, so the loop breathes
+        # through one smooth rise (271->302px) instead of jumping around
+        # non-monotonically the way the sheet's own drawn order did --
+        # accepting one larger step at the wrap (302->271, once per loop)
+        # in exchange for eleven smaller ones instead of noise throughout.
+        # Nudge values below are keyed by f-index AFTER that reassignment
+        # (each cell keeps the same dx it measured under its old name).
         "nudge": {
-            "idle/f0": (4, 0), "idle/f1": (-20, 0), "idle/f2": (-23, 0),
-            "idle/f3": (-15, 0), "idle/f4": (-14, 0), "idle/f5": (5, 0),
-            "idle/f6": (4, 0), "idle/f7": (-23, 0), "idle/f8": (1, 0),
-            "idle/f9": (0, 0), "idle/f10": (1, 0), "idle/f11": (4, 0),
+            "idle/f0": (1, 0), "idle/f1": (-23, 0), "idle/f2": (0, 0),
+            "idle/f3": (1, 0), "idle/f4": (4, 0), "idle/f5": (4, 0),
+            "idle/f6": (-20, 0), "idle/f7": (-14, 0), "idle/f8": (-15, 0),
+            "idle/f9": (5, 0), "idle/f10": (-23, 0), "idle/f11": (4, 0),
         },
     },
 
