@@ -63,9 +63,9 @@
         {
           "stance": "attack",
           "secondsPerFrame": 0.08,
-          "impactFrame": 7,
-          "soundFrame": 7,
-          "_impactFrameNote": "Re-measured (2026-08-30) for the new 12-frame attack sheet -- was 3 of 6, the unauthored Math.Ceiling(frames/2) midpoint the old 6-frame swing never moved past. f6 (0-indexed, so frame 7 here) has the furthest claw reach of all 12 delivered frames (bbox right edge 519px, next-highest 504px) and is also where the cx measured furthest from the standing frames -- both agree on the same frame as the actual strike, not a guessed middle."
+          "impactFrame": 6,
+          "soundFrame": 6,
+          "_impactFrameNote": "Re-measured (2026-08-30) against the CURRENTLY delivered 12-frame sheet -- the previous note here (impactFrame 7, f6) was already stale, measured against an earlier version of this same sheet before it was re-sliced; the numbers it quoted (519px, next-highest 504px) do not match what is on disk now. Fresh measurement: f5 (0-indexed, so frame 6 here) has the furthest bbox right edge of all 12 delivered frames (608px, next-highest f6 at 570px), and is also visibly the peak of the leap by eye -- fully airborne, mouth widest, claws at full extension -- with f6 already showing the front paws landing. Re-measure again if this sheet is re-sliced; a note that says a specific pixel value is only true of one specific file on disk, not of 'the attack sheet' in general."
         }
       ]
     },
