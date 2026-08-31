@@ -1072,8 +1072,9 @@ namespace PrincesPalace
         // loop has got.
         //
         // The base drawing stays on the sprite at full opacity and its
-        // NEIGHBOUR is faded in on top, so alpha never exceeds 0.5 and the
-        // composite is a true lerp between the two. Which neighbour depends on
+        // NEIGHBOUR is faded in on top, capped at MaxBlendAmount below, so the
+        // composite is a lerp weighted toward whichever drawing is "the"
+        // frame rather than a true 50/50 at the midpoint. Which neighbour depends on
         // which way the loop is travelling, which is what keeps it continuous
         // across the point where the rounded index flips: at exactly halfway
         // the two drawings are 50/50 whichever of them is currently "the"
@@ -1083,6 +1084,18 @@ namespace PrincesPalace
         // sampled continuously, so there are no discrete frames to blend and
         // the layer stays hidden (RefreshCombatantSprite returns before ever
         // touching it).
+        //
+        // Capped below a true 50/50 (2026-08-30): a full half-opacity blend
+        // means the WORST-registered pair of frames on a sheet gets shown at
+        // its most visible, exactly at the midpoint crossing. On art with
+        // real inter-frame inconsistency (the rat's tail, still redrawn
+        // rather than posed after two regeneration attempts -- see
+        // Art/Enemies/rat/idle_regeneration_prompt.txt) that reads as two
+        // ring patterns mushed together rather than one tail moving. Lower
+        // trades a little of the smoothing this dissolve exists for against
+        // less ghosting on exactly the content that can't hold a blend.
+        private const float MaxBlendAmount = 0.35f;
+
         private void StepIdleBlend(CombatantState combatant, StanceAnimation animation,
                                    float clock, float perFrame, int frame)
         {
@@ -1100,7 +1113,7 @@ namespace PrincesPalace
                 return;
             }
 
-            float amount = Mathf.Clamp(Mathf.Abs(position - frame), 0f, 0.5f);
+            float amount = Mathf.Clamp(Mathf.Abs(position - frame), 0f, MaxBlendAmount);
             var sprite = animation.FrameAt(neighbour);
             if (sprite == null || amount <= 0.001f)
             {
