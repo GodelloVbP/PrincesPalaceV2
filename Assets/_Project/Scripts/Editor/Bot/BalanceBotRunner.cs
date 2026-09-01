@@ -383,6 +383,26 @@ namespace PrincesPalace.Editor.Bot
         // and number formatting identical, and it is what guarantees the ulong
         // Seed is written as a full-precision integer rather than through a
         // double (the schema calls that out explicitly).
+        // One equip pass, as JSON. Its own method rather than inline because
+        // it is written in three places (the start-of-run pass, every room's
+        // pass, and nothing else may drift from either).
+        private static string EquipJson(List<EquipTrace> worn)
+        {
+            var sb = new StringBuilder();
+            sb.Append('[');
+            for (int i = 0; i < (worn?.Count ?? 0); i++)
+            {
+                if (i > 0) sb.Append(',');
+                var e = worn[i];
+                sb.Append("{\"CharacterId\":").Append(Str(e.CharacterId));
+                sb.Append(",\"ItemId\":").Append(Str(e.ItemId));
+                sb.Append(",\"Slot\":").Append(Str(e.Slot));
+                sb.Append(",\"Plus\":").Append(e.Plus).Append('}');
+            }
+            sb.Append(']');
+            return sb.ToString();
+        }
+
         private static string TraceJson(RunTrace t)
         {
             var sb = new StringBuilder();
@@ -436,11 +456,15 @@ namespace PrincesPalace.Editor.Bot
                 sb.Append("\"NodeId\":").Append(r.NodeId).Append(',');
                 sb.Append("\"RoomType\":").Append(Str(r.RoomType)).Append(',');
                 sb.Append("\"OfferItemIds\":").Append(StrList(r.OfferItemIds)).Append(',');
-                sb.Append("\"PickedIndex\":").Append(r.PickedIndex);
+                sb.Append("\"PickedIndex\":").Append(r.PickedIndex).Append(',');
+                sb.Append("\"Equipped\":").Append(EquipJson(r.Equipped));
                 sb.Append('}');
             }
             sb.Append("],");
 
+            sb.Append("\"EquippedAtStart\":").Append(EquipJson(t.EquippedAtStart)).Append(',');
+            sb.Append("\"WornAtDeath\":").Append(StrList(t.WornAtDeath)).Append(',');
+            sb.Append("\"LevelAtDeath\":").Append(t.LevelAtDeath).Append(',');
             sb.Append("\"DeathStep\":").Append(t.DeathStep).Append(',');
             sb.Append("\"DeathCause\":").Append(Str(t.DeathCause)).Append(',');
             sb.Append("\"Capped\":").Append(t.Capped ? "true" : "false");
@@ -501,6 +525,15 @@ namespace PrincesPalace.Editor.Bot
             sb.Append("\"relicIds\":").Append(StrList(p.Result.RelicIdsAtEnd)).Append(',');
             sb.Append("\"talentIds\":").Append(StrList(p.Result.TalentIdsAtEnd)).Append(',');
 
+            // THE THIRD BUILD AXIS. Two runs can hold the same relics and the
+            // same talents and have arrived at completely different paperdolls
+            // -- that is what an item offer IS -- so buildDiversity was
+            // reporting on two thirds of a build. Already ordinal-sorted on the
+            // trace, so "+".join in bot_merge names the same set whichever
+            // order the pieces were found in.
+            sb.Append("\"gearIds\":").Append(StrList(t.WornAtDeath)).Append(',');
+            sb.Append("\"levelAtDeath\":").Append(t.LevelAtDeath).Append(',');
+
             sb.Append("\"fights\":[");
             for (int i = 0; i < t.Fights.Count; i++)
             {
@@ -535,7 +568,16 @@ namespace PrincesPalace.Editor.Bot
                 sb.Append("{\"step\":").Append(r.Step);
                 sb.Append(",\"nodeId\":").Append(r.NodeId);
                 sb.Append(",\"offerItemIds\":").Append(StrList(r.OfferItemIds));
-                sb.Append(",\"pickedIndex\":").Append(r.PickedIndex).Append('}');
+                sb.Append(",\"pickedIndex\":").Append(r.PickedIndex);
+
+                // WHAT WAS ACTUALLY WORN after this room, ids only. itemPickRate
+                // answers "how often is this taken when offered"; this answers
+                // the different and more interesting question of how often a
+                // taken item ever makes it onto a character -- an item picked
+                // every time and equipped never is a trap, and the two rates
+                // side by side are the only way to see one.
+                sb.Append(",\"equippedItemIds\":")
+                  .Append(StrList(r.Equipped.Select(e => e.ItemId).ToList())).Append('}');
             }
             sb.Append("],");
 

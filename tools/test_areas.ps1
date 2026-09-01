@@ -294,6 +294,10 @@ $PathAreas = @(
     # armour stand) into committed PNGs. 'art' because it produces art, 'ui'
     # because every consumer is a screen tree.
     @{ Pattern = '^Assets/_Project/Scripts/Editor/ProceduralSpriteBaker'; Areas = @('art', 'ui') }
+    # The batch entry point. Its own row because Editor/ had no catch-all and
+    # an edit to BalanceBotRunner.cs landed in -Changed's UNMAPPED list --
+    # which exits 2 and runs nothing, on a file whose whole job is the bot.
+    @{ Pattern = '^Assets/_Project/Scripts/Editor/Bot/'; Areas = @('combat', 'run') }
     @{ Pattern = '^Assets/_Project/Scripts/Editor/SceneBuilder'; Areas = @('ui', 'hub') }
     @{ Pattern = '^Assets/_Project/Scripts/Editor/ContentBuilder'; Areas = @('content') }
     # Dev-only menu item that opens Fight.unity and forces FightBootstrap's

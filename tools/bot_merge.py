@@ -180,6 +180,7 @@ def cell_json(runs, cap):
             ((rnd.get("offerIds", []), rnd.get("pickedIndex", -1))
              for r in runs for rnd in r.get("relicRounds", []))
         ),
+        "itemEquipRate": equip_rate(r.get("rooms", []) for r in runs),
     }
     return out
 
@@ -288,14 +289,54 @@ def build_diversity(runs, cap):
     seeds.
     """
     if not runs:
-        return {"distinctRelicSets": 0, "distinctTalentSets": 0}
+        return {"distinctRelicSets": 0, "distinctTalentSets": 0, "distinctGearSets": 0}
 
     take = max(1, int(math.ceil(len(runs) * 0.10)))
     deepest = sorted(runs, key=lambda r: -depth_of(r, cap))[:take]
 
     relic_sets = {"+".join(sorted(r.get("relicIds", []))) for r in deepest}
     talent_sets = {"+".join(sorted(r.get("talentIds", []))) for r in deepest}
-    return {"distinctRelicSets": len(relic_sets), "distinctTalentSets": len(talent_sets)}
+    # The third axis. Relics and talents are chosen from a handful of options;
+    # the paperdoll is eight slots filled out of everything the run was offered,
+    # so it is where most of a build's actual variation lives -- and it read as
+    # nothing at all until the bot started wearing what it picked up.
+    gear_sets = {"+".join(sorted(r.get("gearIds", []))) for r in deepest}
+    return {
+        "distinctRelicSets": len(relic_sets),
+        "distinctTalentSets": len(talent_sets),
+        "distinctGearSets": len(gear_sets),
+    }
+
+
+def equip_rate(room_lists):
+    """equips / offers, per id that was ever offered.
+
+    The companion to pick_rate, and the pair is the point. pick_rate answers
+    "when this is on the table, how often is it taken"; this answers "how often
+    does a copy of it end up on somebody". An item with a high pick rate and a
+    zero equip rate is a trap: it looks like the best thing in the offer and is
+    never worth wearing. Neither number can show that on its own.
+
+    Denominator is OFFERS, not picks, so the two rates are read against the
+    same base -- a per-pick rate would divide by a number that is itself a
+    policy decision and move when the archetype changed its mind. An id never
+    offered is omitted, exactly as pick_rate omits it.
+    """
+    offered = {}
+    equipped = {}
+
+    for rooms in room_lists:
+        for room in rooms:
+            for item_id in room.get("offerItemIds", []):
+                if not item_id:
+                    continue
+                offered[item_id] = offered.get(item_id, 0) + 1
+            for item_id in room.get("equippedItemIds", []):
+                if not item_id:
+                    continue
+                equipped[item_id] = equipped.get(item_id, 0) + 1
+
+    return {k: num(share(equipped.get(k, 0), offered[k])) for k in sorted(offered)}
 
 
 def pick_rate(offer_rows):

@@ -313,7 +313,9 @@ def render_cell_table(cell, prev_cell):
 
     diversity = cell.get("buildDiversity", {})
     prev_diversity = (prev_cell or {}).get("buildDiversity", {})
-    for key, label in [("distinctRelicSets", "distinct relic sets"), ("distinctTalentSets", "distinct talent sets")]:
+    for key, label in [("distinctRelicSets", "distinct relic sets"),
+                       ("distinctTalentSets", "distinct talent sets"),
+                       ("distinctGearSets", "distinct gear sets")]:
         old = prev_diversity.get(key) if prev_cell else None
         new = diversity.get(key)
         rows.append((label, fmt_num(new), delta_html(old, new) if prev_cell else ""))
@@ -579,6 +581,13 @@ def render_html(summary, previous, batch_dir, previous_dir):
                 "item pick rate",
                 cell.get("itemPickRate", {}),
                 (prev_cell or {}).get("itemPickRate", {}) if prev_cell else None,
+            )
+        )
+        parts.append(
+            render_keyed_table(
+                "item equip rate",
+                cell.get("itemEquipRate", {}),
+                (prev_cell or {}).get("itemEquipRate", {}) if prev_cell else None,
             )
         )
         parts.append(

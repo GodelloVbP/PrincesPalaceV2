@@ -62,6 +62,17 @@ namespace PrincesPalace
         private const uint OfferStream = 103;
         private const uint RelicStream = 104;
 
+        // The three between-fight streams. Separate from each other and from
+        // the four above for the reason the four are separate: a stream is
+        // consumed a different number of times depending on what the policy
+        // does, and sharing one would make an extra tie-break in the equip pass
+        // shift the map choice two rooms later. Started where the block above
+        // ends rather than reusing a gap, so a stream id is never ambiguous
+        // about which decision it seeded.
+        private const uint PresetStream = 105;
+        private const uint EquipStream = 106;
+        private const uint LevelStream = 107;
+
         // ---- what one run hands back --------------------------------------------
 
         // One relic-draft round, which RunTrace has no field for.
@@ -250,7 +261,12 @@ namespace PrincesPalace
             SaveData save;
             using (BotPhaseTimers.Measure(BotPhase.PresetBuild))
             {
-                save = ProfilePresets.Build(profile);
+                // THE ARCHETYPE BUILDS ITS OWN CHARACTER. Where the level's
+                // points go and what the embers buy are decisions with the same
+                // standing as which room to walk into, and a preset that made
+                // them by house rule was sanding half the archetype gap off
+                // before the run started -- see ProfilePresets' own header.
+                save = ProfilePresets.Build(profile, runPolicy, StreamFor(seed, PresetStream, 0, 0));
             }
 
             if (save == null)
@@ -270,6 +286,18 @@ namespace PrincesPalace
             {
                 Draft(seed, runPolicy, result);
             }
+
+            // DRESS BEFORE WALKING IN. A player opens the character sheet on
+            // the way out of the hub and wears the best of what they own; the
+            // bot did not, so every batch before this measured a Late profile
+            // fighting in a level-1 starting kit.
+            //
+            // AFTER the draft rather than before it AND after -- the plan asks
+            // for a pass at both points, and the draft touches relics, never
+            // gear or the bag, so the earlier of the two could only ever find
+            // exactly what this one finds. One pass, at the later point, is the
+            // same answer for half the work.
+            result.Trace.EquippedAtStart.AddRange(EquipPassTraced(seed, save, runPolicy, step: -1, node: 0));
 
             // The last state seen while the run was still alive. EndRun
             // replaces the snapshot and strips the stockpile, so anything read
@@ -515,6 +543,16 @@ namespace PrincesPalace
 
             CheckRewardsDidNotGoBackwards(save, goldBefore, levelBefore, expBefore, step, result);
 
+            // AFTER the settlement, because the settlement is what applies the
+            // experience (RewardApplier, inside SettleFight) -- claiming before
+            // it would collect the track through the level the party had
+            // walking in and leave this fight's own level-up owed until the
+            // next one.
+            using (BotPhaseTimers.Measure(BotPhase.LevelUp))
+            {
+                CollectLevelUps(seed, save, runPolicy, step);
+            }
+
             if (RunManager.HasRun && RunManager.Choices().Count == 0)
             {
                 result.Hits.Add(new InvariantHit("StuckAfterWin",
@@ -529,6 +567,96 @@ namespace PrincesPalace
 
             CaptureWhatTheRunHolds(save, result);
             return true;
+        }
+
+        // ---- wearing what the run has picked up -----------------------------------
+
+        // ONE EQUIP PASS: every fielded character, every slot, the best legal
+        // thing in the bag.
+        //
+        // The rules are GearEvaluator's, which are the character sheet's; this
+        // only decides WHEN to ask, and the answer is the two moments a player
+        // would -- on the way out of the hub, and after taking a reward. Not
+        // after every room: nothing else puts anything in the bag, so a pass
+        // anywhere else would be a scan that can only find what the last one
+        // already took.
+        //
+        // NOTHING IS EVER UNEQUIPPED, and RunManager.EndRun clearing both gear
+        // and bag is why -- see GearEvaluator.EquipBestGear's own note.
+        private static List<GearEvaluator.Equipped> EquipPass(
+            ulong seed, SaveData save, IRunPolicy runPolicy, int step, int node)
+        {
+            using (BotPhaseTimers.Measure(BotPhase.Equip))
+            {
+                var worn = GearEvaluator.EquipBestGear(save, runPolicy, StreamFor(seed, EquipStream, step, node));
+                if (worn.Count > 0) SaveSlotManager.SaveCurrent();
+                return worn;
+            }
+        }
+
+        private static List<EquipTrace> EquipPassTraced(
+            ulong seed, SaveData save, IRunPolicy runPolicy, int step, int node)
+        {
+            return EquipPass(seed, save, runPolicy, step, node)
+                .Select(e => new EquipTrace
+                {
+                    CharacterId = e.CharacterId,
+                    ItemId = e.ItemId,
+                    Slot = e.Slot,
+                    Plus = e.Plus,
+                })
+                .ToList();
+        }
+
+        // ---- collecting a level-up ---------------------------------------------------
+
+        // WHAT A PLAYER DOES AFTER A WON FIGHT, which the bot did none of.
+        //
+        // RewardApplier deliberately stopped claiming the reward track (its own
+        // header says so at length: collection is something the player does
+        // now, from the reward-track screen). So a bot that only settled the
+        // fight levelled up and then never collected the stat points, max
+        // health, Favor or exp-find those levels owed -- for a Late profile
+        // mid-run that is dozens of unclaimed nodes, and the batch reported it
+        // as the game being hard.
+        //
+        // ClaimTrackRewards is idempotent against its own watermark, so calling
+        // it after every won fight costs nothing on the fights that crossed no
+        // level. Only the four GRANT kinds need this; every UNLOCK on the track
+        // (respec, wider offers, second life, the extra starting relics) is a
+        // pure function of `level` and is answered wherever it is used --
+        // SquadTrack reads them straight through, so they need no claim and
+        // there is nothing else here to collect.
+        private static void CollectLevelUps(
+            ulong seed, SaveData save, IRunPolicy runPolicy, int step)
+        {
+            if (save == null) return;
+
+            bool changed = false;
+
+            foreach (var character in save.ActiveSquad())
+            {
+                if (character == null) continue;
+
+                if (character.ClaimTrackRewards()) changed = true;
+
+                int guard = 0;
+                while (character.unspentStatPoints > 0 && guard++ < 1000)
+                {
+                    var options = GearEvaluator.StatOptionsFor(character);
+                    int index = runPolicy.ChooseStat(
+                        options, ViewOf(save), StreamFor(seed, LevelStream, step, guard));
+
+                    var score = index >= 0 && index < options.Count
+                        ? (Domain.Stats.AbilityScore)options[index].Score
+                        : Domain.Stats.AbilityScores.All[0];
+
+                    if (!character.Invest(score)) break;
+                    changed = true;
+                }
+            }
+
+            if (changed) SaveSlotManager.SaveCurrent();
         }
 
         // ---- the post-fight offer ------------------------------------------------
@@ -567,12 +695,28 @@ namespace PrincesPalace
 
             roomTrace.OfferItemIds.AddRange(offers.Select(o => o.ItemId));
 
-            int index = runPolicy.ChooseOffer(offers, ViewOf(save), offerRng);
+            // WHAT EACH ONE IS ACTUALLY WORTH, priced by this archetype's own
+            // weights against the squad's current loadout. Without it
+            // ChooseOffer ranks on tier-then-plus, which is blind to the one
+            // thing that decides a pick: a tier-3 helm is worse than a tier-2
+            // sword to a character with an empty hand, and worthless to one
+            // already wearing a better helm.
+            var scores = GearEvaluator.ScoreOffers(save, offers, runPolicy.Gear);
+
+            int index = runPolicy.ChooseOffer(offers, ViewOf(save).WithOfferScores(scores), offerRng);
             if (index < 0 || index >= offers.Count) return;
 
             var taken = offers[index];
             RunOrchestrator.TakeOffer(save, taken);
             roomTrace.PickedIndex = index;
+
+            // AND THEN PUT IT ON, if it beats what is worn. TakeOffer already
+            // auto-equips into an EMPTY slot -- that is the game's own rule for
+            // a reward that fills a hole -- but a slot already holding
+            // something is deliberately left to the player, and this is the bot
+            // being that player.
+            roomTrace.Equipped.AddRange(
+                EquipPassTraced(seed, save, runPolicy, roomTrace.Step, node.Id));
 
             // "A taken offer not landing in stockpiledItems" (plan §3), with the
             // one legitimate exception spelled out rather than assumed:
@@ -638,6 +782,20 @@ namespace PrincesPalace
                 .Distinct()
                 .OrderBy(id => id, StringComparer.Ordinal)
                 .ToList() ?? new List<string>();
+
+            // WHAT THE PARTY IS WEARING, captured on the same schedule and for
+            // the same reason as the relics beside it: EndRun clears the
+            // paperdoll, so the last live reading is the only one there will
+            // ever be. Onto the trace rather than the result, because a loadout
+            // is a decision the run made -- see RunTrace.WornAtDeath.
+            result.Trace.WornAtDeath = save?.ActiveSquad()
+                .Where(c => c?.equipment != null)
+                .SelectMany(c => c.equipment.EquippedItemIds())
+                .Where(id => !string.IsNullOrEmpty(id))
+                .OrderBy(id => id, StringComparer.Ordinal)
+                .ToList() ?? new List<string>();
+
+            result.Trace.LevelAtDeath = save?.ActiveSquad().Sum(c => c?.level ?? 0) ?? 0;
 
             result.ConsumablesLeftAtEnd = save?.stockpiledItems
                 .Where(e => e != null && e.count > 0)

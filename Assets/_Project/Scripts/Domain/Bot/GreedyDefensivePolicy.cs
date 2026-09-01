@@ -287,11 +287,41 @@ namespace PrincesPalace.Domain.Bot
         // So this reads exactly as "the option carries no effect type" in
         // the brief's own words, and falls back to GreedyAggressivePolicy's
         // read of "best": highest tier, then highest plus, ties by rng.
+        // The non-identifiability above is still true OF THE OFFER, and is
+        // exactly why the score now arrives on the view instead: Core's
+        // GearEvaluator resolves the id through ContentDatabase, prices the
+        // swap with this archetype's own defensive weights, and hands back one
+        // number per offer. The tier/plus read below is the fallback for when
+        // nothing scored them.
         public int ChooseOffer(IReadOnlyList<ItemOffer> offers, RunView view, SeededRandom rng)
         {
+            var scores = view.OfferScores;
+            if (scores != null && scores.Count == offers.Count && offers.Count > 0)
+            {
+                return BestIndexTiedByRng(offers.Count, i => scores[i], rng);
+            }
+
             return BestIndexTiedByRng(offers.Count,
                 i => (offers[i].Tier, offers[i].Plus),
                 rng);
+        }
+
+        // HEALTH AND DEFENCE HEAVY -- see GearWeights.Defensive for the ratio
+        // and why offence is not zeroed.
+        public GearWeights Gear => GearWeights.Defensive;
+
+        public int ChooseStat(IReadOnlyList<StatOption> options, RunView view, SeededRandom rng)
+        {
+            if (options.Count == 0) return -1;
+            var weights = Gear;
+            return BestIndexTiedByRng(options.Count, i => weights.Score(options[i].Deltas), rng);
+        }
+
+        public int ChooseTalent(IReadOnlyList<TalentOption> options, RunView view, SeededRandom rng)
+        {
+            if (options.Count == 0) return -1;
+            var weights = Gear;
+            return BestIndexTiedByRng(options.Count, i => weights.Score(options[i].Deltas), rng);
         }
 
         // Same non-identifiability as ChooseOffer: RelicOption

@@ -72,11 +72,18 @@ def a_run(seed, archetype, depth, capped=False, relics=None, replayed=True, matc
         "swingDenomTurns": 6,
         "relicIds": relics if relics is not None else ["bloodlust"],
         "talentIds": ["hardy"],
+        # Two distinct paperdolls across the fixture's seeds, so
+        # distinctGearSets is a number that can be wrong rather than a
+        # constant 1 that passes whatever build_diversity does.
+        "gearIds": ["iron_coif", "iron_sword"] if seed % 2 else ["iron_sword"],
+        "levelAtDeath": 3 + seed,
         "fights": fights,
         "rooms": [
             {"step": depth - 2, "nodeId": 3 + (seed % 2),
-             "offerItemIds": ["healing_draught", "iron_ration"], "pickedIndex": seed % 2},
-            {"step": depth - 1, "nodeId": 7, "offerItemIds": [], "pickedIndex": -1},
+             "offerItemIds": ["healing_draught", "iron_ration"], "pickedIndex": seed % 2,
+             "equippedItemIds": ["iron_sword"] if seed % 2 else []},
+            {"step": depth - 1, "nodeId": 7, "offerItemIds": [], "pickedIndex": -1,
+             "equippedItemIds": []},
         ],
         "relicRounds": [
             {"offerIds": ["bloodlust", "tin_whistle"], "pickedIndex": 0 if seed % 2 else 1},
@@ -270,6 +277,33 @@ class MergeTests(unittest.TestCase):
         self.assertIn("4/12 runs replayed", text)
         self.assertIn("StalledEnemyTurn x2", text)
 
+
+    def test_build_diversity_counts_gear_sets_beside_relics_and_talents(self):
+        summary = self.merged(self.single)
+        diversity = summary["cells"][0]["buildDiversity"]
+
+        # Present at all -- the axis was missing entirely, and a missing key
+        # renders as a blank row rather than as a failure.
+        self.assertIn("distinctGearSets", diversity)
+        self.assertGreaterEqual(diversity["distinctGearSets"], 1)
+
+    def test_item_equip_rate_is_equips_over_offers_for_every_offered_id(self):
+        summary = self.merged(self.single)
+        cell = summary["cells"][0]
+        equip = cell["itemEquipRate"]
+        pick = cell["itemPickRate"]
+
+        # Same denominator as itemPickRate, so the two tables line up key for
+        # key -- that pairing is the whole reason the rate is per OFFER.
+        self.assertEqual(sorted(equip), sorted(pick))
+
+        # iron_sword is worn in the odd seeds and never offered, so it must
+        # NOT appear: an id with no offers is omitted, exactly as pick_rate
+        # omits it, rather than dividing by zero.
+        self.assertNotIn("iron_sword", equip)
+
+        for value in equip.values():
+            self.assertGreaterEqual(value, 0)
 
 def num_or_float(value):
     return bot_merge.num(value)

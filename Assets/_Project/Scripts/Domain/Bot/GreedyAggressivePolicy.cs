@@ -154,11 +154,60 @@ namespace PrincesPalace.Domain.Bot
             return choices[0];
         }
 
+        // SCORED WHEN THERE IS A SCORE, tier-then-plus when there is not.
+        //
+        // The fallback is what this method used to be outright, and its
+        // comment (kept, on GreedyDefensive's copy) explains why: an ItemOffer
+        // names an id, a tier and a plus, and nothing about what wearing it
+        // would DO. That is still true of the offer -- what changed is that
+        // the driver now asks Core's GearEvaluator the same question the
+        // Reckoning screen asks it for the player, and hands the answers down
+        // on the view. Ranking by tier alone made this archetype take a tier-3
+        // helm over a tier-2 sword while holding nothing in either hand, which
+        // is not "aggressive", it is "reads only the biggest number".
+        //
+        // The fallback is not dead code: a squad with nobody who can wear any
+        // of the three scores all three at zero, and RunView.OfferScores is
+        // empty whenever the driver had no live save to score against.
         public int ChooseOffer(IReadOnlyList<ItemOffer> offers, RunView view, SeededRandom rng)
         {
+            var scores = view.OfferScores;
+            if (scores != null && scores.Count == offers.Count && offers.Count > 0)
+            {
+                return BestIndexTiedByRng(offers.Count, i => scores[i], rng);
+            }
+
             return BestIndexTiedByRng(offers.Count,
                 i => (offers[i].Tier, offers[i].Plus),
                 rng);
+        }
+
+        public GearWeights Gear => GearWeights.Aggressive;
+
+        // THE SAME WEIGHTS THE GEAR PICK USES, applied to what one point would
+        // derive. Strength is not hardcoded here and must not be: STR derives
+        // nothing through AbilityDerivation and reaches damage through weapon
+        // scaling instead, so "the score that raises attack most" is DEX for a
+        // character holding a finesse weapon and STR for one holding a
+        // greatsword. Core measures both and this ranks the answers.
+        public int ChooseStat(IReadOnlyList<StatOption> options, RunView view, SeededRandom rng)
+        {
+            if (options.Count == 0) return -1;
+            var weights = Gear;
+            return BestIndexTiedByRng(options.Count, i => weights.Score(options[i].Deltas), rng);
+        }
+
+        // Best measurable orb, ties by rng -- and a tie is the common case,
+        // because a talent whose whole effect is a combat rule change derives
+        // nothing this can see (see TalentOption's header). Taking one anyway
+        // rather than returning -1 is deliberate: an unspent ember buys
+        // nothing, and the tree's own prerequisite chain means the orb taken
+        // now is what opens the one that might be measurable later.
+        public int ChooseTalent(IReadOnlyList<TalentOption> options, RunView view, SeededRandom rng)
+        {
+            if (options.Count == 0) return -1;
+            var weights = Gear;
+            return BestIndexTiedByRng(options.Count, i => weights.Score(options[i].Deltas), rng);
         }
 
         public int ChooseRelic(IReadOnlyList<RelicOption> offer, RunView view, SeededRandom rng)

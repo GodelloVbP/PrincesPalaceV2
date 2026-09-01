@@ -32,5 +32,23 @@ namespace PrincesPalace.Domain.Bot
         {
             return rng.NextInt(0, offer.Count);
         }
+
+        // NO OPINION, which is this archetype's whole answer to every
+        // question. Deliberately Indifferent and not Uniform: an all-ones
+        // vector still RANKS (a +40 health belt beats a +2 speed ring), and
+        // ranking is exactly what this archetype does not do. Every legal
+        // candidate scores zero, ties, and Core's evaluator draws between them
+        // with the seeded rng -- see GearWeights.Indifferent.
+        public GearWeights Gear => GearWeights.Indifferent;
+
+        public int ChooseStat(IReadOnlyList<StatOption> options, RunView view, SeededRandom rng)
+        {
+            return options.Count == 0 ? -1 : rng.NextInt(0, options.Count);
+        }
+
+        public int ChooseTalent(IReadOnlyList<TalentOption> options, RunView view, SeededRandom rng)
+        {
+            return options.Count == 0 ? -1 : rng.NextInt(0, options.Count);
+        }
     }
 }

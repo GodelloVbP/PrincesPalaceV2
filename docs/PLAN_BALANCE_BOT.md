@@ -312,6 +312,67 @@ profile. If it does not, the policy is wrong, not the game.
   Treasure is always taken over a plain fight. This is `GreedyAggressive`'s
   map rule; `RandomLegal` picks uniformly.
 
+### What a bot does between fights (added; replaces the two lines that said it does not)
+
+The three lines this section used to carry -- stat points spent round-robin
+over the six ability scores, talents never bought, gear never worn -- are all
+gone. They were the reason every batch before `<this commit>` measured a
+character in starting gear with zero talents, which is not a configuration the
+game can produce: a Late profile is a level-60 character fighting in a level-1
+kit unless something dresses it.
+
+- **Gear.** `Core/Bot/GearEvaluator` scores a candidate by SIMULATING the
+  equip through `ItemDescription.SimulateEquip` -- the same clone-and-resolve
+  the character sheet's hover preview runs -- and reading the sheet's own
+  numbers back off the clone. Five axes: offence, health, defence
+  (physical+magical summed), speed, mana regen. Offence is the sheet's DMG
+  line (`WeaponPower.DisplayDamage` of whatever is live in the main hand),
+  NOT `StatBlock.attack`: `EffectiveStats` zeroes every worn item's attack
+  contribution on purpose (balance redesign D3), so a weapon scored off the
+  stat block prices at exactly zero. A candidate that would be inert the
+  moment it is worn is not a candidate.
+- **Preferences are the archetype's**, as a `GearWeights` vector on
+  `IRunPolicy`: aggressive 4:1:2:1:0.5, defensive 1:1.5:8:1:0.5, Lookahead2
+  forwards aggressive's, RandomLegal ranks NOTHING (an all-zero vector, so
+  every legal candidate ties and the seeded rng draws between them -- which
+  is uniform-among-legal falling out of the tie-break the other three already
+  use). The same vector prices stat points and talents, deliberately: an
+  archetype that fights defensively and levels aggressively is two archetypes,
+  and the archetype gap is the one graph the batch exists to draw.
+- **When.** One equip pass after the relic draft (which is also "at run
+  start" -- the draft touches relics, never gear), and one after every
+  `TakeOffer`. Nowhere else puts anything in the bag. Nothing is ever
+  unequipped: `EndRun` clears gear and bag anyway.
+- **Offers** are scored by the same evaluator and the score rides on
+  `RunView.OfferScores`; `ChooseOffer` ranks on it and falls back to
+  tier-then-plus when it is absent. The old tier-then-plus-only rule took a
+  tier-3 helm over a tier-2 sword while holding nothing in either hand.
+- **Level-ups.** After every won fight the driver calls
+  `Character.ClaimTrackRewards()` (idempotent against its own watermark) and
+  spends every `unspentStatPoints` one at a time, re-asking the archetype each
+  time. Only the four GRANT kinds need claiming; every UNLOCK on the track --
+  respec, wider offers, extra starting relics, second life -- is a pure
+  function of `level`, and `SquadTrack` reads them straight through, so there
+  is nothing else to collect.
+- **Talents are PRESET-ONLY, and that is a fact about the game, not a
+  shortcut.** Embers are paid only by `RunSettlement`, which runs only inside
+  `RunManager.EndRun` -- so they arrive after the descent is over. Spending
+  them needs the Talents scene, which `HubController` is the only thing that
+  navigates to; the map screen can reach only Hub and Fight. So embers can be
+  neither earned nor spent mid-run, and buying after each boss is not a thing
+  a player can do either.
+- **The ember budget.** One per boss the save had never killed before
+  (`EmberPayout.PerUniqueBoss = 1`), recorded against `defeatedBossIds` in the
+  same pass -- so the LIFETIME supply is not a rate, it is a fixed number
+  equal to the count of live boss definitions. Rule: Fresh holds none (it has
+  killed nothing); Mid and Late both hold the lifetime maximum, counted off
+  the content rather than hardcoded. Mid and Late come out identical here
+  because the game has nothing further to pay after the first of each boss.
+  **This is a finding as much as an assumption**: the content ships three live
+  bosses, one full talent path costs 45 embers and the per-character lifetime
+  cap is 30, so the tree is currently reachable to a depth of about four orbs
+  and no further.
+
 ## 6. Out of scope
 
 Balance *changes*. The bot reports; the author decides. The first batch's

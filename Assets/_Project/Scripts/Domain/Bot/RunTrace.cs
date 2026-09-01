@@ -34,6 +34,22 @@ namespace PrincesPalace.Domain.Bot
         public int PayoutExp;
     }
 
+    // One thing the bot put on, between rooms.
+    //
+    // A separate record rather than a widened RoomTrace field because equipping
+    // is not one decision per room: an equip pass walks eight slots for every
+    // fielded character and may move nothing or may move six things, and
+    // "which item, into which slot, on whom" is the question the report has to
+    // be able to ask. Same fields-only, plain-types shape TurnTrace has, and
+    // for the same reason -- this is written straight to JSON.
+    public sealed class EquipTrace
+    {
+        public string CharacterId;
+        public string ItemId;
+        public string Slot;
+        public int Plus;
+    }
+
     // One room, fight or otherwise.
     public sealed class RoomTrace
     {
@@ -42,6 +58,11 @@ namespace PrincesPalace.Domain.Bot
         public string RoomType;
         public List<string> OfferItemIds = new List<string>();
         public int PickedIndex;
+
+        // What the equip pass after this room put on. Empty for most rooms,
+        // which is the honest answer: a player does not re-dress after every
+        // fight either.
+        public List<EquipTrace> Equipped = new List<EquipTrace>();
     }
 
     // One whole run, one archetype, one profile, one seed.
@@ -56,6 +77,31 @@ namespace PrincesPalace.Domain.Bot
         public string DeathCause = "";
         public bool Capped;
 
+        // WHAT THE PARTY DIED WEARING, item ids across the whole fielded
+        // squad, ordinal-sorted so two runs that arrived at the same loadout by
+        // different routes read as the same set.
+        //
+        // On the trace rather than computed in the runner, unlike party max HP
+        // and the relic rounds: a loadout is a DECISION the run made and the
+        // trace is the record of decisions. It is also the only place it can be
+        // read at all -- RunManager.EndRun strips both gear and bag, so
+        // anything asked afterwards reports an empty paperdoll for every run,
+        // which is every run.
+        public List<string> WornAtDeath = new List<string>();
+
+        // The one equip pass that happens before any room does: the party
+        // dressing itself out of whatever the profile's starting stock holds.
+        // Not a RoomTrace, because there is no room yet -- and folding it into
+        // the first room's would make "what did the run pick up and put on"
+        // unanswerable for that room.
+        public List<EquipTrace> EquippedAtStart = new List<EquipTrace>();
+
+        // The fielded squad's total level when the run ended. Summed rather
+        // than per character because only Shawn is ever really fielded today,
+        // and a sum degrades correctly to "his level" while a first-member read
+        // would quietly start lying the day a second character is real.
+        public int LevelAtDeath;
+
         // A stable hash of the whole trace, for the determinism check: the
         // same seed/archetype/profile must produce the same hash twice.
         // FNV-1a over a canonical string rather than
@@ -67,7 +113,16 @@ namespace PrincesPalace.Domain.Bot
         {
             var sb = new StringBuilder();
             sb.Append(Seed).Append('|').Append(Archetype).Append('|').Append(Profile).Append('|');
-            sb.Append(DeathStep).Append('|').Append(DeathCause).Append('|').Append(Capped).Append(';');
+            sb.Append(DeathStep).Append('|').Append(DeathCause).Append('|').Append(Capped).Append('|');
+            sb.Append(LevelAtDeath).Append('|');
+            foreach (var id in WornAtDeath) sb.Append(id).Append('+');
+            sb.Append('|');
+            foreach (var worn in EquippedAtStart)
+            {
+                sb.Append(worn.CharacterId).Append('/').Append(worn.ItemId).Append('/')
+                  .Append(worn.Slot).Append('/').Append(worn.Plus).Append('|');
+            }
+            sb.Append(';');
 
             foreach (var fight in Fights)
             {
@@ -90,7 +145,13 @@ namespace PrincesPalace.Domain.Bot
             {
                 sb.Append(room.Step).Append(',').Append(room.NodeId).Append(',').Append(room.RoomType).Append(',');
                 foreach (var id in room.OfferItemIds) sb.Append(id).Append('+');
-                sb.Append(',').Append(room.PickedIndex).Append(';');
+                sb.Append(',').Append(room.PickedIndex).Append(',');
+                foreach (var worn in room.Equipped)
+                {
+                    sb.Append(worn.CharacterId).Append('/').Append(worn.ItemId).Append('/')
+                      .Append(worn.Slot).Append('/').Append(worn.Plus).Append('|');
+                }
+                sb.Append(';');
             }
 
             return Fnv1a(sb.ToString());

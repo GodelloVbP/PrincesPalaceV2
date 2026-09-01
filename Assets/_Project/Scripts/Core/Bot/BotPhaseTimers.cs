@@ -65,11 +65,19 @@ namespace PrincesPalace
         // through the same code), so this is the one line that says what
         // sampling the replay would buy.
         Replay = 13,
+
+        // THE TWO THINGS A PLAYER DOES BETWEEN FIGHTS, and the two the bot did
+        // none of before: wearing the best of what it owns, and collecting the
+        // level-ups it has earned. Given their own rows because both run a
+        // clone-and-re-resolve per candidate (see GearEvaluator) and that is
+        // the one new cost in this phase worth being able to see grow.
+        Equip = 14,
+        LevelUp = 15,
     }
 
     public static class BotPhaseTimers
     {
-        private const int PhaseCount = 14;
+        private const int PhaseCount = 16;
 
         private static readonly long[] Elapsed = new long[PhaseCount];
         private static readonly long[] Calls = new long[PhaseCount];

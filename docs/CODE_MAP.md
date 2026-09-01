@@ -496,6 +496,32 @@ the choice of `UnityEngine.Random` for the offer roll (deliberately unseeded --
 see `PLAN_BALANCE_BOT.md` F3), `ReckoningController` keeps its take-once guard
 and repaint, `RelicDraftController` keeps paging and selection.
 
+### Two more one-rulebook seams (`Core/EquipmentOps.cs`, `Core/TalentOps.cs`)
+
+Same extraction, same reason, one layer smaller. **`EquipmentOps`** holds the
+save-side half of putting gear on and taking it off: read max health, call
+`EquipMove` (Domain, which owns every rule about what can be worn), then
+`RunEncounter.ScaleCarriedHealth` -- carried health is a fraction of a max that
+gear moves. That pair had three copies (`CharacterDossierController`'s
+`EquipFromPack` and `UnequipSlot`, `RunOrchestrator.AutoEquipIntoAnEmptySlot`)
+and the bot is the fourth caller. It deliberately does not persist; the three
+callers honestly differ on when they write.
+
+**`TalentOps`** holds `BuildTree` and the kindle rule (`TalentPage.CanInvest`,
+write the content's own id, subtract the cost) out of `TalentController`, which
+keeps the beat, the save write and the repaint. Without it nothing that is not
+a MonoBehaviour could buy a talent, which is why the bot reported
+`distinctTalentSets: 1` for every cell.
+
+**`ItemDescription.SimulateEquip`** is the third: the clone-and-resolve out of
+`Compare`, made public so a caller can read numbers `ItemComparison` does not
+carry -- specifically a weapon's, since `EffectiveStats` zeroes gear's attack
+contribution and the weapon reaches combat as `WeaponPower` at the
+`FightEncounterAdapter` seam.
+
+Pinned by the characterization tests that already drove the real screens:
+`DossierEquipTests`, `TalentInvestmentTests`, `DossierPackCaptureTests`.
+
 ### The balance bot (`Domain/Bot`, `Core/Bot`, `Editor/Bot`)
 
 `Domain/Bot` -- engine-free brains: `IFightPolicy`/`IRunPolicy` and the four
@@ -503,9 +529,23 @@ archetypes (`RandomLegalPolicy`, `GreedyAggressivePolicy`,
 `GreedyDefensivePolicy`, `Lookahead2Policy`, registered in `Archetypes.cs`),
 `FightRunner` (plays one `FightSession` to its end with one policy),
 `FightInvariants`/`InvariantHit` (the fight-level half of the plan's bug list),
-`RunTrace`. `Core/Bot/BotRunDriver.cs` plays one whole run through
-`RunOrchestrator`'s doors (draft, walk, fight, settle, offer) and adds the
-run-level invariants. `Editor/Bot/BalanceBotRunner.cs` is the `-executeMethod`
+`RunTrace`, and `GearWeights`/`StatDeltas`/`StatOption`/`TalentOption` -- the
+archetype's out-of-fight PREFERENCES, as a weight vector, because Domain cannot
+resolve an item id into what wearing it would do.
+
+`Core/Bot/GearEvaluator.cs` is the other side of that wall: it applies an
+archetype's weights to the character sheet's own numbers
+(`ItemDescription.SimulateEquip`, `ContentDatabase.EffectiveStats`,
+`EquippedWeaponPower` through `WeaponPower.DisplayDamage`, `ActiveLoadout` for
+legality) and answers three questions -- what is worth wearing, where a stat
+point should go, and what one talent would derive. `Core/Bot/ProfilePresets.cs`
+uses it to build Mid/Late: level, claim the track, spend every point, then
+spend an ember budget counted off the live boss definitions.
+
+`Core/Bot/BotRunDriver.cs` plays one whole run through `RunOrchestrator`'s
+doors (draft, walk, fight, settle, offer) and adds the run-level invariants,
+the equip passes (after the draft and after every `TakeOffer`) and the level-up
+collection after every won fight. `Editor/Bot/BalanceBotRunner.cs` is the `-executeMethod`
 batch entry `tools/bot.ps1` launches. See `docs/PLAN_BALANCE_BOT.md` for the
 architecture and `docs/PLAN_BALANCE_BOT.md`'s "How to run and read it" section
 for the day-to-day commands.

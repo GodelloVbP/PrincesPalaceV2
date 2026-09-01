@@ -204,5 +204,17 @@ namespace PrincesPalace.Domain.Bot
 
         public int ChooseRelic(IReadOnlyList<RelicOption> offer, RunView view, SeededRandom rng) =>
             _runBrain.ChooseRelic(offer, view, rng);
+
+        // Gear, stat points and talents go the same way as the three above,
+        // and for the identical reason: the plan says this archetype's edge is
+        // its FIGHT lookahead, so anything else it did differently would
+        // contaminate the one comparison it exists to make.
+        public GearWeights Gear => _runBrain.Gear;
+
+        public int ChooseStat(IReadOnlyList<StatOption> options, RunView view, SeededRandom rng) =>
+            _runBrain.ChooseStat(options, view, rng);
+
+        public int ChooseTalent(IReadOnlyList<TalentOption> options, RunView view, SeededRandom rng) =>
+            _runBrain.ChooseTalent(options, view, rng);
     }
 }

@@ -70,10 +70,16 @@ swingTurns        int   -- commands that moved party HP by >25% of max
 swingDenomTurns   int   -- commands that were eligible to (max HP known)
 relicIds          string[] -- held when the run ended
 talentIds         string[] -- ditto
+gearIds           string[] -- worn across the fielded squad when the run
+                              ended, ordinal-sorted; the third build axis,
+                              feeds buildDiversity.distinctGearSets
+levelAtDeath      int   -- fielded squad's total level when the run ended
 skillsUsed        string[] -- distinct ids behind "Skill:" turn labels
 fights[]          step, floor, roomType, enemyIds, turns, damageTaken,
                   partyHpOut, partyMaxHp, usedItem
-rooms[]           step, nodeId, offerItemIds, pickedIndex
+rooms[]           step, nodeId, offerItemIds, pickedIndex,
+                  equippedItemIds -- what the equip pass after this room
+                  actually put on; feeds itemEquipRate
 relicRounds[]     offerIds, pickedIndex   -- -1 for "took nothing"
 bugs[]            invariant, step, nodeId, detail, lastActions, stack
                   (the merger adds seed/archetype/profile on the way out)
@@ -113,6 +119,20 @@ RunTrace
   Profile       string, e.g. "Fresh"
   Fights        FightTrace[]
   Rooms         RoomTrace[]
+  EquippedAtStart EquipTrace[] -- the one equip pass that happens before any
+                        room does: the party dressing itself out of the
+                        profile's starting stock. Not a RoomTrace because
+                        there is no room yet.
+  WornAtDeath   string[] -- item ids across the fielded squad when the run
+                        ended, ordinal-sorted. On the trace and not computed
+                        in the runner because it is the only place it can be
+                        read at all: RunManager.EndRun strips the paperdoll,
+                        so anything asked afterwards reports empty for every
+                        run, which is every run.
+  LevelAtDeath  int  -- fielded squad's total level. Summed rather than per
+                        character: only Shawn is really fielded today, and a
+                        sum degrades correctly while a first-member read
+                        would start lying the day a second character is real.
   DeathStep     int  -- the Step of the fight or room the run ended on;
                         meaningless (0) when Capped is true
   DeathCause    string -- free text, human-readable, e.g. "killed by
@@ -153,6 +173,15 @@ RoomTrace
   RoomType      string
   OfferItemIds  string[] -- empty when this room made no item offer
   PickedIndex   int      -- -1 when nothing was offered or nothing taken
+  Equipped      EquipTrace[] -- what the equip pass after this room put on.
+                        Empty for most rooms, which is the honest answer: a
+                        player does not re-dress after every fight either.
+
+EquipTrace
+  CharacterId   string -- CharacterDefinition.id it was worn by
+  ItemId        string
+  Slot          string -- EquipmentSlot name, e.g. "Weapon1"
+  Plus          int    -- which copy; the bag keys stacks on it
 ```
 
 ## `summary.json`
@@ -189,8 +218,9 @@ RoomTrace
       "steamrollByFloor": { "1": 0.35, "2": 0.19 },
       "consumableUseShare": 0.44,
       "potionsWastedMean": 1.2,
-      "buildDiversity": { "distinctRelicSets": 41, "distinctTalentSets": 3 },
+      "buildDiversity": { "distinctRelicSets": 41, "distinctTalentSets": 3, "distinctGearSets": 28 },
       "itemPickRate": { "healing_draught": 0.6, "iron_ration": 0.15 },
+      "itemEquipRate": { "healing_draught": 0.0, "iron_ration": 0.11 },
       "relicPickRate": { "bloodlust": 0.3 }
     }
   ],
@@ -301,14 +331,26 @@ RoomTrace
 - `potionsWastedMean`: mean, across the cell's runs, of consumables left in
   the stockpile unused when the run ends (death or cap). "Potion" here means
   any consumable item, not a specific item id.
-- `buildDiversity`: `distinctRelicSets` / `distinctTalentSets` = count of
-  distinct (order-independent) relic-id sets / talent-id sets held at death
-  or cap, among the cell's deepest 10% of runs by `DeathStep` (at least 1
-  run; round up).
+- `buildDiversity`: `distinctRelicSets` / `distinctTalentSets` /
+  `distinctGearSets` = count of distinct (order-independent) relic-id,
+  talent-id and worn-item-id sets held at death or cap, among the cell's
+  deepest 10% of runs by `DeathStep` (at least 1 run; round up). Gear is the
+  third axis and the one where most of a build's variation actually lives:
+  relics and talents are picked from a handful of options, the paperdoll is
+  eight slots filled out of everything the run was offered.
 - `itemPickRate` / `relicPickRate`: for each item/relic id that was ever
   offered in this cell, picks / offers (a `RoomTrace.PickedIndex >= 0`
   pointing at that id counts as a pick). An id never offered is omitted here
   (it shows up in `coverage` instead, not as a `0/0` row).
+- `itemEquipRate`: for each item id that was ever OFFERED in this cell,
+  how many copies the equip pass actually put on somebody, over offers.
+  Denominator is offers rather than picks deliberately, so this and
+  `itemPickRate` are read against the same base -- a per-pick rate would
+  divide by a number that is itself a policy decision. The pair is the point:
+  `itemPickRate` says "when this is on the table, how often is it taken",
+  this says "how often does it end up on anybody". A high pick rate with a
+  zero equip rate is a trap item -- it looks like the best thing in the offer
+  and is never worth wearing -- and neither number can show that alone.
 
 **`decisionPressure`** — batch-wide, not per cell (it is specifically about
 archetypes disagreeing with each other, so it needs more than one archetype
