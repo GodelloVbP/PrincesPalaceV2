@@ -17,6 +17,7 @@ Recordings/
 test-results*.xml
 tools/screenshots/
 *.log
+reports/
 
 # rig_actor.py's review artifacts -- regenerated every run, meant to be
 # looked at locally before trusting a cut, never committed (same posture

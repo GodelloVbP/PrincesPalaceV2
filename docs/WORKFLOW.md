@@ -234,6 +234,7 @@ Triage order, cheapest first:
 | Re-running with nothing changed since the last synced build | `-SkipSync` is legal |
 | UI-visible change | also `tools/screenshot.ps1 -Panel <Name>` and actually look at the PNG |
 | Change to anything that MOVES (an ambient animator, an intro, a tween) | `tools/screenshot.ps1 -Runtime`. `-Panel`/`-All` render Edit Mode, which never ticks `Update()` — a static capture cannot show motion at all, and the pure-curve unit tests only prove the formulas vary, not that anything calls them |
+| Balance-bot batch (not a correctness gate — a report to read) | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/bot.ps1 -Runs 200 -Seed 1 -Archetypes RandomLegal,GreedyAggressive -Profiles Fresh -DepthCap 40`. Runs against the isolated `-TestRunner2` copy (same one PlayMode uses), writes `reports/bot/<timestamp>/` (gitignored — see `docs/PLAN_BALANCE_BOT.md`, `docs/BOT_SUMMARY_SCHEMA.md`), then renders `report.html` via `tools/bot_report.py` |
 
 ## 9. Commit conventions
 
