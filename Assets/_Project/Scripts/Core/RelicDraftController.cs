@@ -117,54 +117,12 @@ namespace PrincesPalace
             Paint();
         }
 
-        // What the CURRENT round offers.
-        //
-        // The round is derived from how many relics the run already holds
-        // rather than counted in a field, which is what makes a mid-draft
-        // reload safe: relicIds is persisted, so coming back re-derives the
-        // same round and -- because the seed is offset by that same count --
-        // re-offers the same cards. A counter in the controller would reset to
-        // round one and hand out a fresh offer, which is a re-roll by quitting.
-        private IEnumerable<RelicOption> Roll(ulong seed)
-        {
-            var save = SaveSlotManager.CurrentSave;
-            var earned = Achievements.EarnedIds(save);
-            var alreadyHeld = RunManager.Run?.relicIds ?? new List<string>();
-
-            var all = ContentDatabase.Relics
-                .Where(r => r != null)
-                .Select(r => new RelicOption(r.id, r.rarity, r.unlockedBy))
-                .ToList();
-
-            // Already-drafted relics are out of the pool. Draft() draws without
-            // replacement WITHIN one offer, which was the whole story when
-            // there was only ever one offer; across rounds nothing stopped the
-            // same relic coming back, and being offered what you are already
-            // carrying reads as a bug.
-            var available = RelicPool.Available(all, earned)
-                .Where(r => !alreadyHeld.Contains(r.Id))
-                .ToList();
-
-            // LEVEL 70: THE WHOLE POOL, IN AUTHORED ORDER, NOT A DRAW.
-            //
-            // "Choose your starting relics (instead of a random draft)" read
-            // literally: at this level there is no roll left to make, so there
-            // is no seed involved either. ContentDatabase.Relics is ordered
-            // content (IOrderedContent), so the order is the one somebody
-            // authored rather than whatever Resources.LoadAll returned -- which
-            // matters more here than usual, because the player is now scanning a
-            // list rather than reacting to three cards.
-            if (SquadTrack.HasUnlocked(TrackReward.ChosenStartingRelics))
-            {
-                return available;
-            }
-
-            // Weighted, so a Godlike relic stays a story. The seed is the run's
-            // own PLUS the round, so reloading before choosing offers the same
-            // three and the second round is not a repeat of the first.
-            var rng = new Domain.Rng.SeededRandom(seed + (ulong)alreadyHeld.Count);
-            return RelicPool.DraftWeighted(available, bound => rng.NextInt(0, bound));
-        }
+        // What the CURRENT round offers -- RunOrchestrator.RelicDraftOffer,
+        // where the roll moved so the bot drafts from the same pool with the
+        // same weighting (docs/PLAN_BALANCE_BOT.md F2). Everything about WHY
+        // the seed is offset by the round travelled with it.
+        private IEnumerable<RelicOption> Roll(ulong seed) =>
+            RunOrchestrator.RelicDraftOffer(seed);
 
         // How many pages the current offer needs. At least one, so an empty
         // pool still reads as a page rather than dividing by zero.
@@ -276,16 +234,11 @@ namespace PrincesPalace
                 return;
             }
 
-            run.relicIds ??= new List<string>();
-
             // Nothing selected is a legal answer. Descending with no relic is
             // worse than descending with one, which is the player's decision to
             // make and not this screen's to refuse.
             bool took = _selected >= 0 && _selected < _offer.Count;
-            if (took)
-            {
-                run.relicIds.Add(_offer[_selected].Id);
-            }
+            RunOrchestrator.TakeRelic(took ? _offer[_selected].Id : null);
 
             // ANOTHER ROUND, if the track has earned one and the player took
             // this one.
@@ -299,7 +252,7 @@ namespace PrincesPalace
             // An empty offer also ends it: with a pool smaller than the number
             // of rounds, there is eventually nothing left to show, and looping
             // on an empty offer would strand the player on a blank screen.
-            if (took && run.relicIds.Count < SquadTrack.StartingRelics())
+            if (took && RunOrchestrator.DraftHasAnotherRound())
             {
                 _selected = -1;
                 _page = 0;
@@ -310,18 +263,13 @@ namespace PrincesPalace
                 {
                     // Persisted BEFORE the next round is painted, so the round
                     // a reload comes back to is the one on screen.
-                    SaveSlotManager.SaveCurrent();
+                    RunOrchestrator.PersistDraft();
                     Paint();
                     return;
                 }
             }
 
-            // Marked drafted either way. Not derivable from the list being
-            // empty: a player who declines must not be asked again every time
-            // they walk back into the hub.
-            run.relicDrafted = true;
-            SaveSlotManager.SaveCurrent();
-
+            RunOrchestrator.FinishDraft();
             Close();
         }
 

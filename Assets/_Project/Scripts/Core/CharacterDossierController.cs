@@ -975,7 +975,7 @@ namespace PrincesPalace
             // modifierIds/riftTier travel through the same way plus does --
             // InventoryOps.TryRemoveAt inside TryEquip keys on the full
             // (itemId, plus, modifierIds, riftTier) stack (see
-            // ReckoningController.AutoEquipIntoAnEmptySlot's identical note),
+            // RunOrchestrator.AutoEquipIntoAnEmptySlot's identical note),
             // so omitting them here would look for the wrong stack and
             // silently strip a rolled item's affixes the moment it is worn
             // from the pack.

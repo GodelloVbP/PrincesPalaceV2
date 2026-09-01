@@ -171,7 +171,7 @@ namespace PrincesPalace.PlayModeTests
 
         // Whether `itemId` at `plus` ended up ANYWHERE this save can hold it --
         // the bag, or auto-equipped into a squad member's slot. Auto-equip
-        // (ReckoningController.AutoEquipIntoAnEmptySlot) moves a picked item
+        // (RunOrchestrator.AutoEquipIntoAnEmptySlot) moves a picked item
         // straight into an empty slot instead of leaving it in the bag, so
         // "the pick reached the save" can no longer be read off bag count
         // alone -- only one of these two places will have gained it.

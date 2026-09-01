@@ -114,7 +114,7 @@ namespace PrincesPalace
             // turn from a turn state it assumes is already settled.
             built.Session.Begin();
 
-            fight.Bind(built.Session, EncounterFor(RunManager.CurrentNode), BuildSatchel());
+            fight.Bind(built.Session, EncounterFor(RunManager.CurrentNode), RunOrchestrator.BuildSatchel());
             fight.ItemUsed += OnItemUsed;
             fight.BindPartyArt(built.Party, built.PartyArt);
 
@@ -136,64 +136,13 @@ namespace PrincesPalace
             fight.SettlementSource = () => LastSettlement;
         }
 
+        // The IN-RUN half moved to RunOrchestrator.BuildFight, which is the
+        // seam the balance bot builds its fights through too (docs/
+        // PLAN_BALANCE_BOT.md F2). What stays here is the half that is only
+        // ever a screen's: the placeholder stage, the art filtering, and the
+        // wiring in Start above.
         internal FightEncounterAdapter.BuiltFight BuildOpeningFight() =>
-            RunManager.HasRun ? BuildRoomFight() : BuildPlaceholderFight();
-
-        // The real thing: this room, this squad, this run's seed.
-        private FightEncounterAdapter.BuiltFight BuildRoomFight()
-        {
-            var run = RunManager.Run;
-
-            // Entry is the only non-fight room that can reach this path, and
-            // only via a direct scene load. Treating an unknown room as a
-            // normal fight beats refusing to build one, for the same reason the
-            // no-content case degrades rather than throwing.
-            var roomType = RunManager.CurrentNode?.Type ?? RoomType.Fight;
-
-            var roster = RunEncounter.For(SaveSlotManager.CurrentSave, run, roomType);
-            if (roster.IsEmpty)
-            {
-                // An empty party here is a squad wipe that should have ended
-                // the run before the map ever offered this room. Saying so is
-                // worth more than an empty stage that looks like a render bug.
-                Debug.LogWarning(
-                    $"[FightBootstrap] Room {roomType} fielded {roster.PartyIds?.Count ?? 0} party " +
-                    $"and {roster.EnemyIds?.Count ?? 0} enemies; the stage stays empty.");
-                return null;
-            }
-
-            // isBoss/isElite ACTUALLY PASSED, which they were not before.
-            // FightSession took its defaults, so IsBossFight was false in every
-            // fight the game could reach -- and OnFightEnded gates
-            // RecordBossKill on it, so no boss kill was ever recorded and the
-            // run settled without paying for any of them. EnemyKit took the
-            // same false for isElite, so elite rooms fielded ordinary kits.
-            var built = FightEncounterAdapter.Build(
-                roster.PartyIds, roster.EnemyIds, roster.Rng,
-                isBoss: roster.IsBoss,
-                isElite: roster.IsElite,
-                relicIds: run.relicIds,
-                depthStep: run.step,
-                // What they are WEARING, which is the difference between a
-                // character built from their save and one built from the
-                // content that named them. Without this the roster was right
-                // and every one of them fought at base stats -- full plate and
-                // nothing swung identically.
-                partyCharacters: SaveSlotManager.CurrentSave?.ActiveSquad());
-
-            if (built == null) return null;
-
-            // THE CHARGE GOES IN BEFORE THE FIGHT OPENS, because Domain cannot
-            // ask a save what the squad has earned. What comes back out is
-            // session.SecondLivesSpent, folded into the run by OnFightEnded.
-            built.Session.SecondLifeCharges = SquadTrack.SecondLivesLeft(run);
-
-            // Damage taken in earlier rooms, carried in. Applied after the
-            // build because the adapter constructs from definitions and knows
-            // nothing about a descent.
-            RunEncounter.ApplyStartingHealth(built.Party, roster.PartyIds, roster.StartingHealth);
-            return built;
-        }
+            RunManager.HasRun ? RunOrchestrator.BuildFight() : BuildPlaceholderFight();
 
         // The tooling's fight. Unchanged, and deliberately still art-filtered:
         // its whole purpose is a stage that can be LOOKED at, which a party of
@@ -264,7 +213,8 @@ namespace PrincesPalace
             // No relics and no depth: this path only runs when there is no run
             // to have drafted any or to be at a depth. Those two arguments used
             // to read the run defensively, which read as though a run could
-            // reach here -- one can't, and BuildRoomFight is where it goes.
+            // reach here -- one can't, and RunOrchestrator.BuildFight is where
+            // it goes.
             return FightEncounterAdapter.Build(party, enemies, new SeededRandom((ulong)seed),
                 relicIds: null,
                 depthStep: 0);
@@ -291,95 +241,31 @@ namespace PrincesPalace
             }
         }
 
+        // THE SETTLEMENT LIVES IN RunOrchestrator NOW.
+        //
+        // Every rule that used to be written out here -- fold the ledger,
+        // write HP back, spend second lives, record the room and the boss, end
+        // the run on a loss, bank gold and apply experience on a win, clear
+        // the room, advance the leg -- moved to RunOrchestrator.SettleFight
+        // unchanged, comments and all. The bot has to obey the same rules and
+        // a second copy of them would measure itself rather than the game
+        // (docs/PLAN_BALANCE_BOT.md F2); FightSettlementTests pins the
+        // behaviour through this same door.
+        //
+        // What is left here is what only a SCREEN needs: the two statics the
+        // Reckoning and the defeat screen read back through RewardSource and
+        // SettlementSource.
         private void OnFightEnded(bool won)
         {
-            if (!RunManager.HasRun) return;
+            var settled = RunOrchestrator.SettleFight(fight.Session, won);
 
-            var run = RunManager.Run;
-            var session = fight.Session;
-
-            // FOLDED BEFORE THE WIN CHECK. What a character did in the fight
-            // that killed them is part of the run -- dropping it would make the
-            // death screen under-report the most dramatic fight in it, which is
-            // the one fight the player most wants described.
-            RunLedger.Fold(run, session?.Ledger);
-
-            // HP CARRIED FORWARD, also before the win check, and for a related
-            // reason: a loss ends the run through EndRun below, and the defeat
-            // screen reports on the squad that just died. Writing health back
-            // only on a win would leave that screen reading whatever the party
-            // had walked IN with.
-            //
-            // This is the other half of ApplyStartingHealth. Nothing in v2
-            // wrote party health back before it, so every room opened at full
-            // regardless of what the last one cost -- which also left Rest
-            // rooms with nothing to restore even once they resolve again.
-            RunEncounter.WriteBackHealth(run, session);
-
-            // AFTER WriteBackHealth, so the half-health a revived character came
-            // back on is what carries into the next room -- writing the spend
-            // first would be harmless, but writing health after a revive is the
-            // whole point and the ordering deserves to be deliberate.
-            //
-            // Folded on BOTH outcomes. A charge spent in a fight the party then
-            // lost anyway is still spent; refunding it would make a second life
-            // free whenever it failed to save the run, which is exactly when it
-            // is least deserved.
-            if (run != null && session != null) run.secondLivesUsed += session.SecondLivesSpent;
-
-            var payout = won ? session?.Payout : null;
-            RunLedger.RecordRoom(run, won,
-                payout?.Gold ?? 0,
-                won ? (payout?.Experience ?? 0) : 0,
-                run?.step ?? 0);
-
-            // A boss goes on the run's list the moment it dies. Whether it PAYS
-            // is settled at the end of the run against the save's lifetime
-            // list, because only that knows whether this was the first time.
-            if (won && session != null && session.IsBossFight)
-            {
-                RunLedger.RecordBossKill(run, BossIdOf(session));
-            }
-
-            if (!won)
-            {
-                // A loss ends the RUN, not just the fight. Anything else would
-                // let a player retry the same room until it went their way,
-                // which is the whole tension a roguelike is built on.
-                //
-                // EndRun settles before it discards, and hands back what it
-                // paid -- which is the only surviving record of the run by the
-                // time the defeat screen draws.
-                LastSettlement = RunManager.EndRun();
-                return;
-            }
-
-            if (payout.HasValue)
-            {
-                // GOLD to the run, EXPERIENCE to the characters. Two different
-                // owners with two different lifetimes: the run's gold is spent
-                // inside the run and lost with it, while a level survives.
-                RunManager.BankPayout(payout.Value.Gold);
-                LastReward = RewardApplier.Apply(payout.Value, FieldedIds());
-
-                // The fight's own counters, carried onto the reward so the
-                // Reckoning's tally tab has something to read. Without this the
-                // ledger existed, was folded into the run, and was visible only
-                // after you died.
-                if (session?.Ledger != null) LastReward.Ledger = session.Ledger;
-            }
-
-            RunManager.ClearCurrentRoom();
-
-            // Out of rooms means the LEG ended, not the run. A leg is eight
-            // steps and finishes on whatever the curve forces -- an elite at
-            // step 8, a boss at 16 -- so ending the run here would stop every
-            // descent at the first elite.
-            //
-            // Where to go NEXT is no longer decided here: the map screen is
-            // where the player chooses, and this only opens the next leg when
-            // there is nothing left to choose between.
-            if (RunManager.LegIsOver()) RunManager.AdvanceLeg();
+            // ASSIGNED ONLY WHEN THERE IS SOMETHING TO ASSIGN, which is what
+            // the two branches this replaces did: a win never touched
+            // LastSettlement and a fight that paid nothing never touched
+            // LastReward. Writing either unconditionally would blank a value
+            // the next screen is about to read.
+            if (settled.Reward != null) LastReward = settled.Reward;
+            if (settled.RunEnded != null) LastSettlement = settled.RunEnded;
         }
 
         // What the fight just paid, per character. Held for the rewards screen
@@ -391,56 +277,6 @@ namespace PrincesPalace
         // screen, which cannot compute it itself: EndRun has already discarded
         // the snapshot by the time anything is drawn.
         public static RunSettlement.Result LastSettlement { get; private set; }
-
-        // Which boss died. The run records the enemy it was sent to kill rather
-        // than whatever happened to be standing there, so a boss room with
-        // adds cannot pay out twice or pay for the wrong thing.
-        private static string BossIdOf(Domain.Combat.Session.FightSession session)
-        {
-            string declared = RunManager.Run?.bossEnemyId;
-            if (!string.IsNullOrEmpty(declared)) return declared;
-
-            // A boss fight with no declared id is a content gap, not a reason
-            // to lose the kill: fall back to the enemy that was actually there.
-            return session.Encounter.Enemies
-                .Select(session.SourceFor)
-                .FirstOrDefault(k => k?.Source != null && k.Source.IsBoss)?.Source.Id;
-        }
-
-        // Who actually stood on the stage. A squad member left out of the
-        // encounter (at 0 HP when it was built) is downed rather than absent.
-        private System.Collections.Generic.IReadOnlyList<string> FieldedIds()
-        {
-            var session = fight.Session;
-            if (session == null) return new System.Collections.Generic.List<string>();
-
-            return session.Encounter.PlayerParty
-                .Select(session.KitFor)
-                .Where(k => k != null)
-                .Select(k => k.Id)
-                .ToList();
-        }
-
-        // The satchel, from the stash.
-        //
-        // stockpiledItems is the single live inventory for now -- the same list
-        // the character overlay reads -- so a potion bought between runs is a
-        // potion available in the next fight, and using one is visible on both
-        // screens because there is only one list.
-        private static IReadOnlyList<SatchelStack> BuildSatchel()
-        {
-            var save = SaveSlotManager.CurrentSave;
-            if (save == null) return new List<SatchelStack>();
-
-            return save.stockpiledItems
-                .Where(e => e != null && e.count > 0)
-                .Select(e => new { Entry = e, Item = ContentDatabase.GetItem(e.itemId) })
-                .Where(x => x.Item != null && x.Item.kind == ItemKind.Consumable)
-                .Select(x => new SatchelStack(
-                    x.Item.id, x.Item.displayName, x.Entry.count,
-                    x.Item.effect == ItemEffect.RestoreMana))
-                .ToList();
-        }
 
         // Resolving the effect is Core's job -- the session is told what
         // happened, not what the item was, because ItemEffect is content and
@@ -459,7 +295,7 @@ namespace PrincesPalace
             // fight opened with.
             InventoryOps.TryRemove(save.stockpiledItems, itemId);
             SaveSlotManager.SaveCurrent();
-            fight.RefreshSatchel(BuildSatchel());
+            fight.RefreshSatchel(RunOrchestrator.BuildSatchel());
         }
 }
 }

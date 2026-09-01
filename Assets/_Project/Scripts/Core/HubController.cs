@@ -263,14 +263,14 @@ namespace PrincesPalace
                 // Seeded from the save so a slot's descent is ITS OWN and
                 // reproduces on resume. Not Random: a run that reshuffled its
                 // own map when reloaded would make the map screen a lie.
-                RunManager.StartRun(RunManager.NewSeed());
+                RunOrchestrator.StartRun(RunManager.NewSeed());
             }
 
             // The relic draft stands between the gate and the map, and only on
             // a run that has not drafted yet. RESUMING walks straight past it:
             // the relic was chosen when this descent began, and offering again
             // would let a player re-roll it by walking back to the hub.
-            if (relicDraft != null && RunManager.HasRun && !RunManager.Run.relicDrafted)
+            if (relicDraft != null && RunOrchestrator.NeedsRelicDraft())
             {
                 relicDraft.Finished = () => Navigation.Go(Navigation.Map);
                 relicDraft.Open(RunManager.Run.runSeed);

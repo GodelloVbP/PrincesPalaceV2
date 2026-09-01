@@ -711,25 +711,12 @@ namespace PrincesPalace
             var offer = _offers[index];
             _taken = true;
 
-            // Straight to the meta stash, which is the single live bag -- the
-            // same one the character overlay and the fight satchel read. The
-            // roll's affix slots travel with it: offer.Modifiers is an
-            // IReadOnlyList, InventoryOps.Add wants a List<string> to copy
-            // from, so ToList() rather than a cast.
-            InventoryOps.Add(save.stockpiledItems, offer.ItemId, 1, offer.Plus,
-                offer.Modifiers?.ToList(), (int)offer.RiftTier);
-
-            // AUTO-EQUIP INTO AN EMPTY SLOT. A reward picked for a slot nobody
-            // is wearing anything in went to the bag and sat there until the
-            // player remembered to open the character sheet -- for a piece
-            // that fills a hole in the loadout rather than replacing a choice
-            // already made, that extra step is friction with no decision
-            // behind it. Only fires when the slot is EMPTY: a slot already
-            // holding something is a real choice (keep this, or swap it), and
-            // that choice stays the player's.
-            AutoEquipIntoAnEmptySlot(save, offer);
-
-            SaveSlotManager.SaveCurrent();
+            // Into the bag, and into an empty slot if the loadout has one --
+            // RunOrchestrator.TakeOffer, which is where the save-touching half
+            // of this decision moved so the bot takes its loot the same way
+            // (docs/PLAN_BALANCE_BOT.md F2). The guard above, the greying out
+            // below and the chosen-item line are this screen's.
+            RunOrchestrator.TakeOffer(save, offer);
 
             if (_reward != null)
             {
@@ -757,44 +744,6 @@ namespace PrincesPalace
                     offerPhase.gameObject.SetActive(false);
                     summaryPhase.gameObject.SetActive(true);
                 }
-            }
-        }
-
-        // First squad member (in ActiveSquad order, same order the loadout
-        // comparison tooltip already reads) with an empty slot this item
-        // fits. Not equippable, or every candidate slot already occupied
-        // across the whole squad: does nothing, and the item stays in the
-        // bag exactly as it did before this existed.
-        private static void AutoEquipIntoAnEmptySlot(SaveData save, ItemOffer offer)
-        {
-            var itemDef = ContentDatabase.GetItem(offer.ItemId);
-            if (itemDef == null || !itemDef.IsEquippable) return;
-
-            foreach (var character in save.ActiveSquad())
-            {
-                if (character?.equipment == null) continue;
-                if (character.equipment.FirstFreeSlotFor(itemDef.equipSlot) == null) continue;
-
-                // MEASURED BEFORE THE SWAP, same reason CharacterDossierController.
-                // EquipFromPack measures it before its own TryEquip: gear
-                // carrying max health changes what the run's carried current
-                // health is a fraction OF.
-                int maxBefore = ContentDatabase.EffectiveStats(character).maxHealth;
-
-                // modifierIds/riftTier travel through the same way plus does --
-                // InventoryOps.TryRemoveAt inside TryEquip keys on the full
-                // (itemId, plus, modifierIds, riftTier) stack, so omitting them
-                // here would look for the WRONG stack (the plain, unrolled one)
-                // and silently fail to find the copy Take() just added.
-                if (!EquipMove.TryEquip(character.equipment, save.stockpiledItems, offer.ItemId,
-                                        itemDef.equipSlot, itemDef.IsEquippable, plus: offer.Plus,
-                                        modifierIds: offer.Modifiers?.ToList(), riftTier: (int)offer.RiftTier))
-                {
-                    return;
-                }
-
-                RunEncounter.ScaleCarriedHealth(character, maxBefore);
-                return;
             }
         }
 

@@ -161,31 +161,27 @@ namespace PrincesPalace
 
         // What the room does. Byte for byte what the click used to do the
         // instant it was pressed -- the only change is WHEN.
+        //
+        // The room's own rules (move, reset the message, resolve, clear) moved
+        // to RunOrchestrator.ArriveAt so the balance bot walks into rooms
+        // through the same code a player does -- docs/PLAN_BALANCE_BOT.md F2.
+        // What is left here is the two things a bot has no use for: which
+        // scene to load, and repainting the map.
         private void Arrive(DescentNode target)
         {
-            if (!RunManager.MoveTo(target.Id)) return;
-
-            // A fight IS a screen, so it is the one room that leads somewhere.
-            // It clears itself on the way out, through the reward path.
-            //
-            // The message is cleared FIRST: the fight scene loads over this one
-            // and the map is rebuilt on return, so a stash line left standing
-            // would reappear under whatever room came next.
-            if (IsFight(target.Type))
+            switch (RunOrchestrator.ArriveAt(target))
             {
-                RoomResolver.Reset();
-                Navigation.Go(Navigation.Fight);
-                return;
+                case RunOrchestrator.Arrival.Refused:
+                    return;
+
+                case RunOrchestrator.Arrival.Fight:
+                    Navigation.Go(Navigation.Fight);
+                    return;
+
+                default:
+                    Refresh();
+                    return;
             }
-
-            // Everything else resolves HERE and the map redraws, which is where
-            // the next choice lives anyway. This used to be a bare
-            // ClearCurrentRoom: treasure paid nothing, rest healed nobody, and
-            // the room cleared without saying anything had happened.
-            RoomResolver.Resolve(RunManager.Run, target.Type);
-
-            RunManager.ClearCurrentRoom();
-            Refresh();
         }
 
         // The jitter seed for every link, built once and shared.

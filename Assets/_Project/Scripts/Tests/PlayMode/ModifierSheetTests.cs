@@ -220,7 +220,7 @@ namespace PrincesPalace.PlayModeTests
         //           pure RNG SHAPE of a roll is ItemOfferRollTests' job, not
         //           this file's)
         //   claim:  InventoryOps.Add, the exact call ReckoningController.Take makes
-        //   equip:  EquipMove.TryEquip, the exact call AutoEquipIntoAnEmptySlot makes
+        //   equip:  EquipMove.TryEquip, the exact call RunOrchestrator.AutoEquipIntoAnEmptySlot makes
         //   fight:  FightEncounterAdapter.Build + a real FightSession swing
         //   reload: SaveSlotManager.SaveCurrent/Forget, the exact round-trip
         //           every other save-compat test in this plan already trusts

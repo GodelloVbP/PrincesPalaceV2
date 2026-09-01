@@ -381,22 +381,19 @@ namespace PrincesPalace
         // The loot on offer, rolled against how deep the run is and what class
         // of thing was just killed.
         //
-        // UnityEngine.Random rather than the session's seeded stream, and
-        // deliberately: the offer is not part of the fight's simulation and
-        // must not shift the beats a replay would produce. Domain takes the
-        // randomness as a Func for exactly this reason.
+        // The roll itself is RunOrchestrator.RollOffers now, so the bot rolls
+        // its offers from the same table (docs/PLAN_BALANCE_BOT.md F2). What
+        // stays HERE is the choice of randomness, which is the part that is
+        // genuinely the screen's: UnityEngine.Random rather than the session's
+        // seeded stream, and deliberately -- the offer is not part of the
+        // fight's simulation and must not shift the beats a replay would
+        // produce. The bot hands in a seeded one for the opposite reason.
         private System.Collections.Generic.List<Domain.Rewards.ItemOffer> RollOffers()
         {
-            var encounter = _session != null && _session.IsEliteFight
-                ? Domain.Rewards.EncounterClass.Elite
-                : Domain.Rewards.EncounterClass.Normal;
-
-            int depth = _session?.DepthStep ?? 0;
             // A lambda, not the method group: Random.Range is overloaded on
             // (int,int) and (float,float), and the int overload is the
             // upper-bound-EXCLUSIVE one both Domain tables expect.
-            return ItemOfferRoll.Roll(encounter, depth, ItemOfferRoll.CurrentSquadFavor(),
-                n => UnityEngine.Random.Range(0, n), SquadTrack.OfferWidth());
+            return RunOrchestrator.RollOffers(_session, n => UnityEngine.Random.Range(0, n));
         }
 
         private void UseSatchelItem(int index)

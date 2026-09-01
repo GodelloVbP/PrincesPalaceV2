@@ -543,8 +543,5 @@ namespace PrincesPalace
             _walk = StartCoroutine(WalkAndArrive(node));
         }
 
-        private static bool IsFight(RoomType type) =>
-            type == RoomType.Fight || type == RoomType.EliteFight || type == RoomType.Boss;
-
             }
 }

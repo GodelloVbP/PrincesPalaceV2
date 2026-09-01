@@ -472,6 +472,30 @@ entering Play mode runs a domain reload that would otherwise wipe the value
 between the menu item setting it and `Start()` reading it. Editor-only
 (`#if UNITY_EDITOR`); a player build always takes the normal sortOrder pick.
 
+### One rulebook for a run (`Core/Bot/RunOrchestrator.cs`)
+
+**Where the rules of a descent live now.** `RunOrchestrator` is a plain static
+class in Core -- not a MonoBehaviour -- holding the bodies that used to sit
+inside screens: `ArriveAt` (was `MapController.Walk`'s `Arrive`), `BuildFight`
+and `BuildSatchel` and `SettleFight` (were `FightBootstrap`), `RollOffers` (was
+`FightController.Input`), `TakeOffer` (was `ReckoningController.Take`), and
+`RelicDraftOffer`/`TakeRelic`/`FinishDraft` (were `RelicDraftController`).
+
+It exists because those rules are about to have a **second caller**: the
+headless balance bot of `docs/PLAN_BALANCE_BOT.md` (F2). A bot that
+re-implements "what a won fight does to the run" measures its own copy rather
+than the game, and `SettleFight` in particular is a fifteen-call ordering where
+every line carries a comment about a bug. So the bodies moved down and the
+screens became thin callers; the extraction is behaviour-preserving and pinned
+by `FightSettlementTests`, which drives the real `FightBootstrap` door.
+
+What each screen kept is exactly its screen work: `MapController` keeps which
+scene to load and the repaint, `FightBootstrap` keeps the placeholder fight and
+the two statics the Reckoning and defeat screens read, `FightController` keeps
+the choice of `UnityEngine.Random` for the offer roll (deliberately unseeded --
+see `PLAN_BALANCE_BOT.md` F3), `ReckoningController` keeps its take-once guard
+and repaint, `RelicDraftController` keeps paging and selection.
+
 ### Rooms that are not fights (`RoomResolution`, `RoomResolver`)
 
 `MapController.Walk.cs`'s `Arrive` sends fight rooms to the Fight scene and
