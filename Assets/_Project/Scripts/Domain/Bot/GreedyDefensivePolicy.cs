@@ -1,0 +1,295 @@
+using System.Collections.Generic;
+using System.Linq;
+using PrincesPalace.Domain.Combat;
+using PrincesPalace.Domain.Combat.Session;
+using PrincesPalace.Domain.Dungeon;
+using PrincesPalace.Domain.Relics;
+using PrincesPalace.Domain.Rewards;
+using PrincesPalace.Domain.Rng;
+
+namespace PrincesPalace.Domain.Bot
+{
+    // Plays not to die. In a fight: heal first, ward second, and only then
+    // hit back -- and when it does hit back, it aims at whoever is about to
+    // hurt the party the most, not whoever is closest to dead. On the map:
+    // rest early and often, bank treasure, and route AROUND an elite when
+    // there is any other way forward. On offers and drafts, it reaches for
+    // armour and healing when the option actually says so and otherwise
+    // falls back to GreedyAggressive's "biggest number" read, because
+    // Domain cannot see enough of an offer to do better -- see each method's
+    // own header for exactly what was and was not identifiable.
+    public sealed class GreedyDefensivePolicy : IFightPolicy, IRunPolicy
+    {
+        // Below this fraction of max HP, a HEALING option (item or skill)
+        // outranks everything else on the menu. Higher than
+        // GreedyAggressive's 30% on purpose -- this archetype spends a turn
+        // on safety sooner, which is the entire point of it existing.
+        private const float HealBelowHealthFraction = 0.50f;
+
+        // Below this fraction, with nothing restorative left to take, this
+        // is as much trouble as the archetype's own read of the fight gets.
+        // See the HoldBack note on Choose() for why that does NOT mean
+        // HoldBack.
+        private const float DesperateHealthFraction = 0.25f;
+
+        // Rest below this fraction of the party's HP, rather than
+        // GreedyAggressive's 50% -- see ChooseNode.
+        private const float RestBelowPartyHpFraction = 0.75f;
+
+        public FightAction Choose(FightSession session, CombatantState actor, IReadOnlyList<FightAction> legal, SeededRandom rng)
+        {
+            bool hurt = actor != null && actor.MaxHealth > 0 &&
+                        actor.CurrentHealth <= actor.MaxHealth * HealBelowHealthFraction;
+
+            if (hurt)
+            {
+                // A healing ITEM specifically -- ItemRestoresMana distinguishes
+                // a health potion from a mana one on the same satchel entry,
+                // the same read GreedyAggressive uses.
+                var healItem = legal.FirstOrDefault(a => a.Kind == FightActionKind.Item && !a.ItemRestoresMana);
+                if (healItem.Kind == FightActionKind.Item) return healItem;
+
+                // A healing SKILL -- HealSelf/HealParty, identified off the
+                // skill's own SkillEffect rather than its name or index, the
+                // same way GreedyAggressive's EstimateDamage reads
+                // DamageSingle/DamageAll off the effect rather than guessing
+                // from a display string.
+                var healSkill = FirstSkillWithEffect(session, actor, legal,
+                    SkillEffect.HealSelf, SkillEffect.HealParty);
+                if (healSkill.HasValue) return healSkill.Value;
+            }
+
+            // A ward/shield skill, taken only while nothing already active
+            // would make a second one wasted -- StatusEffects.IsWarded is
+            // the same query StatusEffects' own Shatter-eligibility check
+            // uses for "is there a ward to detonate", so this reads the
+            // actor's status list the same way the rest of Combat does
+            // rather than re-deriving it.
+            bool alreadyWarded = StatusEffects.IsWarded(actor);
+            if (!alreadyWarded)
+            {
+                var wardSkill = FirstSkillWithEffect(session, actor, legal, SkillEffect.Ward);
+                if (wardSkill.HasValue) return wardSkill.Value;
+            }
+
+            // Nothing safer to do -- hit back, aimed at whoever THREATENS
+            // the party most, not whoever is closest to dead (that read is
+            // GreedyAggressive's job, not this one's).
+            var damaging = legal.Where(a =>
+                a.Kind == FightActionKind.Attack ||
+                a.Kind == FightActionKind.BasicSpell ||
+                a.Kind == FightActionKind.Skill).ToList();
+
+            if (damaging.Count > 0)
+            {
+                var mostThreatening = damaging
+                    .Select(a => a.Target)
+                    .Distinct()
+                    .OrderByDescending(t => ThreatOf(session, t))
+                    .First();
+
+                FightAction best = default;
+                int bestEstimate = int.MinValue;
+                bool found = false;
+
+                foreach (var candidate in damaging)
+                {
+                    if (candidate.Target != mostThreatening) continue;
+
+                    int estimate = EstimateDamage(session, actor, candidate);
+                    if (!found || estimate > bestEstimate)
+                    {
+                        best = candidate;
+                        bestEstimate = estimate;
+                        found = true;
+                    }
+                }
+
+                if (found) return best;
+            }
+
+            // Not HoldBack, deliberately, even under DesperateHealthFraction:
+            // HoldBack (FightSession.cs:242) banks an action for a later
+            // Brave-boosted swing -- it is an OFFENSIVE economy move, the
+            // same one GreedyAggressive would be just as happy to make, and
+            // "actually defensive" per the brief is exactly what it is not.
+            // A defensive archetype under threat with no heal and no ward
+            // left is not made safer by passing a turn that does not reduce
+            // incoming damage at all, so it falls through to the same
+            // most-threatening-target swing above. HoldBack still exists in
+            // `legal` for RandomLegal/GreedyAggressive to reach, and for
+            // FightAction.LegalActions' own "never empty" guarantee.
+            return legal.First(a => a.Kind == FightActionKind.HoldBack);
+        }
+
+        // How much this enemy is about to hurt the party, read off its own
+        // committed intent (EnemyIntent.ExpectedDamage, prepared for every
+        // living enemy whenever it becomes the player's turn -- see
+        // FightSession.Begin/PrepareEnemyIntents). Scoped to intents that
+        // actually land on the party (One/AllOpponents); a Self or
+        // AllAllies intent (a buff, a heal, a summon) threatens nobody and
+        // reads as zero here even though the enemy could still out-damage
+        // others on a future turn. Falls back to the enemy's raw Attack stat
+        // when no intent has been committed yet (a session played directly
+        // against FightAction.LegalActions without going through
+        // FightRunner/Begin, as some of this file's own tests do).
+        private static int ThreatOf(FightSession session, CombatantState enemy)
+        {
+            var intent = session?.IntentDetailFor(enemy);
+            if (intent.HasValue)
+            {
+                var scope = intent.Value.Scope;
+                if (scope == EnemyIntentScope.One || scope == EnemyIntentScope.AllOpponents)
+                {
+                    return intent.Value.ExpectedDamage;
+                }
+
+                return 0;
+            }
+
+            return enemy?.Attack ?? 0;
+        }
+
+        // Same pre-mitigation reading GreedyAggressivePolicy.EstimateDamage
+        // uses, and for the same reason -- see that method's own header.
+        // Duplicated rather than shared because the two archetypes may
+        // legitimately diverge on which skills count as "damage" later, and
+        // a shared helper would couple them without either asking for it.
+        private static int EstimateDamage(FightSession session, CombatantState actor, FightAction action)
+        {
+            switch (action.Kind)
+            {
+                case FightActionKind.Attack:
+                    return CombatMath.ComputeAttackDamage(actor, action.Target);
+                case FightActionKind.BasicSpell:
+                    return session.PreviewBasicSpellPower(actor);
+                case FightActionKind.Skill:
+                    var option = session.SkillOptionsFor(actor).FirstOrDefault(o => o.Index == action.SkillIndex);
+                    bool previewable = option.Skill.Effect == SkillEffect.DamageSingle
+                                    || option.Skill.Effect == SkillEffect.DamageAll;
+                    return previewable ? session.PreviewSkillPower(actor, option.Skill) : 0;
+                default:
+                    return 0;
+            }
+        }
+
+        // The first legal Skill action whose authored SkillEffect is one of
+        // `effects` -- shared by the heal and ward lookups above so both
+        // read "is this skill the thing I am looking for" off the same
+        // ResolvedSkillOption source SkillOptionsFor already hands the
+        // legality check.
+        private static FightAction? FirstSkillWithEffect(
+            FightSession session, CombatantState actor, IReadOnlyList<FightAction> legal, params SkillEffect[] effects)
+        {
+            foreach (var candidate in legal)
+            {
+                if (candidate.Kind != FightActionKind.Skill) continue;
+
+                var option = session.SkillOptionsFor(actor).FirstOrDefault(o => o.Index == candidate.SkillIndex);
+                if (effects.Contains(option.Skill.Effect))
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
+
+        public DescentNode ChooseNode(IReadOnlyList<DescentNode> choices, RunView view, SeededRandom rng)
+        {
+            if (choices.Count == 1) return choices[0];
+
+            // Rest is checked BEFORE treasure and at a higher HP threshold
+            // than GreedyAggressive's (75% here vs 50%) -- this archetype
+            // would rather top off early than carry a scar into the next
+            // fight, per the plan's map rule for GreedyDefensive.
+            if (view.PartyHpFraction < RestBelowPartyHpFraction)
+            {
+                var rest = choices.FirstOrDefault(n => n.Type == RoomType.Rest);
+                if (rest != null) return rest;
+            }
+
+            var treasure = choices.FirstOrDefault(n => n.Type == RoomType.Treasure);
+            if (treasure != null) return treasure;
+
+            var fight = choices.FirstOrDefault(n => n.Type == RoomType.Fight);
+            if (fight != null) return fight;
+
+            // Boss is taken over Elite when both are on offer and neither
+            // Fight/Rest/Treasure is: a boss room is the one every route
+            // through this floor eventually requires, while an elite is
+            // optional extra risk this archetype has no reason to seek out.
+            var boss = choices.FirstOrDefault(n => n.Type == RoomType.Boss);
+            if (boss != null) return boss;
+
+            var elite = choices.FirstOrDefault(n => n.Type == RoomType.EliteFight);
+            if (elite != null) return elite;
+
+            return choices[0];
+        }
+
+        // Slot/health-bearing identification off an ItemOffer -- NOT
+        // possible from Domain. ItemOffer (Domain/Rewards/ItemOffer.cs)
+        // carries only ItemId, Tier, Plus, RiftTier and a list of modifier
+        // ids; it names no EquipmentSlot and no stat block, both of which
+        // exist only after ContentDatabase (Core) resolves the id, which
+        // Domain is not allowed to reach (noEngineReferences, and the
+        // Resources-backed lookup is explicitly a Core/Editor concern -- see
+        // the plan's F1). A modifier id ("hardened", "bulwark", ...) is a
+        // rollable affix name with no textual tell for "defensive" either --
+        // resolving it needs Domain/Content/ModifierEffect data the same way.
+        // So this reads exactly as "the option carries no effect type" in
+        // the brief's own words, and falls back to GreedyAggressivePolicy's
+        // read of "best": highest tier, then highest plus, ties by rng.
+        public int ChooseOffer(IReadOnlyList<ItemOffer> offers, RunView view, SeededRandom rng)
+        {
+            return BestIndexTiedByRng(offers.Count,
+                i => (offers[i].Tier, offers[i].Plus),
+                rng);
+        }
+
+        // Same non-identifiability as ChooseOffer: RelicOption
+        // (Domain/Relics/RelicPool.cs) carries only Id, Rarity and
+        // UnlockedBy -- no RelicEffect, which lives on the Core-resolved
+        // content and is exactly the "effect type" the brief says to key
+        // off when it is there to read. It is not, so this falls back to
+        // GreedyAggressivePolicy's pool-order read: rarest by
+        // RelicPool.WeightOf, ties by rng.
+        public int ChooseRelic(IReadOnlyList<RelicOption> offer, RunView view, SeededRandom rng)
+        {
+            return BestIndexTiedByRng(offer.Count,
+                i => -RelicPool.WeightOf(offer[i].Rarity),
+                rng);
+        }
+
+        // Shared with GreedyAggressivePolicy's own copy -- see that type's
+        // header on why this is duplicated rather than factored out (the
+        // plan keeps each archetype file self-contained and Phase 6 was
+        // asked not to reach back into Phase 2's file to add a dependency
+        // between two otherwise-independent archetypes).
+        private static int BestIndexTiedByRng<TKey>(int count, System.Func<int, TKey> keyOf, SeededRandom rng)
+            where TKey : System.IComparable<TKey>
+        {
+            var tied = new List<int> { 0 };
+            var bestKey = keyOf(0);
+
+            for (int i = 1; i < count; i++)
+            {
+                var key = keyOf(i);
+                int cmp = key.CompareTo(bestKey);
+                if (cmp > 0)
+                {
+                    bestKey = key;
+                    tied.Clear();
+                    tied.Add(i);
+                }
+                else if (cmp == 0)
+                {
+                    tied.Add(i);
+                }
+            }
+
+            return tied.Count == 1 ? tied[0] : tied[rng.NextInt(0, tied.Count)];
+        }
+    }
+}
