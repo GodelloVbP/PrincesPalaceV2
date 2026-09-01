@@ -190,6 +190,54 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void GreedyDefensivePolicy_WardKeepsGettingConsumedEachTurn_EventuallySwingsInstead()
+        {
+            // Pins the seed 629 / GreedyDefensive / Late livelock the balance
+            // bot found: FightInvariants.TooManyCommands at 201 commands, the
+            // last ten all fleece_ward, the enemy's HP never moving. Root
+            // cause was NOT the game -- AdvanceAfterAction/
+            // AutoResolveEnemyTurns ran fine every round -- it was this
+            // policy re-warding forever because a single-hit ward
+            // (StatusEffects.ConsumeWard) is gone again the instant a hit
+            // lands, so "!alreadyWarded" was true on every single ask.
+            //
+            // Simulated here without a real enemy attack (this fixture's foe
+            // is harmless -- see HeroVsManyWithSkills) by clearing the
+            // ward status by hand between calls, which is exactly what an
+            // enemy landing a hit every round would do to it. The same
+            // policy instance is reused across every call, the same way
+            // BotRunDriver reuses one policy object for a whole run.
+            var skills = new List<ResolvedSkill> { WardSkill() };
+            var (session, hero, foes) = HeroVsManyWithSkills(skills, 60);
+            var policy = new GreedyDefensivePolicy();
+            var rng = new SeededRandom(1);
+
+            bool sawADamagingChoice = false;
+            for (int i = 0; i < 10; i++)
+            {
+                var legal = FightAction.LegalActions(session, hero, System.Array.Empty<SatchelStack>());
+                var chosen = policy.Choose(session, hero, legal, rng);
+
+                bool isWard = chosen.Kind == FightActionKind.Skill &&
+                    session.SkillOptionsFor(hero).First(o => o.Index == chosen.SkillIndex).Skill.Effect == SkillEffect.Ward;
+
+                if (!isWard)
+                {
+                    sawADamagingChoice = true;
+                    break;
+                }
+
+                // The ward "gets hit" -- gone before the next ask, same as a
+                // real ConsumeWard call would leave it.
+                hero.Statuses.Clear();
+            }
+
+            Assert.IsTrue(sawADamagingChoice,
+                "the policy re-warded on every one of 10 straight asks with the ward consumed each time -- " +
+                "this is the seed 629 livelock, not a fixed archetype");
+        }
+
+        [Test]
         public void GreedyDefensivePolicy_WithNoHealOrWardToTake_TargetsTheMoreThreateningEnemy()
         {
             // foe0: low HP, harmless (Attack 1). foe1: high HP, dangerous

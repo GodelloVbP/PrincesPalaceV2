@@ -36,6 +36,34 @@ namespace PrincesPalace.Domain.Bot
         // GreedyAggressive's 50% -- see ChooseNode.
         private const float RestBelowPartyHpFraction = 0.75f;
 
+        // Livelock guard, found by the balance bot at seed 629 / Late /
+        // GreedyDefensive: FightInvariants.TooManyCommands, 201 commands, the
+        // last ten all fleece_ward, the enemy's HP never moving.
+        //
+        // fleece_ward is a SINGLE-HIT shield -- StatusEffects.ConsumeWard
+        // removes the Shielded status the moment a hit lands (WardOne applies
+        // it with a 999-turn duration, but that duration is never what ends
+        // it; the hit is). Against an enemy that lands one every round, the
+        // ward is gone again before this policy is next asked, so
+        // "!alreadyWarded" is true on every single turn and the ward branch
+        // -- which runs before the damage branch below -- recasts it forever
+        // without Shawn ever swinging back. The fight cannot end: nothing
+        // ever reduces the enemy's HP.
+        //
+        // Not a game bug: AdvanceAfterAction/AutoResolveEnemyTurns ran fine
+        // every round (no StalledEnemyTurn hit was recorded for this seed),
+        // and re-warding when unwarded is individually a reasonable read of
+        // "defensive". The bug is that the policy has no memory of having
+        // just tried that and it not buying any progress. Capped per actor
+        // rather than globally, and reset the moment a swing actually lands,
+        // so a ward that is genuinely doing its job (the enemy misses, or
+        // dies to someone else first) is never penalised -- only a ward that
+        // keeps getting immediately spent for zero net progress is.
+        private const int MaxConsecutiveWardsWithoutASwing = 3;
+
+        private readonly Dictionary<CombatantState, int> _consecutiveWardsWithoutASwing =
+            new Dictionary<CombatantState, int>();
+
         public FightAction Choose(FightSession session, CombatantState actor, IReadOnlyList<FightAction> legal, SeededRandom rng)
         {
             bool hurt = actor != null && actor.MaxHealth > 0 &&
@@ -68,8 +96,19 @@ namespace PrincesPalace.Domain.Bot
             bool alreadyWarded = StatusEffects.IsWarded(actor);
             if (!alreadyWarded)
             {
-                var wardSkill = FirstSkillWithEffect(session, actor, legal, SkillEffect.Ward);
-                if (wardSkill.HasValue) return wardSkill.Value;
+                int consecutiveWards = _consecutiveWardsWithoutASwing.TryGetValue(actor, out var count) ? count : 0;
+                if (consecutiveWards < MaxConsecutiveWardsWithoutASwing)
+                {
+                    var wardSkill = FirstSkillWithEffect(session, actor, legal, SkillEffect.Ward);
+                    if (wardSkill.HasValue)
+                    {
+                        _consecutiveWardsWithoutASwing[actor] = consecutiveWards + 1;
+                        return wardSkill.Value;
+                    }
+                }
+                // MaxConsecutiveWardsWithoutASwing reached: the ward is
+                // treated as unavailable this turn and the fall-through below
+                // swings instead -- see this field's own header.
             }
 
             // Nothing safer to do -- hit back, aimed at whoever THREATENS
@@ -105,7 +144,14 @@ namespace PrincesPalace.Domain.Bot
                     }
                 }
 
-                if (found) return best;
+                if (found)
+                {
+                    // A swing landed (or was at least attempted) -- the
+                    // livelock guard above only counts wards that were never
+                    // followed by one of these.
+                    _consecutiveWardsWithoutASwing[actor] = 0;
+                    return best;
+                }
             }
 
             // Not HoldBack, deliberately, even under DesperateHealthFraction:

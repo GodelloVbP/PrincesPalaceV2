@@ -5,7 +5,8 @@ using PrincesPalace.Domain.Bot;
 
 namespace PrincesPalace.PlayModeTests
 {
-    // THE BOT ITSELF, PLAYED SMALL: twenty seeds through both archetypes on the
+    // THE BOT ITSELF, PLAYED SMALL: twenty seeds through RandomLegal and
+    // GreedyAggressive, ten through GreedyDefensive and Lookahead2, all on the
     // Fresh profile, capped at sixteen steps.
     //
     // What this is FOR is not balance -- balance is what tools/bot.ps1's batch
@@ -27,6 +28,22 @@ namespace PrincesPalace.PlayModeTests
         private const ulong FirstSeed = 1;
 
         private static readonly string[] Archetypes = { "RandomLegal", "GreedyAggressive" };
+
+        // GreedyDefensive and Lookahead2, at a THIRD of the seed count.
+        //
+        // Both are already exercised by BotPolicyTests (EditMode, unit-level)
+        // and by tools/bot.ps1's own batches -- what this class adds is the
+        // one thing those cannot: the same termination/determinism/hash
+        // guarantees the two original archetypes get, so a livelock or a
+        // non-determinism in either policy is caught here rather than first
+        // showing up as a bug row in a 12,000-run batch (as GreedyDefensive's
+        // did at seed 629 -- see GreedyDefensivePolicy's own comment on the
+        // fix). Fewer seeds than RandomLegal/GreedyAggressive purely for the
+        // class's time budget (this class has to stay well under half a
+        // minute beside the rest of PlayMode); the guarantee being checked is
+        // identical.
+        private const int FewerArchetypeSeeds = 10;
+        private static readonly string[] FewerArchetypes = { "GreedyDefensive", "Lookahead2" };
 
         // A PRE-EXISTING PRODUCTION FAULT, COUNTED RATHER THAN FAILED ON.
         //
@@ -72,12 +89,17 @@ namespace PrincesPalace.PlayModeTests
             var hitsByName = new Dictionary<string, List<string>>();
             int capped = 0;
             int died = 0;
+            int totalRuns = 0;
 
-            foreach (string archetype in Archetypes)
+            var archetypeSeedCounts = Archetypes.Select(a => (archetype: a, seeds: Seeds))
+                .Concat(FewerArchetypes.Select(a => (archetype: a, seeds: FewerArchetypeSeeds)));
+
+            foreach (var (archetype, seedCount) in archetypeSeedCounts)
             {
-                for (ulong seed = FirstSeed; seed < FirstSeed + Seeds; seed++)
+                for (ulong seed = FirstSeed; seed < FirstSeed + (ulong)seedCount; seed++)
                 {
                     var result = BotRunDriver.PlayRun(seed, archetype, ProfilePresets.Fresh, DepthCapSteps);
+                    totalRuns++;
 
                     // TERMINATION IS THE HEADLINE. A run that neither died nor
                     // capped came out of the loop through a guard, and a batch
@@ -103,7 +125,7 @@ namespace PrincesPalace.PlayModeTests
 
             int stalls = hitsByName.TryGetValue(KnownStall, out var stallRows) ? stallRows.Count : 0;
             UnityEngine.Debug.Log(
-                $"[BalanceBotSmokeTests] {Seeds * Archetypes.Length} runs: {died} died, {capped} capped, " +
+                $"[BalanceBotSmokeTests] {totalRuns} runs: {died} died, {capped} capped, " +
                 $"{stalls} {KnownStall} hits (a known production fault -- see this class's own comment).");
 
             var unexpected = hitsByName
@@ -152,6 +174,24 @@ namespace PrincesPalace.PlayModeTests
                 }
             }
 
+            // Fewer seeds again -- see FewerArchetypes' own comment.
+            for (ulong seed = FirstSeed; seed < FirstSeed + 3; seed++)
+            {
+                foreach (string archetype in FewerArchetypes)
+                {
+                    BotRunDriver.InMemorySaves = true;
+                    var inMemory = BotRunDriver.PlayRun(seed, archetype, ProfilePresets.Fresh, DepthCapSteps);
+
+                    BotRunDriver.InMemorySaves = false;
+                    var onDisk = BotRunDriver.PlayRun(seed, archetype, ProfilePresets.Fresh, DepthCapSteps);
+
+                    Assert.AreEqual(onDisk.Trace.Hash(), inMemory.Trace.Hash(),
+                        $"seed {seed} / {archetype} played differently with the save in RAM than with it " +
+                        "on disk. Persistence is not supposed to be able to change a run at all -- if it " +
+                        "can, the in-memory mode is not the only thing that is wrong.");
+                }
+            }
+
             BotRunDriver.InMemorySaves = true;
         }
 
@@ -166,6 +206,21 @@ namespace PrincesPalace.PlayModeTests
             for (ulong seed = FirstSeed; seed < FirstSeed + 5; seed++)
             {
                 foreach (string archetype in Archetypes)
+                {
+                    var first = BotRunDriver.PlayRun(seed, archetype, ProfilePresets.Fresh, DepthCapSteps);
+                    var second = BotRunDriver.PlayRun(seed, archetype, ProfilePresets.Fresh, DepthCapSteps);
+
+                    Assert.AreEqual(first.Trace.Hash(), second.Trace.Hash(),
+                        $"seed {seed} / {archetype} played differently the second time. Every draw a run " +
+                        "makes is derived from (seed, stream, step, node), so a mismatch means something " +
+                        "unseeded leaked into the loop -- which would make every batch number irreproducible.");
+                }
+            }
+
+            // Fewer seeds again -- see FewerArchetypes' own comment.
+            for (ulong seed = FirstSeed; seed < FirstSeed + 3; seed++)
+            {
+                foreach (string archetype in FewerArchetypes)
                 {
                     var first = BotRunDriver.PlayRun(seed, archetype, ProfilePresets.Fresh, DepthCapSteps);
                     var second = BotRunDriver.PlayRun(seed, archetype, ProfilePresets.Fresh, DepthCapSteps);
