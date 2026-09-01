@@ -199,6 +199,35 @@ namespace PrincesPalace
         // combat.
         private IReadOnlyList<SatchelStack> _satchel = new List<SatchelStack>();
 
+        // Bind's own parameter, kept rather than spent on ApplyBackground
+        // alone. An elite room fields a squad drawn entirely from the elite
+        // pool (EncounterRoll.EliteEnemyCount) -- eliteness is a property of
+        // the ENCOUNTER, not of any one monster in it, so every living enemy
+        // plate reads it the same way the background already does. A boss
+        // room fields exactly the one declared boss, so Boss dressing reads
+        // the front slot only -- see RefreshEnemyPlates' own use of this.
+        private EncounterClass _encounterClass = EncounterClass.Normal;
+
+        // NO INPUT LOCK. A real 0.6s WaitForSeconds gate was drafted and cut
+        // before it shipped: EnemyFightableTests.cs binds with
+        // EncounterClass.Boss and presses ATTACK after two frames, for every
+        // boss in the roster, with no speed-multiplier seam available to
+        // compress a hard real-time wait the way FightBeatPlayer's own waits
+        // already can. A lock that only some fixtures know how to skip past
+        // is a lock that silently breaks the ones that don't -- so the
+        // announcement stays a beat the bark speaks, not a gate the player
+        // waits on.
+        private void AnnounceBossIfAny()
+        {
+            if (_encounterClass != EncounterClass.Boss) return;
+
+            // A BOSS ROOM FIELDS EXACTLY THE ONE DECLARED BOSS -- see
+            // _encounterClass's own comment -- so the front slot is always
+            // it.
+            string bossName = _session?.Encounter.FrontEnemy?.Name;
+            if (!string.IsNullOrEmpty(bossName)) PushLogLine(bossName);
+        }
+
         // Handed a new satchel after one is spent. Set only in Bind until now,
         // so a potion used mid-fight left the column showing the count it had
         // when the fight started.
@@ -251,6 +280,7 @@ namespace PrincesPalace
                          IReadOnlyList<SatchelStack> satchel = null)
         {
             _session = session;
+            _encounterClass = encounterClass;
             _satchel = satchel ?? new List<SatchelStack>();
             _menu.Reset();
             _log.Clear();
@@ -289,6 +319,7 @@ namespace PrincesPalace
             // Begin go unnoticed for as long as it did.
             RefreshCommandColumn();
             RefreshUi();
+            AnnounceBossIfAny();
         }
 
         private void Start()

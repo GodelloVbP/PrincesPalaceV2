@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
+using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
@@ -147,7 +148,13 @@ namespace PrincesPalace
                 var image = verbButtons[i] == null ? null : verbButtons[i].targetGraphic as UnityEngine.UI.Image;
                 if (image != null)
                 {
-                    image.color = i == active ? VerbActive
+                    // Gamepad focus shares the branch-open tint rather than
+                    // growing a fourth colour -- the two are mutually
+                    // exclusive in practice (focus only means anything while
+                    // nothing is open yet), so one look serves both "this is
+                    // what Submit presses" and "this is what is open".
+                    bool highlighted = i == active || (active < 0 && i == _focusedVerb);
+                    image.color = highlighted ? VerbActive
                         : i == 0 ? VerbIdlePrimary
                         : RowIdle;
                 }
@@ -311,6 +318,17 @@ namespace PrincesPalace
         // just not this click's business right now.
         private const float MeleeBlockedAlpha = 0.5f;
 
+        // Elite/boss dressing -- a tint on the existing plate and name,
+        // never a new node. The plate carries three text rows in 64px
+        // already (see PlateW/PlateH's own header); a "BOSS"/"ELITE" tag
+        // squeezed in beside an 86px-wide name box would either clip a
+        // longer name or need the box widened, and neither is a colour
+        // change's business. Read straight off _encounterClass -- see its
+        // own comment for why that is enough without a per-combatant flag.
+        private static readonly Color EliteBossPlateTint = Hex(FightHudPalette.BorderGold);
+        private static readonly Color EliteBossNameTint = Hex(FightHudPalette.GoldText);
+        private static readonly Color EnemyNameNormal = Hex(FightHudPalette.EnemyName);
+
         private void RefreshEnemyPlates()
         {
             if (enemyPlates == null) return;
@@ -327,9 +345,24 @@ namespace PrincesPalace
             // question asked of the same click for every plate in the loop.
             bool meleeTargeting = _menu.IsTargeting && TargetingIsMelee();
 
+            // An elite room fields a squad drawn entirely from the elite pool,
+            // so every living plate reads it; a boss room fields exactly the
+            // one declared boss, so only the front slot does -- see
+            // _encounterClass's own comment.
+            var frontEnemy = _session?.Encounter.FrontEnemy;
+
             for (int i = 0; i < enemyPlates.Length; i++)
             {
-                bool present = i < enemies.Count && enemies[i].IsAlive;
+                // IsOnStage, not just IsAlive -- the exact "spawns before the
+                // roar" bug StageVisuals' own _confirmedPresent comment
+                // describes, on the plate instead of the sprite. A round
+                // resolves in full before a single beat plays, so a summon
+                // exists in Encounter.Enemies from the top of the round; left
+                // ungated, its plate appeared several beats before the roar
+                // that called it in, while the stage sprite (already gated)
+                // correctly waited. Same rule, same source of truth, so the
+                // two cannot disagree about when something has arrived.
+                bool present = i < enemies.Count && enemies[i].IsAlive && IsOnStage(enemies[i]);
                 enemyPlates[i].SetShown(present);
 
                 // BLOCKED: reachable by the click OnEnemyPressed will actually
@@ -340,16 +373,25 @@ namespace PrincesPalace
                 bool blocked = present && meleeTargeting && _session != null
                     && !_session.CanMeleeReach(enemies[i]);
 
+                bool dressed = present && (
+                    _encounterClass == EncounterClass.Elite
+                    || (_encounterClass == EncounterClass.Boss && ReferenceEquals(enemies[i], frontEnemy)));
+
                 if (present)
                 {
                     var plateImage = enemyPlates[i].targetGraphic as Image;
                     if (plateImage != null)
                     {
-                        var colour = plateImage.color;
+                        var colour = dressed ? EliteBossPlateTint : Color.white;
                         colour.a = blocked ? MeleeBlockedAlpha : 1f;
                         plateImage.color = colour;
                     }
                     enemyPlates[i].interactable = !blocked;
+
+                    if (Has(enemyPlateNames, i))
+                    {
+                        enemyPlateNames[i].color = dressed ? EliteBossNameTint : EnemyNameNormal;
+                    }
                 }
 
                 enemyPlateReticles[i].SetShown(present && _menu.IsTargeting);

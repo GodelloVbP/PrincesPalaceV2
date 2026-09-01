@@ -83,6 +83,10 @@ namespace PrincesPalace
         // needs to know to stop showing.
         private int _hoveredEnemyIndex = -1;
 
+        // Read-only window for GamepadNavigationTests, same reason and same
+        // shape as FocusedVerbForTest.
+        public int HoveredEnemyIndexForTest => _hoveredEnemyIndex;
+
         private void AddEnemyHover(GameObject plate, int index)
         {
             var trigger = plate.GetComponent<EventTrigger>() ?? plate.AddComponent<EventTrigger>();
@@ -644,6 +648,7 @@ namespace PrincesPalace
         {
             RescueAStrandedTurn();
             RescueAStalledEnemyTurn();
+            PollGamepadNavigation();
 
             if (characterSheetPanel == null) return;
 
@@ -654,6 +659,133 @@ namespace PrincesPalace
             // order Update between components, so the menu's own handler could
             // run after this one, see a closed menu and nothing owning Escape,
             // and reopen it in the same frame the player closed it.
+        }
+
+        // ---- gamepad / keyboard navigation -------------------------------------
+        //
+        // ONE INPUT MODEL, not two. Moving focus calls the exact same
+        // OnRowHovered/OnEnemyHovered/_focusedVerb the mouse's own hover
+        // already drives, so the three visual states (idle/hovered/selected)
+        // stay shared rather than growing a fourth "gamepad-focused" look
+        // nobody asked for. Confirming calls the exact same OnVerbPressed/
+        // OnRowPressed/OnEnemyPressed a click already does.
+        //
+        // LEGACY Input, matching every other key this file reads (see
+        // ToggleCharacterSheet's own "legacy Input cannot be simulated
+        // headlessly" comment) -- untestable for the same reason and by the
+        // same design: the logic every one of these calls into is already
+        // tested directly (FightMenuStateTests, the click handlers' own
+        // callers), so this is thin glue reading an axis, not a second copy
+        // of a rule that could disagree with the first.
+        //
+        // Vertical/Horizontal/Submit/Cancel are Unity's own default-mapped
+        // axes -- already wired to a joystick's stick and D-pad in this
+        // project's InputManager.asset, so this needed no project-settings
+        // change to reach a controller, only the code that reads them.
+        private int _focusedVerb;
+        private bool _verticalAxisArmed = true;
+
+        // Read-only window for GamepadNavigationTests -- the field itself
+        // stays private because nothing outside this file ever needs to SET
+        // it directly, only to move it through MoveFocus the way a stick
+        // press would.
+        public int FocusedVerbForTest => _focusedVerb;
+
+        private void PollGamepadNavigation()
+        {
+            if (_session == null || _isBusy) return;
+
+            float vertical = Input.GetAxisRaw("Vertical");
+            if (Mathf.Abs(vertical) < 0.5f)
+            {
+                _verticalAxisArmed = true;
+            }
+            else if (_verticalAxisArmed)
+            {
+                _verticalAxisArmed = false;
+                MoveFocus(vertical > 0f ? -1 : 1);
+            }
+
+            if (Input.GetButtonDown("Submit")) ConfirmFocus();
+            if (Input.GetButtonDown("Cancel")) OnBackPressed();
+        }
+
+        public static int Wrap(int value, int count) => count <= 0 ? 0 : ((value % count) + count) % count;
+
+        // internal, not private -- legacy Input cannot be simulated
+        // headlessly (see PollGamepadNavigation's own comment), so a test
+        // that had to press a stick to reach this could not exist. Tests
+        // drive it directly, the same way ToggleCharacterSheet already does.
+        public void MoveFocus(int delta)
+        {
+            switch (_menu.Depth)
+            {
+                case MenuDepth.Root:
+                    // BOTTOM-UP, not top-down -- BuildVerbColumn's own header:
+                    // ATTACK sits at the bottom of the column, so moving the
+                    // stick DOWN (delta +1) has to step toward index 0, the
+                    // opposite of a list that reads top to bottom. Negated
+                    // here rather than at the call site, so every other
+                    // depth's delta keeps its ordinary reading-order meaning.
+                    _focusedVerb = Wrap(_focusedVerb - delta, verbButtons?.Length ?? 0);
+                    RefreshUi();
+                    break;
+
+                case MenuDepth.Sub:
+                    var rows = CurrentRows();
+                    if (rows.Count == 0) return;
+                    OnRowHovered(Wrap(_menu.Selection + delta, rows.Count));
+                    break;
+
+                case MenuDepth.Target:
+                    var enemies = Enemies;
+                    var living = new List<int>();
+                    for (int i = 0; i < enemies.Count; i++)
+                    {
+                        if (enemies[i].IsAlive) living.Add(i);
+                    }
+
+                    if (living.Count == 0) return;
+                    int at = living.IndexOf(_hoveredEnemyIndex);
+                    int next = Wrap((at < 0 ? 0 : at) + delta, living.Count);
+                    OnEnemyHovered(living[next]);
+                    break;
+            }
+        }
+
+        public void ConfirmFocus()
+        {
+            switch (_menu.Depth)
+            {
+                case MenuDepth.Root:
+                    OnVerbPressed(_focusedVerb);
+                    break;
+
+                case MenuDepth.Sub:
+                    // Nothing hovered yet (a branch just opened, the stick has
+                    // not moved) presses row 0 rather than doing nothing --
+                    // the same "the first press should work" reasoning
+                    // MoveFocus' Wrap already leans on.
+                    OnRowPressed(_menu.Selection >= 0 ? _menu.Selection : 0);
+                    break;
+
+                case MenuDepth.Target:
+                    if (_hoveredEnemyIndex >= 0)
+                    {
+                        OnEnemyPressed(_hoveredEnemyIndex);
+                        break;
+                    }
+
+                    var enemies = Enemies;
+                    for (int i = 0; i < enemies.Count; i++)
+                    {
+                        if (!enemies[i].IsAlive) continue;
+                        OnEnemyPressed(i);
+                        break;
+                    }
+
+                    break;
+            }
         }
 
         // Separated from the key for the same reason HubController separates
