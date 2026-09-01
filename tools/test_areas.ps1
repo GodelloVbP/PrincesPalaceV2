@@ -281,6 +281,12 @@ $PathAreas = @(
     # in Phase 4/5. Above the Core/ catch-all deliberately: that fallback
     # would otherwise claim it as 'ui' alone and miss combat/art entirely.
     @{ Pattern = '^Assets/_Project/Scripts/Core/Rig/'; Areas = @('combat', 'art') }
+    # Core/Bot -- RunOrchestrator (the whole rulebook of a run: arrival, fight
+    # build, settlement, offers) plus BotRunDriver/ProfilePresets. Above the
+    # Core/ catch-all deliberately, for the same reason Core/Rig is: that
+    # fallback would claim it as 'ui' alone, and 'ui' runs none of the fight
+    # settlement or run-state suites this code is actually the seam for.
+    @{ Pattern = '^Assets/_Project/Scripts/Core/Bot/'; Areas = @('combat', 'run') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/'; Areas = @('ui') }
     @{ Pattern = '^Assets/_Project/Scripts/Data/'; Areas = @('run') }
     @{ Pattern = '^Assets/_Project/Scripts/UI/';   Areas = @('ui') }
