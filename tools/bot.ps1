@@ -34,23 +34,34 @@ param(
 # because a Unity instance is not single-threaded even in -nographics, and
 # capped at 4 because of MEMORY, not CPU:
 #
-#   measured, this machine (16 logical processors, 16 GB):
-#     peak working set per instance   1.5 - 1.7 GB, on the FIRST run against a
-#                                     copy -- the asset import is the tallest
-#                                     part of the curve, not the batch
-#     4 shards, first run             ~6.5 GB resident
+#   measured, this machine (16 logical processors, 16 GB), peak working set:
+#     warm run, per instance          1.1 - 1.4 GB   (~5 GB for 4 shards)
+#     first run against a new copy    2.1 GB         (~8 GB for 4 shards)
 #
-# ...which fits 16 GB with an Editor open and would not at 8 shards. Raise it
-# deliberately, on a machine you have measured, rather than because more
-# sounded faster: past the point where the shards start swapping, a batch gets
-# SLOWER with more of them. This script prints each shard's peak working set
-# at the end of every batch, so the number is never a guess.
+# The asset import is the tallest part of the curve, not the batch -- so the
+# expensive number is the one you pay once. Four fits 16 GB with an Editor
+# open; eight would not. Raise it deliberately, on a machine you have
+# measured, rather than because more sounded faster: past the point where the
+# shards start swapping, a batch gets SLOWER with more of them. This script
+# prints each shard's peak working set at the end of every batch, so the
+# number is never a guess.
+#
+# SCALING IS SUBLINEAR AND THAT IS FINE. Same 12,000-run batch, warm, this
+# machine: 276.7s at 1 shard, 79.5s at 4 -- 3.48x, not 4x. Each shard runs at
+# 23.9ms per run-play under four-way contention against 21.0ms solo, so the
+# loss is 14% per shard rather than anything pathological.
 #
 # TIMING CHARACTERISTICS
 #
 #   Unity startup, warm Library     ~20s per instance, paid once, in parallel
-#   Unity startup, first creation   several minutes (a full asset import)
-#   a run-play                      ~11ms Fresh, ~17ms averaged over profiles
+#   Unity startup, first creation   10-20 minutes (a full asset import, and
+#                                   slower still when several import at once)
+#   a run-play                      ~11ms Fresh 2 archetypes, ~21ms over all
+#                                   four archetypes and all three profiles
+#
+# Reference point: 1000 runs/cell x 4 archetypes x 3 profiles = 12,000 runs
+# and 13,200 run-plays at the default replay share, in 79.5s on 4 warm
+# shards. That is 9,057 runs a minute.
 #
 # Startup dominates a small batch and is invisible in a large one. Below
 # roughly 2,000 runs a single shard is the better trade, because N shards pay
