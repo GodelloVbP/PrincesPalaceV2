@@ -496,6 +496,20 @@ the choice of `UnityEngine.Random` for the offer roll (deliberately unseeded --
 see `PLAN_BALANCE_BOT.md` F3), `ReckoningController` keeps its take-once guard
 and repaint, `RelicDraftController` keeps paging and selection.
 
+### The balance bot (`Domain/Bot`, `Core/Bot`, `Editor/Bot`)
+
+`Domain/Bot` -- engine-free brains: `IFightPolicy`/`IRunPolicy` and the four
+archetypes (`RandomLegalPolicy`, `GreedyAggressivePolicy`,
+`GreedyDefensivePolicy`, `Lookahead2Policy`, registered in `Archetypes.cs`),
+`FightRunner` (plays one `FightSession` to its end with one policy),
+`FightInvariants`/`InvariantHit` (the fight-level half of the plan's bug list),
+`RunTrace`. `Core/Bot/BotRunDriver.cs` plays one whole run through
+`RunOrchestrator`'s doors (draft, walk, fight, settle, offer) and adds the
+run-level invariants. `Editor/Bot/BalanceBotRunner.cs` is the `-executeMethod`
+batch entry `tools/bot.ps1` launches. See `docs/PLAN_BALANCE_BOT.md` for the
+architecture and `docs/PLAN_BALANCE_BOT.md`'s "How to run and read it" section
+for the day-to-day commands.
+
 ### Rooms that are not fights (`RoomResolution`, `RoomResolver`)
 
 `MapController.Walk.cs`'s `Arrive` sends fight rooms to the Fight scene and

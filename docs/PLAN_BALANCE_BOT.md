@@ -317,3 +317,50 @@ profile. If it does not, the policy is wrong, not the game.
 Balance *changes*. The bot reports; the author decides. The first batch's
 numbers are not a target, they are the baseline the second batch is compared
 against.
+
+## 7. How to run and read it
+
+**Run a batch:**
+
+```bash
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/bot.ps1 -Runs 1000 -Profiles Fresh,Mid,Late
+```
+
+Defaults to all four archetypes (`RandomLegal,GreedyAggressive,GreedyDefensive,
+Lookahead2`), depth cap 40, a 10% determinism-replay sample, and
+`Shards = min(4, processors/2)`. `-Runs N` is runs *per cell* (archetype x
+profile), not the batch total -- 1000 runs x 4 archetypes x 3 profiles is a
+12,000-run batch. Key flags:
+
+- `-Archetypes a,b` / `-Profiles p,q` to narrow a cell.
+- `-Shards N` for N parallel Unity instances, each its own project copy
+  (`-Bot1`..`-BotN`, created on first use -- pays a full asset import once,
+  then boots in ~20s). `-Shards 1` stays on the shared `-TestRunner2` copy and
+  skips the copy machinery, for iterating on the bot itself.
+- `-ReplayShare 0.3` replays more of the batch to catch non-determinism (costs
+  roughly that fraction more wall clock); `1` replays everything.
+- `-InMemorySaves 0` forces the save back to disk instead of RAM, only useful
+  for proving the fast path did not change a run's hash (see
+  `BalanceBotSmokeTests.TheInMemorySaveModeChangesNothingAboutHowARunPlays`).
+
+**Where it lands:** `reports/bot/<timestamp>/` (gitignored) -- one
+`shard-N/traces.jsonl` + `summary.json` per shard, merged by `tools/bot_merge.py`
+into a top-level `summary.json`, then rendered to `report.html` by
+`tools/bot_report.py`. The script prints a plain-text table (depth
+median/p10/p90/capped/doomed/swing per archetype x profile), the bug rows (if
+any, one per invariant hit with seed/archetype/profile/step/node and the last
+ten actions), and the determinism check's mismatch count. `report.html` adds
+per-batch deltas against the previous batch in `reports/bot/`. Takeaways worth
+keeping go into a dated `docs/BALANCE_NOTES.md` entry by hand -- nothing under
+`reports/` is committed.
+
+**The smoke test** (`BalanceBotSmokeTests`, PlayMode, ~6s) is the correctness
+gate, run on every full suite: 20 seeds each through RandomLegal and
+GreedyAggressive, 10 each through GreedyDefensive and Lookahead2, all on
+Fresh, capped at 16 steps. It asserts every run terminates (dies or caps),
+trips no invariant beyond the one known pre-existing production fault
+(`StalledEnemyTurn`, counted not failed on), and that the same seed replays to
+an identical trace hash both across two runs and across the in-memory-vs-disk
+save path. It is not a balance signal -- depth numbers only mean something at
+batch scale -- it exists so the batch's numbers are worth reading at all.
+Run it on its own with `tools/test.ps1 BalanceBotSmoke,BotPolicy`.
