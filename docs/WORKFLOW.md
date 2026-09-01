@@ -234,7 +234,9 @@ Triage order, cheapest first:
 | Re-running with nothing changed since the last synced build | `-SkipSync` is legal |
 | UI-visible change | also `tools/screenshot.ps1 -Panel <Name>` and actually look at the PNG |
 | Change to anything that MOVES (an ambient animator, an intro, a tween) | `tools/screenshot.ps1 -Runtime`. `-Panel`/`-All` render Edit Mode, which never ticks `Update()` — a static capture cannot show motion at all, and the pure-curve unit tests only prove the formulas vary, not that anything calls them |
-| Balance-bot batch (not a correctness gate — a report to read) | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/bot.ps1 -Runs 200 -Seed 1 -Archetypes RandomLegal,GreedyAggressive -Profiles Fresh -DepthCap 40`. Runs against the isolated `-TestRunner2` copy (same one PlayMode uses), writes `reports/bot/<timestamp>/` (gitignored — see `docs/PLAN_BALANCE_BOT.md`, `docs/BOT_SUMMARY_SCHEMA.md`), then renders `report.html` via `tools/bot_report.py` |
+| Balance-bot batch (not a correctness gate — a report to read) | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/bot.ps1 -Runs 200`. Defaults now cover all four archetypes and sample the determinism replay at 0.1. Writes `reports/bot/<timestamp>/` (gitignored), merges the shards with `tools/bot_merge.py` into one `summary.json`, then renders `report.html` via `tools/bot_report.py`. See `docs/PLAN_BALANCE_BOT.md`, `docs/BOT_SUMMARY_SCHEMA.md` |
+| … a big one (thousands of runs) | add `-Shards 4`. N shards means N project copies (`-Bot1`…`-BotN`, created on first use — that run pays a full asset import, later ones boot in ~20s); Unity refuses two batchmode instances against one copy. Peak ~1.1 GB per shard, so 4 is the ceiling on 16 GB. `-TestRunner2` is deliberately excluded from the sharded path so a batch cannot clobber a concurrent test run |
+| … iterating on the bot itself | `-Shards 1` stays on `-TestRunner2` and skips the copy machinery entirely (the default is `min(4, processors/2)`). `-ReplayShare 1` replays every run instead of a tenth; `-InMemorySaves 0` puts the save back on disk, which is ~16x slower and exists only to prove the fast path did not change a run's hash |
 
 ## 9. Commit conventions
 
@@ -287,7 +289,8 @@ the same commit:
 | Add an art kit, or change a keying/delivery convention | `docs/ART_PIPELINE.md` |
 | Fix an `AUDIT.md` finding | `AUDIT.md` (strike it, cite the commit) |
 | Add a panel to `SceneBuilder` | `ScreenshotTool.cs`'s `KnownPanels` table + `screenshot.ps1`'s usage text |
-| Change test-tooling behavior or its timing characteristics | that tool's own header comment |
+| Change test-tooling behavior or its timing characteristics | that tool's own header comment, plus §8's table if the command line moved |
+| Change what a balance batch writes, or what a metric means | `docs/BOT_SUMMARY_SCHEMA.md` (it is the contract between `BalanceBotRunner`, `tools/bot_merge.py` and `tools/bot_report.py`) |
 | Finish (or partially close) a handoff's implementation | its `GAP_AUDIT.md` verdicts |
 | Change a workflow rule, ritual, or convention | this file |
 | Change a rule that a hook enforces | that hook's script, plus §10 above |

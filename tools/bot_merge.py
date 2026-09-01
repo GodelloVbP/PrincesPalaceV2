@@ -480,15 +480,31 @@ def merge(runs, headers, contents):
     archetypes = batch.get("archetypes", [])
     profiles = batch.get("profiles", [])
 
+    # CELL ORDER, NOT FILE ORDER, for everything that emits a list of rows.
+    #
+    # Concatenating N shards interleaves the cells: one shard writes every
+    # cell for seeds 1..50, the next every cell for 51..100. Grouping by cell
+    # puts each cell's runs back in seed order, which is the order a single
+    # shard would have produced -- and that is what makes a two-shard bugs[]
+    # or mismatches[] identical to a one-shard one rather than merely holding
+    # the same rows in a different order.
     cells = []
+    ordered = []
     for profile in profiles:
         for archetype in archetypes:
             in_cell = [r for r in runs if r["profile"] == profile and r["archetype"] == archetype]
             if not in_cell:
                 continue
+            ordered.extend(in_cell)
             cell = {"archetype": archetype, "profile": profile}
             cell.update(cell_json(in_cell, cap))
             cells.append(cell)
+
+    # A run whose profile or archetype the header does not name would
+    # otherwise vanish from bugs[] entirely. It should not happen; if it does,
+    # the row is still a finding and losing it silently is the worst outcome.
+    named = {id(r) for r in ordered}
+    ordered.extend(r for r in runs if id(r) not in named)
 
     gap = []
     for profile in profiles:
@@ -504,7 +520,7 @@ def merge(runs, headers, contents):
         gap.append(row)
 
     bugs = []
-    for run in runs:
+    for run in ordered:
         for hit in run.get("bugs", []):
             row = {"invariant": hit["invariant"], "seed": run["seed"],
                    "archetype": run["archetype"], "profile": run["profile"]}
@@ -520,10 +536,10 @@ def merge(runs, headers, contents):
         "archetypeGap": gap,
         "bugs": bugs,
         "determinism": {
-            "checked": sum(1 for r in runs if r.get("replayed")),
+            "checked": sum(1 for r in ordered if r.get("replayed")),
             "mismatches": [
                 {"seed": r["seed"], "archetype": r["archetype"], "profile": r["profile"]}
-                for r in runs if not r.get("hashMatched", True)
+                for r in ordered if not r.get("hashMatched", True)
             ],
         },
     }

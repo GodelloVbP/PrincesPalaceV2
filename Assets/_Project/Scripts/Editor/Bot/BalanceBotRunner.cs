@@ -268,11 +268,15 @@ namespace PrincesPalace.Editor.Bot
                             played.Add(entry);
 
                             // WRITTEN AS THEY FINISH, not held and dumped at
-                            // the end: a batch killed halfway then still
-                            // leaves every completed run on disk, which is
-                            // what the schema's "partial batches" section
-                            // promises and what a 10,000-run batch needs to be
-                            // worth starting.
+                            // the end, so a batch that is killed halfway
+                            // leaves nearly all of its completed runs on disk
+                            // rather than none -- which is what the schema's
+                            // "partial batches" section is for and what makes
+                            // a 10,000-run batch worth starting. NEARLY,
+                            // deliberately: the StreamWriter still buffers, so
+                            // a kill loses the last few KB. AutoFlush would
+                            // close that gap and cost a syscall per run for a
+                            // handful of rows nobody was going to read anyway.
                             using (BotPhaseTimers.Measure(BotPhase.TraceJson))
                             {
                                 traces.WriteLine(TraceJson(entry.Result.Trace));
