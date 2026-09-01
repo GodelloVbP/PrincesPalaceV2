@@ -6,6 +6,7 @@ Run: python tools/bot_report_test.py
 """
 
 import io
+import re
 import sys
 import unittest
 from contextlib import redirect_stdout
@@ -111,6 +112,84 @@ class HtmlRenderTests(unittest.TestCase):
         out = bot_report.render_html(self.summary_a, None, BATCH_A, None)
         self.assertIn("<title>", out)
         self.assertIn("<style>", out)
+
+
+class FoldPlusTiersTests(unittest.TestCase):
+    def test_contiguous_run_collapses_to_a_range(self):
+        rows = bot_report._fold_plus_tiers(["leather_torso_p4", "leather_torso_p5", "leather_torso_p6"])
+        self.assertEqual(rows, ["leather_torso (p4..p6)"])
+
+    def test_gap_in_tiers_is_two_ranges(self):
+        rows = bot_report._fold_plus_tiers(["leather_torso_p4", "leather_torso_p6", "leather_torso_p7"])
+        self.assertEqual(rows, ["leather_torso (p4, p6..p7)"])
+
+    def test_single_tier_has_no_range_dots(self):
+        rows = bot_report._fold_plus_tiers(["steel_helmet_p9"])
+        self.assertEqual(rows, ["steel_helmet (p9)"])
+
+    def test_a_non_plus_tier_id_passes_through_unchanged(self):
+        rows = bot_report._fold_plus_tiers(["stale_bread"])
+        self.assertEqual(rows, ["stale_bread"])
+
+    def test_mixed_ids_sort_together(self):
+        rows = bot_report._fold_plus_tiers(["stale_bread", "leather_torso_p4", "leather_torso_p5"])
+        self.assertEqual(rows, ["leather_torso (p4..p5)", "stale_bread"])
+
+
+class SkillsNeverUsedSplitTests(unittest.TestCase):
+    def test_batch_b_folds_item_plus_tiers_in_the_rendered_report(self):
+        summary = bot_report.load_summary(BATCH_B)
+        out = bot_report.render_coverage(summary["coverage"])
+        self.assertIn("leather_torso (p4, p6..p10)", out)
+        self.assertIn("steel_helmet (p9..p10)", out)
+        # The individual plus-tier ids must NOT also appear as their own rows.
+        self.assertNotIn("leather_torso_p4<", out)
+
+    def test_batch_b_splits_skills_never_used_by_enemyAbilityIds(self):
+        summary = bot_report.load_summary(BATCH_B)
+        out = bot_report.render_coverage(summary["coverage"])
+        self.assertIn("player skills", out)
+        self.assertIn("enemy abilities", out)
+        self.assertIn("provoke", out)
+        self.assertIn("shatter", out)
+        self.assertIn("hex", out)
+        self.assertIn("roar", out)
+        self.assertIn("enemyAbilityIds", out)
+
+    def test_batch_a_has_no_enemy_ability_key_and_collapses_under_details(self):
+        summary = bot_report.load_summary(BATCH_A)
+        out = bot_report.render_coverage(summary["coverage"])
+        # batch_a's skillsNeverUsed is empty, so this exercises the "none"
+        # branch rather than <details> -- assert the flat-list fallback
+        # path is reachable by feeding a non-empty list with no enemy key.
+        out2 = bot_report.render_coverage({"skillsNeverUsed": ["provoke", "hex"]})
+        self.assertIn("<details>", out2)
+        self.assertIn("provoke", out2)
+        self.assertNotIn("player skills", out2)
+        self.assertIsInstance(out, str)
+
+
+class ArchetypeGapFourArchetypesTests(unittest.TestCase):
+    def test_color_map_assigns_a_distinct_color_per_archetype(self):
+        gap = [{"profile": "Fresh", "archetypes": [
+            {"archetype": "RandomLegal", "medianDepth": 12},
+            {"archetype": "GreedyAggressive", "medianDepth": 19},
+            {"archetype": "GreedyDefensive", "medianDepth": 16},
+            {"archetype": "Lookahead2", "medianDepth": 24},
+        ]}]
+        colors = bot_report._archetype_color_map(gap)
+        self.assertEqual(len(colors), 4)
+        self.assertEqual(len(set(colors.values())), 4, "all four archetypes must get distinct colors")
+
+    def test_batch_b_gap_svg_renders_all_four_archetypes_with_distinct_fills(self):
+        summary = bot_report.load_summary(BATCH_B)
+        svg = bot_report.render_archetype_gap_svg(summary)
+        for name in ["RandomLegal", "GreedyAggressive", "GreedyDefensive", "Lookahead2"]:
+            self.assertIn(name, svg)
+
+        fills = re.findall(r'<rect [^>]*fill="(#[0-9a-fA-F]{6})"', svg)
+        self.assertEqual(len(fills), 4, "one bar per archetype")
+        self.assertEqual(len(set(fills)), 4, "all four archetype bars must get distinct colors")
 
 
 class TracesJsonlFixtureTests(unittest.TestCase):

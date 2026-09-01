@@ -15,6 +15,7 @@ import argparse
 import html
 import json
 import os
+import re
 import statistics
 import sys
 from pathlib import Path
@@ -213,10 +214,32 @@ def esc(v):
     return html.escape(str(v))
 
 
+# One color per archetype, assigned by first-seen order across every
+# profile in archetypeGap so the SAME archetype reads as the SAME color
+# in every profile's row group -- this is the ONE thing that makes a
+# four-(or more-)archetype batch scannable at a glance; with a fixed
+# single color (the pre-Phase-6 version), the two extra bars per profile
+# read as noise rather than as "which archetype is this". Six entries
+# covers the plan's four (RandomLegal/GreedyAggressive/GreedyDefensive/
+# Lookahead2) with headroom before it wraps.
+BAR_PALETTE = ["#4a7fd6", "#57d38c", "#e0a355", "#c26be0", "#e06060", "#4fd6c0"]
+
+
+def _archetype_color_map(gap):
+    order = []
+    for profile_entry in gap:
+        for a in profile_entry["archetypes"]:
+            if a["archetype"] not in order:
+                order.append(a["archetype"])
+    return {name: BAR_PALETTE[i % len(BAR_PALETTE)] for i, name in enumerate(order)}
+
+
 def render_archetype_gap_svg(summary):
     gap = summary.get("archetypeGap", [])
     if not gap:
         return '<p class="empty">No archetype gap data (single-archetype batch).</p>'
+
+    colors = _archetype_color_map(gap)
 
     bar_h = 22
     gap_h = 6
@@ -243,8 +266,8 @@ def render_archetype_gap_svg(summary):
         w = 0 if max_depth == 0 else (value / max_depth) * chart_w
         svg.append('<g class="bar-row">')
         svg.append('<text x="0" y="{}" font-size="12">{}</text>'.format(y + bar_h * 0.7, esc(label)))
-        svg.append('<rect x="{}" y="{}" width="{:.1f}" height="{}" fill="#4a7fd6" rx="2"/>'.format(
-            label_w, y, w, bar_h
+        svg.append('<rect x="{}" y="{}" width="{:.1f}" height="{}" fill="{}" rx="2"/>'.format(
+            label_w, y, w, bar_h, colors.get(label, BAR_PALETTE[0])
         ))
         svg.append('<text x="{}" y="{}" font-size="12">{}</text>'.format(
             label_w + w + 8, y + bar_h * 0.7, fmt_num(value)
@@ -333,23 +356,116 @@ def render_death_causes(cell):
     return "".join(out)
 
 
+# Item ids for a set piece are generated as "<set>_<piece>_p<tier>"
+# (ItemSetEntryResolver.BuildPiece: `$"{setId}_{pieceId}_p{tier}"`) --
+# eleven real ids (p0..p10, maxTier defaults to 10) per authored piece.
+# A coverage list of raw ids buries the one gap worth reading ("this
+# WHOLE PIECE never drops") under ten-plus near-duplicate rows. This
+# folds every "<base>_pN" id sharing a base back into one row, so the
+# report reads "leather_torso (p4..p10)" instead of seven separate
+# <li> lines.
+_PLUS_TIER_ID = re.compile(r"^(.*)_p(\d+)$")
+
+
+def _fold_plus_tiers(ids):
+    bases = {}
+    standalone = []
+    for item_id in ids:
+        m = _PLUS_TIER_ID.match(item_id)
+        if m:
+            bases.setdefault(m.group(1), []).append(int(m.group(2)))
+        else:
+            standalone.append(item_id)
+
+    rows = list(standalone)
+    for base, tiers in bases.items():
+        rows.append("{} ({})".format(base, _tier_ranges(sorted(set(tiers)))))
+    return sorted(rows)
+
+
+def _tier_ranges(tiers):
+    """[4,5,6,7,8,9,10] -> 'p4..p10'; [1,3] -> 'p1, p3'."""
+    ranges = []
+    start = prev = tiers[0]
+    for t in tiers[1:]:
+        if t == prev + 1:
+            prev = t
+            continue
+        ranges.append((start, prev))
+        start = prev = t
+    ranges.append((start, prev))
+    return ", ".join("p{}".format(a) if a == b else "p{}..p{}".format(a, b) for a, b in ranges)
+
+
+# coverage.skillsNeverUsed holds BOTH player skill ids and enemy ability
+# ids (docs/BOT_SUMMARY_SCHEMA.md: "never the target of a TurnTrace.Action
+# of the form 'Skill:...'", which TraceLabel writes for an enemy's own
+# skill turns identically to a player's -- see Domain/Bot/FightRunner.cs's
+# TraceLabel). Splitting them needs a second list naming which ids are
+# enemy-side; look for one under a name that says so rather than a single
+# hardcoded key, since the concurrent schema work on this same phase may
+# land it under any of a few reasonable spellings.
+def _find_enemy_ability_key(coverage):
+    for key in coverage.keys():
+        if key == "skillsNeverUsed":
+            continue
+        lowered = key.lower()
+        if "enemy" in lowered and ("abilit" in lowered or "skill" in lowered):
+            return key
+    return None
+
+
 def render_coverage(coverage):
     out = ["<h2>coverage</h2>"]
-    labels = [
+    plain_labels = [
         ("enemiesNeverSeen", "enemies never seen"),
         ("relicsNeverOffered", "relics never offered"),
         ("relicsNeverPicked", "relics never picked"),
-        ("itemsNeverOffered", "items never offered"),
-        ("itemsNeverPicked", "items never picked"),
-        ("skillsNeverUsed", "skills never used"),
     ]
-    for key, label in labels:
+    for key, label in plain_labels:
         items = coverage.get(key, [])
         out.append("<h3>{}</h3>".format(esc(label)))
         if not items:
             out.append('<p class="empty">none</p>')
         else:
             out.append('<ul class="coverage-list">' + "".join("<li><code>{}</code></li>".format(esc(i)) for i in items) + "</ul>")
+
+    for key, label in [("itemsNeverOffered", "items never offered"), ("itemsNeverPicked", "items never picked")]:
+        items = _fold_plus_tiers(coverage.get(key, []))
+        out.append("<h3>{}</h3>".format(esc(label)))
+        if not items:
+            out.append('<p class="empty">none</p>')
+        else:
+            out.append('<ul class="coverage-list">' + "".join("<li><code>{}</code></li>".format(esc(i)) for i in items) + "</ul>")
+
+    skills = coverage.get("skillsNeverUsed", [])
+    enemy_key = _find_enemy_ability_key(coverage)
+    out.append("<h3>skills never used</h3>")
+    if not skills:
+        out.append('<p class="empty">none</p>')
+    elif enemy_key:
+        enemy_ids = set(coverage.get(enemy_key, []))
+        player_skills = sorted(s for s in skills if s not in enemy_ids)
+        enemy_skills = sorted(s for s in skills if s in enemy_ids)
+        out.append("<p><em>split against <code>{}</code>.</em></p>".format(esc(enemy_key)))
+        for sub_label, sub_items in [("player skills", player_skills), ("enemy abilities", enemy_skills)]:
+            out.append("<h4>{}</h4>".format(esc(sub_label)))
+            if not sub_items:
+                out.append('<p class="empty">none</p>')
+            else:
+                out.append('<ul class="coverage-list">' + "".join("<li><code>{}</code></li>".format(esc(i)) for i in sub_items) + "</ul>")
+    else:
+        # No way to tell player skills from enemy abilities apart yet --
+        # collapsed under <details> rather than dumped flat, per this
+        # phase's brief, so a long combined list does not read as one
+        # more full-height coverage section.
+        out.append(
+            '<details><summary>{} never used</summary>'.format(len(skills))
+            + '<ul class="coverage-list">'
+            + "".join("<li><code>{}</code></li>".format(esc(i)) for i in sorted(skills))
+            + "</ul></details>"
+        )
+
     return "".join(out)
 
 

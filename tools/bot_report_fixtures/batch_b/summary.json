@@ -61,16 +61,19 @@
     "enemiesNeverSeen": [],
     "relicsNeverOffered": ["ashbound_locket"],
     "relicsNeverPicked": ["ashbound_locket", "tin_whistle"],
-    "itemsNeverOffered": [],
-    "itemsNeverPicked": ["stale_bread"],
-    "skillsNeverUsed": []
+    "itemsNeverOffered": ["leather_torso_p4", "leather_torso_p6", "leather_torso_p7", "leather_torso_p8", "leather_torso_p9", "leather_torso_p10", "stale_bread"],
+    "itemsNeverPicked": ["stale_bread", "steel_helmet_p9", "steel_helmet_p10"],
+    "skillsNeverUsed": ["provoke", "shatter", "hex", "roar"],
+    "enemyAbilityIds": ["hex", "roar", "bellow"]
   },
   "archetypeGap": [
     {
       "profile": "Fresh",
       "archetypes": [
         { "archetype": "RandomLegal", "medianDepth": 12 },
-        { "archetype": "GreedyAggressive", "medianDepth": 19 }
+        { "archetype": "GreedyAggressive", "medianDepth": 19 },
+        { "archetype": "GreedyDefensive", "medianDepth": 16 },
+        { "archetype": "Lookahead2", "medianDepth": 24 }
       ]
     }
   ],
