@@ -38,7 +38,7 @@ $Areas = @{
     # RigRawSpriteTests, and whatever Domain/Rig sampler/timing tests Phase 5
     # adds) -- combat because the fight stage is the only thing that loads a
     # rig, same reasoning as the frame-sheet stance tests already here.
-    combat  = "Fight|Wool|Spell|Combat|Enemy|Party|Stage|Boss|Turn|Skill|Damage|Defeat|Teardown|BreakShield|Status|Signature|Ward|Gift|Empower|Cooldown|Relic|Balance|Modifier|Rig"
+    combat  = "Fight|Wool|Spell|Combat|Enemy|Party|Stage|Boss|Turn|Skill|Damage|Defeat|Teardown|BreakShield|Status|Signature|Ward|Gift|Empower|Cooldown|Relic|Balance|Modifier|Rig|Bot"
     hub     = "Hub|Talent|Principality|CharacterSheet|SheetStat|Store|Constellation|Glossary"
     # 'ModifierTable' explicitly, alongside the bare 'Modifier' already
     # matching combat above -- ModifierTableTests (Phase A3) covers the
@@ -234,6 +234,9 @@ $ChangedFullSuite = '^(tools/|Packages/|ProjectSettings/|Assets/_Project/Scripts
 # unbypassable invariant belongs; this map is allowed to be a little soft.
 $PathAreas = @(
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Combat/';    Areas = @('combat') }
+    # The balance bot's brains -- policies decide over FightSession the same
+    # way the fight screen's menu does, so it belongs beside Domain/Combat/.
+    @{ Pattern = '^Assets/_Project/Scripts/Domain/Bot/';       Areas = @('combat') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Content/';   Areas = @('content') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Dungeon/';   Areas = @('run') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/DebugMenu/'; Areas = @('ui', 'content') }
