@@ -4,6 +4,8 @@ param(
     [string]$Archetypes = "RandomLegal,GreedyAggressive",
     [string]$Profiles = "Fresh",
     [int]$DepthCap = 40,
+    [double]$ReplayShare = 0.1,
+    [int]$InMemorySaves = 1,
     [switch]$SkipSync
 )
 
@@ -103,6 +105,8 @@ $unityArgs = @(
     "-botArchetypes", $Archetypes,
     "-botProfiles", $Profiles,
     "-botDepthCap", $DepthCap,
+    "-botReplayShare", $ReplayShare,
+    "-botInMemorySaves", $InMemorySaves,
     "-botCommit", $CommitSha,
     "-botOut", "`"$RunnerOutDir`"",
     "-logFile", "`"$logPath`"",

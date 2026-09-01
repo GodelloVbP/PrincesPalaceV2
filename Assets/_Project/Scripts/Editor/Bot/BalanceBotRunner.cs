@@ -34,6 +34,7 @@ namespace PrincesPalace.Editor.Bot
         private const int DefaultRuns = 200;
         private const ulong DefaultSeed = 1;
         private const int DefaultDepthCap = 40;
+        private const double DefaultReplayShare = 0.1;
 
         [MenuItem("Tools/Balance Bot/Run a small batch (20 seeds, both archetypes, Fresh)")]
         public static void RunASmallBatchFromTheMenu()
@@ -88,6 +89,20 @@ namespace PrincesPalace.Editor.Bot
             public int DepthCap = DefaultDepthCap;
             public string OutDir = "";
             public string CommitSha = "";
+
+            // SAMPLED, NOT EVERY RUN. Replaying every seed doubles the batch
+            // for a check whose answer is a property of the machinery rather
+            // than of a seed -- if anything unseeded leaks into the loop it
+            // leaks into every run, so one run in ten finds it just as surely
+            // as ten in ten and costs a tenth as much. 1.0 restores the old
+            // behaviour; 0 turns the check off entirely, which is a thing a
+            // throughput measurement wants and a report never does.
+            public double ReplayShare = DefaultReplayShare;
+
+            // Off makes the bot write save_slot_0.json to a throwaway
+            // directory the way it used to, which is how the equivalence of
+            // the in-memory mode is demonstrated rather than asserted.
+            public bool InMemorySaves = true;
         }
 
         private static Options ReadOptions()
@@ -100,7 +115,12 @@ namespace PrincesPalace.Editor.Bot
                 DepthCap = ArgInt(args, "-botDepthCap", DefaultDepthCap),
                 OutDir = Arg(args, "-botOut", Path.Combine(Path.GetTempPath(), "pp-bot-out")),
                 CommitSha = Arg(args, "-botCommit", ""),
+                ReplayShare = ArgDouble(args, "-botReplayShare", DefaultReplayShare),
+                InMemorySaves = ArgInt(args, "-botInMemorySaves", 1) != 0,
             };
+
+            if (o.ReplayShare < 0) o.ReplayShare = 0;
+            if (o.ReplayShare > 1) o.ReplayShare = 1;
 
             o.Archetypes = SplitList(Arg(args, "-botArchetypes", string.Join(",", BotRunDriver.Archetypes)))
                 .Where(a => BotRunDriver.Archetypes.Contains(a))
@@ -134,6 +154,9 @@ namespace PrincesPalace.Editor.Bot
         private static int ArgInt(string[] args, string name, int fallback) =>
             int.TryParse(Arg(args, name, ""), NumberStyles.Integer, CultureInfo.InvariantCulture, out int v) ? v : fallback;
 
+        private static double ArgDouble(string[] args, string name, double fallback) =>
+            double.TryParse(Arg(args, name, ""), NumberStyles.Float, CultureInfo.InvariantCulture, out double v) ? v : fallback;
+
         private static ulong ArgULong(string[] args, string name, ulong fallback) =>
             ulong.TryParse(Arg(args, name, ""), NumberStyles.Integer, CultureInfo.InvariantCulture, out ulong v) ? v : fallback;
 
@@ -147,12 +170,31 @@ namespace PrincesPalace.Editor.Bot
         // with the batch; only the phase report reads it.
         private static int _runPlays;
 
+        // WHAT THE QUIETENED LOG WOULD HAVE SAID.
+        //
+        // The run loop drops Debug.unityLogger.filterLogType to Error for its
+        // duration -- in batchmode every Debug.Log walks the managed stack to
+        // build a trace and then writes a line to disk, and a batch running
+        // thousands of runs pays that for output nobody reads. Warnings and
+        // infos are disposable here; an ERROR is not, and swallowing one would
+        // turn a report into a lie. So errors and exceptions still flow
+        // (filterLogType = Error passes exactly those) and land in bugs[]
+        // against the run that produced them -- which is strictly MORE than the
+        // old behaviour gave, where they went to the log file and appeared in
+        // no report at all.
+        private static readonly List<InvariantHit> LoggedThisRun = new List<InvariantHit>();
+
         private sealed class Played
         {
             public ulong Seed;
             public string Archetype;
             public string Profile;
             public BotRunDriver.BotRunResult Result;
+
+            // A run nobody replayed is neither a match nor a mismatch, and
+            // counting it as a match would inflate determinism.checked into a
+            // claim the batch never actually made.
+            public bool Replayed;
             public bool HashMatched;
         }
 
@@ -167,13 +209,25 @@ namespace PrincesPalace.Editor.Bot
 
             string tracesPath = Path.Combine(o.OutDir, "traces.jsonl");
             var played = new List<Played>();
+            var progress = new List<string>();
+
+            BotRunDriver.InMemorySaves = o.InMemorySaves;
+
+            var previousFilter = Debug.unityLogger.filterLogType;
+            Application.LogCallback capture = (condition, stack, type) =>
+                LoggedThisRun.Add(new InvariantHit("LoggedError",
+                    type + ": " + condition + (string.IsNullOrEmpty(stack) ? "" : "\n" + stack)));
 
             // NO BOM. Encoding.UTF8 writes one, and Python's json.load refuses
             // a leading BOM outright ("Unexpected UTF-8 BOM") -- which broke
             // tools/bot_report.py on the very first batch this wrote. Both
             // files go out through the same encoding for the same reason.
             using (var traces = new StreamWriter(tracesPath, append: false, NoBom))
+            try
             {
+                Debug.unityLogger.filterLogType = LogType.Error;
+                Application.logMessageReceived += capture;
+
                 foreach (string profile in o.Profiles)
                 {
                     foreach (string archetype in o.Archetypes)
@@ -181,7 +235,16 @@ namespace PrincesPalace.Editor.Bot
                         for (int i = 0; i < o.Runs; i++)
                         {
                             ulong seed = o.FirstSeed + (ulong)i;
-                            var entry = PlayOnePairSafely(seed, archetype, profile, o.DepthCap);
+
+                            // EVERY Nth RUN, not a random tenth: a sampled
+                            // check whose sample moves between batches makes
+                            // "this batch found no mismatch" unreproducible,
+                            // which is the one property a determinism check
+                            // cannot afford to lack.
+                            bool replay = o.ReplayShare >= 1.0
+                                || (o.ReplayShare > 0 && i % Math.Max(1, (int)Math.Round(1.0 / o.ReplayShare)) == 0);
+
+                            var entry = PlayOnePairSafely(seed, archetype, profile, o.DepthCap, replay);
                             played.Add(entry);
 
                             using (BotPhaseTimers.Measure(BotPhase.TraceJson))
@@ -190,10 +253,21 @@ namespace PrincesPalace.Editor.Bot
                             }
                         }
 
-                        Debug.Log($"[BalanceBot] {profile}/{archetype}: {o.Runs} runs done.");
+                        // Held rather than logged: the quiet window is still
+                        // open here and would eat it. A progress line per cell
+                        // is what a watched batch is steered by, so it comes
+                        // back out below rather than being dropped.
+                        progress.Add($"[BalanceBot] {profile}/{archetype}: {o.Runs} runs done.");
                     }
                 }
             }
+            finally
+            {
+                Application.logMessageReceived -= capture;
+                Debug.unityLogger.filterLogType = previousFilter;
+            }
+
+            foreach (string line in progress) Debug.Log(line);
 
             double elapsed = (DateTime.UtcNow - startedAt).TotalSeconds;
 
@@ -221,14 +295,18 @@ namespace PrincesPalace.Editor.Bot
         //
         // Wrapped so a throw that somehow escapes BotRunDriver's own run-level
         // catch still costs one run rather than the batch.
-        private static Played PlayOnePairSafely(ulong seed, string archetype, string profile, int depthCap)
+        private static Played PlayOnePairSafely(
+            ulong seed, string archetype, string profile, int depthCap, bool replay)
         {
             var entry = new Played { Seed = seed, Archetype = archetype, Profile = profile, HashMatched = true };
+            LoggedThisRun.Clear();
 
             try
             {
                 entry.Result = BotRunDriver.PlayRun(seed, archetype, profile, depthCap);
                 _runPlays++;
+
+                if (!replay) return entry;
 
                 RunTrace again;
                 using (BotPhaseTimers.Measure(BotPhase.Replay))
@@ -237,6 +315,7 @@ namespace PrincesPalace.Editor.Bot
                 }
 
                 _runPlays++;
+                entry.Replayed = true;
                 entry.HashMatched = entry.Result.Trace.Hash() == again.Hash();
             }
             catch (Exception e)
@@ -247,6 +326,20 @@ namespace PrincesPalace.Editor.Bot
                 entry.Result.Trace.Profile = profile;
                 entry.Result.Hits.Add(new InvariantHit("Exception",
                     "outside the run loop: " + e.GetType().Name + ": " + e.Message + "\n" + e.StackTrace));
+            }
+            finally
+            {
+                // Attributed to the run that was in flight when it fired. The
+                // log callback cannot write straight onto entry.Result -- that
+                // object does not exist until PlayRun returns -- so it parks
+                // them in the list above and this is where they are claimed.
+                // In a finally because the un-replayed path returns early.
+                if (LoggedThisRun.Count > 0 && entry.Result != null)
+                {
+                    entry.Result.Hits.AddRange(LoggedThisRun);
+                }
+
+                LoggedThisRun.Clear();
             }
 
             return entry;
@@ -365,7 +458,7 @@ namespace PrincesPalace.Editor.Bot
             sb.Append("\"bugs\":").Append(BugsJson(played)).Append(",\n");
 
             var mismatches = played.Where(p => !p.HashMatched).ToList();
-            sb.Append("\"determinism\":{\"checked\":").Append(played.Count).Append(",\"mismatches\":[");
+            sb.Append("\"determinism\":{\"checked\":").Append(played.Count(p => p.Replayed)).Append(",\"mismatches\":[");
             for (int i = 0; i < mismatches.Count; i++)
             {
                 if (i > 0) sb.Append(',');
@@ -819,10 +912,11 @@ namespace PrincesPalace.Editor.Bot
             }
 
             var mismatches = played.Where(p => !p.HashMatched).ToList();
+            int replayed = played.Count(p => p.Replayed);
             sb.AppendLine();
             sb.AppendLine(mismatches.Count == 0
-                ? $"determinism: {played.Count} runs replayed, 0 mismatches"
-                : $"determinism: {played.Count} runs replayed, {mismatches.Count} MISMATCHES " +
+                ? $"determinism: {replayed}/{played.Count} runs replayed, 0 mismatches"
+                : $"determinism: {replayed}/{played.Count} runs replayed, {mismatches.Count} MISMATCHES " +
                   $"(e.g. seed {mismatches[0].Seed} {mismatches[0].Profile}/{mismatches[0].Archetype})");
 
             return sb.ToString();

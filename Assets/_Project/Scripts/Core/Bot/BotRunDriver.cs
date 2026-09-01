@@ -121,6 +121,37 @@ namespace PrincesPalace
 
         // ---- the run -------------------------------------------------------------
 
+        // THE SAVE STAYS IN RAM, unless somebody deliberately turns that off.
+        //
+        // Measured (see BotPhaseTimers' first phase table): the game persists
+        // 28 times per run and at ~5.7ms a write that was 91% of a batch's
+        // wall clock. None of those writes influences what a run does -- they
+        // exist so a player can quit mid-descent -- so the bot keeps the slot
+        // in a dictionary instead. It is a FLAG rather than a hardcode because
+        // the only way to know the optimisation is safe is to play the same
+        // seed both ways and compare RunTrace.Hash(), which is exactly what
+        // BalanceBotSmokeTests does with it.
+        public static bool InMemorySaves = true;
+
+        // ONE THROWAWAY ROOT FOR THE PROCESS, not one directory per run.
+        //
+        // Only reached when InMemorySaves is off: with it on nothing is ever
+        // written here at all, and the root exists purely so a stray writer
+        // that ignores InMemory still cannot reach the player's real
+        // persistentDataPath.
+        private static string _sharedRoot;
+
+        private static string SharedRoot()
+        {
+            if (_sharedRoot == null)
+            {
+                _sharedRoot = Path.Combine(Path.GetTempPath(), "pp-bot-" + Guid.NewGuid().ToString("N"));
+                Directory.CreateDirectory(_sharedRoot);
+            }
+
+            return _sharedRoot;
+        }
+
         public static BotRunResult PlayRun(ulong seed, string archetype, string profile, int depthCapSteps)
         {
             var result = new BotRunResult();
@@ -129,7 +160,16 @@ namespace PrincesPalace
             result.Trace.Profile = profile;
 
             var started = DateTime.UtcNow;
-            string root = Path.Combine(Path.GetTempPath(), "pp-bot-" + Guid.NewGuid().ToString("N"));
+
+            // With the save in RAM the root is shared and never written to; on
+            // disk it has to be per-run, because isolation between runs IS the
+            // fresh directory -- run N+1's Forget()+CurrentSave would otherwise
+            // load run N's save_slot_0.json instead of taking Load's
+            // missing-file branch.
+            bool inMemory = InMemorySaves;
+            string root = inMemory
+                ? SharedRoot()
+                : Path.Combine(Path.GetTempPath(), "pp-bot-" + Guid.NewGuid().ToString("N"));
 
             try
             {
@@ -141,7 +181,10 @@ namespace PrincesPalace
                 // RunManager whose cached map is dropped between runs.
                 using (BotPhaseTimers.Measure(BotPhase.HarnessSetup))
                 {
-                    Directory.CreateDirectory(root);
+                    if (!inMemory) Directory.CreateDirectory(root);
+
+                    SaveSystem.InMemory = inMemory;
+                    SaveSystem.ClearMemory();
                     SaveSystem.RootOverride = root;
                     SaveSlotManager.CurrentSlot = 0;
                     SaveSlotManager.Forget();
@@ -167,13 +210,17 @@ namespace PrincesPalace
                 {
                     Navigation.Reset();
                     SaveSystem.RootOverride = null;
+                    SaveSystem.InMemory = false;
+                    SaveSystem.ClearMemory();
                     SaveSlotManager.Forget();
                     RunManager.ResetForTests();
                     RoomResolver.Reset();
 
                     try
                     {
-                        if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+                        // The SHARED root outlives the run by design; only a
+                        // per-run one is this run's to delete.
+                        if (!inMemory && Directory.Exists(root)) Directory.Delete(root, recursive: true);
                     }
                     catch (IOException)
                     {

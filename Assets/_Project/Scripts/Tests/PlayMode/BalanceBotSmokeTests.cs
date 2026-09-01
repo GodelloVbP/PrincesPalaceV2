@@ -48,6 +48,14 @@ namespace PrincesPalace.PlayModeTests
         [TearDown]
         public void LeaveNoStaticsBehind()
         {
+            // The bot's default. Restored explicitly because
+            // TheInMemorySaveModeChangesNothingAboutHowARunPlays turns it off,
+            // and a test that leaked "off" would make every later test in the
+            // class write thousands of save files nobody reads.
+            BotRunDriver.InMemorySaves = true;
+            SaveSystem.InMemory = false;
+            SaveSystem.ClearMemory();
+
             // BotRunDriver.PlayRun restores all of these in its own finally, so
             // this is belt and braces against a future edit that throws before
             // the try -- GlobalStateTests is the lint that would otherwise
@@ -107,6 +115,44 @@ namespace PrincesPalace.PlayModeTests
                 "the smoke seeds tripped a run-level invariant. Either the driver is asking the " +
                 "orchestrator for something in the wrong order, or the game has a bug the batch " +
                 "should be reporting -- both are worth reading before this is excluded.");
+        }
+
+        // THE OPTIMISATION HAS TO BE INVISIBLE TO THE GAME, and this is what
+        // says so.
+        //
+        // BotRunDriver.InMemorySaves keeps the slot in a dictionary instead of
+        // writing save_slot_0.json 28 times a run, which is 91% of a batch's
+        // wall clock (see BotPhaseTimers' phase table). Persistence is not
+        // supposed to influence anything a run does -- but "supposed to" is a
+        // belief, and the whole value of the balance numbers rests on it, so
+        // the same seed is played BOTH ways and the two RunTrace.Hash() values
+        // have to be the same string.
+        //
+        // A hash rather than a spot-check on depth: Hash() covers every fight,
+        // every turn, every offer and every room the run touched, so a
+        // divergence anywhere in the run fails this, not just one that happens
+        // to move the death step.
+        [Test]
+        public void TheInMemorySaveModeChangesNothingAboutHowARunPlays()
+        {
+            for (ulong seed = FirstSeed; seed < FirstSeed + 5; seed++)
+            {
+                foreach (string archetype in Archetypes)
+                {
+                    BotRunDriver.InMemorySaves = true;
+                    var inMemory = BotRunDriver.PlayRun(seed, archetype, ProfilePresets.Fresh, DepthCapSteps);
+
+                    BotRunDriver.InMemorySaves = false;
+                    var onDisk = BotRunDriver.PlayRun(seed, archetype, ProfilePresets.Fresh, DepthCapSteps);
+
+                    Assert.AreEqual(onDisk.Trace.Hash(), inMemory.Trace.Hash(),
+                        $"seed {seed} / {archetype} played differently with the save in RAM than with it " +
+                        "on disk. Persistence is not supposed to be able to change a run at all -- if it " +
+                        "can, the in-memory mode is not the only thing that is wrong.");
+                }
+            }
+
+            BotRunDriver.InMemorySaves = true;
         }
 
         [Test]

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 
@@ -17,6 +18,42 @@ namespace PrincesPalace
         // reach it without an InternalsVisibleTo entry.
         public static string RootOverride;
 
+        // BOT-ONLY: THE SLOT LIVES IN RAM AND NEVER REACHES THE DISK.
+        //
+        // Measured, not assumed (see the phase table in the commit that added
+        // BotPhaseTimers): a balance batch rewrites the save 28 times per run
+        // -- on arrival at every room, on every offer taken, on every potion
+        // drunk, twice in the relic draft -- and at ~5.7ms per write that was
+        // 91% of the batch's entire wall clock. Persistence does not influence
+        // gameplay in any of those places; it exists so a player who quits
+        // mid-descent comes back where they left off, and a bot never quits.
+        //
+        // OFF BY DEFAULT and only ever set by BotRunDriver, which restores it
+        // in the same finally that restores RootOverride. The game's own paths
+        // never see it.
+        //
+        // Read semantics are kept honest rather than stubbed: Load returns a
+        // COPY through the same JsonUtility round-trip a disk read would, so a
+        // caller cannot alias the object it saved and no code can come to
+        // depend on in-memory mode handing back a live reference. That cost
+        // sits on the read path, which a batch never takes -- the write path,
+        // which it takes 28 times a run, does nothing at all.
+        public static bool InMemory;
+
+        private static readonly Dictionary<int, SaveData> Memory = new Dictionary<int, SaveData>();
+        private static readonly Dictionary<int, long> MemoryWrittenAt = new Dictionary<int, long>();
+        private static long _memoryClock;
+
+        // Called between runs. The equivalent of deleting the throwaway save
+        // root, and the reason the driver no longer needs one directory per
+        // run: without this, run N+1's Forget()+CurrentSave would load run N's
+        // save instead of taking SaveSystem.Load's missing-file branch.
+        public static void ClearMemory()
+        {
+            Memory.Clear();
+            MemoryWrittenAt.Clear();
+        }
+
         private static string PathForSlot(int slot)
         {
             string root = RootOverride ?? Application.persistentDataPath;
@@ -25,6 +62,7 @@ namespace PrincesPalace
 
         public static bool SlotExists(int slot)
         {
+            if (InMemory) return Memory.ContainsKey(slot);
             return File.Exists(PathForSlot(slot));
         }
 
@@ -34,6 +72,20 @@ namespace PrincesPalace
         // failing hard here would strand them at a broken main menu.
         public static SaveData Load(int slot)
         {
+            if (InMemory)
+            {
+                // A COPY, for the same reason the disk path hands back a
+                // freshly parsed object: two callers holding one SaveData is
+                // the shape of "my gold reset when I left the shop", and an
+                // in-memory mode that quietly allowed it would be a different
+                // game from the one the batch is supposed to be measuring.
+                if (!Memory.TryGetValue(slot, out var stored) || stored == null) return SaveData.CreateNew();
+
+                var copy = JsonUtility.FromJson<SaveData>(JsonUtility.ToJson(stored));
+                if (copy == null || !copy.Migrate()) return SaveData.CreateNew();
+                return copy;
+            }
+
             string path = PathForSlot(slot);
             if (!File.Exists(path))
             {
@@ -77,6 +129,21 @@ namespace PrincesPalace
         // filesystem operation rather than an in-place overwrite.
         public static void Save(SaveData data, int slot)
         {
+            if (InMemory)
+            {
+                // Still counted as a write, so the phase table keeps reporting
+                // how many times a run persists -- that number is the finding,
+                // and losing it the moment it stops costing anything would
+                // make the optimisation unfalsifiable.
+                using (BotPhaseTimers.Measure(BotPhase.PersistWrite))
+                {
+                    Memory[slot] = data;
+                    MemoryWrittenAt[slot] = ++_memoryClock;
+                }
+
+                return;
+            }
+
             string path = PathForSlot(slot);
             string tempPath = path + ".tmp";
 
@@ -125,6 +192,13 @@ namespace PrincesPalace
 
         public static void DeleteSlot(int slot)
         {
+            if (InMemory)
+            {
+                Memory.Remove(slot);
+                MemoryWrittenAt.Remove(slot);
+                return;
+            }
+
             string path = PathForSlot(slot);
             if (File.Exists(path))
             {
@@ -146,6 +220,24 @@ namespace PrincesPalace
         // write, never a partial one.
         public static int MostRecentSlot()
         {
+            if (InMemory)
+            {
+                // The monotonic write counter stands in for the file's mtime;
+                // it answers the same question ("which slot was written last")
+                // without a filesystem to ask.
+                int newest = -1;
+                long newestAt = long.MinValue;
+
+                foreach (var kv in MemoryWrittenAt)
+                {
+                    if (kv.Value <= newestAt) continue;
+                    newest = kv.Key;
+                    newestAt = kv.Value;
+                }
+
+                return newest;
+            }
+
             int best = -1;
             DateTime bestWrite = DateTime.MinValue;
 
