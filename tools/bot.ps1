@@ -1,7 +1,7 @@
 param(
     [int]$Runs = 200,
     [int]$Seed = 1,
-    [string]$Archetypes = "RandomLegal,GreedyAggressive",
+    [string]$Archetypes = "RandomLegal,GreedyAggressive,GreedyDefensive,Lookahead2",
     [string]$Profiles = "Fresh",
     [int]$DepthCap = 40,
     [double]$ReplayShare = 0.1,
@@ -116,9 +116,12 @@ $unityArgs = @(
 
 $proc = Start-Process -FilePath $UnityExe -ArgumentList $unityArgs -PassThru -Wait -NoNewWindow
 
-$summaryPath = Join-Path $RunnerOutDir "summary.json"
-if (-not (Test-Path $summaryPath)) {
-    Write-Host "No summary.json produced (Unity exit code $($proc.ExitCode)). Tail of log:"
+# runs.jsonl, not summary.json: the shard writes FACTS and tools/bot_merge.py
+# computes the one summary for the whole batch. See that script's header for
+# why a median cannot be merged from N medians.
+$runsPath = Join-Path $RunnerOutDir "runs.jsonl"
+if (-not (Test-Path $runsPath)) {
+    Write-Host "No runs.jsonl produced (Unity exit code $($proc.ExitCode)). Tail of log:"
     if (Test-Path $logPath) { Get-Content $logPath -Tail 60 | ForEach-Object { Write-Host $_ } }
     exit 1
 }
@@ -129,9 +132,13 @@ robocopy $RunnerOutDir $MainOutDir /E /NFL /NDL /NJH /NJS /NP | Out-Null
 
 $python = Get-Command python -ErrorAction SilentlyContinue
 if (-not $python) {
-    Write-Host "No 'python' on PATH -- batch written to $MainOutDir, but the HTML report needs it. Run tools/bot_report.py by hand once python is available."
+    Write-Host "No 'python' on PATH -- the shard files are in $MainOutDir, but summary.json and the HTML both need it. Run tools/bot_merge.py then tools/bot_report.py by hand once python is available."
     exit 1
 }
+
+Write-Host "`nMerging shards..."
+& python (Join-Path $PSScriptRoot "bot_merge.py") $MainOutDir
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "`nBuilding report..."
 & python (Join-Path $PSScriptRoot "bot_report.py") $MainOutDir --out (Join-Path $MainOutDir "report.html")

@@ -12,16 +12,24 @@ using PrincesPalace.Domain.Bot;
 
 namespace PrincesPalace.Editor.Bot
 {
-    // THE BATCH: seeds x archetypes x profiles, played headless, summarised.
+    // ONE SHARD OF A BATCH: seeds x archetypes x profiles, played headless.
     //
-    // Everything in summary.json is computed HERE, in-process, while the live
-    // save and the finished traces are both still in hand -- that is the split
-    // docs/BOT_SUMMARY_SCHEMA.md states and the reason it states it: doomed and
-    // swing are fractions of the party's MAX hp, which is not a trace field and
-    // must not become one (it moves with level, gear and relics, and recording
-    // it per turn would bloat every trace for a number this side already has).
-    // tools/bot_report.py renders and diffs summary.json; it never recomputes a
-    // metric from traces.jsonl, which is archival.
+    // This writes FACTS, not aggregates. Four files land in -botOut:
+    // traces.jsonl (archival, one full RunTrace per line), runs.jsonl (one
+    // flat row per run -- everything summary.json's metrics are computed
+    // from), content.json (the id lists coverage is differenced against) and
+    // batch.json (what this shard was asked to do). tools/bot_merge.py reads
+    // all of a batch's shards and writes the one summary.json;
+    // tools/bot_report.py renders and diffs that.
+    //
+    // summary.json used to be computed here, and docs/BOT_SUMMARY_SCHEMA.md
+    // had a good reason: doomedShare and swingShare are fractions of the
+    // party's MAX hp, which is not a trace field and must not become one. That
+    // reason survives intact -- it is why runs.jsonl carries partyMaxHp per
+    // fight and a pre-reduced swing count, both read live off the encounter.
+    // What did not survive is computing the BATCH's numbers here, because a
+    // batch is now N Unity processes and a median cannot be merged from N
+    // medians.
     //
     // NOTHING HERE IS A GATE. A batch reports; the author decides (plan §6).
     // The exit code says whether the BATCH ran, not whether the game is
@@ -45,6 +53,7 @@ namespace PrincesPalace.Editor.Bot
                 Runs = 20,
                 FirstSeed = DefaultSeed,
                 Archetypes = BotRunDriver.Archetypes.ToList(),
+                Shard = "1/1",
                 Profiles = new List<string> { ProfilePresets.Fresh },
                 DepthCap = DefaultDepthCap,
                 OutDir = outDir,
@@ -52,7 +61,8 @@ namespace PrincesPalace.Editor.Bot
             };
 
             RunBatch(options);
-            Debug.Log($"[BalanceBot] Wrote {outDir}. Open summary.json, or run tools/bot_report.py over it.");
+            Debug.Log($"[BalanceBot] Wrote {outDir}. Run tools/bot_merge.py over it for summary.json, " +
+                      "then tools/bot_report.py for the HTML.");
             EditorUtility.RevealInFinder(outDir);
         }
 
@@ -103,6 +113,13 @@ namespace PrincesPalace.Editor.Bot
             // directory the way it used to, which is how the equivalence of
             // the in-memory mode is demonstrated rather than asserted.
             public bool InMemorySaves = true;
+
+            // "2/4" -- which of how many. Provenance only: the shard's seed
+            // range and output directory are decided by tools/bot.ps1 and
+            // arrive as -botSeed/-botRuns/-botOut, so nothing here branches on
+            // this. It goes into batch.json so a shard directory found on its
+            // own still says what it was part of.
+            public string Shard = "1/1";
         }
 
         private static Options ReadOptions()
@@ -117,6 +134,7 @@ namespace PrincesPalace.Editor.Bot
                 CommitSha = Arg(args, "-botCommit", ""),
                 ReplayShare = ArgDouble(args, "-botReplayShare", DefaultReplayShare),
                 InMemorySaves = ArgInt(args, "-botInMemorySaves", 1) != 0,
+                Shard = Arg(args, "-botShard", "1/1"),
             };
 
             if (o.ReplayShare < 0) o.ReplayShare = 0;
@@ -208,6 +226,7 @@ namespace PrincesPalace.Editor.Bot
             Directory.CreateDirectory(o.OutDir);
 
             string tracesPath = Path.Combine(o.OutDir, "traces.jsonl");
+            string runsPath = Path.Combine(o.OutDir, "runs.jsonl");
             var played = new List<Played>();
             var progress = new List<string>();
 
@@ -223,6 +242,7 @@ namespace PrincesPalace.Editor.Bot
             // tools/bot_report.py on the very first batch this wrote. Both
             // files go out through the same encoding for the same reason.
             using (var traces = new StreamWriter(tracesPath, append: false, NoBom))
+            using (var runs = new StreamWriter(runsPath, append: false, NoBom))
             try
             {
                 Debug.unityLogger.filterLogType = LogType.Error;
@@ -247,9 +267,16 @@ namespace PrincesPalace.Editor.Bot
                             var entry = PlayOnePairSafely(seed, archetype, profile, o.DepthCap, replay);
                             played.Add(entry);
 
+                            // WRITTEN AS THEY FINISH, not held and dumped at
+                            // the end: a batch killed halfway then still
+                            // leaves every completed run on disk, which is
+                            // what the schema's "partial batches" section
+                            // promises and what a 10,000-run batch needs to be
+                            // worth starting.
                             using (BotPhaseTimers.Measure(BotPhase.TraceJson))
                             {
                                 traces.WriteLine(TraceJson(entry.Result.Trace));
+                                runs.WriteLine(RunRowJson(entry));
                             }
                         }
 
@@ -271,15 +298,14 @@ namespace PrincesPalace.Editor.Bot
 
             double elapsed = (DateTime.UtcNow - startedAt).TotalSeconds;
 
-            string summary;
             using (BotPhaseTimers.Measure(BotPhase.Summary))
             {
-                summary = SummaryJson(o, played, startedAt, elapsed);
+                File.WriteAllText(Path.Combine(o.OutDir, "content.json"), ContentJson(), NoBom);
+                File.WriteAllText(Path.Combine(o.OutDir, "batch.json"), BatchJson(o, startedAt, elapsed), NoBom);
             }
 
-            File.WriteAllText(Path.Combine(o.OutDir, "summary.json"), summary, NoBom);
-
-            Debug.Log(PlainText(o, played, elapsed));
+            Debug.Log($"[BalanceBot] shard {o.Shard}: {played.Count} runs in {elapsed:F1}s -> {o.OutDir}. " +
+                      "summary.json and the plain-text table come from tools/bot_merge.py.");
 
             // RUN-PLAYS, not runs: every metric is over the first play of a
             // pair and the second exists only to compare hashes, but the clock
@@ -418,558 +444,246 @@ namespace PrincesPalace.Editor.Bot
             return sb.ToString();
         }
 
-        // ---- summary.json -------------------------------------------------------------
+        // ---- runs.jsonl, content.json, batch.json ------------------------------------
 
-        private static string SummaryJson(Options o, List<Played> played, DateTime startedAt, double elapsed)
+        // ONE FLAT ROW PER RUN, and no aggregate anywhere in this file.
+        //
+        // summary.json used to be computed HERE, in-process, and
+        // docs/BOT_SUMMARY_SCHEMA.md gave a good reason: doomedShare and
+        // swingShare are fractions of the party's MAX hp, which is not a trace
+        // field and must not become one. That reason still holds -- but it is
+        // a reason to compute the RUN'S OWN numbers here, not the batch's.
+        //
+        // Sharding is what forced the split. A batch now runs as N Unity
+        // processes over disjoint seed ranges, and a median, a decision-
+        // pressure denominator or a coverage list cannot be merged from N
+        // summaries: the median of medians is not the median, and "this relic
+        // was never offered" is only true if it was never offered in ANY
+        // shard. So each shard writes the facts and one merger
+        // (tools/bot_merge.py) computes every aggregate exactly once, over all
+        // of them. Two implementations of doomedShare -- one here for the
+        // single-shard case and one there -- is precisely the thing that
+        // drifts, so there is only the one, and it is the Python.
+        //
+        // What travels is everything an aggregate needs and nothing it does
+        // not: party max HP per fight (the schema's own example of a number
+        // only this side knows), the swing count already reduced against it,
+        // and otherwise the same ids and counters traces.jsonl carries.
+        private static string RunRowJson(Played p)
         {
+            var t = p.Result.Trace;
             var sb = new StringBuilder();
-            sb.Append("{\n");
 
-            sb.Append("\"batch\":{");
-            sb.Append("\"timestamp\":").Append(Str(startedAt.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture))).Append(',');
-            sb.Append("\"commitSha\":").Append(Str(o.CommitSha)).Append(',');
-            sb.Append("\"runsPerCell\":").Append(o.Runs).Append(',');
-            sb.Append("\"firstSeed\":").Append(o.FirstSeed.ToString(CultureInfo.InvariantCulture)).Append(',');
-            sb.Append("\"archetypes\":").Append(StrList(o.Archetypes)).Append(',');
-            sb.Append("\"profiles\":").Append(StrList(o.Profiles)).Append(',');
-            sb.Append("\"depthCapSteps\":").Append(o.DepthCap).Append(',');
-            sb.Append("\"elapsedSeconds\":").Append(Num(elapsed));
-            sb.Append("},\n");
+            sb.Append('{');
+            sb.Append("\"seed\":").Append(p.Seed.ToString(CultureInfo.InvariantCulture)).Append(',');
+            sb.Append("\"archetype\":").Append(Str(p.Archetype)).Append(',');
+            sb.Append("\"profile\":").Append(Str(p.Profile)).Append(',');
+            sb.Append("\"capped\":").Append(t.Capped ? "true" : "false").Append(',');
+            sb.Append("\"deathStep\":").Append(t.DeathStep).Append(',');
+            sb.Append("\"consumablesLeft\":").Append(p.Result.ConsumablesLeftAtEnd).Append(',');
+            sb.Append("\"replayed\":").Append(p.Replayed ? "true" : "false").Append(',');
+            sb.Append("\"hashMatched\":").Append(p.HashMatched ? "true" : "false").Append(',');
 
-            sb.Append("\"cells\":[");
-            bool first = true;
-            foreach (string profile in o.Profiles)
-            {
-                foreach (string archetype in o.Archetypes)
-                {
-                    var cell = played.Where(p => p.Profile == profile && p.Archetype == archetype).ToList();
-                    if (cell.Count == 0) continue;
+            // ALREADY REDUCED, because the alternative is shipping every
+            // TurnTrace's PartyHpAfter and the live max HP beside it to
+            // Python -- which is traces.jsonl plus a column, for a number that
+            // is two counters. swingShare is a pooled share (swings / turns
+            // over the whole cell), so summing the two counters across runs
+            // gives the identical answer to computing it run by run.
+            CountSwings(p.Result, out int swings, out int swingTurns);
+            sb.Append("\"swingTurns\":").Append(swings).Append(',');
+            sb.Append("\"swingDenomTurns\":").Append(swingTurns).Append(',');
 
-                    if (!first) sb.Append(',');
-                    first = false;
-                    sb.Append('\n').Append(CellJson(o, archetype, profile, cell));
-                }
-            }
-            sb.Append("],\n");
+            sb.Append("\"relicIds\":").Append(StrList(p.Result.RelicIdsAtEnd)).Append(',');
+            sb.Append("\"talentIds\":").Append(StrList(p.Result.TalentIdsAtEnd)).Append(',');
 
-            sb.Append("\"decisionPressure\":").Append(DecisionPressureJson(o, played)).Append(",\n");
-            sb.Append("\"coverage\":").Append(CoverageJson(played)).Append(",\n");
-            sb.Append("\"archetypeGap\":").Append(ArchetypeGapJson(o, played)).Append(",\n");
-            sb.Append("\"bugs\":").Append(BugsJson(played)).Append(",\n");
-
-            var mismatches = played.Where(p => !p.HashMatched).ToList();
-            sb.Append("\"determinism\":{\"checked\":").Append(played.Count(p => p.Replayed)).Append(",\"mismatches\":[");
-            for (int i = 0; i < mismatches.Count; i++)
+            sb.Append("\"fights\":[");
+            for (int i = 0; i < t.Fights.Count; i++)
             {
                 if (i > 0) sb.Append(',');
-                sb.Append("{\"seed\":").Append(mismatches[i].Seed.ToString(CultureInfo.InvariantCulture))
-                  .Append(",\"archetype\":").Append(Str(mismatches[i].Archetype))
-                  .Append(",\"profile\":").Append(Str(mismatches[i].Profile)).Append('}');
+                var f = t.Fights[i];
+
+                sb.Append("{\"step\":").Append(f.Step);
+                sb.Append(",\"floor\":").Append(f.Floor);
+                sb.Append(",\"roomType\":").Append(Str(f.RoomType));
+                sb.Append(",\"enemyIds\":").Append(StrList(f.EnemyIds));
+                sb.Append(",\"turns\":").Append(f.Turns);
+                sb.Append(",\"damageTaken\":").Append(f.DamageTaken);
+                sb.Append(",\"partyHpOut\":").Append(f.PartyHpOut);
+
+                // THE NUMBER THE SCHEMA SAYS ONLY THIS SIDE KNOWS. Read live
+                // off the encounter when the fight was built; doomedShare is a
+                // fraction of it and it is deliberately not a trace field.
+                sb.Append(",\"partyMaxHp\":")
+                  .Append(i < p.Result.PartyMaxHpPerFight.Count ? p.Result.PartyMaxHpPerFight[i] : 0);
+
+                sb.Append(",\"usedItem\":")
+                  .Append(f.TurnTraces.Any(x => x.Action != null && x.Action.StartsWith("Item:")) ? "true" : "false");
+                sb.Append('}');
             }
-            sb.Append("]}\n");
+            sb.Append("],");
 
-            sb.Append("}\n");
-            return sb.ToString();
-        }
+            sb.Append("\"rooms\":[");
+            for (int i = 0; i < t.Rooms.Count; i++)
+            {
+                if (i > 0) sb.Append(',');
+                var r = t.Rooms[i];
+                sb.Append("{\"step\":").Append(r.Step);
+                sb.Append(",\"nodeId\":").Append(r.NodeId);
+                sb.Append(",\"offerItemIds\":").Append(StrList(r.OfferItemIds));
+                sb.Append(",\"pickedIndex\":").Append(r.PickedIndex).Append('}');
+            }
+            sb.Append("],");
 
-        // Depth of one run: the step it died on, or the cap if it never did.
-        // A capped run "did not die, but it did stop there" (schema).
-        private static int DepthOf(Played p, int cap) => p.Result.Trace.Capped ? cap : p.Result.Trace.DeathStep;
+            sb.Append("\"relicRounds\":[");
+            for (int i = 0; i < p.Result.RelicRounds.Count; i++)
+            {
+                if (i > 0) sb.Append(',');
+                var round = p.Result.RelicRounds[i];
+                sb.Append("{\"offerIds\":").Append(StrList(round.OfferIds));
+                sb.Append(",\"pickedIndex\":").Append(round.PickedIndex).Append('}');
+            }
+            sb.Append("],");
 
-        private static string CellJson(Options o, string archetype, string profile, List<Played> cell)
-        {
-            var depths = cell.Select(p => DepthOf(p, o.DepthCap)).OrderBy(d => d).ToList();
-            var sb = new StringBuilder();
+            var skillsUsed = t.Fights
+                .SelectMany(f => f.TurnTraces)
+                .Where(x => x.Action != null && x.Action.StartsWith("Skill:"))
+                .Select(x => x.Action.Substring("Skill:".Length))
+                .Distinct()
+                .OrderBy(id => id, StringComparer.Ordinal)
+                .ToList();
+            sb.Append("\"skillsUsed\":").Append(StrList(skillsUsed)).Append(',');
 
-            sb.Append("{\"archetype\":").Append(Str(archetype));
-            sb.Append(",\"profile\":").Append(Str(profile));
-            sb.Append(",\"runs\":").Append(cell.Count);
+            // step/nodeId are the run's LAST recorded room, and lastActions the
+            // last ten commands -- the same approximation the schema already
+            // documents, kept here because both need the turn traces, which do
+            // not travel in this file.
+            var lastRoom = t.Rooms.LastOrDefault();
+            var lastActions = t.Fights
+                .SelectMany(f => f.TurnTraces)
+                .Select(x => x.Action)
+                .Reverse().Take(10).Reverse()
+                .ToList();
 
-            sb.Append(",\"depth\":{\"median\":").Append(Num(Percentile(depths, 0.5)))
-              .Append(",\"p10\":").Append(Num(Percentile(depths, 0.10)))
-              .Append(",\"p90\":").Append(Num(Percentile(depths, 0.90)))
-              .Append(",\"mean\":").Append(Num(depths.Count == 0 ? 0 : depths.Average()))
-              .Append(",\"cappedShare\":").Append(Num(Share(cell.Count(p => p.Result.Trace.Capped), cell.Count)))
-              .Append('}');
+            sb.Append("\"bugs\":[");
+            for (int i = 0; i < p.Result.Hits.Count; i++)
+            {
+                if (i > 0) sb.Append(',');
+                var hit = p.Result.Hits[i];
+                sb.Append("{\"invariant\":").Append(Str(hit.Name));
+                sb.Append(",\"step\":").Append(lastRoom?.Step ?? 0);
+                sb.Append(",\"nodeId\":").Append(lastRoom == null ? "null" : lastRoom.NodeId.ToString(CultureInfo.InvariantCulture));
+                sb.Append(",\"detail\":").Append(Str(hit.Detail));
+                sb.Append(",\"lastActions\":").Append(StrList(lastActions));
+                sb.Append(",\"stack\":").Append(hit.Name == "Exception" ? Str(hit.Detail) : "null");
+                sb.Append('}');
+            }
+            sb.Append(']');
 
-            sb.Append(",\"deathCauses\":").Append(DeathCausesJson(cell));
-            sb.Append(",\"doomedShare\":").Append(Num(DoomedShare(cell)));
-            sb.Append(",\"swingShare\":").Append(Num(SwingShare(cell)));
-
-            var fights = cell.SelectMany(p => p.Result.Trace.Fights).ToList();
-
-            sb.Append(",\"fightLength\":{\"byFloor\":")
-              .Append(NumMap(fights.GroupBy(f => f.Floor.ToString(CultureInfo.InvariantCulture))
-                                   .ToDictionary(g => g.Key, g => g.Average(f => (double)f.Turns))))
-              .Append(",\"byRoomType\":")
-              .Append(NumMap(fights.GroupBy(f => f.RoomType)
-                                   .ToDictionary(g => g.Key, g => g.Average(f => (double)f.Turns))))
-              .Append('}');
-
-            sb.Append(",\"turnOneShare\":").Append(Num(Share(fights.Count(f => f.Turns == 1), fights.Count)));
-
-            sb.Append(",\"steamrollByFloor\":")
-              .Append(NumMap(fights.GroupBy(f => f.Floor.ToString(CultureInfo.InvariantCulture))
-                                   .ToDictionary(g => g.Key, g => Share(g.Count(f => f.DamageTaken == 0), g.Count()))));
-
-            sb.Append(",\"consumableUseShare\":")
-              .Append(Num(Share(fights.Count(f => f.TurnTraces.Any(t => t.Action != null && t.Action.StartsWith("Item:"))), fights.Count)));
-
-            sb.Append(",\"potionsWastedMean\":")
-              .Append(Num(cell.Count == 0 ? 0 : cell.Average(p => (double)p.Result.ConsumablesLeftAtEnd)));
-
-            sb.Append(",\"buildDiversity\":").Append(BuildDiversityJson(o, cell));
-            sb.Append(",\"itemPickRate\":").Append(NumMap(ItemPickRate(cell)));
-            sb.Append(",\"relicPickRate\":").Append(NumMap(RelicPickRate(cell)));
             sb.Append('}');
             return sb.ToString();
         }
 
-        // ---- the cell's harder metrics -------------------------------------------------
-
-        private static string DeathCausesJson(List<Played> cell)
+        // How often a single command moved the party's health bar by more than
+        // a quarter of its maximum, and how many commands were eligible to.
+        //
+        // Fights whose max HP never got recorded are excluded from BOTH
+        // counters rather than counted as non-swings, which is what the
+        // in-process version did -- a zero denominator is honest about not
+        // knowing; a padded one is not.
+        private static void CountSwings(BotRunDriver.BotRunResult result, out int swings, out int turns)
         {
-            // Keyed on (enemyId, roomType, floor); a multi-enemy fight
-            // contributes one row per enemy standing in it, because the trace
-            // does not record which one landed the killing blow and inventing
-            // an answer would be worse than saying "these were present".
-            var counts = new Dictionary<string, int>();
-            var parts = new Dictionary<string, Tuple<string, string, int>>();
+            swings = 0;
+            turns = 0;
 
-            foreach (var p in cell)
+            for (int i = 0; i < result.Trace.Fights.Count; i++)
             {
-                var trace = p.Result.Trace;
-                if (trace.Capped) continue;
+                var fight = result.Trace.Fights[i];
+                int max = i < result.PartyMaxHpPerFight.Count ? result.PartyMaxHpPerFight[i] : 0;
+                if (max <= 0) continue;
 
-                var fight = trace.Fights.FirstOrDefault(f => f.Step == trace.DeathStep);
-                if (fight == null) continue;
-
-                foreach (string enemyId in fight.EnemyIds.Distinct())
+                int before = fight.PartyHpIn;
+                foreach (var turn in fight.TurnTraces)
                 {
-                    string key = enemyId + "|" + fight.RoomType + "|" + fight.Floor;
-                    counts.TryGetValue(key, out int n);
-                    counts[key] = n + 1;
-                    parts[key] = Tuple.Create(enemyId, fight.RoomType, fight.Floor);
+                    turns++;
+                    if (Math.Abs(turn.PartyHpAfter - before) / (double)max > 0.25) swings++;
+                    before = turn.PartyHpAfter;
                 }
             }
-
-            var sb = new StringBuilder("[");
-            bool first = true;
-            foreach (var kv in counts.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal))
-            {
-                if (!first) sb.Append(',');
-                first = false;
-                var part = parts[kv.Key];
-                sb.Append("{\"enemyId\":").Append(Str(part.Item1))
-                  .Append(",\"roomType\":").Append(Str(part.Item2))
-                  .Append(",\"floor\":").Append(part.Item3)
-                  .Append(",\"count\":").Append(kv.Value).Append('}');
-            }
-            return sb.Append(']').ToString();
         }
 
-        // "Never above half health at the end of any of the last three fights
-        // before death" -- a run that was never going to make it, as distinct
-        // from one that died to a spike. Max HP off BotRunResult's per-fight
-        // capture, which is read live off the encounter; it is not a trace
-        // field and the schema says explicitly not to make it one.
-        private static double DoomedShare(List<Played> cell)
+        // THE LISTS COVERAGE IS DIFFERENCED AGAINST.
+        //
+        // Written per shard rather than left for the merger to look up,
+        // because the merger is stdlib Python with no Unity behind it and
+        // ContentDatabase is the only authority on what exists. Identical
+        // across shards of one batch (same commit, same content); the merger
+        // unions them anyway, so a mismatched shard degrades to "the union of
+        // what each shard believed" rather than to a wrong answer.
+        private static string ContentJson()
         {
-            int denominator = 0;
-            int doomed = 0;
+            var enemies = ContentDatabase.Enemies.Where(e => e != null).ToList();
 
-            foreach (var p in cell)
-            {
-                var trace = p.Result.Trace;
-                if (trace.Capped || trace.Fights.Count < 1) continue;
+            // AN ENEMY ABILITY IS A skills.json ENTRY, owned by an enemy
+            // through RawEnemyAbility.skillId -- monsters and characters are
+            // authored in the same file because the rules are identical. So
+            // ContentDatabase.Skills has always contained both, and
+            // coverage.skillsNeverUsed has always listed every enemy ability
+            // as "never used" (FightRunner traces the PLAYER's commands, so an
+            // enemy's skill can never appear there). That is not a finding, it
+            // is noise, and it was burying the player-side gaps that are.
+            // This list is what lets the report split the two apart.
+            var enemyAbilities = enemies
+                .Where(e => e.abilities != null)
+                .SelectMany(e => e.abilities)
+                .Where(a => a != null && !string.IsNullOrEmpty(a.skillId))
+                .Select(a => a.skillId)
+                .Distinct()
+                .OrderBy(id => id, StringComparer.Ordinal)
+                .ToList();
 
-                denominator++;
-
-                int from = Math.Max(0, trace.Fights.Count - 3);
-                bool everHealthy = false;
-
-                for (int i = from; i < trace.Fights.Count; i++)
-                {
-                    int max = i < p.Result.PartyMaxHpPerFight.Count ? p.Result.PartyMaxHpPerFight[i] : 0;
-                    if (max <= 0) continue;
-                    if ((double)trace.Fights[i].PartyHpOut / max > 0.5) { everHealthy = true; break; }
-                }
-
-                if (!everHealthy) doomed++;
-            }
-
-            return Share(doomed, denominator);
-        }
-
-        // How often a single command moves the party's health bar by more than
-        // a quarter of its maximum. Too few is a slog; too many is a coin flip.
-        private static double SwingShare(List<Played> cell)
-        {
-            int turns = 0;
-            int swings = 0;
-
-            foreach (var p in cell)
-            {
-                var trace = p.Result.Trace;
-                for (int i = 0; i < trace.Fights.Count; i++)
-                {
-                    var fight = trace.Fights[i];
-                    int max = i < p.Result.PartyMaxHpPerFight.Count ? p.Result.PartyMaxHpPerFight[i] : 0;
-                    if (max <= 0) continue;
-
-                    int before = fight.PartyHpIn;
-                    foreach (var turn in fight.TurnTraces)
-                    {
-                        turns++;
-                        if (Math.Abs(turn.PartyHpAfter - before) / (double)max > 0.25) swings++;
-                        before = turn.PartyHpAfter;
-                    }
-                }
-            }
-
-            return Share(swings, turns);
-        }
-
-        // Distinct relic/talent sets among the DEEPEST tenth of the cell's
-        // runs. Ranked on the same depth figure the cell's distribution uses
-        // (a capped run counts as the cap) rather than the raw DeathStep,
-        // which reads 0 for a capped run and would sort the strongest runs to
-        // the bottom.
-        private static string BuildDiversityJson(Options o, List<Played> cell)
-        {
-            int take = Math.Max(1, (int)Math.Ceiling(cell.Count * 0.10));
-            var deepest = cell.OrderByDescending(p => DepthOf(p, o.DepthCap)).Take(take).ToList();
-
-            int relicSets = deepest
-                .Select(p => string.Join("+", p.Result.RelicIdsAtEnd.OrderBy(id => id, StringComparer.Ordinal)))
-                .Distinct().Count();
-
-            int talentSets = deepest
-                .Select(p => string.Join("+", p.Result.TalentIdsAtEnd.OrderBy(id => id, StringComparer.Ordinal)))
-                .Distinct().Count();
-
-            return $"{{\"distinctRelicSets\":{relicSets},\"distinctTalentSets\":{talentSets}}}";
-        }
-
-        private static Dictionary<string, double> ItemPickRate(List<Played> cell)
-        {
-            var offered = new Dictionary<string, int>();
-            var picked = new Dictionary<string, int>();
-
-            foreach (var room in cell.SelectMany(p => p.Result.Trace.Rooms))
-            {
-                for (int i = 0; i < room.OfferItemIds.Count; i++)
-                {
-                    Bump(offered, room.OfferItemIds[i]);
-                    if (i == room.PickedIndex) Bump(picked, room.OfferItemIds[i]);
-                }
-            }
-
-            return offered.ToDictionary(kv => kv.Key, kv => Share(picked.TryGetValue(kv.Key, out int n) ? n : 0, kv.Value));
-        }
-
-        private static Dictionary<string, double> RelicPickRate(List<Played> cell)
-        {
-            var offered = new Dictionary<string, int>();
-            var picked = new Dictionary<string, int>();
-
-            foreach (var round in cell.SelectMany(p => p.Result.RelicRounds))
-            {
-                for (int i = 0; i < round.OfferIds.Count; i++)
-                {
-                    Bump(offered, round.OfferIds[i]);
-                    if (i == round.PickedIndex) Bump(picked, round.OfferIds[i]);
-                }
-            }
-
-            return offered.ToDictionary(kv => kv.Key, kv => Share(picked.TryGetValue(kv.Key, out int n) ? n : 0, kv.Value));
-        }
-
-        // ---- batch-wide -------------------------------------------------------------------
-
-        // "A choice every archetype makes the same way is dead." Denominator is
-        // positions reached by two or more archetypes on the same seed and
-        // profile -- a position only one archetype ever sees (because an
-        // earlier disagreement diverged the run) counts neither way.
-        private static string DecisionPressureJson(Options o, List<Played> played)
-        {
-            if (o.Archetypes.Count < 2)
-            {
-                // With one archetype there is nobody to disagree with, and a
-                // zero would read as "every choice is dead" rather than "not
-                // measured".
-                return "{\"nodes\":null,\"offers\":null,\"relics\":null}";
-            }
-
-            var nodes = new Dictionary<string, List<string>>();
-            var offers = new Dictionary<string, List<string>>();
-            var relics = new Dictionary<string, List<string>>();
-
-            foreach (var p in played)
-            {
-                string run = p.Seed + "|" + p.Profile;
-
-                foreach (var room in p.Result.Trace.Rooms)
-                {
-                    Collect(nodes, run + "|" + room.Step, room.NodeId.ToString(CultureInfo.InvariantCulture));
-
-                    if (room.OfferItemIds.Count > 0)
-                    {
-                        Collect(offers, run + "|" + room.Step + "|" + room.NodeId,
-                            room.PickedIndex.ToString(CultureInfo.InvariantCulture));
-                    }
-                }
-
-                Collect(relics, run, string.Join(">", p.Result.RelicRounds.Select(r =>
-                    r.PickedIndex >= 0 && r.PickedIndex < r.OfferIds.Count ? r.OfferIds[r.PickedIndex] : "-")));
-            }
-
-            return "{\"nodes\":" + Num(Disagreement(nodes))
-                 + ",\"offers\":" + Num(Disagreement(offers))
-                 + ",\"relics\":" + Num(Disagreement(relics)) + "}";
-        }
-
-        private static double Disagreement(Dictionary<string, List<string>> positions)
-        {
-            int reached = 0;
-            int differed = 0;
-
-            foreach (var kv in positions)
-            {
-                if (kv.Value.Count < 2) continue;
-                reached++;
-                if (kv.Value.Distinct().Count() > 1) differed++;
-            }
-
-            return Share(differed, reached);
-        }
-
-        // What the batch never touched, differenced against the content
-        // database rather than against itself -- a relic that exists and was
-        // never drawn is the finding; a relic that is silently absent from the
-        // traces is not one anybody can see.
-        private static string CoverageJson(List<Played> played)
-        {
-            var seenEnemies = new HashSet<string>(played.SelectMany(p => p.Result.Trace.Fights).SelectMany(f => f.EnemyIds));
-
-            var offeredRelics = new HashSet<string>(played.SelectMany(p => p.Result.RelicRounds).SelectMany(r => r.OfferIds));
-            var pickedRelics = new HashSet<string>(played.SelectMany(p => p.Result.RelicRounds)
-                .Where(r => r.PickedIndex >= 0 && r.PickedIndex < r.OfferIds.Count)
-                .Select(r => r.OfferIds[r.PickedIndex]));
-
-            var offeredItems = new HashSet<string>(played.SelectMany(p => p.Result.Trace.Rooms).SelectMany(r => r.OfferItemIds));
-            var pickedItems = new HashSet<string>(played.SelectMany(p => p.Result.Trace.Rooms)
-                .Where(r => r.PickedIndex >= 0 && r.PickedIndex < r.OfferItemIds.Count)
-                .Select(r => r.OfferItemIds[r.PickedIndex]));
-
-            var usedSkills = new HashSet<string>(played
-                .SelectMany(p => p.Result.Trace.Fights).SelectMany(f => f.TurnTraces)
-                .Where(t => t.Action != null && t.Action.StartsWith("Skill:"))
-                .Select(t => t.Action.Substring("Skill:".Length)));
-
-            var allEnemies = ContentDatabase.Enemies.Where(e => e != null).Select(e => e.id).ToList();
-            var allRelics = ContentDatabase.Relics.Where(r => r != null).Select(r => r.id).ToList();
+            var sb = new StringBuilder();
+            sb.Append("{\n");
+            sb.Append("\"enemyIds\":").Append(StrList(enemies.Select(e => e.id).ToList())).Append(",\n");
+            sb.Append("\"relicIds\":").Append(StrList(ContentDatabase.Relics.Where(r => r != null).Select(r => r.id).ToList())).Append(",\n");
 
             // OFFERABLE, not every item. ContentDatabase.Items holds equipment
             // and consumables the offer table cannot draw at all, and listing
             // those as "never offered" every batch is noise that buries the
             // one line that matters.
-            var allItems = ContentDatabase.Offerable.Where(i => i != null).Select(i => i.id).ToList();
-            var allSkills = ContentDatabase.Skills.Where(s => s != null).Select(s => s.id).ToList();
-
-            return "{\"enemiesNeverSeen\":" + StrList(allEnemies.Where(id => !seenEnemies.Contains(id)).OrderBy(id => id, StringComparer.Ordinal).ToList())
-                 + ",\"relicsNeverOffered\":" + StrList(allRelics.Where(id => !offeredRelics.Contains(id)).OrderBy(id => id, StringComparer.Ordinal).ToList())
-                 + ",\"relicsNeverPicked\":" + StrList(allRelics.Where(id => !pickedRelics.Contains(id)).OrderBy(id => id, StringComparer.Ordinal).ToList())
-                 + ",\"itemsNeverOffered\":" + StrList(allItems.Where(id => !offeredItems.Contains(id)).OrderBy(id => id, StringComparer.Ordinal).ToList())
-                 + ",\"itemsNeverPicked\":" + StrList(allItems.Where(id => !pickedItems.Contains(id)).OrderBy(id => id, StringComparer.Ordinal).ToList())
-                 + ",\"skillsNeverUsed\":" + StrList(allSkills.Where(id => !usedSkills.Contains(id)).OrderBy(id => id, StringComparer.Ordinal).ToList())
-                 + "}";
-        }
-
-        private static string ArchetypeGapJson(Options o, List<Played> played)
-        {
-            var sb = new StringBuilder("[");
-            bool first = true;
-
-            foreach (string profile in o.Profiles)
-            {
-                if (!first) sb.Append(',');
-                first = false;
-
-                sb.Append("{\"profile\":").Append(Str(profile)).Append(",\"archetypes\":[");
-                bool innerFirst = true;
-
-                foreach (string archetype in o.Archetypes)
-                {
-                    var cell = played.Where(p => p.Profile == profile && p.Archetype == archetype).ToList();
-                    if (cell.Count == 0) continue;
-
-                    if (!innerFirst) sb.Append(',');
-                    innerFirst = false;
-
-                    var depths = cell.Select(p => DepthOf(p, o.DepthCap)).OrderBy(d => d).ToList();
-                    sb.Append("{\"archetype\":").Append(Str(archetype))
-                      .Append(",\"medianDepth\":").Append(Num(Percentile(depths, 0.5))).Append('}');
-                }
-
-                sb.Append("]}");
-            }
-
-            return sb.Append(']').ToString();
-        }
-
-        // One row per hit, never deduplicated -- a run that trips the same
-        // invariant twice is two rows, because twice is the finding.
-        //
-        // step/nodeId are the run's LAST recorded room rather than the exact
-        // position of the hit: InvariantHit carries a name and a detail and
-        // nothing else, and widening it to carry a position would put run
-        // bookkeeping inside a Domain type whose only job is to say what went
-        // wrong. The detail line names the step in its own text where the
-        // driver knows it, and lastActions is what a repro actually needs.
-        private static string BugsJson(List<Played> played)
-        {
-            var sb = new StringBuilder("[");
-            bool first = true;
-
-            foreach (var p in played)
-            {
-                if (p.Result.Hits.Count == 0) continue;
-
-                var lastRoom = p.Result.Trace.Rooms.LastOrDefault();
-                var lastActions = p.Result.Trace.Fights
-                    .SelectMany(f => f.TurnTraces)
-                    .Select(t => t.Action)
-                    .Reverse().Take(10).Reverse()
-                    .ToList();
-
-                foreach (var hit in p.Result.Hits)
-                {
-                    if (!first) sb.Append(',');
-                    first = false;
-
-                    sb.Append("{\"invariant\":").Append(Str(hit.Name))
-                      .Append(",\"seed\":").Append(p.Seed.ToString(CultureInfo.InvariantCulture))
-                      .Append(",\"archetype\":").Append(Str(p.Archetype))
-                      .Append(",\"profile\":").Append(Str(p.Profile))
-                      .Append(",\"step\":").Append(lastRoom?.Step ?? 0)
-                      .Append(",\"nodeId\":").Append(lastRoom == null ? "null" : lastRoom.NodeId.ToString(CultureInfo.InvariantCulture))
-                      .Append(",\"detail\":").Append(Str(hit.Detail))
-                      .Append(",\"lastActions\":").Append(StrList(lastActions))
-                      .Append(",\"stack\":").Append(hit.Name == "Exception" ? Str(hit.Detail) : "null")
-                      .Append('}');
-                }
-            }
-
-            return sb.Append(']').ToString();
-        }
-
-        // ---- the log's own summary ------------------------------------------------------
-
-        // The same numbers as summary.json, in the shape somebody reads off a
-        // terminal without opening a browser. Deliberately short: depth per
-        // cell, the bug count by name, and determinism. Everything else is what
-        // the HTML is for.
-        private static string PlainText(Options o, List<Played> played, double elapsed)
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine();
-            sb.AppendLine("=== BALANCE BOT ===");
-            sb.AppendLine($"{o.Runs} runs/cell x {o.Archetypes.Count} archetypes x {o.Profiles.Count} profiles, " +
-                          $"seeds {o.FirstSeed}..{o.FirstSeed + (ulong)o.Runs - 1}, depth cap {o.DepthCap}, " +
-                          $"{elapsed:F1}s");
-            sb.AppendLine();
-            sb.AppendLine("profile/archetype              runs  median  p10  p90  capped  doomed  swing");
-
-            foreach (string profile in o.Profiles)
-            {
-                foreach (string archetype in o.Archetypes)
-                {
-                    var cell = played.Where(p => p.Profile == profile && p.Archetype == archetype).ToList();
-                    if (cell.Count == 0) continue;
-
-                    var depths = cell.Select(p => DepthOf(p, o.DepthCap)).OrderBy(d => d).ToList();
-                    sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
-                        "{0,-30}{1,5}{2,8:F1}{3,5:F0}{4,5:F0}{5,8:P0}{6,8:P0}{7,7:P0}",
-                        profile + "/" + archetype, cell.Count,
-                        Percentile(depths, 0.5), Percentile(depths, 0.10), Percentile(depths, 0.90),
-                        Share(cell.Count(p => p.Result.Trace.Capped), cell.Count),
-                        DoomedShare(cell), SwingShare(cell)));
-                }
-            }
-
-            var byName = played.SelectMany(p => p.Result.Hits.Select(h => new { p.Seed, p.Archetype, p.Profile, h.Name }))
-                .GroupBy(x => x.Name)
-                .OrderByDescending(g => g.Count())
-                .ToList();
-
-            sb.AppendLine();
-            sb.AppendLine($"bugs: {byName.Sum(g => g.Count())} hits across {byName.Count} invariant(s)");
-            foreach (var group in byName)
-            {
-                var one = group.First();
-                sb.AppendLine($"  {group.Key} x{group.Count()}  (e.g. seed {one.Seed} {one.Profile}/{one.Archetype})");
-            }
-
-            var mismatches = played.Where(p => !p.HashMatched).ToList();
-            int replayed = played.Count(p => p.Replayed);
-            sb.AppendLine();
-            sb.AppendLine(mismatches.Count == 0
-                ? $"determinism: {replayed}/{played.Count} runs replayed, 0 mismatches"
-                : $"determinism: {replayed}/{played.Count} runs replayed, {mismatches.Count} MISMATCHES " +
-                  $"(e.g. seed {mismatches[0].Seed} {mismatches[0].Profile}/{mismatches[0].Archetype})");
-
+            sb.Append("\"offerableItemIds\":").Append(StrList(ContentDatabase.Offerable.Where(i => i != null).Select(i => i.id).ToList())).Append(",\n");
+            sb.Append("\"skillIds\":").Append(StrList(ContentDatabase.Skills.Where(s => s != null).Select(s => s.id).ToList())).Append(",\n");
+            sb.Append("\"enemyAbilityIds\":").Append(StrList(enemyAbilities)).Append("\n");
+            sb.Append("}\n");
             return sb.ToString();
         }
 
-        // ---- the small shared bits ---------------------------------------------------------
-
-        private static void Bump(Dictionary<string, int> counts, string key)
+        // What this shard was asked to do. The merger reconciles these into
+        // summary.json's "batch" block -- runsPerCell sums across shards,
+        // firstSeed is the lowest, and elapsedSeconds is the WALL of the
+        // slowest shard rather than the sum, because the shards ran at once.
+        private static string BatchJson(Options o, DateTime startedAt, double elapsed)
         {
-            if (string.IsNullOrEmpty(key)) return;
-            counts.TryGetValue(key, out int n);
-            counts[key] = n + 1;
-        }
-
-        private static void Collect(Dictionary<string, List<string>> map, string key, string value)
-        {
-            if (!map.TryGetValue(key, out var list))
-            {
-                list = new List<string>();
-                map[key] = list;
-            }
-            list.Add(value);
-        }
-
-        private static double Share(int part, int whole) => whole <= 0 ? 0 : (double)part / whole;
-
-        // Nearest-rank on an already-sorted list, which is what a depth
-        // distribution wants: every value it reports is a step somebody
-        // actually reached rather than an interpolation between two.
-        private static double Percentile(List<int> sorted, double q)
-        {
-            if (sorted.Count == 0) return 0;
-            int index = (int)Math.Ceiling(q * sorted.Count) - 1;
-            return sorted[Math.Min(sorted.Count - 1, Math.Max(0, index))];
+            var sb = new StringBuilder();
+            sb.Append("{\n");
+            sb.Append("\"timestamp\":").Append(Str(startedAt.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture))).Append(",\n");
+            sb.Append("\"commitSha\":").Append(Str(o.CommitSha)).Append(",\n");
+            sb.Append("\"shard\":").Append(Str(o.Shard)).Append(",\n");
+            sb.Append("\"runsPerCell\":").Append(o.Runs).Append(",\n");
+            sb.Append("\"firstSeed\":").Append(o.FirstSeed.ToString(CultureInfo.InvariantCulture)).Append(",\n");
+            sb.Append("\"archetypes\":").Append(StrList(o.Archetypes)).Append(",\n");
+            sb.Append("\"profiles\":").Append(StrList(o.Profiles)).Append(",\n");
+            sb.Append("\"depthCapSteps\":").Append(o.DepthCap).Append(",\n");
+            sb.Append("\"replayShare\":").Append(Num(o.ReplayShare)).Append(",\n");
+            sb.Append("\"elapsedSeconds\":").Append(Num(elapsed)).Append("\n");
+            sb.Append("}\n");
+            return sb.ToString();
         }
 
         private static string Num(double v)
         {
             if (double.IsNaN(v) || double.IsInfinity(v)) return "0";
             return Math.Round(v, 4).ToString("0.####", CultureInfo.InvariantCulture);
-        }
-
-        private static string NumMap(Dictionary<string, double> map)
-        {
-            var sb = new StringBuilder("{");
-            bool first = true;
-            foreach (var kv in map.OrderBy(kv => kv.Key, StringComparer.Ordinal))
-            {
-                if (!first) sb.Append(',');
-                first = false;
-                sb.Append(Str(kv.Key)).Append(':').Append(Num(kv.Value));
-            }
-            return sb.Append('}').ToString();
         }
 
         private static string StrList(IReadOnlyList<string> items)

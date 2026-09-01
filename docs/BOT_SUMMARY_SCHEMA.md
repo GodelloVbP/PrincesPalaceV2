@@ -8,25 +8,92 @@ guessed. If that file's shape changes, this doc and `bot_report.py` both need
 a pass; nothing here should be inferred by convention.
 
 A batch directory (`reports/bot/<yyyyMMdd-HHmmss>/`, made by `tools/bot.ps1`)
-holds exactly two files:
+holds one `summary.json` plus one set of shard files per Unity process that
+produced it. With `-Shards 1` the shard files sit in the batch directory
+itself; with `-Shards N` they sit in `shard-1/` ... `shard-N/`.
+
+Per shard:
 
 - `traces.jsonl` — one full `RunTrace` per line, for manually digging into a
-  specific seed a bug row names. Nothing in `bot_report.py` parses it; it is
-  archival.
-- `summary.json` — one aggregate object. Everything the HTML report renders,
-  including every metric in plan §2 and every check in plan §3, is computed
-  **inside the runner**, in-process, while it still holds the live
-  `FightSession`/`Character` objects. `bot_report.py` never recomputes a
-  metric from raw traces — it only renders `summary.json` and diffs it
-  against a previous batch's `summary.json`.
+  specific seed a bug row names. Nothing in `bot_report.py` or `bot_merge.py`
+  parses it; it is archival.
+- `runs.jsonl` — one **flat row per run**, carrying everything every metric
+  below is computed from. This is the file the merger reads.
+- `content.json` — the id lists `coverage` is differenced against, read out
+  of `ContentDatabase` at batch time.
+- `batch.json` — what that shard was asked to do (see `batch` below).
 
-That split matters for one metric family in particular: "doomed" and "swing"
-(below) are defined in terms of the party's *max* HP, which is not a trace
-field (max HP moves with level, gear and relics, and recording it per turn
-would bloat every trace for a number the runner already has on hand at
-computation time). The runner reads it straight off the live party. No schema
-change is needed to support this — do not add a `PartyHpMax` field to
-`RunTrace.cs` to chase it.
+Per batch:
+
+- `summary.json` — one aggregate object, written by **`tools/bot_merge.py`**
+  over every shard's `runs.jsonl` + `content.json` + `batch.json`.
+  `bot_report.py` never recomputes a metric from raw traces — it only renders
+  `summary.json` and diffs it against a previous batch's.
+
+**Where the aggregates are computed, and why that moved.** They used to be
+computed inside the runner, in-process, while it still held the live
+`FightSession`/`Character` objects. Sharding ended that: a batch is now N
+Unity processes over disjoint seed ranges, and almost nothing in
+`summary.json` can be merged from N per-shard summaries. A median of medians
+is not a median; `decisionPressure`'s denominator counts positions reached by
+two or more archetypes on the same seed, which is only knowable once every
+archetype's runs are in one place; "this relic was never offered" is only
+true if it was never offered in *any* shard. So the runner emits facts and
+`bot_merge.py` computes every aggregate exactly once, over all of them. There
+is deliberately only ONE implementation of each metric, and it is the Python.
+
+The reason the split existed at all survives intact, in a narrower form:
+"doomed" and "swing" (below) are defined in terms of the party's *max* HP,
+which is not a trace field (max HP moves with level, gear and relics, and
+recording it per turn would bloat every trace). The runner reads it straight
+off the live party and writes it into `runs.jsonl` — `fights[].partyMaxHp`,
+plus a pre-reduced `swingTurns`/`swingDenomTurns` pair. Do **not** add a
+`PartyHpMax` field to `RunTrace.cs` to chase it.
+
+## `runs.jsonl`
+
+One JSON object per line, one line per run, in the order runs completed.
+`camelCase` keys, unlike `traces.jsonl` (which mirrors C# field names because
+it mirrors a C# type). Written as runs finish, so a batch killed halfway
+still leaves every completed run on disk.
+
+```
+seed              uint64, JSON number, same precision note as traces.jsonl
+archetype         string
+profile           string
+capped            bool
+deathStep         int   -- 0 and meaningless when capped
+consumablesLeft   int   -- feeds potionsWastedMean
+replayed          bool  -- was this run played twice (see -botReplayShare)
+hashMatched       bool  -- true when not replayed; only meaningful with it
+swingTurns        int   -- commands that moved party HP by >25% of max
+swingDenomTurns   int   -- commands that were eligible to (max HP known)
+relicIds          string[] -- held when the run ended
+talentIds         string[] -- ditto
+skillsUsed        string[] -- distinct ids behind "Skill:" turn labels
+fights[]          step, floor, roomType, enemyIds, turns, damageTaken,
+                  partyHpOut, partyMaxHp, usedItem
+rooms[]           step, nodeId, offerItemIds, pickedIndex
+relicRounds[]     offerIds, pickedIndex   -- -1 for "took nothing"
+bugs[]            invariant, step, nodeId, detail, lastActions, stack
+                  (the merger adds seed/archetype/profile on the way out)
+```
+
+## `content.json`
+
+```
+enemyIds           string[]
+relicIds           string[]
+offerableItemIds   string[] -- ContentDatabase.Offerable, not every item
+skillIds           string[] -- skills.json, which holds BOTH player skills
+                              and enemy abilities
+enemyAbilityIds    string[] -- the subset of skillIds an enemy owns, via
+                              RawEnemyAbility.skillId
+```
+
+Identical across shards of one batch. The merger unions them anyway, so a
+mismatched shard degrades to "everything any shard believed exists" — which
+over-reports a coverage gap rather than hiding one.
 
 ## `traces.jsonl`
 
@@ -100,7 +167,8 @@ RoomTrace
     "archetypes": ["RandomLegal", "GreedyAggressive"],
     "profiles": ["Fresh"],
     "depthCapSteps": 40,                   // 5 legs x 8 steps/leg, see plan F4
-    "elapsedSeconds": 47.2
+    "elapsedSeconds": 47.2,
+    "shards": 1
   },
   "cells": [
     {
@@ -133,7 +201,8 @@ RoomTrace
     "relicsNeverPicked": ["ashbound_locket", "tin_whistle"],
     "itemsNeverOffered": [],
     "itemsNeverPicked": ["stale_bread"],
-    "skillsNeverUsed": []
+    "skillsNeverUsed": [],
+    "enemyAbilityIds": ["hex", "roar"]
   },
   "archetypeGap": [
     {
@@ -186,7 +255,13 @@ RoomTrace
   and non-fight rooms together, so this is not simply legs x rooms/leg
   without knowing the leg's room count, but 5 legs x 8 steps/leg = 40 is the
   assumed default per plan §5).
-- `elapsedSeconds`: wall-clock time for the whole batch, all cells.
+- `elapsedSeconds`: wall-clock time for the whole batch, all cells. With
+  several shards this is the **slowest shard's** wall clock, not the sum:
+  they ran at the same time, and summing would report a batch four times
+  longer than the user watched it take.
+- `shards`: how many Unity processes produced the batch. `runsPerCell` is the
+  sum across them and `firstSeed` the lowest, so the seed range still reads
+  as one contiguous block.
 
 **`cells[]`** — one entry per `(archetype, profile)` pair.
 
@@ -261,6 +336,15 @@ is content ids that never appeared in the stated role across every cell:
 showed up in traces, so a relic id that exists in content but was never
 drawn is caught rather than silently absent.
 
+`enemyAbilityIds` is the odd one out and is **not** a "never" list: it names
+which of the ids in `skillsNeverUsed` are an enemy's rather than a player's.
+Enemy abilities are authored in `skills.json` like any other skill (a
+monster's skill obeys identical rules; `RawEnemyAbility.skillId` is what ties
+it to its owner), and `FightRunner` only ever traces the PLAYER's commands —
+so every enemy ability appears in `skillsNeverUsed` on every batch that has
+ever run. That is noise, and it was burying the player-side gaps that are the
+actual finding. `bot_report.py` splits the list against this one.
+
 **`archetypeGap[]`** — one entry per profile, holding each archetype's
 `depth.median` for that profile, side by side, for the report's headline
 chart. This is a projection of `cells[].depth.median` (same numbers), kept as
@@ -291,12 +375,17 @@ seed; a run that trips the same invariant twice produces two rows.
 - `stack`: exception stack trace as a string, `null` for a value-invariant
   hit (not an exception).
 
-**`determinism`** — every run in the batch is executed twice back to back
-(this is what plan §1 calls "a test the bot gets for free"; a fight is
-milliseconds, so doubling run count is cheap next to one Unity boot).
+**`determinism`** — a sampled share of the batch's runs is executed twice
+back to back (this is what plan §1 calls "a test the bot gets for free").
 
-- `checked`: total number of runs verified this way (= sum of `cells[].runs`
-  for a complete batch).
+- `checked`: number of runs actually verified this way. Since
+  `-botReplayShare` (default 0.1) the replay is **sampled**, so this is a
+  fraction of `sum(cells[].runs)` rather than equal to it — what the check
+  looks for is something unseeded leaking into the loop, which is a property
+  of the machinery rather than of a seed, so it leaks into every run and one
+  run in ten finds it as surely as ten in ten. The sample is every Nth run,
+  not a random tenth, so "this batch found no mismatch" stays reproducible.
+  `-botReplayShare 1` restores replaying everything.
 - `mismatches[]`: `(seed, archetype, profile)` triples where the two
   `RunTrace.Hash()` values differed. Reported once per triple, not once per
   differing field — the whole point is "this seed is not reproducible",

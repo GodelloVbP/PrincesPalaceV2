@@ -25,27 +25,22 @@ namespace PrincesPalace
     {
         // ---- the archetype registry ---------------------------------------------
 
-        // Name -> policy, in one place, because three separate things need the
-        // same mapping (the batch runner's -botArchetypes, the smoke test, and
-        // the report's archetypeGap) and a fourth spelling of it is a fourth
-        // thing that can disagree.
+        // FORWARDED, not restated. Domain.Bot.Archetypes is the one registry;
+        // this used to be a second switch beside it, and a second switch is a
+        // second thing that can disagree -- it already had, the moment Phase 6
+        // added GreedyDefensive and Lookahead2 to Domain and left the batch
+        // runner and the smoke test unable to name them.
         //
-        // A single object implements BOTH interfaces per archetype, which is
-        // the shape RandomLegalPolicy/GreedyAggressivePolicy already have -- a
+        // Kept as a forward rather than deleted because three callers reach the
+        // registry through Core (the batch runner's -botArchetypes, the smoke
+        // test, the report's archetypeGap) and Core is the layer they are
+        // allowed to see. A single object implements BOTH interfaces per
+        // archetype, which is the shape every policy in Domain already has -- a
         // fight brain and a map brain that disagreed about what the archetype
         // is would make the whole comparison meaningless.
-        public static readonly IReadOnlyList<string> Archetypes =
-            new[] { "RandomLegal", "GreedyAggressive" };
+        public static IReadOnlyList<string> Archetypes => Domain.Bot.Archetypes.Names;
 
-        private static object PolicyFor(string archetype)
-        {
-            switch (archetype)
-            {
-                case "RandomLegal": return new RandomLegalPolicy();
-                case "GreedyAggressive": return new GreedyAggressivePolicy();
-                default: return null;
-            }
-        }
+        private static object PolicyFor(string archetype) => Domain.Bot.Archetypes.Create(archetype);
 
         // ---- the seeded streams -------------------------------------------------
 
