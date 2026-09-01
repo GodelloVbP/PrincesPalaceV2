@@ -95,7 +95,32 @@ namespace PrincesPalace.Domain.Bot
                     return session.PreviewBasicSpellPower(actor);
                 case FightActionKind.Skill:
                     var option = session.SkillOptionsFor(actor).FirstOrDefault(o => o.Index == action.SkillIndex);
-                    return session.PreviewSkillPower(actor, option.Skill);
+
+                    // ONLY THE TWO EFFECTS THAT ACTUALLY PREVIEW A NUMBER.
+                    //
+                    // PreviewSkillPower ends in SkillResolution.Amount, whose
+                    // switch handles DamageSingle/DamageAll, the three heals,
+                    // and Summon -- and THROWS on everything else. Eight
+                    // authored player skills land in that default (Provoke,
+                    // Transform, Ward, Shatter, BuffParty and the three
+                    // Gifts), so asking for a preview of one is not a poor
+                    // estimate, it is an ArgumentOutOfRangeException out of
+                    // the middle of a fight. The balance bot found it on
+                    // seed 1; FightController.Hud's detail card reaches the
+                    // same call for the same skills.
+                    //
+                    // Scored 0 rather than guarded with a catch, because 0 is
+                    // the honest answer to the question this method asks: a
+                    // Provoke deals no damage, and this ranks DAMAGE. It does
+                    // mean GreedyAggressive never opens with a Ward or a
+                    // Shatter unless nothing else is on the menu -- which is
+                    // a real limit of the archetype and is the kind of thing
+                    // Phase 6's GreedyDefensive/Lookahead2 exist to cover,
+                    // not something to paper over with a preview that throws.
+                    bool previewable = option.Skill.Effect == SkillEffect.DamageSingle
+                                    || option.Skill.Effect == SkillEffect.DamageAll;
+
+                    return previewable ? session.PreviewSkillPower(actor, option.Skill) : 0;
                 default:
                     return 0;
             }

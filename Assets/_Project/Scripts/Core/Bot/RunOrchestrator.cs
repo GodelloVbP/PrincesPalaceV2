@@ -271,6 +271,32 @@ namespace PrincesPalace
                 .ToList();
         }
 
+        // ONE CONSUMABLE OFF THE STASH, which is the save-side half of using
+        // one in a fight.
+        //
+        // FightBootstrap.OnItemUsed does two things in one handler: it issues
+        // the session command AND spends the item. Only the first half is
+        // Domain's; the second touches the save and so could not travel with
+        // FightRunner, which left the bot able to drink the same potion
+        // forever -- FightRunner decrements a LOCAL copy of the satchel (so a
+        // policy asked twice in one fight sees an honest count), and nothing
+        // wrote that back. A batch measuring consumable pressure against an
+        // infinite bag is measuring nothing.
+        //
+        // Deliberately only the spend, not the command: the two callers issue
+        // the command differently on purpose (the screen passes the item's real
+        // `amount` from content, the bot passes FightAction.ItemAmountProxy,
+        // which both clamp to the same top-off), and folding the command in
+        // here would force one of them to lie about which item it used.
+        public static void SpendConsumable(string itemId)
+        {
+            var save = SaveSlotManager.CurrentSave;
+            if (save == null || string.IsNullOrEmpty(itemId)) return;
+
+            InventoryOps.TryRemove(save.stockpiledItems, itemId);
+            SaveSlotManager.SaveCurrent();
+        }
+
         // ---- settling it ------------------------------------------------------------
 
         // What a finished fight left behind, for whoever has to draw it.
