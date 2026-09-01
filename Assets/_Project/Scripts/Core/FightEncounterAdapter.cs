@@ -651,7 +651,7 @@ namespace PrincesPalace
                 definition.requirements, definition.scalingAxis, definition.queuePushSlots,
                 definition.transform, definition.playerSelectable, definition.cooldownTurns,
                 definition.stance, definition.summonEnemyId, definition.summonCap,
-                definition.approach, definition.shake);
+                definition.approach, definition.shake, definition.meleeReach);
         }
     }
 }

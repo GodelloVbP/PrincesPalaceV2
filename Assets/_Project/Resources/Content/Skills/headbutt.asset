@@ -63,4 +63,5 @@ MonoBehaviour:
   shake: 0
   summonEnemyId: 
   summonCap: 0
+  meleeReach: 0
   sortOrder: 9

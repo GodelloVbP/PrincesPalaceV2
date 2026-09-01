@@ -516,6 +516,7 @@ public static class ContentBuilder
             asset.shake = skill.Shake;
             asset.summonEnemyId = skill.SummonEnemyId;
             asset.summonCap = skill.SummonCap;
+            asset.meleeReach = skill.MeleeReach;
             asset.hasStatus = skill.AppliesStatus.HasValue;
             if (skill.AppliesStatus.HasValue)
             {

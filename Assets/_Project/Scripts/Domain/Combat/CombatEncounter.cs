@@ -165,6 +165,28 @@ namespace PrincesPalace.Domain.Combat
             return _turnOrder.Project(count, combatant => combatant.IsAlive);
         }
 
+        // The same projection, previewing what the queue would look like if
+        // `pushedActor` had already taken `slots` of push-back -- the hover
+        // preview for a skill that carries QueuePushSlots. A thin pass-
+        // through onto TurnOrder.ProjectPushed for the same reason
+        // UpcomingTurns is one onto Project: nothing here mutates the real
+        // schedule, and the queue is the only place that gets to say what a
+        // push would actually do to it.
+        public IReadOnlyList<CombatantState> UpcomingTurnsPushed(CombatantState pushedActor, int slots, int count)
+        {
+            if (count <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(count), count, "Ask for at least one upcoming turn.");
+            }
+
+            if (IsOver)
+            {
+                return new List<CombatantState>();
+            }
+
+            return _turnOrder.ProjectPushed(pushedActor, slots, count, combatant => combatant.IsAlive);
+        }
+
         // Grants `actor` an immediate extra turn — the same actor is Current
         // again right after this one finishes, instead of the schedule moving
         // on. A thin pass-through onto TurnOrder.GrantExtraTurn: the queue is

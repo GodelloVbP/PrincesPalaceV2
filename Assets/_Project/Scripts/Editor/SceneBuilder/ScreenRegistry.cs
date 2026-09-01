@@ -129,6 +129,8 @@ public static class ScreenRegistry
                 fight.barkPortrait = result.Image(screen.BarkPortrait);
                 fight.barkLabel = result.Tmp(screen.BarkLabel);
 
+                fight.lowHpVignette = result.Go(screen.LowHpVignette);
+
                 fight.enemiesHint = result.Tmp(screen.EnemiesHint);
                 fight.enemyPlates = screen.EnemyPlates.Select(result.Button).ToArray();
                 fight.enemyPlateIcons = screen.EnemyPlateIcons.Select(result.Image).ToArray();
@@ -137,6 +139,8 @@ public static class ScreenRegistry
                 fight.enemyPlateHpFills = screen.EnemyPlateHpFills.Select(result.Image).ToArray();
                 fight.enemyPlateTags = screen.EnemyPlateTags.Select(result.Tmp).ToArray();
                 fight.enemyPlateReticles = screen.EnemyPlateReticles.Select(result.Go).ToArray();
+                fight.enemyPlateBreakTracks = screen.EnemyPlateBreakTracks.Select(result.Go).ToArray();
+                fight.enemyPlateBreakFills = screen.EnemyPlateBreakFills.Select(result.Image).ToArray();
 
                 fight.partyPortrait = result.Image(screen.PartyPortrait);
                 fight.partyName = result.Tmp(screen.PartyName);
@@ -151,6 +155,13 @@ public static class ScreenRegistry
                 fight.partyBuffTooltipText = result.Tmp(screen.PartyBuffTooltipText);
                 fight.woolPips = screen.WoolPips.Select(result.Image).ToArray();
                 fight.woolValue = result.Tmp(screen.WoolValue);
+                fight.secondLifeBadge = result.Go(screen.SecondLifeBadge);
+                fight.transformStrip = result.Go(screen.TransformStrip);
+                fight.transformStripText = result.Tmp(screen.TransformStripText);
+                fight.rosterPlates = screen.RosterPlates.Select(result.Go).ToArray();
+                fight.rosterNames = screen.RosterNames.Select(result.Tmp).ToArray();
+                fight.rosterHpValues = screen.RosterHpValues.Select(result.Tmp).ToArray();
+                fight.rosterHpFills = screen.RosterHpFills.Select(result.Image).ToArray();
 
                 fight.verbButtons = screen.VerbButtons.Select(result.Button).ToArray();
                 fight.verbLabels = screen.VerbLabels.Select(result.Tmp).ToArray();

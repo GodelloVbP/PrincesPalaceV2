@@ -39,6 +39,7 @@ namespace PrincesPalace
             {
                 int index = i;
                 enemyPlates[i].onClick.AddListener(() => OnEnemyPressed(index));
+                AddEnemyHover(enemyPlates[i].gameObject, index);
             }
 
             // THE SAME HANDLER FROM THE FIGURE ITSELF. Two ways to name the
@@ -72,6 +73,45 @@ namespace PrincesPalace
             var enter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
             enter.callback.AddListener(_ => OnRowHovered(index));
             trigger.triggers.Add(enter);
+        }
+
+        // Which enemy plate the mouse is over, -1 for none. Enter AND exit,
+        // unlike the submenu's own AddHover -- a submenu row's selection is
+        // meant to persist until another row takes it, but a plate stops
+        // being "the one under the cursor" the instant the cursor leaves it,
+        // which is what the turn-order ghost preview (RefreshInitiative)
+        // needs to know to stop showing.
+        private int _hoveredEnemyIndex = -1;
+
+        private void AddEnemyHover(GameObject plate, int index)
+        {
+            var trigger = plate.GetComponent<EventTrigger>() ?? plate.AddComponent<EventTrigger>();
+
+            var enter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
+            enter.callback.AddListener(_ => OnEnemyHovered(index));
+            trigger.triggers.Add(enter);
+
+            var exit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+            exit.callback.AddListener(_ => OnEnemyUnhovered(index));
+            trigger.triggers.Add(exit);
+        }
+
+        private void OnEnemyHovered(int index)
+        {
+            if (_hoveredEnemyIndex == index) return;
+            _hoveredEnemyIndex = index;
+            RefreshUi();
+        }
+
+        private void OnEnemyUnhovered(int index)
+        {
+            // Only clears if THIS plate was the one being tracked -- the
+            // pointer can arrive at the next plate before it leaves the last
+            // one's collider, and an exit event landing after that entry
+            // event would otherwise clear a hover that is already correct.
+            if (_hoveredEnemyIndex != index) return;
+            _hoveredEnemyIndex = -1;
+            RefreshUi();
         }
 
         private void OnVerbPressed(int index)
@@ -135,22 +175,37 @@ namespace PrincesPalace
                 return;
             }
 
-            // A skill that does not target one enemy resolves the same way --
-            // Wool Gathering (HealSelf) was routing through the enemy-target
-            // prompt regardless, so the player clicked an enemy plate for a
-            // self-heal that ignored the click and healed the caster anyway
-            // (ResolveCharacterSkillInner's HealSelf case never reads its
-            // target argument). SkillTargeting is otherwise read only for the
-            // detail card's TARGET row -- this is the one place it needs to
-            // change what actually happens, not just what is displayed.
+            // Self and Party resolve the same way -- Wool Gathering (HealSelf)
+            // was routing through the enemy-target prompt regardless, so the
+            // player clicked an enemy plate for a self-heal that ignored the
+            // click and healed the caster anyway (ResolveCharacterSkillInner's
+            // HealSelf case never reads its target argument). Neither has
+            // anything to aim at: the target set is fixed the instant the
+            // skill is picked, so there is nothing a Target-depth click could
+            // change.
+            //
+            // AllEnemies no longer joins them here. An earlier version of this
+            // check routed every non-SingleEnemy skill through the same
+            // instant-resolve path, which meant a group cast -- real mana
+            // cost, real variance, the most expensive miscast in the menu --
+            // had LESS confirmation friction than a single-target one. It now
+            // enters Target depth exactly like SingleEnemy does; the click
+            // that confirms it can land on any enemy plate, because
+            // ResolveDamageAll already hits every living opponent and ignores
+            // which one was actually clicked -- see its own header.
             if (_menu.Branch == MenuBranch.Skill)
             {
                 var options = _session.SkillOptionsFor(_session.Current);
-                if (index < options.Count && options[index].Skill.Targeting != Domain.Combat.SkillTargeting.SingleEnemy)
+                if (index < options.Count)
                 {
-                    _session.CastSkill(options[index].Index, _session.Current);
-                    AfterResolution();
-                    return;
+                    var targeting = options[index].Skill.Targeting;
+                    if (targeting == Domain.Combat.SkillTargeting.Self
+                        || targeting == Domain.Combat.SkillTargeting.Party)
+                    {
+                        _session.CastSkill(options[index].Index, _session.Current);
+                        AfterResolution();
+                        return;
+                    }
                 }
             }
 
@@ -168,9 +223,32 @@ namespace PrincesPalace
             var target = enemies[index];
             if (!target.IsAlive) return;
 
+            // AGAINST THE OPTION LIST, not the kit, resolved ONCE and shared
+            // by the reach check below and the cast below that -- see the
+            // Skill case's own comment for why row position and kit index
+            // are not the same number.
+            IReadOnlyList<ResolvedSkillOption> options = null;
+            int row = -1;
+            bool isBasic = false;
+            if (_menu.Branch == MenuBranch.Skill)
+            {
+                options = _session.SkillOptionsFor(_session.Current);
+                row = _menu.Selection;
+                isBasic = row < 0 || row >= options.Count;
+            }
+
+            // THE FRONT-RANK RULE, asked about whatever this click would
+            // actually cast. Attack is always the plain Strike, which has
+            // always reached this way. A skill reaches the same way only when
+            // it says meleeReach -- the basic spell and every authored skill
+            // that leaves the field unset are ranged or magical and were
+            // never subject to this rule, so a click on them never asks.
+            bool meleeSelected = _menu.Branch == MenuBranch.Attack
+                || (_menu.Branch == MenuBranch.Skill && !isBasic && options[row].Skill.MeleeReach);
+
             // The front-rank rule is the SESSION's to state, not the view's --
             // it is a combat rule that happens to be enforced at a click.
-            if (!_session.CanMeleeReach(target) && _menu.Branch == MenuBranch.Attack)
+            if (meleeSelected && !_session.CanMeleeReach(target))
             {
                 _session.AppendMessage($"{target.Name} is out of reach behind the front rank.");
                 RefreshUi();
@@ -184,19 +262,6 @@ namespace PrincesPalace
                     break;
 
                 case MenuBranch.Skill:
-                    // AGAINST THE OPTION LIST, not the kit.
-                    //
-                    // This used to compare the row against kit.Skills.Count and
-                    // pass the row straight to CastSkill, which worked only
-                    // while every skill in the kit had a row. The moment the
-                    // list hides one -- as it now does for unmet requirements --
-                    // row position and kit index stop agreeing, and the player
-                    // casts something other than what they pressed. The option
-                    // carries the index it came from; that is what goes down.
-                    var options = _session.SkillOptionsFor(_session.Current);
-                    int row = _menu.Selection;
-                    bool isBasic = row < 0 || row >= options.Count;
-
                     if (isBasic) _session.ExecuteSkill(target);
                     else _session.CastSkill(options[row].Index, target);
                     break;

@@ -108,6 +108,9 @@ namespace PrincesPalace.Content
         [Tooltip("Summon only: don't summon another one once the caster's side already fields this many living copies of summonEnemyId.")]
         public int summonCap;
 
+        [Tooltip("Does the front-rank rule apply to this skill? False (default) reaches any enemy. True refuses a click past a living front rank -- only means anything on a SingleEnemy skill.")]
+        public bool meleeReach;
+
         // A spell that deals exactly what it says, rather than scaling off
         // the caster's Attack.
         public bool HasFixedDamage => damageInstances != null && damageInstances.Length > 0;

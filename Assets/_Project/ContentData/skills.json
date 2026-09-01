@@ -10,7 +10,8 @@
       "effect": "DamageSingle",
       "resourceCost": 3,
       "power": 2,
-      "manaCost": 0
+      "manaCost": 0,
+      "meleeReach": true
     },
     {
       "id": "woolgathering",

@@ -224,6 +224,19 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            // Same "this field has no meaning on that effect" rule
+            // ignoresDefense and queuePushSlots already follow. A heal or an
+            // AOE has no single front-ranked target for the rule to ask
+            // about; a SingleEnemy-typed effect other than DamageSingle
+            // (there isn't one today, but the check reads on the targeting
+            // rather than the effect on purpose) is still a click on one
+            // enemy and the rule still means something.
+            if (raw.meleeReach && targeting != SkillTargeting.SingleEnemy)
+            {
+                error = $"{label}: meleeReach only means anything on a SingleEnemy skill, not {targeting}.";
+                return false;
+            }
+
             // Both Resources-relative. A wrong convention here costs the skill
             // its animation and its sound with no error anywhere — the hit just
             // lands silently.
@@ -260,7 +273,7 @@ namespace PrincesPalace.Domain.Content
                 appliesStatus, statusMagnitude, statusDuration, requirements, scalingAxis,
                 raw.queuePushSlots, transform, raw.playerSelectable, raw.cooldownTurns,
                 raw.stance?.Trim() ?? "", raw.summonEnemyId?.Trim() ?? "", summonCap,
-                ParseApproach(raw.approach), raw.shake);
+                ParseApproach(raw.approach), raw.shake, raw.meleeReach);
             error = null;
             return true;
         }

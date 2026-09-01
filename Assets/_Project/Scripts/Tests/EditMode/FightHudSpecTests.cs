@@ -13,7 +13,6 @@ namespace PrincesPalace.Domain.Tests
         public void CapacitiesMatchV1()
         {
             Assert.AreEqual(6, FightHudSpec.InitiativeSlots);
-            Assert.AreEqual(6, FightHudSpec.DamagePopups);
             Assert.AreEqual(3, FightHudSpec.StageSlotsPerSide);
             Assert.AreEqual(16, FightHudSpec.WoolPips);
 
@@ -22,6 +21,15 @@ namespace PrincesPalace.Domain.Tests
             // own comment). Four, once RUN is gone and HOLD BACK takes its
             // place rather than joining it.
             Assert.AreEqual(4, FightHudSpec.Verbs);
+        }
+
+        // DamagePopups moved out of CapacitiesMatchV1 on purpose -- it no
+        // longer does. See FightHudSpec.DamagePopups' own comment for why 6
+        // undersold what an AllEnemies cast needs.
+        [Test]
+        public void DamagePopupsIsDoubledPastV1ForSimultaneousMultiTargetHits()
+        {
+            Assert.AreEqual(12, FightHudSpec.DamagePopups);
         }
 
         [Test]

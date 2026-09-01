@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using PrincesPalace.Domain.Combat;
@@ -60,6 +61,49 @@ namespace PrincesPalace
             RefreshPartyPlate();
             RefreshInitiative();
             RefreshStage();
+            RefreshLowHpVignette();
+        }
+
+        // HYSTERESIS, not one threshold -- a party sitting right at 25% would
+        // otherwise flicker the vignette on and off every regen tick and every
+        // poison tick, which reads as a broken effect rather than a danger
+        // signal. Activates below 25%, clears only above 30%: the 5-point gap
+        // is the whole fix, and it is why this needs a field at all rather
+        // than a pure function of the current snapshot.
+        private bool _lowHpActive;
+        private const float LowHpActivate = 0.25f;
+        private const float LowHpClear = 0.30f;
+
+        private void RefreshLowHpVignette()
+        {
+            if (lowHpVignette == null || _session == null) return;
+
+            float lowest = 1f;
+            bool any = false;
+            foreach (var member in _session.Encounter.LivingPlayerParty)
+            {
+                if (member.MaxHealth <= 0) continue;
+                any = true;
+                float fraction = member.CurrentHealth / (float)member.MaxHealth;
+                if (fraction < lowest) lowest = fraction;
+            }
+
+            if (!any)
+            {
+                _lowHpActive = false;
+            }
+            else if (_lowHpActive)
+            {
+                // Already showing: only a recovery past the CLEAR line turns
+                // it off, not merely past the lower ACTIVATE one.
+                if (lowest >= LowHpClear) _lowHpActive = false;
+            }
+            else if (lowest < LowHpActivate)
+            {
+                _lowHpActive = true;
+            }
+
+            lowHpVignette.SetShown(_lowHpActive);
         }
 
         // Just the menu-derived panels -- verbs, submenu, detail card, target
@@ -115,6 +159,19 @@ namespace PrincesPalace
                     var caret = verbCarets[i].GetComponent<TMPro.TMP_Text>();
                     if (caret != null) caret.color = i == active ? CaretActive : CostUnaffordable;
                 }
+            }
+
+            // HOLD BACK's own bank count, folded into the label it is already
+            // one of four -- BankedActions was invisible everywhere before
+            // this, including on the verb that spends a turn creating it.
+            // Index 3: {Attack, Skill, Item, HoldBack} is the fixed order
+            // BuildVerbColumn authored these in.
+            const int HoldBackVerbIndex = 3;
+            if (Has(verbLabels, HoldBackVerbIndex))
+            {
+                var actor = ActingCharacter();
+                int banked = actor?.BankedActions ?? 0;
+                verbLabels[HoldBackVerbIndex].Set(UiStrings.VerbHoldBackWithBank, banked, FightTuning.MaxBankedActions);
             }
 
             breadcrumb.SetContent(FightHudModel.Breadcrumb(_menu));
@@ -209,8 +266,50 @@ namespace PrincesPalace
             targetPrompt.SetShown(targeting);
             if (!targeting) return;
 
-            targetPromptLabel.Set(UiStrings.TargetPrompt, CurrentDetail().Name);
+            string name = CurrentDetail().Name;
+            if (TargetingIsGroup()) targetPromptLabel.Set(UiStrings.TargetPromptGroup, name);
+            else targetPromptLabel.Set(UiStrings.TargetPrompt, name);
         }
+
+        // Whether the skill resolving at Target depth hits every enemy at
+        // once, for the prompt's wording. Party never reaches Target depth
+        // at all (see OnRowPressed), so "not SingleEnemy" here can only mean
+        // AllEnemies -- and the basic spell, which carries no authored
+        // Targeting of its own, is always single-target.
+        private bool TargetingIsGroup()
+        {
+            if (_menu.Branch != MenuBranch.Skill || _session?.Current == null) return false;
+
+            var options = _session.SkillOptionsFor(_session.Current);
+            int row = _menu.Selection;
+            if (row < 0 || row >= options.Count) return false;
+
+            return options[row].Skill.Targeting == Domain.Combat.SkillTargeting.AllEnemies;
+        }
+
+        // Whether the click resolving at Target depth is subject to the
+        // front-rank rule at all -- Attack is always the plain Strike, which
+        // always has been; a skill only joins it by carrying meleeReach (see
+        // ResolvedSkill.MeleeReach's own comment). Mirrors the same lookup
+        // OnEnemyPressed uses to gate the click itself -- this is the half
+        // that paints the same answer onto the plate, not a second rule.
+        private bool TargetingIsMelee()
+        {
+            if (_menu.Branch == MenuBranch.Attack) return true;
+            if (_menu.Branch != MenuBranch.Skill || _session?.Current == null) return false;
+
+            var options = _session.SkillOptionsFor(_session.Current);
+            int row = _menu.Selection;
+            if (row < 0 || row >= options.Count) return false;
+
+            return options[row].Skill.MeleeReach;
+        }
+
+        // Alpha rather than a colour swap -- the same "dim, don't hide"
+        // choice the submenu's own unaffordable rows already make (see
+        // DimmedAlpha there). A blocked plate is still information; it is
+        // just not this click's business right now.
+        private const float MeleeBlockedAlpha = 0.5f;
 
         private void RefreshEnemyPlates()
         {
@@ -224,11 +323,46 @@ namespace PrincesPalace
             // when the rat beside it falls. See FightHudModel.DisplayNames.
             var names = FightHudModel.DisplayNames(enemies);
 
+            // Computed ONCE per refresh, not once per plate -- the same
+            // question asked of the same click for every plate in the loop.
+            bool meleeTargeting = _menu.IsTargeting && TargetingIsMelee();
+
             for (int i = 0; i < enemyPlates.Length; i++)
             {
                 bool present = i < enemies.Count && enemies[i].IsAlive;
                 enemyPlates[i].SetShown(present);
+
+                // BLOCKED: reachable by the click OnEnemyPressed will actually
+                // accept, but not by THIS one. Dimmed, reticle greyed, and not
+                // interactable -- the plate stops being a button rather than
+                // staying one that silently refuses, which is the visual half
+                // of the fix Phase 1 already made to the click itself.
+                bool blocked = present && meleeTargeting && _session != null
+                    && !_session.CanMeleeReach(enemies[i]);
+
+                if (present)
+                {
+                    var plateImage = enemyPlates[i].targetGraphic as Image;
+                    if (plateImage != null)
+                    {
+                        var colour = plateImage.color;
+                        colour.a = blocked ? MeleeBlockedAlpha : 1f;
+                        plateImage.color = colour;
+                    }
+                    enemyPlates[i].interactable = !blocked;
+                }
+
                 enemyPlateReticles[i].SetShown(present && _menu.IsTargeting);
+                if (Has(enemyPlateReticles, i) && present)
+                {
+                    var reticleImage = enemyPlateReticles[i].GetComponent<Image>();
+                    if (reticleImage != null)
+                    {
+                        var colour = reticleImage.color;
+                        colour.a = blocked ? MeleeBlockedAlpha : 1f;
+                        reticleImage.color = colour;
+                    }
+                }
 
                 // THE FIGURE IS A TARGET ONLY WHILE ONE IS BEING CHOSEN. Left
                 // live it is a rectangle over the battlefield eating clicks
@@ -244,7 +378,17 @@ namespace PrincesPalace
                 enemyPlateNames[i].SetContent(i < names.Count ? names[i] : enemy.Name);
                 enemyPlateHps[i].Set(UiStrings.HealthValue, enemy.CurrentHealth, enemy.MaxHealth);
                 SetFill(enemyPlateHpFills[i], enemy.CurrentHealth, enemy.MaxHealth);
-                enemyPlateTags[i].SetContent(TagLineFor(enemy, _session));
+                enemyPlateTags[i].SetContent(FightHudModel.EnemyStatusLine(enemy, _session));
+
+                // Only an elite or boss carries a BreakShield at all -- the
+                // track stays hidden for everything else rather than showing
+                // an always-full meter nobody can deplete.
+                if (Has(enemyPlateBreakTracks, i))
+                {
+                    var shield = enemy.BreakShield;
+                    enemyPlateBreakTracks[i].SetShown(shield != null);
+                    if (shield != null) SetFill(enemyPlateBreakFills[i], shield.Current, shield.Max);
+                }
 
                 // The actor's own idle art, fitted into the plate. Reusing the
                 // stage sprite rather than authoring plate icons is what makes
@@ -285,6 +429,69 @@ namespace PrincesPalace
             RefreshManaPreview(actor);
             RefreshWool(actor);
             RefreshPartyBuffs(actor);
+            RefreshTransformStrip(actor);
+            RefreshSecondLifeBadge();
+            RefreshRoster(actor);
+        }
+
+        // Fused above the party plate, shown only while the acting character
+        // is transformed -- see FightScreen.BuildTransformStrip's own
+        // comment for why this is a separate panel rather than a fourth row
+        // squeezed into the plate itself.
+        private void RefreshTransformStrip(CombatantState actor)
+        {
+            if (transformStrip == null) return;
+
+            var transformation = actor.Transformation;
+            transformStrip.SetShown(transformation != null);
+            if (transformation == null || transformStripText == null) return;
+
+            if (transformation.IsPermanent)
+            {
+                transformStripText.Set(UiStrings.TransformStripPermanent, transformation.DisplayName);
+            }
+            else
+            {
+                transformStripText.Set(UiStrings.TransformStripTurns,
+                    transformation.DisplayName, transformation.TurnsRemaining);
+            }
+        }
+
+        // The one badge on this screen that reads FightSession rather than
+        // the acting character -- a Second Life charge belongs to the whole
+        // party's run, not to whoever happens to be acting this turn.
+        private void RefreshSecondLifeBadge()
+        {
+            if (secondLifeBadge == null || _session == null) return;
+
+            bool available = _session.SecondLivesSpent < _session.SecondLifeCharges;
+            secondLifeBadge.SetShown(available);
+        }
+
+        // The two party members NOT currently acting, information only -- no
+        // swap mechanic, see FightScreen.BuildRosterPlates' own comment. Over
+        // PlayerParty rather than LivingPlayerParty deliberately: a downed
+        // ally is still worth showing here, at 0 HP, rather than vanishing
+        // from the roster the moment they fall.
+        private void RefreshRoster(CombatantState acting)
+        {
+            if (rosterPlates == null || _session == null) return;
+
+            var others = _session.Encounter.PlayerParty.Where(c => c != acting).ToList();
+            for (int i = 0; i < rosterPlates.Length; i++)
+            {
+                bool present = i < others.Count;
+                rosterPlates[i].SetShown(present);
+                if (!present) continue;
+
+                var member = others[i];
+                if (Has(rosterNames, i)) rosterNames[i].SetContent(member.Name);
+                if (Has(rosterHpValues, i))
+                {
+                    rosterHpValues[i].Set(UiStrings.HealthValue, member.CurrentHealth, member.MaxHealth);
+                }
+                if (Has(rosterHpFills, i)) SetFill(rosterHpFills[i], member.CurrentHealth, member.MaxHealth);
+            }
         }
 
         // ---- buff badges ------------------------------------------------------
@@ -513,6 +720,17 @@ namespace PrincesPalace
             }
         }
 
+        // The ordinary chip tint, restored every refresh so a preview from a
+        // moment ago can never leave a chip stuck highlighted after the
+        // mouse has moved on.
+        private static readonly Color InitiativeNormal = Color.white;
+
+        // A push/pull skill's ghost preview -- which chip is amber. Set on
+        // the icon AND the ring rather than a new node, because the only
+        // thing changing is which slot a combatant now occupies, and every
+        // chip already has a graphic to tint for that.
+        private static readonly Color InitiativeGhost = Hex(FightHudPalette.TargetAmber);
+
         private void RefreshInitiative()
         {
             if (initiativeIcons == null || _session == null) return;
@@ -521,9 +739,28 @@ namespace PrincesPalace
                 ? new List<CombatantState>()
                 : new List<CombatantState>(_session.Encounter.UpcomingTurns(initiativeIcons.Length));
 
+            // THE GHOST PREVIEW. Only while a push-flagged skill is both
+            // selected (Target depth) AND a specific enemy plate is under the
+            // cursor -- QueuePushSlots only ever means anything on a
+            // SingleEnemy skill (SkillEntryResolver's own rule), so there is
+            // no target to preview a push against before one plate is
+            // actually being pointed at. Nothing here commits anything: the
+            // real queue is untouched, see TurnOrder.ProjectWith's own header.
+            var previewed = upcoming;
+            int pushSlots = SelectedSkillPushSlots();
+            if (pushSlots > 0 && _menu.IsTargeting && _hoveredEnemyIndex >= 0)
+            {
+                var enemies = Enemies;
+                if (_hoveredEnemyIndex < enemies.Count && enemies[_hoveredEnemyIndex].IsAlive)
+                {
+                    previewed = new List<CombatantState>(_session.Encounter.UpcomingTurnsPushed(
+                        enemies[_hoveredEnemyIndex], pushSlots, initiativeIcons.Length));
+                }
+            }
+
             for (int i = 0; i < initiativeIcons.Length; i++)
             {
-                bool filled = i < upcoming.Count;
+                bool filled = i < previewed.Count;
 
                 // Both of these are built with a NULL sprite and no portrait art
                 // exists yet, so neither may simply be switched on -- see
@@ -535,10 +772,36 @@ namespace PrincesPalace
                 // The initial, as the fallback for a combatant with no portrait
                 // art. Written even when an icon exists, because the icon is
                 // Resources-loaded and may legitimately not be there yet.
-                initiativeLabels[i].SetContent(filled && upcoming[i].Name.Length > 0
-                    ? upcoming[i].Name.Substring(0, 1).ToUpperInvariant()
+                initiativeLabels[i].SetContent(filled && previewed[i].Name.Length > 0
+                    ? previewed[i].Name.Substring(0, 1).ToUpperInvariant()
                     : "");
+
+                // CHANGED FROM THE UNPUSHED SCHEDULE, not "is the pushed
+                // combatant" -- a push moves everyone charged less than it
+                // down by one slot too, and the player benefits from seeing
+                // the whole reshuffle, not just where the target landed.
+                bool moved = ReferenceEquals(previewed, upcoming) == false
+                    && (i >= upcoming.Count || !ReferenceEquals(upcoming[i], previewed[i]));
+                var tint = moved ? InitiativeGhost : InitiativeNormal;
+                if (initiativeIcons[i] != null) initiativeIcons[i].color = tint;
+                if (initiativeRings[i] != null && i == 0) initiativeRings[i].color = tint;
             }
+        }
+
+        // The confirmed or hovered skill's QueuePushSlots, 0 for everything
+        // else -- the same "look up whatever OnEnemyPressed would actually
+        // cast" shape TargetingIsMelee/TargetingIsGroup already share, so a
+        // fourth copy of that lookup does not quietly start disagreeing with
+        // the first three about which skill is live.
+        private int SelectedSkillPushSlots()
+        {
+            if (_menu.Branch != MenuBranch.Skill || _session?.Current == null) return 0;
+
+            var options = _session.SkillOptionsFor(_session.Current);
+            int row = _menu.Selection;
+            if (row < 0 || row >= options.Count) return 0;
+
+            return options[row].Skill.QueuePushSlots;
         }
 
         // ---- what the model needs -------------------------------------------
@@ -595,33 +858,6 @@ namespace PrincesPalace
 
             foreach (var member in _session.Encounter.LivingPlayerParty) return member;
             return null;
-        }
-
-        private static string TagLineFor(CombatantState enemy, FightSession session)
-        {
-            var tags = new List<string>();
-            if (enemy.BreakShield != null && enemy.BreakShield.IsBroken) tags.Add("REELING");
-            foreach (var status in enemy.Statuses) tags.Add(status.Type.ToString().ToUpperInvariant());
-
-            // MARKED is not a StatusEffectType entry -- see
-            // FightSession.Relics.ApplyMark for why it stays outside that
-            // system. This is its display half, read back from the session
-            // that actually holds the mechanical truth rather than
-            // duplicated onto the combatant itself.
-            //
-            // SLOWED used to live here the same way, reading
-            // SpeedBonusFrom(enemy, RelicEffect.LuckyDeck) < 0 -- Lucky
-            // Deck's slow was not a status either, before Phase D2 (item-
-            // modifier plan) migrated it onto StatusEffectType.Chilled. Now
-            // that it IS one, the `foreach` above already adds a "CHILLED"
-            // tag from enemy.Statuses directly; a second, differently-named
-            // SLOWED tag here would just be the same fact shown twice.
-            if (session != null)
-            {
-                if (session.IsMarked(enemy)) tags.Add("MARKED");
-            }
-
-            return string.Join("  ·  ", tags);
         }
 
         // ---- small painting helpers -------------------------------------------

@@ -22,7 +22,18 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // Pooled, genuinely runtime-positioned - one of only two elements on
         // this screen that earns the pool audit exemption.
-        public const int DamagePopups = 6;
+        //
+        // 12, NOT 6 -- v1's number, carried over without being re-derived
+        // against what actually spends a pool this size. An AllEnemies cast
+        // can land on all three enemy slots inside one beat sequence, and a
+        // popup does not vanish the instant the next beat starts (LifeSeconds
+        // outlives BeatGapSeconds) -- six was already tight for three
+        // simultaneous hits with nothing else in flight. Doubled rather than
+        // precisely counted: the pool is a display reservation the same way
+        // WoolPips is, not a hard ceiling worth chasing exactly -- see
+        // FightBeatPlayer.ShowAmount's own "dropped, not queued" fallback for
+        // what happens on the rare frame that still runs out.
+        public const int DamagePopups = 12;
 
         // HOW MANY COMBATANTS A SIDE CAN FIELD, and it is a rule rather than a
         // drawing detail.

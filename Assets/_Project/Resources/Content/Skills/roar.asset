@@ -63,4 +63,5 @@ MonoBehaviour:
   shake: 0.85
   summonEnemyId: rat
   summonCap: 2
+  meleeReach: 0
   sortOrder: 19

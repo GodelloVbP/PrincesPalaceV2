@@ -608,6 +608,40 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString TargetPrompt =
             UiString.Define("target_prompt", "Choose a target for {0}.", "Choose a target for Boulder Slam.");
 
+        // The rework's group-target wording -- revives what was, until the
+        // group-target confirm fix, dead copy: nothing routed an AllEnemies
+        // skill through Target depth for this to ever be read. It is reachable
+        // now, so it is worded distinctly from the single-target prompt above:
+        // there is genuinely nothing to aim at, only something to confirm.
+        public static readonly UiString TargetPromptGroup =
+            UiString.Define("target_prompt_group", "{0} — confirm on any enemy plate.",
+                "Boulder Slam — confirm on any enemy plate.");
+
+        // The rework's reach-block reason -- see FightHudModel.MeleeBlockReason,
+        // which decides whether it applies at all. Registered ahead of the
+        // plate/tooltip that will show it, same as every other string here
+        // waiting on its own screen.
+        public static readonly UiString TargetBlockedByFrontRank =
+            UiString.Define("target_blocked_by_front_rank", "BLOCKED BY FRONT RANK");
+
+        // HOLD BACK's own label, with the banked-action count folded in --
+        // the resource Hold Back BUILDS was invisible everywhere before this,
+        // including on the one verb that spends a turn creating it. Audit
+        // sample is the cap (FightTuning.MaxBankedActions), not a bigger
+        // number: the count can never exceed it.
+        public static readonly UiString VerbHoldBackWithBank =
+            UiString.Define("verb.hold_back_bank", "HOLD BACK  ·  BANK {0}/{1}", "HOLD BACK  ·  BANK 2/2");
+
+        // The transformation strip, fused above the party plate -- the one
+        // domain system that was previously invisible even to the character
+        // running it. IsPermanent (the capstone) gets its own word rather
+        // than a turn count that would stop moving and read as a bug -- see
+        // Transformation.IsPermanent's own comment.
+        public static readonly UiString TransformStripTurns =
+            UiString.Define("transform_strip_turns", "{0} — {1} TURNS", "Black Ram Mode — 99 TURNS");
+        public static readonly UiString TransformStripPermanent =
+            UiString.Define("transform_strip_permanent", "{0} — PERMANENT", "Black Ram Mode — PERMANENT");
+
         // ---- the overarching menu ------------------------------------------
         //
         // Labels only. What each tab CONTAINS is a design job; these exist so
@@ -810,7 +844,8 @@ namespace PrincesPalace.Domain.UiKit
             SubmenuSkillsTitle, SubmenuItemsTitle, SubmenuHint,
             DetailKindSkill, DetailKindItem,
             DetailStatCost, DetailStatPower, DetailStatTarget, DetailStatEffect, DetailStatScaling,
-            TargetPrompt, TargetCancel,
+            TargetPrompt, TargetPromptGroup, TargetCancel, TargetBlockedByFrontRank, VerbHoldBackWithBank,
+            TransformStripTurns, TransformStripPermanent,
             MapTitle, MapDepth, MapGold, MapAbandon, MapFog,
             MapRoomTreasure, MapRoomRest, MapRoomShop, MapRoomEvent,
             MapRoomItem, MapRoomEmpty,

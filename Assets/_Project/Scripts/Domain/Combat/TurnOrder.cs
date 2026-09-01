@@ -291,10 +291,21 @@ namespace PrincesPalace.Domain.Combat
                 return false;
             }
 
+            ApplyPushBack(_entries, entry, slots);
+            return true;
+        }
+
+        // The displacement PushBack applies to the real queue, factored out
+        // so ProjectPushed can run the identical rule against a SIMULATED
+        // copy -- see its own header. `entries` is whichever list `entry`
+        // actually belongs to; the real `_entries` for PushBack itself, a
+        // throwaway snapshot for a preview.
+        private static void ApplyPushBack(List<Entry> entries, Entry entry, int slots)
+        {
             for (int i = 0; i < Math.Max(1, slots); i++)
             {
                 float below = float.MinValue;
-                foreach (var other in _entries)
+                foreach (var other in entries)
                 {
                     if (ReferenceEquals(other, entry) || other.Charge >= entry.Charge)
                     {
@@ -309,8 +320,6 @@ namespace PrincesPalace.Domain.Combat
 
                 entry.Charge = below == float.MinValue ? entry.Charge - TurnThreshold : below - 1f;
             }
-
-            return true;
         }
 
         private readonly Dictionary<TActor, int> _extraTurns = new Dictionary<TActor, int>();
@@ -434,30 +443,81 @@ namespace PrincesPalace.Domain.Combat
         // Null includes everyone.
         public IReadOnlyList<TActor> Project(int count, Func<TActor, bool> include = null)
         {
-            var result = new List<TActor>(Math.Max(0, count));
             if (count <= 0 || _entries.Count == 0)
             {
-                return result;
-            }
-
-            bool Wanted(TActor actor) => include == null || include(actor);
-
-            if (_current != null && Wanted(_current.Actor))
-            {
-                result.Add(_current.Actor);
+                return new List<TActor>();
             }
 
             // Work on copies so the real schedule is untouched.
-            var sim = _entries.Select(e => new Entry
+            var sim = Snapshot();
+            var pendingExtras = new Dictionary<TActor, int>(_extraTurns);
+            var simCurrent = _current != null ? sim.FirstOrDefault(e => Equals(e.Actor, _current.Actor)) : null;
+
+            return SimulateForward(sim, simCurrent, pendingExtras, count, include);
+        }
+
+        // The same projection, but as if `pushedActor` had already taken
+        // `slots` of PushBack -- the hover preview for a skill that carries
+        // QueuePushSlots, so the initiative tracker can show where the cast
+        // would actually land before it is committed. NOTHING here touches
+        // the real schedule: the push lands on the same throwaway snapshot
+        // Project itself simulates forward from, one line earlier.
+        //
+        // `pushedActor` not found in the snapshot (already dead, already
+        // removed) just projects the ordinary queue -- the same "returns
+        // false rather than throwing" spirit PushBack itself follows for a
+        // missing actor, adapted to a method that has no bool to return.
+        public IReadOnlyList<TActor> ProjectPushed(TActor pushedActor, int slots, int count,
+            Func<TActor, bool> include = null)
+        {
+            if (count <= 0 || _entries.Count == 0)
+            {
+                return new List<TActor>();
+            }
+
+            var sim = Snapshot();
+            var pushed = sim.FirstOrDefault(e => Equals(e.Actor, pushedActor));
+            if (pushed != null)
+            {
+                ApplyPushBack(sim, pushed, slots);
+            }
+
+            var pendingExtras = new Dictionary<TActor, int>(_extraTurns);
+            var simCurrent = _current != null ? sim.FirstOrDefault(e => Equals(e.Actor, _current.Actor)) : null;
+
+            return SimulateForward(sim, simCurrent, pendingExtras, count, include);
+        }
+
+        // A fresh, independent copy of every entry -- the starting point
+        // both Project and ProjectPushed simulate forward from, so neither
+        // can ever mutate the real schedule no matter what runs on the copy
+        // afterwards.
+        private List<Entry> Snapshot()
+        {
+            return _entries.Select(e => new Entry
             {
                 Actor = e.Actor,
                 Initiative = e.Initiative,
                 Charge = e.Charge,
                 Rate = e.Rate,
             }).ToList();
+        }
 
-            var pendingExtras = new Dictionary<TActor, int>(_extraTurns);
-            var simCurrent = _current != null ? sim.FirstOrDefault(e => Equals(e.Actor, _current.Actor)) : null;
+        // Runs ChargeUntilNextReady's exact rule against a SIMULATED list
+        // instead of the real `_entries` -- factored out of Project so
+        // ProjectPushed can share it rather than re-deriving the same
+        // charge/extra-turn logic a second time with its own chance to drift
+        // from the real scheduler's behaviour.
+        private static List<TActor> SimulateForward(List<Entry> sim, Entry simCurrent,
+            Dictionary<TActor, int> pendingExtras, int count, Func<TActor, bool> include)
+        {
+            var result = new List<TActor>(Math.Max(0, count));
+            bool Wanted(TActor actor) => include == null || include(actor);
+
+            if (simCurrent != null && Wanted(simCurrent.Actor))
+            {
+                result.Add(simCurrent.Actor);
+            }
 
             const int MaxTicks = 1_000_000;
             int ticks = 0;

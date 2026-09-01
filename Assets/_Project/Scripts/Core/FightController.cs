@@ -81,6 +81,16 @@ namespace PrincesPalace
         [SerializeField] internal Image[] enemyPlateHpFills;
         [SerializeField] internal TMP_Text[] enemyPlateTags;
         [SerializeField] internal GameObject[] enemyPlateReticles;
+        [SerializeField] internal GameObject[] enemyPlateBreakTracks;
+        [SerializeField] internal Image[] enemyPlateBreakFills;
+        [SerializeField] internal GameObject secondLifeBadge;
+        [SerializeField] internal GameObject transformStrip;
+        [SerializeField] internal TMP_Text transformStripText;
+        [SerializeField] internal GameObject[] rosterPlates;
+        [SerializeField] internal TMP_Text[] rosterNames;
+        [SerializeField] internal TMP_Text[] rosterHpValues;
+        [SerializeField] internal Image[] rosterHpFills;
+        [SerializeField] internal GameObject lowHpVignette;
 
         [SerializeField] internal Image partyPortrait;
         [SerializeField] internal TMP_Text partyName;

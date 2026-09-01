@@ -34,6 +34,11 @@ public static class ProceduralSpriteBaker
         // serves stars, lanterns, window bloom, motes and mist alike.
         Bake("radial_glow", dist => 1f - Smoothstep(Mathf.Clamp01(dist)));
 
+        // The exact inverse of radial_glow -- transparent at the centre,
+        // opaque toward the edge. The low-HP vignette's own shape: attention
+        // pulled to the FRAME closing in, not to a glow at a point inside it.
+        Bake("vignette", dist => Smoothstep(Mathf.Clamp01(dist)));
+
         // A flat disc with a thin antialiased edge - a coin, an orb, anything
         // that must not render as a square.
         Bake("solid_circle", dist => 1f - Mathf.Clamp01((dist - 0.92f) / 0.08f));

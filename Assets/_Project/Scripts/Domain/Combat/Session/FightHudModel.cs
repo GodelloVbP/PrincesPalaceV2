@@ -505,6 +505,8 @@ namespace PrincesPalace.Domain.Combat.Session
                     return new BuffBadge("SHD", $"Shielded: the next hit taken is reduced {status.Magnitude}%.", true);
                 case StatusEffectType.Provoked:
                     return new BuffBadge("PRV", $"Provoked: the next attack must target whoever provoked it, for {status.Magnitude}% less damage to them.", false);
+                case StatusEffectType.Empowered:
+                    return new BuffBadge("EMP", $"Empowered: the next attack deals {status.Magnitude}% more damage, then it's spent.", true);
 
                 // KEYWORDS, not sentences -- the two statuses with real icon
                 // art (StatusBadgeIcons.ResourceFor) also get the terse
@@ -577,6 +579,103 @@ namespace PrincesPalace.Domain.Combat.Session
                     default: return kind.ToString().ToLowerInvariant();
                 }
             }
+        }
+
+        // ---- enemy plate status line (v2 rework) ----------------------------
+        //
+        // Replaces a flat "REELING · POISON · CHILLED · MARKED" join that was
+        // never tested against a real fight's worth of statuses -- an elite
+        // carrying four statuses plus a break meter had no wrap rule and no
+        // reading order. Two fixes: a CAP (three codes, the rest folds into a
+        // "+N"), and a PRIORITY order -- harm first, since that is what
+        // changes whether the target is worth worrying about.
+        //
+        // BROKEN IS NOT ONE OF THE THREE. An earlier draft of this pass added
+        // it to the same list and let it sort by category with everything
+        // else, which meant an ordinary Poison/Vulnerable/Chilled trio could
+        // push it into the "+N" overflow -- the one state that must never
+        // hide. It is a distinct, always-shown prefix instead, so it can
+        // never lose its place to a status.
+        private enum PillCategory { Harm, Control, Special, Benefit }
+
+        private static PillCategory CategoryOf(StatusEffectType type)
+        {
+            switch (type)
+            {
+                case StatusEffectType.Poison:
+                case StatusEffectType.Vulnerable:
+                case StatusEffectType.Stun:
+                    return PillCategory.Harm;
+                case StatusEffectType.Provoked:
+                case StatusEffectType.Chilled:
+                case StatusEffectType.Rooted:
+                    return PillCategory.Control;
+                case StatusEffectType.Regen:
+                case StatusEffectType.Protect:
+                case StatusEffectType.Shielded:
+                case StatusEffectType.Empowered:
+                    return PillCategory.Benefit;
+                default:
+                    return PillCategory.Special;
+            }
+        }
+
+        private static string PillCode(StatusEffectType type)
+        {
+            switch (type)
+            {
+                case StatusEffectType.Poison: return "PO";
+                case StatusEffectType.Regen: return "RG";
+                case StatusEffectType.Protect: return "PR";
+                case StatusEffectType.Vulnerable: return "VU";
+                case StatusEffectType.Stun: return "ST";
+                case StatusEffectType.Shielded: return "SH";
+                case StatusEffectType.Provoked: return "PV";
+                case StatusEffectType.Empowered: return "EM";
+                case StatusEffectType.Chilled: return "CH";
+                case StatusEffectType.Rooted: return "RO";
+                default: return "??";
+            }
+        }
+
+        private const int EnemyPillCap = 3;
+
+        // The same amber FightHudPalette.TargetAmber already carries, repeated
+        // as a literal rather than reaching into UiKit from this Session-layer
+        // file for one hex string.
+        private const string BrokenHex = "#FFC45A";
+
+        public static string EnemyStatusLine(CombatantState enemy, FightSession session)
+        {
+            if (enemy == null) return "";
+
+            string broken = enemy.BreakShield != null && enemy.BreakShield.IsBroken
+                ? ItemStatLines.Coloured(BrokenHex, "BRK") + "  ·  "
+                : "";
+
+            var pills = new List<(string Code, int Turns, PillCategory Category)>();
+            foreach (var status in enemy.Statuses)
+            {
+                pills.Add((PillCode(status.Type), status.TurnsRemaining, CategoryOf(status.Type)));
+            }
+
+            // MARKED is not a StatusEffectType entry -- see
+            // FightSession.Relics.ApplyMark for why it stays outside that
+            // system. Turns 0 suppresses the "·N" suffix, the same way BRK's
+            // own prefix carries none -- a mark has no ticking duration.
+            if (session != null && session.IsMarked(enemy))
+            {
+                pills.Add(("MK", 0, PillCategory.Special));
+            }
+
+            var ordered = pills.OrderBy(p => p.Category).ToList();
+            int overflow = ordered.Count - EnemyPillCap;
+            var shown = ordered.Take(EnemyPillCap)
+                .Select(p => p.Turns > 0 ? $"{p.Code}·{p.Turns}" : p.Code);
+
+            string line = broken + string.Join("  ·  ", shown);
+            if (overflow > 0) line += $"  ·  +{overflow}";
+            return line;
         }
 
         public static DetailPanel DetailForItem(SatchelStack stack)

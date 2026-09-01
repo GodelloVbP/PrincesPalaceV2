@@ -202,6 +202,19 @@ namespace PrincesPalace.Domain.Content
         // together with summonEnemyId, same both-fields-or-neither rule
         // appliesStatus/statusMagnitude/statusDuration already follow.
         public int summonCap = -1;
+
+        // DOES THE FRONT-RANK RULE APPLY TO THIS SKILL? False, the default,
+        // is every skill authored before this existed and every ranged or
+        // magical one authored after — CombatEncounter.CanMeleeReach only
+        // ever gets asked about a skill that says true here. A hand striking
+        // through a monster's own bodyguard is a different claim than a bolt
+        // of lightning doing it, and only the first one needed a rule.
+        //
+        // Only means anything on a SingleEnemy skill — see
+        // SkillEntryResolver's own check, the same "this field has no
+        // meaning on that effect" rule ignoresDefense and queuePushSlots
+        // already follow.
+        public bool meleeReach;
     }
 
     // One typed packet inside a spell. `type` is a DamageType name -

@@ -105,6 +105,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef BarkPortrait;
         public NodeRef BarkLabel;
 
+        public NodeRef LowHpVignette;
+
         public NodeRef EnemiesHint;
         public List<NodeRef> EnemyPlates = new List<NodeRef>();
         public List<NodeRef> EnemyPlateIcons = new List<NodeRef>();
@@ -113,6 +115,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> EnemyPlateHpFills = new List<NodeRef>();
         public List<NodeRef> EnemyPlateTags = new List<NodeRef>();
         public List<NodeRef> EnemyPlateReticles = new List<NodeRef>();
+        public List<NodeRef> EnemyPlateBreakTracks = new List<NodeRef>();
+        public List<NodeRef> EnemyPlateBreakFills = new List<NodeRef>();
 
         public NodeRef PartyPlate;
         public NodeRef PartyPortrait;
@@ -129,6 +133,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef WoolRow;
         public NodeRef WoolValue;
         public List<NodeRef> WoolPips = new List<NodeRef>();
+        public NodeRef SecondLifeBadge;
+        public NodeRef TransformStrip;
+        public NodeRef TransformStripText;
+        public List<NodeRef> RosterPlates = new List<NodeRef>();
+        public List<NodeRef> RosterNames = new List<NodeRef>();
+        public List<NodeRef> RosterHpValues = new List<NodeRef>();
+        public List<NodeRef> RosterHpFills = new List<NodeRef>();
 
         public List<NodeRef> VerbButtons = new List<NodeRef>();
         public List<NodeRef> VerbLabels = new List<NodeRef>();
@@ -239,12 +250,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
             s.EnemyStage = enemyStage;
             hud.Add(partyStage);
             hud.Add(enemyStage);
+            hud.Add(s.BuildLowHpVignette());
 
             hud.Add(s.BuildInitiativeTracker());
             hud.Add(s.BuildBark());
             hud.AddRange(s.BuildEnemiesHeading());
             hud.AddRange(s.BuildEnemyPlates());
             hud.Add(s.BuildPartyPlate());
+            hud.Add(s.BuildTransformStrip());
+            hud.AddRange(s.BuildRosterPlates());
             hud.AddRange(s.BuildVerbColumn());
             hud.Add(s.BuildBreadcrumb());
             hud.Add(s.BuildContinueButton());
@@ -800,6 +814,24 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // made it invisible to inspection.
         private const float PlateFirstY = 392f;
 
+        // FULL-CANVAS, ABOVE THE STAGE AND BELOW EVERY INFORMATIONAL PANEL --
+        // built right after the two stage racks for exactly that stacking
+        // order, the same "declaration order is paint order" rule the scrim
+        // itself relies on (see BuildScrim's own header). AsDecor because it
+        // must never eat a click meant for a plate or the battlefield behind
+        // it; Inactive because it is a STATE, not ambient art -- shown only
+        // while some living ally sits below the low-HP threshold, decided at
+        // FightController.Hud's RefreshLowHpVignette.
+        private UiNode BuildLowHpVignette()
+        {
+            var vignette = Ui.Sprite("LowHpVignette", "proc:vignette", Place.Stretch(), UiSize.Fill)
+                .Coloured(FightHudPalette.HpDeep)
+                .AsDecor()
+                .Inactive();
+            LowHpVignette = vignette;
+            return vignette;
+        }
+
         private IEnumerable<UiNode> BuildEnemiesHeading()
         {
             // 155 wide, not v1's 200. At 200 this box ran to x 720 while the
@@ -878,12 +910,31 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .Inactive()
                     .AllowOverflow("the reticle is deliberately OUTSIDE the plate - a marker in the margin, not a badge on the card");
 
+                // THE BREAK METER, hanging BELOW the plate rather than inside
+                // it. There is no room left in 64px -- three rows already
+                // share it (see PlateH's own comment) -- but the 12px gap
+                // PlatePitch leaves before the next row down is real, unused
+                // space, and a 6px bar fits it with margin either side. Same
+                // fill mechanism the HP bar already uses (SetFill), same
+                // width and x-position, one row lower. Only an elite or boss
+                // carries a BreakShield at all, so this stays hidden for
+                // everything else.
+                var breakFill = Ui.Solid($"EnemyPlate{i}BreakFill", FightHudPalette.TargetAmber,
+                    Place.Stretch(), UiSize.Fill);
+                var breakTrack = Ui.Panel($"EnemyPlate{i}BreakTrack",
+                        Place.At(textLeft + 71f, -PlateH * 0.5f - 6f), UiSize.Fixed(142f, 6f), breakFill)
+                    .Coloured(FightHudPalette.Track)
+                    .Inactive()
+                    .AllowOverflow("the break meter hangs in the 12px row gap below the plate, not inside it - see PlatePitch");
+
                 EnemyPlateIcons.Add(icon);
                 EnemyPlateNames.Add(name);
                 EnemyPlateHps.Add(hp);
                 EnemyPlateHpFills.Add(fill);
                 EnemyPlateTags.Add(tags);
                 EnemyPlateReticles.Add(reticle);
+                EnemyPlateBreakTracks.Add(breakTrack);
+                EnemyPlateBreakFills.Add(breakFill);
 
                 // 1.03 hover, no press pop: the plate carries four pieces of
                 // text, so the press animator's 1.05/0.95 would swing them all
@@ -899,6 +950,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 plate.Children.Add(tags);
                 plate.Children.Add(bar);
                 plate.Children.Add(reticle);
+                plate.Children.Add(breakTrack);
                 plate.Inactive();
 
                 EnemyPlates.Add(plate);
@@ -918,6 +970,21 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private UiNode BuildPartyPlate()
         {
             var portrait = Ui.Sprite("PartyPortrait", null, new UiVec(64f, 64f), Place.At(-170f, 54f)).Inactive();
+
+            // A CHILD of the portrait, not a sibling of the plate -- nesting it
+            // here means A1 never has to reason about it (a child overlapping
+            // its own parent on purpose is not the case that check exists to
+            // catch), and it stays inside the portrait's own 64x64 box with
+            // room either side, so it needs no AllowOverflow either. Shown only
+            // while the acting character still has an unspent Second Life --
+            // the one domain state this whole pass adds that was previously
+            // invisible end to end (RunSettlement's own revive, not shown
+            // anywhere before this).
+            var secondLife = Ui.Solid("SecondLifeBadge", FightHudPalette.TargetAmber,
+                    new UiVec(11f, 11f), Place.At(26f, -26f))
+                .Inactive();
+            SecondLifeBadge = secondLife;
+            portrait.Children.Add(secondLife);
 
             var name = Ui.Label("PartyName", UiString.Runtime, new UiVec(220f, 32f), 24,
                 FightHudPalette.PartyNameText, Place.At(-122f, 62f, new UiVec(0f, 0.5f)));
@@ -991,6 +1058,92 @@ namespace PrincesPalace.Domain.UiKit.Screens
             foreach (var icon in BuildPartyBuffIcons()) plate.Children.Add(icon);
             PartyPlate = plate;
             return plate;
+        }
+
+        // The party plate's own top edge in world Y -- -392 (its centre) plus
+        // its own half-height (108). Both the transformation strip and the
+        // roster stack build off this rather than off a restated number, so
+        // moving the plate moves them with it.
+        private const float PartyPlateTopY = -392f + 108f;
+
+        // FUSED TO THE PLATE'S TOP EDGE, not inside it -- the header row two
+        // labels above already leaves a 2px gap between PartyName and
+        // PartyClass, which is not room for a third fact. A separate strip
+        // immediately above costs nothing the plate itself would have to give
+        // up. Shown only while the acting character carries a Transformation
+        // (Black Ram Mode today) -- the only one of the four domain systems
+        // this pass surfaces that changes what the plate above it means while
+        // it's up, so it reads as fused to that plate rather than as a
+        // floating fourth panel.
+        private const float TransformStripH = 36f;
+
+        private UiNode BuildTransformStrip()
+        {
+            var text = Ui.Label("TransformStripText", UiString.Runtime, new UiVec(400f, 24f), 14,
+                FightHudPalette.GoldText, Place.At(0f, 0f));
+            TransformStripText = text;
+
+            var strip = Ui.Panel("TransformStrip",
+                    Place.At(-694f, PartyPlateTopY + TransformStripH * 0.5f),
+                    UiSize.Fixed(452f, TransformStripH), text)
+                .Coloured(FightHudPalette.PanelActive)
+                .Inactive();
+            TransformStrip = strip;
+            return strip;
+        }
+
+        // Two slots -- the stage fields up to StageSlotsPerSide (3) party
+        // members and the plate above already shows the acting one, so two is
+        // every OTHER member there is room on stage for. Information only,
+        // same as the intent icons: nothing here is clickable, there is no
+        // swap-who's-acting mechanic to wire.
+        //
+        // RESERVES ROOM FOR THE TRANSFORM STRIP WHETHER OR NOT IT IS SHOWING.
+        // The alternative is repositioning this stack's own RectTransform at
+        // runtime whenever Transformation comes or goes, which would make its
+        // vertical position a second thing the controller has to keep in sync
+        // with a fact the strip already displays. A fixed 44px gap costs
+        // nothing when the strip is hidden and avoids that entirely.
+        private const int RosterSlots = 2;
+        private const float RosterPlateW = 452f;
+        private const float RosterPlateH = 44f;
+        private const float RosterGap = 6f;
+        private const float RosterFirstY =
+            PartyPlateTopY + TransformStripH + RosterGap + RosterPlateH * 0.5f;
+        private const float RosterPitchY = RosterPlateH + RosterGap;
+
+        private IEnumerable<UiNode> BuildRosterPlates()
+        {
+            return Ui.Each(Enumerable.Range(0, RosterSlots).ToList(), (_, i) =>
+            {
+                // TWO ROWS, not one: name/HP-value share the top at y9 (spans
+                // -2..20), the bar owns the bottom at y-11 (spans -14..-8) --
+                // a 6px gap between them rather than three elements fighting
+                // for one row's width the way the first draft of this row did
+                // (Name and HpBar overlapping 54px, caught by A1 at build).
+                var name = Ui.Label($"Roster{i}Name", UiString.Runtime, new UiVec(140f, 22f), 14,
+                    FightHudPalette.TextPrimary, Place.At(-206f, 9f, new UiVec(0f, 0.5f)))
+                    .TextAligned(UiTextAlign.Left);
+
+                var hpValue = Ui.Label($"Roster{i}HpValue", UiStrings.HealthValue, new UiVec(70f, 20f), 11,
+                    FightHudPalette.HpText, Place.At(206f, 9f, new UiVec(1f, 0.5f)))
+                    .TextAligned(UiTextAlign.Right);
+
+                var hpFill = Ui.Solid($"Roster{i}HpFill", FightHudPalette.HpBright, Place.Stretch(), UiSize.Fill);
+                var hpBar = Ui.Panel($"Roster{i}HpBar", Place.At(0f, -11f), UiSize.Fixed(412f, 6f), hpFill)
+                    .Coloured(FightHudPalette.Track);
+
+                RosterNames.Add(name);
+                RosterHpValues.Add(hpValue);
+                RosterHpFills.Add(hpFill);
+
+                var plate = Ui.Panel($"Roster{i}", Place.At(-694f, RosterFirstY + i * RosterPitchY),
+                        UiSize.Fixed(RosterPlateW, RosterPlateH), name, hpValue, hpBar)
+                    .Coloured(FightHudPalette.PanelPrimary)
+                    .Inactive();
+                RosterPlates.Add(plate);
+                return plate;
+            });
         }
 
         // Up to four badges in a row above the portrait, reading whatever

@@ -91,6 +91,9 @@ namespace PrincesPalace.Domain.Content
         public readonly string SummonEnemyId;
         public readonly int SummonCap;
 
+        // See RawSkillEntry.meleeReach.
+        public readonly bool MeleeReach;
+
         public bool HasFixedDamage => DamageInstances != null && DamageInstances.Length > 0;
 
         public ResolvedSkill(string id, string displayName, string description, string characterId,
@@ -101,8 +104,9 @@ namespace PrincesPalace.Domain.Content
             AbilityScoreBlock requirements = default, ScalingAxis scalingAxis = ScalingAxis.Auto,
             int queuePushSlots = 0, TransformGrant transform = null, bool playerSelectable = true,
             int cooldownTurns = 0, string stance = "", string summonEnemyId = "", int summonCap = 0,
-            StageApproach approach = StageApproach.Hold, float shake = 0f)
+            StageApproach approach = StageApproach.Hold, float shake = 0f, bool meleeReach = false)
         {
+            MeleeReach = meleeReach;
             CooldownTurns = cooldownTurns < 0 ? 0 : cooldownTurns;
             PlayerSelectable = playerSelectable;
             QueuePushSlots = queuePushSlots;
