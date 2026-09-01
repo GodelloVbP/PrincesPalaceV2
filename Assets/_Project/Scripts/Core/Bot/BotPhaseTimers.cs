@@ -1,0 +1,158 @@
+using System;
+using System.Globalization;
+using System.Text;
+
+namespace PrincesPalace
+{
+    // WHERE A BATCH'S WALL CLOCK ACTUALLY GOES.
+    //
+    // The first attempt at making the bot faster guessed at the hot phase and
+    // guessed wrong: the obvious suspect (playing the fight) was a minority of
+    // the time, and the two real costs were the throwaway save DIRECTORY per
+    // run and JsonUtility serialising the whole save on every arrival. Neither
+    // is visible without measuring, so measuring is not an optional extra here
+    // -- it is the only thing that keeps "an optimisation" from being a
+    // superstition.
+    //
+    // ALWAYS ON rather than behind a flag. One Stopwatch.GetTimestamp pair per
+    // phase entry is a handful of nanoseconds against phases measured in tens
+    // of microseconds, so the flag would only buy the risk of the numbers
+    // being unavailable exactly when somebody wants them. Measured cost of the
+    // instrumentation itself: below the run-to-run noise of a batch (see the
+    // header of tools/bot.ps1).
+    //
+    // Static, and reset per batch by the caller. This is a measuring
+    // instrument, not state the game reads -- nothing here changes what a run
+    // does, and a run's RunTrace.Hash() is identical with it on or off.
+    public enum BotPhase
+    {
+        // Per run, outside the game: making the throwaway save root, resetting
+        // the statics, tearing it back down.
+        HarnessSetup = 0,
+        HarnessTeardown = 1,
+
+        // ProfilePresets.Build -- CreateNew, levelling, stat spend.
+        PresetBuild = 2,
+
+        // The relic draft, whole.
+        RelicDraft = 3,
+
+        // The three halves of a fight room.
+        BuildFight = 4,
+        FightPlay = 5,
+        SettleFight = 6,
+
+        // RollOffers + ChooseOffer + TakeOffer.
+        Offers = 7,
+
+        // ArriveAt for a non-fight room (RoomResolver.Resolve).
+        RoomResolve = 8,
+
+        // NESTED INSIDE the phases above, and deliberately so: a save write is
+        // triggered from inside TakeOffer, SettleFight and the draft, and
+        // pulling it out of their totals would mean threading a "minus
+        // persistence" subtotal through every one of them. Read these two as
+        // "of the time above, this much was the save", not as extra time.
+        PersistSerialize = 9,
+        PersistWrite = 10,
+
+        // The batch's own bookkeeping.
+        TraceJson = 11,
+        Summary = 12,
+
+        // The determinism replay: a second whole play of the same seed.
+        // Everything it costs is ALSO counted in the phases above (it goes
+        // through the same code), so this is the one line that says what
+        // sampling the replay would buy.
+        Replay = 13,
+    }
+
+    public static class BotPhaseTimers
+    {
+        private const int PhaseCount = 14;
+
+        private static readonly long[] Elapsed = new long[PhaseCount];
+        private static readonly long[] Calls = new long[PhaseCount];
+
+        private static long _batchStart;
+
+        public static void ResetBatch()
+        {
+            Array.Clear(Elapsed, 0, PhaseCount);
+            Array.Clear(Calls, 0, PhaseCount);
+            _batchStart = System.Diagnostics.Stopwatch.GetTimestamp();
+        }
+
+        public static void Add(BotPhase phase, long ticks)
+        {
+            int i = (int)phase;
+            Elapsed[i] += ticks;
+            Calls[i]++;
+        }
+
+        // A struct, used through `using`, so there is no allocation per phase
+        // entry -- a class here would be one garbage object per fight per run,
+        // which for a 10k-run batch is millions of them and would itself show
+        // up in the numbers it is supposed to be reporting.
+        public struct Scope : IDisposable
+        {
+            private readonly BotPhase _phase;
+            private readonly long _start;
+
+            internal Scope(BotPhase phase)
+            {
+                _phase = phase;
+                _start = System.Diagnostics.Stopwatch.GetTimestamp();
+            }
+
+            public void Dispose() => Add(_phase, System.Diagnostics.Stopwatch.GetTimestamp() - _start);
+        }
+
+        public static Scope Measure(BotPhase phase) => new Scope(phase);
+
+        public static double MillisecondsOf(BotPhase phase) =>
+            Elapsed[(int)phase] * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+
+        public static long CallsOf(BotPhase phase) => Calls[(int)phase];
+
+        // The table the batch prints. Deliberately plain text with a fixed
+        // column layout: it is read off a terminal or out of a log tail, and
+        // the one thing it has to make obvious is which row is big.
+        public static string Report(int runPlays)
+        {
+            double wall = (System.Diagnostics.Stopwatch.GetTimestamp() - _batchStart)
+                          * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+
+            var sb = new StringBuilder();
+            sb.AppendLine();
+            sb.AppendLine("=== PHASE TIMES ===");
+            sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                "{0,-18}{1,12}{2,12}{3,12}{4,9}", "phase", "total ms", "calls", "us/call", "% wall"));
+
+            for (int i = 0; i < PhaseCount; i++)
+            {
+                var phase = (BotPhase)i;
+                double ms = MillisecondsOf(phase);
+                long calls = Calls[i];
+                double perCall = calls == 0 ? 0 : ms * 1000.0 / calls;
+                double share = wall <= 0 ? 0 : ms / wall;
+
+                sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                    "{0,-18}{1,12:F1}{2,12}{3,12:F1}{4,9:P1}", phase, ms, calls, perCall, share));
+            }
+
+            sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                "{0,-18}{1,12:F1}", "WALL", wall));
+            sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                "run-plays {0}, {1:F1} ms per run-play, {2:F0} run-plays/minute",
+                runPlays,
+                runPlays <= 0 ? 0 : wall / runPlays,
+                wall <= 0 ? 0 : runPlays * 60000.0 / wall));
+
+            // PersistSerialize/PersistWrite are inside the rows above, so the
+            // column would otherwise sum past 100% with no explanation.
+            sb.AppendLine("(Persist* and Replay are nested inside the rows above, not additional to them.)");
+            return sb.ToString();
+        }
+    }
+}

@@ -139,13 +139,16 @@ namespace PrincesPalace
                 // through one), a Navigation that goes nowhere (Go() would try
                 // to load a scene from a process that has none open), and a
                 // RunManager whose cached map is dropped between runs.
-                Directory.CreateDirectory(root);
-                SaveSystem.RootOverride = root;
-                SaveSlotManager.CurrentSlot = 0;
-                SaveSlotManager.Forget();
-                RunManager.ResetForTests();
-                RoomResolver.Reset();
-                Navigation.LoadOverride = _ => { };
+                using (BotPhaseTimers.Measure(BotPhase.HarnessSetup))
+                {
+                    Directory.CreateDirectory(root);
+                    SaveSystem.RootOverride = root;
+                    SaveSlotManager.CurrentSlot = 0;
+                    SaveSlotManager.Forget();
+                    RunManager.ResetForTests();
+                    RoomResolver.Reset();
+                    Navigation.LoadOverride = _ => { };
+                }
 
                 PlayOneRun(seed, archetype, profile, depthCapSteps, result);
             }
@@ -160,20 +163,23 @@ namespace PrincesPalace
             }
             finally
             {
-                Navigation.Reset();
-                SaveSystem.RootOverride = null;
-                SaveSlotManager.Forget();
-                RunManager.ResetForTests();
-                RoomResolver.Reset();
+                using (BotPhaseTimers.Measure(BotPhase.HarnessTeardown))
+                {
+                    Navigation.Reset();
+                    SaveSystem.RootOverride = null;
+                    SaveSlotManager.Forget();
+                    RunManager.ResetForTests();
+                    RoomResolver.Reset();
 
-                try
-                {
-                    if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
-                }
-                catch (IOException)
-                {
-                    // A temp directory that will not delete is litter, not a
-                    // finding -- it must not turn a clean run into a bug row.
+                    try
+                    {
+                        if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+                    }
+                    catch (IOException)
+                    {
+                        // A temp directory that will not delete is litter, not a
+                        // finding -- it must not turn a clean run into a bug row.
+                    }
                 }
             }
 
@@ -199,7 +205,12 @@ namespace PrincesPalace
                 return;
             }
 
-            var save = ProfilePresets.Build(profile);
+            SaveData save;
+            using (BotPhaseTimers.Measure(BotPhase.PresetBuild))
+            {
+                save = ProfilePresets.Build(profile);
+            }
+
             if (save == null)
             {
                 result.Hits.Add(new InvariantHit("NoSave", "the profile built no save"));
@@ -213,7 +224,10 @@ namespace PrincesPalace
                 return;
             }
 
-            Draft(seed, runPolicy, result);
+            using (BotPhaseTimers.Measure(BotPhase.RelicDraft))
+            {
+                Draft(seed, runPolicy, result);
+            }
 
             // The last state seen while the run was still alive. EndRun
             // replaces the snapshot and strips the stockpile, so anything read
@@ -273,7 +287,12 @@ namespace PrincesPalace
                 };
 
                 bool isFight = RunOrchestrator.IsFight(node.Type);
-                var arrival = RunOrchestrator.ArriveAt(node);
+
+                RunOrchestrator.Arrival arrival;
+                using (BotPhaseTimers.Measure(BotPhase.RoomResolve))
+                {
+                    arrival = RunOrchestrator.ArriveAt(node);
+                }
 
                 if (arrival == RunOrchestrator.Arrival.Refused)
                 {
@@ -351,7 +370,12 @@ namespace PrincesPalace
             var run = RunManager.Run;
             int step = run.step;
 
-            var built = RunOrchestrator.BuildFight();
+            FightEncounterAdapter.BuiltFight built;
+            using (BotPhaseTimers.Measure(BotPhase.BuildFight))
+            {
+                built = RunOrchestrator.BuildFight();
+            }
+
             if (built == null)
             {
                 result.Hits.Add(new InvariantHit("NoFightBuilt",
@@ -385,9 +409,12 @@ namespace PrincesPalace
             // a potion, which FightBootstrap.OnItemUsed does for the screen.
             // Without it FightRunner decrements only its local copy and the
             // bot's bag never empties.
-            result.Hits.AddRange(FightRunner.Play(
-                session, fightPolicy, RunOrchestrator.BuildSatchel(), fightRng, fightTrace,
-                RunOrchestrator.SpendConsumable));
+            using (BotPhaseTimers.Measure(BotPhase.FightPlay))
+            {
+                result.Hits.AddRange(FightRunner.Play(
+                    session, fightPolicy, RunOrchestrator.BuildSatchel(), fightRng, fightTrace,
+                    RunOrchestrator.SpendConsumable));
+            }
 
             bool won = session.PlayerWon;
             fightTrace.Won = won;
@@ -429,7 +456,10 @@ namespace PrincesPalace
                 result.Trace.DeathCause = DescribeTheDeath(fightTrace);
             }
 
-            RunOrchestrator.SettleFight(session, won);
+            using (BotPhaseTimers.Measure(BotPhase.SettleFight))
+            {
+                RunOrchestrator.SettleFight(session, won);
+            }
 
             if (!won)
             {
@@ -450,7 +480,11 @@ namespace PrincesPalace
                     "SettleFight is supposed to have advanced the leg"));
             }
 
-            Offer(seed, save, node, runPolicy, session, roomTrace, result);
+            using (BotPhaseTimers.Measure(BotPhase.Offers))
+            {
+                Offer(seed, save, node, runPolicy, session, roomTrace, result);
+            }
+
             CaptureWhatTheRunHolds(save, result);
             return true;
         }

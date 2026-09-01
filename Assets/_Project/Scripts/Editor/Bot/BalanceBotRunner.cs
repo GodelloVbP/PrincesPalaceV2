@@ -143,6 +143,10 @@ namespace PrincesPalace.Editor.Bot
         // because every metric below is over the FIRST play of a pair -- the
         // second exists only to compare hashes, and folding its trace into the
         // numbers would double-count every fight.
+        // How many whole runs were actually PLAYED, replays included. Reset
+        // with the batch; only the phase report reads it.
+        private static int _runPlays;
+
         private sealed class Played
         {
             public ulong Seed;
@@ -157,6 +161,8 @@ namespace PrincesPalace.Editor.Bot
         private static void RunBatch(Options o)
         {
             var startedAt = DateTime.UtcNow;
+            BotPhaseTimers.ResetBatch();
+            _runPlays = 0;
             Directory.CreateDirectory(o.OutDir);
 
             string tracesPath = Path.Combine(o.OutDir, "traces.jsonl");
@@ -177,7 +183,11 @@ namespace PrincesPalace.Editor.Bot
                             ulong seed = o.FirstSeed + (ulong)i;
                             var entry = PlayOnePairSafely(seed, archetype, profile, o.DepthCap);
                             played.Add(entry);
-                            traces.WriteLine(TraceJson(entry.Result.Trace));
+
+                            using (BotPhaseTimers.Measure(BotPhase.TraceJson))
+                            {
+                                traces.WriteLine(TraceJson(entry.Result.Trace));
+                            }
                         }
 
                         Debug.Log($"[BalanceBot] {profile}/{archetype}: {o.Runs} runs done.");
@@ -186,10 +196,22 @@ namespace PrincesPalace.Editor.Bot
             }
 
             double elapsed = (DateTime.UtcNow - startedAt).TotalSeconds;
-            string summary = SummaryJson(o, played, startedAt, elapsed);
+
+            string summary;
+            using (BotPhaseTimers.Measure(BotPhase.Summary))
+            {
+                summary = SummaryJson(o, played, startedAt, elapsed);
+            }
+
             File.WriteAllText(Path.Combine(o.OutDir, "summary.json"), summary, NoBom);
 
             Debug.Log(PlainText(o, played, elapsed));
+
+            // RUN-PLAYS, not runs: every metric is over the first play of a
+            // pair and the second exists only to compare hashes, but the clock
+            // pays for both -- so the throughput number has to count both or it
+            // reports a rate the machine never actually achieved.
+            Debug.Log(BotPhaseTimers.Report(_runPlays));
         }
 
         // TWICE, BACK TO BACK, ALWAYS -- the schema's determinism section. A
@@ -206,8 +228,16 @@ namespace PrincesPalace.Editor.Bot
             try
             {
                 entry.Result = BotRunDriver.PlayRun(seed, archetype, profile, depthCap);
-                var again = BotRunDriver.PlayRun(seed, archetype, profile, depthCap);
-                entry.HashMatched = entry.Result.Trace.Hash() == again.Trace.Hash();
+                _runPlays++;
+
+                RunTrace again;
+                using (BotPhaseTimers.Measure(BotPhase.Replay))
+                {
+                    again = BotRunDriver.PlayRun(seed, archetype, profile, depthCap).Trace;
+                }
+
+                _runPlays++;
+                entry.HashMatched = entry.Result.Trace.Hash() == again.Hash();
             }
             catch (Exception e)
             {

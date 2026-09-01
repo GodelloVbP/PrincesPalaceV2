@@ -79,19 +79,27 @@ namespace PrincesPalace
         {
             string path = PathForSlot(slot);
             string tempPath = path + ".tmp";
-            string json = JsonUtility.ToJson(data, true);
+
+            string json;
+            using (BotPhaseTimers.Measure(BotPhase.PersistSerialize))
+            {
+                json = JsonUtility.ToJson(data, true);
+            }
 
             try
             {
-                File.WriteAllText(tempPath, json);
+                using (BotPhaseTimers.Measure(BotPhase.PersistWrite))
+                {
+                    File.WriteAllText(tempPath, json);
 
-                if (File.Exists(path))
-                {
-                    File.Replace(tempPath, path, null);
-                }
-                else
-                {
-                    File.Move(tempPath, path);
+                    if (File.Exists(path))
+                    {
+                        File.Replace(tempPath, path, null);
+                    }
+                    else
+                    {
+                        File.Move(tempPath, path);
+                    }
                 }
             }
             catch (Exception e)
