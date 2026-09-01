@@ -220,7 +220,18 @@ report's bug section: invariant name, seed, archetype, profile, step, node,
 and the last ten actions of the trace.
 
 - HP above max, or below zero on a living combatant.
-- A fight that is not over after 200 player commands.
+- A fight that is not over, read as NEITHER SIDE REACHING A NEW LOW in total
+  health for `FightRunner.StallCommands` (60) consecutive commands. This was a
+  flat "not over after 200 player commands" until the bot started dressing
+  itself: a Mid GreedyDefensive at the floor-3 boss took 201 commands to bring
+  a Throne Colossus from 794 HP to 35, winning the whole way, and the check cut
+  it off ten commands short of the kill -- 3,220 hits in one batch, each of
+  them truncating a run the party was about to win into a false death. A
+  command count never could have been the test: `DifficultyCurve` compounds
+  enemy health 75 permille per step, so any fixed number is eventually too
+  small for a legitimate deep fight. `FightInvariants.MaxPlayerCommands` stays,
+  raised to 2000, purely as the runaway ceiling that stops a headless batch
+  hanging on a session that has stopped answering.
 - A player turn with no legal action.
 - `Payout` null after a win, or non-null before `IsOver`.
 - A won fight after which `RunManager.Choices()` is empty and `LegIsOver()`

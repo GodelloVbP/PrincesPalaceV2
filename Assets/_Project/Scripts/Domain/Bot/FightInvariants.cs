@@ -26,10 +26,28 @@ namespace PrincesPalace.Domain.Bot
     // the Core orchestrator this phase does not touch, and lands with it.
     public static class FightInvariants
     {
-        // "A fight that is not over after 200 player commands." FightRunner
-        // stops issuing commands once this is hit, so it fires at most once
-        // per fight rather than once per command past the line.
-        public const int MaxPlayerCommands = 200;
+        // A RUNAWAY CEILING, NOT THE STALL DETECTOR ANY MORE.
+        //
+        // The plan's §3 wording was "a fight that is not over after 200
+        // player commands", and 200 was chosen while the bot fought in
+        // starting gear and died around step 8. Once the bot started wearing
+        // what it picked up and spending its levels, a Mid GreedyDefensive
+        // reaching the floor-3 boss took 201 commands to bring a Throne
+        // Colossus from 794 HP to 35 -- winning the whole way, and cut off
+        // ten commands short of the kill. That fired 3,220 times in one
+        // 12,000-run batch and, worse than the noise, every hit truncated a
+        // run the party was about to win into a false death: two archetypes
+        // on two profiles had their depth medians understated by it.
+        //
+        // A count of commands cannot be the test, because it never could be:
+        // DifficultyCurve compounds enemy health 75 permille per step, so
+        // however high the number is set, some depth eventually needs more
+        // commands than it legitimately to win. FightRunner asks the question
+        // that does not have that problem -- has EITHER side reached a new low
+        // in the last StallCommands commands -- and this stays only as the
+        // hard ceiling that keeps a headless batch from hanging on a session
+        // that has stopped answering at all.
+        public const int MaxPlayerCommands = 2000;
 
         public static List<InvariantHit> Check(FightSession session, int commandsIssued)
         {

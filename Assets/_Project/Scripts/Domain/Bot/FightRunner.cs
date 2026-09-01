@@ -22,6 +22,25 @@ namespace PrincesPalace.Domain.Bot
         // check somehow bypassed still cannot hang the batch.
         public const int HardCommandCap = FightInvariants.MaxPlayerCommands + 50;
 
+        // HOW LONG A FIGHT MAY GO NOWHERE BEFORE IT COUNTS AS STUCK.
+        //
+        // "Nowhere" is neither side reaching a NEW LOW in total health --
+        // which is the honest reading of "this fight is not going to end",
+        // and the one a command count cannot give (see
+        // FightInvariants.MaxPlayerCommands for the batch that proved it).
+        // A slow win still trips the counter down every few commands and
+        // never fires; a slow LOSS does the same on the party's side; only a
+        // genuine deadlock, or a policy re-offering a command the session
+        // silently refuses, reaches sixty commands with both watermarks
+        // standing still.
+        //
+        // Sixty rather than something tighter because a real fight can spend
+        // a long stretch making no numerical progress on purpose -- warding,
+        // buffing, rebuilding a resource before spending it -- and a stall
+        // detector that fires on a legitimate wind-up is a detector nobody
+        // reads.
+        public const int StallCommands = 60;
+
         // `onItemUsed` is the SAVE-SIDE half of drinking a potion, handed in
         // rather than done here: the local satchel below is a copy, and Domain
         // has no save to spend the real stack from. Core's driver passes
@@ -48,6 +67,13 @@ namespace PrincesPalace.Domain.Bot
                 .ToList() ?? new List<SatchelStack>();
 
             int commands = 0;
+
+            // The two watermarks the stall check reads. Started at int.MaxValue
+            // so the first command of any fight sets both and the counter
+            // begins from a real reading rather than from zero.
+            int lowestEnemyHp = int.MaxValue;
+            int lowestPartyHp = int.MaxValue;
+            int commandsSinceProgress = 0;
 
             while (!session.IsOver && session.IsPlayerTurn && commands < HardCommandCap)
             {
@@ -84,11 +110,38 @@ namespace PrincesPalace.Domain.Bot
                     });
                 }
 
+                int enemyHp = session.Encounter.LivingEnemies.Sum(c => c.CurrentHealth);
+                int partyHp = session.Encounter.LivingPlayerParty.Sum(c => c.CurrentHealth);
+
+                if (enemyHp < lowestEnemyHp || partyHp < lowestPartyHp)
+                {
+                    if (enemyHp < lowestEnemyHp) lowestEnemyHp = enemyHp;
+                    if (partyHp < lowestPartyHp) lowestPartyHp = partyHp;
+                    commandsSinceProgress = 0;
+                }
+                else
+                {
+                    commandsSinceProgress++;
+                }
+
                 var turnHits = FightInvariants.Check(session, commands);
                 hits.AddRange(turnHits);
 
                 if (turnHits.Any(h => h.Name == "TooManyCommands"))
                 {
+                    break;
+                }
+
+                // THE STALL, reported under the plan's own §3 name because it
+                // is the plan's own question -- "a fight that is not over" --
+                // asked the way that survives a difficulty curve. See
+                // StallCommands above.
+                if (commandsSinceProgress >= StallCommands)
+                {
+                    hits.Add(new InvariantHit("TooManyCommands",
+                        $"neither side reached a new low in {StallCommands} commands " +
+                        $"(command {commands}, enemies at {enemyHp}, party at {partyHp}); " +
+                        "the fight is not going to end"));
                     break;
                 }
 

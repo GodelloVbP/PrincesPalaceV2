@@ -100,5 +100,46 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsTrue(hits.Any(h => h.Name == "TooManyCommands"));
         }
+
+        // ---- the stall, which is not a command count ----------------------------
+        //
+        // Only the false-positive half is pinned here, and that is deliberate
+        // rather than lazy. A genuine two-sided deadlock cannot be built out
+        // of this engine on purpose: an attack of 0 still lands minimum
+        // damage, so both sides make progress every command, and a policy that
+        // only passes trips the pre-existing StalledEnemyTurn fault and leaves
+        // the loop by that door instead. The one shape that IS reachable, and
+        // the one that cost 3,220 false bug rows, is a fight that grinds and
+        // wins -- which is what the test below refuses to let regress.
+
+        // THE REGRESSION THIS WHOLE CHANGE IS FOR. A slow win is not a stall.
+        // A Mid GreedyDefensive at the floor-3 boss took 201 commands to bring
+        // a Throne Colossus from 794 HP to 35 -- winning the whole way -- and
+        // the old flat 200-command cap called it stuck and truncated the run
+        // into a death, 3,220 times in one batch.
+        [Test]
+        public void Play_AGrindingButWinningFight_IsNotReportedAsStuck()
+        {
+            // Chip damage against a large pool: hundreds of commands, every
+            // one of them progress.
+            var hero = Fighter("Hero", true, maxHealth: 5000, attack: 4, speed: 10);
+            var foe = Fighter("Foe", false, maxHealth: 900, attack: 1, speed: 1);
+            var encounter = new CombatEncounter(new[] { hero }, new[] { foe });
+            var kit = new PlayerKit("hero", CharacterRole.Tank, null, null, DamageType.Physical);
+            var session = new FightSession(encounter, new List<PlayerKit> { kit }, null, new SeededRandom(1))
+            {
+                DamageVarianceRange = 0f,
+            };
+
+            var trace = new FightTrace();
+            var hits = FightRunner.Play(session, new GreedyAggressivePolicy(),
+                System.Array.Empty<SatchelStack>(), new SeededRandom(1), trace);
+
+            Assert.Greater(trace.Turns, 200,
+                "the fixture did not actually run past the old cap, so it proves nothing");
+            Assert.IsTrue(session.IsOver && session.PlayerWon, "the fixture fight was not won");
+            Assert.IsFalse(hits.Any(h => h.Name == "TooManyCommands"),
+                "a fight that was progressing every single command was called stuck");
+        }
     }
 }
