@@ -283,27 +283,11 @@ namespace PrincesPalace
             }
         }
 
-        // column -> path and row -> slot, which is what the content has always
-        // meant by those fields: TalentEntryResolver refuses a row outside
-        // 0..20, and the skeleton is 21 slots.
-        private static TalentTree BuildTree(Character character)
-        {
-            var tree = new TalentTree();
-
-            foreach (var talent in ContentDatabase.TalentsFor(character))
-            {
-                if (talent == null) continue;
-
-                tree.Set(talent.column, talent.row, new TalentSlot(
-                    talent.id,
-                    talent.displayName,
-                    talent.description,
-                    ContentDatabase.OrbCost(talent),
-                    talent.minSpent));
-            }
-
-            return tree;
-        }
+        // MOVED to TalentOps.BuildTree so something that is not a
+        // MonoBehaviour can resolve a character's tree -- the balance bot
+        // needs it to buy talents for a profile preset. Unchanged on the way
+        // down; this stays as the name this file already asks.
+        private static TalentTree BuildTree(Character character) => TalentOps.BuildTree(character);
 
         private void Kindle()
         {
@@ -313,16 +297,10 @@ namespace PrincesPalace
             var save = SaveSlotManager.CurrentSave;
             if (save == null) return;
 
-            var tree = Tree;
-            if (!TalentPage.CanInvest(tree, _path, _selectedSlot, Unlocked, Embers)) return;
-
-            // THE CONTENT'S OWN ID, which is the entire point of this seam.
-            // Everything that reads unlockedTalentIds -- the effective stats,
-            // the ability scores, the combat effect set -- matches against the
-            // ids in talents.json, and this used to write one it had invented.
-            var taken = tree.At(_path, _selectedSlot);
-            character.unlockedTalentIds.Add(taken.Id);
-            character.embers -= taken.Cost;
+            // The refusal check, the id write and the ember spend are all
+            // TalentOps.Kindle now -- see its header. This keeps only what is
+            // actually the screen's: the beat, the save write and the repaint.
+            if (!TalentOps.Kindle(character, Tree, _path, _selectedSlot)) return;
 
             // STARTED BEFORE THE REPAINT. Refresh below paints this stone lit,
             // and the beat is what carries it from ash to lit -- so the beat

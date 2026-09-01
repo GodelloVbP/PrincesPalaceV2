@@ -967,11 +967,6 @@ namespace PrincesPalace
 
             var item = _bag[index];
 
-            // MEASURED BEFORE THE SWAP, because the swap is what moves it.
-            // Gear that carries max health changes what the run's carried
-            // current health is a fraction OF -- see ScaleCarriedHealth.
-            int maxBefore = ContentDatabase.EffectiveStats(character).maxHealth;
-
             // modifierIds/riftTier travel through the same way plus does --
             // InventoryOps.TryRemoveAt inside TryEquip keys on the full
             // (itemId, plus, modifierIds, riftTier) stack (see
@@ -979,14 +974,18 @@ namespace PrincesPalace
             // so omitting them here would look for the wrong stack and
             // silently strip a rolled item's affixes the moment it is worn
             // from the pack.
-            if (!EquipMove.TryEquip(character.equipment, save.stockpiledItems, item.Id, item.Slot,
-                                    item.IsEquippable, plus: item.Plus,
-                                    modifierIds: item.ModifierIds?.ToList(), riftTier: (int)item.RiftTier))
+            //
+            // The "measure max health before the swap, rescale carried health
+            // after it" pair that used to sit around this call is inside
+            // EquipmentOps.Equip now -- three screens and the bot each had
+            // their own copy of it. Nothing about the move changed.
+            if (!EquipmentOps.Equip(save, character, item.Id, item.Slot, item.IsEquippable,
+                                    plus: item.Plus,
+                                    modifierIds: item.ModifierIds?.ToList(),
+                                    riftTier: (int)item.RiftTier))
             {
                 return;
             }
-
-            RunEncounter.ScaleCarriedHealth(character, maxBefore);
 
             // WRITTEN IMMEDIATELY. Gear that vanishes because the game closed
             // between an equip and a save is the least forgivable thing this
@@ -1012,16 +1011,12 @@ namespace PrincesPalace
             var save = SaveSlotManager.CurrentSave;
             if (character?.equipment == null || save == null) return;
 
-            int maxBefore = ContentDatabase.EffectiveStats(character).maxHealth;
-
-            if (!EquipMove.TryUnequip(character.equipment, save.stockpiledItems, EquipmentSlots.All[index]))
+            // Scales carried health both ways -- see EquipmentOps.Unequip,
+            // which carries the symmetry note this call site used to.
+            if (!EquipmentOps.Unequip(save, character, EquipmentSlots.All[index]))
             {
                 return;
             }
-
-            // Both ways, and that symmetry is the point: scaling only on the
-            // way in would make an equip/unequip cycle a healing exploit.
-            RunEncounter.ScaleCarriedHealth(character, maxBefore);
 
             SaveSlotManager.SaveCurrent();
             ClearPreview();

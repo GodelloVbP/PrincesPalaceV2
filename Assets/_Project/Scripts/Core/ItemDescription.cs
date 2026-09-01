@@ -204,9 +204,8 @@ namespace PrincesPalace
             var beforeScores = ContentDatabase.EffectiveAbilityScores(character);
             var beforeLive = LiveSlots(character);
 
-            var clone = CloneForSimulation(character);
-            var targetSlot = clone.equipment.ResolveTargetSlot(candidate.equipSlot);
-            clone.equipment.Set(targetSlot, candidate.id, candidatePlus);
+            var targetSlot = character.equipment.ResolveTargetSlot(candidate.equipSlot);
+            var clone = SimulateEquip(character, candidate, candidatePlus);
 
             var afterStats = ContentDatabase.EffectiveStats(clone);
             var afterScores = ContentDatabase.EffectiveAbilityScores(clone);
@@ -225,6 +224,42 @@ namespace PrincesPalace
                 newlyInert,
                 newlyLive,
                 afterLive.Contains(targetSlot));
+        }
+
+        // THE SWAP ITSELF, as a character you can ask questions of.
+        //
+        // Lifted out of Compare unchanged so a SECOND caller can read numbers
+        // Compare does not return. ItemComparison carries a StatBlock delta,
+        // and a StatBlock has no field for the one number a weapon actually
+        // changes: gear no longer grants flat Attack (ContentDatabase.
+        // EffectiveStats zeroes `bonus.attack`), so a sword's whole
+        // contribution arrives as WeaponPower at the FightEncounterAdapter
+        // seam and reads as +0 attack in the delta. The bot's GearEvaluator
+        // has to ask ContentDatabase.EquippedWeaponPower of the simulated
+        // character to see it -- which needs the character, not the delta.
+        //
+        // Returns a THROWAWAY. The real character is never mutated, which is
+        // what lets this be called in a loop over a whole bag.
+        // `preferredSlot` names WHICH hand, for the one item class that has two
+        // -- the same parameter EquipMove.TryEquip takes and for the same
+        // reason. Null keeps Compare's original behaviour exactly:
+        // ResolveTargetSlot, which is what a player clicking a pack cell with
+        // no slot in mind gets. A preferred slot the item does not fit is
+        // refused here the way EquipMove refuses it, rather than silently
+        // simulating a helm on somebody's feet.
+        public static Character SimulateEquip(Character character, ItemDefinition candidate,
+            int candidatePlus = 0, EquipmentSlot? preferredSlot = null)
+        {
+            if (character?.equipment == null || candidate == null) return character;
+            if (preferredSlot.HasValue && !EquipmentSlots.Accepts(preferredSlot.Value, candidate.equipSlot))
+            {
+                return null;
+            }
+
+            var clone = CloneForSimulation(character);
+            var targetSlot = preferredSlot ?? clone.equipment.ResolveTargetSlot(candidate.equipSlot);
+            clone.equipment.Set(targetSlot, candidate.id, candidatePlus);
+            return clone;
         }
 
         // A COMPLETE copy, by round-trip rather than by hand.

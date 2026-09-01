@@ -509,25 +509,23 @@ namespace PrincesPalace
                 if (character?.equipment == null) continue;
                 if (character.equipment.FirstFreeSlotFor(itemDef.equipSlot) == null) continue;
 
-                // MEASURED BEFORE THE SWAP, same reason CharacterDossierController.
-                // EquipFromPack measures it before its own TryEquip: gear
-                // carrying max health changes what the run's carried current
-                // health is a fraction OF.
-                int maxBefore = ContentDatabase.EffectiveStats(character).maxHealth;
-
                 // modifierIds/riftTier travel through the same way plus does --
                 // InventoryOps.TryRemoveAt inside TryEquip keys on the full
                 // (itemId, plus, modifierIds, riftTier) stack, so omitting them
                 // here would look for the WRONG stack (the plain, unrolled one)
                 // and silently fail to find the copy Take() just added.
-                if (!EquipMove.TryEquip(character.equipment, save.stockpiledItems, offer.ItemId,
-                                        itemDef.equipSlot, itemDef.IsEquippable, plus: offer.Plus,
-                                        modifierIds: offer.Modifiers?.ToList(), riftTier: (int)offer.RiftTier))
+                //
+                // EquipmentOps.Equip carries the "measure max health first,
+                // rescale carried health after" pair this call site used to
+                // spell out; TakeOffer still owns the SaveCurrent below it.
+                if (!EquipmentOps.Equip(save, character, offer.ItemId, itemDef.equipSlot,
+                                        itemDef.IsEquippable, plus: offer.Plus,
+                                        modifierIds: offer.Modifiers?.ToList(),
+                                        riftTier: (int)offer.RiftTier))
                 {
                     return;
                 }
 
-                RunEncounter.ScaleCarriedHealth(character, maxBefore);
                 return;
             }
         }
