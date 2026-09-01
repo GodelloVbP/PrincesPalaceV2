@@ -24,15 +24,30 @@ namespace PrincesPalace.Domain.Bot
 
         // HOW LONG A FIGHT MAY GO NOWHERE BEFORE IT COUNTS AS STUCK.
         //
-        // "Nowhere" is neither side reaching a NEW LOW in total health --
-        // which is the honest reading of "this fight is not going to end",
-        // and the one a command count cannot give (see
-        // FightInvariants.MaxPlayerCommands for the batch that proved it).
-        // A slow win still trips the counter down every few commands and
-        // never fires; a slow LOSS does the same on the party's side; only a
-        // genuine deadlock, or a policy re-offering a command the session
-        // silently refuses, reaches sixty commands with both watermarks
-        // standing still.
+        // "Nowhere" is neither side's total health FALLING FROM ONE COMMAND TO
+        // THE NEXT for this many commands running. That is the honest reading
+        // of "this fight is not going to end", and the one a command count
+        // cannot give -- see FightInvariants.MaxPlayerCommands for the batch
+        // that proved it.
+        //
+        // STEP TO STEP, NOT AGAINST A WATERMARK, and the difference cost a
+        // whole batch to learn. The first version asked whether either side
+        // had reached a NEW LOW, which reads as the same question and is not:
+        // an enemy that HEALS early sets its low before the heal, and every
+        // command of a long, steadily winning grind afterwards is measured
+        // against a floor the fight can no longer touch. Seed 2, Mid/
+        // GreedyDefensive, the floor-4 boss: the Forest Warden healed 1112 ->
+        // 1853 in the opening rounds, then fell to 1557 over the next fifty
+        // commands -- progress on every reading except "a new low", which is
+        // the one that fired. 1,795 rows of it.
+        //
+        // The cost of the step-to-step reading is a real false NEGATIVE: a
+        // fight where the enemy fully heals what the party chips off each
+        // round progresses every command and stalls forever. That is a worse
+        // bug and a rarer one, and the hard ceiling still catches it -- which
+        // is the right way round, because a false positive silently truncates
+        // a run the party was winning into a death and corrupts the depth
+        // median the whole report is built on.
         //
         // Sixty rather than something tighter because a real fight can spend
         // a long stretch making no numerical progress on purpose -- warding,
@@ -68,11 +83,12 @@ namespace PrincesPalace.Domain.Bot
 
             int commands = 0;
 
-            // The two watermarks the stall check reads. Started at int.MaxValue
-            // so the first command of any fight sets both and the counter
-            // begins from a real reading rather than from zero.
-            int lowestEnemyHp = int.MaxValue;
-            int lowestPartyHp = int.MaxValue;
+            // The previous command's readings, which the stall check compares
+            // each new pair against. int.MaxValue so the first command of any
+            // fight counts as progress and the counter starts from a real
+            // reading rather than from zero.
+            int previousEnemyHp = int.MaxValue;
+            int previousPartyHp = int.MaxValue;
             int commandsSinceProgress = 0;
 
             while (!session.IsOver && session.IsPlayerTurn && commands < HardCommandCap)
@@ -113,16 +129,14 @@ namespace PrincesPalace.Domain.Bot
                 int enemyHp = session.Encounter.LivingEnemies.Sum(c => c.CurrentHealth);
                 int partyHp = session.Encounter.LivingPlayerParty.Sum(c => c.CurrentHealth);
 
-                if (enemyHp < lowestEnemyHp || partyHp < lowestPartyHp)
-                {
-                    if (enemyHp < lowestEnemyHp) lowestEnemyHp = enemyHp;
-                    if (partyHp < lowestPartyHp) lowestPartyHp = partyHp;
-                    commandsSinceProgress = 0;
-                }
-                else
-                {
-                    commandsSinceProgress++;
-                }
+                // EITHER side losing health is progress -- a slow win drives
+                // the enemy total down, a slow loss drives the party's, and
+                // both are fights that are going to end.
+                bool moved = enemyHp < previousEnemyHp || partyHp < previousPartyHp;
+                commandsSinceProgress = moved ? 0 : commandsSinceProgress + 1;
+
+                previousEnemyHp = enemyHp;
+                previousPartyHp = partyHp;
 
                 var turnHits = FightInvariants.Check(session, commands);
                 hits.AddRange(turnHits);
@@ -139,7 +153,7 @@ namespace PrincesPalace.Domain.Bot
                 if (commandsSinceProgress >= StallCommands)
                 {
                     hits.Add(new InvariantHit("TooManyCommands",
-                        $"neither side reached a new low in {StallCommands} commands " +
+                        $"neither side lost any health for {StallCommands} commands running " +
                         $"(command {commands}, enemies at {enemyHp}, party at {partyHp}); " +
                         "the fight is not going to end"));
                     break;

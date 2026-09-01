@@ -220,8 +220,9 @@ report's bug section: invariant name, seed, archetype, profile, step, node,
 and the last ten actions of the trace.
 
 - HP above max, or below zero on a living combatant.
-- A fight that is not over, read as NEITHER SIDE REACHING A NEW LOW in total
-  health for `FightRunner.StallCommands` (60) consecutive commands. This was a
+- A fight that is not over, read as NEITHER SIDE'S TOTAL HEALTH FALLING from
+  one command to the next for `FightRunner.StallCommands` (60) consecutive
+  commands. This was a
   flat "not over after 200 player commands" until the bot started dressing
   itself: a Mid GreedyDefensive at the floor-3 boss took 201 commands to bring
   a Throne Colossus from 794 HP to 35, winning the whole way, and the check cut
@@ -232,6 +233,16 @@ and the last ten actions of the trace.
   small for a legitimate deep fight. `FightInvariants.MaxPlayerCommands` stays,
   raised to 2000, purely as the runaway ceiling that stops a headless batch
   hanging on a session that has stopped answering.
+  The first attempt at this asked whether either side had reached a NEW LOW,
+  which is not the same question: an enemy that HEALS early sets its low before
+  the heal, and a long winning grind afterwards is then measured against a
+  floor the fight can no longer touch (seed 2, Mid/GreedyDefensive: the Forest
+  Warden went 1112 -> 1853 -> 1557 and every command of the decline read as no
+  progress). 1,795 more false rows. The step-to-step reading trades that for a
+  false NEGATIVE -- an enemy that fully heals what the party chips off each
+  round progresses every command and stalls forever -- which the ceiling still
+  catches, and which is the right way round: a false positive silently
+  truncates a winning run into a death and corrupts the depth median.
 - A player turn with no legal action.
 - `Payout` null after a win, or non-null before `IsOver`.
 - A won fight after which `RunManager.Choices()` is empty and `LegIsOver()`
