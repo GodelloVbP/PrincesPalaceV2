@@ -26,7 +26,12 @@ from pathlib import Path
 
 def load_summary(batch_dir):
     path = Path(batch_dir) / "summary.json"
-    with open(path, "r", encoding="utf-8") as f:
+    # utf-8-sig, not utf-8: it reads a plain UTF-8 file identically and also
+    # tolerates a leading BOM. The runner writes without one now, but the
+    # previous-batch lookup below reads OLD directories -- including any
+    # written before that was true -- and json.load refuses a BOM outright,
+    # so a single stale batch on disk would break every report from here on.
+    with open(path, "r", encoding="utf-8-sig") as f:
         return json.load(f)
 
 

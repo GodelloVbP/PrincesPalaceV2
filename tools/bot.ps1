@@ -17,10 +17,7 @@ param(
 # Mirrors run_tests.ps1's shape (sync -> divergent productName -> batchmode
 # launch), swapping -runTests for -executeMethod against
 # PrincesPalace.Editor.Bot.BalanceBotRunner.RunFromCommandLine. That method
-# does not exist yet (this file is Phase 3's tooling half, written ahead of
-# Phase 3's Editor half) -- so this script cannot be run end to end until it
-# lands. Validate syntax with:
-#   powershell -NoProfile -Command "[scriptblock]::Create((Get-Content tools/bot.ps1 -Raw))"
+# lives in Assets/_Project/Scripts/Editor/Bot/BalanceBotRunner.cs.
 #
 # Pure ASCII, no BOM: CLAUDE.md's PowerShell gotcha applies here same as
 # everywhere else in tools/ -- an em-dash inside a string breaks PS 5.1's
@@ -70,6 +67,21 @@ if (-not $SkipSync) {
         Set-Content $settingsPath -Encoding utf8
 }
 
+# The sha the batch measured, read HERE and passed in.
+#
+# The runner copy is a robocopy of Assets/Packages/ProjectSettings only, so
+# there is no .git inside it and the Editor entry cannot ask. summary.json's
+# commitSha is what lets a report be matched back to the code it measured,
+# and a report that cannot say what it measured is a report nobody can act
+# on -- so it travels as an argument rather than being looked up on the far
+# side. Empty (and harmless) if git is unavailable.
+$CommitSha = "unknown"
+try { $CommitSha = (& git -C $SourceProject rev-parse --short HEAD) } catch { $CommitSha = "" }
+# Never left EMPTY: an empty element in Start-Process -ArgumentList collapses
+# and shifts every argument after it by one, which would silently hand
+# -botOut's path to -botCommit and leave the batch writing nowhere.
+if (-not $CommitSha) { $CommitSha = "unknown" }
+
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $RunnerOutDir = Join-Path $TestProject "bot-out"
 $MainOutDir = Join-Path $SourceProject "reports\bot\$timestamp"
@@ -91,6 +103,7 @@ $unityArgs = @(
     "-botArchetypes", $Archetypes,
     "-botProfiles", $Profiles,
     "-botDepthCap", $DepthCap,
+    "-botCommit", $CommitSha,
     "-botOut", "`"$RunnerOutDir`"",
     "-logFile", "`"$logPath`"",
     "-buildTarget", "StandaloneWindows64",
