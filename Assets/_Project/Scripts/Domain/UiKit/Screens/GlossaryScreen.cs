@@ -59,7 +59,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var inside = new List<UiNode>
             {
                 Ui.Label("GlossaryTitle", UiStrings.GlossaryTitle, new UiVec(900f, 56f), 34, "#F2DB9E",
-                    Place.At(-360f, 388f)).AsDecor(),
+                    Place.At(-360f, 388f)).AsDecor()
+                    .Styled(TypographyRole.FunctionalHeading),
             };
 
             // ---- the rail: one button per category, built from the enum -----
@@ -84,6 +85,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var page = Ui.Label("GlossaryPageLabel", UiStrings.GlossaryPage, new UiVec(260f, 34f), 16,
                     "#B8A8D9", Place.At(ListX, -390f))
                 .AsDecor();
+            // NOT THEMED: narrow arrow icon buttons.
             var prev = Ui.Button("GlossaryPrevPage", UiStrings.TalentPrev, new UiVec(52f, 44f), 20,
                 Place.At(ListX - 200f, -390f));
             var next = Ui.Button("GlossaryNextPage", UiStrings.TalentNext, new UiVec(52f, 44f), 20,
@@ -107,7 +109,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor();
             var detailBody = Ui.Label("GlossaryDetailBody", UiString.Runtime, new UiVec(600f, 240f), 16,
                     "#9C8FC4", Place.At(PlateX, -60f))
-                .AsDecor();
+                .AsDecor()
+                .Styled(TypographyRole.Body);
             var lockedBy = Ui.Label("GlossaryDetailLockedBy", UiStrings.GlossaryLockedBy, new UiVec(600f, 60f), 16,
                     "#D9A87E", Place.At(PlateX, -230f))
                 .AsDecor()
@@ -128,7 +131,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             inside.Add(lockedBy);
 
             var close = Ui.Button("GlossaryCloseButton", UiStrings.Close, new UiVec(200f, 54f), 16,
-                Place.At(740f, 390f));
+                    Place.At(740f, 390f))
+                .Themed(ButtonTheme.Silver);
             screen.CloseButton = close;
             inside.Add(close);
 
@@ -142,6 +146,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return screen;
         }
 
+        // NOT THEMED: a pooled row generated per category at a pinned width
+        // (240x66), composite already (marker/label/count children) -- the
+        // brief's own tab-strip/pooled-pinned-width exclusion.
         private UiNode BuildCategory(int index, GlossaryCategory category)
         {
             float y = RailTop - index * RailPitch;
@@ -179,6 +186,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return button;
         }
 
+        // NOT THEMED: same reason as BuildCategory above -- a pooled,
+        // pinned-width (500x60) composite row.
         private UiNode BuildRow(int index)
         {
             float y = ListTop - index * ListPitch;

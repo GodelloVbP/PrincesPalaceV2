@@ -184,6 +184,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // hides the one that has nowhere to go: paging is a clamped line,
             // and an arrow that greys out is how a player finds the ends without
             // counting.
+            // NOT THEMED: narrow arrow icon buttons, the same category
+            // GlossaryScreen's and DebugMenuScreen's pagers stay unthemed for.
             var prevPath = Ui.Button("PrevPathButton", UiStrings.TalentPrev,
                 new UiVec(ConstellationLayout.ArrowWidth, ConstellationLayout.ArrowHeight), 30,
                 Place.At(ConstellationLayout.ArrowLeftX, 0f));
@@ -194,7 +196,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.NextPathButton = nextPath;
 
             var back = Ui.Button("TalentBackButton", UiStrings.TalentBack, new UiVec(190f, 52f), 15,
-                Place.At(-UiFrames.Reference.X * 0.5f + 119f, UiFrames.Reference.Y * 0.5f - 50f));
+                    Place.At(-UiFrames.Reference.X * 0.5f + 119f, UiFrames.Reference.Y * 0.5f - 50f))
+                .Themed(ButtonTheme.Silver);
             screen.BackButton = back;
 
             // THE VIGNETTE, over the sky and under everything that has to be
@@ -284,6 +287,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // Hidden outright while there is one character -- see
             // TalentController.Refresh, and the reason written there.
+            // NOT THEMED: a 40x40 square icon button, the same category the
+            // path arrows above stay unthemed for.
             var prevCharacter = Ui.Button("PrevCharacterButton", UiStrings.TalentPrev,
                 new UiVec(40f, 40f), 20,
                 Place.At(-ConstellationLayout.PanelInnerWidth * 0.5f + 20f,
@@ -328,7 +333,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     new UiVec(ConstellationLayout.PanelInnerWidth, 26f), 13, "#F2DB9E",
                     Place.At(0f, ConstellationLayout.PanelPriceY))
                 .Tracked(10f)
-                .AsDecor();
+                .AsDecor()
+                .Styled(TypographyRole.TacticalData);
             PanelPrice = price;
             parts.Add(price);
 
@@ -336,7 +342,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     new UiVec(ConstellationLayout.PanelInnerWidth, ConstellationLayout.PanelBodyHeight),
                     20, "#B8A8D9",
                     Place.At(0f, ConstellationLayout.PanelBodyY))
-                .AsDecor();
+                .AsDecor()
+                .Styled(TypographyRole.Body);
             DetailBody = body;
             parts.Add(body);
 
@@ -353,11 +360,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var investLabel = Ui.Label("InvestButtonCaption", UiStrings.TalentInvest,
                     new UiVec(ConstellationLayout.PanelActionWidth - 30f, 40f), 22, "#F2DB9E",
                     Place.At(0f, 0f))
-                .Tracked(26f);
+                .Tracked(26f)
+                .Styled(TypographyRole.ButtonLabel);
+            // ThemedPlate(), not Themed(): the caption above is this button's
+            // own declared child (a custom colour/tracking, not the
+            // generated centred label), the same shape FightScreen's verb
+            // rows already established. Gold: the one recommended action on
+            // this panel, "Unlock/Confirm" in the brief's own words.
             var invest = Ui.Button("InvestButton", UiString.Runtime,
-                new UiVec(ConstellationLayout.PanelActionWidth, ConstellationLayout.PanelActionHeight), 20,
-                Place.At(0f, ConstellationLayout.PanelActionY));
+                    new UiVec(ConstellationLayout.PanelActionWidth, ConstellationLayout.PanelActionHeight), 20,
+                    Place.At(0f, ConstellationLayout.PanelActionY))
+                .ThemedPlate(ButtonTheme.Gold);
             invest.Children.Add(investLabel);
+            invest.LayerCaptionWithVisuals(investLabel);
             InvestButton = invest;
             InvestLabel = investLabel;
             parts.Add(invest);
@@ -383,7 +398,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     new UiVec(ConstellationLayout.PanelInnerWidth, 22f), 12, "#8E7FB0",
                     Place.At(0f, ConstellationLayout.PanelMeterY + 24f))
                 .Tracked(20f)
-                .AsDecor();
+                .AsDecor()
+                .Styled(TypographyRole.TacticalData);
             EmberCount = meter;
             PanelMeter = meter;
             parts.Add(meter);
@@ -391,7 +407,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var respec = Ui.Button("TalentRespecButton", UiStrings.TalentRespec,
                     new UiVec(ConstellationLayout.PanelActionWidth, 52f), 14,
                     Place.At(0f, ConstellationLayout.PanelRespecY))
-                .Inactive();
+                .Inactive()
+                .Themed(ButtonTheme.Violet);
             RespecButton = respec;
             parts.Add(respec);
 
@@ -493,7 +510,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var title = Ui.Label("RespecDialogTitle", UiStrings.TalentRespecTitle,
                     new UiVec(700f, 56f), 34, "#EDE6FF", Place.At(0f, 96f))
                 .Tracked(4f)
-                .AsDecor();
+                .AsDecor()
+                .Styled(TypographyRole.FunctionalHeading);
 
             // NAMES THE EXACT REFUND, filled by the controller. What goes dark
             // and what comes back is the part a player needs before pressing;
@@ -501,13 +519,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // remember what they had.
             var body = Ui.Label("RespecDialogBody", UiString.Runtime,
                     new UiVec(700f, 90f), 20, "#B8A8D9", Place.At(0f, 8f))
-                .AsDecor();
+                .AsDecor()
+                .Styled(TypographyRole.Body);
             RespecDialogBody = body;
 
+            // Cancel/Confirm, not two Golds: at most one gold button per
+            // screen state, so the confirmation gets it and backing out reads
+            // as ordinary navigation, same as Back everywhere else.
             var cancel = Ui.Button("RespecCancelButton", UiStrings.TalentRespecCancel,
-                new UiVec(260f, 64f), 18, Place.At(-150f, -104f));
+                    new UiVec(260f, 64f), 18, Place.At(-150f, -104f))
+                .Themed(ButtonTheme.Silver);
             var confirm = Ui.Button("RespecConfirmButton", UiStrings.TalentRespecConfirm,
-                new UiVec(260f, 64f), 18, Place.At(150f, -104f));
+                    new UiVec(260f, 64f), 18, Place.At(150f, -104f))
+                .Themed(ButtonTheme.Gold);
 
             RespecCancelButton = cancel;
             RespecConfirmButton = confirm;

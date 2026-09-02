@@ -407,6 +407,10 @@ namespace PrincesPalace
                 {
                     respecButton.interactable =
                         character.HasAnythingToRespec(ContentDatabase.SpentBy(character));
+                    // Same seam as InvestButton above: RespecButton is themed
+                    // (Violet) now, so the interactable flag needs the plate
+                    // repainted explicitly.
+                    respecButton.GetComponent<ThemedButtonState>()?.Refresh();
                 }
             }
 
@@ -792,6 +796,11 @@ namespace PrincesPalace
             panelRefusal.SetContent(Explain(refusal));
 
             investButton.interactable = refusal == TalentPage.Refusal.None;
+            // InvestButton wears a theme's plate now (see TalentScreen.
+            // BuildPanel) -- Button.interactable alone does not repaint it;
+            // ThemedButtonState.Refresh() reads the flag back into the
+            // plate/glow tint the way OnEnable already does on activation.
+            investButton.GetComponent<ThemedButtonState>()?.Refresh();
             investLabel.Set(LabelFor(refusal));
         }
 

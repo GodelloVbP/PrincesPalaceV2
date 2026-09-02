@@ -27,6 +27,16 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void CloseWearsSilverAndThePooledRowsStayUnthemed()
+        {
+            var screen = GlossaryScreen.Build();
+
+            Assert.AreEqual(ButtonTheme.Silver, screen.CloseButton.Node.Theme);
+            Assert.IsNull(screen.CategoryButtons[0].Node.Theme, "pooled, pinned-width tab strip");
+            Assert.IsNull(screen.Rows[0].Node.Theme, "pooled, pinned-width row");
+        }
+
+        [Test]
         public void ItAuditsCleanInsideTheHubItMountsIn()
         {
             var errors = UiAudit.RunAllFrames(HubScreen.Build().Root);

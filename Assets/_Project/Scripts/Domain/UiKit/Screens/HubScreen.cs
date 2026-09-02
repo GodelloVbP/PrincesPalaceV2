@@ -86,6 +86,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     "#F2DB9E", Place.At(0f, HubAnchors.GateCaptionOffset))
                 .AllowOverflow("the gate's nameplate hangs below the plinths - inside the arch it would fill the void the eye needs to read as an opening");
 
+            // NOT THEMED: SpriteKey below is the gate's own painted art, and
+            // Themed() would delete it (see Staged()'s comment on the same
+            // trade-off for the buildings). "Start Run -> Gold" in the theme
+            // brief has nowhere to land on this screen for that reason.
             var gate = Ui.Button("StartRunGate", UiString.Runtime,
                 new UiVec(HubAnchors.GateSize, HubAnchors.GateSize), 22,
                 Place.At(HubAnchors.Gate.X, HubAnchors.Gate.Y, new UiVec(0.5f, 0f)));
@@ -101,11 +105,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.StartRunCaption = gateCaption;
 
             var currency = Ui.Label("CurrencyLabel", UiStrings.HubWallet, new UiVec(500f, 80f), 20, "#F2DB9E",
-                Place.At(0f, 0f));
+                    Place.At(0f, 0f))
+                .Styled(TypographyRole.TacticalData);
             screen.CurrencyLabel = currency;
 
             var mainMenu = Ui.Button("MainMenuButton", UiStrings.HubMainMenu, new UiVec(220f, 60f), 16,
-                Place.At(-830f, 480f));
+                Place.At(-830f, 480f))
+                .Themed(ButtonTheme.Silver);
             screen.MainMenuButton = mainMenu;
 
             var ambience = HubAmbience.Build();
@@ -167,8 +173,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // job. Stacking them removes the question instead of nudging a
                 // number until it passes.
                 Ui.Column("HubHeading", Place.At(0f, 445f), spacing: 4f, UiAlign.Centre,
-                    Ui.Label("HubTitleLabel", UiStrings.HubTitle, new UiVec(1000f, 80f), 56, "#EDE6FF"),
-                    Ui.Label("HubSubtitleLabel", UiStrings.HubSubtitle, new UiVec(600f, 32f), 18, "#B8A8D9"))
+                    Ui.Label("HubTitleLabel", UiStrings.HubTitle, new UiVec(1000f, 80f), 56, "#EDE6FF")
+                        .Styled(TypographyRole.CeremonialTitle),
+                    Ui.Label("HubSubtitleLabel", UiStrings.HubSubtitle, new UiVec(600f, 32f), 18, "#B8A8D9")
+                        .Styled(TypographyRole.Body))
                     .AsDecor(),
 
                 // Lighter than it looks like it should be. v1's first pass made
@@ -214,6 +222,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // The size is BAKED from the depth rather than applied as a transform
         // scale, because the audit measures declared boxes and a full-size node
         // scaled down would be reported as overlapping things it never touches.
+        // NOT THEMED, deliberately, the same call MapScreen's room buttons
+        // already made: SpriteKey below points at the building's own painted
+        // art, and Theme.HasValue drops a button's root Image entirely
+        // (UiEmitter.EmitButton) so a theme's plate would replace that art
+        // rather than dress a bare frame. That includes the gate -- its
+        // "Start Run -> Gold" mapping from the brief assumes a bare button
+        // this screen doesn't have.
         private BuildingNodes Staged(string name, UiString caption, string art, HubAnchors.Plot plot)
         {
             var position = HubAnchors.PositionFor(plot);

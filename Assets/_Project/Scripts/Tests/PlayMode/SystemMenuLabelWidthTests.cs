@@ -107,11 +107,17 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             yield return null;
 
-            var hubTitle = Object.FindObjectsByType<TMP_Text>(FindObjectsInactive.Include)
-                .FirstOrDefault(t => t.name == "HubTitleLabel");
+            // NOT HubTitleLabel any more: the button-theme migration gave it
+            // TypographyRole.CeremonialTitle (the brief's own "Hub screen
+            // title" carve-out), which authors 2em of tracking on purpose --
+            // asserting 0 on it now would be pinning the bug this test exists
+            // to catch. A building nameplate never asked for a role at all,
+            // so it is still the untouched control this check wants.
+            var buildingCaption = Object.FindObjectsByType<TMP_Text>(FindObjectsInactive.Include)
+                .FirstOrDefault(t => t.name == "RelicsBuildingCaption");
 
-            Assert.IsNotNull(hubTitle, "the hub has no title label");
-            Assert.AreEqual(0f, hubTitle.characterSpacing, 0.01f,
+            Assert.IsNotNull(buildingCaption, "the hub has no RelicsBuilding nameplate");
+            Assert.AreEqual(0f, buildingCaption.characterSpacing, 0.01f,
                 "tracking has leaked into labels that never asked for it");
         }
 

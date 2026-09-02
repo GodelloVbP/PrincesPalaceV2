@@ -81,12 +81,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 children.Add(BuildCard(screen, group, centreY));
             }
 
-            // Under column 0, below its last card.
+            // Under column 0, below its last card. Themed Crimson -- the
+            // brief's one reset action -- which means dropping the .NoChrome()
+            // this row used before there was a semantic kit to reach for.
             var restore = Ui.Button("OptionsRestoreDefaults", UiStrings.OptionsRestoreDefaults,
                     new UiVec(OptionsLayout.RestoreWidth, OptionsLayout.RestoreHeight), 14,
                     Place.At(OptionsLayout.ColumnCentreX(0),
                              nextTop[0] - OptionsLayout.RestoreHeight * 0.5f))
-                .NoChrome();
+                .Themed(ButtonTheme.Crimson);
             screen.RestoreDefaults = restore;
             children.Add(restore);
 
@@ -95,7 +97,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             children.Add(Ui.Label("OptionsAppliesNote", UiStrings.OptionsAppliesImmediately,
                     new UiVec(520f, 18f), 13, Body,
                     Place.At(OptionsLayout.ColumnCentreX(0), OptionsLayout.ContentBottom - 14f))
-                .AsDecor());
+                .AsDecor()
+                .Styled(TypographyRole.Body));
 
             screen.Root = Ui.Panel("OptionsPane", Place.At(0f, 0f),
                 UiSize.Fixed(OptionsLayout.PaneWidth, OptionsLayout.PaneHeight), children);
@@ -121,7 +124,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     new UiVec(OptionsLayout.HeadingWidth, OptionsLayout.HeadingHeight), 18, Heading,
                     Place.At(-OptionsLayout.CardContentHalf + OptionsLayout.HeadingWidth * 0.5f,
                              OptionsLayout.HeadingCentreY(rows)))
-                .AsDecor());
+                .AsDecor()
+                .Styled(TypographyRole.FunctionalHeading));
 
             for (int i = 0; i < rows; i++)
             {
@@ -165,7 +169,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 children.Add(Ui.Label($"OptionsRow{key}Note", row.Note,
                         new UiVec(OptionsLayout.LabelWidth, 16f), 12, Body,
                         Place.At(OptionsLayout.LabelCentreX, -11f))
-                    .AsDecor());
+                    .AsDecor()
+                    .Styled(TypographyRole.Body));
             }
 
             if (row.Kind == OptionKind.Slider)
@@ -201,6 +206,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             }
             else
             {
+                // NOT THEMED: square icon buttons (step size both axes).
                 var prev = Ui.Button($"OptionsRow{key}Prev", UiStrings.OverlayPrev,
                         new UiVec(OptionsLayout.StepButtonSize, OptionsLayout.StepButtonSize), 14,
                         Place.At(OptionsLayout.StepPrevCentreX, 0f))

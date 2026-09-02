@@ -42,6 +42,23 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void EveryChromeButtonWearsSilverAndThePooledRowsStayUnthemed()
+        {
+            // "DebugMenuScreen: Silver only" -- no recommended action, no
+            // danger, in a tool rather than the fiction.
+            var screen = DebugMenuScreen.Build();
+
+            Assert.AreEqual(ButtonTheme.Silver, screen.GiveGoldButton.Node.Theme);
+            Assert.AreEqual(ButtonTheme.Silver, screen.GiveEmbersButton.Node.Theme);
+            Assert.AreEqual(ButtonTheme.Silver, screen.GiveOneEmberButton.Node.Theme);
+            Assert.AreEqual(ButtonTheme.Silver, screen.CloseButton.Node.Theme);
+            Assert.IsNull(screen.FilterButtons[0].Node.Theme, "a pooled, pinned-width tab strip");
+            Assert.IsNull(screen.RowButtons[0].Node.Theme, "a pooled, pinned-width row");
+            Assert.IsNull(screen.PrevPageButton.Node.Theme, "an icon arrow, not a plate button");
+            Assert.IsNull(screen.NextPageButton.Node.Theme, "an icon arrow, not a plate button");
+        }
+
+        [Test]
         public void TheMenuStartsHidden()
         {
             Assert.IsTrue(Tree().StartInactive);
@@ -98,8 +115,12 @@ namespace PrincesPalace.Domain.Tests
             // child by that name produces two GameObjects with one name under
             // one parent, and every by-name lookup takes the emitter's empty
             // one. This screen shipped that bug for one build.
+            // n.Theme == null: a themed button's own "<Name>Label" child is
+            // Ui.ApplyTheme's real, intended output (see UiNode.Themed), not
+            // the emitter-name collision this check exists to catch -- the
+            // same narrowing DefeatScreenTests made for the same reason.
             var offenders = Walk(Tree())
-                .Where(n => n.Kind == UiNodeKind.Button)
+                .Where(n => n.Kind == UiNodeKind.Button && n.Theme == null)
                 .SelectMany(button => button.Children
                     .Where(c => c.Name == button.Name + "Label")
                     .Select(c => c.Name))

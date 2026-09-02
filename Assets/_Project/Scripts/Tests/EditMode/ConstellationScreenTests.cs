@@ -38,6 +38,40 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void InvestWearsGoldAndKeepsItsOwnCaption()
+        {
+            // ThemedPlate(), not Themed(): the panel declares its own custom-
+            // coloured caption (InvestButtonCaption) rather than taking the
+            // generated one.
+            var screen = TalentScreen.Build();
+
+            Assert.AreEqual(ButtonTheme.Gold, screen.InvestButton.Node.Theme);
+            Assert.IsTrue(screen.InvestButton.Node.CaptionPreserving);
+            CollectionAssert.Contains(
+                screen.InvestButton.Node.Children.Select(c => c.Name), "InvestButtonCaption");
+        }
+
+        [Test]
+        public void RespecWearsVioletAndItsDialogButtonsSplitGoldAndSilver()
+        {
+            var screen = TalentScreen.Build();
+
+            Assert.AreEqual(ButtonTheme.Violet, screen.RespecButton.Node.Theme);
+            Assert.AreEqual(ButtonTheme.Gold, screen.RespecConfirmButton.Node.Theme);
+            Assert.AreEqual(ButtonTheme.Silver, screen.RespecCancelButton.Node.Theme);
+        }
+
+        [Test]
+        public void BackWearsSilverAndThePagingArrowsStayUnthemed()
+        {
+            var screen = TalentScreen.Build();
+
+            Assert.AreEqual(ButtonTheme.Silver, screen.BackButton.Node.Theme);
+            Assert.IsNull(screen.PrevPathButton.Node.Theme, "an icon arrow, not a plate button");
+            Assert.IsNull(screen.NextPathButton.Node.Theme, "an icon arrow, not a plate button");
+        }
+
+        [Test]
         public void AnOrbWearsItsMedallionRatherThanItsOwnGlow()
         {
             // The orb read "proc:radial_glow" -- the SAME asset as the glow
@@ -47,10 +81,15 @@ namespace PrincesPalace.Domain.Tests
             // baked disc, and is now the painted medallion the talent kit was
             // generated for.
             var screen = TalentScreen.Build();
-            var byName = Walk(screen.Root).ToDictionary(n => n.Name, n => n);
-
-            var orb = byName["Orb0_0"];
-            var glow = byName["Orb0_0Glow"];
+            // First(), not ToDictionary(): every themed button on this screen
+            // now declares its own "Visuals" child (Ui.ApplyTheme/
+            // ApplyThemePlateOnly's Glow+Plate container), so node names are
+            // no longer unique screen-wide the moment more than one button is
+            // themed -- a dictionary keyed by name throws on the duplicate
+            // rather than finding the two orb nodes this test actually wants.
+            var all = Walk(screen.Root).ToList();
+            var orb = all.First(n => n.Name == "Orb0_0");
+            var glow = all.First(n => n.Name == "Orb0_0Glow");
 
             Assert.AreEqual(TalentScreen.OrbUnlitKey, orb.SpriteKey);
             Assert.AreNotEqual(orb.SpriteKey, glow.SpriteKey,

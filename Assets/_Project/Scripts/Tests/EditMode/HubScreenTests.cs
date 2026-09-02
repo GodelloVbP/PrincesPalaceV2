@@ -37,6 +37,22 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void MainMenuWearsSilverAndTheStagedButtonsStayUnthemed()
+        {
+            // The gate and the five buildings keep their own painted art
+            // (SpriteKey) as their plate -- Themed() would delete it, the
+            // same trade-off MapScreen's room buttons already made.
+            var screen = HubScreen.Build();
+
+            Assert.AreEqual(ButtonTheme.Silver, screen.MainMenuButton.Node.Theme);
+            Assert.IsNull(screen.StartRunButton.Node.Theme);
+            Assert.IsNull(screen.TalentsButton.Node.Theme);
+            Assert.IsNull(screen.RelicsButton.Node.Theme);
+            Assert.IsNull(screen.CharacterSheetButton.Node.Theme);
+            Assert.IsNull(screen.PrincipalityButton.Node.Theme);
+        }
+
+        [Test]
         public void EverythingStagedLivesInsideTheWorld()
         {
             // The chrome/world split is what lets one handle drift or settle the

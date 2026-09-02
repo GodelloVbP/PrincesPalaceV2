@@ -48,16 +48,23 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var chrome = new List<UiNode>
             {
                 Ui.Label("DebugTitle", UiStrings.DebugTitle, new UiVec(400f, 56f), 34, "#F2DB9E",
-                    Place.At(0f, 430f)).AsDecor(),
+                    Place.At(0f, 430f)).AsDecor()
+                    .Styled(TypographyRole.FunctionalHeading),
             };
 
             // --- currency grants -------------------------------------------------
+            // Silver: a debug tool has no recommended action or danger to
+            // colour-code, per the brief's own "Silver only" rule for this
+            // screen.
             var gold = Ui.Button("DebugGiveGoldButton", UiStrings.DebugGiveGold, new UiVec(280f, 56f), 20,
-                Place.At(-310f, 348f));
+                    Place.At(-310f, 348f))
+                .Themed(ButtonTheme.Silver);
             var embers = Ui.Button("DebugGiveEmbersButton", UiStrings.DebugGiveEmbers, new UiVec(280f, 56f), 20,
-                Place.At(0f, 348f));
+                    Place.At(0f, 348f))
+                .Themed(ButtonTheme.Silver);
             var oneEmber = Ui.Button("DebugGiveOneEmberButton", UiStrings.DebugGiveOneEmber, new UiVec(280f, 56f), 20,
-                Place.At(310f, 348f));
+                    Place.At(310f, 348f))
+                .Themed(ButtonTheme.Silver);
 
             screen.GiveGoldButton = gold;
             screen.GiveEmbersButton = embers;
@@ -75,6 +82,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 UiStrings.DebugFilterEquipment,
             };
 
+            // NOT THEMED: a pooled filter row at a pinned width (210x48) --
+            // a tab strip.
             for (int i = 0; i < filters.Length; i++)
             {
                 // Evenly spaced about centre: four buttons 210 wide on a 220
@@ -88,6 +97,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             }
 
             // --- the item list ------------------------------------------------------
+            // NOT THEMED: a pooled, pinned-width (900x44) composite row, same
+            // as GlossaryScreen's rail/list rows.
             for (int i = 0; i < DebugMenuCatalog.RowsPerPage; i++)
             {
                 float y = ListTop - i * (RowHeight + RowSpacing);
@@ -115,6 +126,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var page = Ui.Label("DebugPageLabel", UiStrings.DebugPage, new UiVec(320f, 40f), 18, "#B8A8D9",
                 Place.At(0f, pagerY)).AsDecor();
+            // NOT THEMED: narrow arrow icon buttons.
             var prev = Ui.Button("DebugPrevPage", UiStrings.TalentPrev, new UiVec(56f, 44f), 20,
                 Place.At(-260f, pagerY));
             var next = Ui.Button("DebugNextPage", UiStrings.TalentNext, new UiVec(56f, 44f), 20,
@@ -128,7 +140,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             chrome.Add(next);
 
             var close = Ui.Button("DebugCloseButton", UiStrings.Close, new UiVec(220f, 56f), 18,
-                Place.At(0f, -470f));
+                    Place.At(0f, -470f))
+                .Themed(ButtonTheme.Silver);
             screen.CloseButton = close;
             chrome.Add(close);
 
