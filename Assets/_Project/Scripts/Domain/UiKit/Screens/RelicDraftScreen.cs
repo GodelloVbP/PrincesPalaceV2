@@ -89,12 +89,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // arrows.
             //
             // Outside the card row, not over it: three 380-wide cards at a 420
-            // pitch reach x +/-610, and the frame's half-width is 750.
+            // pitch reach x +/-610. Pulled in from +/-680 to +/-660 when the
+            // frame gained real border art: the container's own 3.5%
+            // left/right inset caps content at +/-697.5 (half of the 1500-
+            // wide frame's own content bound), and 680+30 (this button's own
+            // half-width) reached 710 -- 12.5px past it.
             var prevPage = Ui.Button("DraftPrevPage", UiStrings.TalentPrev,
-                    new UiVec(60f, 60f), 22, Place.At(-680f, 20f))
+                    new UiVec(60f, 60f), 22, Place.At(-660f, 20f))
                 .Inactive();
             var nextPage = Ui.Button("DraftNextPage", UiStrings.TalentNext,
-                    new UiVec(60f, 60f), 22, Place.At(680f, 20f))
+                    new UiVec(60f, 60f), 22, Place.At(660f, 20f))
                 .Inactive();
 
             // Between the cards (which stop at y -210) and Descend (at -350).
@@ -122,8 +126,22 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.DescendButton = descend;
             inside.Add(descend);
 
-            var frame = Ui.Panel("DraftFrame", Place.At(0f, 0f), UiSize.Fixed(1500f, 820f), inside)
-                .Coloured("#241736F5");
+            // VIOLET, 3:2 KIT CONTAINER -- was a flat #241736F5 panel at
+            // 1500x820 (aspect 1.83), 22.8% off the kit's measured 3:2
+            // aspect (1.49, see ContainerArt.ContainerAspect3x2's comment) --
+            // past the 5% band Ui.Container refuses. Nudged to 1500x1000
+            // (aspect 1.5, 0.7% off -- comfortably inside the band) rather
+            // than narrowed to 1230x820: every existing child (three
+            // 380-wide cards at a 420 pitch, the title, the descend button)
+            // already clears the container's own measured inset at the
+            // TALLER box with room to spare -- the card row's outer edge
+            // reaches only 610 against a 697.5 content bound, and Descend's
+            // bottom edge reaches only -382 against a -455 bound -- so nudging
+            // height moves fewer things than narrowing width and re-fitting
+            // three cards plus their gaps would have.
+            var frame = Ui.Container("DraftFrame", ButtonTheme.Violet, ContainerRatio.ThreeByTwo,
+                Place.At(0f, 0f), new UiVec(1500f, 1000f));
+            Ui.ContainerContent(frame, ContainerRatio.ThreeByTwo, "DraftFrameContent", inside.ToArray());
             screen.Frame = frame;
 
             var content = Ui.Panel("DraftContent", Place.At(0f, 0f), UiSize.Fill, frame);
