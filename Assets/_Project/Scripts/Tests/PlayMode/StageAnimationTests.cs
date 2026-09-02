@@ -30,10 +30,24 @@ namespace PrincesPalace.PlayModeTests
         private FightController _fight;
 
         [SetUp]
-        public void PlayFast() => FightBeatPlayer.BeatSpeedMultiplier = 60f;
+        public void PlayFast()
+        {
+            FightBeatPlayer.BeatSpeedMultiplier = 60f;
+
+            // The transform breath runs on its own clock, unscaled by
+            // BeatSpeedMultiplier by design (see FightController.
+            // BreathSpeedMultiplier's own comment) -- this collapses its
+            // ~2.8s real-time cycle for the four tests below that wait it
+            // out.
+            FightController.BreathSpeedMultiplier = 60f;
+        }
 
         [TearDown]
-        public void Restore() => FightBeatPlayer.BeatSpeedMultiplier = 1f;
+        public void Restore()
+        {
+            FightBeatPlayer.BeatSpeedMultiplier = 1f;
+            FightController.BreathSpeedMultiplier = 1f;
+        }
 
         private GameObject Named(string name) =>
             _fight.GetComponentsInChildren<Transform>(includeInactive: true)

@@ -983,6 +983,20 @@ namespace PrincesPalace
         // drive it and it outlives the beat.
         private Coroutine _idling;
 
+        // THE TEST SEAM FOR THE BREATH SPECIFICALLY, separate from
+        // FightBeatPlayer.BeatSpeedMultiplier on purpose. StepIdleFrame's own
+        // comment explains why the breath clock below is UNSCALED by that
+        // multiplier -- a paused fight must not bank up a breath -- so
+        // speeding the fight's beats up for a test does nothing to how long
+        // the ~2.8s breath cycle (BreathCurve) takes in real time. Four
+        // PlayMode tests (StageAnimationTests: FlatArtStillBreathesEven
+        // ThoughItsDrawingCannot, ABreathOnlyEverMakesTheFigureTallerThanIts
+        // Mark, ReHomingAFigureMidBreathDoesNotFoldTheBreathIntoItsSize,
+        // APunchStillLandsOnAFigureThatIsBreathing) were each waiting out a
+        // real ~3s deadline for exactly that reason. Set in [UnitySetUp],
+        // reset in [UnityTearDown], same shape as BeatSpeedMultiplier.
+        public static float BreathSpeedMultiplier = 1f;
+
         // Where each figure is in its own breath. Cleared per combatant the
         // moment it stops being idle, which is what makes the loop restart from
         // frame 0 on the way back rather than resuming mid-inhale from before
@@ -1283,10 +1297,12 @@ namespace PrincesPalace
                 clock = index * perFrame * IdlePhaseFrames;
             }
 
-            // UNSCALED, like every other clock on this stage. A fight paused
-            // behind a modal should not bank up a breath and spend it all at
-            // once when the panel closes.
-            clock += Time.unscaledDeltaTime;
+            // UNSCALED BY BeatSpeedMultiplier, like every other clock on this
+            // stage -- a fight paused behind a modal should not bank up a
+            // breath and spend it all at once when the panel closes. Scaled
+            // by BreathSpeedMultiplier instead, which is 1 outside a test and
+            // therefore changes nothing about that rule in play.
+            clock += Time.unscaledDeltaTime * BreathSpeedMultiplier;
             _idleClock[combatant] = clock;
 
             // THE TRANSFORM HALF OF THE BREATH, and it runs for every idle
