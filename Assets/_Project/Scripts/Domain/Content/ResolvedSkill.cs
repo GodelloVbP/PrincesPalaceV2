@@ -96,6 +96,24 @@ namespace PrincesPalace.Domain.Content
 
         public bool HasFixedDamage => DamageInstances != null && DamageInstances.Length > 0;
 
+        // Whether this skill deals damage at all -- the same gate
+        // FightHudModel's SCALES/POWER rows already use (HasNoPreviewablePower/
+        // ScalingLabelForSkill), repeated here rather than duplicated a third
+        // time for the damage-type row those two rows sit beside.
+        public bool IsDamaging => Effect == SkillEffect.DamageSingle || Effect == SkillEffect.DamageAll;
+
+        // The damage type THIS SKILL authors directly -- only ever answerable
+        // for a fixed-damage (multi-packet) spell, whose packets already
+        // carry their own typed amount. A non-fixed damaging skill (the
+        // common case: Power/FlatAmount scaled off the caster's own Attack)
+        // has NO authored type of its own -- it rides whatever the caster's
+        // kit/content declares as their attackType at cast time
+        // (FightSession.ActorAttackType), and ResolvedSkill has no caster to
+        // ask. Null here does not mean "no type" for that case; it means
+        // "ask the caster" -- see FightHudModel.DamageTypeLabel, the one
+        // place both a skill AND a caster are in hand together.
+        public DamageType? FixedDamageType => HasFixedDamage ? DamageInstances[0].type : (DamageType?)null;
+
         public ResolvedSkill(string id, string displayName, string description, string characterId,
             int unlockLevel, SkillEffect effect, SkillTargeting targeting, int manaCost,
             int resourceCost, bool spendsAllResource, int power, int flatAmount, bool ignoresDefense,

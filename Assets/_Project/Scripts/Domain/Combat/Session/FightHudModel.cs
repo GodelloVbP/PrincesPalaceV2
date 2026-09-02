@@ -82,6 +82,15 @@ namespace PrincesPalace.Domain.Combat.Session
         public string Kind = "";
         public string Body = "";
         public readonly List<(string Key, string Value)> Stats = new List<(string, string)>();
+
+        // The skill's damage type ("Fire", "Arcane", ...), or "" for a
+        // non-damaging skill -- see FightHudModel.DamageTypeLabel. A
+        // DEDICATED field rather than a sixth Stats row: FightMenuStateTests
+        // already pins Stats at exactly five entries by index (SCALES is
+        // Stats[4]), so a new row would renumber every one of them for
+        // whichever screen places this label. The UiKit side decides where
+        // (and whether) to show it; this model only has to carry the string.
+        public string DamageType = "";
     }
 
     // The fight HUD's contents, derived from the session and nothing else.
@@ -318,7 +327,36 @@ namespace PrincesPalace.Domain.Combat.Session
             panel.Stats.Add(("TARGET", ReachFor(skill.Targeting)));
             panel.Stats.Add(("EFFECT", VerbFor(skill.Effect)));
             panel.Stats.Add(("SCALES", ScalingLabelForSkill(session, actor, skill)));
+            panel.DamageType = DamageTypeLabel(session, actor, skill);
             return panel;
+        }
+
+        // The skill's damage type, as a display string: "Fire", "Arcane", a
+        // "/"-joined list for a multi-packet spell that authors more than
+        // one (frost_flare: Fire and Ice), or "" for a skill that deals no
+        // typed damage at all.
+        //
+        // FIXED-DAMAGE PACKETS ANSWER FROM THE SKILL ALONE -- each one
+        // already carries its own authored type (ResolvedSkill.
+        // DamageInstances), no caster needed. A non-fixed damaging skill
+        // (Power/FlatAmount scaled off Attack) has no authored type of its
+        // own -- it rides the CASTER's own attackType at cast time, the
+        // identical resolve ScalingLabelForSkill just above already needs a
+        // session+actor for, so this reads it the same way rather than
+        // inventing a second answer to "what element is this cast".
+        public static string DamageTypeLabel(FightSession session, CombatantState actor, ResolvedSkill skill)
+        {
+            if (!skill.IsDamaging) return "";
+
+            if (skill.HasFixedDamage)
+            {
+                var types = skill.DamageInstances.Select(i => i.type).Distinct();
+                return string.Join("/", types);
+            }
+
+            if (session == null || actor == null) return "";
+            var castType = session.ActorAttackType(actor) ?? DamageType.Physical;
+            return castType.ToString();
         }
 
         // Which ability score this skill's damage actually rides, for the

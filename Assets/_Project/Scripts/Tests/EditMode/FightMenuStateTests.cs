@@ -585,6 +585,75 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual("-", panel.Stats[4].Value);
         }
 
+        // ---- DamageType: the skill model exposes it, FightHudModel resolves it --
+
+        [Test]
+        public void ADamagingSkillWithNoAuthoredPackets_NamesTheCastersAttackType()
+        {
+            // Fight()'s kit passes attackType: null (see the helper above),
+            // so ActorAttackType(actor) falls through to Physical -- the
+            // same fallback ScalingLabelForSkill already relies on for this
+            // exact fixture shape.
+            var skill = Skill("a", "Alpha");
+            var (session, hero) = Fight(skill);
+
+            var panel = FightHudModel.DetailForSkill(session, hero, skill);
+
+            Assert.AreEqual("Physical", panel.DamageType);
+        }
+
+        [Test]
+        public void ADamagingSkillWithNoAuthoredPackets_NamesWhicheverElementTheCastersKitDeclares()
+        {
+            var skill = Skill("a", "Alpha");
+            var hero = new CombatantState("Hero", true, 200, 30, 20, 10);
+            var foe = new CombatantState("Foe", false, 1000, 10, 5, 1);
+            var encounter = new CombatEncounter(new[] { hero }, new[] { foe });
+            var kit = new PlayerKit("hero", CharacterRole.Tank, new[] { skill }, null, DamageType.Fire);
+            var session = new FightSession(encounter, new List<PlayerKit> { kit }, null, new SeededRandom(1));
+
+            var panel = FightHudModel.DetailForSkill(session, hero, skill);
+
+            Assert.AreEqual("Fire", panel.DamageType);
+        }
+
+        [Test]
+        public void AFixedDamageSkill_NamesItsOwnAuthoredPacketType_RegardlessOfTheCastersKit()
+        {
+            var skill = Skill("bolt", "Bolt", packets: new[] { new DamageInstance(DamageType.Arcane, 20) });
+            var (session, hero) = Fight(skill);
+
+            var panel = FightHudModel.DetailForSkill(session, hero, skill);
+
+            Assert.AreEqual("Arcane", panel.DamageType);
+        }
+
+        [Test]
+        public void AFixedDamageSkillWithTwoDistinctPacketTypes_NamesBoth()
+        {
+            var skill = Skill("frostflare", "Frostflare", packets: new[]
+            {
+                new DamageInstance(DamageType.Fire, 10),
+                new DamageInstance(DamageType.Ice, 7),
+            });
+            var (session, hero) = Fight(skill);
+
+            var panel = FightHudModel.DetailForSkill(session, hero, skill);
+
+            Assert.AreEqual("Fire/Ice", panel.DamageType);
+        }
+
+        [Test]
+        public void ANonDamagingSkill_NamesNoDamageTypeAtAll()
+        {
+            var heal = Skill("h", "Mend", effect: SkillEffect.HealSelf, power: 5);
+            var (session, hero) = Fight(heal);
+
+            var panel = FightHudModel.DetailForSkill(session, hero, heal);
+
+            Assert.AreEqual("", panel.DamageType);
+        }
+
         [Test]
         public void TheStandingCountIgnoresTheFallen()
         {
