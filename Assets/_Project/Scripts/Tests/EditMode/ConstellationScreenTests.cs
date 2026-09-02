@@ -142,13 +142,45 @@ namespace PrincesPalace.Domain.Tests
             // If the labels were siblings rather than children, the column
             // could be moved or hidden and leave its own text over the sky --
             // the same class of bug the plate had, in the other direction.
+            //
+            // Walked (not panel.Children directly) because the panel is now a
+            // Container wrapper -- BuildFrameHolder's shape puts the frame art
+            // and TalentPanelContent as its two children, and the labels below
+            // are TalentPanelContent's children, one level further down.
             var panel = Walk(TalentScreen.Build().Root).First(n => n.Name == "TalentPanelColumn");
-            var names = panel.Children.Select(c => c.Name).ToList();
+            var names = Walk(panel).Select(c => c.Name).ToList();
 
             CollectionAssert.Contains(names, "TalentDetailName");
             CollectionAssert.Contains(names, "TalentDetailBody");
             CollectionAssert.Contains(names, "TalentDetailKicker");
             CollectionAssert.Contains(names, "TalentDetailRefusal");
+        }
+
+        // ---- the Violet 9:16 container ---------------------------------------
+
+        [Test]
+        public void ThePanelIsAVioletNineBySixteenContainer()
+        {
+            var panel = Walk(TalentScreen.Build().Root).First(n => n.Name == "TalentPanelColumn");
+
+            Assert.IsFalse(panel.Decor, "the wrapper must stay non-Decor, or content beneath it audits clean against itself");
+            var frame = panel.Children.Single(c => c.Kind == UiNodeKind.Sprite);
+            Assert.AreEqual("UI/Buttons/Processed/container_violet_9x16.png", frame.SpriteKey);
+            Assert.IsTrue(frame.Decor);
+        }
+
+        [Test]
+        public void ThePanelContentSitsInsideTheMeasuredInset()
+        {
+            var panel = Walk(TalentScreen.Build().Root).First(n => n.Name == "TalentPanelColumn");
+            var content = panel.Children.Single(c => c.Name == "TalentPanelContent");
+            var inset = Ui.ContainerContentInset(ContainerRatio.NineBySixteen);
+
+            Assert.AreEqual(PlaceKind.Stretch, content.Place.Kind);
+            Assert.AreEqual(ConstellationLayout.PanelWidth * inset.Left, content.Place.Left, 0.01f);
+            Assert.AreEqual(ConstellationLayout.PanelWidth * inset.Right, content.Place.Right, 0.01f);
+            Assert.AreEqual(ConstellationLayout.PanelHeight * inset.Top, content.Place.Top, 0.01f);
+            Assert.AreEqual(ConstellationLayout.PanelHeight * inset.Bottom, content.Place.Bottom, 0.01f);
         }
 
         // The confirmation is the one thing on this screen that MUST start

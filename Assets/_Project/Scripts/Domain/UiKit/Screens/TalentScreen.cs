@@ -253,21 +253,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // column that is always there and says what to do with it is furniture.
         private UiNode BuildPanel()
         {
-            var parts = new List<UiNode>
-            {
-                Ui.Sprite("TalentPanelGround", "proc:card_ground",
-                        new UiVec(ConstellationLayout.PanelWidth, ConstellationLayout.PanelHeight),
-                        Place.At(0f, 0f))
-                    .Coloured("#0B0913F2")
-                    .AsDecor(),
+            // VIOLET, 9:16 CONTAINER ART -- replaces the flat "proc:card_ground"
+            // slab and its own 1px accent edge with the themed kit frame; the
+            // painted border is the only line separating the column from the
+            // sky now, so nothing else draws one. Content is added below via
+            // Ui.ContainerContent, which measures the kit's own inset and is
+            // what keeps every label off the border.
+            var frame = Ui.Container("TalentPanelColumn", ButtonTheme.Violet, ContainerRatio.NineBySixteen,
+                Place.At(ConstellationLayout.PanelCentreX, 0f),
+                new UiVec(ConstellationLayout.PanelWidth, ConstellationLayout.PanelHeight));
 
-                // The 1px accent edge down its left side: the only line
-                // separating the panel from the sky it sits over.
-                Ui.Solid("TalentPanelEdge", "#E7B25C4D",
-                        new UiVec(1f, ConstellationLayout.PanelHeight),
-                        Place.At(-ConstellationLayout.PanelWidth * 0.5f + 0.5f, 0f))
-                    .AsDecor(),
-            };
+            var parts = new List<UiNode>();
 
             // THE CHARACTER'S NAME HEADS THE COLUMN, and is a CHILD of it.
             //
@@ -412,12 +408,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             RespecButton = respec;
             parts.Add(respec);
 
-            var panel = Ui.Panel("TalentPanelColumn",
-                Place.At(ConstellationLayout.PanelCentreX, 0f),
-                UiSize.Fixed(ConstellationLayout.PanelWidth, ConstellationLayout.PanelHeight),
-                parts);
-            Panel = panel;
-            return panel;
+            Ui.ContainerContent(frame, ContainerRatio.NineBySixteen, "TalentPanelContent", parts.ToArray());
+            Panel = frame;
+            return frame;
         }
 
         // ---- the sky's own layers ------------------------------------------------

@@ -31,7 +31,15 @@ namespace PrincesPalace.Domain.UiKit
         public const float SkyHeight = 1080f;   // 900 authored
 
         // The detail panel, over the sky rather than beside it.
-        public const float PanelWidth = 456f;   // 380 authored at x 1220
+        //
+        // WIDTH IS DERIVED, NOT AUTHORED. It used to be the handoff's 380 at
+        // x1.2 (456), which the Violet 9:16 container kit refuses by 3.5% --
+        // ContainerArt measured that ratio's PNGs at aspect 0.4083, and 456
+        // against a 1080 height is 0.4222. PanelHeight is unchanged (still the
+        // full sky height), so the exact fit comes from narrowing the width
+        // to match rather than cropping the panel's height -- the right edge
+        // stays anchored to the canvas edge either way, see PanelCentreX.
+        public const float PanelWidth = PanelHeight * ContainerArt.ContainerAspect9x16; // 440.96, was 456 (3.5% off)
         public static float PanelCentreX => UiFrames.Reference.X * 0.5f - PanelWidth * 0.5f;
 
         // Where slot 0 sits, in this project's own frame: the handoff's
@@ -77,13 +85,28 @@ namespace PrincesPalace.Domain.UiKit
         // canvas and the panel covers its right-hand end -- which is why the
         // tree's origin is the sky STAGE's centre and not the screen's.
         public const float PanelHeight = 1080f;
-        public const float PanelPad = 34f;         // 28 authored
+
+        // Matches the Violet 9:16 container's own measured content inset
+        // (ContainerArt.Inset, left/right 0.08 of the frame's width) rather
+        // than the handoff's 28-authored pad, so a label can never sit under
+        // the painted border -- see Ui.ContainerContent, which is what
+        // actually places content at this margin now.
+        public const float PanelPad = PanelWidth * 0.08f;
 
         public static float PanelInnerWidth => PanelWidth - PanelPad * 2f;
 
         // The rows, from the panel's own centre. Authored sizes x1.2 come from
         // the handoff's type table; these are where the boxes sit.
-        public const float PanelHeaderY = 486f;
+        //
+        // HEADER 472, NOT 486, AND RESPEC -468, NOT -480. The container's own
+        // top/bottom inset (0.04 of 1080 = 43.2px each side) is tighter than
+        // the panel's old edge -- at 486 the header's 44-tall box topped out
+        // at 508, past the 496.8 the inset allows, and at -480 the respec
+        // button's bottom cleared -496.8 by the same margin. Both nudged in
+        // ~12-14px, the minimum that clears the inset with the same ~3-5px
+        // margin the audit already runs at everywhere else; nothing between
+        // them moved.
+        public const float PanelHeaderY = 472f;   // was 486, 9x16 container's top inset
         public const float PanelPathY = 430f;
         public const float PanelNameY = 322f;
         public const float PanelKickerY = 244f;
@@ -93,7 +116,7 @@ namespace PrincesPalace.Domain.UiKit
         public const float PanelRefusalY = -132f;
         public const float PanelActionY = -320f;
         public const float PanelMeterY = -420f;
-        public const float PanelRespecY = -480f;
+        public const float PanelRespecY = -468f;  // was -480, 9x16 container's bottom inset
 
         public const float PanelActionWidth = 320f;
         public const float PanelActionHeight = 72f;
