@@ -130,12 +130,24 @@ namespace PrincesPalace.PlayModeTests
         // would be asserting the exact bug this phase exists to remove.
         //
         // Proven instead by COMPARISON: the IDENTICAL real content (item,
-        // tier, enemy, seed) fought over the same number of rounds twice,
-        // once with swift equipped and once with no modifier at all -- if
-        // the content -> roll -> equip -> combat chain is genuinely wiring
-        // a scaled dodge rating into real combat, the swift-wearing hero
+        // tier, enemy) fought over the same number of rounds twice, once
+        // with swift equipped and once with no modifier at all -- if the
+        // content -> roll -> equip -> combat chain is genuinely wiring a
+        // scaled dodge rating into real combat, the swift-wearing hero
         // must take substantially less cumulative damage than the
         // identical fight with nothing granting it any dodge at all.
+        //
+        // SUMMED ACROSS SEVERAL SEEDS, not one. A single 40-round seed is a
+        // small enough sample that a probabilistic dodge (halved from the
+        // affix-power-down pass: base DodgeRating 12 -> 6, which at this
+        // item's own tier/RiftTier still curves to a real ~53% dodge chance
+        // -- see CombatMath.DodgePercentFrom, not negligible) can tie or
+        // even lose to the no-dodge control by chance alone on any ONE
+        // seed; SeededRandom(11) did exactly that after the halving. Eight
+        // independent seeds, summed, is what actually distinguishes "the
+        // mechanism is genuinely wired in" from "this one draw happened to
+        // run cold" -- the claim under test is about the WIRING, not about
+        // any single roll of it.
         [Test]
         public void SwiftModifier_OnAHighTierItem_MeaningfullyReducesRealDamageTaken_InARealFight()
         {
@@ -145,7 +157,7 @@ namespace PrincesPalace.PlayModeTests
                 .FirstOrDefault();
             Assert.IsNotNull(item, "fixture: content has at least one equippable item");
 
-            int TotalDamageTakenOverRounds(List<string> modifierIds, int rounds)
+            int TotalDamageTakenOverRounds(List<string> modifierIds, int rounds, ulong seed)
             {
                 var definition = ContentDatabase.Characters.FirstOrDefault();
                 var character = new Character(definition.id);
@@ -156,7 +168,7 @@ namespace PrincesPalace.PlayModeTests
                 var built = FightEncounterAdapter.Build(
                     new List<string> { character.definitionId },
                     ContentDatabase.Enemies.Take(1).Select(e => e.id).ToList(),
-                    new SeededRandom(11),
+                    new SeededRandom(seed),
                     partyCharacters: new List<Character> { character });
                 Assert.IsNotNull(built, "fixture: a real fight must build");
 
@@ -180,13 +192,20 @@ namespace PrincesPalace.PlayModeTests
             }
 
             const int rounds = 40;
-            int withSwift = TotalDamageTakenOverRounds(new List<string> { "swift" }, rounds);
-            int withoutSwift = TotalDamageTakenOverRounds(new List<string>(), rounds);
+            ulong[] seeds = { 11, 12, 13, 14, 15, 16, 17, 18 };
+
+            int withSwift = 0;
+            int withoutSwift = 0;
+            foreach (ulong seed in seeds)
+            {
+                withSwift += TotalDamageTakenOverRounds(new List<string> { "swift" }, rounds, seed);
+                withoutSwift += TotalDamageTakenOverRounds(new List<string>(), rounds, seed);
+            }
 
             Assert.Less(withSwift, withoutSwift,
-                "the real swift-equipped hero must take LESS cumulative damage over the same number of rounds " +
-                "than the identical fight with no dodge-granting modifier equipped -- if not, dodge is not " +
-                "actually gating this real content's combat");
+                "the real swift-equipped hero must take LESS cumulative damage, summed over several seeds, than " +
+                "the identical fights with no dodge-granting modifier equipped -- if not, dodge is not actually " +
+                "gating this real content's combat");
         }
     }
 }

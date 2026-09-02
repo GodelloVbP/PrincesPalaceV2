@@ -38,7 +38,11 @@ $Areas = @{
     # RigRawSpriteTests, and whatever Domain/Rig sampler/timing tests Phase 5
     # adds) -- combat because the fight stage is the only thing that loads a
     # rig, same reasoning as the frame-sheet stance tests already here.
-    combat  = "Fight|Wool|Spell|Combat|Enemy|Party|Stage|Boss|Turn|Skill|Damage|Defeat|Teardown|BreakShield|Status|Signature|Ward|Gift|Empower|Cooldown|Relic|Balance|Modifier|Rig|Bot"
+    # 'Wisdom' for WisdomManaRegenTests (the WIS-derived Mana Regen pass) --
+    # a real-fight PlayMode test over CombatantState.ManaRegen and the
+    # per-turn regen tick, the same subject FightSession.Riders' own regen
+    # rider lives in, not a content/stat-derivation subject on its own.
+    combat  = "Fight|Wool|Spell|Combat|Enemy|Party|Stage|Boss|Turn|Skill|Damage|Defeat|Teardown|BreakShield|Status|Signature|Ward|Gift|Empower|Cooldown|Relic|Balance|Modifier|Rig|Bot|Wisdom"
     hub     = "Hub|Talent|Principality|CharacterSheet|SheetStat|Store|Constellation|Glossary"
     # 'ModifierTable' explicitly, alongside the bare 'Modifier' already
     # matching combat above -- ModifierTableTests (Phase A3) covers the
