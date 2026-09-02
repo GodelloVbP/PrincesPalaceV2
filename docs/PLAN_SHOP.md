@@ -86,77 +86,99 @@ already falls through to `Refresh()`, so a new value that is not handled would
 silently clear-and-redraw, which is the wrong failure. Handle it explicitly in
 both.
 
-### F4. There is no "standard spell loadout". There is one auto-scaling spell per level, and deleting it kills Intelligence
+### F4. There are two different things called "spell", and only one of them is what the author means
 
-This is the finding that decides the whole spell-book design, and the brief's
-framing hides it.
+**Revised 2026-09-02 against author decision 1.** The original text below
+treated `spells.json`'s auto-scaling ladder as *the* spell system and planned
+to delete it. Reading the author's own example — "the mud blast and frost
+flare etc." — against `Assets/_Project/ContentData/skills.json` shows that is
+the wrong target. `mud_burst`, `static_fleece`, `frost_flare`, `lightning_bolt`
+and `golden_fleece` are ordinary `characterId: "sheep"` entries in
+**`skills.json`**, each with its own `unlockLevel` (3/4/5/7/8) and its own
+`manaCost` (8/6/7/11/12). They are not rows of `spells.json`. `spells.json` is
+a *different* system: a level-keyed curve (`Spark`…`Ascendance`) that drives
+the automatic, nameless "Skill" action every character gets regardless of what
+it has learned (`FightController.SpellTierFor` in the old readme's own words).
 
-`ContentData/spells.json` is **not a list of spells**. Its own `_readme` says:
-"The Skill power/cost curve, one row per character level. Every character's
-Skill action automatically uses whichever tier matches their current level —
-there's no separate spell-picking UI." Nine rows, `Spark` (level 1, 10 MP,
-×1.5) to `Ascendance` (level 9, 28 MP, ×4.2), each with a `scalesWith` line
-like `intelligence S` / `wisdom C`.
+Two systems, one word, easy to conflate:
 
-It reaches a fight like this: `ContentDatabase.GetSpellTierForLevel`
-(`Core/Content/ContentDatabase.cs:362`, and the score-aware overload at `:389`)
-→ `FightEncounterAdapter.TierAtLevel` / `SpellTierFor`
-(`Core/FightEncounterAdapter.cs:628-635`) → `PlayerKit.BasicSpell`
-(`Domain/Combat/Session/CombatantKit.cs:42-58`) → an appended submenu row
-(`Domain/Combat/Session/FightHudModel.cs:145-159`).
-
-**Every reference that removing it touches:**
-
-| File | Lines | What |
+| | `spells.json` → `PlayerKit.BasicSpell` | `skills.json` entries with `manaCost > 0` |
 |---|---|---|
-| `Core/FightEncounterAdapter.cs` | `:582`, `:621`, `:628-635` | both `KitFor` overloads, `TierAtLevel`, `SpellTierFor` |
-| `Domain/Combat/Session/CombatantKit.cs` | `:42-43`, `:49`, `:58` | the field and the ctor parameter |
-| `Domain/Combat/Session/FightSession.Skills.cs` | `:852`, `:854`, `:856-857`, `:866-869`, `:905`, `:907` | seven members: cost, name, afford, preview, multiplier |
-| `Domain/Combat/Session/FightHudModel.cs` | `:35`, `:46`, `:55`, `:93-95`, `:145-159` | `IsBasicSpell`, `BasicSpellRow`, `SkillRowCount`, the appended row |
-| `Core/FightController.Hud.cs` | `:894` | the detail panel's POWER stat |
-| `Domain/Bot/FightAction.cs` | `:15`, `:76`, `:114-122`, `:166` | the `BasicSpell` action kind |
-| `Domain/Bot/FightRunner.cs` | `:219`, `:228-229` | trace naming (`"Skill:" + BasicSpellNameFor`) |
-| `Domain/Bot/GreedyAggressivePolicy.cs` | `:45`, `:81`, `:94-95` | scoring |
-| `Domain/Bot/GreedyDefensivePolicy.cs` | `:149`, `:247-248` | scoring |
-| `Domain/Bot/Lookahead2Policy.cs` | `:27`, `:154-156` | scoring |
-| `Core/Content/ContentDatabase.Effective.cs` | `:569`, `:602`, `:658-675`, `:686` | **the scaling profile** — see below |
-| `Core/Content/ContentDatabase.Validation.cs` | `:440-472` | duplicate-level and must-have-level-1 checks |
-| `Core/Content/SpellTierDefinition.cs`, `Domain/Content/RawSpellTierEntry.cs`, `SpellTierEntryResolver.cs`, `ResolvedSpellTier.cs` | whole files | the content type |
-| `Editor/ContentBuilder.cs` | `:22`, `:48`, `:59`, `:435-462` | `BuildSpellTiers` |
-| `Data/Character.cs` | `:79` | a comment describing the mechanic |
-| tests | `BotPolicyTests.cs:34-35,115-116,253-254,365-366`, `ChilledStatusTests.cs:233`, and every other `new PlayerKit(...)` site | the ctor's default arg absorbs most, the four `basicSpell:` sites do not |
+| What it is | An automatic, nameless "Skill" action every character has from level 1 | Named, authored abilities (Mud Burst, Frost Flare, …) |
+| Gated by | Character level only, always on | `unlockLevel` today |
+| Reached via | `FightEncounterAdapter.TierAtLevel`/`SpellTierFor` → `PlayerKit.BasicSpell` → an appended submenu row | `ContentDatabase.AvailableSkillsFor` → `PlayerKit.Skills`, same as `shear`/`headbutt`/etc. |
+| What the author means by "the mud blast and frost flare" | Not this | **This** |
 
-**The load-bearing one is `ContentDatabase.Effective.cs:658-675`.** It reads the
-tier's `scaling` and puts it into `ScalingSet.SpellTier`
-(`Domain/Stats/ScalingSet.cs:21`), which is summed with the two weapon profiles
-at `:54` and `:60`. That is the *only* place a caster's Intelligence and Wisdom
-multiply a cast. Delete the tier without replacing that input and INT becomes a
-dead stat — quietly, with nothing failing.
+**Decision 1 removes the first row's gating and the appended-row plumbing —
+never the second row's underlying scaling — and it does not delete
+`spells.json`.** Here is why that distinction has teeth.
 
-**Therefore: a spell book must carry its own `ScalingProfile`.** This is not
-optional polish; it is the condition under which the deletion is safe. The
-existing `scalesWith` grades in `spells.json` are the migration source: fold
-them into the authored books.
+`mud_burst` and the other four use `scalingAxis: "Auto"` (or leave it
+unwritten, which is the same thing), which `ScalingAxes.For` resolves to the
+**Spell** axis for a Nature-typed caster (`Domain/Combat/SkillResolution.cs:106-110`).
+A Spell-axis skill's damage rides `actor.SkillScaling`
+(`SkillResolution.cs:110`), which is built once per fight from
+`ContentDatabase.Effective.cs`'s `EffectiveSkillScaling(character)`
+(`:640-675`): `tier.scaling` — the `intelligence`/`wisdom` grade off the
+**same `spells.json` ladder**, looked up by `character.level` — combined with
+whatever `spellScaling` the equipped weapons carry. **This is the only place a
+caster's Intelligence and Wisdom multiply any Spell-axis cast, named skill
+included**, and it is keyed to level, not to which named skill is being cast.
+Deleting `spells.json` — the original text's plan — would silence Intelligence
+for `mud_burst` too, which is exactly the failure mode the old F4 warned about,
+just aimed at the wrong file.
 
-### F5. A learned spell should be a `ResolvedSkill`, which removes the "spell submenu" from the build entirely
+**So `spells.json` / `SpellTierDefinition` / `ContentDatabase.GetSpellTierForLevel`
+/ `EffectiveSkillScaling` all stay, untouched, as the shared INT/WIS-by-level
+scaling curve every Spell-axis skill already rides.** What *does* go is the
+narrower BasicSpell layer built on top of it — the automatic, nameless action
+and its appended row:
 
-`ResolvedSkill` (`Domain/Content/ResolvedSkill.cs:15-80`) already carries every
-field a spell needs: `Effect`, `Targeting`, `ManaCost`, `ResourceCost`,
-`Power`, `FlatAmount`, `IgnoresDefense`, `DamageInstances`, `Vfx`,
-`AppliesStatus`, `Requirements`, `ScalingAxis`, `QueuePushSlots`,
-`CooldownTurns`, `PlayerSelectable`.
+| File | Lines | What | Disposition |
+|---|---|---|---|
+| `Core/FightEncounterAdapter.cs` | `:582`, `:621`, `:628-635` | both `KitFor` overloads' basic-spell lookup, `TierAtLevel`, `SpellTierFor` | removed |
+| `Domain/Combat/Session/CombatantKit.cs` | `:42-43`, `:49`, `:58` | the `BasicSpell` field and ctor parameter | removed |
+| `Domain/Combat/Session/FightSession.Skills.cs` | `:852`, `:854`, `:856-857`, `:866-869`, `:905`, `:907` | seven members: cost, name, afford, preview, multiplier | removed |
+| `Domain/Combat/Session/FightHudModel.cs` | `:35`, `:46`, `:55`, `:93-95`, `:145-159` | `IsBasicSpell`, `BasicSpellRow`, `SkillRowCount`, the appended row | removed |
+| `Core/FightController.Hud.cs` | `:894` | the detail panel's POWER stat | removed |
+| `Domain/Bot/FightAction.cs` | `:15`, `:76`, `:114-122`, `:166` | the `BasicSpell` action kind | removed |
+| `Domain/Bot/FightRunner.cs` | `:219`, `:228-229` | trace naming (`"Skill:" + BasicSpellNameFor`) | removed |
+| `Domain/Bot/GreedyAggressivePolicy.cs` | `:45`, `:81`, `:94-95` | scoring | removed |
+| `Domain/Bot/GreedyDefensivePolicy.cs` | `:149`, `:247-248` | scoring | removed |
+| `Domain/Bot/Lookahead2Policy.cs` | `:27`, `:154-156` | scoring | removed |
+| `Data/Character.cs` | `:79` | a comment describing the mechanic | rewritten |
+| tests | `BotPolicyTests.cs:34-35,115-116,253-254,365-366`, `ChilledStatusTests.cs:233`, and every other `new PlayerKit(...)` site | the ctor's default arg absorbs most, the four `basicSpell:` sites do not | updated |
+| `Core/Content/ContentDatabase.Effective.cs` | `:569`, `:602`, `:640-675`, `:686` | `EffectiveSkillScaling`, `EffectiveWeaponScaling`, `EffectiveSkillDisplayName`, `GetSpellTierForLevel` | **kept, unmodified** — this is the scaling curve, not the appended row |
+| `Core/Content/ContentDatabase.Validation.cs` | `:440-472` | duplicate-level and must-have-level-1 checks on `spells.json` | **kept** — the ladder is still authored content that needs the same checks |
+| `Core/Content/SpellTierDefinition.cs`, `Domain/Content/RawSpellTierEntry.cs`, `SpellTierEntryResolver.cs`, `ResolvedSpellTier.cs` | whole files | the content type | **kept** — still resolves `spells.json` for `EffectiveSkillScaling` to read |
+| `Editor/ContentBuilder.cs` | `:22`, `:48`, `:59`, `:435-462` | `BuildSpellTiers` | **kept** |
+
+No `ScalingProfile` needs inventing for a book. A book teaches an existing
+`SkillDefinition`, and that definition's own `scalingAxis` already routes its
+damage through the untouched ladder above — the same as `shear` or `headbutt`
+do today. §1a spells out the consequence for content shape.
+
+### F5. A learned spell is already a `SkillDefinition` — resolving it is not new work, it is the existing skill pipeline with one more unlock route
+
+Under decision 1 (F4) a "spell" that gets learned is one of the five existing
+`skills.json` entries. `ResolvedSkill` (`Domain/Content/ResolvedSkill.cs:15-80`)
+already carries every field it needs, and `FightEncounterAdapter.Resolve`
+(`:651-670`) already converts a `SkillDefinition` to one — there is nothing to
+build here, only a fourth unlock route to add.
 
 `PlayerKit.Skills` (`CombatantKit.cs:35`) is already the list the fight's Skill
 submenu is built from — `FightHudModel.SkillRows`
 (`FightHudModel.cs:118-160`) iterates `session.SkillOptionsFor(actor)`,
 handles affordability, cooldown labels and ability-requirement filtering, and
-then appends the basic-spell row at the end.
+(today) then appends the basic-spell row at the end.
 
-So the whole of the fight-side work is: **put learned books into
-`PlayerKit.Skills`, and stop appending the extra row.** No new submenu, no new
-dispatch, no new targeting. `FightHudModel.BasicSpellRow`/`SkillRowCount`
-(`:93-95`) exist precisely so the row index and the dispatcher cannot disagree
-about which row is the basic spell; both disappear with it.
+So the whole of the fight-side work is: **teach `ContentDatabase.AvailableSkillsFor`
+a fourth "how is this unlocked" route (§1a) so a learned skill flows into
+`PlayerKit.Skills` exactly the way `unlockLevel`, `unlockedSkillIds` and talent
+grants already do, and stop appending the basic-spell row (F4).** No new
+submenu, no new dispatch, no new targeting. `FightHudModel.BasicSpellRow`/
+`SkillRowCount` (`:93-95`) exist precisely so the row index and the dispatcher
+cannot disagree about which row is the basic spell; both disappear with it.
 
 The brief's "the fight's spell submenu" is therefore already built. Do not
 build a second one.
@@ -283,38 +305,93 @@ nests in.
 
 ## 1. The spell-book system
 
-### 1a. Content: a new type, not an item kind
+**Revised 2026-09-02 against author decision 1** — "spells can be learned from
+the books, so the mud blast and frost flare etc." A book teaches an *existing*
+authored spell: one of the five `characterId: "sheep"` entries in
+`skills.json` that cost mana — `mud_burst`, `static_fleece`, `frost_flare`,
+`lightning_bolt`, `golden_fleece` — and any future entry authored the same way.
+This whole section is rewritten from the original text, which read "the
+standard loadout disappears" as pointing at `spells.json`'s auto-scaling
+ladder (F4); it does not. `spells.json` stays exactly as it is.
 
-**Decision: a new content type `spellbooks.json` → `SpellBookDefinition`.** Not
-an `ItemKind`, and not a reuse of `SkillDefinition`.
+### 1a. Content: option (a) — no new content type, a flag on the existing skill
 
-Reasons, in order of weight:
+Two shapes were on the table:
 
-1. **A book is not a possession.** It is consumed on learning and never enters
-   the bag. `ItemKind` (`Core/Content/ItemEffect.cs`) values are Consumable /
-   Weapon / Equipment, and every one of them is a thing that sits in
-   `stockpiledItems` with a count. A book with `count` is a lie the sell panel
-   would have to be taught to skip.
-2. **A book is not a character's authored kit.** `skills.json` entries carry a
-   `characterId` and an `unlockLevel` (`ResolvedSkill.cs:20-21`) — they are
-   *whose* and *when*. A book is neither: any character can learn any book, at
-   any level, and only within one run.
-3. But a book **resolves into** a `ResolvedSkill` (F5), so the definition is
-   `ResolvedSkill`'s fields minus `CharacterId`/`UnlockLevel`, plus a price
-   tier and a `ScalingProfile` (F4).
+**(a) No new content type.** A book is a reference to a skill id. Drop/sell it
+as `{skillId}`. Add `bookOnly: true` to the skill entry, replacing its
+`unlockLevel` as the gate: `bookOnly` skills are never reached by levelling,
+only by being learned. **Chosen.**
 
-**Ordering, per CLAUDE.md gotcha 4.** `ContentDatabase.LoadOrdered<T>` is
-constrained on `IOrderedContent` and a lint refuses `Resources.LoadAll`
-anywhere else. `SpellBookDefinition : ScriptableObject, IOrderedContent` with
-`sortOrder` assigned from authored file order, exactly as
-`SpellTierDefinition.cs:11` and `ItemSetEntryResolver` already do. It does not
-build otherwise.
+**(b) A thin `spellbooks.json`** with `{id, skillId, tier, price}` rows,
+carrying pricing/rarity metadata a skill entry shouldn't have to.
 
-Seed the file by migrating the nine `spells.json` tiers into nine books —
-`Spark` through `Ascendance`, keeping each row's `manaCost`,
-`powerMultiplier` and `scalesWith` — so the first version of the system ships
-with content that is already balanced, and `spells.json` is deleted in the same
-commit rather than left as a second source of truth.
+**(a), for three reasons:**
+
+1. **There is nothing left for a second content type to hold.** F4 (revised)
+   already established that the only per-cast field a "book" needs beyond what
+   `SkillDefinition` has is a price band, and F9/§2b already solve "price by
+   tier" generically for every other sold thing (gear, relics) as a pure
+   function of a tier number — a book needs the same one number, not a whole
+   asset. Reason 3 of the original (b)-shaped decision — "a book resolves into
+   a `ResolvedSkill` … plus a price tier and a `ScalingProfile`" — no longer
+   holds: F4 (revised) shows the scaling comes for free from the skill's own
+   `scalingAxis`, so there is no `ScalingProfile` to carry and nothing left
+   that only a new type could hold.
+2. **A skill entry already carries the "granted rather than earned" idiom.**
+   `unlockLevel: 999` plus a route into `AvailableSkillsFor` other than the
+   level check is the existing convention for Provoke, Headbutt, Black Ram
+   Mode and friends (`ContentDatabase.cs:230-240`, `TalentGrantedSkillsFor`).
+   `bookOnly: true` is the same idiom with a fourth route, not a new one.
+3. **(b)'s own case for a new type — "a book is not a possession, not a
+   character's authored kit" — is still true, but it is an argument against
+   putting a book in `stockpiledItems` or gating it by `characterId`+
+   `unlockLevel`, not an argument for a second ScriptableObject asset per
+   spell.** `bookOnly: true` on the existing `SkillDefinition` satisfies both
+   halves: it is excluded from the level ladder (not "a character's authored
+   kit" in the levelling sense) and it never touches the bag (the shop and the
+   drop roll reference it by `skillId`, never write it to `stockpiledItems`).
+
+**The five `skills.json` entries that change, exactly:**
+
+| id | today | becomes |
+|---|---|---|
+| `mud_burst` | `unlockLevel: 3` | `unlockLevel: 999`, `bookOnly: true` |
+| `static_fleece` | `unlockLevel: 4` | `unlockLevel: 999`, `bookOnly: true` |
+| `frost_flare` | `unlockLevel: 5` | `unlockLevel: 999`, `bookOnly: true` |
+| `lightning_bolt` | `unlockLevel: 7` | `unlockLevel: 999`, `bookOnly: true` |
+| `golden_fleece` | `unlockLevel: 8` | `unlockLevel: 999`, `bookOnly: true` |
+
+`999` matches the existing unreachable-level convention exactly (`provoke`,
+`headbutt`, `black_ram_mode`, `fleece_ward`, `shatter`, `wail`, the three
+`gift_*` skills are already authored this way) so `SkillEntryResolver`'s
+"unlockLevel must be 1 or higher" validation needs no change, and the sort
+`.OrderBy(unlockLevel).ThenBy(sortOrder)` in both `KitFor` and
+`AvailableSkillsFor` already puts a learned spell after the character's
+levelled kit with no extra work — "your kit, then what you learned this run"
+falls out of the existing sort key.
+
+**`ContentDatabase.AvailableSkillsFor` (`Core/Content/ContentDatabase.cs:213-252`)
+gains a fourth route**, beside `unlockLevel <= character.level`,
+`unlockedSkillIds.Contains`, and talent-granted:
+
+```
+|| (s.bookOnly && run.learnedSpells.Any(e => e.characterId == character.definitionId && e.skillId == s.id))
+```
+
+`FightEncounterAdapter.KitFor(CharacterDefinition, level)` — the no-run,
+definition-only overload used by direct scene loads and tests
+(`:549-582`) — has no `run` to ask, so `bookOnly` skills are correctly excluded
+there by construction (its existing `s.unlockLevel <= level` filter already
+rejects `999`); that overload's "learns nothing" behaviour needed no new code
+even before this change.
+
+`headbutt`, `shear`, `battering_ram`, `fleece_ward` (Ward) and `woolgathering`
+(Woolgathering) are ordinary skills today and stay ordinary skills — **none of
+the five is `bookOnly` and none is touched by this section.** Enemy skills
+(`boulder_slam`, `roar`, `grapple`, `shell_up`, `barrel_roll`, `trunk_slam`,
+`spore_cloud`, `bog_mud_burst`) are `playerSelectable: false` already and are
+likewise unaffected.
 
 ### 1b. Data: three slots per character, on the run
 
@@ -322,12 +399,14 @@ commit rather than left as a second source of truth.
 RunSnapshot:
     public List<LearnedSpellEntry> learnedSpells = new List<LearnedSpellEntry>();
 
-[Serializable] class LearnedSpellEntry { public string characterId; public string bookId; public int slot; }
+[Serializable] class LearnedSpellEntry { public string characterId; public string skillId; public int slot; }
 ```
 
-A flat list of `{characterId, bookId, slot}`, not a dictionary — same reason
-`RunHealthEntry` is a list entry (`Data/RunSnapshot.cs:9-14`): `JsonUtility`
-serializes fields and `Dictionary` is not one of the shapes it can write.
+`skillId`, not `bookId` — under decision 1 there is no separate book
+identity, only the id of the `bookOnly` skill being learned. A flat list of
+`{characterId, skillId, slot}`, not a dictionary — same reason `RunHealthEntry`
+is a list entry (`Data/RunSnapshot.cs:9-14`): `JsonUtility` serializes fields
+and `Dictionary` is not one of the shapes it can write.
 
 `MaxSpellSlots = 3`, a constant in Domain beside the entry type. Purely
 additive, so `SaveData.CurrentVersion` does not move — an older save's
@@ -338,100 +417,115 @@ Nothing carries over: `StartRun` replaces the whole snapshot
 (`Core/RunManager.cs:135`), which is the same mechanism that already resets
 `relicIds` and `offerRerollsUsed` (`RunSnapshot.cs:112`, `:129-131`).
 
-`SaveData.Reconcile` must drop entries whose `bookId` no longer resolves, the
-same tolerant treatment `stockpiledItems` gets at `Data/SaveData.cs:405` — but
-**dropping, not deleting silently into a void**: a learned book that vanished
-because content was edited under a live run should free its slot, which is
-what dropping the entry does.
+`SaveData.Reconcile` must drop entries whose `skillId` no longer resolves to a
+`bookOnly` skill, the same tolerant treatment `stockpiledItems` gets at
+`Data/SaveData.cs:405` — but **dropping, not deleting silently into a void**: a
+learned spell that vanished because content was edited under a live run should
+free its slot, which is what dropping the entry does.
 
-### 1c. How a learned book reaches the kit
+### 1c. How a learned spell reaches the kit
 
-One insertion point, in the place the adapter already builds the list:
+No separate insertion point is needed. §1a's fourth `AvailableSkillsFor` route
+*is* the mechanism — `FightEncounterAdapter.KitFor(Character, ...)`
+(`Core/FightEncounterAdapter.cs:610-621`) already builds `skills` from
+`ContentDatabase.AvailableSkillsFor(character)` and passes it straight to
+`new PlayerKit(...)`; nothing at that call site changes. This is smaller than
+the original plan, which had the adapter append a separately-resolved book
+list after the authored skills — that extra step is gone because a learned
+spell is not a separate kind of thing to resolve, it is a `SkillDefinition`
+that has become reachable.
 
-`FightEncounterAdapter.KitFor(Character, ...)`
-(`Core/FightEncounterAdapter.cs:610-621`) builds `skills` and passes it to
-`new PlayerKit(...)`. Append the run's learned books for that character id,
-resolved to `ResolvedSkill`, after the authored skills. The submenu order then
-reads "your kit, then what you learned this run", which is the same ordering
-the basic spell had (`FightHudModel.BasicSpellRow` put it last).
-
-The `basicSpell` argument at `:621` becomes `null` and then goes away with the
-parameter.
-
-The definition-only overload at `:549-582` is the no-save path (a direct scene
-load, a test); it learns nothing and passes an empty list. That is the
-graceful-degradation case and it already behaves correctly.
+The `basicSpell` argument at `:621` still becomes `null` and then goes away
+with the parameter — that part is F4 (revised), unrelated to how a learned
+spell reaches the kit.
 
 ### 1d. Learn / replace
 
 ```
-LearnBook(characterId, bookId):
+LearnSpell(characterId, skillId):
     entries = learnedSpells where characterId matches
     if entries.Count < 3     -> append at the lowest free slot index
     else                     -> caller must supply a slot to overwrite
 ```
 
 Two calls, not one: `CanLearn(characterId)` returns the free slot or -1, and
-`LearnBook(characterId, bookId, slot)` writes. The screen asks first, shows the
-replace picker when the answer is -1, and calls with the chosen slot. The bot
-policy answers the same question without a screen.
+`LearnSpell(characterId, skillId, slot)` writes. The screen asks first, shows
+the replace picker when the answer is -1, and calls with the chosen slot. The
+bot policy answers the same question without a screen.
 
-Refuse a duplicate: learning a book already in one of that character's three
+Refuse a duplicate: learning a spell already in one of that character's three
 slots is a no-op that returns false, and the shop card reads OWNED for that
 character. Not a hard error — content can change under a run — but not a silent
 success either.
 
 ### 1e. Drops
 
-Books drop from won fights, alongside the existing consumable roll.
+Spells drop from won fights, alongside the existing consumable roll.
 
 `VictoryRewards.RollConsumableDrops` (`Domain/Combat/Session/VictoryRewards.cs:76`)
 is the model: one roll per enemy, in roster order, returning `(enemy, itemId)`
 pairs rather than mutating anything, "which is what makes a seeded run
-reproduce its own loot". Add `RollSpellBookDrop` beside it with the same shape
-— pure, injected randomness, returns a book id or null.
+reproduce its own loot". Add `RollSpellDrop` beside it with the same shape —
+pure, injected randomness, drawing from `ContentDatabase.Skills` filtered to
+`bookOnly`, returning a skill id or null.
 
 Rate: **not** `ItemDropChance = 0.3f` (`VictoryRewards.cs:30`), which is
-per-enemy and would hand out several books a leg. A book is a third of a
+per-enemy and would hand out several spells a leg. A spell is a third of a
 character's whole loadout for the run. Start at one roll per *fight*, not per
-enemy, at `0.10` normal / `0.20` elite / `0.35` boss — roughly one book per leg,
-which fills three slots by the end of leg 3 and leaves the shop as the way to
-get them sooner or better. Put it in `VictoryRewards` as named constants so the
-next balance batch can move them without hunting.
+enemy, at `0.10` normal / `0.20` elite / `0.35` boss — roughly one spell per
+leg, which fills three slots by the end of leg 3 and leaves the shop as the way
+to get them sooner or better. Put it in `VictoryRewards` as named constants so
+the next balance batch can move them without hunting.
 
-Do **not** put books into `ItemOfferRoll` (`Core/ItemOfferRoll.cs`). Its
+Do **not** put spells into `ItemOfferRoll` (`Core/ItemOfferRoll.cs`). Its
 `Candidates()` is documented as equippables-only for a reason worth keeping:
 "a 'choose one of three' that can offer a health potion is not a choice, it is
-a tax on the one player who reads carefully" (`:30-35`). A book in the gear
-offer is that same tax with a different noun. A dropped book is an event of its
-own, shown after the offer.
+a tax on the one player who reads carefully" (`:30-35`). A spell in the gear
+offer is that same tax with a different noun. A dropped spell is an event of
+its own, shown after the offer.
 
-### 1f. A character with no spells
+### 1f. A character with no learned spells
 
-House style is graceful degradation, and the honest version here is that the
-Skill verb has nothing behind it for a level-1 character who has found nothing.
+House style is graceful degradation. Under F4 (revised), the honest version of
+this section is smaller than it was: the sheep is **never** without a Skill
+verb, because `shear` (`unlockLevel: 1`), `woolgathering` (`unlockLevel: 2`)
+and `battering_ram` (`unlockLevel: 6`) are ordinary, non-`bookOnly` skills that
+still unlock by level. A fresh, book-less sheep still has `shear` from turn
+one. **What actually disappears at run start is the automatic, nameless
+BasicSpell action** (F4) — "no free spell at all" means no free *named*
+spell beyond the authored kit above, not an empty Skill submenu.
 
-`FightHudModel.SkillRows` returns a list; today it can never be empty because
-the basic row is always appended (`FightHudModel.cs:145-159`). After the change
-it can be. Two things must hold:
+The general rule from the original plan still holds, for the case the sheep
+itself mostly avoids and any future character might not:
 
-1. The Skill verb is **shown and disabled**, not hidden, with the reason on it
-   ("NO SPELLS LEARNED"). The submenu's own rule already says unaffordable rows
-   are included and dimmed rather than removed, "the player should learn what
-   they have rather than watch the list change length"
-   (`FightHudModel.cs:100-103`) — a verb that vanishes is the same defect one
-   level up.
-2. Every bot policy that scores a `BasicSpell` action must tolerate an actor
-   with zero skills. `FightAction.cs:114-122` already guards on
-   `KitFor(actor)?.BasicSpell != null` before offering the action, so removing
-   the kind removes the guard's subject too — but `GreedyAggressivePolicy.cs:45`
-   and `GreedyDefensivePolicy.cs:149` filter action lists that could now be
-   attack-only. Pin it with a test: a kit with no skills produces a legal
-   action list and a policy picks from it.
+1. If a character's Skill submenu were ever genuinely empty, the Skill verb
+   must be **shown and disabled**, not hidden, with the reason on it ("NO
+   SPELLS LEARNED"). The submenu's own rule already says unaffordable rows are
+   included and dimmed rather than removed, "the player should learn what they
+   have rather than watch the list change length" (`FightHudModel.cs:100-103`)
+   — a verb that vanishes is the same defect one level up.
+2. Every bot policy that scored a `BasicSpell` action must tolerate an actor
+   whose `Skills` list happens to be empty. `FightAction.cs:114-122` already
+   guards on `KitFor(actor)?.BasicSpell != null` before offering that action;
+   removing the `BasicSpell` kind (F4) removes the guard's subject too — but
+   `GreedyAggressivePolicy.cs:45` and `GreedyDefensivePolicy.cs:149` filter
+   action lists that could now be attack-only for a kitless actor in principle.
+   Pin it with a test: a kit with no skills produces a legal action list and a
+   policy picks from it.
+
+**What the character sheet shows:** the 3-slot strip per character (`docs/handoffs/shop_v2/README.md`
+§3, "Row A") reads `learnedSpells` directly — `EMPTY` for an unfilled slot,
+the spell's display name for a filled one. It is unaffected by whether the
+character's ordinary Skill submenu happens to be empty; the two are different
+lists (`AvailableSkillsFor`'s full result vs. the run's `learnedSpells`).
 
 ---
 
 ## 2. The shop
+
+**Per stock roll: 3 spell cards, 4 item cards, 3 relic cards** (§2d). The
+designer README's card counts (`docs/handoffs/shop_v2/README.md` §3, Row A/B/C)
+match: 3 spell cards, 4 item cards, 3 relic cards.
 
 ### 2a. What a normal fight is actually worth — the price anchor
 
@@ -473,13 +567,27 @@ about 150 gold in leg 1 and about 185 in every leg after. Meanwhile
 `RarityTable.StepsPerTier = 8` (`Domain/Rewards/RarityTable.cs:40`) means the
 expected item tier climbs by one *every leg*.
 
-So "a normal fight's payout at that depth buys about one common item" and
-"higher tier costs more" cannot both hold across the whole run — if price is
-linear in tier and income is flat, purchasing power must fall. It should fall:
-gold mattering less as a run goes on is correct for the genre, and the shop
-stays a real decision early where the player is poorest. The rule that
-survives intact is the *local* one: **within a shop, the tier-matched item
-costs about one normal fight, and stepping up a tier costs visibly more.**
+**Revised 2026-09-02 against author decision 2** — "price should be a
+calculation based on tier and the + mod, regardless of floor." The formula in
+§2b already is: `BaseFor(tier)`, `PlusFactor(plus)` and `RiftFactor(riftTier)`
+take no depth or floor argument, and neither does `SpellBookPrice(tier)` or
+`RelicPrice(rarity)`. Price was never actually a function of depth in this
+plan — only **stock** is, through `RarityTable.FloorTier(step)` picking which
+tiers get offered. Those are two different rules and the original prose above
+blurred them by arguing from "purchasing power" as if it were a pricing
+decision still open to debate. It is not a decision: it is the plain
+arithmetic consequence of a tier-priced formula meeting flat-with-depth income
+(§2a's own numbers), stated here as an observation rather than a pushback
+paragraph —
+
+**A tier-matched item costs about one normal fight's payout in leg 1 and
+progressively more of one in later legs, purely because income per fight stops
+climbing around step 8-16 while the tier on offer keeps climbing every leg.**
+Nothing about the pricing formula needs to change to make that true, and
+nothing about it should change to make it false — a depth term in the price
+would double-count what `FloorTier` already does on the stock side. **Price is
+tier-and-plus-and-rift, full stop; stock-tier-by-depth is a separate, stock-only
+rule (§2c/§2d).**
 
 ### 2b. Pricing formulas
 
@@ -491,7 +599,7 @@ GearPrice              = round( BaseFor(tier) * PlusFactor * RiftFactor )
 
 ConsumablePrice        = ItemDefinition.cost               // authored, 15 today
 
-SpellBookPrice(tier)   = 45 + 25 * tier                    // book tier 1..5
+SpellBookPrice(tier)   = 45 + 25 * tier                    // spell tier 1..4, see below
 
 RelicPrice(rarity)     = { Common 60, Uncommon 110, Rare 190, UltraRare 300, Mythic 460 }
 
@@ -509,6 +617,26 @@ Relic prices are **flat, not depth-scaled**, deliberately: a relic bought at
 step 8 has thirty-two steps left to pay off and one bought at step 40 has
 nothing, so a flat price makes the early buy the good buy without a second
 curve to tune.
+
+**Spell price band, derived from today's `unlockLevel`.** `skills.json` has no
+`tier` field for a skill, so `SpellBookPrice` needs one manufactured from the
+one number that already exists per spell — its (former, pre-`bookOnly`)
+`unlockLevel`. This is a first guess for the balance batch to move, not a
+measured curve:
+
+| skillId | unlockLevel (pre-decision-1) | book tier | price |
+|---|---|---|---|
+| `mud_burst` | 3 | 1 | 70 |
+| `static_fleece` | 4 | 2 | 95 |
+| `frost_flare` | 5 | 2 | 95 |
+| `lightning_bolt` | 7 | 3 | 120 |
+| `golden_fleece` | 8 | 4 | 145 |
+
+Roughly two unlock-levels per book tier, `golden_fleece` pinned at the top
+band since it is the sheep's ultimate (`spendsAllResource: true`,
+`ignoresDefense: true`, a 5-turn cooldown). The mapping lives as a lookup, not
+a formula, in `ShopPricing.cs` — five entries is not enough data to fit a
+curve to, and a lookup is honest about that.
 
 ### 2c. The price table, against measured income
 
@@ -529,19 +657,26 @@ Three depths. Shop stock is tier-banded to the depth via
 | Rare: tier-matched, +2, 1 affix | **61** | **81** | **102** |
 | Very rare: +3, 2 affixes | 82 | 109 | 136 |
 | Health potion | 15 | 15 | 15 |
-| Spell book, tier 1 | 70 | 70 | 70 |
-| Spell book, tier 3 | 120 | 120 | 120 |
-| Spell book, tier 5 | 170 | 170 | 170 |
+| Spell, `mud_burst` (T1) | 70 | 70 | 70 |
+| Spell, `static_fleece`/`frost_flare` (T2) | 95 | 95 | 95 |
+| Spell, `lightning_bolt` (T3) | 120 | 120 | 120 |
+| Spell, `golden_fleece` (T4) | 145 | 145 | 145 |
 | Relic, Common | 60 | 60 | 60 |
 | Relic, Rare | 190 | 190 | 190 |
 | Relic, Mythic | 460 | 460 | 460 |
 | Reroll 1 / 2 / 3 | 25 / 50 / 100 | 25 / 50 / 100 | 25 / 50 / 100 |
 
-Reading the anchors: at step 8 a tier-matched common is **24** against a
-16-19 fight and a **61** rare against a 68-76 boss — both land. At step 40 the
-common is 40 against a 24 fight, so purchasing power has fallen to ~0.6 fights
-per item, which is the taper §2a argues for. A Mythic relic at 460 is about
-2.5 legs of saving: a run-defining purchase, reachable but never casual.
+Every row here is priced by tier/plus/rift alone (§2a, revised) — the three
+columns differ only because a deeper shop *stocks* a higher tier, never
+because depth enters the formula. Reading the anchors: at step 8 a
+tier-matched common is **24** against a 16-19 fight and a **61** rare against a
+68-76 boss — both land. At step 40 the tier-matched common is 40 against a
+22-24 fight, so it costs somewhat more than one fight's payout — an observed
+consequence of flat income meeting a climbing tier band, not a lever this plan
+pulls. A Mythic relic at 460 is about 2.5 legs of saving: a run-defining
+purchase, reachable but never casual. Spell prices are flat across all three
+columns by construction (§2b) — a spell is worth the same whenever it is
+bought.
 
 Sell prices at 30%: a tier-matched common sells for 7 / 10 / 12; a +3
 two-affix piece for 25 / 33 / 41. Selling the whole bag never funds a relic,
@@ -572,7 +707,7 @@ What it rolls, in one pass:
 
 | Section | Count | Source |
 |---|---|---|
-| Spell books | 3 | weighted over `ContentDatabase.SpellBooks`, excluding books already in every fielded character's slots |
+| Spells | 3 | weighted over `ContentDatabase.Skills` filtered to `bookOnly`, excluding a spell already learned by every fielded character (§1a/§4 "Spell card — Owned by everyone") |
 | Items | 4 | `ItemOfferRoll.Candidates()` through `ItemOfferTable.Choose(candidates, FloorTier(step), MaxTier, next, 4)`, then `RarityTable.RollPlus` + `ModifierTable.RollRiftTier`/`PickModifiers` per item — the identical three-axis roll `ItemOfferRoll.Roll` does at `Core/ItemOfferRoll.cs:154-168`, with `count` 4 |
 | Relics | 3 | `RelicPool.DraftWeighted(available, next, 3)` with `available` = `RelicPool.Available` minus `run.relicIds`, exactly as `RunOrchestrator.RelicDraftOffer:84-86` |
 | Sell | — | not rolled; it is `save.stockpiledItems` |
@@ -590,7 +725,7 @@ using Elite or Boss would make browsing better than winning.
 Stock state on `RunSnapshot`, purely additive:
 
 ```
-public List<ShopStockEntry> shopStock = new List<ShopStockEntry>();   // itemId/bookId/relicId, kind, plus, riftTier, modifierIds, sold
+public List<ShopStockEntry> shopStock = new List<ShopStockEntry>();   // itemId/skillId/relicId, kind, plus, riftTier, modifierIds, sold
 public int shopRerollsUsed;                                           // this visit; cleared on leave
 public int shopNodeId = -1;                                           // which node the stock belongs to
 ```
@@ -640,9 +775,9 @@ the bot is the second caller and a second copy is a second rulebook.
 ShopChoice ChooseShop(ShopView shop, RunView view, SeededRandom rng);
 ```
 
-returning one of buy-item(i) / buy-book(i, replaceSlot) / buy-relic(i) /
-sell(bagIndex) / reroll / leave, called in a loop until it says leave or the
-purse refuses. `RunView` already carries `Gold` (`Domain/Bot/RunView.cs:17`),
+returning one of buy-item(i) / buy-spell(i, characterId, replaceSlot) /
+buy-relic(i) / sell(bagIndex) / reroll / leave, called in a loop until it says
+leave or the purse refuses. `RunView` already carries `Gold` (`Domain/Bot/RunView.cs:17`),
 so the policy can already see what it can afford. Cap the loop — a policy that
 never says leave is a hang, and `BotRunDriver` has no timeout for it.
 
@@ -704,42 +839,50 @@ before each commit (~130s, `tools/run_tests_parallel.ps1`).
 ### Phase 0 — pin the basic spell before removing it (0.5d)
 
 - **Changes:** nothing in production. Characterization tests for the current
-  behaviour: a level-5 character's Skill row name/cost/power; the
-  `ScalingSet.SpellTier` contribution to a cast at INT 20 vs INT 10; a bot
-  policy's `BasicSpell` scoring.
+  behaviour: a level-5 character's Skill row name/cost/power for the automatic
+  BasicSpell action; the `ScalingSet.SpellTier` contribution to a cast at INT
+  20 vs INT 10 (both for BasicSpell and for `mud_burst`, since both ride the
+  same `EffectiveSkillScaling` curve — F4 revised); a bot policy's `BasicSpell`
+  scoring.
 - **Must not change:** the tests must fail if the behaviour changes, which is
   the point — write them so they pin literals, not recomputed formulas.
-- **How we know:** the three tests pass now, and each is proved non-vacuous by
+- **How we know:** the tests pass now, and each is proved non-vacuous by
   breaking the production value by hand and watching that one test fail.
 
-### Phase 1 — spell books replace the tier curve (2.5-3d)
+### Phase 1 — spells become book-only, BasicSpell removed (1.5-2d)
 
-- **Changes:** `spellbooks.json` + `SpellBookDefinition` (`IOrderedContent`) +
-  resolver + `ContentBuilder.BuildSpellBooks`; the nine `spells.json` tiers
-  migrated in with their `scalesWith` intact; `RunSnapshot.learnedSpells` +
-  `MaxSpellSlots`; `RunOrchestrator.LearnBook`/`CanLearn`; the adapter appends
-  learned books to `PlayerKit.Skills`; every reference in F4's table removed;
-  `spells.json`, `SpellTierDefinition` and the four `Domain/Content` spell-tier
-  files deleted.
-- **Must not change:** `ScalingSet`'s three-profile shape, and the fact that
-  Intelligence multiplies a cast. `ContentDatabase.Effective.cs:658-675` must
-  keep filling `ScalingSet.SpellTier` — from the learned book now, `None` when
-  nothing is learned.
-- **How we know:** Phase 0's scaling test, rewritten to learn a book with the
-  same grades, produces the same number. `ContentDatabaseTests`' canary gains a
-  spell-book entry (AUDIT #20, `AUDIT.md:363`, is the precedent for that being
-  required). A character with zero books produces a legal action list and a
-  playable Skill verb. Full suite green with scenes built.
+Smaller than the original estimate: no new content type, no `spells.json`
+deletion, no scaling migration (F4/§1a revised).
 
-### Phase 2 — books drop (0.5d)
+- **Changes:** `bookOnly: true` on the five `skills.json` entries, replacing
+  their `unlockLevel` with `999` (§1a's table); `AvailableSkillsFor`'s fourth
+  unlock route; `RunSnapshot.learnedSpells` + `MaxSpellSlots`;
+  `RunOrchestrator.LearnSpell`/`CanLearn`; every reference in F4 (revised)'s
+  "removed" column taken out (`PlayerKit.BasicSpell`, the appended
+  `FightHudModel` row, `FightAction.BasicSpell`, the three bot policies'
+  scoring, `FightEncounterAdapter.TierAtLevel`/`SpellTierFor`).
+- **Must not change:** `spells.json`, `SpellTierDefinition`,
+  `ContentDatabase.Effective.cs`'s `EffectiveSkillScaling`/
+  `GetSpellTierForLevel` (F4 revised — these are the shared scaling curve
+  every Spell-axis skill rides, `mud_burst` included, and are untouched by
+  this phase), and `ScalingSet`'s three-profile shape.
+- **How we know:** Phase 0's scaling test for `mud_burst` at INT 20 vs INT 10
+  still produces the same number, unchanged, because nothing it reads moved.
+  `ContentDatabaseTests`' canary gains a `bookOnly` skill and a
+  `learnedSpells` entry that unlocks it (AUDIT #20, `AUDIT.md:363`, is the
+  precedent for that being required). A character with zero learned spells
+  still has `shear` in its kit and a playable Skill verb (§1f). Full suite
+  green with scenes built.
 
-- **Changes:** `VictoryRewards.RollSpellBookDrop` + rate constants; the
+### Phase 2 — spells drop (0.5d)
+
+- **Changes:** `VictoryRewards.RollSpellDrop` + rate constants; the
   fight-settlement path offers the drop and the learn/replace answer routes
-  through `RunOrchestrator.LearnBook`.
+  through `RunOrchestrator.LearnSpell`.
 - **Must not change:** `ItemOfferRoll.Candidates()` stays equippables-only
   (`Core/ItemOfferRoll.cs:30-42`).
-- **How we know:** a seeded run drops the same books twice; a bot batch reports
-  median books learned per run, which should sit near 1 per leg.
+- **How we know:** a seeded run drops the same spells twice; a bot batch
+  reports median spells learned per run, which should sit near 1 per leg.
 
 ### Phase 3 — the shop room (2d)
 
@@ -778,7 +921,8 @@ before each commit (~130s, `tools/run_tests_parallel.ps1`).
   bought per run, books learned per run, and median depth (should rise for Mid
   and Late, or the shop is priced too high to matter).
 
-**Total: 8.5-9 days.** The spell books are 4 of them and they are the risk;
+**Total: 7.5-8 days.** (Reduced from the original 8.5-9 with Phase 1's scope
+cut — §1a.) The spell books are still the riskier half of the two systems;
 the shop screen is the part most likely to need a second design round.
 
 ---
@@ -792,11 +936,16 @@ is cheap to reverse.
    once, not per section. Price doubles per reroll within a visit (25 / 50 /
    100 / 200) and resets to 25 on leaving. Rerolls are unlimited while the
    player can pay, because the doubling is the limit.
-2. **Prices are anchored on the depth's own income**, which §2a shows cannot
-   hold uniformly — the tier-matched item costs about one normal fight in leg 1
-   and about 1.6 by leg 5. Taken deliberately; see §2a for the argument.
-3. **Spell books are priced by book tier**, flat with depth. A book is worth the
-   same whenever it is bought because it lasts the whole run either way.
+2. **Prices are a pure function of tier, plus and rift — never of depth or
+   floor** (author decision 2, §2a/§2b revised). Depth affects only which
+   tier a shop *stocks* (`RarityTable.FloorTier`, §2c/§2d); that a tier-matched
+   item costs closer to two fights by leg 5 than one is an observed
+   consequence of flat income meeting a climbing stock tier, not a knob this
+   formula turns.
+3. **Spell prices are banded by a book tier derived from the spell's
+   (pre-decision-1) `unlockLevel`** (§2b), flat with depth for the same reason
+   every other price is. A spell is worth the same whenever it is bought
+   because it lasts the whole run either way.
 4. **Buying a relic appends to `run.relicIds`** with no cap, per F8. There is no
    slot to fill and none to invent.
 5. **Sell is bag-only** (`save.stockpiledItems`); worn gear must be unequipped

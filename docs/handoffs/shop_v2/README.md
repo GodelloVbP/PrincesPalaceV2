@@ -15,11 +15,24 @@ store with UPGRADES/ITEMS columns; this screen is not a restyle of that one and
 should not inherit its two-column shape. It is also the first in-run sink for
 gold the game has ever had.
 
-The other half of what this screen sells is new: the automatic per-level spell
-that every character casts today **disappears**. Spells become books found
-during a run and learned into **3 slots per character, per run**, carried over
-into nothing. That is why the screen carries a spell-slot strip: a book
-purchase has to show what it would replace before it is bought.
+The other half of what this screen sells is new. Two things change together,
+revised 2026-09-02 against the author's own reading of "the standard loadout
+disappears":
+
+- The automatic, nameless "Skill" action every character casts today, purely
+  off level (`Spark`…`Ascendance`), **disappears** — no free spell at run
+  start beyond whatever the character's own kit already unlocks by level
+  (for the sheep: `shear`, `woolgathering`, `battering_ram` — none of them a
+  spell).
+- The named spells — Mud Burst, Static Fleece, Frost Flare, Lightning Bolt,
+  Golden Fleece — stop unlocking by character level and become **books found
+  during a run and learned into 3 slots per character, per run**, carried over
+  into nothing. A book teaches one of these existing spells; it does not add a
+  new one. That is why the screen carries a spell-slot strip: a book purchase
+  has to show what it would replace before it is bought.
+
+Ward, Woolgathering, Shear, Battering Ram and every enemy skill are ordinary
+skills, not spells, and none of them is touched by any of this.
 
 Build detail, formulas and the engine-side plan: `docs/PLAN_SHOP.md`.
 
