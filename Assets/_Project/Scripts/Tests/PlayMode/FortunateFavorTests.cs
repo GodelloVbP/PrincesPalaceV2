@@ -69,10 +69,10 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsTrue(ContentDatabase.ActiveLoadout(character).IsLive(item.equipSlot),
                 "fixture check: the item must be LIVE or ModifierEffects reads nothing");
 
-            // fortunate's authored base is 3; TierMultiplier(0) x RiftMultiplier(RiftForged) = 1.0 x 1.6 = 1.6.
-            // 3 x 1.6 = 4.8, away-from-zero rounded to 5.
+            // fortunate's authored base is 2 (halved from 3); TierMultiplier(0) x RiftMultiplier(RiftForged) = 1.0 x 1.6 = 1.6.
+            // 2 x 1.6 = 3.2, away-from-zero rounded to 3.
             int wearing = ItemOfferRoll.FavorOf(character, definition);
-            Assert.AreEqual(bare + 5, wearing,
+            Assert.AreEqual(bare + 3, wearing,
                 "a live-equipped Fortunate must add its scaled bonus straight into FavorOf");
         }
 
@@ -140,9 +140,9 @@ namespace PrincesPalace.PlayModeTests
             int riftForgedBonus = ContentDatabase.ModifierEffects(riftForged)
                 .Best(ModifierEffectType.FortunateFavorBonusFlat);
 
-            // base 3: Ordinary scale is exactly 1.0 (unscaled base survives), RiftForged is 3 x 1.6 = 4.8 -> 5.
-            Assert.AreEqual(3, ordinaryBonus, "tier 0, RiftTier Ordinary: scale is exactly 1.0");
-            Assert.AreEqual(5, riftForgedBonus, "3 x 1.6 = 4.8, away-from-zero rounded");
+            // base 2 (halved from 3): Ordinary scale is exactly 1.0 (unscaled base survives), RiftForged is 2 x 1.6 = 3.2 -> 3.
+            Assert.AreEqual(2, ordinaryBonus, "tier 0, RiftTier Ordinary: scale is exactly 1.0");
+            Assert.AreEqual(3, riftForgedBonus, "2 x 1.6 = 3.2, away-from-zero rounded");
             Assert.Greater(riftForgedBonus, ordinaryBonus, "a higher RiftTier must scale the bonus up");
         }
 

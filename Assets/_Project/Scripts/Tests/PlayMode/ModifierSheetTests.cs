@@ -94,16 +94,18 @@ namespace PrincesPalace.PlayModeTests
             var effects = ContentDatabase.ModifierEffects(character);
             Assert.IsFalse(effects.IsEmpty, "a Convergent roll with three real modifiers must produce real effects");
 
-            // Scale = 1.0 x 2.0 = 2.0.
+            // Scale = 1.0 x 2.0 = 2.0. Bases (10/8/8) are fiery/ironclad/
+            // vampiric's CURRENT authored magnitudes -- halved from 20/15/15
+            // in the affix-power-down pass; see modifiers.json's own entries.
             var fireOnHit = effects.All.Single(e =>
                 e.Type == ModifierEffectType.ElementalDamageOnHitPercent && e.Against == DamageType.Fire);
-            Assert.AreEqual(40, fireOnHit.Magnitude, "fiery: 20 x 2.0");
+            Assert.AreEqual(20, fireOnHit.Magnitude, "fiery: 10 x 2.0");
 
             var physicalResist = effects.All.Single(e =>
                 e.Type == ModifierEffectType.TypedResistanceFlat && e.Against == DamageType.Physical);
-            Assert.AreEqual(30, physicalResist.Magnitude, "ironclad: 15 x 2.0");
+            Assert.AreEqual(16, physicalResist.Magnitude, "ironclad: 8 x 2.0");
 
-            Assert.AreEqual(30, effects.Best(ModifierEffectType.LifestealPercent), "vampiric: 15 x 2.0");
+            Assert.AreEqual(16, effects.Best(ModifierEffectType.LifestealPercent), "vampiric: 8 x 2.0");
         }
 
         // POST-AFFIX-SPLIT: "stalwart" used to carry both
@@ -125,12 +127,13 @@ namespace PrincesPalace.PlayModeTests
             var effects = ContentDatabase.ModifierEffects(character);
             Assert.IsFalse(effects.IsEmpty, "a RiftTouched roll with two real modifiers must produce real effects");
 
-            // Scale = 1.0 x 1.3 = 1.3. 3 x 1.3 = 3.9, away-from-zero -> 4;
-            // 30 x 1.3 = 39.0 exactly.
-            Assert.AreEqual(4, effects.Best(ModifierEffectType.FlatPhysicalDamageReduction),
-                "stalwart: 3 x 1.3 = 3.9, rounded away from zero");
-            Assert.AreEqual(39, effects.Best(ModifierEffectType.BreakShieldDepletionResistPercent),
-                "bulwark: 30 x 1.3 = 39.0 exactly");
+            // Scale = 1.0 x 1.3 = 1.3. Bases (2, 15) are stalwart/bulwark's
+            // CURRENT authored magnitudes -- halved from 3/30. 2 x 1.3 = 2.6,
+            // away-from-zero -> 3; 15 x 1.3 = 19.5, away-from-zero -> 20.
+            Assert.AreEqual(3, effects.Best(ModifierEffectType.FlatPhysicalDamageReduction),
+                "stalwart: 2 x 1.3 = 2.6, rounded away from zero");
+            Assert.AreEqual(20, effects.Best(ModifierEffectType.BreakShieldDepletionResistPercent),
+                "bulwark: 15 x 1.3 = 19.5, rounded away from zero");
         }
 
         [Test]
@@ -188,10 +191,11 @@ namespace PrincesPalace.PlayModeTests
             var resistedState = builtResisted.Party[0];
             var bareState = builtBare.Party[0];
 
-            // emberguard's own scaled TypedResistanceFlat (Fire): 15 x 1.0 x
-            // 1.6 = 24 -- already pinned in ItemModifierScalingReachesCombatTests,
-            // reused here rather than recomputed.
-            Assert.AreEqual(24, resistedState.TypedResistance.Fire);
+            // emberguard's own scaled TypedResistanceFlat (Fire): 8 x 1.0 x
+            // 1.6 = 12.8 -> 13, away-from-zero -- already pinned in
+            // ItemModifierScalingReachesCombatTests, reused here rather than
+            // recomputed.
+            Assert.AreEqual(13, resistedState.TypedResistance.Fire);
             Assert.AreEqual(0, bareState.TypedResistance.Fire, "fixture check: the bare control wears nothing");
 
             var burned = DamagePipeline.AfterDefences(100, DamageType.Fire, resistedState,
@@ -303,11 +307,11 @@ namespace PrincesPalace.PlayModeTests
             // recomputed here.
             var fireOnHit = hero.ModifierEffects.All.Single(e =>
                 e.Type == ModifierEffectType.ElementalDamageOnHitPercent && e.Against == DamageType.Fire);
-            Assert.AreEqual(40, fireOnHit.Magnitude, "fiery: 20 x 2.0, reached through the real roll/claim/equip chain");
+            Assert.AreEqual(20, fireOnHit.Magnitude, "fiery: 10 x 2.0, reached through the real roll/claim/equip chain");
             var arcaneOnHit = hero.ModifierEffects.All.Single(e =>
                 e.Type == ModifierEffectType.ElementalDamageOnHitPercent && e.Against == DamageType.Arcane);
-            Assert.AreEqual(40, arcaneOnHit.Magnitude, "astral: 20 x 2.0, reached through the same chain");
-            Assert.AreEqual(30, hero.ModifierEffects.Best(ModifierEffectType.LifestealPercent), "vampiric: 15 x 2.0");
+            Assert.AreEqual(20, arcaneOnHit.Magnitude, "astral: 10 x 2.0, reached through the same chain");
+            Assert.AreEqual(16, hero.ModifierEffects.Best(ModifierEffectType.LifestealPercent), "vampiric: 8 x 2.0");
 
             // A known, round Attack so the elemental on-hit damage is a
             // hand-computed literal rather than a figure that depends on the
@@ -341,9 +345,12 @@ namespace PrincesPalace.PlayModeTests
             }
 
             // elementalRaw = max(1, Rounding.AwayFromZero(Attack x Magnitude / 100f))
-            //              = max(1, Rounding.AwayFromZero(10 x 40 / 100f))
-            //              = max(1, 4) = 4, for BOTH fiery's Fire rider and
-            // astral's Arcane rider, BEFORE each is routed through
+            //              = max(1, Rounding.AwayFromZero(10 x 20 / 100f))
+            //              = max(1, 2) = 2, for BOTH fiery's Fire rider and
+            // astral's Arcane rider -- Magnitude is 20 (10 base x 2.0 Convergent
+            // scale, halved from the pre-power-down 40), not the swing's own
+            // element (Physical), so these still take the foreign-element
+            // Attack-based proc path, BEFORE each is routed through
             // DamagePipeline.AfterDefences' own typed mitigation against the
             // toughest real enemy's own Magical/PhysicalDefense and
             // TypedResistance -- content data this test does not want to
@@ -351,12 +358,10 @@ namespace PrincesPalace.PlayModeTests
             // ItemModifierCombatHookTests can. What IS hand-derivable without
             // touching content is the bound: mitigation only ever reduces
             // toward the game's universal floor of 1, never below it or
-            // above this unmitigated raw of 4 -- so the actual landed figure
-            // must fall somewhere in [1, 4]. (Before this fix it was pinned
-            // at exactly 20 regardless of the target's defense, which is
-            // the bug -- see FightSession.ApplyModifierOnHitRiders.)
+            // above this unmitigated raw of 2 -- so the actual landed figure
+            // must fall somewhere in [1, 2].
             bool FiredInRange(string element) =>
-                Enumerable.Range(1, 4).Any(n => messages.Any(m => m.Contains($"{n} bonus {element} damage")));
+                Enumerable.Range(1, 2).Any(n => messages.Any(m => m.Contains($"{n} bonus {element} damage")));
 
             Assert.IsTrue(FiredInRange("Fire"),
                 "fiery's on-hit proc must fire and land in [1,4] -- three rolled modifiers on one item, none " +
@@ -393,11 +398,11 @@ namespace PrincesPalace.PlayModeTests
             // the roll rather than a pre-baked number that happened to match
             // once.
             var reloadedEffects = ContentDatabase.ModifierEffects(reloadedCharacter);
-            Assert.AreEqual(30, reloadedEffects.Best(ModifierEffectType.LifestealPercent),
+            Assert.AreEqual(16, reloadedEffects.Best(ModifierEffectType.LifestealPercent),
                 "a reloaded save must resolve the identical scaled magnitude, not merely the identical ids");
-            Assert.AreEqual(40, reloadedEffects.All.Single(e =>
+            Assert.AreEqual(20, reloadedEffects.All.Single(e =>
                     e.Type == ModifierEffectType.ElementalDamageOnHitPercent && e.Against == DamageType.Fire).Magnitude,
-                "the reloaded fiery rider must still scale to 40 after the round trip");
+                "the reloaded fiery rider must still scale to 20 after the round trip");
         }
     }
 }

@@ -38,16 +38,19 @@ namespace PrincesPalace.PlayModeTests
         // what is under test is whether the DISPLAY layer reads the already-
         // scaled number correctly, not whether the scaling formula itself is
         // right (that is ModifierMagnitudeTests' job).
+        // Bases here (10, 8) are fiery/emberguard's CURRENT authored
+        // magnitudes -- halved from 20/15 in the affix-power-down pass; see
+        // modifiers.json's own entries.
         private static int FieryExpectedDamage(int itemTier, RiftTier riftTier)
         {
             double scale = ModifierMagnitude.Scale(itemTier, riftTier);
-            return Rounding.AwayFromZero((float)(20 * scale));
+            return Rounding.AwayFromZero((float)(10 * scale));
         }
 
         private static int EmberguardExpectedResistPercent(int itemTier, RiftTier riftTier)
         {
             double scale = ModifierMagnitude.Scale(itemTier, riftTier);
-            int resistanceFlat = Rounding.AwayFromZero((float)(15 * scale));
+            int resistanceFlat = Rounding.AwayFromZero((float)(8 * scale));
             return ItemStatLines.DamageReductionPercent(resistanceFlat);
         }
 
@@ -74,7 +77,7 @@ namespace PrincesPalace.PlayModeTests
                 new System.Collections.Generic.List<string> { "fiery" });
 
             var damageRider = scaled.Single(pair => pair.Effect.Type == ModifierEffectType.ElementalDamageOnHitPercent);
-            Assert.AreEqual(20, damageRider.Effect.Magnitude, "tier 0, Ordinary: scale is exactly 1.0, unscaled base survives untouched");
+            Assert.AreEqual(10, damageRider.Effect.Magnitude, "tier 0, Ordinary: scale is exactly 1.0, unscaled base survives untouched");
         }
 
         [Test]

@@ -69,11 +69,13 @@ namespace PrincesPalace.PlayModeTests
             var effects = ContentDatabase.ModifierEffects(character);
             Assert.IsFalse(effects.IsEmpty, "a real, live-equipped modifier must produce real effects");
 
-            // fiery's authored base: ElementalDamageOnHitPercent 20 (Fire).
+            // fiery's authored base: ElementalDamageOnHitPercent 10 (Fire) -- halved
+            // from 20 in the affix-power-down pass (AUDIT-adjacent balance
+            // call; see modifiers.json's own header).
             // Scale = TierMultiplier(0) x RiftMultiplier(RiftForged) = 1.0 x 1.6 = 1.6.
             var onHit = effects.All.Single(e => e.Type == ModifierEffectType.ElementalDamageOnHitPercent);
             Assert.AreEqual(DamageType.Fire, onHit.Against);
-            Assert.AreEqual(32, onHit.Magnitude, "20 x 1.6 = 32, away-from-zero rounded");
+            Assert.AreEqual(16, onHit.Magnitude, "10 x 1.6 = 16.0 exactly");
         }
 
         [Test]
@@ -86,11 +88,11 @@ namespace PrincesPalace.PlayModeTests
             var effects = ContentDatabase.ModifierEffects(character);
             Assert.IsFalse(effects.IsEmpty, "a real, live-equipped modifier must produce real effects");
 
-            // emberguard's authored base: TypedResistanceFlat 15 (Fire).
+            // emberguard's authored base: TypedResistanceFlat 8 (Fire) -- halved from 15.
             // Scale = TierMultiplier(0) x RiftMultiplier(RiftForged) = 1.0 x 1.6 = 1.6.
             var resist = effects.All.Single(e => e.Type == ModifierEffectType.TypedResistanceFlat);
             Assert.AreEqual(DamageType.Fire, resist.Against);
-            Assert.AreEqual(24, resist.Magnitude, "15 x 1.6 = 24");
+            Assert.AreEqual(13, resist.Magnitude, "8 x 1.6 = 12.8, away-from-zero rounded");
         }
 
         [Test]
@@ -106,8 +108,8 @@ namespace PrincesPalace.PlayModeTests
             var character = FreshCharacterWearing(item, new[] { "fiery", "emberguard" }, RiftTier.RiftForged);
             var effects = ContentDatabase.ModifierEffects(character);
 
-            Assert.AreEqual(32, effects.All.Single(e => e.Type == ModifierEffectType.ElementalDamageOnHitPercent).Magnitude);
-            Assert.AreEqual(24, effects.All.Single(e => e.Type == ModifierEffectType.TypedResistanceFlat).Magnitude);
+            Assert.AreEqual(16, effects.All.Single(e => e.Type == ModifierEffectType.ElementalDamageOnHitPercent).Magnitude);
+            Assert.AreEqual(13, effects.All.Single(e => e.Type == ModifierEffectType.TypedResistanceFlat).Magnitude);
         }
 
         [Test]
@@ -120,7 +122,7 @@ namespace PrincesPalace.PlayModeTests
             var effects = ContentDatabase.ModifierEffects(character);
 
             var onHit = effects.All.Single(e => e.Type == ModifierEffectType.ElementalDamageOnHitPercent);
-            Assert.AreEqual(20, onHit.Magnitude, "tier 0, RiftTier Ordinary: scale is exactly 1.0, unscaled base survives untouched");
+            Assert.AreEqual(10, onHit.Magnitude, "tier 0, RiftTier Ordinary: scale is exactly 1.0, unscaled base survives untouched");
         }
 
         [Test]
@@ -141,7 +143,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(built, "fixture: a real fight must build");
             var state = built.Party[0];
 
-            Assert.AreEqual(24, state.TypedResistance.Fire,
+            Assert.AreEqual(13, state.TypedResistance.Fire,
                 "the elemental family's typed-resistance half must reach CombatantState.TypedResistance " +
                 "the same seam a relic's ResistanceFlat already does");
         }
@@ -177,10 +179,10 @@ namespace PrincesPalace.PlayModeTests
             var withoutState = builtWithout.Party[0];
 
             // runic's authored base at Ordinary/tier-0 (scale exactly 1.0):
-            // FlatMaxManaBonus 10, FlatManaRegenBonus 2.
-            Assert.AreEqual(10, withState.MaxMana - withoutState.MaxMana, "Runic's flat Max Mana bonus must reach MaxMana");
-            Assert.AreEqual(10, withState.CurrentMana - withoutState.CurrentMana, "and start the fight already full");
-            Assert.AreEqual(2, withState.ManaRegen - withoutState.ManaRegen, "Runic's flat ManaRegen bonus must reach ManaRegen");
+            // FlatMaxManaBonus 5, FlatManaRegenBonus 1 -- both halved from 10/2.
+            Assert.AreEqual(5, withState.MaxMana - withoutState.MaxMana, "Runic's flat Max Mana bonus must reach MaxMana");
+            Assert.AreEqual(5, withState.CurrentMana - withoutState.CurrentMana, "and start the fight already full");
+            Assert.AreEqual(1, withState.ManaRegen - withoutState.ManaRegen, "Runic's flat ManaRegen bonus must reach ManaRegen");
         }
     }
 }

@@ -94,10 +94,10 @@ namespace PrincesPalace.PlayModeTests
             var effects = ContentDatabase.ModifierEffects(character);
             Assert.IsFalse(effects.IsEmpty, "a real, live-equipped frostbite modifier must produce a real effect");
 
-            // frostbite's authored base: ChilledOnHitChancePercent 20. Scale =
-            // TierMultiplier(0) x RiftMultiplier(RiftForged) = 1.0 x 1.6 = 1.6.
+            // frostbite's authored base: ChilledOnHitChancePercent 10 (halved
+            // from 20). Scale = TierMultiplier(0) x RiftMultiplier(RiftForged) = 1.0 x 1.6 = 1.6.
             var chill = effects.All.Single(e => e.Type == ModifierEffectType.ChilledOnHitChancePercent);
-            Assert.AreEqual(32, chill.Magnitude, "20 x 1.6 = 32.0 exactly");
+            Assert.AreEqual(16, chill.Magnitude, "10 x 1.6 = 16.0 exactly");
         }
 
         [Test]
@@ -110,7 +110,7 @@ namespace PrincesPalace.PlayModeTests
             var effects = ContentDatabase.ModifierEffects(character);
 
             var chill = effects.All.Single(e => e.Type == ModifierEffectType.ChilledOnHitChancePercent);
-            Assert.AreEqual(20, chill.Magnitude, "tier 0, RiftTier Ordinary: scale is exactly 1.0, unscaled base survives untouched");
+            Assert.AreEqual(10, chill.Magnitude, "tier 0, RiftTier Ordinary: scale is exactly 1.0, unscaled base survives untouched");
         }
 
         [Test]
@@ -129,7 +129,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(built, "fixture: a real fight must build");
             var state = built.Party[0];
 
-            Assert.AreEqual(32, state.ModifierEffects.Best(ModifierEffectType.ChilledOnHitChancePercent),
+            Assert.AreEqual(16, state.ModifierEffects.Best(ModifierEffectType.ChilledOnHitChancePercent),
                 "the real, scaled frostbite chill chance must reach the combatant the fight actually runs on");
         }
 

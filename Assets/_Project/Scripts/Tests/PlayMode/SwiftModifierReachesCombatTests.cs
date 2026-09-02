@@ -67,10 +67,10 @@ namespace PrincesPalace.PlayModeTests
             var effects = ContentDatabase.ModifierEffects(character);
             Assert.IsFalse(effects.IsEmpty, "a real, live-equipped swift modifier must produce a real effect");
 
-            // swift's authored base: DodgeRating 12. Scale =
+            // swift's authored base: DodgeRating 6 (halved from 12). Scale =
             // TierMultiplier(0) x RiftMultiplier(RiftForged) = 1.0 x 1.6 = 1.6.
             var dodge = effects.All.Single(e => e.Type == ModifierEffectType.DodgeRating);
-            Assert.AreEqual(19, dodge.Magnitude, "12 x 1.6 = 19.2, away-from-zero rounded");
+            Assert.AreEqual(10, dodge.Magnitude, "6 x 1.6 = 9.6, away-from-zero rounded");
         }
 
         [Test]
@@ -83,7 +83,7 @@ namespace PrincesPalace.PlayModeTests
             var effects = ContentDatabase.ModifierEffects(character);
 
             var dodge = effects.All.Single(e => e.Type == ModifierEffectType.DodgeRating);
-            Assert.AreEqual(12, dodge.Magnitude, "tier 0, RiftTier Ordinary: scale is exactly 1.0, unscaled base survives untouched");
+            Assert.AreEqual(6, dodge.Magnitude, "tier 0, RiftTier Ordinary: scale is exactly 1.0, unscaled base survives untouched");
         }
 
         [Test]
@@ -102,7 +102,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(built, "fixture: a real fight must build");
             var state = built.Party[0];
 
-            Assert.AreEqual(19, state.ModifierEffects.Best(ModifierEffectType.DodgeRating),
+            Assert.AreEqual(10, state.ModifierEffects.Best(ModifierEffectType.DodgeRating),
                 "the real, scaled swift dodge chance must reach the combatant the fight actually runs on");
         }
 

@@ -6,7 +6,7 @@
       "displayName": "Fiery",
       "description": "Burns on every landed hit. Elemental family: Fire, the damage half -- Emberguard is Fire's separate resistance affix; a Fiery item does not also resist fire the way the original bundled Fiery/Frosty/etc. modifiers used to.",
       "effects": [
-        { "type": "ElementalDamageOnHitPercent", "magnitude": 20, "damageType": "Fire" }
+        { "type": "ElementalDamageOnHitPercent", "magnitude": 10, "damageType": "Fire" }
       ]
     },
     {
@@ -14,7 +14,7 @@
       "displayName": "Emberguard",
       "description": "Fire glances off the wearer rather than catching. Elemental family: Fire, the resistance half -- Fiery is Fire's separate on-hit-burn affix. Split off Fiery's old bundle so a roll grants one or the other, never both from a single slot.",
       "effects": [
-        { "type": "TypedResistanceFlat", "magnitude": 15, "damageType": "Fire" }
+        { "type": "TypedResistanceFlat", "magnitude": 8, "damageType": "Fire" }
       ]
     },
     {
@@ -22,7 +22,7 @@
       "displayName": "Frosty",
       "description": "Every hit carries a bite of frost. Elemental family: Ice, the damage half -- Permafrost is Ice's resistance affix and Frostbite is Ice's chill-proc affix, both split off this modifier's old three-effect bundle.",
       "effects": [
-        { "type": "ElementalDamageOnHitPercent", "magnitude": 20, "damageType": "Ice" }
+        { "type": "ElementalDamageOnHitPercent", "magnitude": 10, "damageType": "Ice" }
       ]
     },
     {
@@ -30,7 +30,7 @@
       "displayName": "Permafrost",
       "description": "Frost does not bite the wearer back. Elemental family: Ice, the resistance half -- Frosty is Ice's separate on-hit-frost affix and Frostbite carries the old bundle's chill proc. Split off so each rule rolls on its own.",
       "effects": [
-        { "type": "TypedResistanceFlat", "magnitude": 15, "damageType": "Ice" }
+        { "type": "TypedResistanceFlat", "magnitude": 8, "damageType": "Ice" }
       ]
     },
     {
@@ -38,7 +38,7 @@
       "displayName": "Frostbite",
       "description": "A lucky strike leaves the target chilled to the bone. Elemental family: Ice, the chill-proc half -- Frosty carries the on-hit damage and Permafrost carries the resistance; this used to ride along with both on one bundled Frosty roll, now it is its own affix.",
       "effects": [
-        { "type": "ChilledOnHitChancePercent", "magnitude": 20 }
+        { "type": "ChilledOnHitChancePercent", "magnitude": 10 }
       ]
     },
     {
@@ -46,7 +46,7 @@
       "displayName": "Sylvan",
       "description": "Thorns answer every blow. Elemental family: Nature, the damage half -- Thornhide is Nature's resistance affix and Entangling is Nature's root-proc affix, both split off this modifier's old three-effect bundle.",
       "effects": [
-        { "type": "ElementalDamageOnHitPercent", "magnitude": 20, "damageType": "Nature" }
+        { "type": "ElementalDamageOnHitPercent", "magnitude": 10, "damageType": "Nature" }
       ]
     },
     {
@@ -54,7 +54,7 @@
       "displayName": "Thornhide",
       "description": "The wearer's own hide grows thicker against green and growing things. Elemental family: Nature, the resistance half -- Sylvan is Nature's separate on-hit-thorn affix and Entangling carries the old bundle's root proc.",
       "effects": [
-        { "type": "TypedResistanceFlat", "magnitude": 15, "damageType": "Nature" }
+        { "type": "TypedResistanceFlat", "magnitude": 8, "damageType": "Nature" }
       ]
     },
     {
@@ -62,7 +62,7 @@
       "displayName": "Entangling",
       "description": "A lucky strike tangles the target in root and vine. Elemental family: Nature, the root-proc half -- Sylvan carries the on-hit damage and Thornhide carries the resistance; this used to ride along with both on one bundled Sylvan roll, now it is its own affix.",
       "effects": [
-        { "type": "RootChancePercent", "magnitude": 20 }
+        { "type": "RootChancePercent", "magnitude": 10 }
       ]
     },
     {
@@ -70,7 +70,7 @@
       "displayName": "Venomous",
       "description": "Every strike leaves a sting behind. Elemental family: Poison, the damage half -- Antivenom is Poison's separate resistance affix, split off this modifier's old two-effect bundle.",
       "effects": [
-        { "type": "ElementalDamageOnHitPercent", "magnitude": 20, "damageType": "Poison" }
+        { "type": "ElementalDamageOnHitPercent", "magnitude": 10, "damageType": "Poison" }
       ]
     },
     {
@@ -78,7 +78,7 @@
       "displayName": "Antivenom",
       "description": "The wearer has long since built up a tolerance. Elemental family: Poison, the resistance half -- Venomous is Poison's separate on-hit-sting affix. Split off Venomous's old bundle so a roll grants one or the other, never both.",
       "effects": [
-        { "type": "TypedResistanceFlat", "magnitude": 15, "damageType": "Poison" }
+        { "type": "TypedResistanceFlat", "magnitude": 8, "damageType": "Poison" }
       ]
     },
     {
@@ -86,7 +86,7 @@
       "displayName": "Astral",
       "description": "A sliver of the Rift rides every hit home. Elemental family: Arcane, the damage half -- Moonveil is Arcane's separate resistance affix, split off this modifier's old two-effect bundle.",
       "effects": [
-        { "type": "ElementalDamageOnHitPercent", "magnitude": 20, "damageType": "Arcane" }
+        { "type": "ElementalDamageOnHitPercent", "magnitude": 10, "damageType": "Arcane" }
       ]
     },
     {
@@ -94,7 +94,7 @@
       "displayName": "Moonveil",
       "description": "A veil of the same Rift-sliver turns arcane harm aside. Elemental family: Arcane, the resistance half -- Astral is Arcane's separate on-hit affix. Split off Astral's old bundle so a roll grants one or the other, never both.",
       "effects": [
-        { "type": "TypedResistanceFlat", "magnitude": 15, "damageType": "Arcane" }
+        { "type": "TypedResistanceFlat", "magnitude": 8, "damageType": "Arcane" }
       ]
     },
     {
@@ -102,7 +102,7 @@
       "displayName": "Hardened",
       "description": "A brute, physical edge on every hit. Elemental family: Physical, the damage half -- Ironclad is Physical's resistance affix and Juggernaut is Physical's stagger-proc affix, both split off this modifier's old three-effect bundle (the one family with a third effect, since Physical had no typed-resistance twin worth calling out the way the other five elements do -- see Ironclad and Juggernaut's own descriptions).",
       "effects": [
-        { "type": "ElementalDamageOnHitPercent", "magnitude": 20, "damageType": "Physical" }
+        { "type": "ElementalDamageOnHitPercent", "magnitude": 10, "damageType": "Physical" }
       ]
     },
     {
@@ -110,7 +110,7 @@
       "displayName": "Ironclad",
       "description": "Plating enough to turn aside a plain blow. Elemental family: Physical, the resistance half -- Hardened carries the on-hit damage and Juggernaut carries the old bundle's stagger proc; this used to ride along with both on one bundled Hardened roll, now it is its own affix.",
       "effects": [
-        { "type": "TypedResistanceFlat", "magnitude": 15, "damageType": "Physical" }
+        { "type": "TypedResistanceFlat", "magnitude": 8, "damageType": "Physical" }
       ]
     },
     {
@@ -118,7 +118,7 @@
       "displayName": "Juggernaut",
       "description": "Enough weight behind the swing to stagger whatever it lands on. Elemental family: Physical, the stagger-proc half -- Hardened carries the on-hit damage and Ironclad carries the resistance; this used to ride along with both on one bundled Hardened roll, now it is its own affix.",
       "effects": [
-        { "type": "PushBackOnHitChancePercent", "magnitude": 15 }
+        { "type": "PushBackOnHitChancePercent", "magnitude": 8 }
       ]
     },
     {
@@ -126,7 +126,7 @@
       "displayName": "Vampiric",
       "description": "Every hit landed feeds the wearer a little of what it took. Base 15% at Ordinary tier 0 -- deliberately modest; Vampiric compounds with the healer role rather than replacing it, and the tier/rift curve is where a build actually gets scary. Already single-effect since Phase C; untouched by the affix split.",
       "effects": [
-        { "type": "LifestealPercent", "magnitude": 15 }
+        { "type": "LifestealPercent", "magnitude": 8 }
       ]
     },
     {
@@ -134,7 +134,7 @@
       "displayName": "Stalwart",
       "description": "Armour plating a percentage curve cannot express. FlatPhysicalDamageReduction's base (3) is small on purpose at Ordinary/tier-0 -- it is a FLAT subtraction, so it matters far more against the many small hits of a swarm than against one boss-sized blow, which is the intended shape (a Stalwart wearer shrugs off chip damage, not a haymaker). Bulwark is this affix's split-off sibling -- the guard that gives less ground under pressure, split into its own roll so the two can no longer only ever be found together.",
       "effects": [
-        { "type": "FlatPhysicalDamageReduction", "magnitude": 3 }
+        { "type": "FlatPhysicalDamageReduction", "magnitude": 2 }
       ]
     },
     {
@@ -142,7 +142,7 @@
       "displayName": "Bulwark",
       "description": "A guard that gives less ground under pressure. BreakShieldDepletionResistPercent (30) is forward-looking infrastructure -- no player combatant carries a BreakShield today, only some bosses/elites do, so this is inert on the wearer until a future fight puts one on the player's own side. Split off Stalwart's old bundle so a roll grants the flat mitigation or the shield-resist, never both.",
       "effects": [
-        { "type": "BreakShieldDepletionResistPercent", "magnitude": 30 }
+        { "type": "BreakShieldDepletionResistPercent", "magnitude": 15 }
       ]
     },
     {
@@ -150,7 +150,7 @@
       "displayName": "Explosive",
       "description": "Whatever the wearer finishes off does not go quietly -- the kill splashes onto whoever was standing next to it. The exact mechanism Trample already uses, so a Black Ram wearing this alongside his own talent gets two independent splashes off one kill rather than one doubled splash -- see OnKillSplashPercent's own comment on why that is deliberate, not a bug to fix later. Already single-effect since Phase C; untouched by the affix split.",
       "effects": [
-        { "type": "OnKillSplashPercent", "magnitude": 30 }
+        { "type": "OnKillSplashPercent", "magnitude": 15 }
       ]
     },
     {
@@ -158,7 +158,7 @@
       "displayName": "Fortunate",
       "description": "The Prince favours whoever is wearing this, right now -- a flat, passive bonus to Prince's Favor for as long as it stays equipped, nothing stored and nothing that outlives taking it off. Base 3 at Ordinary/tier-0 sits alongside Shawn's own authored favour of 4: a meaningful nudge toward better drops, not a second currency to bank.",
       "effects": [
-        { "type": "FortunateFavorBonusFlat", "magnitude": 3 }
+        { "type": "FortunateFavorBonusFlat", "magnitude": 2 }
       ]
     },
     {
@@ -166,7 +166,7 @@
       "displayName": "Runic",
       "description": "A deeper well of mana. Manaflow is this family's regen affix, Quickcast its mana-discount tempo affix, and Wardrune its mana-to-ward affix -- all four used to roll together as one bundled Runic modifier; split so each rolls on its own like every other affix.",
       "effects": [
-        { "type": "FlatMaxManaBonus", "magnitude": 10 }
+        { "type": "FlatMaxManaBonus", "magnitude": 5 }
       ]
     },
     {
@@ -174,7 +174,7 @@
       "displayName": "Manaflow",
       "description": "A faster trickle of mana each turn. Runic's old bundle split four ways -- see Runic, Quickcast and Wardrune's own descriptions for the rest of the family.",
       "effects": [
-        { "type": "FlatManaRegenBonus", "magnitude": 2 }
+        { "type": "FlatManaRegenBonus", "magnitude": 1 }
       ]
     },
     {
@@ -182,7 +182,7 @@
       "displayName": "Quickcast",
       "description": "A plain swing buys a cheaper follow-up cast. Runic's old bundle split four ways -- see Runic, Manaflow and Wardrune's own descriptions for the rest of the family.",
       "effects": [
-        { "type": "NextSkillManaDiscountPercent", "magnitude": 25 }
+        { "type": "NextSkillManaDiscountPercent", "magnitude": 13 }
       ]
     },
     {
@@ -198,7 +198,7 @@
       "displayName": "Swift",
       "description": "Phase D1's dodge family. A step too quick for a swing or a cast to reliably land -- Magnitude is a dodge RATING, not a direct percent, run through CombatMath.DodgePercentFrom's curve (100 * R / (R + 100), the same R/(R+100) shape as armour mitigation -- '100 dodge = 50% chance to dodge') before DamagePipeline.RollDodge rolls against it (see ModifierEffectType.DodgeRating for the full mechanics: zero damage, and every on-hit rider skipped with it). RENAMED from DodgeChancePercent, and the curve inserted, 2026-08-26: at a direct-percent reading, a maxed Swift item (base 12 x up to ~18.6x combined tier/rift scaling, ~223 raw) would have exceeded 100 outright -- a guaranteed, unavoidable dodge, which is exactly what the curve now prevents (that same ~223 rating instead reads as ~69%, per DamagePipeline's own hand-computed table). Base 12 at Ordinary/tier-0 curves to ~10.7%, close enough to the old flat 12% that it was left as-is rather than retuned. Already single-effect since Phase C; untouched by the affix split.",
       "effects": [
-        { "type": "DodgeRating", "magnitude": 12 }
+        { "type": "DodgeRating", "magnitude": 6 }
       ]
     }
   ]
