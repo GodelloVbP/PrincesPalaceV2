@@ -58,20 +58,46 @@ namespace PrincesPalace.PlayModeTests
 
         private void Click(string name) => Named(name).GetComponent<Button>().onClick.Invoke();
 
+        // WHY FRAMES, NOT SECONDS. All three waits below used to race a
+        // Time.realtimeSinceStartup deadline against a coroutine that only
+        // gets to advance once per Update -- and a wall-clock deadline pays
+        // for a slow frame out of the SAME budget it needs to finish in. One
+        // GC pause or JIT hiccup right after Show() can burn the whole
+        // window before the coroutine gets its second tick, which reads as
+        // the animation never having started. Seen flaky in a full
+        // multi-fixture run (never in isolation) even at a 2s ceiling.
+        //
+        // A frame count does not have this problem: a slow frame still only
+        // costs ONE tick of the budget, however long it took in wall time,
+        // so the bound below is generous in the currency that actually
+        // matters (Updates), not in the one contention can eat into.
+        //
+        // MaxFrames turns an animation's own (unscaled, pre-multiplier)
+        // duration into that budget. At [SetUp]'s SpeedMultiplier of 40x,
+        // durations under a second finish inside one or two Updates even on
+        // a merely-ordinary machine -- the division term is a courtesy, not
+        // where the safety margin lives. FrameMargin is where it lives: 90
+        // Updates of slack, enough to absorb several bad frames in a row
+        // without turning into a silent hang if the animation genuinely
+        // never starts (the loop still exits, and callers assert on the
+        // state they polled for, same as before).
+        private const float MinTestFps = 30f;
+        private const int FrameMargin = 90;
+
+        private static int MaxFrames(float animationSeconds) =>
+            Mathf.CeilToInt(animationSeconds / ReckoningController.SpeedMultiplier * MinTestFps) + FrameMargin;
+
         // POLLED ON THE OFFER PHASE ITSELF. SweepToSummary sets it inactive
         // as its very last step -- after StartBars() has already been kicked
         // off, so this also guarantees the bars have started where that
         // matters below -- and it is a one-way flag rather than a value that
-        // plateaus, so it is safe to poll directly. [SetUp]'s
-        // SpeedMultiplier = 40 runs the whole 0.18s SweepSeconds journey in
-        // low single-digit milliseconds of real time; 0.3s real is two
-        // orders of magnitude past that while still catching a real stall
-        // (the offer phase never leaving).
+        // plateaus, so it is safe to poll directly. SweepSeconds is 0.18s.
         private IEnumerator WaitForTheSweepToLand()
         {
-            float deadline = Time.realtimeSinceStartup + 0.3f;
-            while (Named("ReckoningOfferPhase").activeSelf && Time.realtimeSinceStartup < deadline)
+            int frames = 0, maxFrames = MaxFrames(0.18f);
+            while (Named("ReckoningOfferPhase").activeSelf && frames < maxFrames)
             {
+                frames++;
                 yield return null;
             }
         }
@@ -82,22 +108,14 @@ namespace PrincesPalace.PlayModeTests
         // fixture's Reward() never levels up (LevelAfter == LevelBefore), so
         // CountGain only ever climbs toward ExpGained and never plateaus or
         // resets mid-sequence -- safe to poll for the final value landing
-        // rather than guess a duration for it.
-        //
-        // 2s ceiling, not the tighter 0.5s this started at: the animation
-        // itself needs only a handful of scaled frames, but the deadline is
-        // WALL time against a coroutine that only gets to advance once per
-        // Update. One slow frame right after Show() -- a GC pause, JIT on a
-        // scene freshly loaded -- can burn the whole budget before FillBar
-        // gets its second tick, which read here as the bar never having
-        // started at all. Seen flaky at 0.5s in a full multi-fixture run
-        // (never in isolation); 2s, matching WaitForThePlayInToLand's own
-        // margin, gives one bad frame room without hiding an actual stall.
+        // rather than guess a duration for it. BarSeconds is 0.55s, and row
+        // 0 has no stagger delay, so that is the whole budget.
         private IEnumerator WaitForTheGainToLand(TMPro.TMP_Text gain, string expected)
         {
-            float deadline = Time.realtimeSinceStartup + 2f;
-            while (!gain.text.Contains(expected) && Time.realtimeSinceStartup < deadline)
+            int frames = 0, maxFrames = MaxFrames(0.55f);
+            while (!gain.text.Contains(expected) && frames < maxFrames)
             {
+                frames++;
                 yield return null;
             }
         }
@@ -107,13 +125,14 @@ namespace PrincesPalace.PlayModeTests
         // plateau, so it is safe to poll directly: it either reaches full
         // width or the ceiling fires and callers see the truth (a still-
         // narrow panel, a glow that never faded up) instead of a timing
-        // guess.
+        // guess. PlayIn runs for max(WipeSeconds, GloomSeconds) = 0.34s.
         private IEnumerator WaitForThePlayInToLand()
         {
             var wipe = Named("ReckoningFrameWipe").GetComponent<RectTransform>();
-            float deadline = Time.realtimeSinceStartup + 2f;
-            while (wipe.rect.width < ReckoningScreen.PanelWidth - 0.5f && Time.realtimeSinceStartup < deadline)
+            int frames = 0, maxFrames = MaxFrames(0.34f);
+            while (wipe.rect.width < ReckoningScreen.PanelWidth - 0.5f && frames < maxFrames)
             {
+                frames++;
                 yield return null;
             }
         }
@@ -255,6 +274,18 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenIt(Offers());
 
             Click("ReckoningOffer0");
+
+            // MUST land the sweep first. Paint() writes each row's FINAL
+            // gain text the moment Show() runs -- a preview, sitting there
+            // before the sweep or FillBar have moved at all -- and FillBar
+            // only overwrites it to "+0 EXP" and starts climbing once
+            // StartBars() fires at the very end of SweepToSummary. Polling
+            // the gain text immediately after Click (as this used to) can
+            // catch that Paint() preview on its very first, same-frame
+            // check and return early having watched nothing animate: the
+            // real flake behind this test, independent of whether the
+            // second wait below is bounded by seconds or by frames.
+            yield return WaitForTheSweepToLand();
 
             var gain = Named("ReckoningRow0Gain").GetComponent<TMPro.TMP_Text>();
             yield return WaitForTheGainToLand(gain, "79");
