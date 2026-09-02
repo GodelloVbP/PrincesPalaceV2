@@ -99,7 +99,6 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text partyHpValue;
         [SerializeField] internal Image partyMpFill;
         [SerializeField] internal TMP_Text partyMpValue;
-        [SerializeField] internal RectTransform partyMpPreview;
 
         // Same "caption is a synthesised child with no NodeRef" story as
         // enemyIntentIcons below -- each badge's Image and TMP glyph are both

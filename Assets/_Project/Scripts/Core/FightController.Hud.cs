@@ -506,7 +506,6 @@ namespace PrincesPalace
                 partyClass.Set(UiStrings.LevelAndRole, kit.Level, kit.Role.ToString().ToUpperInvariant());
             }
 
-            RefreshManaPreview(actor);
             RefreshWool(actor);
             RefreshPartyBuffs(actor);
             RefreshTransformStrip(actor);
@@ -750,32 +749,6 @@ namespace PrincesPalace
             }
 
             partyBuffTooltip.SetShown(true);
-        }
-
-        // The cost preview: a lighter segment at the right-hand end of the
-        // filled portion, showing what the hovered skill would take from INSIDE
-        // the resource. Right-pivoted, so it grows leftward from wherever the
-        // fill currently ends -- which is why its width is the only thing that
-        // moves and its position never does.
-        private void RefreshManaPreview(CombatantState actor)
-        {
-            if (partyMpPreview == null) return;
-
-            int preview = _menu.ManaPreview;
-            bool show = preview > 0 && actor.MaxMana > 0 && preview <= actor.CurrentMana;
-            partyMpPreview.gameObject.SetShown(show);
-            if (!show) return;
-
-            float barWidth = partyMpFill == null ? 0f : ((RectTransform)partyMpFill.transform).rect.width;
-            float fraction = Mathf.Clamp01(preview / (float)actor.MaxMana);
-            partyMpPreview.sizeDelta = new Vector2(barWidth * fraction, partyMpPreview.sizeDelta.y);
-
-            // Anchored to where the CURRENT fill ends, not to the bar's end: the
-            // segment has to read as "this much of what you have", and pinning
-            // it to the track would show a cost you could not pay as if you
-            // could.
-            float filled = Mathf.Clamp01(actor.CurrentMana / (float)actor.MaxMana);
-            partyMpPreview.anchoredPosition = new Vector2(barWidth * filled, partyMpPreview.anchoredPosition.y);
         }
 
         private void RefreshWool(CombatantState actor)

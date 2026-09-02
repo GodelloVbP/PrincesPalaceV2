@@ -104,16 +104,23 @@ namespace PrincesPalace.Domain.Stage
         // against a 46px icon it overlapped the sprite by exactly 5px, and
         // because the icon is a Button declared after the sprite it would have
         // taken the clicks along that strip. 30 - 23 leaves 7px of daylight.
-        public const float IntentIconSize = 46f;
+        //
+        // 69, UP FROM 46 (x1.5) -- the debuff/buff icon pass, balance-bot
+        // 2026-09-02: every status badge on the HUD grew half again as large.
+        // IntentIconOffset scaled with it below, so the daylight above the
+        // slot's top edge (Offset - half the icon) grew too rather than
+        // shrinking toward an overlap.
+        public const float IntentIconSize = 69f;
 
-        // 48, not 30. At build time this is measured from the slot's top edge;
-        // at RUNTIME PlaceIntentBadge re-measures from the actor's own opaque
-        // top, which is a very different distance -- the golem's idle frame
-        // carries 123px of empty headroom where the rat's carries 17. 30 left
-        // the golem's badge resting on its shoulder while the other two looked
-        // right, which is the shape of every bug on this stage: correct for the
-        // actor it was eyeballed against.
-        public const float IntentIconOffset = 48f;
+        // 72, UP FROM 48 (x1.5, alongside IntentIconSize). At build time this
+        // is measured from the slot's top edge; at RUNTIME PlaceIntentBadge
+        // re-measures from the actor's own opaque top, which is a very
+        // different distance -- the golem's idle frame carries 123px of empty
+        // headroom where the rat's carries 17. 30 left the golem's badge
+        // resting on its shoulder while the other two looked right, which is
+        // the shape of every bug on this stage: correct for the actor it was
+        // eyeballed against.
+        public const float IntentIconOffset = 72f;
 
         // 1200 WIDE, up from 1000. The far anchor is at 565 and this frame is
         // measured from its centre, so a 1000-wide frame put the outermost slot

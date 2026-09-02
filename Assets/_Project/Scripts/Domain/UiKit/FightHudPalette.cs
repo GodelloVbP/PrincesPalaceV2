@@ -78,7 +78,6 @@ namespace PrincesPalace.Domain.UiKit
         public const string MpBright = "#7EA8E6";
         public const string MpDeep = "#3A5A9A";
         public const string MpText = "#C4D8F2";
-        public const string MpPreview = "#C8E2FFE6";         // 0.90
         public const string EnemyName = "#F0DCD8";
         public const string EnemyHpText = "#E0A89C";
         public const string PipFilled = "#E8E0F7";

@@ -126,7 +126,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef PartyHpValue;
         public NodeRef PartyMpFill;
         public NodeRef PartyMpValue;
-        public NodeRef PartyMpPreview;
         public List<NodeRef> PartyBuffIcons = new List<NodeRef>();
         public NodeRef PartyBuffTooltip;
         public NodeRef PartyBuffTooltipText;
@@ -1035,22 +1034,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 FightHudPalette.MpBright, Place.At(-194f, -22f, new UiVec(0f, 0.5f)));
             var mpFill = Ui.Solid("PartyMpFill", FightHudPalette.MpBright, Place.Stretch(), UiSize.Fill);
 
-            // The MP COST PREVIEW: a lighter segment at the right-hand end of
-            // the filled portion, showing what a hovered skill would consume
-            // from INSIDE the resource. The one piece of this screen that
-            // answers "can I afford this" without the player reading a number
-            // and doing the subtraction. Right-pivoted so it grows leftward from
-            // wherever the current fill ends.
-            var mpPreview = Ui.Solid("PartyMpPreview", FightHudPalette.MpPreview,
-                    Place.At(0f, 0f, new UiVec(1f, 0.5f)), UiSize.Fixed(40f, 14f))
-                .Inactive();
-
-            // Fill and preview are ONE BAR. The preview sitting on the fill is
-            // what makes it read as part of the resource rather than as a
-            // second thing beside it, so they are layers, not neighbours.
-            Ui.Layered(mpFill, mpPreview);
-
-            var mpBar = Ui.Panel("PartyMpBar", Place.At(-24f, -22f), UiSize.Fixed(292f, 16f), mpFill, mpPreview)
+            // THE MANA-COST OVERLAY (PartyMpPreview) IS GONE, balance-bot
+            // 2026-09-02: it drew a lighter segment inside the fill showing
+            // what a hovered skill would cost, which is now double-booked
+            // with the numeric cost already on the skill row/detail card --
+            // and it stayed live even while the player was casting, tracking
+            // a cost that no longer meant "if you pick this". The numeric
+            // cost is the one source of truth now.
+            var mpBar = Ui.Panel("PartyMpBar", Place.At(-24f, -22f), UiSize.Fixed(292f, 16f), mpFill)
                 .Coloured(FightHudPalette.TrackMp);
             var mpValue = Ui.Label("PartyMpValue", UiStrings.HealthValue, new UiVec(70f, 20f), 12,
                 FightHudPalette.MpText, Place.At(194f, -22f, new UiVec(1f, 0.5f)));
@@ -1061,7 +1052,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
             PartyHpFill = hpFill;
             PartyHpValue = hpValue;
             PartyMpFill = mpFill;
-            PartyMpPreview = mpPreview;
             PartyMpValue = mpValue;
 
             var plate = Ui.Container("PartyPlate", ButtonTheme.Blue, ContainerRatio.TwoByOne,
@@ -1184,22 +1174,38 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // limit.
         private const int PartyBuffSlots = 4;
 
+        // 27x27, UP FROM 18x18 (x1.5, debuff/buff icon pass, balance-bot
+        // 2026-09-02) -- pitch scaled with it, 33 up from 22, so the gap
+        // between badges (pitch minus size) grows in the same proportion
+        // rather than shrinking toward a collision.
+        private const float PartyBuffIconSize = 27f;
+        private const float PartyBuffPitch = 33f;
+
+        // Y MOVED, 90 -> 30, because 90 no longer fits. The old row's band
+        // (above the header, below the container's own top inset -- see the
+        // comment this replaced) is 101.59 - 78 = 23.58px tall, and a 27px
+        // icon does not fit inside it at any Y. The header row (PartyName,
+        // y46-78) and the HP row (PartyHpBar/PartyHpValue, top edge 14) leave
+        // a second, wider band between them -- y14 to y46, 32px tall, clear of
+        // both -- and portrait's own right edge (-138) still bounds it on the
+        // left, so the badges still cannot land on the portrait.
+        private const float PartyBuffY = 30f;
+
+        // Left edge of PartyBuff0 clears the portrait's right edge (-138) by
+        // 13.5px, scaled up from the old row's 9px clearance (-129 - -138) by
+        // the same x1.5 as the icon itself.
+        private const float PartyBuffX0 = -111f;
+
         private IEnumerable<UiNode> BuildPartyBuffIcons()
         {
             PartyBuffIcons.Clear();
 
             for (int i = 0; i < PartyBuffSlots; i++)
             {
-                // -120/y90, not v1's -202/96: the container's measured inset
-                // (top 0.055 of 228.28 = 12.56px) caps content at y 101.59,
-                // and the old y96 (top edge 105) missed that band as well as
-                // clipping the portrait's own top edge (86) at the old x. The
-                // row now starts to the RIGHT of the portrait (whose right
-                // edge is -138) instead of overlapping it, so the two no
-                // longer share any x range and can stack this close in y.
-                float x = -120f + i * 22f;
-                var icon = Ui.Button($"PartyBuff{i}", UiString.Runtime, new UiVec(18f, 18f), 11,
-                        Place.At(x, 90f))
+                float x = PartyBuffX0 + i * PartyBuffPitch;
+                var icon = Ui.Button($"PartyBuff{i}", UiString.Runtime,
+                        new UiVec(PartyBuffIconSize, PartyBuffIconSize), 11,
+                        Place.At(x, PartyBuffY))
                     .NoChrome()
                     .Inactive();
 
@@ -1392,7 +1398,30 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // the art frame in BuildSubmenuFrame has to size itself off the same
         // number these rows are actually built at.
         private const float SubmenuRowW = FightSubmenuLayout.RowWidth;
-        private const float SubmenuX = 25f;
+
+        // DERIVED FROM THE FRAME'S FLUSH POSITION, not the other way round,
+        // balance-bot 2026-09-02. SubmenuX used to be the fixed point (25)
+        // and the frame's centre (ContainerX below) was built outward from
+        // it; now the frame's LEFT EDGE is the fixed point (flush against the
+        // verb column's right edge, zero gap) and this is back-solved from
+        // it so the rows/viewport/scrollbar/BACK still land correctly inside
+        // the frame's own measured content inset -- see ContainerX's comment
+        // for why moving one without the other overflows the frame by
+        // exactly the same amount the frame moved.
+        //
+        // Was a flat 25; is now ~38.61, since the frame had to move right by
+        // 13.61px (VerbColumnX + VerbRowW*0.5 + FrameWidth*0.5 versus the old
+        // containerX) to close the 13.61px OVERLAP the wider (post-01bc943)
+        // 3:4 frame had opened with the verb column.
+        private static float SubmenuX =>
+            ContainerX - FightSubmenuLayout.ContainerWidth * 0.5f + SubmenuRowW * 0.5f
+            + FightSubmenuLayout.ContainerPad;
+
+        // THE FRAME'S OWN CENTRE X. Flush against the verb column's right
+        // edge (VerbColumnX + VerbRowW * 0.5), zero gap -- see
+        // BuildSubmenuFrame's own comment for the overlap this replaces.
+        private static float ContainerX =>
+            VerbColumnX + VerbRowW * 0.5f + FightSubmenuLayout.FrameWidth * 0.5f;
 
         // Opens to the RIGHT of the verbs rather than replacing them: nothing is
         // taken off screen, only added, which is what the breadcrumb underneath
@@ -1510,10 +1539,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         {
             float containerW = FightSubmenuLayout.ContainerWidth;
 
-            // The rows keep their x; the container grows to the right of them
-            // to find room for the bar, so nothing on the left edge moves.
-            float containerX = SubmenuX - SubmenuRowW * 0.5f - FightSubmenuLayout.ContainerPad
-                               + containerW * 0.5f;
+            // ContainerX/SubmenuX are declared together above (both are
+            // solved from the flush-left constraint) -- see ContainerX's own
+            // comment for why the frame's centre moved and SubmenuX moved
+            // with it.
+            float containerX = ContainerX;
 
             // The content: a full-canvas rect so every row in the pool fits
             // inside it, centred on the column's origin so its children's

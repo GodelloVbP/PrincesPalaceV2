@@ -219,6 +219,32 @@ namespace PrincesPalace.PlayModeTests
                 "arrowing back to the top of the list left the window at the bottom");
         }
 
+        // The same claim as ArrowingPastTheWindowScrollsTheSelectedRowIntoIt,
+        // pinned against the CONTENT RECT rather than only against the row's
+        // world position -- both have to move, or a viewport that happened to
+        // be tall enough to already contain row 11 would pass the other test
+        // for the wrong reason.
+        [UnityTest]
+        public IEnumerator ScrollingSelectionToRowElevenMovesTheContentAndKeepsItInView()
+        {
+            yield return LoadFightWithALongList();
+
+            var content = Rect("SubmenuContent");
+            var viewport = Rect("SubmenuViewport");
+            float resting = content.anchoredPosition.y;
+
+            for (int i = 0; i < SatchelSize; i++)
+            {
+                _fight.MoveFocus(1);
+                yield return null;
+            }
+
+            Assert.AreNotEqual(resting, content.anchoredPosition.y,
+                "the content rect never moved -- selecting row 11 did not scroll the list");
+            Assert.IsTrue(InsideWindow(Rect($"CharacterSkill{SatchelSize - 1}"), viewport),
+                "row 11 is selected but sits outside the viewport that clips it");
+        }
+
         // A list that FITS must not have gained a scroll it never had. Eight
         // rows against an eight-row window: no bar, no travel, nothing moves.
         [UnityTest]
