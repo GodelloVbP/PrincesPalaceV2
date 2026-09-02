@@ -128,9 +128,7 @@ namespace PrincesPalace.Domain.UiKit
         public static UiNode Container(string name, ButtonTheme theme, ContainerRatio ratio, Place place, UiVec size)
         {
             ValidateContainerAspect(name, "Container", ContainerKind.Container, ratio, size);
-            var node = Sprite(name, ContainerArt.Key(ContainerKind.Container, theme, ratio), place, UiSize.Fixed(size));
-            node.PreserveAspect = true;
-            return node.AsDecor();
+            return BuildFrameHolder(name, ContainerArt.Key(ContainerKind.Container, theme, ratio), place, size);
         }
 
         // Same rules as Container, always Decor, never a Button -- a flag
@@ -139,23 +137,56 @@ namespace PrincesPalace.Domain.UiKit
         public static UiNode FlagBanner(string name, ButtonTheme theme, ContainerRatio ratio, Place place, UiVec size)
         {
             ValidateContainerAspect(name, "FlagBanner", ContainerKind.FlagBanner, ratio, size);
-            var node = Sprite(name, ContainerArt.Key(ContainerKind.FlagBanner, theme, ratio), place, UiSize.Fixed(size));
-            node.PreserveAspect = true;
-            return node.AsDecor();
+            return BuildFrameHolder(name, ContainerArt.Key(ContainerKind.FlagBanner, theme, ratio), place, size);
+        }
+
+        // Builds the holder Container/FlagBanner returns: a plain, un-Decor
+        // Panel (draws nothing of its own -- EmitsNoGraphic) sized and placed
+        // exactly as the caller asked, wrapping the themed frame art as ITS
+        // OWN Decor Sprite child rather than being that Sprite itself.
+        //
+        // The frame used to BE the returned node, marked AsDecor directly --
+        // which worked for the art but was wrong the moment ContainerContent
+        // added real content as ITS child. UiAudit.Walk's Decor exemption
+        // (A1) is inherited by an entire subtree unconditionally: `bool
+        // decorHere = isDecor || node.Source.Decor`, carried into every
+        // descendant with no way for a lower node to opt back in. So content
+        // living under a Decor frame was never checked for overlap against
+        // its own siblings -- two labels stacked on each other inside one
+        // ContainerContent audited clean, because as far as A1 was concerned
+        // everything below the frame was ambient decoration.
+        //
+        // Keeping the frame Decor but demoting it to a CHILD of a non-Decor
+        // wrapper fixes that without touching A1's semantics at all: the
+        // wrapper's own decorHere is false, so content added beside the frame
+        // (see ContainerContent) is audited exactly like any panel's
+        // children, while CheckSiblingOverlap's existing "either side is
+        // Decor" skip still exempts the frame/content pair itself -- the
+        // frame is meant to sit under the content, not be checked against it.
+        private static UiNode BuildFrameHolder(string name, string spriteKey, Place place, UiVec size)
+        {
+            var frame = Sprite(name + "Art", spriteKey, Place.Stretch(), UiSize.Fill);
+            frame.PreserveAspect = true;
+            frame.AsDecor();
+            return Panel(name, place, UiSize.Fixed(size), frame);
         }
 
         // The padded surface a Container/FlagBanner's real content goes on --
         // the painted border on every side, and (for a banner) the V-notch at
         // the bottom, must never hold a label or a button. Adds a plain,
-        // graphic-less Panel as a child of `holder` (a Container or
-        // FlagBanner node), stretched to the measured inset, and returns it
-        // for the caller to add children to.
+        // graphic-less Panel as a SIBLING of the frame art inside `holder`
+        // (a Container or FlagBanner node), stretched to the measured inset,
+        // and returns it for the caller to add children to.
         //
         // Draws nothing itself (EmitsNoGraphic), so it never collides with
         // the art it sits on; UiAudit's containment check (A2) still measures
         // every child declared inside it against ITS rect, which is what
         // keeps a label from escaping into the border -- the whole reason
         // this exists instead of a bare Place.Stretch() at each call site.
+        // Sibling of the frame, not a descendant of it, is what keeps this
+        // content's own children subject to the sibling-overlap check (A1)
+        // instead of inheriting the frame's Decor exemption -- see
+        // BuildFrameHolder for why that distinction has to live there.
         public static UiNode ContainerContent(UiNode holder, ContainerRatio ratio, string name, params UiNode[] children)
         {
             if (holder == null)
@@ -164,12 +195,14 @@ namespace PrincesPalace.Domain.UiKit
             }
 
             // Kind (not ratio) is the only thing this needs to infer, and it
-            // reads it off the holder's own SpriteKey rather than taking a
+            // reads it off the frame child's own SpriteKey -- the wrapper
+            // `holder` itself carries no sprite -- rather than taking a
             // second parameter that could disagree with which factory built
             // it -- a banner's bottom inset differs from a container's for a
             // reason (the V) that is a fact about the ASSET, not about which
             // of the two nominal ratios was chosen.
-            var kind = holder.SpriteKey != null && holder.SpriteKey.Contains("banner_flag_")
+            var frame = holder.Children.FirstOrDefault();
+            var kind = frame?.SpriteKey != null && frame.SpriteKey.Contains("banner_flag_")
                 ? ContainerKind.FlagBanner
                 : ContainerKind.Container;
 

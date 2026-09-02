@@ -513,5 +513,57 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsEmpty(Of(tree, UiAuditCheck.InertOverlapAllowance),
                 "A7 fired on a node that is not decoration, where the allowance does real work");
         }
+
+        // --- Container/FlagBanner: the frame's Decor must not shadow its content ---
+
+        [Test]
+        public void ContainerContent_TwoOverlappingLabels_AreReported()
+        {
+            // The bug this guards: Container/FlagBanner mark their frame art
+            // AsDecor, and A1's Decor exemption used to be inherited by the
+            // frame's WHOLE subtree -- including whatever ContainerContent put
+            // inside it -- so two labels stacked on each other inside one
+            // container's content audited clean. Ui.Container now wraps the
+            // Decor frame in a plain, non-Decor holder and ContainerContent
+            // adds content as the frame's SIBLING rather than its child, so
+            // this has to be caught exactly like any other panel's children.
+            var size = Ui.ContainerSizeForHeight(ContainerRatio.ThreeByFour, 569f);
+            var holder = Ui.Container("Frame", ButtonTheme.Gold, ContainerRatio.ThreeByFour, Place.At(0f, 0f), size);
+            Ui.ContainerContent(holder, ContainerRatio.ThreeByFour, "FrameContent",
+                Ui.Label("LabelA", UiStrings.Cancel, new UiVec(100f, 30f), place: Place.At(0f, 0f)),
+                Ui.Label("LabelB", UiStrings.Cancel, new UiVec(100f, 30f), place: Place.At(10f, 0f)));
+
+            var tree = Ui.Panel("Root", UiSize.Fixed(1920f, 1080f), holder);
+            var overlaps = Of(tree, UiAuditCheck.SiblingOverlap);
+
+            Assert.IsNotEmpty(overlaps,
+                "two overlapping labels inside a ContainerContent must be reported, not hidden by the " +
+                "frame's own Decor flag");
+            var hit = overlaps.First();
+            StringAssert.Contains("LabelA", hit.Message);
+            StringAssert.Contains("LabelB", hit.Message);
+        }
+
+        [Test]
+        public void ContainerContent_LabelInsideTheInset_OverTheFrameArt_IsNotReported()
+        {
+            // The other half of the same guarantee: a label sitting where it
+            // is meant to -- inside the measured inset, over the frame's own
+            // painted art -- must NOT be reported. The frame is Decor and the
+            // sibling-overlap check already skips any pair where either side
+            // is Decor, so the frame/content relationship itself stays quiet;
+            // this is what confirms that skip still works after the restructure.
+            var size = Ui.ContainerSizeForHeight(ContainerRatio.ThreeByFour, 569f);
+            var holder = Ui.Container("Frame", ButtonTheme.Gold, ContainerRatio.ThreeByFour, Place.At(0f, 0f), size);
+            Ui.ContainerContent(holder, ContainerRatio.ThreeByFour, "FrameContent",
+                Ui.Label("Label", UiStrings.Cancel, new UiVec(100f, 30f), place: Place.At(0f, 0f)));
+
+            var tree = Ui.Panel("Root", UiSize.Fixed(1920f, 1080f), holder);
+            var overlaps = Of(tree, UiAuditCheck.SiblingOverlap);
+
+            CollectionAssert.IsEmpty(overlaps,
+                "a label inside the inset, sitting over the frame art the way this kit intends, must not " +
+                "collide with the frame it is deliberately layered on top of");
+        }
     }
 }

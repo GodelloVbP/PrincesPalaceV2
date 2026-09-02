@@ -109,43 +109,57 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // --- shape / flags ------------------------------------------------------
+        //
+        // Container()/FlagBanner() return a plain, non-Decor Panel wrapping the
+        // themed frame art as its own Decor Sprite child -- not the Sprite
+        // itself -- so that content added later via ContainerContent lands as
+        // the frame's SIBLING and is never shadowed by the frame's own Decor
+        // exemption. See Ui.BuildFrameHolder for why.
 
         [Test]
-        public void Container_IsASpriteNode_NotAButton()
+        public void Container_IsAPanel_WrappingADecorSpriteFrame_NotAButton()
         {
             var size = Ui.ContainerSizeForHeight(ContainerRatio.ThreeByFour, 569f);
             var node = Ui.Container("Frame", ButtonTheme.Gold, ContainerRatio.ThreeByFour, Place.At(0f, 0f), size);
 
-            Assert.AreEqual(UiNodeKind.Sprite, node.Kind);
+            Assert.AreEqual(UiNodeKind.Panel, node.Kind);
+            var frame = node.Children.Single();
+            Assert.AreEqual(UiNodeKind.Sprite, frame.Kind);
         }
 
         [Test]
-        public void Container_IsDecor_NonInteractive()
+        public void Container_WrapperIsNotDecor_ButItsFrameArtIs()
         {
             var size = Ui.ContainerSizeForHeight(ContainerRatio.ThreeByFour, 569f);
             var node = Ui.Container("Frame", ButtonTheme.Gold, ContainerRatio.ThreeByFour, Place.At(0f, 0f), size);
 
-            Assert.IsTrue(node.Decor);
+            Assert.IsFalse(node.Decor,
+                "the wrapper must not be Decor, or ContainerContent's content would inherit the exemption again");
+            Assert.IsTrue(node.Children.Single().Decor, "the frame art itself is still non-interactive decoration");
         }
 
         [Test]
-        public void Container_PreservesAspect()
+        public void Container_FrameArt_PreservesAspect()
         {
             var size = Ui.ContainerSizeForHeight(ContainerRatio.ThreeByFour, 569f);
             var node = Ui.Container("Frame", ButtonTheme.Gold, ContainerRatio.ThreeByFour, Place.At(0f, 0f), size);
 
-            Assert.IsTrue(node.PreserveAspect);
+            Assert.IsTrue(node.Children.Single().PreserveAspect);
         }
 
         [Test]
-        public void FlagBanner_IsDecor_NonInteractive()
+        public void FlagBanner_WrapperIsNotDecor_ButItsFrameArtIs()
         {
             var size = Ui.FlagBannerSizeForHeight(ContainerRatio.ThreeByFour, 640f);
             var node = Ui.FlagBanner("Banner", ButtonTheme.Silver, ContainerRatio.ThreeByFour, Place.At(0f, 0f), size);
 
-            Assert.IsTrue(node.Decor);
-            Assert.IsTrue(node.PreserveAspect);
-            Assert.AreEqual(UiNodeKind.Sprite, node.Kind);
+            Assert.IsFalse(node.Decor);
+            Assert.AreEqual(UiNodeKind.Panel, node.Kind);
+
+            var frame = node.Children.Single();
+            Assert.IsTrue(frame.Decor);
+            Assert.IsTrue(frame.PreserveAspect);
+            Assert.AreEqual(UiNodeKind.Sprite, frame.Kind);
         }
 
         [TestCase(ButtonTheme.Gold, ContainerRatio.ThreeByFour, "UI/Buttons/Processed/container_gold_3x4.png")]
@@ -157,7 +171,7 @@ namespace PrincesPalace.Domain.Tests
             var size = Ui.ContainerSizeForHeight(ratio, height);
             var node = Ui.Container("Frame", theme, ratio, Place.At(0f, 0f), size);
 
-            Assert.AreEqual(expectedKey, node.SpriteKey);
+            Assert.AreEqual(expectedKey, node.Children.Single().SpriteKey);
         }
 
         [TestCase(ButtonTheme.Violet, ContainerRatio.NineBySixteen, "UI/Buttons/Processed/banner_flag_violet_9x16.png")]
@@ -168,21 +182,25 @@ namespace PrincesPalace.Domain.Tests
             var size = Ui.FlagBannerSizeForHeight(ratio, height);
             var node = Ui.FlagBanner("Banner", theme, ratio, Place.At(0f, 0f), size);
 
-            Assert.AreEqual(expectedKey, node.SpriteKey);
+            Assert.AreEqual(expectedKey, node.Children.Single().SpriteKey);
         }
 
         // --- ContainerContent: the inset --------------------------------------
 
         [Test]
-        public void ContainerContent_IsAddedAsAChildOfTheHolder()
+        public void ContainerContent_IsAddedAsASiblingOfTheFrameArt_UnderTheHolder()
         {
+            // Not a child of the frame -- see BuildFrameHolder/ContainerContent
+            // in Ui.cs for why content has to sit BESIDE the Decor frame art
+            // rather than under it.
             var size = Ui.ContainerSizeForHeight(ContainerRatio.ThreeByFour, 569f);
             var holder = Ui.Container("Frame", ButtonTheme.Gold, ContainerRatio.ThreeByFour, Place.At(0f, 0f), size);
+            var frame = holder.Children.Single();
             var label = Ui.Label("Label", UiStrings.Cancel, new UiVec(100f, 30f));
 
             var content = Ui.ContainerContent(holder, ContainerRatio.ThreeByFour, "FrameContent", label);
 
-            Assert.AreSame(content, holder.Children.Single());
+            CollectionAssert.AreEqual(new[] { frame, content }, holder.Children);
             Assert.AreSame(label, content.Children.Single());
         }
 
