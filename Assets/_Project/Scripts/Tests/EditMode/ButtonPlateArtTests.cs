@@ -5,9 +5,17 @@ using PrincesPalace.Domain.UiKit;
 namespace PrincesPalace.Domain.Tests
 {
     // Ui.PlateShapeFor / ButtonPlateArt: which of the four measured plate
-    // shapes (Legacy 2.79, ThreeByOne 3.10, FiveByOne 3.42, Row6x1 4.92) a
+    // shapes (Legacy 2.79, ThreeByOne 3.10, FiveByOne 4.91, Row6x1 5.92) a
     // themed button's own declared rect resolves to, and UiNode.Plate()'s
     // override of that pick.
+    //
+    // FiveByOne/Row6x1 moved 2026-09-02 (3.42->4.91, 4.92->5.92) when the
+    // user resliced button_51.png/row_61.png at closer-to-true ratios --
+    // see ButtonPlateArt's own header comment. Several real rects below
+    // changed which shape they land on as a result; each such test is
+    // renamed and re-pinned to the new pick rather than just re-asserted,
+    // so a future reader isn't left wondering why a "PicksFiveByOne" test
+    // asserts Row6x1.
     public class ButtonPlateArtTests
     {
         // --- the selection rule itself, pinned against the real rects this
@@ -19,19 +27,22 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void VerbRow_300x52_PicksRow6x1()
         {
-            // FightScreen.VerbRowW/VerbRowH. Aspect 5.769 sits 0.160 (ln) from
-            // Row6x1 and at least 0.36 from every other shape.
+            // FightScreen.VerbRowW/VerbRowH. Aspect 5.769 sits 0.026 (ln)
+            // from Row6x1 (was 0.160 pre-reslice) and at least 0.5 from
+            // every other shape.
             Assert.AreEqual(ButtonPlateShape.Row6x1, Ui.PlateShapeFor(300f, 52f));
         }
 
         [Test]
-        public void HubMainMenuButton_220x60_PicksFiveByOne()
+        public void HubMainMenuButton_220x60_PicksThreeByOne()
         {
             // HubScreen.MainMenuButton (also DamagePopup's own incidental
             // 220x60, and close enough to MainMenuScreen's various 200-260
             // wide Silver buttons to stand in for the whole cluster). Aspect
-            // 3.667 sits 0.070 (ln) from FiveByOne, its nearest neighbour.
-            Assert.AreEqual(ButtonPlateShape.FiveByOne, Ui.PlateShapeFor(220f, 60f));
+            // 3.667 sits 0.168 (ln) from ThreeByOne, its nearest neighbour --
+            // FiveByOne moving up to 4.91 pulled this rect off FiveByOne
+            // (was its pick pre-reslice, at 0.070) and onto ThreeByOne.
+            Assert.AreEqual(ButtonPlateShape.ThreeByOne, Ui.PlateShapeFor(220f, 60f));
         }
 
         [Test]
@@ -40,15 +51,19 @@ namespace PrincesPalace.Domain.Tests
             // FightScreen.TargetCancelButton. Aspect 2.933 sits 0.050 (ln)
             // from Legacy versus 0.055 from ThreeByOne - the closest contest
             // in the codebase's real rects, and Legacy still wins it.
+            // Legacy/ThreeByOne were untouched by the reslice, so this pick
+            // is unchanged.
             Assert.AreEqual(ButtonPlateShape.Legacy, Ui.PlateShapeFor(88f, 30f));
         }
 
         [Test]
-        public void RelicDraftContinueButton_320x64_PicksRow6x1()
+        public void RelicDraftContinueButton_320x64_PicksFiveByOne()
         {
-            // RelicDraftScreen's continue button. Aspect 5.0 sits 0.016 (ln)
-            // from Row6x1 - not close to any other shape.
-            Assert.AreEqual(ButtonPlateShape.Row6x1, Ui.PlateShapeFor(320f, 64f));
+            // RelicDraftScreen's continue button. Aspect 5.0 sits 0.018 (ln)
+            // from FiveByOne - Row6x1 was the pick pre-reslice (0.016 from
+            // the old 4.92 Row6x1 aspect); FiveByOne moving up to 4.91 is
+            // now the closer neighbour by a hair.
+            Assert.AreEqual(ButtonPlateShape.FiveByOne, Ui.PlateShapeFor(320f, 64f));
         }
 
         [Test]
@@ -61,7 +76,7 @@ namespace PrincesPalace.Domain.Tests
         public void ExactlyAtAShapesOwnAspect_PicksThatShape()
         {
             Assert.AreEqual(ButtonPlateShape.ThreeByOne, Ui.PlateShapeFor(310f, 100f));
-            Assert.AreEqual(ButtonPlateShape.FiveByOne, Ui.PlateShapeFor(342f, 100f));
+            Assert.AreEqual(ButtonPlateShape.FiveByOne, Ui.PlateShapeFor(491f, 100f));
         }
 
         [TestCase(0f, 52f)]

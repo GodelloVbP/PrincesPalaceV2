@@ -24,8 +24,19 @@ namespace PrincesPalace.Domain.UiKit
     //
     //   button_plate_<theme>.png:       482x171 .. 483x174, aspect 2.770-2.819
     //   button_plate_<theme>_3x1.png:   459x148 .. 461x149, aspect 3.080-3.115
-    //   button_plate_<theme>_5x1.png:   676x197 .. 676x198, aspect 3.414-3.432
-    //   row_plate_<theme>_6x1.png:      713x145 across all six themes, aspect 4.9172
+    //   button_plate_<theme>_5x1.png:   953x194 .. 954x194, aspect 4.912-4.918
+    //   row_plate_<theme>_6x1.png:      856x144 .. 856x145, aspect 5.903-5.944
+    //
+    // The 5x1 and 6x1 pair above are the RESPLICED numbers (2026-09-02): the
+    // user regenerated those two source sheets (plus the 2x1 container) at
+    // closer-to-true ratios, and tools/splice_ui_kit.py was re-run against
+    // buttons_51.png/rows_61.png in place of the original button_51.png/
+    // row_61.png -- same Processed/ filenames, so no caller changes, but the
+    // FiveByOne aspect jumped from 3.42 to ~4.92 and Row6x1 from 4.92 to
+    // ~5.92. The two shapes stay well separated (0.4 ln-distance apart) so
+    // the ratio-distance selection rule below still discriminates cleanly
+    // between them; button_31/container_32 (3x1 button, 3x2 container) were
+    // not touched by this regeneration and keep their prior numbers.
     //
     // Each cluster agrees within ~2% of itself, so ONE canonical aspect per
     // shape (the cluster average, rounded to the precision the selection rule
@@ -35,8 +46,16 @@ namespace PrincesPalace.Domain.UiKit
         // width / height, averaged across the six themes' delivered PNGs.
         internal const float LegacyAspect = 2.79f;
         internal const float ThreeByOneAspect = 3.10f;
-        internal const float FiveByOneAspect = 3.42f;
-        internal const float Row6x1Aspect = 4.92f;
+        internal const float FiveByOneAspect = 4.91f;
+        internal const float Row6x1Aspect = 5.92f;
+
+        // Content inset, worst raw fraction across the six themes measured
+        // by tools/splice_ui_kit.py's measure_inset against the resliced
+        // 5x1/6x1 PNGs (button text is centred by layout today, not inset,
+        // so nothing consumes these -- recorded for whoever wires per-shape
+        // text padding next):
+        //   button_plate_*_5x1 raw max: L0.008 T0.021 R0.008 B0.047
+        //   row_plate_*_6x1   raw max: L0.012 T0.057 R0.013 B0.043
 
         internal static float Aspect(ButtonPlateShape shape)
         {

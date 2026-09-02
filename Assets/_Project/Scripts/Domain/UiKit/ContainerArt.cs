@@ -44,11 +44,20 @@ namespace PrincesPalace.Domain.UiKit
         // shipped for these two). Measured the same way as the pair above:
         //
         //   container_*_3x2: 464x341 .. 466x344, aspect 1.349-1.367
-        //   container_*_2x1: 469x270 .. 475x273, aspect 1.718-1.759
+        //
+        // container_*_2x1 was RESPLICED 2026-09-02: the user regenerated
+        // container_21.png (plus the two button sheets above) at a
+        // closer-to-true 2:1 ratio, and tools/splice_ui_kit.py re-ran
+        // against the new containers_21.png in place of the original --
+        // same Processed/ filenames, so callers are unaffected, but the
+        // measured aspect moved from 1.718-1.759 to a noticeably tighter
+        // cluster:
+        //
+        //   container_*_2x1: 530x269 .. 536x270, aspect 1.963-1.993
         //
         // Each cluster again agrees within ~2% of itself.
         internal const float ContainerAspect3x2 = 1.36f;
-        internal const float ContainerAspect2x1 = 1.74f;
+        internal const float ContainerAspect2x1 = 1.98f;
 
         internal static float Aspect(ContainerKind kind, ContainerRatio ratio)
         {
@@ -113,7 +122,12 @@ namespace PrincesPalace.Domain.UiKit
         // discipline as the pair above:
         //
         //   container_*_3x2 raw max: L.015 T.018 R.015 B.021
-        //   container_*_2x1 raw max: L.017 T.030 R.017 B.030
+        //
+        // container_*_2x1's raw max was re-measured against the resliced
+        // art (see ContainerAspect2x1's comment above): L.010 T.019 R.011
+        // B.023 -- smaller than the original .017/.030/.017/.030 the pinned
+        // insets below were sized against, so those insets (kept as-is)
+        // stay comfortably safe rather than needing to shrink.
         internal static ContentInsetFrac Inset(ContainerKind kind, ContainerRatio ratio)
         {
             if (kind == ContainerKind.Container)
