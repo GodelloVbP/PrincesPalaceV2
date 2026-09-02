@@ -239,10 +239,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // centring under it.
             const float LeftEdgeX = -810f;
 
+            // No .Tracked() here any more -- CeremonialTitle's own spec
+            // (2f, not the 5f this used to hardcode) is what ApplyTypography
+            // actually applies once Role is set; a node.Tracking value would
+            // be silently ignored, so stating one here would lie.
             var title = Ui.Label("TitleLabel", UiStrings.GameTitle, new UiVec(760f, 100f), 64,
                     "#E3C166", Place.At(LeftEdgeX + 380f, 260f))
-                .Tracked(5f)
-                .TextAligned(UiTextAlign.Left);
+                .TextAligned(UiTextAlign.Left)
+                .Styled(TypographyRole.CeremonialTitle);
             screen.TitleLabel = title;
 
             // A FLAT SCRIM, not a gradient -- this DSL's procedural sprites
@@ -279,6 +283,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var slotChildren = new List<UiNode>
             {
                 Ui.Label("SaveSlotTitle", UiStrings.ChooseSlotHeader, new UiVec(400f, 44f), 28)
+                    .Styled(TypographyRole.FunctionalHeading)
             };
 
             for (int i = 0; i < slotCount; i++)
@@ -317,9 +322,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // --- manage saves, the destructive half ----------------------------
             var manageRows = new List<UiNode>
             {
-                Ui.Label("ManageSavesTitle", UiStrings.ManageSaves, new UiVec(400f, 50f), 32),
+                Ui.Label("ManageSavesTitle", UiStrings.ManageSaves, new UiVec(400f, 50f), 32)
+                    .Styled(TypographyRole.FunctionalHeading),
                 Ui.Label("ManageSavesWarning", UiStrings.ManageSavesWarning, new UiVec(560f, 60f), 15,
-                    "#A99BD4"),
+                    "#A99BD4")
+                    .Styled(TypographyRole.Body),
             };
 
             for (int i = 0; i < slotCount; i++)
@@ -393,7 +400,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var confirmNo = Ui.Button("ResetConfirmNoButton", UiStrings.Cancel, new UiVec(200f, 60f), 20)
                 .Themed(ButtonTheme.Silver);
-            var confirmLabel = Ui.Label("ResetConfirmLabel", UiStrings.ConfirmDelete, new UiVec(760f, 50f), 22);
+            var confirmLabel = Ui.Label("ResetConfirmLabel", UiStrings.ConfirmDelete, new UiVec(760f, 50f), 22)
+                .Styled(TypographyRole.Body);
 
             screen.ResetConfirmYesButton = holdButton;
             screen.ResetConfirmYesFill = holdFill;

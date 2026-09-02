@@ -152,6 +152,15 @@ namespace PrincesPalace.Domain.UiKit
         // button needs.
         public ButtonTheme? Theme;
 
+        // Which typography role (Typography.cs, engine-free) this label's
+        // presentation follows. Null is the untouched path: UiEmitter's
+        // ApplyTypography leaves SceneBuilder.UiFont at node.FontSize with
+        // node.Tracking as written, no case transform, no autosize -- exactly
+        // what every label emitted before this field existed. Set through
+        // Styled() below, and automatically to ButtonLabel by Ui.ApplyTheme
+        // for a themed button's own <name>Label.
+        public TypographyRole? Role;
+
         // Escape hatches. Both REQUIRE a reason, so every exemption is greppable
         // and reviewable -- in v1 everything was an escape hatch and none of them
         // were enumerable.
@@ -230,6 +239,10 @@ namespace PrincesPalace.Domain.UiKit
             return this;
         }
         public UiNode Padded(UiPad pad) { Pad = pad; return this; }
+
+        // Named Styled, not Role -- a field and a method cannot share a name
+        // in C#, and the field is the one every reader looks for first.
+        public UiNode Styled(TypographyRole role) { Role = role; return this; }
 
         // Containers default to FromChildren, which is right almost always. A
         // Fixed size is what a container needs before any child can Fill it --

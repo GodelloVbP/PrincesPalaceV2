@@ -44,6 +44,18 @@ public static class UiTextFitAudit
             if (boxWidth <= 0f || boxHeight <= 0f) continue;
 
             string sample = node.Text.AuditSample;
+
+            // A roled label whose spec upper-cases is measured upper-cased --
+            // ApplyTypography does the same transform to what actually
+            // renders, and capitals run wider than mixed case at the same
+            // point size. Measuring the untransformed sample here would pass
+            // a title that overflows the moment its real (uppercased) text
+            // draws.
+            if (node.Role.HasValue && Typography.Specs[node.Role.Value].Uppercase)
+            {
+                sample = sample?.ToUpperInvariant();
+            }
+
             var preferred = label.GetPreferredValues(sample, boxWidth, 0f);
 
             if (preferred.x <= boxWidth + Tolerance && preferred.y <= boxHeight + Tolerance) continue;

@@ -198,21 +198,79 @@ public static class UiEmitter
     private static void EmitLabel(GameObject go, UiNode node, bool decor)
     {
         var text = go.AddComponent<TextMeshProUGUI>();
-        text.font = SceneBuilder.UiFont;
         text.text = BakedText(node.Text);
-        text.fontSize = node.FontSize;
 
-        // TMP's characterSpacing is already in hundredths of an em, so this is
-        // a straight pass-through of the .14em the design writes. Set BEFORE
-        // UiTextFitAudit runs, which measures off this very component -- a
-        // tracked label is wider, and the audit has to see the width that will
-        // actually be drawn.
-        text.characterSpacing = node.Tracking;
+        // Font, material, case, tracking, line spacing and the autosize
+        // range all come from here -- set BEFORE UiTextFitAudit runs, which
+        // measures off this very component, and before alignment/color below
+        // since neither of those affects the font ApplyTypography resolves.
+        ApplyTypography(text, node);
 
         text.alignment = Alignment(node.TextAlign);
         text.color = SceneBuilder.ParseHex(node.ColorHex, Color.white);
         text.raycastTarget = false; // a label is never the click target
         if (decor) text.raycastTarget = false;
+    }
+
+    // THE single resolution point for a label's typographic dressing: font
+    // asset, material, upper-casing of the already-baked text, tracking,
+    // line spacing, and the autosize range. EmitLabel calls this for every
+    // Label node -- a themed button's own <name>Label included, since
+    // Ui.ApplyTheme gives it Role.ButtonLabel and it is emitted through the
+    // ordinary Label case in EmitNode's switch, before WireThemedButton ever
+    // runs. There is no second call site for that label's font to diverge
+    // from this one at.
+    //
+    // Role == null is the untouched path: SceneBuilder.UiFont at node.
+    // FontSize, node.Tracking exactly as written, no autosize. Every
+    // unmigrated screen's Ui.Label/Ui.Button calls hit only this branch, so
+    // adding Role to the vocabulary moved nothing for a caller that never
+    // sets it.
+    //
+    // Only the TMP component's baked text is upper-cased here -- never
+    // node.Text, the UiString the screen declared and the text-fit audit
+    // still measures from its own AuditSample. A controller that overwrites
+    // this label at runtime (TMP_Text.Set, MainMenuController.RefreshContinue
+    // and its like) writes its own case afterwards and is unaffected either
+    // way.
+    private static void ApplyTypography(TextMeshProUGUI text, UiNode node)
+    {
+        if (!node.Role.HasValue)
+        {
+            text.font = SceneBuilder.UiFont;
+            text.fontSize = node.FontSize;
+            text.characterSpacing = node.Tracking;
+            return;
+        }
+
+        var role = node.Role.Value;
+        var spec = Typography.Specs[role];
+
+        // Null on a missing asset (not yet generated) falls back to UiFont
+        // rather than leaving TMP with no font -- the same graceful-
+        // degradation posture FontFor/MaterialFor already state themselves.
+        text.font = SceneBuilder.FontFor(role) ?? SceneBuilder.UiFont;
+        var material = SceneBuilder.MaterialFor(role);
+        if (material != null) text.fontSharedMaterial = material;
+
+        if (spec.Uppercase) text.text = text.text?.ToUpperInvariant();
+
+        // ButtonLabel's Tracking is null (dynamic, fit-dependent) by design
+        // -- see Typography.cs -- so it falls through to the same
+        // Ui.ButtonTracking rule d05294c gave button captions, rather than a
+        // fixed authored value every other role carries.
+        text.characterSpacing = spec.Tracking ?? Ui.ButtonTracking(node.Text);
+        text.lineSpacing = spec.LineSpacing;
+
+        // node.FontSize > 0 is this project's existing "was this actually
+        // set" sentinel (Ui.ApplyTheme's own label.FontSize fallback uses the
+        // same test) -- kept here so a role can still hand a genuinely unset
+        // node its own authored max.
+        float fontSizeMax = node.FontSize > 0 ? node.FontSize : spec.MaxSize1080p;
+        text.fontSize = fontSizeMax;
+        text.enableAutoSizing = true;
+        text.fontSizeMax = fontSizeMax;
+        text.fontSizeMin = spec.MinSize1080p;
     }
 
     // A LABEL'S ALIGNMENT, and only a label's: a button's caption fills its
@@ -380,16 +438,14 @@ public static class UiEmitter
 
         // THE LABEL DRESSING THE PLAIN DSL CANNOT SAY.
         //
-        // Auto-fit and an ellipsis fallback so a caption that runs long
-        // shrinks before it clips off a fixed-size plate, and a margin that
-        // keeps the word off the plate's own painted border - none of these
-        // are things any other screen's Label needs, which is why they live
-        // here rather than as new UiNode fields every OTHER label would carry
-        // for nothing.
-        labelText.enableAutoSizing = true;
-        labelText.fontSizeMin = 20f;
-        labelText.fontSizeMax = labelNode.FontSize;
-        labelText.alignment = TextAlignmentOptions.Center;
+        // Font, material, case, tracking, line spacing and the autosize
+        // range already came from EmitLabel's own ApplyTypography -- Ui.
+        // ApplyTheme gives this label Role.ButtonLabel, and the Label case in
+        // EmitNode's switch ran on it before this function was ever called.
+        // What is left is the two things genuinely specific to sitting on a
+        // plate: an ellipsis fallback so a caption that outgrows even the
+        // role's own size floor still doesn't clip off the plate, and a
+        // margin that keeps the word off the plate's own painted border.
         labelText.overflowMode = TextOverflowModes.Ellipsis;
         labelText.margin = new Vector4(18f, 4f, 18f, 4f);
 

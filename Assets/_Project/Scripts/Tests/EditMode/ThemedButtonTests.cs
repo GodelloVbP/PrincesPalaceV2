@@ -58,6 +58,29 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(UiNodeKind.Label, label.Kind);
         }
 
+        // --- typography role -----------------------------------------------------
+
+        [Test]
+        public void AThemedButtonsLabel_CarriesTheButtonLabelRole()
+        {
+            var button = Build(ButtonTheme.Gold);
+            var label = Find(button, "TestButtonLabel");
+
+            Assert.AreEqual(TypographyRole.ButtonLabel, label.Role,
+                "Ui.ApplyTheme should give every themed button's own label Role.ButtonLabel automatically - " +
+                "that is the whole point of step 1, a screen never says .Styled(ButtonLabel) itself");
+        }
+
+        [Test]
+        public void TheButtonNodeItself_CarriesNoRole()
+        {
+            // Role belongs to the LABEL, not the button that wears it - the
+            // button node has no text of its own to be typeset.
+            var button = Build(ButtonTheme.Gold);
+
+            Assert.IsNull(button.Role);
+        }
+
         [TestCase(ButtonTheme.Gold, "gold")]
         [TestCase(ButtonTheme.Crimson, "crimson")]
         [TestCase(ButtonTheme.Violet, "violet")]

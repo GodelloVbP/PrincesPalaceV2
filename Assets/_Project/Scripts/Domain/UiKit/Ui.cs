@@ -365,6 +365,12 @@ namespace PrincesPalace.Domain.UiKit
                 node.FontSize > 0 ? node.FontSize : 29, "#FFFFFFFF", Place.Stretch());
             label.Tracking = ButtonTracking(node.Text);
 
+            // Every themed button's caption follows ButtonLabel -- the one
+            // migration step 1 does automatically, without a screen having to
+            // say .Styled(ButtonLabel) at every Themed() call site. See
+            // UiEmitter.ApplyTypography for what this actually changes.
+            label.Role = TypographyRole.ButtonLabel;
+
             // Visuals and Label occupy the SAME box on purpose - the caption
             // sits on its own plate, which is exactly what Layered exists to
             // say. Without it, A1 reads Label as a real graphic sitting on top

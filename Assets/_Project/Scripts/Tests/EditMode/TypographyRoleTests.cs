@@ -52,5 +52,25 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(spec.Uppercase);
             Assert.IsNull(spec.Tracking);
         }
+
+        // --- UiNode.Role / .Styled() ----------------------------------------------
+
+        [Test]
+        public void ANewLabel_HasNoRoleByDefault()
+        {
+            var label = Ui.Label("SomeLabel", UiStrings.Cancel, new UiVec(100f, 20f));
+
+            Assert.IsNull(label.Role,
+                "an unmigrated label must stay on the untouched path - see UiEmitter.ApplyTypography");
+        }
+
+        [Test]
+        public void Styled_SetsRole_AndReturnsTheSameNodeForChaining()
+        {
+            var label = Ui.Label("SomeLabel", UiStrings.Cancel, new UiVec(100f, 20f))
+                .Styled(TypographyRole.Body);
+
+            Assert.AreEqual(TypographyRole.Body, label.Role);
+        }
     }
 }
