@@ -1301,8 +1301,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         private UiNode BuildContinueButton()
         {
+            // GOLD, not one of the four verb colours: this is the recommended-
+            // next-action button (see CLAUDE.md's colour reservation) rather
+            // than a combat choice - it only ever appears once a beat has
+            // resolved and there is exactly one thing to do next.
             var button = Ui.Button("ContinueButton", UiStrings.Continue, new UiVec(300f, 80f), 20,
                     Place.At(-286f, -420f))
+                .Themed(ButtonTheme.Gold)
                 .Inactive()
                 .AllowOverlap("Continue swaps footprints with the verb column - the verbs are fully hidden whenever it is up, so the two are never both live");
             ContinueButton = button;
@@ -1722,9 +1727,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             prompt.Opening();
             prompt.AsDecor();
 
+            // SILVER, matching Cancel/Back everywhere else - .Hovers() is
+            // dropped rather than left dead: ThemedButtonState drives its own
+            // hover/press feedback on Glow/Plate, and EmitButton's themed
+            // branch never reaches the HoverScale/ButtonPressAnimator code
+            // that a plain button's .Hovers() call would otherwise wire.
             var cancel = Ui.Button("TargetCancelButton", UiStrings.TargetCancel,
                     new UiVec(88f, 30f), 12, Place.At(190f, 0f))
-                .Hovers(1.05f);
+                .Themed(ButtonTheme.Silver);
             TargetCancelButton = cancel;
             prompt.Children.Add(cancel);
 
