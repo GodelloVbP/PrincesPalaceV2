@@ -41,22 +41,29 @@ namespace PrincesPalace.Domain.UiKit
 
         // The transparent-grid kit's second delivery -- container_<theme>_
         // 3x2.png and _2x1.png, container-only (no banner_flag_ equivalent
-        // shipped for these two). Measured the same way as the pair above:
+        // shipped for these two).
         //
-        //   container_*_3x2: 464x341 .. 466x344, aspect 1.349-1.367
+        // container_*_3x2 was RESPLICED 2026-09-02: the user regenerated
+        // container_32.png in place at a true-to-nominal 3:2 ratio (the
+        // filename didn't change, only the pixels -- tools/splice_ui_kit.py
+        // re-ran against it and overwrote the same Processed/ filenames, so
+        // every .meta GUID stayed valid). Old measurement was 464x341 ..
+        // 466x344, aspect 1.349-1.367; resliced:
         //
-        // container_*_2x1 was RESPLICED 2026-09-02: the user regenerated
-        // container_21.png (plus the two button sheets above) at a
-        // closer-to-true 2:1 ratio, and tools/splice_ui_kit.py re-ran
-        // against the new containers_21.png in place of the original --
-        // same Processed/ filenames, so callers are unaffected, but the
+        //   container_*_3x2: 504x338 .. 505x338, aspect 1.491-1.494
+        //
+        // container_*_2x1 was RESPLICED 2026-09-02 (same day, earlier): the
+        // user regenerated container_21.png (plus the two button sheets
+        // above) at a closer-to-true 2:1 ratio, and tools/splice_ui_kit.py
+        // re-ran against the new containers_21.png in place of the original
+        // -- same Processed/ filenames, so callers are unaffected, but the
         // measured aspect moved from 1.718-1.759 to a noticeably tighter
         // cluster:
         //
         //   container_*_2x1: 530x269 .. 536x270, aspect 1.963-1.993
         //
-        // Each cluster again agrees within ~2% of itself.
-        internal const float ContainerAspect3x2 = 1.36f;
+        // Each cluster agrees within ~2% of itself.
+        internal const float ContainerAspect3x2 = 1.49f;
         internal const float ContainerAspect2x1 = 1.98f;
 
         internal static float Aspect(ContainerKind kind, ContainerRatio ratio)
@@ -121,7 +128,11 @@ namespace PrincesPalace.Domain.UiKit
         // WORST (largest) raw fraction per side, then the same margin
         // discipline as the pair above:
         //
-        //   container_*_3x2 raw max: L.015 T.018 R.015 B.021
+        // container_*_3x2's raw max was re-measured against the resliced
+        // art (see ContainerAspect3x2's comment above): L.008 T.003 R.008
+        // B.015 -- smaller than the original .015/.018/.015/.021 the pinned
+        // insets below were sized against, so those insets (kept as-is)
+        // stay comfortably safe rather than needing to shrink.
         //
         // container_*_2x1's raw max was re-measured against the resliced
         // art (see ContainerAspect2x1's comment above): L.010 T.019 R.011
