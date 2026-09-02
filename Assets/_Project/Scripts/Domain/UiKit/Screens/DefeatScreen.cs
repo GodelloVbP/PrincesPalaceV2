@@ -18,6 +18,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const float PanelWidth = ReckoningScreen.PanelWidth;
         public const float PanelHeight = ReckoningScreen.PanelHeight;
 
+        // CRIMSON, 3:2 KIT CONTAINER -- the frame's own box, not PanelWidth/
+        // PanelHeight. Those two stay matched to the Reckoning's for
+        // ItIsTheSameSizeAsTheReckoning (the screen's overall footprint);
+        // the FRAME wears real art now, so its own height is derived to hit
+        // the kit's measured 3:2 aspect (1.49, see ContainerArt.
+        // ContainerAspect3x2) exactly rather than reusing 896 (aspect 1.5),
+        // which was only ever a number a flat-coloured panel didn't care
+        // about matching. Width unchanged (1344, pinned by DefeatScreenTests);
+        // height moves 896 -> 902.01.
+        public const float FrameHeight = PanelWidth / ContainerArt.ContainerAspect3x2;
+
         // Matches the Reckoning's, for the same reason: fixed at build time, so
         // it must cover the largest party the save can field.
         public const int RowCount = ReckoningScreen.RowCount;
@@ -37,7 +48,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> RowNames = new List<NodeRef>();
         public List<NodeRef> RowStats = new List<NodeRef>();
 
-        private const float ColumnX = 336f;
+        // Pulled in from 336 -- the container's own 3.5% left/right inset
+        // caps content at +-624.96 (1344 * (0.5 - 0.035)), and a 600-wide
+        // column at 336 reached 636, 11.04px past it. 324.96 clears it with
+        // zero slack; nothing else about the column layout changes.
+        private const float ColumnX = 324.96f;
         private const float RowHeight = 76f;
         private const float RowPitch = 84f;
 
@@ -116,9 +131,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             inside.Add(inspect);
             inside.Add(ret);
 
-            var frame = Ui.Panel("DefeatFrame", Place.At(0f, 0f),
-                    UiSize.Fixed(PanelWidth, PanelHeight), inside)
-                .Coloured("#2A1230F5");
+            var frame = Ui.Container("DefeatFrame", ButtonTheme.Crimson, ContainerRatio.ThreeByTwo,
+                Place.At(0f, 0f), new UiVec(PanelWidth, FrameHeight));
+            Ui.ContainerContent(frame, ContainerRatio.ThreeByTwo, "DefeatFrameContent", inside.ToArray());
             screen.Frame = frame;
 
             var content = Ui.Panel("DefeatContent", Place.At(0f, 0f), UiSize.Fill, frame);

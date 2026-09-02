@@ -107,6 +107,71 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void TheFrameIsACrimsonThreeByTwoContainer()
+        {
+            // Was a flat #2A1230F5 panel -- the frame moved to the kit's
+            // Crimson 3:2 container 2026-09-02, and the old fill is gone
+            // entirely so the painted art is the only frame.
+            var frame = DefeatScreen.Build().Frame.Node;
+
+            Assert.IsFalse(frame.Decor,
+                "the wrapper must stay non-Decor, or content beneath it audits clean against itself");
+            var art = frame.Children.Single(c => c.Kind == UiNodeKind.Sprite);
+            Assert.AreEqual("UI/Buttons/Processed/container_crimson_3x2.png", art.SpriteKey);
+            Assert.IsTrue(art.Decor);
+            Assert.IsNull(frame.ColorHex, "the old flat fill must be gone -- the art is the only frame now");
+        }
+
+        [Test]
+        public void TheFrameIsPinnedWidthAndTheHeightMatchesTheMeasuredAspect()
+        {
+            var rect = RectOf("DefeatFrame");
+
+            // 1.49 -- ContainerArt.ContainerAspect3x2 is internal and this
+            // assembly carries no InternalsVisibleTo grant to it (only
+            // Editor gets one), so the measured aspect is restated here as a
+            // literal, same as ContainerTests' own SpriteKey literals.
+            Assert.AreEqual(1344f, rect.Width, 0.01f);
+            Assert.AreEqual(1344f / 1.49f, rect.Height, 0.01f, "902.01, was 896");
+        }
+
+        [Test]
+        public void TheFrameContentSitsInsideTheMeasuredInset()
+        {
+            var frame = DefeatScreen.Build().Frame.Node;
+            var content = frame.Children.Single(c => c.Name == "DefeatFrameContent");
+            var inset = Ui.ContainerContentInset(ContainerRatio.ThreeByTwo);
+
+            Assert.AreEqual(PlaceKind.Stretch, content.Place.Kind);
+            Assert.AreEqual(DefeatScreen.PanelWidth * inset.Left, content.Place.Left, 0.01f);
+            Assert.AreEqual(DefeatScreen.PanelWidth * inset.Right, content.Place.Right, 0.01f);
+            Assert.AreEqual(DefeatScreen.FrameHeight * inset.Top, content.Place.Top, 0.01f);
+            Assert.AreEqual(DefeatScreen.FrameHeight * inset.Bottom, content.Place.Bottom, 0.01f);
+        }
+
+        [Test]
+        public void TheFrameChildrenRideInsideTheFrame()
+        {
+            // If the title, rows or exit buttons were siblings of the frame
+            // rather than descendants, moving or hiding it would leave them
+            // stranded next to it instead of with it.
+            var frame = DefeatScreen.Build().Frame.Node;
+            var names = Walk(frame).Select(n => n.Name).ToList();
+
+            CollectionAssert.Contains(names, "DefeatTitle");
+            CollectionAssert.Contains(names, "DefeatReturnButton");
+            CollectionAssert.Contains(names, "DefeatInspectButton");
+        }
+
+        private static UiRect RectOf(string name)
+        {
+            var solved = UiSolver.Solve(Tree(), UiFrames.Reference);
+            var node = solved.Name == name ? solved : solved.Descendants().FirstOrDefault(n => n.Name == name);
+            Assert.IsNotNull(node, $"no node named '{name}' in the defeat tree");
+            return node.Rect;
+        }
+
+        [Test]
         public void NoChildCollidesWithAButtonsGeneratedCaption()
         {
             // A THEMED button's own "<Name>Label" is not a collision -- it is
