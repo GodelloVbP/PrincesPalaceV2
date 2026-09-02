@@ -314,6 +314,90 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(chosenA.Target?.Name, chosenB.Target?.Name);
         }
 
+        [Test]
+        public void Lookahead2Policy_AtNearFullHealth_AttacksInsteadOfARepeatedZeroValueHeal()
+        {
+            // Pins the seed 18 (and 418 further rows across the same batch)
+            // livelock: Woolgathering (HealSelf, flatAmount 40 + power 30 per
+            // point of Wool spent) previewed a flat, HP-independent number
+            // that beat a real attack every single turn because ScoreOf used
+            // to score a heal's own effect UNCAPPED -- even at/near full
+            // health, where the cast restores almost nothing. This heal is
+            // built the same way: a large flatAmount and no resource cost
+            // (so PreviewSkillPower returns exactly flatAmount regardless of
+            // the actor's own Wool), which an uncapped ScoreOf would always
+            // rank above the attack below. Capped to the 1 HP actually
+            // missing, it must not.
+            var bigHeal = new ResolvedSkill("mega_heal", "Mega Heal", "", "hero", 1, SkillEffect.HealSelf,
+                SkillTargeting.Self, 0, 0, false, 0, 999, false, null, SpellPresentation.None, 0);
+            var skills = new List<ResolvedSkill> { bigHeal };
+            var (session, hero, foes) = HeroVsManyWithSkills(skills, 5000);
+            hero.CurrentHealth = hero.MaxHealth - 1;
+            var policy = new Lookahead2Policy();
+            var legal = FightAction.LegalActions(session, hero, System.Array.Empty<SatchelStack>());
+
+            var chosen = policy.Choose(session, hero, legal, new SeededRandom(1));
+
+            Assert.AreNotEqual(FightActionKind.Skill, chosen.Kind,
+                "an uncapped heal preview of 999 would always outscore Attack/BasicSpell; capped to the 1 HP actually missing it must not win over either");
+        }
+
+        [Test]
+        public void Lookahead2Policy_IncomingDamageMagnitude_DoesNotChangeOrderingBetweenTwoDamagingOptions()
+        {
+            // The score already subtracts the SAME incoming-damage term from
+            // every non-lethal option (ScoreOf sums ThreatOf across every
+            // living enemy regardless of which one is targeted), so raising
+            // the enemy's own attack must not flip which of two damaging
+            // options this policy prefers -- it changes both options' scores
+            // by the identical amount. Pinned directly rather than assumed:
+            // a future change that made `incoming` depend on the action
+            // (say, only counting threats the action does not also block)
+            // would break this silently otherwise.
+            FightActionKind ChosenKindWithFoeAttack(int foeAttack)
+            {
+                var hero = Fighter("Hero", true, maxHealth: 300, attack: 50, speed: 10);
+                var foe = Fighter("Foe", false, maxHealth: 5000, attack: foeAttack, speed: 1);
+                var encounter = new CombatEncounter(new[] { hero }, new[] { foe });
+                // Multiplier well below 1 so the basic spell never ties or
+                // beats the melee Attack on raw damage alone.
+                var basicSpell = new ResolvedSpellTier(1, "Bolt", 0, 0.1f, 0);
+                var kit = new PlayerKit("hero", CharacterRole.Tank, null, null, DamageType.Physical, basicSpell);
+                var session = new FightSession(encounter, new List<PlayerKit> { kit }, null, new SeededRandom(1))
+                {
+                    DamageVarianceRange = 0f,
+                };
+                session.Begin();
+                var policy = new Lookahead2Policy();
+                var legal = FightAction.LegalActions(session, hero, System.Array.Empty<SatchelStack>());
+
+                return policy.Choose(session, hero, legal, new SeededRandom(1)).Kind;
+            }
+
+            var lowThreat = ChosenKindWithFoeAttack(1);
+            var highThreat = ChosenKindWithFoeAttack(500);
+
+            Assert.AreEqual(FightActionKind.Attack, lowThreat, "melee should out-damage the weak basic spell regardless of incoming threat");
+            Assert.AreEqual(lowThreat, highThreat,
+                "raising the enemy's own attack -- and so the incoming term subtracted from every option alike -- must not flip which damaging option ranks best");
+        }
+
+        [Test]
+        public void NonDamagingSkillGuard_BlocksAfterMaxConsecutive_AndResetsOnProgress()
+        {
+            var guard = new NonDamagingSkillGuard();
+            var actor = Fighter("Hero", true);
+
+            Assert.IsTrue(guard.MayChoose(actor, "ward", 2));
+            guard.RecordChosen(actor, "ward");
+            Assert.IsTrue(guard.MayChoose(actor, "ward", 2));
+            guard.RecordChosen(actor, "ward");
+            Assert.IsFalse(guard.MayChoose(actor, "ward", 2), "a third repeat past a cap of 2 must be blocked");
+
+            guard.RecordProgress(actor);
+            Assert.IsTrue(guard.MayChoose(actor, "ward", 2), "progress must clear the streak");
+        }
+
         // ---- Archetypes.Create ----------------------------------------------
 
         [Test]

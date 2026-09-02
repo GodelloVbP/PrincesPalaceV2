@@ -56,16 +56,29 @@ namespace PrincesPalace.Domain.Bot
         // itself and forwards every call.
         private readonly GreedyAggressivePolicy _runBrain = new GreedyAggressivePolicy();
 
+        // Backstop for the guard below -- see NonDamagingSkillGuard's own
+        // header for why a per-turn score cannot be the whole fix, and this
+        // policy's ScoreOf/isHeal comments for the primary fix (capping a
+        // heal's own effect to what is actually missing). Independent of
+        // Gift skills or DamageAll being individually tuned later: whatever
+        // effect ScoreOf gives 0 of its own to (Provoke, Ward, Shatter,
+        // BuffParty, Transform, the three Gifts, Summon) is, by definition,
+        // never converting anything this policy can see -- so a memoryless
+        // score keeps re-picking whichever of them currently beats
+        // `-incoming`, forever, exactly the way GreedyDefensive's ward did
+        // at seed 629 before it got the same kind of guard.
+        private readonly NonDamagingSkillGuard _repeatGuard = new NonDamagingSkillGuard();
+
         public FightAction Choose(FightSession session, CombatantState actor, IReadOnlyList<FightAction> legal, SeededRandom rng)
         {
             var livingEnemies = session.Encounter.LivingEnemies.ToList();
 
             var tied = new List<FightAction> { legal[0] };
-            long bestScore = ScoreOf(session, actor, legal[0], livingEnemies);
+            long bestScore = ScoreOf(session, actor, legal[0], livingEnemies, _repeatGuard, out _);
 
             for (int i = 1; i < legal.Count; i++)
             {
-                long score = ScoreOf(session, actor, legal[i], livingEnemies);
+                long score = ScoreOf(session, actor, legal[i], livingEnemies, _repeatGuard, out _);
                 if (score > bestScore)
                 {
                     bestScore = score;
@@ -78,7 +91,42 @@ namespace PrincesPalace.Domain.Bot
                 }
             }
 
-            return tied.Count == 1 ? tied[0] : tied[rng.NextInt(0, tied.Count)];
+            var chosen = tied.Count == 1 ? tied[0] : tied[rng.NextInt(0, tied.Count)];
+
+            string chosenKey = NonProgressingSkillKey(session, actor, chosen);
+            if (chosenKey != null)
+            {
+                _repeatGuard.RecordChosen(actor, chosenKey);
+            }
+            else
+            {
+                _repeatGuard.RecordProgress(actor);
+            }
+
+            return chosen;
+        }
+
+        // The skill id for every Skill EXCEPT a damaging one -- null only for
+        // DamageSingle/DamageAll (and for every non-Skill action). A heal
+        // used to be excluded here too, on the theory that ScoreOf's own cap
+        // (missing HP/mana) already made it honest; it does not, when the
+        // party is taking roughly as much chip damage as the heal restores
+        // each turn -- "missing" never runs out, so a heal that is genuinely
+        // converting HP every single cast can still win the pick forever and
+        // enemy HP never moves (seeds across the 20260902-013421 batch: 183
+        // rows, all woolgathering, all repeated past any plausible "still
+        // buying something" count). Folding it into the same guard as the
+        // effects ScoreOf cannot preview at all is the fix: real or not, a
+        // repeat that never gets interrupted by an actual damaging pick is
+        // exactly the shape the guard exists to catch.
+        private static string NonProgressingSkillKey(FightSession session, CombatantState actor, FightAction action)
+        {
+            if (action.Kind != FightActionKind.Skill) return null;
+
+            var option = session.SkillOptionsFor(actor).FirstOrDefault(o => o.Index == action.SkillIndex);
+            bool isDamage = option.Skill.Effect == SkillEffect.DamageSingle || option.Skill.Effect == SkillEffect.DamageAll;
+
+            return isDamage ? null : option.Skill.Id;
         }
 
         // The expected party HP swing of taking `action` right now: this
@@ -87,10 +135,12 @@ namespace PrincesPalace.Domain.Bot
         // unit) plus KillBonus if it drops its target, minus the enemies
         // still standing afterwards' combined expected damage next turn.
         private static long ScoreOf(
-            FightSession session, CombatantState actor, FightAction action, List<CombatantState> livingEnemies)
+            FightSession session, CombatantState actor, FightAction action, List<CombatantState> livingEnemies,
+            NonDamagingSkillGuard repeatGuard, out string nonProgressingKey)
         {
             long ownEffect = 0;
             bool killsTarget = false;
+            nonProgressingKey = null;
 
             switch (action.Kind)
             {
@@ -138,18 +188,96 @@ namespace PrincesPalace.Domain.Bot
                     }
                     else if (isHeal)
                     {
-                        // RestorePartyMana previews a mana number through the
-                        // exact same Amount() branch as the two HP heals
-                        // (SkillResolution.Amount, HealSelf/HealParty/
-                        // RestorePartyMana share one case) -- there is no way
-                        // to tell "restores mana" from "restores HP" without
-                        // re-deriving the effect a second time, which is
-                        // what `effect` already is. Scored as an HP gain
-                        // regardless: a wrong unit on the minority case
-                        // (RestorePartyMana) still reads as "this is doing
-                        // something useful", which is closer to true than
-                        // scoring it 0.
-                        ownEffect = session.PreviewSkillPower(actor, option.Skill);
+                        // CAPPED TO WHAT IS ACTUALLY MISSING -- the root
+                        // cause of the seed 18 (and 418 further rows across
+                        // the batch this was found in) livelock: an
+                        // uncapped heal scores its full preview amount even
+                        // at or near full health, where it restores nothing
+                        // real. woolgathering (flatAmount 40 + power 30 per
+                        // point of Wool spent, so a flat ~160 whenever the
+                        // caster is not already low on Wool) was consistently
+                        // OUTSCORING a real attack whose pre-mitigation
+                        // preview happened to sit below that flat number for
+                        // this matchup, so it won every single turn and
+                        // enemy HP never moved -- the trace shows party HP
+                        // oscillating in a narrow high band the whole time,
+                        // not sitting at a fixed low value, which is what
+                        // said "the heal itself is fine, the SCORE is wrong"
+                        // rather than "this actor is stuck needing to heal".
+                        //
+                        // The Item branch above already caps a health potion
+                        // to MaxHealth-CurrentHealth for the identical
+                        // reason; heal skills never got the same treatment.
+                        // RestorePartyMana previews through the same
+                        // SkillResolution.Amount case as the two HP heals
+                        // (there is no way to tell "restores mana" from
+                        // "restores HP" without re-deriving `effect`, which
+                        // this already has) and is capped the same way, in
+                        // its own unit -- missing PARTY mana rather than
+                        // missing party HP, which also fixes the "wrong
+                        // unit" quirk this branch used to warn about rather
+                        // than merely documenting it.
+                        int previewed = session.PreviewSkillPower(actor, option.Skill);
+                        int missing;
+                        if (effect == SkillEffect.RestorePartyMana)
+                        {
+                            missing = session.Encounter.LivingPlayerParty
+                                .Sum(c => System.Math.Max(0, c.MaxMana - c.CurrentMana));
+                        }
+                        else if (effect == SkillEffect.HealParty)
+                        {
+                            missing = session.Encounter.LivingPlayerParty
+                                .Sum(c => System.Math.Max(0, c.MaxHealth - c.CurrentHealth));
+                        }
+                        else
+                        {
+                            missing = actor != null ? System.Math.Max(0, actor.MaxHealth - actor.CurrentHealth) : 0;
+                        }
+
+                        ownEffect = System.Math.Min(previewed, missing);
+
+                        // Same backstop as the effects below that ScoreOf
+                        // cannot preview at all -- see NonProgressingSkillKey.
+                        // The cap above already makes a heal near full health
+                        // score honestly, but a heal that keeps restoring a
+                        // REAL amount every turn because incoming chip damage
+                        // refills "missing" just as fast is a genuine
+                        // standoff, not overhealing, and the cap alone cannot
+                        // see that: it only looks at THIS turn. Two picks
+                        // running with no damaging action landing in between
+                        // is the same "tried it, not converting" signal the
+                        // else branch already acts on.
+                        nonProgressingKey = option.Skill.Id;
+                        if (repeatGuard != null &&
+                            !repeatGuard.MayChoose(actor, nonProgressingKey, NonDamagingSkillGuard.DefaultMaxConsecutive))
+                        {
+                            ownEffect -= KillBonus;
+                        }
+                    }
+                    else
+                    {
+                        // Backstop for whatever the comment above already
+                        // scores at 0 -- see NonDamagingSkillGuard's own
+                        // header. Flagging the key here (rather than only in
+                        // NonProgressingSkillKey, which Choose() also calls)
+                        // means the penalty below and the eventual
+                        // RecordChosen/RecordProgress bookkeeping read off
+                        // the exact same "is this effect one we cannot
+                        // preview" test, so the two can never drift apart.
+                        nonProgressingKey = option.Skill.Id;
+                        if (repeatGuard != null &&
+                            !repeatGuard.MayChoose(actor, nonProgressingKey, NonDamagingSkillGuard.DefaultMaxConsecutive))
+                        {
+                            // Large enough to outweigh any realistic
+                            // ownEffect-incoming spread so this drops below
+                            // every other legal option this turn -- but
+                            // finite, so if it is the ONLY legal action
+                            // (FightAction.LegalActions never returns empty;
+                            // HoldBack alone would still beat this) it is
+                            // still chosen rather than the loop having
+                            // nothing to return.
+                            ownEffect -= KillBonus;
+                        }
                     }
 
                     break;

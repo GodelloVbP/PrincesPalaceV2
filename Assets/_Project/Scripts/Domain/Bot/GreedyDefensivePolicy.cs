@@ -59,13 +59,44 @@ namespace PrincesPalace.Domain.Bot
         // so a ward that is genuinely doing its job (the enemy misses, or
         // dies to someone else first) is never penalised -- only a ward that
         // keeps getting immediately spent for zero net progress is.
+        //
+        // Kept at 3 rather than being retuned to NonDamagingSkillGuard's own
+        // default of 2 -- this was the number that fixed seed 629 and
+        // BotPolicyTests pins the exact sequence it produces, so changing it
+        // now would be re-tuning a working guard to match an unrelated one's
+        // default rather than for any reason of its own.
         private const int MaxConsecutiveWardsWithoutASwing = 3;
 
-        private readonly Dictionary<CombatantState, int> _consecutiveWardsWithoutASwing =
-            new Dictionary<CombatantState, int>();
+        // Shared with Lookahead2Policy's own no-progress backstop -- see
+        // NonDamagingSkillGuard's header. This was the original of the two
+        // (found first, at seed 629) and is the reason the type exists at
+        // all; only the ward key is ever recorded here.
+        private readonly NonDamagingSkillGuard _repeatGuard = new NonDamagingSkillGuard();
+        private const string WardGuardKey = "ward";
+
+        // What RecordProgress actually requires now: NOT "a swing was
+        // attempted" (that reset unconditionally, seeds 488/772/... in the
+        // 20260902-013421 batch: ward,ward,ward,attack-that-does-not-land,
+        // ward,ward,ward,attack-that-does-not-land forever -- capped at 3
+        // wards in a row same as always, but the cap kept being handed back
+        // every fourth turn regardless of whether that attack actually did
+        // anything). Total living-enemy HP, snapshotted per actor on every
+        // Choose() call; the swing branch below only resets the guard when
+        // that total has actually dropped since the LAST time this actor was
+        // asked. An attack that keeps missing (or a target that keeps
+        // getting healed back up by an ally) now leaves the ward guard
+        // tripped instead of handing it a fresh streak of 3 -- the fallback
+        // swing keeps being taken every turn from then on, which is what
+        // actually ends the fight instead of cycling back to ward.
+        private readonly Dictionary<CombatantState, int> _enemyHpAtLastCheck = new Dictionary<CombatantState, int>();
 
         public FightAction Choose(FightSession session, CombatantState actor, IReadOnlyList<FightAction> legal, SeededRandom rng)
         {
+            int totalEnemyHp = session.Encounter.LivingEnemies.Sum(e => e.CurrentHealth);
+            bool madeRealProgressSinceLastAsk =
+                !_enemyHpAtLastCheck.TryGetValue(actor, out var lastEnemyHp) || totalEnemyHp < lastEnemyHp;
+            _enemyHpAtLastCheck[actor] = totalEnemyHp;
+
             bool hurt = actor != null && actor.MaxHealth > 0 &&
                         actor.CurrentHealth <= actor.MaxHealth * HealBelowHealthFraction;
 
@@ -96,13 +127,12 @@ namespace PrincesPalace.Domain.Bot
             bool alreadyWarded = StatusEffects.IsWarded(actor);
             if (!alreadyWarded)
             {
-                int consecutiveWards = _consecutiveWardsWithoutASwing.TryGetValue(actor, out var count) ? count : 0;
-                if (consecutiveWards < MaxConsecutiveWardsWithoutASwing)
+                if (_repeatGuard.MayChoose(actor, WardGuardKey, MaxConsecutiveWardsWithoutASwing))
                 {
                     var wardSkill = FirstSkillWithEffect(session, actor, legal, SkillEffect.Ward);
                     if (wardSkill.HasValue)
                     {
-                        _consecutiveWardsWithoutASwing[actor] = consecutiveWards + 1;
+                        _repeatGuard.RecordChosen(actor, WardGuardKey);
                         return wardSkill.Value;
                     }
                 }
@@ -146,10 +176,17 @@ namespace PrincesPalace.Domain.Bot
 
                 if (found)
                 {
-                    // A swing landed (or was at least attempted) -- the
-                    // livelock guard above only counts wards that were never
-                    // followed by one of these.
-                    _consecutiveWardsWithoutASwing[actor] = 0;
+                    // Only reset the guard when the swing actually reduced
+                    // total enemy HP since this actor was last asked -- see
+                    // _enemyHpAtLastCheck's header. An attempted swing that
+                    // did not land is not "progress" for livelock-guard
+                    // purposes even though it is still this turn's chosen
+                    // action.
+                    if (madeRealProgressSinceLastAsk)
+                    {
+                        _repeatGuard.RecordProgress(actor);
+                    }
+
                     return best;
                 }
             }
