@@ -84,6 +84,13 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void AbandonWearsSilverLikeEveryOtherExit()
+        {
+            // Room nodes stay unthemed -- the painted tree IS their plate.
+            Assert.AreEqual(ButtonTheme.Silver, MapScreen.Build().AbandonButton.Node.Theme);
+        }
+
+        [Test]
         public void ThePoolCoversEveryPositionALegCouldUse()
         {
             var screen = MapScreen.Build();

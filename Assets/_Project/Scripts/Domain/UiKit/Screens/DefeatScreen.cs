@@ -50,11 +50,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // roster with everything they learned, and a screen that says
                 // otherwise is lying about its own save format.
                 Ui.Label("DefeatTitle", UiStrings.DefeatTitle, new UiVec(900f, 64f), 40, "#D98A8A",
-                    Place.At(0f, 318f)).AsDecor(),
+                    Place.At(0f, 318f)).AsDecor().Styled(TypographyRole.CeremonialTitle),
                 Ui.Label("DefeatStatsHeading", UiStrings.DefeatStatsHeading, new UiVec(600f, 34f), 20,
-                    "#B8A8D9", Place.At(-ColumnX, 248f)).AsDecor(),
+                    "#B8A8D9", Place.At(-ColumnX, 248f)).AsDecor().Styled(TypographyRole.FunctionalHeading),
                 Ui.Label("DefeatLostHeading", UiStrings.DefeatLost, new UiVec(600f, 34f), 20,
-                    "#B8A8D9", Place.At(ColumnX, 248f)).AsDecor(),
+                    "#B8A8D9", Place.At(ColumnX, 248f)).AsDecor().Styled(TypographyRole.FunctionalHeading),
             };
 
             for (int i = 0; i < RowCount; i++)
@@ -65,28 +65,32 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // ---- the right column: what it cost, then what it paid ----------
             var goldLost = Ui.Label("DefeatGoldLost", UiStrings.DefeatGoldLost, new UiVec(600f, 48f), 26,
                     "#D98A8A", Place.At(ColumnX, 190f))
-                .AsDecor();
+                .AsDecor()
+                .Styled(TypographyRole.TacticalData);
             screen.GoldLostLabel = goldLost;
             inside.Add(goldLost);
 
             inside.Add(Ui.Label("DefeatKeptHeading", UiStrings.DefeatKept, new UiVec(600f, 34f), 20,
-                "#B8A8D9", Place.At(ColumnX, 110f)).AsDecor());
+                "#B8A8D9", Place.At(ColumnX, 110f)).AsDecor().Styled(TypographyRole.FunctionalHeading));
 
             var embers = Ui.Label("DefeatEmbers", UiStrings.DefeatEmbers, new UiVec(600f, 48f), 26,
                     "#F2DB9E", Place.At(ColumnX, 52f))
-                .AsDecor();
+                .AsDecor()
+                .Styled(TypographyRole.TacticalData);
             screen.EmbersLabel = embers;
             inside.Add(embers);
 
             var exp = Ui.Label("DefeatExp", UiStrings.DefeatExp, new UiVec(600f, 36f), 18,
                     "#B8A8D9", Place.At(ColumnX, -6f))
-                .AsDecor();
+                .AsDecor()
+                .Styled(TypographyRole.TacticalData);
             screen.ExpLabel = exp;
             inside.Add(exp);
 
             var depth = Ui.Label("DefeatDepth", UiStrings.DefeatDepth, new UiVec(600f, 36f), 18,
                     "#9C8FC4", Place.At(ColumnX, -56f))
-                .AsDecor();
+                .AsDecor()
+                .Styled(TypographyRole.TacticalData);
             screen.DepthLabel = depth;
             inside.Add(depth);
 
@@ -96,10 +100,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // roster is the ONE thing that survived, and "what did I actually
             // gain" is the question a death screen provokes -- sending the
             // player to the hub to go and look is a worse answer than a button.
+            // SILVER, both. There is no Retry control on this screen (a run
+            // that ended in defeat is over -- see RunManager.EndRun), so
+            // there is no recommended-continuation action here to reserve
+            // Gold for; both exits are ordinary navigation.
             var inspect = Ui.Button("DefeatInspectButton", UiStrings.DefeatInspect,
-                new UiVec(300f, 60f), 22, Place.At(-170f, -318f));
+                    new UiVec(300f, 60f), 22, Place.At(-170f, -318f))
+                .Themed(ButtonTheme.Silver);
             var ret = Ui.Button("DefeatReturnButton", UiStrings.DefeatToHub,
-                new UiVec(300f, 60f), 22, Place.At(170f, -318f));
+                    new UiVec(300f, 60f), 22, Place.At(170f, -318f))
+                .Themed(ButtonTheme.Silver);
 
             screen.InspectButton = inspect;
             screen.ReturnButton = ret;

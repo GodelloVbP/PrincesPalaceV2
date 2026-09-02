@@ -155,15 +155,24 @@ namespace PrincesPalace.Domain.UiKit.Screens
         {
             var screen = new MapScreen();
 
+            // FunctionalHeading, not CeremonialTitle -- the map is a working
+            // screen the player passes through every room, not a title or a
+            // ceremonial moment the way Defeat/Reckoning's own titles are.
             var title = Ui.Label("MapTitleLabel", UiStrings.MapTitle, new UiVec(700f, 60f), 40, "#EDE6FF",
-                Place.At(0f, 452f));
+                Place.At(0f, 452f)).Styled(TypographyRole.FunctionalHeading);
             var depth = Ui.Label("MapDepthLabel", UiStrings.MapDepth, new UiVec(420f, 34f), 20, "#B8A8D9",
-                Place.At(0f, 404f));
+                Place.At(0f, 404f)).Styled(TypographyRole.TacticalData);
             var gold = Ui.Label("MapGoldLabel", UiStrings.MapGold, new UiVec(320f, 40f), 22, "#F2DB9E",
-                Place.At(690f, 452f));
+                Place.At(690f, 452f)).Styled(TypographyRole.TacticalData);
 
+            // SILVER: leaving the descent, matching Cancel/Back everywhere
+            // else in the kit. Room-node buttons are NOT themed here -- the
+            // painted tree IS their plate (button.SpriteKey = TreeKey below),
+            // so a theme's plate would replace the bespoke art rather than
+            // dress a bare frame.
             var abandon = Ui.Button("AbandonRunButton", UiStrings.MapAbandon, new UiVec(240f, 60f), 16,
-                Place.At(-800f, 452f));
+                    Place.At(-800f, 452f))
+                .Themed(ButtonTheme.Silver);
 
             // What the room the party just walked into did.
             //
@@ -177,7 +186,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // shop's apology -- so a placeholder message cannot overflow a box
             // fitted to the short ones.
             var roomMessage = Ui.Label("MapRoomMessageLabel", UiStrings.MapRoomShop,
-                new UiVec(900f, 32f), 18, "#C8BBE4", Place.At(0f, 364f));
+                new UiVec(900f, 32f), 18, "#C8BBE4", Place.At(0f, 364f))
+                .Styled(TypographyRole.Body);
 
             screen.TitleLabel = title;
             screen.DepthLabel = depth;

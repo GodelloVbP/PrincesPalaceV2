@@ -106,6 +106,14 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void DescendIsTheOneGoldButtonOnTheScreen()
+        {
+            // The recommended action: take the offer (or knowingly decline
+            // it) and move on. It is the only way out of the draft.
+            Assert.AreEqual(ButtonTheme.Gold, RelicDraftScreen.Build().DescendButton.Node.Theme);
+        }
+
+        [Test]
         public void EveryCardLayerButTheCardIsDecor()
         {
             // Decor buys overlap exemption for the stacked layers AND clears

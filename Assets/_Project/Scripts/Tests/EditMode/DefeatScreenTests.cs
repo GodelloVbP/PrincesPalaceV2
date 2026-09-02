@@ -73,6 +73,18 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void BothExitsWearSilverThereIsNoRetryToMakeGold()
+        {
+            // Both are ordinary navigation off a screen with no recommended
+            // continuation to reserve Gold for -- see the comment at their
+            // construction site.
+            var screen = DefeatScreen.Build();
+
+            Assert.AreEqual(ButtonTheme.Silver, screen.ReturnButton.Node.Theme);
+            Assert.AreEqual(ButtonTheme.Silver, screen.InspectButton.Node.Theme);
+        }
+
+        [Test]
         public void ThereAreTwoWaysOutAndOneOfThemIsTheRoster()
         {
             // The roster is the ONE thing that survived a defeat, so "what did
@@ -97,8 +109,13 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void NoChildCollidesWithAButtonsGeneratedCaption()
         {
+            // A THEMED button's own "<Name>Label" is not a collision -- it is
+            // Ui.ApplyTheme's real, intended child (see UiNode.Themed). This
+            // guard is only for a button that generates NO label of its own
+            // (untethered), where a same-named child would still be the
+            // emitter-name clash it was written to catch.
             var offenders = Walk(Tree())
-                .Where(n => n.Kind == UiNodeKind.Button)
+                .Where(n => n.Kind == UiNodeKind.Button && n.Theme == null)
                 .SelectMany(b => b.Children.Where(c => c.Name == b.Name + "Label").Select(c => c.Name))
                 .ToList();
 

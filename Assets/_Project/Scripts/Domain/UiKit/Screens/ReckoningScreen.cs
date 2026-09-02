@@ -250,7 +250,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // moved onto the phase that owns the choice.
             var lootHeading = Ui.Label("ReckoningOfferHeading", UiStrings.ReckoningChooseOne,
                     new UiVec(700f, 44f), 26, "#F2DB9E", Place.At(0f, 248f))
-                .AsDecor();
+                .AsDecor()
+                .Styled(TypographyRole.FunctionalHeading);
             screen.LootHeading = lootHeading;
 
             // REROLL, beside the heading rather than under the cards.
@@ -296,7 +297,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 Ui.Sprite("ReckoningTitlePlaque", PlaqueKey, Place.At(0f, 218f),
                     UiSize.Fixed(480f, 157f)).AsDecor(),
                 Ui.Label("ReckoningTitle", UiStrings.ReckoningTitle, new UiVec(400f, 46f), 26, "#F2DB9E",
-                    Place.At(0f, 218f)).AsDecor(),
+                    Place.At(0f, 218f)).AsDecor().Styled(TypographyRole.CeremonialTitle),
             };
 
             for (int i = 0; i < TabStrings.Length; i++)
@@ -345,6 +346,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // ONLY on the summary phase. Phase one has no way out but the
             // choice itself -- you always take something.
+            // NOT migrated to the semantic kit. The brief's own plan calls
+            // this Silver, but the button already wears bespoke arrow art
+            // (continue_arrow.png, immediately below) with a matching glow
+            // built for that shape (ReckoningContinueGlow, above) -- exactly
+            // the case the migration brief itself calls out to leave alone:
+            // the art already IS the continue control. A themed plate would
+            // replace it outright, not dress it.
             var continueButton = Ui.Button("ReckoningContinueButton", UiStrings.Continue,
                 new UiVec(340f, 84f), 22, Place.At(0f, -272f));
             continueButton.SpriteKey = ContinueKey;
@@ -491,9 +499,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var children = new List<UiNode>
             {
                 Ui.Label("ReckoningGoldLabel", UiStrings.ReckoningGold, new UiVec(700f, 54f), 32,
-                    "#F2DB9E", Place.At(0f, 30f)).AsDecor(),
+                    "#F2DB9E", Place.At(0f, 30f)).AsDecor().Styled(TypographyRole.TacticalData),
                 Ui.Label("ReckoningExpHeading", UiStrings.ReckoningExperience, new UiVec(700f, 32f), 20,
-                    "#B8A8D9", Place.At(0f, -20f)).AsDecor(),
+                    "#B8A8D9", Place.At(0f, -20f)).AsDecor().Styled(TypographyRole.FunctionalHeading),
             };
 
             GoldLabel = children[0];
@@ -515,7 +523,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var children = new List<UiNode>
             {
                 Ui.Label("ReckoningRelicHeading", UiStrings.ReckoningRelicHeld, new UiVec(700f, 34f), 20,
-                    "#B8A8D9", Place.At(0f, 40f)).AsDecor(),
+                    "#B8A8D9", Place.At(0f, 40f)).AsDecor().Styled(TypographyRole.FunctionalHeading),
             };
 
             for (int i = 0; i < RelicRowCount; i++)
@@ -563,7 +571,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var children = new List<UiNode>
             {
                 Ui.Label("ReckoningTallyHeading", UiStrings.ReckoningTallyHeading, new UiVec(800f, 34f), 20,
-                    "#B8A8D9", Place.At(0f, 40f)).AsDecor(),
+                    "#B8A8D9", Place.At(0f, 40f)).AsDecor().Styled(TypographyRole.FunctionalHeading),
             };
 
             for (int i = 0; i < RowCount; i++)
@@ -947,6 +955,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // wider offer divides the same budget into four narrower cards
             // instead of adding a fourth at the old width, which would have
             // needed 1450px of a 1080px interior.
+            // NOT migrated to the semantic kit, even though picking one of
+            // these is this screen's "Accept" (Green, per the migration
+            // brief). NoChrome() a few lines below is deliberate design, not
+            // an oversight -- see BuildOffer's own "NO PLATE" note: a themed
+            // plate behind each card is precisely the mistake that note
+            // records fixing ("a gold button frame behind it turned three
+            // treasures into three menu entries"). Theming here would
+            // reintroduce it in a different colour.
             var button = Ui.Button($"ReckoningOffer{index}", UiString.Runtime,
                     new UiVec(cardWidth, CardHeight), 14, Place.At(x, CardCentreY))
                 .NoChrome();

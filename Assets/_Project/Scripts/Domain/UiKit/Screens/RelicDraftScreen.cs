@@ -54,9 +54,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var inside = new List<UiNode>
             {
                 Ui.Label("DraftTitle", UiStrings.DraftTitle, new UiVec(1200f, 60f), 38, "#F2DB9E",
-                    Place.At(0f, 350f)).AsDecor(),
+                    Place.At(0f, 350f)).AsDecor().Styled(TypographyRole.CeremonialTitle),
                 Ui.Label("DraftSubtitle", UiStrings.DraftSubtitle, new UiVec(1000f, 36f), 19, "#B8A8D9",
-                    Place.At(0f, 300f)).AsDecor(),
+                    Place.At(0f, 300f)).AsDecor().Styled(TypographyRole.Body),
             };
 
             // Laid out from the centre so the row stays centred whatever the
@@ -75,6 +75,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var empty = Ui.Label("DraftEmptyHint", UiStrings.DraftNoRelics, new UiVec(900f, 44f), 22,
                     "#7E6E9E", Place.At(0f, 0f))
                 .AsDecor()
+                .Styled(TypographyRole.Body)
                 .Inactive();
             screen.EmptyHint = empty;
             inside.Add(empty);
@@ -100,6 +101,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var pageLabel = Ui.Label("DraftPageLabel", UiString.Runtime, new UiVec(300f, 30f), 18,
                     "#B8A8D9", Place.At(0f, -280f))
                 .AsDecor()
+                .Styled(TypographyRole.TacticalData)
                 .Inactive();
 
             screen.PrevPageButton = prevPage;
@@ -111,8 +113,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // Always pressable. A draft the player cannot leave is worse than a
             // draft they decline, and an empty pool has to have an exit.
+            // GOLD: the one recommended action on this screen -- take the
+            // offer (or knowingly decline it) and move on. It is the only way
+            // out, which is exactly what Gold is reserved for.
             var descend = Ui.Button("DraftDescendButton", UiStrings.DraftDescend,
-                new UiVec(320f, 64f), 24, Place.At(0f, -350f));
+                new UiVec(320f, 64f), 24, Place.At(0f, -350f))
+                .Themed(ButtonTheme.Gold);
             screen.DescendButton = descend;
             inside.Add(descend);
 

@@ -265,6 +265,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> RibbonDots = new List<NodeRef>();
         public List<NodeRef> RibbonNumbers = new List<NodeRef>();
 
+        // NOT migrated to TypographyRole in this pass, deliberately, unlike
+        // the other four screens: almost every label here is one of a
+        // hundred-plus pooled/runtime nodes (TrackCaption*, TrackLevel*,
+        // TrackRibbonNumber*, the card's own fields) with its own tuned font
+        // constant already threaded through RewardTrackLayout (CardCaptionFont,
+        // MilestoneCaptionFont, and a dozen more) -- a role's own size band
+        // and uppercase rule would fight numbers this class was carefully
+        // measured against, for text that is not a title, heading or button
+        // caption in the first place.
         public static RewardTrackScreen Build()
         {
             var screen = new RewardTrackScreen();
@@ -663,6 +672,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
             //
             // proc:disc_metal, not proc:solid_circle: see that bake's header
             // for why a flat gold coin reads as tarnish.
+            // NOT migrated to the semantic kit. There is no separate
+            // "relic reward button" node to give Violet: every one of the
+            // twelve reward kinds (stat/health/exp/favor/respec/rest/reroll/
+            // offer/relic/chosen-relic/second-life/refresh) shares this same
+            // TrackDot shape, distinguished only by the mat tint and icon a
+            // CHILD carries (see MatTintFor/IconFor below) -- the disc itself
+            // already wears bespoke art (proc:disc_metal via SpriteKey) that
+            // a theme's plate would replace. Colouring only the relic-kind
+            // dots would mean per-instance theming keyed off runtime reward
+            // data, which is a different, bigger change than a plate swap.
+            // Pooled with pinned Place/UiSize per level, measured by this
+            // class's own audit and RewardTrackLayout's tests either way.
             var dot = Ui.Button($"TrackDot{level}", UiString.Runtime,
                     new UiVec(diameter, diameter), 1, Place.At(x, 0f))
                 .Hovers(1.16f);
@@ -1163,6 +1184,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // sitting at the top of it. The design draws both as a hairline
             // rectangle with a wash inside, which is what everything else here
             // does: outline the thing, do not fill it.
+            // NOT migrated to the semantic kit (would be Green -- collecting
+            // is the affirmative action) despite fitting Themed()'s aspect
+            // fine at 260x44 (5.91:1, in line with ContinueButton's accepted
+            // 5.15:1 stretch). The screen's OWN comment two lines up states
+            // why: this row deliberately replaced "the game's standard
+            // button face -- a filled gold gradient" with a hairline
+            // rectangle and a wash, because the filled plate was one of the
+            // brightest objects on a screen whose whole palette uses gold as
+            // stroke and glow. A themed plate (any colour) is exactly the
+            // filled look this row was built to get away from -- it would
+            // fight the design rather than fit it. TrackCloseButton below is
+            // the same case, left unthemed for the same reason.
             var collect = Ui.Button("TrackCollectButton", UiString.Runtime,
                     new UiVec(RewardTrackLayout.CollectWidth, RewardTrackLayout.SummaryRowHeight),
                     15, Place.At(RewardTrackLayout.CollectCentreX,
