@@ -516,13 +516,21 @@ namespace PrincesPalace.PlayModeTests
                 "the effect does not begin on the caster, which is the whole complaint it fixes");
 
             // Out to the end of the sequence, where it has to have arrived.
+            //
+            // BOUNDED ON THE PLAYER'S OWN STATE, not a fixed real-time guess.
+            // PlayRoutine already runs its whole travel through
+            // FightBeatPlayer.Scaled, so under this fixture's 60x [SetUp] the
+            // flight is done in milliseconds -- waiting a flat 1.4s here was
+            // ~130x longer than the thing it was waiting for. The 2f ceiling
+            // is a failure timeout, not the expected wait.
             float waited = 0f;
-            while (waited < 1.4f)
+            while (_player.IsPlaying && waited < 2f)
             {
                 waited += Time.unscaledDeltaTime;
                 yield return null;
             }
 
+            Assert.IsFalse(_player.IsPlaying, "the effect never finished its flight inside the timeout");
             Assert.AreEqual(target, _player.Image.rectTransform.anchoredPosition.x, 2f,
                 "the effect never reached the thing it was cast at");
         }
@@ -843,13 +851,18 @@ namespace PrincesPalace.PlayModeTests
             // box sits 95 to the right of what it is aimed at rather than 95 to
             // the left. Read at the END of the flight, which is where the
             // arrival is placed.
+            //
+            // BOUNDED ON THE PLAYER'S OWN STATE -- see the sibling test above
+            // for why a fixed 1.4s real wait was ~130x longer than the scaled
+            // flight it was waiting for.
             float waited = 0f;
-            while (waited < 1.4f)
+            while (_player.IsPlaying && waited < 2f)
             {
                 waited += Time.unscaledDeltaTime;
                 yield return null;
             }
 
+            Assert.IsFalse(_player.IsPlaying, "the effect never finished its flight inside the timeout");
             Assert.AreEqual(hero + 95f, _player.Image.rectTransform.anchoredPosition.x, 2f,
                 "the mirrored cast corrected the same way an unmirrored one does, which puts the " +
                 "impact twice as far off as leaving it uncorrected would have");
@@ -953,8 +966,14 @@ namespace PrincesPalace.PlayModeTests
             bool sawBlend = false;
             bool sawClean = false;
 
+            // BOUNDED ON THE PLAYER'S OWN STATE, not a fixed 1.6s guess. This
+            // inherits [SetUp]'s 60x, so PlayRoutine's whole 8s-authored
+            // sequence runs in ~0.13s -- the fixed wait used to spend the
+            // other ~1.47s sampling nothing. The 2f ceiling is a failure
+            // timeout: if the effect never finishes, sawBlend/sawClean stay
+            // false and the asserts below say why.
             float watched = 0f;
-            while (watched < 1.6f)
+            while (_player.IsPlaying && watched < 2f)
             {
                 if (fade.enabled && fade.color.a > 0.05f && fade.color.a < 0.95f) sawBlend = true;
 
