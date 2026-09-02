@@ -238,6 +238,17 @@ namespace PrincesPalace
 
             if (built == null) return null;
 
+            // THE DEPTH RIDES THE SESSION, here and not only in
+            // FightBootstrap. The screen set it after calling this (its
+            // comment: "the payout is scaled by where the fight HAPPENED"),
+            // and the bot did not -- so every bot fight before this line
+            // settled at DepthStep 0: VictoryRewards paid unscaled gold/exp
+            // and RarityTable.RollTier centred every offer on FloorTier(0).
+            // Found by the first batch that traced offer tiers -- step-40
+            // offers had the step-1 distribution, which the formula cannot
+            // produce. One seam, two callers, so it lives in the seam.
+            built.Session.DepthStep = run.step;
+
             // THE CHARGE GOES IN BEFORE THE FIGHT OPENS, because Domain cannot
             // ask a save what the squad has earned. What comes back out is
             // session.SecondLivesSpent, folded into the run by SettleFight.
