@@ -59,7 +59,7 @@ FORMULA_REFERENCE = [
      "tier rolled ONCE per offer set; plus / riftTier / modifiers rolled PER item"),
     ("Assets/_Project/Scripts/Domain/Rewards/ItemOffer.cs:74,115-136",
      "ItemOfferTable.Choose: TierSpread 1 around the target, widened until the pool fills the row"),
-    ("Assets/_Project/Scripts/Core/Bot/RunOrchestrator.cs:461-463",
+    ("Assets/_Project/Scripts/Core/Bot/RunOrchestrator.cs:472-474",
      "encounter = session.IsEliteFight ? Elite : Normal  -- IsBossFight is NOT consulted"),
 ]
 

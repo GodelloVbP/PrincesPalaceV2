@@ -86,7 +86,7 @@ rooms[]           step, floor, nodeId, roomType, offerItemIds, pickedIndex,
                   no offer). encounterClass is "Normal" or "Elite", read off
                   the exact same expression RunOrchestrator.RollOffers uses
                   (session.IsEliteFight ? Elite : Normal,
-                  Assets/_Project/Scripts/Core/Bot/RunOrchestrator.cs:461-463)
+                  Assets/_Project/Scripts/Core/Bot/RunOrchestrator.cs:472-474)
                   -- IsBossFight is never consulted there, so a boss room's
                   offer rolls as "Normal" (or "Elite" if it also happens to
                   be flagged elite) today; encounterClass records what the
