@@ -29,8 +29,14 @@ namespace PrincesPalace.Domain.Tests
         // character in the game currently carries a flat 10 across the
         // board; if any of these stopped being zero, every derived stat
         // would silently change at once.
+        //
+        // ManaRegenBonus is the one deliberate exception -- see its own
+        // header: it is not a (score - 10) bonus/penalty, it is the whole
+        // baseline rate, so a neutral WIS 10 still derives floor(10/4) = 2,
+        // not 0. DerivedStats can therefore no longer equal StatBlock.Zero at
+        // an all-tens spread; it equals a block with ONLY manaRegen set.
         [Test]
-        public void AllTens_DeriveExactlyZeroOnEveryStat()
+        public void AllTens_DeriveExactlyZeroOnEveryStat_ExceptTheStandardManaRegenBaseline()
         {
             var neutral = Scores();
 
@@ -40,7 +46,8 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, AbilityDerivation.MagicalDefenseBonus(neutral));
             Assert.AreEqual(0, AbilityDerivation.SpeedBonus(neutral));
             Assert.AreEqual(0, AbilityDerivation.SignatureGainBonus(neutral));
-            Assert.AreEqual(StatBlock.Zero, AbilityDerivation.DerivedStats(neutral));
+            Assert.AreEqual(2, AbilityDerivation.ManaRegenBonus(neutral), "floor(10 / 4) = 2");
+            Assert.AreEqual(new StatBlock(0, 0, 0, manaRegen: 2), AbilityDerivation.DerivedStats(neutral));
         }
 
         // ---- the boundary table -------------------------------------------
@@ -124,6 +131,19 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(expected, AbilityDerivation.SignatureGainBonus(Scores(cha: cha)));
         }
 
+        // floor(WIS / 4), NOT (WIS - 10) / 4 -- see ManaRegenBonus's own
+        // header for why this one derivation is not measured against the
+        // neutral score the way every other row in this table is.
+        [TestCase(0, 0)]
+        [TestCase(3, 0)]
+        [TestCase(10, 2)]
+        [TestCase(14, 3)]
+        [TestCase(20, 5)]
+        public void ManaRegenBonus_IsPinnedAcrossTheBoundaryTable(int wis, int expected)
+        {
+            Assert.AreEqual(expected, AbilityDerivation.ManaRegenBonus(Scores(wis: wis)));
+        }
+
         // ---- the floor/truncation convention, pinned as its own fact ------
         //
         // AbilityDerivation.cs documents the choice at length: SpeedBonus and
@@ -158,6 +178,10 @@ namespace PrincesPalace.Domain.Tests
         // grades instead (Phase 3/D3, not yet wired). Extreme values included
         // specifically to rule out "it happens to be zero near 10" -- STR/INT
         // do not even have a private constant that could accidentally fire.
+        //
+        // manaRegen: 2, not StatBlock.Zero outright -- every fixture here
+        // fields the default WIS 10, and ManaRegenBonus's floor(WIS / 4)
+        // baseline is live at every score, STR/INT included.
         [TestCase(0)]
         [TestCase(9)]
         [TestCase(10)]
@@ -165,7 +189,8 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(200)]
         public void StrengthDerivesNothing_AtAnyScore(int str)
         {
-            Assert.AreEqual(StatBlock.Zero, AbilityDerivation.DerivedStats(Scores(str: str, dex: 10, con: 10, wis: 10, intel: 10, cha: 10)));
+            Assert.AreEqual(new StatBlock(0, 0, 0, manaRegen: 2),
+                AbilityDerivation.DerivedStats(Scores(str: str, dex: 10, con: 10, wis: 10, intel: 10, cha: 10)));
         }
 
         [TestCase(0)]
@@ -175,7 +200,8 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(200)]
         public void IntelligenceDerivesNothing_AtAnyScore(int intel)
         {
-            Assert.AreEqual(StatBlock.Zero, AbilityDerivation.DerivedStats(Scores(str: 10, dex: 10, con: 10, wis: 10, intel: intel, cha: 10)));
+            Assert.AreEqual(new StatBlock(0, 0, 0, manaRegen: 2),
+                AbilityDerivation.DerivedStats(Scores(str: 10, dex: 10, con: 10, wis: 10, intel: intel, cha: 10)));
         }
 
         // ---- DerivedStats combines correctly, attack always 0 -------------
@@ -193,14 +219,15 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(20, block.magicalDefense, "WIS 20: (20-10)*2");
             Assert.AreEqual(-1, block.speed, "DEX 8: (8-10)/2 truncated");
             Assert.AreEqual(0, block.attack, "Attack derives from no ability score until Phase 3 (weapon grades)");
-            Assert.AreEqual(0, block.manaRegen, "No score feeds ManaRegen -- gear and talents only");
+            Assert.AreEqual(5, block.manaRegen, "WIS 20: floor(20 / 4)");
         }
 
         // Shawn's authored spread, pinned here so his identity is a fact the
         // suite protects rather than a number in a builder someone can
         // adjust without noticing what it does to him. Matches the plan's
         // worked example exactly: +120 HP, +12 PDEF, -1 Speed, +8 Mana,
-        // +8 MDEF, +0 Signature Gain.
+        // +8 MDEF, +0 Signature Gain -- plus the standard mana-regen
+        // baseline, WIS 14 -> floor(14 / 4) = 3.
         [Test]
         public void ShawnsSpread_DerivesTheProfileThePlanPins()
         {
@@ -212,6 +239,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(8, AbilityDerivation.MaxManaBonus(shawn), "WIS 14: d=4, 4*2");
             Assert.AreEqual(8, AbilityDerivation.MagicalDefenseBonus(shawn), "WIS 14: d=4, 4*2");
             Assert.AreEqual(0, AbilityDerivation.SignatureGainBonus(shawn), "CHA 10: d=0");
+            Assert.AreEqual(3, AbilityDerivation.ManaRegenBonus(shawn), "WIS 14: floor(14 / 4)");
 
             var block = AbilityDerivation.DerivedStats(shawn);
             Assert.AreEqual(120, block.maxHealth);
@@ -219,6 +247,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(-1, block.speed);
             Assert.AreEqual(8, block.magicalDefense);
             Assert.AreEqual(0, block.attack);
+            Assert.AreEqual(3, block.manaRegen, "WIS 14: floor(14 / 4)");
         }
 
         // ---- signed, and symmetric now that the curve is a straight line --

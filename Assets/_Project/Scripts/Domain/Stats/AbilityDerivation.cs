@@ -118,6 +118,22 @@ namespace PrincesPalace.Domain.Stats
             return (scores.wisdom - NeutralScore) * MagicalDefensePerPoint;
         }
 
+        // Wisdom: standard per-turn mana regen. DELIBERATELY NOT the
+        // (score - NeutralScore) convention every other derivation in this
+        // file uses -- this is not a bonus/penalty measured against a
+        // neutral 10, it is the character's whole baseline regen rate, floor
+        // divided straight off the raw score. floor(WIS / 4): WIS 14 -> 3,
+        // WIS 3 -> 0, WIS 20 -> 5. Plain integer division already floors for
+        // every non-negative WIS a character can field, so there is no
+        // helper call here the way SpeedBonus/SignatureGainBonus need one
+        // for their signed, below-neutral case.
+        public const int ManaRegenPerPoints = 4;
+
+        public static int ManaRegenBonus(AbilityScoreBlock scores)
+        {
+            return scores.wisdom / ManaRegenPerPoints;
+        }
+
         // Dexterity: Speed, +1 per 2 points, signed -- see the convention
         // note above for what "per 2" means below neutral.
         public static int SpeedBonus(AbilityScoreBlock scores)
@@ -154,7 +170,7 @@ namespace PrincesPalace.Domain.Stats
                 MaxHealthBonus(scores),
                 SpeedBonus(scores),
                 attack: 0,
-                manaRegen: 0,
+                manaRegen: ManaRegenBonus(scores),
                 physicalDefense: PhysicalDefenseBonus(scores),
                 magicalDefense: MagicalDefenseBonus(scores));
         }
