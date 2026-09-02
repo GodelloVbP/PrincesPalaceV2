@@ -34,12 +34,10 @@ namespace PrincesPalace.Domain.Dungeon
         ItemSpawn,
 
         // Unscouted: the map shows a "?" and nothing else until the room is
-        // actually entered. Same placeholder treatment as Event/Shop/
-        // ItemSpawn otherwise — it generates, renders, clears — the mystery
-        // is presentation, not a hidden second type underneath. Keeping it
-        // that way (rather than secretly pre-rolling a real type and
-        // revealing it) is what keeps this deterministic from the floor seed
-        // like everything else, with nothing extra to reproduce.
+        // actually entered. Retired from generation (DescentMapGenerator no
+        // longer rolls it — its weight moved to Fight), kept for
+        // compatibility so a saved `currentNodeId` from before that change
+        // still resolves, renders and clears the same as it always did.
         Unknown,
     }
 }

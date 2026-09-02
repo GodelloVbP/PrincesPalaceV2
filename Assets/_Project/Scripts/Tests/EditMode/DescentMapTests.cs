@@ -234,5 +234,26 @@ namespace PrincesPalace.Domain.Tests
                 CollectionAssert.Contains(seen, expected, $"{expected} never appeared in {Seeds} floors");
             }
         }
+
+        // Unknown ("?") is retired from generation — its weight moved to
+        // Fight. The enum value and its resolution/icon handling stay for a
+        // save whose currentNodeId already points at one, but nothing new
+        // may ever roll it. Checked across many legs, not just many seeds of
+        // one leg, since a positional bug could hide in a later leg.
+        [Test]
+        public void UnknownNeverGenerates()
+        {
+            for (ulong seed = 0; seed < Seeds; seed++)
+            {
+                for (int leg = 0; leg < 5; leg++)
+                {
+                    int startStep = leg * DescentMapGenerator.DefaultLegLength;
+                    var map = DescentMapGenerator.GenerateLeg(new SeededRandom(seed), startStep);
+
+                    CollectionAssert.DoesNotContain(map.Nodes.Select(n => n.Type).ToList(), RoomType.Unknown,
+                        $"seed {seed}, leg starting at step {startStep} generated an Unknown room");
+                }
+            }
+        }
     }
 }

@@ -164,12 +164,17 @@ namespace PrincesPalace.Domain.Dungeon
         // ForcedTypeAt cadence now (step ≡ EliteOffsetInLeg within each leg),
         // so the player's first one always arrives after real levelling room
         // to prepare.
+        // Unknown ("?") is retired from generation — its weight (8) went to
+        // Fight rather than being redistributed across the placeholders, so
+        // Event/Treasure/Shop/Rest keep the same ratio to each other they had
+        // before. The enum value, its RoomResolution case and its map-icon
+        // handling all stay: a saved `currentNodeId` from before this change
+        // can still point at one, and it must still resolve.
         private static readonly (RoomType Type, int Weight)[] MiddleRooms =
         {
-            (RoomType.Fight, 44),
+            (RoomType.Fight, 52),
             (RoomType.Event, 14),
             (RoomType.Treasure, 12),
-            (RoomType.Unknown, 8),
             (RoomType.Shop, 6),
             (RoomType.Rest, 6),
         };
