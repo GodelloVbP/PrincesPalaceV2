@@ -185,6 +185,75 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(expectedKey, node.Children.Single().SpriteKey);
         }
 
+        // --- the second delivery: ThreeByTwo/TwoByOne, container-only -------
+
+        [Test]
+        public void ContainerThreeByTwo_AtItsOwnMeasuredAspect_DoesNotThrow()
+        {
+            var size = Ui.ContainerSizeForHeight(ContainerRatio.ThreeByTwo, 341f);
+            Assert.DoesNotThrow(() =>
+                Ui.Container("Frame", ButtonTheme.Gold, ContainerRatio.ThreeByTwo, Place.At(0f, 0f), size));
+        }
+
+        [Test]
+        public void ContainerTwoByOne_AtItsOwnMeasuredAspect_DoesNotThrow()
+        {
+            var size = Ui.ContainerSizeForHeight(ContainerRatio.TwoByOne, 271f);
+            Assert.DoesNotThrow(() =>
+                Ui.Container("Frame", ButtonTheme.Crimson, ContainerRatio.TwoByOne, Place.At(0f, 0f), size));
+        }
+
+        [Test]
+        public void ContainerThreeByTwo_StretchedPastFivePercent_Throws()
+        {
+            var baseline = Ui.ContainerSizeForHeight(ContainerRatio.ThreeByTwo, 341f);
+            var wrongShape = new UiVec(baseline.X * 1.10f, baseline.Y);
+
+            Assert.Throws<System.ArgumentException>(() =>
+                Ui.Container("Frame", ButtonTheme.Gold, ContainerRatio.ThreeByTwo, Place.At(0f, 0f), wrongShape));
+        }
+
+        [TestCase(ButtonTheme.Gold, ContainerRatio.ThreeByTwo, "UI/Buttons/Processed/container_gold_3x2.png")]
+        [TestCase(ButtonTheme.Violet, ContainerRatio.TwoByOne, "UI/Buttons/Processed/container_violet_2x1.png")]
+        public void ContainerThreeByTwoOrTwoByOne_SpriteKeyMatchesThemeAndRatio(ButtonTheme theme, ContainerRatio ratio, string expectedKey)
+        {
+            float height = ratio == ContainerRatio.ThreeByTwo ? 341f : 271f;
+            var size = Ui.ContainerSizeForHeight(ratio, height);
+            var node = Ui.Container("Frame", theme, ratio, Place.At(0f, 0f), size);
+
+            Assert.AreEqual(expectedKey, node.Children.Single().SpriteKey);
+        }
+
+        [Test]
+        public void ThreeByTwoContent_PassesUiAudit_AtAllFourAspects()
+        {
+            var size = Ui.ContainerSizeForHeight(ContainerRatio.ThreeByTwo, 341f);
+            var holder = Ui.Container("Frame", ButtonTheme.Gold, ContainerRatio.ThreeByTwo, Place.At(0f, 0f), size);
+            Ui.ContainerContent(holder, ContainerRatio.ThreeByTwo, "FrameContent",
+                Ui.Label("Label", UiStrings.Cancel, new UiVec(100f, 30f), place: Place.At(0f, 0f)).AsDecor());
+
+            var root = Ui.Panel("Root", UiSize.Fixed(1920f, 1080f), holder);
+            var errors = UiAudit.RunAllFrames(root);
+
+            CollectionAssert.IsEmpty(errors,
+                "first 5 of " + errors.Count + ": " + string.Join(" | ", errors.Take(5).Select(e => e.ToString())));
+        }
+
+        [Test]
+        public void TwoByOneContent_PassesUiAudit_AtAllFourAspects()
+        {
+            var size = Ui.ContainerSizeForHeight(ContainerRatio.TwoByOne, 271f);
+            var holder = Ui.Container("Frame", ButtonTheme.Crimson, ContainerRatio.TwoByOne, Place.At(0f, 0f), size);
+            Ui.ContainerContent(holder, ContainerRatio.TwoByOne, "FrameContent",
+                Ui.Label("Label", UiStrings.Cancel, new UiVec(100f, 30f), place: Place.At(0f, 0f)).AsDecor());
+
+            var root = Ui.Panel("Root", UiSize.Fixed(1920f, 1080f), holder);
+            var errors = UiAudit.RunAllFrames(root);
+
+            CollectionAssert.IsEmpty(errors,
+                "first 5 of " + errors.Count + ": " + string.Join(" | ", errors.Take(5).Select(e => e.ToString())));
+        }
+
         // --- ContainerContent: the inset --------------------------------------
 
         [Test]

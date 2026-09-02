@@ -177,6 +177,11 @@ namespace PrincesPalace.Domain.UiKit
         // it already draws for its own words.
         public bool CaptionPreserving;
 
+        // Forces a specific plate shape instead of the aspect-nearest pick
+        // Ui.PlateShapeFor would otherwise make. Null is the normal path --
+        // see UiNode.Plate() for when a screen actually needs this.
+        public ButtonPlateShape? PlateShapeOverride;
+
         // Which typography role (Typography.cs, engine-free) this label's
         // presentation follows. Null is the untouched path: UiEmitter's
         // ApplyTypography leaves SceneBuilder.UiFont at node.FontSize with
@@ -286,6 +291,17 @@ namespace PrincesPalace.Domain.UiKit
         // pair already is -- without this, A1 sees Visuals' full-button
         // footprint sitting under a hotkey/text/caret it was never told is
         // meant to be there.
+        // Forces this themed button to wear a specific plate shape instead
+        // of whichever one Ui.PlateShapeFor(width, height) would pick for
+        // its declared rect. Must be called BEFORE Themed()/ThemedPlate() --
+        // both read PlateShapeOverride while building Visuals, so calling
+        // this after has nothing left to affect.
+        public UiNode Plate(ButtonPlateShape shape)
+        {
+            PlateShapeOverride = shape;
+            return this;
+        }
+
         public UiNode LayerCaptionWithVisuals(params UiNode[] captionChildren)
         {
             var visuals = Children.FirstOrDefault(c => c.Name == "Visuals");

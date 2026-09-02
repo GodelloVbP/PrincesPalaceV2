@@ -496,7 +496,8 @@ namespace PrincesPalace.Domain.UiKit
             node.Theme = theme;
 
             var buttonSize = new UiVec(node.Size.X, node.Size.Y);
-            var visuals = BuildVisuals(theme, buttonSize);
+            var shape = node.PlateShapeOverride ?? PlateShapeFor(buttonSize.X, buttonSize.Y);
+            var visuals = BuildVisuals(theme, shape, buttonSize);
 
             var label = Label(node.Name + "Label", node.Text, buttonSize,
                 node.FontSize > 0 ? node.FontSize : 29, "#FFFFFFFF", Place.Stretch());
@@ -547,15 +548,24 @@ namespace PrincesPalace.Domain.UiKit
             node.CaptionPreserving = true;
 
             var buttonSize = new UiVec(node.Size.X, node.Size.Y);
-            var visuals = BuildVisuals(theme, buttonSize);
+            var shape = node.PlateShapeOverride ?? PlateShapeFor(buttonSize.X, buttonSize.Y);
+            var visuals = BuildVisuals(theme, shape, buttonSize);
             node.Children.Add(visuals);
         }
+
+        // The plate shape a themed button of this rect gets when it does not
+        // force one with .Plate(). Ratio-nearest by the same rule
+        // ButtonPlateArt.ShapeFor states -- exposed here (rather than only
+        // internally) so a screen or a test can ask what a rect resolves to
+        // without going through a full Themed() build.
+        public static ButtonPlateShape PlateShapeFor(float width, float height) =>
+            ButtonPlateArt.ShapeFor(width, height);
 
         // Visuals(Glow, Plate) -- the half of a themed button's tree BOTH
         // ApplyTheme and ApplyThemePlateOnly need, factored out once they
         // stopped being the same method. The Glow/Plate pair's own Layered()
         // exemption lives here with it, since the two are built together.
-        private static UiNode BuildVisuals(ButtonTheme theme, UiVec buttonSize)
+        private static UiNode BuildVisuals(ButtonTheme theme, ButtonPlateShape shape, UiVec buttonSize)
         {
             // Larger than the plate on every edge, so a focused button reads
             // as lit rather than as a second, smaller plate underneath the
@@ -575,7 +585,7 @@ namespace PrincesPalace.Domain.UiKit
                     "the focus glow is deliberately larger than the plate it sits behind so a focused " +
                     "button reads as lit, not merely outlined");
 
-            var plate = Sprite("Plate", $"UI/Buttons/Processed/button_plate_{ThemeKey(theme)}.png",
+            var plate = Sprite("Plate", ButtonPlateArt.Key(theme, shape),
                 buttonSize, Place.At(0f, 0f));
 
             // Glow under Plate (declared first, drawn first) and exempt from
@@ -599,8 +609,6 @@ namespace PrincesPalace.Domain.UiKit
             if (length <= 10) return 1f;
             return 0f;
         }
-
-        private static string ThemeKey(ButtonTheme theme) => theme.ToString().ToLowerInvariant();
 
         // The glow's own tint per theme - NOT the plate's colour, which is
         // baked into its PNG. Not reused from FightHudPalette: those tokens

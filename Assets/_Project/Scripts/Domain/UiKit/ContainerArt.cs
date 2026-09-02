@@ -1,3 +1,5 @@
+using System;
+
 namespace PrincesPalace.Domain.UiKit
 {
     // Which shape of container/banner art a screen wants. Nominal names only --
@@ -7,6 +9,8 @@ namespace PrincesPalace.Domain.UiKit
     {
         ThreeByFour,
         NineBySixteen,
+        ThreeByTwo,
+        TwoByOne,
     }
 
     // The measured shape of the six-theme container/banner kit
@@ -35,14 +39,43 @@ namespace PrincesPalace.Domain.UiKit
         internal const float BannerAspect3x4 = 0.5145f;
         internal const float BannerAspect9x16 = 0.3004f;
 
+        // The transparent-grid kit's second delivery -- container_<theme>_
+        // 3x2.png and _2x1.png, container-only (no banner_flag_ equivalent
+        // shipped for these two). Measured the same way as the pair above:
+        //
+        //   container_*_3x2: 464x341 .. 466x344, aspect 1.349-1.367
+        //   container_*_2x1: 469x270 .. 475x273, aspect 1.718-1.759
+        //
+        // Each cluster again agrees within ~2% of itself.
+        internal const float ContainerAspect3x2 = 1.36f;
+        internal const float ContainerAspect2x1 = 1.74f;
+
         internal static float Aspect(ContainerKind kind, ContainerRatio ratio)
         {
-            switch (kind)
+            if (kind == ContainerKind.Container)
             {
-                case ContainerKind.Container:
-                    return ratio == ContainerRatio.ThreeByFour ? ContainerAspect3x4 : ContainerAspect9x16;
+                switch (ratio)
+                {
+                    case ContainerRatio.ThreeByFour: return ContainerAspect3x4;
+                    case ContainerRatio.NineBySixteen: return ContainerAspect9x16;
+                    case ContainerRatio.ThreeByTwo: return ContainerAspect3x2;
+                    case ContainerRatio.TwoByOne: return ContainerAspect2x1;
+                    default: throw new ArgumentOutOfRangeException(nameof(ratio), ratio, "unhandled ContainerRatio");
+                }
+            }
+
+            // FlagBanner never shipped 3x2/2x1 art -- ThreeByFour/
+            // NineBySixteen are the only ratios that resolve to a real
+            // banner_flag_ asset, so a caller asking for one of the new
+            // container-only ratios on a FlagBanner is a mistake to catch
+            // here rather than hand back a number that names no PNG.
+            switch (ratio)
+            {
+                case ContainerRatio.ThreeByFour: return BannerAspect3x4;
+                case ContainerRatio.NineBySixteen: return BannerAspect9x16;
                 default:
-                    return ratio == ContainerRatio.ThreeByFour ? BannerAspect3x4 : BannerAspect9x16;
+                    throw new ArgumentOutOfRangeException(nameof(ratio), ratio,
+                        $"FlagBanner has no {ratio} art -- only ThreeByFour and NineBySixteen ship a banner_flag_ asset.");
             }
         }
 
@@ -72,18 +105,43 @@ namespace PrincesPalace.Domain.UiKit
         //   container_gold_9x16: 285x699, border L18 T18 R19 B19px  -> raw frac  L.063 T.026 R.067 B.027
         //   banner_flag_gold_3x4:  330x641, border L19 T18 R18px, V-shoulder 86px from bottom -> raw frac L.058 T.028 R.055 B.134
         //   banner_flag_gold_9x16: 242x810, border L17 T18 R17px, V-shoulder 72px from bottom -> raw frac L.070 T.022 R.070 B.111
+        //
+        // 3x2/2x1 measured the same way (measure_inset in tools/
+        // splice_ui_kit.py, run directly against the already-cropped PNGs
+        // rather than a sheet's grid box), across all six themes -- the
+        // WORST (largest) raw fraction per side, then the same margin
+        // discipline as the pair above:
+        //
+        //   container_*_3x2 raw max: L.015 T.018 R.015 B.021
+        //   container_*_2x1 raw max: L.017 T.030 R.017 B.030
         internal static ContentInsetFrac Inset(ContainerKind kind, ContainerRatio ratio)
         {
-            switch (kind)
+            if (kind == ContainerKind.Container)
             {
-                case ContainerKind.Container:
-                    return ratio == ContainerRatio.ThreeByFour
-                        ? new ContentInsetFrac(left: 0.065f, right: 0.065f, top: 0.045f, bottom: 0.04f)
-                        : new ContentInsetFrac(left: 0.08f, right: 0.08f, top: 0.04f, bottom: 0.04f);
+                switch (ratio)
+                {
+                    case ContainerRatio.ThreeByFour:
+                        return new ContentInsetFrac(left: 0.065f, right: 0.065f, top: 0.045f, bottom: 0.04f);
+                    case ContainerRatio.NineBySixteen:
+                        return new ContentInsetFrac(left: 0.08f, right: 0.08f, top: 0.04f, bottom: 0.04f);
+                    case ContainerRatio.ThreeByTwo:
+                        return new ContentInsetFrac(left: 0.035f, right: 0.035f, top: 0.04f, bottom: 0.045f);
+                    case ContainerRatio.TwoByOne:
+                        return new ContentInsetFrac(left: 0.035f, right: 0.035f, top: 0.055f, bottom: 0.055f);
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(ratio), ratio, "unhandled ContainerRatio");
+                }
+            }
+
+            switch (ratio)
+            {
+                case ContainerRatio.ThreeByFour:
+                    return new ContentInsetFrac(left: 0.075f, right: 0.075f, top: 0.04f, bottom: 0.18f);
+                case ContainerRatio.NineBySixteen:
+                    return new ContentInsetFrac(left: 0.09f, right: 0.09f, top: 0.035f, bottom: 0.15f);
                 default:
-                    return ratio == ContainerRatio.ThreeByFour
-                        ? new ContentInsetFrac(left: 0.075f, right: 0.075f, top: 0.04f, bottom: 0.18f)
-                        : new ContentInsetFrac(left: 0.09f, right: 0.09f, top: 0.035f, bottom: 0.15f);
+                    throw new ArgumentOutOfRangeException(nameof(ratio), ratio,
+                        $"FlagBanner has no {ratio} art -- only ThreeByFour and NineBySixteen ship a banner_flag_ asset.");
             }
         }
 
@@ -95,8 +153,17 @@ namespace PrincesPalace.Domain.UiKit
 
         private static string ThemeKey(ButtonTheme theme) => theme.ToString().ToLowerInvariant();
 
-        private static string RatioKey(ContainerRatio ratio) =>
-            ratio == ContainerRatio.ThreeByFour ? "3x4" : "9x16";
+        private static string RatioKey(ContainerRatio ratio)
+        {
+            switch (ratio)
+            {
+                case ContainerRatio.ThreeByFour: return "3x4";
+                case ContainerRatio.NineBySixteen: return "9x16";
+                case ContainerRatio.ThreeByTwo: return "3x2";
+                case ContainerRatio.TwoByOne: return "2x1";
+                default: throw new ArgumentOutOfRangeException(nameof(ratio), ratio, "unhandled ContainerRatio");
+            }
+        }
     }
 
     internal enum ContainerKind

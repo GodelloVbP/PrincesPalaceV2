@@ -81,6 +81,11 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsNull(button.Role);
         }
 
+        // Forces Legacy so this stays a pure theme-to-key check: Build()'s
+        // 200x60 rect resolves to FiveByOne on its own merits under
+        // Ui.PlateShapeFor (see ButtonPlateArtTests, which covers shape
+        // SELECTION), and that is a separate concern from whether a given
+        // shape's key names the right theme.
         [TestCase(ButtonTheme.Gold, "gold")]
         [TestCase(ButtonTheme.Crimson, "crimson")]
         [TestCase(ButtonTheme.Violet, "violet")]
@@ -89,7 +94,10 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(ButtonTheme.Silver, "silver")]
         public void ThePlateSpriteMatchesTheTheme(ButtonTheme theme, string key)
         {
-            var plate = Find(Build(theme), "Plate");
+            var button = Ui.Button("TestButton", UiStrings.Cancel, new UiVec(200f, 60f), 20, Place.At(0f, 0f))
+                .Plate(ButtonPlateShape.Legacy)
+                .Themed(theme);
+            var plate = Find(button, "Plate");
 
             Assert.AreEqual($"UI/Buttons/Processed/button_plate_{key}.png", plate.SpriteKey);
         }
