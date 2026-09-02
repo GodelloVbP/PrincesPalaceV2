@@ -75,6 +75,27 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(UiStrings.Play.Format().ToUpperInvariant(), play.text);
         }
 
+        // Pins the reservation b955ceb left open: PlayButton is Themed() at
+        // FontSize 24, below ButtonLabel's 26-30 band. ApplyTypography must
+        // pin fontSizeMin to that literal rather than leaving it at the
+        // role's own 26 (min > max), which is dead, order-dependent
+        // autosize metadata rather than an actual bug today only because
+        // TMP's shrink loop never fires above fontSizeMin.
+        [UnityTest]
+        public IEnumerator AThemedButtonsLiteralBelowItsBand_PinsFontSizeMinToTheLiteral()
+        {
+            yield return LoadMainMenu();
+
+            var play = FindText("PlayButtonLabel");
+
+            Assert.IsNotNull(play, "PlayButton is Themed(), so it should carry a PlayButtonLabel child");
+            Assert.AreEqual(24f, play.fontSizeMax,
+                "PlayButton was authored with FontSize 24 - the explicit literal wins over ButtonLabel's own max");
+            Assert.AreEqual(24f, play.fontSizeMin,
+                "an explicit literal below the role's band pins fontSizeMin to it too, so fontSizeMin never " +
+                "exceeds fontSizeMax; auto-sizing can still shrink further if the text does not fit");
+        }
+
         [UnityTest]
         public IEnumerator AnUnroledLabel_StillUsesUiFontWithItsDefaultMaterial()
         {

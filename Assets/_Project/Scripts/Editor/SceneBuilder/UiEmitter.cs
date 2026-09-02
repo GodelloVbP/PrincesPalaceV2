@@ -270,7 +270,15 @@ public static class UiEmitter
         text.fontSize = fontSizeMax;
         text.enableAutoSizing = true;
         text.fontSizeMax = fontSizeMax;
-        text.fontSizeMin = spec.MinSize1080p;
+
+        // An explicit literal below the role's own band wins outright: pin
+        // both ends to it rather than leaving fontSizeMin above fontSizeMax
+        // (dead, order-dependent metadata -- b955ceb's own reservation).
+        // Auto-sizing still applies from here down, just floored at the
+        // authored literal instead of the role's usual minimum, so a button
+        // built at 16-24 keeps rendering at exactly 16-24 and can still
+        // shrink further if its own text does not fit.
+        text.fontSizeMin = fontSizeMax < spec.MinSize1080p ? fontSizeMax : spec.MinSize1080p;
     }
 
     // A LABEL'S ALIGNMENT, and only a label's: a button's caption fills its
