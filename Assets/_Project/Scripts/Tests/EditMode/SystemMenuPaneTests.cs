@@ -479,17 +479,25 @@ namespace PrincesPalace.Domain.Tests
                 "the stage sits off-centre in its column - one margin is wider than the other");
         }
 
-        // The tenth the loadout column gave up has to arrive somewhere, and the
-        // three still have to sum to the pane.
+        // The three columns still have to sum to the CONTENT canvas -- the
+        // outer Blue 2:1 container's own inset boundary (1488, balance-bot
+        // 2026-09-02), not the declared 1600px frame any more.
         [Test]
-        public void TheLeftBarGainedWhatTheLoadoutGaveUp()
+        public void TheThreeColumnsFillTheContentCanvas()
         {
-            Assert.AreEqual(DossierLayout.Width,
+            Assert.AreEqual(DossierLayout.ContentWidth,
                 DossierLayout.ColumnAWidth + DossierLayout.ColumnBWidth + DossierLayout.ColumnCWidth,
-                0.001f, "the three columns no longer fill the pane");
+                0.001f, "the three columns no longer fill the pane's content canvas");
 
-            Assert.AreEqual(374f + DossierLayout.ColumnBGivesUp, DossierLayout.ColumnAWidth, 0.001f,
-                "the left bar did not gain what the loadout column gave up");
+            // COLUMN A'S WIDTH IS DERIVED, not the old authored 449 (374 base
+            // + a 75px give-up from column B) -- it is capped now by fitting
+            // its own Blue 3:4 container inside the OUTER container's shrunk
+            // content height, with the same 4px margin ExitsLayout/
+            // OptionsLayout use over their own container's inset. Pinned
+            // literal, not a re-derivation of DossierLayout's own formula
+            // (that would be a tautology) -- 416.05, was 449.
+            Assert.AreEqual(416.04528f, DossierLayout.ColumnAWidth, 0.01f,
+                "column A's width no longer matches what fits the outer container's content height");
         }
 
         // ---- the pack, two abreast and scrolling ---------------------------------

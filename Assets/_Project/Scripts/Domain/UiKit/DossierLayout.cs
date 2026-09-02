@@ -35,48 +35,78 @@ namespace PrincesPalace.Domain.UiKit
         public const float Width = SystemMenuLayout.PanelWidth;                              // 1600
         public const float Height = SystemMenuLayout.PanelHeight - SystemMenuLayout.BarHeight; // 804
 
-        public const float HalfWidth = Width * 0.5f;
-        public const float HalfHeight = Height * 0.5f;
+        // THE OUTER PANE IS A BLUE 2:1 CONTAINER now (balance-bot, 2026-09-02),
+        // not a flat Solid ground -- HalfWidth/HalfHeight read SystemMenu
+        // Layout.PaneContentHalfWidth/HalfHeight, the container's own measured
+        // inset boundary, instead of Width/Height * 0.5f. Same conversion as
+        // Exits/Options/RunStats (see SystemMenuLayout.PaneInset's own
+        // comment): 744/357.78 against the old 800/402. Width/Height above
+        // stay exactly what they were -- still the FRAME's declared size
+        // (SystemMenuPaneTests.EveryHostedPaneIsTheSizeOfTheContentArea pins
+        // them against the panel), which needed no aspect nudge at all.
+        public static float HalfWidth => SystemMenuLayout.PaneContentHalfWidth;
+        public static float HalfHeight => SystemMenuLayout.PaneContentHalfHeight;
+
+        // The columns' own canvas -- narrower than the declared frame (Width)
+        // now that the ground is a bordered container rather than a flat fill.
+        public static float ContentWidth => HalfWidth * 2f;
 
         // Three columns, no gap; the dividers are borders.
         //
-        // The loadout column gives up A TENTH OF ITS WIDTH to the left bar.
-        // The handover's proportions put 746 of 1600 under the silhouette,
-        // which is more room than a centred figure and two files of slots
-        // need -- and the left bar, which carries the portrait, the name, the
-        // XP track and the pack, wanted it. 75 is that tenth, rounded so all
-        // three columns stay whole pixels and still sum to the pane.
-        public const float ColumnBGivesUp = 75f;
+        // COLUMN A'S WIDTH IS DERIVED NOW, not authored. It used to be a flat
+        // 449 (374 base, plus 75 the loadout column gave up -- "a tenth of
+        // its width", see the git log for that reasoning), which fit a Blue
+        // 3:4 container at 763.6 tall inside the old flat 804-tall ground
+        // with room to spare. It does not fit inside the OUTER container's
+        // own content box any more: that box is only HalfHeight * 2 (715.56)
+        // tall, 48px shorter than 763.6 before any margin is even spent. So
+        // column A is capped instead -- the widest 3:4 frame that clears the
+        // outer container's content height with the same 4px slack margin
+        // ExitsLayout.ContentMargin/OptionsLayout.PadX use over THEIR
+        // container's own inset.
+        public const float ColumnAFrameMargin = 4f;
 
-        public const float ColumnAWidth = 374f + ColumnBGivesUp;                 // 449
+        public static float ColumnAMaxFrameHeight => HalfHeight * 2f - ColumnAFrameMargin * 2f;  // 707.56, was 804
+        public static float ColumnAWidth => ColumnAMaxFrameHeight * ContainerArt.ContainerAspect3x4;  // 416.05, was 449
 
-        // THE BLUE 3:4 CONTAINER COLUMN A SITS IN. WIDTH IS UNTOUCHED --
-        // ColumnBWidth is whatever the shared 1600px pane has left after A and
-        // C, so widening A to hit the container kit's exact aspect would move
-        // B's boundary too. The frame is nudged to 0.588 (ContainerArt's
-        // measured 3:4) by trimming its HEIGHT instead, which is entirely
-        // internal to column A -- nothing outside it moves.
-        public const float ColumnAFrameHeight = ColumnAWidth / ContainerArt.ContainerAspect3x4; // 763.61, was 804 (5.0% off)
+        // UNCHANGED IN FORM -- still ColumnAWidth over the kit's measured 3:4
+        // aspect -- and now comes back out at ColumnAMaxFrameHeight exactly,
+        // by construction: see ColumnAWidth's own comment.
+        public static float ColumnAFrameHeight => ColumnAWidth / ContainerArt.ContainerAspect3x4; // 707.56, was 763.61
         public const float ColumnCWidth = 480f;
-        public const float ColumnBWidth = Width - ColumnAWidth - ColumnCWidth;   // 671
 
-        public const float PadY = 32f;
+        // ContentWidth, NOT Width -- the columns share the outer container's
+        // own inset canvas (1488, was 1600), not the declared frame.
+        public static float ColumnBWidth => ContentWidth - ColumnAWidth - ColumnCWidth;   // 591.95, was 671
+
+        // 4f, was 32f (balance-bot, 2026-09-02) -- it no longer clears the
+        // outer container's own border the way it did against the old flat
+        // Solid ground: HalfHeight already stops short of the painted edge
+        // (357.78, the container's own measured inset), so the old 32px
+        // stacked a second margin on top of one the container already pays
+        // for. Left at 32 the stat list lost a row it cannot spare (column C
+        // holds 7 of the 8 SheetStats.Derived rows and Build() refuses to
+        // emit a list that does not fit) -- dropped to the same 4px slack
+        // ExitsLayout.ContentMargin/OptionsLayout.PadX use over their own
+        // container's inset, it returns exactly the row back (8, with 30px
+        // to spare rather than a full row of headroom).
+        public const float PadY = 4f;
         public const float ColumnAPadX = 30f;
         public const float ColumnBPadLeft = 40f;
         public const float ColumnCPadX = 40f;
 
         // Centre x of each column, measured from the panel centre.
-        public const float ColumnACentreX = -HalfWidth + ColumnAWidth * 0.5f;
-        public const float ColumnBCentreX = -HalfWidth + ColumnAWidth + ColumnBWidth * 0.5f;
-        public const float ColumnCCentreX = HalfWidth - ColumnCWidth * 0.5f;
+        public static float ColumnACentreX => -HalfWidth + ColumnAWidth * 0.5f;
+        public static float ColumnBCentreX => -HalfWidth + ColumnAWidth + ColumnBWidth * 0.5f;
+        public static float ColumnCCentreX => HalfWidth - ColumnCWidth * 0.5f;
 
         // The two dividers sit on the column boundaries.
-        public const float DividerAtoB = -HalfWidth + ColumnAWidth;
-        public const float DividerBtoC = HalfWidth - ColumnCWidth;
+        public static float DividerAtoB => -HalfWidth + ColumnAWidth;
+        public static float DividerBtoC => HalfWidth - ColumnCWidth;
 
         // ---- column A -----------------------------------------------------------
 
-        public const float ContentAWidth = ColumnAWidth - ColumnAPadX * 2f;      // 314
+        public static float ContentAWidth => ColumnAWidth - ColumnAPadX * 2f;      // 356.05, was 389
 
         // Everything in column A stacks from the top, so each y is the one
         // above it minus its own height. Stated as running totals rather than
@@ -94,9 +124,9 @@ namespace PrincesPalace.Domain.UiKit
         private const float ColumnAFrameInsetBottom = 0.04f;
         private const float ColumnAContentMargin = 3f;
 
-        public const float ColumnATop =
+        public static float ColumnATop =>
             ColumnAFrameHeight * (0.5f - ColumnAFrameInsetTop) - ColumnAContentMargin;
-        public const float ColumnABottom =
+        public static float ColumnABottom =>
             -ColumnAFrameHeight * (0.5f - ColumnAFrameInsetBottom) + ColumnAContentMargin;
 
         // Square-ish, because the Image carries preserveAspect: a box taller
@@ -104,30 +134,31 @@ namespace PrincesPalace.Domain.UiKit
         // past about the content width buys empty bars and nothing else. This
         // is why column A cannot simply be filled by growing the portrait.
         //
-        // DERIVED, NOT AUTHORED. Was a flat 318 against the old 740px total
-        // (ColumnATop 370 to ColumnABottom -370); everything BELOW the
+        // DERIVED, NOT AUTHORED, same as before -- but the total it derives
+        // from shrank again (balance-bot, 2026-09-02): ColumnATop/Bottom now
+        // run 318.9 to -322.5 (was 344.4 to -348.3), because ColumnAFrameHeight
+        // itself dropped to fit the OUTER container. Everything BELOW the
         // portrait -- name, sub-line, XP row, the track readout, three nav
-        // rows -- is a fixed 422px of gaps and boxes untouched by this resize,
-        // so the portrait absorbs the container's own height reduction
-        // entirely rather than every row shrinking a little.
-        public const float PortraitHeight = ColumnATop - ColumnABottom - 422f; // was 318
+        // rows -- is still the same fixed 422px of gaps and boxes, so the
+        // portrait absorbs this reduction too rather than every row shrinking.
+        public static float PortraitHeight => ColumnATop - ColumnABottom - 422f; // 219.4, was ~277
 
-        public const float PortraitCentreY = ColumnATop - PortraitHeight * 0.5f;
+        public static float PortraitCentreY => ColumnATop - PortraitHeight * 0.5f;
         // Each step is the PREVIOUS box's half-height, then this box's, then the
         // gap between them. Written that way rather than as one number because
         // the name's box is 42 tall and the sub-line's 24, and a step that
         // forgets either of those overlaps them -- which is exactly what the
         // sibling-overlap audit refused when this was first widened.
-        public const float NameCentreY = PortraitCentreY - PortraitHeight * 0.5f - 24f - 21f;
-        public const float SubLineCentreY = NameCentreY - 21f - 12f - 6f;
-        public const float XpRowCentreY = SubLineCentreY - 12f - 8f - 20f;
+        public static float NameCentreY => PortraitCentreY - PortraitHeight * 0.5f - 24f - 21f;
+        public static float SubLineCentreY => NameCentreY - 21f - 12f - 6f;
+        public static float XpRowCentreY => SubLineCentreY - 12f - 8f - 20f;
 
         // The reward-track line, directly under the XP bar because it answers
         // the question the bar raises: the bar says how far to the next level,
         // this says what that level is worth. Same step arithmetic as the rows
         // above -- previous box's half-height, the gap, then this box's half.
         public const float TrackRowHeight = 30f;
-        public const float TrackRowCentreY = XpRowCentreY - 20f - 8f - TrackRowHeight * 0.5f;
+        public static float TrackRowCentreY => XpRowCentreY - 20f - 8f - TrackRowHeight * 0.5f;
 
         public const float NavRowHeight = 56f;
 
@@ -140,14 +171,14 @@ namespace PrincesPalace.Domain.UiKit
         // column, and the space that is left falls between two groups that mean
         // different things -- who this is, and what you can open -- which is
         // where negative space belongs.
-        public const float PackRowCentreY = ColumnABottom + NavRowHeight * 0.5f;
-        public const float SkillsRowCentreY = PackRowCentreY + NavRowHeight;
+        public static float PackRowCentreY => ColumnABottom + NavRowHeight * 0.5f;
+        public static float SkillsRowCentreY => PackRowCentreY + NavRowHeight;
 
         // The reward track's NAV ROW, third in the footer stack -- distinct
         // from TrackRowCentreY above, which is the one-line "what does the next
         // level give" readout under the XP bar. Two different things about the
         // same track, at opposite ends of the column.
-        public const float TrackNavRowCentreY = SkillsRowCentreY + NavRowHeight;
+        public static float TrackNavRowCentreY => SkillsRowCentreY + NavRowHeight;
 
         // ---- the XP bar ---------------------------------------------------------
         //
@@ -163,11 +194,11 @@ namespace PrincesPalace.Domain.UiKit
         public const float XpLabelGap = 10f;
         public const float XpRemainingWidth = 70f;
 
-        public const float XpTrackWidth =
+        public static float XpTrackWidth =>
             ContentAWidth - XpLabelWidth - XpLabelGap - XpRemainingWidth;
 
         // Left edge of the track, from column A's centre.
-        public const float XpTrackLeft =
+        public static float XpTrackLeft =>
             -ContentAWidth * 0.5f + XpLabelWidth + XpLabelGap;
 
         // ---- the pack, over column A --------------------------------------------
@@ -331,7 +362,13 @@ namespace PrincesPalace.Domain.UiKit
         public const float StagePadX = 20f;
 
         public static float StageFitWidth => ColumnBWidth - StagePadX * 2f;
-        public static float StageFitHeight => Height - PadY * 2f;
+
+        // HalfHeight * 2f, NOT Height -- the pane's usable vertical extent is
+        // the outer container's own content box (715.56) now, not the
+        // declared 804-tall frame. StageFitHeight drops to 651.56 from 740;
+        // StageScale (whichever axis is tighter) is what makes the stage
+        // shrink uniformly rather than distorting it.
+        public static float StageFitHeight => HalfHeight * 2f - PadY * 2f;
 
         public static float StageScale
         {
@@ -576,9 +613,12 @@ namespace PrincesPalace.Domain.UiKit
         public const float AttributeColumns = 3f;
         public const float AttributeCellWidth = ContentCWidth / AttributeColumns;
 
-        public const float ColumnCTop = HalfHeight - PadY;
+        // Properties, not consts, now that HalfHeight is the outer container's
+        // own inset boundary rather than a compile-time half of Height. 325.78,
+        // was 370.
+        public static float ColumnCTop => HalfHeight - PadY;
         public const float SectionLabelHeight = 24f;
-        public const float AttributeBlockTop = ColumnCTop - SectionLabelHeight - 12f;
+        public static float AttributeBlockTop => ColumnCTop - SectionLabelHeight - 12f;
 
         public static float AttributeCellCentreX(int column) =>
             ColumnCCentreX - ContentCWidth * 0.5f + AttributeCellWidth * (column + 0.5f);
@@ -588,7 +628,7 @@ namespace PrincesPalace.Domain.UiKit
 
         // The stat list starts under the attribute block, with the handover's
         // 18px gap and its own rule.
-        public const float StatListTop =
+        public static float StatListTop =>
             AttributeBlockTop - AttributeCellHeight * AttributeRows - 22f;
 
         // Taller, because the list is what closes column C. At 34 the nine

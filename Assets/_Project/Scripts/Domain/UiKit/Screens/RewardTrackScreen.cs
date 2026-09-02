@@ -278,31 +278,30 @@ namespace PrincesPalace.Domain.UiKit.Screens
         {
             var screen = new RewardTrackScreen();
 
-            // ITS OWN GROUND, and FULLY OPAQUE.
-            //
-            // It opens OVER the dossier, so anything less lets three columns of
-            // numbers read straight through a hundred captions -- which is
-            // exactly what #120A18FA did: the first capture of this screen has
-            // Shawn's portrait and his ability scores legible behind the rail.
-            // The dossier's own ground is FA because it opens over a painted
-            // hub that is meant to stay faintly present; this opens over a
-            // screen full of text, which is not.
-            var ground = Ui.Solid("TrackGround", Ground,
-                    new UiVec(SystemMenuLayout.PanelWidth, SystemMenuLayout.ContentHeight),
-                    Place.At(0f, 0f))
-                .AsDecor();
-
-            var children = new List<UiNode> { ground };
+            var children = new List<UiNode>();
             children.AddRange(BuildPanelFurniture());
             children.AddRange(BuildRailBand(screen));
             children.Add(BuildCard(screen));
             children.AddRange(BuildRibbon(screen));
             children.AddRange(BuildSummaryRow(screen));
 
-            screen.Root = Ui.Panel("RewardTrackPanel", Place.At(0f, 0f),
-                    UiSize.Fixed(SystemMenuLayout.PanelWidth, SystemMenuLayout.ContentHeight),
-                    children)
-                .Inactive();
+            // A GOLD 2:1 CONTAINER now (balance-bot, 2026-09-02), not the
+            // flat #120A18FA Solid ground -- same conversion as Exits/
+            // Options/RunStats/Dossier (see SystemMenuLayout.PaneInset's own
+            // comment). It still opens OVER the dossier and needs the same
+            // opacity that flat ground existed for -- three columns of
+            // numbers must not read through a hundred captions -- and the
+            // container's own painted art is fully opaque, so that job
+            // carries over without a second ground underneath it.
+            // PanelWidth x ContentHeight (1600x804) still needs no aspect
+            // nudge: it is the same valid 2:1 box every other pane's ground
+            // already is.
+            var ground = Ui.Container("RewardTrackPanel", ButtonTheme.Gold, ContainerRatio.TwoByOne,
+                Place.At(0f, 0f), new UiVec(SystemMenuLayout.PanelWidth, SystemMenuLayout.ContentHeight));
+            Ui.ContainerContent(ground, ContainerRatio.TwoByOne, "RewardTrackPanelContent", children.ToArray());
+            ground.Inactive();
+
+            screen.Root = ground;
 
             return screen;
         }
@@ -369,8 +368,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // and bottom thirds empty. Two of those thirds now have bands of
             // their own, and this gives the middle one an edge so the rail
             // reads as running THROUGH something rather than across a void.
+            // PaneContentWidth, NOT PanelWidth (balance-bot, 2026-09-02) --
+            // see RewardTrackLayout.BandEdgeWidth's own comment: this is a
+            // child of the container's content panel now, 1488 wide rather
+            // than the declared 1600 frame.
             yield return Ui.Sprite("TrackBandWash", "proc:band_fade",
-                    new UiVec(SystemMenuLayout.PanelWidth, RewardTrackLayout.BandHeight),
+                    new UiVec(RewardTrackLayout.PaneContentWidth, RewardTrackLayout.BandHeight),
                     Place.At(0f, RewardTrackLayout.BandCentreY))
                 .Coloured(BandWash)
                 .AsDecor();
@@ -516,9 +519,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.Content = content;
 
             // The window. A coordinate frame and a mask, never a surface.
+            //
+            // PaneContentWidth, NOT PanelWidth (balance-bot, 2026-09-02) --
+            // this is a child of the container's content panel now, 1488
+            // wide rather than the declared 1600 frame; the controller
+            // reads viewport.rect.width at runtime for every scroll/ribbon
+            // computation (RewardTrackController.Input.cs, .cs), so the
+            // narrower rect also carries through to those correctly rather
+            // than needing a second update.
             var viewport = Ui.Panel("TrackViewport",
                     Place.At(0f, RewardTrackLayout.BandCentreY),
-                    UiSize.Fixed(SystemMenuLayout.PanelWidth, RewardTrackLayout.BandHeight),
+                    UiSize.Fixed(RewardTrackLayout.PaneContentWidth, RewardTrackLayout.BandHeight),
                     content)
                 .Clipping();
             screen.Viewport = viewport;
@@ -1132,12 +1143,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // of ninety-nine works out at 121px of the ribbon's 1440, which is
             // the clearest statement this screen makes about how much of the
             // track the rail can actually show.
+            // RewardTrackLayout.PaneContentWidth, NOT PanelWidth (balance-
+            // bot, 2026-09-02) -- this build-time box is the tree's own
+            // guess at what viewport.rect.width will be; the controller
+            // recomputes it from the real rect at runtime, but the two
+            // should agree at build time rather than start 112px apart.
             var window = Ui.Panel("TrackRibbonWindow",
                 Place.At(0f, 0f),
-                UiSize.Fixed(RewardTrackLayout.RibbonWindowWidth(SystemMenuLayout.PanelWidth),
+                UiSize.Fixed(RewardTrackLayout.RibbonWindowWidth(RewardTrackLayout.PaneContentWidth),
                              RewardTrackLayout.RibbonWindowHeight),
                 Ui.Rim("TrackRibbonWindowEdge",
-                    new UiVec(RewardTrackLayout.RibbonWindowWidth(SystemMenuLayout.PanelWidth),
+                    new UiVec(RewardTrackLayout.RibbonWindowWidth(RewardTrackLayout.PaneContentWidth),
                               RewardTrackLayout.RibbonWindowHeight),
                     Lilac));
             screen.RibbonWindow = window;

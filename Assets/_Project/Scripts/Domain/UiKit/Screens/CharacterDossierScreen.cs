@@ -143,37 +143,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var children = new List<UiNode>();
 
-            // ITS OWN GROUND. The handover gives this panel #120a18, and it
-            // needs one for a reason beyond taste: it opens over the hub and the
-            // fight, and a transparent sheet let a painted background read
-            // straight through the numerals.
-            children.Add(Ui.Solid("DossierGround", Ground,
-                    new UiVec(DossierLayout.Width, DossierLayout.Height), Place.At(0f, 0f))
-                .AsDecor());
-
-            // Light from above, over the flat ground.
-            //
-            // The ground alone gave the panel no hierarchy: three columns of
-            // equal weight on one even field. This lifts the top edge, where
-            // the portrait and the column headings are, and leaves the bottom
-            // honest black so the stat rows stay quiet. Violet rather than
-            // white so it reads as the palette's own light and not as a
-            // grey wash laid over it.
-            children.Add(Ui.Sprite("DossierVeil", VeilKey,
-                    Place.At(0f, 0f), UiSize.Fixed(DossierLayout.Width, DossierLayout.Height))
-                .Coloured("#6A54902B")
-                .AsDecor());
-
             children.Add(screen.BuildColumnAFrame());
             children.AddRange(screen.BuildColumnB());
             children.AddRange(screen.BuildColumnC());
 
-            // The two column dividers.
+            // The two column dividers, sized to the outer container's own
+            // content extent (HalfHeight * 2f) rather than the raw 804-tall
+            // frame -- Height would now run past the painted border.
+            float dividerHeight = DossierLayout.HalfHeight * 2f - DossierLayout.PadY * 2f;
             children.Add(Ui.Solid("DossierDividerAB", Rule,
-                new UiVec(1f, DossierLayout.Height - DossierLayout.PadY * 2f),
+                new UiVec(1f, dividerHeight),
                 Place.At(DossierLayout.DividerAtoB, 0f)).AsDecor());
             children.Add(Ui.Solid("DossierDividerBC", Rule,
-                new UiVec(1f, DossierLayout.Height - DossierLayout.PadY * 2f),
+                new UiVec(1f, dividerHeight),
                 Place.At(DossierLayout.DividerBtoC, 0f)).AsDecor());
 
             // The pack covers column A entirely, so it is declared AFTER it.
@@ -182,8 +164,21 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // And the tooltip over everything.
             children.Add(screen.BuildTooltip());
 
-            screen.Root = Ui.Panel("CharacterDossier", Place.At(0f, 0f),
-                UiSize.Fixed(DossierLayout.Width, DossierLayout.Height), children);
+            // A BLUE 2:1 CONTAINER now (balance-bot, 2026-09-02), not the flat
+            // #120a18 Solid ground plus a violet "light from above" veil --
+            // same conversion as Exits/Options/RunStats (see SystemMenuLayout.
+            // PaneInset's own comment). The container's own painted art
+            // supplies the hierarchy the veil used to fake with a gradient, so
+            // the veil is gone rather than carried over as a second wash on
+            // top of themed art. DossierLayout.Width/Height (1600x804) stay
+            // the declared FRAME size; the container's own measured inset is
+            // what everything above is actually laid out against now
+            // (DossierLayout.HalfWidth/HalfHeight).
+            var ground = Ui.Container("CharacterDossier", ButtonTheme.Blue, ContainerRatio.TwoByOne,
+                Place.At(0f, 0f), new UiVec(DossierLayout.Width, DossierLayout.Height));
+            Ui.ContainerContent(ground, ContainerRatio.TwoByOne, "DossierPaneContent", children.ToArray());
+
+            screen.Root = ground;
             return screen;
         }
 
@@ -502,9 +497,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // The PANEL sits over column A; its CHILDREN are relative to the
             // panel, hence cx = 0 above. Collapsing both onto one variable put
             // the whole pack in the middle of the screen, over the loadout.
+            // Height * 0.5f no longer clears the outer container's own
+            // content box (balance-bot, 2026-09-02) -- HalfHeight * 2f is the
+            // box this panel is actually a child of now.
             var panel = Ui.Sprite("DossierPackPanel", null,
                     Place.At(DossierLayout.ColumnACentreX, 0f),
-                    UiSize.Fixed(DossierLayout.ColumnAWidth, DossierLayout.Height))
+                    UiSize.Fixed(DossierLayout.ColumnAWidth, DossierLayout.HalfHeight * 2f))
                 .Coloured(PackGround)
                 .Inactive()
                 .AllowOverlap("the pack covers column A entirely - that IS the interaction");

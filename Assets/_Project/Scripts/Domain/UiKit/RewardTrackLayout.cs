@@ -28,10 +28,22 @@ namespace PrincesPalace.Domain.UiKit
         public const int FirstLevel = RewardTrack.StartingLevel + 1;
         public static int NodeCount => RewardTrack.MaxLevel - FirstLevel + 1;
 
+        // THE OUTER PANE IS A GOLD 2:1 CONTAINER now (balance-bot,
+        // 2026-09-02), not a flat Solid ground -- so "the panel's top edge"
+        // is no longer SystemMenuLayout.ContentHeight * 0.5f (402, the raw
+        // frame). ContentTop is the container's own measured inset boundary
+        // instead (357.78, same as DossierLayout/OptionsLayout/ExitsLayout's
+        // HalfHeight -- see SystemMenuLayout.PaneInset's own comment), and
+        // every yFromTop offset below is still the handoff's own number,
+        // unmoved: changing this one constant shifts the whole rail/card/
+        // summary block down together by the inset delta (44.22) without
+        // touching any of the ~20 individual offsets.
+        public static float ContentTop => SystemMenuLayout.PaneContentHalfHeight;
+
         // The handoff's coordinate frame, converted: y down from the panel's
         // top edge becomes y up from its centre.
         public static float CentreY(float yFromTop) =>
-            SystemMenuLayout.ContentHeight * 0.5f - yFromTop;
+            ContentTop - yFromTop;
 
         // ---- the rail -----------------------------------------------------------
 
@@ -329,17 +341,35 @@ namespace PrincesPalace.Domain.UiKit
         public const float CornerArm = 18f;
         public const float CornerStroke = 1f;
 
+        // The container's own inset boundary now (balance-bot, 2026-09-02),
+        // not SystemMenuLayout.PanelWidth/ContentHeight * 0.5f -- the outer
+        // Gold 2:1 container's own painted border is what the corners used
+        // to be substituting for, and they are children of ITS content panel
+        // now (1488x715.56, not the raw 1600x804 frame), so anchoring them
+        // to the raw frame's half-extent put them 30px past the left/right
+        // and 18px past the top/bottom of the box that actually contains
+        // them.
         public static float CornerCentreX =>
-            SystemMenuLayout.PanelWidth * 0.5f - CornerInset - CornerArm * 0.5f;
+            SystemMenuLayout.PaneContentHalfWidth - CornerInset - CornerArm * 0.5f;
 
         public static float CornerCentreY =>
-            SystemMenuLayout.ContentHeight * 0.5f - CornerInset - CornerArm * 0.5f;
+            SystemMenuLayout.PaneContentHalfHeight - CornerInset - CornerArm * 0.5f;
 
         // A soft violet wash at the panel's middle, so the ground has a centre.
         // The design states it as a radial gradient at 72% of the width and 58%
-        // of the height, which are RADII -- hence the doubling.
+        // of the height, which are RADII -- hence the doubling. Still measured
+        // off the raw PanelWidth/ContentHeight (not the container's tighter
+        // content box): it is a gradient that fades to nothing well inside its
+        // own rect and is built with AllowOverflow for exactly that reason, so
+        // there is no containment box for this one to clear.
         public static float WashWidth => SystemMenuLayout.PanelWidth * 1.44f;
         public static float WashHeight => SystemMenuLayout.ContentHeight * 1.16f;
+
+        // The container's own content canvas -- narrower than the declared
+        // 1600x804 frame now that the ground is a bordered container rather
+        // than a flat fill. What the band wash and its edge hairlines size
+        // themselves to instead of the raw PanelWidth.
+        public static float PaneContentWidth => SystemMenuLayout.PaneContentHalfWidth * 2f;
 
         // Summary: the collect button, where you are, and CLOSE.
         public const float SummaryYFromTop = 43f;         // band 20..66
@@ -410,11 +440,16 @@ namespace PrincesPalace.Domain.UiKit
 
         // Both buttons keep the same clearance from the panel's own edge,
         // whatever they are labelled.
+        //
+        // SystemMenuLayout.PaneContentHalfWidth, NOT PanelWidth * 0.5f
+        // (balance-bot, 2026-09-02) -- these are children of the container's
+        // content panel now (744 half-width, not the declared 800), and at
+        // the old reference both buttons ran 12px past their own edge of it.
         public static float CollectCentreX =>
-            -SystemMenuLayout.PanelWidth * 0.5f + SummaryInsetX + CollectWidth * 0.5f;
+            -SystemMenuLayout.PaneContentHalfWidth + SummaryInsetX + CollectWidth * 0.5f;
 
         public static float CloseCentreX =>
-            SystemMenuLayout.PanelWidth * 0.5f - SummaryInsetX - CloseWidth * 0.5f;
+            SystemMenuLayout.PaneContentHalfWidth - SummaryInsetX - CloseWidth * 0.5f;
 
         // Centred on the panel, and no wider than twice the narrower of the two
         // gaps it has to clear.
@@ -596,7 +631,17 @@ namespace PrincesPalace.Domain.UiKit
         public const float BandTopFromTop = 290f;
         public const float BandBottomFromTop = 502f;
         public const float BandHairlineFromTop = 501f;
-        public const float RailYFromTop = 402f;           // the panel's own vertical centre
+
+        // NOT a fixed 402 any more (balance-bot, 2026-09-02). 402 was "the
+        // panel's own vertical centre" only because CentreY's old reference
+        // (the raw 804-tall frame's own half-height) WAS 402 -- RailYFromTop
+        // being equal to that reference is what made CentreY(RailYFromTop)
+        // land on y=0. Now that the reference is ContentTop (357.78, the
+        // container's own inset boundary), the same identity needs
+        // RailYFromTop to track ContentTop itself: the true vertical centre
+        // of a container is exactly ContentTop below its own content top,
+        // whatever that top happens to be.
+        public static float RailYFromTop => ContentTop;
 
         // The two hairlines stop short of the panel's edge and fade out before
         // they get there -- see the hairline_fade bake. A rule that runs the
@@ -604,8 +649,13 @@ namespace PrincesPalace.Domain.UiKit
         // junction that makes a drawn line look like a table.
         public const float BandEdgeInsetX = 44f;
 
+        // PaneContentWidth, NOT SystemMenuLayout.PanelWidth (balance-bot,
+        // 2026-09-02) -- these hairlines are children of the container's own
+        // content panel, 1488 wide rather than the declared 1600 frame; at
+        // the old width they ran 12px past the container's own left and
+        // right edges.
         public static float BandEdgeWidth =>
-            SystemMenuLayout.PanelWidth - BandEdgeInsetX * 2f;
+            PaneContentWidth - BandEdgeInsetX * 2f;
 
         // The bloom under the lit rail. Fifteen pixels of it, against the
         // rail's own three.
@@ -653,11 +703,24 @@ namespace PrincesPalace.Domain.UiKit
         // The ascent ribbon: all 99 levels at once, in space the rail cannot
         // use. The brief's sharpest open question was that a player at level 47
         // cannot see level 50 without scrolling; this is the answer to it.
-        public const float RibbonLabelYFromTop = 655f;    // label row at 648, 14 tall
+        //
+        // SHIFTED UP 60px (balance-bot, 2026-09-02), UNLIKE every other
+        // yFromTop constant on this screen. The uniform ContentTop delta
+        // (44.22) alone is not enough here: the ribbon's old bottom edge
+        // (768) already used nearly the whole 804-tall raw panel (36px of
+        // clearance), and the outer container's content box is 88.44px
+        // shorter than that (715.56) -- so after the uniform shift the
+        // ribbon's bottom overran the container's own bottom inset by
+        // 52.44px, not merely moved with everything else. 60 reclaims that
+        // (plus ~7.5px of the same 4px slack margin the rest of this
+        // conversion series uses) by pulling the whole ribbon block closer to
+        // the band above it; the internal geometry (RibbonHeight=86, the
+        // 27px label-to-top gap) is untouched, only its position moved.
+        public const float RibbonLabelYFromTop = 595f;    // was 655
         public const float RibbonLabelHeight = 14f;
         public const int RibbonLabelFont = 10;
-        public const float RibbonTopFromTop = 682f;
-        public const float RibbonBottomFromTop = 768f;
+        public const float RibbonTopFromTop = 622f;       // was 682
+        public const float RibbonBottomFromTop = 708f;    // was 768
         public const float RibbonInsetX = 80f;
 
         public static float RibbonWidth => SystemMenuLayout.PanelWidth - RibbonInsetX * 2f;
