@@ -192,7 +192,8 @@
       "effect": "Ward",
       "targeting": "Self",
       "manaCost": 0,
-      "resourceCost": 2
+      "resourceCost": 2,
+      "cooldownTurns": 2
     },
     {
       "id": "shatter",

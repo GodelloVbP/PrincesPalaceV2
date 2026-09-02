@@ -78,6 +78,19 @@ namespace PrincesPalace.PlayModeTests
             return kit.Skills.Select(s => s.Id).ToList();
         }
 
+        // Ward used to have no cooldown at all -- castable every turn, and
+        // with its talent strand refunding the wool, free every turn too.
+        // 2 is the shortest real wait SkillEntryResolver allows (it refuses
+        // 1 as indistinguishable from 0 -- see SkillEntryResolver).
+        [Test]
+        public void WardHasARealCooldown()
+        {
+            var ward = ContentDatabase.GetSkill(WardSkillId);
+            Assert.IsNotNull(ward, "fixture: content still has " + WardSkillId);
+            Assert.AreEqual(2, ward.cooldownTurns,
+                "Ward is meant to be castable every other turn, not every turn");
+        }
+
         [Test]
         public void WithoutTheTalent_ThereIsNoWardOnTheStrip()
         {
