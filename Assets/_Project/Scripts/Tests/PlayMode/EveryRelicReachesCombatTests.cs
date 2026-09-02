@@ -116,6 +116,13 @@ namespace PrincesPalace.PlayModeTests
             int baseArmorPenetration = FightEncounterAdapter.Build(OneParty(), OneEnemy(),
                 new Domain.Rng.SeededRandom(11)).Party[0].ArmorPenetration;
 
+            // Balance pass 2: Jo-Sun's Book of Anatomy and Vampire Dentures,
+            // the two newest stats a relic modifier can move.
+            int baseWeaknessBonus = FightEncounterAdapter.Build(OneParty(), OneEnemy(),
+                new Domain.Rng.SeededRandom(11)).Party[0].WeaknessMultiplierBonusPercent;
+            int baseRelicLifesteal = FightEncounterAdapter.Build(OneParty(), OneEnemy(),
+                new Domain.Rng.SeededRandom(11)).Party[0].RelicLifestealPercent;
+
             var inert = new List<string>();
 
             foreach (var relic in withModifiers)
@@ -129,6 +136,8 @@ namespace PrincesPalace.PlayModeTests
                              || actor.MagicalDefense != baseMagicalDefense
                              || actor.MaxHealth != baseHealth || actor.Speed != baseSpeed
                              || actor.ArmorPenetration != baseArmorPenetration
+                             || actor.WeaknessMultiplierBonusPercent != baseWeaknessBonus
+                             || actor.RelicLifestealPercent != baseRelicLifesteal
                              || !actor.TypedResistance.IsEmpty;
 
                 if (!moved) inert.Add(relic.id);

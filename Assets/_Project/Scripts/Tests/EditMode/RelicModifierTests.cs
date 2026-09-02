@@ -161,6 +161,14 @@ namespace PrincesPalace.Domain.Tests
                 // Stat's own switch).
                 if (stat == RelicStat.ArmorPenetration) continue;
 
+                // Balance pass 2: WeaknessDamageBonusPercent and
+                // LifestealPercent are flat-only for the identical reason --
+                // each already lands against something percent-shaped (a
+                // multiplier, a percent-of-damage heal), so a percent-of-a-
+                // percent twin would be exactly as unreadable as it would be
+                // for ArmorPenetration or Resistance.
+                if (stat == RelicStat.WeaknessBonus || stat == RelicStat.Lifesteal) continue;
+
                 var types = Enum.GetValues(typeof(RelicModifierType))
                     .Cast<RelicModifierType>()
                     .Where(t => t != RelicModifierType.None)
