@@ -5,6 +5,21 @@ using UnityEngine.UI;
 
 namespace PrincesPalace
 {
+    // What FightController.RefreshVerbs actually distinguishes about a root
+    // verb (Attack/Skill/Item/Hold Back), named after the distinction rather
+    // than after "state 1/2/3": whether NOTHING about this verb is true right
+    // now (Idle), whether ITS OWN branch is the one currently open -- or, with
+    // nothing open yet, that it has gamepad focus (Open), or whether it is the
+    // menu's own recommended default with nothing open or focused (Primary).
+    // A button can be Open XOR Primary, never both -- RefreshVerbs' own
+    // `highlighted ? ... : i == 0 ? ... : ...` chain is exactly that priority.
+    public enum ThemedMenuState
+    {
+        Idle,
+        Open,
+        Primary,
+    }
+
     // The flat state controller a THEMED button gets instead of
     // ButtonPressAnimator/SubtleHoverScale - see UiEmitter.EmitButton's
     // Themed() branch for why the two are mutually exclusive with this one.
@@ -34,6 +49,24 @@ namespace PrincesPalace
         [SerializeField] internal Image Glow;
         [SerializeField] internal Image Plate;
 
+        // A MENU-STATE SEAM, for a button whose state is not just its own
+        // pointer/selection history -- FightController.RefreshVerbs drives
+        // this from what is open/focused/recommended in a menu these four
+        // pointer handlers know nothing about. Idle by default so a button
+        // nobody ever calls SetMenuState on (ContinueButton, TargetCancelButton
+        // today) renders exactly as it always has.
+        //
+        // The four values below are what SetMenuState composes against --
+        // Open/Primary tints and glow alphas, deliberately serialized fields
+        // UiEmitter assigns (WireThemedButton) rather than consts baked into
+        // this MonoBehaviour, so the numbers live with the rest of the kit's
+        // authored values instead of being a second place a designer would
+        // have to know to look.
+        [SerializeField] internal Color OpenPlateTint = new Color(1.12f, 1.12f, 1.12f, 1f);
+        [SerializeField] internal float OpenGlowAlpha = 0.5f;
+        [SerializeField] internal Color PrimaryGlowColor = Color.white;
+        [SerializeField] internal float PrimaryGlowAlpha = FocusGlowAlpha;
+
         // Same default and the same override reason as ButtonPressAnimator:
         // UiNode.Quiet() flips this to Sound.None for a button whose own
         // controller plays a flourish on the same click.
@@ -56,9 +89,29 @@ namespace PrincesPalace
         private bool _isSelected;
         private bool _isPressed;
 
+        private ThemedMenuState _menuState = ThemedMenuState.Idle;
+
+        // Glow's own RGB, as Ui.ApplyTheme baked it for THIS button's theme
+        // (alpha 0 at build time -- see UiNode.Theme's own comment). Captured
+        // once so Open can fade the glow's alpha up in the verb's own colour
+        // without this component having to know what that colour was; Primary
+        // overrides it to PrimaryGlowColor instead, since a recommended-action
+        // ring is gold regardless of the plate under it.
+        private Color _themeGlowColor = Color.white;
+        private bool _themeGlowCaptured;
+
+        // Public for the same reason FocusGlowAlpha is: a test asserts
+        // against the real state rather than reading it off a private field
+        // through reflection.
+        public ThemedMenuState CurrentMenuState => _menuState;
+
         private void Awake() => _button = GetComponent<Button>();
 
-        private void OnEnable() => Refresh();
+        private void OnEnable()
+        {
+            CaptureThemeGlowColor();
+            Refresh();
+        }
 
         private void OnDisable()
         {
@@ -82,6 +135,43 @@ namespace PrincesPalace
         {
             UpdateGlow();
             UpdatePlate();
+        }
+
+        // THE MENU-STATE SEAM. FightController.RefreshVerbs calls this once
+        // per verb per repaint instead of writing targetGraphic.color the way
+        // an unthemed button's row still does -- see that method for why the
+        // two paths coexist.
+        //
+        // Snaps Glow's RGB immediately (Open's own theme tint, or Primary's
+        // gold) rather than fading it: only alpha animates, in UpdateGlow's
+        // existing fade, and the hue swap happens while alpha is at or near
+        // zero in every real transition this menu produces, so there is
+        // nothing for a hue fade to be seen doing.
+        public void SetMenuState(ThemedMenuState state)
+        {
+            _menuState = state;
+            CaptureThemeGlowColor();
+
+            if (Glow != null)
+            {
+                var rgb = state == ThemedMenuState.Primary ? PrimaryGlowColor : _themeGlowColor;
+                var current = Glow.color;
+                Glow.color = new Color(rgb.r, rgb.g, rgb.b, current.a);
+            }
+
+            Refresh();
+        }
+
+        // Idempotent and safe to call before Glow is wired (BEFORE
+        // WireThemedButton assigns it, at Editor build time) -- it simply
+        // does nothing until Glow is non-null, and captures on the first call
+        // afterward. RGB never changes once captured (only .a ever does, via
+        // the fade coroutines below), so capturing late loses nothing.
+        private void CaptureThemeGlowColor()
+        {
+            if (_themeGlowCaptured || Glow == null) return;
+            _themeGlowColor = Glow.color;
+            _themeGlowCaptured = true;
         }
 
         private bool Interactable => _button == null || _button.interactable;
@@ -136,15 +226,33 @@ namespace PrincesPalace
             SoundController.Play(clickSound);
         }
 
+        // The menu state sets an AMBIENT floor (Open's partial glow, Primary's
+        // gold ring); hover/select composes ON TOP as the stronger, temporary
+        // signal a pointer or gamepad focus already meant before menu states
+        // existed -- Max, not a replacement, so hovering an Open or Primary
+        // verb still reads as more lit than either state alone.
+        private float MenuStateGlowAlpha()
+        {
+            switch (_menuState)
+            {
+                case ThemedMenuState.Open: return OpenGlowAlpha;
+                case ThemedMenuState.Primary: return PrimaryGlowAlpha;
+                default: return 0f;
+            }
+        }
+
         private void UpdateGlow()
         {
-            float target = Interactable && (_isHovering || _isSelected) ? FocusGlowAlpha : 0f;
+            float focusAlpha = Interactable && (_isHovering || _isSelected) ? FocusGlowAlpha : 0f;
+            float target = Interactable ? Mathf.Max(MenuStateGlowAlpha(), focusAlpha) : 0f;
             FadeGlowTo(target);
         }
 
+        private Color MenuStatePlateTint() => _menuState == ThemedMenuState.Open ? OpenPlateTint : IdleTint;
+
         private void UpdatePlate()
         {
-            var target = !Interactable ? DisabledTint : _isPressed ? PressedTint : IdleTint;
+            var target = !Interactable ? DisabledTint : _isPressed ? PressedTint : MenuStatePlateTint();
             FadePlateTo(target);
         }
 
@@ -200,7 +308,7 @@ namespace PrincesPalace
         private void ApplyImmediate()
         {
             if (Glow != null) SetAlphaImmediate(Glow, 0f);
-            if (Plate != null) Plate.color = Interactable ? IdleTint : DisabledTint;
+            if (Plate != null) Plate.color = Interactable ? MenuStatePlateTint() : DisabledTint;
         }
     }
 }

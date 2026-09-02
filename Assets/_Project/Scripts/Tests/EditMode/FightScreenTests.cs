@@ -692,6 +692,65 @@ namespace PrincesPalace.Domain.Tests
                 "and that line is CommandBottom, which is what both are measured from");
         }
 
+        // ---- verb theming --------------------------------------------------------
+
+        [TestCase(0, ButtonTheme.Crimson)]
+        [TestCase(1, ButtonTheme.Violet)]
+        [TestCase(2, ButtonTheme.Green)]
+        [TestCase(3, ButtonTheme.Blue)]
+        public void EachVerbWearsItsOwnTheme(int index, ButtonTheme expected)
+        {
+            var verb = Screen().VerbButtons[index].Node;
+
+            Assert.AreEqual(expected, verb.Theme, $"Verb{index} should be Themed({expected})");
+            Assert.IsTrue(verb.CaptionPreserving,
+                $"Verb{index} declares its own hotkey/text/caret caption - ThemedPlate(), not Themed()");
+        }
+
+        [Test]
+        public void AVerbRowsTree_HasVisualsButNoGeneratedLabel()
+        {
+            var verb = Screen().VerbButtons[0].Node;
+
+            var visuals = Walk(verb).FirstOrDefault(n => n.Name == "Visuals");
+            Assert.IsNotNull(visuals, "Verb0 has no Visuals child - ThemedPlate() should have built one");
+
+            var generatedLabel = Walk(verb).FirstOrDefault(n => n.Name == "Verb0Label");
+            Assert.IsNull(generatedLabel,
+                "a caption-preserving verb must not also get a generated 'Verb0Label' - that would be a second, " +
+                "blank, centred label drawn under the row's own hand-declared caption");
+
+            Assert.IsNotNull(Walk(verb).FirstOrDefault(n => n.Name == "Verb0Hotkey"));
+            Assert.IsNotNull(Walk(verb).FirstOrDefault(n => n.Name == "Verb0Text"));
+            Assert.IsNotNull(Walk(verb).FirstOrDefault(n => n.Name == "Verb0Caret"));
+        }
+
+        [Test]
+        public void AVerbRowsVisualsIsLayeredWithItsCaption_NotAllowOverlap()
+        {
+            var verb = Screen().VerbButtons[0].Node;
+
+            var offenders = Walk(verb).Where(n => n.AllowOverlapReason != null).Select(n => n.Name).ToList();
+            CollectionAssert.IsEmpty(offenders,
+                "a themed verb row must not carry AllowOverlap anywhere in its declared subtree: " +
+                string.Join(", ", offenders));
+
+            var visuals = Walk(verb).First(n => n.Name == "Visuals");
+            var text = Walk(verb).First(n => n.Name == "Verb0Text");
+            Assert.IsNotNull(visuals.LayerGroup);
+            Assert.AreSame(visuals.LayerGroup, text.LayerGroup,
+                "the caption sits ON its own plate - Visuals and the caption children share one LayerGroup token");
+        }
+
+        [Test]
+        public void AVerbRowsAspectMatches300By52()
+        {
+            var rect = RectOf("Verb0");
+
+            Assert.AreEqual(300f, rect.Width, 0.01f);
+            Assert.AreEqual(52f, rect.Height, 0.01f);
+        }
+
         private static IEnumerable<UiNode> Walk(UiNode node)
         {
             yield return node;

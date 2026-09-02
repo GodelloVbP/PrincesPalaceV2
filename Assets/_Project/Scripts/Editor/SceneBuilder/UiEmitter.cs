@@ -405,30 +405,46 @@ public static class UiEmitter
         text.raycastTarget = false;
     }
 
+    // The menu-state tint/glow values every ThemedButtonState gets, so the
+    // authored numbers live in exactly one place rather than as a second
+    // set of defaults quietly duplicated on the MonoBehaviour. A button
+    // nothing ever calls SetMenuState on (ContinueButton, TargetCancelButton)
+    // never reads OpenPlateTint/OpenGlowAlpha/PrimaryGlowAlpha at all, so
+    // assigning them here costs those buttons nothing.
+    private static readonly Color ThemedOpenPlateTint = new Color(1.12f, 1.12f, 1.12f, 1f);
+    private const float ThemedOpenGlowAlpha = 0.5f;
+
+    // Gold, reused from Ui.ThemeGlowHex(Gold) rather than a second hex
+    // literal -- the same "recommended next action" colour ContinueButton
+    // already wears (see 1cd4007), now also the ring a Primary VERB gets
+    // while nothing is open.
+    private static readonly Color ThemedPrimaryGlowColor =
+        SceneBuilder.ParseHex(Ui.ThemeGlowHex(ButtonTheme.Gold), Color.white);
+    private const float ThemedPrimaryGlowAlpha = ThemedButtonState.FocusGlowAlpha;
+
     // Finishes what EmitButton's Themed() branch started, once Visuals'
-    // Glow/Plate and the declared Label child actually exist as GameObjects.
+    // Glow/Plate (and, for the label-generating mode, the declared Label)
+    // actually exist as GameObjects.
     //
     // Finds them BY NAME rather than by position in node.Children - Ui.
-    // ApplyTheme is the only writer of this shape, but matching on the same
-    // names it uses is cheaper to read than trusting an index never to drift
-    // if that method's own child order ever changes.
+    // ApplyTheme/ApplyThemePlateOnly are the only writers of this shape, but
+    // matching on the same names they use is cheaper to read than trusting
+    // an index never to drift if either method's own child order changes.
     private static void WireThemedButton(GameObject go, UiNode node, UiEmitResult result)
     {
         var visuals = node.Children.FirstOrDefault(c => c.Name == "Visuals");
         var glowNode = visuals?.Children.FirstOrDefault(c => c.Name == "Glow");
         var plateNode = visuals?.Children.FirstOrDefault(c => c.Name == "Plate");
-        var labelNode = node.Children.FirstOrDefault(c => c.Name == node.Name + "Label");
 
-        if (visuals == null || glowNode == null || plateNode == null || labelNode == null)
+        if (visuals == null || glowNode == null || plateNode == null)
         {
             throw new System.Exception(
-                $"[UiEmitter] '{node.Name}' is Themed() but its Visuals/Glow/Plate/Label children are missing - " +
-                "did something build this node without going through Ui.ApplyTheme?");
+                $"[UiEmitter] '{node.Name}' is Themed() but its Visuals/Glow/Plate children are missing - " +
+                "did something build this node without going through Ui.ApplyTheme/ThemedPlate?");
         }
 
         var plateImage = result.Objects[plateNode].GetComponent<Image>();
         var glowImage = result.Objects[glowNode].GetComponent<Image>();
-        var labelText = result.Objects[labelNode].GetComponent<TextMeshProUGUI>();
 
         var button = go.GetComponent<Button>();
         button.targetGraphic = plateImage;
@@ -438,11 +454,33 @@ public static class UiEmitter
         state.Plate = plateImage;
         if (node.SilentClick) state.clickSound = Sound.None;
 
+        state.OpenPlateTint = ThemedOpenPlateTint;
+        state.OpenGlowAlpha = ThemedOpenGlowAlpha;
+        state.PrimaryGlowColor = ThemedPrimaryGlowColor;
+        state.PrimaryGlowAlpha = ThemedPrimaryGlowAlpha;
+
         // Recorded so UiWiringSweep (E3) checks Glow/Plate the same way it
         // checks every other controller's serialized references - it only
         // ever walks result.AttachedControllers, and AddComponent alone would
         // leave this component invisible to that sweep.
         result.AttachedControllers.Add(state);
+
+        // CAPTION-PRESERVING BUTTONS STOP HERE. ThemedPlate() built no
+        // <name>Label -- the caller's own caption children (FightScreen's
+        // verb rows: hotkey/text/caret) already carry their own font and
+        // colour, so there is nothing here for the label dressing below to
+        // touch.
+        if (node.CaptionPreserving) return;
+
+        var labelNode = node.Children.FirstOrDefault(c => c.Name == node.Name + "Label");
+        if (labelNode == null)
+        {
+            throw new System.Exception(
+                $"[UiEmitter] '{node.Name}' is Themed() but its Label child is missing - " +
+                "did something build this node without going through Ui.ApplyTheme?");
+        }
+
+        var labelText = result.Objects[labelNode].GetComponent<TextMeshProUGUI>();
 
         // THE LABEL DRESSING THE PLAIN DSL CANNOT SAY.
         //

@@ -202,5 +202,97 @@ namespace PrincesPalace.Domain.Tests
             // "Manage Saves" is 12 characters - past the <=10 band.
             Assert.AreEqual(0f, Ui.ButtonTracking(UiStrings.ManageSaves));
         }
+
+        // --- ThemedPlate: caption-preserving mode --------------------------------
+        //
+        // A composite button (FightScreen's verb rows) that already declares
+        // its own caption children instead of a single centred string. See
+        // UiNode.CaptionPreserving's own comment for why this needs a
+        // separate entry point rather than a flag on Themed().
+
+        private static UiNode BuildPlateOnly(ButtonTheme theme, string name = "TestButton")
+        {
+            var button = Ui.Button(name, UiString.Runtime, new UiVec(200f, 60f), 1, Place.At(0f, 0f))
+                .ThemedPlate(theme);
+            var caption = Ui.Label(name + "Caption", UiStrings.Cancel, new UiVec(160f, 30f), 20, null, Place.At(0f, 0f));
+            button.Children.Add(caption);
+            button.LayerCaptionWithVisuals(caption);
+            return button;
+        }
+
+        [Test]
+        public void AThemedPlateButtonsTree_HasVisualsButNoGeneratedLabel()
+        {
+            var button = BuildPlateOnly(ButtonTheme.Crimson);
+
+            var visuals = Find(button, "Visuals");
+            Assert.IsNotNull(visuals, "no Visuals child - Ui.ApplyThemePlateOnly should have built one");
+            Assert.AreEqual(UiNodeKind.Panel, visuals.Kind);
+            Assert.IsNotNull(visuals.Children.FirstOrDefault(n => n.Name == "Glow"));
+            Assert.IsNotNull(visuals.Children.FirstOrDefault(n => n.Name == "Plate"));
+
+            var generatedLabel = Find(button, "TestButtonLabel");
+            Assert.IsNull(generatedLabel,
+                "ThemedPlate() must not generate its own '<name>Label' - the caller declares its own caption");
+        }
+
+        [Test]
+        public void AThemedPlateButton_IsMarkedCaptionPreserving()
+        {
+            var button = BuildPlateOnly(ButtonTheme.Crimson);
+
+            Assert.IsTrue(button.CaptionPreserving);
+            Assert.AreEqual(ButtonTheme.Crimson, button.Theme);
+        }
+
+        [Test]
+        public void LayerCaptionWithVisuals_SharesOneTokenBetweenVisualsAndTheCaption()
+        {
+            var button = BuildPlateOnly(ButtonTheme.Blue);
+            var visuals = Find(button, "Visuals");
+            var caption = Find(button, "TestButtonCaption");
+
+            Assert.IsNotNull(visuals.LayerGroup);
+            Assert.AreSame(visuals.LayerGroup, caption.LayerGroup);
+            Assert.IsNull(visuals.AllowOverlapReason);
+            Assert.IsNull(caption.AllowOverlapReason);
+        }
+
+        [Test]
+        public void LayerCaptionWithVisuals_WithNoVisuals_Throws()
+        {
+            var button = Ui.Button("Bare", UiStrings.Cancel, new UiVec(200f, 60f), 20);
+
+            Assert.Throws<System.InvalidOperationException>(
+                () => button.LayerCaptionWithVisuals(Ui.Label("Caption", UiStrings.Cancel, new UiVec(100f, 20f))));
+        }
+
+        [Test]
+        public void AThemedPlateRoot_PassesUiAudit_AtAllFourAspects()
+        {
+            var button = BuildPlateOnly(ButtonTheme.Green);
+            var root = Ui.Panel("Root", UiSize.Fixed(1920f, 1080f), button);
+
+            var errors = UiAudit.RunAllFrames(root);
+
+            CollectionAssert.IsEmpty(errors,
+                "first 5 of " + errors.Count + ": " + string.Join(" | ", errors.Take(5).Select(e => e.ToString())));
+        }
+
+        [Test]
+        public void ThemedPlateOnANonButtonNode_Throws()
+        {
+            var panel = Ui.Panel("SomePanel", UiSize.Fixed(100f, 100f));
+
+            Assert.Throws<System.ArgumentException>(() => panel.ThemedPlate(ButtonTheme.Gold));
+        }
+
+        [Test]
+        public void ThemedPlateOnAChromelessButton_Throws()
+        {
+            var button = Ui.Button("SomeButton", UiString.Runtime, new UiVec(200f, 60f), 20).NoChrome();
+
+            Assert.Throws<System.ArgumentException>(() => button.ThemedPlate(ButtonTheme.Gold));
+        }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace PrincesPalace.Domain.UiKit
 {
@@ -152,6 +153,22 @@ namespace PrincesPalace.Domain.UiKit
         // button needs.
         public ButtonTheme? Theme;
 
+        // True when this button wears a theme's Visuals(Glow, Plate) but kept
+        // its OWN declared caption children instead of getting a generated
+        // <name>Label. Set only through ThemedPlate(), never assigned
+        // directly, and never true at the same time node.Children already
+        // holds a "<Name>Label" the way Themed()'s output does.
+        //
+        // Exists for a composite button that already declares its caption as
+        // real children (the fight's verb rows: a hotkey badge, a
+        // left-aligned text child, a nesting caret) -- Themed()'s Label
+        // would either draw a second, blank, centred label under the real
+        // one, or force the row to restructure its own DSL declaration just
+        // to reach the shared caption shape. This gives such a row the plate
+        // and the focus/press/disabled state machine without touching what
+        // it already draws for its own words.
+        public bool CaptionPreserving;
+
         // Which typography role (Typography.cs, engine-free) this label's
         // presentation follows. Null is the untouched path: UiEmitter's
         // ApplyTypography leaves SceneBuilder.UiFont at node.FontSize with
@@ -238,6 +255,45 @@ namespace PrincesPalace.Domain.UiKit
             Ui.ApplyTheme(this, theme);
             return this;
         }
+
+        // Wears a theme's PLATE ONLY -- Visuals(Glow, Plate), no generated
+        // <name>Label -- for a button whose caption is already declared as
+        // its own children. See CaptionPreserving for why this has to be a
+        // separate mode rather than a flag on Themed(): the label-generating
+        // path stays byte-for-byte unchanged for every existing caller.
+        //
+        // Call LayerCaptionWithVisuals() once the caption children have been
+        // added, or A1 reports the plate colliding with them -- Visuals
+        // stretches over the whole button and the caption sits inside it on
+        // purpose, the same relationship Themed()'s own Visuals/Label pair
+        // states with Layered().
+        public UiNode ThemedPlate(ButtonTheme theme)
+        {
+            Ui.ApplyThemePlateOnly(this, theme);
+            return this;
+        }
+
+        // Marks this button's Visuals (built by ThemedPlate) and its own
+        // caption children as ONE widget, the way Themed()'s Visuals/Label
+        // pair already is -- without this, A1 sees Visuals' full-button
+        // footprint sitting under a hotkey/text/caret it was never told is
+        // meant to be there.
+        public UiNode LayerCaptionWithVisuals(params UiNode[] captionChildren)
+        {
+            var visuals = Children.FirstOrDefault(c => c.Name == "Visuals");
+            if (visuals == null)
+            {
+                throw new InvalidOperationException(
+                    $"'{Name}' has no Visuals child to layer a caption against - call ThemedPlate() before " +
+                    "LayerCaptionWithVisuals().");
+            }
+
+            var members = new List<UiNode> { visuals };
+            members.AddRange(captionChildren.Where(c => c != null));
+            Ui.Layered(members);
+            return this;
+        }
+
         public UiNode Padded(UiPad pad) { Pad = pad; return this; }
 
         // Named Styled, not Role -- a field and a method cannot share a name

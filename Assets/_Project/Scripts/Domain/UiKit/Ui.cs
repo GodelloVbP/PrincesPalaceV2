@@ -332,7 +332,67 @@ namespace PrincesPalace.Domain.UiKit
             node.Theme = theme;
 
             var buttonSize = new UiVec(node.Size.X, node.Size.Y);
+            var visuals = BuildVisuals(theme, buttonSize);
 
+            var label = Label(node.Name + "Label", node.Text, buttonSize,
+                node.FontSize > 0 ? node.FontSize : 29, "#FFFFFFFF", Place.Stretch());
+            label.Tracking = ButtonTracking(node.Text);
+
+            // Every themed button's caption follows ButtonLabel -- the one
+            // migration step 1 does automatically, without a screen having to
+            // say .Styled(ButtonLabel) at every Themed() call site. See
+            // UiEmitter.ApplyTypography for what this actually changes.
+            label.Role = TypographyRole.ButtonLabel;
+
+            // Visuals and Label occupy the SAME box on purpose - the caption
+            // sits on its own plate, which is exactly what Layered exists to
+            // say. Without it, A1 reads Label as a real graphic sitting on top
+            // of Visuals' own (invisible) rect and reports the collision the
+            // bare-container exemption protects against in the OTHER
+            // direction only (a drawn sibling on top of an empty frame), not
+            // this one (a drawn sibling on top of an empty frame's own
+            // drawn contents).
+            Layered(visuals, label);
+
+            node.Children.Add(visuals);
+            node.Children.Add(label);
+        }
+
+        // Called by UiNode.ThemedPlate() -- the CAPTION-PRESERVING mode.
+        // Builds the SAME Visuals(Glow, Plate) ApplyTheme does, but declares
+        // no <name>Label: the caller already has its own caption children
+        // and adds them itself, then calls LayerCaptionWithVisuals() to state
+        // the same "one widget" relationship Themed()'s own Layered(visuals,
+        // label) states for the label-generating path.
+        internal static void ApplyThemePlateOnly(UiNode node, ButtonTheme theme)
+        {
+            if (node.Kind != UiNodeKind.Button)
+            {
+                throw new ArgumentException(
+                    $"ThemedPlate({theme}) only applies to a Button node; '{node.Name}' is a {node.Kind}.");
+            }
+
+            if (node.Chromeless)
+            {
+                throw new ArgumentException(
+                    $"'{node.Name}' is both Chromeless and ThemedPlate({theme}) - no plate at all and a themed " +
+                    "plate are contradictory. Drop whichever one this button does not actually want.");
+            }
+
+            node.Theme = theme;
+            node.CaptionPreserving = true;
+
+            var buttonSize = new UiVec(node.Size.X, node.Size.Y);
+            var visuals = BuildVisuals(theme, buttonSize);
+            node.Children.Add(visuals);
+        }
+
+        // Visuals(Glow, Plate) -- the half of a themed button's tree BOTH
+        // ApplyTheme and ApplyThemePlateOnly need, factored out once they
+        // stopped being the same method. The Glow/Plate pair's own Layered()
+        // exemption lives here with it, since the two are built together.
+        private static UiNode BuildVisuals(ButtonTheme theme, UiVec buttonSize)
+        {
             // Larger than the plate on every edge, so a focused button reads
             // as lit rather than as a second, smaller plate underneath the
             // first. Overflows Visuals by design - see the AllowOverflow.
@@ -359,30 +419,7 @@ namespace PrincesPalace.Domain.UiKit
             // things that happen to share a box.
             Layered(glow, plate);
 
-            var visuals = Panel("Visuals", Place.Stretch(), UiSize.Fill, glow, plate);
-
-            var label = Label(node.Name + "Label", node.Text, buttonSize,
-                node.FontSize > 0 ? node.FontSize : 29, "#FFFFFFFF", Place.Stretch());
-            label.Tracking = ButtonTracking(node.Text);
-
-            // Every themed button's caption follows ButtonLabel -- the one
-            // migration step 1 does automatically, without a screen having to
-            // say .Styled(ButtonLabel) at every Themed() call site. See
-            // UiEmitter.ApplyTypography for what this actually changes.
-            label.Role = TypographyRole.ButtonLabel;
-
-            // Visuals and Label occupy the SAME box on purpose - the caption
-            // sits on its own plate, which is exactly what Layered exists to
-            // say. Without it, A1 reads Label as a real graphic sitting on top
-            // of Visuals' own (invisible) rect and reports the collision the
-            // bare-container exemption protects against in the OTHER
-            // direction only (a drawn sibling on top of an empty frame), not
-            // this one (a drawn sibling on top of an empty frame's own
-            // drawn contents).
-            Layered(visuals, label);
-
-            node.Children.Add(visuals);
-            node.Children.Add(label);
+            return Panel("Visuals", Place.Stretch(), UiSize.Fill, glow, plate);
         }
 
         // <=7 chars tracks the most (a short word needs the most help reading
@@ -407,7 +444,11 @@ namespace PrincesPalace.Domain.UiKit
         // and a coincidental hex match there would be exactly that, a
         // coincidence, not a shared role - see UiKitLintTests' own reasoning
         // on ItemStatLines.HeadingHex for the same call made the other way.
-        private static string ThemeGlowHex(ButtonTheme theme)
+        //
+        // Public so UiEmitter can read the SAME Gold value for a menu-state
+        // Primary ring (ThemedButtonState.SetMenuState) rather than a second
+        // hex literal drifting from this one.
+        public static string ThemeGlowHex(ButtonTheme theme)
         {
             switch (theme)
             {

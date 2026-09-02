@@ -1249,6 +1249,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
             };
             var nests = new[] { false, true, true, false };
 
+            // ATTACK/SKILL/ITEM/HOLD BACK, in BuildVerbColumn's own fixed
+            // order -- no RUN verb to give Silver, so this is four of the
+            // kit's six themes rather than the five-verb mapping CLAUDE.md
+            // states for a screen that still has one.
+            var themes = new[]
+            {
+                ButtonTheme.Crimson, ButtonTheme.Violet, ButtonTheme.Green, ButtonTheme.Blue,
+            };
+
             return Ui.Each(labels, (label, i) =>
             {
                 bool primary = i == 0;
@@ -1258,13 +1267,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     quiet ? FightHudPalette.QuietHotkey : FightHudPalette.LoudHotkey,
                     Place.At(-134f, 0f, new UiVec(0f, 0.5f)));
 
-                // "Text", not "Label": the emitter names a button's own caption
-                // child `<Button>Label`, so a hand-declared `Verb0Label` would
-                // collide with the one the emitter creates -- and A4 would only
-                // catch it after the emit, not in the tree.
+                // "Text", not "Label": ThemedPlate() (like Themed()) reserves
+                // `<Button>Label` for a generated caption -- but this row is
+                // CaptionPreserving, so that name is never used at all here.
+                // Kept as "Text" anyway so the two vocabularies read the same
+                // way at every call site.
                 var text = Ui.Label($"Verb{i}Text", label, new UiVec(200f, 26f), primary ? 19 : 17,
                     quiet ? FightHudPalette.TextMuted : FightHudPalette.TextPrimary,
-                    Place.At(-104f, 0f, new UiVec(0f, 0.5f)));
+                    Place.At(-104f, 0f, new UiVec(0f, 0.5f)))
+                    .Styled(TypographyRole.ButtonLabel);
 
                 // Declared on every row and deactivated on the ones that do not
                 // nest, rather than existing on some rows only: a ref list with
@@ -1277,11 +1288,28 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // Named directly. v1 created these as Verb0..4 and then renamed
                 // them afterwards, so what a row MEANT lived somewhere else
                 // entirely from what it was called.
+                //
+                // ThemedPlate(), not Themed(): this row already declares its
+                // own caption (hotkey + text + caret) below rather than a
+                // single centred string, so the label-generating mode would
+                // either draw a second, blank label under the real one or
+                // force this row to restructure its own DSL declaration.
+                // ThemedPlate() gives it Visuals(Glow, Plate) and nothing
+                // else -- the shared gold-outline row art EmitButton would
+                // otherwise fall back to is never reached, since the Themed
+                // branch returns before that fallback exists.
                 var row = Ui.Button($"Verb{i}", UiString.Runtime, new UiVec(VerbRowW, VerbRowH), 1,
-                    Place.At(VerbColumnX, CommandBottom + 26f + i * VerbPitch));
+                    Place.At(VerbColumnX, CommandBottom + 26f + i * VerbPitch))
+                    .ThemedPlate(themes[i]);
                 row.Children.Add(hotkey);
                 row.Children.Add(text);
                 row.Children.Add(caret);
+
+                // Visuals stretches over the whole row on purpose -- the
+                // caption sits ON its own plate, the same relationship
+                // Themed()'s Visuals/Label pair states with Layered(). Without
+                // this A1 reports the plate colliding with every word on it.
+                row.LayerCaptionWithVisuals(hotkey, text, caret);
 
                 VerbButtons.Add(row);
                 VerbLabels.Add(text);

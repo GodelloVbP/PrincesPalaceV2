@@ -168,6 +168,41 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
+        public IEnumerator OpeningSkillPutsItInOpenStateAndAttackInPrimary()
+        {
+            // FightController.RefreshVerbs' own three-way distinction, now
+            // painted through ThemedButtonState.SetMenuState instead of a
+            // flat targetGraphic.color write -- see FightController.Hud.cs.
+            yield return LoadFight();
+
+            var attackState = Named("Verb0").GetComponent<ThemedButtonState>();
+            var skillState = Named("Verb1").GetComponent<ThemedButtonState>();
+            Assert.IsNotNull(attackState, "Verb0 should be a themed button (ThemedPlate(Crimson))");
+            Assert.IsNotNull(skillState, "Verb1 should be a themed button (ThemedPlate(Violet))");
+
+            // Resting: nothing is OPEN (Branch == None, ActiveVerbIndex -1),
+            // but gamepad focus defaults to index 0 -- the same verb the
+            // menu's own recommendation happens to be -- so `highlighted`
+            // is already true for ATTACK before anything is ever pressed.
+            // Open, not Primary, is the state that actually paints at rest;
+            // Primary only shows once focus or an open branch moves
+            // elsewhere while index 0 stays neither.
+            Assert.AreEqual(ThemedMenuState.Open, attackState.CurrentMenuState);
+            Assert.AreEqual(ThemedMenuState.Idle, skillState.CurrentMenuState);
+
+            Click("Verb1");
+
+            // SKILL's own branch open (ActiveVerbIndex 1) makes ATTACK
+            // neither the open verb NOR the default gamepad focus (the
+            // `active < 0 && ...` clause only ever applies while nothing is
+            // open) -- so it falls all the way through to i == 0, its
+            // Primary/recommended-default colouring, exactly as it read
+            // VerbIdlePrimary before this migration.
+            Assert.AreEqual(ThemedMenuState.Primary, attackState.CurrentMenuState);
+            Assert.AreEqual(ThemedMenuState.Open, skillState.CurrentMenuState);
+        }
+
+        [UnityTest]
         public IEnumerator TheOnlyRowLandsJustAboveBack_WhateverTheCount()
         {
             // v1's design preview drew rows at 8-slot positions and left a gap

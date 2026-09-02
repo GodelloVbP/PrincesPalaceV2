@@ -145,18 +145,36 @@ namespace PrincesPalace
             int active = _menu.ActiveVerbIndex;
             for (int i = 0; i < verbButtons.Length; i++)
             {
-                var image = verbButtons[i] == null ? null : verbButtons[i].targetGraphic as UnityEngine.UI.Image;
-                if (image != null)
+                // Gamepad focus shares the branch-open tint rather than
+                // growing a fourth colour -- the two are mutually
+                // exclusive in practice (focus only means anything while
+                // nothing is open yet), so one look serves both "this is
+                // what Submit presses" and "this is what is open".
+                bool highlighted = i == active || (active < 0 && i == _focusedVerb);
+
+                // THEMED VERBS drive ThemedButtonState.SetMenuState instead
+                // of targetGraphic.color -- Open/Primary/Idle is the same
+                // three-way distinction this method has always made, just
+                // painted on Glow/Plate instead of a flat Image tint. The
+                // targetGraphic path stays for any verb that is NOT themed
+                // (none today, but nothing here assumes every verb always
+                // will be).
+                var themed = verbButtons[i] == null ? null : verbButtons[i].GetComponent<ThemedButtonState>();
+                if (themed != null)
                 {
-                    // Gamepad focus shares the branch-open tint rather than
-                    // growing a fourth colour -- the two are mutually
-                    // exclusive in practice (focus only means anything while
-                    // nothing is open yet), so one look serves both "this is
-                    // what Submit presses" and "this is what is open".
-                    bool highlighted = i == active || (active < 0 && i == _focusedVerb);
-                    image.color = highlighted ? VerbActive
-                        : i == 0 ? VerbIdlePrimary
-                        : RowIdle;
+                    themed.SetMenuState(highlighted ? ThemedMenuState.Open
+                        : i == 0 ? ThemedMenuState.Primary
+                        : ThemedMenuState.Idle);
+                }
+                else
+                {
+                    var image = verbButtons[i] == null ? null : verbButtons[i].targetGraphic as UnityEngine.UI.Image;
+                    if (image != null)
+                    {
+                        image.color = highlighted ? VerbActive
+                            : i == 0 ? VerbIdlePrimary
+                            : RowIdle;
+                    }
                 }
 
                 // Only the two nesting verbs have a live caret; the others were
