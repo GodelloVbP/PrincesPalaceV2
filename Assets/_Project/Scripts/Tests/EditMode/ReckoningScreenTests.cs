@@ -98,12 +98,22 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void TheFrameWearsItsPaintedArtRatherThanAFlatColour()
+        public void TheFrameWearsTheGoldThreeByTwoContainerArt()
         {
+            // Was the bespoke reckoning_frame.png, asserted directly against
+            // frame.SpriteKey -- the frame moved to the kit's Gold 3:2
+            // container 2026-09-02 (see the build site's own comment), which
+            // wraps the art as a Decor CHILD rather than being the sprite
+            // itself, so frame.SpriteKey is null now and the art lives one
+            // level down.
             var frame = ReckoningScreen.Build().Frame.Node;
 
-            Assert.AreEqual(ReckoningScreen.FrameKey, frame.SpriteKey,
+            Assert.IsFalse(frame.Decor,
+                "the wrapper must stay non-Decor, or content beneath it audits clean against itself");
+            var art = frame.Children.Single(c => c.Kind == UiNodeKind.Sprite);
+            Assert.AreEqual("UI/Buttons/Processed/container_gold_3x2.png", art.SpriteKey,
                 "the violet blob is back");
+            Assert.IsTrue(art.Decor);
         }
 
         [Test]

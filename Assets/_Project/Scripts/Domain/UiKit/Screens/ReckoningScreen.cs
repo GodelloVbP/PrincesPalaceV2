@@ -51,7 +51,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // sweep is clipped to IS the box content is asserted to stay inside.
         public const float BorderInsetX = PanelWidth * 0.5f - ContentHalfWidth;
 
-        public const string FrameKey = "UI/Reckoning/Processed/reckoning_frame.png";
+        // reckoning_frame.png's own bespoke key retired 2026-09-02 when the
+        // frame moved to the Gold 3:2 kit container (see the frame's own
+        // build-site comment) -- no caller reads it any more.
         public const string TabKey = "UI/Buttons/Processed/tab_plate.png";
         public const string ContinueKey = "UI/Buttons/Processed/continue_arrow.png";
         // BAKED, not painted. The painted attempt came back as a stubby star:
@@ -390,8 +392,29 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.SummaryPhase = summaryPhase;
 
             // ---- the container -----------------------------------------
-            var frame = Ui.Sprite("ReckoningFrame", FrameKey, Place.At(0f, 0f),
-                UiSize.Fixed(PanelWidth, PanelHeight));
+            //
+            // GOLD, 3:2 KIT CONTAINER -- not the bespoke reckoning_frame.png
+            // painting this replaces. The reward container per the plan: this
+            // is the screen paying out. 1344x896 (aspect 1.5) is 0.7% off the
+            // kit's measured 3:2 aspect (1.49, see ContainerArt.
+            // ContainerAspect3x2) -- comfortably inside the 5% band, so the
+            // panel's own numbers (already chosen to match the OLD frame's
+            // 1536x1024 art) needed no change at all.
+            //
+            // ContentHalfWidth/ContentTop/ContentBottom below still gate
+            // NothingSitsOnThePaintedBorder -- they stay put deliberately,
+            // not recomputed from the kit's own (looser) measured inset: they
+            // are tighter than the kit's border in every direction, so
+            // content already proven to clear them clears the new art's
+            // border too, and nothing had to move.
+            //
+            // Ui.Container returns a wrapper Panel with the art as a Decor
+            // CHILD ("ReckoningFrameArt"), not the sprite itself -- unlike
+            // the old direct Ui.Sprite, so frame.SpriteKey is now null and
+            // the art lives one level down. Un-Decor wrapper, same as every
+            // other Container call site (see Ui.BuildFrameHolder).
+            var frame = Ui.Container("ReckoningFrame", ButtonTheme.Gold, ContainerRatio.ThreeByTwo,
+                Place.At(0f, 0f), new UiVec(PanelWidth, PanelHeight));
 
             // The phases hang inside a CLIP inset to the painted border rather
             // than off the frame directly.
