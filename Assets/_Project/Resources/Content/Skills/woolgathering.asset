@@ -22,11 +22,11 @@ MonoBehaviour:
   manaCost: 0
   resourceCost: 4
   spendsAllResource: 0
-  power: 30
+  power: 2
   flatAmount: 40
   ignoresDefense: 0
   damageInstances: []
-  cooldownTurns: 0
+  cooldownTurns: 2
   playerSelectable: 1
   vfx:
     path: 

@@ -550,6 +550,47 @@ namespace PrincesPalace.Domain.Combat
             target.CurrentHealth = Math.Min(target.MaxHealth, target.CurrentHealth + amount);
         }
 
+        // WHAT WISDOM IS WORTH TO A HEALING SKILL, on top of its authored
+        // flat and resource parts (SkillResolution.Amount).
+        //
+        // Half a percent of the CASTER'S OWN max health per point of Wisdom
+        // above neutral. A percentage rather than a flat rate because that is
+        // the only shape that answers both ends of the brief at once: a heal
+        // worth about 50 on a fresh Shawn and about 200 -- a fifth of the bar
+        // -- on a late build that actually bought Wisdom. A flat rate through
+        // zero at 10 cannot do both, because Shawn's authored WIS 14 is 4
+        // points above neutral and a level-60 Wisdom build is roughly 30, and
+        // 4:30 is nowhere near 10:160.
+        //
+        // THE TWO ANCHORS, pinned literally in WoolgatheringHealTests:
+        //   fresh Shawn  -- WIS 14, 400 max health -> 8  (Woolgathering 56)
+        //   late  Shawn  -- WIS 40, 1000 max health -> 150 (Woolgathering 198)
+        //
+        // Why it reads the caster's max health and not the target's: it is a
+        // measure of how good this caster is at mending, and a party heal that
+        // grew on the frailest member would be worth more the worse off the
+        // party was for reasons nobody chose.
+        //
+        // FLOORED AT NEUTRAL rather than signed, which is the one place this
+        // departs from AbilityDerivation's house convention. Everything with
+        // no authored ability scores derives a Wisdom of 0 -- an enemy built
+        // from a definition with no scores block, most of the roster -- and a
+        // signed rate would turn Shell Up's authored heal of 2 into a heal of
+        // nothing at all. A below-neutral caster healing at their authored
+        // rate is a far smaller lie than a monster whose heal silently stopped
+        // working.
+        public const int HealPermillePerWisdomPoint = 5;
+
+        public static int WisdomHealBonus(CombatantState actor)
+        {
+            if (actor == null) return 0;
+
+            int above = actor.AbilityScores.wisdom - AbilityDerivation.NeutralScore;
+            if (above <= 0) return 0;
+
+            return actor.MaxHealth * above * HealPermillePerWisdomPoint / 1000;
+        }
+
         public static void SpendMana(CombatantState combatant, int amount)
         {
             combatant.CurrentMana = Math.Max(0, combatant.CurrentMana - amount);

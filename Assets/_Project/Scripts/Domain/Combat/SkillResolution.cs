@@ -40,8 +40,16 @@ namespace PrincesPalace.Domain.Combat
                 case SkillEffect.DamageAll:
                     return Damage(actor, target, power, flatAmount, resourceSpent, ignoresDefense, type, axis);
 
+                // A HEAL ALSO SCALES WITH THE CASTER'S WISDOM. Split off from
+                // the mana restore below, which shares the flat-plus-resource
+                // shape but must not: mana is not health, and a mana pool that
+                // grew with the caster's HEALTH bar would be nonsense.
+                // CombatMath.WisdomHealBonus carries the rate and the reasoning.
                 case SkillEffect.HealSelf:
                 case SkillEffect.HealParty:
+                    return Math.Max(0, flatAmount + power * resourceSpent
+                                       + CombatMath.WisdomHealBonus(actor));
+
                 case SkillEffect.RestorePartyMana:
                     return Math.Max(0, flatAmount + power * resourceSpent);
 

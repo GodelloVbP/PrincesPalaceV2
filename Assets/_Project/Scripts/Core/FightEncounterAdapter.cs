@@ -553,9 +553,17 @@ namespace PrincesPalace
             // The character's own strip, plus whichever basic spell tier their
             // level grants. Both are looked up here rather than carried on the
             // definition, so adding a skill stays a line in skills.json.
+            //
+            // FILTERED BY UNLOCK LEVEL, which it was not. This took every skill
+            // authored against the character id and handed the lot over, so
+            // unlockLevel was a number nothing in a fight ever read -- see the
+            // Character overload below for what that cost.
             var skills = ContentDatabase.Skills
-                .Where(s => s.characterId == definition.id)
-                .OrderBy(s => s.sortOrder)
+                .Where(s => s.playerSelectable
+                            && s.characterId == definition.id
+                            && s.unlockLevel <= level)
+                .OrderBy(s => s.unlockLevel)
+                .ThenBy(s => s.sortOrder)
                 .Select(Resolve)
                 .ToList();
 
@@ -578,26 +586,33 @@ namespace PrincesPalace
         // The IN-RUN kit: the character's own strip PLUS whatever their tree
         // granted them, at their real level.
         //
-        // TalentGrantedSkillsFor had no call site at all before this, so a
-        // talent that granted a skill wrote it nowhere the fight could see.
+        // THROUGH ContentDatabase.AvailableSkillsFor, which is the one place
+        // that knows what "this character can press this" means -- unlocked by
+        // level, OR taught outright (unlockedSkillIds), OR granted by a talent,
+        // and player-selectable either way.
+        //
+        // It used to hand-roll the union here, and the hand-rolled version
+        // dropped the level filter entirely: every skill authored against the
+        // character id went into the kit regardless of unlockLevel. The whole
+        // convention that marks a skill "granted rather than earned" is
+        // authoring it at level 999 (see AvailableSkillsFor's own header), so
+        // dropping that filter handed a level-1 Shawn the entire talent tree's
+        // worth of abilities for free -- Ward, Shatter, Wail, all three Gifts,
+        // Provoke, Headbutt and Black Ram Mode, plus Golden Fleece seven levels
+        // early. The balance bot found it from the outside: a level-2 run with
+        // an empty talentIds list recorded fleece_ward, gift_haste and shatter
+        // in skillsUsed, and the defensive policy spent 41% of its deep-fight
+        // turns on a Ward it had never bought.
+        //
+        // AvailableSkillsFor had no production caller at all before this, which
+        // is why nothing caught the divergence: the correct answer existed and
+        // the fight asked a second, wrong copy of the question instead.
         private static PlayerKit KitFor(Character character, CharacterDefinition definition,
                                         IReadOnlyList<ResolvedRelic> relics)
         {
-            var skills = ContentDatabase.Skills
-                .Where(s => s.characterId == definition.id)
-                .OrderBy(s => s.sortOrder)
+            var skills = ContentDatabase.AvailableSkillsFor(character)
                 .Select(Resolve)
                 .ToList();
-
-            // Appended, not merged by id: a granted skill the strip already
-            // holds would otherwise appear twice in the submenu.
-            var granted = ContentDatabase.TalentGrantedSkillsFor(character);
-            foreach (var extra in granted)
-            {
-                if (extra == null) continue;
-                if (skills.Any(s => s.Id == extra.id)) continue;
-                skills.Add(Resolve(extra));
-            }
 
             var tier = TierAtLevel(character.level);
 
