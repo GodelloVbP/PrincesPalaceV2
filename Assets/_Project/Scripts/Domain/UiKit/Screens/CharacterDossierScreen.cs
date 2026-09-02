@@ -164,7 +164,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Coloured("#6A54902B")
                 .AsDecor());
 
-            children.AddRange(screen.BuildColumnA());
+            children.Add(screen.BuildColumnAFrame());
             children.AddRange(screen.BuildColumnB());
             children.AddRange(screen.BuildColumnC());
 
@@ -189,9 +189,26 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // ---- column A: identity ---------------------------------------------------
 
+        // BLUE, 3:4 CONTAINER ART. Column A had no flat panel or outline of
+        // its own before this -- it sat directly on the shared DossierGround/
+        // DossierVeil the whole 1600x804 pane draws first -- so this is a new
+        // frame rather than a replacement of one. The identity content moves
+        // INSIDE it via Ui.ContainerContent, at cx = 0 (column A's own centre,
+        // not the dossier's), the same convention BuildPackPanel already uses
+        // for content that lives on a panel placed at ColumnACentreX.
+        private UiNode BuildColumnAFrame()
+        {
+            var frame = Ui.Container("DossierColumnAFrame", ButtonTheme.Blue, ContainerRatio.ThreeByFour,
+                Place.At(DossierLayout.ColumnACentreX, 0f),
+                new UiVec(DossierLayout.ColumnAWidth, DossierLayout.ColumnAFrameHeight));
+
+            Ui.ContainerContent(frame, ContainerRatio.ThreeByFour, "DossierColumnAContent", BuildColumnA().ToArray());
+            return frame;
+        }
+
         private IEnumerable<UiNode> BuildColumnA()
         {
-            float cx = DossierLayout.ColumnACentreX;
+            const float cx = 0f;
 
             var portrait = Ui.Sprite("DossierPortrait", PortraitKey,
                     Place.At(cx, DossierLayout.PortraitCentreY),
@@ -258,7 +275,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         private UiNode BuildNavRow(string key, UiString label, float centreY)
         {
-            float cx = DossierLayout.ColumnACentreX;
+            const float cx = 0f;
 
             var button = Ui.Button($"Dossier{key}Row", UiString.Runtime,
                     new UiVec(DossierLayout.ContentAWidth, DossierLayout.NavRowHeight), 1,

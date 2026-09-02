@@ -61,8 +61,15 @@ namespace PrincesPalace.Domain.Tests
                 case "dossier":
                     // Column C's stat list is the last thing down the tallest
                     // column, and it was the one stopping 184px early.
-                    usable = DossierLayout.ColumnATop - (-DossierLayout.HalfHeight + DossierLayout.PadY);
-                    used = DossierLayout.ColumnATop
+                    //
+                    // HalfHeight - PadY, NOT DossierLayout.ColumnATop -- the two
+                    // were the same number before column A got its own Blue 3:4
+                    // container frame (shorter than the pane, see
+                    // DossierLayout.ColumnAFrameHeight), and this row is about
+                    // column C's own top, which still runs the full pane.
+                    float genericTop = DossierLayout.HalfHeight - DossierLayout.PadY;
+                    usable = genericTop - (-DossierLayout.HalfHeight + DossierLayout.PadY);
+                    used = genericTop
                            - (DossierLayout.StatListTop
                               - DossierLayout.StatRowHeight * SheetStats.Derived.Length);
                     break;

@@ -49,6 +49,14 @@ namespace PrincesPalace.Domain.UiKit
         public const float ColumnBGivesUp = 75f;
 
         public const float ColumnAWidth = 374f + ColumnBGivesUp;                 // 449
+
+        // THE BLUE 3:4 CONTAINER COLUMN A SITS IN. WIDTH IS UNTOUCHED --
+        // ColumnBWidth is whatever the shared 1600px pane has left after A and
+        // C, so widening A to hit the container kit's exact aspect would move
+        // B's boundary too. The frame is nudged to 0.588 (ContainerArt's
+        // measured 3:4) by trimming its HEIGHT instead, which is entirely
+        // internal to column A -- nothing outside it moves.
+        public const float ColumnAFrameHeight = ColumnAWidth / ContainerArt.ContainerAspect3x4; // 763.61, was 804 (5.0% off)
         public const float ColumnCWidth = 480f;
         public const float ColumnBWidth = Width - ColumnAWidth - ColumnCWidth;   // 671
 
@@ -70,18 +78,39 @@ namespace PrincesPalace.Domain.UiKit
 
         public const float ContentAWidth = ColumnAWidth - ColumnAPadX * 2f;      // 314
 
-        // Square-ish, because the Image carries preserveAspect: a box taller
-        // than the art's own aspect letterboxes rather than filling, so height
-        // past about the content width buys empty bars and nothing else. This
-        // is why column A cannot simply be filled by growing the portrait.
-        public const float PortraitHeight = 318f;
-
         // Everything in column A stacks from the top, so each y is the one
         // above it minus its own height. Stated as running totals rather than
         // as a flow container because the pack panel has to cover the column
         // exactly and a flow would fight that.
-        public const float ColumnATop = HalfHeight - PadY;
-        public const float ColumnABottom = -HalfHeight + PadY;
+        //
+        // MEASURED AGAINST THE CONTAINER'S OWN FRAME, not the shared panel
+        // HalfHeight/PadY any more -- ColumnAFrameHeight is shorter than the
+        // full 804 pane, and content stacking to the old ColumnATop/Bottom
+        // would sit past the container's painted border. 0.045/0.04 are the
+        // kit's measured Container/3:4 top/bottom insets (ContainerArt.Inset);
+        // the extra 3px is slack over the audit's own 0.01 containment
+        // tolerance, not a second inset.
+        private const float ColumnAFrameInsetTop = 0.045f;
+        private const float ColumnAFrameInsetBottom = 0.04f;
+        private const float ColumnAContentMargin = 3f;
+
+        public const float ColumnATop =
+            ColumnAFrameHeight * (0.5f - ColumnAFrameInsetTop) - ColumnAContentMargin;
+        public const float ColumnABottom =
+            -ColumnAFrameHeight * (0.5f - ColumnAFrameInsetBottom) + ColumnAContentMargin;
+
+        // Square-ish, because the Image carries preserveAspect: a box taller
+        // than the art's own aspect letterboxes rather than filling, so height
+        // past about the content width buys empty bars and nothing else. This
+        // is why column A cannot simply be filled by growing the portrait.
+        //
+        // DERIVED, NOT AUTHORED. Was a flat 318 against the old 740px total
+        // (ColumnATop 370 to ColumnABottom -370); everything BELOW the
+        // portrait -- name, sub-line, XP row, the track readout, three nav
+        // rows -- is a fixed 422px of gaps and boxes untouched by this resize,
+        // so the portrait absorbs the container's own height reduction
+        // entirely rather than every row shrinking a little.
+        public const float PortraitHeight = ColumnATop - ColumnABottom - 422f; // was 318
 
         public const float PortraitCentreY = ColumnATop - PortraitHeight * 0.5f;
         // Each step is the PREVIOUS box's half-height, then this box's, then the
