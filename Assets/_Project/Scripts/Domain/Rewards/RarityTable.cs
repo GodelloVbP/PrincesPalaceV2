@@ -33,11 +33,18 @@ namespace PrincesPalace.Domain.Rewards
     {
         // How many steps of descent buy one tier.
         //
-        // Eight, which is one leg — so a player is a tier better off at
-        // every elite, and the top of the ladder sits around step 80. Tied to
-        // the leg length rather than to a floor number because the descent is
-        // continuous (Phase 3); "floor" is cosmetic.
-        private const int StepsPerTier = 8;
+        // Sixteen — two legs, one floor pair — so the tier curve climbs at
+        // HALF the old rate (one leg). Doubled from 8 in the affix/tier
+        // rebalance pass: at 8, FloorTier(depthStep) already reached tier 2
+        // by floor 3 and tier 4 by floor 5 (RunDepth.FloorFor puts floor N at
+        // legStartStep (N-1)*8), so the ladder's own climb — which only ever
+        // adds on top, never subtracts — pushed the FLOOR of what a fight
+        // could pay past what the design calls for at that depth ("floor 3 ->
+        // tier 1-2", not "tier 2 guaranteed, usually 2-3"). Doubling the
+        // divisor keeps the ladder's shape (LootLadder.Climb, per-rung step
+        // chances) untouched and only slows the EXPECTATION it climbs on top
+        // of. Tied to the leg length still, just two of them rather than one.
+        private const int StepsPerTier = 16;
 
         // The expected tier at a depth. Everything below is an offset from
         // this.
@@ -82,6 +89,15 @@ namespace PrincesPalace.Domain.Rewards
         // maxTier is passed rather than assumed so a thin or re-authored
         // catalogue cannot be asked for a tier that does not exist — the same
         // reason ItemOfferTable takes it.
+        // Favor's effect on the TIER roll -- deliberately SMALL. The tier
+        // rebalance pass's own instruction: "Favor shifts the plus curve
+        // mostly and the tier curve a little." A fifth of RollPlus's
+        // PlusFavorPerPoint below, and a lower cap, so a Favor stack that
+        // meaningfully fattens the plus tail barely moves how often the
+        // tier ladder climbs an extra rung.
+        public const float TierFavorPerPoint = 0.002f;
+        public const float TierMaxStep = 0.45f;
+
         public static int RollTier(EncounterClass encounter, int depthStep, int maxTier, int favor, Func<int, int> nextIndex)
         {
             if (maxTier < 0)
@@ -96,8 +112,18 @@ namespace PrincesPalace.Domain.Rewards
             // why an early run only ever produced tier 0 and 1 and read as
             // stale. The ladder only ever climbs, and can climb five, so a
             // floor-1 fight can still hand over something that changes the run.
+            //
+            // TierFavorPerPoint/TierMaxStep, not LootLadder.Climb's own
+            // (encounter, favor) convenience overload -- that overload reads
+            // LootLadder.FavorPerPoint/MaxStep, which RollPlus below now
+            // tunes much higher for the plus roll specifically. Calling the
+            // full StepChanceFor overload with the tier's OWN small favor
+            // dial is what keeps the two curves independently tunable.
             int centre = FloorTier(depthStep);
-            int offset = LootLadder.Climb(encounter, favor, nextIndex);
+            float tierStep = LootLadder.StepChanceFor(encounter, favor,
+                LootLadder.NormalStep, LootLadder.EliteStep, LootLadder.BossStep,
+                TierFavorPerPoint, TierMaxStep);
+            int offset = LootLadder.Climb(tierStep, LootLadder.MaxRungs, nextIndex);
 
             int floor = TierFloorFor(encounter);
             if (floor > maxTier)
@@ -122,9 +148,47 @@ namespace PrincesPalace.Domain.Rewards
         // That independence is the point and it predates this change: a +3 is
         // exciting at step 4 and still exciting at step 40, because it never
         // became the expectation.
+        //
+        // FIVE TIMES TierFavorPerPoint, and its own higher cap -- "Favor
+        // shifts the plus curve mostly", the other half of the same
+        // instruction TierFavorPerPoint's header quotes. A Favor stack that
+        // barely nudges the tier ladder meaningfully fattens this one.
+        public const float PlusFavorPerPoint = 0.010f;
+        public const float PlusMaxStep = 0.55f;
+
+        // The ladder's REACHABLE LENGTH, not just its per-rung odds, is what
+        // Favor buys here -- structurally, not just probabilistically.
+        //
+        // At zero Favor the ladder is exactly PlusBaseMaxRungs (5) long, the
+        // same ceiling this roll always had, so +10 is not merely rare with
+        // no Favor invested, it is IMPOSSIBLE: LootLadder.Climb cannot return
+        // more than the maxRungs it is handed, whatever the step chance
+        // rolls. Every PlusFavorPerRung points of Favor unlocks one more
+        // rung, capped at PlusMaxRungs (10) -- "a +10 tier-0 item on floor 1
+        // must be possible but rare, only with high favor". A high Favor
+        // character (75+, roughly double Shawn's own authored 4 plus a
+        // couple of rolled Fortunate affixes) reaches the full 10-rung
+        // ladder; the per-rung climb chance above still has to succeed ten
+        // consecutive times to actually land there.
+        public const int PlusBaseMaxRungs = 5;
+        public const int PlusMaxRungs = 10;
+        public const int PlusFavorPerRung = 15;
+
+        public static int PlusMaxRungsFor(int favor)
+        {
+            if (favor <= 0) return PlusBaseMaxRungs;
+
+            int bonusRungs = favor / PlusFavorPerRung;
+            int uncapped = PlusBaseMaxRungs + bonusRungs;
+            return uncapped > PlusMaxRungs ? PlusMaxRungs : uncapped;
+        }
+
         public static int RollPlus(EncounterClass encounter, int favor, Func<int, int> nextIndex)
         {
-            return LootLadder.Climb(encounter, favor, nextIndex);
+            float plusStep = LootLadder.StepChanceFor(encounter, favor,
+                LootLadder.NormalStep, LootLadder.EliteStep, LootLadder.BossStep,
+                PlusFavorPerPoint, PlusMaxStep);
+            return LootLadder.Climb(plusStep, PlusMaxRungsFor(favor), nextIndex);
         }
 
 

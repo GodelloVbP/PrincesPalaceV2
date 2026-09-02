@@ -60,13 +60,16 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- the depth curve --------------------------------------------
 
-        // PINNED literals. One tier per leg of eight steps.
+        // PINNED literals. One tier per TWO legs (16 steps) -- doubled from
+        // one leg (8) in the tier rebalance pass so the tier curve climbs at
+        // half the old rate; see StepsPerTier's own header for why.
         [TestCase(0, 0)]
         [TestCase(7, 0)]
-        [TestCase(8, 1)]
-        [TestCase(16, 2)]
-        [TestCase(80, 10)]
-        public void FloorTier_ClimbsOnePerLeg(int step, int expected)
+        [TestCase(8, 0)]
+        [TestCase(15, 0)]
+        [TestCase(16, 1)]
+        [TestCase(80, 5)]
+        public void FloorTier_ClimbsOnePerTwoLegs(int step, int expected)
         {
             Assert.AreEqual(expected, RarityTable.FloorTier(step));
         }
@@ -75,6 +78,28 @@ namespace PrincesPalace.Domain.Tests
         public void FloorTier_NeverGoesNegative()
         {
             Assert.AreEqual(0, RarityTable.FloorTier(-40));
+        }
+
+        // TIER REBALANCE: "tiers come more slowly" -- pinned as the actual
+        // target the brief states in floor terms, not just the depthStep
+        // formula those floors translate to. Floor N's own leg starts at
+        // depthStep (N-1)*8 (RunDepth.FloorFor's inverse); a NORMAL fight
+        // (the common case a run's texture is mostly made of) sampled there
+        // must land in the stated tier range at least 80% of the time.
+        // Zero Favor -- these are the UNBOOSTED, common-case numbers; see
+        // the Favor-driven tests below for how Favor moves them.
+        [TestCase(0, 0, 1)]   // floor 1
+        [TestCase(16, 1, 2)]  // floor 3
+        [TestCase(32, 2, 3)]  // floor 5
+        public void NormalFights_LandInTheStatedTierRangeAtLeast80PercentOfTheTime(
+            int depthStep, int rangeLow, int rangeHigh)
+        {
+            var tiers = SampleTiers(EncounterClass.Normal, depthStep, maxTier: 10);
+
+            double inRange = Share(tiers, t => t >= rangeLow && t <= rangeHigh);
+            Assert.GreaterOrEqual(inRange, 0.80,
+                $"depthStep {depthStep} (floor {depthStep / 8 + 1}) landed in [{rangeLow},{rangeHigh}] only " +
+                $"{inRange:P1} of the time");
         }
 
         // ---- THE guarantee ----------------------------------------------
@@ -133,7 +158,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheThreeClasses_AreOrderedNormalThenEliteThenBoss()
         {
-            const int Step = 40;   // expected tier 5, clear of both clamps
+            const int Step = 40;   // expected tier 2 (40/16), clear of both clamps
 
             double normal = SampleTiers(EncounterClass.Normal, Step, 10).Average();
             double elite = SampleTiers(EncounterClass.Elite, Step, 10).Average();
@@ -155,7 +180,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ANormalFight_UsuallyPaysExactlyTheDepthsTier()
         {
-            const int Step = 40;   // expected tier 5, clear of both clamps
+            const int Step = 40;   // expected tier 2 (40/16), clear of both clamps
             var tiers = SampleTiers(EncounterClass.Normal, Step, 10);
             int expected = RarityTable.FloorTier(Step);
 
@@ -260,8 +285,13 @@ namespace PrincesPalace.Domain.Tests
                 "if nearly everything is +0 the long tail has stopped existing");
         }
 
+        // AT ZERO FAVOR specifically -- RarityTable.PlusMaxRungsFor(0) ==
+        // PlusBaseMaxRungs (5), the same ceiling this roll always had. See
+        // HighFavor_CanReachTheFullTenRungLadder_ButRarely below for the
+        // Favor-unlocked half of the ladder this test deliberately does not
+        // reach.
         [Test]
-        public void PlusNeverGoesNegativeAndStaysModest()
+        public void PlusNeverGoesNegativeAndStaysModest_AtZeroFavor()
         {
             foreach (EncounterClass encounter in Enum.GetValues(typeof(EncounterClass)))
             {
@@ -269,6 +299,53 @@ namespace PrincesPalace.Domain.Tests
                 Assert.GreaterOrEqual(pluses.Min(), 0);
                 Assert.LessOrEqual(pluses.Max(), 5, $"{encounter} rolled an implausibly honed drop");
             }
+        }
+
+        // TIER REBALANCE: "plus values go higher... up to +10... only with
+        // high favor". PlusMaxRungsFor is a STRUCTURAL gate, not a
+        // probabilistic one -- LootLadder.Climb cannot return more than the
+        // maxRungs it is handed, so +10 is IMPOSSIBLE below the Favor
+        // threshold that unlocks the tenth rung, and merely RARE above it.
+        [Test]
+        public void PlusMaxRungsFor_NeverUnlocksThePlusTenRungWithoutFavor()
+        {
+            foreach (int favor in new[] { 0, -5, 10, 14 })
+            {
+                Assert.LessOrEqual(RarityTable.PlusMaxRungsFor(favor), RarityTable.PlusBaseMaxRungs,
+                    $"favor {favor} must not reach past the base ladder");
+            }
+        }
+
+        [Test]
+        public void PlusMaxRungsFor_ClimbsWithFavor_CappedAtTen()
+        {
+            Assert.AreEqual(RarityTable.PlusBaseMaxRungs + 1, RarityTable.PlusMaxRungsFor(RarityTable.PlusFavorPerRung));
+            Assert.AreEqual(RarityTable.PlusMaxRungs, RarityTable.PlusMaxRungsFor(1000),
+                "the ladder is capped at PlusMaxRungs regardless of how much Favor is stacked");
+        }
+
+        [Test]
+        public void NeverPlusTen_AtZeroFavor_HoweverManySamples()
+        {
+            var pluses = SamplePluses(EncounterClass.Boss, favor: 0);
+            Assert.IsFalse(pluses.Any(p => p >= 10), "structurally impossible below the Favor threshold");
+        }
+
+        // "...must be possible but rare" -- possible: a real, nonzero share
+        // of a large sample; rare: comfortably under 1%. High Favor here
+        // means the ladder's full 10 rungs are reachable (PlusMaxRungsFor
+        // saturates at PlusMaxRungs beyond a modest Favor stack — see
+        // PlusMaxRungsFor_ClimbsWithFavor_CappedAtTen), not that every climb
+        // succeeds; ten consecutive successes at any per-rung chance still
+        // decays geometrically.
+        [Test]
+        public void HighFavor_CanReachThePlusTenRung_ButRarely()
+        {
+            var pluses = SamplePluses(EncounterClass.Normal, favor: 100);
+
+            double topRung = Share(pluses, p => p == 10);
+            Assert.Greater(topRung, 0.0, "a +10 tier-0 item must be POSSIBLE at high favor");
+            Assert.Less(topRung, 0.01, "...but RARE -- under 1%, or the ladder has saturated again");
         }
 
         [Test]
