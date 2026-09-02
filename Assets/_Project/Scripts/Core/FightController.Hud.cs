@@ -860,6 +860,17 @@ namespace PrincesPalace
                 ? FightHudModel.ItemRows(_satchel)
                 : FightHudModel.SkillRows(_session, ActingCharacter());
 
+        // Same seam as HoveredEnemyIndexForTest/FocusedVerbForTest
+        // (FightController.Input.cs) -- the click handler stays private
+        // because production never calls it from outside an EventTrigger,
+        // but a test driving the real submenu needs the same hover a mouse
+        // would send without standing up pointer events for it.
+        public void HoverRowForTest(int index) => OnRowHovered(index);
+
+        // What Column C is actually showing right now, for a test to read
+        // the same panel RefreshDetail paints from.
+        public DetailPanel CurrentDetailForTest() => CurrentDetail();
+
         private DetailPanel CurrentDetail()
         {
             var actor = ActingCharacter();

@@ -267,8 +267,30 @@ namespace PrincesPalace.Domain.Combat.Session
         // shown blank despite dealing real damage. FightSession.PreviewSkillPower
         // is the actual pre-mitigation figure for every skill shape (fixed
         // packets, flat, or resource-scaled) with no target and no RNG spent.
-        public static string PowerLabel(FightSession session, CombatantState actor, ResolvedSkill skill) =>
-            session == null ? "0" : session.PreviewSkillPower(actor, skill).ToString();
+        // "-" rather than a printed "0" for the effects SkillResolution.Amount
+        // has no number for at all (Provoke, Transform, BuffParty, the three
+        // Gifts) -- their preview is a real 0, but showing "0 POWER" on the
+        // card reads as "this does nothing" for an ability that redirects
+        // aggro, transforms the caster, or hands an ally a status/resource.
+        // Same idiom ScalingLabelForSkill below already uses for "no answer
+        // here". Ward and Shatter DO have a number (talent-authored; see
+        // SkillResolution.Amount) and print it like any other skill.
+        private static bool HasNoPreviewablePower(SkillEffect effect) => effect switch
+        {
+            SkillEffect.Provoke => true,
+            SkillEffect.Transform => true,
+            SkillEffect.BuffParty => true,
+            SkillEffect.GiftMana => true,
+            SkillEffect.GiftFury => true,
+            SkillEffect.GiftHaste => true,
+            _ => false,
+        };
+
+        public static string PowerLabel(FightSession session, CombatantState actor, ResolvedSkill skill)
+        {
+            if (HasNoPreviewablePower(skill.Effect)) return "-";
+            return session == null ? "0" : session.PreviewSkillPower(actor, skill).ToString();
+        }
 
         public static DetailPanel DetailForSkill(FightSession session, CombatantState actor, ResolvedSkill skill, string resourceName = null)
         {

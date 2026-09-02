@@ -53,6 +53,61 @@ namespace PrincesPalace.Domain.Combat
                 case SkillEffect.RestorePartyMana:
                     return Math.Max(0, flatAmount + power * resourceSpent);
 
+                // No number to preview -- the whole action is redirecting who
+                // gets attacked next turn (StatusEffectType.Provoked), not a
+                // health bar moving. See SkillEffect.Provoke's own header.
+                case SkillEffect.Provoke:
+                    return 0;
+
+                // No number to preview -- entering the transform is a state
+                // change (stat grants come from the skill's own
+                // TransformGrant block, applied by EnterTransform), not
+                // damage or healing scored against power/flatAmount.
+                case SkillEffect.Transform:
+                    return 0;
+
+                // The shield strain a Ward grants IS a number worth showing,
+                // but it lives on the caster's WardReductionPercent talent,
+                // not on power/flatAmount/resourceSpent -- see
+                // SkillEffect.Ward's own header on why every Ward/Shatter
+                // number is talent-authored. Mirrors ApplyWard/WardOne
+                // (FightSession.Talents.cs) exactly, short of the side
+                // effects a preview must not have: same zero-if-unwarded
+                // gate, same floor of 1 once it lands.
+                case SkillEffect.Ward:
+                {
+                    int reduction = actor.Talents.Best(TalentEffectType.WardReductionPercent);
+                    return reduction <= 0 ? 0 : Math.Max(1, reduction);
+                }
+
+                // Previews ONE ward's worth of detonation damage -- how many
+                // actually go off depends on how many wards are out, which
+                // Amount has no way to see with no side effects. Mirrors the
+                // per-wearer share ResolveShatter computes (FightSession.
+                // Talents.cs), skipping only the self-ward triple (that
+                // depends on which ward is being detonated, a question this
+                // signature cannot ask).
+                case SkillEffect.Shatter:
+                {
+                    int percent = actor.Talents.Best(TalentEffectType.ShatterDamagePercentOfAttack);
+                    return CombatMath.Scale(actor.Attack * percent / 100);
+                }
+
+                // No number to preview -- the Lamb's Wail only applies its
+                // authored status to the party, deliberately with no heal
+                // amount authored alongside it. See SkillEffect.BuffParty's
+                // own header on why that is not HealParty with an omission.
+                case SkillEffect.BuffParty:
+                    return 0;
+
+                // No number to preview -- each Gift hands an ally a status or
+                // a share of the caster's own resource (ResolveGift), not a
+                // figure scaled by power/flatAmount/resourceSpent.
+                case SkillEffect.GiftMana:
+                case SkillEffect.GiftFury:
+                case SkillEffect.GiftHaste:
+                    return 0;
+
                 // No number to preview -- what a Summon does is add a
                 // combatant, not move a health bar. FightSession.Enemies'
                 // PreviewSkill calls this unconditionally for every enemy

@@ -1,4 +1,8 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
@@ -362,6 +366,56 @@ namespace PrincesPalace.Domain.Tests
             noResource.CurrentMana = 10;
             Assert.IsFalse(SkillResolution.CanAfford(noResource, 10, 1), "No resource at all cannot pay a resource cost");
             Assert.IsTrue(SkillResolution.CanAfford(noResource, 10, 0), "But a mana-only skill is fine");
+        }
+
+        // THE CLASS OF BUG, not the instance. Eight authored player-skill
+        // effects (Provoke, Transform, Ward, Shatter, BuffParty, GiftMana,
+        // GiftFury, GiftHaste) fell through Amount's default case straight
+        // into an ArgumentOutOfRangeException -- see
+        // ProvokeSkillDetailCardTests for the screen that threw it. This
+        // walks every SkillEffect skills.json actually authors (not the
+        // whole enum -- an effect nothing authors yet is not this bug) and
+        // asserts none of them do, so the next effect authored with no case
+        // in Amount is caught here on the day it lands rather than the day
+        // a player hovers its card.
+        [Test]
+        public void Amount_HasACaseForEveryEffectAuthoredContentActuallyUses()
+        {
+            string json = File.ReadAllText(SkillsJsonPath());
+
+            // A flat scan rather than the record-by-record parser
+            // FightCapacityPinTests uses -- there is nothing here that needs
+            // correlating back to which skill or character an effect belongs
+            // to, only the SET of effect names the file mentions at all.
+            var rx = new Regex("\"effect\"\\s*:\\s*\"([^\"]*)\"", RegexOptions.Compiled);
+            var names = rx.Matches(json).Cast<Match>().Select(m => m.Groups[1].Value).Distinct().ToList();
+
+            CollectionAssert.IsNotEmpty(names, "fixture: skills.json authored nothing to check");
+
+            var actor = Actor();
+            var target = Target(5);
+
+            foreach (var name in names)
+            {
+                Assert.IsTrue(Enum.TryParse<SkillEffect>(name, out var effect),
+                    $"skills.json authors an effect '{name}' SkillEffect has no member for at all");
+
+                Assert.DoesNotThrow(() => SkillResolution.Amount(
+                    effect, actor, target, power: 2, flatAmount: 3, resourceSpent: 1, ignoresDefense: false),
+                    $"SkillResolution.Amount has no case for {effect}, which skills.json authors at least once");
+            }
+        }
+
+        private static string SkillsJsonPath()
+        {
+            var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+            while (dir != null && !Directory.Exists(Path.Combine(dir.FullName, "Assets", "_Project", "ContentData")))
+            {
+                dir = dir.Parent;
+            }
+
+            Assert.IsNotNull(dir, "Could not locate Assets/_Project/ContentData from the working directory.");
+            return Path.Combine(dir.FullName, "Assets", "_Project", "ContentData", "skills.json");
         }
 
         // ---- how a skill travels to what it hits ------------------------------
