@@ -90,6 +90,14 @@ namespace PrincesPalace.Domain.UiKit
         public UiVec Scale = UiVec.One;
         public bool StartInactive;
 
+        // Sprite only. Fits the sprite inside its declared box on its longer
+        // axis instead of stretching it to fill both -- required for the
+        // Container/FlagBanner kit (Ui.Container/Ui.FlagBanner), whose art is
+        // refused at any size that does not already match its own measured
+        // aspect, so preserving it changes nothing visible but guards against
+        // a future caller loosening that check and stretching the border.
+        public bool PreserveAspect;
+
         // Marks a subtree as pure decoration: the emitter clears raycastTarget
         // throughout it. v1 needed a hand-written sweep over 110 ambient sprites
         // to guarantee the same thing, and a single missed one is an unclickable

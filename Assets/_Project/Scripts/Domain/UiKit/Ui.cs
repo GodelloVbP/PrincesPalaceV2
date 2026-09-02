@@ -102,6 +102,137 @@ namespace PrincesPalace.Domain.UiKit
             return node;
         }
 
+        // ---- container / flag-banner kit ---------------------------------------
+        //
+        // A themed, non-interactive frame of exact-ratio art (Art/UI/Buttons/
+        // Processed/container_<theme>_<ratio>.png) that CONTENT is declared
+        // INSIDE, via ContainerContent -- the container itself is a Sprite
+        // node like any other, and a plain UiNode.Children.Add would work just
+        // as well, but ContainerContent also applies the measured inset so a
+        // caller cannot forget it and let a label sit under the painted
+        // border.
+        //
+        // Reuses ButtonTheme rather than a parallel ContainerTheme: the six
+        // colours are the same semantic vocabulary a button already speaks
+        // (Gold = the recommended path, Crimson = loss/danger, and so on),
+        // and a second enum naming the same six things would only be able to
+        // disagree with the first one.
+        //
+        // REFUSES a size whose aspect does not match the delivered art within
+        // 5% -- see ContainerArt's own header for where the measured aspect
+        // comes from. A container is drawn Simple + preserveAspect, so a
+        // mismatched size would not stretch visibly WRONG so much as pad or
+        // crop the art inside its own box, which is a quieter, harder-to-spot
+        // version of the same mistake; refusing it at declaration time is
+        // cheaper than finding it in a screenshot.
+        public static UiNode Container(string name, ButtonTheme theme, ContainerRatio ratio, Place place, UiVec size)
+        {
+            ValidateContainerAspect(name, "Container", ContainerKind.Container, ratio, size);
+            var node = Sprite(name, ContainerArt.Key(ContainerKind.Container, theme, ratio), place, UiSize.Fixed(size));
+            node.PreserveAspect = true;
+            return node.AsDecor();
+        }
+
+        // Same rules as Container, always Decor, never a Button -- a flag
+        // banner names a place or an identity, it does not do anything, so it
+        // gets no ThemedButtonState and no click target at all.
+        public static UiNode FlagBanner(string name, ButtonTheme theme, ContainerRatio ratio, Place place, UiVec size)
+        {
+            ValidateContainerAspect(name, "FlagBanner", ContainerKind.FlagBanner, ratio, size);
+            var node = Sprite(name, ContainerArt.Key(ContainerKind.FlagBanner, theme, ratio), place, UiSize.Fixed(size));
+            node.PreserveAspect = true;
+            return node.AsDecor();
+        }
+
+        // The padded surface a Container/FlagBanner's real content goes on --
+        // the painted border on every side, and (for a banner) the V-notch at
+        // the bottom, must never hold a label or a button. Adds a plain,
+        // graphic-less Panel as a child of `holder` (a Container or
+        // FlagBanner node), stretched to the measured inset, and returns it
+        // for the caller to add children to.
+        //
+        // Draws nothing itself (EmitsNoGraphic), so it never collides with
+        // the art it sits on; UiAudit's containment check (A2) still measures
+        // every child declared inside it against ITS rect, which is what
+        // keeps a label from escaping into the border -- the whole reason
+        // this exists instead of a bare Place.Stretch() at each call site.
+        public static UiNode ContainerContent(UiNode holder, ContainerRatio ratio, string name, params UiNode[] children)
+        {
+            if (holder == null)
+            {
+                throw new ArgumentNullException(nameof(holder), "ContainerContent needs the Container/FlagBanner node its content sits on.");
+            }
+
+            // Kind (not ratio) is the only thing this needs to infer, and it
+            // reads it off the holder's own SpriteKey rather than taking a
+            // second parameter that could disagree with which factory built
+            // it -- a banner's bottom inset differs from a container's for a
+            // reason (the V) that is a fact about the ASSET, not about which
+            // of the two nominal ratios was chosen.
+            var kind = holder.SpriteKey != null && holder.SpriteKey.Contains("banner_flag_")
+                ? ContainerKind.FlagBanner
+                : ContainerKind.Container;
+
+            var inset = ContainerArt.Inset(kind, ratio);
+            float left = holder.Size.X * inset.Left;
+            float right = holder.Size.X * inset.Right;
+            float top = holder.Size.Y * inset.Top;
+            float bottom = holder.Size.Y * inset.Bottom;
+
+            var content = Panel(name, Place.Stretch(left, right, bottom, top), UiSize.Fill, children);
+            holder.Children.Add(content);
+            return content;
+        }
+
+        private static void ValidateContainerAspect(string name, string factory, ContainerKind kind, ContainerRatio ratio, UiVec size)
+        {
+            if (size.X <= 0f || size.Y <= 0f)
+            {
+                throw new ArgumentException($"Ui.{factory}(\"{name}\") needs a positive size; got {size}.");
+            }
+
+            float expected = ContainerArt.Aspect(kind, ratio);
+            float actual = size.X / size.Y;
+            float relativeError = Math.Abs(actual - expected) / expected;
+
+            if (relativeError > ContainerArt.AspectTolerance)
+            {
+                float expectedWidth = size.Y * expected;
+                float expectedHeight = size.X / expected;
+                throw new ArgumentException(
+                    $"Ui.{factory}(\"{name}\", {ratio}) was given a {size.X:0.#}x{size.Y:0.#} box, whose aspect " +
+                    $"({actual:0.###}) misses the delivered art's measured aspect ({expected:0.###}) by " +
+                    $"{relativeError:P1} - more than the {ContainerArt.AspectTolerance:P0} this kit allows. " +
+                    $"Stretching the art into the wrong ratio is exactly what this check exists to catch. Fix by " +
+                    $"using a {size.X:0.#}x{expectedHeight:0.#} or {expectedWidth:0.#}x{size.Y:0.#} box instead - " +
+                    $"or Ui.ContainerSizeForHeight/ForWidth, which always produces one.");
+            }
+        }
+
+        // Produces a size that already passes the aspect check above, so a
+        // caller who has a height (or width) to fill never has to compute the
+        // matching other axis by hand.
+        public static UiVec ContainerSizeForHeight(ContainerRatio ratio, float height) =>
+            new UiVec(height * ContainerArt.Aspect(ContainerKind.Container, ratio), height);
+
+        public static UiVec ContainerSizeForWidth(ContainerRatio ratio, float width) =>
+            new UiVec(width, width / ContainerArt.Aspect(ContainerKind.Container, ratio));
+
+        public static UiVec FlagBannerSizeForHeight(ContainerRatio ratio, float height) =>
+            new UiVec(height * ContainerArt.Aspect(ContainerKind.FlagBanner, ratio), height);
+
+        public static UiVec FlagBannerSizeForWidth(ContainerRatio ratio, float width) =>
+            new UiVec(width, width / ContainerArt.Aspect(ContainerKind.FlagBanner, ratio));
+
+        // The measured content inset, exposed for a test (or a caller
+        // building content by hand rather than through ContainerContent) to
+        // check a rect against.
+        public static ContentInsetFrac ContainerContentInset(ContainerRatio ratio) =>
+            ContainerArt.Inset(ContainerKind.Container, ratio);
+
+        public static ContentInsetFrac FlagBannerContentInset(ContainerRatio ratio) =>
+            ContainerArt.Inset(ContainerKind.FlagBanner, ratio);
+
         public static UiNode Solid(string name, string colorHex, UiVec size, Place? place = null)
         {
             var node = Node(name, UiNodeKind.Solid, place ?? Place.Flow, UiSize.Fixed(size));

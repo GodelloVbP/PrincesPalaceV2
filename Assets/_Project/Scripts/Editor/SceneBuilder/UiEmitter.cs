@@ -72,10 +72,10 @@ public static class UiEmitter
                 EmitButton(go, node, solved);
                 break;
             case UiNodeKind.Sprite:
-                EmitImage(go, SceneBuilder.LoadSpriteByKey(node.SpriteKey), node.ColorHex, decor);
+                EmitImage(go, SceneBuilder.LoadSpriteByKey(node.SpriteKey), node.ColorHex, decor, node.PreserveAspect);
                 break;
             case UiNodeKind.Solid:
-                EmitImage(go, null, node.ColorHex ?? "#ffffff", decor);
+                EmitImage(go, null, node.ColorHex ?? "#ffffff", decor, preserveAspect: false);
                 break;
             case UiNodeKind.NestedCanvas:
                 EmitNestedCanvas(go, node);
@@ -507,11 +507,19 @@ public static class UiEmitter
         // - stated for the reader, since it is a decision and not an oversight.
     }
 
-    private static void EmitImage(GameObject go, Sprite sprite, string colorHex, bool decor)
+    private static void EmitImage(GameObject go, Sprite sprite, string colorHex, bool decor, bool preserveAspect = false)
     {
         var image = go.AddComponent<Image>();
         if (sprite != null) image.sprite = sprite;
         image.color = SceneBuilder.ParseHex(colorHex, Color.white);
+        image.type = Image.Type.Simple;
+
+        // Container/FlagBanner art is refused (Ui.Container/FlagBanner) at
+        // any declared size whose aspect does not already match the sprite's
+        // own, so this changes nothing visible today -- it exists so a future
+        // caller loosening that check gets a fitted box instead of a
+        // stretched one.
+        if (preserveAspect) image.preserveAspect = true;
 
         // Decoration can never take a click. In v1 this was a hand-written sweep
         // over 110 ambient sprites, and one missed entry is an unclickable
