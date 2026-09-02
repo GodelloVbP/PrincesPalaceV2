@@ -266,6 +266,7 @@ public static class ContentBuilder
             asset.iconPath = relic.IconPath;
             asset.rarity = relic.Rarity;
             asset.unlockedBy = relic.UnlockedBy;
+            asset.requiresConvergenceAbility = relic.RequiresConvergenceAbility;
             asset.modifiers = relic.Modifiers
                 .Select(m => new RelicModifierEntry
                 {

@@ -19,6 +19,7 @@ MonoBehaviour:
   effect: 12
   rarity: 5
   unlockedBy: 
+  requiresConvergenceAbility: 0
   modifiers: []
   sortOrder: 17
   iconPath: Assets/_Project/Art/Items/Relics/Processed/first_rune.png

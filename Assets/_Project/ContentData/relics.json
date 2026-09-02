@@ -174,6 +174,68 @@
       "effect": "FirstRune",
       "rarity": "godlike",
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/first_rune.png"
+    },
+    {
+      "id": "magic_marker",
+      "displayName": "Magic Marker",
+      "description": "Your spells mark the enemy they hit. Hitting a marked enemy with an attack consumes the mark and restores 20% of your missing mana (or signature resource).",
+      "effect": "MagicMarker",
+      "rarity": "common",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/magic_marker.png"
+    },
+    {
+      "id": "jar_of_bear_urine",
+      "displayName": "Jar of Bear Urine",
+      "description": "Marks every enemy the instant combat begins.",
+      "effect": "JarOfBearUrine",
+      "rarity": "common",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/jar_of_bear_urine.png"
+    },
+    {
+      "id": "world_enders_crown",
+      "displayName": "World Ender's Crown",
+      "description": "The instant you drop below 30% health, every enemy is feared for 1 turn. Re-arms once you climb back above 30%.",
+      "effect": "WorldEndersCrown",
+      "rarity": "mythic",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/world_enders_crown.png"
+    },
+    {
+      "id": "cursed_idol",
+      "displayName": "Cursed Idol",
+      "description": "Damaging an enemy lowers its resistances by 3% for 3 turns, stacking up to 15%. Each stack falls off on its own.",
+      "effect": "CursedIdol",
+      "rarity": "rare",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/cursed_idol.png"
+    },
+    {
+      "id": "amassing_star",
+      "displayName": "Amassing Star",
+      "description": "Every enemy you kill (summons excluded) grants +2% damage for the rest of the run.",
+      "effect": "AmassingStar",
+      "rarity": "rare",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/amassing_star.png"
+    },
+    {
+      "id": "pointy_nail_on_the_end_of_a_stick",
+      "displayName": "Pointy Nail on the End of a Stick",
+      "description": "Melee attacks gain 35 flat armour penetration.",
+      "rarity": "common",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/pointy_nail_on_the_end_of_a_stick.png",
+      "modifiers": [
+        {
+          "type": "ArmorPenetrationFlat",
+          "amount": 35
+        }
+      ]
+    },
+    {
+      "id": "rampaging_bulls_horn",
+      "displayName": "Rampaging Bull's Horn",
+      "description": "After casting a convergence ability, gain 50% damage reduction for 2 turns. Only offered to a party with a convergence ability.",
+      "effect": "RampagingBullsHorn",
+      "rarity": "rare",
+      "requiresConvergenceAbility": true,
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/rampaging_bulls_horn.png"
     }
   ]
 }

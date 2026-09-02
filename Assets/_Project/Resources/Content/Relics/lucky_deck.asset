@@ -20,6 +20,7 @@ MonoBehaviour:
   effect: 10
   rarity: 3
   unlockedBy: 
+  requiresConvergenceAbility: 0
   modifiers: []
   sortOrder: 16
   iconPath: Assets/_Project/Art/Items/Relics/Processed/lucky_deck.png

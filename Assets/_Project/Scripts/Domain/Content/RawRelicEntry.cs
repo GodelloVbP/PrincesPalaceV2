@@ -41,6 +41,13 @@ namespace PrincesPalace.Domain.Content
         // behaviour is a RelicEffect, and populated for one that is just a
         // number -- which is most of them, and none of which should cost C#.
         public RawRelicModifier[] modifiers = System.Array.Empty<RawRelicModifier>();
+
+        // Mechanic (g), ACQUISITION GATE: true means this relic is only
+        // ever offered to a party that has a convergence/ultimate ability
+        // (ConvergenceGate.HasConvergenceAbility) -- false (the default)
+        // means every relic that does not say otherwise, which is nearly
+        // all of them.
+        public bool requiresConvergenceAbility;
     }
 
     // JsonUtility cannot deserialize a bare top-level array.

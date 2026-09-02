@@ -14,6 +14,9 @@ namespace PrincesPalace.Domain.Content
         public readonly string UnlockedBy;
         public readonly System.Collections.Generic.IReadOnlyList<RelicModifier> Modifiers;
 
+        // Mechanic (g). See RawRelicEntry.requiresConvergenceAbility.
+        public readonly bool RequiresConvergenceAbility;
+
         // A relic has to DO something, one way or the other, to be worth
         // offering. Asked here so the draft and the glossary can both tell a
         // real relic from a placeholder without re-deriving the rule.
@@ -27,7 +30,8 @@ namespace PrincesPalace.Domain.Content
 
         public ResolvedRelic(string id, string displayName, string description, RelicEffect effect, int sortOrder,
                              string iconPath = "", RelicRarity rarity = RelicRarity.Common, string unlockedBy = "",
-                             System.Collections.Generic.IReadOnlyList<RelicModifier> modifiers = null)
+                             System.Collections.Generic.IReadOnlyList<RelicModifier> modifiers = null,
+                             bool requiresConvergenceAbility = false)
         {
             Rarity = rarity;
             UnlockedBy = unlockedBy ?? "";
@@ -38,6 +42,7 @@ namespace PrincesPalace.Domain.Content
             Effect = effect;
             SortOrder = sortOrder;
             IconPath = iconPath;
+            RequiresConvergenceAbility = requiresConvergenceAbility;
         }
     }
 }

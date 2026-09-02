@@ -125,6 +125,42 @@ namespace PrincesPalace.Domain.Combat
         // Stun's exact turn-skip mechanism rather than inventing a second
         // one.
         Rooted,
+
+        // Marked. A general "something is coming for you" debuff with no
+        // effect of its own — anything that USES a mark (a relic or skill
+        // effect keyed on marked targets) reads it through Marks.IsMarked
+        // and spends it through Marks.ConsumeMark, never through this
+        // enum's usual Magnitude/duration reading. Magnitude is unused
+        // (always 0); TurnsRemaining is set generously high (Marks.
+        // MarkDurationTurns) so ordinary per-turn ticking cannot expire an
+        // unconsumed mark first — the same "spent, not decayed" convention
+        // Shielded and Empowered already use, except a mark is spent by
+        // ConsumeMark rather than by DamagePipeline.
+        //
+        // ELEVENTH, and the first status built as a REUSABLE Domain
+        // facility rather than for one relic — see Marks' own header.
+        // Drowned Lantern's own "spell marks its target" already shipped
+        // before this existed and keeps its private per-session HashSet
+        // rather than being migrated onto it; the two are independent and
+        // do not interact.
+        Marked,
+
+        // Feared. Stunned (skips the holder's turn — StatusEffects.HasStun
+        // treats this exactly like Stun) AND Vulnerable (Magnitude percent
+        // more damage taken — StatusEffects.DamageTakenMultiplier reads it
+        // the same way it reads Vulnerable) for TurnsRemaining of the
+        // holder's own turns.
+        //
+        // NOT spent like Stun — Fear decays by turn count, same as
+        // Protect/Vulnerable/Chilled, so ResolveSkippedTurn's ConsumeStun
+        // (which only ever removes StatusEffectType.Stun) leaves a Feared
+        // entry standing to skip the NEXT turn too, and the turn after
+        // that, until its own duration runs out — matching "duration in
+        // turns" rather than "spent on one skip".
+        //
+        // TWELFTH. See Fear's own header for the authored Magnitude
+        // (vulnerable percent) and application API.
+        Feared,
     }
 
     // One active affliction or boon on a combatant: what it is, how strong,

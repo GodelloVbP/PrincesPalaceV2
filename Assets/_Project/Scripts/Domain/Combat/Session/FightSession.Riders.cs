@@ -318,6 +318,12 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (actor == null) return;
 
+            // Mechanic (c): every falling-off stack this combatant carries
+            // (Cursed Idol's key included) ages by one of THEIR OWN turns
+            // here too, the same "holder's own turns" rule every status
+            // duration in this file already follows.
+            FallingOffStacks.TickAll(actor);
+
             var report = StatusEffects.Tick(actor);
 
             // Chilled's malus is booked in FightSession.SpeedBuffs' own

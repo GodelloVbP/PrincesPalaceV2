@@ -45,7 +45,19 @@ namespace PrincesPalace.Domain.Combat.Session
         private CombatMath.DamageResult DealDamage(
             CombatantState actor, CombatantState target, int amount, DamageType type)
         {
+            // Cursed Idol's own bonus -- see FightSession.BalanceRelics.
+            // CursedIdolBonus's own header for why it lands here rather
+            // than inside TotalDamage.
+            amount += CursedIdolBonus(actor, target, amount);
+
             var result = CombatMath.ApplyDamageDetailed(target, amount);
+
+            // Both mechanic (c)'s stack and mechanic (b)'s crossing-check
+            // read what THIS call just produced -- CursedIdolOnHit stacks
+            // on the target being hit, WorldEndersCrownCheck reads that
+            // same target's own new health fraction.
+            CursedIdolOnHit(actor, target);
+            WorldEndersCrownCheck(target);
 
             // What a shield ate is NOT what the target took. ApplyDamage's int
             // overload returns Absorbed despite its name, which is exactly the
@@ -77,6 +89,13 @@ namespace PrincesPalace.Domain.Combat.Session
 
             int before = target.CurrentHealth;
             CombatMath.Heal(target, amount);
+
+            // World Ender's Crown re-arms on the way back UP too -- a
+            // health change that climbs back above 30% has to clear the
+            // "already fired" flag exactly like the damage path does, or a
+            // healed party would never fear the field again for the rest of
+            // the fight.
+            WorldEndersCrownCheck(target);
 
             Ledger.Restored(LedgerIdOf(target), target.CurrentHealth - before);
         }

@@ -42,7 +42,13 @@ $Areas = @{
     # a real-fight PlayMode test over CombatantState.ManaRegen and the
     # per-turn regen tick, the same subject FightSession.Riders' own regen
     # rider lives in, not a content/stat-derivation subject on its own.
-    combat  = "Fight|Wool|Spell|Combat|Enemy|Party|Stage|Boss|Turn|Skill|Damage|Defeat|Teardown|BreakShield|Status|Signature|Ward|Gift|Empower|Cooldown|Relic|Balance|Modifier|Rig|Bot|Wisdom"
+    # 'Mark|Fear|Falling|Penetration|Convergence' for the balance-bot pass's
+    # own mechanic tests (MarksTests, FearTests, FallingOffStacksTests,
+    # ArmorPenetrationTests, ConvergenceGateTests) -- all five are Domain/
+    # Combat facilities (Marks.cs, Fear.cs, FallingOffStacks.cs,
+    # CombatantState.ArmorPenetration, ConvergenceGate.cs), the same
+    # PathAreas folder every other combat mechanic already lives in.
+    combat  = "Fight|Wool|Spell|Combat|Enemy|Party|Stage|Boss|Turn|Skill|Damage|Defeat|Teardown|BreakShield|Status|Signature|Ward|Gift|Empower|Cooldown|Relic|Balance|Modifier|Rig|Bot|Wisdom|Mark|Fear|Falling|Penetration|Convergence"
     hub     = "Hub|Talent|Principality|CharacterSheet|SheetStat|Store|Constellation|Glossary"
     # 'ModifierTable' explicitly, alongside the bare 'Modifier' already
     # matching combat above -- ModifierTableTests (Phase A3) covers the

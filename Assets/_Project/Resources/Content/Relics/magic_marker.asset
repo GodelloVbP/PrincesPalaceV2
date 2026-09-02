@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6da02db8c4530f747adcb0b4f87d4af4, type: 3}
+  m_Name: magic_marker
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
+  id: magic_marker
+  displayName: Magic Marker
+  description: Your spells mark the enemy they hit. Hitting a marked enemy with an
+    attack consumes the mark and restores 20% of your missing mana (or signature
+    resource).
+  effect: 15
+  rarity: 0
+  unlockedBy: 
+  requiresConvergenceAbility: 0
+  modifiers: []
+  sortOrder: 18
+  iconPath: Assets/_Project/Art/Items/Relics/Processed/magic_marker.png

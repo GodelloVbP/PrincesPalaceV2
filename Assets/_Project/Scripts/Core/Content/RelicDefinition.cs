@@ -28,6 +28,9 @@ namespace PrincesPalace.Content
         [Tooltip("Achievement id required before this relic can appear at all. Empty means available from the first run.")]
         public string unlockedBy;
 
+        [Tooltip("Mechanic (g): only offered to a party with a convergence/ultimate ability (a Transform skill).")]
+        public bool requiresConvergenceAbility;
+
         [Tooltip("Numeric changes. Authored in JSON; no C# needed. A relic may carry these AND an effect.")]
         public RelicModifierEntry[] modifiers = System.Array.Empty<RelicModifierEntry>();
 

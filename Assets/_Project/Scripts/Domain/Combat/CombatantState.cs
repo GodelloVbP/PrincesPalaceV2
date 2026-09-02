@@ -30,6 +30,15 @@ namespace PrincesPalace.Domain.Combat
         // wrong number ends up in the wrong slot.
         public int ManaRegen;
 
+        // Mechanic (e), ARMOR PENETRATION: a flat amount subtracted from a
+        // target's broad Defense (physical only -- see CombatMath.
+        // BroadDefense) before mitigation, floored at 0 there. A derived
+        // stat on the ATTACKER, the same "set once at kit-build time" shape
+        // ManaRegen already uses -- gear/relics add to it via
+        // RelicModifiers.Apply(RelicStat.ArmorPenetration, ...), same as
+        // every other flat/percent stat on this class.
+        public int ArmorPenetration;
+
         // The only two defensive stats — the old single generic `Defense`
         // field is gone, not renamed to either of these. Formerly
         // PhysicalResistance/MagicalResistance, renamed in place. See
@@ -138,6 +147,20 @@ namespace PrincesPalace.Domain.Combat
         // codebase (inventory, unlockedTalentIds) is a real empty list, not
         // null.
         public readonly List<ActiveStatus> Statuses = new List<ActiveStatus>();
+
+        // Mechanic (c), FALLING-OFF STACKS -- see FallingOffStacks' own
+        // header. One list of remaining-turn counts per caller-owned key,
+        // empty for every combatant carrying no stacking effect, which is
+        // nearly everyone.
+        public readonly Dictionary<string, List<int>> StackTimers = new Dictionary<string, List<int>>();
+
+        // Whether ResolveSummon (a Roar-style skill) put this combatant on
+        // the field rather than it starting the encounter there. Read by
+        // Amassing Star (FightSession.BalanceRelics) -- "summons do not
+        // count" toward its run-wide payout, since a summon is not a kill
+        // the player fought for in the same sense the thing that cast it
+        // was.
+        public bool IsSummon;
 
         // What this combatant's gear and spells RIDE, and the scores they
         // ride on.

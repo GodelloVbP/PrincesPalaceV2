@@ -18,6 +18,7 @@ MonoBehaviour:
   effect: 3
   rarity: 0
   unlockedBy: 
+  requiresConvergenceAbility: 0
   modifiers: []
   sortOrder: 2
   iconPath: Assets/_Project/Art/Items/Relics/Processed/bloodlust.png

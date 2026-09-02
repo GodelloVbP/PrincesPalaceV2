@@ -111,6 +111,9 @@ namespace PrincesPalace.Domain.Combat.Session
             // The Drowned Lantern: the basic spell marks its target too.
             ApplyMark(actor, target);
 
+            // Magic Marker (mechanic a). Independent of the line above.
+            MagicMarkerApplyMark(actor, target);
+
             // The actor poses too, not just the victim -- the player can see
             // which of their own actions actually went off.
             SetStance(actor, Stances.Cast);
@@ -401,6 +404,7 @@ namespace PrincesPalace.Domain.Combat.Session
             }
 
             _enemyKits[state] = kit;
+            state.IsSummon = true;
             AppendMessage($"{actor.Name} calls out — {state.Name} answers!");
         }
 
@@ -481,6 +485,9 @@ namespace PrincesPalace.Domain.Combat.Session
             // The Drowned Lantern: a damaging spell marks whatever it lands
             // on, for an attack to cash in later.
             ApplyMark(actor, target);
+
+            // Magic Marker (mechanic a). Independent of the line above.
+            MagicMarkerApplyMark(actor, target);
 
             if (target.IsAlive)
             {
@@ -597,6 +604,9 @@ namespace PrincesPalace.Domain.Combat.Session
 
                 // The Drowned Lantern: a sweep marks everyone it actually hits.
                 ApplyMark(actor, enemy);
+
+                // Magic Marker (mechanic a). Independent of the line above.
+                MagicMarkerApplyMark(actor, enemy);
 
                 // The kill message, _killedThisAction and RecordKill all now
                 // happen INSIDE ApplyFinalDamage -- this only still needs its

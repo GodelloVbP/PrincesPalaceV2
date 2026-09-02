@@ -19,6 +19,7 @@ MonoBehaviour:
   effect: 7
   rarity: 0
   unlockedBy: 
+  requiresConvergenceAbility: 0
   modifiers: []
   sortOrder: 5
   iconPath: Assets/_Project/Art/Items/Relics/Processed/toothed_necklace.png

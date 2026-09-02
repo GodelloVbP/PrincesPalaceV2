@@ -170,9 +170,14 @@ namespace PrincesPalace.Domain.Combat
             return 1f;
         }
 
+        // Feared reads as Stun here too -- see StatusEffectType.Feared's own
+        // header. ResolveSkippedTurn's own ConsumeStun call only ever
+        // removes the Stun entry, so a Feared status keeps returning true
+        // here (and keeps skipping the holder's turn) for as many of its
+        // own turns as it has left, rather than being spent on the first.
         public static bool HasStun(List<ActiveStatus> statuses)
         {
-            return statuses.Any(s => s.Type == StatusEffectType.Stun);
+            return statuses.Any(s => s.Type == StatusEffectType.Stun || s.Type == StatusEffectType.Feared);
         }
 
         // Rooted is queried, never consumed -- unlike Stun it decays by turn
@@ -220,8 +225,11 @@ namespace PrincesPalace.Domain.Combat
                 {
                     total -= status.Magnitude / 100f;
                 }
-                else if (status.Type == StatusEffectType.Vulnerable)
+                else if (status.Type == StatusEffectType.Vulnerable || status.Type == StatusEffectType.Feared)
                 {
+                    // Feared's Vulnerable half rides the same additive term
+                    // Vulnerable itself uses -- see StatusEffectType.Feared's
+                    // own header.
                     total += status.Magnitude / 100f;
                 }
             }

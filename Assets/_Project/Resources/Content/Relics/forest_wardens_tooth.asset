@@ -18,6 +18,7 @@ MonoBehaviour:
   effect: 0
   rarity: 1
   unlockedBy: first_forest_boss
+  requiresConvergenceAbility: 0
   modifiers: []
   sortOrder: 10
   iconPath: Assets/_Project/Art/Items/Relics/Processed/forest_wardens_tooth.png

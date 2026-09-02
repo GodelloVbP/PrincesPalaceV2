@@ -14,11 +14,17 @@ namespace PrincesPalace.Domain.Relics
         public readonly RelicRarity Rarity;
         public readonly string UnlockedBy;
 
-        public RelicOption(string id, RelicRarity rarity, string unlockedBy = "")
+        // Mechanic (g), ACQUISITION GATE. See ResolvedRelic.
+        // RequiresConvergenceAbility.
+        public readonly bool RequiresConvergenceAbility;
+
+        public RelicOption(string id, RelicRarity rarity, string unlockedBy = "",
+                           bool requiresConvergenceAbility = false)
         {
             Id = id;
             Rarity = rarity;
             UnlockedBy = unlockedBy ?? "";
+            RequiresConvergenceAbility = requiresConvergenceAbility;
         }
 
         public bool IsUnlockedFromTheStart => string.IsNullOrEmpty(UnlockedBy);
@@ -41,14 +47,20 @@ namespace PrincesPalace.Domain.Relics
         // A relic with no `unlockedBy` is always in. A gated one needs its
         // achievement earned -- and the gate is checked against a set the
         // CALLER owns, so this has no opinion about where achievements live.
+        // `partyHasConvergenceAbility` defaults to false, which is the safe
+        // reading for every caller that has not been updated to compute it
+        // yet -- a relic gated on mechanic (g) simply does not appear
+        // rather than the gate silently failing open.
         public static List<RelicOption> Available(
-            IEnumerable<RelicOption> all, ICollection<string> earnedAchievements)
+            IEnumerable<RelicOption> all, ICollection<string> earnedAchievements,
+            bool partyHasConvergenceAbility = false)
         {
             if (all == null) return new List<RelicOption>();
 
             return all
                 .Where(r => r.IsUnlockedFromTheStart
                             || (earnedAchievements != null && earnedAchievements.Contains(r.UnlockedBy)))
+                .Where(r => !r.RequiresConvergenceAbility || partyHasConvergenceAbility)
                 .ToList();
         }
 

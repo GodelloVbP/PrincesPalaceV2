@@ -54,6 +54,15 @@ namespace PrincesPalace.Domain.Combat.Session
         // directly still matches what the session deals.
         public float DamageVarianceRange { get; set; } = DamagePipeline.DefaultVarianceRange;
 
+        // Mechanic (d), RUN-WIDE STATS. Set by the caller (FightEncounterAdapter)
+        // from RunSnapshot.bonusDamagePercent BEFORE Begin() -- a settable
+        // property rather than a constructor parameter, the same shape
+        // DamageVarianceRange already uses, so every existing constructor
+        // call site keeps compiling. Read by every player-side damage
+        // instance through FightSession.Relics.TotalDamage. 0 for a run
+        // that has not banked any yet, which is every run's first fight.
+        public int RunWideBonusDamagePercent { get; set; }
+
         public FightSession(
             CombatEncounter encounter,
             IReadOnlyList<PlayerKit> players,
@@ -173,6 +182,7 @@ namespace PrincesPalace.Domain.Combat.Session
             if (_begun) return;
             _begun = true;
 
+            RelicsOnCombatBegin();
             GrantTurnStart();
             AutoResolveEnemyTurns();
 

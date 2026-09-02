@@ -168,5 +168,18 @@ namespace PrincesPalace
         //
         // Purely additive, so CurrentVersion does not move.
         public int secondLivesUsed;
+
+        // Mechanic (d), RUN-WIDE STATS: a per-run accumulator combat reads
+        // back every fight, as opposed to a per-fight bonus that resets
+        // when the encounter ends. Amassing Star adds 2 here per kill
+        // (RunOrchestrator.SettleFight, from FightSession.
+        // BonusDamagePercentEarned); FightEncounterAdapter reads it back
+        // onto FightSession.RunWideBonusDamagePercent when the NEXT fight
+        // is built. Reset for free exactly like relicIds: StartRun replaces
+        // the whole snapshot, so a new run starts at zero without anything
+        // having to remember to clear it.
+        //
+        // Purely additive, so CurrentVersion does not move.
+        public int bonusDamagePercent;
     }
 }

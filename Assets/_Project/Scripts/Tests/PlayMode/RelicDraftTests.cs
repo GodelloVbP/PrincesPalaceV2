@@ -269,7 +269,12 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.Less(guard, 20, "paging never reached the end");
 
-            int expected = ContentDatabase.Relics.Count(r => r != null && string.IsNullOrEmpty(r.unlockedBy));
+            // Mechanic (g): a relic can also be gated on the party having a
+            // convergence/ultimate ability -- this test's squad has none,
+            // so a relic requiring one (Rampaging Bull's Horn) is correctly
+            // absent from the pool even though its own unlockedBy is empty.
+            int expected = ContentDatabase.Relics.Count(r =>
+                r != null && string.IsNullOrEmpty(r.unlockedBy) && !r.requiresConvergenceAbility);
             Assert.GreaterOrEqual(seen.Distinct().Count(), expected,
                 $"paging showed {seen.Distinct().Count()} relics but {expected} are unlocked from the start");
         }

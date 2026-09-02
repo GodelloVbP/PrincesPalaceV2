@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6da02db8c4530f747adcb0b4f87d4af4, type: 3}
+  m_Name: world_enders_crown
+  m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
+  id: world_enders_crown
+  displayName: World Ender's Crown
+  description: The instant you drop below 30% health, every enemy is feared for 1
+    turn. Re-arms once you climb back above 30%.
+  effect: 17
+  rarity: 4
+  unlockedBy: 
+  requiresConvergenceAbility: 0
+  modifiers: []
+  sortOrder: 20
+  iconPath: Assets/_Project/Art/Items/Relics/Processed/world_enders_crown.png

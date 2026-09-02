@@ -201,5 +201,29 @@ namespace PrincesPalace.Domain.Tests
                 "a Godlike should occupy exactly its own weight's worth of the range");
         }
 
+        // ---- mechanic (g): the acquisition gate -----------------------------------
+
+        private static RelicOption Convergence(string id) =>
+            new RelicOption(id, RelicRarity.Rare, requiresConvergenceAbility: true);
+
+        [Test]
+        public void AConvergenceGatedRelicIsHiddenFromAPartyWithoutOne()
+        {
+            var all = new[] { Open("dual_wield"), Convergence("bulls_horn") };
+
+            var available = RelicPool.Available(all, new HashSet<string>(), partyHasConvergenceAbility: false);
+
+            CollectionAssert.AreEquivalent(new[] { "dual_wield" }, available.Select(r => r.Id));
+        }
+
+        [Test]
+        public void AConvergenceGatedRelicAppearsOnceThePartyHasOne()
+        {
+            var all = new[] { Open("dual_wield"), Convergence("bulls_horn") };
+
+            var available = RelicPool.Available(all, new HashSet<string>(), partyHasConvergenceAbility: true);
+
+            CollectionAssert.AreEquivalent(new[] { "dual_wield", "bulls_horn" }, available.Select(r => r.Id));
+        }
     }
 }

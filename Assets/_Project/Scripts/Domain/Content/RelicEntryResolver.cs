@@ -182,7 +182,7 @@ namespace PrincesPalace.Domain.Content
             if (!ArtPathConvention.Check(label, "iconPath", raw.iconPath, out error)) return false;
 
             resolvedRelic = new ResolvedRelic(raw.id, raw.displayName, raw.description ?? "", effect, sortOrder,
-                raw.iconPath ?? "", rarity, unlockedBy, modifiers);
+                raw.iconPath ?? "", rarity, unlockedBy, modifiers, raw.requiresConvergenceAbility);
             error = null;
             return true;
         }

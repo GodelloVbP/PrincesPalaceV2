@@ -108,5 +108,40 @@ namespace PrincesPalace.Domain.Content
         // different things should not also disagree about what a percentage
         // means.
         LongCount,
+
+        // ── the balance pass -- see FightSession.BalanceRelics ──────────
+
+        // Every spell the wearer lands marks its target (Marks.Apply).
+        // Hitting a marked enemy with a plain ATTACK consumes the mark
+        // (Marks.ConsumeMark) and restores 20% of the actor's own missing
+        // primary resource. Independent of Drowned Lantern's own bespoke
+        // mark -- see Marks' own header.
+        MagicMarker,
+
+        // Marks every enemy on the field the instant combat begins.
+        JarOfBearUrine,
+
+        // The instant the wearer's health CROSSES below 30%, every enemy on
+        // the field is Feared for one turn. Re-arms the moment the wearer
+        // goes back above 30% -- see FightSession.BalanceRelics'
+        // WorldEndersCrownArmed for the crossing-detection.
+        WorldEndersCrown,
+
+        // Every hit the wearer lands on an enemy stacks a 3-turn resistance
+        // shred on it (FallingOffStacks), 3% per stack, capped at 15%
+        // (mechanic c).
+        CursedIdol,
+
+        // Every kill the wearer scores (summons excluded) grants the whole
+        // RUN +2% damage for the rest of it (mechanic d), read back by
+        // every fight in that run through FightSession.
+        // RunWideBonusDamagePercent.
+        AmassingStar,
+
+        // Casting a convergence/ultimate ability (a Transform skill) grants
+        // 50% damage reduction for 2 turns. Gated on
+        // ConvergenceGate.HasConvergenceAbility at draft time (mechanic g)
+        // -- offered only to a party that actually has one.
+        RampagingBullsHorn,
     }
 }

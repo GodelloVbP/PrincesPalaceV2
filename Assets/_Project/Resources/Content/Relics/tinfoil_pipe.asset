@@ -18,6 +18,7 @@ MonoBehaviour:
   effect: 6
   rarity: 2
   unlockedBy: 
+  requiresConvergenceAbility: 0
   modifiers: []
   sortOrder: 6
   iconPath: Assets/_Project/Art/Items/Relics/Processed/tinfoil_pipe.png

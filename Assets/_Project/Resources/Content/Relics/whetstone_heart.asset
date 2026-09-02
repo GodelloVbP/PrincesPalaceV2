@@ -18,6 +18,7 @@ MonoBehaviour:
   effect: 0
   rarity: 1
   unlockedBy: 
+  requiresConvergenceAbility: 0
   modifiers:
   - type: 1
     amount: 20

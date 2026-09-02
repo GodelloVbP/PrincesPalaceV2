@@ -19,6 +19,7 @@ MonoBehaviour:
   effect: 9
   rarity: 3
   unlockedBy: 
+  requiresConvergenceAbility: 0
   modifiers: []
   sortOrder: 15
   iconPath: Assets/_Project/Art/Items/Relics/Processed/sword_in_a_box.png

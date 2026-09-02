@@ -150,5 +150,37 @@ namespace PrincesPalace.Domain.Combat.Session
         // Magnitude of its own to author (ModifierEffectType.RootChancePercent's
         // own comment), only a duration.
         public const int RootOnHitTurns = 2;
+
+        // ---- the balance pass -- mechanics a-g, and the relics built on them ----
+
+        // Magic Marker: consuming a mark restores this percent of the
+        // actor's own MISSING primary resource.
+        public const int MagicMarkerRestorePercent = 20;
+
+        // World Ender's Crown: crossing below this fraction of health fears
+        // every enemy for FEARED turns.
+        public const float WorldEndersCrownHealthFraction = 0.3f;
+        public const int WorldEndersCrownFearTurns = 1;
+
+        // Cursed Idol: each landed hit on an enemy stacks a resistance
+        // shred, 3% per stack, up to 5 stacks (15%), each stack falling off
+        // 3 turns after it was added.
+        public const int CursedIdolPercentPerStack = 3;
+        public const int CursedIdolMaxStacks = 5;
+        public const int CursedIdolStackTurns = 3;
+        public const string CursedIdolStackKey = "cursed_idol";
+
+        // Amassing Star: percent damage added to the WHOLE REST OF THE RUN
+        // per non-summon kill.
+        public const int AmassingStarPercentPerKill = 2;
+
+        // Pointy Nail on the End of a Stick: flat armour penetration on
+        // every melee (Physical-typed) swing the wearer makes.
+        public const int PointyNailArmorPenetration = 35;
+
+        // Rampaging Bull's Horn: damage reduction after casting a
+        // convergence/ultimate ability, and how long it lasts.
+        public const int BullsHornReductionPercent = 50;
+        public const int BullsHornDurationTurns = 2;
     }
 }

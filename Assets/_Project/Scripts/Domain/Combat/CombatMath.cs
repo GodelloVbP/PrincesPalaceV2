@@ -144,6 +144,22 @@ namespace PrincesPalace.Domain.Combat
                 }
             }
 
+            // Mechanic (e): flat armour penetration, LAST -- against
+            // whatever survived Last Stand's bonus, BreakShield's zero and
+            // Sharp Horns' percent above, same ordering rule ("penetration
+            // acts on whatever is left"). PHYSICAL ONLY: this stat is
+            // authored as "melee attacks ignore armour", and every melee
+            // swing in this game carries DamageType.Physical, so gating on
+            // IsPhysical(type) rather than on how the blow was thrown is
+            // what keeps a caster's own Physical-typed nuke sharing the
+            // same rule a plain attack does, without penetration leaking
+            // onto a Magical or Nature cast that has nothing to do with a
+            // melee weapon.
+            if (attacker != null && attacker.ArmorPenetration > 0 && IsPhysical(type))
+            {
+                broad -= attacker.ArmorPenetration;
+            }
+
             return Math.Max(0, broad);
         }
 

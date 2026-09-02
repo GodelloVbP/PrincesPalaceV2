@@ -111,6 +111,10 @@ namespace PrincesPalace.PlayModeTests
                 new Domain.Rng.SeededRandom(11)).Party[0].MaxHealth;
             int baseSpeed = FightEncounterAdapter.Build(OneParty(), OneEnemy(),
                 new Domain.Rng.SeededRandom(11)).Party[0].Speed;
+            // Mechanic (e): armour penetration, the newest stat a relic
+            // modifier can move (Pointy Nail on the End of a Stick).
+            int baseArmorPenetration = FightEncounterAdapter.Build(OneParty(), OneEnemy(),
+                new Domain.Rng.SeededRandom(11)).Party[0].ArmorPenetration;
 
             var inert = new List<string>();
 
@@ -124,6 +128,7 @@ namespace PrincesPalace.PlayModeTests
                              || actor.PhysicalDefense != basePhysicalDefense
                              || actor.MagicalDefense != baseMagicalDefense
                              || actor.MaxHealth != baseHealth || actor.Speed != baseSpeed
+                             || actor.ArmorPenetration != baseArmorPenetration
                              || !actor.TypedResistance.IsEmpty;
 
                 if (!moved) inert.Add(relic.id);

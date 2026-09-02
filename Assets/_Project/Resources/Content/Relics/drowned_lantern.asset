@@ -19,6 +19,7 @@ MonoBehaviour:
   effect: 11
   rarity: 3
   unlockedBy: 
+  requiresConvergenceAbility: 0
   modifiers: []
   sortOrder: 9
   iconPath: Assets/_Project/Art/Items/Relics/Processed/drowned_lantern.png

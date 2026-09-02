@@ -201,6 +201,7 @@ namespace PrincesPalace
                 RelicModifiers.Apply(stats.speed, RelicStat.Speed, modifiers));
 
             state.ManaRegen = stats.manaRegen;
+            state.ArmorPenetration = RelicModifiers.Apply(0, RelicStat.ArmorPenetration, modifiers);
             state.AbilityScores = scores;
 
             // Never assigned anywhere in the real adapter path before this --
@@ -326,6 +327,7 @@ namespace PrincesPalace
                 RelicModifiers.Apply(stats.speed + AbilityDerivation.SpeedBonus(scores), RelicStat.Speed, modifiers));
 
             state.ManaRegen = stats.manaRegen;
+            state.ArmorPenetration = RelicModifiers.Apply(0, RelicStat.ArmorPenetration, modifiers);
             state.AbilityScores = scores;
 
             // Same "Defence applies to both broad Defenses" reading the
@@ -490,6 +492,11 @@ namespace PrincesPalace
 
             var session = new FightSession(encounter, kits, enemyKits, rng, isBoss, isElite,
                 summonFactory: SummonFactory);
+
+            // Mechanic (d): whatever Amassing Star has banked onto the run
+            // so far applies to THIS fight too, not just the ones after the
+            // kill that earned it.
+            session.RunWideBonusDamagePercent = RunManager.Run?.bonusDamagePercent ?? 0;
 
             return new BuiltFight { Session = session, Party = party, PartyArt = art };
         }

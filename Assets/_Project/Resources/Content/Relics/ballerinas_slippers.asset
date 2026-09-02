@@ -19,6 +19,7 @@ MonoBehaviour:
   effect: 5
   rarity: 0
   unlockedBy: 
+  requiresConvergenceAbility: 0
   modifiers: []
   sortOrder: 7
   iconPath: Assets/_Project/Art/Items/Relics/Processed/ballerinas_slippers.png

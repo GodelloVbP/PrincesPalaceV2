@@ -151,6 +151,16 @@ namespace PrincesPalace.Domain.Tests
             {
                 if (stat == RelicStat.None) continue;
 
+                // ArmorPenetration is FLAT ONLY, on purpose -- see
+                // RelicModifierType.ArmorPenetrationFlat's own comment: it
+                // already lands against a stat (broad Defense) that is
+                // itself already a percentage-shaped mitigation curve, the
+                // same reasoning ResistanceFlat gives for staying flat-only
+                // (ResistanceFlat is exempt from this canary entirely by
+                // never mapping to a RelicStat at all -- see RelicModifier.
+                // Stat's own switch).
+                if (stat == RelicStat.ArmorPenetration) continue;
+
                 var types = Enum.GetValues(typeof(RelicModifierType))
                     .Cast<RelicModifierType>()
                     .Where(t => t != RelicModifierType.None)
@@ -234,6 +244,26 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsTrue(ok, "a mechanic-less relic is still valid content");
             Assert.IsFalse(resolved[0].HasBehaviour);
+        }
+
+        // ---- mechanic (e): armour penetration -------------------------------------
+
+        [Test]
+        public void ArmorPenetrationFlatAppliesToTheArmorPenetrationStat()
+        {
+            int result = RelicModifiers.Apply(0, RelicStat.ArmorPenetration,
+                new[] { Mod(RelicModifierType.ArmorPenetrationFlat, 35) });
+
+            Assert.AreEqual(35, result, "Pointy Nail's own number, applied as a flat addition to a base of 0");
+        }
+
+        [Test]
+        public void ArmorPenetrationDoesNotLeakOntoOtherStats()
+        {
+            int attack = RelicModifiers.Apply(100, RelicStat.Attack,
+                new[] { Mod(RelicModifierType.ArmorPenetrationFlat, 35) });
+
+            Assert.AreEqual(100, attack, "an armour-penetration modifier must not touch Attack");
         }
     }
 }

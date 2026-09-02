@@ -86,6 +86,9 @@ namespace PrincesPalace.Domain.Combat.Session
             // second and Sword in a Box's bonus attack, both of which reach
             // here through this same call.
             RollLuckyDeck(actor, target, damage);
+
+            // Magic Marker: an attack against a marked target consumes it.
+            MagicMarkerConsumeOnAttack(actor, target);
         }
 
         // ---- the cast ------------------------------------------------------------
@@ -122,6 +125,10 @@ namespace PrincesPalace.Domain.Combat.Session
             // read them: the spell repeats itself, and THEN steel follows.
             TryFirstRune(actor, skill, target, resourceSpent);
             TrySwordInABox(actor, target);
+
+            // Rampaging Bull's Horn: fires only on a convergence (Transform)
+            // cast -- see its own header.
+            RampagingBullsHornOnConvergence(actor, skill);
         }
 
         // ---- sword in a box --------------------------------------------------------
@@ -396,7 +403,33 @@ namespace PrincesPalace.Domain.Combat.Session
         // ALREADY multiplied by the execute bonus, not on top of the pipeline's
         // raw output -- the two are different numbers on that one path.
         private int TotalDamage(CombatantState actor, int baseAmount, int outcomeDamage) =>
-            outcomeDamage + PotencyBonus(baseAmount) + NecklaceDamageBonus(actor, baseAmount);
+            outcomeDamage + PotencyBonus(baseAmount) + NecklaceDamageBonus(actor, baseAmount)
+                          + RunWideDamageBonus(actor, outcomeDamage);
+
+        // Cursed Idol's own bonus is deliberately NOT folded into
+        // TotalDamage above, unlike every sibling bonus there -- TotalDamage
+        // has no target-carrying overload the way DealDamage does, and the
+        // stack lives on the TARGET, not the actor, so it is read at the one
+        // call site that already has both (DealDamage, FightSession.
+        // Ledger.cs) rather than threading a fifth parameter through every
+        // TotalDamage call site for one relic.
+
+        // Mechanic (d) / Amassing Star. PLAYER SIDE ONLY -- an enemy has no
+        // run to accumulate against, and RunWideBonusDamagePercent is set
+        // from the PARTY's own RunSnapshot. Applied to the finished
+        // outcome figure rather than to baseAmount like Potency/Necklace
+        // above, because it is a flat percent of "however hard this swing
+        // already lands" -- there is no "own base" reading for a run-wide
+        // multiplier the way there is for a per-swing counting relic.
+        private int RunWideDamageBonus(CombatantState actor, int outcomeDamage)
+        {
+            if (actor == null || !actor.IsPlayerSide || outcomeDamage <= 0 || RunWideBonusDamagePercent <= 0)
+            {
+                return 0;
+            }
+
+            return outcomeDamage * RunWideBonusDamagePercent / 100;
+        }
 
         // ---- the necklace --------------------------------------------------------
         //
@@ -516,6 +549,7 @@ namespace PrincesPalace.Domain.Combat.Session
         private void RelicsOnEachKill(CombatantState actor, CombatantState victim)
         {
             PayBounty(actor, victim);
+            AmassingStarOnKill(actor, victim);
         }
 
     }

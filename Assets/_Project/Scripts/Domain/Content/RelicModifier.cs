@@ -54,6 +54,16 @@ namespace PrincesPalace.Domain.Content
         MaxHealthFlat,
         MaxManaFlat,
         SpeedFlat,
+
+        // Mechanic (e), ARMOR PENETRATION: flat, on the ATTACKER, applied
+        // to CombatantState.ArmorPenetration -- see CombatMath.BroadDefense
+        // for where it is spent. No percent twin, the same reasoning
+        // ResistanceFlat gives for staying flat-only: this already lands
+        // against a stat (broad Defense) that is itself already a
+        // percentage-shaped mitigation curve, so a percent-of-a-percent
+        // would be exactly as unreadable there as it would be for
+        // Resistance.
+        ArmorPenetrationFlat,
     }
 
     // One numeric change, exactly as typed into relics.json.
@@ -134,6 +144,8 @@ namespace PrincesPalace.Domain.Content
                     case RelicModifierType.SpeedPercent:
                     case RelicModifierType.SpeedFlat:
                         return RelicStat.Speed;
+                    case RelicModifierType.ArmorPenetrationFlat:
+                        return RelicStat.ArmorPenetration;
                     default:
                         return RelicStat.None;
                 }
@@ -157,6 +169,9 @@ namespace PrincesPalace.Domain.Content
         MaxHealth,
         MaxMana,
         Speed,
+
+        // Mechanic (e). See RelicModifierType.ArmorPenetrationFlat.
+        ArmorPenetration,
     }
 
     // Folds a set of modifiers into a single change per stat.

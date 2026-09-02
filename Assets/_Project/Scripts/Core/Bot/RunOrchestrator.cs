@@ -73,15 +73,26 @@ namespace PrincesPalace
 
             var all = ContentDatabase.Relics
                 .Where(r => r != null)
-                .Select(r => new RelicOption(r.id, r.rarity, r.unlockedBy))
+                .Select(r => new RelicOption(r.id, r.rarity, r.unlockedBy, r.requiresConvergenceAbility))
                 .ToList();
+
+            // Mechanic (g): does anybody in the squad actually have a
+            // convergence/ultimate ability (a Transform skill) right now?
+            // Computed from the ACTIVE SQUAD, not the fielded party --
+            // relics are drafted in the hub, before a fight's party is
+            // chosen.
+            var squad = save?.ActiveSquad() ?? new List<Character>();
+            bool hasConvergence = squad
+                .Where(c => c != null)
+                .SelectMany(c => ContentDatabase.AvailableSkillsFor(c))
+                .Any(s => s != null && s.effect == Domain.Combat.SkillEffect.Transform);
 
             // Already-drafted relics are out of the pool. Draft() draws without
             // replacement WITHIN one offer, which was the whole story when
             // there was only ever one offer; across rounds nothing stopped the
             // same relic coming back, and being offered what you are already
             // carrying reads as a bug.
-            var available = RelicPool.Available(all, earned)
+            var available = RelicPool.Available(all, earned, hasConvergence)
                 .Where(r => !alreadyHeld.Contains(r.Id))
                 .ToList();
 
@@ -383,6 +394,16 @@ namespace PrincesPalace
             if (won && session != null && session.IsBossFight)
             {
                 RunLedger.RecordBossKill(run, BossIdOf(session));
+            }
+
+            // Mechanic (d) / Amassing Star: whatever the fight banked stays
+            // banked whether the run continues or ends here -- a kill that
+            // happened is not undone by the death that followed it, the
+            // same "folded on both outcomes" reasoning secondLivesUsed just
+            // above already uses.
+            if (session != null && run != null)
+            {
+                run.bonusDamagePercent += session.BonusDamagePercentEarned;
             }
 
             if (!won)

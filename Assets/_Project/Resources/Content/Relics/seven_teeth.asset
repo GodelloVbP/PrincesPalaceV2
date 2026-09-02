@@ -19,6 +19,7 @@ MonoBehaviour:
   effect: 8
   rarity: 1
   unlockedBy: 
+  requiresConvergenceAbility: 0
   modifiers: []
   sortOrder: 3
   iconPath: Assets/_Project/Art/Items/Relics/Processed/seven_teeth.png
