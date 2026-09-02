@@ -258,6 +258,13 @@ namespace PrincesPalace.Domain.Dungeon
             // Elite or Boss is width 1 as well — a fork into two bosses is
             // not a choice, it is a coin toss. Everything else is
             // 2..MaxColumnWidth wide.
+            //
+            // Types are NOT rolled here. Linking only needs widths and
+            // positions, never a room's type, so the skeleton is built with
+            // forced types set and everything else left as an overwritten
+            // placeholder — RollTypes fills the rest in AFTER linking, which
+            // is what lets it know a node's actual predecessors instead of
+            // guessing at them.
             var columns = new List<List<DescentNode>>();
             for (int d = 0; d < columnCount; d++)
             {
@@ -272,7 +279,7 @@ namespace PrincesPalace.Domain.Dungeon
                         Id = nextId++,
                         Depth = d,
                         Slot = slot,
-                        Type = forced ?? PickMiddleRoom(random),
+                        Type = forced ?? RoomType.Fight, // placeholder; RollTypes overwrites
                     });
                 }
 
@@ -281,14 +288,140 @@ namespace PrincesPalace.Domain.Dungeon
             }
 
             LinkColumns(map, columns, random);
+            RollTypes(columns, random, startStep, restBeforeBoss);
+            EnforceEveryRoadHasVariety(map, columns, startStep, restBeforeBoss);
             return map;
         }
 
-        private static RoomType PickMiddleRoom(SeededRandom random)
+        // Rolls every non-forced node's type, column by column, constrained
+        // by the two structural rules a road must never break:
+        //
+        //   (a) no three consecutive ROLLED rooms of the same type along any
+        //       road — a forced room (elite/boss/rest) is exempt from the
+        //       count but still breaks a streak in progress;
+        //   (c) a column of 2+ nodes is never all the same type, or a fork
+        //       stops being a choice.
+        //
+        // Both are enforced by narrowing the weighted table BEFORE rolling
+        // (excluding whichever types would violate the rule), not by
+        // rolling-and-retrying — so this is O(nodes), no retry loop, and the
+        // rng stream advances exactly once per unforced node regardless of
+        // how many types got excluded.
+        //
+        // (b) — every road has at least one non-Fight rolled room — is NOT
+        // handled here. It is a whole-road property (every column
+        // contributes exactly one node to any given road, so a road is "all
+        // Fight" only once every rolled column on it happened to roll Fight)
+        // and cannot be guaranteed by a per-node local exclusion the way (a)
+        // and (c) can. EnforceEveryRoadHasVariety fixes it afterward.
+        private static void RollTypes(List<List<DescentNode>> columns, SeededRandom random, int startStep,
+            bool restBeforeBoss)
         {
-            int total = MiddleRooms.Sum(r => r.Weight);
+            // The longest run of consecutive same-rolled-type rooms ending
+            // AT this node, along whichever incoming road makes it longest.
+            // 0 for a forced (or entry) node: forced rooms reset the streak
+            // rather than extend it.
+            var runLength = new Dictionary<int, int>();
+
+            for (int d = 0; d < columns.Count; d++)
+            {
+                var column = columns[d];
+                var predecessors = d == 0
+                    ? new List<DescentNode>()
+                    : columns[d - 1];
+
+                RoomType? uniformSoFar = null;
+                bool columnIsUniformSoFar = true;
+
+                for (int slot = 0; slot < column.Count; slot++)
+                {
+                    var node = column[slot];
+                    bool forced = d == 0 || ForcedTypeAt(startStep + d, restBeforeBoss).HasValue;
+                    if (forced)
+                    {
+                        // Type already set on the skeleton (Entry, or
+                        // whatever ForcedTypeAt returned).
+                        runLength[node.Id] = 0;
+                        continue;
+                    }
+
+                    var incoming = predecessors.Where(p => p.Next.Contains(node.Id)).ToList();
+
+                    // (a): exclude any type that a predecessor already
+                    // carries a 2-long streak of — picking it here would
+                    // make three.
+                    var excluded = new HashSet<RoomType>();
+                    foreach (var p in incoming)
+                    {
+                        if (runLength.TryGetValue(p.Id, out int len) && len >= 2)
+                        {
+                            excluded.Add(p.Type);
+                        }
+                    }
+
+                    // (c): the LAST node of a multi-room column additionally
+                    // excludes whatever every earlier sibling in this column
+                    // already agreed on, so the column cannot close out
+                    // uniform. Skipped if it would leave nothing pickable —
+                    // (a) takes priority, since a broken streak is worse
+                    // than a same-typed column.
+                    bool isClosingSlot = slot == column.Count - 1 && column.Count >= 2;
+                    if (isClosingSlot && columnIsUniformSoFar && uniformSoFar.HasValue)
+                    {
+                        var withColumnRule = new HashSet<RoomType>(excluded) { uniformSoFar.Value };
+                        if (MiddleRooms.Any(r => !withColumnRule.Contains(r.Type)))
+                        {
+                            excluded = withColumnRule;
+                        }
+                    }
+
+                    var type = PickMiddleRoom(random, excluded);
+                    node.Type = type;
+
+                    if (slot == 0)
+                    {
+                        uniformSoFar = type;
+                    }
+                    else if (uniformSoFar != type)
+                    {
+                        columnIsUniformSoFar = false;
+                    }
+
+                    int longestMatchingIncoming = 0;
+                    foreach (var p in incoming)
+                    {
+                        if (p.Type == type && runLength.TryGetValue(p.Id, out int len))
+                        {
+                            longestMatchingIncoming = Math.Max(longestMatchingIncoming, len);
+                        }
+                    }
+
+                    runLength[node.Id] = longestMatchingIncoming + 1;
+                }
+            }
+        }
+
+        private static RoomType PickMiddleRoom(SeededRandom random, ISet<RoomType> excluded = null)
+        {
+            var pool = excluded == null || excluded.Count == 0
+                ? MiddleRooms
+                : MiddleRooms.Where(r => !excluded.Contains(r.Type)).ToArray();
+
+            // Every type excluded is only possible if the caller handed in
+            // a set wide enough to swallow the whole table — neither (a)
+            // nor (c) above ever does that (each checks the pool is
+            // non-empty before committing to the extra exclusion). Falling
+            // back to the full table rather than throwing keeps this a
+            // bounded, no-retry pick even in a combination nobody
+            // anticipated.
+            if (pool.Length == 0)
+            {
+                pool = MiddleRooms;
+            }
+
+            int total = pool.Sum(r => r.Weight);
             int roll = random.NextInt(0, total);
-            foreach (var (type, weight) in MiddleRooms)
+            foreach (var (type, weight) in pool)
             {
                 if (roll < weight)
                 {
@@ -298,7 +431,165 @@ namespace PrincesPalace.Domain.Dungeon
                 roll -= weight;
             }
 
-            return RoomType.Fight;
+            return pool[pool.Length - 1].Type;
+        }
+
+        // Highest-weight-first, Fight excluded — the order EnforceEvery
+        // RoadHasVariety tries substitute types in.
+        private static readonly RoomType[] NonFightByWeightDescending = MiddleRooms
+            .Where(r => r.Type != RoomType.Fight)
+            .OrderByDescending(r => r.Weight)
+            .Select(r => r.Type)
+            .ToArray();
+
+        // (b): every road (entry to boss, following links) has at least one
+        // non-Fight ROLLED room. RollTypes cannot guarantee this locally —
+        // it is a property of the whole road, not of one node's neighbours
+        // — so this walks every road after the fact and, for any road that
+        // is all Fight, retypes the first rolled node on it for which a
+        // substitution exists that does not itself break (a) or (c).
+        //
+        // Bounded rather than a search: for each violating road, at most
+        // (rolled nodes on the road) x (non-Fight types) substitutions are
+        // tried, and each is checked, not retried-until-lucky.
+        private static void EnforceEveryRoadHasVariety(DescentMap map, List<List<DescentNode>> columns,
+            int startStep, bool restBeforeBoss)
+        {
+            bool IsForced(DescentNode n) => n.Depth == 0 || ForcedTypeAt(startStep + n.Depth, restBeforeBoss).HasValue;
+
+            foreach (var road in EnumerateRoads(map))
+            {
+                bool hasNonFightRolled = road.Any(n => !IsForced(n) && n.Type != RoomType.Fight);
+                if (hasNonFightRolled)
+                {
+                    continue;
+                }
+
+                var rolledOnRoad = road.Where(n => !IsForced(n)).ToList();
+                bool fixedRoad = false;
+
+                foreach (var node in rolledOnRoad)
+                {
+                    foreach (var candidate in NonFightByWeightDescending)
+                    {
+                        if (!RespectsLocalRules(node, candidate, columns, startStep, restBeforeBoss))
+                        {
+                            continue;
+                        }
+
+                        node.Type = candidate;
+                        fixedRoad = true;
+                        break;
+                    }
+
+                    if (fixedRoad)
+                    {
+                        break;
+                    }
+                }
+
+                // No candidate on this road could be swapped without
+                // breaking (a) or (c) — leaves the road as the one
+                // documented exception to (b) rather than forcing a
+                // violation of the other two rules to satisfy this one.
+            }
+        }
+
+        // Whether NODE could legally become CANDIDATE without breaking (a)
+        // against either direction along the road or (c) against the rest
+        // of its column. Recomputed from the map as it currently stands, so
+        // a fix made earlier in the same pass is accounted for.
+        //
+        // Both directions matter, not just the backward one: retyping NODE
+        // is the only thing this pass ever does, but a road runs through it
+        // in both directions, and a successor already typed CANDIDATE could
+        // turn a now-two-long incoming streak into three just as easily as
+        // a predecessor could.
+        private static bool RespectsLocalRules(DescentNode node, RoomType candidate,
+            List<List<DescentNode>> columns, int startStep, bool restBeforeBoss)
+        {
+            var column = columns[node.Depth];
+            if (column.Count >= 2 && column.All(n => n.Id == node.Id || n.Type == candidate))
+            {
+                return false; // (c): would make the column uniform
+            }
+
+            int backwardStreak = BackwardStreakLength(node, candidate, columns, startStep, restBeforeBoss);
+            if (backwardStreak >= 3)
+            {
+                return false; // (a): a predecessor chain already runs two of this type
+            }
+
+            foreach (int nextId in node.Next)
+            {
+                var successor = columns[node.Depth + 1].First(n => n.Id == nextId);
+                bool successorForced = ForcedTypeAt(startStep + successor.Depth, restBeforeBoss).HasValue;
+                if (!successorForced && successor.Type == candidate && backwardStreak + 1 >= 3)
+                {
+                    return false; // (a): would make three going forward into this successor
+                }
+            }
+
+            return true;
+        }
+
+        // The length of the consecutive same-TYPE chain of rolled rooms
+        // that would end at NODE if NODE's type were TYPE, walking
+        // backward through matching, non-forced predecessors. Capped at 3:
+        // callers only ever care whether it reaches 3, not how far past it
+        // runs, and capping keeps this bounded regardless of leg length.
+        private static int BackwardStreakLength(DescentNode node, RoomType type, List<List<DescentNode>> columns,
+            int startStep, bool restBeforeBoss)
+        {
+            int length = 1;
+            var current = node;
+            while (length < 3 && current.Depth > 0)
+            {
+                var prior = columns[current.Depth - 1].FirstOrDefault(p => p.Next.Contains(current.Id) &&
+                    p.Type == type && !(p.Depth == 0 || ForcedTypeAt(startStep + p.Depth, restBeforeBoss).HasValue));
+                if (prior == null)
+                {
+                    break;
+                }
+
+                length++;
+                current = prior;
+            }
+
+            return length;
+        }
+
+        // Every entry-to-boss path through the leg, following links
+        // forward. Bounded by leg width (MaxColumnWidth per column) and
+        // length, both small and fixed per leg, so this never approaches
+        // being unbounded even though it is exponential in shape.
+        private static IEnumerable<List<DescentNode>> EnumerateRoads(DescentMap map)
+        {
+            var entry = map.Entry;
+            if (entry == null)
+            {
+                yield break;
+            }
+
+            var stack = new Stack<List<DescentNode>>();
+            stack.Push(new List<DescentNode> { entry });
+
+            while (stack.Count > 0)
+            {
+                var path = stack.Pop();
+                var last = path[path.Count - 1];
+                if (last.Next.Count == 0)
+                {
+                    yield return path;
+                    continue;
+                }
+
+                foreach (int nextId in last.Next)
+                {
+                    var extended = new List<DescentNode>(path) { map.Node(nextId) };
+                    stack.Push(extended);
+                }
+            }
         }
 
         private static void LinkColumns(DescentMap map, List<List<DescentNode>> columns, SeededRandom random)
