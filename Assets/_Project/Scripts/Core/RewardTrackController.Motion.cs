@@ -75,6 +75,15 @@ namespace PrincesPalace
         // that looks like it is waiting for something.
         private const float OrbitLoop = 26f;
 
+        // THE TEST SEAM, same shape as ReckoningController.SpeedMultiplier --
+        // every event cue here (fly-in, glide, follow, advance, burst, card
+        // swap) is driven off Time.unscaledDeltaTime for the reason in this
+        // file's header (a menu-opened panel must not freeze), so a test
+        // waiting for one of them out pays real wall time regardless of
+        // Time.timeScale. 1 outside a test, which changes nothing about play.
+        // RewardTrackClaimTests sets/resets it in [SetUp]/[TearDown].
+        public static float SpeedMultiplier = 1f;
+
         private Coroutine _glide;
         private Coroutine _cardSwap;
         private Coroutine _bursts;
@@ -359,7 +368,7 @@ namespace PrincesPalace
             float elapsed = -FlyInDelay;
             while (elapsed < FlyInSeconds)
             {
-                elapsed += Time.unscaledDeltaTime;
+                elapsed += Time.unscaledDeltaTime * SpeedMultiplier;
 
                 if (elapsed >= 0f)
                 {
@@ -397,7 +406,7 @@ namespace PrincesPalace
 
             while (elapsed < seconds)
             {
-                elapsed += Time.unscaledDeltaTime;
+                elapsed += Time.unscaledDeltaTime * SpeedMultiplier;
                 SetScroll(Mathf.Lerp(from, target, EaseOutCubic(Mathf.Clamp01(elapsed / seconds))));
                 yield return null;
             }
@@ -465,7 +474,7 @@ namespace PrincesPalace
                 float elapsed = 0f;
                 while (elapsed < wait)
                 {
-                    elapsed += Time.unscaledDeltaTime;
+                    elapsed += Time.unscaledDeltaTime * SpeedMultiplier;
                     yield return null;
                 }
             }
@@ -490,7 +499,7 @@ namespace PrincesPalace
             float t = 0f;
             while (t < BurstSeconds)
             {
-                t += Time.unscaledDeltaTime;
+                t += Time.unscaledDeltaTime * SpeedMultiplier;
                 PaintBurst(rig, Mathf.Clamp01(t / BurstSeconds));
                 StampSeal(index, Mathf.Clamp01(t / SealStampSeconds));
                 yield return null;
@@ -649,7 +658,7 @@ namespace PrincesPalace
 
             while (elapsed < CardSwapSeconds)
             {
-                elapsed += Time.unscaledDeltaTime;
+                elapsed += Time.unscaledDeltaTime * SpeedMultiplier;
                 float t = EaseOutCubic(Mathf.Clamp01(elapsed / CardSwapSeconds));
 
                 cardRect.anchoredPosition =
@@ -705,7 +714,7 @@ namespace PrincesPalace
 
             while (elapsed < AdvanceSeconds)
             {
-                elapsed += Time.unscaledDeltaTime;
+                elapsed += Time.unscaledDeltaTime * SpeedMultiplier;
                 float t = EaseOutCubic(Mathf.Clamp01(elapsed / AdvanceSeconds));
 
                 railFill.sizeDelta = new Vector2(Mathf.Lerp(from, target, t), railFill.sizeDelta.y);

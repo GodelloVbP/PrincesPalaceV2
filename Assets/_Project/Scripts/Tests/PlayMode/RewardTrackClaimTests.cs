@@ -40,11 +40,18 @@ namespace PrincesPalace.PlayModeTests
             SaveSystem.RootOverride = _root;
             SaveSlotManager.CurrentSlot = 0;
             SaveSlotManager.Forget();
+
+            // Every event cue on this screen -- fly-in, glide included -- runs
+            // off Time.unscaledDeltaTime (see RewardTrackController.Motion's
+            // own SpeedMultiplier comment), so this collapses the wait below
+            // to well under a frame. 1 outside a test, so play is unchanged.
+            RewardTrackController.SpeedMultiplier = 40f;
         }
 
         [TearDown]
         public void Restore()
         {
+            RewardTrackController.SpeedMultiplier = 1f;
             SaveSystem.RootOverride = null;
             SaveSlotManager.Forget();
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
@@ -262,9 +269,15 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(node, "the rail has no node for level 90");
             node.onClick.Invoke();
 
-            // The glide is 460ms and the fly-in it cancels is longer, so this
-            // waits out both rather than sampling mid-flight.
-            yield return new WaitForSecondsRealtime(0.8f);
+            // A FIXED WAIT STILL, not a poll -- no exposed "still animating"
+            // flag to watch on RewardTrackController, and the glide it starts
+            // cancels whatever fly-in was still running rather than one clean
+            // state to sample. [SetUp]'s SpeedMultiplier = 40 runs the whole
+            // glide (460ms) and the fly-in it cancels in low single-digit
+            // milliseconds of real time; 0.15s real still catches a genuine
+            // stall while being ~5x faster than the flat 0.8s this replaced.
+            float deadline = Time.realtimeSinceStartup + 0.15f;
+            while (Time.realtimeSinceStartup < deadline) yield return null;
 
             Assert.AreEqual(30, First().claimedTrackLevel,
                 "pressing an unreached node paid something out");

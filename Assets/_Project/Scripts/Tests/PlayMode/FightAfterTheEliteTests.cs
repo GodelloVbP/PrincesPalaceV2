@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
@@ -55,6 +56,7 @@ namespace PrincesPalace.PlayModeTests
             SaveSlotManager.Forget();
             RunManager.ResetForTests();
             Time.timeScale = 1f;
+            ReckoningController.SpeedMultiplier = 1f;
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
         }
 
@@ -304,6 +306,13 @@ namespace PrincesPalace.PlayModeTests
         {
             FightBeatPlayer.BeatSpeedMultiplier = 60f;
 
+            // The Reckoning that opens once this fight is won runs its own
+            // unscaled wipe/sweep/bar-fill (ReckoningController.
+            // SpeedMultiplier) -- without this the "something must be
+            // pressable" check below would sit through that animation at
+            // real speed on top of the fight itself.
+            ReckoningController.SpeedMultiplier = 40f;
+
             RunManager.StartRun(639228196442867409UL);
 
             // Stand the party in leg 1's elite -- step 4, the forced room
@@ -344,18 +353,32 @@ namespace PrincesPalace.PlayModeTests
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
             Assert.IsTrue(fight.Session.IsOver, "the elite never finished");
 
-            // Let whatever takes over finish arriving.
+            // Let whatever takes over finish arriving, THEN wait for it to
+            // become pressable -- polled on the actual state the assertion
+            // below checks, rather than a flat sleep sized for the
+            // Reckoning's animation. [SetUp]'s SpeedMultiplier = 40 (set
+            // above) already collapses that animation to well under a
+            // frame; this loop just bounds how long a genuine regression
+            // gets to hang before failing.
             float settle = Time.realtimeSinceStartup + 5f;
             while (fight.IsBusy && Time.realtimeSinceStartup < settle) yield return null;
-            yield return new WaitForSecondsRealtime(1.5f);
+
+            List<string> live;
+            float pressableDeadline = Time.realtimeSinceStartup + 2f;
+            do
+            {
+                live = fight.GetComponentsInChildren<Button>(includeInactive: false)
+                    .Where(b => b.interactable && b.gameObject.activeInHierarchy)
+                    .Select(b => b.name)
+                    .ToList();
+                if (live.Count > 0) break;
+                yield return null;
+            } while (Time.realtimeSinceStartup < pressableDeadline);
+
+            ReckoningController.SpeedMultiplier = 1f;
 
             // SOMETHING has to be pressable. Win or lose, the fight is over and
             // the player must be able to leave it.
-            var live = fight.GetComponentsInChildren<Button>(includeInactive: false)
-                .Where(b => b.interactable && b.gameObject.activeInHierarchy)
-                .Select(b => b.name)
-                .ToList();
-
             CollectionAssert.IsNotEmpty(live,
                 $"the elite is over (won={fight.Session.PlayerWon}) and there is not one pressable " +
                 "button on the screen - the verb column is hidden, Continue is hidden, and whatever " +

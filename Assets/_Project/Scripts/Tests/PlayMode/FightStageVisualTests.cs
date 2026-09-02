@@ -165,7 +165,13 @@ namespace PrincesPalace.PlayModeTests
             var size = slot.localScale;
 
             animator.Play(new Vector2(140f, 40f), holdSeconds: 0f);
-            yield return new WaitForSecondsRealtime(0.75f);
+
+            // Polled on the animator's own IsPlaying rather than a flat
+            // sleep -- [SetUp]'s BeatSpeedMultiplier = 60 already finishes
+            // the lunge in milliseconds; 2s only bounds a genuine stall.
+            float deadline = Time.realtimeSinceStartup + 2f;
+            while (animator.IsPlaying && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.IsFalse(animator.IsPlaying, "the lunge never finished");
 
             Assert.AreEqual(mark.x, slot.anchoredPosition.x, 0.5f, "the figure did not come home in x");
             Assert.AreEqual(mark.y, slot.anchoredPosition.y, 0.5f, "the figure did not come home in y");

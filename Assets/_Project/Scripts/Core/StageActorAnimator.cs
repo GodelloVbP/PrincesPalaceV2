@@ -63,6 +63,11 @@ namespace PrincesPalace
         private Vector3 _baseScale;
         private Coroutine _running;
 
+        // Whether a Play() is still under way -- exposed so a test can poll
+        // for the lunge/recoil finishing rather than sleep out a fixed real
+        // duration guessed at FightBeatPlayer.BeatSpeedMultiplier's default.
+        public bool IsPlaying => _running != null;
+
         // THE AFTERIMAGE, a hint of motion blur on the fast parts.
         //
         // uGUI cannot blur a sprite honestly -- the atlas neighbours bleed into
