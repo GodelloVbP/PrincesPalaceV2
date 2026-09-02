@@ -17,35 +17,41 @@ namespace PrincesPalace.Domain.UiKit
     // nothing tells a player this pane could scroll.
     public static class RunStatsLayout
     {
+        // Still the FRAME's declared size (SystemMenuPaneTests.EveryHostedPane
+        // IsTheSizeOfTheContentArea pins it against the panel) -- it needed no
+        // aspect nudge to become the Silver 2:1 ground below.
         public const float PaneWidth = SystemMenuLayout.PanelWidth;                              // 1600
         public const float PaneHeight = SystemMenuLayout.PanelHeight - SystemMenuLayout.BarHeight; // 804
 
-        public const float HalfWidth = PaneWidth * 0.5f;
-        public const float HalfHeight = PaneHeight * 0.5f;
+        // THE CONTAINER'S OWN INSET BOUNDARY now (balance-bot, 2026-09-02),
+        // not PaneWidth/PaneHeight * 0.5f -- see SystemMenuLayout.PaneInset's
+        // own comment. 744/357.78 against the old 800/402.
+        public static float HalfWidth => SystemMenuLayout.PaneContentHalfWidth;
+        public static float HalfHeight => SystemMenuLayout.PaneContentHalfHeight;
 
-        // 60, not the 120 this and every other pane used to take. The dossier
-        // fills the pane now, so a 120px inset here would have been the odd one
-        // out -- and three cards inside 1360 of 1600 left the columns narrow
-        // enough that the figures floated in them.
-        public const float PadX = 60f;
-        public const float PadTop = 44f;
-        public const float PadBottom = 64f;
+        // A SMALL SLACK MARGIN over the container's own inset, not a second
+        // authored pad -- same pattern as ExitsLayout.ContentMargin and
+        // OptionsLayout's own PadX/PadTop/PadBottom. ColumnWidth comes out
+        // unchanged at 460 either way: 744 * 2 - 8 equals 1600 - 120.
+        public const float PadX = 4f;
+        public const float PadTop = 4f;
+        public const float PadBottom = 4f;
 
         public const float ColumnCount = 3f;
 
-        // Chosen so the column lands on a whole number: (1600 - 120 - 100) / 3
+        // Chosen so the column lands on a whole number: (1488 - 8 - 100) / 3
         // is exactly 460. Half-pixel columns are how a rim ends up one pixel
         // thick on one card and two on the next.
         public const float ColumnGap = 50f;
 
-        public const float ColumnWidth =
-            (PaneWidth - PadX * 2f - ColumnGap * (ColumnCount - 1f)) / ColumnCount;   // 420
+        public static float ColumnWidth =>
+            (HalfWidth * 2f - PadX * 2f - ColumnGap * (ColumnCount - 1f)) / ColumnCount;   // 460
 
         public static float ColumnCentreX(int column) =>
             -HalfWidth + PadX + ColumnWidth * 0.5f + column * (ColumnWidth + ColumnGap);
 
-        public const float ContentTop = HalfHeight - PadTop;
-        public const float ContentBottom = -HalfHeight + PadBottom;
+        public static float ContentTop => HalfHeight - PadTop;
+        public static float ContentBottom => -HalfHeight + PadBottom;
 
         public static float UsableHeight => ContentTop - ContentBottom;
 
@@ -65,8 +71,8 @@ namespace PrincesPalace.Domain.UiKit
         // is what separates them rather than any chrome.
         public const float RowHeight = 70f;
 
-        public const float CardContentWidth = ColumnWidth - CardPadX * 2f;      // 372
-        public const float CardContentHalf = CardContentWidth * 0.5f;           // 186
+        public static float CardContentWidth => ColumnWidth - CardPadX * 2f;      // 372
+        public static float CardContentHalf => CardContentWidth * 0.5f;           // 186
 
         public static float CardHeight(int rows) =>
             CardPadY * 2f + HeadingHeight + rows * RowHeight;

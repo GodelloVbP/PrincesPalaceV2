@@ -60,6 +60,31 @@ namespace PrincesPalace.Domain.UiKit
 
         public static float ContentCentreY => HalfHeight - BarHeight - ContentHeight * 0.5f;
 
+        // ---- the shared pane ground, as a themed 2:1 container -------------------
+        //
+        // PanelWidth x ContentHeight (1600x804, aspect 1.99) ALREADY hits the
+        // kit's measured 2:1 aspect (1.98) within 0.5% -- comfortably inside
+        // Ui.Container's 5% band, so unlike every other conversion in this
+        // series, no size nudge is needed here at all. That settles the "804
+        // vs 1592" question the balance-bot brief posed: neither literal moves,
+        // because the pane's existing frame size was already a valid 2:1 box.
+        //
+        // PaneContentHalfWidth/HalfHeight are the ONE inset boundary every
+        // hosted pane's own HalfWidth/HalfHeight now reads instead of Width *
+        // 0.5f / Height * 0.5f -- CharacterDossierScreen, RewardTrackScreen,
+        // OptionsScreen, RunStatsScreen and ExitsScreen all lay their content
+        // out against these, so a pane's declared frame (Width/Height, still
+        // PanelWidth x ContentHeight -- SystemMenuPaneTests.EveryHostedPane
+        // IsTheSizeOfTheContentArea pins this) and its usable content region
+        // stop being the same rect the way they used to be, now that the
+        // ground is themed art with a painted border rather than a flat fill.
+        public static readonly ContentInsetFrac PaneInset =
+            Ui.ContainerContentInset(ContainerRatio.TwoByOne);
+
+        public static float PaneContentHalfWidth => PanelWidth * 0.5f - PanelWidth * PaneInset.Left;
+
+        public static float PaneContentHalfHeight => ContentHeight * 0.5f - ContentHeight * PaneInset.Top;
+
         // The row the tabs live in, inside the insets.
         public const float RowWidth = PanelWidth - BarInsetLeft - BarInsetRight;   // 1520
 

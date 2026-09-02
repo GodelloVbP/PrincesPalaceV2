@@ -100,8 +100,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             children.Add(BuildAbandon(screen));
 
-            screen.Root = Ui.Panel("ExitsPane", Place.At(0f, 0f),
-                UiSize.Fixed(ExitsLayout.PaneWidth, ExitsLayout.PaneHeight), children);
+            // A SILVER 2:1 CONTAINER, not a bare Panel -- this pane sat on the
+            // shared SystemMenuFill with no ground of its own before this
+            // (balance-bot, 2026-09-02). Silver: the neutral/utility theme,
+            // same choice as Options and Run statistics. PaneWidth x PaneHeight
+            // (1600x804) already hits the kit's measured 2:1 aspect within
+            // 0.5% -- see SystemMenuLayout.PaneInset's own comment -- so no
+            // size nudge was needed to make this a valid container.
+            var ground = Ui.Container("ExitsPane", ButtonTheme.Silver, ContainerRatio.TwoByOne,
+                Place.At(0f, 0f), new UiVec(ExitsLayout.PaneWidth, ExitsLayout.PaneHeight));
+            Ui.ContainerContent(ground, ContainerRatio.TwoByOne, "ExitsPaneContent", children.ToArray());
+
+            screen.Root = ground;
             return screen;
         }
 

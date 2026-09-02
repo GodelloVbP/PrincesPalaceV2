@@ -94,14 +94,32 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // APPLIES IMMEDIATELY, and the pane says so rather than leaving the
             // player hunting for a confirm button that is not there.
+            //
+            // ContentBottom + 12f, not ContentBottom - 14f: this used to sit in
+            // the 64px of PadBottom slack below ContentBottom, which the Silver
+            // 2:1 container's own inset replaced with a 4px margin (balance-bot,
+            // 2026-09-02) -- 14px below ContentBottom now escapes the
+            // container's own content inset instead of landing in dead space
+            // beneath it. Nothing else occupies this strip, so moving the note
+            // to just inside the floor costs nothing.
             children.Add(Ui.Label("OptionsAppliesNote", UiStrings.OptionsAppliesImmediately,
                     new UiVec(520f, 18f), 13, Body,
-                    Place.At(OptionsLayout.ColumnCentreX(0), OptionsLayout.ContentBottom - 14f))
+                    Place.At(OptionsLayout.ColumnCentreX(0), OptionsLayout.ContentBottom + 12f))
                 .AsDecor()
                 .Styled(TypographyRole.Body));
 
-            screen.Root = Ui.Panel("OptionsPane", Place.At(0f, 0f),
-                UiSize.Fixed(OptionsLayout.PaneWidth, OptionsLayout.PaneHeight), children);
+            // A SILVER 2:1 CONTAINER, not a bare Panel -- this pane sat on the
+            // shared SystemMenuFill with no ground of its own before this
+            // (balance-bot, 2026-09-02). Silver: the neutral/utility theme,
+            // same choice as Run statistics and the Main menu pane.
+            // PaneWidth x PaneHeight (1600x804) already hits the kit's
+            // measured 2:1 aspect within 0.5% -- see SystemMenuLayout.
+            // PaneInset's own comment -- so no size nudge was needed.
+            var ground = Ui.Container("OptionsPane", ButtonTheme.Silver, ContainerRatio.TwoByOne,
+                Place.At(0f, 0f), new UiVec(OptionsLayout.PaneWidth, OptionsLayout.PaneHeight));
+            Ui.ContainerContent(ground, ContainerRatio.TwoByOne, "OptionsPaneContent", children.ToArray());
+
+            screen.Root = ground;
             return screen;
         }
 

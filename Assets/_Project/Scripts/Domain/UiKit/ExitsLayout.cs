@@ -23,13 +23,24 @@ namespace PrincesPalace.Domain.UiKit
         public const float PaneWidth = SystemMenuLayout.PanelWidth;                               // 1600
         public const float PaneHeight = SystemMenuLayout.PanelHeight - SystemMenuLayout.BarHeight;  // 804
 
-        public const float HalfHeight = PaneHeight * 0.5f;
+        // THE PANE'S OWN GROUND IS A SILVER 2:1 CONTAINER now (balance-bot,
+        // 2026-09-02) -- HalfHeight reads SystemMenuLayout.PaneContentHalfWidth/
+        // HalfHeight, the container's own measured inset boundary, instead of
+        // PaneHeight * 0.5f. PaneWidth/PaneHeight above stay exactly what they
+        // were: they are still the FRAME's declared size (SystemMenuPaneTests.
+        // EveryHostedPaneIsTheSizeOfTheContentArea pins them against the
+        // panel), which needed no aspect nudge at all -- see SystemMenuLayout.
+        // PaneInset's own comment.
+        public static float HalfHeight => SystemMenuLayout.PaneContentHalfHeight;
 
-        public const float PadTop = 44f;
-        public const float PadBottom = 64f;
+        // A SMALL SLACK MARGIN over the container's own inset, not a second
+        // authored pad -- the border clearance is the inset's job now. Same
+        // pattern as DossierLayout.ColumnAContentMargin: a few pixels over the
+        // audit's own 0.01 containment tolerance, nothing more.
+        public const float ContentMargin = 4f;
 
-        public static float ContentTop => HalfHeight - PadTop;
-        public static float ContentBottom => -HalfHeight + PadBottom;
+        public static float ContentTop => HalfHeight - ContentMargin;
+        public static float ContentBottom => -HalfHeight + ContentMargin;
 
         // ---- the two exits ------------------------------------------------------
 

@@ -123,6 +123,75 @@ namespace PrincesPalace.Domain.UiKit
         public static float ContainerHeight =>
             ContainerPad * 2f + ViewportHeight + RowGap + BackRowHeight;
 
+        // The row's own content width -- ONE COPY, because the art frame below
+        // (built in FightScreen.BuildSubmenuFrame) has to size itself from the
+        // exact same number the rows are actually built at, not a second 282
+        // that could drift from it the way this file's own header warns about.
+        public const float RowWidth = 282f;
+
+        public static float ContainerWidth =>
+            RowWidth + ContainerPad * 2f + ScrollbarGap + ScrollbarWidth;
+
+        // ---- the Violet 3:4 art frame around the box above ----------------------
+        //
+        // ContainerWidth/ContainerHeight (316x500, aspect 0.632) are the INNER
+        // box every row, the scrollbar and BACK already lay out against,
+        // UNCHANGED by wrapping it in themed art -- nothing about RowY,
+        // ScrollRange or ThumbHeight above had to move, because the frame is
+        // built AROUND this box in BuildSubmenuFrame rather than replacing its
+        // arithmetic. 0.632 misses the kit's measured 3:4 aspect (0.588) by
+        // 7.5%, past Ui.Container's 5% band, so the frame is WIDER than the
+        // inner box by the kit's own measured inset (6.5% a side) -- widened so
+        // ContainerWidth is EXACTLY what the frame's own left+right inset
+        // leaves once its border is subtracted (316 = FrameWidth * (1 - .13)),
+        // which is what keeps the inner box's horizontal centre equal to the
+        // frame's own with no separate x correction.
+        //
+        // Tall enough (617.72) for that wider frame to still hit 0.588 exactly.
+        // The inner box's own vertical need (500 of the 565.21 the frame's
+        // 4.5%/4% top/bottom inset leaves) uses 88% of it: BuildSubmenuFrame
+        // reparents the unchanged viewport/track/thumb/BACK under this inset
+        // instead of a bare Panel at the old ContainerCentreY -- and because
+        // every one of their own Y's is already authored AS AN OFFSET FROM
+        // that centre (ViewportOffsetInContainer, BackRowY - ContainerCentreY),
+        // reparenting them under a DIFFERENT centre (FrameContentCentreY,
+        // below) recentres the whole 500-tall block inside the taller frame
+        // automatically -- no shift added anywhere in the screen.
+        public static readonly ContentInsetFrac FrameInset =
+            Ui.ContainerContentInset(ContainerRatio.ThreeByFour);
+
+        public static float FrameWidth => ContainerWidth / (1f - FrameInset.Left - FrameInset.Right);
+
+        public static float FrameHeight =>
+            Ui.ContainerSizeForWidth(ContainerRatio.ThreeByFour, FrameWidth).Y;
+
+        // BOTTOM-ANCHORED AT THE FRAME'S OWN TRUE EDGE, not its inset -- this
+        // is what keeps FightScreenTests.TheSkillPanelEndsOnTheSameLineAsThe
+        // VerbColumn true: the frame, not the content inside it, is what has
+        // to end on the same line as the verb column.
+        public static float FrameCentreY => ContainerBottom + FrameHeight * 0.5f;
+
+        public static float FrameTop => FrameCentreY + FrameHeight * 0.5f;
+
+        // The content inset's OWN centre, which is not the frame's centre once
+        // the top and bottom insets differ (4.5% vs 4%) -- half that 0.5% of
+        // FrameHeight, about 1.5px, plus all of the frame's own half-height.
+        // What BuildSubmenuFrame's viewport/track/thumb/BACK are reparented
+        // under.
+        public static float FrameContentCentreY =>
+            FrameCentreY + FrameHeight * (FrameInset.Bottom - FrameInset.Top) * 0.5f;
+
+        // How far every ABSOLUTE position below RowsBottom moves once the
+        // rows/scrollbar/BACK are reparented under FrameContentCentreY instead
+        // of the old ContainerCentreY. Nothing that reads its own POSITION
+        // relative to its immediate parent (RowYInContent, ContentY, the
+        // scroll math) needs this -- Unity's own nesting applies it for free.
+        // It exists for the one place that does need it: a test comparing a
+        // BUILT tree's absolute row position back against RowY's literal
+        // output (FightScreenTests.TheSubmenuRowsComeFromTheSharedLayout
+        // Function).
+        public static float FrameRecentreShiftY => FrameContentCentreY - ContainerCentreY;
+
         // NO LONGER CONCENTRIC WITH THE VIEWPORT. It was, while the container
         // held nothing but the list; the back row hangs below the viewport now,
         // so the two centres are a back row and a gap apart. Written from the
@@ -309,9 +378,14 @@ namespace PrincesPalace.Domain.UiKit
         // sit inside the frame for a short list and the frame's own top edge
         // would cut it, and it would move every time the count changed while
         // the box around it did not.
+        // MEASURED AGAINST THE FRAME'S OWN TOP EDGE now, not the inner box's --
+        // the inner box sits recentred well inside the frame (see FrameHeight's
+        // own comment), so the old ContainerCentreY + ContainerHeight * 0.5f
+        // would land the header deep inside the painted border instead of
+        // above it.
         public static float HeaderY(int count)
         {
-            return ContainerCentreY + ContainerHeight * 0.5f + 16f;
+            return FrameTop + 16f;
         }
 
         // Total vertical extent a list of `count` rows occupies. The builder

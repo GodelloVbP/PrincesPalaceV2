@@ -53,8 +53,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 children.Add(BuildCard(screen, groups, groups[i], i));
             }
 
-            screen.Root = Ui.Panel("RunStatsPane", Place.At(0f, 0f),
-                UiSize.Fixed(RunStatsLayout.PaneWidth, RunStatsLayout.PaneHeight), children);
+            // A SILVER 2:1 CONTAINER, not a bare Panel -- this pane sat on the
+            // shared SystemMenuFill with no ground of its own before this
+            // (balance-bot, 2026-09-02). PaneWidth x PaneHeight (1600x804)
+            // already hits the kit's measured 2:1 aspect within 0.5% -- see
+            // SystemMenuLayout.PaneInset's own comment -- so no size nudge
+            // was needed.
+            var ground = Ui.Container("RunStatsPane", ButtonTheme.Silver, ContainerRatio.TwoByOne,
+                Place.At(0f, 0f), new UiVec(RunStatsLayout.PaneWidth, RunStatsLayout.PaneHeight));
+            Ui.ContainerContent(ground, ContainerRatio.TwoByOne, "RunStatsPaneContent", children.ToArray());
+
+            screen.Root = ground;
             return screen;
         }
 

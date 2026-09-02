@@ -193,10 +193,11 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(FightSubmenuLayout.HeaderY(2), FightSubmenuLayout.HeaderY(17), 0.01f,
                 "the header moved with the count instead of staying on its frame");
 
-            float containerTop = FightSubmenuLayout.ContainerCentreY
-                                 + FightSubmenuLayout.ContainerHeight * 0.5f;
-
-            Assert.Greater(FightSubmenuLayout.HeaderY(5), containerTop,
+            // FrameTop, not the old ContainerCentreY + ContainerHeight * 0.5f --
+            // the inner box (rows/scrollbar/BACK) now sits recentred well
+            // inside the Violet 3:4 art frame (see FrameHeight's own comment),
+            // so the frame the header actually has to clear is the taller one.
+            Assert.Greater(FightSubmenuLayout.HeaderY(5), FightSubmenuLayout.FrameTop,
                 "the header must clear the top of the frame it labels");
         }
     }

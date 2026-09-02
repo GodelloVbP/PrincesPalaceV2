@@ -256,10 +256,15 @@ namespace PrincesPalace.Domain.Tests
             // The single most important binding on this screen: the same
             // function the runtime controller calls to RE-anchor these rows is
             // the one that placed them here. v1 had two hand-mirrored copies.
+            // + FrameRecentreShiftY: the rows are reparented under the Violet
+            // 3:4 frame's content inset now (balance-bot 2026-09-02), not a
+            // bare Panel at the old ContainerCentreY -- see that constant's
+            // own comment. RowY itself is untouched.
             int count = FightSubmenuLayout.PoolSize;
             for (int i = 0; i < count; i++)
             {
-                Assert.AreEqual(FightSubmenuLayout.RowY(count, i), RectOf($"CharacterSkill{i}").Centre.Y, 0.01f);
+                Assert.AreEqual(FightSubmenuLayout.RowY(count, i) + FightSubmenuLayout.FrameRecentreShiftY,
+                    RectOf($"CharacterSkill{i}").Centre.Y, 0.01f);
             }
         }
 
@@ -736,6 +741,51 @@ namespace PrincesPalace.Domain.Tests
                 "the skill panel and the verb column no longer end on the same line");
             Assert.AreEqual(FightSubmenuLayout.CommandBottom, panelBottom, 0.01f,
                 "and that line is CommandBottom, which is what both are measured from");
+        }
+
+        // ---- the submenu's Violet 3:4 container ------------------------------------
+        //
+        // Same pattern as CharacterDossierScreenTests/RelicDraftScreenTests: a
+        // flat Solid + Ui.Rim became Ui.Container(Violet, ThreeByFour) sized
+        // from FightSubmenuLayout.FrameWidth/FrameHeight, balance-bot 2026-09-02.
+        [Test]
+        public void TheSubmenuFrameIsAVioletThreeByFourContainer()
+        {
+            var frame = Walk(Screen().Root).First(n => n.Name == "SubmenuContainer");
+
+            Assert.IsFalse(frame.Decor,
+                "the wrapper must stay non-Decor, or content beneath it audits clean against itself");
+            var art = frame.Children.Single(c => c.Kind == UiNodeKind.Sprite);
+            Assert.AreEqual("UI/Buttons/Processed/container_violet_3x4.png", art.SpriteKey);
+            Assert.IsTrue(art.Decor);
+        }
+
+        [Test]
+        public void TheSubmenuFrameContentSitsInsideTheMeasuredInset()
+        {
+            var frame = Walk(Screen().Root).First(n => n.Name == "SubmenuContainer");
+            var content = frame.Children.Single(c => c.Name == "SubmenuFrameContent");
+            var inset = Ui.ContainerContentInset(ContainerRatio.ThreeByFour);
+
+            Assert.AreEqual(PlaceKind.Stretch, content.Place.Kind);
+            Assert.AreEqual(FightSubmenuLayout.FrameWidth * inset.Left, content.Place.Left, 0.01f);
+            Assert.AreEqual(FightSubmenuLayout.FrameWidth * inset.Right, content.Place.Right, 0.01f);
+            Assert.AreEqual(FightSubmenuLayout.FrameHeight * inset.Top, content.Place.Top, 0.01f);
+            Assert.AreEqual(FightSubmenuLayout.FrameHeight * inset.Bottom, content.Place.Bottom, 0.01f);
+        }
+
+        [Test]
+        public void TheSubmenuFrameChildrenRideInsideTheFrame()
+        {
+            // If the viewport, scrollbar or BACK were siblings of the frame
+            // rather than descendants, hiding SubmenuColumn would leave them
+            // stranded next to it instead of with it.
+            var frame = Walk(Screen().Root).First(n => n.Name == "SubmenuContainer");
+            var names = Walk(frame).Select(n => n.Name).ToList();
+
+            CollectionAssert.Contains(names, "SubmenuViewport");
+            CollectionAssert.Contains(names, "SubmenuScrollTrack");
+            CollectionAssert.Contains(names, "SubmenuBack");
         }
 
         // ---- verb theming --------------------------------------------------------

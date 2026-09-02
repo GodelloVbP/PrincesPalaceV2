@@ -118,6 +118,33 @@ namespace PrincesPalace.Domain.Tests
                 "two run-stat rows share a key, so one of them prints the other's number");
         }
 
+        // Was a bare Panel sitting on the shared SystemMenuFill -- balance-bot,
+        // 2026-09-02 gave it a Silver 2:1 ground, same pattern as Options and
+        // the Main menu pane.
+        [Test]
+        public void TheRunStatsPaneIsASilverTwoByOneContainer()
+        {
+            var ground = RunStatsScreen.Build().Root;
+
+            Assert.IsFalse(ground.Decor,
+                "the wrapper must stay non-Decor, or content beneath it audits clean against itself");
+            var art = ground.Children.Single(c => c.Kind == UiNodeKind.Sprite);
+            Assert.AreEqual("UI/Buttons/Processed/container_silver_2x1.png", art.SpriteKey);
+            Assert.IsTrue(art.Decor);
+        }
+
+        [Test]
+        public void TheRunStatsPaneContentSitsInsideTheMeasuredInset()
+        {
+            var ground = RunStatsScreen.Build().Root;
+            var content = ground.Children.Single(c => c.Name == "RunStatsPaneContent");
+            var inset = Ui.ContainerContentInset(ContainerRatio.TwoByOne);
+
+            Assert.AreEqual(PlaceKind.Stretch, content.Place.Kind);
+            Assert.AreEqual(RunStatsLayout.PaneWidth * inset.Left, content.Place.Left, 0.01f);
+            Assert.AreEqual(RunStatsLayout.PaneHeight * inset.Top, content.Place.Top, 0.01f);
+        }
+
         [Test]
         public void TheRunStatCardsFitWithoutScrolling()
         {
@@ -196,7 +223,64 @@ namespace PrincesPalace.Domain.Tests
                 "the pane declared a different number of keys and value nodes");
         }
 
+        // Was a bare Panel sitting on the shared SystemMenuFill -- balance-bot,
+        // 2026-09-02 gave it a Silver 2:1 ground, same pattern as Run
+        // statistics and the Main menu pane.
+        [Test]
+        public void TheOptionsPaneIsASilverTwoByOneContainer()
+        {
+            var ground = OptionsScreen.Build().Root;
+
+            Assert.IsFalse(ground.Decor,
+                "the wrapper must stay non-Decor, or content beneath it audits clean against itself");
+            var art = ground.Children.Single(c => c.Kind == UiNodeKind.Sprite);
+            Assert.AreEqual("UI/Buttons/Processed/container_silver_2x1.png", art.SpriteKey);
+            Assert.IsTrue(art.Decor);
+        }
+
+        [Test]
+        public void TheOptionsPaneContentSitsInsideTheMeasuredInset()
+        {
+            var ground = OptionsScreen.Build().Root;
+            var content = ground.Children.Single(c => c.Name == "OptionsPaneContent");
+            var inset = Ui.ContainerContentInset(ContainerRatio.TwoByOne);
+
+            Assert.AreEqual(PlaceKind.Stretch, content.Place.Kind);
+            Assert.AreEqual(OptionsLayout.PaneWidth * inset.Left, content.Place.Left, 0.01f);
+            Assert.AreEqual(OptionsLayout.PaneHeight * inset.Top, content.Place.Top, 0.01f);
+        }
+
         // ---- the Main menu pane --------------------------------------------------
+
+        // Was a bare Panel sitting on the shared SystemMenuFill -- balance-bot,
+        // 2026-09-02 gave it a Silver 2:1 ground, same pattern as the other
+        // container conversions (CharacterDossierScreenTests, RelicDraft
+        // ScreenTests).
+        [Test]
+        public void TheExitsPaneIsASilverTwoByOneContainer()
+        {
+            var ground = ExitsScreen.Build().Root;
+
+            Assert.IsFalse(ground.Decor,
+                "the wrapper must stay non-Decor, or content beneath it audits clean against itself");
+            var art = ground.Children.Single(c => c.Kind == UiNodeKind.Sprite);
+            Assert.AreEqual("UI/Buttons/Processed/container_silver_2x1.png", art.SpriteKey);
+            Assert.IsTrue(art.Decor);
+        }
+
+        [Test]
+        public void TheExitsPaneContentSitsInsideTheMeasuredInset()
+        {
+            var ground = ExitsScreen.Build().Root;
+            var content = ground.Children.Single(c => c.Name == "ExitsPaneContent");
+            var inset = Ui.ContainerContentInset(ContainerRatio.TwoByOne);
+
+            Assert.AreEqual(PlaceKind.Stretch, content.Place.Kind);
+            Assert.AreEqual(ExitsLayout.PaneWidth * inset.Left, content.Place.Left, 0.01f);
+            Assert.AreEqual(ExitsLayout.PaneWidth * inset.Right, content.Place.Right, 0.01f);
+            Assert.AreEqual(ExitsLayout.PaneHeight * inset.Top, content.Place.Top, 0.01f);
+            Assert.AreEqual(ExitsLayout.PaneHeight * inset.Bottom, content.Place.Bottom, 0.01f);
+        }
 
         [Test]
         public void TheExitsStackStaysInsideThePane()

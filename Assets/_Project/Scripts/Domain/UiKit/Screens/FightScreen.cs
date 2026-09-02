@@ -1388,7 +1388,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // the width off both sides would have opened a gap there and closed one
         // on the battlefield, which is the half of the screen the narrowing is
         // for.
-        private const float SubmenuRowW = 282f;
+        // Reads FightSubmenuLayout.RowWidth rather than restating 282 --
+        // the art frame in BuildSubmenuFrame has to size itself off the same
+        // number these rows are actually built at.
+        private const float SubmenuRowW = FightSubmenuLayout.RowWidth;
         private const float SubmenuX = 25f;
 
         // Opens to the RIGHT of the verbs rather than replacing them: nothing is
@@ -1505,25 +1508,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // scrolling is one anchoredPosition on their parent.
         private IEnumerable<UiNode> BuildSubmenuFrame(IEnumerable<UiNode> rows)
         {
-            float containerW = SubmenuRowW + FightSubmenuLayout.ContainerPad * 2f
-                               + FightSubmenuLayout.ScrollbarGap + FightSubmenuLayout.ScrollbarWidth;
+            float containerW = FightSubmenuLayout.ContainerWidth;
 
             // The rows keep their x; the container grows to the right of them
             // to find room for the bar, so nothing on the left edge moves.
             float containerX = SubmenuX - SubmenuRowW * 0.5f - FightSubmenuLayout.ContainerPad
                                + containerW * 0.5f;
-
-            var frame = new List<UiNode>
-            {
-                Ui.Solid("SubmenuPlate", FightHudPalette.PanelVioletDeep,
-                        new UiVec(containerW, FightSubmenuLayout.ContainerHeight),
-                        Place.At(0f, 0f))
-                    .AsDecor(),
-            };
-
-            frame.AddRange(Ui.Rim("SubmenuPlate",
-                new UiVec(containerW, FightSubmenuLayout.ContainerHeight),
-                FightHudPalette.BorderSub));
 
             // The content: a full-canvas rect so every row in the pool fits
             // inside it, centred on the column's origin so its children's
@@ -1538,7 +1528,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // NOT AT THE CONTAINER'S CENTRE ANY MORE. It was, while the frame
             // held nothing but the list; the back row sits in the bottom
             // padding now, so the viewport rides above the container's middle
-            // by half a back row and half a gap.
+            // by half a back row and half a gap. UNCHANGED by the Violet 3:4
+            // frame below: this is still "offset from the INNER box's own
+            // centre" exactly as it always was, and reparenting it under the
+            // frame's own (taller) content inset is what recentres it -- see
+            // FightSubmenuLayout.FrameHeight's own comment.
             float viewportY = FightSubmenuLayout.ViewportOffsetInContainer;
 
             var viewport = Ui.Panel("SubmenuViewport",
@@ -1547,7 +1541,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     content)
                 .Clipping();
             SubmenuViewport = viewport;
-            frame.Add(viewport);
 
             // The bar. Track and thumb both start inactive: a list that fits
             // has no bar at all, and the controller is what knows the count.
@@ -1560,7 +1553,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor()
                 .Inactive();
             SubmenuScrollTrack = track;
-            frame.Add(track);
 
             var thumb = Ui.Solid("SubmenuScrollThumb", FightHudPalette.ScrollThumb,
                     new UiVec(FightSubmenuLayout.ScrollbarWidth, FightSubmenuLayout.ThumbMinHeight),
@@ -1568,7 +1560,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor()
                 .Inactive();
             SubmenuScrollThumb = thumb;
-            frame.Add(thumb);
 
             // ---- BACK, as the last row ------------------------------------------
             //
@@ -1601,15 +1592,27 @@ namespace PrincesPalace.Domain.UiKit.Screens
             back.Children.Add(backText);
             back.LayerCaptionWithVisuals(backKey, backText);
             SubmenuBackButton = back;
-            frame.Add(back);
 
-            var container = Ui.Panel("SubmenuContainer",
-                Place.At(containerX, FightSubmenuLayout.ContainerCentreY),
-                UiSize.Fixed(containerW, FightSubmenuLayout.ContainerHeight),
-                frame);
-            SubmenuContainer = container;
+            // ---- the Violet 3:4 themed frame, wrapping the inner box above --------
+            //
+            // containerW x FightSubmenuLayout.ContainerHeight (316x500, 0.632)
+            // missed the kit's measured 3:4 aspect (0.588) by 7.5% -- past
+            // Ui.Container's 5% band. FrameWidth/FrameHeight (363.22x617.72)
+            // are what the SAME inner box looks like widened to the kit's own
+            // 6.5%-a-side inset and then completed to 0.588 exactly; see
+            // FightSubmenuLayout.FrameHeight's own comment for why nothing
+            // below RowsBottom had to move for it. The flat Solid + Ui.Rim
+            // this replaces is gone -- Ui.Container draws its own border art.
+            var frameNode = Ui.Container("SubmenuContainer", ButtonTheme.Violet, ContainerRatio.ThreeByFour,
+                Place.At(containerX, FightSubmenuLayout.FrameCentreY),
+                new UiVec(FightSubmenuLayout.FrameWidth, FightSubmenuLayout.FrameHeight));
 
-            yield return container;
+            Ui.ContainerContent(frameNode, ContainerRatio.ThreeByFour, "SubmenuFrameContent",
+                viewport, track, thumb, back);
+
+            SubmenuContainer = frameNode;
+
+            yield return frameNode;
         }
 
         // ---- column C: the detail panel ----------------------------------------------
