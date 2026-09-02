@@ -19,6 +19,20 @@ namespace PrincesPalace.Domain.UiKit
         Pool,
     }
 
+    // The plate art a button wears. One PNG per theme
+    // (Art/UI/Buttons/Processed/button_plate_<theme>.png), each already
+    // carrying its own surface, texture and coloured border baked in -- there
+    // is no separate border layer to keep in step with a colour swatch here.
+    public enum ButtonTheme
+    {
+        Gold,
+        Crimson,
+        Violet,
+        Blue,
+        Green,
+        Silver,
+    }
+
     // One node of a screen's declared tree. Plain data plus fluent modifiers --
     // it knows nothing about GameObjects, RectTransforms or Unity at all, which
     // is what lets an entire screen be built and audited from an EditMode test
@@ -130,6 +144,14 @@ namespace PrincesPalace.Domain.UiKit
         // able to state an exception rather than be weakened.
         public bool SilentClick;
 
+        // Which plate this button wears. Null means the unthemed path: the
+        // shared button_cropped frame or a bespoke SpriteKey, whichever
+        // EmitButton already resolved before this existed. Set only through
+        // Themed(), never assigned directly -- see that method for why setting
+        // it is inseparable from building the Visuals/Label children a themed
+        // button needs.
+        public ButtonTheme? Theme;
+
         // Escape hatches. Both REQUIRE a reason, so every exemption is greppable
         // and reviewable -- in v1 everything was an escape hatch and none of them
         // were enumerable.
@@ -191,6 +213,22 @@ namespace PrincesPalace.Domain.UiKit
         public UiNode Hovers(float scale = 1.02f) { HoverScale = scale; return this; }
         public UiNode Opening() { OpensOnShow = true; return this; }
         public UiNode Quiet() { SilentClick = true; return this; }
+
+        // Wears a theme's plate instead of the shared button frame.
+        //
+        // Builds the Visuals(Glow, Plate) + Label children a themed button
+        // needs RIGHT HERE, at declaration time -- see Ui.ApplyTheme for why
+        // that has to be Domain-side rather than something UiEmitter invents
+        // later: UiAudit and UiKitAuditTests only ever see the UiNode tree, so
+        // a hierarchy the emitter built for itself would be untestable and
+        // unaudited. Contradicts Chromeless (no plate at all) and NoChrome's
+        // own reasoning, so calling this on one throws rather than silently
+        // picking a winner.
+        public UiNode Themed(ButtonTheme theme)
+        {
+            Ui.ApplyTheme(this, theme);
+            return this;
+        }
         public UiNode Padded(UiPad pad) { Pad = pad; return this; }
 
         // Containers default to FromChildren, which is right almost always. A

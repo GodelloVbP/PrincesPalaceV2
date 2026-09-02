@@ -261,11 +261,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // Continue sits ABOVE the column rather than in it -- see the field
             // comment on why it is not a fourth Column child.
             var continueButton = Ui.Button("ContinueButton", UiStrings.Continue,
-                new UiVec(340f, 66f), 24, Place.At(LeftEdgeX + 170f, 90f));
+                    new UiVec(340f, 66f), 24, Place.At(LeftEdgeX + 170f, 90f))
+                .Themed(ButtonTheme.Gold);
             screen.ContinueButton = continueButton;
 
-            var play = Ui.Button("PlayButton", UiStrings.Play, new UiVec(260f, 60f), 24);
-            var exit = Ui.Button("ExitButton", UiStrings.Exit, new UiVec(260f, 60f), 24);
+            var play = Ui.Button("PlayButton", UiStrings.Play, new UiVec(260f, 60f), 24)
+                .Themed(ButtonTheme.Gold);
+            var exit = Ui.Button("ExitButton", UiStrings.Exit, new UiVec(260f, 60f), 24)
+                .Themed(ButtonTheme.Silver);
             screen.PlayButton = play;
             screen.ExitButton = exit;
 
@@ -294,8 +297,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 slotChildren.Add(button);
             }
 
-            var manageSaves = Ui.Button("ManageSavesButton", UiStrings.ManageSaves, new UiVec(200f, 50f), 18);
-            var cancel = Ui.Button("CloseSaveSlotButton", UiStrings.Cancel, new UiVec(200f, 50f), 18);
+            var manageSaves = Ui.Button("ManageSavesButton", UiStrings.ManageSaves, new UiVec(200f, 50f), 18)
+                .Themed(ButtonTheme.Silver);
+            var cancel = Ui.Button("CloseSaveSlotButton", UiStrings.Cancel, new UiVec(200f, 50f), 18)
+                .Themed(ButtonTheme.Silver);
             screen.ManageSavesButton = manageSaves;
             screen.CloseSaveSlotButton = cancel;
 
@@ -333,14 +338,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // figure uses in the choose list, so the two lists' right-hand
                 // edge lines up whichever one is on screen.
                 var delete = Ui.Button($"ResetSlot{i}DeleteButton", UiStrings.Delete, new UiVec(130f, 44f), 16,
-                    Place.At(250f, 0f));
+                        Place.At(250f, 0f))
+                    .Themed(ButtonTheme.Crimson);
                 screen.DeleteButtons.Add(delete);
                 row.Children.Add(delete);
 
                 manageRows.Add(row);
             }
 
-            var backToSlots = Ui.Button("CloseManageSavesButton", UiStrings.Back, new UiVec(260f, 50f), 20);
+            var backToSlots = Ui.Button("CloseManageSavesButton", UiStrings.Back, new UiVec(260f, 50f), 20)
+                .Themed(ButtonTheme.Silver);
             screen.CloseManageSavesButton = backToSlots;
             manageRows.Add(backToSlots);
 
@@ -384,7 +391,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var confirmYes = Ui.Panel("ResetConfirmYesGroup", Place.Flow, UiSize.Fixed(holdSize),
                 holdTrack, holdFill, holdButton);
 
-            var confirmNo = Ui.Button("ResetConfirmNoButton", UiStrings.Cancel, new UiVec(200f, 60f), 20);
+            var confirmNo = Ui.Button("ResetConfirmNoButton", UiStrings.Cancel, new UiVec(200f, 60f), 20)
+                .Themed(ButtonTheme.Silver);
             var confirmLabel = Ui.Label("ResetConfirmLabel", UiStrings.ConfirmDelete, new UiVec(760f, 50f), 22);
 
             screen.ResetConfirmYesButton = holdButton;

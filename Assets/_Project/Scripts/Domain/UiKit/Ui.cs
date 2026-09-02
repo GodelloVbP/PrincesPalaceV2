@@ -306,6 +306,114 @@ namespace PrincesPalace.Domain.UiKit
             return Node(name, UiNodeKind.Pool, Place.Stretch(), UiSize.Fill, children);
         }
 
+        // ---- themed buttons ----------------------------------------------------
+        //
+        // Called by UiNode.Themed(), not directly -- see that method's own
+        // comment for why the split exists. Builds Visuals(Glow, Plate) +
+        // Label as REAL UiNode children, so the same tree UiAudit and
+        // UiKitAuditTests already walk sees a themed button's true shape.
+        // UiEmitter reads these children back rather than inventing its own,
+        // which is the other half of that guarantee.
+        internal static void ApplyTheme(UiNode node, ButtonTheme theme)
+        {
+            if (node.Kind != UiNodeKind.Button)
+            {
+                throw new ArgumentException(
+                    $"Themed({theme}) only applies to a Button node; '{node.Name}' is a {node.Kind}.");
+            }
+
+            if (node.Chromeless)
+            {
+                throw new ArgumentException(
+                    $"'{node.Name}' is both Chromeless and Themed({theme}) - no plate at all and a themed " +
+                    "plate are contradictory. Drop whichever one this button does not actually want.");
+            }
+
+            node.Theme = theme;
+
+            var buttonSize = new UiVec(node.Size.X, node.Size.Y);
+
+            // Larger than the plate on every edge, so a focused button reads
+            // as lit rather than as a second, smaller plate underneath the
+            // first. Overflows Visuals by design - see the AllowOverflow.
+            const float GlowMargin = 28f;
+            var glowSize = new UiVec(buttonSize.X + GlowMargin, buttonSize.Y + GlowMargin);
+
+            // radial_glow: a white radial falloff with no colour of its own,
+            // tinted per theme through ColorHex exactly like every other use
+            // of that one baked asset (stars, motes, window bloom). Alpha 0 at
+            // idle - ThemedButtonState fades it up on focus, so this is not
+            // authoring a glow that is lit from the very first frame.
+            var glow = Sprite("Glow", "proc:radial_glow", glowSize, Place.At(0f, 0f))
+                .AsDecor()
+                .Coloured(ThemeGlowHex(theme))
+                .AllowOverflow(
+                    "the focus glow is deliberately larger than the plate it sits behind so a focused " +
+                    "button reads as lit, not merely outlined");
+
+            var plate = Sprite("Plate", $"UI/Buttons/Processed/button_plate_{ThemeKey(theme)}.png",
+                buttonSize, Place.At(0f, 0f));
+
+            // Glow under Plate (declared first, drawn first) and exempt from
+            // each other - a glow behind its own plate is one widget, not two
+            // things that happen to share a box.
+            Layered(glow, plate);
+
+            var visuals = Panel("Visuals", Place.Stretch(), UiSize.Fill, glow, plate);
+
+            var label = Label(node.Name + "Label", node.Text, buttonSize,
+                node.FontSize > 0 ? node.FontSize : 29, "#FFFFFFFF", Place.Stretch());
+            label.Tracking = ButtonTracking(node.Text);
+
+            // Visuals and Label occupy the SAME box on purpose - the caption
+            // sits on its own plate, which is exactly what Layered exists to
+            // say. Without it, A1 reads Label as a real graphic sitting on top
+            // of Visuals' own (invisible) rect and reports the collision the
+            // bare-container exemption protects against in the OTHER
+            // direction only (a drawn sibling on top of an empty frame), not
+            // this one (a drawn sibling on top of an empty frame's own
+            // drawn contents).
+            Layered(visuals, label);
+
+            node.Children.Add(visuals);
+            node.Children.Add(label);
+        }
+
+        // <=7 chars tracks the most (a short word needs the most help reading
+        // as more than a stub), <=10 a little, longer none. The same design
+        // instinct SystemMenuLayout.TabLabelTracking states as a fixed .14em,
+        // scaled down here because a button's own word is read alone rather
+        // than in a row of others exactly like it.
+        public static float ButtonTracking(UiString text)
+        {
+            string display = text.IsTemplated ? text.AuditSample : text.Template;
+            int length = display?.Length ?? 0;
+            if (length <= 7) return 3f;
+            if (length <= 10) return 1f;
+            return 0f;
+        }
+
+        private static string ThemeKey(ButtonTheme theme) => theme.ToString().ToLowerInvariant();
+
+        // The glow's own tint per theme - NOT the plate's colour, which is
+        // baked into its PNG. Not reused from FightHudPalette: those tokens
+        // answer a different question (a fight HUD's own borders and text),
+        // and a coincidental hex match there would be exactly that, a
+        // coincidence, not a shared role - see UiKitLintTests' own reasoning
+        // on ItemStatLines.HeadingHex for the same call made the other way.
+        private static string ThemeGlowHex(ButtonTheme theme)
+        {
+            switch (theme)
+            {
+                case ButtonTheme.Gold: return "#F0CE7A00";
+                case ButtonTheme.Crimson: return "#D9584A00";
+                case ButtonTheme.Violet: return "#B98CE000";
+                case ButtonTheme.Blue: return "#5FB0E600";
+                case ButtonTheme.Green: return "#78CE7200";
+                default: return "#D6D6E000"; // Silver
+            }
+        }
+
         private static UiNode Flow(string name, UiNodeKind kind, Place place, float spacing, UiAlign align,
                                    IEnumerable<UiNode> children)
         {

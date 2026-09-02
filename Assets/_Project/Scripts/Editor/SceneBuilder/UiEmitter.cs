@@ -116,6 +116,17 @@ public static class UiEmitter
             EmitNode(child, go.transform, solved.Rect, result, decor);
         }
 
+        // A THEMED BUTTON'S WIRING IS DONE HERE, AFTER ITS CHILDREN EXIST.
+        //
+        // EmitButton ran before this loop and could only add the Button
+        // component - its targetGraphic is the Plate Image, and Plate is a
+        // declared child (see Ui.ApplyTheme), which the loop above has only
+        // just emitted. Wiring it any earlier would be wiring a null.
+        if (node.Kind == UiNodeKind.Button && node.Theme.HasValue)
+        {
+            WireThemedButton(go, node, result);
+        }
+
         // AFTER children, so a subtree that starts inactive is fully built first
         // - Start() only runs on activation, and a half-built inactive tree is
         // the sort of thing that fails much later and somewhere else.
@@ -227,6 +238,21 @@ public static class UiEmitter
 
     private static void EmitButton(GameObject go, UiNode node, SolvedNode solved)
     {
+        // THEMED BUTTONS TAKE A COMPLETELY SEPARATE PATH.
+        //
+        // No Image on the root at all: the Plate a declared child carries (see
+        // Ui.ApplyTheme) is the visible face AND the raycast target, wired
+        // once that child exists (WireThemedButton, called from EmitNode after
+        // this node's children are emitted - Plate does not exist yet here).
+        // Everything below this branch is the UNTHEMED path, unchanged, so a
+        // screen that never calls .Themed() keeps the exact emission it always
+        // had.
+        if (node.Theme.HasValue)
+        {
+            go.AddComponent<Button>();
+            return;
+        }
+
         var image = go.AddComponent<Image>();
 
         // A button may wear its own art instead of the shared button frame -
@@ -311,6 +337,72 @@ public static class UiEmitter
         // black on violet is unreadable.
         text.color = sprite == null && !node.Chromeless ? Color.black : Color.white;
         text.raycastTarget = false;
+    }
+
+    // Finishes what EmitButton's Themed() branch started, once Visuals'
+    // Glow/Plate and the declared Label child actually exist as GameObjects.
+    //
+    // Finds them BY NAME rather than by position in node.Children - Ui.
+    // ApplyTheme is the only writer of this shape, but matching on the same
+    // names it uses is cheaper to read than trusting an index never to drift
+    // if that method's own child order ever changes.
+    private static void WireThemedButton(GameObject go, UiNode node, UiEmitResult result)
+    {
+        var visuals = node.Children.FirstOrDefault(c => c.Name == "Visuals");
+        var glowNode = visuals?.Children.FirstOrDefault(c => c.Name == "Glow");
+        var plateNode = visuals?.Children.FirstOrDefault(c => c.Name == "Plate");
+        var labelNode = node.Children.FirstOrDefault(c => c.Name == node.Name + "Label");
+
+        if (visuals == null || glowNode == null || plateNode == null || labelNode == null)
+        {
+            throw new System.Exception(
+                $"[UiEmitter] '{node.Name}' is Themed() but its Visuals/Glow/Plate/Label children are missing - " +
+                "did something build this node without going through Ui.ApplyTheme?");
+        }
+
+        var plateImage = result.Objects[plateNode].GetComponent<Image>();
+        var glowImage = result.Objects[glowNode].GetComponent<Image>();
+        var labelText = result.Objects[labelNode].GetComponent<TextMeshProUGUI>();
+
+        var button = go.GetComponent<Button>();
+        button.targetGraphic = plateImage;
+
+        var state = go.AddComponent<ThemedButtonState>();
+        state.Glow = glowImage;
+        state.Plate = plateImage;
+        if (node.SilentClick) state.clickSound = Sound.None;
+
+        // Recorded so UiWiringSweep (E3) checks Glow/Plate the same way it
+        // checks every other controller's serialized references - it only
+        // ever walks result.AttachedControllers, and AddComponent alone would
+        // leave this component invisible to that sweep.
+        result.AttachedControllers.Add(state);
+
+        // THE LABEL DRESSING THE PLAIN DSL CANNOT SAY.
+        //
+        // Auto-fit and an ellipsis fallback so a caption that runs long
+        // shrinks before it clips off a fixed-size plate, and a margin that
+        // keeps the word off the plate's own painted border - none of these
+        // are things any other screen's Label needs, which is why they live
+        // here rather than as new UiNode fields every OTHER label would carry
+        // for nothing.
+        labelText.enableAutoSizing = true;
+        labelText.fontSizeMin = 20f;
+        labelText.fontSizeMax = labelNode.FontSize;
+        labelText.alignment = TextAlignmentOptions.Center;
+        labelText.overflowMode = TextOverflowModes.Ellipsis;
+        labelText.margin = new Vector4(18f, 4f, 18f, 4f);
+
+        // Non-uniform stretch, not preserveAspect. The plate is 482x174
+        // (2.79:1); several migrated buttons run far wider than that (5.15:1
+        // for Continue at 340x66), and preserveAspect would fit the plate
+        // to the SHORTER axis and leave 70-80px of dead transparent space on
+        // each side - a small plate floating in an oversized invisible box.
+        // A stretched plate is visibly distorted on those buttons instead,
+        // and distortion of a texture reads as less broken than a plate that
+        // does not reach its own button's edges. Unity's own Image default
+        // (preserveAspect = false) already does this, so nothing to set here
+        // - stated for the reader, since it is a decision and not an oversight.
     }
 
     private static void EmitImage(GameObject go, Sprite sprite, string colorHex, bool decor)

@@ -161,6 +161,15 @@ namespace PrincesPalace.Domain.UiKit
         {
             if (node.Source == null || node.Source.Kind != UiNodeKind.Button) return;
 
+            // A THEMED button is the one case where "<button>Label" in the
+            // tree is correct rather than a collision: Ui.ApplyTheme declares
+            // it as the button's real caption, and UiEmitter's Themed() branch
+            // does not generate a second one the way the unthemed path always
+            // does. This check exists for the OTHER path, where the emitter's
+            // own generated label is the invisible one a same-named tree node
+            // would silently shadow.
+            if (node.Source.Theme.HasValue) return;
+
             string reserved = node.Name + "Label";
             foreach (var child in node.Children)
             {
