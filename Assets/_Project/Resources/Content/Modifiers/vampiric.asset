@@ -20,7 +20,7 @@ MonoBehaviour:
     gets scary. Already single-effect since Phase C; untouched by the affix split.
   effects:
   - type: 4
-    magnitude: 15
+    magnitude: 8
     threshold: 0
     against: 0
     hasAgainst: 0

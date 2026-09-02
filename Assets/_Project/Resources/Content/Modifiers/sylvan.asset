@@ -19,7 +19,7 @@ MonoBehaviour:
     affix, both split off this modifier''s old three-effect bundle.'
   effects:
   - type: 1
-    magnitude: 20
+    magnitude: 10
     threshold: 0
     against: 3
     hasAgainst: 1

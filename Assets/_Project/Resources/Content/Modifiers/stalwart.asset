@@ -23,7 +23,7 @@ MonoBehaviour:
     no longer only ever be found together.
   effects:
   - type: 6
-    magnitude: 3
+    magnitude: 2
     threshold: 0
     against: 0
     hasAgainst: 0

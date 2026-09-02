@@ -21,7 +21,7 @@ MonoBehaviour:
     a second currency to bank.'
   effects:
   - type: 14
-    magnitude: 3
+    magnitude: 2
     threshold: 0
     against: 0
     hasAgainst: 0

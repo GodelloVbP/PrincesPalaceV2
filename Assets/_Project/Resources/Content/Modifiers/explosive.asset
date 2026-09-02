@@ -22,7 +22,7 @@ MonoBehaviour:
     since Phase C; untouched by the affix split.
   effects:
   - type: 8
-    magnitude: 30
+    magnitude: 15
     threshold: 0
     against: 0
     hasAgainst: 0

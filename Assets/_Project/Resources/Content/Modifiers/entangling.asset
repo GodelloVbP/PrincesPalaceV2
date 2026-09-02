@@ -20,7 +20,7 @@ MonoBehaviour:
     roll, now it is its own affix.'
   effects:
   - type: 17
-    magnitude: 20
+    magnitude: 10
     threshold: 0
     against: 0
     hasAgainst: 0

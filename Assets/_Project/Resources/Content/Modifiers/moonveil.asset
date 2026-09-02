@@ -19,7 +19,7 @@ MonoBehaviour:
     Split off Astral''s old bundle so a roll grants one or the other, never both.'
   effects:
   - type: 2
-    magnitude: 15
+    magnitude: 8
     threshold: 0
     against: 5
     hasAgainst: 1

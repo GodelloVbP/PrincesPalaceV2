@@ -20,7 +20,7 @@ MonoBehaviour:
     single slot.'
   effects:
   - type: 2
-    magnitude: 15
+    magnitude: 8
     threshold: 0
     against: 1
     hasAgainst: 1

@@ -19,7 +19,7 @@ MonoBehaviour:
     resist fire the way the original bundled Fiery/Frosty/etc. modifiers used to.'
   effects:
   - type: 1
-    magnitude: 20
+    magnitude: 10
     threshold: 0
     against: 1
     hasAgainst: 1

@@ -20,7 +20,7 @@ MonoBehaviour:
     Hardened roll, now it is its own affix.'
   effects:
   - type: 2
-    magnitude: 15
+    magnitude: 8
     threshold: 0
     against: 0
     hasAgainst: 1

@@ -20,7 +20,7 @@ MonoBehaviour:
     own like every other affix.
   effects:
   - type: 10
-    magnitude: 10
+    magnitude: 5
     threshold: 0
     against: 0
     hasAgainst: 0

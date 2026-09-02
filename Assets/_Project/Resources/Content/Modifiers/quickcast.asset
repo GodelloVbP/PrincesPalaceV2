@@ -19,7 +19,7 @@ MonoBehaviour:
     of the family.
   effects:
   - type: 12
-    magnitude: 25
+    magnitude: 13
     threshold: 0
     against: 0
     hasAgainst: 0

@@ -29,7 +29,7 @@ MonoBehaviour:
     single-effect since Phase C; untouched by the affix split.'
   effects:
   - type: 15
-    magnitude: 12
+    magnitude: 6
     threshold: 0
     against: 0
     hasAgainst: 0

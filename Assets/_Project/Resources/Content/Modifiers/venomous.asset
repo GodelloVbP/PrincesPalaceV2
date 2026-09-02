@@ -19,7 +19,7 @@ MonoBehaviour:
     modifier''s old two-effect bundle.'
   effects:
   - type: 1
-    magnitude: 20
+    magnitude: 10
     threshold: 0
     against: 4
     hasAgainst: 1

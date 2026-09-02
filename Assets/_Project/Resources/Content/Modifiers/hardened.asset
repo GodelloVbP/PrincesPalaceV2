@@ -22,7 +22,7 @@ MonoBehaviour:
     Juggernaut''s own descriptions).'
   effects:
   - type: 1
-    magnitude: 20
+    magnitude: 10
     threshold: 0
     against: 0
     hasAgainst: 1

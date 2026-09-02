@@ -19,7 +19,7 @@ MonoBehaviour:
     on-hit-thorn affix and Entangling carries the old bundle''s root proc.'
   effects:
   - type: 2
-    magnitude: 15
+    magnitude: 8
     threshold: 0
     against: 3
     hasAgainst: 1
