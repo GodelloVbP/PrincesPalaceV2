@@ -170,13 +170,27 @@ namespace PrincesPalace.Domain.Dungeon
         // before. The enum value, its RoomResolution case and its map-icon
         // handling all stay: a saved `currentNodeId` from before this change
         // can still point at one, and it must still resolve.
+        // Fight's weight here is NOT its measured share — see
+        // EnforceEveryRoadHasVariety just below. Rule (b) retypes roughly
+        // one rolled room on every road that would otherwise have come out
+        // all-Fight, and how often that fires depends only on how DOMINANT
+        // Fight is at roll time, not on the exact table weight past a
+        // point. Measured over 500 seeds x 5 legs, raising Fight from the
+        // pre-(a)/(b)/(c) table's 52 (57.8% of the table, 44.2% measured)
+        // through 90, 200 and up plateaus the measured share at ~55.2% no
+        // matter how much higher Fight goes — that ceiling, not the table
+        // weight, is what (b) actually lets through. 250 (Event/Treasure/
+        // Shop/Rest scaled down to a matching 7/6/3/3, same 14:12:6:6 ratio
+        // as before) lands the measured share at 54.6%, comfortably inside
+        // the 53-57% band DescentRoadVariationTests pins without sitting on
+        // either edge of it.
         private static readonly (RoomType Type, int Weight)[] MiddleRooms =
         {
-            (RoomType.Fight, 52),
-            (RoomType.Event, 14),
-            (RoomType.Treasure, 12),
-            (RoomType.Shop, 6),
-            (RoomType.Rest, 6),
+            (RoomType.Fight, 250),
+            (RoomType.Event, 7),
+            (RoomType.Treasure, 6),
+            (RoomType.Shop, 3),
+            (RoomType.Rest, 3),
         };
 
         // What an absolute step is FORCED to be, or null when it rolls

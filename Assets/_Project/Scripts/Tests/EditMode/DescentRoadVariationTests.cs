@@ -150,8 +150,13 @@ namespace PrincesPalace.Domain.Tests
         // road afterward, but neither is meant to reshape the overall mix:
         // Fight should still be the clear majority, and the rest should
         // still land somewhere in the neighbourhood of their table weights.
-        // Printed rather than pinned to a tight band, since the whole point
-        // of this file's report is showing the measured mix.
+        // The mix itself is still printed rather than asserted room-by-room
+        // -- that is what this file's report is for -- but Fight's OVERALL
+        // share is pinned to a band now, not just bounded loosely. It is
+        // the one number a retune of DescentMapGenerator.MiddleRooms is
+        // meant to land on, and a band with no floor a caller can trust
+        // would let that retune silently drift back toward the pre-tune
+        // 44% without any test noticing.
         [Test]
         public void TheOverallTypeMixStaysInTheNeighbourhoodOfTheWeights()
         {
@@ -180,18 +185,20 @@ namespace PrincesPalace.Domain.Tests
                 TestContext.WriteLine($"  {kv.Key}: {kv.Value} ({100.0 * kv.Value / total:F1}%)");
             }
 
-            // Fight's table weight is 52/90 (~58%). The (a)/(c) exclusions
-            // and the (b) retype pass both actively push rooms AWAY from
-            // Fight whenever it would otherwise cluster or dominate a road,
-            // so its measured share necessarily lands under its raw table
-            // weight — that is the feature working, not drift. What must
-            // still hold is that it stays the largest single bucket by a
-            // clear margin, not that it holds a fixed percentage.
+            // Fight's raw table weight (see MiddleRooms) is nowhere near
+            // its measured share -- the (a)/(c) exclusions and the (b)
+            // retype pass all actively push rooms AWAY from Fight whenever
+            // it would otherwise cluster or dominate a road, and MiddleRooms'
+            // own comment shows that pushback plateaus the measured share
+            // well under 100% no matter how far the table weight is raised.
+            // 53-57% is that plateau band, not a fixed target it happened
+            // to land on: it is what "measured Fight about 55%" from the
+            // retune brief actually cashes out to as a band a test can pin.
             int otherTypesMax = counts.Where(kv => kv.Key != RoomType.Fight).Max(kv => kv.Value);
             Assert.Greater(fightCount, otherTypesMax * 1.5,
                 "Fight should still clearly outnumber every other rolled type, even after the constraints thin it out");
-            Assert.Greater(fightShare, 0.35, "Fight's share dropped implausibly far below its table weight");
-            Assert.Less(fightShare, 0.75, "Fight's share grew implausibly far past its table weight");
+            Assert.Greater(fightShare, 0.53, "Fight's measured share dropped below the tuned band (53-57%)");
+            Assert.Less(fightShare, 0.57, "Fight's measured share grew past the tuned band (53-57%)");
             CollectionAssert.DoesNotContain(counts.Keys.ToList(), RoomType.Unknown, "Unknown should never roll");
         }
     }
