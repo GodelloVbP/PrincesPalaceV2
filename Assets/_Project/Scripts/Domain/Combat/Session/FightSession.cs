@@ -346,7 +346,11 @@ namespace PrincesPalace.Domain.Combat.Session
         // and flag a kill.
         private void ApplyFinalDamage(CombatantState actor, CombatantState target, int damage)
         {
-            DealDamage(actor, target, damage, AttackTypeOf(actor));
+            // Read once and reused below for the modifier riders -- see
+            // ApplyModifierOnHitRiders' own header on why a rider needs to
+            // know what element THIS hit already was.
+            var hitType = AttackTypeOf(actor);
+            DealDamage(actor, target, damage, hitType);
             RecordBeatAmount(damage);
             SetStance(target, target.IsAlive ? Stances.Hurt : Stances.Defeated);
 
@@ -363,7 +367,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // Every item-modifier on-hit rider (elemental damage, lifesteal,
             // chance-to-push) -- see the method's own header for why these
             // three share one block rather than three separate call sites.
-            ApplyModifierOnHitRiders(actor, target, damage);
+            ApplyModifierOnHitRiders(actor, target, damage, hitType);
 
             if (!target.IsAlive)
             {
@@ -396,7 +400,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // HP by the elemental tick still gets lifestolen-from and can still be
         // pushed (harmlessly; PushBack on a combatant about to be removed
         // from the order is a no-op the queue already tolerates).
-        private void ApplyModifierOnHitRiders(CombatantState actor, CombatantState target, int damage)
+        private void ApplyModifierOnHitRiders(CombatantState actor, CombatantState target, int damage, DamageType hitType)
         {
             if (actor == null || target == null || damage <= 0) return;
 
@@ -412,6 +416,38 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 if (effect.Type != ModifierEffectType.ElementalDamageOnHitPercent || !effect.Against.HasValue)
                 {
+                    continue;
+                }
+
+                // BUG (found investigating "Astral only added 4 damage to a
+                // 117-damage arcane spell"): when the affix's own element IS
+                // the element the hit already was -- an Astral (Arcane) affix
+                // riding an ARCANE spell, not a Fiery (Fire) affix riding a
+                // Physical sword -- the +% describes how much bigger THAT hit
+                // itself should have been, not a second, foreign-element proc.
+                // The proc math below is `Magnitude% of Attack`, which is
+                // correct for a foreign-element rider (a small extra tick
+                // alongside the swing) but floors a same-element bonus to a
+                // few points regardless of how large the hit it is supposed
+                // to be boosting was -- 41% of an Attack of 10 is 4, whether
+                // the swing it rode in on hit for 12 or the spell it rode in
+                // on hit for 117. Applied straight to `damage`, the hit's own
+                // already-mitigated landed figure, the same convention
+                // Vampiric's lifesteal just below already uses for
+                // percent-of-this-hit math -- not re-run through
+                // DamagePipeline.AfterDefences, because it is the SAME
+                // element as `damage` already paid its one mitigation pass
+                // as; re-mitigating it a second time would tax it twice.
+                if (effect.Against.Value == hitType)
+                {
+                    int matchingBonus = Rounding.AwayFromZero(damage * effect.Magnitude / 100f);
+                    if (matchingBonus > 0)
+                    {
+                        DealDamage(actor, target, matchingBonus, hitType);
+                        AppendMessage($"{target.Name} takes {matchingBonus} bonus {hitType} damage!");
+                        if (!target.IsAlive) break;
+                    }
+
                     continue;
                 }
 

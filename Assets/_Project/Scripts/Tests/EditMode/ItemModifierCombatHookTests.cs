@@ -107,6 +107,44 @@ namespace PrincesPalace.Domain.Tests
                 "fixture check: with no resistance the elemental rider lands its full, unmitigated 4");
         }
 
+        // BUG: Astral (+41% Arcane) on an Arcane spell was adding only ~4
+        // bonus damage to a 117-damage hit, because the rider computed
+        // Magnitude% of ATTACK (a small number) even when the affix's own
+        // element was the SAME element the hit already was -- the intended
+        // reading of "+41% arcane damage" for an arcane-typed hit is 41% of
+        // THAT HIT, not a second, separate proc sized off Attack. Here the
+        // hero carries no kit, so AttackTypeOf(actor) falls back to Physical
+        // (FightSession.AttackTypeOf's own fallback) -- giving a Physical
+        // affix on a Physical swing the identical same-element shape a real
+        // Astral-on-an-Arcane-spell case has, without needing a PlayerKit
+        // fixture. Attack 117, no defense on the target: plain swing lands
+        // exactly 117 (see the fixture check below, matching the "for
+        // {damage} damage" combat-log figure the bug report quoted).
+        [Test]
+        public void ElementalDamageOnHit_WhenItMatchesTheHitsOwnElement_BoostsThatHitInstead_OfAddingASeparateAttackSizedProc()
+        {
+            var hero = Fighter("Hero", true, attack: 117, speed: 10);
+            var foe = Fighter("Foe", false, maxHealth: 1000, speed: 1);
+            Give(hero, new ModifierEffect(ModifierEffectType.ElementalDamageOnHitPercent, 41, against: DamageType.Physical));
+
+            var session = Session(new CombatEncounter(new[] { hero }, new[] { foe }));
+            session.ExecuteAttack(foe);
+
+            // Same-element bonus = Rounding.AwayFromZero(117 * 41 / 100f)
+            //                    = Rounding.AwayFromZero(47.97) = 48.
+            // Total landed = 117 (plain swing, no defense) + 48 = 165 --
+            // the exact "117 arcane, +41% -> 165" figure named in the bug.
+            Assert.AreEqual(1000 - 165, foe.CurrentHealth,
+                "a same-element affix must scale the hit it rode in on, not add a small Attack-sized proc");
+
+            // No separate "bonus Physical damage" proc line, and no split
+            // ledger entry -- the whole 165 counts as ONE hit of the actor's
+            // own type, same as a plain swing with no modifier would.
+            var line = session.Ledger.For("Hero");
+            Assert.AreEqual(165, line.PhysicalDealt, "the boosted hit is still all Physical, all on the swing's own bucket");
+            Assert.AreEqual(0, line.OtherDealt, "a same-element bonus must not also count as a foreign-element rider");
+        }
+
         [Test]
         public void ElementalDamageOnHit_NeverFiresWithoutTheModifier()
         {
