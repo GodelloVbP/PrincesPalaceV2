@@ -192,6 +192,71 @@ function Get-AreaOrphans {
 }
 
 # ---------------------------------------------------------------------------
+# Which HOST runs a class: the dotnet project under tools/domain-tests, or
+# Unity.
+#
+# Domain is engine-free by asmdef (noEngineReferences: true, no references),
+# so the EditMode suite over it compiles and runs under plain `dotnet test` --
+# no editor, no Library, no project sync. That is the whole saving: booting
+# Unity costs more than every EditMode test put together.
+#
+# Two things decide a class's host, and neither is a hand-maintained list:
+#   - PlayMode is always Unity. It needs a scene and a running player loop.
+#   - An EditMode class is dotnet-hosted UNLESS its file is excluded from
+#     tools/domain-tests/PrincesPalace.Domain.Tests/PrincesPalace.Domain.Tests.csproj,
+#     which is read here rather than duplicated. The csproj is the single
+#     source of truth for what the fast host compiles; a list here would be a
+#     second one, and the two would part ways the first time someone added an
+#     exclusion without knowing this file existed.
+#
+# A class in an excluded file falls back to Unity, which is a correctness-
+# preserving default: the worst case for getting this wrong is a slow run,
+# never a skipped test.
+$DomainTestsCsproj = Join-Path $PSScriptRoot "domain-tests\PrincesPalace.Domain.Tests\PrincesPalace.Domain.Tests.csproj"
+
+function Get-UnityOnlyTestFiles {
+    if (-not (Test-Path $DomainTestsCsproj)) { return @() }
+    $content = Get-Content $DomainTestsCsproj -Raw
+    $names = @()
+    foreach ($m in [regex]::Matches($content, '<Compile\s+Remove="[^"]*EditMode[\\/]([A-Za-z0-9_]+\.cs)"')) {
+        $names += $m.Groups[1].Value
+    }
+    return $names | Sort-Object -Unique
+}
+
+# class name -> "dotnet" or "Unity", for every class Get-TestClasses found.
+function Get-TestHosts {
+    param([hashtable]$Classes = (Get-TestClasses))
+
+    $unityOnly = New-Object System.Collections.Generic.HashSet[string]
+    foreach ($f in Get-UnityOnlyTestFiles) { [void]$unityOnly.Add($f) }
+
+    # Which file declares which EditMode class. Same regex Get-TestClasses
+    # uses, deliberately -- a class this cannot place is one Get-TestClasses
+    # never saw either, so there is nothing to disagree about.
+    $fileOf = @{}
+    $dir = Join-Path $AreasTestsRoot "EditMode"
+    if (Test-Path $dir) {
+        foreach ($file in Get-ChildItem $dir -Filter *.cs -File) {
+            $content = Get-Content $file.FullName -Raw
+            foreach ($match in [regex]::Matches($content, '(?m)^\s*(?:\[[^\]]*\]\s*)*public\s+(?:sealed\s+|static\s+|partial\s+)*class\s+(\w+)')) {
+                $fileOf[$match.Groups[1].Value] = $file.Name
+            }
+        }
+    }
+
+    $hosts = @{}
+    foreach ($name in $Classes.Keys) {
+        if ($Classes[$name] -ne "EditMode") { $hosts[$name] = "Unity"; continue }
+        $declaringFile = $fileOf[$name]
+        if ($declaringFile -and $unityOnly.Contains($declaringFile)) { $hosts[$name] = "Unity"; continue }
+        if (-not $declaringFile) { $hosts[$name] = "Unity"; continue }
+        $hosts[$name] = "dotnet"
+    }
+    return $hosts
+}
+
+# ---------------------------------------------------------------------------
 # -Changed support: map an uncommitted source-file change to the area(s) it
 # belongs to, so "tools/test.ps1 -Changed" can run just the slice affected by
 # what is actually sitting in the working tree.

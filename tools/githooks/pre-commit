@@ -1,12 +1,14 @@
 #!/bin/sh
 #
-# Pre-commit gate. Two checks, both of which turn a rule that CLAUDE.md could
+# Pre-commit gate. Three checks, all of which turn a rule that CLAUDE.md could
 # only ask for into one the repo enforces.
 #
-# Runtime is a few milliseconds: one `git ls-files` and one awk pass for the
-# pairing check, plus one grep per staged .ps1. It does not run tests - the
-# test gate stays `tools/run_tests_parallel.ps1`, deliberately, because a
-# 90-second pre-commit hook is a hook people learn to bypass.
+# Runtime is a few milliseconds for the first two: one `git ls-files` and one
+# awk pass for the pairing check, plus one grep per staged .ps1. The third
+# only fires when Domain/ or the EditMode tests are staged, and costs ~2s warm
+# (a `dotnet build`, not a test run). It does not run tests - the test gate
+# stays `tools/run_tests_parallel.ps1`, deliberately, because a 4-minute
+# pre-commit hook is a hook people learn to bypass.
 #
 # Install (per clone, since core.hooksPath is local config and not committed):
 #
@@ -128,5 +130,46 @@ while IFS= read -r f; do
         fail "  character with ASCII, or move it into a # comment."
     fi
 done < "$TMPDIR_HOOK/ps1"
+
+# ---------------------------------------------------------------------------
+# 3. The dotnet host still COMPILES the sources being committed.
+#
+# tools/domain-tests compiles Domain/ and the EditMode suite outside Unity so
+# the edit-run-edit loop does not have to boot an editor. Nothing in Unity's
+# own build would notice if that stopped working: a new test file that reaches
+# for UnityEngine, or a Domain file that does, breaks the fast host while the
+# slow one stays green. Discovering that at the START of the next session -
+# when the loop you reach for first silently is not there - is exactly the
+# rot this prevents.
+#
+# A build, not a test run. What breaks here is compilation (a missing
+# exclusion, an engine reference in Domain), and the assertions are already
+# covered by run_tests_parallel.ps1. `dotnet build` on an unchanged tree is
+# ~1s; a one-file change is ~2s.
+#
+# Skipped when dotnet is not on PATH rather than failing: the hook's job is to
+# catch a real regression, not to make the repo uncommittable on a machine
+# that has not installed an SDK.
+# ---------------------------------------------------------------------------
+
+if git diff --cached --name-only --diff-filter=ACMR      -- 'Assets/_Project/Scripts/Domain'         'Assets/_Project/Scripts/Tests/EditMode'         'tools/domain-tests' | grep -q .
+then
+    if command -v dotnet > /dev/null 2>&1; then
+        BUILD_LOG="$TMPDIR_HOOK/dotnet-build.log"
+        if ! dotnet build tools/domain-tests --nologo -v q > "$BUILD_LOG" 2>&1; then
+            fail "pre-commit: tools/domain-tests no longer builds."
+            fail ""
+            grep -i "error" "$BUILD_LOG" | head -20 | sed 's/^/      /' >&2
+            fail ""
+            fail "  This is the host tools/test.ps1 uses to run the EditMode"
+            fail "  suite without Unity. A test that genuinely needs the engine"
+            fail "  belongs on the exclusion list in"
+            fail "  tools/domain-tests/PrincesPalace.Domain.Tests/PrincesPalace.Domain.Tests.csproj,"
+            fail "  with its reason - see tools/domain-tests/README.md. A DOMAIN"
+            fail "  file that needs one is a layering violation instead: Domain"
+            fail "  is noEngineReferences by asmdef, so move it to Core/."
+        fi
+    fi
+fi
 
 exit $FAIL

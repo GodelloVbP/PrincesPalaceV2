@@ -4,39 +4,59 @@ param(
     [switch]$SkipSync,
     [switch]$List,
     [switch]$Full,
-    [switch]$Changed
+    [switch]$Changed,
+    [switch]$Unity
 )
 
-# The FAST path. Runs a slice of the suite instead of all of it.
+# The FAST path. Runs a slice of the suite instead of all of it, and where it
+# can, runs that slice without Unity at all.
 #
 # Measured, because the shape of the problem is not what it looks like.
-# Re-measure rather than trust these numbers if it's been a while --
-# they drift as the suite grows, and they HAVE drifted twice already
-# (originally 335/316 tests across 37 PlayMode classes; then 655/424 as of
-# the workflow-standards restructure, 2026-08-01; the numbers below are from
-# the test-area overhaul, 2026-08-05):
+# Re-measure rather than trust these numbers if it's been a while -- they
+# drift as the suite grows, and they HAVE drifted three times already
+# (335/316 originally; 655/424 at the workflow-standards restructure,
+# 2026-08-01; 690/505 at the test-area overhaul, 2026-08-05). The numbers
+# below are from the dotnet-host change, 2026-09-02, at 2384 EditMode and
+# 650 PlayMode tests:
 #
-#     robocopy sync, both runners  ~0.3s   negligible
-#     Unity boot + import          ~6s     a fixed floor, per platform
-#     EditMode, all 690 tests      ~0.5s
-#     PlayMode, all 505 tests      ~85-90s <- the whole cost
+#     robocopy sync, both runners  ~39s    cold; ~1s when nothing moved
+#     Unity boot + import          ~8s     a fixed floor, per platform
+#     EditMode, all 2384 tests     ~11s
+#     PlayMode, all 650 tests      ~181s   <- the whole cost
 #     ---------------------------------
-#     full parallel run            ~90-100s wall (PlayMode dominates; they run concurrently)
+#     full parallel run            ~236s wall (PlayMode dominates; concurrent)
 #
-# Two things follow. EditMode is already AT the floor -- 690 tests cost half
-# a second, so there is nothing to split there and never will be. And
-# PlayMode's cost is spread across roughly 60 classes with no dominant
-# hotspot, so carving it into fixed "fast" and "slow" suites would not help
-# either (this was investigated for real -- see the -Split section of the
-# 2026-08-05 test-area plan; deferred, not abandoned, as the saving from
-# splitting PlayMode across both runner copies works out to ~15s against the
-# machinery it costs).
+# The thing worth internalising: for an EditMode slice, essentially NONE of
+# the cost was the tests. Booting Unity, syncing a whole project copy and
+# importing it dwarfed the assertions many times over.
 #
-# What does help is running only the classes you are actually working on, and
-# only the PLATFORM they live on. WoolTests alone is ~12s against ~90-100s
-# for the full run, and most of that 12s is Unity starting up. Better still,
+# So EditMode does not go through Unity any more. Domain is engine-free by
+# asmdef (noEngineReferences: true, zero references), which means the suite
+# over it compiles and runs under plain `dotnet test` against the SAME source
+# files -- see tools/domain-tests/README.md. 154 of the 159 EditMode classes
+# run there, 2349 of the 2384 tests, in ~4s warm against ~20s through Unity.
+# The five that stay in Unity need JsonUtility, Application.dataPath or
+# Resources.Load; tools/test.ps1 -List marks every class D (dotnet) or U
+# (Unity), and the split is read off the csproj, not maintained here.
+#
+# PlayMode is untouched and always Unity: it needs a scene and a player loop.
+# Its cost is spread across ~87 classes with no dominant hotspot, so carving
+# it into fixed "fast" and "slow" suites would not help either (this was
+# investigated for real -- see the -Split section of the 2026-08-05 test-area
+# plan; deferred, not abandoned).
+#
 # `tools/test.ps1 -Changed` picks the right slice FOR you from whatever is
-# sitting uncommitted -- see its own section below.
+# sitting uncommitted, and the host split happens underneath it.
+#
+# Be honest about where the saving lands, though, because it is not uniform.
+# A slice made only of D classes is ~4s. A slice with ANY PlayMode class is
+# still PlayMode-bound, and every named area except `rng` has some: `combat`
+# is ~110s either way, since 47 of its 122 classes are PlayMode and that is
+# 93s of the run. Areas are cut by SUBJECT, not by host, so a Domain change
+# in a subject that also has fight-screen tests correctly still runs them.
+# The saving is real on a class-name slice, which is what most of the loop
+# actually is, and it is nothing on `combat`. Do not read the 4s as the
+# number for everything.
 #
 # This is for the edit-run-edit loop. Before committing, run the full thing:
 #     powershell -NoProfile -ExecutionPolicy Bypass -File tools/run_tests_parallel.ps1
@@ -44,13 +64,17 @@ param(
 # every area or out of discovery's sight -- see tools/test_areas.ps1.
 #
 # Usage:
-#     tools/test.ps1 wool            one class, platform auto-detected
+#     tools/test.ps1 wool            one class, host and platform auto-detected
 #     tools/test.ps1 combat          a named area (see $Areas below;
 #                                    also: hub, content, run, ui, art, rng)
 #     tools/test.ps1 Wool,Spell      several, comma-separated
 #     tools/test.ps1 -Changed        just what your uncommitted changes touch
-#     tools/test.ps1 -List           what is available (classes, areas,
-#                                    ORPHANS, discovery blind spots)
+#     tools/test.ps1 -Unity          force everything through Unity, no dotnet
+#                                    host -- the answer to "is the fast host
+#                                    lying to me?"
+#     tools/test.ps1 -List           what is available (classes with their
+#                                    host, areas, ORPHANS, discovery blind
+#                                    spots)
 #     tools/test.ps1 -Full           everything, same as run_tests_parallel
 
 # Derived, not hardcoded - see the same block in run_tests_parallel.ps1 for
@@ -73,13 +97,19 @@ $RunnerFor = @{
 . (Join-Path $PSScriptRoot "test_areas.ps1")
 
 $classes = Get-TestClasses
+$testHosts = Get-TestHosts -Classes $classes
 
 if ($List) {
-    Write-Host "`nTest classes by platform:`n"
+    Write-Host "`nTest classes by platform. [D] runs under dotnet (tools/domain-tests,"
+    Write-Host "no Unity); [U] needs Unity. See tools/domain-tests/README.md.`n"
     foreach ($platform in @("EditMode", "PlayMode")) {
         $names = $classes.Keys | Where-Object { $classes[$_] -eq $platform } | Sort-Object
-        Write-Host "  $platform ($($names.Count))"
-        foreach ($n in $names) { Write-Host "    $n" }
+        $dCount = ($names | Where-Object { $testHosts[$_] -eq "dotnet" }).Count
+        Write-Host "  $platform ($($names.Count); $dCount on dotnet)"
+        foreach ($n in $names) {
+            $tag = if ($testHosts[$n] -eq "dotnet") { "D" } else { "U" }
+            Write-Host "    [$tag] $n"
+        }
         Write-Host ""
     }
     Write-Host "Named areas:`n"
@@ -227,10 +257,51 @@ if ($Changed) {
 }
 
 $wanted = $wanted | Sort-Object -Unique
-$platforms = $wanted | ForEach-Object { $classes[$_] } | Sort-Object -Unique
+
+# --- split by HOST ---------------------------------------------------------
+# Everything the dotnet project compiles goes there; the rest goes to Unity.
+# -Unity forces the whole slice through Unity instead, which is the way to
+# check the fast host against the slow one when a result looks wrong.
+$dotnetWanted = @()
+$unityWanted = @()
+foreach ($c in $wanted) {
+    if (-not $Unity -and $testHosts[$c] -eq "dotnet") { $dotnetWanted += $c } else { $unityWanted += $c }
+}
+
+$platforms = $unityWanted | ForEach-Object { $classes[$_] } | Sort-Object -Unique
 
 Write-Host "Matched $($wanted.Count) class(es): $($wanted -join ', ')"
-Write-Host "Platform(s): $($platforms -join ', ')`n"
+if ($dotnetWanted) {
+    Write-Host "  dotnet ($($dotnetWanted.Count)): $($dotnetWanted -join ', ')"
+}
+if ($unityWanted) {
+    Write-Host "  Unity  ($($unityWanted.Count)): $($unityWanted -join ', ')  [$($platforms -join ', ')]"
+}
+if ($Unity -and $wanted) { Write-Host "  (-Unity: the dotnet host was skipped on purpose)" }
+Write-Host ""
+
+# --- run: the dotnet host ---------------------------------------------------
+# Started FIRST and left running while Unity boots, so on a mixed slice the
+# two overlap instead of queueing. There is no project copy and no lock here:
+# `dotnet test` reads the same source files in place, so it cannot collide
+# with a concurrent Unity run in either TestRunner.
+#
+# Not --no-build: the point of running it is to test what is on disk right
+# now, and an incremental rebuild of a changed Domain file is ~2s.
+#
+# VSTest's filter is substring-based, so ".<Class>." is the same anchoring
+# trick the Unity regex below uses, for the same reason.
+$dotnetJob = $null
+$dotnetLog = Join-Path $env:TEMP "domain-tests-run.log"
+if ($dotnetWanted) {
+    $dotnetFilter = ($dotnetWanted | ForEach-Object { "FullyQualifiedName~.$_." }) -join "|"
+    $solutionDir = Join-Path $PSScriptRoot "domain-tests"
+    $dotnetJob = Start-Job -ScriptBlock {
+        param($Dir, $TestFilter, $LogPath)
+        & dotnet test $Dir --nologo --filter $TestFilter 2>&1 | Out-File -FilePath $LogPath -Encoding utf8
+        return $LASTEXITCODE
+    } -ArgumentList $solutionDir, $dotnetFilter, $dotnetLog
+}
 
 # --- sync ------------------------------------------------------------------
 # Only the copies actually about to run. Syncing the other one is ~0.15s, but
@@ -249,14 +320,17 @@ if (-not $SkipSync) {
     }
 }
 
-# --- run -------------------------------------------------------------------
+# --- run: Unity -------------------------------------------------------------
 # Anchored on the class segment (".<Class>."), so a preset for "combat" cannot
 # also drag in an unrelated class that merely has "Fight" in a METHOD name.
 # Unity matches -testFilter against the full namespace.class.method.
 $procs = @{}
 foreach ($platform in $platforms) {
     $runner = $RunnerFor[$platform]
-    $onThis = $wanted | Where-Object { $classes[$_] -eq $platform }
+    # $unityWanted, NOT $wanted: anything the dotnet host already took must
+    # not be handed to Unity as well, or a mixed slice runs the shared classes
+    # twice and pays the whole EditMode cost this change exists to remove.
+    $onThis = $unityWanted | Where-Object { $classes[$_] -eq $platform }
     $pattern = ".*\.(" + (($onThis | ForEach-Object { [regex]::Escape($_) }) -join "|") + ")\..*"
 
     $resultsPath = Join-Path $runner.Path "test-results-$platform.xml"
@@ -306,9 +380,46 @@ foreach ($platform in $platforms) {
     if ([int]$root.failed -ne 0) { $allPassed = $false }
 }
 
+# --- collect: the dotnet host ----------------------------------------------
+# Read AFTER Unity so a mixed slice overlapped the two rather than serialising
+# them. The summary line is parsed out of the run log rather than a results
+# file: `dotnet test` prints "Passed!  - Failed: 0, Passed: N, ..." and the
+# exit code is the authority on pass/fail, so a parse that misses only costs
+# the count, never the verdict.
+if ($dotnetJob) {
+    $dotnetExit = Receive-Job -Job $dotnetJob -Wait -AutoRemoveJob
+    $dotnetOut = if (Test-Path $dotnetLog) { Get-Content $dotnetLog -Raw } else { "" }
+
+    $summary = ($dotnetOut -split "`r?`n" | Where-Object { $_ -match "^(Passed|Failed)!\s" } | Select-Object -First 1)
+    if ($summary -match "Passed:\s*(\d+)") { $totalRun += [int]$Matches[1] }
+    if ($summary -match "Failed:\s*(\d+)") { $totalRun += [int]$Matches[1] }
+
+    if ($summary) {
+        Write-Host "dotnet -- $($summary.Trim())"
+    } else {
+        Write-Host "dotnet -- no summary line in $dotnetLog"
+    }
+
+    if ($dotnetExit -ne 0) {
+        $allPassed = $false
+        # The failure detail, and only that: a full `dotnet test` transcript is
+        # mostly restore/build noise nobody reads.
+        $dotnetOut -split "`r?`n" |
+            Where-Object { $_ -match "^\s*(Failed|Error Message|Stack Trace|Assert\.|  Expected|  But was|error CS)" } |
+            Select-Object -First 60 |
+            ForEach-Object { Write-Host $_ }
+        Write-Host "Full transcript: $dotnetLog"
+    }
+}
+
 # A filter that matches a class but selects no tests is almost always a typo
 # that would otherwise read as a pass.
-if ($totalRun -eq 0) {
+#
+# Gated on $allPassed so it cannot MASK a real failure with a wrong diagnosis:
+# a dotnet host that failed to compile prints no summary line, so $totalRun
+# stays 0 and this would otherwise report "no tests ran" over a build error.
+# Both exit 1 either way; only the message the reader acts on differs.
+if ($allPassed -and $totalRun -eq 0) {
     Write-Host "`nNo tests actually ran. The filter matched a class but no test inside it."
     exit 1
 }

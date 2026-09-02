@@ -225,9 +225,13 @@ Triage order, cheapest first:
 
 | Situation | Command |
 |---|---|
-| Iterating on one class/area | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/test.ps1 <fuzzy-name or area>` (~12s for a single class, more for a broad area; areas: `combat`, `hub`, `content`, `run`, `ui`, `art`, `rng`, defined in `tools/test_areas.ps1`; `-List` shows everything) |
+| Iterating on one class/area | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/test.ps1 <fuzzy-name or area>` (areas: `combat`, `hub`, `content`, `run`, `ui`, `art`, `rng`, defined in `tools/test_areas.ps1`; `-List` shows everything, marking each class `[D]` or `[U]` for its host) |
+| … and how long that takes | Depends entirely on whether the slice needs Unity. A slice that is all `[D]` classes runs under `dotnet test` with no editor at all: **~4s** (`test.ps1 wool` was ~12s, is 3.7s). A slice with any `[U]` class still boots Unity for those, and any slice touching PlayMode is PlayMode-bound — `test.ps1 combat` is ~110s either way, because 47 of its 122 classes are PlayMode and that is 93s of the run. The EditMode half of a mixed slice is still routed to dotnet, so it costs nothing extra |
+| Checking the fast host against the slow one | `tools/test.ps1 <slice> -Unity` forces the whole slice through Unity. Use it when a dotnet result looks wrong, or after touching `tools/domain-tests`. Both hosts compile the same files, but not with the same NUnit (Unity ships 3.5, the host pins 3.14) — see `tools/domain-tests/README.md` |
+
 | Iterating across several touched files, not sure which area | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/test.ps1 -Changed` — maps uncommitted changes (tracked + untracked) to the areas/classes they affect and runs just that, printing the mapping it used |
-| Before any commit | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/run_tests_parallel.ps1` (~5 min, warm runners). **Does not build the scenes** — see below. **Refuses to run at all** if any test class matches no area, or if a `[Test]`/`[UnityTest]` file's class was never discovered — both point at `tools/test_areas.ps1` and name the class/file; there is no bypass flag, fix the pattern |
+| Before any commit | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/run_tests_parallel.ps1` (~4 min: 39s sync, then EditMode and PlayMode concurrently, PlayMode 181s of it). Unchanged by the dotnet host, deliberately — it is the only thing that compiles and runs everything under the NUnit and BCL Unity actually ships, which is what makes it the gate. Skipping its EditMode platform would save nothing anyway: PlayMode runs concurrently and dominates the wall clock. **Does not build the scenes** — see below. **Refuses to run at all** if any test class matches no area, or if a `[Test]`/`[UnityTest]` file's class was never discovered — both point at `tools/test_areas.ps1` and name the class/file; there is no bypass flag, fix the pattern |
+| Changed `Domain/` or `Tests/EditMode/` and want to know the fast host still compiles | `dotnet build tools/domain-tests` (~2s warm). `tools/githooks/pre-commit` runs this for you when either is staged |
 | Changed `ContentData/*.json` or `ContentBuilder.cs` | add `-BuildContent` |
 | Changed a screen tree under `Domain/UiKit/Screens/` or wiring in `Editor/SceneBuilder/` | add `-BuildScenes` (~1 min slower). It builds the scenes in the runners, where PlayMode reads them, AND copies them back to main and into the PlayMode runner — needed both to trust a PlayMode run against your change and before committing it. Without it, PlayMode loads whatever scenes are already on disk, not yours. UiAudit itself does not need this flag: it already runs inside the EditMode screen tests (`FightScreenTests`, `MapScreenTests`, `HubScreenTests`, etc.), which re-solve layout from the screen tree in code, not from a built scene |
 | About to COMMIT regenerated scenes | same flag, `-BuildScenes` — there is no separate build-only vs. sync-only mode |
@@ -271,6 +275,7 @@ covered.
 | Every test class maps to an area | `run_tests_parallel.ps1` | test run, no bypass |
 | Asset and `.meta` commit together | `tools/githooks/pre-commit` | commit |
 | Staged `.ps1` is ASCII outside comments | `tools/githooks/pre-commit` | commit |
+| `tools/domain-tests` still builds when `Domain/`/`Tests/EditMode/` changes | `tools/githooks/pre-commit` | commit |
 | No `git add -A/-u/.`, no `git commit -a` | `tools/githooks/deny_broad_staging.py` | before the command runs |
 
 The two git hooks need `git config core.hooksPath tools/githooks` (§1) and, for
@@ -290,6 +295,7 @@ the same commit:
 | Fix an `AUDIT.md` finding | `AUDIT.md` (strike it, cite the commit) |
 | Add a panel to `SceneBuilder` | `ScreenshotTool.cs`'s `KnownPanels` table + `screenshot.ps1`'s usage text |
 | Change test-tooling behavior or its timing characteristics | that tool's own header comment, plus §8's table if the command line moved |
+| Exclude a test file from the dotnet host (or add one back) | `tools/domain-tests/README.md`'s exclusion table, with the reason — `tools/test.ps1 -List` reads the split off the csproj and needs nothing |
 | Change what a balance batch writes, or what a metric means | `docs/BOT_SUMMARY_SCHEMA.md` (it is the contract between `BalanceBotRunner`, `tools/bot_merge.py` and `tools/bot_report.py`) |
 | Finish (or partially close) a handoff's implementation | its `GAP_AUDIT.md` verdicts |
 | Change a workflow rule, ritual, or convention | this file |
