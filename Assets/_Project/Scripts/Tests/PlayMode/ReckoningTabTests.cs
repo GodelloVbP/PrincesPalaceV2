@@ -36,15 +36,33 @@ namespace PrincesPalace.PlayModeTests
             SaveSlotManager.Forget();
             Navigation.LoadOverride = _ => { };
             RunManager.StartRun(4242);
+
+            // ReckoningController's whole animation is unscaled -- see its
+            // own SpeedMultiplier comment -- so this collapses the wipe,
+            // sweep and bar-fill waits below to well under a frame.
+            ReckoningController.SpeedMultiplier = 40f;
         }
 
         [TearDown]
         public void Restore()
         {
+            ReckoningController.SpeedMultiplier = 1f;
             Navigation.Reset();
             SaveSystem.RootOverride = null;
             SaveSlotManager.Forget();
             if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
+        }
+
+        // A FIXED WAIT STILL, not a poll -- see ReckoningTests.
+        // WaitForTheBarSequence for why (FillBar's coroutine reference is
+        // private, and the Sweep-Flash-Sweep sequence plateaus mid-run).
+        // [SetUp]'s SpeedMultiplier = 40 runs the whole animation in low tens
+        // of milliseconds of real time; 0.2s real still catches a genuine
+        // stall while being ~7x faster than the flat 1.4s this replaced.
+        private IEnumerator WaitForTheBarSequence()
+        {
+            float deadline = Time.realtimeSinceStartup + 0.2f;
+            while (Time.realtimeSinceStartup < deadline) yield return null;
         }
 
         private GameObject Named(string name) =>
@@ -244,7 +262,7 @@ namespace PrincesPalace.PlayModeTests
             // would look right for most of its life.
             yield return ShowAReckoning();
 
-            yield return new WaitForSecondsRealtime(1.4f);
+            yield return WaitForTheBarSequence();
 
             StringAssert.Contains("50", TextOf("ReckoningRow0Gain"));
         }
@@ -256,7 +274,7 @@ namespace PrincesPalace.PlayModeTests
             // permanently 46px low and nothing else would report it.
             yield return ShowAReckoning();
 
-            yield return new WaitForSecondsRealtime(1.4f);
+            yield return WaitForTheBarSequence();
 
             // The MASK carries both the lift and the open, so that the frame it
             // clips travels with it -- lifting the frame alone would slide it
@@ -273,7 +291,7 @@ namespace PrincesPalace.PlayModeTests
         {
             yield return ShowAReckoning();
 
-            yield return new WaitForSecondsRealtime(1.4f);
+            yield return WaitForTheBarSequence();
 
             var dimmer = Named("ReckoningPanelDimmer").GetComponent<Image>();
 
