@@ -76,7 +76,10 @@ $Areas = @{
     # belongs here, but ItemOfferTests and ItemOfferRollTests are reward rules
     # that already sit in 'content' and 'run', and a bare pattern would drag
     # them in for the sake of a shared word.
-    ui      = "Button|Audio|Splash|PauseMenu|DebugMenu|MainMenu|SystemMenu|Cursor|Dialogue|Bark|Inventory|Equipment|Dossier|Options|Music|Screen|UiKit|Flicker|Ambience|Overlay|OfferRow|Tooltip"
+    # 'Typography' for TypographyRoleTests -- the per-role font/material
+    # asset resolution (TmpBootstrap.Typography.cs, SceneBuilder.FontFor/
+    # MaterialFor) is UI presentation, same subject as everything else here.
+    ui      = "Button|Audio|Splash|PauseMenu|DebugMenu|MainMenu|SystemMenu|Cursor|Dialogue|Bark|Inventory|Equipment|Dossier|Options|Music|Screen|UiKit|Flicker|Ambience|Overlay|OfferRow|Tooltip|Typography"
     # 'LoopCycle' rather than widening 'Loop': the idle loop's pacing is art
     # timing and belongs here, and a bare 'Loop' would be a word common enough
     # to drag in anything.

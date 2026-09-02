@@ -21,7 +21,7 @@ using PrincesPalace.Domain.UiKit;
 // v1's SceneBuilder was 7,608 lines across 14 partial files, and every one of
 // its four documented failure modes came from layout arithmetic living at
 // construction sites. There are no construction sites here.
-public static class SceneBuilder
+public static partial class SceneBuilder
 {
     public const string ScenesDir = "Assets/_Project/Scenes";
 
@@ -36,6 +36,16 @@ public static class SceneBuilder
     private static TMP_FontAsset _uiFont;
     private static Sprite _buttonSprite;
     private static bool _buttonSpriteLoaded;
+
+    // SceneBuilder.Typography.cs: role lookups over TmpBootstrap.Typography.cs's
+    // generated assets. Kept here per the partial-class convention (root file
+    // owns fields/consts, parts own methods) -- see CODE_STANDARDS.md 4.
+    private const string TypographyFontDir = "Assets/_Project/Fonts";
+    private const string TypographyMaterialDir = "Assets/_Project/Fonts/Materials";
+    private static readonly Dictionary<TypographyRole, TMP_FontAsset> _typographyFonts =
+        new Dictionary<TypographyRole, TMP_FontAsset>();
+    private static readonly Dictionary<TypographyRole, Material> _typographyMaterials =
+        new Dictionary<TypographyRole, Material>();
 
     public static TMP_FontAsset UiFont
     {
