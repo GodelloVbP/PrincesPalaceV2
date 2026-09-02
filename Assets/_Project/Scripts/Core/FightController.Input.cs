@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
+using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace
 {
@@ -64,15 +65,31 @@ namespace PrincesPalace
 
         // Selection-by-hover is deliberate: it makes the detail column feel
         // instant, and confirming stays a separate click. Added in code rather
-        // than as a serialized EventTrigger because a build-time delegate does
+        // than as a serialized trigger because a build-time delegate does
         // not serialise -- the same trap that made v1's slot refresh silently
         // not exist in the shipped scene.
+        //
+        // HoverIndex, NOT EventTrigger -- THE WHEEL SCROLL FIX. EventTrigger
+        // implements EVERY UGUI event interface unconditionally, including
+        // IScrollHandler, whether or not a Scroll entry was ever added to it.
+        // ExecuteEvents walks up from wherever the pointer hit looking for
+        // the NEAREST IScrollHandler, so an EventTrigger sitting on the row
+        // (added here only for PointerEnter) was the first one found on every
+        // wheel notch over a row -- ahead of SubmenuViewport's real
+        // ListScroll, several ancestors further up. Its own OnScroll is a
+        // no-op (no Scroll entry registered), so the notch was silently
+        // swallowed: no exception, no log, just a scrollbar that "doesn't
+        // work", which is exactly the report and exactly why 9a208f3 could
+        // not reproduce it by calling ListScroll.Scrolled directly -- that
+        // seam skips the raycast/bubble entirely. HoverIndex (already used
+        // for the intent icons and the reward track) implements only
+        // IPointerEnterHandler/IPointerExitHandler, so it is invisible to an
+        // IScrollHandler search and the notch reaches ListScroll instead.
         private void AddHover(GameObject row, int index)
         {
-            var trigger = row.GetComponent<EventTrigger>() ?? row.AddComponent<EventTrigger>();
-            var enter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
-            enter.callback.AddListener(_ => OnRowHovered(index));
-            trigger.triggers.Add(enter);
+            var hover = row.GetComponent<HoverIndex>() ?? row.AddComponent<HoverIndex>();
+            hover.Index = index;
+            hover.Changed = (i, entered) => { if (entered) OnRowHovered(i); };
         }
 
         // Which enemy plate the mouse is over, -1 for none. Enter AND exit,
@@ -439,6 +456,21 @@ namespace PrincesPalace
             foreach (var line in _session.DrainImmediateMessages()) PushLogLine(line);
 
             var beats = _session.DrainBeats();
+
+            // THE ONE PLACE A BEAT LEARNS ITS DAMAGE TYPE. CombatBeat itself
+            // stays Physical (see its own field comment) -- FightSession
+            // never sets this, so it is filled in HERE, the single choke
+            // point every drained batch already passes through regardless of
+            // which verb produced it (attack, skill, an enemy's own reply).
+            // ActorAttackType is the same public read FightHudModel's detail
+            // card already uses for its element label, so a hit and the card
+            // that described the skill causing it cannot disagree about what
+            // "Fire" means.
+            foreach (var beat in beats)
+            {
+                if (beat == null) continue;
+                beat.DamageType = _session.ActorAttackType(beat.Actor) ?? DamageType.Physical;
+            }
 
             if (beatPlayer != null && beats.Count > 0)
             {

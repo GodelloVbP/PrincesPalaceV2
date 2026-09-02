@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
@@ -292,6 +293,151 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.AreEqual(resting, content.anchoredPosition.y, 0.01f,
                 "a list with nowhere to go moved anyway");
+        }
+
+        // ---- the real input path, not the seam --------------------------------
+        //
+        // Every test above drives ListScroll.Scrolled directly -- proof the
+        // ARITHMETIC is right, and exactly the shape that let 9a208f3 land
+        // unable to reproduce a real player's report. What none of them
+        // exercise is EventSystem/GraphicRaycaster actually finding a row
+        // under the pointer and bubbling the wheel up to whatever object owns
+        // ListScroll -- which is the one thing a mouse in the real game does
+        // that a direct method call cannot.
+        // The NEAREST canvas above `from`, NOT the root one -- FightScreen
+        // wraps its whole HUD (submenu included) in "FightHud", a nested
+        // Canvas built by Ui.WorldInterleavedCanvas so the HUD can sort by
+        // SortingLayer against stage actor SpriteRenderers (see
+        // BuildSubmenuColumn's own tree and EmitNestedCanvas). UiEmitter
+        // gives every NestedCanvas its OWN GraphicRaycaster (EmitNestedCanvas,
+        // line ~573) precisely because Unity's GraphicRegistry books a
+        // raycastable Graphic against its NEAREST enclosing Canvas, not the
+        // outermost one -- the outer "Canvas"'s own GraphicRaycaster never
+        // sees a row's Plate at all. Reaching for the root here, the more
+        // "obvious" choice, is exactly the wrong one and returns zero hits
+        // for everything under the HUD.
+        private static (GraphicRaycaster raycaster, Camera camera) FindRaycastSurface(Transform from)
+        {
+            var canvas = from.GetComponentInParent<Canvas>();
+            Assert.IsNotNull(canvas, "fixture: the node under test is not inside any Canvas");
+            var raycaster = canvas.GetComponent<GraphicRaycaster>();
+            Assert.IsNotNull(raycaster,
+                $"fixture: '{canvas.name}', the nearest Canvas above '{from.name}', has no GraphicRaycaster of its own");
+            return (raycaster, canvas.worldCamera);
+        }
+
+        private static GameObject TopmostHitAt(GraphicRaycaster raycaster, Camera camera, Vector2 worldPosition,
+            out PointerEventData eventData)
+        {
+            var screenPoint = RectTransformUtility.WorldToScreenPoint(camera, worldPosition);
+            eventData = new PointerEventData(EventSystem.current) { position = screenPoint };
+
+            var hits = new List<RaycastResult>();
+            raycaster.Raycast(eventData, hits);
+
+            Assert.IsNotEmpty(hits, $"nothing raycast-hittable sits at {worldPosition} -- the point the test " +
+                                     "aimed at is not reachable by a real pointer at all");
+
+            // pointerPressRaycast, not a bare position, matters for what
+            // comes next -- ListScroll's own track-grab path (Seek) converts
+            // eventData.position back to a local point via
+            // RectTransformUtility.ScreenPointToLocalPointInRectangle(rect,
+            // position, eventData.pressEventCamera, ...), and pressEventCamera
+            // is READ from this raycast result's module.eventCamera. Left
+            // unset, that conversion reads the point as Overlay space, which
+            // is wrong for this canvas's ScreenSpaceCamera mode -- exactly
+            // what a real EventSystem always sets before either handler runs.
+            eventData.pointerPressRaycast = hits[0];
+            return hits[0].gameObject;
+        }
+
+        // THE ACTUAL BUG REPORT, reproduced as closely as a test can: point at
+        // a ROW (not at the viewport's own transparent catcher, not at
+        // ListScroll's GameObject directly) and turn the wheel.
+        [UnityTest]
+        public IEnumerator WheelOverARowsPlateBubblesUpToTheRealListScroll()
+        {
+            yield return LoadFightWithALongList();
+
+            var content = Rect("SubmenuContent");
+            var thumb = Rect("SubmenuScrollThumb");
+
+            // Row 3: comfortably inside the resting window (RowsInView is 8,
+            // per AShortListStillShowsNoBarAndDoesNotMove above), so this hits
+            // a real, currently-visible row rather than one already clipped.
+            var row = Named("CharacterSkill3");
+            Assert.IsNotNull(row, "fixture: no CharacterSkill3 row in the pool");
+
+            // THE PLATE, specifically -- "the themed row's own raycast-
+            // receiving Image" the brief names, and the SAME Image the row's
+            // own Button uses as its targetGraphic (see UiEmitter's own
+            // comment on WireThemedButton), so this is provably the surface a
+            // real click on the row also lands on.
+            var plate = row.GetComponent<Button>()?.targetGraphic;
+            Assert.IsNotNull(plate, "fixture: the row's Button has no targetGraphic (no Plate wired)");
+
+            var (raycaster, camera) = FindRaycastSurface(plate.transform);
+            var hit = TopmostHitAt(raycaster, camera, plate.transform.position, out var eventData);
+
+            float restingContent = content.anchoredPosition.y;
+            float restingThumb = thumb.anchoredPosition.y;
+
+            // NEGATIVE, per ListScroll.OnScroll's own sign convention: it
+            // negates scrollDelta.y before handing pixels to Scrolled, so a
+            // notch that moves the list DOWN (the direction every other list
+            // here scrolls a wheel notch) is asked for with a NEGATIVE
+            // eventData.scrollDelta.y here.
+            eventData.scrollDelta = new Vector2(0f, -1f);
+            ExecuteEvents.ExecuteHierarchy(hit, eventData, ExecuteEvents.scrollHandler);
+            yield return null;
+
+            Assert.AreNotEqual(restingContent, content.anchoredPosition.y,
+                "a wheel notch over the row's own Plate, raycast through the real GraphicRaycaster and " +
+                "bubbled via ExecuteEvents, moved nothing -- ListScroll is not reachable from where a " +
+                "player's pointer actually lands");
+            Assert.AreNotEqual(restingThumb, thumb.anchoredPosition.y, "the thumb did not follow the real scroll");
+        }
+
+        // THE SCROLLBAR'S OWN SURFACE. The thumb itself is decorative
+        // (AsDecor, no raycast target -- see BuildSubmenuFrame's own
+        // comment); the TRACK is what WireSubmenuScroll re-enables
+        // raycastTarget on and wires Seeked to, so a real grab-and-drag lands
+        // on the track underneath the thumb, not the thumb's own pixels.
+        [UnityTest]
+        public IEnumerator DraggingTheTrackSeeksTheRealList()
+        {
+            yield return LoadFightWithALongList();
+
+            var track = Rect("SubmenuScrollTrack");
+            var content = Rect("SubmenuContent");
+            float restingContent = content.anchoredPosition.y;
+
+            var (raycaster, camera) = FindRaycastSurface(track);
+
+            // The BOTTOM of the track, so a seek there means "show me the end
+            // of the list" -- unambiguous against the resting (top) position.
+            var bottomOfTrack = track.position - new Vector3(0f, track.rect.height * 0.5f * track.lossyScale.y, 0f);
+            var hit = TopmostHitAt(raycaster, camera, bottomOfTrack, out var eventData);
+
+            Assert.AreEqual("SubmenuScrollTrack", hit.name,
+                "a pointer at the bottom of the scrollbar's track did not land on the track itself -- " +
+                "something else (the thumb, the frame) is intercepting the raycast there");
+
+            ExecuteEvents.Execute(hit, eventData, ExecuteEvents.pointerClickHandler);
+            yield return null;
+
+            Assert.AreNotEqual(restingContent, content.anchoredPosition.y,
+                "a real click at the bottom of the track, through GraphicRaycaster, did not seek the list");
+
+            // A click at the VERY bottom of the track asks for fromTop == 1,
+            // which is the list's maximum scroll -- pinned against
+            // FightSubmenuLayout's own arithmetic rather than eyeballed, the
+            // same way ScrollingSelectionToRowElevenMovesTheContentAndKeeps
+            // ItInView above pins ThumbCentreY.
+            float expectedScroll = FightSubmenuLayout.ScrollAt(SatchelSize, 1f);
+            float expectedContentY = FightSubmenuLayout.ContentY(SatchelSize, expectedScroll);
+            Assert.AreEqual(expectedContentY, content.anchoredPosition.y, 1f,
+                "the track seek landed somewhere other than the bottom of the list");
         }
     }
 }

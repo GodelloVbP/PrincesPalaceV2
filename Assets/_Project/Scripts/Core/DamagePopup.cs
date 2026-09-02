@@ -1,6 +1,8 @@
 using System.Collections;
 using TMPro;
 using UnityEngine;
+using PrincesPalace.Domain.Stats;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
 {
@@ -47,8 +49,13 @@ namespace PrincesPalace
         private const float PeakGlow = 2.7f;
         private const float GlowFraction = 0.30f;
 
-        private static readonly Color DamageColor = new Color(0.93f, 0.26f, 0.24f, 1f);
         private static readonly Color HealColor = new Color(0.42f, 0.86f, 0.45f, 1f);
+
+        // The physical fallback if FightHudPalette's own hex ever failed to
+        // parse -- kept as the literal DamagePopup always showed before
+        // FightHudPalette.ForDamageType existed, so a bad hex string degrades
+        // to the old flat red rather than to ColorUtility's own magenta.
+        private static readonly Color PhysicalFallback = new Color(0.93f, 0.26f, 0.24f, 1f);
 
         // PHASE D1: a dodge's own colour -- neither the alarm-red of damage
         // nor the relief-green of a heal, because a miss is neither. Pale
@@ -70,8 +77,20 @@ namespace PrincesPalace
             _rect = (RectTransform)transform;
         }
 
-        public void Play(Vector2 anchoredStart, int amount, bool isHealing) =>
-            PlayContent(anchoredStart, (isHealing ? "+" : "-") + Mathf.Abs(amount), isHealing ? HealColor : DamageColor);
+        // TYPED, since a hit's DamageType decides its colour -- see
+        // FightHudPalette.ForDamageType. Healing keeps its own fixed green
+        // regardless of the type carried on the beat: DamageType describes an
+        // ATTACK's element and a heal is never elemental, so reading it here
+        // would tint a heal by whatever the healer's basic attack happens to
+        // be.
+        public void Play(Vector2 anchoredStart, int amount, bool isHealing, DamageType damageType = DamageType.Physical) =>
+            PlayContent(anchoredStart, (isHealing ? "+" : "-") + Mathf.Abs(amount),
+                isHealing ? HealColor : ColorForDamageType(damageType));
+
+        private static Color ColorForDamageType(DamageType type) =>
+            ColorUtility.TryParseHtmlString(FightHudPalette.ForDamageType(type), out var parsed)
+                ? parsed
+                : PhysicalFallback;
 
         // PHASE D1: the dodge/miss reading -- "Miss" rather than a number, so
         // a dodged attack cannot be mistaken for "0 damage from armour" (see

@@ -463,7 +463,7 @@ namespace PrincesPalace
             }
             else
             {
-                popup.Play(at, beat.Amount, beat.IsHealing);
+                popup.Play(at, beat.Amount, beat.IsHealing, beat.DamageType);
             }
         }
 

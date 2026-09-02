@@ -180,6 +180,11 @@ namespace PrincesPalace
         // failed to populate rather than one with nothing to populate.
         [SerializeField] internal TMP_Text[] detailStatKeys;
 
+        // The skill's element, riding the POWER row -- see FightScreen.
+        // BuildDetailColumn's own comment for why it shares that line rather
+        // than getting a sixth row.
+        [SerializeField] internal TMP_Text detailDamageType;
+
         [SerializeField] internal GameObject targetPrompt;
         [SerializeField] internal TMP_Text targetPromptLabel;
 

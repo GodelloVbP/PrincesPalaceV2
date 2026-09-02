@@ -182,6 +182,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> DetailStatKeys = new List<NodeRef>();
         public List<NodeRef> DetailStatValues = new List<NodeRef>();
 
+        // The skill's element ("FIRE", "ARCANE", ...), tinted at runtime by
+        // FightHudPalette.ForDamageType -- see BuildDetailColumn's own
+        // comment for why it rides the POWER row instead of a sixth row of
+        // its own.
+        public NodeRef DetailDamageType;
+
         public NodeRef TargetPrompt;
         public NodeRef IntentTooltip;
         public NodeRef IntentTooltipText;
@@ -1732,22 +1738,55 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 UiStrings.DetailStatScaling,
             };
 
+            // keys[1] -- see the DetailDamageType comment in the loop below.
+            const int PowerStatRowIndex = 1;
+
             var children = new List<UiNode> { name, kind, body, divider };
             for (int i = 0; i < FightHudSpec.DetailStatRows; i++)
             {
                 float y = statBottom + (FightHudSpec.DetailStatRows - 1 - i) * statPitch;
-                var key = Ui.Label($"DetailStatKey{i}", keys[i], new UiVec(170f, 16f), 12,
+
+                // THE POWER ROW GIVES UP WIDTH ON BOTH SIDES, for the element
+                // tag that rides it. Five stat rows already fill DetailStatRows
+                // (FightMenuStateTests pins Stats at exactly five by index), so
+                // there is no sixth row to give the skill's DamageType its own
+                // line -- it has to fit on an existing one, and POWER is the
+                // one line a damaging skill's element actually describes.
+                // "POWER" is the shortest of the five key words, so it is the
+                // row whose key box can afford to lose the most.
+                bool isPowerRow = i == PowerStatRowIndex;
+                float keyW = isPowerRow ? 60f : 170f;
+                float valueW = isPowerRow ? 80f : 120f;
+
+                var key = Ui.Label($"DetailStatKey{i}", keys[i], new UiVec(keyW, 16f), 12,
                     FightHudPalette.TextMuted, Place.At(left, y, new UiVec(0f, 0.5f)));
 
                 // 120 wide, not v1's 170: at 170 this box began at x -22 and the
                 // key's box reaches 22.
-                var value = Ui.Label($"DetailStatValue{i}", UiString.Runtime, new UiVec(120f, 16f), 13,
+                var value = Ui.Label($"DetailStatValue{i}", UiString.Runtime, new UiVec(valueW, 16f), 13,
                     FightHudPalette.GoldLight, Place.At(DetailW * 0.5f - 22f, y, new UiVec(1f, 0.5f)));
 
                 DetailStatKeys.Add(key);
                 DetailStatValues.Add(value);
                 children.Add(key);
                 children.Add(value);
+
+                if (isPowerRow)
+                {
+                    // Spans the freed middle -- from just right of the
+                    // narrowed key box to just left of the narrowed value
+                    // box, so it can never collide with either at any of the
+                    // four audited aspects. Empty content for a non-damaging
+                    // skill (FightController.RefreshDetail hides it), which
+                    // is why it takes no key label of its own: a key beside
+                    // an empty value reads as a bug, not as "no element".
+                    var damageType = Ui.Label("DetailDamageType", UiString.Runtime,
+                            new UiVec(148f, 16f), 11, FightHudPalette.TextMuted,
+                            Place.At(left + keyW + 4f, y, new UiVec(0f, 0.5f)))
+                        .Styled(TypographyRole.TacticalData);
+                    DetailDamageType = damageType;
+                    children.Add(damageType);
+                }
             }
 
             var column = Ui.Sprite("DetailColumn", PanelViolet,

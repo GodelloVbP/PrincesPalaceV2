@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Rewards;
+using PrincesPalace.Domain.Stats;
 using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace
@@ -303,6 +304,30 @@ namespace PrincesPalace
                     detailStatKeys[i].gameObject.SetShown(has);
                 }
             }
+
+            RefreshDetailDamageType(panel.DamageType);
+        }
+
+        // "Fire", "Poison", a "/"-joined "Fire/Ice" or "" -- see FightHudModel.
+        // DamageTypeLabel's own header for where the string comes from. Only
+        // the FIRST element of a joined list gets a colour; CombatBeat (and
+        // so this card) has no way to show two colours on one word, and the
+        // label itself still names every element the skill authors.
+        private void RefreshDetailDamageType(string label)
+        {
+            if (detailDamageType == null) return;
+
+            bool has = !string.IsNullOrEmpty(label);
+            detailDamageType.gameObject.SetShown(has);
+            if (!has) return;
+
+            detailDamageType.SetContent(label.ToUpperInvariant());
+
+            string firstType = label.Split('/')[0];
+            var color = System.Enum.TryParse(firstType, out DamageType parsed)
+                ? Hex(FightHudPalette.ForDamageType(parsed))
+                : Hex(FightHudPalette.TextMuted);
+            detailDamageType.color = color;
         }
 
         private void RefreshTargetPrompt()

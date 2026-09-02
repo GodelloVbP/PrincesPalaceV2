@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Combat.Session
 {
@@ -36,6 +37,28 @@ using PrincesPalace.Domain.Content;
         // actions in the same chain have already landed.
         public int Amount;
         public bool IsHealing;
+
+        // THE ONE FIELD THIS CLASS DID NOT CARRY UNTIL THE POPUP NEEDED IT.
+        //
+        // FightSession never sets this -- it stays Physical (the enum's own
+        // zero value) for every beat FightSession itself records, exactly as
+        // it always implicitly was. It is set from OUTSIDE, in
+        // FightController.AfterResolution, the one place every drained batch
+        // of beats already passes through: that call already has
+        // FightSession.ActorAttackType(beat.Actor) on hand (FightHudModel's
+        // detail-card label reads the very same method), so painting it onto
+        // each beat costs one loop rather than a second recording path
+        // threaded through every RecordBeatAmount call site inside
+        // FightSession's own several files.
+        //
+        // A caster's OWN type, not the packet's -- a fixed-damage skill that
+        // authors a type its caster does not carry (frost_flare's Ice half on
+        // a Fire-typed caster) still pops in the caster's colour. CombatBeat
+        // does not carry which ResolvedSkill produced it at all, only who
+        // acted and who was hit, so that finer distinction would need the
+        // beat to carry the skill too -- a bigger seam than a popup justifies
+        // today.
+        public DamageType DamageType;
 
         // PHASE D1: the single-target swing or cast this beat represents was
         // DODGED — Amount stays 0 (RecordBeatAmount already no-ops for a

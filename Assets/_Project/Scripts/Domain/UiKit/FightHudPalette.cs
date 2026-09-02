@@ -1,3 +1,5 @@
+using PrincesPalace.Domain.Stats;
+
 namespace PrincesPalace.Domain.UiKit
 {
     // The battle HUD's colours, as hex.
@@ -114,5 +116,60 @@ namespace PrincesPalace.Domain.UiKit
         public const string TargetPromptFill = "#26160AE6";   // 0.90
         public const string TargetPromptBorder = "#FFC45A8C"; // 0.55
         public const string DetailBorder = "#C8AAE642";       // 0.26
+
+        // --- damage type, one token per Stats.DamageType member -----------------
+        //
+        // The damage popup and the skill detail card's element label both read
+        // these through ForDamageType, so a hit and the card describing the
+        // skill that caused it cannot disagree about what colour "Fire" is.
+        //
+        // Physical is the popup's own original flat red (0.93, 0.26, 0.24 in
+        // DamagePopup's old hardcoded Color), carried over as a token rather
+        // than changed -- this pass adds colour to the OTHER five types, it
+        // does not restyle the one every hit used to show.
+        public const string DamageTypePhysical = "#ED423DFF";
+        public const string DamageTypeFire = "#FF6A2AFF";
+        public const string DamageTypeIce = "#9FD8F5FF";
+
+        // Not in the brief (which named Physical/Fire/Poison/Arcane and three
+        // elements this enum does not have -- Lightning, Holy, Shadow), so
+        // this is a judgement call rather than an authored spec: forest green,
+        // a hue apart from Poison below so the two read as different things
+        // rather than as one green with two names.
+        public const string DamageTypeNature = "#5FA24AFF";
+
+        // Pushed ACID rather than the brief's own #5FD35F: that value sits one
+        // step from DamagePopup.HealColor (#6BDB73, still the fixed colour a
+        // heal shows regardless of DamageType) and the two would read as the
+        // same green on a number that only differs by a leading +/-. This is
+        // the "make poison more acid if it clashes" contingency the brief
+        // itself named.
+        public const string DamageTypePoison = "#A8E63CFF";
+
+        // TacticalData's own FaceColor (TmpBootstrap.Typography.cs) -- the
+        // brief asked for this exact hex, and it is already the violet every
+        // other numeric HUD readout on this screen is tinted with.
+        public const string DamageTypeArcane = "#C69AF1FF";
+
+        // Every Stats.DamageType member, explicitly -- no default fallthrough
+        // to white, and no default fallthrough to Physical either for a type
+        // this switch has heard of; only a genuinely FUTURE enum member (one
+        // this file has not been taught yet) falls through to Physical, and
+        // FightHudPaletteDamageTypeTests pins every CURRENT member against a
+        // literal so a new one added to the enum without a token here fails a
+        // test rather than silently painting a popup white.
+        public static string ForDamageType(DamageType type)
+        {
+            switch (type)
+            {
+                case DamageType.Physical: return DamageTypePhysical;
+                case DamageType.Fire: return DamageTypeFire;
+                case DamageType.Ice: return DamageTypeIce;
+                case DamageType.Nature: return DamageTypeNature;
+                case DamageType.Poison: return DamageTypePoison;
+                case DamageType.Arcane: return DamageTypeArcane;
+                default: return DamageTypePhysical;
+            }
+        }
     }
 }

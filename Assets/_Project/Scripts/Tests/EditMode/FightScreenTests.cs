@@ -138,6 +138,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(s.PartyPlate.IsValid);
             Assert.IsTrue(s.SubmenuColumn.IsValid);
             Assert.IsTrue(s.DetailColumn.IsValid);
+            Assert.IsTrue(s.DetailDamageType.IsValid);
             Assert.IsTrue(s.TargetPrompt.IsValid);
             Assert.IsTrue(s.SpellVfxPool.IsValid);
             Assert.IsTrue(s.ContinueButton.IsValid);
@@ -845,6 +846,28 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(300f, rect.Width, 0.01f);
             Assert.AreEqual(52f, rect.Height, 0.01f);
+        }
+
+        // ---- the skill detail card's element tag ------------------------------
+
+        [Test]
+        public void TheDamageTypeTagSitsBetweenThePowerKeyAndItsValue()
+        {
+            var keyRect = RectOf("DetailStatKey1");
+            var valueRect = RectOf("DetailStatValue1");
+            var tagRect = RectOf("DetailDamageType");
+
+            // Same row -- riding POWER rather than a row of its own, since
+            // FightHudSpec.DetailStatRows (pinned at 5 by
+            // TheTreeIsSizedFromFightHudSpec_NotFromRestatedNumbers) leaves no
+            // sixth line to give it.
+            Assert.AreEqual(keyRect.Centre.Y, tagRect.Centre.Y, 0.01f);
+            Assert.AreEqual(valueRect.Centre.Y, tagRect.Centre.Y, 0.01f);
+
+            Assert.LessOrEqual(keyRect.Right, tagRect.Left,
+                "the element tag reaches back into the POWER key's own box");
+            Assert.LessOrEqual(tagRect.Right, valueRect.Left,
+                "the element tag reaches into the POWER value's own box");
         }
 
         private static IEnumerable<UiNode> Walk(UiNode node)
