@@ -9,6 +9,7 @@ using UnityEngine.TestTools;
 using UnityEngine.UI;
 using PrincesPalace.Domain.Dungeon;
 using PrincesPalace.Domain.Equipment;
+using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -335,11 +336,41 @@ namespace PrincesPalace.PlayModeTests
             LogAssert.ignoreFailingMessages = true;
         }
 
+        // A REAL LEVEL-N SQUAD, not just the level field. `character.level`
+        // alone changes nothing a fight reads: max health, attack and every
+        // other combat stat come from ContentDatabase.EffectiveAbilityScores
+        // (base + invested + talent bonuses) and Character.bonusMaxHealth,
+        // both of which only move through ClaimTrackRewards and Invest --
+        // see Character.cs's own header on `level` ("level gates spell tiers
+        // ... [not] a within-run curve") and FightEncounterAdapter (maxHealth
+        // = stats.maxHealth + AbilityDerivation.MaxHealthBonus(scores)). A
+        // character left at raw `level = N` fights with a level-1 statline
+        // whatever N is, which is why level 200 and level 90 used to be
+        // indistinguishable here. ProfilePresets.Build is the game's own door
+        // for turning a level into a build (level, ClaimTrackRewards, spend
+        // every point) and this mirrors it minus the talent/ember half,
+        // which the tests in this file never needed. Points are spread
+        // round-robin across every score rather than by any archetype --
+        // there is no fight-specific build under test, only "is this
+        // character as strong as its level says it should be".
         private static void LevelTheSquadTo(int level)
         {
             foreach (var character in SaveSlotManager.CurrentSave.ActiveSquad())
             {
                 character.level = level;
+                character.ClaimTrackRewards();
+
+                int scoreIndex = 0;
+                while (character.unspentStatPoints > 0)
+                {
+                    var score = AbilityScores.All[scoreIndex % AbilityScores.All.Length];
+                    if (!character.Invest(score))
+                    {
+                        break;
+                    }
+
+                    scoreIndex++;
+                }
             }
         }
 
