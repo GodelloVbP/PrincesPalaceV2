@@ -77,9 +77,25 @@ levelAtDeath      int   -- fielded squad's total level when the run ended
 skillsUsed        string[] -- distinct ids behind "Skill:" turn labels
 fights[]          step, floor, roomType, enemyIds, turns, damageTaken,
                   partyHpOut, partyMaxHp, usedItem
-rooms[]           step, nodeId, offerItemIds, pickedIndex,
-                  equippedItemIds -- what the equip pass after this room
-                  actually put on; feeds itemEquipRate
+rooms[]           step, floor, nodeId, roomType, offerItemIds, pickedIndex,
+                  favor, encounterClass, offers[], equippedItemIds -- what
+                  the equip pass after this room actually put on; feeds
+                  itemEquipRate.
+                  favor is ItemOfferRoll.CurrentSquadFavor() at the moment
+                  this room's offer was rolled (0 / "" for a room that made
+                  no offer). encounterClass is "Normal" or "Elite", read off
+                  the exact same expression RunOrchestrator.RollOffers uses
+                  (session.IsEliteFight ? Elite : Normal,
+                  Assets/_Project/Scripts/Core/Bot/RunOrchestrator.cs:461-463)
+                  -- IsBossFight is never consulted there, so a boss room's
+                  offer rolls as "Normal" (or "Elite" if it also happens to
+                  be flagged elite) today; encounterClass records what the
+                  roll actually saw, not what a boss room arguably deserves.
+                  offers[] is one entry per offerItemIds entry, index-aligned:
+                  {itemId, tier, plus, riftTier, modifierCount} -- the axes
+                  RarityTable/LootLadder/ModifierTable actually rolled for
+                  that copy (riftTier is the plain int backing
+                  Domain.Content.RiftTier, 0..3).
 relicRounds[]     offerIds, pickedIndex   -- -1 for "took nothing"
 bugs[]            invariant, step, nodeId, detail, lastActions, stack
                   (the merger adds seed/archetype/profile on the way out)
@@ -169,13 +185,32 @@ TurnTrace
 
 RoomTrace
   Step          int
+  Floor         int
   NodeId        int
   RoomType      string
   OfferItemIds  string[] -- empty when this room made no item offer
   PickedIndex   int      -- -1 when nothing was offered or nothing taken
+  Offers        OfferEntry[] -- index-aligned with OfferItemIds; empty when
+                        this room made no offer
+  Favor         int    -- ItemOfferRoll.CurrentSquadFavor() at roll time; 0
+                        when this room made no offer
+  EncounterClass string -- "Normal" or "Elite", exactly as
+                        RunOrchestrator.RollOffers computed it for this
+                        roll (session.IsEliteFight ? Elite : Normal); ""
+                        when this room made no offer. IsBossFight is not
+                        consulted there, so a boss room's roll reads
+                        "Normal" today -- see BalanceBotRunner.RunRowJson's
+                        note on the same field.
   Equipped      EquipTrace[] -- what the equip pass after this room put on.
                         Empty for most rooms, which is the honest answer: a
                         player does not re-dress after every fight either.
+
+OfferEntry
+  ItemId        string
+  Tier          int
+  Plus          int
+  RiftTier      int    -- (int)Domain.Content.RiftTier, 0..3
+  ModifierCount int
 
 EquipTrace
   CharacterId   string -- CharacterDefinition.id it was worn by
@@ -183,6 +218,23 @@ EquipTrace
   Slot          string -- EquipmentSlot name, e.g. "Weapon1"
   Plus          int    -- which copy; the bag keys stacks on it
 ```
+
+### `RunTrace.Hash()` and this change
+
+`Hash()` folds every field named above into one FNV-1a string (see
+`RunTrace.cs`'s own comment on why FNV-1a rather than
+`System.Security.Cryptography`). Adding `RoomTrace.Floor`/`Favor`/
+`EncounterClass`/`Offers` to the fields the hash loop appends means the hash
+of a run traced before this change and the identical run traced after it
+will differ -- not because anything about how the run plays changed, but
+because the hash now covers strictly more of the trace than it did. This is
+expected and not a `determinism` mismatch: the determinism check
+(`bot_merge.py`'s `determinism.mismatches`) compares two hashes taken with
+the SAME build replaying the SAME seed back to back within one batch, so
+both sides of that comparison always include the new fields identically.
+Nothing about the existing fields' contribution to the hash changed -- the
+new `Append` calls are additions to the string being hashed, not edits to
+how the old fields are appended.
 
 ## `summary.json`
 

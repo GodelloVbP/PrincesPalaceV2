@@ -351,6 +351,7 @@ namespace PrincesPalace
                 var roomTrace = new RoomTrace
                 {
                     Step = RunManager.Run.step,
+                    Floor = RunManager.Run.floor,
                     NodeId = node.Id,
                     RoomType = node.Type.ToString(),
                     PickedIndex = -1,
@@ -371,9 +372,10 @@ namespace PrincesPalace
                     break;
                 }
 
-                // MoveTo writes the step, so the room's own step is only right
-                // once arrival has happened.
+                // MoveTo writes the step (and can cross a leg boundary into a
+                // new floor), so both are only right once arrival has happened.
                 roomTrace.Step = RunManager.Run.step;
+                roomTrace.Floor = RunManager.Run.floor;
 
                 if (!isFight)
                 {
@@ -694,6 +696,29 @@ namespace PrincesPalace
             }
 
             roomTrace.OfferItemIds.AddRange(offers.Select(o => o.ItemId));
+
+            // WHAT DECIDED THIS OFFER, for the shop-balance batch
+            // (docs/PLAN_BALANCE_BOT.md §7 extension): the exact axes
+            // RarityTable/LootLadder rolled, and the favor/encounter-class
+            // that fed them. EncounterClass mirrors
+            // RunOrchestrator.RollOffers' OWN read (session.IsEliteFight ?
+            // Elite : Normal) verbatim rather than reclassifying from
+            // node.Type/session.IsBossFight -- RollOffers never consults
+            // IsBossFight, so a boss room's offer is rolled as Normal (or
+            // Elite, if IsEliteFight also happens to be true) today. Recording
+            // anything else here would make this trace lie about what the
+            // roll actually saw.
+            roomTrace.Favor = ItemOfferRoll.CurrentSquadFavor();
+            roomTrace.EncounterClass =
+                (session.IsEliteFight ? EncounterClass.Elite : EncounterClass.Normal).ToString();
+            roomTrace.Offers.AddRange(offers.Select(o => new OfferEntry
+            {
+                ItemId = o.ItemId,
+                Tier = o.Tier,
+                Plus = o.Plus,
+                RiftTier = (int)o.RiftTier,
+                ModifierCount = o.Modifiers?.Count ?? 0,
+            }));
 
             // WHAT EACH ONE IS ACTUALLY WORTH, priced by this archetype's own
             // weights against the squad's current loadout. Without it

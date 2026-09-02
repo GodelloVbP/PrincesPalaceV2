@@ -566,9 +566,30 @@ namespace PrincesPalace.Editor.Bot
                 if (i > 0) sb.Append(',');
                 var r = t.Rooms[i];
                 sb.Append("{\"step\":").Append(r.Step);
+                sb.Append(",\"floor\":").Append(r.Floor);
                 sb.Append(",\"nodeId\":").Append(r.NodeId);
+                sb.Append(",\"roomType\":").Append(Str(r.RoomType));
                 sb.Append(",\"offerItemIds\":").Append(StrList(r.OfferItemIds));
                 sb.Append(",\"pickedIndex\":").Append(r.PickedIndex);
+                sb.Append(",\"favor\":").Append(r.Favor);
+                sb.Append(",\"encounterClass\":").Append(Str(r.EncounterClass));
+
+                // TIER/PLUS/RIFTTIER/MODIFIERCOUNT PER OFFER, index-aligned
+                // with offerItemIds -- the shop-balance batch's whole point
+                // (docs/PLAN_BALANCE_BOT.md §7 extension) is these numbers,
+                // not the item ids beside them.
+                sb.Append(",\"offers\":[");
+                for (int k = 0; k < r.Offers.Count; k++)
+                {
+                    if (k > 0) sb.Append(',');
+                    var off = r.Offers[k];
+                    sb.Append("{\"itemId\":").Append(Str(off.ItemId));
+                    sb.Append(",\"tier\":").Append(off.Tier);
+                    sb.Append(",\"plus\":").Append(off.Plus);
+                    sb.Append(",\"riftTier\":").Append(off.RiftTier);
+                    sb.Append(",\"modifierCount\":").Append(off.ModifierCount).Append('}');
+                }
+                sb.Append(']');
 
                 // WHAT WAS ACTUALLY WORN after this room, ids only. itemPickRate
                 // answers "how often is this taken when offered"; this answers

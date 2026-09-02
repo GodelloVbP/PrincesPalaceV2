@@ -50,14 +50,47 @@ namespace PrincesPalace.Domain.Bot
         public int Plus;
     }
 
+    // One item on the end-of-fight reward screen, with the axes that decide
+    // it rather than just the id -- the shop-balance batch (plan §7 extension)
+    // cares whether tier/plus/rift-tier/modifier-count are climbing the way
+    // RarityTable/LootLadder intend, not which flavor of sword landed.
+    // Fields-only, same reasoning as TurnTrace/EquipTrace above.
+    public sealed class OfferEntry
+    {
+        public string ItemId;
+        public int Tier;
+        public int Plus;
+
+        // (int)Domain.Content.RiftTier, 0..3. Stored as a plain int for the
+        // same reason EquipmentSlotEntry.riftTier is: a JSON number needs no
+        // enum on the reading side.
+        public int RiftTier;
+        public int ModifierCount;
+    }
+
     // One room, fight or otherwise.
     public sealed class RoomTrace
     {
         public int Step;
+        public int Floor;
         public int NodeId;
         public string RoomType;
         public List<string> OfferItemIds = new List<string>();
         public int PickedIndex;
+
+        // Per-offer tier/plus/riftTier/modifierCount, index-aligned with
+        // OfferItemIds. OfferItemIds stays rather than being replaced --
+        // existing readers (bot_merge.py's itemPickRate/itemEquipRate) key
+        // off it by id alone and do not need the extra axes.
+        public List<OfferEntry> Offers = new List<OfferEntry>();
+
+        // The squad's Prince's Favor at the moment this room's offer was
+        // rolled (ItemOfferRoll.CurrentSquadFavor()), and the encounter class
+        // RunOrchestrator.RollOffers actually used to roll it -- "Normal" or
+        // "Elite" exactly as that method computes them, not a class this room
+        // arguably deserves. Empty string for a room that made no offer.
+        public int Favor;
+        public string EncounterClass = "";
 
         // What the equip pass after this room put on. Empty for most rooms,
         // which is the honest answer: a player does not re-dress after every
@@ -143,9 +176,16 @@ namespace PrincesPalace.Domain.Bot
 
             foreach (var room in Rooms)
             {
-                sb.Append(room.Step).Append(',').Append(room.NodeId).Append(',').Append(room.RoomType).Append(',');
+                sb.Append(room.Step).Append(',').Append(room.Floor).Append(',').Append(room.NodeId).Append(',').Append(room.RoomType).Append(',');
                 foreach (var id in room.OfferItemIds) sb.Append(id).Append('+');
                 sb.Append(',').Append(room.PickedIndex).Append(',');
+                sb.Append(room.Favor).Append(',').Append(room.EncounterClass).Append(',');
+                foreach (var offer in room.Offers)
+                {
+                    sb.Append(offer.ItemId).Append('/').Append(offer.Tier).Append('/').Append(offer.Plus)
+                      .Append('/').Append(offer.RiftTier).Append('/').Append(offer.ModifierCount).Append('|');
+                }
+                sb.Append(',');
                 foreach (var worn in room.Equipped)
                 {
                     sb.Append(worn.CharacterId).Append('/').Append(worn.ItemId).Append('/')
