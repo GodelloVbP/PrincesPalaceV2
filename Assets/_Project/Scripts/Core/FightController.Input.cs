@@ -731,7 +731,14 @@ namespace PrincesPalace
                 case MenuDepth.Sub:
                     var rows = CurrentRows();
                     if (rows.Count == 0) return;
-                    OnRowHovered(Wrap(_menu.Selection + delta, rows.Count));
+
+                    // AND SCROLLED TO, which hovering never has to do: the
+                    // stick can walk the selection clean off the window, and
+                    // until it followed, a long list was navigable only for the
+                    // eight rows that happened to be on screen.
+                    int row = Wrap(_menu.Selection + delta, rows.Count);
+                    OnRowHovered(row);
+                    ScrollSubmenuRowIntoView(row);
                     break;
 
                 case MenuDepth.Target:

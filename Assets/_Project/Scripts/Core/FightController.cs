@@ -147,6 +147,25 @@ namespace PrincesPalace
         // anything without the other -- the range is a function of the count.
         private float _submenuScroll;
         private int _submenuCount;
+
+        // WHICH LIST THAT SCROLL BELONGS TO, so that a repaint can tell itself
+        // apart from a new list.
+        //
+        // AnchorSubmenuRows is called from RefreshSubmenu, which runs on every
+        // RefreshUi -- and RefreshUi runs on every hover, every plate, every
+        // beat. It reset the scroll unconditionally, so the list snapped to the
+        // top on all of them, and the wheel was the worst case rather than an
+        // exception: scrolling slides the rows UNDER a stationary pointer, so
+        // the notch itself changes which row is hovered and springs the list
+        // straight back. The bar looked dead.
+        //
+        // A count and a branch, not a bool, because "the same list" has to mean
+        // the same entries: ITEM's twelve potions and SKILL's twelve spells are
+        // different lists that happen to be the same length. Cleared outright
+        // when the column closes (ForgetSubmenuScroll), which is what keeps a
+        // freshly opened menu starting at its first row.
+        private int _submenuScrolledCount = -1;
+        private MenuBranch _submenuScrolledBranch = MenuBranch.None;
         [SerializeField] internal TMP_Text[] submenuNames;
 
         [SerializeField] internal GameObject detailColumn;
@@ -595,7 +614,19 @@ namespace PrincesPalace
             // Opening at the TOP of the list: row 0 is the first skill, and a
             // menu that opens halfway down its own contents is a menu the
             // player has to scroll before they can read it.
-            _submenuScroll = 0f;
+            //
+            // ONLY ON OPENING IT, though, which is the fix. This ran on every
+            // repaint, and a repaint is what a hover costs -- so the player
+            // scrolled, the rows moved under the pointer, the new hover
+            // repainted, and the list was back at the top before the notch had
+            // finished. Same branch and same count means the same list still
+            // open in front of the same player, and where they left it is
+            // theirs to keep.
+            bool sameList = shown == _submenuScrolledCount && _menu.Branch == _submenuScrolledBranch;
+            _submenuScrolledCount = shown;
+            _submenuScrolledBranch = _menu.Branch;
+
+            if (!sameList) _submenuScroll = 0f;
             ApplySubmenuScroll();
 
             // The header sits on the container now rather than on the top row,
@@ -662,6 +693,55 @@ namespace PrincesPalace
         private void SeekSubmenuTo(float fromTop)
         {
             _submenuScroll = FightSubmenuLayout.ScrollAt(_submenuCount, fromTop);
+            ApplySubmenuScroll();
+        }
+
+        // The column closed, so the scroll it was holding stops being anybody's.
+        //
+        // Called from the one place that knows -- RefreshSubmenu's closed path.
+        // Without it, backing out of a twelve-row list and opening the same
+        // twelve-row list again would land the player wherever they were last
+        // time, which is a menu that remembers something no player asked it to.
+        private void ForgetSubmenuScroll()
+        {
+            _submenuScrolledCount = -1;
+            _submenuScrolledBranch = MenuBranch.None;
+        }
+
+        // Bring a row the player ARROWED onto back inside the window.
+        //
+        // Only the keyboard and the stick need this: a row reached with the
+        // mouse is under the pointer and therefore already on screen, and a
+        // list that scrolled itself on hover would be unusable. Arrowing has no
+        // such guarantee -- past the eighth row the highlight simply walked
+        // off the top of the viewport and the player was navigating a list they
+        // could not see.
+        //
+        // Written as a correction to the CURRENT position rather than as a
+        // target scroll: how far the row overhangs the window is the amount to
+        // move, and a row already inside it moves nothing.
+        private void ScrollSubmenuRowIntoView(int index)
+        {
+            if (index < 0 || index >= _submenuCount) return;
+            if (FightSubmenuLayout.ScrollRange(_submenuCount) <= 0f) return;
+
+            float y = FightSubmenuLayout.ContentY(_submenuCount, _submenuScroll)
+                      + FightSubmenuLayout.RowYInContent(index);
+
+            float windowHalf = FightSubmenuLayout.ViewportHeight * 0.5f;
+            float rowHalf = FightSubmenuLayout.RowHeight * 0.5f;
+
+            // Scrolling further down the list moves the content UP, so a row
+            // hanging off the top is corrected by scrolling BACK -- see
+            // FightSubmenuLayout.ContentOffsetY for why the two run opposite
+            // ways round.
+            float overTop = y + rowHalf - windowHalf;
+            float underBottom = -windowHalf - (y - rowHalf);
+
+            if (overTop > 0f) _submenuScroll -= overTop;
+            else if (underBottom > 0f) _submenuScroll += underBottom;
+            else return;
+
             ApplySubmenuScroll();
         }
 

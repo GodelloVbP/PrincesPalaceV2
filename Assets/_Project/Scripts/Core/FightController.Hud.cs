@@ -188,7 +188,14 @@ namespace PrincesPalace
         private void RefreshSubmenu()
         {
             submenuColumn.SetShown(_menu.SubmenuOpen);
-            if (!_menu.SubmenuOpen || submenuRows == null) return;
+            if (!_menu.SubmenuOpen || submenuRows == null)
+            {
+                // The scroll belongs to the list that is open. Closing the
+                // column is what makes the next open start at the top again --
+                // see ForgetSubmenuScroll.
+                ForgetSubmenuScroll();
+                return;
+            }
 
             var rows = CurrentRows();
 
