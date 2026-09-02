@@ -406,6 +406,10 @@ namespace PrincesPalace.Domain.Combat.Session
             _enemyKits[state] = kit;
             state.IsSummon = true;
             AppendMessage($"{actor.Name} calls out — {state.Name} answers!");
+
+            // Disgruntled Lackey: an ENEMY's own summons draw the party's
+            // grudge -- see its own header.
+            DisgruntledLackeyOnEnemySummon(actor);
         }
 
         private void ResolveDamageSingle(CombatantState actor, ResolvedSkill skill, CombatantState target, int resourceSpent)
@@ -784,6 +788,10 @@ namespace PrincesPalace.Domain.Combat.Session
             if (!_encounter.PushBack(target, skill.QueuePushSlots)) return;
 
             AppendMessage($"{target.Name} is knocked back down the order.");
+
+            // Mechanic: the shared "position changed" event -- Sparring
+            // Buckler's own trigger, whoever moved.
+            NotePositionChanged(target, actor);
 
             // Charge T2: the shove does not merely delay the telegraphed
             // action, it takes it away. Removing the committed intent IS that

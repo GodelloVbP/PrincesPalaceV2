@@ -90,6 +90,11 @@ namespace PrincesPalace.Domain.Combat.Session
             // frame of any of it. The beat queue is what makes that safe.
             AutoResolveEnemyTurns();
 
+            // Phoenix Egg: an egg cannot act, so its holder's own turn (once
+            // it comes back around) resolves itself the same way an enemy's
+            // does -- see AutoResolveEggTurns' own header.
+            AutoResolveEggTurns();
+
             if (_encounter.IsOver)
             {
                 ResolveVictory();
@@ -245,6 +250,11 @@ namespace PrincesPalace.Domain.Combat.Session
             var actor = _encounter.Current;
             if (actor == null) return;
 
+            // Mechanic (f): a fresh actor's turn is the turn boundary every
+            // OncePerTurn lock resets against -- see CombatLocks' own
+            // header.
+            _locks.ResetTurn();
+
             RegenerateMana(actor);
             ApplyRunicWardConversion(actor);
             TickStatuses(actor);
@@ -261,6 +271,9 @@ namespace PrincesPalace.Domain.Combat.Session
             // does for a status.
             TickLambTurnStart(actor);
             TickTransform(actor);
+
+            // Phoenix Egg: the shell's own 3-turn clock.
+            TickPhoenixEgg(actor);
 
             var signature = actor.Signature;
             if (signature == null) return;
@@ -323,6 +336,13 @@ namespace PrincesPalace.Domain.Combat.Session
             // here too, the same "holder's own turns" rule every status
             // duration in this file already follows.
             FallingOffStacks.TickAll(actor);
+
+            // Ice Fingernail's own malus has to shrink alongside its
+            // stacks -- nothing else re-reads the stack count once a
+            // stack falls off on its own clock (as opposed to a fresh
+            // attack re-stacking it), so the malus would otherwise
+            // outlive every stack that justified it.
+            RefreshIceFingernailSpeed(actor);
 
             var report = StatusEffects.Tick(actor);
 

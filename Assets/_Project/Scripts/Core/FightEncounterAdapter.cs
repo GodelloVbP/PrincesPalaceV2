@@ -202,6 +202,13 @@ namespace PrincesPalace
 
             state.ManaRegen = stats.manaRegen;
             state.ArmorPenetration = RelicModifiers.Apply(0, RelicStat.ArmorPenetration, modifiers);
+
+            // Balance pass 2: Jo-Sun's Book of Anatomy and Vampire Dentures,
+            // the same "flat stat set once at kit-build time from a
+            // RelicModifier" shape ArmorPenetration just above already uses.
+            state.WeaknessMultiplierBonusPercent = RelicModifiers.Apply(0, RelicStat.WeaknessBonus, modifiers);
+            state.RelicLifestealPercent = RelicModifiers.Apply(0, RelicStat.Lifesteal, modifiers);
+
             state.AbilityScores = scores;
 
             // Never assigned anywhere in the real adapter path before this --
@@ -328,6 +335,12 @@ namespace PrincesPalace
 
             state.ManaRegen = stats.manaRegen;
             state.ArmorPenetration = RelicModifiers.Apply(0, RelicStat.ArmorPenetration, modifiers);
+
+            // Balance pass 2 -- same reasoning as the save-backed overload
+            // above.
+            state.WeaknessMultiplierBonusPercent = RelicModifiers.Apply(0, RelicStat.WeaknessBonus, modifiers);
+            state.RelicLifestealPercent = RelicModifiers.Apply(0, RelicStat.Lifesteal, modifiers);
+
             state.AbilityScores = scores;
 
             // Same "Defence applies to both broad Defenses" reading the

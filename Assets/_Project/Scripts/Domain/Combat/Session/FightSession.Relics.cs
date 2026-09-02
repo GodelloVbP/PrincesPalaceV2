@@ -89,6 +89,13 @@ namespace PrincesPalace.Domain.Combat.Session
 
             // Magic Marker: an attack against a marked target consumes it.
             MagicMarkerConsumeOnAttack(actor, target);
+
+            // Ice Fingernail: the swing stacks a slow on the target.
+            IceFingernailOnAttack(actor, target);
+
+            // Dancer's Anklet: an attack is one of the three moments that
+            // earns an automatic reposition.
+            DancersAnkletReposition(actor);
         }
 
         // ---- the cast ------------------------------------------------------------
@@ -129,6 +136,10 @@ namespace PrincesPalace.Domain.Combat.Session
             // Rampaging Bull's Horn: fires only on a convergence (Transform)
             // cast -- see its own header.
             RampagingBullsHornOnConvergence(actor, skill);
+
+            // Dancer's Anklet: a cast is the other of the three moments
+            // that earns an automatic reposition.
+            DancersAnkletReposition(actor);
         }
 
         // ---- sword in a box --------------------------------------------------------
@@ -550,6 +561,8 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             PayBounty(actor, victim);
             AmassingStarOnKill(actor, victim);
+            EssenceSiphonOnKill(actor, victim);
+            InconspicuousKeyOnKill(actor, victim);
         }
 
     }

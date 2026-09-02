@@ -37,6 +37,10 @@ namespace PrincesPalace.Domain.Combat.Session
 
                 AppendMessage($"{actor.Name} uncorks the jar - every enemy reeks, and is marked.");
             }
+
+            // Loaded Dice: balance pass 2 -- see FightSession.
+            // BalanceRelics2.LoadedDiceOnCombatBegin.
+            LoadedDiceOnCombatBegin();
         }
 
         // ---- magic marker -----------------------------------------------------------

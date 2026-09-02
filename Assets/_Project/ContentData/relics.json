@@ -236,6 +236,120 @@
       "rarity": "rare",
       "requiresConvergenceAbility": true,
       "iconPath": "Assets/_Project/Art/Items/Relics/Processed/rampaging_bulls_horn.png"
+    },
+    {
+      "id": "ice_fingernail",
+      "displayName": "Ice Fingernail",
+      "description": "Attacks apply a 10% slow, stacking up to 40%.",
+      "effect": "IceFingernail",
+      "rarity": "common",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/ice_fingernail.png"
+    },
+    {
+      "id": "loaded_dice",
+      "displayName": "Loaded Dice",
+      "description": "At the start of the fight, stun one random enemy for 1 turn.",
+      "effect": "LoadedDice",
+      "rarity": "rare",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/loaded_dice.png"
+    },
+    {
+      "id": "monkey_kings_scepter",
+      "displayName": "Monkey King's Scepter",
+      "description": "Your melee attacks can reach any enemy, regardless of position.",
+      "effect": "MonkeyKingsScepter",
+      "rarity": "ultrarare",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/monkey_kings_scepter.png"
+    },
+    {
+      "id": "jo_suns_book_of_anatomy",
+      "displayName": "Jo-Sun's Book of Anatomy",
+      "description": "Super-effective damage is multiplied by an extra 20%.",
+      "rarity": "rare",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/jo_suns_book_of_anatomy.png",
+      "modifiers": [
+        {
+          "type": "WeaknessDamageBonusPercent",
+          "amount": 20
+        }
+      ]
+    },
+    {
+      "id": "sparring_saber",
+      "displayName": "Sparring Saber",
+      "description": "Altering your own position in the turn order grants +30% Speed for 1 turn.",
+      "effect": "SparringSaber",
+      "rarity": "common",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/sparring_saber.png"
+    },
+    {
+      "id": "sparring_buckler",
+      "displayName": "Sparring Buckler",
+      "description": "Casting an ability that alters anyone's position grants a 15% ward, once per turn.",
+      "effect": "SparringBuckler",
+      "rarity": "rare",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/sparring_buckler.png"
+    },
+    {
+      "id": "essence_siphon",
+      "displayName": "Essence Siphon",
+      "description": "After an enemy dies (summons excluded), heal 3% of your max health.",
+      "effect": "EssenceSiphon",
+      "rarity": "rare",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/essence_siphon.png"
+    },
+    {
+      "id": "disgruntled_lackey",
+      "displayName": "Disgruntled Lackey",
+      "description": "Whenever an enemy summons a unit, deal 100% of your max health as damage to the summoner.",
+      "effect": "DisgruntledLackey",
+      "rarity": "mythic",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/disgruntled_lackey.png"
+    },
+    {
+      "id": "inconspicuous_key",
+      "displayName": "Inconspicuous Key",
+      "description": "They say hell and heaven have the same master key. Once per combat, an enemy you kill answers its call for one last blow against its own side.",
+      "effect": "InconspicuousKey",
+      "rarity": "mythic",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/inconspicuous_key.png"
+    },
+    {
+      "id": "dancers_anklet",
+      "displayName": "Dancer's Anklet",
+      "description": "After you attack, cast a spell or use an ability, you slip one position forward in the turn order.",
+      "effect": "DancersAnklet",
+      "rarity": "ultrarare",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/dancers_anklet.png"
+    },
+    {
+      "id": "berserkers_vest",
+      "displayName": "Berserker's Vest",
+      "description": "Getting hit lowers all of your active cooldowns by 1 turn, once per turn.",
+      "effect": "BerserkersVest",
+      "rarity": "ultrarare",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/berserkers_vest.png"
+    },
+    {
+      "id": "vampire_dentures",
+      "displayName": "Vampire Dentures",
+      "description": "10% vampirism - heal for a tenth of the damage your attacks deal.",
+      "rarity": "common",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/vampire_dentures.png",
+      "modifiers": [
+        {
+          "type": "LifestealPercent",
+          "amount": 10
+        }
+      ]
+    },
+    {
+      "id": "phoenix_egg",
+      "displayName": "Phoenix Egg",
+      "description": "Taking what would be fatal damage instead turns you into an egg for 3 turns, with its own HP pool. Revive with whatever fraction of it survives, or die if it breaks. Once per combat.",
+      "effect": "PhoenixEgg",
+      "rarity": "ultrarare",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/phoenix_egg.png"
     }
   ]
 }

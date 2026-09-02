@@ -64,6 +64,23 @@ namespace PrincesPalace.Domain.Content
         // would be exactly as unreadable there as it would be for
         // Resistance.
         ArmorPenetrationFlat,
+
+        // Balance pass 2, Jo-Sun's Book of Anatomy: a flat percent added
+        // MULTIPLICATIVELY to the super-effective (weakness) multiplier
+        // only -- see CombatMath.EffectivenessMultiplier's own header. No
+        // percent/flat twin, the same reasoning ArmorPenetrationFlat gives:
+        // this already lands against a multiplier, so a second "flat"
+        // reading would mean something different (add to the RAW
+        // multiplier rather than scale it) and this relic is authored as
+        // the scaling reading.
+        WeaknessDamageBonusPercent,
+
+        // Vampire Dentures: the RELIC half of lifesteal, on the same stat
+        // ModifierEffectType.LifestealPercent already grants from gear --
+        // see CombatantState.RelicLifestealPercent's own comment for why
+        // the two stay separate fields that sum at the one read site
+        // rather than one shared bag.
+        LifestealPercent,
     }
 
     // One numeric change, exactly as typed into relics.json.
@@ -146,6 +163,10 @@ namespace PrincesPalace.Domain.Content
                         return RelicStat.Speed;
                     case RelicModifierType.ArmorPenetrationFlat:
                         return RelicStat.ArmorPenetration;
+                    case RelicModifierType.WeaknessDamageBonusPercent:
+                        return RelicStat.WeaknessBonus;
+                    case RelicModifierType.LifestealPercent:
+                        return RelicStat.Lifesteal;
                     default:
                         return RelicStat.None;
                 }
@@ -172,6 +193,11 @@ namespace PrincesPalace.Domain.Content
 
         // Mechanic (e). See RelicModifierType.ArmorPenetrationFlat.
         ArmorPenetration,
+
+        // Balance pass 2. See RelicModifierType.WeaknessDamageBonusPercent
+        // and .LifestealPercent respectively.
+        WeaknessBonus,
+        Lifesteal,
     }
 
     // Folds a set of modifiers into a single change per stat.

@@ -235,7 +235,11 @@ namespace PrincesPalace.Domain.Combat.Session
                 return new Outcome(0, 1f, 0, isMiss: true);
             }
 
-            float effectiveness = CombatMath.EffectivenessMultiplier(type, affinity);
+            // Jo-Sun's Book of Anatomy: the attacker's own bonus against a
+            // matched weakness, if any -- see CombatMath.
+            // EffectivenessMultiplier's own header.
+            float effectiveness = CombatMath.EffectivenessMultiplier(
+                type, affinity, attacker?.WeaknessMultiplierBonusPercent ?? 0);
 
             int result = CombatMath.AfterResistance(
                 CombatMath.ApplyStatusEffects(CombatMath.ApplyEffectiveness(raw, effectiveness), target),

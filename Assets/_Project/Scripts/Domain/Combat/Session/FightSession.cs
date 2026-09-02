@@ -63,6 +63,11 @@ namespace PrincesPalace.Domain.Combat.Session
         // that has not banked any yet, which is every run's first fight.
         public int RunWideBonusDamagePercent { get; set; }
 
+        // Mechanic (f), LOCKS. See CombatLocks' own header -- a per-fight
+        // once-per-turn/once-per-combat gate, reset at the turn boundary
+        // inside GrantTurnStart (FightSession.Riders.cs).
+        private readonly CombatLocks _locks = new CombatLocks();
+
         public FightSession(
             CombatEncounter encounter,
             IReadOnlyList<PlayerKit> players,
@@ -106,7 +111,21 @@ namespace PrincesPalace.Domain.Combat.Session
         public bool PlayerWon => _encounter.PlayerWon;
         public CombatEncounter Encounter => _encounter;
 
-        public bool CanMeleeReach(CombatantState target) => _encounter.CanMeleeReach(target);
+        // Monkey King's Scepter: the CURRENT actor's melee reaches any
+        // enemy regardless of the front-rank rule. Read off Current rather
+        // than taking an actor parameter -- every real caller (the input
+        // layer, checking before it lets a click through) is asking "can
+        // whoever is about to act reach this", which is exactly Current.
+        public bool CanMeleeReach(CombatantState target)
+        {
+            var actor = _encounter.Current;
+            if (actor != null && actor.IsPlayerSide && HasRelic(actor, RelicEffect.MonkeyKingsScepter))
+            {
+                return target != null;
+            }
+
+            return _encounter.CanMeleeReach(target);
+        }
 
         public PlayerKit KitFor(CombatantState combatant) =>
             combatant != null && _playerKits.TryGetValue(combatant, out var kit) ? kit : null;
@@ -185,6 +204,7 @@ namespace PrincesPalace.Domain.Combat.Session
             RelicsOnCombatBegin();
             GrantTurnStart();
             AutoResolveEnemyTurns();
+            AutoResolveEggTurns();
 
             if (!_encounter.IsOver && _encounter.IsPlayerTurn)
             {
@@ -415,7 +435,15 @@ namespace PrincesPalace.Domain.Combat.Session
             if (actor == null || target == null || damage <= 0) return;
 
             var effects = actor.ModifierEffects;
-            if (effects.IsEmpty) return;
+
+            // Vampire Dentures' own lifesteal (RelicLifestealPercent) is a
+            // SEPARATE field from gear's ModifierEffects -- see
+            // CombatantState.RelicLifestealPercent's own comment -- so an
+            // actor carrying no gear-derived on-hit rider at all (the
+            // common case for a fresh relic with no equipment involved)
+            // must not short-circuit out of this method before the
+            // lifesteal block below ever reads it.
+            if (effects.IsEmpty && actor.RelicLifestealPercent <= 0) return;
 
             // Elemental on-hit damage -- the player-side mirror of the
             // Poison-on-hit template at FightSession.Enemies.cs:548. One
@@ -519,7 +547,9 @@ namespace PrincesPalace.Domain.Combat.Session
             // figure -- NOT CombatMath.Scale, same reasoning and the same
             // Rounding.AwayFromZero(value * pct / 100f) convention as the
             // elemental rider just above.
-            int lifestealPercent = effects.Best(ModifierEffectType.LifestealPercent);
+            // Vampire Dentures' own half summed on top of gear's --
+            // see CombatantState.RelicLifestealPercent's own comment.
+            int lifestealPercent = effects.Best(ModifierEffectType.LifestealPercent) + actor.RelicLifestealPercent;
             if (lifestealPercent > 0)
             {
                 int healed = Rounding.AwayFromZero(damage * lifestealPercent / 100f);

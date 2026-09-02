@@ -365,11 +365,26 @@ namespace PrincesPalace.Domain.Combat
         // things" a different KIND of vulnerability rather than a broader one.
         // A troll that burns and freezes takes 1.5x from fire and 1.5x from
         // ice, not 2.25x from either.
-        public static float EffectivenessMultiplier(DamageType attackType, ElementalAffinity affinity)
+        // `weaknessBonusPercent` is Jo-Sun's Book of Anatomy's own reading --
+        // the relic reports "x2.0 to x2.2" in the game's voice, but this
+        // codebase's own weakness multiplier is 1.5, not 2.0 (see
+        // WeaknessMultiplier's own comment), so the relic is authored as
+        // +20% MULTIPLICATIVE against WHATEVER the base already is: 1.5 x
+        // 1.2 = 1.8. Applied to the weakness branch only -- a resistance is
+        // a different number entirely and "anatomy" has nothing to say
+        // about it. Zero (every attacker without the relic) changes nothing.
+        public static float EffectivenessMultiplier(DamageType attackType, ElementalAffinity affinity,
+            int weaknessBonusPercent = 0)
         {
             if (affinity.IsWeakTo(attackType))
             {
-                return WeaknessMultiplier;
+                float multiplier = WeaknessMultiplier;
+                if (weaknessBonusPercent > 0)
+                {
+                    multiplier *= 1f + weaknessBonusPercent / 100f;
+                }
+
+                return multiplier;
             }
 
             if (affinity.Resists(attackType))

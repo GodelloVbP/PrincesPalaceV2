@@ -162,6 +162,32 @@ namespace PrincesPalace.Domain.Combat
         // was.
         public bool IsSummon;
 
+        // Balance pass 2. Jo-Sun's Book of Anatomy: a flat percent added
+        // MULTIPLICATIVELY to the super-effective (weakness) multiplier
+        // only -- see CombatMath.EffectivenessMultiplier's own header.
+        // Same "set once at kit-build time from a RelicModifier" shape
+        // ArmorPenetration already uses.
+        public int WeaknessMultiplierBonusPercent;
+
+        // Vampire Dentures: the RELIC half of lifesteal, summed alongside
+        // ModifierEffectType.LifestealPercent (gear's own half) inside
+        // ApplyModifierOnHitRiders -- see that method's own comment. A
+        // separate field rather than folded into ModifierEffects because
+        // RelicModifiers.Apply only ever reads RelicModifier, the same
+        // reason ArmorPenetration and WeaknessMultiplierBonusPercent are
+        // each their own field rather than routed through ModifierEffects.
+        public int RelicLifestealPercent;
+
+        // Phoenix Egg. IsPhoenixEgg is false for literally everyone who has
+        // not just cheated a fatal blow this way -- EggHealth/
+        // EggTurnsRemaining are meaningless while it is false, the same
+        // "flag first, numbers only matter behind it" shape BreakShield's
+        // own IsBroken already uses. See FightSession.BalanceRelics2 for
+        // the hatch/absorb/revive arithmetic.
+        public bool IsPhoenixEgg;
+        public int EggHealth;
+        public int EggTurnsRemaining;
+
         // What this combatant's gear and spells RIDE, and the scores they
         // ride on.
         //

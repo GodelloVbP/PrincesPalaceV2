@@ -143,5 +143,69 @@ namespace PrincesPalace.Domain.Content
         // ConvergenceGate.HasConvergenceAbility at draft time (mechanic g)
         // -- offered only to a party that actually has one.
         RampagingBullsHorn,
+
+        // ── balance pass 2 -- see FightSession.BalanceRelics2 ──────────
+        //
+        // Jo-Sun's Book of Anatomy and Vampire Dentures have no entries
+        // here -- both are pure RelicModifier relics (WeaknessDamageBonusPercent,
+        // LifestealPercent), the same "no C# beyond the modifier wiring"
+        // shape Pointy Nail on the End of a Stick already uses.
+
+        // Every landed attack stacks a 10% slow on the target
+        // (FallingOffStacks), up to 4 stacks (40%), each stack falling off
+        // on its own a few turns after it lands.
+        IceFingernail,
+
+        // At the start of the fight, stuns one random living enemy for one
+        // turn (seeded).
+        LoadedDice,
+
+        // The wearer's plain attacks reach any enemy regardless of the
+        // front-rank rule (CombatEncounter.CanMeleeReach).
+        MonkeyKingsScepter,
+
+        // Altering the wearer's OWN position in the turn order grants +30%
+        // Speed for one turn. Mechanic: the shared "position changed" event
+        // (FightSession.BalanceRelics2.NotePositionChanged), which also
+        // serves Sparring Buckler below.
+        SparringSaber,
+
+        // Casting an ability that alters ANY combatant's position in the
+        // turn order grants a ward worth 15% of the wearer's max health,
+        // once per turn (CombatLocks.OncePerTurn). Same shared event as
+        // Sparring Saber.
+        SparringBuckler,
+
+        // After an enemy dies (summons excluded), heal 3% of the wearer's
+        // max health.
+        EssenceSiphon,
+
+        // Whenever an ENEMY summons a unit, the party's holder of this
+        // relic deals damage equal to their own max health to the summoner.
+        DisgruntledLackey,
+
+        // Once per combat, after killing a non-summon enemy, the fallen
+        // enemy answers the key's call for one blow against another enemy
+        // before it is gone for good -- see FightSession.BalanceRelics2.
+        // InconspicuousKeyOnKill for the engine-limits reading this took.
+        InconspicuousKey,
+
+        // After the wearer attacks, casts a spell or uses an ability, they
+        // may move one position forward in the turn order -- granted
+        // automatically (this game has no player-facing "choose to
+        // reposition" input), once per turn.
+        DancersAnklet,
+
+        // Taking damage lowers every one of the wearer's active cooldowns
+        // by 1 turn, once per turn.
+        BerserkersVest,
+
+        // Taking what would be fatal damage instead turns the wearer into
+        // an egg with its own HP pool (equal to max health) for 3 turns.
+        // The egg can be attacked and cannot act; it revives at the end of
+        // the 3 turns with HP equal to whatever fraction of the egg's own
+        // pool survived, or dies outright if the egg's pool reaches 0
+        // first. Once per combat.
+        PhoenixEgg,
     }
 }

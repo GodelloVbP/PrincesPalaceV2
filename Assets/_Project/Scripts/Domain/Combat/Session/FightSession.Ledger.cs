@@ -1,3 +1,4 @@
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Combat.Session
@@ -45,12 +46,50 @@ namespace PrincesPalace.Domain.Combat.Session
         private CombatMath.DamageResult DealDamage(
             CombatantState actor, CombatantState target, int amount, DamageType type)
         {
+            // Phoenix Egg, already hatched: every further hit eats the
+            // egg's OWN pool instead of the wearer's health -- see
+            // PhoenixEggAbsorb's own header. Checked first and returns
+            // outright: nothing below (Cursed Idol's bonus, the crown's
+            // crossing-check) applies to a shell.
+            if (target != null && target.IsPhoenixEgg)
+            {
+                return PhoenixEggAbsorb(actor, target, amount, type);
+            }
+
+            // Phoenix Egg, about to hatch: this hit would otherwise be
+            // fatal. Intercepted BEFORE Cursed Idol's bonus/CombatMath ever
+            // sees it -- the egg replaces the blow entirely rather than
+            // softening it. Once per combat (CombatLocks).
+            if (target != null && target.IsPlayerSide && amount > 0 && target.CurrentHealth > 0
+                && amount >= target.CurrentHealth
+                && HasRelic(target, RelicEffect.PhoenixEgg)
+                && _locks.OncePerCombat(FightTuning.PhoenixEggLockKeyFor(LedgerIdOf(target))))
+            {
+                return PhoenixEggHatch(actor, target, amount, type);
+            }
+
             // Cursed Idol's own bonus -- see FightSession.BalanceRelics.
             // CursedIdolBonus's own header for why it lands here rather
             // than inside TotalDamage.
             amount += CursedIdolBonus(actor, target, amount);
 
             var result = CombatMath.ApplyDamageDetailed(target, amount);
+
+            // Berserker's Vest: getting hit shortens every one of the
+            // wearer's own active cooldowns by 1, once per turn. Read
+            // BEFORE the crown/idol riders below -- it cares only that
+            // damage actually reached this combatant's health, not about
+            // anything either of those two mechanics does afterward.
+            if (target != null && target.IsPlayerSide && amount > 0
+                && HasRelic(target, RelicEffect.BerserkersVest)
+                && _locks.OncePerTurn(FightTuning.BerserkersVestLockKeyFor(LedgerIdOf(target))))
+            {
+                int shortened = ReduceCooldowns(target, FightTuning.BerserkersVestCooldownReduction);
+                if (shortened > 0)
+                {
+                    AppendMessage($"{target.Name}'s vest bristles at the blow - cooldowns tick down.");
+                }
+            }
 
             // Both mechanic (c)'s stack and mechanic (b)'s crossing-check
             // read what THIS call just produced -- CursedIdolOnHit stacks

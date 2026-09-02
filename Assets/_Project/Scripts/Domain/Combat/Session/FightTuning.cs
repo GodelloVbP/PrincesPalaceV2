@@ -182,5 +182,55 @@ namespace PrincesPalace.Domain.Combat.Session
         // convergence/ultimate ability, and how long it lasts.
         public const int BullsHornReductionPercent = 50;
         public const int BullsHornDurationTurns = 2;
+
+        // ---- balance pass 2 -- see FightSession.BalanceRelics2 ----------------
+
+        // Ice Fingernail: 10% slow per stack (FallingOffStacks), up to 4
+        // stacks (40%), each stack falling off 3 turns after it lands.
+        public const int IceFingernailPercentPerStack = 10;
+        public const int IceFingernailMaxStacks = 4;
+
+        // Longer than Cursed Idol's own 3 -- a slow that fell off after
+        // three of the TARGET's own turns would rarely hold more than one
+        // or two stacks at once against an attacker swinging every one of
+        // its own turns, since a fresh stack and a tick both land once per
+        // attack/reply cycle. Five turns is what actually lets four stacks
+        // (the stated cap) coexist under ordinary 1:1 swinging.
+        public const int IceFingernailStackTurns = 5;
+        public const string IceFingernailStackKey = "ice_fingernail";
+
+        // Sparring Saber: altering your own position grants this much
+        // Speed for one turn.
+        public const int SparringSaberSpeedPercent = 30;
+        public const int SparringSaberSpeedTurns = 1;
+
+        // Sparring Buckler: the ward's own strength, as a percent reduction
+        // on the wearer's next hit -- see FightSession.BalanceRelics2.
+        // NotePositionChanged for the "ward" reading taken (this game's
+        // existing Shielded status, not a flat absorb pool).
+        public const int SparringBucklerWardPercent = 15;
+
+        // Essence Siphon: percent of max health healed per non-summon kill.
+        public const int EssenceSiphonHealPercent = 3;
+
+        // Berserker's Vest: cooldown turns shaved off per hit taken, once
+        // per turn.
+        public const int BerserkersVestCooldownReduction = 1;
+
+        // Phoenix Egg: how many of the wearer's own turns the shell lasts.
+        public const int PhoenixEggDurationTurns = 3;
+
+        // ---- combat-lock keys (mechanic f) --------------------------------------
+        //
+        // Every OncePerTurn/OncePerCombat lock below is keyed per COMBATANT
+        // (the ledger id already used to attribute damage/kills), not by a
+        // bare constant -- CombatLocks is one shared instance for the whole
+        // session, and a bare key would let one party member's trigger
+        // spend the lock for everyone else carrying the same shared relic.
+        public static string PhoenixEggLockKeyFor(string combatantId) => "phoenix_egg:" + combatantId;
+        public static string BerserkersVestLockKeyFor(string combatantId) => "berserkers_vest:" + combatantId;
+        public static string SparringBucklerLockKeyFor(string combatantId) => "sparring_buckler:" + combatantId;
+        public static string DancersAnkletLockKeyFor(string combatantId) => "dancers_anklet:" + combatantId;
+        public static string InconspicuousKeyLockKeyFor(string combatantId) => "inconspicuous_key:" + combatantId;
     }
 }
