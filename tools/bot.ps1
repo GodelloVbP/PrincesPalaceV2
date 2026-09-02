@@ -345,8 +345,17 @@ Write-Host "Building report..."
 & python (Join-Path $PSScriptRoot "bot_report.py") $MainOutDir --out (Join-Path $MainOutDir "report.html")
 $reportExit = $LASTEXITCODE
 
+# The item-offer tables ride beside the report: same shards, no summary.json
+# involved (it reads rooms[].offers straight off runs.jsonl). Its exit code
+# is not folded into the report's -- a batch whose offers page failed still
+# has a report worth reading.
+Write-Host ""
+Write-Host "Building offers page..."
+& python (Join-Path $PSScriptRoot "bot_offers.py") $MainOutDir --out (Join-Path $MainOutDir "offers.html")
+
 Write-Host ""
 Write-Host "Batch: $MainOutDir"
 Write-Host "Report: $(Join-Path $MainOutDir "report.html")"
+Write-Host "Offers: $(Join-Path $MainOutDir "offers.html")"
 
 exit $reportExit
