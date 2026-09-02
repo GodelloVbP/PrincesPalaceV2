@@ -16,7 +16,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
     // the same one and a pool change cannot leave a fourth card orphaned.
     public sealed class RelicDraftScreen
     {
-        public const float CardWidth = 380f;
+        // VIOLET, 3:4 KIT CONTAINER. 380x460 (aspect 0.826) was 40% off the
+        // kit's measured 3:4 aspect (0.588, see ContainerArt.
+        // ContainerAspect3x4) -- past the 5% band Ui.Container refuses.
+        // Narrowed to 270 (270/460 = 0.587, 0.2% off) rather than grown
+        // taller: height is what the frame's title/subtitle/Descend column
+        // above and below the card row was already budgeted against (see
+        // the frame's own 1500x1000 comment), so narrowing is the change
+        // that does not also reopen that budget.
+        public const float CardWidth = 270f; // was 380
         public const float CardHeight = 460f;
         private const float CardGap = 40f;
 
@@ -96,9 +104,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // half-width) reached 710 -- 12.5px past it.
             var prevPage = Ui.Button("DraftPrevPage", UiStrings.TalentPrev,
                     new UiVec(60f, 60f), 22, Place.At(-660f, 20f))
+                .NoChrome()
                 .Inactive();
             var nextPage = Ui.Button("DraftNextPage", UiStrings.TalentNext,
                     new UiVec(60f, 60f), 22, Place.At(660f, 20f))
+                .NoChrome()
                 .Inactive();
 
             // Between the cards (which stop at y -210) and Descend (at -350).
@@ -158,16 +168,23 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // layout alone left that unreadable until Descend.
         private UiNode BuildCard(int index, float x)
         {
-            // The selection ring is the one layer the reward card has no
-            // equivalent for -- an offer there is taken on click and gone, but
-            // a draft round can be reconsidered before Descend, so "which one
-            // is currently chosen" still needs its own channel. Kept as a
-            // sibling ring for the same reason it always was: a colour on the
-            // card itself would fight the rarity read the burst now carries.
-            var selection = Ui.Solid($"DraftCard{index}Selection", "#F2DB9E00",
-                    Place.Stretch(-6f, -6f, -6f, -6f), UiSize.Fill)
+            // THE SAME GLOW LOOK ThemedButtonState's own focus state uses
+            // (proc:radial_glow, tinted per theme, alpha 0 at idle -- see
+            // Ui.BuildVisuals), rather than a bespoke Solid ring: the
+            // selection is the one layer the reward card has no equivalent
+            // for -- an offer there is taken on click and gone, but a draft
+            // round can be reconsidered before Descend, so "which one is
+            // currently chosen" still needs its own channel. Violet, matching
+            // the frame's own theme. Sized like the halo/burst behind the
+            // icon (deliberately larger than the card, bleeding past its
+            // edge) rather than an inset ring, so the glow reads as light
+            // coming off the card instead of a border competing with the
+            // rarity burst.
+            var selection = Ui.Sprite($"DraftCard{index}Selection", "proc:radial_glow",
+                    Place.Stretch(-24f, -24f, -24f, -24f), UiSize.Fill)
+                .Coloured(Ui.ThemeGlowHex(ButtonTheme.Violet))
                 .AsDecor()
-                .AllowOverflow("the ring sits 6px OUTSIDE its card on every side - that overhang is the whole signal, since a border drawn inside the card would be competing with the card's own edge rather than framing it");
+                .AllowOverflow("the glow sits outside its card on every side, same as ThemedButtonState's own focus glow - that bleed IS the selection signal");
 
             // Icon geometry scaled from the offer card's 200x250-in-400 to this
             // card's 460 height, same top/bottom-margin shape.
@@ -191,32 +208,49 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     Place.At(0f, IconCentre), UiSize.Fixed(200f, IconTop - IconBottom))
                 .AsDecor();
 
-            var name = Ui.Label($"DraftCard{index}Name", UiString.Runtime, new UiVec(340f, 60f), 24,
+            // 230, DOWN FROM 340: the card narrowed from 380 to 270 to clear
+            // the Violet 3:4 container's own aspect (see CardWidth's own
+            // comment), and the container's measured 3:4 inset (6.5% each
+            // side of 270 = 17.55px) caps content at a 234.9px content
+            // width -- 230 clears that with 5px to spare on each side.
+            var name = Ui.Label($"DraftCard{index}Name", UiString.Runtime, new UiVec(230f, 60f), 24,
                     "#EDE6FF", Place.At(0f, IconBottom - 6f - 33f))
                 .AsDecor();
 
             const float RarityY = IconBottom - 6f - 66f - 4f - 13f;
 
-            var rarity = Ui.Label($"DraftCard{index}Rarity", UiStrings.DraftRarity, new UiVec(340f, 30f), 16,
+            var rarity = Ui.Label($"DraftCard{index}Rarity", UiStrings.DraftRarity, new UiVec(230f, 30f), 16,
                     "#B8A8D9", Place.At(0f, RarityY))
                 .AsDecor();
 
             // Below the rarity line, in the gap the reward card's shorter card
             // doesn't have: rarity's box bottoms out at RarityY - 15, so this
-            // starts 8px under that and runs to within 8px of the card's own
-            // bottom edge (-CardHeight/2 = -230).
-            var body = Ui.Label($"DraftCard{index}Body", UiString.Runtime, new UiVec(340f, 76f), 14,
-                    "#9C8FC4", Place.At(0f, RarityY - 15f - 8f - 38f))
+            // starts 8px under that. Pulled up 10px from the pre-container
+            // position (- 38 -> - 28): the Violet 3:4 container's own bottom
+            // inset (4% of 460 = 18.4px content bound) now trims 7.5px this
+            // box used to have to spend -- shrinking the card's own edge, not
+            // this label -- so the label moves up to clear it with ~3.6px to
+            // spare rather than escaping the frame's own painted border.
+            var body = Ui.Label($"DraftCard{index}Body", UiString.Runtime, new UiVec(230f, 76f), 14,
+                    "#9C8FC4", Place.At(0f, RarityY - 15f - 8f - 28f))
                 .AsDecor();
+
+            // THE FRAME, nested inside the clickable button rather than
+            // replacing it: a card still has to take the click Choose()
+            // listens for, and Ui.Container's own factory returns a plain
+            // (non-Button) Panel, so the frame is declared as a Sprite-
+            // backed CHILD of the NoChrome button instead of swapping the
+            // button out for one. Same size as the button's own hit box, so
+            // the painted border reads flush with the clickable area.
+            var frame = Ui.Container($"DraftCard{index}Frame", ButtonTheme.Violet, ContainerRatio.ThreeByFour,
+                Place.At(0f, 0f), new UiVec(CardWidth, CardHeight));
+            Ui.ContainerContent(frame, ContainerRatio.ThreeByFour, $"DraftCard{index}FrameContent",
+                selection, halo, burst, icon, name, rarity, body);
 
             var card = Ui.Button($"DraftCard{index}", UiString.Runtime,
                     new UiVec(CardWidth, CardHeight), 12, Place.At(x, 20f))
                 .NoChrome();
-
-            foreach (var layer in new[] { selection, halo, burst, icon, name, rarity, body })
-            {
-                card.Children.Add(layer);
-            }
+            card.Children.Add(frame);
 
             Cards.Add(card);
             CardSelections.Add(selection);

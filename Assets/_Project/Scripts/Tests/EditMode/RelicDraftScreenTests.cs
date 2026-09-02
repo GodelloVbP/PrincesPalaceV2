@@ -118,10 +118,19 @@ namespace PrincesPalace.Domain.Tests
         {
             // Decor buys overlap exemption for the stacked layers AND clears
             // the raycast, so no layer can eat the click meant for its card.
+            //
+            // "...Frame"/"...FrameContent" are excluded: the Violet 3:4
+            // container wrapper each card grew (balance-bot, 2026-09-02) is
+            // the SAME non-Decor-holder-wrapping-a-Decor-frame shape
+            // DraftFrame/DraftFrameContent already use at the top level (see
+            // Ui.BuildFrameHolder's own comment on why the holder must stay
+            // non-Decor) -- content beneath a Decor node is exempt from
+            // sibling overlap entirely, which is wrong for real content.
             foreach (var node in Walk(Tree()))
             {
                 if (!node.Name.StartsWith("DraftCard")) continue;
                 if (node.Kind == UiNodeKind.Button) continue;
+                if (node.Name.EndsWith("Frame") || node.Name.EndsWith("FrameContent")) continue;
 
                 Assert.IsTrue(node.Decor, $"{node.Name} would steal its card's click");
             }
@@ -155,6 +164,30 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(1500f * inset.Right, content.Place.Right, 0.01f);
             Assert.AreEqual(1000f * inset.Top, content.Place.Top, 0.01f);
             Assert.AreEqual(1000f * inset.Bottom, content.Place.Bottom, 0.01f);
+        }
+
+        [Test]
+        public void EachCardIsAVioletThreeByFourContainerNestedInsideItsButton()
+        {
+            // Balance-bot, 2026-09-02: 380x460 (0.826) moved to 270x460
+            // (0.587) to clear the kit's measured 3:4 aspect (0.588) -- see
+            // CardWidth's own comment. The card stays a Button (it still
+            // takes Choose()'s click); the container art is a nested,
+            // non-Button holder inside it, same shape Ui.Container always
+            // returns.
+            var card = RelicDraftScreen.Build().Cards[0].Node;
+            var frame = card.Children.Single(c => c.Name == "DraftCard0Frame");
+
+            Assert.IsFalse(frame.Decor, "the wrapper must stay non-Decor, or content beneath it audits clean against itself");
+            var art = frame.Children.Single(c => c.Kind == UiNodeKind.Sprite);
+            Assert.AreEqual("UI/Buttons/Processed/container_violet_3x4.png", art.SpriteKey);
+            Assert.IsTrue(art.Decor);
+
+            var content = frame.Children.Single(c => c.Name == "DraftCard0FrameContent");
+            var inset = Ui.ContainerContentInset(ContainerRatio.ThreeByFour);
+            Assert.AreEqual(PlaceKind.Stretch, content.Place.Kind);
+            Assert.AreEqual(RelicDraftScreen.CardWidth * inset.Left, content.Place.Left, 0.01f);
+            Assert.AreEqual(RelicDraftScreen.CardHeight * inset.Top, content.Place.Top, 0.01f);
         }
 
         [Test]

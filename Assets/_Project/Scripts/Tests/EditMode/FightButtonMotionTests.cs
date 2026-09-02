@@ -103,15 +103,26 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void SubmenuRowsHoverGentlyRatherThanPopping()
+        public void SubmenuRowsHoverGentlyThroughTheirThemedPlateNow()
         {
+            // Balance-bot, 2026-09-02: the manual .Hovers(1.02f) scale-pop
+            // this test used to pin is gone -- the rows wear a Violet
+            // ThemedPlate now, and ThemedButtonState's own hover state is
+            // what gives them their "gentle, not popping" feedback (a
+            // brightened plate, not a rescale). HoverScale staying at its
+            // zero default is the point, not a regression: two hover
+            // mechanisms driving localScale would fight each other, which is
+            // exactly why HoverScale and a themed plate are mutually
+            // exclusive by construction (see UiNode.HoverScale's own header).
             var rows = FightNodes().Where(n => n.Name.StartsWith("CharacterSkill")
                                                && n.Kind == UiNodeKind.Button).ToList();
 
             CollectionAssert.IsNotEmpty(rows, "no submenu row buttons found - this test is not seeing the tree");
             foreach (var row in rows)
             {
-                Assert.AreEqual(1.02f, row.HoverScale, 0.0001f, $"'{row.Name}' should hover at 1.02");
+                Assert.AreEqual(ButtonTheme.Violet, row.Theme, $"'{row.Name}' should wear the Violet themed plate");
+                Assert.AreEqual(0f, row.HoverScale, 0.0001f,
+                    $"'{row.Name}' should not also drive the manual hover-scale animator - ThemedButtonState owns hover now");
             }
         }
 

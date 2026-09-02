@@ -142,20 +142,33 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // filled, what a roster's display name is, or what floor a save
         // reached -- so every line here is set by the controller's own
         // Refresh(), the same split Continue's own text takes.
-        private static SlotCardRefs AddCardContent(UiNode host, string stem, bool showGold)
+        private static SlotCardRefs AddCardContent(UiNode host, string stem, bool showGold, bool includeWash = true)
         {
             // THE WASH, added FIRST so the text paints on top of it -- draw
             // order is declaration order in this DSL, and a wash added after
             // its own row's text would cover it.
-            var filledWash = Ui.Solid($"{stem}FilledWash", "#E3C16621", new UiVec(CardWidth, CardHeight),
-                    Place.At(0f, 0f))
-                .AsDecor();
-            var emptyWash = Ui.Solid($"{stem}EmptyWash", "#0E070C4D", new UiVec(CardWidth, CardHeight),
-                    Place.At(0f, 0f))
-                .AsDecor()
-                .Inactive();
-            host.Children.Add(filledWash);
-            host.Children.Add(emptyWash);
+            //
+            // includeWash is false for the choose-list Slot{i}Button now
+            // (balance-bot, 2026-09-02): that button wears a Gold ThemedPlate
+            // instead of NoChrome, so the plate itself IS the background and
+            // a wash under it would either hide behind an opaque plate or
+            // show through a translucent one for no reason. Manage Saves'
+            // rows stay Panels, not Buttons, and keep the wash exactly as
+            // before -- ResetProgressController still drives it.
+            NodeRef filledWash = default;
+            NodeRef emptyWash = default;
+            if (includeWash)
+            {
+                filledWash = Ui.Solid($"{stem}FilledWash", "#E3C16621", new UiVec(CardWidth, CardHeight),
+                        Place.At(0f, 0f))
+                    .AsDecor();
+                emptyWash = Ui.Solid($"{stem}EmptyWash", "#0E070C4D", new UiVec(CardWidth, CardHeight),
+                        Place.At(0f, 0f))
+                    .AsDecor()
+                    .Inactive();
+                host.Children.Add(filledWash.Node);
+                host.Children.Add(emptyWash.Node);
+            }
 
             // FOUR COLUMNS, LEFT TO RIGHT, and each one's box is placed by its
             // own EDGES rather than guessed at from the card's centre -- a
@@ -249,15 +262,22 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Styled(TypographyRole.CeremonialTitle);
             screen.TitleLabel = title;
 
-            // A FLAT SCRIM, not a gradient -- this DSL's procedural sprites
-            // have no linear-gradient generator, and a solid rectangle behind
-            // the text block is the same technique every modal dimmer on this
-            // screen already uses, just far more transparent. Sized to the
-            // text column plus a margin, not the whole canvas: it exists to
-            // keep gold text legible against a busy painting, not to darken
-            // the palace itself.
-            var scrim = Ui.Solid("TextScrim", "#03072B8C", new UiVec(900f, 560f),
-                    Place.At(LeftEdgeX + 380f, 60f))
+            // GOLD, 3:2 KIT CONTAINER, not a flat scrim any more -- this is the
+            // save-selection surface's own colour, matching the plaques the
+            // wordmark sits above. 900x560 (aspect 1.607) was 7.9% off the
+            // kit's measured 3:2 aspect (1.49, see ContainerArt.
+            // ContainerAspect3x2) -- past the 5% band Ui.Container refuses.
+            // Nudged to 834x560 (aspect 1.489, 0.06% off) rather than grown to
+            // 900x604: nothing is declared INSIDE this rect (the title/menu
+            // column are separate siblings positioned independently, not
+            // children of it), so there is nothing to re-fit either way, and
+            // keeping the height untouched is the smaller of the two changes.
+            // .AsDecor() stays: nothing sits inside this container to check
+            // via Ui.ContainerContent, so it keeps behaving exactly as the
+            // flat scrim did -- an opaque background the title is allowed to
+            // sit on top of without an overlap exemption.
+            var scrim = Ui.Container("TextScrim", ButtonTheme.Gold, ContainerRatio.ThreeByTwo,
+                    Place.At(LeftEdgeX + 380f, 60f), new UiVec(834f, 560f))
                 .AsDecor();
 
             // --- the menu itself ---------------------------------------------
@@ -288,17 +308,28 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             for (int i = 0; i < slotCount; i++)
             {
-                // CHROMELESS, unlike every other button on this screen. The
-                // shared gold plaque is drawn for a pill-shaped label -- Play,
-                // Exit, Delete -- and stretched across a 700px card it would
-                // read as a smear of gold rather than a border. The card's
-                // own wash (see AddCardContent) is what a plaque would have
-                // been here.
+                // GOLD THEMED PLATE now (balance-bot, 2026-09-02), not
+                // Chromeless -- the plate replaces the old FilledWash/
+                // EmptyWash Solids as the card's own background, and
+                // SaveSlotController drives filled/empty through
+                // SetMenuState(Primary/Idle) instead of toggling two washes.
+                // 700x92 (aspect 7.6) stretches the 5.92 row plate non-
+                // uniformly by about 28% rather than being narrowed to fit
+                // it exactly: AddCardContent's column geometry (the number
+                // badge at -310, the gold figure centred at 250) is SHARED
+                // with Manage Saves' identical-width rows, and narrowing just
+                // this button to clear the row plate's own aspect would
+                // either desync the two lists' column alignment or force a
+                // second copy of that geometry -- the same "accept the
+                // stretch" tradeoff RespecButton already established
+                // (ButtonPlateArt's own header, 2ff2e50).
                 var button = Ui.Button($"Slot{i}Button", UiString.Runtime,
                         new UiVec(CardWidth, CardHeight), 20)
-                    .NoChrome();
+                    .ThemedPlate(ButtonTheme.Gold);
                 screen.SlotButtons.Add(button);
-                screen.ChooseCards.Add(AddCardContent(button, $"Slot{i}", showGold: true));
+                var card = AddCardContent(button, $"Slot{i}", showGold: true, includeWash: false);
+                screen.ChooseCards.Add(card);
+                button.LayerCaptionWithVisuals(card.Number.Node, card.Top.Node, card.Detail.Node, card.Gold.Node);
                 slotChildren.Add(button);
             }
 

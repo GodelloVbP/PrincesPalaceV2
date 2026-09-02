@@ -59,8 +59,11 @@ namespace PrincesPalace
         // serialise dictionaries. Same shape the character overlay uses.
         [SerializeField] internal IconEntry[] icons;
 
-        private static readonly Color RingLit = new Color(0.95f, 0.86f, 0.62f, 1f);
-        private static readonly Color RingDark = new Color(0.95f, 0.86f, 0.62f, 0f);
+        // The selection glow's RGB is baked into the sprite's own colour at
+        // build time (Ui.ThemeGlowHex(Violet), see RelicDraftScreen.BuildCard)
+        // -- only the ALPHA toggles here, the same fade ThemedButtonState's
+        // own focus glow uses (FocusGlowAlpha), rather than a second colour
+        // pair that could disagree with the theme.
 
         private readonly List<RelicOption> _offer = new List<RelicOption>();
         private int _selected = -1;
@@ -202,7 +205,9 @@ namespace PrincesPalace
 
                 ItemIcons.Apply(cardIcons[i], icons, option.Id);
 
-                cardSelections[i].color = _selected == absolute ? RingLit : RingDark;
+                var glowColor = cardSelections[i].color;
+                glowColor.a = _selected == absolute ? ThemedButtonState.FocusGlowAlpha : 0f;
+                cardSelections[i].color = glowColor;
 
                 // Same two-layer rarity read as the Reckoning's item offers:
                 // a burst carrying the colour behind the icon and a softer

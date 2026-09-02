@@ -1200,6 +1200,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 float x = -120f + i * 22f;
                 var icon = Ui.Button($"PartyBuff{i}", UiString.Runtime, new UiVec(18f, 18f), 11,
                         Place.At(x, 90f))
+                    .NoChrome()
                     .Inactive();
 
                 PartyBuffIcons.Add(icon);
@@ -1433,11 +1434,25 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // what it was through the whole scroll rework: the rows do not
                 // know they are inside a viewport, and the only thing that
                 // moves when the list scrolls is the rect around them.
+                // VIOLET, CAPTION-PRESERVING PLATE -- one row pool serves both
+                // the Skill and Item branches (CurrentRows() rebinds the same
+                // nodes at runtime; the "CharacterSkill" name is the pool's
+                // legacy identity, not a claim this is skill-only), so there
+                // is one theme rather than a per-branch swap the pool has no
+                // seam for. Violet: neither branch has its own colour
+                // reservation the way the four verbs do, and it is the kit's
+                // neutral default elsewhere (Relic Draft, the Constellation
+                // screen). 282x48 is 5.875:1, which the aspect-nearest rule
+                // resolves to Row6x1 (5.92) on its own -- no .Plate() override
+                // needed. ThemedButtonState's own hover state replaces the
+                // manual .Hovers(1.02f) scale-pop this used to drive.
                 var row = Ui.Button($"CharacterSkill{i}", UiString.Runtime,
                     new UiVec(SubmenuRowW, FightSubmenuLayout.RowHeight), 1,
-                    Place.At(0f, FightSubmenuLayout.RowYInContent(i))).Hovers(1.02f);
+                    Place.At(0f, FightSubmenuLayout.RowYInContent(i)))
+                    .ThemedPlate(ButtonTheme.Violet);
                 row.Children.Add(mark);
                 row.Children.Add(name);
+                row.LayerCaptionWithVisuals(mark, name);
 
                 SubmenuRows.Add(row);
                 SubmenuMarks.Add(mark);
@@ -1572,14 +1587,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 new UiVec(SubmenuRowW - 100f, 24f), 18,
                 FightHudPalette.BackRowText, Place.At(18f, 0f));
 
+            // SILVER, not Violet: BACK leaves the branch rather than choosing
+            // from it, and Silver is the kit's neutral/utility theme
+            // elsewhere (Options/RunStats/Exits panes). The dead
+            // .Coloured(RowQuiet)/.Hovers() pair is gone -- ThemedButtonState
+            // now owns both the idle tint and the hover feedback.
             var back = Ui.Button("SubmenuBack", UiString.Runtime,
                     new UiVec(SubmenuRowW, FightSubmenuLayout.BackRowHeight), 1,
                     Place.At(SubmenuX - containerX,
                              FightSubmenuLayout.BackRowY - FightSubmenuLayout.ContainerCentreY))
-                .Coloured(FightHudPalette.RowQuiet)
-                .Hovers(1.02f);
+                .ThemedPlate(ButtonTheme.Silver);
             back.Children.Add(backKey);
             back.Children.Add(backText);
+            back.LayerCaptionWithVisuals(backKey, backText);
             SubmenuBackButton = back;
             frame.Add(back);
 

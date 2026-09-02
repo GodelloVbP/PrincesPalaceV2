@@ -85,11 +85,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var page = Ui.Label("GlossaryPageLabel", UiStrings.GlossaryPage, new UiVec(260f, 34f), 16,
                     "#B8A8D9", Place.At(ListX, -390f))
                 .AsDecor();
-            // NOT THEMED: narrow arrow icon buttons.
+            // NoChrome: narrow arrow icon buttons, no plate to reskin.
             var prev = Ui.Button("GlossaryPrevPage", UiStrings.TalentPrev, new UiVec(52f, 44f), 20,
-                Place.At(ListX - 200f, -390f));
+                Place.At(ListX - 200f, -390f)).NoChrome();
             var next = Ui.Button("GlossaryNextPage", UiStrings.TalentNext, new UiVec(52f, 44f), 20,
-                Place.At(ListX + 200f, -390f));
+                Place.At(ListX + 200f, -390f)).NoChrome();
             screen.PageLabel = page;
             screen.PrevPageButton = prev;
             screen.NextPageButton = next;
@@ -146,9 +146,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return screen;
         }
 
-        // NOT THEMED: a pooled row generated per category at a pinned width
-        // (240x66), composite already (marker/label/count children) -- the
-        // brief's own tab-strip/pooled-pinned-width exclusion.
+        // BLUE, CAPTION-PRESERVING PLATE. The brief called for plain
+        // Themed(Blue), but this row already declares its own Marker/
+        // Caption/Count children -- Themed() would add a SECOND, blank
+        // generated Label (node.Text is UiString.Runtime here) sharing
+        // Visuals' box without being LAYERED against them, which A1 would
+        // correctly report as the generated label sitting on top of the
+        // hand-authored caption. ThemedPlate() is the kit's own answer for
+        // exactly this shape (see FightScreen's submenu rows and BACK row,
+        // migrated the same way) -- same plate, no redundant label.
         private UiNode BuildCategory(int index, GlossaryCategory category)
         {
             float y = RailTop - index * RailPitch;
@@ -173,11 +179,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor();
 
             var button = Ui.Button($"GlossaryCategory{index}", UiString.Runtime,
-                new UiVec(240f, 66f), 12, Place.At(RailX, y));
+                    new UiVec(240f, 66f), 12, Place.At(RailX, y))
+                .ThemedPlate(ButtonTheme.Blue);
 
             button.Children.Add(marker);
             button.Children.Add(label);
             button.Children.Add(count);
+            button.LayerCaptionWithVisuals(marker, label, count);
 
             CategoryButtons.Add(button);
             CategoryMarkers.Add(marker);
@@ -186,8 +194,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return button;
         }
 
-        // NOT THEMED: same reason as BuildCategory above -- a pooled,
-        // pinned-width (500x60) composite row.
+        // SILVER, CAPTION-PRESERVING PLATE -- same reason as BuildCategory
+        // above.
         private UiNode BuildRow(int index)
         {
             float y = ListTop - index * ListPitch;
@@ -205,11 +213,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor();
 
             var row = Ui.Button($"GlossaryRow{index}", UiString.Runtime,
-                new UiVec(500f, 60f), 12, Place.At(ListX, y));
+                    new UiVec(500f, 60f), 12, Place.At(ListX, y))
+                .ThemedPlate(ButtonTheme.Silver);
 
             row.Children.Add(marker);
             row.Children.Add(name);
             row.Children.Add(meta);
+            row.LayerCaptionWithVisuals(marker, name, meta);
 
             Rows.Add(row);
             RowMarkers.Add(marker);

@@ -150,6 +150,13 @@ namespace PrincesPalace
                 categoryCounts[i].Set(UiStrings.GlossaryCount,
                     GlossaryCatalog.UnlockedCount(entries), entries.Count);
                 categoryMarkers[i].color = i == _category ? MarkerLit : MarkerDark;
+
+                // Blue ThemedPlate now, on top of the marker: the marker is
+                // its own accent (which category, as a small lit tick) and
+                // stays; the plate itself brightens through SetMenuState the
+                // way every other themed selection does.
+                var themed = categoryButtons[i].GetComponent<ThemedButtonState>();
+                if (themed != null) themed.SetMenuState(i == _category ? ThemedMenuState.Open : ThemedMenuState.Idle);
             }
         }
 
@@ -175,6 +182,9 @@ namespace PrincesPalace
                 rowNames[i].color = entry.Locked ? NameLocked : NameNormal;
                 rowMetas[i].SetContent(entry.Meta);
                 rowMarkers[i].color = _selectedRow == i ? MarkerLit : MarkerDark;
+
+                var themedRow = rows[i].GetComponent<ThemedButtonState>();
+                if (themedRow != null) themedRow.SetMenuState(_selectedRow == i ? ThemedMenuState.Open : ThemedMenuState.Idle);
             }
 
             PaintDetail(page);

@@ -182,8 +182,21 @@ namespace PrincesPalace
 
             for (int i = 0; i < filterButtons.Length; i++)
             {
-                var graphic = filterButtons[i].targetGraphic as Image;
-                if (graphic != null) graphic.color = i == _filter ? FilterOn : FilterOff;
+                // Themed(Silver) now (balance-bot, 2026-09-02): targetGraphic
+                // is the plate, so a direct colour write here would fight
+                // ThemedButtonState's own idle/hover/press tint. SetMenuState
+                // is the same Open/Idle distinction FilterOn/FilterOff used
+                // to draw, painted on the plate instead.
+                var themed = filterButtons[i].GetComponent<ThemedButtonState>();
+                if (themed != null)
+                {
+                    themed.SetMenuState(i == _filter ? ThemedMenuState.Open : ThemedMenuState.Idle);
+                }
+                else
+                {
+                    var graphic = filterButtons[i].targetGraphic as Image;
+                    if (graphic != null) graphic.color = i == _filter ? FilterOn : FilterOff;
+                }
             }
 
             var page = DebugMenuCatalog.Page(_filtered, _page);

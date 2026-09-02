@@ -27,13 +27,21 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void CloseWearsSilverAndThePooledRowsStayUnthemed()
+        public void CloseWearsSilverAndThePooledRowsWearThemedPlates()
         {
+            // Balance-bot, 2026-09-02: the rail and the row list moved off
+            // the gold-fallback plate onto ThemedPlate (caption-preserving,
+            // so the pooled marker/label/count children are untouched) --
+            // see BuildCategory/BuildRow's own comments for why plain
+            // Themed() does not fit a row that already declares its own
+            // caption children.
             var screen = GlossaryScreen.Build();
 
             Assert.AreEqual(ButtonTheme.Silver, screen.CloseButton.Node.Theme);
-            Assert.IsNull(screen.CategoryButtons[0].Node.Theme, "pooled, pinned-width tab strip");
-            Assert.IsNull(screen.Rows[0].Node.Theme, "pooled, pinned-width row");
+            Assert.AreEqual(ButtonTheme.Blue, screen.CategoryButtons[0].Node.Theme);
+            Assert.IsTrue(screen.CategoryButtons[0].Node.CaptionPreserving);
+            Assert.AreEqual(ButtonTheme.Silver, screen.Rows[0].Node.Theme);
+            Assert.IsTrue(screen.Rows[0].Node.CaptionPreserving);
         }
 
         [Test]

@@ -22,14 +22,15 @@ namespace PrincesPalace
         [SerializeField] internal Button[] slotButtons;
 
         // One card's content, per slot -- see MainMenuScreen.AddCardContent
-        // for what each of these is and where it sits. FilledWash/EmptyWash
-        // are the two background states a card switches between, not text.
+        // for what each of these is and where it sits. No FilledWash/
+        // EmptyWash any more (balance-bot, 2026-09-02): Slot{i}Button wears a
+        // Gold ThemedPlate now, and Refresh drives its filled/empty state
+        // through ThemedButtonState.SetMenuState instead of toggling two
+        // background Solids.
         [SerializeField] internal TMP_Text[] slotNumbers;
         [SerializeField] internal TMP_Text[] slotTops;
         [SerializeField] internal TMP_Text[] slotDetails;
         [SerializeField] internal TMP_Text[] slotGolds;
-        [SerializeField] internal GameObject[] slotFilledWashes;
-        [SerializeField] internal GameObject[] slotEmptyWashes;
 
         // The door into Manage Saves, and back out of it. Reached from HERE
         // rather than from the main menu root, on request: deleting a save is
@@ -91,8 +92,16 @@ namespace PrincesPalace
 
                 slotGolds[i].Set(UiStrings.SlotGold, facts.Gold);
 
-                slotFilledWashes[i].SetActive(facts.Filled);
-                slotEmptyWashes[i].SetActive(!facts.Filled);
+                // PRIMARY for a filled slot (the gold "recommended action"
+                // ring -- there is a run to continue), Idle for an empty one.
+                // Hover's own glow is unconditional (ThemedButtonState.
+                // UpdateGlow takes the MAX of menu-state alpha and focus
+                // alpha), so "Open on hover" needs no extra call here.
+                var themed = slotButtons[i].GetComponent<ThemedButtonState>();
+                if (themed != null)
+                {
+                    themed.SetMenuState(facts.Filled ? ThemedMenuState.Primary : ThemedMenuState.Idle);
+                }
             }
         }
 

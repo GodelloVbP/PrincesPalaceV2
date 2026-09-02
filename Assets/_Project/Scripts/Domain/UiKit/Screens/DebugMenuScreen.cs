@@ -82,29 +82,34 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 UiStrings.DebugFilterEquipment,
             };
 
-            // NOT THEMED: a pooled filter row at a pinned width (210x48) --
-            // a tab strip.
+            // SILVER: a pooled filter row at a pinned width (210x48) -- a tab
+            // strip, but a plain one (the button's own text IS the caption,
+            // no separate child), so plain Themed() fits without conflict.
             for (int i = 0; i < filters.Length; i++)
             {
                 // Evenly spaced about centre: four buttons 210 wide on a 220
                 // pitch, so the row is symmetric however many there are.
                 float x = (i - (filters.Length - 1) * 0.5f) * 220f;
                 var filter = Ui.Button($"DebugFilter{i}", filters[i], new UiVec(210f, 48f), 18,
-                    Place.At(x, 276f));
+                        Place.At(x, 276f))
+                    .Themed(ButtonTheme.Silver);
 
                 screen.FilterButtons.Add(filter);
                 chrome.Add(filter);
             }
 
             // --- the item list ------------------------------------------------------
-            // NOT THEMED: a pooled, pinned-width (900x44) composite row, same
-            // as GlossaryScreen's rail/list rows.
+            // SILVER, CAPTION-PRESERVING PLATE: a pooled, pinned-width
+            // (900x44) composite row (its own Name child, not the button's
+            // generated caption), same shape as GlossaryScreen's rail/list
+            // rows -- ThemedPlate rather than Themed() for the same reason.
             for (int i = 0; i < DebugMenuCatalog.RowsPerPage; i++)
             {
                 float y = ListTop - i * (RowHeight + RowSpacing);
 
                 var row = Ui.Button($"DebugRow{i}", UiString.Runtime, new UiVec(RowWidth, RowHeight), 16,
-                    Place.At(0f, y));
+                        Place.At(0f, y))
+                    .ThemedPlate(ButtonTheme.Silver);
 
                 // The label is a child so it can be left-aligned inside a
                 // centred button without the button's own text fighting it.
@@ -115,6 +120,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         new UiVec(RowWidth - 40f, RowHeight - 8f), 16, "#EDE6FF", Place.At(0f, 0f))
                     .AsDecor();
                 row.Children.Add(label);
+                row.LayerCaptionWithVisuals(label);
 
                 screen.RowButtons.Add(row);
                 screen.RowLabels.Add(label);
@@ -126,11 +132,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var page = Ui.Label("DebugPageLabel", UiStrings.DebugPage, new UiVec(320f, 40f), 18, "#B8A8D9",
                 Place.At(0f, pagerY)).AsDecor();
-            // NOT THEMED: narrow arrow icon buttons.
+            // NoChrome: narrow arrow icon buttons.
             var prev = Ui.Button("DebugPrevPage", UiStrings.TalentPrev, new UiVec(56f, 44f), 20,
-                Place.At(-260f, pagerY));
+                Place.At(-260f, pagerY)).NoChrome();
             var next = Ui.Button("DebugNextPage", UiStrings.TalentNext, new UiVec(56f, 44f), 20,
-                Place.At(260f, pagerY));
+                Place.At(260f, pagerY)).NoChrome();
 
             screen.PageLabel = page;
             screen.PrevPageButton = prev;

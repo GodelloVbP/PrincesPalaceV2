@@ -430,8 +430,6 @@ public static class ScreenRegistry
                 slots.slotTops = screen.ChooseCards.Select(c => result.Tmp(c.Top)).ToArray();
                 slots.slotDetails = screen.ChooseCards.Select(c => result.Tmp(c.Detail)).ToArray();
                 slots.slotGolds = screen.ChooseCards.Select(c => result.Tmp(c.Gold)).ToArray();
-                slots.slotFilledWashes = screen.ChooseCards.Select(c => result.Go(c.FilledWash)).ToArray();
-                slots.slotEmptyWashes = screen.ChooseCards.Select(c => result.Go(c.EmptyWash)).ToArray();
                 slots.manageSavesButton = result.Button(screen.ManageSavesButton);
                 slots.managePanel = result.Go(screen.ManageSavesPanel);
 

@@ -717,6 +717,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         new UiVec(DossierLayout.AttributePlusSize, DossierLayout.AttributePlusSize), 14,
                         Place.At(halfWidth - DossierLayout.AttributePlusInset,
                                  halfHeight - DossierLayout.AttributePlusInset))
+                    .NoChrome()
                     .Inactive();
 
                 cell.Children.Add(value);

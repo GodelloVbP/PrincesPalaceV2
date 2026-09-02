@@ -184,14 +184,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // hides the one that has nowhere to go: paging is a clamped line,
             // and an arrow that greys out is how a player finds the ends without
             // counting.
-            // NOT THEMED: narrow arrow icon buttons, the same category
-            // GlossaryScreen's and DebugMenuScreen's pagers stay unthemed for.
+            // NoChrome: narrow arrow icon buttons, the same category
+            // GlossaryScreen's and DebugMenuScreen's pagers stay chromeless for.
             var prevPath = Ui.Button("PrevPathButton", UiStrings.TalentPrev,
                 new UiVec(ConstellationLayout.ArrowWidth, ConstellationLayout.ArrowHeight), 30,
-                Place.At(ConstellationLayout.ArrowLeftX, 0f));
+                Place.At(ConstellationLayout.ArrowLeftX, 0f)).NoChrome();
             var nextPath = Ui.Button("NextPathButton", UiStrings.TalentNext,
                 new UiVec(ConstellationLayout.ArrowWidth, ConstellationLayout.ArrowHeight), 30,
-                Place.At(ConstellationLayout.ArrowRightX, 0f));
+                Place.At(ConstellationLayout.ArrowRightX, 0f)).NoChrome();
             screen.PrevPathButton = prevPath;
             screen.NextPathButton = nextPath;
 
@@ -283,16 +283,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // Hidden outright while there is one character -- see
             // TalentController.Refresh, and the reason written there.
-            // NOT THEMED: a 40x40 square icon button, the same category the
-            // path arrows above stay unthemed for.
+            // NoChrome: a 40x40 square icon button, the same category the
+            // path arrows above stay chromeless for.
             var prevCharacter = Ui.Button("PrevCharacterButton", UiStrings.TalentPrev,
                 new UiVec(40f, 40f), 20,
                 Place.At(-ConstellationLayout.PanelInnerWidth * 0.5f + 20f,
-                         ConstellationLayout.PanelHeaderY));
+                         ConstellationLayout.PanelHeaderY)).NoChrome();
             var nextCharacter = Ui.Button("NextCharacterButton", UiStrings.TalentNext,
                 new UiVec(40f, 40f), 20,
                 Place.At(ConstellationLayout.PanelInnerWidth * 0.5f - 20f,
-                         ConstellationLayout.PanelHeaderY));
+                         ConstellationLayout.PanelHeaderY)).NoChrome();
             PrevCharacterButton = prevCharacter;
             NextCharacterButton = nextCharacter;
             parts.Add(prevCharacter);

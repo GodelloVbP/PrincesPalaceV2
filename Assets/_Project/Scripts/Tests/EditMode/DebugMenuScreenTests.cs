@@ -42,20 +42,26 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
-        public void EveryChromeButtonWearsSilverAndThePooledRowsStayUnthemed()
+        public void EveryChromeButtonWearsSilverIncludingThePooledRows()
         {
             // "DebugMenuScreen: Silver only" -- no recommended action, no
-            // danger, in a tool rather than the fiction.
+            // danger, in a tool rather than the fiction. Balance-bot,
+            // 2026-09-02: the filter tabs and the item rows moved off the
+            // gold-fallback plate onto Silver too (rows via ThemedPlate,
+            // caption-preserving, since a row's caption is its own child --
+            // see BuildRow's own comment); only the icon pager arrows stay
+            // NoChrome.
             var screen = DebugMenuScreen.Build();
 
             Assert.AreEqual(ButtonTheme.Silver, screen.GiveGoldButton.Node.Theme);
             Assert.AreEqual(ButtonTheme.Silver, screen.GiveEmbersButton.Node.Theme);
             Assert.AreEqual(ButtonTheme.Silver, screen.GiveOneEmberButton.Node.Theme);
             Assert.AreEqual(ButtonTheme.Silver, screen.CloseButton.Node.Theme);
-            Assert.IsNull(screen.FilterButtons[0].Node.Theme, "a pooled, pinned-width tab strip");
-            Assert.IsNull(screen.RowButtons[0].Node.Theme, "a pooled, pinned-width row");
-            Assert.IsNull(screen.PrevPageButton.Node.Theme, "an icon arrow, not a plate button");
-            Assert.IsNull(screen.NextPageButton.Node.Theme, "an icon arrow, not a plate button");
+            Assert.AreEqual(ButtonTheme.Silver, screen.FilterButtons[0].Node.Theme);
+            Assert.AreEqual(ButtonTheme.Silver, screen.RowButtons[0].Node.Theme);
+            Assert.IsTrue(screen.RowButtons[0].Node.CaptionPreserving);
+            Assert.IsTrue(screen.PrevPageButton.Node.Chromeless, "an icon arrow, not a plate button");
+            Assert.IsTrue(screen.NextPageButton.Node.Chromeless, "an icon arrow, not a plate button");
         }
 
         [Test]

@@ -270,6 +270,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // wide.
             var reroll = Ui.Button("ReckoningRerollButton", UiString.Runtime,
                     new UiVec(170f, 40f), 17, Place.At(445f, 248f))
+                .Themed(ButtonTheme.Violet)
                 .Inactive();
             screen.RerollButton = reroll;
 

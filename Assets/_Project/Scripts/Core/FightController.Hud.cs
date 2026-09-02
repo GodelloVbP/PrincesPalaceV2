@@ -248,8 +248,21 @@ namespace PrincesPalace
                 var row = rows[i];
                 submenuNames[i].SetContent(row.Name);
 
-                var frame = submenuRows[i].targetGraphic as UnityEngine.UI.Image;
-                if (frame != null) frame.color = i == _menu.Selection ? RowSelected : RowIdle;
+                // THEMED ROWS drive ThemedButtonState.SetMenuState instead of
+                // targetGraphic.color, same split RefreshVerbs already makes
+                // for the verb column -- Open for the selected row, Idle for
+                // every other one. The colour path stays as a fallback for
+                // any row that is not themed (none today).
+                var themedRow = submenuRows[i].GetComponent<ThemedButtonState>();
+                if (themedRow != null)
+                {
+                    themedRow.SetMenuState(i == _menu.Selection ? ThemedMenuState.Open : ThemedMenuState.Idle);
+                }
+                else
+                {
+                    var frame = submenuRows[i].targetGraphic as UnityEngine.UI.Image;
+                    if (frame != null) frame.color = i == _menu.Selection ? RowSelected : RowIdle;
+                }
 
                 submenuRows[i].interactable = row.Affordable;
 
