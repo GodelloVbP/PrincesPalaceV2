@@ -26,4 +26,4 @@ MonoBehaviour:
     hasAgainst: 0
     againstMagical: 0
   sortOrder: 28
-  iconPath: Assets/_Project/Art/Items/Relics/Processed/jo_suns_book_of_anatomy.png
+  iconPath: Assets/_Project/Art/Generated/disc_metal.png

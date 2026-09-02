@@ -1,6 +1,6 @@
 {
   "_readme": "Every relic in the game. Edit this file, then run Prince's Palace > Build Default Content. id and displayName are always required. Everything else is optional and defaulted. RELICS ARE DRAFTED PER RUN: three are offered at the start of a descent, the player keeps one for that run only, and it is gone when the run ends. Nothing here is permanent progression. `rarity` is one of common, uncommon, rare, ultrarare, mythic, godlike (case-insensitive, default common) and is an AUTHORED statement about how often the relic should be offered -- unlike item rarity it is not derived from a tier, because a relic has no numbers to derive it from. Changing a relic's band is this one word and nothing else. `unlockedBy` names an AchievementIds value; empty means available from the very first run, and an unknown id is a content-build failure rather than a relic that silently never appears. `effect` names a PrincesPalace.Domain.Content.RelicEffect value (case-insensitive); OMIT IT for a relic that has no mechanic yet -- it resolves to None, which is exempt from the one-relic-per-effect rule precisely so a pool of named-but-unimplemented relics can exist. Every other effect must still be unique: two relics doing the same thing makes one of them a dead choice in a draft. iconPath is optional and points at Assets/_Project/Art/Items/Relics/Processed/ -- SceneBuilder.LoadSprite leaves the slot blank with a console warning until that file exists.",
-  "_placeholders": "forest_wardens_tooth is DELIBERATELY MECHANIC-LESS -- it exists so the draft, the rarity ladder and the glossary can be seen working against a pool big enough to be a real choice, before anybody has designed what it does. It is the only one left; every other relic that used to sit in this state (seven_teeth through drowned_lantern) has since earned an `effect`. Give it one when it earns one; until then it is honest about being furniture.",
+  "_placeholders": "forest_wardens_tooth is DELIBERATELY MECHANIC-LESS -- it exists so the draft, the rarity ladder and the glossary can be seen working against a pool big enough to be a real choice, before anybody has designed what it does. It is the only one left; every other relic that used to sit in this state (seven_teeth through drowned_lantern) has since earned an `effect`. Give it one when it earns one; until then it is honest about being furniture. The 20 relics from balance pass 2 (magic_marker through phoenix_egg) point iconPath at Assets/_Project/Art/Generated/disc_metal.png -- a baked metallic-coin placeholder (see ProceduralSpriteBaker) -- until each earns real art from Art/Items/Relics/Processed/; they are not mechanic-less, only unillustrated.",
   "relics": [
     {
       "id": "dual_wield",
@@ -181,7 +181,7 @@
       "description": "Your spells mark the enemy they hit. Hitting a marked enemy with an attack consumes the mark and restores 20% of your missing mana (or signature resource).",
       "effect": "MagicMarker",
       "rarity": "common",
-      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/magic_marker.png"
+      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
     },
     {
       "id": "jar_of_bear_urine",
@@ -189,7 +189,7 @@
       "description": "Marks every enemy the instant combat begins.",
       "effect": "JarOfBearUrine",
       "rarity": "common",
-      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/jar_of_bear_urine.png"
+      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
     },
     {
       "id": "world_enders_crown",
@@ -197,7 +197,7 @@
       "description": "The instant you drop below 30% health, every enemy is feared for 1 turn. Re-arms once you climb back above 30%.",
       "effect": "WorldEndersCrown",
       "rarity": "mythic",
-      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/world_enders_crown.png"
+      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
     },
     {
       "id": "cursed_idol",
@@ -205,7 +205,7 @@
       "description": "Damaging an enemy lowers its resistances by 3% for 3 turns, stacking up to 15%. Each stack falls off on its own.",
       "effect": "CursedIdol",
       "rarity": "rare",
-      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/cursed_idol.png"
+      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
     },
     {
       "id": "amassing_star",
@@ -213,14 +213,14 @@
       "description": "Every enemy you kill (summons excluded) grants +2% damage for the rest of the run.",
       "effect": "AmassingStar",
       "rarity": "rare",
-      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/amassing_star.png"
+      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
     },
     {
       "id": "pointy_nail_on_the_end_of_a_stick",
       "displayName": "Pointy Nail on the End of a Stick",
       "description": "Melee attacks gain 35 flat armour penetration.",
       "rarity": "common",
-      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/pointy_nail_on_the_end_of_a_stick.png",
+      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png",
       "modifiers": [
         {
           "type": "ArmorPenetrationFlat",
@@ -235,7 +235,7 @@
       "effect": "RampagingBullsHorn",
       "rarity": "rare",
       "requiresConvergenceAbility": true,
-      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/rampaging_bulls_horn.png"
+      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
     },
     {
       "id": "ice_fingernail",
@@ -243,7 +243,7 @@
       "description": "Attacks apply a 10% slow, stacking up to 40%.",
       "effect": "IceFingernail",
       "rarity": "common",
-      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/ice_fingernail.png"
+      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
     },
     {
       "id": "loaded_dice",
@@ -251,7 +251,7 @@
       "description": "At the start of the fight, stun one random enemy for 1 turn.",
       "effect": "LoadedDice",
       "rarity": "rare",
-      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/loaded_dice.png"
+      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
     },
     {
       "id": "monkey_kings_scepter",
@@ -259,14 +259,14 @@
       "description": "Your melee attacks can reach any enemy, regardless of position.",
       "effect": "MonkeyKingsScepter",
       "rarity": "ultrarare",
-      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/monkey_kings_scepter.png"
+      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
     },
     {
       "id": "jo_suns_book_of_anatomy",
       "displayName": "Jo-Sun's Book of Anatomy",
       "description": "Super-effective damage is multiplied by an extra 20%.",
       "rarity": "rare",
-      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/jo_suns_book_of_anatomy.png",
+      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png",
       "modifiers": [
         {
           "type": "WeaknessDamageBonusPercent",
@@ -280,7 +280,7 @@
       "description": "Altering your own position in the turn order grants +30% Speed for 1 turn.",
       "effect": "SparringSaber",
       "rarity": "common",
-      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/sparring_saber.png"
+      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
     },
     {
       "id": "sparring_buckler",
@@ -288,7 +288,7 @@
       "description": "Casting an ability that alters anyone's position grants a 15% ward, once per turn.",
       "effect": "SparringBuckler",
       "rarity": "rare",
-      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/sparring_buckler.png"
+      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
     },
     {
       "id": "essence_siphon",
@@ -296,7 +296,7 @@
       "description": "After an enemy dies (summons excluded), heal 3% of your max health.",
       "effect": "EssenceSiphon",
       "rarity": "rare",
-      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/essence_siphon.png"
+      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
     },
     {
       "id": "disgruntled_lackey",
@@ -304,7 +304,7 @@
       "description": "Whenever an enemy summons a unit, deal 100% of your max health as damage to the summoner.",
       "effect": "DisgruntledLackey",
       "rarity": "mythic",
-      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/disgruntled_lackey.png"
+      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
     },
     {
       "id": "inconspicuous_key",
@@ -312,7 +312,7 @@
       "description": "They say hell and heaven have the same master key. Once per combat, an enemy you kill answers its call for one last blow against its own side.",
       "effect": "InconspicuousKey",
       "rarity": "mythic",
-      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/inconspicuous_key.png"
+      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
     },
     {
       "id": "dancers_anklet",
@@ -320,7 +320,7 @@
       "description": "After you attack, cast a spell or use an ability, you slip one position forward in the turn order.",
       "effect": "DancersAnklet",
       "rarity": "ultrarare",
-      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/dancers_anklet.png"
+      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
     },
     {
       "id": "berserkers_vest",
@@ -328,14 +328,14 @@
       "description": "Getting hit lowers all of your active cooldowns by 1 turn, once per turn.",
       "effect": "BerserkersVest",
       "rarity": "ultrarare",
-      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/berserkers_vest.png"
+      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
     },
     {
       "id": "vampire_dentures",
       "displayName": "Vampire Dentures",
       "description": "10% vampirism - heal for a tenth of the damage your attacks deal.",
       "rarity": "common",
-      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/vampire_dentures.png",
+      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png",
       "modifiers": [
         {
           "type": "LifestealPercent",
@@ -349,7 +349,7 @@
       "description": "Taking what would be fatal damage instead turns you into an egg for 3 turns, with its own HP pool. Revive with whatever fraction of it survives, or die if it breaks. Once per combat.",
       "effect": "PhoenixEgg",
       "rarity": "ultrarare",
-      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/phoenix_egg.png"
+      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
     }
   ]
 }
