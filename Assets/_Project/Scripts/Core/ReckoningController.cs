@@ -180,6 +180,16 @@ namespace PrincesPalace
         private bool _wired;
         private Coroutine _animation;
 
+        // THE TEST SEAM, same shape as FightBeatPlayer.BeatSpeedMultiplier and
+        // FightController.BreathSpeedMultiplier -- this driver has neither of
+        // those, being entirely its own thing off Time.unscaledDeltaTime (the
+        // wipe/gloom in PlayIn, the sweep and smear in SweepToSummary, the bar
+        // fill and stagger delay in Sweep/FillBar, the level-up flash in
+        // Flash), so it needed its own. 1 outside a test, which changes
+        // nothing about play. ReckoningTests, ReckoningPhaseTests and
+        // ReckoningTabTests set/reset it in [SetUp]/[TearDown].
+        public static float SpeedMultiplier = 1f;
+
         // Raised when the player dismisses it. An event rather than a call into
         // Navigation, for the same reason FightController.FightEnded is one:
         // the reward screen has no business knowing what comes after a fight.
@@ -885,7 +895,7 @@ namespace PrincesPalace
 
             while (elapsed < longest)
             {
-                elapsed += Time.unscaledDeltaTime;
+                elapsed += Time.unscaledDeltaTime * SpeedMultiplier;
 
                 float k = Smooth(Mathf.Clamp01(elapsed / WipeSeconds));
                 SetWipeWidth(ReckoningScreen.PanelWidth * k);
@@ -939,7 +949,7 @@ namespace PrincesPalace
             summaryPhase.gameObject.SetActive(true);
             summaryPhase.anchoredPosition = new Vector2(width, 0f);
 
-            for (float t = 0f; t < SweepSeconds; t += Time.unscaledDeltaTime)
+            for (float t = 0f; t < SweepSeconds; t += Time.unscaledDeltaTime * SpeedMultiplier)
             {
                 float k = EaseOut(Mathf.Clamp01(t / SweepSeconds));
 
@@ -986,7 +996,15 @@ namespace PrincesPalace
 
         private IEnumerator FillBar(int index, CharacterReward row, float delay)
         {
-            if (delay > 0f) yield return new WaitForSecondsRealtime(delay);
+            // Scaled the same way as everything else on this seam, rather
+            // than by dividing WaitForSecondsRealtime's own clock -- there is
+            // no unscaled equivalent of WaitForSeconds that also multiplies,
+            // so this is a manual timer instead of the realtime wait it
+            // replaces.
+            if (delay > 0f)
+            {
+                for (float t = 0f; t < delay; t += Time.unscaledDeltaTime * SpeedMultiplier) yield return null;
+            }
 
             // NO LEVEL-UP: one fill, start to finish.
             if (!row.LevelledUp)
@@ -1036,7 +1054,7 @@ namespace PrincesPalace
             // is not three times as long to watch as a one-level fight.
             float seconds = BarSeconds * (countTo - countFrom);
 
-            for (float t = 0f; t < seconds; t += Time.unscaledDeltaTime)
+            for (float t = 0f; t < seconds; t += Time.unscaledDeltaTime * SpeedMultiplier)
             {
                 float k = Smooth(Mathf.Clamp01(t / seconds));
                 SetSpan(rowBarFills[index], from, Mathf.Lerp(from, to, k));
@@ -1056,7 +1074,10 @@ namespace PrincesPalace
             var resting = fill.color;
 
             fill.color = Color.white;
-            yield return new WaitForSecondsRealtime(FlashSeconds);
+
+            // Manual timer, same reason as FillBar's delay above.
+            for (float t = 0f; t < FlashSeconds; t += Time.unscaledDeltaTime * SpeedMultiplier) yield return null;
+
             fill.color = resting;
         }
 

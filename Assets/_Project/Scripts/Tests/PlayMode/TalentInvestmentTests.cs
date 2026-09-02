@@ -40,11 +40,22 @@ namespace PrincesPalace.PlayModeTests
             SaveSlotManager.CurrentSlot = 0;
             SaveSlotManager.Forget();
             Navigation.LoadOverride = _ => { };
+
+            // The sky's slide is UNSCALED by Time.timeScale on purpose (see
+            // TalentController.Motion.cs's own header), so it pays real time
+            // regardless of anything else in the fixture. Sped up here for
+            // EveryConstellationSettlesWhereTheFirstOneSits, which only polls
+            // for the slide to have stopped moving rather than sampling its
+            // shape -- KindlingOvershootsTheStoneAndSettlesItBack opts back
+            // out below because it needs the opposite: real frames across the
+            // whole beat to catch the overshoot actually happening.
+            TalentController.MotionSpeedMultiplier = 60f;
         }
 
         [TearDown]
         public void Restore()
         {
+            TalentController.MotionSpeedMultiplier = 1f;
             Navigation.Reset();
             SaveSystem.RootOverride = null;
             SaveSlotManager.Forget();
@@ -390,6 +401,14 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator KindlingOvershootsTheStoneAndSettlesItBack()
         {
+            // OPTED OUT of [SetUp]'s MotionSpeedMultiplier = 60 -- see the
+            // comment there. This test samples the SHAPE of the beat (the
+            // scale has to rise past 1.02 before it comes back), not just
+            // whether it has finished, so it needs the same real frames
+            // across the whole 1.12s beat that the comment below already
+            // budgets for.
+            TalentController.MotionSpeedMultiplier = 1f;
+
             yield return OpenTheTree();
 
             var talents = Object.FindAnyObjectByType<TalentController>();

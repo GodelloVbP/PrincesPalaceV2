@@ -23,6 +23,15 @@ namespace PrincesPalace
     // reads as the screen having frozen.
     public partial class TalentController
     {
+        // THE TEST SEAM FOR THIS SCREEN'S OWN CLOCK. Nothing here reads
+        // FightBeatPlayer.BeatSpeedMultiplier -- this screen is not a fight,
+        // and its whole clock is already unscaled by Time.timeScale on
+        // purpose (see the header above). Scales only `delta` below, so
+        // DriveRestingLoops/DriveSky -- which read Time.unscaledTime directly
+        // rather than an accumulated elapsed -- are untouched: nothing in the
+        // suite times those. 1 outside a test, so play is unchanged.
+        public static float MotionSpeedMultiplier = 1f;
+
         private int _kindlingSlot = -1;
         private int _kindlingPath = -1;
         private float _kindlingElapsed;
@@ -64,7 +73,7 @@ namespace PrincesPalace
         private void Update()
         {
             float time = Time.unscaledTime;
-            float delta = Time.unscaledDeltaTime;
+            float delta = Time.unscaledDeltaTime * MotionSpeedMultiplier;
 
             DriveSlide(delta);
             DrivePushIn(delta);

@@ -37,11 +37,17 @@ namespace PrincesPalace.PlayModeTests
 
             _wentTo = null;
             Navigation.LoadOverride = scene => _wentTo = scene;
+
+            // ReckoningController's whole animation is unscaled -- see its
+            // own SpeedMultiplier comment -- so this collapses the wipe,
+            // sweep and bar-fill waits below to well under a frame.
+            ReckoningController.SpeedMultiplier = 40f;
         }
 
         [TearDown]
         public void Restore()
         {
+            ReckoningController.SpeedMultiplier = 1f;
             Navigation.Reset();
             SaveSystem.RootOverride = null;
             SaveSlotManager.Forget();
@@ -51,6 +57,24 @@ namespace PrincesPalace.PlayModeTests
         private GameObject Named(string name) =>
             _reckoning.GetComponentsInChildren<Transform>(includeInactive: true)
                 .FirstOrDefault(t => t.name == name)?.gameObject;
+
+        // A FIXED WAIT STILL, not a poll -- there is no exposed "this bar is
+        // still animating" flag to poll on (FillBar's coroutine reference is
+        // private, and a level-up's Sweep-Flash-Sweep sequence PLATEAUS
+        // between passes, which rules out watching the fill rect settle: it
+        // legitimately stops moving mid-sequence during the flash).
+        //
+        // What changed is the duration. [SetUp]'s SpeedMultiplier = 40 runs
+        // the whole Sweep/Flash/Sweep sequence (worst case here: two sweeps
+        // and a flash, well under 0.55s + 0.09s of *scaled* clock) in low
+        // tens of milliseconds of real time -- 0.2s real is roughly 6x that,
+        // which still catches a real stall (the bar never reaching its final
+        // span) while being ~7x faster than the flat 1.5s this replaced.
+        private IEnumerator WaitForTheBarSequence()
+        {
+            float deadline = Time.realtimeSinceStartup + 0.2f;
+            while (Time.realtimeSinceStartup < deadline) yield return null;
+        }
 
         private static SaveData Save => SaveSlotManager.CurrentSave;
 
@@ -400,7 +424,7 @@ namespace PrincesPalace.PlayModeTests
 
             // Let the fill animation finish so the assertion is on the settled
             // state rather than on a frame partway through it.
-            for (float t = 0f; t < 1.5f; t += Time.unscaledDeltaTime) yield return null;
+            yield return WaitForTheBarSequence();
 
             Assert.AreEqual(0f, before.anchorMin.x, 0.001f, "the dim segment starts at the left edge");
             Assert.AreEqual(before.anchorMax.x, fill.anchorMin.x, 0.001f,
@@ -420,7 +444,7 @@ namespace PrincesPalace.PlayModeTests
             var before = Named("ReckoningRow0BarBefore").GetComponent<RectTransform>();
             var fill = Named("ReckoningRow0BarFill").GetComponent<RectTransform>();
 
-            for (float t = 0f; t < 1.5f; t += Time.unscaledDeltaTime) yield return null;
+            yield return WaitForTheBarSequence();
 
             Assert.AreEqual(0f, before.anchorMax.x, 0.001f, "nothing was carried over the level boundary");
             Assert.AreEqual(0f, fill.anchorMin.x, 0.001f);
@@ -453,7 +477,17 @@ namespace PrincesPalace.PlayModeTests
             var wipe = Named("ReckoningFrameWipe").GetComponent<RectTransform>();
             var frame = Named("ReckoningFrame").GetComponent<RectTransform>();
 
-            for (float t = 0f; t < 1f; t += Time.unscaledDeltaTime) yield return null;
+            // BOUNDED ON THE WIPE'S OWN WIDTH, not a fixed real-time guess.
+            // PlayIn is a single monotonic ease with no plateau, so unlike the
+            // bar-fill sequence above it is safe to poll directly: it either
+            // reaches full width or the 2s ceiling fires and the assertions
+            // below fail on the truth (a permanently narrow panel) rather
+            // than on a timing guess.
+            float deadline = Time.realtimeSinceStartup + 2f;
+            while (wipe.rect.width < ReckoningScreen.PanelWidth - 0.5f && Time.realtimeSinceStartup < deadline)
+            {
+                yield return null;
+            }
 
             Assert.AreEqual(PrincesPalace.Domain.UiKit.Screens.ReckoningScreen.PanelWidth,
                 wipe.rect.width, 0.5f, "the panel is permanently narrower than it should be");

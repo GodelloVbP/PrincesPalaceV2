@@ -35,11 +35,17 @@ namespace PrincesPalace.PlayModeTests
             SaveSlotManager.CurrentSlot = 0;
             SaveSlotManager.Forget();
             Navigation.LoadOverride = _ => { };
+
+            // ReckoningController's whole animation is unscaled -- see its
+            // own SpeedMultiplier comment -- so this collapses the wipe,
+            // sweep and bar-fill waits below to well under a frame.
+            ReckoningController.SpeedMultiplier = 40f;
         }
 
         [TearDown]
         public void Restore()
         {
+            ReckoningController.SpeedMultiplier = 1f;
             Navigation.Reset();
             SaveSystem.RootOverride = null;
             SaveSlotManager.Forget();
@@ -51,6 +57,66 @@ namespace PrincesPalace.PlayModeTests
                 .FirstOrDefault(t => t.name == name)?.gameObject;
 
         private void Click(string name) => Named(name).GetComponent<Button>().onClick.Invoke();
+
+        // POLLED ON THE OFFER PHASE ITSELF. SweepToSummary sets it inactive
+        // as its very last step -- after StartBars() has already been kicked
+        // off, so this also guarantees the bars have started where that
+        // matters below -- and it is a one-way flag rather than a value that
+        // plateaus, so it is safe to poll directly. [SetUp]'s
+        // SpeedMultiplier = 40 runs the whole 0.18s SweepSeconds journey in
+        // low single-digit milliseconds of real time; 0.3s real is two
+        // orders of magnitude past that while still catching a real stall
+        // (the offer phase never leaving).
+        private IEnumerator WaitForTheSweepToLand()
+        {
+            float deadline = Time.realtimeSinceStartup + 0.3f;
+            while (Named("ReckoningOfferPhase").activeSelf && Time.realtimeSinceStartup < deadline)
+            {
+                yield return null;
+            }
+        }
+
+        // POLLED ON THE GAIN LABEL ITSELF. FillBar has no exposed
+        // "still running" flag any more than ReckoningTests' bar sequence
+        // does (see its WaitForTheBarSequence), but unlike that one this
+        // fixture's Reward() never levels up (LevelAfter == LevelBefore), so
+        // CountGain only ever climbs toward ExpGained and never plateaus or
+        // resets mid-sequence -- safe to poll for the final value landing
+        // rather than guess a duration for it.
+        //
+        // 2s ceiling, not the tighter 0.5s this started at: the animation
+        // itself needs only a handful of scaled frames, but the deadline is
+        // WALL time against a coroutine that only gets to advance once per
+        // Update. One slow frame right after Show() -- a GC pause, JIT on a
+        // scene freshly loaded -- can burn the whole budget before FillBar
+        // gets its second tick, which read here as the bar never having
+        // started at all. Seen flaky at 0.5s in a full multi-fixture run
+        // (never in isolation); 2s, matching WaitForThePlayInToLand's own
+        // margin, gives one bad frame room without hiding an actual stall.
+        private IEnumerator WaitForTheGainToLand(TMPro.TMP_Text gain, string expected)
+        {
+            float deadline = Time.realtimeSinceStartup + 2f;
+            while (!gain.text.Contains(expected) && Time.realtimeSinceStartup < deadline)
+            {
+                yield return null;
+            }
+        }
+
+        // BOUNDED ON THE WIPE'S OWN WIDTH, same shape as ReckoningTests'
+        // equivalent poll -- PlayIn is a single monotonic ease with no
+        // plateau, so it is safe to poll directly: it either reaches full
+        // width or the ceiling fires and callers see the truth (a still-
+        // narrow panel, a glow that never faded up) instead of a timing
+        // guess.
+        private IEnumerator WaitForThePlayInToLand()
+        {
+            var wipe = Named("ReckoningFrameWipe").GetComponent<RectTransform>();
+            float deadline = Time.realtimeSinceStartup + 2f;
+            while (wipe.rect.width < ReckoningScreen.PanelWidth - 0.5f && Time.realtimeSinceStartup < deadline)
+            {
+                yield return null;
+            }
+        }
 
         private static CombatReward Reward()
         {
@@ -113,8 +179,7 @@ namespace PrincesPalace.PlayModeTests
 
             Click("ReckoningOffer0");
 
-            // The sweep is 0.3s; give it room to land.
-            yield return new WaitForSecondsRealtime(0.7f);
+            yield return WaitForTheSweepToLand();
 
             Assert.IsFalse(Named("ReckoningOfferPhase").activeSelf);
             Assert.IsTrue(Named("ReckoningSummaryPhase").activeSelf);
@@ -128,7 +193,7 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenIt(Offers());
 
             Click("ReckoningOffer0");
-            yield return new WaitForSecondsRealtime(0.7f);
+            yield return WaitForTheSweepToLand();
 
             var summary = Named("ReckoningSummaryPhase").GetComponent<RectTransform>();
 
@@ -149,7 +214,7 @@ namespace PrincesPalace.PlayModeTests
 
             var offer = Named("ReckoningOfferPhase").GetComponent<RectTransform>();
             Click("ReckoningOffer0");
-            yield return new WaitForSecondsRealtime(0.7f);
+            yield return WaitForTheSweepToLand();
 
             Assert.Less(offer.anchoredPosition.x, 0f,
                 "the choice left to the RIGHT, so the summary came in from the left - that is the " +
@@ -166,7 +231,7 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenIt(Offers());
 
             Click("ReckoningOffer0");
-            yield return new WaitForSecondsRealtime(0.7f);
+            yield return WaitForTheSweepToLand();
 
             var summary = Named("ReckoningSummaryPhase");
             var rect = summary.GetComponent<RectTransform>();
@@ -190,9 +255,9 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenIt(Offers());
 
             Click("ReckoningOffer0");
-            yield return new WaitForSecondsRealtime(1.6f);
 
             var gain = Named("ReckoningRow0Gain").GetComponent<TMPro.TMP_Text>();
+            yield return WaitForTheGainToLand(gain, "79");
 
             StringAssert.Contains("79", gain.text, "the bar never ran after the sweep");
         }
@@ -200,6 +265,16 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest]
         public IEnumerator TheFrameOpensAsAHorizontalWipeAndEndsFullWidth()
         {
+            // OPTED OUT of [SetUp]'s SpeedMultiplier = 40 for the opening
+            // frames below -- this test samples the SHAPE of the wipe one
+            // frame in (still part-open), not just whether it has finished.
+            // At 40x, a single real frame's unscaled delta already covers
+            // more than the whole 0.34s wipe, so the panel would read as
+            // fully open before the first assertion ever ran. Restored to
+            // full speed once those shape checks are done, for the settle
+            // wait below.
+            ReckoningController.SpeedMultiplier = 1f;
+
             // Full height from the first frame, zero width, opening outward.
             // A scale-pop reads as a dialog; this reads as the panel being
             // drawn across the fight.
@@ -227,7 +302,8 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(ReckoningScreen.PanelWidth, frame.rect.width, 0.5f,
                 "the frame is being resized rather than revealed by the mask");
 
-            yield return new WaitForSecondsRealtime(0.8f);
+            ReckoningController.SpeedMultiplier = 40f;
+            yield return WaitForThePlayInToLand();
 
             Assert.AreEqual(ReckoningScreen.PanelWidth, wipe.rect.width, 1f,
                 "the wipe never finished opening");
@@ -289,7 +365,7 @@ namespace PrincesPalace.PlayModeTests
             // simply go dead.
             yield return OpenIt(Offers());
             Click("ReckoningOffer0");
-            yield return new WaitForSecondsRealtime(0.7f);
+            yield return WaitForTheSweepToLand();
 
             var glow = Named("ReckoningContinueGlow").GetComponent<RectTransform>();
             var image = glow.GetComponent<Image>();
@@ -355,7 +431,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator TheDropGlowFadesUpBehindTheFrame()
         {
             yield return OpenIt(Offers());
-            yield return new WaitForSecondsRealtime(0.8f);
+            yield return WaitForThePlayInToLand();
 
             var glow = Named("ReckoningFrameGlow").GetComponent<Image>();
 
