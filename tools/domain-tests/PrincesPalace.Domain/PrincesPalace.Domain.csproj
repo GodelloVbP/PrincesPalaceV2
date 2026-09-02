@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The SAME source files Unity compiles into the PrincesPalace.Domain
+       assembly, compiled a second time by the .NET SDK so the EditMode tests
+       can run without booting Unity. Included BY PATH, never copied. There is
+       exactly one copy of every Domain file, under Assets/. -->
+
+  <PropertyGroup>
+    <!-- netstandard2.1 because that is what Unity 6 compiles Domain against.
+         Targeting net10.0 here would let a Domain file use an API Unity
+         does not have and still build green, which defeats the point. -->
+    <TargetFramework>netstandard2.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- No exclusions. PrincesPalace.Domain.asmdef declares
+         "noEngineReferences": true and an empty references list, so every
+         file here is supposed to compile with nothing but the BCL. A file
+         that needs an exclusion to build is a Domain layering violation and
+         belongs in Core/, not on an exclude list. -->
+    <Compile Include="..\..\..\Assets\_Project\Scripts\Domain\**\*.cs" />
+  </ItemGroup>
+
+</Project>

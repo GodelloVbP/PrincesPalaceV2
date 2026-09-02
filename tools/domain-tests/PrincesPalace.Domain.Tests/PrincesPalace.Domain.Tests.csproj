@@ -1,0 +1,92 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The EditMode suite, compiled and run by `dotnet test` instead of Unity.
+
+    Same files. Included by path out of Assets/_Project/Scripts/Tests/EditMode,
+    never copied, so there is exactly one copy of every test in the repo and
+    no way for the two hosts to drift apart file by file.
+
+    What differs is only WHICH files: the handful that touch UnityEngine or
+    read imported assets are excluded below, each with the reason, and stay
+    Unity-only. Everything else runs here.
+  -->
+
+  <PropertyGroup>
+    <!--
+      net10.0 because that is the only runtime installed on this machine
+      (dotnet 10.0.302 SDK, Microsoft.NETCore.App 10.0.10). It is the HOST
+      framework only. The code under test is the netstandard2.1 Domain
+      library next door, so a Domain file still cannot reach past what Unity
+      gives it. Test files themselves get net10.0's BCL, which is a real (if
+      small) divergence: a test using a post-netstandard2.1 API would compile
+      here and fail in Unity. LangVersion 9 in Directory.Build.props closes
+      the language half of that gap; the library half is closed by the
+      Domain project's own target.
+    -->
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>PrincesPalace.Domain.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      NUnit 3.14.0 is the last 3.x, and 3.x is what Unity's test framework
+      is: com.unity.test-framework 1.7.0 depends on com.unity.ext.nunit
+      2.1.0, whose nunit.framework.dll reports FileVersion 3.5.0.0 and whose
+      own package.json says "Based on NUnit version 3.5". Nothing on NuGet
+      ships 3.5 in a form dotnet test can load, and 3.5 to 3.14 is additive
+      for the assertion surface this suite uses (classic Assert.*, TestCase,
+      OneTimeSetUp). The consequence to know: an assertion added after 3.5
+      would compile here and NOT in Unity, so a green dotnet run is not
+      proof a new test compiles under Unity. The full gate still is.
+    -->
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PrincesPalace.Domain\PrincesPalace.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\..\Assets\_Project\Scripts\Tests\EditMode\**\*.cs" />
+
+    <!--
+      EXCLUSION POLICY, in one line: a test stays Unity-only when it needs
+      the ENGINE, not merely when it mentions it. Five files qualify, all
+      five for a reason no shim can honestly stand in for. Adding to this
+      list costs coverage in the fast loop, so justify each one here.
+    -->
+
+    <!-- JsonUtility. Unity's serializer, and the thing under test IS its
+         behaviour on an old-shaped save (which fields it fills, which it
+         leaves at default). A System.Text.Json stand-in would test a
+         different serializer and pass for the wrong reason. -->
+    <Compile Remove="..\..\..\Assets\_Project\Scripts\Tests\EditMode\ItemModifierStorageTests.cs" />
+
+    <!-- JsonUtility again, over the real enemies.json. Same reasoning: the
+         pin is on what Unity's parser produces from the authored file. -->
+    <Compile Remove="..\..\..\Assets\_Project\Scripts\Tests\EditMode\EnemyContentPinTests.cs" />
+
+    <!-- JsonUtility a third time, fully qualified as UnityEngine.JsonUtility
+         rather than through a using, which is how it stayed invisible to a
+         "using UnityEngine" grep. Same reasoning as the two above: the
+         assertion is on what Unity's parser makes of enemies.json. -->
+    <Compile Remove="..\..\..\Assets\_Project\Scripts\Tests\EditMode\ForestWardenTests.cs" />
+
+    <!-- Application.dataPath, and it reads committed art off disk. -->
+    <Compile Remove="..\..\..\Assets\_Project\Scripts\Tests\EditMode\HandAssembledArtTests.cs" />
+
+    <!-- Resources.Load of an imported TextAsset. Reading the same JSON with
+         File.ReadAllText would skip the import, which is half of what this
+         test is for: a rig manifest that exists but never imported is
+         exactly the failure it catches. -->
+    <Compile Remove="..\..\..\Assets\_Project\Scripts\Tests\EditMode\RigAnimationContentTests.cs" />
+
+    <!-- The Mathf stand-in for RewardTrackLayoutTests. See its own header. -->
+    <Compile Include="MathfShim.cs" />
+  </ItemGroup>
+
+</Project>

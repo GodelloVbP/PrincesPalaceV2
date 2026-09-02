@@ -1,0 +1,35 @@
+<Project>
+
+  <!--
+    bin/ and obj/ are left at their SDK defaults, beside each .csproj here
+    under tools/domain-tests/, which is already where they need to be: well
+    away from Assets/. Unity imports everything under Assets/, so an obj/
+    tree there would be imported as project assets and grow .meta files for
+    build intermediates. Both are gitignored.
+
+    Do not "tidy" them into a shared build/ folder with BaseOutputPath. This
+    repo's path contains an apostrophe ("Prince's Palace"), and an explicitly
+    set BaseOutputPath makes MSBuild fail to expand the
+    _DebugSymbolsIntermediatePath item transform, raising an MSB3021 that
+    names the transform expression rather than the quote that caused it.
+  -->
+
+  <!--
+    Unity 6 compiles this code as C# 9 against .NET Standard 2.1. The dotnet
+    host is held to the SAME ceiling, or a construct that builds green here
+    fails in Unity, which is the one failure mode that would make this whole
+    shortcut untrustworthy.
+
+    EnableDefaultCompileItems is off because the sources are not next to the
+    projects: every file is included by explicit path from Assets/.
+  -->
+  <PropertyGroup>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AssemblyName>$(MSBuildProjectName)</AssemblyName>
+    <RootNamespace>PrincesPalace.Domain</RootNamespace>
+  </PropertyGroup>
+
+</Project>

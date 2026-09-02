@@ -39,6 +39,15 @@ Assets/_Project/Resources/Rigs/**/wiggle.png.meta
 *.sln
 *.user
 
+# ...except the dotnet host for the Domain tests, whose whole point is that
+# it is committed and reproducible. The blanket *.csproj rule above exists
+# for the ones Unity regenerates from the asmdefs on every open; these two
+# are hand-written and are the source of truth for what the fast test loop
+# compiles, so they have to survive it.
+!tools/domain-tests/**/*.csproj
+tools/domain-tests/**/bin/
+tools/domain-tests/**/obj/
+
 # Python bytecode from the tools/ measurement scripts, which import each other
 # rather than each carrying its own copy of the constants they parse.
 tools/__pycache__/

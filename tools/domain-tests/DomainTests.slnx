@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="PrincesPalace.Domain/PrincesPalace.Domain.csproj" />
+  <Project Path="PrincesPalace.Domain.Tests/PrincesPalace.Domain.Tests.csproj" />
+</Solution>
