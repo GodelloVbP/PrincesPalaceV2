@@ -5,28 +5,31 @@ param(
     [switch]$NoScenes
 )
 
-# SCENES ARE BUILT ON EVERY FULL RUN. -BuildScenes now only decides whether
-# they are copied BACK to main afterwards.
+# SCENES ARE NOT BUILT UNLESS -BuildScenes IS PASSED. Building them on every
+# run was tried and measured, not assumed away: the EditMode screen tests
+# (FightScreenTests, MapScreenTests, HubScreenTests, etc.) already exercise
+# UiAudit against a freshly-solved layout as part of the normal suite, so a
+# scene rebuild bought this script nothing that the test run wasn't already
+# checking. What it did buy was cost: a rebuild with NO source change still
+# rewrites every fileID in all five scenes -- 165,849 lines out and the same
+# 165,849 back, none of which mean anything -- which is why the sync-back
+# stayed behind its own flag even while the build itself ran unconditionally.
 #
-# They are generated artifacts, so a suite run against the scenes that happen
-# to be on disk is testing whatever the source looked like the last time
-# somebody remembered the flag. That gap is invisible in the worst way: the
-# tests pass, and the scenes are simply stale. It also skipped UiAudit, which
-# is the only check that sees overlap, overflow, duplicate names and text
-# overflow in what was actually EMITTED -- the strongest layout check this
-# project has was opt-in.
+# -BuildScenes now does both halves at once: build the scenes in the primary
+# runner (so PlayMode tests against them and the generation sentinels run),
+# AND copy them back to main and into the PlayMode runner. Use it whenever you
+# changed a screen tree under Domain/UiKit/Screens/ or wiring in
+# Editor/SceneBuilder/ScreenRegistry.cs -- PlayMode otherwise loads
+# whatever scenes happen to already be on disk, which is the prior source's
+# layout, not yours. Use it again before committing such a change, for the
+# same reason.
 #
-# The reason the sync-back stays behind its flag is measured rather than
-# assumed: a rebuild with NO source change still rewrites every fileID in all
-# five scenes. 165,849 lines out and the same 165,849 back, none of which mean
-# anything. Syncing that to main on every run would leave the working tree
-# permanently dirty with five enormous diffs, and "did my change alter the
-# scenes" would stop being answerable.
-#
-# So: build always, in the runners, where the audit and the PlayMode tests
-# need them. Write them into main only when the intent is to commit them.
-# -NoScenes opts out for a deliberately quick run; it costs about 25s.
-$BuildScenesHere = -not $NoScenes
+# -NoScenes is no longer needed -- no build means nothing to opt out of -- but
+# stays accepted as a no-op so muscle memory doesn't hard-fail.
+if ($NoScenes) {
+    Write-Host "-NoScenes is a no-op now: scenes are not built by default. Pass -BuildScenes if you need them."
+}
+$BuildScenesHere = $BuildScenes
 $SyncScenesToMain = $BuildScenes
 
 # Runs EditMode and PlayMode CONCURRENTLY against two separate isolated copies
