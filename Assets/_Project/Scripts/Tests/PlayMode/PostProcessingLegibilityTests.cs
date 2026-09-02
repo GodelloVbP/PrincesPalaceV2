@@ -44,17 +44,21 @@ namespace PrincesPalace.PlayModeTests
         private const int Width = 1920;
         private const int Height = 1080;
 
-        // FightScreen.BuildPartyPlate: the plate sits at (-694, -392), 452x216,
-        // and PartyHpValue sits at plate-local (194, 4) with a right pivot,
-        // 70x20. Stated here rather than read from the live rect on purpose --
+        // FightScreen.BuildPartyPlate: the plate sits at (-694, -385.858),
+        // 452x228.283 (a Blue 2:1 container now, was a flat 452x216
+        // panel_crimson sprite -- the bottom edge stayed at -500, so only the
+        // centre and height moved), and PartyHpValue sits at plate-local
+        // (194, 4) with a right pivot, 70x20 -- content coordinates are
+        // unchanged by the container move, only the plate's own world centre
+        // is. Stated here rather than read from the live rect on purpose --
         // if the tree moves the plate, this test should fail and be re-aimed,
         // not silently follow it somewhere the vignette is weaker.
         // CENTRE and size, matching Place.At's own convention -- Place.At is
         // centre-anchored, so treating these as corners would aim every crop
         // half a plate up and to the left, which is the kind of mistake that
         // still produces plausible numbers.
-        private static readonly Rect PlateRect = CentredAt(-694f, -392f, 452f, 216f);
-        private static readonly Rect HpValueRect = CentredAt(-694f + 194f - 35f, -392f + 4f, 70f, 20f);
+        private static readonly Rect PlateRect = CentredAt(-694f, -385.858f, 452f, 228.283f);
+        private static readonly Rect HpValueRect = CentredAt(-694f + 194f - 35f, -385.858f + 4f, 70f, 20f);
 
         private static Rect CentredAt(float centreX, float centreY, float width, float height) =>
             new Rect(centreX - width * 0.5f, centreY - height * 0.5f, width, height);

@@ -156,11 +156,57 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ThePartyPlateSitsWhereV1PutIt()
         {
+            // Width and the bottom edge (the canvas's own 40px HUD margin,
+            // -540 + 40) are v1's; the height moved from 216 (aspect 2.09) to
+            // 452/1.98 = 228.28 to clear the Blue 2:1 container kit's own 5%
+            // aspect band, and the centre moved with it -- see
+            // FightScreen.BuildPartyPlate's own header.
             var rect = RectOf("PartyPlate");
             Assert.AreEqual(-694f, rect.Centre.X, 0.01f);
-            Assert.AreEqual(-392f, rect.Centre.Y, 0.01f);
+            Assert.AreEqual(-385.858f, rect.Centre.Y, 0.01f);
             Assert.AreEqual(452f, rect.Width, 0.01f);
-            Assert.AreEqual(216f, rect.Height, 0.01f);
+            Assert.AreEqual(228.283f, rect.Height, 0.01f);
+            Assert.AreEqual(-500f, rect.Centre.Y - rect.Height * 0.5f, 0.01f, "the bottom edge must not move");
+        }
+
+        [Test]
+        public void ThePartyPlateIsABlueTwoByOneContainer()
+        {
+            var plate = Walk(Screen().Root).First(n => n.Name == "PartyPlate");
+
+            Assert.IsFalse(plate.Decor,
+                "the wrapper must stay non-Decor, or content beneath it audits clean against itself");
+            var art = plate.Children.Single(c => c.Kind == UiNodeKind.Sprite);
+            Assert.AreEqual("UI/Buttons/Processed/container_blue_2x1.png", art.SpriteKey);
+            Assert.IsTrue(art.Decor);
+        }
+
+        [Test]
+        public void ThePartyPlateContentSitsInsideTheMeasuredInset()
+        {
+            var plate = Walk(Screen().Root).First(n => n.Name == "PartyPlate");
+            var content = plate.Children.Single(c => c.Name == "PartyPlateContent");
+            var inset = Ui.ContainerContentInset(ContainerRatio.TwoByOne);
+
+            Assert.AreEqual(PlaceKind.Stretch, content.Place.Kind);
+            Assert.AreEqual(FightScreen.PartyPlateWidth * inset.Left, content.Place.Left, 0.01f);
+            Assert.AreEqual(FightScreen.PartyPlateWidth * inset.Right, content.Place.Right, 0.01f);
+            Assert.AreEqual(FightScreen.PartyPlateHeight * inset.Top, content.Place.Top, 0.01f);
+            Assert.AreEqual(FightScreen.PartyPlateHeight * inset.Bottom, content.Place.Bottom, 0.01f);
+        }
+
+        [Test]
+        public void ThePartyPlateChildrenRideInsideTheFrame()
+        {
+            // If the HP/MP rows or the wool meter were siblings of the frame
+            // rather than descendants, moving or hiding the plate would leave
+            // them stranded next to it instead of with it.
+            var plate = Walk(Screen().Root).First(n => n.Name == "PartyPlate");
+            var names = Walk(plate).Select(n => n.Name).ToList();
+
+            CollectionAssert.Contains(names, "PartyHpBar");
+            CollectionAssert.Contains(names, "PartyMpBar");
+            CollectionAssert.Contains(names, "WoolRow");
         }
 
         // TWO ABREAST, NOT A COLUMN OF THREE. Half-width plates in two columns

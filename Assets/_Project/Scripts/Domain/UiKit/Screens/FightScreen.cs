@@ -960,13 +960,33 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         // ---- the party plate ----------------------------------------------------
 
-        // panel_crimson.png, not a dedicated gold plate: every gold banner
-        // delivered for this slot shares a wide-notched silhouette whose flat
-        // midsection reaches within 0.5% of the canvas edge -- fine for a verb
-        // button with nothing near its edges, and wrong here, where the HP/MP
-        // rows sit at exactly that mid-height and fought the border for the same
-        // few pixels (the "overflow in the health / mana container" report,
-        // twice). panel_crimson is a true rectangle and keeps uniform clearance.
+        // BLUE, 2:1 CONTAINER ART -- the character's own stat card, so the
+        // informational/defensive theme (the same one HOLD BACK uses in the
+        // verb column) rather than Crimson, which the old panel_crimson.png
+        // fallback wore for reasons that had nothing to do with theme (see
+        // FallbackPlateKey, still Crimson for the enemy plates that use it).
+        // FightHudPalette itself never tied this slot to a colour -- its hex
+        // tokens are HP/MP/text roles, not a per-plate theme -- so there was
+        // nothing here to defer to.
+        //
+        // 452x216 (aspect 2.09) was 5.6% off the kit's measured 2:1 aspect
+        // (1.98, see ContainerArt.ContainerAspect2x1) -- outside the 5% band
+        // Ui.Container refuses. WIDTH STAYS 452 (FightScreenTests pins it);
+        // the nudge is entirely in HEIGHT, 216 -> 452/1.98 = 228.28.
+        //
+        // THE BOTTOM EDGE IS THE ANCHOR, not the centre: -500 was already the
+        // canvas's own 40px HUD margin above the floor (UiFrames.Reference.Y
+        // * -0.5 + 40). Growing the plate by keeping its old centre Y would
+        // have moved that margin; growing it from the bottom up keeps the
+        // margin and pushes the top edge up by the same 12.28px instead.
+        // Public: FightScreenTests (a separate assembly, no InternalsVisibleTo
+        // grant to it) reads these rather than restating the numbers.
+        public const float PartyPlateWidth = 452f;
+        public const float PartyPlateHeight = PartyPlateWidth / ContainerArt.ContainerAspect2x1; // 228.28, was 216
+        private const float PartyPlateCentreX = -694f;
+        private const float PartyPlateBottomY = -500f; // -392 - 108: the old plate's bottom edge, preserved
+        private const float PartyPlateCentreY = PartyPlateBottomY + PartyPlateHeight * 0.5f; // -385.86, was -392
+
         private UiNode BuildPartyPlate()
         {
             var portrait = Ui.Sprite("PartyPortrait", null, new UiVec(64f, 64f), Place.At(-170f, 54f)).Inactive();
@@ -1044,27 +1064,26 @@ namespace PrincesPalace.Domain.UiKit.Screens
             PartyMpPreview = mpPreview;
             PartyMpValue = mpValue;
 
-            var plate = Ui.Sprite("PartyPlate", PanelCrimson, Place.At(-694f, -392f), UiSize.Fixed(452f, 216f));
-            plate.Children.Add(portrait);
-            plate.Children.Add(name);
-            plate.Children.Add(cls);
-            plate.Children.Add(hpTag);
-            plate.Children.Add(hpBar);
-            plate.Children.Add(hpValue);
-            plate.Children.Add(mpTag);
-            plate.Children.Add(mpBar);
-            plate.Children.Add(mpValue);
-            plate.Children.Add(BuildWoolRow());
-            foreach (var icon in BuildPartyBuffIcons()) plate.Children.Add(icon);
+            var plate = Ui.Container("PartyPlate", ButtonTheme.Blue, ContainerRatio.TwoByOne,
+                Place.At(PartyPlateCentreX, PartyPlateCentreY),
+                new UiVec(PartyPlateWidth, PartyPlateHeight));
+
+            var content = new List<UiNode>
+            {
+                portrait, name, cls, hpTag, hpBar, hpValue, mpTag, mpBar, mpValue, BuildWoolRow(),
+            };
+            content.AddRange(BuildPartyBuffIcons());
+            Ui.ContainerContent(plate, ContainerRatio.TwoByOne, "PartyPlateContent", content.ToArray());
+
             PartyPlate = plate;
             return plate;
         }
 
-        // The party plate's own top edge in world Y -- -392 (its centre) plus
-        // its own half-height (108). Both the transformation strip and the
-        // roster stack build off this rather than off a restated number, so
-        // moving the plate moves them with it.
-        private const float PartyPlateTopY = -392f + 108f;
+        // The party plate's own top edge in world Y -- its bottom edge
+        // (PartyPlateBottomY) plus its own height. Both the transformation
+        // strip and the roster stack build off this rather than off a
+        // restated number, so moving the plate moves them with it.
+        private const float PartyPlateTopY = PartyPlateBottomY + PartyPlateHeight;
 
         // FUSED TO THE PLATE'S TOP EDGE, not inside it -- the header row two
         // labels above already leaves a 2px gap between PartyName and
@@ -1171,9 +1190,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             for (int i = 0; i < PartyBuffSlots; i++)
             {
-                float x = -202f + i * 22f;
+                // -120/y90, not v1's -202/96: the container's measured inset
+                // (top 0.055 of 228.28 = 12.56px) caps content at y 101.59,
+                // and the old y96 (top edge 105) missed that band as well as
+                // clipping the portrait's own top edge (86) at the old x. The
+                // row now starts to the RIGHT of the portrait (whose right
+                // edge is -138) instead of overlapping it, so the two no
+                // longer share any x range and can stack this close in y.
+                float x = -120f + i * 22f;
                 var icon = Ui.Button($"PartyBuff{i}", UiString.Runtime, new UiVec(18f, 18f), 11,
-                        Place.At(x, 96f))
+                        Place.At(x, 90f))
                     .Inactive();
 
                 PartyBuffIcons.Add(icon);
@@ -1212,7 +1238,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             children.AddRange(pips);
             children.Add(value);
 
-            var row = Ui.Panel("WoolRow", Place.At(0f, -66f), UiSize.Fixed(452f, 40f), children);
+            // 410 wide, not the plate's own 452: the row's actual content
+            // (divider/tag/pips/value) already tops out at +-202, but the
+            // PANEL's own declared box is what A2 checks against the
+            // container's inset, and the full 452 span (+-226) sat 15.82px
+            // past the container's left/right content bound (+-210.18).
+            // 410 (+-205) clears both: 3px inside its own content, 5.18px
+            // inside the container.
+            var row = Ui.Panel("WoolRow", Place.At(0f, -66f), UiSize.Fixed(410f, 40f), children);
             WoolRow = row;
             return row;
         }
