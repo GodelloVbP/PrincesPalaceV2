@@ -700,17 +700,15 @@ namespace PrincesPalace
             // WHAT DECIDED THIS OFFER, for the shop-balance batch
             // (docs/PLAN_BALANCE_BOT.md §7 extension): the exact axes
             // RarityTable/LootLadder rolled, and the favor/encounter-class
-            // that fed them. EncounterClass mirrors
-            // RunOrchestrator.RollOffers' OWN read (session.IsEliteFight ?
-            // Elite : Normal) verbatim rather than reclassifying from
-            // node.Type/session.IsBossFight -- RollOffers never consults
-            // IsBossFight, so a boss room's offer is rolled as Normal (or
-            // Elite, if IsEliteFight also happens to be true) today. Recording
-            // anything else here would make this trace lie about what the
-            // roll actually saw.
+            // that fed them. session.EncounterClass is the SAME ranking
+            // RunOrchestrator.RollOffers reads its own `encounter` from
+            // (Boss > Elite > Normal, FightSession.EncounterClass) -- one
+            // property now, not two copies of the same ternary that can
+            // drift apart the way this one already had (it used to check
+            // IsEliteFight only, so a boss room's trace read Normal/Elite
+            // even after RollOffers itself was fixed to check Boss first).
             roomTrace.Favor = ItemOfferRoll.CurrentSquadFavor();
-            roomTrace.EncounterClass =
-                (session.IsEliteFight ? EncounterClass.Elite : EncounterClass.Normal).ToString();
+            roomTrace.EncounterClass = session.EncounterClass.ToString();
             roomTrace.Offers.AddRange(offers.Select(o => new OfferEntry
             {
                 ItemId = o.ItemId,

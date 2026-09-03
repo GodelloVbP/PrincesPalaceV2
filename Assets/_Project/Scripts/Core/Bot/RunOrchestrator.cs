@@ -490,19 +490,16 @@ namespace PrincesPalace
         // this only keeps the choice at the caller.
         public static List<ItemOffer> RollOffers(FightSession session, Func<int, int> nextIndex)
         {
-            // BOSS CHECKED FIRST. This used to read IsEliteFight only, so a
-            // boss kill -- which sets IsBossFight, not IsEliteFight -- fell
-            // through to EncounterClass.Normal every time: RarityTable's
-            // TierFloorFor(Boss)=3 guarantee, and LootLadder's wider Boss
-            // step chance, never fired for the one fight class they exist
-            // for. Found from a floor-3 boss paying out a tier-1/+1 item,
-            // which the Normal band produces routinely and the Boss floor
-            // forbids outright.
-            var encounter = session != null && session.IsBossFight
-                ? EncounterClass.Boss
-                : session != null && session.IsEliteFight
-                    ? EncounterClass.Elite
-                    : EncounterClass.Normal;
+            // BOSS CHECKED FIRST -- via FightSession.EncounterClass, the one
+            // ranking every caller now shares. This used to read IsEliteFight
+            // only, inline, so a boss kill -- which sets IsBossFight, not
+            // IsEliteFight -- fell through to EncounterClass.Normal every
+            // time: RarityTable's TierFloorFor(Boss)=3 guarantee, and
+            // LootLadder's wider Boss step chance, never fired for the one
+            // fight class they exist for. Found from a floor-3 boss paying
+            // out a tier-1/+1 item, which the Normal band produces routinely
+            // and the Boss floor forbids outright.
+            var encounter = session?.EncounterClass ?? EncounterClass.Normal;
 
             int depth = session?.DepthStep ?? 0;
             return ItemOfferRoll.Roll(encounter, depth, ItemOfferRoll.CurrentSquadFavor(),

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.Rng;
 using PrincesPalace.Domain.Stats;
 
@@ -48,6 +49,17 @@ namespace PrincesPalace.Domain.Combat.Session
 
         public bool IsBossFight { get; }
         public bool IsEliteFight { get; }
+
+        // ONE ranking, computed once, for every caller that needs to know
+        // what kind of fight this was -- Boss beats Elite beats Normal.
+        // RunOrchestrator.RollOffers and Core/Bot/BotRunDriver's own trace
+        // used to each carry their own copy of this ranking; BotRunDriver's
+        // fell out of sync with RollOffers' own fix (Boss checked first) and
+        // silently kept reporting a boss room's offer as Elite/Normal in the
+        // balance-bot trace. One property, read by both, cannot drift apart
+        // again the same way.
+        public EncounterClass EncounterClass =>
+            IsBossFight ? EncounterClass.Boss : IsEliteFight ? EncounterClass.Elite : EncounterClass.Normal;
 
         // How wide the damage roll is. A parameter rather than v1's mutable
         // static: tests set it to 0 so a prediction made through CombatMath

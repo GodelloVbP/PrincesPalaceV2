@@ -360,8 +360,7 @@ def build(rows):
         "Archetypes are POOLED in every table ({}).".format(
             ", ".join(sorted({r["archetype"] for r in rows})) or "none"),
         "Favor: " + favor_note(rows),
-        "Encounter classes seen in the roll: {} (Boss never appears because RunOrchestrator.RollOffers "
-        "does not consult IsBossFight -- see table 8).".format(", ".join(classes_seen(rows)) or "none"),
+        "Encounter classes seen in the roll: {}.".format(", ".join(classes_seen(rows)) or "none"),
     ]
     return sections, notes
 
