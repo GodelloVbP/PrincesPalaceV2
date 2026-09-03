@@ -2272,3 +2272,27 @@ Every GAP_AUDIT row gains a fifth column, **Decision served**, naming one of
 the three decisions in point 2 or `machinery`. Rows marked `machinery` are
 allowed — a save field is machinery — but a gate cannot exit on machinery
 rows alone.
+
+### 7.5 Gate 1 build notes — where the code corrected the plan (commit 4bc66f7)
+
+- **Sell-price midpoints round to even.** `Math.Round` takes 34.5 down to 34
+  and the potion's 4.5 down to 4; §2c predicted 35 and 5. Pinned as the code
+  behaves, in `ShopPricingTests`.
+- **The affordability anchor (assumption 11) is 24, not 16-19.** The cheapest
+  gear that can exist is tier-0 / +0 / no-affix at 20, so a 16 anchor is a
+  guarantee that never fires. `ShopPricing.NormalFightPayoutAnchor = 24`.
+- **`RelicRarity.Godlike` is priced at 700.** §2b's table stopped at Mythic;
+  the enum has six values and `RelicPool.WeightOf` already treats Godlike as
+  rarer than Mythic. Without a case the rarest relic would price as Common.
+- **Section order is gear = 0, books = 1, relics = 2** (`ShopStock`), which
+  reverses §2e's older `0 spells, 1 items, 2 relics`. The constants are the
+  truth; the screen binds to them.
+- **`ShopStockEntry.noOffer` is an explicit flag**, not an empty `contentId`,
+  so a reconciled placeholder still says which content vanished.
+- **`RoomResolution.Kind.ShopNotBuilt` survives gate 1** for the map's
+  interim shim in `MapController.Walk.Arrive`; gate 2 deletes both together.
+- **F9's single `Shop = 5` stream prose is historical**; the three per-section
+  streams of §7.1 point 7 are what shipped (`RngStreams.ShopGear/ShopBooks/
+  ShopRelics` = 5/6/7). The gear shelf's affordability re-draw consumes extra
+  draws from `ShopGear`, so `ShopStock.AffordabilityRedraws` and the anchor
+  are part of the shelf's seed and moving either renumbers every shop.
