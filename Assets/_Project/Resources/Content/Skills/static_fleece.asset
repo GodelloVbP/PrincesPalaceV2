@@ -17,7 +17,7 @@ MonoBehaviour:
   description: All that wool has to discharge somewhere, and it is not fussy about
     where.
   characterId: sheep
-  unlockLevel: 4
+  unlockLevel: 2147483647
   effect: 1
   targeting: 1
   manaCost: 6
@@ -65,6 +65,6 @@ MonoBehaviour:
   summonEnemyId: 
   summonCap: 0
   meleeReach: 0
-  bookOnly: 0
+  bookOnly: 1
   bookTier: 2
   sortOrder: 2

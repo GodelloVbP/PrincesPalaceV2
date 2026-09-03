@@ -16,6 +16,17 @@ namespace PrincesPalace.Domain.Tests
         private static CombatantState Fighter(string name, bool isPlayerSide, int maxHealth = 100, int attack = 20, int speed = 5) =>
             new CombatantState(name, isPlayerSide, maxHealth, 10, attack, speed);
 
+        // Stands in for the old free BasicSpell wherever a fixture needs a
+        // way to reach a back-rank foe (Attack is front-rank-only -- see
+        // CombatEncounter.CanMeleeReach). Fixed damage rather than
+        // scaled, so its output does not ride the same Attack stat as
+        // melee and callers can dial it below or above Attack on purpose.
+        private static ResolvedSkill RangedSkill(int fixedDamage = 100) =>
+            new ResolvedSkill("bolt", "Bolt", "", "hero", 1, SkillEffect.DamageSingle,
+                SkillTargeting.SingleEnemy, 0, 0, false, 0, 0, false,
+                new[] { new DamageInstance(DamageType.Physical, fixedDamage) },
+                SpellPresentation.None, 0);
+
         private static (FightSession session, CombatantState hero, List<CombatantState> foes) HeroVsMany(
             params int[] foeHealths)
         {
@@ -25,13 +36,14 @@ namespace PrincesPalace.Domain.Tests
                 .ToList();
 
             var encounter = new CombatEncounter(new[] { hero }, foes);
-            // A free basic spell (0 mana) so a target behind the front rank
-            // is reachable at all -- Attack is front-rank-only (see
-            // CombatEncounter.CanMeleeReach), and with more than one foe
-            // that is the only way this fixture can show GreedyAggressive
-            // choosing BETWEEN targets rather than being handed just one.
-            var basicSpell = new ResolvedSpellTier(1, "Bolt", 0, 1f, 0);
-            var kit = new PlayerKit("hero", CharacterRole.Tank, null, null, DamageType.Physical, basicSpell);
+            // RangedSkill stands in for the old free basic spell so a
+            // target behind the front rank is reachable at all -- Attack is
+            // front-rank-only (see CombatEncounter.CanMeleeReach), and with
+            // more than one foe that is the only way this fixture can show
+            // GreedyAggressive choosing BETWEEN targets rather than being
+            // handed just one.
+            var skills = new List<ResolvedSkill> { RangedSkill() };
+            var kit = new PlayerKit("hero", CharacterRole.Tank, skills, null, DamageType.Physical);
             var session = new FightSession(encounter, new List<PlayerKit> { kit }, null, new SeededRandom(1))
             {
                 DamageVarianceRange = 0f,
@@ -72,8 +84,8 @@ namespace PrincesPalace.Domain.Tests
         public void GreedyAggressivePolicy_WithTwoReachableFoes_TargetsTheLowerHpOne()
         {
             // foes[0] (200 HP) is the front rank, reachable by Attack or the
-            // basic spell; foes[1] (40 HP) sits behind it and is reachable
-            // only by the basic spell (Attack is front-rank-only -- see
+            // ranged skill; foes[1] (40 HP) sits behind it and is reachable
+            // only by the ranged skill (Attack is front-rank-only -- see
             // CombatEncounter.CanMeleeReach). GreedyAggressive must still
             // pick the lower-HP one across both kinds of reach.
             var (session, hero, foes) = HeroVsMany(200, 40);
@@ -111,8 +123,7 @@ namespace PrincesPalace.Domain.Tests
                 .ToList();
 
             var encounter = new CombatEncounter(new[] { hero }, foes);
-            var basicSpell = new ResolvedSpellTier(1, "Bolt", 0, 1f, 0);
-            var kit = new PlayerKit("hero", CharacterRole.Tank, skills, null, DamageType.Physical, basicSpell);
+            var kit = new PlayerKit("hero", CharacterRole.Tank, skills, null, DamageType.Physical);
             var session = new FightSession(encounter, new List<PlayerKit> { kit }, null, new SeededRandom(1))
             {
                 DamageVarianceRange = 0f,
@@ -241,7 +252,7 @@ namespace PrincesPalace.Domain.Tests
         public void GreedyDefensivePolicy_WithNoHealOrWardToTake_TargetsTheMoreThreateningEnemy()
         {
             // foe0: low HP, harmless (Attack 1). foe1: high HP, dangerous
-            // (Attack 100) and reachable only via the basic spell (Attack is
+            // (Attack 100) and reachable only via the ranged skill (Attack is
             // front-rank-only). GreedyAggressive would target foe0 for being
             // lowest-HP; GreedyDefensive must target foe1 for being the
             // bigger threat instead.
@@ -249,8 +260,8 @@ namespace PrincesPalace.Domain.Tests
             var foe0 = Fighter("Foe0", false, maxHealth: 10, attack: 1, speed: 1);
             var foe1 = Fighter("Foe1", false, maxHealth: 200, attack: 100, speed: 1);
             var encounter = new CombatEncounter(new[] { hero }, new[] { foe0, foe1 });
-            var basicSpell = new ResolvedSpellTier(1, "Bolt", 0, 1f, 0);
-            var kit = new PlayerKit("hero", CharacterRole.Tank, null, null, DamageType.Physical, basicSpell);
+            var skills = new List<ResolvedSkill> { RangedSkill() };
+            var kit = new PlayerKit("hero", CharacterRole.Tank, skills, null, DamageType.Physical);
             var session = new FightSession(encounter, new List<PlayerKit> { kit }, null, new SeededRandom(1))
             {
                 DamageVarianceRange = 0f,
@@ -284,9 +295,9 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void Lookahead2Policy_WhenOneOptionKillsAndAnotherOnlyChips_PicksTheKill()
         {
-            // foe0 (front rank, 500 HP): reachable by Attack or the basic
-            // spell, but neither kills it. foe1 (back rank, 1 HP): reachable
-            // only by the basic spell, and any positive hit kills it. The
+            // foe0 (front rank, 500 HP): reachable by Attack or the ranged
+            // skill, but neither kills it. foe1 (back rank, 1 HP): reachable
+            // only by the ranged skill, and any positive hit kills it. The
             // kill must win even though it is not the biggest single number
             // on the menu.
             var (session, hero, foes) = HeroVsMany(500, 1);
@@ -339,7 +350,7 @@ namespace PrincesPalace.Domain.Tests
             var chosen = policy.Choose(session, hero, legal, new SeededRandom(1));
 
             Assert.AreNotEqual(FightActionKind.Skill, chosen.Kind,
-                "an uncapped heal preview of 999 would always outscore Attack/BasicSpell; capped to the 1 HP actually missing it must not win over either");
+                "an uncapped heal preview of 999 would always outscore Attack/the ranged skill; capped to the 1 HP actually missing it must not win over either");
         }
 
         [Test]
@@ -359,10 +370,10 @@ namespace PrincesPalace.Domain.Tests
                 var hero = Fighter("Hero", true, maxHealth: 300, attack: 50, speed: 10);
                 var foe = Fighter("Foe", false, maxHealth: 5000, attack: foeAttack, speed: 1);
                 var encounter = new CombatEncounter(new[] { hero }, new[] { foe });
-                // Multiplier well below 1 so the basic spell never ties or
-                // beats the melee Attack on raw damage alone.
-                var basicSpell = new ResolvedSpellTier(1, "Bolt", 0, 0.1f, 0);
-                var kit = new PlayerKit("hero", CharacterRole.Tank, null, null, DamageType.Physical, basicSpell);
+                // Fixed at 1 damage so the ranged skill never ties or beats
+                // the melee Attack on raw damage alone.
+                var skills = new List<ResolvedSkill> { RangedSkill(fixedDamage: 1) };
+                var kit = new PlayerKit("hero", CharacterRole.Tank, skills, null, DamageType.Physical);
                 var session = new FightSession(encounter, new List<PlayerKit> { kit }, null, new SeededRandom(1))
                 {
                     DamageVarianceRange = 0f,
@@ -377,7 +388,7 @@ namespace PrincesPalace.Domain.Tests
             var lowThreat = ChosenKindWithFoeAttack(1);
             var highThreat = ChosenKindWithFoeAttack(500);
 
-            Assert.AreEqual(FightActionKind.Attack, lowThreat, "melee should out-damage the weak basic spell regardless of incoming threat");
+            Assert.AreEqual(FightActionKind.Attack, lowThreat, "melee should out-damage the weak ranged skill regardless of incoming threat");
             Assert.AreEqual(lowThreat, highThreat,
                 "raising the enemy's own attack -- and so the incoming term subtracted from every option alike -- must not flip which damaging option ranks best");
         }

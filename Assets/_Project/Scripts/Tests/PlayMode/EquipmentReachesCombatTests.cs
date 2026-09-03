@@ -217,21 +217,24 @@ namespace PrincesPalace.PlayModeTests
         // ---- the spell ladder ----------------------------------------------
 
         // KitFor took SpellTiers.OrderByDescending(level).First() with no level
-        // filter at all, so a level 1 character cast the endgame tier.
+        // filter at all, so a level 1 character cast the endgame tier. The bug
+        // predates BasicSpell's removal (docs/PLAN_SHOP.md Gate 4); the ladder
+        // itself (SpellTierDefinition, TierAtLevel) is unchanged by that cut --
+        // it still scales SkillPowerMultiplier for every fixed-damage skill,
+        // it just no longer also names a free "Skill" action.
         [Test]
         public void TheSpellTierNeverOutrunsTheCharactersLevel()
         {
             var definition = FirstCharacter();
-            var character = new Character(definition.id) { level = 1 };
+            var tiers = ContentDatabase.SpellTiers.Where(t => t != null).OrderBy(t => t.level).ToList();
+            Assert.GreaterOrEqual(tiers.Count, 2, "this test needs two spell tiers to compare; content has " + tiers.Count);
 
+            var character = new Character(definition.id) { level = 1 };
             var built = BuildFor(character);
             var kit = built.Session.KitFor(built.Party[0]);
 
-            if (kit.BasicSpell.HasValue)
-            {
-                Assert.LessOrEqual(kit.BasicSpell.Value.Level, character.level,
-                    "a level 1 character was handed a higher spell tier than they have reached");
-            }
+            Assert.AreEqual(tiers[0].powerMultiplier, kit.SkillPowerMultiplier,
+                "a level 1 character was handed a higher spell tier's multiplier than they have reached");
         }
 
         [Test]
@@ -255,10 +258,10 @@ namespace PrincesPalace.PlayModeTests
             var lowBuilt = BuildFor(low);
             var highBuilt = BuildFor(high);
 
-            int lowTier = lowBuilt.Session.KitFor(lowBuilt.Party[0]).BasicSpell?.Level ?? 0;
-            int highTier = highBuilt.Session.KitFor(highBuilt.Party[0]).BasicSpell?.Level ?? 0;
+            float lowMultiplier = lowBuilt.Session.KitFor(lowBuilt.Party[0]).SkillPowerMultiplier;
+            float highMultiplier = highBuilt.Session.KitFor(highBuilt.Party[0]).SkillPowerMultiplier;
 
-            Assert.Greater(highTier, lowTier,
+            Assert.Greater(highMultiplier, lowMultiplier,
                 "the spell ladder does not respond to level at all");
         }
 

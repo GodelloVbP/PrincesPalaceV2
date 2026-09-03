@@ -417,110 +417,12 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(Messages(session).Any(m => m.Contains("loses hold of")));
         }
 
-        // ---- role riders ----------------------------------------------------------
-
-        [Test]
-        public void TheTankDrinksFromTheBlow()
-        {
-            var hero = Hero();
-            hero.CurrentHealth = 100;
-            var (session, _, encounter) = Fight(Kit(CharacterRole.Tank), hero);
-
-            session.ExecuteSkill(encounter.Enemies[0]);
-
-            Assert.Greater(hero.CurrentHealth, 100);
-            Assert.IsTrue(Messages(session).Any(m => m.Contains("recovers")));
-        }
-
-        // Shreds BOTH broad Defenses now, by the same flat amount each --
-        // see FightSession.Skills.cs's CrowdControl case for why there is no
-        // longer one generic `Defense` field for this to write to.
-        [Test]
-        public void CrowdControlShredsTheTargetsGuard()
-        {
-            var foe = Foe();
-            foe.PhysicalDefense = 10;
-            foe.MagicalDefense = 10;
-            var (session, _, _) = Fight(Kit(CharacterRole.CrowdControl), null, foe);
-
-            session.ExecuteSkill(foe);
-
-            Assert.AreEqual(10 - FightTuning.CrowdControlDefenseShred, foe.PhysicalDefense);
-            Assert.AreEqual(10 - FightTuning.CrowdControlDefenseShred, foe.MagicalDefense);
-        }
-
-        [Test]
-        public void CrowdControlShredNeverGoesNegative()
-        {
-            // Below zero it would start ADDING damage through the subtraction in
-            // the damage formula, which is a different mechanic entirely.
-            var foe = Foe();
-            foe.PhysicalDefense = 1;
-            foe.MagicalDefense = 1;
-            var (session, _, _) = Fight(Kit(CharacterRole.CrowdControl), null, foe);
-
-            session.ExecuteSkill(foe);
-
-            Assert.AreEqual(0, foe.PhysicalDefense);
-            Assert.AreEqual(0, foe.MagicalDefense);
-        }
-
-        [Test]
-        public void SupportMendsTheWholeSquad()
-        {
-            var hero = Hero();
-            var ally = Hero("Ally");
-            hero.CurrentHealth = 100;
-            ally.CurrentHealth = 100;
-            var encounter = new CombatEncounter(new[] { hero, ally }, new[] { Foe() });
-            var session = new FightSession(encounter,
-                new List<PlayerKit> { Kit(CharacterRole.Support) }, null, new SeededRandom(3))
-            { DamageVarianceRange = 0f };
-
-            session.ExecuteSkill(encounter.Enemies[0]);
-
-            Assert.Greater(ally.CurrentHealth, 100, "the ally is mended too, not only the caster");
-        }
-
-        [Test]
-        public void UtilityFeedsItsOwnEngineInsteadOfThePartysHealthBar()
-        {
-            var hero = Hero();
-            hero.Signature = new SignatureResource("wool", "Wool", 16, 0, 0, 0);
-            var (session, _, encounter) = Fight(Kit(CharacterRole.Utility), hero);
-
-            session.ExecuteSkill(encounter.Enemies[0]);
-
-            Assert.AreEqual(FightTuning.UtilitySkillSignatureGain, hero.Signature.Current);
-        }
-
-        [Test]
-        public void UtilityWithNoSignatureResourceIsSimplyANoOp()
-        {
-            // Graceful by construction rather than by a special case.
-            var (session, _, encounter) = Fight(Kit(CharacterRole.Utility));
-
-            Assert.DoesNotThrow(() => session.ExecuteSkill(encounter.Enemies[0]));
-        }
-
-        [Test]
-        public void TheAssassinExecutesAWeakenedTarget()
-        {
-            var strong = Foe("Strong");
-            var (baseline, _, _) = Fight(Kit(CharacterRole.Assassin), null, strong);
-            baseline.ExecuteSkill(strong);
-            int ordinary = baseline.DrainBeats()[0].Amount;
-
-            var weakened = Foe("Weakened");
-            var (session, _, _) = Fight(Kit(CharacterRole.Assassin), null, weakened);
-            weakened.CurrentHealth = (int)(weakened.MaxHealth * FightTuning.AssassinExecuteHealthFraction);
-
-            session.ExecuteSkill(weakened);
-            var beats = session.DrainBeats();
-
-            Assert.Greater(beats[0].Amount, ordinary);
-            Assert.IsTrue(beats.SelectMany(b => b.Messages).Any(m => m.Contains("finds an opening")));
-        }
+        // Role riders (Tank lifesteal, CrowdControl defense-shred, Support
+        // party-heal, Utility signature-gain, Assassin execute messaging)
+        // were removed with BasicSpell (docs/PLAN_SHOP.md Gate 4) -- their
+        // only entry point was the deleted free "Skill" action, so the tests
+        // that exercised them through ExecuteSkill went with it. See
+        // FightSession.Skills.cs's "riders on a resolved skill" comment.
 
         // ---- relics ---------------------------------------------------------------
 
@@ -536,8 +438,8 @@ namespace PrincesPalace.Domain.Tests
                 "a plain attack raises nothing");
 
             var caster = Hero();
-            var (cast, _, castFoes) = Fight(Kit(relics: new[] { relic }), caster);
-            cast.ExecuteSkill(castFoes.Enemies[0]);
+            var (cast, _, castFoes) = Fight(Kit(relics: new[] { relic }, skills: new[] { Skill(SkillEffect.DamageSingle) }), caster);
+            cast.CastSkill(0, castFoes.Enemies[0]);
 
             Assert.IsTrue(caster.Statuses.Any(s => s.Type == StatusEffectType.Shielded));
         }
@@ -587,8 +489,8 @@ namespace PrincesPalace.Domain.Tests
 
             var caster = Hero();
             caster.Signature = new SignatureResource("wool", "Wool", 16, 0, gainOnAttack: 3, gainOnDamageTaken: 0);
-            var (cast, _, castFoes) = Fight(Kit(), caster);
-            cast.ExecuteSkill(castFoes.Enemies[0]);
+            var (cast, _, castFoes) = Fight(Kit(skills: new[] { Skill(SkillEffect.DamageSingle) }), caster);
+            cast.CastSkill(0, castFoes.Enemies[0]);
 
             Assert.AreEqual(0, caster.Signature.Current, "a cast is not a swing");
         }

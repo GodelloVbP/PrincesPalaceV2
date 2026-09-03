@@ -150,7 +150,6 @@ namespace PrincesPalace.Domain.Bot
             // GreedyAggressive's job, not this one's).
             var damaging = legal.Where(a =>
                 a.Kind == FightActionKind.Attack ||
-                a.Kind == FightActionKind.BasicSpell ||
                 a.Kind == FightActionKind.Skill).ToList();
 
             if (damaging.Count > 0)
@@ -248,8 +247,6 @@ namespace PrincesPalace.Domain.Bot
             {
                 case FightActionKind.Attack:
                     return CombatMath.ComputeAttackDamage(actor, action.Target);
-                case FightActionKind.BasicSpell:
-                    return session.PreviewBasicSpellPower(actor);
                 case FightActionKind.Skill:
                     var option = session.SkillOptionsFor(actor).FirstOrDefault(o => o.Index == action.SkillIndex);
                     bool previewable = option.Skill.Effect == SkillEffect.DamageSingle

@@ -15,111 +15,13 @@ namespace PrincesPalace.Domain.Combat.Session
     // and a Resolve method.
     public sealed partial class FightSession
     {
-        // ---- the generic Skill action ----------------------------------------
-
-        // The Skill verb: one cast, one target, role rider on top. Distinct
-        // from CastSkill below, which runs an AUTHORED skill off the
-        // character's own strip.
-        public void ExecuteSkill(CombatantState target)
-        {
-            var actor = Current;
-            if (actor == null || target == null) return;
-
-            _actionCanBrave = true;
-            BeginBeat(actor, target);
-
-            // THE BASIC SPELL IS A SPELL. It did not advance the Charging
-            // Crystal's tally before this file existed -- the counter was
-            // hooked into the character-skill path alone, so "every 4th spell"
-            // quietly meant "every 4th of one KIND of spell" and a player
-            // pressing the plain Skill button would never charge one.
-            //
-            // Nothing was wrong with the counter; the moment simply had two
-            // entrances and only one of them was wired. Naming the moments is
-            // what made the second one visible.
-            RelicsBeforeCast(actor);
-
-            // Weight of Wool counts warded party members and Gift: Fury is
-            // spent by the swing, and CombatMath can see neither from inside
-            // its own scaling. Summed onto the actor here, immediately before
-            // the figure is computed, which is the only arrangement that
-            // cannot go stale.
-            RefreshAttackBonus(actor, spendingGift: true);
-
-            ChargeSkillMana(actor, SkillManaCostFor(actor));
-
-            ExecuteSkillInner(actor, target);
-
-            // Everything a relic does when a cast finishes -- the shield
-            // rises, the charge disarms, the rune and the sword follow. See
-            // FightSession.Relics. 0 resourceSpent: the basic spell has no
-            // signature-resource cost of its own to echo back.
-            RelicsAfterCast(actor, null, target, resourceSpent: 0);
-
-            CommitBeat();
-            AdvanceAfterAction();
-        }
-
-        // THE EFFECT ITSELF, separated from mana/RefreshAttackBonus/relic
-        // bookkeeping for the same reason ResolveCharacterSkillInner is
-        // separate from ResolveCharacterSkill: the First Rune replays THIS
-        // and only this, for free, without spending mana a second time or
-        // re-entering RelicsBeforeCast/RelicsAfterCast. See
-        // FightSession.Relics.TryFirstRune.
-        private void ExecuteSkillInner(CombatantState actor, CombatantState target)
-        {
-            var outcome = DamagePipeline.AfterDefences(
-                CombatMath.ComputeSkillDamage(actor, target, SkillPowerMultiplierFor(actor)),
-                actor, target,
-                attackType: ActorAttackType(actor),
-                affinity: AffinityOf(target),
-                varianceRange: DamageVarianceRange,
-                rng: _rng,
-                resolveWard: ResolveWard);
-
-            // Swift: same short-circuit ResolveAttackSwing's own miss branch
-            // documents -- everything past this point (the role effect, the
-            // shared ApplyFinalDamage riders, the Drowned Lantern's mark) is
-            // a rider on a landed hit.
-            if (outcome.IsMiss)
-            {
-                RecordMiss();
-                AppendMessage($"{target.Name} dodges {actor.Name}'s {SkillDisplayNameFor(actor)}!");
-                SetStance(actor, Stances.Cast);
-                return;
-            }
-
-            DepleteBreakShield(target, outcome.Effectiveness);
-
-            var role = ActorRole(actor);
-            bool isExecute = role == CharacterRole.Assassin
-                             && IsBelowHealthFraction(target, FightTuning.AssassinExecuteHealthFraction);
-
-            // The base, held so a charged cast measures against the spell
-            // rather than against what the execute bonus makes of it.
-            int baseAmount = CombatMath.ComputeSkillDamage(actor, target, SkillPowerMultiplierFor(actor));
-
-            int executeAdjusted = isExecute
-                ? Rounding.AwayFromZero(outcome.Damage * FightTuning.AssassinExecuteBonusMultiplier)
-                : outcome.Damage;
-            int damage = TotalDamage(actor, baseAmount, executeAdjusted);
-
-            AppendMessage($"{actor.Name} casts {SkillDisplayNameFor(actor)} on {target.Name} for {damage} damage!{EffectivenessSuffix(outcome.Effectiveness)}");
-            ApplySkillRoleEffect(role, actor, target, damage, isExecute);
-            ApplyFinalDamage(actor, target, damage);
-
-            // The Drowned Lantern: the basic spell marks its target too.
-            ApplyMark(actor, target);
-
-            // Magic Marker (mechanic a). Independent of the line above.
-            MagicMarkerApplyMark(actor, target);
-
-            // The actor poses too, not just the victim -- the player can see
-            // which of their own actions actually went off.
-            SetStance(actor, Stances.Cast);
-        }
-
         // ---- authored character skills ---------------------------------------
+        //
+        // The generic Skill verb (ExecuteSkill) that used to sit here is gone
+        // (docs/PLAN_SHOP.md §4 Phase E): every cast now goes through
+        // CastSkill below, against one of the character's own authored
+        // skills -- there is no second, nameless spell any more for a
+        // separate verb to run.
 
         // Casts the actor's Nth authored skill. Returns false when the cast was
         // refused outright, so the caller knows the turn was not spent.
@@ -722,58 +624,16 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // ---- riders on a resolved skill --------------------------------------
 
-        private void ApplySkillRoleEffect(CharacterRole? role, CombatantState actor, CombatantState target, int damage, bool isExecute)
-        {
-            switch (role)
-            {
-                case CharacterRole.Assassin:
-                    if (isExecute)
-                    {
-                        AppendMessage($"{actor.Name} finds an opening on the weakened {target.Name}!");
-                    }
-                    break;
-
-                case CharacterRole.Tank:
-                    int lifesteal = Rounding.AwayFromZero(damage * FightTuning.TankSkillLifestealFraction);
-                    if (lifesteal > 0)
-                    {
-                        HealAndCount(actor, lifesteal);
-                        AppendMessage($"{actor.Name} recovers {lifesteal} HP from the blow.");
-                    }
-                    break;
-
-                case CharacterRole.CrowdControl:
-                    // A flat write to BOTH broad Defenses -- see
-                    // ApplyDefenseShred's own comment (FightSession.Talents.cs)
-                    // for why the same magnitude lands on each rather than
-                    // being split between them.
-                    target.PhysicalDefense = System.Math.Max(0, target.PhysicalDefense - FightTuning.CrowdControlDefenseShred);
-                    target.MagicalDefense = System.Math.Max(0, target.MagicalDefense - FightTuning.CrowdControlDefenseShred);
-                    AppendMessage($"{target.Name}'s defenses are shredded!");
-                    break;
-
-                // Utility and Support shared one case until v1 split them,
-                // which had made two characters mechanically identical.
-                // Utility feeds its own engine instead of the party's health
-                // bar -- a no-op for a Utility character with no signature
-                // resource, graceful by construction rather than special case.
-                case CharacterRole.Utility:
-                    int gained = actor.Signature?.Gain(FightTuning.UtilitySkillSignatureGain) ?? 0;
-                    if (gained > 0)
-                    {
-                        AppendMessage($"{actor.Name} gathers {gained} {actor.Signature.DisplayName} from the effort.");
-                    }
-                    break;
-
-                case CharacterRole.Support:
-                    foreach (var ally in _encounter.AlliesOf(actor).ToList())
-                    {
-                        HealAndCount(ally, FightTuning.SupportSkillPartyHealAmount);
-                    }
-                    AppendMessage($"{actor.Name}'s Skill also mends the squad's wounds.");
-                    break;
-            }
-        }
+        // ApplySkillRoleEffect (Tank lifesteal, CrowdControl defense-shred,
+        // Support party-heal, Utility signature-gain, Assassin execute
+        // messaging) was removed with the BasicSpell cut (docs/PLAN_SHOP.md
+        // Gate 4). Its only caller anywhere in the codebase was the deleted
+        // ExecuteSkillInner -- these five role riders never fired on an
+        // authored/named skill cast, only on the old free "Skill" action, so
+        // there is no remaining entry point to preserve them through. Decided
+        // 2026-09-03: let them go rather than silently extend five class-role
+        // bonuses onto every authored skill, which would have been a real
+        // balance change nobody asked for.
 
         // Headbutt's shove, and the intent it can take with it.
         //
@@ -859,38 +719,9 @@ namespace PrincesPalace.Domain.Combat.Session
         public DamageType? ActorAttackType(CombatantState actor) =>
             KitFor(actor)?.AttackType ?? SourceFor(actor)?.Source.AttackType;
 
-        // The generic Skill verb's numbers come from the character's basic
-        // spell tier, if their level grants one, and fall back to plain
-        // defaults otherwise -- graceful on missing content, house style.
-        //
-        // Public because the HUD model builds the basic spell's submenu row
-        // from exactly these, through exactly this path. v1 hand-rolled a
-        // separate mana check for that row, which is one of the two bugs the
-        // decomposition was meant to kill.
-        public int BasicSpellManaCostFor(CombatantState actor) => KitFor(actor)?.BasicSpell?.ManaCost ?? 0;
-
-        public string BasicSpellNameFor(CombatantState actor) => KitFor(actor)?.BasicSpell?.DisplayName ?? "Spell";
-
-        public bool CanAffordBasicSpell(CombatantState actor) =>
-            SkillResolution.CanAfford(actor, BasicSpellManaCostFor(actor), 0);
-
-        // Same pre-mitigation reading as PreviewSkillPower, for the one spell
-        // that has no ResolvedSkill behind it. ComputeSkillDamage itself is
-        // raw and target-free now too (see its own header), so this just
-        // calls it directly -- written out as a straight passthrough rather
-        // than duplicating its formula, which is what let this readout go
-        // stale (still multiplying by CombatMath.DamageScale) when
-        // ComputeSkillDamage itself stopped, on 2026-08-26.
-        public int PreviewBasicSpellPower(CombatantState actor) =>
-            actor == null ? 0 : CombatMath.ComputeSkillDamage(actor, null, SkillPowerMultiplierFor(actor));
-
-        private int SkillManaCostFor(CombatantState actor) => BasicSpellManaCostFor(actor);
-
-        // THE ONE PLACE mana is charged for a skill cast -- both the plain
-        // Skill action (ExecuteSkill) and an authored character skill
-        // (CastSkill) route through here now, which is what lets Runic's
-        // one-shot discount live in a single spot instead of being
-        // duplicated at both call sites. Consumes and clears
+        // THE ONE PLACE mana is charged for a skill cast, which is what lets
+        // Runic's one-shot discount live in a single spot rather than being
+        // duplicated at every call site. Consumes and clears
         // PendingManaDiscountPercent unconditionally, whether or not this
         // particular cast had anything armed -- an unarmed discount is
         // already 0, so "consume" is a no-op the same way spending 0 gold
@@ -920,12 +751,13 @@ namespace PrincesPalace.Domain.Combat.Session
             CombatMath.SpendMana(actor, cost);
         }
 
-        private float SkillPowerMultiplierFor(CombatantState actor) => KitFor(actor)?.BasicSpell?.PowerMultiplier ?? 1f;
-
-        private string SkillDisplayNameFor(CombatantState actor) => BasicSpellNameFor(actor);
-
-        private static bool IsBelowHealthFraction(CombatantState combatant, float fraction) =>
-            combatant.MaxHealth > 0 && combatant.CurrentHealth <= combatant.MaxHealth * fraction;
+        // The spell TIER's own powerMultiplier -- kept independent of the
+        // BasicSpell removal (docs/PLAN_SHOP.md §4 Phase E), see
+        // PlayerKit.SkillPowerMultiplier's own header for why: it scales
+        // every FIXED-damage-instance skill (frost_flare, lightning_bolt),
+        // not the free action that used to carry it.
+        private float SkillPowerMultiplierFor(CombatantState actor) =>
+            KitFor(actor)?.SkillPowerMultiplier ?? 1f;
 
         // Every half of a skill's presentation, recorded together -- the frames
         // it draws, the kick it insists on, and the pose the caster strikes.

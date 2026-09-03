@@ -17,7 +17,7 @@ MonoBehaviour:
   description: A single white line from the ceiling to whatever is standing under
     it.
   characterId: sheep
-  unlockLevel: 7
+  unlockLevel: 2147483647
   effect: 0
   targeting: 0
   manaCost: 11
@@ -67,6 +67,6 @@ MonoBehaviour:
   summonEnemyId: 
   summonCap: 0
   meleeReach: 0
-  bookOnly: 0
+  bookOnly: 1
   bookTier: 3
   sortOrder: 7

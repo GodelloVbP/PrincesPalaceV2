@@ -17,7 +17,7 @@ MonoBehaviour:
   description: Burns and freezes in the same breath. Something out there hates one
     half of it.
   characterId: sheep
-  unlockLevel: 5
+  unlockLevel: 2147483647
   effect: 0
   targeting: 0
   manaCost: 7
@@ -69,6 +69,6 @@ MonoBehaviour:
   summonEnemyId: 
   summonCap: 0
   meleeReach: 0
-  bookOnly: 0
+  bookOnly: 1
   bookTier: 2
   sortOrder: 6

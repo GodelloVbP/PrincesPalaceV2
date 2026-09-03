@@ -28,10 +28,10 @@
     },
     {
       "id": "static_fleece",
+      "bookOnly": true,
       "displayName": "Static Fleece",
       "description": "All that wool has to discharge somewhere, and it is not fussy about where.",
       "characterId": "sheep",
-      "unlockLevel": 4,
       "effect": "DamageAll",
       "resourceCost": 3,
       "power": 1,
@@ -54,10 +54,10 @@
     },
     {
       "id": "golden_fleece",
+      "bookOnly": true,
       "displayName": "Golden Fleece",
       "description": "Everything he has been saving, spent at once, and it comes back to him.",
       "characterId": "sheep",
-      "unlockLevel": 8,
       "effect": "DamageSingle",
       "resourceCost": 8,
       "spendsAllResource": true,
@@ -69,10 +69,10 @@
     },
     {
       "id": "mud_burst",
+      "bookOnly": true,
       "displayName": "Mud Burst",
       "description": "The bog answers. It arrives wearing whatever it picked up on the way.",
       "characterId": "sheep",
-      "unlockLevel": 3,
       "effect": "DamageSingle",
       "manaCost": 8,
       "flatAmount": 12,
@@ -93,10 +93,10 @@
     },
     {
       "id": "frost_flare",
+      "bookOnly": true,
       "displayName": "Frost Flare",
       "description": "Burns and freezes in the same breath. Something out there hates one half of it.",
       "characterId": "sheep",
-      "unlockLevel": 5,
       "effect": "DamageSingle",
       "manaCost": 7,
       "damageInstances": [
@@ -121,10 +121,10 @@
     },
     {
       "id": "lightning_bolt",
+      "bookOnly": true,
       "displayName": "Lightning Bolt",
       "description": "A single white line from the ceiling to whatever is standing under it.",
       "characterId": "sheep",
-      "unlockLevel": 7,
       "effect": "DamageSingle",
       "manaCost": 11,
       "damageInstances": [

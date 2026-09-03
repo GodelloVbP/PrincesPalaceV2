@@ -17,7 +17,7 @@ MonoBehaviour:
   description: Everything he has been saving, spent at once, and it comes back to
     him.
   characterId: sheep
-  unlockLevel: 8
+  unlockLevel: 2147483647
   effect: 0
   targeting: 0
   manaCost: 12
@@ -65,6 +65,6 @@ MonoBehaviour:
   summonEnemyId: 
   summonCap: 0
   meleeReach: 0
-  bookOnly: 0
+  bookOnly: 1
   bookTier: 4
   sortOrder: 4

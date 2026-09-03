@@ -30,10 +30,6 @@ namespace PrincesPalace.Domain.Combat.Session
         // What hovering this row previews on the mana bar.
         public readonly int ManaCost;
 
-        // The basic spell's row, which is synthesised rather than authored --
-        // every character has one and no character has it in their skill list.
-        public readonly bool IsBasicSpell;
-
         // A THIRD reason, kept apart for the same stated reason as the other
         // two: "no mana" and "not yet" are different sentences, and a row that
         // greyed out without saying which leaves the player checking their mana
@@ -43,7 +39,7 @@ namespace PrincesPalace.Domain.Combat.Session
         public bool Affordable => CanPay && MeetsRequirement && CooldownRemaining <= 0;
 
         public SubmenuRow(string name, string meta, string cost, bool canPay, bool meetsRequirement,
-                          int manaCost, bool isBasicSpell = false, int cooldownRemaining = 0)
+                          int manaCost, int cooldownRemaining = 0)
         {
             Name = name;
             Meta = meta;
@@ -52,7 +48,6 @@ namespace PrincesPalace.Domain.Combat.Session
             MeetsRequirement = meetsRequirement;
             CooldownRemaining = cooldownRemaining;
             ManaCost = manaCost;
-            IsBasicSpell = isBasicSpell;
         }
     }
 
@@ -96,13 +91,6 @@ namespace PrincesPalace.Domain.Combat.Session
     // The fight HUD's contents, derived from the session and nothing else.
     public static class FightHudModel
     {
-        // Where the basic spell sits in the skill branch: after the authored
-        // skills, always. Stated once so the row index and the dispatch cannot
-        // disagree about which row means "cast the basic spell".
-        public static int BasicSpellRow(int authoredSkillCount) => authoredSkillCount;
-
-        public static int SkillRowCount(int authoredSkillCount) => authoredSkillCount + 1;
-
         // Column B for the skill branch.
         //
         // UNAFFORDABLE ROWS ARE INCLUDED AND DIMMED. They are the character's
@@ -151,20 +139,6 @@ namespace PrincesPalace.Domain.Combat.Session
                     skill.ManaCost,
                     cooldownRemaining: option.CooldownRemaining));
             }
-
-            // The basic spell's own row. Its cost comes through the same
-            // SkillResolution every authored skill uses -- v1 hand-rolled a
-            // separate mana check here, which is one of the two bugs that died
-            // in the move.
-            int basicCost = session.BasicSpellManaCostFor(actor);
-            rows.Add(new SubmenuRow(
-                session.BasicSpellNameFor(actor),
-                "ARCANE  ·  SINGLE",
-                basicCost + " MP",
-                SkillResolution.CanAfford(actor, basicCost, 0),
-                meetsRequirement: true,
-                manaCost: basicCost,
-                isBasicSpell: true));
 
             return rows;
         }

@@ -169,36 +169,10 @@ namespace PrincesPalace.Domain.Tests
                 "no relic is equipped, so every cast should land for the same figure");
         }
 
-        // A CAST IS A CAST, however the player reached it.
-        //
-        // The Charging Crystal counted character skills and not the basic Skill
-        // action, because the counter was hooked into one of the two paths that
-        // resolve a cast and nobody had a list of what those paths were. The
-        // relic said "every 4th spell" and meant "every 4th of one kind", so a
-        // player pressing the plain Skill button charged nothing, ever.
-        //
-        // Found by naming the moments rather than by playing the game -- see
-        // FightSession.Relics.
-        [Test]
-        public void TheBasicSpellCountsAsASpell()
-        {
-            var (session, hero, foe) = Fight(RelicEffect.ChargingCrystal);
-
-            var dealt = Enumerable.Range(0, 8)
-                .Select(_ =>
-                {
-                    int before = foe.CurrentHealth;
-                    session.ExecuteSkill(foe);
-                    return before - foe.CurrentHealth;
-                })
-                .ToList();
-
-            Assert.AreEqual(dealt[0], dealt[1], "the second basic cast is ordinary");
-            Assert.Greater(dealt[3], dealt[0],
-                "the fourth basic cast was not charged, so the plain Skill button does not count " +
-                "as a spell");
-            Assert.AreEqual(dealt[3], dealt[7], "and the eighth charges by the same amount");
-        }
+        // TheBasicSpellCountsAsASpell (Charging Crystal must count the free
+        // basic Skill action, not only authored casts) was removed with
+        // BasicSpell itself (docs/PLAN_SHOP.md Gate 4) -- CastSkill is now
+        // the only cast path, and the tests above already cover it.
 
         // ---- the long count ------------------------------------------------------
 

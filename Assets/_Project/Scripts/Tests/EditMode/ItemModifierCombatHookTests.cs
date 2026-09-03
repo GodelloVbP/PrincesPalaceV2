@@ -365,8 +365,8 @@ namespace PrincesPalace.Domain.Tests
         // Before this fix, ResolveDamageAll called DealDamage directly per
         // enemy instead of routing through ApplyFinalDamage -- the shared
         // rider path every other real damage entry point (a plain swing,
-        // ExecuteSkillInner, ResolveDamageSingle) already funnels through --
-        // so an AOE cast silently skipped every item-modifier on-hit rider
+        // ResolveDamageSingle) already funnels through -- so an AOE cast
+        // silently skipped every item-modifier on-hit rider
         // (elemental procs, lifesteal, push/chill/root chances) while a
         // single-target hit fired them correctly. These tests prove the fix:
         // the SAME rider fires per enemy an AOE cast actually lands on.

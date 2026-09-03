@@ -215,18 +215,12 @@ namespace PrincesPalace.Domain.Bot
         // names on both, so those coverage lists can be differenced against
         // ContentDatabase directly.
         //
-        // The basic spell is labelled as a skill by its display name, because a
-        // ResolvedSpellTier has no id of its own -- so it appears in the
-        // batch's skill usage without ever matching a skills.json id, which is
-        // the honest answer rather than inventing one.
         private static string TraceLabel(FightSession session, CombatantState actor, FightAction action)
         {
             switch (action.Kind)
             {
                 case FightActionKind.Attack:
                     return "Attack";
-                case FightActionKind.BasicSpell:
-                    return "Skill:" + session.BasicSpellNameFor(actor);
                 case FightActionKind.Skill:
                     var option = session.SkillOptionsFor(actor).FirstOrDefault(o => o.Index == action.SkillIndex);
                     return "Skill:" + (option.Skill.Id ?? "");

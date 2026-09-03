@@ -6,13 +6,15 @@ using PrincesPalace.Domain.Combat.Session;
 
 namespace PrincesPalace.Domain.Bot
 {
-    // The five things a player turn can spend itself on, mirrored onto one
+    // The four things a player turn can spend itself on, mirrored onto one
     // value a policy can hand back without touching FightSession itself.
+    // BasicSpell removed (docs/PLAN_SHOP.md §4 Phase E) -- Skill now covers
+    // every cast, since there is no second, nameless spell left to be a
+    // fifth kind.
     public enum FightActionKind
     {
         Attack,
         Skill,
-        BasicSpell,
         Item,
         HoldBack
     }
@@ -73,7 +75,6 @@ namespace PrincesPalace.Domain.Bot
             switch (Kind)
             {
                 case FightActionKind.Attack: return $"Attack({Target?.Name})";
-                case FightActionKind.BasicSpell: return $"BasicSpell({Target?.Name})";
                 case FightActionKind.Skill: return $"Skill[{SkillIndex}]({Target?.Name})";
                 case FightActionKind.Item: return $"Item({ItemDisplayName})";
                 default: return "HoldBack";
@@ -95,32 +96,18 @@ namespace PrincesPalace.Domain.Bot
             // Every enemy still standing, and the subset of those a MELEE
             // command can land on -- the front-rank rule (CombatEncounter.
             // CanMeleeReach) only ever gates Attack and a skill that says
-            // MeleeReach; the basic spell and every other authored skill are
-            // ranged/magical and can hit anyone standing, exactly as
-            // FightController.Input's own click handler reads it (see its
-            // "meleeSelected" comment). Getting this wrong would offer
-            // Attack on a back-rank target CanMeleeReach then refuses, or
-            // deny a ranged skill a target the real menu allows.
+            // MeleeReach; every other authored skill is ranged/magical and
+            // can hit anyone standing, exactly as FightController.Input's
+            // own click handler reads it (see its "meleeSelected" comment).
+            // Getting this wrong would offer Attack on a back-rank target
+            // CanMeleeReach then refuses, or deny a ranged skill a target
+            // the real menu allows.
             var allTargets = session.Encounter.LivingEnemies.ToList();
             var meleeTargets = allTargets.Where(session.CanMeleeReach).ToList();
 
             foreach (var target in meleeTargets)
             {
                 actions.Add(new FightAction(FightActionKind.Attack, target));
-            }
-
-            // The generic Skill button (ExecuteSkill/basic spell) has no
-            // ResolvedSkillOption of its own -- it is gated on
-            // CanAffordBasicSpell plus actually having one at all (a
-            // character before their spell-granting level has none, and
-            // BasicSpellManaCostFor reads 0 for both cases, which
-            // CanAffordBasicSpell alone cannot tell apart).
-            if (session.KitFor(actor)?.BasicSpell != null && session.CanAffordBasicSpell(actor))
-            {
-                foreach (var target in allTargets)
-                {
-                    actions.Add(new FightAction(FightActionKind.BasicSpell, target));
-                }
             }
 
             foreach (var option in session.SkillOptionsFor(actor))
@@ -162,9 +149,6 @@ namespace PrincesPalace.Domain.Bot
             {
                 case FightActionKind.Attack:
                     session.ExecuteAttack(action.Target);
-                    break;
-                case FightActionKind.BasicSpell:
-                    session.ExecuteSkill(action.Target);
                     break;
                 case FightActionKind.Skill:
                     session.CastSkill(action.SkillIndex, action.Target);

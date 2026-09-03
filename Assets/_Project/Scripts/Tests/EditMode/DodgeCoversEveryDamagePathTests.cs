@@ -15,15 +15,18 @@ namespace PrincesPalace.Domain.Tests
     // and a dodge must silence every on-hit rider that would otherwise fire
     // off that same landed hit -- not just zero the damage number.
     //
-    // The six real, non-preview call sites of AfterDefences, enumerated by
+    // The real, non-preview call sites of AfterDefences, enumerated by
     // reading every call site in Domain/Combat/Session/ (see this phase's own
     // report for the full list) -- one test per path below, named to match:
     //   1. FightSession.cs ResolveAttackSwing            (a plain swing)
-    //   2. FightSession.Skills.cs ExecuteSkillInner       (the basic Skill action)
-    //   3. FightSession.Skills.cs ResolveDamageSingle     (a character skill, single target)
-    //   4. FightSession.Skills.cs ResolveDamageAll        (a character skill, AOE)
-    //   5. FightSession.Skills.cs ResolveDamageInstances  (a fixed-packet spell)
-    //   6. FightSession.Enemies.cs ResolveEnemyAction      (an enemy's real swing)
+    //   2. FightSession.Skills.cs ResolveDamageSingle     (a character skill, single target)
+    //   3. FightSession.Skills.cs ResolveDamageAll        (a character skill, AOE)
+    //   4. FightSession.Skills.cs ResolveDamageInstances  (a fixed-packet spell)
+    //   5. FightSession.Enemies.cs ResolveEnemyAction      (an enemy's real swing)
+    //
+    // ExecuteSkillInner (the free basic Skill action every character used to
+    // have regardless of what they had learned) was removed with BasicSpell
+    // (docs/PLAN_SHOP.md Gate 4) -- this file's old path 2 proof went with it.
     //
     // Everything that does NOT reach AfterDefences at all -- splash/kill-
     // splash (SplashOntoNeighbours), Shatter, and a Poison DoT tick -- gets
@@ -120,23 +123,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(Beats(session).First(b => b.Actor == hero).Missed);
         }
 
-        // ---- 2. the basic Skill action (ExecuteSkillInner) --------------------
-
-        [Test]
-        public void BasicSkillAction_AgainstAVeryHighDodgeChance_DealsNoDamage()
-        {
-            var hero = Hero(attack: 20, mana: 100);
-            var foe = Foe();
-            Give(foe, AlwaysDodge);
-
-            var session = Session(new CombatEncounter(new[] { hero }, new[] { foe }));
-            session.ExecuteSkill(foe);
-
-            Assert.AreEqual(1000, foe.CurrentHealth);
-            Assert.IsTrue(Beats(session).First(b => b.Actor == hero).Missed);
-        }
-
-        // ---- 3. a character skill, single target (ResolveDamageSingle) -------
+        // ---- 2. a character skill, single target (ResolveDamageSingle) -------
 
         [Test]
         public void CharacterSkill_SingleTarget_AgainstAVeryHighDodgeChance_DealsNoDamage_AndAppliesNoStatus()
@@ -157,7 +144,7 @@ namespace PrincesPalace.Domain.Tests
                 "no status may be applied off a dodged skill cast");
         }
 
-        // ---- 4. a character skill, AOE (ResolveDamageAll) --------------------
+        // ---- 3. a character skill, AOE (ResolveDamageAll) --------------------
 
         [Test]
         public void CharacterSkill_Aoe_EachEnemyRollsItsOwnDodgeIndependently()
@@ -175,7 +162,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.Less(sitter.CurrentHealth, 1000, "a sibling with no dodge chance must still be hit by the SAME cast");
         }
 
-        // ---- 5. a fixed-packet spell (ResolveDamageInstances) -----------------
+        // ---- 4. a fixed-packet spell (ResolveDamageInstances) -----------------
 
         [Test]
         public void FixedPacketSpell_AgainstAVeryHighDodgeChance_NoPacketLands()
@@ -233,7 +220,7 @@ namespace PrincesPalace.Domain.Tests
                 "a single upfront RollDodge call (same seed) must exactly predict the whole cast's outcome");
         }
 
-        // ---- 6. an enemy's real swing (FightSession.Enemies.cs) --------------
+        // ---- 5. an enemy's real swing (FightSession.Enemies.cs) --------------
 
         [Test]
         public void EnemySwing_AgainstAPlayerWithAVeryHighDodgeChance_DealsNoDamage_AndAppliesNoStatus()

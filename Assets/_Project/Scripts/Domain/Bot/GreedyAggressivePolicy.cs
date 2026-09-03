@@ -42,7 +42,6 @@ namespace PrincesPalace.Domain.Bot
             // target instead of spreading thin across the board.
             var damaging = legal.Where(a =>
                 a.Kind == FightActionKind.Attack ||
-                a.Kind == FightActionKind.BasicSpell ||
                 a.Kind == FightActionKind.Skill).ToList();
 
             if (damaging.Count > 0)
@@ -78,21 +77,18 @@ namespace PrincesPalace.Domain.Bot
         }
 
         // Pre-mitigation reads off the session's own preview queries --
-        // PreviewBasicSpellPower and PreviewSkillPower both skip
-        // DamagePipeline.AfterDefences entirely (see their own headers),
-        // which is a proxy for "expected damage" that ignores the target's
-        // defence and any variance roll. Good enough to RANK the options
-        // against each other, wrong as an absolute prediction -- and
-        // reimplementing DamagePipeline here to do better is exactly what
-        // the plan says not to do.
+        // PreviewSkillPower skips DamagePipeline.AfterDefences entirely (see
+        // its own header), which is a proxy for "expected damage" that
+        // ignores the target's defence and any variance roll. Good enough to
+        // RANK the options against each other, wrong as an absolute
+        // prediction -- and reimplementing DamagePipeline here to do better
+        // is exactly what the plan says not to do.
         private static int EstimateDamage(FightSession session, CombatantState actor, FightAction action)
         {
             switch (action.Kind)
             {
                 case FightActionKind.Attack:
                     return CombatMath.ComputeAttackDamage(actor, action.Target);
-                case FightActionKind.BasicSpell:
-                    return session.PreviewBasicSpellPower(actor);
                 case FightActionKind.Skill:
                     var option = session.SkillOptionsFor(actor).FirstOrDefault(o => o.Index == action.SkillIndex);
 

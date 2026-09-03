@@ -44,15 +44,36 @@ namespace PrincesPalace.Domain.Combat.Session
         // elemental affinity. A rudimentary, one-directional system by design.
         public readonly DamageType? AttackType;
 
-        // The character's basic spell, if their level grants one.
-        public readonly ResolvedSpellTier? BasicSpell;
+        // BasicSpell removed (docs/PLAN_SHOP.md §4 Phase E, the flip): the
+        // automatic, nameless "Skill" action every character used to cast
+        // off spells.json's level-keyed ladder regardless of what they had
+        // learned. The ladder itself (SpellTierDefinition, EffectiveSkillScaling,
+        // GetSpellTierForLevel) is untouched -- it is what every Spell-axis
+        // skill's damage still scales through, this field just is not one
+        // any more. A character now has exactly the skills their kit
+        // authored plus whatever they learned from a book.
+
+        // NOT PART OF THE BasicSpell REMOVAL -- kept on purpose. The spell
+        // tier's own powerMultiplier is a SEPARATE axis from
+        // EffectiveSkillScaling's INT/WIS grade (FightSession.Skills.cs'
+        // own header calls this out: "the two never stood in for each other
+        // and neither replaces the other"), and it is what scales every
+        // FIXED-damage-instance skill (frost_flare, lightning_bolt) -- named
+        // skills, not the free action that used to carry it. Removing
+        // BasicSpell wholesale would have silently dropped this multiplier
+        // to 1 for both of them, a real damage nerf nobody asked for and the
+        // plan's own F4 did not flag, because it read spells.json as
+        // powering only EffectiveSkillScaling. 1f (neutral) for a kit built
+        // with no level to ask about, same as the ladder's own "before tier
+        // 1" reading.
+        public readonly float SkillPowerMultiplier;
 
         public PlayerKit(string id, CharacterRole role,
                          IReadOnlyList<ResolvedSkill> skills,
                          IReadOnlyList<ResolvedRelic> relics,
                          DamageType? attackType,
-                         ResolvedSpellTier? basicSpell = null,
-                         int level = 1)
+                         int level = 1,
+                         float skillPowerMultiplier = 1f)
         {
             Level = level;
             Id = id;
@@ -60,7 +81,7 @@ namespace PrincesPalace.Domain.Combat.Session
             Skills = skills ?? new List<ResolvedSkill>();
             Relics = relics ?? new List<ResolvedRelic>();
             AttackType = attackType;
-            BasicSpell = basicSpell;
+            SkillPowerMultiplier = skillPowerMultiplier;
 
             _relicEffects = new HashSet<RelicEffect>();
             for (int i = 0; i < Relics.Count; i++)

@@ -45,23 +45,30 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- magic marker -------------------------------------------------------
 
+        private static ResolvedSkill CastableSkill() =>
+            new ResolvedSkill("bolt", "Bolt", "", "hero", 1,
+                SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, 0, 0, false, 100, 0, false,
+                null, SpellPresentation.None, 0);
+
         [Test]
         public void MagicMarkerMarksASpellTarget()
         {
-            var (session, hero, foe1, _) = Fight(RelicEffect.MagicMarker);
+            var (session, hero, foe1, _) = Fight(RelicEffect.MagicMarker,
+                skills: new List<ResolvedSkill> { CastableSkill() });
 
-            session.ExecuteSkill(foe1);
+            session.CastSkill(0, foe1);
 
-            Assert.IsTrue(Marks.IsMarked(foe1), "the basic spell should mark whatever it hits");
+            Assert.IsTrue(Marks.IsMarked(foe1), "a cast should mark whatever it hits");
         }
 
         [Test]
         public void MagicMarkerConsumesTheMarkAndRestoresTwentyPercentOfMissingMana()
         {
-            var (session, hero, foe1, _) = Fight(RelicEffect.MagicMarker, heroMaxMana: 100);
+            var (session, hero, foe1, _) = Fight(RelicEffect.MagicMarker, heroMaxMana: 100,
+                skills: new List<ResolvedSkill> { CastableSkill() });
             hero.CurrentMana = 50; // 50 missing
 
-            session.ExecuteSkill(foe1); // marks foe1, costs 0 mana (no BasicSpell authored)
+            session.CastSkill(0, foe1); // marks foe1, costs 0 mana (test skill is authored free)
             session.ExecuteAttack(foe1); // consumes the mark
 
             Assert.IsFalse(Marks.IsMarked(foe1), "the attack should have consumed the mark");

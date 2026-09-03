@@ -256,44 +256,29 @@ namespace PrincesPalace.Domain.Tests
                 SkillTargeting.SingleEnemy, manaCost, 0, false, power, 0, false,
                 packets, SpellPresentation.None, 0, requirements: requirements);
 
-        private static (FightSession session, CombatantState hero) Fight(params ResolvedSkill[] skills)
+        private static (FightSession session, CombatantState hero) Fight(params ResolvedSkill[] skills) =>
+            FightWithTier(1f, skills);
+
+        // A separate overload rather than an optional parameter after skills
+        // -- params must be the last parameter, so a caster's own tier
+        // multiplier (PlayerKit.SkillPowerMultiplier, still live for every
+        // fixed-damage skill after BasicSpell's removal, docs/PLAN_SHOP.md
+        // Gate 4) gets its own entry point instead.
+        private static (FightSession session, CombatantState hero) FightWithTier(float skillPowerMultiplier, params ResolvedSkill[] skills)
         {
             var hero = new CombatantState("Hero", true, 200, 30, 20, 10);
             var foe = new CombatantState("Foe", false, 1000, 10, 5, 1);
             var encounter = new CombatEncounter(new[] { hero }, new[] { foe });
-            var kit = new PlayerKit("hero", CharacterRole.Tank, skills, null, null,
-                new ResolvedSpellTier(1, "Spark", 6, 1.5f, 0));
+            var kit = new PlayerKit("hero", CharacterRole.Tank, skills, null, null, skillPowerMultiplier: skillPowerMultiplier);
             var session = new FightSession(encounter, new List<PlayerKit> { kit }, null, new SeededRandom(1));
             return (session, hero);
         }
 
-        [Test]
-        public void TheBasicSpellGetsARowAfterTheAuthoredSkills()
-        {
-            // Every character has one and no character has it in their list, so
-            // its index is stated once rather than recomputed at each call site.
-            var (session, hero) = Fight(Skill("a", "Alpha"), Skill("b", "Beta"));
-
-            var rows = FightHudModel.SkillRows(session, hero);
-
-            Assert.AreEqual(3, rows.Count);
-            Assert.AreEqual(FightHudModel.BasicSpellRow(2), rows.Count - 1);
-            Assert.IsTrue(rows[2].IsBasicSpell);
-            Assert.AreEqual("Spark", rows[2].Name);
-        }
-
-        [Test]
-        public void TheBasicSpellsCostComesFromTheSameResolutionEveryOtherSkillUses()
-        {
-            // v1 hand-rolled a separate mana check for this one row. That is
-            // exactly the shape that drifts.
-            var (session, hero) = Fight();
-
-            var basic = FightHudModel.SkillRows(session, hero).Single();
-
-            Assert.AreEqual(session.BasicSpellManaCostFor(hero), basic.ManaCost);
-            Assert.AreEqual(session.CanAffordBasicSpell(hero), basic.CanPay);
-        }
+        // BasicSpell (the free "Skill" row every character got after their
+        // authored skills, regardless of what they had learned) was removed
+        // with docs/PLAN_SHOP.md Gate 4 -- SkillRows no longer appends one,
+        // so the two tests that pinned its row and its cost resolution went
+        // with it.
 
         [Test]
         public void AnUnaffordableRowIsShownAndMarked_NeverDropped()
@@ -305,7 +290,7 @@ namespace PrincesPalace.Domain.Tests
 
             var rows = FightHudModel.SkillRows(session, hero);
 
-            Assert.AreEqual(3, rows.Count, "both authored skills plus the basic spell");
+            Assert.AreEqual(2, rows.Count, "both authored skills");
             Assert.IsTrue(rows[0].Affordable);
             Assert.IsFalse(rows[1].Affordable);
         }
@@ -389,7 +374,7 @@ namespace PrincesPalace.Domain.Tests
         public void APacketSpellShowsTheSumOfItsPacketsScaledByTheCastersOwnTier()
         {
             // The packets are the SAME multiplier ResolveDamageInstances
-            // itself applies -- Fight()'s spell tier is 1.5x, so 30 Fire and
+            // itself applies -- this fixture's tier is 1.5x, so 30 Fire and
             // 20 Ice read 45 and 30, not the raw 30/20 authored in content.
             // Showing the raw sum would be exactly the kind of "close but not
             // the real number" the Strike row had before this fix.
@@ -399,7 +384,7 @@ namespace PrincesPalace.Domain.Tests
                 new DamageInstance(DamageType.Ice, 20),
             };
             var spell = Skill("bolt", "Prismatic Bolt", power: 0, packets: packets);
-            var (session, hero) = Fight(spell);
+            var (session, hero) = FightWithTier(1.5f, spell);
 
             Assert.AreEqual("75", FightHudModel.PowerLabel(session, hero, spell));
         }
@@ -669,10 +654,10 @@ namespace PrincesPalace.Domain.Tests
 
             var rows = FightHudModel.SkillRows(session, stranger);
 
-            // One row: the basic spell, which every combatant conceptually has
-            // even with no kit behind it. Graceful, not empty-and-confusing.
-            Assert.AreEqual(1, rows.Count);
-            Assert.IsTrue(rows[0].IsBasicSpell);
+            // BasicSpell (docs/PLAN_SHOP.md Gate 4) is gone, so a combatant
+            // with no kit behind it now genuinely has nothing to offer --
+            // an empty list rather than a throw is still the graceful part.
+            Assert.AreEqual(0, rows.Count);
         }
 
         // ---- telling two of the same monster apart -------------------------------

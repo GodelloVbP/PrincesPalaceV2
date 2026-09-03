@@ -24,8 +24,8 @@ namespace PrincesPalace.Domain.Bot
     // be new production combat code. So instead of executing a hypothetical
     // turn, this reads the same pre-mitigation preview numbers
     // GreedyAggressivePolicy already trusts to RANK options
-    // (CombatMath.ComputeAttackDamage, PreviewBasicSpellPower,
-    // PreviewSkillPower) for "what this action does", and the enemies'
+    // (CombatMath.ComputeAttackDamage, PreviewSkillPower) for "what this
+    // action does", and the enemies'
     // already-committed EnemyIntent.ExpectedDamage (FightSession.
     // IntentDetailFor, prepared for the player's whole turn by
     // PrepareEnemyIntents) for "what comes back" -- no variance roll, no
@@ -147,13 +147,6 @@ namespace PrincesPalace.Domain.Bot
                 case FightActionKind.Attack:
                 {
                     int dmg = CombatMath.ComputeAttackDamage(actor, action.Target);
-                    ownEffect = dmg;
-                    killsTarget = action.Target != null && dmg >= action.Target.CurrentHealth;
-                    break;
-                }
-                case FightActionKind.BasicSpell:
-                {
-                    int dmg = session.PreviewBasicSpellPower(actor);
                     ownEffect = dmg;
                     killsTarget = action.Target != null && dmg >= action.Target.CurrentHealth;
                     break;

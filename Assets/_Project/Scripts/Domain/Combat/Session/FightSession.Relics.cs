@@ -148,7 +148,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // Played as its OWN beat, the identical pattern Dual Wield's second
         // swing already uses -- CommitBeat closes the cast's beat, a fresh
         // BeginBeat opens the attack's, and the CALLER's own trailing
-        // CommitBeat (in CastSkill or ExecuteSkill) finalises it. Reusing
+        // CommitBeat (in CastSkill) finalises it. Reusing
         // ResolveAttackSwing means this attack counts toward the Long Count,
         // can trigger Lucky Deck, and can earn Bloodlust on a kill exactly as
         // a player-pressed Attack would -- it IS one, just not one the player
@@ -179,43 +179,35 @@ namespace PrincesPalace.Domain.Combat.Session
         // nothing further: no mana, no cooldown started twice (BeginCooldown
         // already ran once, in the outer CastSkill, before this ever fires).
         //
-        // CALLS *Inner DIRECTLY, never the wrapper. ResolveCharacterSkillInner
-        // and ExecuteSkillInner are the halves of each cast path that do not
-        // touch relics at all -- BeginSpellPotency/RelicsBeforeCast/
-        // RelicsAfterCast live only in the OUTER methods. Going straight to
-        // Inner is what makes a second copy of the Charging Crystal's tally
-        // and a second First Rune off the first's own copy both structurally
+        // CALLS ResolveCharacterSkillInner DIRECTLY, never the wrapper. It is
+        // the half of the cast path that does not touch relics at all --
+        // BeginSpellPotency/RelicsBeforeCast/RelicsAfterCast live only in
+        // ResolveCharacterSkill, the outer method. Going straight to Inner is
+        // what makes a second copy of the Charging Crystal's tally and a
+        // second First Rune off the first's own copy both structurally
         // impossible, rather than guarded by a flag that could be forgotten.
         //
         // SCOPED TO A SINGLE DAMAGING TARGET. "A copy of that spell, on the
-        // same target" reads cleanly for the one thing a DamageSingle cast or
-        // the basic spell hit -- and reads as a genuine question for a heal, a
-        // Ward, a Transform, or a sweep that already hit everyone. Left out
-        // rather than guessed at.
+        // same target" reads cleanly for a DamageSingle cast, and reads as a
+        // genuine question for a heal, a Ward, a Transform, or a sweep that
+        // already hit everyone. Left out rather than guessed at.
+        //
+        // `skill` is no longer nullable: RelicsAfterCast's one remaining
+        // caller (ResolveCharacterSkill) always has a real ResolvedSkill --
+        // the basic Skill action this null case used to mean is gone
+        // (docs/PLAN_SHOP.md §4 Phase E).
         private void TryFirstRune(CombatantState actor, ResolvedSkill? skill, CombatantState target,
                                   int resourceSpent)
         {
             if (actor == null || target == null || !target.IsAlive) return;
             if (!HasRelic(actor, RelicEffect.FirstRune)) return;
-
-            bool eligible = skill.HasValue
-                ? skill.Value.Effect == SkillEffect.DamageSingle
-                : true; // the basic spell action is always single-target
-
-            if (!eligible) return;
+            if (!skill.HasValue || skill.Value.Effect != SkillEffect.DamageSingle) return;
 
             CommitBeat();
             BeginBeat(actor, target, isCast: true);
             AppendMessage($"{actor.Name}'s First Rune flares - the spell lands again!");
 
-            if (skill.HasValue)
-            {
-                ResolveCharacterSkillInner(actor, skill.Value, target, resourceSpent);
-            }
-            else
-            {
-                ExecuteSkillInner(actor, target);
-            }
+            ResolveCharacterSkillInner(actor, skill.Value, target, resourceSpent);
         }
 
         // ---- the drowned lantern's mark ---------------------------------------------

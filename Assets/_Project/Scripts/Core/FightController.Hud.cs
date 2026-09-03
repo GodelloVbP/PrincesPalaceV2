@@ -906,18 +906,12 @@ namespace PrincesPalace
                 return FightHudModel.DetailForSkill(_session, actor, kit.Skills[index], actor?.Signature?.DisplayName);
             }
 
-            // The basic spell's row, which has no ResolvedSkill behind it.
-            var panel = new DetailPanel
-            {
-                Name = rows[index].Name,
-                Kind = "SPELL",
-                Body = "The character's own arcane strike.",
-            };
-            panel.Stats.Add(("COST", rows[index].Cost));
-            panel.Stats.Add(("POWER", (_session?.PreviewBasicSpellPower(actor) ?? 0).ToString()));
-            panel.Stats.Add(("TARGET", "SINGLE"));
-            panel.Stats.Add(("EFFECT", "DAMAGE"));
-            return panel;
+            // Every skill-branch row now has a ResolvedSkill behind it --
+            // the basic spell's row, which did not, is gone (docs/PLAN_SHOP.md
+            // §4 Phase E). Reaching here means the index does not match the
+            // kit after all; the same honest empty panel DetailForNoSelection
+            // already gives an out-of-range Column C selection.
+            return FightHudModel.DetailForNoSelection(_menu.Branch);
         }
 
         // Whoever the plate is describing: the acting character while it is the

@@ -326,6 +326,87 @@ skipped).
 
 ### Gate 4
 
+**Recorded 2026-09-03, branch `balance-bot`.** Built: `PlayerKit.BasicSpell`
+removed entirely (the free, nameless "Skill" action every character got
+regardless of what they had learned, driven by `spells.json`'s level-keyed
+tier ladder via `FightController.SpellTierFor`); `skills.json`'s five spell
+entries flipped to `bookOnly: true` with `unlockLevel` removed, so they are
+now reachable only through `RunOrchestrator.LearnSpell`/the shop, never by
+levelling. `FightSession.ExecuteSkill`/`ExecuteSkillInner` and every HUD/bot
+surface that named the basic spell (`FightHudModel.BasicSpellRow`/
+`IsBasicSpell`, `FightController.Hud.cs`'s basic-spell detail fallback,
+`FightAction.FightActionKind.BasicSpell`, three bot policies' basic-spell
+scoring) removed with it.
+
+**The spell tier ladder itself is NOT removed** (`SpellTierDefinition`,
+`ContentDatabase.SpellTiers`, `FightEncounterAdapter.TierAtLevel`) — it still
+scales `PlayerKit.SkillPowerMultiplier`, the multiplier every FIXED-damage
+skill (`frost_flare`, `lightning_bolt`) reads alongside `EffectiveSkillScaling`'s
+INT/WIS grade. Dropping this to a flat 1 across the board would have been a
+silent damage nerf to two named spells that nothing in the plan's own F4
+section flagged, because F4 read the ladder as powering only the free action.
+Caught mid-cut by a compile error once `BasicSpell` was removed and
+`SkillPowerMultiplierFor` turned out to read `KitFor(actor)?.BasicSpell?.
+PowerMultiplier`; fixed by carrying the multiplier itself on the kit
+(`CombatantKit.cs`'s new `SkillPowerMultiplier` field, still fed by the same
+`TierAtLevel` lookup in `FightEncounterAdapter`) rather than deleting the
+whole `BasicSpell` struct and the lookup with it.
+
+**A second, larger coupling found and NOT silently absorbed.**
+`FightSession.Skills.cs`'s `ApplySkillRoleEffect` — Tank lifesteal,
+CrowdControl defense-shred, Support party-heal, Utility signature-gain, and
+the Assassin execute-bonus message — turned out to have exactly one caller
+anywhere in the codebase: the now-deleted `ExecuteSkillInner`. Confirmed by a
+full-repo grep before touching it. This was already true before this gate:
+none of the five role riders had ever fired on an authored/named skill cast
+(`ResolveDamageSingle`, `ResolveDamageAll`, `ResolveDamageInstances`), only
+on the free basic-spell action every character always had regardless of what
+they had learned. Removing `BasicSpell` as planned would have taken these
+five class-identity mechanics from "narrowly reachable" to "unreachable by
+any code path," with no design decision behind the loss.
+
+Flagged to the user rather than resolved unilaterally — porting the effect
+into the authored-skill path is a real balance change (every Tank skill
+would now lifesteal, every Support skill would now heal the party, not just
+the one free action), not a mechanical cleanup. **Decided 2026-09-03: remove
+them.** `ApplySkillRoleEffect` and its five `FightTuning` constants
+(`AssassinExecuteHealthFraction`, `AssassinExecuteBonusMultiplier`,
+`TankSkillLifestealFraction`, `CrowdControlDefenseShred`,
+`SupportSkillPartyHealAmount`, `UtilitySkillSignatureGain`) are deleted, not
+ported. The seven `SkillDispatchTests` role-rider tests that only ever
+exercised this path went with it.
+
+**Test fallout, all fixed.** ~25 test-file compile errors across
+`EditMode`/`PlayMode` from the `BasicSpell`/`ExecuteSkill`/
+`FightActionKind.BasicSpell`/`ResolvedSpellTier`-as-kit-arg removal — mostly
+fixtures that used the free basic spell as a cheap way to reach a back-rank
+foe or to prove a cast is not a swing, rewritten against an authored
+`ResolvedSkill` instead. Three tests failed for real reasons after content
+rebuilt: `SpellBooksTests.TheFiveSpellsCarryABookTierAndKeepTheirUnlockLevel`
+pinned Phase A's `bookOnly: false` snapshot (rewritten as
+`...AndAreUnreachableByLevelling`, asserting `bookOnly: true` and
+`unlockLevel == int.MaxValue`); `LearningABookDoesNotChangeWhatTheLevelRoute
+AlreadyGrants` pinned Phase A's no-op (rewritten as
+`LearningABookIsTheOnlyWayToReachIt`, now the load-bearing proof the flip
+landed — a level-9 character has `mud_burst` unavailable until it is
+learned); `SpellVfxTests.TheTwoStrikeSpellsSitOnAReachableRungOfShawnsLadder`
+pinned `frost_flare`/`lightning_bolt`'s old unlock levels (5/7), rewritten
+against `bookOnly`/`bookTier` (2/3) since both are off the level ladder now.
+
+Full suite green: `EditMode 2740/2740`, `PlayMode 740/765` (25 skipped, same
+skip count as gate 3 — no new skips introduced).
+
+**NOT done, both process blocks carried forward from gates 2/3, not new
+here:** the human usability checklist (§7.1 point 9) and any live UI walk
+test — `Scenes/` is still carrying another live session's uncommitted work
+as of this recording, so nothing that needs a built scene has run. **Also
+not done:** the gate-4 exit balance batch measuring combat outcomes with the
+flip live (the plan's own reason for staging this gate last — "combat
+outcomes now genuinely depend on learned spells"). This is a genuine gap:
+the code is tested for correctness but not yet measured for balance impact,
+and the role-rider removal in particular (five characters losing a passive
+they always had) is exactly the kind of change that batch is for.
+
 ## Audit table
 
 | Handoff section | Spec'd | Built | Verdict | Decision served |

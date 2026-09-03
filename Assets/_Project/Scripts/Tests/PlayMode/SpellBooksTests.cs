@@ -58,34 +58,44 @@ namespace PrincesPalace.PlayModeTests
         // ---- content: bookOnly stays inert, bookTier does not -------------------
 
         [Test]
-        public void TheFiveSpellsCarryABookTierAndKeepTheirUnlockLevel()
+        public void TheFiveSpellsCarryABookTierAndAreUnreachableByLevelling()
         {
+            // Phase E (docs/PLAN_SHOP.md Gate 4) flipped bookOnly on the five
+            // spells and stripped their unlockLevel -- this is now the live,
+            // shipped state, not a staging snapshot. SkillEntryResolver reads
+            // an absent unlockLevel on a bookOnly skill as int.MaxValue (see
+            // that file's own comment for why: NOT defaulting to 1, which
+            // would have handed every book-only spell out for free at the
+            // level route the book gate exists to close).
             var skill = ContentDatabase.GetSkill(SkillId);
             Assert.IsNotNull(skill, "mud_burst should exist in the built content");
-            Assert.IsFalse(skill.bookOnly, "Phase A ships bookOnly authored false on every skill -- only Phase E flips it");
-            Assert.Greater(skill.bookTier, 0, "the five spells are book-eligible from Phase A onward");
-            Assert.Greater(skill.unlockLevel, 0, "and still reachable by levelling until Phase E");
-            Assert.Less(skill.unlockLevel, int.MaxValue);
+            Assert.IsTrue(skill.bookOnly, "the five spells are learned-only, never levelled into");
+            Assert.Greater(skill.bookTier, 0, "and still carry the tier that prices/rolls them in the shop");
+            Assert.AreEqual(int.MaxValue, skill.unlockLevel,
+                "no level should ever grant a book-only skill for free");
         }
 
         [Test]
-        public void LearningABookDoesNotChangeWhatTheLevelRouteAlreadyGrants()
+        public void LearningABookIsTheOnlyWayToReachIt()
         {
-            // The whole point of staging: Phase A/gate 3 is measurable
-            // without moving a single fight outcome. AvailableSkillsFor's
-            // fourth route is gated on bookOnly, which is false here, so
-            // learning the book must be a no-op for what the character can
-            // actually press.
+            // The payoff of the staged flip: before Gate 4 this same shape
+            // (learn, then diff AvailableSkillsFor) was a deliberate no-op,
+            // because the level route already granted mud_burst regardless.
+            // Now bookOnly is true, so the level route grants nothing for
+            // this skill and AvailableSkillsFor's fourth route (gated on
+            // bookOnly) is the only way in.
             RunManager.StartRun(4242UL);
-            var character = new Character { definitionId = CharacterId, level = 1 };
+            var character = new Character { definitionId = CharacterId, level = 9 };
 
             var before = ContentDatabase.AvailableSkillsFor(character).Select(s => s.id).ToList();
+            CollectionAssert.DoesNotContain(before, SkillId,
+                "a book-only skill must not be granted by levelling, even at max level");
 
             GiveOneUnassignedCopy();
             RunOrchestrator.LearnSpell(CharacterId, SkillId);
 
             var after = ContentDatabase.AvailableSkillsFor(character).Select(s => s.id).ToList();
-            CollectionAssert.AreEqual(before, after);
+            CollectionAssert.Contains(after, SkillId, "learning the book is what grants it");
         }
 
         // ---- CanLearn -------------------------------------------------------

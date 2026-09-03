@@ -102,8 +102,15 @@ namespace PrincesPalace.PlayModeTests
 
             _front = foes[0];
             var encounter = new CombatEncounter(new[] { hero }, foes);
-            var kit = new PlayerKit("shawn", CharacterRole.Tank, null, null, null,
-                new ResolvedSpellTier(1, "Spark", 6, 1.5f, 0), level: 4);
+            // BasicSpell is gone (docs/PLAN_SHOP.md Gate 4) -- an authored
+            // skill stands in wherever this fixture used to lean on the free
+            // "Spark" row every character got regardless of what they had
+            // learned, so the Skill-column UI tests below still have exactly
+            // one row to press.
+            var skill = new ResolvedSkill("spark", "Spark", "", "shawn", 1, SkillEffect.DamageSingle,
+                SkillTargeting.SingleEnemy, 6, 0, false, 100, 0, false,
+                null, SpellPresentation.None, 0);
+            var kit = new PlayerKit("shawn", CharacterRole.Tank, new[] { skill }, null, null, level: 4);
 
             var enemyKits = foes.Select(f => new EnemyKit(
                 new ResolvedEnemy(f.Name.ToLowerInvariant(), f.Name, new StatBlock(), 5, 3, false,
@@ -155,14 +162,14 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
-        public IEnumerator PressingSkillOpensTheColumnWithTheBasicSpellInIt()
+        public IEnumerator PressingSkillOpensTheColumnWithTheAuthoredSkillInIt()
         {
             yield return LoadFight();
 
             Click("Verb1");
 
             Assert.IsTrue(Active("SubmenuColumn"));
-            Assert.IsTrue(Active("CharacterSkill0"), "one row: the basic spell");
+            Assert.IsTrue(Active("CharacterSkill0"), "one row: the fixture's one authored skill");
             Assert.IsFalse(Active("CharacterSkill1"), "and nothing beyond it");
             Assert.AreEqual("Spark", TextOf("CharacterSkill0Name"));
         }

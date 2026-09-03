@@ -597,20 +597,8 @@ namespace PrincesPalace
                 .Select(Resolve)
                 .ToList();
 
-            // Spell tiers are keyed by LEVEL alone, not by character -- the
-            // basic spell is the same ladder for everyone and only its tier
-            // differs. Highest available AT OR BELOW the character's level.
-            //
-            // The level filter is the fix: this read "highest available wins"
-            // and took the top of the ladder unconditionally, so a level 1
-            // character cast the endgame tier. With no character to ask, level
-            // 1 is the honest floor rather than the top.
-            var tier = TierAtLevel(level);
-
             return new PlayerKit(definition.id, definition.role, skills, relics,
-                definition.attackType,
-                tier == null ? (ResolvedSpellTier?)null : SpellTierFor(tier),
-                level);
+                definition.attackType, level, SkillPowerMultiplierAtLevel(level));
         }
 
         // The IN-RUN kit: the character's own strip PLUS whatever their tree
@@ -644,25 +632,28 @@ namespace PrincesPalace
                 .Select(Resolve)
                 .ToList();
 
-            var tier = TierAtLevel(character.level);
-
             return new PlayerKit(definition.id, definition.role, skills, relics,
-                definition.attackType,
-                tier == null ? (ResolvedSpellTier?)null : SpellTierFor(tier),
-                character.level);
+                definition.attackType, character.level, SkillPowerMultiplierAtLevel(character.level));
         }
 
-        // The highest tier a character of this level has actually reached.
-        // Null when the ladder starts above them, which PlayerKit already
-        // treats as "no basic spell yet".
+        // THE SPELL TIER'S OWN powerMultiplier, kept even though the tier's
+        // name/mana cost/DisplayName it used to travel with (as PlayerKit.
+        // BasicSpell) did not survive the flip. FightSession.Skills.cs'
+        // ResolveDamageInstances/PreviewSkillPower multiply every FIXED-
+        // damage skill (frost_flare, lightning_bolt) by this alongside
+        // EffectiveSkillScaling's INT/WIS grade -- "the two never stood in
+        // for each other" is that file's own words for why dropping this to
+        // 1 would have been a silent damage nerf, not a cleanup. 1f (the
+        // ladder's own "before tier 1" reading) for a level the ladder has
+        // not reached yet.
+        private static float SkillPowerMultiplierAtLevel(int level) =>
+            TierAtLevel(level)?.powerMultiplier ?? 1f;
+
         private static SpellTierDefinition TierAtLevel(int level) =>
             ContentDatabase.SpellTiers
                 .Where(t => t != null && t.level <= level)
                 .OrderByDescending(t => t.level)
                 .FirstOrDefault();
-
-        private static ResolvedSpellTier SpellTierFor(SpellTierDefinition tier) =>
-            new ResolvedSpellTier(tier.level, tier.displayName, tier.manaCost, tier.powerMultiplier, tier.sortOrder);
 
         // The other half of the content conversion. Mechanical, field for field:
         // ResolvedSkill was designed as the shape SkillDefinition already had.

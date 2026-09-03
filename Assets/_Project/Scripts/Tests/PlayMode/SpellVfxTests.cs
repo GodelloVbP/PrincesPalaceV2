@@ -139,15 +139,21 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void TheTwoStrikeSpellsSitOnAReachableRungOfShawnsLadder()
         {
-            foreach (var (id, level) in new[] { ("frost_flare", 5), ("lightning_bolt", 7) })
+            // Both moved from the level ladder onto the book ladder in
+            // docs/PLAN_SHOP.md Gate 4 -- bookOnly true, unlockLevel gone
+            // (SkillEntryResolver reads its absence on a bookOnly skill as
+            // int.MaxValue, on purpose: see that file's own comment). A
+            // reachable rung is now bookTier > 0, not a level number.
+            foreach (var (id, bookTier) in new[] { ("frost_flare", 2), ("lightning_bolt", 3) })
             {
                 var skill = ContentDatabase.Skills.FirstOrDefault(s => s != null && s.id == id);
 
                 Assert.IsNotNull(skill, $"'{id}' is not in skills.json at all");
                 Assert.AreEqual("sheep", skill.characterId, $"'{id}' is no longer Shawn's");
-                Assert.AreEqual(level, skill.unlockLevel,
-                    $"'{id}' moved off its rung - if that is deliberate, move it, but 999 means " +
-                    "nobody can ever cast it and nothing else will say so");
+                Assert.IsTrue(skill.bookOnly, $"'{id}' should be learned-only, not levelled into");
+                Assert.AreEqual(bookTier, skill.bookTier,
+                    $"'{id}' moved off its rung - if that is deliberate, move it, but 0 means " +
+                    "nobody can ever roll it in the shop and nothing else will say so");
 
                 // AND ITS ART IS POINTED AT. The sibling test above checks every
                 // declared path has frames; this checks the path is declared,
@@ -424,8 +430,14 @@ namespace PrincesPalace.PlayModeTests
                 .Select(i => new CombatantState(i == 0 ? "Front" : $"Foe{i}", false, 5000, 10, 8, 4))
                 .ToArray();
             var encounter = new CombatEncounter(new[] { hero }, foes);
-            var kit = new PlayerKit("shawn", CharacterRole.Tank, null, null, null,
-                new ResolvedSpellTier(1, "Spark", 6, 1.5f, 0), level: 4);
+            // BasicSpell is gone (docs/PLAN_SHOP.md Gate 4) -- an authored
+            // skill stands in wherever this fixture used to lean on the free
+            // "Spark" row every character got regardless of what they had
+            // learned.
+            var skill = new ResolvedSkill("spark", "Spark", "", "shawn", 1, SkillEffect.DamageSingle,
+                SkillTargeting.SingleEnemy, 6, 0, false, 100, 0, false,
+                null, SpellPresentation.None, 0);
+            var kit = new PlayerKit("shawn", CharacterRole.Tank, new[] { skill }, null, null, level: 4);
             var enemyKits = foes
                 .Select(f => new EnemyKit(new ResolvedEnemy(f.Name.ToLowerInvariant(), f.Name,
                     new StatBlock(), 5, 3, false,

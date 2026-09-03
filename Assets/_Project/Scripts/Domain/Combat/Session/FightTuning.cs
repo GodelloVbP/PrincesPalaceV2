@@ -77,19 +77,6 @@ namespace PrincesPalace.Domain.Combat.Session
         public const int LongCountEvery = 3;
         public const int LongCountPercent = 40;
 
-        // ---- role riders -----------------------------------------------------
-        //
-        // Every role gets one small extra effect on top of Skill's plain
-        // damage, so the squad's roles actually play differently in a fight
-        // rather than only differing on the Character Sheet.
-
-        public const float AssassinExecuteHealthFraction = 0.3f;
-        public const float AssassinExecuteBonusMultiplier = 1.5f;
-        public const float TankSkillLifestealFraction = 0.3f;
-        public const int CrowdControlDefenseShred = 2;
-        public const int SupportSkillPartyHealAmount = 150;
-        public const int UtilitySkillSignatureGain = 3;
-
         // ---- relics ----------------------------------------------------------
 
         // 99 turns is "for the rest of the fight" spelled as a duration. The

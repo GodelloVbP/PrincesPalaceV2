@@ -62,8 +62,14 @@ namespace PrincesPalace.PlayModeTests
             var foe = new CombatantState("Front", false, 5000, 10, 8, 4);
             var encounter = new CombatEncounter(new[] { hero }, new[] { foe });
 
-            var kit = new PlayerKit("shawn", CharacterRole.Tank, null, null, attackType,
-                new ResolvedSpellTier(1, "Spark", 6, 1.5f, 0), level: 4);
+            // BasicSpell is gone (docs/PLAN_SHOP.md Gate 4) -- an authored
+            // skill stands in wherever this fixture used to lean on the free
+            // "Spark" row every character got regardless of what they had
+            // learned.
+            var skill = new ResolvedSkill("spark", "Spark", "", "shawn", 1, SkillEffect.DamageSingle,
+                SkillTargeting.SingleEnemy, 6, 0, false, 100, 0, false,
+                null, SpellPresentation.None, 0);
+            var kit = new PlayerKit("shawn", CharacterRole.Tank, new[] { skill }, null, attackType, level: 4);
             var enemyKit = new EnemyKit(
                 new ResolvedEnemy("front", "Front", new StatBlock(), 5, 3, false,
                     DamageType.Physical, DamageType.Physical, 0), false);

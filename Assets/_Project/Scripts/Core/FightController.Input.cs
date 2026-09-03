@@ -245,27 +245,30 @@ namespace PrincesPalace
             if (!target.IsAlive) return;
 
             // AGAINST THE OPTION LIST, not the kit, resolved ONCE and shared
-            // by the reach check below and the cast below that -- see the
-            // Skill case's own comment for why row position and kit index
-            // are not the same number.
+            // by the reach check below and the cast below that -- row
+            // position and kit index used to disagree the moment the
+            // appended basic-spell row existed; now every skill-branch row
+            // has a real ResolvedSkillOption behind it (docs/PLAN_SHOP.md §4
+            // Phase E), so a row that does not resolve is simply an invalid
+            // selection rather than a second, synthesised kind of row.
             IReadOnlyList<ResolvedSkillOption> options = null;
             int row = -1;
-            bool isBasic = false;
+            bool validSkillRow = false;
             if (_menu.Branch == MenuBranch.Skill)
             {
                 options = _session.SkillOptionsFor(_session.Current);
                 row = _menu.Selection;
-                isBasic = row < 0 || row >= options.Count;
+                validSkillRow = row >= 0 && row < options.Count;
             }
 
             // THE FRONT-RANK RULE, asked about whatever this click would
             // actually cast. Attack is always the plain Strike, which has
             // always reached this way. A skill reaches the same way only when
-            // it says meleeReach -- the basic spell and every authored skill
-            // that leaves the field unset are ranged or magical and were
-            // never subject to this rule, so a click on them never asks.
+            // it says meleeReach -- every authored skill that leaves the
+            // field unset is ranged or magical and was never subject to this
+            // rule, so a click on it never asks.
             bool meleeSelected = _menu.Branch == MenuBranch.Attack
-                || (_menu.Branch == MenuBranch.Skill && !isBasic && options[row].Skill.MeleeReach);
+                || (_menu.Branch == MenuBranch.Skill && validSkillRow && options[row].Skill.MeleeReach);
 
             // The front-rank rule is the SESSION's to state, not the view's --
             // it is a combat rule that happens to be enforced at a click.
@@ -283,8 +286,7 @@ namespace PrincesPalace
                     break;
 
                 case MenuBranch.Skill:
-                    if (isBasic) _session.ExecuteSkill(target);
-                    else _session.CastSkill(options[row].Index, target);
+                    if (validSkillRow) _session.CastSkill(options[row].Index, target);
                     break;
 
                 default:

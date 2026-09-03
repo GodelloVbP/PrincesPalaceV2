@@ -42,8 +42,6 @@ namespace PrincesPalace.Domain.Tests
                 "a lone reachable foe must offer an Attack");
             Assert.IsTrue(legal.Any(a => a.Kind == FightActionKind.HoldBack),
                 "HoldBack is always legal");
-            Assert.IsFalse(legal.Any(a => a.Kind == FightActionKind.BasicSpell),
-                "no basic spell was granted, so none should be offered");
             Assert.IsFalse(legal.Any(a => a.Kind == FightActionKind.Skill),
                 "no skills were granted, so none should be offered");
             Assert.IsFalse(legal.Any(a => a.Kind == FightActionKind.Item),

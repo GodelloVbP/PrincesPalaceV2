@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Mud Burst
   description: The bog answers. It arrives wearing whatever it picked up on the way.
   characterId: sheep
-  unlockLevel: 3
+  unlockLevel: 2147483647
   effect: 0
   targeting: 0
   manaCost: 8
@@ -64,6 +64,6 @@ MonoBehaviour:
   summonEnemyId: 
   summonCap: 0
   meleeReach: 0
-  bookOnly: 0
+  bookOnly: 1
   bookTier: 1
   sortOrder: 5

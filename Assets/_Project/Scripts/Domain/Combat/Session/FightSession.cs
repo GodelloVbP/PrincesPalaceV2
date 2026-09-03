@@ -360,7 +360,7 @@ namespace PrincesPalace.Domain.Combat.Session
             ApplyFinalDamage(actor, target, damage);
 
             // Runic's tempo rider: a PLAIN swing (this method, never a skill
-            // cast -- see ExecuteSkillInner/CastSkill, which never call this)
+            // cast -- see CastSkill, which never calls this)
             // arms a one-shot mana discount for the actor's NEXT skill.
             // Armed here rather than inside ApplyFinalDamage because
             // ApplyFinalDamage is shared with both skill paths and has no
@@ -530,7 +530,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 // dodgeAlreadyResolved: true -- NOT a second dodge roll. This
                 // rider only ever runs from ApplyFinalDamage, which only runs
                 // once the parent swing already landed (a miss returns out of
-                // ResolveAttackSwing/ExecuteSkillInner/etc. long before
+                // ResolveAttackSwing/CastSkill/etc. long before
                 // ApplyFinalDamage is reached). The blade already connected;
                 // "the elemental charge on the blade separately whiffs" is
                 // not a distinct event this combat model has a concept for,
