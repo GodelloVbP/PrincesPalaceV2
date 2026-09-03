@@ -52,6 +52,11 @@ namespace PrincesPalace
         [SerializeField] internal GameObject characterSheetPanel;
         [SerializeField] internal Button abandonButton;
 
+        // The in-run shop, mounted here too (F10, docs/PLAN_SHOP.md) --
+        // entered from the map, no scene of its own, opened and closed by
+        // MapController.Walk.cs's Arrive() rather than by Navigation.Go.
+        [SerializeField] internal ShopController shop;
+
         // The painted room icons. Bound by the wiring step rather than loaded
         // here: an "Assets/..." path is an editor-only address, and Core cannot
         // see the editor assembly.
@@ -163,6 +168,17 @@ namespace PrincesPalace
 
         public void SetCharacterSheet(bool open, bool inventory = false) =>
             SheetPanel.Set(characterSheetPanel, open, inventory);
+
+        // Gate 2's replacement for the gate-1 shim (MapController.Walk.cs's
+        // Arrive()): a nested panel, so no Navigation.Go, and closing it is
+        // the shop's own LEAVE button rather than anything this method does.
+        public void OpenShop()
+        {
+            if (shop == null) return;
+
+            shop.Finished = Refresh;
+            shop.Open();
+        }
 
         public void Refresh()
         {

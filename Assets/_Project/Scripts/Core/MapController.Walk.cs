@@ -179,19 +179,13 @@ namespace PrincesPalace
                     return;
 
                 case RunOrchestrator.Arrival.Shop:
-                    // GATE 1 HAS NO SHOP SCREEN YET, and a room that opens
-                    // nothing and clears nothing would strand a human player
-                    // on a node they cannot leave. So the stock rolls (that
-                    // is the half being measured), the room is left
-                    // immediately, and the map says what it has always said
-                    // about a shop.
-                    //
-                    // Gate 2 replaces this with OpenShop() -- a nested panel,
-                    // so no Navigation.Go -- and LeaveShop moves to the
-                    // panel's own LEAVE button.
-                    RunOrchestrator.LeaveShop();
-                    RoomResolver.Resolve(RunManager.Run, RoomType.Shop);
-                    Refresh();
+                    // A nested panel, like the fight is a scene -- no
+                    // Navigation.Go, and the room stays uncleared until the
+                    // shop's own LEAVE button calls RunOrchestrator.LeaveShop
+                    // (ShopController.Leave -> MapController.Refresh via
+                    // Finished). Replaces gate 1's shim, which had no screen
+                    // to open and left immediately instead.
+                    OpenShop();
                     return;
 
                 case RunOrchestrator.Arrival.Resolved:

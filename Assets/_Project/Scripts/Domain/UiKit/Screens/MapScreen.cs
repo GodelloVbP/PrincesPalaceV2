@@ -143,6 +143,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // between rooms is when gear is meant to change.
         public SystemMenuScreen SystemMenu;
 
+        // The in-run shop, entered from a Shop room (F10, docs/PLAN_SHOP.md).
+        // Nested here the same way the draft nests in the hub -- entered from
+        // this screen, no scene of its own. Declared LAST among Root's
+        // children (below) so it draws over the system menu too -- there is
+        // no dossier access from inside the shop in v1 (docs/PLAN_SHOP.md
+        // §2c), and drawing on top is what makes that true rather than a
+        // z-order accident.
+        public ShopScreen Shop;
+
         // Anchored to the content rect's LEFT edge, which is the origin every
         // MapLayout x is measured from. Declared once here so no construction
         // site restates it and drifts.
@@ -248,6 +257,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var systemMenu = SystemMenuScreen.Build();
             screen.SystemMenu = systemMenu;
 
+            var shop = ShopScreen.Build();
+            screen.Shop = shop;
+
             // The old paperdoll is gone; the system menu's Character pane is
             // the character screen now. SheetPanel opens the menu instead, so
             // every caller -- C, I, Escape, the hub's building -- reaches the
@@ -257,7 +269,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // the scrolling wood rather than under it. The sheet is LAST, so
             // the modal dims the map and everything on it.
             screen.Root = Ui.Panel("MapPanel", UiSize.Fill,
-                viewport, title, depth, gold, abandon, roomMessage, systemMenu.Root);
+                viewport, title, depth, gold, abandon, roomMessage, systemMenu.Root, shop.Root);
 
             return screen;
         }

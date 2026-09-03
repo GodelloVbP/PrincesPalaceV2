@@ -566,6 +566,7 @@ public static class ScreenRegistry
     private static ScreenDef Map()
     {
         MapScreen screen = null;
+        ShopController shopController = null;
 
         return new ScreenDef
         {
@@ -611,8 +612,77 @@ public static class ScreenRegistry
                 map.restIcon = SceneBuilder.LoadSpriteByKey(MapScreen.RestIconKey);
                 map.eventIcon = SceneBuilder.LoadSpriteByKey(MapScreen.EventIconKey);
                 map.treasureIcon = SceneBuilder.LoadSpriteByKey(MapScreen.TreasureIconKey);
+
+                shopController = WireShop(result, screen.Shop);
+                map.shop = shopController;
+            },
+
+            // Gate 2's own count bindings (docs/PLAN_SHOP.md §7.3): the six
+            // offer arrays and the PACK modal's row array. The four/three/
+            // three counts are ShopStock's own constants (§7.1 point 3,
+            // revised in docs/handoffs/shop_v2/GAP_AUDIT.md's Gate 1 exit
+            // record); this pairing is what stops a future count change on
+            // one side from orphaning cards on the other.
+            CountBindings = () => new[]
+            {
+                Count("ShopController.gearCards", screen.Shop.GearCards.Select(c => c.Button).ToList(),
+                    () => shopController.gearCards.Length),
+                Count("ShopController.bookCards", screen.Shop.BookCards.Select(c => c.Button).ToList(),
+                    () => shopController.bookCards.Length),
+                Count("ShopController.relicCards", screen.Shop.RelicCards.Select(c => c.Button).ToList(),
+                    () => shopController.relicCards.Length),
+                Count("ShopController.packRows", screen.Shop.PackRows.Select(r => r.Row).ToList(),
+                    () => shopController.packRows.Length),
             },
         };
+    }
+
+    private static ShopController WireShop(UiEmitResult result, ShopScreen screen)
+    {
+        var shop = result.Attach<ShopController>(screen.Root);
+
+        shop.goldLabel = result.Tmp(screen.GoldLabel);
+        shop.leaveButton = result.Button(screen.LeaveButton);
+        shop.leaveButtonLabel = result.Tmp(screen.LeaveButtonLabel);
+        shop.detailLabel = result.Tmp(screen.DetailLabel);
+        shop.buyButton = result.Button(screen.BuyButton);
+        shop.packButton = result.Button(screen.PackButton);
+
+        shop.gearReroll = result.Button(screen.GearReroll);
+        shop.gearRerollLabel = result.Tmp(screen.GearRerollLabel);
+        shop.gearCards = screen.GearCards.Select(c => result.Button(c.Button)).ToArray();
+        shop.gearNames = screen.GearCards.Select(c => result.Tmp(c.Name)).ToArray();
+        shop.gearMetas = screen.GearCards.Select(c => result.Tmp(c.Meta)).ToArray();
+        shop.gearPrices = screen.GearCards.Select(c => result.Tmp(c.Price)).ToArray();
+
+        shop.bookReroll = result.Button(screen.BookReroll);
+        shop.bookRerollLabel = result.Tmp(screen.BookRerollLabel);
+        shop.bookCards = screen.BookCards.Select(c => result.Button(c.Button)).ToArray();
+        shop.bookNames = screen.BookCards.Select(c => result.Tmp(c.Name)).ToArray();
+        shop.bookMetas = screen.BookCards.Select(c => result.Tmp(c.Meta)).ToArray();
+        shop.bookPrices = screen.BookCards.Select(c => result.Tmp(c.Price)).ToArray();
+
+        shop.relicReroll = result.Button(screen.RelicReroll);
+        shop.relicRerollLabel = result.Tmp(screen.RelicRerollLabel);
+        shop.relicCards = screen.RelicCards.Select(c => result.Button(c.Button)).ToArray();
+        shop.relicNames = screen.RelicCards.Select(c => result.Tmp(c.Name)).ToArray();
+        shop.relicMetas = screen.RelicCards.Select(c => result.Tmp(c.Meta)).ToArray();
+        shop.relicPrices = screen.RelicCards.Select(c => result.Tmp(c.Price)).ToArray();
+
+        shop.packRoot = result.Go(screen.PackRoot);
+        shop.packCloseButton = result.Button(screen.PackCloseButton);
+        shop.packEmptyHint = result.Go(screen.PackEmptyHint);
+        shop.packPrevButton = result.Button(screen.PackPrevPage);
+        shop.packNextButton = result.Button(screen.PackNextPage);
+        shop.packPageLabel = result.Tmp(screen.PackPageLabel);
+        shop.packRows = screen.PackRows.Select(r => result.Go(r.Row)).ToArray();
+        shop.packNames = screen.PackRows.Select(r => result.Tmp(r.Name)).ToArray();
+        shop.packMetas = screen.PackRows.Select(r => result.Tmp(r.Meta)).ToArray();
+        shop.packPrices = screen.PackRows.Select(r => result.Tmp(r.Price)).ToArray();
+        shop.packSellOneButtons = screen.PackRows.Select(r => result.Button(r.SellOne)).ToArray();
+        shop.packSellAllButtons = screen.PackRows.Select(r => result.Button(r.SellAll)).ToArray();
+
+        return shop;
     }
 
     // The hub's atmosphere. Same bounded hatch as DressAmbience: it ATTACHES

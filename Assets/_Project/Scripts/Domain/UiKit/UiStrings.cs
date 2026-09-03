@@ -452,6 +452,53 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString DraftRarity =
             UiString.Define("draft.rarity", "{0}", "ULTRA-RARE");
 
+        // --- the shop (docs/PLAN_SHOP.md, docs/handoffs/shop_v2) ------------------
+        public static readonly UiString ShopTitle = UiString.Define("shop.title", "SHOP");
+        public static readonly UiString ShopGold =
+            UiString.Define("shop.gold", "{0} G", "9,999,999 G");
+        public static readonly UiString ShopLeave = UiString.Define("shop.leave", "LEAVE");
+        public static readonly UiString ShopLeaveConfirm = UiString.Define("shop.leave_confirm", "LEAVE?");
+        public static readonly UiString ShopBuy = UiString.Define("shop.buy", "BUY");
+        public static readonly UiString ShopPack = UiString.Define("shop.pack", "PACK");
+        public static readonly UiString ShopSectionGear = UiString.Define("shop.section_gear", "GEAR");
+        public static readonly UiString ShopSectionBooks = UiString.Define("shop.section_books", "SPELL BOOKS");
+        public static readonly UiString ShopSectionRelics = UiString.Define("shop.section_relics", "RELICS");
+
+        // Per-section reroll (§7.1 point 7) -- one button per shelf, its own
+        // price, its own counter.
+        public static readonly UiString ShopReroll =
+            UiString.Define("shop.reroll", "REROLL · {0} G", "REROLL · 9999 G");
+        public static readonly UiString ShopRerollNeed =
+            UiString.Define("shop.reroll_need", "NEED {0}", "NEED 9999");
+
+        // A card's own price chip, and what it becomes at each state. NEED is
+        // the SHORTFALL (price minus gold), never the price itself -- showing
+        // the price in red would be showing the wrong number.
+        public static readonly UiString ShopCardPrice =
+            UiString.Define("shop.card_price", "{0} G", "9999 G");
+        public static readonly UiString ShopCardConfirm =
+            UiString.Define("shop.card_confirm", "CONFIRM · {0} G", "CONFIRM · 9999 G");
+        public static readonly UiString ShopCardNeed =
+            UiString.Define("shop.card_need", "NEED {0}", "NEED 9999");
+        public static readonly UiString ShopCardSold = UiString.Define("shop.card_sold", "SOLD");
+        public static readonly UiString ShopCardNoOffer = UiString.Define("shop.card_no_offer", "NO OFFER");
+
+        public static readonly UiString ShopGearMeta =
+            UiString.Define("shop.gear_meta", "TIER {0} · +{1} · {2} AFFIX", "TIER 10 · +5 · 3 AFFIX");
+        public static readonly UiString ShopBookMeta =
+            UiString.Define("shop.book_meta", "MANA {0}", "MANA 999");
+
+        public static readonly UiString ShopDetailEmpty = UiString.Define("shop.detail_empty", "SELECT A CARD");
+
+        public static readonly UiString ShopPackEmpty = UiString.Define("shop.pack_empty", "NOTHING TO SELL");
+        public static readonly UiString ShopPackPage =
+            UiString.Define("shop.pack_page", "{0} / {1}", "99 / 99");
+        public static readonly UiString ShopSellPriceLabel =
+            UiString.Define("shop.sell_price", "SELL · {0} G", "SELL · 9999 G");
+        public static readonly UiString ShopSellOneButton = UiString.Define("shop.sell_one_button", "SELL 1");
+        public static readonly UiString ShopSellAllButton =
+            UiString.Define("shop.sell_all_button", "SELL ALL {0}", "SELL ALL 99");
+
         // --- the glossary --------------------------------------------------------
         public static readonly UiString GlossaryTitle = UiString.Define("glossary.title", "THE RECORD");
         public static readonly UiString GlossaryCount =
@@ -825,6 +872,12 @@ namespace PrincesPalace.Domain.UiKit
             DefeatTitle, DefeatLost, DefeatKept, DefeatGoldLost, DefeatEmbers, DefeatEmbersNone,
             DefeatDepth, DefeatExp, DefeatStatsHeading, DefeatStatLine, DefeatToHub, DefeatInspect,
             DraftTitle, DraftSubtitle, DraftTake, DraftNoRelics, DraftDescend, DraftRarity,
+            ShopTitle, ShopGold, ShopLeave, ShopLeaveConfirm, ShopBuy, ShopPack,
+            ShopSectionGear, ShopSectionBooks, ShopSectionRelics,
+            ShopReroll, ShopRerollNeed,
+            ShopCardPrice, ShopCardConfirm, ShopCardNeed, ShopCardSold, ShopCardNoOffer,
+            ShopGearMeta, ShopBookMeta, ShopDetailEmpty,
+            ShopPackEmpty, ShopPackPage, ShopSellPriceLabel, ShopSellOneButton, ShopSellAllButton,
             GlossaryTitle, GlossaryCount, GlossaryPage, GlossaryEmpty,
             GlossaryLocked, GlossaryLockedBy, GlossaryPick,
             DebugTitle, DebugGiveGold, DebugGiveEmbers, DebugGiveOneEmber, DebugAdd,

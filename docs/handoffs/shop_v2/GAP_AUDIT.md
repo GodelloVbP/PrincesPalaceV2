@@ -181,6 +181,75 @@ directly, not laid out first and reconciled after.
 
 ### Gate 2
 
+**Recorded 2026-09-03, branch `shop-v2`.** Built: `Domain/UiKit/Screens/ShopScreen.cs`
+(the tree -- header, three sections at gate 1's decided counts of 4 gear /
+3 books / 3 relics, a detail label, BUY/PACK/LEAVE, the PACK modal with six
+paged rows), `Core/ShopController.cs` (single global selection + BUY per
+§7.1 point 6, per-section REROLL, the PACK modal's sell-one/sell-all, the
+two-press LEAVE confirm), the nesting into `MapScreen` and the wiring +
+`CountBindings` in `ScreenRegistry.Map()`, `MapController.OpenShop()`
+replacing the gate-1 shim in `MapController.Walk.cs`'s `Arrive()`, and the
+new `UiStrings` entries.
+
+**Deviations from README §3/§3f, stated rather than silently taken:**
+
+1. **Layout is a flat vertical stack, not the five-panel pixel grid.** §3f's
+   coordinates were drawn against a prototype with painted borders and card
+   art neither of which exist for this screen yet; a plain layout the audit
+   can check today was chosen over copying coordinates nothing has verified
+   against this screen's real content. Restyling to the five-panel shape is
+   follow-up, not done here.
+2. **The tooltip is a fixed-position detail label, not a floating overlay
+   that follows the focused-or-hovered card (§3d).** It shows whatever is
+   selected under the single-selection model; there is no runtime pointer-
+   tracking pass in this gate.
+3. **No keyboard navigation graph and no `UiMotion.DurationScale`** (§7.1
+   points 8). Mouse only. The navigation model §7.1 asked to build now, so a
+   gamepad could be wired later without a second model, was not built --
+   flagged rather than quietly dropped, since it is real scope the review
+   asked for and this gate did not deliver.
+4. **The book section is real UI wired to real content that never appears
+   yet.** `ShopStock.RollBooks` still returns `NO OFFER` for all three cards
+   (gate 3 populates it) -- the section, its cards and its reroll are live
+   and audited, just permanently empty until then.
+
+**What was verified, and what could not be:**
+
+- `ShopScreenTests.TheScreenAuditsCleanAtEveryFrame` and
+  `ItAuditsCleanInsideTheMapItMountsIn` -- `UiAudit` clean at all four
+  `UiFrames` (1920x1080, 2580x1080, 1920x1440, 1920x1200), both standalone
+  and nested inside the real `MapScreen` tree. Card/pack-row counts pinned
+  against `ShopStock`'s own constants, not literals.
+  `ScreenRegistry.Map()`'s new `CountBindings` (four arrays: gear/book/
+  relic cards, pack rows) are declared, matching E4's convention.
+- **NOT verified: a live PlayMode walk (map -> shop -> buy -> leave)
+  through an actual built scene**, the gate's own exit criterion. This
+  needs `Map.unity` (and the four sibling scenes `ScreenBuilder` regenerates
+  together) rebuilt with `ShopController` in the tree, and `git status` at
+  the start of this work already showed `Assets/_Project/Scenes/*.unity`
+  modified by another live session sharing this working tree (`docs/
+  WORKFLOW.md` §4 confirms more than one interactive session was open
+  against this repo during this work). A scene rebuild is a full
+  regeneration -- every `fileID` moves -- and syncing that back to `main`
+  would silently overwrite whatever that session has pending in those five
+  files, which is the exact incident §4's rules exist to prevent. This is
+  the one exit criterion left open, and it is a **process** block, not a
+  code one: the fix is coordinating a scene rebuild (the "freeze protocol"
+  §4 already describes for a multi-file shared change) once Scenes/
+  ownership is clear, then adding the walk test §7.3 asks for, not writing
+  more screen code.
+- The four pre-existing `TooManyCommands` bugs from gate 1's batch are
+  unrelated to this screen and untouched.
+
+**Human checklist (time to first purchase, can the tester explain why the
+offer they bought was good, did anyone try to sell a worn piece, did anyone
+misread `NEED n` as the price) is NOT run.** It needs the same built scene
+the walk test does, so it waits on the same block above.
+
+Full suite green throughout (`EditMode 2748/2748`, `PlayMode 722/722`, 25
+skipped, unchanged from before this gate -- no scenes were rebuilt so no
+PlayMode test newly exercises the shop).
+
 ### Gate 3
 
 ### Gate 4
