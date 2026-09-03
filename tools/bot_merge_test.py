@@ -462,5 +462,88 @@ def num_or_float(value):
     return bot_merge.num(value)
 
 
+def _room(step, learned=0, unassigned=0, shop_offers=None, gold_in=0, room_type="Fight"):
+    return {
+        "step": step,
+        "roomType": room_type,
+        "learnedSpellCountAfterRoom": learned,
+        "unassignedSpellBookCountAfterRoom": unassigned,
+        "goldOnArrival": gold_in,
+        "shopOffers": shop_offers or [],
+    }
+
+
+def _run(rooms, capped=False, death_step=0):
+    return {"capped": capped, "deathStep": death_step, "rooms": rooms}
+
+
+class SpellAcquisitionTests(unittest.TestCase):
+    """Gate 3's own exit numbers (docs/PLAN_SHOP.md 7.3, Phase D 1-3).
+
+    Pure-function tests against bot_merge.spell_acquisition_json directly --
+    the shape it reads (rooms[].learnedSpellCountAfterRoom etc.) is simple
+    enough not to need a whole batch/shard fixture to exercise honestly.
+    """
+
+    def test_learned_first_spell_by_step_counts_runs_that_reached_it(self):
+        runs = [
+            # Died AT step 8, having just learned a spell there.
+            _run([_room(4, learned=0), _room(8, learned=1)], death_step=8),
+            # Died at step 8 too, nothing learned.
+            _run([_room(4, learned=0), _room(8, learned=0)], death_step=8),
+            # Died at step 5 -- never reaches step 8, excluded from that
+            # step's denominator entirely rather than counted as "no".
+            _run([_room(4, learned=0)], death_step=5),
+        ]
+
+        out = bot_merge.spell_acquisition_json(runs, cap=40)
+
+        self.assertEqual(2, out["learnedFirstSpellByStep"]["8"]["n"])
+        self.assertEqual(num_or_float(0.5), out["learnedFirstSpellByStep"]["8"]["share"])
+        self.assertIsNone(out["learnedFirstSpellByStep"]["16"])
+
+    def test_slots_filled_per_leg_divides_by_legs_reached(self):
+        # Depth 16 (capped) = two legs, three spells learned by the end.
+        runs = [_run([_room(8, learned=1), _room(16, learned=3)], capped=True)]
+
+        out = bot_merge.spell_acquisition_json(runs, cap=16)
+
+        self.assertEqual(num_or_float(1.5), out["slotsFilledPerLegMean"])
+
+    def test_zero_books_at_leg_2_is_compared_against_at_least_one(self):
+        runs = [
+            _run([_room(8, learned=0, unassigned=0)], capped=True, death_step=0),
+            _run([_room(8, learned=1, unassigned=0)], capped=True, death_step=0),
+        ]
+        # Depths differ so the two medians can't accidentally agree.
+        runs[0]["capped"] = True
+        runs[1]["capped"] = False
+        runs[1]["deathStep"] = 12
+
+        out = bot_merge.spell_acquisition_json(runs, cap=40)
+
+        self.assertEqual(40, out["depthZeroBooksAtLeg2"])
+        self.assertEqual(12, out["depthSomeBooksAtLeg2"])
+
+    def test_shop_visits_showing_an_unaffordable_book_are_shared_against_all_visits(self):
+        affordable_book = {"kind": "Book", "price": 10}
+        unaffordable_book = {"kind": "Book", "price": 500}
+        runs = [
+            _run([_room(8, shop_offers=[unaffordable_book], gold_in=50, room_type="Shop")], capped=True),
+            _run([_room(8, shop_offers=[affordable_book], gold_in=50, room_type="Shop")], capped=True),
+        ]
+
+        out = bot_merge.spell_acquisition_json(runs, cap=40)
+
+        self.assertEqual(num_or_float(0.5), out["shopVisitsShowingUnaffordableBookShare"])
+
+    def test_no_shop_visits_reports_null_rather_than_zero(self):
+        runs = [_run([_room(8, room_type="Fight")], capped=True)]
+
+        out = bot_merge.spell_acquisition_json(runs, cap=40)
+
+        self.assertIsNone(out["shopVisitsShowingUnaffordableBookShare"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

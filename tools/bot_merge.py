@@ -237,6 +237,100 @@ def arrival_gold_by_step(runs):
     return out
 
 
+# Steps this section reads P(learned a first spell) at -- one per boss
+# (docs/PLAN_SHOP.md 7.3 Gate 3, the plan's own Phase D numbers 1-3).
+SPELL_ACQUISITION_STEPS = [8, 16, 24, 32]
+
+
+def _rooms_up_to(run, step):
+    """Every room this run recorded at or before `step`, in order."""
+    return [room for room in run.get("rooms", []) if room.get("step", 0) <= step]
+
+
+def spell_acquisition_json(runs, cap):
+    """Gate 3's own exit numbers (docs/PLAN_SHOP.md 7.3, Phase D 1-3).
+
+    Every RoomTrace carries learnedSpellCountAfterRoom /
+    unassignedSpellBookCountAfterRoom now (both bookOnly-inert during Phase
+    A/gate 3 -- this measures ACQUISITION, not combat impact, which is the
+    whole point of shipping the loop before the flip). Null fields are the
+    honest answer for a cell that never reached the step in question, same
+    posture arrival_gold_by_step already takes.
+    """
+    learned_by_step = {}
+    for step in SPELL_ACQUISITION_STEPS:
+        reached = 0
+        learned = 0
+        for run in runs:
+            # REACHED means the run's own depth got there, not merely "has a
+            # room recorded before this step" -- a run that died at step 5
+            # has a step-4 room too, and counting it toward "reached step 8"
+            # would be exactly the depth-of-8 share reading as depth-of-4.
+            if depth_of(run, cap) < step:
+                continue
+
+            rooms = _rooms_up_to(run, step)
+            if not rooms:
+                continue
+            reached += 1
+            if rooms[-1].get("learnedSpellCountAfterRoom", 0) > 0:
+                learned += 1
+
+        learned_by_step[str(step)] = None if reached == 0 else {
+            "share": num(share(learned, reached)),
+            "n": reached,
+        }
+
+    # Slots filled per leg, at the DEEPEST room each run reached -- a leg is
+    # eight steps, so this is learnedSpellCount / (depth / 8), floored at one
+    # leg so a run that died on step 3 is not divided by a fraction.
+    slots_per_leg = []
+    for run in runs:
+        rooms = run.get("rooms", [])
+        if not rooms:
+            continue
+        depth = depth_of(run, cap)
+        legs = max(1.0, depth / 8.0)
+        slots_per_leg.append(rooms[-1].get("learnedSpellCountAfterRoom", 0) / legs)
+
+    # Zero books entering leg 2 (step 9) against at least one -- "books" here
+    # means ACQUIRED, learned or still unassigned either counts, since a
+    # book sitting unassigned still says the loop found something.
+    zero_at_leg2 = []
+    some_at_leg2 = []
+    for run in runs:
+        rooms = _rooms_up_to(run, 8)
+        if not rooms:
+            continue
+        last = rooms[-1]
+        total = last.get("learnedSpellCountAfterRoom", 0) + last.get("unassignedSpellBookCountAfterRoom", 0)
+        (some_at_leg2 if total > 0 else zero_at_leg2).append(depth_of(run, cap))
+
+    # Shop visits that showed an unaffordable book -- the shelf's own
+    # roll already excludes a book every fielded character knows, so a
+    # shown-but-unaffordable book card is the honest "wanted it, could not
+    # pay" reading without needing per-character eligibility replayed here.
+    shop_visits_with_unaffordable_book = 0
+    total_shop_visits = 0
+    for run in runs:
+        for room in shop_rooms(run):
+            total_shop_visits += 1
+            gold_in = room.get("goldOnArrival", 0)
+            if any(c.get("kind") == "Book" and c.get("price", 0) > gold_in for c in room.get("shopOffers", [])):
+                shop_visits_with_unaffordable_book += 1
+
+    return {
+        "learnedFirstSpellByStep": learned_by_step,
+        "slotsFilledPerLegMean": num(sum(slots_per_leg) / len(slots_per_leg)) if slots_per_leg else None,
+        "depthZeroBooksAtLeg2": num(percentile(sorted(zero_at_leg2), 0.5)) if zero_at_leg2 else None,
+        "depthSomeBooksAtLeg2": num(percentile(sorted(some_at_leg2), 0.5)) if some_at_leg2 else None,
+        "shopVisitsShowingUnaffordableBookShare": (
+            None if total_shop_visits == 0
+            else num(share(shop_visits_with_unaffordable_book, total_shop_visits))
+        ),
+    }
+
+
 def shop_json(runs):
     """Everything gate 1 asks about a shop visit (docs/PLAN_SHOP.md 7.3).
 
@@ -490,6 +584,7 @@ def cell_json(runs, cap):
         ),
         "itemEquipRate": equip_rate(r.get("rooms", []) for r in runs),
         "shop": shop_json(runs),
+        "spellAcquisition": spell_acquisition_json(runs, cap),
     }
     return out
 

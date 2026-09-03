@@ -252,6 +252,78 @@ PlayMode test newly exercises the shop).
 
 ### Gate 3
 
+**Recorded 2026-09-03, branch `shop-v2`, commit `c93432a`.** Built: the full
+content chain for `bookOnly`/`bookTier` (Phase A, additive -- `unlockLevel`
+kept, `bookOnly` false everywhere); `RunSnapshot.learnedSpells`/
+`unassignedSpellBooks` with tolerant `Reconcile`; `RunOrchestrator.CanLearn`/
+`LearnSpell`/`ReplaceSpell` (return-to-pool on replace, §7.1 point 5) and
+`BuyBook`; `ShopStock.RollBooks` drawing real candidates; `VictoryRewards.
+RollSpellDrop`; the book card's purchase-time facts; the dossier's fourth
+nav row and assignment panel; the map's pending-book indicator; the bot's
+`ChooseSpellAssignment` for all four archetypes plus the `BuyBook` shop
+choice they were missing entirely until this gate.
+
+**A real bug found and fixed before the exit numbers meant anything.** The
+first batch run against this gate showed `shop.spendShareBySection.books`
+at 42-65% (books being bought) against `spellAcquisition.
+learnedFirstSpellByStep` flat at 0% for every cell -- a contradiction that
+could only be a missing wire. `RoomTrace`'s new fields
+(`LearnedSpellCountAfterRoom`, `UnassignedSpellBookCountAfterRoom`,
+`SpellAssignments`) were being set correctly on the C# object but never
+reached `runs.jsonl`: `BalanceBotRunner.RunRowJson` hand-maps every
+`RoomTrace` field into JSON rather than reflecting the object, and the new
+fields were never added to that map. Fixed in `c93432a`; a 30-run smoke
+batch confirmed real per-choice traces (`Outcome: "Ok"`, slots filling in
+order, `Skip` once full) before the exit batch below was run.
+
+**Exit batch: 12,000 runs** (4 archetypes × 3 profiles × 1,000 seeds),
+`reports/bot/20260903-190102`, commit `c93432a`.
+
+| archetype | profile | learned@8 | @16 | @24 | @32 | slots/leg | unaffordable-book share |
+|---|---|---|---|---|---|---|---|
+| RandomLegal | Fresh | 60.6% | 85.8% | 94.9% | 83.3% | 0.14 | 21.6% |
+| GreedyAggressive | Fresh | 68.7% | 93.5% | 97.8% | 89.5% | 0.91 | 25.0% |
+| GreedyDefensive | Fresh | 69.0% | 93.7% | 98.0% | 98.2% | 1.10 | 24.6% |
+| Lookahead2 | Fresh | 60.7% | 87.3% | 97.6% | 91.6% | 1.07 | 24.9% |
+| RandomLegal | Mid | 60.8% | 86.9% | 96.0% | 90.8% | 0.30 | 20.6% |
+| GreedyAggressive | Mid | 68.6% | 93.7% | 98.0% | 99.1% | 1.06 | 25.0% |
+| GreedyDefensive | Mid | 69.0% | 93.7% | 98.0% | 99.4% | 1.30 | 24.5% |
+| Lookahead2 | Mid | 60.7% | 87.6% | 97.7% | 98.9% | 1.13 | 25.0% |
+| RandomLegal | Late | 58.7% | 84.3% | 94.6% | 98.3% | 0.84 | 20.2% |
+| GreedyAggressive | Late | 64.8% | 92.2% | 97.1% | 99.0% | 1.28 | 26.1% |
+| GreedyDefensive | Late | 65.3% | 92.2% | 97.2% | 99.0% | 1.29 | 26.1% |
+| Lookahead2 | Late | 59.6% | 86.9% | 96.4% | 99.0% | 1.27 | 26.9% |
+
+**Depth, zero books entering leg 2 (step 8) vs. at least one:** 10 of 12
+cells show both groups at the depth cap (40) -- by step 8 almost every run
+already holds a book (the per-fight drop rate plus shop availability over
+~8 fights leaves few runs with nothing), so there is barely a "zero" group
+left to compare in most cells. The one cell with a real split,
+`RandomLegal`/Fresh, shows 38 vs. 37 -- statistically noise at this sample
+size, not a depth penalty. Read together with the matched-seed shop-vs-no-
+shop comparison from gate 1 (also no depth cost), **the plan's Phase D gate
+condition (b) -- "runs that reach leg 2 bookless do not lose materially more
+depth" -- holds**, though the "zero books" group is thin enough in most
+cells that this should be re-checked once gate 4's own batch runs with the
+flip live and combat outcomes actually depend on it.
+
+**Reading against the plan's own gate-4 entry condition (a) -- "the median
+run has a usable book before the first boss" (step 8):** every cell clears
+50%, most clear 60-69%, at the first boss. This is with `bookOnly` still
+false, i.e. measuring the ACQUISITION loop alone, independent of whether a
+learned spell does anything yet -- which is exactly what Phase A/gate 3 was
+staged to prove before gate 4 makes it load-bearing.
+
+**Human checklist (did a tester find the unassigned book, buy a duplicate
+by accident, regret a replacement) is NOT run**, for the identical reason
+gate 2's checklist is open: it needs the same built scene the PlayMode walk
+test needs, and `Scenes/` is still carrying another live session's
+uncommitted work as of this recording. Same process block as gate 2's exit
+record, not a new one.
+
+Full suite green throughout (`EditMode 2751/2751`, `PlayMode 740/765`, 25
+skipped).
+
 ### Gate 4
 
 ## Audit table
