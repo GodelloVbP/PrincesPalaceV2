@@ -107,12 +107,65 @@ namespace PrincesPalace.Domain.UiKit
         // margin the audit already runs at everywhere else; nothing between
         // them moved.
         public const float PanelHeaderY = 472f;   // was 486, 9x16 container's top inset
+
+        // RE-DERIVED AS A TOP-DOWN STACK (balance-bot item 3, 2026-09-03).
+        // The flat authored numbers below had two real defects the 456->440.96
+        // width narrowing (05a8bcc) never touched, because neither is a width
+        // problem: (1) PanelKickerY (244) sat BELOW PanelNameY (322) even
+        // though the kicker's own comment says it reads "above the name" --
+        // rows were declared in reading order but not in on-screen order, so
+        // the state word printed under the talent's name instead of over it;
+        // (2) PanelBodyHeight (240) was a flat guess that left ~120px of the
+        // rail's own height between the price row and the refusal line
+        // unclaimed by anything -- "does not use the container space".
+        //
+        // Same header/path rows as before (unaffected); everything from the
+        // kicker down is now one running stack, each row's centre computed
+        // from the edge the row above it left, with a named gap between them
+        // -- so a future row insertion (or a font-size change moving a box's
+        // own height) cannot silently reopen either defect the way two
+        // independently-authored constants could.
         public const float PanelPathY = 430f;
-        public const float PanelNameY = 322f;
-        public const float PanelKickerY = 244f;
-        public const float PanelPriceY = 196f;
-        public const float PanelBodyY = 40f;
-        public const float PanelBodyHeight = 240f;
+        private const float PanelHeaderHeight = 44f;
+        private const float PanelPathHeight = 34f;
+        private const float PanelKickerHeight = 22f;
+        private const float PanelNameHeight = 96f;
+        private const float PanelPriceHeight = 26f;
+        private const float PanelRefusalHeight = 60f;
+
+        private const float GapPathToKicker = 16f;
+        private const float GapKickerToName = 10f;
+        private const float GapNameToPrice = 12f;
+        private const float GapPriceToBody = 16f;
+        private const float GapBodyToRefusal = 16f;
+
+        private static float PathBottomEdge => PanelPathY - PanelPathHeight * 0.5f;
+
+        // KICKER NOW ABOVE THE NAME, matching its own "the state, above the
+        // name" comment instead of contradicting it.
+        public static float PanelKickerY =>
+            PathBottomEdge - GapPathToKicker - PanelKickerHeight * 0.5f;
+        private static float KickerBottomEdge => PanelKickerY - PanelKickerHeight * 0.5f;
+
+        public static float PanelNameY =>
+            KickerBottomEdge - GapKickerToName - PanelNameHeight * 0.5f;
+        private static float NameBottomEdge => PanelNameY - PanelNameHeight * 0.5f;
+
+        public static float PanelPriceY =>
+            NameBottomEdge - GapNameToPrice - PanelPriceHeight * 0.5f;
+        private static float PriceBottomEdge => PanelPriceY - PanelPriceHeight * 0.5f;
+
+        // THE BODY CLAIMS EVERYTHING DOWN TO THE REFUSAL LINE, rather than a
+        // flat authored guess -- PanelRefusalY stays where it was (the bottom
+        // cluster - refusal/invest/meter/respec - was never part of this
+        // report and is left exactly as built), so the body's own height is
+        // whatever's actually left between the price row and it.
+        private static float BodyTopEdge => PriceBottomEdge - GapPriceToBody;
+        private static float BodyBottomEdge => PanelRefusalY + PanelRefusalHeight * 0.5f + GapBodyToRefusal;
+
+        public static float PanelBodyHeight => BodyTopEdge - BodyBottomEdge;
+        public static float PanelBodyY => (BodyTopEdge + BodyBottomEdge) * 0.5f;
+
         public const float PanelRefusalY = -132f;
         public const float PanelActionY = -320f;
         public const float PanelMeterY = -420f;

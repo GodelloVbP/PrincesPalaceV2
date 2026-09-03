@@ -25,6 +25,62 @@ namespace PrincesPalace.Domain.Tests
         // to satisfy too, and is the only form of this test that survives one
         // being added.
 
+        // ---- the detail rail (balance-bot item 3, 2026-09-03) --------------------
+        //
+        // Pins the rail's rows in on-screen top-to-bottom ORDER (not just
+        // that each box has room), because the regression this closed was an
+        // ordering bug -- the kicker printed below the name it was meant to
+        // sit above -- that a pure non-overlap check would not have caught on
+        // its own.
+
+        [Test]
+        public void DetailRailRowsRunTopToBottomInReadingOrder()
+        {
+            Assert.Greater(ConstellationLayout.PanelHeaderY, ConstellationLayout.PanelPathY);
+            Assert.Greater(ConstellationLayout.PanelPathY, ConstellationLayout.PanelKickerY,
+                "the kicker is the state, printed ABOVE the name - it must sit higher on screen than the name below it");
+            Assert.Greater(ConstellationLayout.PanelKickerY, ConstellationLayout.PanelNameY);
+            Assert.Greater(ConstellationLayout.PanelNameY, ConstellationLayout.PanelPriceY);
+            Assert.Greater(ConstellationLayout.PanelPriceY, ConstellationLayout.PanelBodyY);
+            Assert.Greater(ConstellationLayout.PanelBodyY, ConstellationLayout.PanelRefusalY);
+        }
+
+        [Test]
+        public void DetailRailRowsDoNotOverlap()
+        {
+            // Each row's own half-height clearance against the next, positive
+            // margin required - see ConstellationLayout's own Gap consts.
+            float pathBottom = ConstellationLayout.PanelPathY - 17f;
+            float kickerTop = ConstellationLayout.PanelKickerY + 11f;
+            Assert.Greater(pathBottom, kickerTop);
+
+            float kickerBottom = ConstellationLayout.PanelKickerY - 11f;
+            float nameTop = ConstellationLayout.PanelNameY + 48f;
+            Assert.Greater(kickerBottom, nameTop);
+
+            float nameBottom = ConstellationLayout.PanelNameY - 48f;
+            float priceTop = ConstellationLayout.PanelPriceY + 13f;
+            Assert.Greater(nameBottom, priceTop);
+
+            float priceBottom = ConstellationLayout.PanelPriceY - 13f;
+            float bodyTop = ConstellationLayout.PanelBodyY + ConstellationLayout.PanelBodyHeight * 0.5f;
+            Assert.Greater(priceBottom, bodyTop);
+
+            float bodyBottom = ConstellationLayout.PanelBodyY - ConstellationLayout.PanelBodyHeight * 0.5f;
+            float refusalTop = ConstellationLayout.PanelRefusalY + 30f;
+            Assert.Greater(bodyBottom, refusalTop);
+        }
+
+        [Test]
+        public void DetailRailBodyUsesTheSpaceItActuallyHas()
+        {
+            // Was a flat 240 -- the same failure mode reported on the pane
+            // (item 3): a guessed height that leaves the container's own
+            // room unclaimed. Pinned above its old value so a future
+            // shrink of the rail is a deliberate edit, not a silent revert.
+            Assert.Greater(ConstellationLayout.PanelBodyHeight, 240f);
+        }
+
         [Test]
         public void EveryPathPlotsEverySlot()
         {
