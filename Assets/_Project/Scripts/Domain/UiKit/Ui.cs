@@ -570,7 +570,18 @@ namespace PrincesPalace.Domain.UiKit
             // Larger than the plate on every edge, so a focused button reads
             // as lit rather than as a second, smaller plate underneath the
             // first. Overflows Visuals by design - see the AllowOverflow.
-            const float GlowMargin = 28f;
+            // 38, not the original 28 - the smaller margin read as a thin
+            // outline rather than a glow at hover; a soft radial sized to
+            // roughly the plate's own footprint plus this margin is what
+            // "medium to medium-strong, centred on the plate" needs at idle
+            // alpha before ThemedButtonState's Selected halo scales it up
+            // further still (see GlowRect/SelectedGlowScale there). Capped
+            // at 38, not pushed further: FightScreenTests.NoAlwaysVisible
+            // PanelStandsInFrontOfAFigureSFeet caught 48 putting the HOLD
+            // BACK verb's glow 2px into the front stage slot's foot band --
+            // the verb column is always visible, so its glow's static
+            // footprint is load-bearing stage clearance, not just cosmetic.
+            const float GlowMargin = 38f;
             var glowSize = new UiVec(buttonSize.X + GlowMargin, buttonSize.Y + GlowMargin);
 
             // radial_glow: a white radial falloff with no colour of its own,

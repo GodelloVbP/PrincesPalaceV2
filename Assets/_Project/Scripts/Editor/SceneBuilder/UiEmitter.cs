@@ -451,6 +451,7 @@ public static class UiEmitter
 
         var state = go.AddComponent<ThemedButtonState>();
         state.Glow = glowImage;
+        state.GlowRect = glowImage.rectTransform;
         state.Plate = plateImage;
         if (node.SilentClick) state.clickSound = Sound.None;
 

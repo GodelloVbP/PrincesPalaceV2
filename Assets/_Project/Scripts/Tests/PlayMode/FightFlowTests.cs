@@ -203,6 +203,33 @@ namespace PrincesPalace.PlayModeTests
         }
 
         [UnityTest]
+        public IEnumerator OpenVerbGlowsWithAHaloLargerThanItsPlate()
+        {
+            // Item 1 of the 2026-09-03 handoff: Selected (SetMenuState Open,
+            // here Verb0 at rest per the test above it) grows the glow rect
+            // past the plate's own edges instead of only brightening in
+            // place - a halo, not a same-size ring.
+            yield return LoadFight();
+
+            var attackState = Named("Verb0").GetComponent<ThemedButtonState>();
+            Assert.AreEqual(ThemedMenuState.Open, attackState.CurrentMenuState);
+
+            // The fade/scale coroutines are event-driven and unscaled-time
+            // based (~150ms) - give them a couple of frames' worth of real
+            // time to settle before asserting the end state.
+            yield return new WaitForSecondsRealtime(0.25f);
+
+            var plateRect = attackState.Plate.rectTransform;
+            var glowRect = attackState.GlowRect;
+            Assert.Greater(glowRect.lossyScale.x, 1f, "Open state should scale the glow rect past 1.0");
+            Assert.AreEqual(ThemedButtonState.SelectedGlowScale, glowRect.localScale.x, 0.01f);
+
+            float plateWidth = plateRect.rect.width * plateRect.lossyScale.x;
+            float glowWidth = glowRect.rect.width * glowRect.lossyScale.x;
+            Assert.Greater(glowWidth, plateWidth, "the glow should read as a halo around the plate, not the same footprint");
+        }
+
+        [UnityTest]
         public IEnumerator TheOnlyRowLandsJustAboveBack_WhateverTheCount()
         {
             // v1's design preview drew rows at 8-slot positions and left a gap

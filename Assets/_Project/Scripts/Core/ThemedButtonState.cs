@@ -37,17 +37,27 @@ namespace PrincesPalace
     // done - four states changing occasionally do not need a per-frame poll
     // the way a continuous hover-pop does.
     //
-    // Glow/Plate are assigned by UiEmitter once Visuals' children exist
-    // (WireThemedButton), the same internal + [SerializeField] shape every
-    // other builder-wired controller reference in this project uses - see
-    // CODE_STANDARDS.md 4a. This component itself creates no GameObjects
-    // (UiKitLintTests' OnlyTheEmitterMayCreateGameObjects would refuse it).
+    // Glow/Plate/GlowRect are assigned by UiEmitter once Visuals' children
+    // exist (WireThemedButton), the same [SerializeField] builder-wired shape
+    // every other controller reference in this project uses (CODE_STANDARDS.md
+    // 4a) -- public rather than internal because FightFlowTests (a separate
+    // assembly with no InternalsVisibleTo grant) asserts against the real
+    // GlowRect/Plate rects rather than reading them through reflection. This
+    // component itself creates no GameObjects (UiKitLintTests' OnlyTheEmitter
+    // MayCreateGameObjects would refuse it).
     public class ThemedButtonState : MonoBehaviour,
         IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler, IPointerClickHandler,
         ISelectHandler, IDeselectHandler
     {
-        [SerializeField] internal Image Glow;
-        [SerializeField] internal Image Plate;
+        [SerializeField] public Image Glow;
+        [SerializeField] public Image Plate;
+
+        // Glow's own RectTransform, wired alongside Glow (WireThemedButton) so
+        // the Selected halo below can scale it without a GetComponent lookup
+        // on every transition. Null on any button ApplyThemePlateOnly/
+        // ApplyTheme never touched (there are none today, but Glow itself can
+        // already be null pre-wiring - same guard shape).
+        [SerializeField] public RectTransform GlowRect;
 
         // A MENU-STATE SEAM, for a button whose state is not just its own
         // pointer/selection history -- FightController.RefreshVerbs drives
@@ -78,6 +88,17 @@ namespace PrincesPalace
         public const float FocusGlowAlpha = 0.85f;
         private const float FadeSeconds = 0.12f;
 
+        // SELECTED HALO. "Selected" = SetMenuState(Open) or SetMenuState
+        // (Primary), or the button carrying real ISelectHandler focus - the
+        // three cases item 1 of the 2026-09-03 handoff calls out together.
+        // The glow rect itself grows past the plate's edges (not just a
+        // brighter alpha) so a halo shows all the way around the plate, not
+        // only a brighter ring the same size as it. Public for the same
+        // reason FocusGlowAlpha is: a test asserts the real target.
+        public const float SelectedGlowScale = 1.18f;
+        public const float SelectedGlowAlpha = 1f;
+        private const float ScaleSeconds = 0.15f;
+
         private static readonly Color PressedTint = new Color(0.72f, 0.72f, 0.72f, 1f);
         private static readonly Color DisabledTint = new Color(0.45f, 0.45f, 0.45f, 1f);
         private static readonly Color IdleTint = Color.white;
@@ -85,6 +106,7 @@ namespace PrincesPalace
         private Button _button;
         private Coroutine _glowFade;
         private Coroutine _plateFade;
+        private Coroutine _glowScaleFade;
         private bool _isHovering;
         private bool _isSelected;
         private bool _isPressed;
@@ -241,11 +263,20 @@ namespace PrincesPalace
             }
         }
 
+        // Selected = the menu explicitly opened this button's branch, made it
+        // the recommended default, or real focus (gamepad/keyboard) landed on
+        // it via ISelectHandler - a mouse hover alone is NOT Selected, it
+        // stays the plain FocusGlowAlpha ring UpdateGlow already gave it.
+        private bool IsSelectedHalo =>
+            Interactable && (_menuState == ThemedMenuState.Open || _menuState == ThemedMenuState.Primary || _isSelected);
+
         private void UpdateGlow()
         {
             float focusAlpha = Interactable && (_isHovering || _isSelected) ? FocusGlowAlpha : 0f;
             float target = Interactable ? Mathf.Max(MenuStateGlowAlpha(), focusAlpha) : 0f;
+            if (IsSelectedHalo) target = Mathf.Max(target, SelectedGlowAlpha);
             FadeGlowTo(target);
+            ScaleGlowTo(IsSelectedHalo ? SelectedGlowScale : 1f);
         }
 
         private Color MenuStatePlateTint() => _menuState == ThemedMenuState.Open ? OpenPlateTint : IdleTint;
@@ -270,6 +301,28 @@ namespace PrincesPalace
             if (_plateFade != null) StopCoroutine(_plateFade);
             if (!gameObject.activeInHierarchy) { Plate.color = target; return; }
             _plateFade = StartCoroutine(FadeColor(Plate, target));
+        }
+
+        private void ScaleGlowTo(float target)
+        {
+            if (GlowRect == null) return;
+            if (_glowScaleFade != null) StopCoroutine(_glowScaleFade);
+            if (!gameObject.activeInHierarchy) { GlowRect.localScale = new Vector3(target, target, 1f); return; }
+            _glowScaleFade = StartCoroutine(FadeScale(GlowRect, target));
+        }
+
+        private IEnumerator FadeScale(RectTransform rect, float target)
+        {
+            float start = rect.localScale.x;
+            float t = 0f;
+            while (t < ScaleSeconds)
+            {
+                t += Time.unscaledDeltaTime;
+                float s = Mathf.Lerp(start, target, Mathf.Clamp01(t / ScaleSeconds));
+                rect.localScale = new Vector3(s, s, 1f);
+                yield return null;
+            }
+            rect.localScale = new Vector3(target, target, 1f);
         }
 
         private static void SetAlphaImmediate(Image image, float alpha)
@@ -308,6 +361,7 @@ namespace PrincesPalace
         private void ApplyImmediate()
         {
             if (Glow != null) SetAlphaImmediate(Glow, 0f);
+            if (GlowRect != null) GlowRect.localScale = Vector3.one;
             if (Plate != null) Plate.color = Interactable ? MenuStatePlateTint() : DisabledTint;
         }
     }
