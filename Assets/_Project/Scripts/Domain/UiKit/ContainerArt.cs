@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace PrincesPalace.Domain.UiKit
 {
@@ -66,34 +67,7 @@ namespace PrincesPalace.Domain.UiKit
         internal const float ContainerAspect3x2 = 1.49f;
         internal const float ContainerAspect2x1 = 1.98f;
 
-        internal static float Aspect(ContainerKind kind, ContainerRatio ratio)
-        {
-            if (kind == ContainerKind.Container)
-            {
-                switch (ratio)
-                {
-                    case ContainerRatio.ThreeByFour: return ContainerAspect3x4;
-                    case ContainerRatio.NineBySixteen: return ContainerAspect9x16;
-                    case ContainerRatio.ThreeByTwo: return ContainerAspect3x2;
-                    case ContainerRatio.TwoByOne: return ContainerAspect2x1;
-                    default: throw new ArgumentOutOfRangeException(nameof(ratio), ratio, "unhandled ContainerRatio");
-                }
-            }
-
-            // FlagBanner never shipped 3x2/2x1 art -- ThreeByFour/
-            // NineBySixteen are the only ratios that resolve to a real
-            // banner_flag_ asset, so a caller asking for one of the new
-            // container-only ratios on a FlagBanner is a mistake to catch
-            // here rather than hand back a number that names no PNG.
-            switch (ratio)
-            {
-                case ContainerRatio.ThreeByFour: return BannerAspect3x4;
-                case ContainerRatio.NineBySixteen: return BannerAspect9x16;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(ratio), ratio,
-                        $"FlagBanner has no {ratio} art -- only ThreeByFour and NineBySixteen ship a banner_flag_ asset.");
-            }
-        }
+        internal static float Aspect(ContainerKind kind, ContainerRatio ratio) => Spec(kind, ratio).Aspect;
 
         // The band a declared size is allowed to miss the measured aspect by
         // before Container/FlagBanner refuse it outright -- stretching either
@@ -139,55 +113,68 @@ namespace PrincesPalace.Domain.UiKit
         // B.023 -- smaller than the original .017/.030/.017/.030 the pinned
         // insets below were sized against, so those insets (kept as-is)
         // stay comfortably safe rather than needing to shrink.
-        internal static ContentInsetFrac Inset(ContainerKind kind, ContainerRatio ratio)
-        {
-            if (kind == ContainerKind.Container)
-            {
-                switch (ratio)
-                {
-                    case ContainerRatio.ThreeByFour:
-                        return new ContentInsetFrac(left: 0.065f, right: 0.065f, top: 0.045f, bottom: 0.04f);
-                    case ContainerRatio.NineBySixteen:
-                        return new ContentInsetFrac(left: 0.08f, right: 0.08f, top: 0.04f, bottom: 0.04f);
-                    case ContainerRatio.ThreeByTwo:
-                        return new ContentInsetFrac(left: 0.035f, right: 0.035f, top: 0.04f, bottom: 0.045f);
-                    case ContainerRatio.TwoByOne:
-                        return new ContentInsetFrac(left: 0.035f, right: 0.035f, top: 0.055f, bottom: 0.055f);
-                    default:
-                        throw new ArgumentOutOfRangeException(nameof(ratio), ratio, "unhandled ContainerRatio");
-                }
-            }
-
-            switch (ratio)
-            {
-                case ContainerRatio.ThreeByFour:
-                    return new ContentInsetFrac(left: 0.075f, right: 0.075f, top: 0.04f, bottom: 0.18f);
-                case ContainerRatio.NineBySixteen:
-                    return new ContentInsetFrac(left: 0.09f, right: 0.09f, top: 0.035f, bottom: 0.15f);
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(ratio), ratio,
-                        $"FlagBanner has no {ratio} art -- only ThreeByFour and NineBySixteen ship a banner_flag_ asset.");
-            }
-        }
+        internal static ContentInsetFrac Inset(ContainerKind kind, ContainerRatio ratio) => Spec(kind, ratio).Inset;
 
         internal static string Key(ContainerKind kind, ButtonTheme theme, ContainerRatio ratio)
         {
             string stem = kind == ContainerKind.Container ? "container" : "banner_flag";
-            return $"UI/Buttons/Processed/{stem}_{ThemeKey(theme)}_{RatioKey(ratio)}.png";
+            return $"UI/Buttons/Processed/{stem}_{theme.ThemeKey()}_{Spec(kind, ratio).FileSuffix}.png";
         }
 
-        private static string ThemeKey(ButtonTheme theme) => theme.ToString().ToLowerInvariant();
-
-        private static string RatioKey(ContainerRatio ratio)
+        // One statement of "which surfaces exist per (kind, ratio)" -- Aspect,
+        // Inset and Key above all read the same table instead of repeating
+        // the kind/ratio switch three times. A combination this kit never
+        // shipped art for (FlagBanner + ThreeByTwo/TwoByOne) is simply absent
+        // from the dictionary, so the lookup itself is the one throw.
+        private static readonly Dictionary<(ContainerKind, ContainerRatio), ContainerSpec> Specs =
+            new Dictionary<(ContainerKind, ContainerRatio), ContainerSpec>
         {
-            switch (ratio)
+            [(ContainerKind.Container, ContainerRatio.ThreeByFour)] = new ContainerSpec(
+                ContainerAspect3x4, new ContentInsetFrac(left: 0.065f, right: 0.065f, top: 0.045f, bottom: 0.04f), "3x4"),
+            [(ContainerKind.Container, ContainerRatio.NineBySixteen)] = new ContainerSpec(
+                ContainerAspect9x16, new ContentInsetFrac(left: 0.08f, right: 0.08f, top: 0.04f, bottom: 0.04f), "9x16"),
+            [(ContainerKind.Container, ContainerRatio.ThreeByTwo)] = new ContainerSpec(
+                ContainerAspect3x2, new ContentInsetFrac(left: 0.035f, right: 0.035f, top: 0.04f, bottom: 0.045f), "3x2"),
+            [(ContainerKind.Container, ContainerRatio.TwoByOne)] = new ContainerSpec(
+                ContainerAspect2x1, new ContentInsetFrac(left: 0.035f, right: 0.035f, top: 0.055f, bottom: 0.055f), "2x1"),
+            [(ContainerKind.FlagBanner, ContainerRatio.ThreeByFour)] = new ContainerSpec(
+                BannerAspect3x4, new ContentInsetFrac(left: 0.075f, right: 0.075f, top: 0.04f, bottom: 0.18f), "3x4"),
+            [(ContainerKind.FlagBanner, ContainerRatio.NineBySixteen)] = new ContainerSpec(
+                BannerAspect9x16, new ContentInsetFrac(left: 0.09f, right: 0.09f, top: 0.035f, bottom: 0.15f), "9x16"),
+        };
+
+        private static ContainerSpec Spec(ContainerKind kind, ContainerRatio ratio)
+        {
+            if (Specs.TryGetValue((kind, ratio), out var spec))
             {
-                case ContainerRatio.ThreeByFour: return "3x4";
-                case ContainerRatio.NineBySixteen: return "9x16";
-                case ContainerRatio.ThreeByTwo: return "3x2";
-                case ContainerRatio.TwoByOne: return "2x1";
-                default: throw new ArgumentOutOfRangeException(nameof(ratio), ratio, "unhandled ContainerRatio");
+                return spec;
             }
+
+            // FlagBanner never shipped 3x2/2x1 art -- ThreeByFour/
+            // NineBySixteen are the only ratios that resolve to a real
+            // banner_flag_ asset, so a caller asking for one of the new
+            // container-only ratios on a FlagBanner is a mistake to catch
+            // here rather than hand back a number that names no PNG.
+            throw new ArgumentOutOfRangeException(nameof(ratio), ratio,
+                kind == ContainerKind.Container
+                    ? "unhandled ContainerRatio"
+                    : $"FlagBanner has no {ratio} art -- only ThreeByFour and NineBySixteen ship a banner_flag_ asset.");
+        }
+    }
+
+    // One (kind, ratio) surface's full spec -- see ContainerArt.Specs for
+    // where the numbers come from and why they live in one table.
+    internal readonly struct ContainerSpec
+    {
+        internal readonly float Aspect;
+        internal readonly ContentInsetFrac Inset;
+        internal readonly string FileSuffix;
+
+        internal ContainerSpec(float aspect, ContentInsetFrac inset, string fileSuffix)
+        {
+            Aspect = aspect;
+            Inset = inset;
+            FileSuffix = fileSuffix;
         }
     }
 

@@ -107,9 +107,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // (1600x804) already hits the kit's measured 2:1 aspect within
             // 0.5% -- see SystemMenuLayout.PaneInset's own comment -- so no
             // size nudge was needed to make this a valid container.
-            var ground = Ui.Container("ExitsPane", ButtonTheme.Silver, ContainerRatio.TwoByOne,
-                Place.At(0f, 0f), new UiVec(ExitsLayout.PaneWidth, ExitsLayout.PaneHeight));
-            Ui.ContainerContent(ground, ContainerRatio.TwoByOne, "ExitsPaneContent", children.ToArray());
+            var ground = Ui.SystemMenuPane("ExitsPane", "ExitsPaneContent", ButtonTheme.Silver,
+                new UiVec(ExitsLayout.PaneWidth, ExitsLayout.PaneHeight), children.ToArray());
 
             screen.Root = ground;
             return screen;

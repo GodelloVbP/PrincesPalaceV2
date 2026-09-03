@@ -59,9 +59,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // already hits the kit's measured 2:1 aspect within 0.5% -- see
             // SystemMenuLayout.PaneInset's own comment -- so no size nudge
             // was needed.
-            var ground = Ui.Container("RunStatsPane", ButtonTheme.Silver, ContainerRatio.TwoByOne,
-                Place.At(0f, 0f), new UiVec(RunStatsLayout.PaneWidth, RunStatsLayout.PaneHeight));
-            Ui.ContainerContent(ground, ContainerRatio.TwoByOne, "RunStatsPaneContent", children.ToArray());
+            var ground = Ui.SystemMenuPane("RunStatsPane", "RunStatsPaneContent", ButtonTheme.Silver,
+                new UiVec(RunStatsLayout.PaneWidth, RunStatsLayout.PaneHeight), children.ToArray());
 
             screen.Root = ground;
             return screen;

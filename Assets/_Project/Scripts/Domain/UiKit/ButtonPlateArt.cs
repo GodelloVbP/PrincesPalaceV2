@@ -107,7 +107,7 @@ namespace PrincesPalace.Domain.UiKit
 
         internal static string Key(ButtonTheme theme, ButtonPlateShape shape)
         {
-            string t = ThemeKey(theme);
+            string t = theme.ThemeKey();
             switch (shape)
             {
                 case ButtonPlateShape.ThreeByOne: return $"UI/Buttons/Processed/button_plate_{t}_3x1.png";
@@ -119,7 +119,5 @@ namespace PrincesPalace.Domain.UiKit
                 default: return $"UI/Buttons/Processed/button_plate_{t}.png";
             }
         }
-
-        private static string ThemeKey(ButtonTheme theme) => theme.ToString().ToLowerInvariant();
     }
 }

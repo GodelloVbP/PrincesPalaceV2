@@ -296,9 +296,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // PanelWidth x ContentHeight (1600x804) still needs no aspect
             // nudge: it is the same valid 2:1 box every other pane's ground
             // already is.
-            var ground = Ui.Container("RewardTrackPanel", ButtonTheme.Gold, ContainerRatio.TwoByOne,
-                Place.At(0f, 0f), new UiVec(SystemMenuLayout.PanelWidth, SystemMenuLayout.ContentHeight));
-            Ui.ContainerContent(ground, ContainerRatio.TwoByOne, "RewardTrackPanelContent", children.ToArray());
+            var ground = Ui.SystemMenuPane("RewardTrackPanel", "RewardTrackPanelContent", ButtonTheme.Gold,
+                new UiVec(SystemMenuLayout.PanelWidth, SystemMenuLayout.ContentHeight), children.ToArray());
             ground.Inactive();
 
             screen.Root = ground;

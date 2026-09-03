@@ -217,6 +217,22 @@ namespace PrincesPalace.Domain.UiKit
             return content;
         }
 
+        // A system-menu screen's whole pane in one call: a 2:1 Container as
+        // the screen's ground, its content wrapped inside the measured inset.
+        // Exits, Options, Run statistics and Reward track each built this by
+        // hand (a Container call, a ContainerContent call, then `screen.Root
+        // = ground`) with the same six-line "this pane sat on the shared
+        // SystemMenuFill with no ground of its own" comment repeated at every
+        // site -- the ground node is still handed back so a caller that needs
+        // to mark it Inactive() (Reward track, which opens over the dossier)
+        // or read it back into `screen.Root` can do so itself.
+        public static UiNode SystemMenuPane(string groundName, string contentName, ButtonTheme theme, UiVec size, params UiNode[] children)
+        {
+            var ground = Container(groundName, theme, ContainerRatio.TwoByOne, Place.At(0f, 0f), size);
+            ContainerContent(ground, ContainerRatio.TwoByOne, contentName, children);
+            return ground;
+        }
+
         private static void ValidateContainerAspect(string name, string factory, ContainerKind kind, ContainerRatio ratio, UiVec size)
         {
             if (size.X <= 0f || size.Y <= 0f)
@@ -244,27 +260,38 @@ namespace PrincesPalace.Domain.UiKit
 
         // Produces a size that already passes the aspect check above, so a
         // caller who has a height (or width) to fill never has to compute the
-        // matching other axis by hand.
+        // matching other axis by hand. Kind-parameterised; ContainerSizeFor*/
+        // FlagBannerSizeFor* below are thin forwards kept for the ~50 call
+        // sites (mostly tests) that name a kind explicitly.
+        private static UiVec SizeForHeight(ContainerKind kind, ContainerRatio ratio, float height) =>
+            new UiVec(height * ContainerArt.Aspect(kind, ratio), height);
+
+        private static UiVec SizeForWidth(ContainerKind kind, ContainerRatio ratio, float width) =>
+            new UiVec(width, width / ContainerArt.Aspect(kind, ratio));
+
         public static UiVec ContainerSizeForHeight(ContainerRatio ratio, float height) =>
-            new UiVec(height * ContainerArt.Aspect(ContainerKind.Container, ratio), height);
+            SizeForHeight(ContainerKind.Container, ratio, height);
 
         public static UiVec ContainerSizeForWidth(ContainerRatio ratio, float width) =>
-            new UiVec(width, width / ContainerArt.Aspect(ContainerKind.Container, ratio));
+            SizeForWidth(ContainerKind.Container, ratio, width);
 
         public static UiVec FlagBannerSizeForHeight(ContainerRatio ratio, float height) =>
-            new UiVec(height * ContainerArt.Aspect(ContainerKind.FlagBanner, ratio), height);
+            SizeForHeight(ContainerKind.FlagBanner, ratio, height);
 
         public static UiVec FlagBannerSizeForWidth(ContainerRatio ratio, float width) =>
-            new UiVec(width, width / ContainerArt.Aspect(ContainerKind.FlagBanner, ratio));
+            SizeForWidth(ContainerKind.FlagBanner, ratio, width);
 
         // The measured content inset, exposed for a test (or a caller
         // building content by hand rather than through ContainerContent) to
         // check a rect against.
+        private static ContentInsetFrac ContentInset(ContainerKind kind, ContainerRatio ratio) =>
+            ContainerArt.Inset(kind, ratio);
+
         public static ContentInsetFrac ContainerContentInset(ContainerRatio ratio) =>
-            ContainerArt.Inset(ContainerKind.Container, ratio);
+            ContentInset(ContainerKind.Container, ratio);
 
         public static ContentInsetFrac FlagBannerContentInset(ContainerRatio ratio) =>
-            ContainerArt.Inset(ContainerKind.FlagBanner, ratio);
+            ContentInset(ContainerKind.FlagBanner, ratio);
 
         public static UiNode Solid(string name, string colorHex, UiVec size, Place? place = null)
         {

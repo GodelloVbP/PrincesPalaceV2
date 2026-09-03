@@ -115,9 +115,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // PaneWidth x PaneHeight (1600x804) already hits the kit's
             // measured 2:1 aspect within 0.5% -- see SystemMenuLayout.
             // PaneInset's own comment -- so no size nudge was needed.
-            var ground = Ui.Container("OptionsPane", ButtonTheme.Silver, ContainerRatio.TwoByOne,
-                Place.At(0f, 0f), new UiVec(OptionsLayout.PaneWidth, OptionsLayout.PaneHeight));
-            Ui.ContainerContent(ground, ContainerRatio.TwoByOne, "OptionsPaneContent", children.ToArray());
+            var ground = Ui.SystemMenuPane("OptionsPane", "OptionsPaneContent", ButtonTheme.Silver,
+                new UiVec(OptionsLayout.PaneWidth, OptionsLayout.PaneHeight), children.ToArray());
 
             screen.Root = ground;
             return screen;

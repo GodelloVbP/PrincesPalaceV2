@@ -34,6 +34,13 @@ namespace PrincesPalace.Domain.UiKit
         Silver,
     }
 
+    // Shared by ContainerArt and ButtonPlateArt, whose Processed/ filenames
+    // both key on the theme's lowercase name.
+    internal static class ButtonThemeExtensions
+    {
+        internal static string ThemeKey(this ButtonTheme theme) => theme.ToString().ToLowerInvariant();
+    }
+
     // One node of a screen's declared tree. Plain data plus fluent modifiers --
     // it knows nothing about GameObjects, RectTransforms or Unity at all, which
     // is what lets an entire screen be built and audited from an EditMode test
