@@ -249,6 +249,17 @@ namespace PrincesPalace
                 var row = rows[i];
                 submenuNames[i].SetContent(row.Name);
 
+                // interactable BEFORE SetMenuState, not after: SetMenuState
+                // ends in Refresh(), which reads Button.interactable RIGHT
+                // THEN to pick DisabledTint vs the state's own plate tint
+                // (ThemedButtonState.Refresh/MenuStatePlateTint). Setting it
+                // afterward means a skill that just became unaffordable
+                // still paints this repaint's plate off the STALE
+                // interactable flag from before -- one frame of a plate
+                // that reads "castable" for a row `row.Affordable` already
+                // says is not.
+                submenuRows[i].interactable = row.Affordable;
+
                 // THEMED ROWS drive ThemedButtonState.SetMenuState instead of
                 // targetGraphic.color, same split RefreshVerbs already makes
                 // for the verb column -- Open for the selected row, Idle for
@@ -264,8 +275,6 @@ namespace PrincesPalace
                     var frame = submenuRows[i].targetGraphic as UnityEngine.UI.Image;
                     if (frame != null) frame.color = i == _menu.Selection ? RowSelected : RowIdle;
                 }
-
-                submenuRows[i].interactable = row.Affordable;
 
                 // The row's whole state, in one channel. It used to carry the
                 // name at full strength, the meta dimmed and the cost
