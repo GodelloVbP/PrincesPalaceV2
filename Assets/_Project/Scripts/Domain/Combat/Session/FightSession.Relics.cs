@@ -106,15 +106,12 @@ namespace PrincesPalace.Domain.Combat.Session
             BeginSpellPotency(actor);
         }
 
-        // `skill` stays nullable in the signature, but every caller now
-        // supplies a real one -- the basic Skill action that used to leave
-        // it null had no ResolvedSkill of its own (it was the global spell
-        // tier, not a character's kit entry) and is gone (docs/PLAN_SHOP.md
-        // §4 Phase E; see TryFirstRune's own comment below for the same
-        // fact from the other side). Relics that care which spell it was
-        // can rely on it being real; relics that only care THAT one
-        // happened still need not.
-        private void RelicsAfterCast(CombatantState actor, ResolvedSkill? skill, CombatantState target,
+        // `skill` is not nullable -- the basic Skill action that used to
+        // leave it null had no ResolvedSkill of its own (it was the global
+        // spell tier, not a character's kit entry) and is gone
+        // (docs/PLAN_SHOP.md §4 Phase E; see TryFirstRune's own comment
+        // below for the same fact from the other side).
+        private void RelicsAfterCast(CombatantState actor, ResolvedSkill skill, CombatantState target,
                                      int resourceSpent)
         {
             EndPotency();
@@ -196,22 +193,22 @@ namespace PrincesPalace.Domain.Combat.Session
         // genuine question for a heal, a Ward, a Transform, or a sweep that
         // already hit everyone. Left out rather than guessed at.
         //
-        // `skill` is no longer nullable: RelicsAfterCast's one remaining
-        // caller (ResolveCharacterSkill) always has a real ResolvedSkill --
-        // the basic Skill action this null case used to mean is gone
+        // `skill` is not nullable: RelicsAfterCast's one remaining caller
+        // (ResolveCharacterSkill) always has a real ResolvedSkill -- the
+        // basic Skill action this null case used to mean is gone
         // (docs/PLAN_SHOP.md §4 Phase E).
-        private void TryFirstRune(CombatantState actor, ResolvedSkill? skill, CombatantState target,
+        private void TryFirstRune(CombatantState actor, ResolvedSkill skill, CombatantState target,
                                   int resourceSpent)
         {
             if (actor == null || target == null || !target.IsAlive) return;
             if (!HasRelic(actor, RelicEffect.FirstRune)) return;
-            if (!skill.HasValue || skill.Value.Effect != SkillEffect.DamageSingle) return;
+            if (skill.Effect != SkillEffect.DamageSingle) return;
 
             CommitBeat();
             BeginBeat(actor, target, isCast: true);
             AppendMessage($"{actor.Name}'s First Rune flares - the spell lands again!");
 
-            ResolveCharacterSkillInner(actor, skill.Value, target, resourceSpent);
+            ResolveCharacterSkillInner(actor, skill, target, resourceSpent);
         }
 
         // ---- the drowned lantern's mark ---------------------------------------------

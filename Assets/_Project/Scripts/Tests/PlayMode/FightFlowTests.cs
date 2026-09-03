@@ -102,15 +102,7 @@ namespace PrincesPalace.PlayModeTests
 
             _front = foes[0];
             var encounter = new CombatEncounter(new[] { hero }, foes);
-            // BasicSpell is gone (docs/PLAN_SHOP.md Gate 4) -- an authored
-            // skill stands in wherever this fixture used to lean on the free
-            // "Spark" row every character got regardless of what they had
-            // learned, so the Skill-column UI tests below still have exactly
-            // one row to press.
-            var skill = new ResolvedSkill("spark", "Spark", "", "shawn", 1, SkillEffect.DamageSingle,
-                SkillTargeting.SingleEnemy, 6, 0, false, 100, 0, false,
-                null, SpellPresentation.None, 0);
-            var kit = new PlayerKit("shawn", CharacterRole.Tank, new[] { skill }, null, null, level: 4);
+            var kit = PlayModeSparkFixture.Kit();
 
             var enemyKits = foes.Select(f => new EnemyKit(
                 new ResolvedEnemy(f.Name.ToLowerInvariant(), f.Name, new StatBlock(), 5, 3, false,

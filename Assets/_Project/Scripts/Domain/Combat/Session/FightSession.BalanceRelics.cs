@@ -202,12 +202,12 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // ---- rampaging bull's horn ------------------------------------------------------
 
-        // Called from RelicsAfterCast (FightSession.Relics.cs). `skill` is
-        // null for the basic spell action, which is never a convergence
-        // ability, so the null-check alone excludes it correctly.
-        private void RampagingBullsHornOnConvergence(CombatantState actor, ResolvedSkill? skill)
+        // Called from RelicsAfterCast (FightSession.Relics.cs) with the real
+        // cast skill -- BasicSpell, the free action that never counted as a
+        // convergence ability, is gone (docs/PLAN_SHOP.md §4 Phase E).
+        private void RampagingBullsHornOnConvergence(CombatantState actor, ResolvedSkill skill)
         {
-            if (actor == null || !skill.HasValue || skill.Value.Effect != SkillEffect.Transform) return;
+            if (actor == null || skill.Effect != SkillEffect.Transform) return;
             if (!HasRelic(actor, RelicEffect.RampagingBullsHorn)) return;
 
             // Protect is the existing "incoming damage reduced by Magnitude

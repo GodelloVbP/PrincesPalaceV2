@@ -6,8 +6,9 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Combat.Session
 {
-    // Everything the player can do that is not a plain swing: the generic
-    // Skill action, and the fourteen authored skill effects.
+    // Everything the player can do that is not a plain swing: the fourteen
+    // authored skill effects. (The generic, nameless "Skill" action every
+    // character used to get for free is gone -- see the note below.)
     //
     // Ported from v1's FightController.Actions.cs. Every number and every
     // effect comes from the resolved skill, so adding a skill stays a line in

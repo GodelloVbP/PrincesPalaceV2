@@ -23,8 +23,8 @@ namespace PrincesPalace.Domain.Bot
     // for HoldBack). Immutable so a policy can hold one across a Choose call
     // without a caller mutating it out from under it.
     //
-    // THE ONLY PLACE bot code calls ExecuteAttack / CastSkill / ExecuteSkill /
-    // UseConsumable / HoldBack -- see Apply below. A policy never touches
+    // THE ONLY PLACE bot code calls ExecuteAttack / CastSkill / UseConsumable
+    // / HoldBack -- see Apply below. A policy never touches
     // FightSession's commands directly, so every archetype goes through the
     // same legality and dispatch rules.
     public readonly struct FightAction
@@ -139,8 +139,8 @@ namespace PrincesPalace.Domain.Bot
         }
 
         // Issues the one session command this action names. Nothing else in
-        // bot code may call ExecuteAttack/CastSkill/ExecuteSkill/
-        // UseConsumable/HoldBack directly -- see this type's own header.
+        // bot code may call ExecuteAttack/CastSkill/UseConsumable/HoldBack
+        // directly -- see this type's own header.
         public static void Apply(FightSession session, FightAction action)
         {
             if (session == null) return;
