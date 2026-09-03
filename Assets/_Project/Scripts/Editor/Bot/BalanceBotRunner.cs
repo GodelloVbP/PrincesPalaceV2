@@ -220,6 +220,29 @@ namespace PrincesPalace.Editor.Bot
 
         private static void RunBatch(Options o)
         {
+            // Bot-only: field placeholder_brawler and placeholder_caster
+            // alongside Shawn so a batch actually exercises a three-member
+            // squad, the shape combat, positions and the reward track are
+            // meant to handle. This does NOT touch the live game's solo
+            // default (SaveData.BaseMaxSquadSize) -- that stays a deliberate
+            // design choice the batch works around rather than overrides.
+            // Reset in `finally` so an in-process interactive run (the
+            // "Prince's Palace > Balance Bot" menu item, not the -executeMethod
+            // command line that exits the process anyway) never leaves the
+            // switch on for whatever the Editor does next.
+            SaveData.TestSquadOfThreeEnabled = true;
+            try
+            {
+                RunBatchCore(o);
+            }
+            finally
+            {
+                SaveData.TestSquadOfThreeEnabled = false;
+            }
+        }
+
+        private static void RunBatchCore(Options o)
+        {
             var startedAt = DateTime.UtcNow;
             BotPhaseTimers.ResetBatch();
             _runPlays = 0;

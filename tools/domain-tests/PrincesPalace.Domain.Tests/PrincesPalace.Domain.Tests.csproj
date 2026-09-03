@@ -85,6 +85,10 @@
          exactly the failure it catches. -->
     <Compile Remove="..\..\..\Assets\_Project\Scripts\Tests\EditMode\RigAnimationContentTests.cs" />
 
+    <!-- SaveData and ContentDatabase, both Core (not Domain) types this
+         project has no reference to. See its own header. -->
+    <Compile Remove="..\..\..\Assets\_Project\Scripts\Tests\EditMode\SaveDataSquadOfThreeTests.cs" />
+
     <!-- The Mathf stand-in for RewardTrackLayoutTests. See its own header. -->
     <Compile Include="MathfShim.cs" />
   </ItemGroup>

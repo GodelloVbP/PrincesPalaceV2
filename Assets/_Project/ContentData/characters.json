@@ -28,6 +28,46 @@
       "signatureGainOnAttack": 0,
       "signatureGainOnDamageTaken": 0,
       "signatureAbsorbsDamage": false
+    },
+    {
+      "id": "placeholder_brawler",
+      "displayName": "Placeholder Brawler",
+      "role": "Tank",
+      "attackType": "Physical",
+      "maxHealth": 260,
+      "speed": 8,
+      "attack": 10,
+      "physicalDefense": 40,
+      "magicalDefense": 12,
+      "strength": 18,
+      "dexterity": 6,
+      "constitution": 18,
+      "wisdom": 6,
+      "intelligence": 4,
+      "charisma": 8,
+      "portraitPath": "Assets/_Project/Art/Portraits/Sheep/Processed/Shawn_neutral.png",
+      "battleSpritePath": "Characters/sheep",
+      "battleSpriteFacing": "Right"
+    },
+    {
+      "id": "placeholder_caster",
+      "displayName": "Placeholder Caster",
+      "role": "Support",
+      "attackType": "Arcane",
+      "maxHealth": 140,
+      "speed": 11,
+      "attack": 4,
+      "physicalDefense": 12,
+      "magicalDefense": 30,
+      "strength": 4,
+      "dexterity": 6,
+      "constitution": 8,
+      "wisdom": 20,
+      "intelligence": 16,
+      "charisma": 6,
+      "portraitPath": "Assets/_Project/Art/Portraits/Sheep/Processed/Shawn_neutral.png",
+      "battleSpritePath": "Characters/sheep",
+      "battleSpriteFacing": "Right"
     }
   ]
 }

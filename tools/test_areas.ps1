@@ -48,7 +48,10 @@ $Areas = @{
     # Combat facilities (Marks.cs, Fear.cs, FallingOffStacks.cs,
     # CombatantState.ArmorPenetration, ConvergenceGate.cs), the same
     # PathAreas folder every other combat mechanic already lives in.
-    combat  = "Fight|Wool|Spell|Combat|Enemy|Party|Stage|Boss|Turn|Skill|Damage|Defeat|Teardown|BreakShield|Status|Signature|Ward|Gift|Empower|Cooldown|Relic|Balance|Modifier|Rig|Bot|Wisdom|Mark|Fear|Falling|Penetration|Convergence"
+    # 'Squad' for SquadOfThreeTests/SaveDataSquadOfThreeTests -- the
+    # three-member-party placeholders and their fight/paging/bot coverage,
+    # same PathAreas folder as Party/Bot above.
+    combat  = "Fight|Wool|Spell|Combat|Enemy|Party|Squad|Stage|Boss|Turn|Skill|Damage|Defeat|Teardown|BreakShield|Status|Signature|Ward|Gift|Empower|Cooldown|Relic|Balance|Modifier|Rig|Bot|Wisdom|Mark|Fear|Falling|Penetration|Convergence"
     hub     = "Hub|Talent|Principality|CharacterSheet|SheetStat|Store|Constellation|Glossary"
     # 'ModifierTable' explicitly, alongside the bare 'Modifier' already
     # matching combat above -- ModifierTableTests (Phase A3) covers the
@@ -89,7 +92,11 @@ $Areas = @{
     # 'Typography' for TypographyRoleTests -- the per-role font/material
     # asset resolution (TmpBootstrap.Typography.cs, SceneBuilder.FontFor/
     # MaterialFor) is UI presentation, same subject as everything else here.
-    ui      = "Button|Audio|Splash|PauseMenu|DebugMenu|MainMenu|SystemMenu|Cursor|Dialogue|Bark|Inventory|Equipment|Dossier|Options|Music|Screen|UiKit|Flicker|Ambience|Overlay|OfferRow|Tooltip|Typography|Container"
+    # 'Settings' for GameSettingsTests (balance-bot item 7, 2026-09-03) --
+    # GameSettings is the model OptionsPaneTests/OptionsController's rows
+    # bind to (audio/resolution/window mode/fps), the same UI-presentation
+    # subject 'Options' already covers here.
+    ui      = "Button|Audio|Splash|PauseMenu|DebugMenu|MainMenu|SystemMenu|Cursor|Dialogue|Bark|Inventory|Equipment|Dossier|Options|Settings|Music|Screen|UiKit|Flicker|Ambience|Overlay|OfferRow|Tooltip|Typography|Container"
     # 'LoopCycle' rather than widening 'Loop': the idle loop's pacing is art
     # timing and belongs here, and a bare 'Loop' would be a word common enough
     # to drag in anything.

@@ -51,6 +51,18 @@ namespace PrincesPalace
         // extra_recruit_slot still adds one, so a 2-member party is
         // reachable in-game today.
         private const int BaseMaxSquadSize = 1;
+
+        // TEST-ONLY SWITCH. Off by default, so nothing here changes the live
+        // game's solo default above -- that is a deliberate design decision
+        // (see the comment above BaseMaxSquadSize), not an oversight this
+        // field is meant to quietly reverse. Set true by
+        // BalanceBotRunner.RunFromCommandLine and by tests that need a real
+        // three-member squad to exercise (placeholder_brawler and
+        // placeholder_caster fill the other two seats once this is on).
+        // A caller that sets it must set it back, since it is static and
+        // survives past the call that set it.
+        public static bool TestSquadOfThreeEnabled;
+        private const int TestSquadOfThreeSize = 3;
         // PUBLIC because the squad's ceiling has to be assertable against the
         // stage's slot count, and a test that wrote "extra_recruit_slot" as a
         // literal would be the drift it is meant to catch.
@@ -162,7 +174,8 @@ namespace PrincesPalace
         // of the roster get auto-selected in CreateNew()/Reconcile().
         public int EffectiveMaxSquadSize()
         {
-            return BaseMaxSquadSize + (purchasedUpgradeIds.Contains(ExtraRecruitSlotUpgradeId) ? ExtraRecruitSlotBonus : 0);
+            int baseSize = TestSquadOfThreeEnabled ? TestSquadOfThreeSize : BaseMaxSquadSize;
+            return baseSize + (purchasedUpgradeIds.Contains(ExtraRecruitSlotUpgradeId) ? ExtraRecruitSlotBonus : 0);
         }
 
         // THE single definition of "who is in the party right now".

@@ -742,6 +742,20 @@
           "type": "WardsNeverExpire"
         }
       ]
+    },
+    {
+      "id": "placeholder_brawler_ward_root",
+      "characterId": "placeholder_brawler",
+      "displayName": "Placeholder: Brace",
+      "column": 0,
+      "row": 0,
+      "description": "Placeholder kit. Gives placeholder_brawler_ward (skills.json) a magnitude to apply, in sheep_lamb_ward's own range.",
+      "effects": [
+        {
+          "type": "WardReductionPercent",
+          "magnitude": 40
+        }
+      ]
     }
   ]
 }

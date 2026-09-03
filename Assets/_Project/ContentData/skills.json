@@ -389,6 +389,78 @@
       },
       "cooldownTurns": 2,
       "playerSelectable": false
+    },
+    {
+      "id": "placeholder_brawler_slam",
+      "displayName": "Slam",
+      "description": "Placeholder kit. A shoulder into whatever is in front of him.",
+      "characterId": "placeholder_brawler",
+      "unlockLevel": 1,
+      "effect": "DamageSingle",
+      "manaCost": 6,
+      "flatAmount": 12,
+      "meleeReach": true
+    },
+    {
+      "id": "placeholder_brawler_provoke",
+      "displayName": "Bellow",
+      "description": "Placeholder kit. Reuses the Provoke effect Shawn's own kit already defines.",
+      "characterId": "placeholder_brawler",
+      "unlockLevel": 1,
+      "effect": "Provoke",
+      "manaCost": 0,
+      "resourceCost": 0
+    },
+    {
+      "id": "placeholder_brawler_ward",
+      "displayName": "Brace",
+      "description": "Placeholder kit. Reuses the Ward effect Shawn's own kit already defines; see placeholder_brawler_ward_root in talents.json for the magnitude it needs to do anything.",
+      "characterId": "placeholder_brawler",
+      "unlockLevel": 1,
+      "effect": "Ward",
+      "targeting": "Self",
+      "manaCost": 5,
+      "resourceCost": 0
+    },
+    {
+      "id": "placeholder_caster_bolt",
+      "displayName": "Arcane Bolt",
+      "description": "Placeholder kit. A plain ranged hit, typed to match her attackType.",
+      "characterId": "placeholder_caster",
+      "unlockLevel": 1,
+      "effect": "DamageSingle",
+      "manaCost": 8,
+      "damageInstances": [
+        {
+          "type": "Arcane",
+          "amount": 18
+        }
+      ]
+    },
+    {
+      "id": "placeholder_caster_firebolt",
+      "displayName": "Firebolt",
+      "description": "Placeholder kit. A second element so a fight can show off weakness/resistance on her.",
+      "characterId": "placeholder_caster",
+      "unlockLevel": 1,
+      "effect": "DamageSingle",
+      "manaCost": 9,
+      "damageInstances": [
+        {
+          "type": "Fire",
+          "amount": 20
+        }
+      ]
+    },
+    {
+      "id": "placeholder_caster_mend",
+      "displayName": "Mend",
+      "description": "Placeholder kit. A party heal so a three-member squad has one to lean on.",
+      "characterId": "placeholder_caster",
+      "unlockLevel": 1,
+      "effect": "HealParty",
+      "manaCost": 10,
+      "flatAmount": 25
     }
   ]
 }
