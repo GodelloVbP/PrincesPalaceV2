@@ -107,11 +107,15 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheShippedBug_AnUnclampedCountRunningAwayUpTheScreen_CannotRecur()
         {
-            Assert.AreEqual(1708f, FightSubmenuLayout.RowY(40, 0), 0.01f,
+            // 1384/648, DOWN FROM 1708/844 -- RowHeight 48->40 (balance-bot
+            // item 5, 2026-09-03) shortened RowPitch from 54 to 46, which
+            // this test's own literals have to move with; see that item's
+            // own comment on FightSubmenuLayout.RowHeight for why 40.
+            Assert.AreEqual(1384f, FightSubmenuLayout.RowY(40, 0), 0.01f,
                 "unclamped, RowY still produces the runaway position - this documents the input, not the behaviour");
 
             int shown = FightSubmenuLayout.VisibleCount(40);
-            Assert.AreEqual(844f, FightSubmenuLayout.RowY(shown, 0), 0.01f,
+            Assert.AreEqual(648f, FightSubmenuLayout.RowY(shown, 0), 0.01f,
                 "clamped, the top row must sit at the pool height");
         }
 
@@ -130,12 +134,14 @@ namespace PrincesPalace.Domain.Tests
         }
 
         // Twelve rows against an eight-row window: four rows' worth of travel.
-        // 216 rather than the 192 four rows suggest, because travel is measured
-        // in PIXELS and twelve rows carry eleven gaps against the window's seven.
+        // 184, DOWN FROM 216 (RowHeight 48->40, balance-bot item 5,
+        // 2026-09-03) -- still not the 160 four rows at 40px suggest, for the
+        // same reason as before: travel is measured in PIXELS and twelve rows
+        // carry eleven gaps against the window's seven.
         [Test]
         public void AListLongerThanTheWindowScrollsByTheDifference()
         {
-            Assert.AreEqual(216f, FightSubmenuLayout.ScrollRange(12), 0.01f);
+            Assert.AreEqual(184f, FightSubmenuLayout.ScrollRange(12), 0.01f);
         }
 
         // SCROLL ZERO IS THE TOP OF THE LIST, which is the inversion worth
@@ -145,8 +151,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ScrollZeroShowsTheTopOfTheListAndFullScrollTheBottom()
         {
-            Assert.AreEqual(-216f, FightSubmenuLayout.ContentOffsetY(12, 0f), 0.01f);
-            Assert.AreEqual(0f, FightSubmenuLayout.ContentOffsetY(12, 216f), 0.01f);
+            Assert.AreEqual(-184f, FightSubmenuLayout.ContentOffsetY(12, 0f), 0.01f);
+            Assert.AreEqual(0f, FightSubmenuLayout.ContentOffsetY(12, 184f), 0.01f);
         }
 
         // The thumb is the visible fraction of the list, floored so it stays
@@ -154,13 +160,14 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheThumbShowsHowMuchOfTheListIsOnScreen()
         {
-            // 282.67 rather than the 284 that eight-of-twelve suggests, and the
-            // difference is the gaps: the thumb is the visible fraction of the
-            // content BY HEIGHT (426 of 642), and twelve rows carry eleven gaps
-            // against the window's seven. Pinned at the real number, because the
-            // tidy one would mean the thumb was measuring rows rather than
-            // pixels and would drift the moment the gap changed.
-            Assert.AreEqual(282.67f, FightSubmenuLayout.ThumbHeight(12), 0.01f,
+            // 240.01, DOWN FROM 282.67 (RowHeight 48->40, balance-bot item 5,
+            // 2026-09-03), and still not a round number for the same reason:
+            // the thumb is the visible fraction of the content BY HEIGHT (362
+            // of 546), and twelve rows carry eleven gaps against the window's
+            // seven. Pinned at the real number, because the tidy one would
+            // mean the thumb was measuring rows rather than pixels and would
+            // drift the moment the gap changed.
+            Assert.AreEqual(240.01f, FightSubmenuLayout.ThumbHeight(12), 0.01f,
                 "the thumb must be the visible fraction of the content's height");
 
             // ABOVE AND BELOW THE VIEWPORT'S OWN CENTRE, not the container's.
@@ -171,7 +178,7 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.Greater(FightSubmenuLayout.ThumbCentreY(12, 0f), middle,
                 "at the top of the list the thumb sits high");
-            Assert.Less(FightSubmenuLayout.ThumbCentreY(12, 216f), middle,
+            Assert.Less(FightSubmenuLayout.ThumbCentreY(12, 184f), middle,
                 "at the bottom it sits low");
         }
 

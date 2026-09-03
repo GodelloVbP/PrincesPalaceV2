@@ -16,13 +16,16 @@ namespace PrincesPalace.Domain.UiKit
     {
         // 48 and 6, down from 66 and 8.
         //
-        // 48 IS THE FLOOR THE ROW'S OWN CONTENTS SET, not a number picked for
-        // looking tidy. A row carries a 36px mark, a name box 20 tall centred
-        // at +10 and a meta box 20 tall centred at -14, so its contents span
-        // -24 to +20 -- 44 -- and the two pixels either side are all the margin
-        // there is. Going below 48 means moving the text, which is a different
-        // change with different reasons.
-        public const float RowHeight = 48f;
+        // 40, DOWN FROM 48 (balance-bot item 5, 2026-09-03). The 44px floor
+        // that comment describes was measured against a row that carried a
+        // mark, a name AND a meta line -- the two-line row this project no
+        // longer builds (see BuildSubmenuColumn's own "A NAME, AND NOTHING
+        // ELSE" comment, which removed the meta line and cost before this).
+        // A single 24px name box only needs its own text height plus a
+        // sensible margin either side, and the mark is 36px -- so 40 clears
+        // both with room, where 48 was carrying dead space the two-line row
+        // no longer needs.
+        public const float RowHeight = 40f;
         public const float RowGap = 6f;
         public const float RowPitch = RowHeight + RowGap;
 

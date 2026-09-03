@@ -1458,11 +1458,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // things is a table; sixteen rows each saying one thing is a
                 // list, and the detail panel is what the list is for.
                 //
-                // Centred in the space left of the mark, and vertically centred
-                // in the row now there is no second line to make room for.
+                // LEFT-ALIGNED now, not centred (balance-bot item 5,
+                // 2026-09-03) -- a single-word-to-short-phrase name centred
+                // in a wide box drifts around as its own length changes,
+                // which reads worse in a scanned list than a name that
+                // starts at the same x every row. The box itself already
+                // carries the clearance off the mark (its left edge sits
+                // 24px clear of the mark's own right edge); TextAlign.Left
+                // is the only change, so that clearance becomes the name's
+                // left margin instead of half its centring slack.
                 var name = Ui.Label($"CharacterSkill{i}Name", UiString.Runtime,
                     new UiVec(SubmenuRowW - 90f, 24f), 18,
-                    FightHudPalette.RowNameText, Place.At(21f, 0f));
+                    FightHudPalette.RowNameText, Place.At(21f, 0f))
+                    .TextAligned(UiTextAlign.Left);
 
                 // 1.02, the gentler of the two: a submenu row is 404 wide with
                 // four columns of text in it, so the press pop would shift all
@@ -1480,10 +1488,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // seam for. Violet: neither branch has its own colour
                 // reservation the way the four verbs do, and it is the kit's
                 // neutral default elsewhere (Relic Draft, the Constellation
-                // screen). 282x48 is 5.875:1, which the aspect-nearest rule
-                // resolves to Row6x1 (5.92) on its own -- no .Plate() override
-                // needed. ThemedButtonState's own hover state replaces the
-                // manual .Hovers(1.02f) scale-pop this used to drive.
+                // screen). 282x40 (was 282x48, balance-bot item 5, 2026-09-03)
+                // is 7.05:1, which the aspect-nearest rule still resolves to
+                // Row6x1 (5.92, ln-distance 0.175 against FiveByOne's 0.362)
+                // on its own -- no .Plate() override needed. ThemedButtonState's
+                // own hover state replaces the manual .Hovers(1.02f) scale-pop
+                // this used to drive.
                 var row = Ui.Button($"CharacterSkill{i}", UiString.Runtime,
                     new UiVec(SubmenuRowW, FightSubmenuLayout.RowHeight), 1,
                     Place.At(0f, FightSubmenuLayout.RowYInContent(i)))
