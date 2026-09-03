@@ -319,20 +319,58 @@ namespace PrincesPalace.Domain.Rewards
 
         // ---- the book shelf ---------------------------------------------------
 
-        // GATE 1 SELLS NO BOOKS. Books are gate 3 (§7.3): the shop no longer
-        // depends on them existing, and a shop selling gear and relics is
-        // already a complete room.
-        //
-        // The section is rolled anyway, as BookCount NO OFFER cards, and it
-        // is deliberately not an empty list: the count constant, the section
-        // index, the reroll slot and the screen's binding all exist from
-        // gate 1, so gate 3 fills a shelf that is already there rather than
-        // adding one. DRAWS NOTHING from its stream, so the day it does draw,
-        // the books that appear are the first thing that stream ever
-        // produced -- no phantom consumption to preserve.
-        public static List<ShopStockEntry> RollBooks(Func<int, int> nextIndex)
+        // One book-eligible skill, as the shop's roll needs to see it -- a
+        // pure Domain-side view, not a ContentDatabase lookup, for the same
+        // reason RollGear takes its candidates as a parameter instead of
+        // reaching for content itself.
+        public readonly struct BookCandidate
         {
-            return PadTo(new List<ShopStockEntry>(), BookSection, BookCount, ShopEntryKind.Book);
+            public readonly string SkillId;
+            public readonly int BookTier;
+
+            public BookCandidate(string skillId, int bookTier)
+            {
+                SkillId = skillId;
+                BookTier = bookTier;
+            }
+        }
+
+        // `available` is already filtered by the caller to skills nobody
+        // fielded already knows (§2d's "owned by everyone" rule) and to
+        // skills with bookTier > 0 -- ShopStock draws from what it is
+        // handed, it does not decide eligibility. Uniform draw without
+        // replacement (RelicPool.DraftWeighted's shape with every weight
+        // equal to 1): books carry no rarity to weight by.
+        //
+        // gate 3 is the first thing that draws from RngStreams.ShopBooks --
+        // every prior shop rolled this section as BookCount NO OFFER cards
+        // without touching the stream, so there is no phantom consumption
+        // to preserve and this draw's numbers are the first that stream has
+        // ever produced.
+        public static List<ShopStockEntry> RollBooks(IReadOnlyList<BookCandidate> available, Func<int, int> nextIndex)
+        {
+            var entries = new List<ShopStockEntry>();
+            if (available == null || available.Count == 0 || nextIndex == null)
+            {
+                return PadTo(entries, BookSection, BookCount, ShopEntryKind.Book);
+            }
+
+            var remaining = new List<BookCandidate>(available);
+            int wanted = Math.Min(BookCount, remaining.Count);
+
+            for (int i = 0; i < wanted; i++)
+            {
+                int roll = nextIndex(remaining.Count);
+                if (roll < 0) roll = 0;
+                if (roll >= remaining.Count) roll = remaining.Count - 1;
+
+                var picked = remaining[roll];
+                remaining.RemoveAt(roll);
+
+                entries.Add(ShopStockEntry.Book(i, picked.SkillId, ShopPricing.BookPrice(picked.BookTier)));
+            }
+
+            return PadTo(entries, BookSection, BookCount, ShopEntryKind.Book);
         }
 
         // ---- the whole shelf ---------------------------------------------------
@@ -344,6 +382,7 @@ namespace PrincesPalace.Domain.Rewards
             IReadOnlyList<ItemOffer> gearCandidates, int depthStep, int maxTier,
             Func<ItemOffer, ItemOffer> rollOne,
             IReadOnlyList<RelicOption> availableRelics,
+            IReadOnlyList<BookCandidate> availableBooks,
             Func<int, int> nextIndex)
         {
             switch (section)
@@ -351,7 +390,7 @@ namespace PrincesPalace.Domain.Rewards
                 case GearSection:
                     return RollGear(gearCandidates, depthStep, maxTier, rollOne, nextIndex);
                 case BookSection:
-                    return RollBooks(nextIndex);
+                    return RollBooks(availableBooks, nextIndex);
                 case RelicSection:
                     return RollRelics(availableRelics, nextIndex);
                 default:

@@ -233,6 +233,29 @@ namespace PrincesPalace.Domain.Bot
         // and this archetype's whole posture is taking what is in front of it.
         public ShopChoice ChooseShop(ShopView shop, RunView view, SeededRandom rng)
         {
+            // BOOKS FIRST. A spell is a straightforward power gain with no
+            // gear-slot opportunity cost, and the archetype's whole read of
+            // a shelf is "grab what's strong" -- the same reasoning that
+            // puts rarest-relic ahead of gear below applies a step earlier
+            // here. Cheapest affordable, not the most expensive: books have
+            // no Score (ShopCardView's own header explains why -- it is a
+            // gear-only number), so price is the only ranking signal a
+            // policy has, and the cheap one leaves the most gold for
+            // whatever else the shelf has.
+            int cheapestBook = -1;
+            int cheapestBookPrice = -1;
+
+            foreach (var card in shop.Cards)
+            {
+                if (card.Kind != ShopEntryKind.Book || !card.Buyable) continue;
+                if (cheapestBook >= 0 && card.Price >= cheapestBookPrice) continue;
+
+                cheapestBookPrice = card.Price;
+                cheapestBook = card.Index;
+            }
+
+            if (cheapestBook >= 0) return ShopChoice.BuyBook(cheapestBook);
+
             int bestGear = -1;
             float bestScore = 0f;
 
@@ -266,6 +289,9 @@ namespace PrincesPalace.Domain.Bot
 
             return bestRelic >= 0 ? ShopChoice.BuyRelic(bestRelic) : ShopChoice.Leave();
         }
+
+        public SpellAssignmentChoice ChooseSpellAssignment(SpellAssignmentView view, RunView runView, SeededRandom rng) =>
+            SpellAssignmentDefault.Choose(view);
 
         public int ChooseRelic(IReadOnlyList<RelicOption> offer, RunView view, SeededRandom rng)
         {

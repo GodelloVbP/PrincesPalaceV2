@@ -101,10 +101,40 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
-            int unlockLevel = raw.unlockLevel >= 0 ? raw.unlockLevel : DefaultUnlockLevel;
-            if (unlockLevel < 1)
+            // BOOK-ONLY SKILLS DO NOT DEFAULT TO unlockLevel 1 (docs/
+            // PLAN_SHOP.md §1a point 1). Simply omitting unlockLevel would
+            // resolve to DefaultUnlockLevel below and hand a book-only spell
+            // to a level-1 character by the ordinary level route -- the
+            // exact opposite of the intent, silently. int.MaxValue is what
+            // keeps it off the ladder, and AvailableSkillsFor.OrderBy(level)
+            // reads that as "sorts last", which is the right place for a
+            // learned spell to sit behind an authored kit.
+            int unlockLevel;
+            if (raw.bookOnly)
             {
-                error = $"{label}: unlockLevel must be 1 or higher (got {unlockLevel}). Characters start at level 1.";
+                if (raw.unlockLevel >= 0)
+                {
+                    error = $"{label}: bookOnly and unlockLevel cannot both be authored — a book-only skill " +
+                            "is reached by being learned, never by levelling. Remove unlockLevel.";
+                    return false;
+                }
+
+                unlockLevel = int.MaxValue;
+            }
+            else
+            {
+                unlockLevel = raw.unlockLevel >= 0 ? raw.unlockLevel : DefaultUnlockLevel;
+                if (unlockLevel < 1)
+                {
+                    error = $"{label}: unlockLevel must be 1 or higher (got {unlockLevel}). Characters start at level 1.";
+                    return false;
+                }
+            }
+
+            if (raw.bookTier < 0)
+            {
+                error = $"{label}: bookTier cannot be negative (got {raw.bookTier}). 0 means this skill is not " +
+                        "book-eligible at all.";
                 return false;
             }
 
@@ -273,7 +303,8 @@ namespace PrincesPalace.Domain.Content
                 appliesStatus, statusMagnitude, statusDuration, requirements, scalingAxis,
                 raw.queuePushSlots, transform, raw.playerSelectable, raw.cooldownTurns,
                 raw.stance?.Trim() ?? "", raw.summonEnemyId?.Trim() ?? "", summonCap,
-                ParseApproach(raw.approach), raw.shake, raw.meleeReach);
+                ParseApproach(raw.approach), raw.shake, raw.meleeReach,
+                raw.bookOnly, raw.bookTier);
             error = null;
             return true;
         }

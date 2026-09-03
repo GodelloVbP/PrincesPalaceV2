@@ -79,6 +79,7 @@ namespace PrincesPalace
         // choiceIndex), so the same seed asked the same question at the same
         // point in the same visit always gets the same tie-break.
         private const uint ShopStream = 108;
+        private const uint SpellAssignmentStream = 109;
 
         // ---- what one run hands back --------------------------------------------
 
@@ -413,6 +414,7 @@ namespace PrincesPalace
                 if (arrival == RunOrchestrator.Arrival.Shop)
                 {
                     VisitShop(seed, save, runPolicy, roomTrace);
+                    ResolvePendingSpellAssignments(seed, save, runPolicy, roomTrace);
                     result.Trace.Rooms.Add(roomTrace);
                     CaptureWhatTheRunHolds(save, result);
                     continue;
@@ -426,6 +428,13 @@ namespace PrincesPalace
                 }
 
                 bool alive = PlayTheFight(seed, save, node, fightPolicy, runPolicy, roomTrace, result);
+
+                // A won fight can drop a book (VictoryRewards.RollSpellDrop,
+                // RunOrchestrator.SettleFight) -- resolved here whether or
+                // not the party survives the room, same reason a dead run's
+                // empty pool below is simply a no-op rather than a case to
+                // special-case.
+                ResolvePendingSpellAssignments(seed, save, runPolicy, roomTrace);
                 result.Trace.Rooms.Add(roomTrace);
 
                 if (!alive) return;
@@ -537,6 +546,105 @@ namespace PrincesPalace
             roomTrace.GoldSpent = roomTrace.GoldOnArrival - roomTrace.GoldOnLeave;
         }
 
+        // EVERY PENDING BOOK, RESOLVED THE SAME TURN (docs/PLAN_SHOP.md
+        // §1g/§2g). Called after every room that can grow
+        // run.unassignedSpellBooks -- a shop visit's purchases and a won
+        // fight's drop both land there, and the bot has no dossier to walk
+        // to separately, so it asks ChooseSpellAssignment for whatever is
+        // still unplaced right where a human player's next visit to the
+        // dossier would. The asymmetry is real and deliberate: a human's two
+        // acts (buy, then place) can be separated by any number of rooms,
+        // so the bot's own numbers should be read as "assigned as soon as
+        // possible," not as a measurement of how promptly a player would
+        // actually open the dossier.
+        private static void ResolvePendingSpellAssignments(ulong seed, SaveData save, IRunPolicy runPolicy,
+            RoomTrace roomTrace)
+        {
+            var run = RunManager.Run;
+            if (run?.unassignedSpellBooks == null || run.unassignedSpellBooks.Count == 0)
+            {
+                if (roomTrace != null)
+                {
+                    roomTrace.LearnedSpellCountAfterRoom = run?.learnedSpells?.Count ?? 0;
+                    roomTrace.UnassignedSpellBookCountAfterRoom = 0;
+                }
+
+                return;
+            }
+
+            // A snapshot, not a live read of run.unassignedSpellBooks -- the
+            // loop below mutates that list through LearnSpell, and walking a
+            // list while removing from it under a different name is the
+            // usual way that goes wrong.
+            var pending = new List<string>(run.unassignedSpellBooks);
+
+            for (int i = 0; i < pending.Count; i++)
+            {
+                string skillId = pending[i];
+                var view = SpellAssignmentViewOf(save, skillId);
+
+                // Three real coordinates (step, node, which pending book),
+                // not two packed into one -- the same F9 reasoning the real
+                // game's own RngStreams.Derive third argument exists for,
+                // even though this stream (109+) is bot-only and never
+                // persisted: a packed coordinate is a bug waiting for the
+                // day either half grows past its assumed bound, and the fix
+                // costs nothing here either.
+                var rng = new SeededRandom(RngStreams.Derive(seed, SpellAssignmentStream, run.step, run.currentNodeId, i));
+                var choice = runPolicy.ChooseSpellAssignment(view, ViewOf(save), rng);
+
+                var assignmentTrace = new SpellAssignmentTrace { SkillId = skillId };
+
+                if (choice.Assign)
+                {
+                    var result = RunOrchestrator.LearnSpell(choice.CharacterId, skillId, choice.Slot);
+                    assignmentTrace.Assigned = result.Applied;
+                    assignmentTrace.CharacterId = choice.CharacterId;
+                    assignmentTrace.Slot = choice.Slot;
+                    assignmentTrace.Outcome = result.Outcome.ToString();
+                }
+                else
+                {
+                    assignmentTrace.Outcome = "Skip";
+                }
+
+                roomTrace?.SpellAssignments.Add(assignmentTrace);
+            }
+
+            if (roomTrace != null)
+            {
+                run = RunManager.Run;
+                roomTrace.LearnedSpellCountAfterRoom = run?.learnedSpells?.Count ?? 0;
+                roomTrace.UnassignedSpellBookCountAfterRoom = run?.unassignedSpellBooks?.Count ?? 0;
+            }
+        }
+
+        // ONE PENDING BOOK, FLATTENED FOR THE POLICY -- every fielded
+        // character, whether they already know it, and their lowest free
+        // slot (-1 if all three are full). Mirrors ShopViewOf's own bargain:
+        // the policy sees exactly what CanLearn/AlreadyKnows already answer,
+        // never the raw learnedSpells list.
+        private static SpellAssignmentView SpellAssignmentViewOf(SaveData save, string skillId)
+        {
+            var run = RunManager.Run;
+            var squad = save?.ActiveSquad() ?? new List<Character>();
+            var learned = run?.learnedSpells ?? new List<LearnedSpellEntry>();
+
+            var candidates = new List<SpellCandidateView>();
+            foreach (var character in squad)
+            {
+                if (character == null) continue;
+
+                bool alreadyKnows = learned.Exists(e =>
+                    e != null && e.characterId == character.definitionId && e.skillId == skillId);
+                int freeSlot = RunOrchestrator.CanLearn(character.definitionId);
+
+                candidates.Add(new SpellCandidateView(character.definitionId, alreadyKnows, freeSlot));
+            }
+
+            return new SpellAssignmentView(skillId, candidates);
+        }
+
         // The one place a ShopChoice becomes a mutation. A switch rather than
         // four call sites, so "which orchestrator method does this kind mean"
         // is answered once.
@@ -546,6 +654,7 @@ namespace PrincesPalace
             {
                 case ShopChoiceKind.BuyGear: return RunOrchestrator.BuyGear(choice.Index);
                 case ShopChoiceKind.BuyRelic: return RunOrchestrator.BuyRelic(choice.Index);
+                case ShopChoiceKind.BuyBook: return RunOrchestrator.BuyBook(choice.Index);
                 case ShopChoiceKind.Sell: return RunOrchestrator.Sell(choice.Index, choice.Quantity);
                 case ShopChoiceKind.Reroll: return RunOrchestrator.RerollSection(choice.Section);
                 default: return ShopResult.Refused(ShopRefusal.BadIndex);

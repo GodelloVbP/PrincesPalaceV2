@@ -119,27 +119,68 @@ namespace PrincesPalace.EditModeTests
             Assert.IsTrue(shelf.All(e => e.noOffer && e.section == ShopStock.GearSection));
         }
 
-        // GATE 1 SELLS NO BOOKS. The section exists at full width from gate 1
-        // so gate 3 fills a shelf that is already there.
+        // With no candidates (an empty pool, or every book already known by
+        // every fielded character) the shelf is still BookCount wide, all
+        // NO OFFER -- the count constant, the section index and the screen's
+        // binding do not shrink just because nothing is offerable.
         [Test]
-        public void TheBookShelfIsAllNoOfferInThisGate()
+        public void AnEmptyBookPoolIsAllNoOffer()
         {
-            var books = ShopStock.RollBooks(Stream(11));
+            var books = ShopStock.RollBooks(new List<ShopStock.BookCandidate>(), Stream(11));
 
             Assert.AreEqual(ShopStock.BookCount, books.Count);
             Assert.IsTrue(books.All(e => e.noOffer && e.kind == ShopEntryKind.Book));
             Assert.IsTrue(books.All(e => e.section == ShopStock.BookSection));
         }
 
-        // ...and it draws nothing, so the day it does draw, what appears is
-        // the first thing that stream ever produced.
+        // A null pool consumes nothing from its stream, same posture as an
+        // empty one -- there is no draw to make against zero candidates.
         [Test]
-        public void TheBookShelfConsumesNothingFromItsStream()
+        public void ANullBookPoolConsumesNothingFromItsStream()
         {
             int draws = 0;
-            ShopStock.RollBooks(bound => { draws++; return 0; });
+            ShopStock.RollBooks(null, bound => { draws++; return 0; });
 
             Assert.AreEqual(0, draws);
+        }
+
+        [Test]
+        public void BooksAreDrawnWithoutReplacementAndPricedByTier()
+        {
+            var candidates = new List<ShopStock.BookCandidate>
+            {
+                new ShopStock.BookCandidate("mud_burst", 1),
+                new ShopStock.BookCandidate("static_fleece", 2),
+                new ShopStock.BookCandidate("lightning_bolt", 3),
+                new ShopStock.BookCandidate("golden_fleece", 4),
+            };
+
+            var books = ShopStock.RollBooks(candidates, Stream(13));
+
+            Assert.AreEqual(ShopStock.BookCount, books.Count);
+            var offered = books.Where(e => !e.noOffer).ToList();
+            Assert.AreEqual(ShopStock.BookCount, offered.Count, "four candidates for three slots, none should pad");
+            CollectionAssert.AllItemsAreUnique(offered.Select(e => e.contentId).ToList());
+
+            foreach (var entry in offered)
+            {
+                var source = candidates.First(c => c.SkillId == entry.contentId);
+                Assert.AreEqual(ShopPricing.BookPrice(source.BookTier), entry.price);
+            }
+        }
+
+        // Fewer candidates than BookCount pads with NO OFFER rather than
+        // shrinking the row (§2d) -- same rule the relic shelf's own
+        // undersized-pool test pins.
+        [Test]
+        public void FewerBookCandidatesThanSlotsPadsWithNoOffer()
+        {
+            var candidates = new List<ShopStock.BookCandidate> { new ShopStock.BookCandidate("mud_burst", 1) };
+            var books = ShopStock.RollBooks(candidates, Stream(14));
+
+            Assert.AreEqual(ShopStock.BookCount, books.Count);
+            Assert.AreEqual(1, books.Count(e => !e.noOffer));
+            Assert.AreEqual(ShopStock.BookCount - 1, books.Count(e => e.noOffer));
         }
 
         [Test]
@@ -278,9 +319,10 @@ namespace PrincesPalace.EditModeTests
         [Test]
         public void RollSectionDispatchesToTheRightShelf()
         {
-            var gear = ShopStock.RollSection(ShopStock.GearSection, Pool(30), 8, 10, Hone(0), Relics(6), Stream(1));
-            var books = ShopStock.RollSection(ShopStock.BookSection, Pool(30), 8, 10, Hone(0), Relics(6), Stream(1));
-            var relics = ShopStock.RollSection(ShopStock.RelicSection, Pool(30), 8, 10, Hone(0), Relics(6), Stream(1));
+            var books6 = new List<ShopStock.BookCandidate> { new ShopStock.BookCandidate("mud_burst", 1) };
+            var gear = ShopStock.RollSection(ShopStock.GearSection, Pool(30), 8, 10, Hone(0), Relics(6), books6, Stream(1));
+            var books = ShopStock.RollSection(ShopStock.BookSection, Pool(30), 8, 10, Hone(0), Relics(6), books6, Stream(1));
+            var relics = ShopStock.RollSection(ShopStock.RelicSection, Pool(30), 8, 10, Hone(0), Relics(6), books6, Stream(1));
 
             Assert.IsTrue(gear.All(e => e.kind == ShopEntryKind.Gear));
             Assert.IsTrue(books.All(e => e.kind == ShopEntryKind.Book));

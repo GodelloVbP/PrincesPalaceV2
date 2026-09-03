@@ -105,6 +105,43 @@ namespace PrincesPalace.Domain.Combat.Session
             }
         }
 
+        // A spell is a third of a character's whole loadout for the run, so
+        // its drop rate is not ItemDropChance -- that is per ENEMY and would
+        // hand out several a leg. This is per FIGHT (docs/PLAN_SHOP.md §1e),
+        // roughly one spell per leg at these rates: enough to fill three
+        // slots by leg 3, leaving the shop as the way to get there sooner or
+        // better. Named constants so a balance batch can move them without
+        // hunting for a literal.
+        public const float SpellDropChanceNormal = 0.10f;
+        public const float SpellDropChanceElite = 0.20f;
+        public const float SpellDropChanceBoss = 0.35f;
+
+        // `bookSkillIds` is book-eligible skill ids (bookTier > 0), passed in
+        // by the caller for the same reason RollConsumableDrops takes
+        // `consumableIds` -- Domain does not reach ContentDatabase. Filtered
+        // on bookTier, not bookOnly: bookOnly stays false on every skill
+        // until Phase E's flip (docs/handoffs/shop_v2/GAP_AUDIT.md, Gate 3),
+        // and a drop roll gated on it would never fire during the additive
+        // phase this exists to measure.
+        //
+        // Null, not "no drop and no signal": a caller with nothing to check
+        // affordability or eligibility against still gets a clean "nothing
+        // happened" rather than an empty-string sentinel to remember to
+        // check for.
+        public static string RollSpellDrop(IReadOnlyList<string> bookSkillIds, bool isEliteFight, bool isBossFight,
+            SeededRandom rng)
+        {
+            if (bookSkillIds == null || bookSkillIds.Count == 0 || rng == null) return null;
+
+            float chance = isBossFight ? SpellDropChanceBoss
+                : isEliteFight ? SpellDropChanceElite
+                : SpellDropChanceNormal;
+
+            if (rng.NextFloat() >= chance) return null;
+
+            return bookSkillIds[rng.NextInt(0, bookSkillIds.Count)];
+        }
+
         // Whether this fight guarantees a weapon.
         //
         // Elite AND boss rooms both do. Boss alone used to make weapons

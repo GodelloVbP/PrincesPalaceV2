@@ -518,6 +518,8 @@ public static class ContentBuilder
             asset.summonEnemyId = skill.SummonEnemyId;
             asset.summonCap = skill.SummonCap;
             asset.meleeReach = skill.MeleeReach;
+            asset.bookOnly = skill.BookOnly;
+            asset.bookTier = skill.BookTier;
             asset.hasStatus = skill.AppliesStatus.HasValue;
             if (skill.AppliesStatus.HasValue)
             {

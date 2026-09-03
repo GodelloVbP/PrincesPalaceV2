@@ -42,6 +42,21 @@ namespace PrincesPalace
         [SerializeField] internal GameObject packPanel;
         [SerializeField] internal Button packCloseButton;
 
+        // The spell-books panel (docs/PLAN_SHOP.md §1g, gate 3). Same
+        // row+panel+close shape as Pack/Track above.
+        [SerializeField] internal Button spellsRow;
+        [SerializeField] internal TMP_Text spellsChevron;
+        [SerializeField] internal TMP_Text spellsCount;
+        [SerializeField] internal GameObject spellsPanel;
+        [SerializeField] internal Button spellsCloseButton;
+        [SerializeField] internal Button[] spellSlots;
+        [SerializeField] internal TMP_Text[] spellSlotNames;
+        [SerializeField] internal Image[] spellSlotSelections;
+        [SerializeField] internal GameObject unassignedEmptyHint;
+        [SerializeField] internal Button[] unassignedRows;
+        [SerializeField] internal TMP_Text[] unassignedNames;
+        [SerializeField] internal Image[] unassignedSelections;
+
         // The fight's copy is readable and inert; every other copy is live.
         //
         // Decided at BUILD time rather than sniffed at runtime, which is the
@@ -161,6 +176,27 @@ namespace PrincesPalace
             if (trackRow != null) trackRow.onClick.AddListener(ShowTrack);
             if (packCloseButton != null) packCloseButton.onClick.AddListener(() => ShowPack(false));
 
+            if (spellsRow != null) spellsRow.onClick.AddListener(ToggleSpells);
+            if (spellsCloseButton != null) spellsCloseButton.onClick.AddListener(() => ShowSpells(false));
+
+            if (spellSlots != null)
+            {
+                for (int i = 0; i < spellSlots.Length; i++)
+                {
+                    int slot = i;
+                    if (spellSlots[i] != null) spellSlots[i].onClick.AddListener(() => PressSlot(slot));
+                }
+            }
+
+            if (unassignedRows != null)
+            {
+                for (int i = 0; i < unassignedRows.Length; i++)
+                {
+                    int row = i;
+                    if (unassignedRows[i] != null) unassignedRows[i].onClick.AddListener(() => SelectUnassigned(row));
+                }
+            }
+
             // The attribute link, driven from hover AND from the button itself,
             // so a controller player reaches it too -- the handover asks for
             // that explicitly and it is one line here.
@@ -274,6 +310,140 @@ namespace PrincesPalace
 
         private void TogglePack() => ShowPack(packPanel != null && !packPanel.activeSelf);
 
+        // ---- spell books (docs/PLAN_SHOP.md §1g, gate 3) -------------------------
+
+        // Which unassigned-book row is selected, as an index into the SAME
+        // snapshot RefreshSpells just painted -- not into run.unassignedSpellBooks
+        // directly, because a duplicate skillId can occupy more than one row
+        // and "row 2" has to mean row 2, not "some row with this skillId".
+        private int _selectedUnassignedRow = -1;
+        private List<string> _unassignedSnapshot = new List<string>();
+
+        public void ShowSpells(bool open)
+        {
+            spellsPanel.SetShown(open);
+            if (spellsChevron != null) spellsChevron.SetContent(open ? "<" : ">");
+            if (!open) _selectedUnassignedRow = -1;
+            RefreshSpells();
+        }
+
+        private void ToggleSpells() => ShowSpells(spellsPanel != null && !spellsPanel.activeSelf);
+
+        private void SelectUnassigned(int row)
+        {
+            if (row < 0 || row >= _unassignedSnapshot.Count) return;
+
+            // Re-pressing the selected row deselects, same rule the relic
+            // draft's own card press follows -- a screen whose whole job is
+            // comparing things should let a choice be reconsidered.
+            _selectedUnassignedRow = _selectedUnassignedRow == row ? -1 : row;
+            RefreshSpells();
+        }
+
+        // A press on a slot COMMITS the currently selected unassigned book
+        // into THAT slot -- an empty slot learns it directly (LearnSpell's
+        // explicit-slot overload, not the lowest-free-slot one: the player
+        // clicked THIS box, and placing it in a different one because it
+        // happened to sort lower would be a screen disagreeing with its own
+        // click), a full slot replaces it (ReplaceSpell, which returns the
+        // displaced book to the pool rather than destroying it -- §7.1
+        // point 5). Nothing selected is a no-op; there is nothing to place.
+        private void PressSlot(int slot)
+        {
+            if (_selectedUnassignedRow < 0 || _selectedUnassignedRow >= _unassignedSnapshot.Count) return;
+
+            var squad = Squad();
+            if (_index < 0 || _index >= squad.Count) return;
+            var character = squad[_index];
+            string skillId = _unassignedSnapshot[_selectedUnassignedRow];
+
+            var run = RunManager.Run;
+            bool slotOccupied = run?.learnedSpells != null
+                && run.learnedSpells.Exists(e => e != null && e.characterId == character.definitionId && e.slot == slot);
+
+            var result = slotOccupied
+                ? RunOrchestrator.ReplaceSpell(character.definitionId, skillId, slot)
+                : RunOrchestrator.LearnSpell(character.definitionId, skillId, slot);
+
+            if (result.Applied) _selectedUnassignedRow = -1;
+
+            Refresh();
+        }
+
+        private void RefreshSpells()
+        {
+            var squad = Squad();
+            var run = RunManager.Run;
+
+            var character = (_index >= 0 && _index < squad.Count) ? squad[_index] : null;
+            var learned = run?.learnedSpells ?? new List<LearnedSpellEntry>();
+            var unassigned = run?.unassignedSpellBooks ?? new List<string>();
+
+            if (spellsCount != null && character != null)
+            {
+                int filled = learned.Count(e => e != null && e.characterId == character.definitionId);
+                spellsCount.Set(UiStrings.DossierSpellsCount, filled, SpellBooks.MaxSpellSlots);
+            }
+
+            if (spellSlots != null)
+            {
+                for (int i = 0; i < spellSlots.Length; i++)
+                {
+                    string skillId = character == null
+                        ? null
+                        : learned.FirstOrDefault(e => e != null && e.characterId == character.definitionId && e.slot == i)?.skillId;
+
+                    if (spellSlotNames != null && i < spellSlotNames.Length)
+                    {
+                        if (string.IsNullOrEmpty(skillId))
+                        {
+                            spellSlotNames[i].Set(UiStrings.DossierSlotEmpty);
+                        }
+                        else
+                        {
+                            var definition = ContentDatabase.GetSkill(skillId);
+                            spellSlotNames[i].Set(UiStrings.DossierSlotFilled, definition?.displayName ?? skillId);
+                        }
+                    }
+
+                    // A green preview when the currently selected book would
+                    // FILL this slot, so a full-vs-empty slot reads the same
+                    // way the shop's own would-fill/would-replace preview
+                    // does, before the second click commits either.
+                    if (spellSlotSelections != null && i < spellSlotSelections.Length && spellSlotSelections[i] != null)
+                    {
+                        bool previewFill = _selectedUnassignedRow >= 0 && string.IsNullOrEmpty(skillId);
+                        spellSlotSelections[i].gameObject.SetActive(previewFill);
+                    }
+                }
+            }
+
+            _unassignedSnapshot = new List<string>(unassigned);
+
+            if (unassignedEmptyHint != null) unassignedEmptyHint.SetActive(_unassignedSnapshot.Count == 0);
+
+            if (unassignedRows != null)
+            {
+                for (int i = 0; i < unassignedRows.Length; i++)
+                {
+                    bool present = i < _unassignedSnapshot.Count;
+                    unassignedRows[i].gameObject.SetActive(present);
+                    if (!present) continue;
+
+                    if (unassignedNames != null && i < unassignedNames.Length)
+                    {
+                        var definition = ContentDatabase.GetSkill(_unassignedSnapshot[i]);
+                        unassignedNames[i].SetContent(definition?.displayName ?? _unassignedSnapshot[i]);
+                    }
+
+                    if (unassignedSelections != null && i < unassignedSelections.Length && unassignedSelections[i] != null)
+                    {
+                        unassignedSelections[i].gameObject.SetActive(i == _selectedUnassignedRow);
+                    }
+                }
+            }
+        }
+
         private void Step(int by)
         {
             var squad = Squad();
@@ -333,6 +503,7 @@ namespace PrincesPalace
             RefreshStats(character, stats, scores);
             RefreshSlots(character);
             RefreshPack();
+            RefreshSpells();
         }
 
         // The bag, through the SAME BagView the old sheet sorted with -- the

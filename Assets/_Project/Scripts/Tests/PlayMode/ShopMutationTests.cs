@@ -205,10 +205,11 @@ namespace PrincesPalace.PlayModeTests
             CollectionAssert.Contains(RunManager.Run.relicIds, card.contentId);
         }
 
-        // The book shelf is all NO OFFER in this gate, so nothing on it can
-        // be bought -- and pressing it must refuse rather than charge.
+        // Gate 3 gives the book shelf real content (the five bookTier > 0
+        // spells) -- the shelf is the same BookCount width either way, but
+        // it is no longer all NO OFFER by construction.
         [Test]
-        public void TheBookShelfSellsNothingInThisGate()
+        public void TheBookShelfOffersRealBooksInGate3()
         {
             OpenAShop();
 
@@ -216,7 +217,26 @@ namespace PrincesPalace.PlayModeTests
                 .Where(e => e.section == ShopStock.BookSection).ToList();
 
             Assert.AreEqual(ShopStock.BookCount, books.Count);
-            Assert.IsTrue(books.All(e => e.noOffer));
+            Assert.IsTrue(books.Any(e => !e.noOffer), "the five book-eligible spells should fill at least one card");
+        }
+
+        [Test]
+        public void BuyingABookAppendsToUnassignedSpellBooksAndChargesGold()
+        {
+            OpenAShop();
+            var run = RunManager.Run;
+            int goldBefore = run.gold;
+
+            var entry = FirstBuyable(ShopStock.BookSection);
+            Assert.IsNotNull(entry, "gate 3's book shelf should offer at least one real card");
+
+            var result = RunOrchestrator.BuyBook(entry.index);
+
+            Assert.IsTrue(result.Applied);
+            Assert.AreEqual(goldBefore - entry.price, run.gold);
+            CollectionAssert.Contains(run.unassignedSpellBooks, entry.contentId);
+            Assert.IsTrue(RunOrchestrator.CurrentShopStock.First(e => e.section == ShopStock.BookSection
+                && e.index == entry.index).sold);
         }
 
         // ---- selling -------------------------------------------------------------

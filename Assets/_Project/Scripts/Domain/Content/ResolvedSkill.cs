@@ -94,6 +94,10 @@ namespace PrincesPalace.Domain.Content
         // See RawSkillEntry.meleeReach.
         public readonly bool MeleeReach;
 
+        // See RawSkillEntry.bookOnly / bookTier.
+        public readonly bool BookOnly;
+        public readonly int BookTier;
+
         public bool HasFixedDamage => DamageInstances != null && DamageInstances.Length > 0;
 
         // Whether this skill deals damage at all -- the same gate
@@ -122,8 +126,11 @@ namespace PrincesPalace.Domain.Content
             AbilityScoreBlock requirements = default, ScalingAxis scalingAxis = ScalingAxis.Auto,
             int queuePushSlots = 0, TransformGrant transform = null, bool playerSelectable = true,
             int cooldownTurns = 0, string stance = "", string summonEnemyId = "", int summonCap = 0,
-            StageApproach approach = StageApproach.Hold, float shake = 0f, bool meleeReach = false)
+            StageApproach approach = StageApproach.Hold, float shake = 0f, bool meleeReach = false,
+            bool bookOnly = false, int bookTier = 0)
         {
+            BookOnly = bookOnly;
+            BookTier = bookTier;
             MeleeReach = meleeReach;
             CooldownTurns = cooldownTurns < 0 ? 0 : cooldownTurns;
             PlayerSelectable = playerSelectable;

@@ -32,6 +32,10 @@ namespace PrincesPalace.Domain.Tests
         private static ShopCardView NoBook() =>
             new ShopCardView(ShopStock.BookSection, 0, ShopEntryKind.Book, "", 0, false, true, false, 0f);
 
+        private static ShopCardView Book(int index, int price, bool affordable = true, bool sold = false) =>
+            new ShopCardView(ShopStock.BookSection, index, ShopEntryKind.Book, "book_" + index,
+                price, sold, false, affordable, 0f);
+
         // Affordability is decided by the DRIVER, not recomputed here, so the
         // fixture sets it explicitly per card -- exactly the way the real view
         // arrives. `gold` is what the policies that reason about saving read.
@@ -237,30 +241,45 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void Lookahead2DoesNotRerollTheSameSectionTwice()
         {
-            // Both live sections already rerolled once: the rule is one per
+            // All three sections already rerolled once: the rule is one per
             // section per visit, so a shelf that is still dead is walked away
             // from rather than chased.
-            var shop = Shelf(new[] { Gear(0, 20, 0f), Relic(0, 900, affordable: false) }, 500,
-                rerollsUsed: new[] { 1, 0, 1 }, rerollPrices: new[] { 30, 15, 30 });
+            var shop = Shelf(new[] { Gear(0, 20, 0f), Relic(0, 900, affordable: false), NoBook() }, 500,
+                rerollsUsed: new[] { 1, 1, 1 }, rerollPrices: new[] { 30, 15, 30 });
 
             var choice = new Lookahead2Policy().ChooseShop(shop, View(500), Rng());
 
             Assert.AreEqual(ShopChoiceKind.Leave, choice.Kind);
         }
 
-        // The book shelf rolls NO OFFER until gate 3, so rerolling it buys a
-        // second helping of nothing.
+        // Gate 3 gives the book shelf real content, so a NO OFFER book
+        // section is dead the same way an empty gear/relic section is --
+        // and worth rerolling on the same terms.
         [Test]
-        public void Lookahead2NeverRerollsTheBookSection()
+        public void Lookahead2RerollsADeadBookSection()
         {
             // Gear and relics both already rerolled, so the book shelf is the
-            // only section left that a reroll rule could reach. It must not.
+            // only section left that a reroll rule could reach.
             var shop = Shelf(new[] { NoBook(), Gear(0, 20, 0f), Relic(0, 60, sold: true) }, 500,
                 rerollsUsed: new[] { 1, 0, 1 }, rerollPrices: new[] { 30, 15, 30 });
 
             var choice = new Lookahead2Policy().ChooseShop(shop, View(500), Rng());
 
-            Assert.AreEqual(ShopChoiceKind.Leave, choice.Kind);
+            Assert.AreEqual(ShopChoiceKind.Reroll, choice.Kind);
+            Assert.AreEqual(ShopStock.BookSection, choice.Section);
+        }
+
+        // A book actually on offer is bought, never rerolled away -- the
+        // section is only "dead" when nothing on it is buyable.
+        [Test]
+        public void Lookahead2DoesNotRerollABookSectionThatHasSomethingToBuy()
+        {
+            var shop = Shelf(new[] { Book(0, 70), Gear(0, 20, 0f) }, 500,
+                rerollsUsed: new[] { 1, 0, 1 }, rerollPrices: new[] { 30, 15, 30 });
+
+            var choice = new Lookahead2Policy().ChooseShop(shop, View(500), Rng());
+
+            Assert.AreEqual(ShopChoiceKind.BuyBook, choice.Kind);
         }
 
         [Test]

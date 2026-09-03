@@ -593,6 +593,7 @@ public static class ScreenRegistry
                 map.trailCores = screen.TrailCores.Select(result.Image).ToArray();
                 map.depthLabel = result.Tmp(screen.DepthLabel);
                 map.goldLabel = result.Tmp(screen.GoldLabel);
+                map.pendingBookLabel = result.Tmp(screen.PendingBookLabel);
                 map.roomMessageLabel = result.Tmp(screen.RoomMessageLabel);
                 map.abandonButton = result.Button(screen.AbandonButton);
 
@@ -1157,6 +1158,19 @@ public static class ScreenRegistry
         controller.packChevron = result.Tmp(dossier.PackChevron);
         controller.packPanel = result.Go(dossier.PackPanel);
         controller.packCloseButton = result.Button(dossier.PackCloseButton);
+
+        controller.spellsRow = result.Button(dossier.SpellsRow);
+        controller.spellsChevron = result.Tmp(dossier.SpellsChevron);
+        controller.spellsCount = result.Tmp(dossier.SpellsCount);
+        controller.spellsPanel = result.Go(dossier.SpellsPanel);
+        controller.spellsCloseButton = result.Button(dossier.SpellsCloseButton);
+        controller.spellSlots = dossier.SpellSlots.Select(result.Button).ToArray();
+        controller.spellSlotNames = dossier.SpellSlotNames.Select(result.Tmp).ToArray();
+        controller.spellSlotSelections = dossier.SpellSlotSelections.Select(result.Image).ToArray();
+        controller.unassignedEmptyHint = result.Go(dossier.UnassignedEmptyHint);
+        controller.unassignedRows = dossier.UnassignedRows.Select(result.Button).ToArray();
+        controller.unassignedNames = dossier.UnassignedNames.Select(result.Tmp).ToArray();
+        controller.unassignedSelections = dossier.UnassignedSelections.Select(result.Image).ToArray();
 
         controller.slotCells = dossier.SlotCells.Select(result.Button).ToArray();
         controller.slotIcons = dossier.SlotIcons.Select(result.Image).ToArray();

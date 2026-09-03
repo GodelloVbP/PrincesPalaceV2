@@ -216,6 +216,37 @@ namespace PrincesPalace
             return Persisted(-price);
         }
 
+        // A book purchase names no character and calls neither CanLearn nor
+        // LearnSpell (§1g, §2f) -- the player already decided, with money,
+        // against the other cards, and naming a recipient here would be a
+        // second decision taken on their behalf at the moment they are most
+        // likely to be mid-plan, the same reasoning §2c gives for gear never
+        // auto-equipping, one step earlier. It just appends to the pool the
+        // dossier's assignment panel reads from.
+        public static ShopResult BuyBook(int index)
+        {
+            // 1. VALIDATE.
+            var run = RunManager.Run;
+            if (!ShopIsOpen(run)) return ShopResult.Refused(ShopRefusal.NoShop);
+
+            var entry = EntryAt(run, ShopStock.BookSection, index);
+            if (entry == null) return ShopResult.Refused(ShopRefusal.BadIndex);
+            if (entry.noOffer || entry.sold) return ShopResult.Refused(ShopRefusal.NothingToBuy);
+            if (ContentDatabase.GetSkill(entry.contentId) == null) return ShopResult.Refused(ShopRefusal.NothingToBuy);
+            if (run.gold < entry.price) return ShopResult.Refused(ShopRefusal.NotEnoughGold);
+            if (Refused()) return ShopResult.Refused(ShopRefusal.Injected);
+
+            // 2. APPLY.
+            int price = entry.price;
+            run.gold -= price;
+            entry.sold = true;
+            run.unassignedSpellBooks ??= new List<string>();
+            run.unassignedSpellBooks.Add(entry.contentId);
+
+            // 3. PERSIST.
+            return Persisted(-price);
+        }
+
         // Sells `quantity` copies of the bag stack at `bagIndex`.
         //
         // BAG ONLY. Worn gear cannot be sold, deliberately: a sell that
@@ -364,7 +395,34 @@ namespace PrincesPalace
                 return ShopStock.RollRelics(AvailableRelicOptions(), next);
             }
 
-            return ShopStock.RollBooks(next);
+            return ShopStock.RollBooks(AvailableBookOptions(), next);
+        }
+
+        // THE BOOK POOL THIS SHOP CAN OFFER: every bookTier > 0 skill, minus
+        // any skillId every FIELDED character already knows (§2d's "owned by
+        // everyone" rule -- a card nobody could act on is a dead card taking
+        // a live card's slot). "Fielded" is the active squad
+        // (SaveData.ActiveSquadIds), same definition §3e uses for the
+        // dossier's row count. A skill known by SOME but not all fielded
+        // characters is still offered -- the shop carries no per-character
+        // ownership context (§7.1 point 4 puts those facts on the card
+        // itself instead, read from run.learnedSpells/unassignedSpellBooks
+        // directly by whatever paints the card).
+        private static List<ShopStock.BookCandidate> AvailableBookOptions()
+        {
+            var run = RunManager.Run;
+            var save = SaveSlotManager.CurrentSave;
+            var squad = save?.ActiveSquadIds() ?? new List<string>();
+            var learned = run?.learnedSpells ?? new List<LearnedSpellEntry>();
+
+            bool EveryoneKnows(string skillId) =>
+                squad.Count > 0 && squad.All(id =>
+                    learned.Exists(e => e != null && e.characterId == id && e.skillId == skillId));
+
+            return ContentDatabase.Skills
+                .Where(s => s != null && s.bookTier > 0 && !EveryoneKnows(s.id))
+                .Select(s => new ShopStock.BookCandidate(s.id, s.bookTier))
+                .ToList();
         }
     }
 }

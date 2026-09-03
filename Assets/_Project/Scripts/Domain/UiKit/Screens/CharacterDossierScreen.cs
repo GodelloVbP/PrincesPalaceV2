@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Equipment;
 
 namespace PrincesPalace.Domain.UiKit.Screens
@@ -69,6 +70,22 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef SkillsCount;
         public NodeRef PackRow;
         public NodeRef PackChevron;
+
+        // The spell-books panel (docs/PLAN_SHOP.md §1g, gate 3): a fourth
+        // nav row and a fourth column-A overlay, same shape as Pack's own
+        // row+panel pair.
+        public NodeRef SpellsRow;
+        public NodeRef SpellsChevron;
+        public NodeRef SpellsCount;
+        public NodeRef SpellsPanel;
+        public NodeRef SpellsCloseButton;
+        public List<NodeRef> SpellSlots = new List<NodeRef>();
+        public List<NodeRef> SpellSlotNames = new List<NodeRef>();
+        public List<NodeRef> SpellSlotSelections = new List<NodeRef>();
+        public NodeRef UnassignedEmptyHint;
+        public List<NodeRef> UnassignedRows = new List<NodeRef>();
+        public List<NodeRef> UnassignedNames = new List<NodeRef>();
+        public List<NodeRef> UnassignedSelections = new List<NodeRef>();
 
         public NodeRef PackPanel;
         public NodeRef PackCloseButton;
@@ -174,6 +191,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // The pack covers column A entirely, so it is declared AFTER it.
             children.Add(screen.BuildPackPanel());
 
+            // Same shape, one row later: covers column A too, and is
+            // declared after the pack so the two never fight over which one
+            // draws on top (only one is ever active at a time, per the
+            // controller's own arm-one-panel-at-a-time rule).
+            children.Add(screen.BuildSpellsPanel());
+
             // And the tooltip over everything.
             children.Add(screen.BuildTooltip());
 
@@ -275,6 +298,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // The two nav rows. BuildNavRow assigns its own refs -- an iterator
             // cannot carry `out` parameters, and threading them back through the
             // caller bought nothing.
+            yield return BuildNavRow("Spells", UiStrings.DossierSpellsRow, DossierLayout.SpellsNavRowCentreY);
             yield return BuildNavRow("Track", UiStrings.TrackRow, DossierLayout.TrackNavRowCentreY);
             yield return BuildNavRow("Skills", UiStrings.OverlaySkills, DossierLayout.SkillsRowCentreY);
             yield return BuildNavRow("Pack", UiStrings.OverlayPack, DossierLayout.PackRowCentreY);
@@ -326,6 +350,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // better home: it says what is next AND is the door to the rest.
             if (key == "Skills") { SkillsRow = button; SkillsCount = countLabel; }
             else if (key == "Track") { TrackRow = button; TrackNext = countLabel; }
+            else if (key == "Spells") { SpellsRow = button; SpellsCount = countLabel; SpellsChevron = chev; }
             else { PackRow = button; PackChevron = chev; }
 
             return button;
@@ -525,6 +550,139 @@ namespace PrincesPalace.Domain.UiKit.Screens
         }
 
         public const int PackCapacity = 24;
+
+        // ---- column A, covered: spell books (docs/PLAN_SHOP.md §1g) --------------
+
+        // How many pending books show at once. Not the pool's capacity --
+        // same "a window, not the whole thing" posture the pack's own cells
+        // take (PackVisibleCells) -- a fixed count emitted at build time.
+        // Five is generous against what a single-character-squad run can
+        // realistically be carrying unplaced at once; paging is the
+        // Pack-style follow-up the day it is not (§2d's own precedent for
+        // when to add one: not before there is something to page).
+        public const int UnassignedVisibleCount = 5;
+
+        private UiNode BuildSpellsPanel()
+        {
+            // Zero, not the column centre -- same reason BuildPackPanel's
+            // children are cx-relative: this panel is ITSELF placed at
+            // column A, so a dossier-space coordinate here would offset
+            // twice.
+            const float cx = 0f;
+            var children = new List<UiNode>();
+
+            children.Add(Ui.Label("DossierSpellsTitle", UiStrings.ShopSectionBooks,
+                new UiVec(170f, 22f), 13, TextFaint,
+                Place.At(cx - DossierLayout.ContentAWidth * 0.5f + 75f, DossierLayout.ColumnATop - 10f)).AsDecor());
+
+            var close = Ui.Button("DossierSpellsClose", UiStrings.OverlayPackClose, new UiVec(110f, 28f), 15,
+                    Place.At(cx + DossierLayout.ContentAWidth * 0.5f - 55f, DossierLayout.ColumnATop - 12f))
+                .NoChrome();
+            SpellsCloseButton = close;
+            children.Add(close);
+
+            children.Add(Ui.Solid("DossierSpellsHeaderRule", Rule,
+                new UiVec(DossierLayout.ContentAWidth, 1f),
+                Place.At(cx, DossierLayout.ColumnATop - 26f)).AsDecor());
+
+            // THREE SLOTS, pinned against SpellBooks.MaxSpellSlots rather
+            // than typed here -- a literal 3 is the drift E4's own pairing
+            // exists to catch one level up.
+            const float slotHeight = 56f;
+            const float slotGap = 8f;
+            float slotTop = DossierLayout.ColumnATop - 46f;
+
+            for (int i = 0; i < SpellBooks.MaxSpellSlots; i++)
+            {
+                float y = slotTop - i * (slotHeight + slotGap) - slotHeight * 0.5f;
+
+                // LOCAL to the slot button below (Place.At(0, 0)), not
+                // Place.At(cx, y) again -- these are the BUTTON's children,
+                // so re-using its own absolute placement here would offset
+                // them a second time (the exact bug ShopScreen's own header
+                // comment warns against; caught here by the containment
+                // audit rather than by remembering the rule).
+                var selection = Ui.Solid($"DossierSpellSlot{i}Selection", "#5A3E7A80",
+                        new UiVec(DossierLayout.ContentAWidth, slotHeight), Place.At(0f, 0f))
+                    .Inactive()
+                    .AsDecor();
+
+                var name = Ui.Label($"DossierSpellSlot{i}Name", UiString.Runtime,
+                        new UiVec(DossierLayout.ContentAWidth - 24f, 24f), 16, Text,
+                        Place.At(0f, 0f)).AsDecor();
+
+                var slot = Ui.Button($"DossierSpellSlot{i}", UiString.Runtime,
+                        new UiVec(DossierLayout.ContentAWidth, slotHeight), 1, Place.At(cx, y))
+                    .NoChrome()
+                    .AllowOverlap("the selection tint and the name sit inside their own slot by construction");
+                slot.Children.Add(selection);
+                slot.Children.Add(name);
+
+                SpellSlots.Add(slot);
+                SpellSlotSelections.Add(selection);
+                SpellSlotNames.Add(name);
+                children.Add(slot);
+            }
+
+            float dividerY = slotTop - SpellBooks.MaxSpellSlots * (slotHeight + slotGap);
+            children.Add(Ui.Solid("DossierSpellsDivider", Rule,
+                new UiVec(DossierLayout.ContentAWidth, 1f), Place.At(cx, dividerY)).AsDecor());
+
+            children.Add(Ui.Label("DossierSpellsUnassignedHeader", UiStrings.DossierUnassignedHeader,
+                new UiVec(170f, 20f), 13, TextFaint,
+                Place.At(cx - DossierLayout.ContentAWidth * 0.5f + 75f, dividerY - 20f)).AsDecor());
+
+            var empty = Ui.Label("DossierSpellsEmptyHint", UiStrings.DossierUnassignedEmpty,
+                    new UiVec(DossierLayout.ContentAWidth, 24f), 14, TextDim, Place.At(cx, dividerY - 60f))
+                .AsDecor()
+                .Inactive();
+            UnassignedEmptyHint = empty;
+            children.Add(empty);
+
+            const float rowHeight = 40f;
+            const float rowGap = 4f;
+            float rowTop = dividerY - 40f;
+
+            for (int i = 0; i < UnassignedVisibleCount; i++)
+            {
+                float y = rowTop - i * (rowHeight + rowGap) - rowHeight * 0.5f;
+
+                // Local to the row button below, same reason as the slot
+                // loop above.
+                var selection = Ui.Solid($"DossierUnassigned{i}Selection", "#5A3E7A80",
+                        new UiVec(DossierLayout.ContentAWidth, rowHeight), Place.At(0f, 0f))
+                    .Inactive()
+                    .AsDecor();
+
+                var name = Ui.Label($"DossierUnassigned{i}Name", UiString.Runtime,
+                        new UiVec(DossierLayout.ContentAWidth - 24f, 22f), 15, Text,
+                        Place.At(0f, 0f)).Inactive().AsDecor();
+
+                var row = Ui.Button($"DossierUnassigned{i}", UiString.Runtime,
+                        new UiVec(DossierLayout.ContentAWidth, rowHeight), 1, Place.At(cx, y))
+                    .NoChrome()
+                    .Inactive()
+                    .AllowOverlap("the selection tint and the name sit inside their own row by construction");
+                row.Children.Add(selection);
+                row.Children.Add(name);
+
+                UnassignedRows.Add(row);
+                UnassignedSelections.Add(selection);
+                UnassignedNames.Add(name);
+                children.Add(row);
+            }
+
+            var panel = Ui.Sprite("DossierSpellsPanel", null,
+                    Place.At(DossierLayout.ColumnACentreX, 0f),
+                    UiSize.Fixed(DossierLayout.ColumnAWidth, DossierLayout.HalfHeight * 2f))
+                .Coloured(PackGround)
+                .Inactive()
+                .AllowOverlap("this panel covers column A entirely - that IS the interaction, same as the pack");
+
+            foreach (var child in children) panel.Children.Add(child);
+            SpellsPanel = panel;
+            return panel;
+        }
 
         // ---- column B: the loadout --------------------------------------------------
 

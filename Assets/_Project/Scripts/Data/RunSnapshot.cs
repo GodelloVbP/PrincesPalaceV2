@@ -223,5 +223,40 @@ namespace PrincesPalace
         // itself because the game updated is a free reroll granted by a patch
         // note.
         public int shopStockVersion;
+
+        // ---- learned spells (docs/PLAN_SHOP.md §1b) -------------------------
+        //
+        // A flat list of {characterId, skillId, slot}, not a dictionary --
+        // same reason RunHealthEntry above is a list entry: JsonUtility
+        // serializes fields and Dictionary is not one of the shapes it can
+        // write. Nothing carries over between runs: StartRun replaces the
+        // whole snapshot, the same mechanism that already resets relicIds
+        // and offerRerollsUsed.
+        //
+        // Purely additive. SaveData.CurrentVersion does not move -- an
+        // older in-flight run's JsonUtility deserialize leaves this empty,
+        // and empty is exactly "has learned nothing".
+        public List<LearnedSpellEntry> learnedSpells = new List<LearnedSpellEntry>();
+
+        // A bought or dropped book, between "acquired" and "learned into a
+        // slot" -- one skillId per copy owned and not yet placed, so buying
+        // the same book twice for two different characters is two entries.
+        // The shop's own commit only ever appends here (§2f); LearnSpell is
+        // what removes one matching entry, and Replace* returns the
+        // displaced book here instead of destroying it (§7.1 point 5).
+        public List<string> unassignedSpellBooks = new List<string>();
+    }
+
+    // One learned spell, in one of a character's three slots this run.
+    // `slot` is 0..MaxSpellSlots-1 and is the identity of the SLOT, not an
+    // ordering hint -- CanLearn/LearnSpell/ReplaceSpell all address a
+    // specific slot by this number so a replace overwrites the one the
+    // player actually picked rather than "whichever entry sorts there".
+    [Serializable]
+    public class LearnedSpellEntry
+    {
+        public string characterId;
+        public string skillId;
+        public int slot;
     }
 }

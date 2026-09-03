@@ -44,6 +44,12 @@ namespace PrincesPalace.Domain.Rng
         public const uint ShopBooks = 6;
         public const uint ShopRelics = 7;
 
+        // A won fight's spell-book drop roll (docs/PLAN_SHOP.md §1e), keyed
+        // to (run.step, run.currentNodeId) -- quitting mid-reward and
+        // returning must not reroll it, same reason Treasure and the shop
+        // streams are keyed to position rather than drawn fresh.
+        public const uint SpellDrop = 8;
+
         // SplitMix64's finalizer, the same mixing SeededRandom itself uses.
         // Applied to the packed inputs rather than to a running state, so this
         // is a pure hash: same inputs, same answer, forever, with no ordering

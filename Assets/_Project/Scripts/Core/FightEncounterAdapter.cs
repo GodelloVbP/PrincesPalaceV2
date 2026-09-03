@@ -578,10 +578,20 @@ namespace PrincesPalace
             // authored against the character id and handed the lot over, so
             // unlockLevel was a number nothing in a fight ever read -- see the
             // Character overload below for what that cost.
+            // !s.bookOnly is belt and braces, not the thing that actually
+            // excludes a book-only skill here -- a book-only entry's
+            // unlockLevel is int.MaxValue by construction, so `unlockLevel
+            // <= level` already refuses it for any level that will ever
+            // exist. Stated anyway: a filter that reads as "levelled skills
+            // only" should say so rather than lean on a sentinel two files
+            // away (docs/PLAN_SHOP.md §1a point 3) -- and this overload has
+            // no run to ask, so it could never grant a learned book even if
+            // the level check somehow let one through.
             var skills = ContentDatabase.Skills
                 .Where(s => s.playerSelectable
                             && s.characterId == definition.id
-                            && s.unlockLevel <= level)
+                            && s.unlockLevel <= level
+                            && !s.bookOnly)
                 .OrderBy(s => s.unlockLevel)
                 .ThenBy(s => s.sortOrder)
                 .Select(Resolve)

@@ -465,6 +465,7 @@ namespace PrincesPalace
             activeRun.inventory.RemoveAll(entry => entry == null || ContentDatabase.GetItem(entry.itemId) == null);
             activeRun.currentHealth.RemoveAll(entry => entry == null || ContentDatabase.GetCharacter(entry.characterId) == null);
 
+            ReconcileLearnedSpells(activeRun);
             ReconcileShopStock(activeRun);
 
             roster.RemoveAll(c => c == null || ContentDatabase.GetCharacter(c.definitionId) == null);
@@ -612,6 +613,32 @@ namespace PrincesPalace
         //  - The reroll array is normalised to SectionCount. See
         //    RunSnapshot.shopRerollsUsed for what can make it the wrong
         //    length.
+        // Tolerant pruning for docs/PLAN_SHOP.md §1b, same posture
+        // stockpiledItems gets above: a content edit under a live run is not
+        // worth discarding the run over.
+        //
+        // CHECKED AGAINST bookTier > 0, not against bookOnly. bookOnly stays
+        // false on every skill until Phase E's flip (docs/handoffs/shop_v2/
+        // GAP_AUDIT.md, Gate 3), so a check against it here would prune every
+        // learned spell the moment it was learned -- bookTier is the "is this
+        // still a book-eligible skill" question Phase A actually needs
+        // answered, and it is meaningful from the day this ships.
+        private static void ReconcileLearnedSpells(RunSnapshot run)
+        {
+            run.learnedSpells ??= new List<LearnedSpellEntry>();
+            run.unassignedSpellBooks ??= new List<string>();
+
+            run.learnedSpells.RemoveAll(e => e == null || !IsBookEligible(e.skillId)
+                || ContentDatabase.GetCharacter(e.characterId) == null);
+            run.unassignedSpellBooks.RemoveAll(id => !IsBookEligible(id));
+        }
+
+        private static bool IsBookEligible(string skillId)
+        {
+            var skill = ContentDatabase.GetSkill(skillId);
+            return skill != null && skill.bookTier > 0;
+        }
+
         private static void ReconcileShopStock(RunSnapshot run)
         {
             run.shopStock ??= new List<ShopStockEntry>();

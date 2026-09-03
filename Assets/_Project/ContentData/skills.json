@@ -36,7 +36,8 @@
       "resourceCost": 3,
       "power": 1,
       "manaCost": 6,
-      "cooldownTurns": 2
+      "cooldownTurns": 2,
+      "bookTier": 2
     },
     {
       "id": "battering_ram",
@@ -63,7 +64,8 @@
       "power": 3,
       "ignoresDefense": true,
       "manaCost": 12,
-      "cooldownTurns": 5
+      "cooldownTurns": 5,
+      "bookTier": 4
     },
     {
       "id": "mud_burst",
@@ -86,7 +88,8 @@
         "impactX": 0.69,
         "impactY": 0.52
       },
-      "cooldownTurns": 2
+      "cooldownTurns": 2,
+      "bookTier": 1
     },
     {
       "id": "frost_flare",
@@ -113,7 +116,8 @@
         "impactX": 0.5,
         "impactY": 0.18,
         "sfxPath": "Audio/Sfx/frost_flare"
-      }
+      },
+      "bookTier": 2
     },
     {
       "id": "lightning_bolt",
@@ -136,7 +140,8 @@
         "impactX": 0.5,
         "impactY": 0.23,
         "sfxPath": "Audio/Sfx/lightning_strike"
-      }
+      },
+      "bookTier": 3
     },
     {
       "id": "provoke",

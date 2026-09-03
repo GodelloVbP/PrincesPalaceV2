@@ -28,6 +28,21 @@ namespace PrincesPalace.Domain.Rewards
         // (itemId, plus, modifierIds, riftTier).
         NotInBag,
 
+        // LearnSpell/ReplaceSpell only: the character already has this
+        // skillId in one of their three slots. A no-op, not an error --
+        // content can change under a run -- but not a silent success either
+        // (docs/PLAN_SHOP.md §1d).
+        AlreadyKnown,
+
+        // LearnSpell/ReplaceSpell only: the skillId named is not sitting in
+        // run.unassignedSpellBooks -- nothing to place.
+        NotOwned,
+
+        // LearnSpell only: CanLearn(characterId) answered -1. The caller is
+        // expected to have checked this and offered ReplaceSpell instead;
+        // reaching here means it didn't.
+        NoFreeSlot,
+
         // The test-only refusal seam fired. Never reachable in a build.
         Injected,
     }

@@ -40,6 +40,7 @@ namespace PrincesPalace
         [SerializeField] internal Image[] trailCores;
         [SerializeField] internal TMP_Text depthLabel;
         [SerializeField] internal TMP_Text goldLabel;
+        [SerializeField] internal TMP_Text pendingBookLabel;
 
         // What the room the party just walked into did. Empty between rooms,
         // rather than left showing the last one's result under a new heading.
@@ -194,6 +195,7 @@ namespace PrincesPalace
                 HideBackdrops(0);
                 fog.gameObject.SetShown(false);
                 walker.gameObject.SetShown(false);
+                if (pendingBookLabel != null) pendingBookLabel.gameObject.SetActive(false);
                 return;
             }
 
@@ -202,6 +204,13 @@ namespace PrincesPalace
 
             depthLabel.Set(UiStrings.MapDepth, RunManager.Run.step, RunManager.Run.floor);
             goldLabel.Set(UiStrings.MapGold, RunManager.Run.gold);
+
+            if (pendingBookLabel != null)
+            {
+                int pending = RunManager.Run.unassignedSpellBooks?.Count ?? 0;
+                pendingBookLabel.gameObject.SetActive(pending > 0);
+                if (pending > 0) pendingBookLabel.Set(UiStrings.MapPendingBook, pending);
+            }
 
             // Painted from the LAST resolved room, which Arrive has already
             // written by the time this runs. A fight clears it on the way out,

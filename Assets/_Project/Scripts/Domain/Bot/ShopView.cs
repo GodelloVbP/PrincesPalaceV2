@@ -26,6 +26,7 @@ namespace PrincesPalace.Domain.Bot
         Leave,
         BuyGear,
         BuyRelic,
+        BuyBook,
         Sell,
         Reroll,
     }
@@ -60,6 +61,9 @@ namespace PrincesPalace.Domain.Bot
         public static ShopChoice BuyRelic(int index) =>
             new ShopChoice(ShopChoiceKind.BuyRelic, index, 0, ShopStock.RelicSection);
 
+        public static ShopChoice BuyBook(int index) =>
+            new ShopChoice(ShopChoiceKind.BuyBook, index, 0, ShopStock.BookSection);
+
         public static ShopChoice Sell(int bagIndex, int quantity) =>
             new ShopChoice(ShopChoiceKind.Sell, bagIndex, quantity, -1);
 
@@ -72,6 +76,7 @@ namespace PrincesPalace.Domain.Bot
             {
                 case ShopChoiceKind.BuyGear: return "BuyGear:" + Index;
                 case ShopChoiceKind.BuyRelic: return "BuyRelic:" + Index;
+                case ShopChoiceKind.BuyBook: return "BuyBook:" + Index;
                 case ShopChoiceKind.Sell: return "Sell:" + Index + "x" + Quantity;
                 case ShopChoiceKind.Reroll: return "Reroll:" + Section;
                 default: return "Leave";

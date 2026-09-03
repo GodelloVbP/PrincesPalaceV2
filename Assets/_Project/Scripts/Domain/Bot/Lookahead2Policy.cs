@@ -404,6 +404,24 @@ namespace PrincesPalace.Domain.Bot
             if (bestRelic >= 0) return ShopChoice.BuyRelic(bestRelic);
             if (reachable > 0) return ShopChoice.Leave();
 
+            // Cheapest affordable book, once saving for a relic is off the
+            // table for this visit -- a spell is a genuine gain that costs
+            // nothing toward the NEXT relic's price, unlike gear, whose
+            // Score competes with the same purse a saved relic would use.
+            int cheapestBook = -1;
+            int cheapestBookPrice = -1;
+
+            foreach (var card in shop.Cards)
+            {
+                if (card.Kind != ShopEntryKind.Book || !card.Buyable) continue;
+                if (cheapestBook >= 0 && card.Price >= cheapestBookPrice) continue;
+
+                cheapestBookPrice = card.Price;
+                cheapestBook = card.Index;
+            }
+
+            if (cheapestBook >= 0) return ShopChoice.BuyBook(cheapestBook);
+
             int bestGear = -1;
             float bestScore = 0f;
 
@@ -422,15 +440,20 @@ namespace PrincesPalace.Domain.Bot
             return dead >= 0 ? ShopChoice.Reroll(dead) : ShopChoice.Leave();
         }
 
+        public SpellAssignmentChoice ChooseSpellAssignment(SpellAssignmentView view, RunView runView, SeededRandom rng) =>
+            SpellAssignmentDefault.Choose(view);
+
         // A section holding nothing this archetype would buy at any price it
         // can pay -- no scoring gear it can afford in the gear section, no
-        // affordable relic in the relic section -- that has not been rerolled
-        // yet and whose reroll it can pay for. The book section is skipped:
-        // it rolls NO OFFER until gate 3, so rerolling it buys a second
-        // helping of nothing.
+        // affordable relic or book in the other two -- that has not been
+        // rerolled yet and whose reroll it can pay for. The book section
+        // used to be skipped here (it rolled NO OFFER until gate 3); now
+        // that it draws real content, an affordable book counts the same
+        // way an affordable relic does -- no Score to rank it by, so its
+        // mere presence is what "worth keeping" means.
         private static int DeadSectionWorthRerolling(ShopView shop)
         {
-            foreach (int section in new[] { ShopStock.GearSection, ShopStock.RelicSection })
+            foreach (int section in new[] { ShopStock.GearSection, ShopStock.RelicSection, ShopStock.BookSection })
             {
                 if (shop.RerollsUsedIn(section) > 0 || !shop.CanAffordReroll(section)) continue;
 
@@ -438,7 +461,7 @@ namespace PrincesPalace.Domain.Bot
                 foreach (var card in shop.Cards)
                 {
                     if (card.Section != section || !card.Buyable) continue;
-                    if (section == ShopStock.RelicSection || card.Score > 0f) worthKeeping = true;
+                    if (section != ShopStock.GearSection || card.Score > 0f) worthKeeping = true;
                 }
 
                 if (!worthKeeping) return section;

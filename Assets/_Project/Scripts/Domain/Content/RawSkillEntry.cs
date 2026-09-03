@@ -203,6 +203,27 @@ namespace PrincesPalace.Domain.Content
         // appliesStatus/statusMagnitude/statusDuration already follow.
         public int summonCap = -1;
 
+        // A SPELL LEARNED FROM A BOOK RATHER THAN BY LEVELLING (docs/
+        // PLAN_SHOP.md §1a). False on every skill in the tree today,
+        // including the five this will eventually apply to -- Phase A ships
+        // the field and bookTier below purely additively, and only Phase E
+        // flips this to true (and removes unlockLevel) on the five. The
+        // resolver refuses an entry that authors both bookOnly and
+        // unlockLevel: an absent unlockLevel resolves to int.MaxValue
+        // (SkillEntryResolver's own DefaultUnlockLevel does NOT apply to a
+        // book-only entry), which is what keeps a book-only skill off the
+        // level ladder without a second gating mechanism.
+        public bool bookOnly;
+
+        // The shop's price band for this spell as a book (1-4, ShopPricing's
+        // four-entry lookup) — authored independently of bookOnly and read
+        // by the shop's roll from day one (Phase A/gate 3), because "which
+        // spells can be found or bought as a book" and "does owning one
+        // supersede the level route" are two different questions with two
+        // different answers during the staged rollout. 0 means this skill
+        // is not book-eligible at all, which is every skill but the five.
+        public int bookTier;
+
         // DOES THE FRONT-RANK RULE APPLY TO THIS SKILL? False, the default,
         // is every skill authored before this existed and every ranged or
         // magical one authored after — CombatEncounter.CanMeleeReach only

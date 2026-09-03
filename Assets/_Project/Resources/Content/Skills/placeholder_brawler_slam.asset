@@ -64,4 +64,6 @@ MonoBehaviour:
   summonEnemyId: 
   summonCap: 0
   meleeReach: 1
+  bookOnly: 0
+  bookTier: 0
   sortOrder: 26

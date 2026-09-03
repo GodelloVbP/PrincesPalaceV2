@@ -241,6 +241,12 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString MapGold =
             UiString.Define("map.gold", "{0} GOLD", "99999 GOLD");
         public static readonly UiString MapAbandon = UiString.Define("map.abandon", "Abandon Run");
+        // A book waiting to be placed (docs/PLAN_SHOP.md §7.1 point 4) -- the
+        // map's nudge toward the dossier's assignment panel, since neither
+        // the shop nor the dossier is guaranteed to be the next thing opened
+        // after a purchase or a drop.
+        public static readonly UiString MapPendingBook =
+            UiString.Define("map.pending_book", "SPELL BOOKS TO PLACE: {0}", "SPELL BOOKS TO PLACE: 99");
         // The hint at the fog, past the last generated column. A leg is rolled
         // whole and nothing exists beyond it until the party reaches the
         // boundary, so this is an honest "there is more" rather than a false
@@ -488,6 +494,23 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString ShopBookMeta =
             UiString.Define("shop.book_meta", "MANA {0}", "MANA 999");
 
+        // A book card's purchase-time facts (docs/PLAN_SHOP.md §7.1 point 4):
+        // the shop carries no per-character context to show a badge against,
+        // but it does know the run's own learnedSpells/unassignedSpellBooks,
+        // and showing what they already say costs nothing extra to roll.
+        public static readonly UiString ShopBookKnownByOne =
+            UiString.Define("shop.book_known_by_one", "KNOWN BY {0}", "KNOWN BY WWWWWWWWWW");
+        public static readonly UiString ShopBookKnownByMany =
+            UiString.Define("shop.book_known_by_many", "KNOWN BY {0}", "KNOWN BY 9");
+        public static readonly UiString ShopBookAllSlotsFull =
+            UiString.Define("shop.book_all_slots_full", "ALL SLOTS FULL");
+        public static readonly UiString ShopBookUnassignedCopy =
+            UiString.Define("shop.book_unassigned_copy", "{0} UNASSIGNED COPY", "9 UNASSIGNED COPY");
+        public static readonly UiString ShopBookUnassignedCopies =
+            UiString.Define("shop.book_unassigned_copies", "{0} UNASSIGNED COPIES", "9 UNASSIGNED COPIES");
+        public static readonly UiString ShopBookEligible =
+            UiString.Define("shop.book_eligible", "ELIGIBLE {0}/{1}", "ELIGIBLE 9/9");
+
         public static readonly UiString ShopDetailEmpty = UiString.Define("shop.detail_empty", "SELECT A CARD");
 
         public static readonly UiString ShopPackEmpty = UiString.Define("shop.pack_empty", "NOTHING TO SELL");
@@ -498,6 +521,18 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString ShopSellOneButton = UiString.Define("shop.sell_one_button", "SELL 1");
         public static readonly UiString ShopSellAllButton =
             UiString.Define("shop.sell_all_button", "SELL ALL {0}", "SELL ALL 99");
+
+        // --- the dossier's spell-books panel (docs/PLAN_SHOP.md §1g) --------------
+        public static readonly UiString DossierSpellsRow = UiString.Define("dossier.spells_row", "SPELLS");
+        public static readonly UiString DossierSpellsCount =
+            UiString.Define("dossier.spells_count", "{0}/{1}", "9/9");
+        public static readonly UiString DossierUnassignedHeader =
+            UiString.Define("dossier.unassigned_header", "UNASSIGNED");
+        public static readonly UiString DossierUnassignedEmpty =
+            UiString.Define("dossier.unassigned_empty", "NOTHING TO PLACE");
+        public static readonly UiString DossierSlotEmpty = UiString.Define("dossier.slot_empty", "EMPTY");
+        public static readonly UiString DossierSlotFilled =
+            UiString.Define("dossier.slot_filled", "{0}", "LIGHTNING BOLT");
 
         // --- the glossary --------------------------------------------------------
         public static readonly UiString GlossaryTitle = UiString.Define("glossary.title", "THE RECORD");
@@ -878,6 +913,10 @@ namespace PrincesPalace.Domain.UiKit
             ShopCardPrice, ShopCardConfirm, ShopCardNeed, ShopCardSold, ShopCardNoOffer,
             ShopGearMeta, ShopBookMeta, ShopDetailEmpty,
             ShopPackEmpty, ShopPackPage, ShopSellPriceLabel, ShopSellOneButton, ShopSellAllButton,
+            DossierSpellsRow, DossierSpellsCount, DossierUnassignedHeader, DossierUnassignedEmpty,
+            DossierSlotEmpty, DossierSlotFilled,
+            ShopBookKnownByOne, ShopBookKnownByMany, ShopBookAllSlotsFull,
+            ShopBookUnassignedCopy, ShopBookUnassignedCopies, ShopBookEligible,
             GlossaryTitle, GlossaryCount, GlossaryPage, GlossaryEmpty,
             GlossaryLocked, GlossaryLockedBy, GlossaryPick,
             DebugTitle, DebugGiveGold, DebugGiveEmbers, DebugGiveOneEmber, DebugAdd,
@@ -899,7 +938,7 @@ namespace PrincesPalace.Domain.UiKit
             DetailStatCost, DetailStatPower, DetailStatTarget, DetailStatEffect, DetailStatScaling,
             TargetPrompt, TargetPromptGroup, TargetCancel, TargetBlockedByFrontRank, VerbHoldBackWithBank,
             TransformStripTurns, TransformStripPermanent,
-            MapTitle, MapDepth, MapGold, MapAbandon, MapFog,
+            MapTitle, MapDepth, MapGold, MapAbandon, MapFog, MapPendingBook,
             MapRoomTreasure, MapRoomRest, MapRoomShop, MapRoomEvent,
             MapRoomItem, MapRoomEmpty,
             SheetTabCharacter, SheetTabInventory, SheetStatValue, OverlayLockedInFight,

@@ -139,6 +139,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef AbandonButton;
         public NodeRef RoomMessageLabel;
 
+        // "A book is waiting to be placed" (docs/PLAN_SHOP.md §7.1 point 4).
+        // Shown whenever run.unassignedSpellBooks is non-empty; the nudge
+        // toward the dossier's assignment panel, since nothing else on the
+        // map says a purchase or a drop is still sitting unplaced.
+        public NodeRef PendingBookLabel;
+
         // The same overlay the hub and the fight mount. Live here:
         // between rooms is when gear is meant to change.
         public SystemMenuScreen SystemMenu;
@@ -173,6 +179,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 Place.At(0f, 404f)).Styled(TypographyRole.TacticalData);
             var gold = Ui.Label("MapGoldLabel", UiStrings.MapGold, new UiVec(320f, 40f), 22, "#F2DB9E",
                 Place.At(690f, 452f)).Styled(TypographyRole.TacticalData);
+
+            // Under the gold chip, same column, one row down (404, matching
+            // depth's own band) -- the shop and the dossier both write to
+            // run.unassignedSpellBooks and neither is guaranteed to be the
+            // next thing the player opens, so the map is where a pending
+            // book has to say so.
+            var pendingBook = Ui.Label("MapPendingBookLabel", UiStrings.MapPendingBook, new UiVec(320f, 32f), 16,
+                    "#E7B25C", Place.At(690f, 404f))
+                .Styled(TypographyRole.TacticalData)
+                .Inactive();
+            screen.PendingBookLabel = pendingBook;
 
             // SILVER: leaving the descent, matching Cancel/Back everywhere
             // else in the kit. Room-node buttons are NOT themed here -- the
@@ -269,7 +286,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // the scrolling wood rather than under it. The sheet is LAST, so
             // the modal dims the map and everything on it.
             screen.Root = Ui.Panel("MapPanel", UiSize.Fill,
-                viewport, title, depth, gold, abandon, roomMessage, systemMenu.Root, shop.Root);
+                viewport, title, depth, gold, pendingBook, abandon, roomMessage, systemMenu.Root, shop.Root);
 
             return screen;
         }

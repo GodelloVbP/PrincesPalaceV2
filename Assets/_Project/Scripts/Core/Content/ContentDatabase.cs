@@ -240,12 +240,34 @@ namespace PrincesPalace.Content
             // by id (see TalentGrantedSkillsFor).
             var granted = TalentGrantedSkillsFor(character);
 
+            // ...or was LEARNED FROM A BOOK this run (docs/PLAN_SHOP.md §1a),
+            // the fourth route. Reads RunManager.Run directly rather than
+            // taking it as a parameter -- the same ambient-run-state posture
+            // every other Core method that needs "the run right now" already
+            // takes (RunOrchestrator, MapController) -- and is null-safe:
+            // outside a run (a definition preview, a main-menu character
+            // card) this contributes nothing, which is the correct reading.
+            //
+            // GATED ON s.bookOnly, which stays false on every skill until
+            // Phase E flips it on the five spells (docs/handoffs/shop_v2/
+            // GAP_AUDIT.md, Gate 3). Until then this whole clause is a
+            // deliberate no-op: a character can OWN a learned spell
+            // (run.learnedSpells) without it changing what AvailableSkillsFor
+            // returns, which is what makes Phase A/gate 3 purely additive --
+            // the acquisition loop ships and is measurable before it can
+            // change a single fight.
+            var run = RunManager.Run;
+            bool LearnedThisRun(SkillDefinition s) =>
+                s.bookOnly && run != null && run.learnedSpells != null
+                && run.learnedSpells.Exists(e => e.characterId == character.definitionId && e.skillId == s.id);
+
             return _skills
                 .Where(s => s.playerSelectable
                             && s.characterId == character.definitionId
                     && (s.unlockLevel <= character.level
                         || character.unlockedSkillIds.Contains(s.id)
-                        || granted.Contains(s)))
+                        || granted.Contains(s)
+                        || LearnedThisRun(s)))
                 .OrderBy(s => s.unlockLevel)
                 .ThenBy(s => s.sortOrder)
                 .ToList();

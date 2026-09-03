@@ -140,6 +140,38 @@ namespace PrincesPalace.Domain.Bot
         // on PurchasesBySection, so a policy repeatedly asking for something
         // it cannot have would read as a quiet visit.
         public List<ShopChoiceTrace> ShopChoices = new List<ShopChoiceTrace>();
+
+        // ---- spell acquisition (docs/PLAN_SHOP.md §1g/§2g, gate 3) --------------
+        //
+        // Recorded for EVERY ROOM, same reasoning GoldOnArrival's own header
+        // gives: the gate-3 numbers ("P(a fielded character has learned a
+        // first spell) by step 8/16/24/32") ask about a specific depth, and a
+        // single end-of-run reading cannot answer a question about the
+        // middle of the run. Read AFTER pending assignments are resolved for
+        // this room, so a book bought or dropped here that got placed
+        // immediately already counts.
+        public int LearnedSpellCountAfterRoom;
+        public int UnassignedSpellBookCountAfterRoom;
+
+        // What the bot actually did with each pending book this room, in
+        // order -- the acquisition-loop analogue of ShopChoices above.
+        public List<SpellAssignmentTrace> SpellAssignments = new List<SpellAssignmentTrace>();
+    }
+
+    // One ChooseSpellAssignment answer and what the orchestrator did with
+    // it. Flat strings and ints, same posture as ShopChoiceTrace.
+    public sealed class SpellAssignmentTrace
+    {
+        public string SkillId = "";
+        public bool Assigned;
+        public string CharacterId = "";
+        public int Slot = -1;
+
+        // ShopResult.Outcome's name when Assigned is true; "Skip" otherwise
+        // -- a policy declining is not a refusal, so it gets its own word
+        // rather than borrowing ShopOutcome.Refused for a choice nothing
+        // refused.
+        public string Outcome = "";
     }
 
     // One ChooseShop answer and what the orchestrator did with it. Flat

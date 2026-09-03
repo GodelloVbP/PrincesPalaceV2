@@ -56,6 +56,14 @@ namespace PrincesPalace.Domain.Bot
         // ask for something it cannot have; asking twice in a row is a loop.
         ShopChoice ChooseShop(ShopView shop, RunView view, SeededRandom rng);
 
+        // ONE PENDING BOOK, ASKED ONCE (docs/PLAN_SHOP.md §1g/§2g) -- a
+        // second call, separate from ChooseShop's now-recipient-less
+        // buy-book: a purchase and a placement are two different decisions
+        // that can happen on two different screens for a human player, and
+        // the interface keeps them two different calls for the bot for the
+        // same reason.
+        SpellAssignmentChoice ChooseSpellAssignment(SpellAssignmentView view, RunView runView, SeededRandom rng);
+
         // BELOW THIS FRACTION OF PARTY HP, THIS ARCHETYPE GOES TO A REST NODE
         // IF THERE IS ONE. Already a private constant inside each policy's
         // ChooseNode; surfaced because ShopNodePreference has to know it to

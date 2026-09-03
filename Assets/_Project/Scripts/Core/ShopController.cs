@@ -174,12 +174,7 @@ namespace PrincesPalace
                     result = RunOrchestrator.BuyRelic(index);
                     break;
                 default:
-                    // Books have no purchase route yet -- Phase A/gate 3
-                    // (docs/PLAN_SHOP.md) hasn't shipped, so every book card
-                    // is a NO OFFER placeholder and Select() above already
-                    // refuses to select one. This arm exists so a future
-                    // BuyBook wires in here without touching Commit's shape.
-                    result = ShopResult.Refused(ShopRefusal.NothingToBuy);
+                    result = RunOrchestrator.BuyBook(index);
                     break;
             }
 
@@ -386,7 +381,7 @@ namespace PrincesPalace
                 {
                     var skill = ContentDatabase.GetSkill(entry.contentId);
                     string name = skill?.displayName ?? entry.contentId;
-                    string meta = UiStrings.ShopBookMeta.Format(skill?.manaCost ?? 0);
+                    string meta = BookFactLine(entry.contentId);
                     return (name, meta);
                 }
             }
@@ -487,6 +482,54 @@ namespace PrincesPalace
                     }
                 }
             }
+        }
+
+        // A book card's meta line, in priority order (§7.1 point 4): the shop
+        // has no per-character context to badge against, but it does know
+        // the run's own state, and showing what that already says costs
+        // nothing extra to roll. A skill known by EVERY fielded character
+        // never reaches this card at all (excluded at roll time, §2d), so
+        // that case does not need handling here.
+        private static string BookFactLine(string skillId)
+        {
+            var run = RunManager.Run;
+            var save = SaveSlotManager.CurrentSave;
+            var squad = save?.ActiveSquad() ?? new List<Character>();
+            if (run == null || squad.Count == 0) return "";
+
+            var learned = run.learnedSpells ?? new List<LearnedSpellEntry>();
+            var knownBy = squad.Where(c => c != null
+                && learned.Exists(e => e != null && e.characterId == c.definitionId && e.skillId == skillId)).ToList();
+
+            var eligible = squad.Where(c => c != null && !knownBy.Contains(c)).ToList();
+
+            // Every eligible (doesn't-already-know-it) fielded character is
+            // full. Not "nobody can ever place it" -- a replace still can --
+            // but the honest read at a glance, same as the shop card's own
+            // "unaffordable" state naming the fact rather than hiding it.
+            bool allFull = eligible.Count > 0 && eligible.All(c => RunOrchestrator.CanLearn(c.definitionId) < 0);
+            if (allFull) return UiStrings.ShopBookAllSlotsFull.Format();
+
+            int unassignedCopies = (run.unassignedSpellBooks ?? new List<string>()).Count(id => id == skillId);
+            if (unassignedCopies > 0)
+            {
+                return unassignedCopies == 1
+                    ? UiStrings.ShopBookUnassignedCopy.Format(unassignedCopies)
+                    : UiStrings.ShopBookUnassignedCopies.Format(unassignedCopies);
+            }
+
+            if (knownBy.Count == 1)
+                return UiStrings.ShopBookKnownByOne.Format(DisplayNameOf(knownBy[0]));
+            if (knownBy.Count > 1)
+                return UiStrings.ShopBookKnownByMany.Format(knownBy.Count);
+
+            return UiStrings.ShopBookEligible.Format(eligible.Count, squad.Count);
+        }
+
+        private static string DisplayNameOf(Character character)
+        {
+            var definition = ContentDatabase.Characters.FirstOrDefault(c => c != null && c.id == character.definitionId);
+            return definition?.displayName ?? character.definitionId;
         }
 
         private static ShopStockEntry EntryAt(int section, int index)

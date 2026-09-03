@@ -404,6 +404,25 @@ namespace PrincesPalace.Domain.Bot
                 return ShopChoice.Sell(row.BagIndex, 1);
             }
 
+            // Cheapest affordable book first, same reasoning
+            // GreedyAggressive's own ChooseShop gives for going first: a
+            // spell has no gear-slot opportunity cost and no Score to rank
+            // by, so price is the only signal and the cheap one preserves
+            // gold for whatever the rest of the shelf turns out to hold.
+            int cheapestBook = -1;
+            int cheapestBookPrice = -1;
+
+            foreach (var card in shop.Cards)
+            {
+                if (card.Kind != ShopEntryKind.Book || !card.Buyable) continue;
+                if (cheapestBook >= 0 && card.Price >= cheapestBookPrice) continue;
+
+                cheapestBookPrice = card.Price;
+                cheapestBook = card.Index;
+            }
+
+            if (cheapestBook >= 0) return ShopChoice.BuyBook(cheapestBook);
+
             int bestGear = -1;
             float bestScore = 0f;
 
@@ -438,6 +457,9 @@ namespace PrincesPalace.Domain.Bot
 
             return cheapestRelic >= 0 ? ShopChoice.BuyRelic(cheapestRelic) : ShopChoice.Leave();
         }
+
+        public SpellAssignmentChoice ChooseSpellAssignment(SpellAssignmentView view, RunView runView, SeededRandom rng) =>
+            SpellAssignmentDefault.Choose(view);
 
         public int ChooseRelic(IReadOnlyList<RelicOption> offer, RunView view, SeededRandom rng)
         {

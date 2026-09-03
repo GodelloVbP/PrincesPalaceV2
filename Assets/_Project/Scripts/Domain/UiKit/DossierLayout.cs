@@ -157,6 +157,14 @@ namespace PrincesPalace.Domain.UiKit
         // same track, at opposite ends of the column.
         public static float TrackNavRowCentreY => SkillsRowCentreY + NavRowHeight;
 
+        // The spell-books nav row (docs/PLAN_SHOP.md §1g, gate 3), fourth in
+        // the footer stack -- one more NavRowHeight up from Track. Audited
+        // like everything else on this screen rather than assumed to fit:
+        // the "200px of empty column" the footer's own header comment
+        // records is what leaves room for a fourth row without shrinking
+        // anything above it.
+        public static float SpellsNavRowCentreY => TrackNavRowCentreY + NavRowHeight;
+
         // ---- the XP bar ---------------------------------------------------------
         //
         // IN THE LAYOUT rather than computed in the screen, because there are

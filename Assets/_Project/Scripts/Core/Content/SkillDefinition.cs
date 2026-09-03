@@ -111,6 +111,12 @@ namespace PrincesPalace.Content
         [Tooltip("Does the front-rank rule apply to this skill? False (default) reaches any enemy. True refuses a click past a living front rank -- only means anything on a SingleEnemy skill.")]
         public bool meleeReach;
 
+        [Tooltip("Learned from a book rather than by levelling (docs/PLAN_SHOP.md s1a). False on every skill until Phase E flips it on the five spells and removes their unlockLevel.")]
+        public bool bookOnly;
+
+        [Tooltip("The shop's price band for this spell as a book, 1-4. Authored and read from Phase A onward regardless of bookOnly -- 'can this be found as a book' and 'does owning one replace the level route' are different questions. 0 means not book-eligible.")]
+        public int bookTier;
+
         // A spell that deals exactly what it says, rather than scaling off
         // the caster's Attack.
         public bool HasFixedDamage => damageInstances != null && damageInstances.Length > 0;

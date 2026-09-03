@@ -476,6 +476,27 @@ namespace PrincesPalace
                 // owners with two different lifetimes: the run's gold is spent
                 // inside the run and lost with it, while a level survives.
                 RunManager.BankPayout(payout.Value.Gold);
+
+                // ONE ROLL, THIS FIGHT (docs/PLAN_SHOP.md §1e). Keyed to
+                // (step, node) so quitting mid-reward and returning does not
+                // reroll it -- the same property Treasure and the shop
+                // streams have, for the same reason. Folded into
+                // run.unassignedSpellBooks BEFORE RewardApplier.Apply below,
+                // so the one SaveCurrent() that call already makes is the
+                // save this rides too, rather than a second write.
+                var bookIds = ContentDatabase.Skills
+                    .Where(s => s != null && s.bookTier > 0)
+                    .Select(s => s.id)
+                    .ToList();
+                var spellRng = RngStreams.Open(run.runSeed, RngStreams.SpellDrop, run.step, run.currentNodeId);
+                string droppedSpell = VictoryRewards.RollSpellDrop(bookIds,
+                    session != null && session.IsEliteFight, session != null && session.IsBossFight, spellRng);
+                if (droppedSpell != null)
+                {
+                    run.unassignedSpellBooks ??= new List<string>();
+                    run.unassignedSpellBooks.Add(droppedSpell);
+                }
+
                 reward = RewardApplier.Apply(payout.Value, FieldedIds(session));
 
                 // The fight's own counters, carried onto the reward so the

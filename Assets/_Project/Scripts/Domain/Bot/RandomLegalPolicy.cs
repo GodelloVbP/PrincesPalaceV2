@@ -76,6 +76,7 @@ namespace PrincesPalace.Domain.Bot
                 if (!card.Buyable) continue;
                 if (card.Kind == ShopEntryKind.Gear) legal.Add(ShopChoice.BuyGear(card.Index));
                 else if (card.Kind == ShopEntryKind.Relic) legal.Add(ShopChoice.BuyRelic(card.Index));
+                else if (card.Kind == ShopEntryKind.Book) legal.Add(ShopChoice.BuyBook(card.Index));
             }
 
             foreach (var row in shop.Bag)
@@ -90,5 +91,8 @@ namespace PrincesPalace.Domain.Bot
 
             return legal.Count == 0 ? ShopChoice.Leave() : legal[rng.NextInt(0, legal.Count)];
         }
+
+        public SpellAssignmentChoice ChooseSpellAssignment(SpellAssignmentView view, RunView runView, SeededRandom rng) =>
+            SpellAssignmentDefault.Choose(view);
     }
 }

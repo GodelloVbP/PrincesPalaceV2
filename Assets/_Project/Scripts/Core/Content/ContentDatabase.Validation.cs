@@ -401,9 +401,28 @@ namespace PrincesPalace.Content
                                "not player-selectable, so it will never appear on their strip.");
                 }
 
-                if (skill.unlockLevel < 1)
+                // A book-only skill's unlockLevel is int.MaxValue by
+                // construction (SkillEntryResolver) -- not a violation of
+                // "1 or higher", the carve-out below is what stops this row
+                // reading it as one. The second check is the load-time twin
+                // of the resolver's own authoring-time refusal: content is
+                // checked at both moments, and this is the one that would
+                // catch a hand-edited asset the resolver never saw.
+                if (!skill.bookOnly && skill.unlockLevel < 1)
                 {
                     errors.Add($"Skill '{skill.id}' unlocks at level {skill.unlockLevel}; characters start at level 1.");
+                }
+
+                if (skill.bookOnly && skill.unlockLevel != int.MaxValue)
+                {
+                    errors.Add($"Skill '{skill.id}' is bookOnly but its unlockLevel is {skill.unlockLevel}, not " +
+                               "int.MaxValue -- bookOnly and unlockLevel cannot both be authored.");
+                }
+
+                if (skill.bookTier < 0)
+                {
+                    errors.Add($"Skill '{skill.id}' has a negative bookTier ({skill.bookTier}). 0 means not " +
+                               "book-eligible.");
                 }
 
                 // A free skill that touches a health or mana bar strictly
