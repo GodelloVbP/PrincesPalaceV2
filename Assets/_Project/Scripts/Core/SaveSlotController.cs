@@ -97,11 +97,7 @@ namespace PrincesPalace
                 // Hover's own glow is unconditional (ThemedButtonState.
                 // UpdateGlow takes the MAX of menu-state alpha and focus
                 // alpha), so "Open on hover" needs no extra call here.
-                var themed = slotButtons[i].GetComponent<ThemedButtonState>();
-                if (themed != null)
-                {
-                    themed.SetMenuState(facts.Filled ? ThemedMenuState.Primary : ThemedMenuState.Idle);
-                }
+                ThemedButtonState.ApplySelection(slotButtons[i], facts.Filled, ThemedMenuState.Primary);
             }
         }
 

@@ -155,8 +155,7 @@ namespace PrincesPalace
                 // its own accent (which category, as a small lit tick) and
                 // stays; the plate itself brightens through SetMenuState the
                 // way every other themed selection does.
-                var themed = categoryButtons[i].GetComponent<ThemedButtonState>();
-                if (themed != null) themed.SetMenuState(i == _category ? ThemedMenuState.Open : ThemedMenuState.Idle);
+                ThemedButtonState.ApplySelection(categoryButtons[i], i == _category);
             }
         }
 
@@ -183,8 +182,7 @@ namespace PrincesPalace
                 rowMetas[i].SetContent(entry.Meta);
                 rowMarkers[i].color = _selectedRow == i ? MarkerLit : MarkerDark;
 
-                var themedRow = rows[i].GetComponent<ThemedButtonState>();
-                if (themedRow != null) themedRow.SetMenuState(_selectedRow == i ? ThemedMenuState.Open : ThemedMenuState.Idle);
+                ThemedButtonState.ApplySelection(rows[i], _selectedRow == i);
             }
 
             PaintDetail(page);

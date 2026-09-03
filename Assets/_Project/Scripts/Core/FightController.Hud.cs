@@ -23,10 +23,6 @@ namespace PrincesPalace
         // The palette, parsed once. Domain speaks hex because it cannot name a
         // Color; parsing per repaint would be a string parse per label per
         // frame for no reason.
-        private static readonly Color VerbActive = Hex(FightHudPalette.PanelActive);
-        private static readonly Color VerbIdlePrimary = Hex(FightHudPalette.PanelPrimary);
-        private static readonly Color RowIdle = Hex(FightHudPalette.RowQuiet);
-        private static readonly Color RowSelected = Hex(FightHudPalette.PanelActive);
         private static readonly Color CostAffordable = Hex(FightHudPalette.GoldLight);
         private static readonly Color CostUnaffordable = Hex(FightHudPalette.TextDisabled);
         private static readonly Color PipFilled = Hex(FightHudPalette.PipFilled);
@@ -153,30 +149,16 @@ namespace PrincesPalace
                 // what Submit presses" and "this is what is open".
                 bool highlighted = i == active || (active < 0 && i == _focusedVerb);
 
-                // THEMED VERBS drive ThemedButtonState.SetMenuState instead
-                // of targetGraphic.color -- Open/Primary/Idle is the same
-                // three-way distinction this method has always made, just
-                // painted on Glow/Plate instead of a flat Image tint. The
-                // targetGraphic path stays for any verb that is NOT themed
-                // (none today, but nothing here assumes every verb always
-                // will be).
-                var themed = verbButtons[i] == null ? null : verbButtons[i].GetComponent<ThemedButtonState>();
-                if (themed != null)
-                {
-                    themed.SetMenuState(highlighted ? ThemedMenuState.Open
-                        : i == 0 ? ThemedMenuState.Primary
-                        : ThemedMenuState.Idle);
-                }
-                else
-                {
-                    var image = verbButtons[i] == null ? null : verbButtons[i].targetGraphic as UnityEngine.UI.Image;
-                    if (image != null)
-                    {
-                        image.color = highlighted ? VerbActive
-                            : i == 0 ? VerbIdlePrimary
-                            : RowIdle;
-                    }
-                }
+                // THEMED VERBS drive ThemedButtonState.SetMenuState (through
+                // ApplySelection) instead of targetGraphic.color -- Open/
+                // Primary/Idle is the same three-way distinction this method
+                // has always made, just painted on Glow/Plate instead of a
+                // flat Image tint. Every verb is themed today, so there is no
+                // unthemed fallback left to keep.
+                var verbState = highlighted ? ThemedMenuState.Open
+                    : i == 0 ? ThemedMenuState.Primary
+                    : ThemedMenuState.Idle;
+                ThemedButtonState.ApplySelection(verbButtons[i], verbState != ThemedMenuState.Idle, verbState);
 
                 // Only the two nesting verbs have a live caret; the others were
                 // built with theirs deactivated and it stays that way.
@@ -260,21 +242,13 @@ namespace PrincesPalace
                 // says is not.
                 submenuRows[i].interactable = row.Affordable;
 
-                // THEMED ROWS drive ThemedButtonState.SetMenuState instead of
-                // targetGraphic.color, same split RefreshVerbs already makes
-                // for the verb column -- Open for the selected row, Idle for
-                // every other one. The colour path stays as a fallback for
-                // any row that is not themed (none today).
-                var themedRow = submenuRows[i].GetComponent<ThemedButtonState>();
-                if (themedRow != null)
-                {
-                    themedRow.SetMenuState(i == _menu.Selection ? ThemedMenuState.Open : ThemedMenuState.Idle);
-                }
-                else
-                {
-                    var frame = submenuRows[i].targetGraphic as UnityEngine.UI.Image;
-                    if (frame != null) frame.color = i == _menu.Selection ? RowSelected : RowIdle;
-                }
+                // THEMED ROWS drive ThemedButtonState.SetMenuState (through
+                // ApplySelection) instead of targetGraphic.color, same split
+                // RefreshVerbs already makes for the verb column -- Open for
+                // the selected row, Idle for every other one. Called AFTER
+                // the interactable write above, per ApplySelection's own
+                // ordering contract.
+                ThemedButtonState.ApplySelection(submenuRows[i], i == _menu.Selection);
 
                 // The row's whole state, in one channel. It used to carry the
                 // name at full strength, the meta dimmed and the cost

@@ -364,5 +364,37 @@ namespace PrincesPalace
             if (GlowRect != null) GlowRect.localScale = Vector3.one;
             if (Plate != null) Plate.color = Interactable ? MenuStatePlateTint() : DisabledTint;
         }
+
+        // THE SELECTION-PAINT SEAM, replacing the hand-copied "GetComponent
+        // <ThemedButtonState>(); SetMenuState if found, else fall back to a
+        // flat colour" loops that used to live at FightController.Hud's verb
+        // and submenu columns, GlossaryController's rail and row list,
+        // DebugMenuController's filter row, and SaveSlotController's slot
+        // list. `selected` picks between `selectedState` (Open, the common
+        // case) and Idle -- a caller with a THIRD live state (SaveSlotController's
+        // Primary for a filled slot, FightController's Primary for the
+        // unhighlighted first verb) computes its own ThemedMenuState first
+        // and passes `state != Idle` as `selected` alongside it, rather than
+        // leaning on the default.
+        //
+        // Null-safe on BOTH the button and the component. Every themed row
+        // this project draws today carries ThemedButtonState (WireThemedButton
+        // wires it on every Themed() button UiEmitter builds), so there is no
+        // unthemed colour fallback left to fall back to -- an untethered
+        // button, or one mid-build before wiring runs, silently does nothing
+        // instead of throwing.
+        //
+        // CALL THIS AFTER setting `button.interactable`, never before:
+        // SetMenuState ends in Refresh(), which reads Button.interactable
+        // immediately to choose DisabledTint vs the state's own plate tint
+        // (MenuStatePlateTint above). Calling this first paints one frame off
+        // a stale interactable flag (f7c3744).
+        public static void ApplySelection(Selectable button, bool selected, ThemedMenuState selectedState = ThemedMenuState.Open)
+        {
+            if (button == null) return;
+            var themed = button.GetComponent<ThemedButtonState>();
+            if (themed == null) return;
+            themed.SetMenuState(selected ? selectedState : ThemedMenuState.Idle);
+        }
     }
 }

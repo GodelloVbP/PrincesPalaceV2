@@ -42,9 +42,6 @@ namespace PrincesPalace
         public const int GoldGrant = 10000;
         public const int EmberGrant = 25;
 
-        private static readonly Color FilterOn = new Color(0.95f, 0.86f, 0.62f, 1f);
-        private static readonly Color FilterOff = new Color(0.55f, 0.50f, 0.66f, 1f);
-
         // KindAll, then the three ItemKind ordinals, matching the order the
         // screen declares its filter buttons in.
         private static readonly int[] FilterKinds =
@@ -185,18 +182,10 @@ namespace PrincesPalace
                 // Themed(Silver) now (balance-bot, 2026-09-02): targetGraphic
                 // is the plate, so a direct colour write here would fight
                 // ThemedButtonState's own idle/hover/press tint. SetMenuState
-                // is the same Open/Idle distinction FilterOn/FilterOff used
-                // to draw, painted on the plate instead.
-                var themed = filterButtons[i].GetComponent<ThemedButtonState>();
-                if (themed != null)
-                {
-                    themed.SetMenuState(i == _filter ? ThemedMenuState.Open : ThemedMenuState.Idle);
-                }
-                else
-                {
-                    var graphic = filterButtons[i].targetGraphic as Image;
-                    if (graphic != null) graphic.color = i == _filter ? FilterOn : FilterOff;
-                }
+                // (through ApplySelection) is the same Open/Idle distinction
+                // the old flat colours used to draw, painted on the plate
+                // instead.
+                ThemedButtonState.ApplySelection(filterButtons[i], i == _filter);
             }
 
             var page = DebugMenuCatalog.Page(_filtered, _page);
