@@ -73,6 +73,13 @@ namespace PrincesPalace
         private const uint EquipStream = 106;
         private const uint LevelStream = 107;
 
+        // The shop's own, opened per CHOICE rather than per visit: a policy
+        // that draws a different number of times on its second call would
+        // otherwise shift what its third call sees. Position is (step,
+        // choiceIndex), so the same seed asked the same question at the same
+        // point in the same visit always gets the same tie-break.
+        private const uint ShopStream = 108;
+
         // ---- what one run hands back --------------------------------------------
 
         // One relic-draft round, which RunTrace has no field for.
@@ -158,7 +165,14 @@ namespace PrincesPalace
             return _sharedRoot;
         }
 
-        public static BotRunResult PlayRun(ulong seed, string archetype, string profile, int depthCapSteps)
+        // `shopNodes` is a BATCH-LEVEL switch, not an archetype's opinion --
+        // see ShopNodePreference. Defaulted rather than made a static like
+        // InMemorySaves because it changes what a run DOES, and a
+        // process-global that changes results is a thing a caller forgets to
+        // reset; the two modes are meant to be run as two batches over the
+        // same seeds and compared.
+        public static BotRunResult PlayRun(ulong seed, string archetype, string profile, int depthCapSteps,
+            ShopNodeMode shopNodes = ShopNodeMode.WhenOffered)
         {
             var result = new BotRunResult();
             result.Trace.Seed = seed;
@@ -199,7 +213,7 @@ namespace PrincesPalace
                     Navigation.LoadOverride = _ => { };
                 }
 
-                PlayOneRun(seed, archetype, profile, depthCapSteps, result);
+                PlayOneRun(seed, archetype, profile, depthCapSteps, shopNodes, result);
             }
             catch (Exception e)
             {
@@ -241,7 +255,8 @@ namespace PrincesPalace
         }
 
         private static void PlayOneRun(
-            ulong seed, string archetype, string profile, int depthCapSteps, BotRunResult result)
+            ulong seed, string archetype, string profile, int depthCapSteps, ShopNodeMode shopNodes,
+            BotRunResult result)
         {
             var policy = PolicyFor(archetype);
             var fightPolicy = policy as IFightPolicy;
@@ -341,7 +356,18 @@ namespace PrincesPalace
                     continue;
                 }
 
-                var node = runPolicy.ChooseNode(choices, ViewOf(save), StreamFor(seed, NodeStream, RunManager.Run.step, rooms));
+                // THE SHOP PREFERENCE WRAPS THE POLICY, IT DOES NOT REPLACE
+                // IT. WhenOffered answers the node itself only when a Shop is
+                // on the table and the archetype would not have rested;
+                // Never narrows the list and lets the archetype choose out of
+                // what is left. Everything else is the archetype's own rule,
+                // unchanged (ShopNodePreference).
+                var view = ViewOf(save);
+                var offered = ShopNodePreference.ChoicesFor(shopNodes, choices);
+                var node = ShopNodePreference.PreferredNode(
+                               shopNodes, offered, view, runPolicy.RestBelowPartyHpFraction)
+                           ?? runPolicy.ChooseNode(offered, view, StreamFor(seed, NodeStream, RunManager.Run.step, rooms));
+
                 if (node == null)
                 {
                     result.Hits.Add(new InvariantHit("NoNodeChosen", $"the policy chose nothing from {choices.Count} options"));
@@ -386,7 +412,7 @@ namespace PrincesPalace
                 // "not a fight" no longer means "already done".
                 if (arrival == RunOrchestrator.Arrival.Shop)
                 {
-                    VisitShop(roomTrace);
+                    VisitShop(seed, save, runPolicy, roomTrace);
                     result.Trace.Rooms.Add(roomTrace);
                     CaptureWhatTheRunHolds(save, result);
                     continue;
@@ -406,23 +432,90 @@ namespace PrincesPalace
             }
         }
 
-        // WHAT THE BOT DOES IN A SHOP, FOR NOW: LOOK AND LEAVE.
+        // ---- the shop ------------------------------------------------------------
+
+        // HOW MANY DECISIONS ONE VISIT MAY MAKE.
         //
-        // Gate 1 builds the economy and measures it; the policy call
-        // (IRunPolicy.ChooseShop) is gate 1's other half and is not this
-        // agent's. Leaving immediately still produces every number the gate
-        // needs except the purchase ones -- arrival gold, forgone gold, what
-        // was on the shelf and at what price -- and it produces them from the
-        // real roll rather than from an estimate.
+        // A policy that never says leave is a hang, and there is no timeout
+        // under BotRunDriver to catch one (docs/PLAN_SHOP.md 2g). Twelve is
+        // comfortably above what any archetype here can legitimately want --
+        // six cards plus three rerolls is nine, and only GreedyDefensive
+        // sells -- so hitting it is a finding rather than a truncation, and
+        // it is recorded as one on the trace.
+        private const int MaxShopChoices = 12;
+
+        // WHAT THE BOT DOES IN A SHOP: ASK THE POLICY UNTIL IT LEAVES.
+        //
+        // The view is rebuilt before EVERY call, not once per visit. A
+        // purchase moves the purse and marks a card sold; a sale renumbers
+        // the bag, because InventoryOps.TryRemoveAt drops an emptied stack
+        // out of the list. A policy handed a stale view would be buying
+        // against gold it had already spent and selling at indices that had
+        // moved.
+        //
+        // THE VISIT ENDS ON ANY OF FOUR THINGS: leave, a refusal, the cap, or
+        // an empty shelf. A refusal ends it because an archetype is allowed
+        // to ask for something it cannot have but asking twice in a row is a
+        // loop -- and the refusal is on the trace, so a policy that keeps
+        // doing it is visible rather than merely slow.
         //
         // The shelf is read BEFORE LeaveShop, which clears it.
-        private static void VisitShop(RoomTrace roomTrace)
+        private static void VisitShop(ulong seed, SaveData save, IRunPolicy runPolicy, RoomTrace roomTrace)
         {
             var run = RunManager.Run;
 
             roomTrace.PurchasesBySection = new int[ShopStock.SectionCount];
             roomTrace.RerollsBySection = new int[ShopStock.SectionCount];
 
+            int step = run.step;
+
+            for (int choiceIndex = 0; choiceIndex < MaxShopChoices; choiceIndex++)
+            {
+                var shopView = ShopViewOf(save, runPolicy);
+                if (shopView.Cards.Count == 0) break;
+
+                var choice = runPolicy.ChooseShop(
+                    shopView, ViewOf(save), StreamFor(seed, ShopStream, step, choiceIndex));
+
+                if (choice.Kind == ShopChoiceKind.Leave)
+                {
+                    roomTrace.ShopChoices.Add(new ShopChoiceTrace { Kind = "Leave", Outcome = "Leave" });
+                    break;
+                }
+
+                var result = Apply(choice);
+                roomTrace.ShopChoices.Add(new ShopChoiceTrace
+                {
+                    Kind = choice.Kind.ToString(),
+                    Section = choice.Section,
+                    Index = choice.Index,
+                    GoldDelta = result.GoldDelta,
+                    Outcome = result.Outcome.ToString(),
+                    Refusal = result.Reason.ToString(),
+                });
+
+                if (!result.Applied) break;
+
+                if (choice.Kind == ShopChoiceKind.Reroll &&
+                    choice.Section >= 0 && choice.Section < ShopStock.SectionCount)
+                {
+                    roomTrace.RerollsBySection[choice.Section]++;
+                }
+
+                // RECORDED, NOT SILENTLY TRUNCATED. A visit that ran out of
+                // budget was cut off mid-decision, and a report that could
+                // not tell that from a policy choosing to leave would count
+                // the cut-off visit as a completed one.
+                if (choiceIndex == MaxShopChoices - 1)
+                {
+                    roomTrace.ShopChoices.Add(new ShopChoiceTrace { Kind = "Capped", Outcome = "Capped" });
+                }
+            }
+
+            // COUNTED OFF THE SHELF, not off the choice list: `sold` is the
+            // shelf's own record of what left it, so a purchase the
+            // orchestrator applied and the trace mis-attributed cannot make
+            // the two disagree.
             foreach (var entry in RunOrchestrator.CurrentShopStock)
             {
                 if (entry == null || entry.noOffer) continue;
@@ -438,18 +531,107 @@ namespace PrincesPalace
                 if (entry.sold) roomTrace.PurchasesBySection[entry.section]++;
             }
 
-            for (int section = 0; section < ShopStock.SectionCount; section++)
-            {
-                roomTrace.RerollsBySection[section] =
-                    run.shopRerollsUsed != null && section < run.shopRerollsUsed.Length
-                        ? run.shopRerollsUsed[section]
-                        : 0;
-            }
-
             RunOrchestrator.LeaveShop();
 
             roomTrace.GoldOnLeave = run.gold;
             roomTrace.GoldSpent = roomTrace.GoldOnArrival - roomTrace.GoldOnLeave;
+        }
+
+        // The one place a ShopChoice becomes a mutation. A switch rather than
+        // four call sites, so "which orchestrator method does this kind mean"
+        // is answered once.
+        private static ShopResult Apply(ShopChoice choice)
+        {
+            switch (choice.Kind)
+            {
+                case ShopChoiceKind.BuyGear: return RunOrchestrator.BuyGear(choice.Index);
+                case ShopChoiceKind.BuyRelic: return RunOrchestrator.BuyRelic(choice.Index);
+                case ShopChoiceKind.Sell: return RunOrchestrator.Sell(choice.Index, choice.Quantity);
+                case ShopChoiceKind.Reroll: return RunOrchestrator.RerollSection(choice.Section);
+                default: return ShopResult.Refused(ShopRefusal.BadIndex);
+            }
+        }
+
+        // THE SHELF AND THE BAG, FLATTENED, WITH CORE'S SCORES ATTACHED.
+        //
+        // Same bargain ViewOf makes and the same reason RunView.OfferScores
+        // exists: Domain cannot resolve an item id into what wearing it would
+        // do, so the score is computed HERE, by the same GearEvaluator the
+        // reward offer uses, against the archetype's own weights -- and a
+        // policy sees a number rather than a content database.
+        private static ShopView ShopViewOf(SaveData save, IRunPolicy runPolicy)
+        {
+            var run = RunManager.Run;
+            var stock = RunOrchestrator.CurrentShopStock;
+            if (run == null || stock.Count == 0)
+            {
+                return new ShopView(Array.Empty<ShopCardView>(), Array.Empty<int>(),
+                    Array.Empty<int>(), Array.Empty<ShopBagRow>(), run?.gold ?? 0);
+            }
+
+            var weights = runPolicy.Gear;
+            var cards = new List<ShopCardView>(stock.Count);
+
+            foreach (var entry in stock)
+            {
+                if (entry == null) continue;
+
+                // SCORED ONLY FOR GEAR, and only for a card still on sale:
+                // ScoreOffer walks the paperdoll for every fielded character,
+                // and paying that for a NO OFFER placeholder or a card
+                // already bought buys nothing.
+                float score = entry.kind == ShopEntryKind.Gear && !entry.noOffer && !entry.sold
+                    ? GearEvaluator.ScoreOffer(save, entry.contentId, entry.plus, weights)
+                    : 0f;
+
+                cards.Add(new ShopCardView(entry.section, entry.index, entry.kind, entry.contentId,
+                    entry.price, entry.sold, entry.noOffer, run.gold >= entry.price, score));
+            }
+
+            var rerollPrices = new int[ShopStock.SectionCount];
+            var rerollsUsed = new int[ShopStock.SectionCount];
+            for (int section = 0; section < ShopStock.SectionCount; section++)
+            {
+                rerollPrices[section] = RunOrchestrator.RerollPriceFor(section);
+                rerollsUsed[section] = run.shopRerollsUsed != null && section < run.shopRerollsUsed.Length
+                    ? run.shopRerollsUsed[section]
+                    : 0;
+            }
+
+            return new ShopView(cards, rerollPrices, rerollsUsed, BagRowsOf(save, weights), run.gold);
+        }
+
+        private static List<ShopBagRow> BagRowsOf(SaveData save, GearWeights weights)
+        {
+            var rows = new List<ShopBagRow>();
+            var bag = save?.stockpiledItems;
+            if (bag == null) return rows;
+
+            var seenIds = new HashSet<string>();
+
+            for (int i = 0; i < bag.Count; i++)
+            {
+                var entry = bag[i];
+                if (entry == null || entry.count <= 0) continue;
+
+                var definition = ContentDatabase.GetItem(entry.itemId);
+                bool consumable = definition != null && definition.kind == ItemKind.Consumable;
+
+                // DUPLICATE MEANS "an earlier row already holds this id",
+                // which is the only duplicate a bag can show: two stacks of
+                // the same item exist precisely because their plus, affixes
+                // or rift tier differ, so the ids match and the copies do not.
+                bool duplicate = !seenIds.Add(entry.itemId);
+
+                float score = consumable
+                    ? 0f
+                    : GearEvaluator.ScoreOffer(save, entry.itemId, entry.plus, weights);
+
+                rows.Add(new ShopBagRow(i, entry.itemId, entry.count,
+                    RunOrchestrator.SellPriceOf(entry), score, duplicate, consumable));
+            }
+
+            return rows;
         }
 
         // ---- the relic draft -----------------------------------------------------

@@ -133,7 +133,7 @@ namespace PrincesPalace.Domain.Bot
             var treasure = choices.FirstOrDefault(n => n.Type == RoomType.Treasure);
             if (treasure != null) return treasure;
 
-            if (view.PartyHpFraction < 0.5f)
+            if (view.PartyHpFraction < RestBelowPartyHpFraction)
             {
                 var rest = choices.FirstOrDefault(n => n.Type == RoomType.Rest);
                 if (rest != null) return rest;
@@ -208,6 +208,63 @@ namespace PrincesPalace.Domain.Bot
             if (options.Count == 0) return -1;
             var weights = Gear;
             return BestIndexTiedByRng(options.Count, i => weights.Score(options[i].Deltas), rng);
+        }
+
+        // Same 50% threshold ChooseNode uses above, surfaced for
+        // ShopNodePreference rather than restated in it.
+        public float RestBelowPartyHpFraction => 0.5f;
+
+        // BUY THE BIGGEST NUMBER, NEVER REROLL, NEVER SELL.
+        //
+        // The same read of "best" the offer picker uses -- Core's
+        // GearEvaluator score against this archetype's own weights -- so a
+        // piece it would have taken for free is a piece it will pay for.
+        // Gear before relics because gear is the thing it can score: a relic
+        // is ranked only by rarity, which says how rare it is and not what it
+        // does, and spending the purse on that first would starve the ranking
+        // this archetype actually has.
+        //
+        // Score must be POSITIVE, not merely highest. GearEvaluator answers
+        // zero for a piece nobody in the squad can wear and for one strictly
+        // worse than what is already on, and paying gold for either is not
+        // aggression.
+        //
+        // No reroll at all: rerolling is a bet that the next shelf is better,
+        // and this archetype's whole posture is taking what is in front of it.
+        public ShopChoice ChooseShop(ShopView shop, RunView view, SeededRandom rng)
+        {
+            int bestGear = -1;
+            float bestScore = 0f;
+
+            foreach (var card in shop.Cards)
+            {
+                if (card.Kind != ShopEntryKind.Gear || !card.Buyable) continue;
+                if (card.Score <= bestScore) continue;
+
+                bestScore = card.Score;
+                bestGear = card.Index;
+            }
+
+            if (bestGear >= 0) return ShopChoice.BuyGear(bestGear);
+
+            // RAREST AFFORDABLE RELIC, which is the identical read of "best"
+            // ChooseRelic uses on the draft screen -- lowest pool weight
+            // first. Price is deliberately not the tiebreak: RelicPrice is a
+            // pure function of rarity, so ranking on either gives the same
+            // order and ranking on rarity says what is actually meant.
+            int bestRelic = -1;
+            int bestPrice = -1;
+
+            foreach (var card in shop.Cards)
+            {
+                if (card.Kind != ShopEntryKind.Relic || !card.Buyable) continue;
+                if (card.Price <= bestPrice) continue;
+
+                bestPrice = card.Price;
+                bestRelic = card.Index;
+            }
+
+            return bestRelic >= 0 ? ShopChoice.BuyRelic(bestRelic) : ShopChoice.Leave();
         }
 
         public int ChooseRelic(IReadOnlyList<RelicOption> offer, RunView view, SeededRandom rng)

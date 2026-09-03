@@ -6,6 +6,8 @@ param(
     [int]$DepthCap = 40,
     [double]$ReplayShare = 0.1,
     [int]$InMemorySaves = 1,
+    [ValidateSet("WhenOffered","Never")]
+    [string]$ShopPolicy = "WhenOffered",
     [int]$Shards = 0,
     [switch]$SkipSync
 )
@@ -67,6 +69,19 @@ param(
 # roughly 2,000 runs a single shard is the better trade, because N shards pay
 # N robocopy syncs and the same 20s boot each while splitting work that was
 # already only a few seconds.
+#
+# SHOP POLICY
+#
+#   -ShopPolicy WhenOffered   (default) the run takes a Shop node whenever
+#                             one is among the column's choices and the
+#                             archetype would not have rested instead.
+#   -ShopPolicy Never         Shop nodes are filtered out before the policy
+#                             is asked -- the fight-only baseline.
+#
+# The pair answers "does taking a shop cost depth" (PLAN_SHOP.md SS7.1 point
+# 1): run the SAME -Seed and -Runs in both modes and hand bot_merge.py both
+# batch directories. The node stream is positional, so the two batches
+# diverge only where the map choice itself differs.
 #
 # OUTPUT
 #
@@ -231,7 +246,7 @@ New-Item -ItemType Directory -Path $MainOutDir -Force | Out-Null
 
 Write-Host ""
 Write-Host "Running balance bot: $Runs runs/cell, seed $Seed, archetypes [$Archetypes], profiles [$Profiles],"
-Write-Host "depth cap $DepthCap steps, replay share $ReplayShare, across $($shardList.Count) shard(s)."
+Write-Host "depth cap $DepthCap steps, replay share $ReplayShare, shop policy $ShopPolicy, across $($shardList.Count) shard(s)."
 
 # ---- launch ------------------------------------------------------------------
 
@@ -255,6 +270,7 @@ foreach ($shard in $shardList) {
         "-botDepthCap", $DepthCap,
         "-botReplayShare", $ReplayShare,
         "-botInMemorySaves", $InMemorySaves,
+        "-botShopPolicy", $ShopPolicy,
         "-botShard", "$($shard.Index)/$($shardList.Count)",
         "-botCommit", $CommitSha,
         "-botOut", "`"$($shard.OutDir)`"",

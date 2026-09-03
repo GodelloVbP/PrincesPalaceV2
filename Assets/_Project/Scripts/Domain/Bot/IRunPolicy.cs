@@ -45,5 +45,23 @@ namespace PrincesPalace.Domain.Bot
         // embers in hand and nothing on the frontier worth having should be
         // able to say so.
         int ChooseTalent(IReadOnlyList<TalentOption> options, RunView view, SeededRandom rng);
+
+        // ONE SHOP DECISION, ASKED IN A LOOP UNTIL IT SAYS LEAVE. The driver
+        // rebuilds `shop` between every call -- a purchase moves the purse,
+        // a sale moves the bag -- and caps the loop, because a policy that
+        // never says leave is a hang and there is no timeout under it
+        // (docs/PLAN_SHOP.md §2g).
+        //
+        // A refused mutation also ends the visit. An archetype is allowed to
+        // ask for something it cannot have; asking twice in a row is a loop.
+        ShopChoice ChooseShop(ShopView shop, RunView view, SeededRandom rng);
+
+        // BELOW THIS FRACTION OF PARTY HP, THIS ARCHETYPE GOES TO A REST NODE
+        // IF THERE IS ONE. Already a private constant inside each policy's
+        // ChooseNode; surfaced because ShopNodePreference has to know it to
+        // avoid walking a hurt party past the Rest node into a shop, and a
+        // second copy of the number in the wrapper is a second number to keep
+        // in step. Zero for an archetype with no rest rule.
+        float RestBelowPartyHpFraction { get; }
     }
 }

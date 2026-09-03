@@ -66,6 +66,107 @@ here before the next gate starts. Empty until a gate actually exits.
 
 ### Gate 1
 
+**Recorded 2026-09-03, commit range `4bc66f7`-`ed48a39` (economy) plus the
+bot/policy layer built on top of it.** Batches: `WhenOffered` — 12,000 runs
+(4 archetypes × 3 profiles × 1,000 seeds), 4 shards, `reports/bot/20260903-150857`
+— and a matched `Never` batch on the same seeds, 3,000 runs (the 250-run/shard
+shape × 4 shards), `reports/bot/20260903-155145`. Paired summary:
+`reports/bot/20260903-150857/summary_paired.json`
+(`python tools/bot_merge.py reports/bot/20260903-150857 --compare reports/bot/20260903-155145`).
+Determinism check: 1,200 replayed runs, 0 mismatches — quitting mid-shop and
+reloading reproduces the same stock, which is the property F9/§2d exist for.
+4 pre-existing `TooManyCommands` invariant hits (a `placeholder_brawler_provoke`
+stalemate, `GreedyAggressive`/`GreedyDefensive` Late), unrelated to the shop —
+a placeholder-content bug, not a regression from this work.
+
+**Matched-seed comparison (§7.1 point 1) — taking a shop does not cost depth.**
+3,000 pairs, 1,751 with at least one shop visit. Median depth: 40 vs 40
+(delta 0, both hit the depth cap at the same rate). Survival to the next
+boss after a shop visit: 99.66% (`WhenOffered`) vs 99.71% (`Never`) — a
+0.05pp gap, noise at this sample size. Depth variance: 5.21 vs 5.44. The
+"shop over fight does not cost depth" gate (§7.3, exit condition c) passes
+cleanly at the current 3/1/2-card, gear/relic-only shelf.
+
+**Arrival gold, by step (all archetypes/profiles pooled), replacing §2a's
+cumulative-won-gold table:**
+
+| step | p10 | p25 | median |
+|---|---|---|---|
+| 4 | 9 | 21 | 31 |
+| 8 | 62 | 90 | 112 |
+| 12 | 195 | 249 | 294 |
+| 16 | 339 | 408 | 475 |
+| 24 | 852 | 989 | 1,115 |
+| 32 | 1,808 | 2,040 | 2,280 |
+| 40 | 3,619 | 4,018 | 4,429 |
+
+**Per-cell shop numbers** (12 cells, archetype × profile; RandomLegal picks
+uniformly among legal choices including "leave", the three others buy
+whenever a card scores positively):
+
+| archetype | profile | arrival gold p10/p25/median | below cheapest | purchases/visit | zero-purchase | afford gear/relic | spend share gear/relic | gold on leave (median) | gold at death (median) |
+|---|---|---|---|---|---|---|---|---|---|
+| RandomLegal | Fresh | 34 / 208 / 656 | 8.2% | 0.34 | 73.4% | 91.2% / 85.4% | 35% / 65% | 633 | 3,738 |
+| GreedyAggressive | Fresh | 34 / 173 / 512 | 7.3% | 2.91 | 7.4% | 91.7% / 84.6% | 26% / 75% | 308 | 3,892 |
+| GreedyDefensive | Fresh | 34 / 182 / 541 | 7.3% | 2.85 | 6.5% | 91.8% / 85.2% | 25% / 75% | 350 | 4,232 |
+| Lookahead2 | Fresh | 27 / 141 / 447 | 8.4% | 2.25 | 16.3% | 90.3% / 82.3% | 18% / 82% | 56 | 3,144 |
+| RandomLegal | Mid | 39 / 214 / 709 | 7.9% | 0.33 | 73.6% | 91.1% / 86.0% | 39% / 61% | 684 | 4,170 |
+| GreedyAggressive | Mid | 34 / 176 / 510 | 7.4% | 2.86 | 7.6% | 91.1% / 84.8% | 27% / 73% | 290 | 4,201 |
+| GreedyDefensive | Mid | 34 / 182 / 535 | 7.4% | 2.77 | 7.0% | 91.2% / 85.1% | 25% / 75% | 345 | 4,321 |
+| Lookahead2 | Mid | 27 / 140 / 445 | 8.6% | 2.23 | 16.5% | 89.8% / 82.4% | 18% / 82% | 54 | 3,451 |
+| RandomLegal | Late | 25 / 210 / 694 | 9.3% | 0.34 | 73.7% | 89.3% / 84.6% | 40% / 60% | 668 | 4,219 |
+| GreedyAggressive | Late | 24 / 166 / 477 | 9.4% | 2.87 | 9.6% | 88.6% / 82.2% | 31% / 69% | 242 | 4,068 |
+| GreedyDefensive | Late | 26 / 172 / 494 | 9.0% | 2.73 | 8.2% | 89.0% / 82.6% | 29% / 71% | 294 | 4,119 |
+| Lookahead2 | Late | 17 / 128 / 424 | 10.9% | 2.16 | 19.4% | 87.1% / 79.7% | 22% / 78% | 48 | 3,780 |
+
+Book section: `noOffer` for every visit in this gate (`ShopStock.BookCount = 1`,
+no book content rolled yet) — `spendShareBySection.books = 0` everywhere,
+correctly.
+
+**Reading.** Affordability is not the bottleneck: 87-92% of gear cards and
+80-86% of relic cards are affordable on arrival across every archetype and
+profile, and only 7-11% of visits arrive below the cheapest card on offer.
+The bottleneck is **visit frequency and per-visit spend ceiling against a
+six-card shelf**, not price. Even the most aggressive buyer (`GreedyAggressive`,
+2.9 purchases/visit, 6.5-9.6% zero-purchase) leaves a run with a median of
+3,700-4,300 gold unspent at death — six to nine times the pre-shop §2a
+baseline (531-740 median gold at death) that the shop was meant to sink.
+`RandomLegal`'s 73% zero-purchase share is a policy artifact (it treats
+"leave" as one of several equally-legal choices, per its brief) and should
+not be read as a shelf-size finding on its own; the three greedy archetypes,
+which buy on every affordable positive-scoring card, are the honest read of
+whether six offers is enough room to spend into, and they say it is not.
+
+**Proposed changes for the next gate, not applied here** (§7 reserves this
+decision for the plan's owner):
+1. **Widen the shelf, or slow the gold curve, or both.** At the current
+   3 gear / 2 relic / 1 book cards, even a bot that never declines an
+   affordable positive-scoring purchase cannot spend fast enough to keep
+   pace with arrival gold, which itself grows roughly geometrically with
+   depth (31 → 4,429 median from step 4 to step 40, a ~140× climb against
+   §2a's flat-with-depth *per-fight* income — the run-total simply compounds).
+   A `GearCount` of 4-5 and/or a `RelicCount` of 3 would give the greedy
+   archetypes more to spend on per visit; whether that closes the gap or
+   only delays it depends on how many *visits* a run gets, which gate 1
+   did not change (shop generation weight is unmoved, F2/§0).
+2. **The book section, once populated in gate 3, is one more sink** — its
+   `spendShareBySection` is 0 by construction this gate and should move the
+   split visibly once real content rolls there.
+3. **Gold-forgone-by-step** (median won-fight payout at the same step band,
+   from this same batch): steps 1-8 = 29g, 9-16 = 71g, 17-24 = 129g,
+   25-40 = 260g. Against the arrival-gold table above, a player is never
+   close to being unable to afford a shop trip — the opportunity cost of a
+   shop node is small next to the bank they are already carrying by the time
+   they reach one.
+4. **`RerollPrice`'s doubling (15·2^n, ceiling 9999) is not the constraint
+   either** — 6.7-8.9% reroll-then-no-purchase per section, roughly flat
+   across archetypes, suggests rerolling is used sparingly and mostly
+   productively, not as a symptom of an unaffordable shelf.
+
+None of the above is applied in this gate; §7.3 requires the counts to be
+**re-decided in writing** before gate 2's screen is laid out, and this is
+that writing.
+
 ### Gate 2
 
 ### Gate 3

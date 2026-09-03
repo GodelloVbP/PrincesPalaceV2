@@ -219,6 +219,100 @@ class TracesJsonlFixtureTests(unittest.TestCase):
                     self.assertIn("PartyHpAfter", turn)
 
 
+class ShopSectionTests(unittest.TestCase):
+    """The gate-1 shop rows, rendered off a summary built here rather than off
+    a checked-in fixture: the two batch_* fixtures predate the shop and are
+    the record of what an older summary.json looked like, which is a property
+    worth keeping rather than editing away."""
+
+    def summary(self, shop, versus=None):
+        return {
+            "batch": {"timestamp": "2026-09-03T00:00:00Z", "commitSha": "abc1234",
+                      "runsPerCell": 10, "firstSeed": 1, "archetypes": ["RandomLegal"],
+                      "profiles": ["Fresh"], "depthCapSteps": 40, "elapsedSeconds": 1,
+                      "shopPolicies": ["WhenOffered"]},
+            "cells": [{"archetype": "RandomLegal", "profile": "Fresh", "runs": 10,
+                       "depth": {"median": 8, "p10": 4, "p90": 20, "mean": 9, "cappedShare": 0},
+                       "deathCauses": [], "doomedShare": 0, "swingShare": 0,
+                       "fightLength": {"byFloor": {}, "byRoomType": {}},
+                       "turnOneShare": 0, "steamrollByFloor": {}, "consumableUseShare": 0,
+                       "potionsWastedMean": 0,
+                       "buildDiversity": {"distinctRelicSets": 1, "distinctTalentSets": 1,
+                                          "distinctGearSets": 1},
+                       "itemPickRate": {}, "relicPickRate": {}, "itemEquipRate": {},
+                       "shop": shop}],
+            "decisionPressure": {"nodes": None, "offers": None, "relics": None},
+            "shopVsNoShop": versus,
+            "coverage": {"enemiesNeverSeen": [], "relicsNeverOffered": [],
+                         "relicsNeverPicked": [], "itemsNeverOffered": [],
+                         "itemsNeverPicked": [], "skillsNeverUsed": [], "enemyAbilityIds": []},
+            "archetypeGap": [{"profile": "Fresh",
+                              "archetypes": [{"archetype": "RandomLegal", "medianDepth": 8}]}],
+            "bugs": [],
+            "determinism": {"checked": 1, "mismatches": []},
+        }
+
+    A_SHOP = {
+        "visits": 4,
+        "arrivalGold": {"p10": 12, "p25": 20, "median": 44, "p75": 91},
+        "belowCheapestShare": 0.25,
+        "goldForgone": {"1-8": 16, "9-16": 22, "17-24": None, "25-40": None},
+        "purchasesPerVisit": 0.5,
+        "zeroPurchaseShare": 0.75,
+        "affordableShareBySection": {"gear": 0.4, "books": None, "relics": 0.05},
+        "rerollsPerVisitBySection": {"gear": 0.25, "books": 0, "relics": 0},
+        "rerollThenNoPurchaseShare": {"gear": 0.25, "books": None, "relics": None},
+        "spendShareBySection": {"gear": 1, "books": None, "relics": 0},
+        "goldOnLeaveMedian": 20,
+        "goldAtDeathMedian": 31,
+        "arrivalGoldByStep": {
+            "4": {"p10": 8, "p25": 14, "median": 30, "n": 10},
+            "8": None, "12": None, "16": None, "24": None, "32": None, "40": None,
+        },
+    }
+
+    def test_the_shop_block_renders_its_numbers(self):
+        out = bot_report.render_html(self.summary(self.A_SHOP), None, "x", None)
+        self.assertIn("arrived below the cheapest card", out)
+        self.assertIn("visits that bought nothing", out)
+        self.assertIn("gold forgone", out)
+        self.assertIn("share of shown cards affordable on arrival", out)
+        self.assertIn("gold on arrival, by step", out)
+
+    def test_a_step_nobody_reached_reads_as_not_reached(self):
+        out = bot_report.render_html(self.summary(self.A_SHOP), None, "x", None)
+        self.assertIn("not reached", out)
+
+    def test_a_cell_with_no_visits_says_so_instead_of_showing_zeroes(self):
+        empty = {"visits": 0, "arrivalGold": None, "belowCheapestShare": None,
+                 "goldForgone": {"1-8": 16}, "arrivalGoldByStep": {}}
+        out = bot_report.render_html(self.summary(empty), None, "x", None)
+        self.assertIn("no shop visits in this cell", out)
+        self.assertNotIn("visits that bought nothing", out)
+
+    def test_shop_vs_no_shop_is_absent_without_both_modes(self):
+        out = bot_report.render_html(self.summary(self.A_SHOP), None, "x", None)
+        self.assertNotIn("shop vs no shop", out)
+
+    def test_shop_vs_no_shop_renders_the_paired_comparison(self):
+        versus = {
+            "pairs": 100, "pairsWithAShopVisit": 61,
+            "medianDepth": {"WhenOffered": 12, "Never": 14, "delta": -2},
+            "survivalToNextBossShare": {"WhenOffered": 0.4, "Never": 0.5},
+            "depthVariance": {"WhenOffered": 30, "Never": 26},
+        }
+        summary = self.summary(self.A_SHOP, versus)
+        out = bot_report.render_html(summary, None, "x", None)
+        self.assertIn("shop vs no shop (matched seeds)", out)
+        self.assertIn("100 paired runs", out)
+        self.assertIn("survived to a boss after the first shop", out)
+
+        text = bot_report.render_text_summary(summary)
+        self.assertIn("Shop policy: WhenOffered", text)
+        self.assertIn("Shop vs no shop: median depth 12 vs 14 over 100 paired runs", text)
+        self.assertIn("shop visits=4", text)
+
+
 class CliSmokeTest(unittest.TestCase):
     def test_main_runs_end_to_end(self):
         import tempfile

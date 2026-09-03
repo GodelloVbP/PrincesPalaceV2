@@ -120,6 +120,13 @@ namespace PrincesPalace.Editor.Bot
             // this. It goes into batch.json so a shard directory found on its
             // own still says what it was part of.
             public string Shard = "1/1";
+
+            // WHETHER THIS BATCH TAKES SHOPS. The pair of batches that
+            // answers "does taking a shop cost depth" is the same seeds run
+            // twice, once in each mode (docs/PLAN_SHOP.md 7.1 point 1), so
+            // the mode has to be in the header or a report cannot say which
+            // half it is looking at.
+            public ShopNodeMode ShopNodes = ShopNodeMode.WhenOffered;
         }
 
         private static Options ReadOptions()
@@ -135,6 +142,7 @@ namespace PrincesPalace.Editor.Bot
                 ReplayShare = ArgDouble(args, "-botReplayShare", DefaultReplayShare),
                 InMemorySaves = ArgInt(args, "-botInMemorySaves", 1) != 0,
                 Shard = Arg(args, "-botShard", "1/1"),
+                ShopNodes = ShopNodePreference.Parse(Arg(args, "-botShopPolicy", "WhenOffered")),
             };
 
             if (o.ReplayShare < 0) o.ReplayShare = 0;
@@ -287,7 +295,8 @@ namespace PrincesPalace.Editor.Bot
                             bool replay = o.ReplayShare >= 1.0
                                 || (o.ReplayShare > 0 && i % Math.Max(1, (int)Math.Round(1.0 / o.ReplayShare)) == 0);
 
-                            var entry = PlayOnePairSafely(seed, archetype, profile, o.DepthCap, replay);
+                            var entry = PlayOnePairSafely(
+                                seed, archetype, profile, o.DepthCap, o.ShopNodes, replay);
                             played.Add(entry);
 
                             // WRITTEN AS THEY FINISH, not held and dumped at
@@ -349,14 +358,14 @@ namespace PrincesPalace.Editor.Bot
         // Wrapped so a throw that somehow escapes BotRunDriver's own run-level
         // catch still costs one run rather than the batch.
         private static Played PlayOnePairSafely(
-            ulong seed, string archetype, string profile, int depthCap, bool replay)
+            ulong seed, string archetype, string profile, int depthCap, ShopNodeMode shopNodes, bool replay)
         {
             var entry = new Played { Seed = seed, Archetype = archetype, Profile = profile, HashMatched = true };
             LoggedThisRun.Clear();
 
             try
             {
-                entry.Result = BotRunDriver.PlayRun(seed, archetype, profile, depthCap);
+                entry.Result = BotRunDriver.PlayRun(seed, archetype, profile, depthCap, shopNodes);
                 _runPlays++;
 
                 if (!replay) return entry;
@@ -364,7 +373,7 @@ namespace PrincesPalace.Editor.Bot
                 RunTrace again;
                 using (BotPhaseTimers.Measure(BotPhase.Replay))
                 {
-                    again = BotRunDriver.PlayRun(seed, archetype, profile, depthCap).Trace;
+                    again = BotRunDriver.PlayRun(seed, archetype, profile, depthCap, shopNodes).Trace;
                 }
 
                 _runPlays++;
@@ -569,6 +578,14 @@ namespace PrincesPalace.Editor.Bot
                 sb.Append(",\"enemyIds\":").Append(StrList(f.EnemyIds));
                 sb.Append(",\"turns\":").Append(f.Turns);
                 sb.Append(",\"damageTaken\":").Append(f.DamageTaken);
+
+                // GOLD FORGONE IS A MEDIAN OVER WON FIGHTS AT A STEP BAND
+                // (docs/PLAN_SHOP.md 7.1 point 1), so the merger needs both:
+                // a lost fight pays zero and including it would drag every
+                // Fresh band toward 0 at exactly the depths where a shop
+                // decision matters most.
+                sb.Append(",\"won\":").Append(f.Won ? "true" : "false");
+                sb.Append(",\"payoutGold\":").Append(f.PayoutGold);
                 sb.Append(",\"partyHpOut\":").Append(f.PartyHpOut);
 
                 // THE NUMBER THE SCHEMA SAYS ONLY THIS SIDE KNOWS. Read live
@@ -621,7 +638,44 @@ namespace PrincesPalace.Editor.Bot
                 // every time and equipped never is a trap, and the two rates
                 // side by side are the only way to see one.
                 sb.Append(",\"equippedItemIds\":")
-                  .Append(StrList(r.Equipped.Select(e => e.ItemId).ToList())).Append('}');
+                  .Append(StrList(r.Equipped.Select(e => e.ItemId).ToList()));
+
+                // GOLD ON ARRIVAL FOR EVERY ROOM, not only for shops -- the
+                // arrival-gold-at-every-step table is the point of it, and it
+                // costs one int a room (docs/PLAN_SHOP.md 7.1 point 1).
+                sb.Append(",\"goldOnArrival\":").Append(r.GoldOnArrival);
+                sb.Append(",\"goldSpent\":").Append(r.GoldSpent);
+                sb.Append(",\"goldOnLeave\":").Append(r.GoldOnLeave);
+                sb.Append(",\"purchasesBySection\":").Append(IntList(r.PurchasesBySection));
+                sb.Append(",\"rerollsBySection\":").Append(IntList(r.RerollsBySection));
+
+                sb.Append(",\"shopOffers\":[");
+                for (int k = 0; k < r.ShopOffers.Count; k++)
+                {
+                    if (k > 0) sb.Append(',');
+                    var card = r.ShopOffers[k];
+                    sb.Append("{\"kind\":").Append(Str(card.Kind));
+                    sb.Append(",\"contentId\":").Append(Str(card.ContentId));
+                    sb.Append(",\"price\":").Append(card.Price);
+                    sb.Append(",\"sold\":").Append(card.Sold ? "true" : "false").Append('}');
+                }
+                sb.Append(']');
+
+                sb.Append(",\"shopChoices\":[");
+                for (int k = 0; k < r.ShopChoices.Count; k++)
+                {
+                    if (k > 0) sb.Append(',');
+                    var pick = r.ShopChoices[k];
+                    sb.Append("{\"kind\":").Append(Str(pick.Kind));
+                    sb.Append(",\"section\":").Append(pick.Section);
+                    sb.Append(",\"index\":").Append(pick.Index);
+                    sb.Append(",\"goldDelta\":").Append(pick.GoldDelta);
+                    sb.Append(",\"outcome\":").Append(Str(pick.Outcome));
+                    sb.Append(",\"refusal\":").Append(Str(pick.Refusal)).Append('}');
+                }
+                sb.Append(']');
+
+                sb.Append('}');
             }
             sb.Append("],");
 
@@ -765,6 +819,7 @@ namespace PrincesPalace.Editor.Bot
             sb.Append("\"profiles\":").Append(StrList(o.Profiles)).Append(",\n");
             sb.Append("\"depthCapSteps\":").Append(o.DepthCap).Append(",\n");
             sb.Append("\"replayShare\":").Append(Num(o.ReplayShare)).Append(",\n");
+            sb.Append("\"shopPolicy\":").Append(Str(ShopNodePreference.Name(o.ShopNodes))).Append(",\n");
             sb.Append("\"elapsedSeconds\":").Append(Num(elapsed)).Append("\n");
             sb.Append("}\n");
             return sb.ToString();
@@ -774,6 +829,21 @@ namespace PrincesPalace.Editor.Bot
         {
             if (double.IsNaN(v) || double.IsInfinity(v)) return "0";
             return Math.Round(v, 4).ToString("0.####", CultureInfo.InvariantCulture);
+        }
+
+        // Same shape as StrList, for the two per-section counter arrays.
+        // Its own helper rather than a Select().ToList() at each call site:
+        // an int list written through the string writer would quote every
+        // number, and the merge reads them as numbers.
+        private static string IntList(IReadOnlyList<int> values)
+        {
+            var sb = new StringBuilder("[");
+            for (int i = 0; i < (values?.Count ?? 0); i++)
+            {
+                if (i > 0) sb.Append(',');
+                sb.Append(values[i].ToString(CultureInfo.InvariantCulture));
+            }
+            return sb.Append(']').ToString();
         }
 
         private static string StrList(IReadOnlyList<string> items)

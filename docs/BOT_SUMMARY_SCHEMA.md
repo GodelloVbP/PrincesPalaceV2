@@ -76,9 +76,18 @@ gearIds           string[] -- worn across the fielded squad when the run
 levelAtDeath      int   -- fielded squad's total level when the run ended
 skillsUsed        string[] -- distinct ids behind "Skill:" turn labels
 fights[]          step, floor, roomType, enemyIds, turns, damageTaken,
-                  partyHpOut, partyMaxHp, usedItem
+                  partyHpOut, partyMaxHp, usedItem, won, payoutGold
+                  -- won/payoutGold exist for one number: "gold forgone", the
+                  median WON-fight payout at the step band a shop was taken
+                  at, which is what taking that node cost (PLAN_SHOP.md
+                  SS7.1 point 1). A lost fight pays zero, so the median has
+                  to be able to exclude it.
 rooms[]           step, floor, nodeId, roomType, offerItemIds, pickedIndex,
-                  favor, encounterClass, offers[], equippedItemIds -- what
+                  favor, encounterClass, offers[], equippedItemIds,
+                  goldOnArrival, goldSpent, goldOnLeave,
+                  purchasesBySection[], rerollsBySection[], shopOffers[],
+                  shopChoices[]
+                  equippedItemIds is what
                   the equip pass after this room actually put on; feeds
                   itemEquipRate.
                   favor is ItemOfferRoll.CurrentSquadFavor() at the moment
@@ -96,6 +105,32 @@ rooms[]           step, floor, nodeId, roomType, offerItemIds, pickedIndex,
                   RarityTable/LootLadder/ModifierTable actually rolled for
                   that copy (riftTier is the plain int backing
                   Domain.Content.RiftTier, 0..3).
+                  goldOnArrival is recorded for EVERY room, not only for
+                  shops, and read BEFORE the room resolves -- so a treasure
+                  room's stash is not already in it. It is what a player
+                  HOLDS when a door opens, which is neither their lifetime
+                  winnings nor a median over fights they won, and it is what
+                  the arrival-gold-by-step table is computed from.
+                  goldSpent / goldOnLeave are 0 for every room that is not a
+                  shop. Kept as two numbers rather than one difference so a
+                  sale, which moves gold the other way, cannot hide inside a
+                  subtraction.
+                  purchasesBySection[] / rerollsBySection[] are indexed by
+                  ShopStock's section constants (gear 0, books 1, relics 2).
+                  shopOffers[] is the shelf as it stood when the visit ENDED:
+                  {kind, contentId, price, sold}, NO OFFER placeholders
+                  excluded. Affordability "on arrival" is this price against
+                  goldOnArrival.
+                  shopChoices[] is every ChooseShop answer IN ORDER, refusals
+                  and the closing leave included:
+                  {kind, section, index, goldDelta, outcome, refusal}.
+                  `kind` is ShopChoiceKind's name, plus two the policy never
+                  says: "Leave" for the answer that ended the visit and
+                  "Capped" for a visit cut off at BotRunDriver's twelve-choice
+                  ceiling. The counters above cannot express ORDER, and order
+                  is the difference between "sold the duplicate, then bought
+                  what beat it" and the reverse; they cannot express a
+                  REFUSAL at all.
 relicRounds[]     offerIds, pickedIndex   -- -1 for "took nothing"
 bugs[]            invariant, step, nodeId, detail, lastActions, stack
                   (the merger adds seed/archetype/profile on the way out)
@@ -249,7 +284,9 @@ how the old fields are appended.
     "profiles": ["Fresh"],
     "depthCapSteps": 40,                   // 5 legs x 8 steps/leg, see plan F4
     "elapsedSeconds": 47.2,
-    "shards": 1
+    "shards": 1,
+    "shopPolicies": ["WhenOffered"]        // a LIST: merging two batches to
+                                           // compare them puts both here
   },
   "cells": [
     {
@@ -273,10 +310,35 @@ how the old fields are appended.
       "buildDiversity": { "distinctRelicSets": 41, "distinctTalentSets": 3, "distinctGearSets": 28 },
       "itemPickRate": { "healing_draught": 0.6, "iron_ration": 0.15 },
       "itemEquipRate": { "healing_draught": 0.0, "iron_ration": 0.11 },
-      "relicPickRate": { "bloodlust": 0.3 }
+      "relicPickRate": { "bloodlust": 0.3 },
+      "shop": {
+        "visits": 340,
+        "arrivalGold": { "p10": 12, "p25": 24, "median": 51, "p75": 96 },
+        "belowCheapestShare": 0.22,
+        "goldForgone": { "1-8": 16, "9-16": 22, "17-24": 20, "25-40": 14 },
+        "purchasesPerVisit": 0.61,
+        "zeroPurchaseShare": 0.55,
+        "affordableShareBySection": { "gear": 0.44, "books": null, "relics": 0.07 },
+        "rerollsPerVisitBySection": { "gear": 0.09, "books": 0.0, "relics": 0.02 },
+        "rerollThenNoPurchaseShare": { "gear": 0.05, "books": null, "relics": null },
+        "spendShareBySection": { "gear": 0.72, "books": null, "relics": 0.28 },
+        "goldOnLeaveMedian": 20,
+        "goldAtDeathMedian": 44,
+        "arrivalGoldByStep": {
+          "4": { "p10": 8, "p25": 16, "median": 33, "n": 3812 },
+          "8": null
+        }
+      }
     }
   ],
   "decisionPressure": { "nodes": 0.31, "offers": 0.44, "relics": 0.52 },
+  "shopVsNoShop": {
+    "pairs": 3000,
+    "pairsWithAShopVisit": 1840,
+    "medianDepth": { "WhenOffered": 12, "Never": 13, "delta": -1 },
+    "survivalToNextBossShare": { "WhenOffered": 0.41, "Never": 0.44 },
+    "depthVariance": { "WhenOffered": 61.2, "Never": 58.9 }
+  },
   "coverage": {
     "enemiesNeverSeen": [],
     "relicsNeverOffered": ["ashbound_locket"],
@@ -484,6 +546,74 @@ back to back (this is what plan §1 calls "a test the bot gets for free").
   `RunTrace.Hash()` values differed. Reported once per triple, not once per
   differing field — the whole point is "this seed is not reproducible",
   which is the finding regardless of where in the trace it first diverges.
+
+**`cells[].shop`** — the gate-1 shop numbers (`PLAN_SHOP.md` §7.3). Every
+share here is per VISIT unless it says otherwise, and every "per section"
+map is keyed `gear` / `books` / `relics` in `ShopStock`'s own order.
+
+- `visits`: shop rooms entered by this cell's runs. A cell with none reports
+  `visits: 0` and `null` for the numbers a visit would have produced — which
+  is what a `-ShopPolicy Never` batch looks like, and a block of zeroes there
+  would read as "every visit bought nothing" rather than "no visits".
+- `arrivalGold`: p10 / p25 / median / p75 of `goldOnArrival` at shop nodes.
+  **This is what the shop is priced against** (§7.1 point 1), not §2a's
+  medians over won fights.
+- `belowCheapestShare`: visits arriving with less gold than the cheapest card
+  on the shelf. Nothing is sold on arrival, so "cheapest card" and "cheapest
+  unsold card" are the same number at the moment this is measured.
+- `goldForgone`: the median **won**-fight `payoutGold` in each step band
+  (1-8 / 9-16 / 17-24 / 25-40), measured inside the same cell. What taking a
+  shop node cost, in the currency the shop charges. `null` for a band the
+  cell never won a fight in.
+- `purchasesPerVisit`, `zeroPurchaseShare`: cards bought per visit, and the
+  share of visits that bought none.
+- `affordableShareBySection`: of the cards actually SHOWN in a section, the
+  share priced at or below `goldOnArrival`. `null` for a section that showed
+  no cards at all — the book shelf rolls `NO OFFER` until gate 3, and a zero
+  there would read as "never affordable".
+- `rerollsPerVisitBySection`, `rerollThenNoPurchaseShare`: how often a
+  section is rerolled, and the share of visits that paid to look again at a
+  section and then bought nothing in it — §7.1 point 2's *reroll or walk*
+  telemetry. Counted per VISIT, not per reroll: a section rerolled twice and
+  then bought from is one satisfied decision.
+- `spendShareBySection`: of the gold that left the purse on CARDS, the share
+  that went to each section. `null` throughout when nothing was bought.
+- `goldOnLeaveMedian`: what was still in the purse walking out.
+- `goldAtDeathMedian`: the last room's `goldOnArrival`. The run snapshot is
+  gone by the time anything could ask — `RunManager.EndRun` replaces it — so
+  this is the closest honest reading: gold unspent at the moment it stopped
+  mattering.
+- `arrivalGoldByStep`: p10 / p25 / median of `goldOnArrival` at steps 4, 8,
+  12, 16, 24, 32 and 40, over EVERY room rather than only shop nodes, plus
+  `n` (rooms measured). **This replaces §2a's cumulative-won-gold table.**
+  `null` for a step nobody in the cell reached — "never got there" and "got
+  there broke" are different findings.
+
+**`shopVsNoShop`** — the matched-seed comparison (§7.1 point 1), or `null`.
+
+Present only when the runs come from both `-ShopPolicy` modes: one batch dir
+holding shards of each, or two batch dirs merged with
+`bot_merge.py <a> --compare <b>`. Runs are paired by
+`(seed, archetype, profile)`, never by position — a run present in one mode
+and missing from the other would otherwise shift every comparison after it.
+
+The **cells are computed over the first batch's mode only**. Every cell
+metric is a claim about one mode, and pooling two into one median answers a
+question nobody asked; `batch.shopPolicy` names which mode the cells
+describe, and `batch.shopPolicies` lists every mode present.
+
+- `pairs`: seeds present in both modes.
+- `pairsWithAShopVisit`: of those, the ones where the shop-taking side
+  actually entered a shop. A pair with no visit is the same run twice and
+  counts in neither numerator nor denominator of the survival share.
+- `medianDepth`: per mode, and their difference. Negative `delta` means
+  taking shops cost depth.
+- `survivalToNextBossShare`: per mode, the share of pairs whose run went on
+  to WIN a boss fight at a step later than the first shop visit's. Both sides
+  are measured from the same step — the shop-taking side's visit — so the
+  comparison is against the same point in the run.
+- `depthVariance`: population variance of depth per mode. A shop that does
+  not move the median but widens the spread is a shop that is swinging runs.
 
 ### Partial batches
 

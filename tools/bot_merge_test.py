@@ -57,6 +57,11 @@ def a_run(seed, archetype, depth, capped=False, relics=None, replayed=True, matc
             "partyHpOut": 0 if i == 2 and not capped else 40 - 10 * i,
             "partyMaxHp": 100,
             "usedItem": i == 1,
+            # The last of the three is the fight that killed the run, so it
+            # pays nothing -- which is what makes goldForgone's "won fights
+            # only" rule a rule the fixture can actually break.
+            "won": not (i == 2 and not capped),
+            "payoutGold": 0 if (i == 2 and not capped) else 20 + 2 * i,
         })
 
     return {
@@ -79,17 +84,59 @@ def a_run(seed, archetype, depth, capped=False, relics=None, replayed=True, matc
         "levelAtDeath": 3 + seed,
         "fights": fights,
         "rooms": [
-            {"step": depth - 2, "nodeId": 3 + (seed % 2),
+            {"step": depth - 2, "nodeId": 3 + (seed % 2), "roomType": "Fight",
              "offerItemIds": ["healing_draught", "iron_ration"], "pickedIndex": seed % 2,
-             "equippedItemIds": ["iron_sword"] if seed % 2 else []},
-            {"step": depth - 1, "nodeId": 7, "offerItemIds": [], "pickedIndex": -1,
-             "equippedItemIds": []},
+             "equippedItemIds": ["iron_sword"] if seed % 2 else [],
+             "goldOnArrival": 40 * seed, "goldSpent": 0, "goldOnLeave": 0,
+             "purchasesBySection": [], "rerollsBySection": [],
+             "shopOffers": [], "shopChoices": []},
+            shop_room(seed, depth - 1),
         ],
         "relicRounds": [
             {"offerIds": ["bloodlust", "tin_whistle"], "pickedIndex": 0 if seed % 2 else 1},
         ],
         "skillsUsed": ["cleave"],
         "bugs": bugs or [],
+    }
+
+
+def shop_room(seed, step):
+    """One shop visit, shaped as BalanceBotRunner writes a Shop RoomTrace.
+
+    Deliberately uneven across seeds: the odd seeds arrive with 100 and buy
+    the cheap gear card, the even seeds arrive with 10 and can afford nothing
+    -- so belowCheapestShare, zeroPurchaseShare and the per-section
+    affordability shares are all numbers that can be wrong rather than
+    constants. Seed 3 also rerolls the gear shelf and still buys nothing,
+    which is the one row rerollThenNoPurchaseShare exists to count.
+    """
+    rich = seed % 2 == 1
+    rerolled = seed == 3
+    gold_in = 100 if rich else 10
+    bought = rich and not rerolled
+
+    return {
+        "step": step,
+        "nodeId": 11,
+        "roomType": "Shop",
+        "offerItemIds": [],
+        "pickedIndex": -1,
+        "equippedItemIds": [],
+        "goldOnArrival": gold_in,
+        "goldSpent": 24 if bought else (15 if rerolled else 0),
+        "goldOnLeave": gold_in - (24 if bought else (15 if rerolled else 0)),
+        "purchasesBySection": [1 if bought else 0, 0, 0],
+        "rerollsBySection": [1 if rerolled else 0, 0, 0],
+        "shopOffers": [
+            {"kind": "Gear", "contentId": "iron_coif", "price": 24, "sold": bought},
+            {"kind": "Gear", "contentId": "iron_sword", "price": 44, "sold": False},
+            {"kind": "Relic", "contentId": "bloodlust", "price": 190, "sold": False},
+        ],
+        "shopChoices": (
+            [{"kind": "BuyGear", "section": 0, "index": 0, "goldDelta": -24,
+              "outcome": "Ok", "refusal": "None"}] if bought else []
+        ) + [{"kind": "Leave", "section": -1, "index": -1, "goldDelta": 0,
+              "outcome": "Leave", "refusal": "None"}],
     }
 
 
@@ -277,6 +324,112 @@ class MergeTests(unittest.TestCase):
         self.assertIn("4/12 runs replayed", text)
         self.assertIn("StalledEnemyTurn x2", text)
 
+
+    # --- the shop block --------------------------------------------------
+
+    def test_the_shop_block_is_identical_across_shard_layouts(self):
+        one = self.merged(self.single)["cells"][0]["shop"]
+        two = self.merged(self.split)["cells"][0]["shop"]
+        self.assertEqual(json.dumps(one, sort_keys=True), json.dumps(two, sort_keys=True))
+
+    def test_arrival_gold_percentiles_come_off_shop_visits_only(self):
+        shop = self.merged(self.single)["cells"][0]["shop"]
+
+        # Six visits per cell: three at 100 (odd seeds) and three at 10.
+        self.assertEqual(6, shop["visits"])
+        self.assertEqual(10, shop["arrivalGold"]["p25"])
+        self.assertEqual(10, shop["arrivalGold"]["median"])
+        self.assertEqual(100, shop["arrivalGold"]["p75"])
+
+    def test_below_cheapest_and_zero_purchase_are_counted_per_visit(self):
+        shop = self.merged(self.single)["cells"][0]["shop"]
+
+        # The three even seeds arrive with 10 against a cheapest card of 24.
+        self.assertEqual(num_or_float(3 / 6.0), shop["belowCheapestShare"])
+        # Seeds 1 and 5 buy; seed 3 rerolls and buys nothing; the evens cannot.
+        self.assertEqual(num_or_float(2 / 6.0), shop["purchasesPerVisit"])
+        self.assertEqual(num_or_float(4 / 6.0), shop["zeroPurchaseShare"])
+
+    def test_affordability_is_per_section_and_against_arrival_gold(self):
+        shop = self.merged(self.single)["cells"][0]["shop"]
+
+        # Gear: 12 cards shown (two a visit). The three rich visits arrive
+        # with 100 and can afford both cards; the three poor ones arrive with
+        # 10 and can afford neither.
+        self.assertEqual(num_or_float(6 / 12.0), shop["affordableShareBySection"]["gear"])
+        # A relic at 190 is never affordable in this fixture.
+        self.assertEqual(0, shop["affordableShareBySection"]["relics"])
+        # The book shelf shows nothing at all until gate 3, and "no cards" is
+        # null rather than a zero that would read as "never affordable".
+        self.assertIsNone(shop["affordableShareBySection"]["books"])
+
+    def test_a_reroll_that_bought_nothing_is_counted(self):
+        shop = self.merged(self.single)["cells"][0]["shop"]
+
+        self.assertEqual(num_or_float(1 / 6.0), shop["rerollsPerVisitBySection"]["gear"])
+        self.assertEqual(num_or_float(1 / 6.0), shop["rerollThenNoPurchaseShare"]["gear"])
+        # No reroll of the relic shelf at all -- null, not zero, since "never
+        # rerolled" and "rerolled and always bought" are different findings.
+        self.assertIsNone(shop["rerollThenNoPurchaseShare"]["relics"])
+
+    def test_spend_share_is_of_gold_actually_spent_on_cards(self):
+        shop = self.merged(self.single)["cells"][0]["shop"]
+        self.assertEqual(1, shop["spendShareBySection"]["gear"])
+        self.assertEqual(0, shop["spendShareBySection"]["relics"])
+
+    def test_gold_forgone_is_the_median_won_fight_payout_in_the_band(self):
+        shop = self.merged(self.single)["cells"][0]["shop"]
+
+        # The fixture's won fights pay 20 and 22; the lost one pays 0 and is
+        # excluded, which is the whole rule.
+        for band, value in shop["goldForgone"].items():
+            if value is not None:
+                self.assertIn(value, (20, 22), band)
+
+    def test_arrival_gold_by_step_reports_null_for_a_depth_nobody_reached(self):
+        by_step = self.merged(self.single)["cells"][0]["shop"]["arrivalGoldByStep"]
+
+        # RandomLegal's deepest fixture run caps at 40 but records rooms only
+        # at depth-2 and depth-1, so most of the table is empty -- and empty
+        # must read as "not measured", not as "arrived with nothing".
+        self.assertIn("40", by_step)
+        self.assertTrue(any(v is None for v in by_step.values()))
+
+    # --- shop vs no shop ---------------------------------------------------
+
+    def test_shop_vs_no_shop_is_null_for_a_single_mode_batch(self):
+        self.assertIsNone(self.merged(self.single)["shopVsNoShop"])
+
+    def test_shop_vs_no_shop_pairs_the_two_modes_by_seed(self):
+        baseline = os.path.join(self.root, "never")
+        head = header(1, 6, 12.0)
+        head["shopPolicy"] = "Never"
+
+        # The baseline dies two steps shallower on every seed and visits no
+        # shop, which is what the mode means.
+        rows = []
+        for row in the_runs():
+            copy = json.loads(json.dumps(row))
+            copy["deathStep"] = max(1, copy["deathStep"] - 2)
+            copy["rooms"] = [r for r in copy["rooms"] if r["roomType"] != "Shop"]
+            rows.append(copy)
+        write_shard(baseline, rows, head)
+
+        runs, headers, contents = bot_merge.load_batch(self.single)
+        other, other_headers, other_contents = bot_merge.load_batch(baseline)
+        summary = bot_merge.merge(runs + other, headers + other_headers,
+                                  contents + other_contents)
+
+        versus = summary["shopVsNoShop"]
+        self.assertEqual(12, versus["pairs"])
+        self.assertEqual(12, versus["pairsWithAShopVisit"])
+        self.assertGreater(versus["medianDepth"]["delta"], 0)
+
+        # And the CELLS still describe one mode only -- pooling two modes into
+        # one median would answer a question nobody asked.
+        self.assertEqual(["Never", "WhenOffered"], summary["batch"]["shopPolicies"])
+        self.assertEqual("WhenOffered", summary["batch"]["shopPolicy"])
+        self.assertEqual(6, summary["cells"][0]["runs"])
 
     def test_build_diversity_counts_gear_sets_beside_relics_and_talents(self):
         summary = self.merged(self.single)

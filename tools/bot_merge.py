@@ -86,10 +86,22 @@ def load_batch(batch_dir):
     contents = []
 
     for shard in dirs:
-        runs.extend(_read_jsonl(os.path.join(shard, "runs.jsonl")))
         header_path = os.path.join(shard, "batch.json")
-        if os.path.isfile(header_path):
-            headers.append(_read_json(header_path))
+        head = _read_json(header_path) if os.path.isfile(header_path) else {}
+        if head:
+            headers.append(head)
+
+        # THE SHOP POLICY TRAVELS ON THE RUN, not just in the header. A batch
+        # directory can hold shards from both modes, and the shop-vs-no-shop
+        # comparison pairs runs across them -- so a run has to be able to say
+        # which half it belongs to. Under an underscore because it is not a
+        # runs.jsonl field: it is copied down from the shard that wrote it,
+        # and nothing outside this file reads it.
+        policy = head.get("shopPolicy", "WhenOffered")
+        for row in _read_jsonl(os.path.join(shard, "runs.jsonl")):
+            row["_shopPolicy"] = policy
+            runs.append(row)
+
         content_path = os.path.join(shard, "content.json")
         if os.path.isfile(content_path):
             contents.append(_read_json(content_path))
@@ -137,6 +149,302 @@ def depth_of(run, cap):
     return cap if run.get("capped") else run.get("deathStep", 0)
 
 
+# ------------------------------------------------------------------- shop
+
+
+# THE FOUR BANDS GOLD FORGONE IS MEASURED IN, per docs/PLAN_SHOP.md 7.1
+# point 1. A leg is eight steps, so these are legs 1, 2, 3 and "the rest",
+# which is where income stops climbing (2a).
+STEP_BANDS = [(1, 8), (9, 16), (17, 24), (25, 40)]
+
+# The steps the arrival-gold table reports at. This replaces 2a's
+# "cumulative won gold at depth" table: cumulative winnings are not what a
+# player holds when a door opens, and GoldOnArrival is recorded for EVERY
+# room precisely so the question can be asked at any depth rather than only
+# where a shop happened to generate.
+ARRIVAL_STEPS = [4, 8, 12, 16, 24, 32, 40]
+
+SECTION_NAMES = ["gear", "books", "relics"]
+
+
+def band_of(step):
+    for low, high in STEP_BANDS:
+        if low <= step <= high:
+            return "{}-{}".format(low, high)
+    return None
+
+
+def band_key(low, high):
+    return "{}-{}".format(low, high)
+
+
+def shop_rooms(run):
+    return [room for room in run.get("rooms", []) if room.get("roomType") == "Shop"]
+
+
+def forgone_gold(runs):
+    """Median won-fight payout per step band -- what a shop node cost to take.
+
+    OVER WON FIGHTS ONLY. A lost fight pays zero, and including it would drag
+    every Fresh band toward 0 at exactly the depths where the trade matters:
+    the number is "the fight you did not have", and the fight you did not
+    have is one you would probably have won.
+
+    Measured inside the SAME cell, so the comparison is against this
+    archetype at this profile rather than against a batch-wide average.
+    """
+    by_band = {}
+    for run in runs:
+        for fight in run.get("fights", []):
+            if not fight.get("won"):
+                continue
+            band = band_of(fight.get("step", 0))
+            if band is None:
+                continue
+            by_band.setdefault(band, []).append(fight.get("payoutGold", 0))
+
+    out = {}
+    for low, high in STEP_BANDS:
+        key = band_key(low, high)
+        values = sorted(by_band.get(key, []))
+        out[key] = num(percentile(values, 0.5)) if values else None
+    return out
+
+
+def arrival_gold_by_step(runs):
+    """p10 / p25 / median gold on arrival, at each of ARRIVAL_STEPS.
+
+    Every room, not only shops. A step nobody in the cell reached reports
+    null rather than 0 -- "never got there" and "got there broke" are
+    different findings and a zero would read as the second.
+    """
+    at_step = {}
+    for run in runs:
+        for room in run.get("rooms", []):
+            step = room.get("step", 0)
+            if step in ARRIVAL_STEPS:
+                at_step.setdefault(step, []).append(room.get("goldOnArrival", 0))
+
+    out = {}
+    for step in ARRIVAL_STEPS:
+        values = sorted(at_step.get(step, []))
+        out[str(step)] = None if not values else {
+            "p10": num(percentile(values, 0.10)),
+            "p25": num(percentile(values, 0.25)),
+            "median": num(percentile(values, 0.5)),
+            "n": len(values),
+        }
+    return out
+
+
+def shop_json(runs):
+    """Everything gate 1 asks about a shop visit (docs/PLAN_SHOP.md 7.3).
+
+    Null when the cell visited no shop at all, which is the honest answer for
+    a -ShopPolicy Never batch: a block full of zeroes would read as "visits
+    that bought nothing" rather than "no visits".
+    """
+    visits = [(run, room) for run in runs for room in shop_rooms(run)]
+
+    forgone = forgone_gold(runs)
+    by_step = arrival_gold_by_step(runs)
+
+    if not visits:
+        return {
+            "visits": 0,
+            "arrivalGold": None,
+            "belowCheapestShare": None,
+            "goldForgone": forgone,
+            "arrivalGoldByStep": by_step,
+        }
+
+    arrival = sorted(room.get("goldOnArrival", 0) for _, room in visits)
+
+    below_cheapest = 0
+    zero_purchase = 0
+    purchases = 0
+
+    # SHOWN CARDS, per section: the denominator is cards still on sale when
+    # the shelf was rolled, so a NO OFFER placeholder (the whole book section
+    # until gate 3) never counts as an unaffordable card.
+    shown = [0, 0, 0]
+    affordable = [0, 0, 0]
+
+    rerolls = [0, 0, 0]
+    reroll_then_nothing = [0, 0, 0]
+    spend = [0, 0, 0]
+
+    for _, room in visits:
+        gold_in = room.get("goldOnArrival", 0)
+        offers = room.get("shopOffers", [])
+
+        prices = [c.get("price", 0) for c in offers]
+        if prices and gold_in < min(prices):
+            below_cheapest += 1
+
+        bought = room.get("purchasesBySection", []) or []
+        rerolled = room.get("rerollsBySection", []) or []
+
+        total_bought = sum(bought)
+        purchases += total_bought
+        if total_bought == 0:
+            zero_purchase += 1
+
+        for card in offers:
+            section = _section_of(card.get("kind", ""))
+            if section is None:
+                continue
+            shown[section] += 1
+            if gold_in >= card.get("price", 0):
+                affordable[section] += 1
+            if card.get("sold"):
+                spend[section] += card.get("price", 0)
+
+        for section in range(len(SECTION_NAMES)):
+            used = rerolled[section] if section < len(rerolled) else 0
+            rerolls[section] += used
+
+            # "PAID TO LOOK AGAIN AND STILL WALKED", counted per VISIT rather
+            # than per reroll: a section rerolled twice and then bought from
+            # is one satisfied decision, not one satisfied and one wasted.
+            if used > 0 and (section >= len(bought) or bought[section] == 0):
+                reroll_then_nothing[section] += 1
+
+    n = len(visits)
+    spend_total = sum(spend)
+
+    return {
+        "visits": n,
+        "arrivalGold": {
+            "p10": num(percentile(arrival, 0.10)),
+            "p25": num(percentile(arrival, 0.25)),
+            "median": num(percentile(arrival, 0.5)),
+            "p75": num(percentile(arrival, 0.75)),
+        },
+        "belowCheapestShare": num(share(below_cheapest, n)),
+        "goldForgone": forgone,
+        "purchasesPerVisit": num(share(purchases, n)),
+        "zeroPurchaseShare": num(share(zero_purchase, n)),
+        "affordableShareBySection": {
+            SECTION_NAMES[i]: (None if shown[i] == 0 else num(share(affordable[i], shown[i])))
+            for i in range(len(SECTION_NAMES))
+        },
+        "rerollsPerVisitBySection": {
+            SECTION_NAMES[i]: num(share(rerolls[i], n)) for i in range(len(SECTION_NAMES))
+        },
+        "rerollThenNoPurchaseShare": {
+            SECTION_NAMES[i]: (None if rerolls[i] == 0 else num(share(reroll_then_nothing[i], n)))
+            for i in range(len(SECTION_NAMES))
+        },
+        "spendShareBySection": {
+            SECTION_NAMES[i]: (None if spend_total == 0 else num(share(spend[i], spend_total)))
+            for i in range(len(SECTION_NAMES))
+        },
+        "goldOnLeaveMedian": num(percentile(sorted(room.get("goldOnLeave", 0) for _, room in visits), 0.5)),
+
+        # WHAT THE RUN WAS CARRYING WHEN IT ENDED, read off the LAST room's
+        # arrival gold. The run snapshot is gone by the time anything could
+        # ask -- RunManager.EndRun replaces it -- and the last room the party
+        # walked into is the closest honest reading: gold unspent at the
+        # moment it stopped mattering.
+        "goldAtDeathMedian": num(percentile(
+            sorted(run["rooms"][-1].get("goldOnArrival", 0) for run in runs if run.get("rooms")), 0.5)),
+        "arrivalGoldByStep": by_step,
+    }
+
+
+def _section_of(kind):
+    """ShopEntryKind's name -> ShopStock's section index."""
+    if kind == "Gear":
+        return 0
+    if kind == "Book":
+        return 1
+    if kind == "Relic":
+        return 2
+    return None
+
+
+def shop_vs_no_shop(runs, cap):
+    """Paired runs, one per mode, differing in exactly one decision.
+
+    PAIRED BY (seed, archetype, profile) and never by position: the two
+    batches play the same seeds, and a run present in one mode and missing
+    from the other -- a shard that died, a cell that was not asked for --
+    would otherwise shift every comparison after it by one.
+
+    Null when the runs come from only one mode, which is the normal case for
+    a single batch. Reporting zeroes there would read as "taking a shop
+    changes nothing" rather than as "not measured".
+    """
+    by_mode = {}
+    for run in runs:
+        by_mode.setdefault(run.get("_shopPolicy", "WhenOffered"), {})[
+            (run.get("seed"), run.get("archetype"), run.get("profile"))] = run
+
+    if len(by_mode) < 2 or "WhenOffered" not in by_mode or "Never" not in by_mode:
+        return None
+
+    taken = by_mode["WhenOffered"]
+    baseline = by_mode["Never"]
+    keys = sorted(set(taken) & set(baseline), key=lambda k: (str(k[2]), str(k[1]), k[0]))
+    if not keys:
+        return None
+
+    depths = {"WhenOffered": [], "Never": []}
+    survived = {"WhenOffered": 0, "Never": 0}
+    boss_pairs = 0
+
+    for key in keys:
+        pair = {"WhenOffered": taken[key], "Never": baseline[key]}
+        for mode, run in pair.items():
+            depths[mode].append(depth_of(run, cap))
+
+        # SURVIVAL TO THE NEXT BOSS, MEASURED FROM THE SHOP. A pair with no
+        # shop visit on the WhenOffered side has nothing to compare -- the two
+        # runs are the same run -- so it counts in neither numerator nor
+        # denominator.
+        visits = shop_rooms(pair["WhenOffered"])
+        if not visits:
+            continue
+
+        after = visits[0].get("step", 0)
+        boss_pairs += 1
+        for mode, run in pair.items():
+            if _won_a_boss_after(run, after):
+                survived[mode] += 1
+
+    return {
+        "pairs": len(keys),
+        "pairsWithAShopVisit": boss_pairs,
+        "medianDepth": {
+            "WhenOffered": num(percentile(sorted(depths["WhenOffered"]), 0.5)),
+            "Never": num(percentile(sorted(depths["Never"]), 0.5)),
+            "delta": num(percentile(sorted(depths["WhenOffered"]), 0.5)
+                         - percentile(sorted(depths["Never"]), 0.5)),
+        },
+        "survivalToNextBossShare": {
+            "WhenOffered": num(share(survived["WhenOffered"], boss_pairs)),
+            "Never": num(share(survived["Never"], boss_pairs)),
+        },
+        "depthVariance": {
+            "WhenOffered": num(_variance(depths["WhenOffered"])),
+            "Never": num(_variance(depths["Never"])),
+        },
+    }
+
+
+def _won_a_boss_after(run, step):
+    return any(f.get("roomType") == "Boss" and f.get("won") and f.get("step", 0) > step
+               for f in run.get("fights", []))
+
+
+def _variance(values):
+    if len(values) < 2:
+        return 0
+    mean = sum(values) / float(len(values))
+    return sum((v - mean) ** 2 for v in values) / float(len(values))
+
+
 # ------------------------------------------------------------------ cells
 
 
@@ -181,6 +489,7 @@ def cell_json(runs, cap):
              for r in runs for rnd in r.get("relicRounds", []))
         ),
         "itemEquipRate": equip_rate(r.get("rooms", []) for r in runs),
+        "shop": shop_json(runs),
     }
     return out
 
@@ -509,6 +818,12 @@ def merge_headers(headers):
         "depthCapSteps": first.get("depthCapSteps", 0),
         "elapsedSeconds": num(max(h.get("elapsedSeconds", 0) for h in headers)),
         "shards": len(headers),
+
+        # A LIST, not a string. One batch is normally one mode, but merging
+        # two batch directories to compare them puts both here -- and a
+        # header that named only the first would misdescribe half its own
+        # runs.
+        "shopPolicies": sorted({h.get("shopPolicy", "WhenOffered") for h in headers}),
     }
 
 
@@ -518,6 +833,17 @@ def merge_headers(headers):
 def merge(runs, headers, contents):
     batch = merge_headers(headers)
     cap = batch.get("depthCapSteps", 0)
+
+    # THE SECOND BATCH IS A COMPARISON, NOT A BIGGER SAMPLE. Every cell
+    # metric -- depth, doomedShare, the shop block -- is a claim about one
+    # mode, and pooling two modes into one median would answer a question
+    # nobody asked. So the cells are computed over the FIRST batch's mode
+    # only, and shopVsNoShop is the one thing that sees both.
+    all_runs = runs
+    primary = (headers[0].get("shopPolicy", "WhenOffered") if headers else "WhenOffered")
+    if len({r.get("_shopPolicy", "WhenOffered") for r in runs}) > 1:
+        runs = [r for r in runs if r.get("_shopPolicy", "WhenOffered") == primary]
+        batch["shopPolicy"] = primary
     archetypes = batch.get("archetypes", [])
     profiles = batch.get("profiles", [])
 
@@ -573,6 +899,7 @@ def merge(runs, headers, contents):
         "batch": batch,
         "cells": cells,
         "decisionPressure": decision_pressure(runs, archetypes),
+        "shopVsNoShop": shop_vs_no_shop(all_runs, cap),
         "coverage": coverage(runs, merge_content(contents)),
         "archetypeGap": gap,
         "bugs": bugs,
@@ -639,6 +966,36 @@ def plain_text(summary):
         lines.append("  {} x{}  (e.g. seed {} {}/{})".format(
             name, by_name[name], one["seed"], one["profile"], one["archetype"]))
 
+    shop_cells = [c for c in summary["cells"] if (c.get("shop") or {}).get("visits")]
+    if shop_cells:
+        lines.append("")
+        lines.append("shop visits                    n   arrive p10/p25/med   <cheapest  buys/visit  0-buy")
+        for cell in shop_cells:
+            shop = cell["shop"]
+            gold = shop["arrivalGold"]
+            lines.append(
+                "{:<30}{:>4}{:>8.0f}/{:.0f}/{:.0f}{:>11.0%}{:>12.2f}{:>7.0%}".format(
+                    cell["profile"] + "/" + cell["archetype"],
+                    shop["visits"],
+                    float(gold["p10"]), float(gold["p25"]), float(gold["median"]),
+                    float(shop["belowCheapestShare"]),
+                    float(shop["purchasesPerVisit"]),
+                    float(shop["zeroPurchaseShare"]),
+                )
+            )
+
+    versus = summary.get("shopVsNoShop")
+    if versus:
+        lines.append("")
+        lines.append(
+            "shop vs no shop: {} paired runs ({} with a visit), median depth {} vs {} (delta {})".format(
+                versus["pairs"], versus["pairsWithAShopVisit"],
+                versus["medianDepth"]["WhenOffered"], versus["medianDepth"]["Never"],
+                versus["medianDepth"]["delta"]))
+        lines.append("  survival to the next boss after the first shop: {:.0%} vs {:.0%}".format(
+            float(versus["survivalToNextBossShare"]["WhenOffered"]),
+            float(versus["survivalToNextBossShare"]["Never"])))
+
     determinism = summary["determinism"]
     mismatches = determinism["mismatches"]
     total_runs = sum(cell["runs"] for cell in summary["cells"])
@@ -662,9 +1019,23 @@ def main(argv=None):
                         help="where summary.json goes (default: <batch>/summary.json)")
     parser.add_argument("--quiet", action="store_true",
                         help="write the file without printing the plain-text table")
+    parser.add_argument("--compare", default=None,
+                        help="a second reports/bot/<timestamp> directory, run over the same "
+                             "seeds with the other -ShopPolicy mode; its runs are folded in "
+                             "so shopVsNoShop can pair them")
     args = parser.parse_args(argv)
 
     runs, headers, contents = load_batch(args.batch)
+
+    if args.compare:
+        # FOLDED IN, NOT MERGED SIDE BY SIDE. Every cell metric would be
+        # meaningless over two modes at once, so the second batch contributes
+        # to shopVsNoShop and to nothing else -- see merge().
+        other_runs, other_headers, other_contents = load_batch(args.compare)
+        runs = runs + other_runs
+        headers = headers + other_headers
+        contents = contents + other_contents
+
     summary = merge(runs, headers, contents)
 
     out = args.out or os.path.join(args.batch, "summary.json")

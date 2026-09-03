@@ -344,5 +344,107 @@ namespace PrincesPalace.Domain.Bot
 
         public int ChooseTalent(IReadOnlyList<TalentOption> options, RunView view, SeededRandom rng) =>
             _runBrain.ChooseTalent(options, view, rng);
+
+        public float RestBelowPartyHpFraction => _runBrain.RestBelowPartyHpFraction;
+
+        // WHAT ONE LEG PAYS, and the one number this archetype's shop rule
+        // needs that no other archetype does. Measured, not guessed:
+        // docs/PLAN_SHOP.md §2a puts a leg at roughly 185 gold across every
+        // profile past leg 1 (a normal fight at 22-24, an elite at ~44, a
+        // boss at 60-76, eight steps).
+        //
+        // A FLOOR ON PATIENCE, NOT A PREDICTION. Saving past this would be
+        // betting on a shop appearing at all, and Shop is roughly 7% of
+        // rooms -- so the rule is "hold for the next leg", never "hold
+        // indefinitely".
+        public const int OneLegIncome = 185;
+
+        // THE ONLY ARCHETYPE THAT DOES NOT SPEND WHAT IT HAS.
+        //
+        // Three rules, in order, and each is the shop-side reading of the
+        // lookahead this archetype is named for:
+        //
+        //  1. An affordable relic is taken, rarest first -- a relic is the
+        //     only purchase whose value compounds over the rest of the run.
+        //  2. A relic it CANNOT afford, but could after one more leg, makes
+        //     it leave with the gold rather than spend it on gear. This is
+        //     the "save or spend" decision §7.1 point 2 asks the shop to
+        //     create, and this archetype is the one that answers "save".
+        //  3. Otherwise gear, on the same positive-score rule the two greedy
+        //     archetypes use.
+        //
+        // And one reroll, once, per section, and only when the section is
+        // dead: nothing in it it can both afford and use. A second reroll of
+        // the same section would be chasing, which is the opposite of what
+        // paying to look again is for.
+        public ShopChoice ChooseShop(ShopView shop, RunView view, SeededRandom rng)
+        {
+            int bestRelic = -1;
+            int bestPrice = -1;
+            int reachable = 0;
+
+            foreach (var card in shop.Cards)
+            {
+                if (card.Kind != ShopEntryKind.Relic || !card.OnSale) continue;
+
+                if (card.Affordable)
+                {
+                    if (card.Price > bestPrice)
+                    {
+                        bestPrice = card.Price;
+                        bestRelic = card.Index;
+                    }
+                }
+                else if (card.Price <= shop.Gold + OneLegIncome)
+                {
+                    reachable++;
+                }
+            }
+
+            if (bestRelic >= 0) return ShopChoice.BuyRelic(bestRelic);
+            if (reachable > 0) return ShopChoice.Leave();
+
+            int bestGear = -1;
+            float bestScore = 0f;
+
+            foreach (var card in shop.Cards)
+            {
+                if (card.Kind != ShopEntryKind.Gear || !card.Buyable) continue;
+                if (card.Score <= bestScore) continue;
+
+                bestScore = card.Score;
+                bestGear = card.Index;
+            }
+
+            if (bestGear >= 0) return ShopChoice.BuyGear(bestGear);
+
+            int dead = DeadSectionWorthRerolling(shop);
+            return dead >= 0 ? ShopChoice.Reroll(dead) : ShopChoice.Leave();
+        }
+
+        // A section holding nothing this archetype would buy at any price it
+        // can pay -- no scoring gear it can afford in the gear section, no
+        // affordable relic in the relic section -- that has not been rerolled
+        // yet and whose reroll it can pay for. The book section is skipped:
+        // it rolls NO OFFER until gate 3, so rerolling it buys a second
+        // helping of nothing.
+        private static int DeadSectionWorthRerolling(ShopView shop)
+        {
+            foreach (int section in new[] { ShopStock.GearSection, ShopStock.RelicSection })
+            {
+                if (shop.RerollsUsedIn(section) > 0 || !shop.CanAffordReroll(section)) continue;
+
+                bool worthKeeping = false;
+                foreach (var card in shop.Cards)
+                {
+                    if (card.Section != section || !card.Buyable) continue;
+                    if (section == ShopStock.RelicSection || card.Score > 0f) worthKeeping = true;
+                }
+
+                if (!worthKeeping) return section;
+            }
+
+            return -1;
+        }
     }
 }

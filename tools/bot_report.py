@@ -129,13 +129,25 @@ def render_text_summary(summary):
             fmt_num(batch.get("elapsedSeconds")),
         )
     )
+    if batch.get("shopPolicies"):
+        lines.append("Shop policy: {}".format(", ".join(batch["shopPolicies"])))
+
     for cell in summary.get("cells", []):
         depth = cell.get("depth", {})
+        shop = cell.get("shop") or {}
         lines.append(
-            "  {} / {}: depth median={} (n={})".format(
-                cell["archetype"], cell["profile"], fmt_num(depth.get("median")), cell.get("runs")
+            "  {} / {}: depth median={} (n={}), shop visits={}".format(
+                cell["archetype"], cell["profile"], fmt_num(depth.get("median")),
+                cell.get("runs"), shop.get("visits", 0)
             )
         )
+
+    versus = summary.get("shopVsNoShop")
+    if versus:
+        lines.append("Shop vs no shop: median depth {} vs {} over {} paired runs".format(
+            fmt_num(versus["medianDepth"]["WhenOffered"]),
+            fmt_num(versus["medianDepth"]["Never"]),
+            versus["pairs"]))
 
     bug_count = len(summary.get("bugs", []))
     lines.append("Bugs: {}".format(bug_count))
@@ -342,6 +354,129 @@ def render_keyed_table(title, current, previous, better=None):
     return "".join(out)
 
 
+def render_shop(cell, prev_cell):
+    """The gate-1 shop numbers for one cell (docs/PLAN_SHOP.md 7.3).
+
+    A cell that never entered a shop renders one line saying so rather than a
+    table of zeroes -- which is what a -ShopPolicy Never batch looks like, and
+    reading it as "every visit bought nothing" would be exactly backwards.
+    """
+    shop = cell.get("shop") or {}
+    prev = (prev_cell or {}).get("shop") or {}
+
+    if not shop.get("visits"):
+        out = ["<h3>shop</h3>"]
+        out.append('<p class="empty">no shop visits in this cell.</p>')
+        out.append(render_keyed_table(
+            "gold forgone (median won-fight payout, by step band)",
+            shop.get("goldForgone", {}), prev.get("goldForgone") if prev_cell else None))
+        out.append(render_arrival_gold(shop, prev if prev_cell else None))
+        return "".join(out)
+
+    gold = shop.get("arrivalGold", {})
+    prev_gold = prev.get("arrivalGold", {}) if prev_cell else None
+
+    rows = [("visits", shop.get("visits"), prev.get("visits") if prev_cell else None)]
+    for key in ("p10", "p25", "median", "p75"):
+        rows.append(("arrival gold " + key, gold.get(key),
+                     (prev_gold or {}).get(key) if prev_gold else None))
+    for key, label in [
+        ("belowCheapestShare", "arrived below the cheapest card"),
+        ("purchasesPerVisit", "purchases per visit"),
+        ("zeroPurchaseShare", "visits that bought nothing"),
+        ("goldOnLeaveMedian", "gold on leave (median)"),
+        ("goldAtDeathMedian", "gold at death (median)"),
+    ]:
+        rows.append((label, shop.get(key), prev.get(key) if prev_cell else None))
+
+    out = ["<h3>shop</h3>"]
+    out.append('<table class="sortable"><thead><tr><th>metric</th>'
+               '<th data-numeric="1">value</th><th>delta</th></tr></thead><tbody>')
+    for label, new, old in rows:
+        d = delta_html(old, new) if prev_cell else ""
+        out.append("<tr><td>{}</td><td>{}</td><td>{}</td></tr>".format(esc(label), fmt_num(new), d))
+    out.append("</tbody></table>")
+
+    for key, title in [
+        ("affordableShareBySection", "share of shown cards affordable on arrival, per section"),
+        ("rerollsPerVisitBySection", "rerolls per visit, per section"),
+        ("rerollThenNoPurchaseShare", "visits that rerolled a section and bought nothing in it"),
+        ("spendShareBySection", "share of gold spent, per section"),
+        ("goldForgone", "gold forgone (median won-fight payout, by step band)"),
+    ]:
+        out.append(render_keyed_table(title, shop.get(key, {}),
+                                      prev.get(key) if prev_cell else None))
+
+    out.append(render_arrival_gold(shop, prev if prev_cell else None))
+    return "".join(out)
+
+
+def render_arrival_gold(shop, prev):
+    """Gold on arrival at every measured step, not only at shop nodes.
+
+    This is what replaces PLAN_SHOP 2a's cumulative-won-gold table: what a
+    player HOLDS when a door opens, which is neither their lifetime winnings
+    nor a median over fights they won.
+    """
+    table = shop.get("arrivalGoldByStep") or {}
+    if not table:
+        return ""
+
+    prev_table = (prev or {}).get("arrivalGoldByStep") or {}
+    steps = sorted(table, key=lambda k: int(k))
+
+    out = ["<h3>gold on arrival, by step</h3>"]
+    out.append('<table class="sortable"><thead><tr><th>step</th><th data-numeric="1">p10</th>'
+               '<th data-numeric="1">p25</th><th data-numeric="1">median</th>'
+               '<th data-numeric="1">rooms</th><th>median delta</th></tr></thead><tbody>')
+    for step in steps:
+        row = table.get(step)
+        if row is None:
+            out.append('<tr><td>{}</td><td colspan="5" class="empty">not reached</td></tr>'.format(esc(step)))
+            continue
+        old = (prev_table.get(step) or {}).get("median") if prev_table.get(step) else None
+        out.append("<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>".format(
+            esc(step), fmt_num(row.get("p10")), fmt_num(row.get("p25")),
+            fmt_num(row.get("median")), fmt_num(row.get("n")),
+            delta_html(old, row.get("median")) if prev else ""))
+    out.append("</tbody></table>")
+    return "".join(out)
+
+
+def render_shop_vs_no_shop(summary):
+    """The matched-seed comparison (docs/PLAN_SHOP.md 7.1 point 1).
+
+    Absent unless the batch (or the pair merged with --compare) holds both
+    -ShopPolicy modes, because there is nothing to compare against otherwise.
+    """
+    versus = summary.get("shopVsNoShop")
+    if not versus:
+        return ""
+
+    depth = versus["medianDepth"]
+    survival = versus["survivalToNextBossShare"]
+    variance = versus["depthVariance"]
+
+    out = ["<h2>shop vs no shop (matched seeds)</h2>"]
+    out.append("<p>{} paired runs, {} of them with a shop visit on the shop-taking side. "
+               "A pair with no visit is the same run twice and counts in neither column.</p>".format(
+                   esc(versus["pairs"]), esc(versus["pairsWithAShopVisit"])))
+    out.append('<table class="sortable"><thead><tr><th>metric</th>'
+               '<th data-numeric="1">WhenOffered</th><th data-numeric="1">Never</th>'
+               '<th data-numeric="1">delta</th></tr></thead><tbody>')
+    out.append("<tr><td>median depth</td><td>{}</td><td>{}</td><td>{}</td></tr>".format(
+        fmt_num(depth["WhenOffered"]), fmt_num(depth["Never"]), fmt_num(depth["delta"])))
+    out.append("<tr><td>survived to a boss after the first shop</td><td>{}</td><td>{}</td>"
+               "<td>{}</td></tr>".format(
+                   fmt_num(survival["WhenOffered"]), fmt_num(survival["Never"]),
+                   fmt_num(survival["WhenOffered"] - survival["Never"])))
+    out.append("<tr><td>depth variance</td><td>{}</td><td>{}</td><td>{}</td></tr>".format(
+        fmt_num(variance["WhenOffered"]), fmt_num(variance["Never"]),
+        fmt_num(variance["WhenOffered"] - variance["Never"])))
+    out.append("</tbody></table>")
+    return "".join(out)
+
+
 def render_death_causes(cell):
     rows = cell.get("deathCauses", [])
     if not rows:
@@ -537,10 +672,15 @@ def render_html(summary, previous, batch_dir, previous_dir):
             esc(fmt_num(batch.get("elapsedSeconds"))),
         )
     )
+    if batch.get("shopPolicies"):
+        parts.append('<div class="subtitle">shop policy: {}</div>'.format(
+            esc(", ".join(batch["shopPolicies"]))))
     if previous:
         parts.append("<p>Compared against <code>{}</code>.</p>".format(esc(str(previous_dir))))
     else:
         parts.append('<p class="empty">No previous batch found -- deltas blank.</p>')
+
+    parts.append(render_shop_vs_no_shop(summary))
 
     parts.append("<h2>archetype gap (median depth)</h2>")
     parts.append(render_archetype_gap_svg(summary))
@@ -554,6 +694,7 @@ def render_html(summary, previous, batch_dir, previous_dir):
         prev_cell = prev_cells.get(key)
         parts.append('<h2 class="cell-header">{} / {}</h2>'.format(esc(key[0]), esc(key[1])))
         parts.append(render_cell_table(cell, prev_cell))
+        parts.append(render_shop(cell, prev_cell))
         parts.append(render_death_causes(cell))
         parts.append(
             render_keyed_table(

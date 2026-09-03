@@ -128,6 +128,44 @@ namespace PrincesPalace.Domain.Bot
         // and "arrived with less than the cheapest card" are both read off
         // this plus the counters above.
         public List<ShopOfferTrace> ShopOffers = new List<ShopOfferTrace>();
+
+        // EVERY CHOICE THE POLICY MADE, IN ORDER, including the ones that
+        // were refused and the leave that ended the visit.
+        //
+        // The counters above cannot express order and were never meant to:
+        // "sold a duplicate, then bought the helm it was worse than" and
+        // "bought the helm, then sold the duplicate" are the same two
+        // counters and two different decisions. They also cannot express a
+        // refusal at all -- a purchase the purse turned down leaves no mark
+        // on PurchasesBySection, so a policy repeatedly asking for something
+        // it cannot have would read as a quiet visit.
+        public List<ShopChoiceTrace> ShopChoices = new List<ShopChoiceTrace>();
+    }
+
+    // One ChooseShop answer and what the orchestrator did with it. Flat
+    // strings and ints for the reason ShopOfferTrace is: it is written once
+    // and read by a Python merge.
+    public sealed class ShopChoiceTrace
+    {
+        // ShopChoiceKind's name.
+        public string Kind = "";
+
+        // -1 where the kind does not use it.
+        public int Section = -1;
+        public int Index = -1;
+
+        // Signed the way the purse moved, straight off ShopResult: negative
+        // for a purchase or a reroll, positive for a sale, zero for a
+        // refusal or a leave.
+        public int GoldDelta;
+
+        // ShopOutcome's name, or "Leave". A visit that ended because the
+        // shelf refused reads differently from one that ended because the
+        // policy was done, and only this column can tell them apart.
+        public string Outcome = "";
+
+        // ShopRefusal's name, "None" when nothing was refused.
+        public string Refusal = "None";
     }
 
     // One shop card, as the trace records it. Deliberately flat strings and
@@ -234,6 +272,19 @@ namespace PrincesPalace.Domain.Bot
                 {
                     sb.Append(worn.CharacterId).Append('/').Append(worn.ItemId).Append('/')
                       .Append(worn.Slot).Append('/').Append(worn.Plus).Append('|');
+                }
+                sb.Append(',');
+
+                // THE SHOP VISIT IS IN THE HASH, or the determinism check
+                // would sign off on a shop that rolled a different shelf or
+                // took a different decision on the same seed -- the exact
+                // defect the check exists to catch, in the newest code.
+                sb.Append(room.GoldOnArrival).Append('/').Append(room.GoldSpent).Append(',');
+                foreach (var choice in room.ShopChoices)
+                {
+                    sb.Append(choice.Kind).Append('/').Append(choice.Section).Append('/')
+                      .Append(choice.Index).Append('/').Append(choice.GoldDelta).Append('/')
+                      .Append(choice.Outcome).Append('|');
                 }
                 sb.Append(';');
             }

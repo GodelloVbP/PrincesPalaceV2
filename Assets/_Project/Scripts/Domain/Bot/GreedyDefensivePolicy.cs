@@ -34,7 +34,11 @@ namespace PrincesPalace.Domain.Bot
 
         // Rest below this fraction of the party's HP, rather than
         // GreedyAggressive's 50% -- see ChooseNode.
-        private const float RestBelowPartyHpFraction = 0.75f;
+        // A PROPERTY, NOT A CONST, since ShopNodePreference reads it through
+        // IRunPolicy -- the wrapper must not walk a 60%-health party past the
+        // Rest node into a shop, and a copy of 0.75 inside it would be a
+        // second number to keep in step.
+        public float RestBelowPartyHpFraction => 0.75f;
 
         // Livelock guard, found by the balance bot at seed 629 / Late /
         // GreedyDefensive: FightInvariants.TooManyCommands, 201 commands, the
@@ -368,6 +372,73 @@ namespace PrincesPalace.Domain.Bot
         // off when it is there to read. It is not, so this falls back to
         // GreedyAggressivePolicy's pool-order read: rarest by
         // RelicPool.WeightOf, ties by rng.
+        // CLEAR THE BAG FIRST, THEN BUY. The one archetype that sells.
+        //
+        // "Junk" is a bag row that scores at or below zero on this
+        // archetype's own defensive weights, or a second stack of something
+        // it already carries -- the two readings of "this will never go on
+        // anybody" a bag can actually support. CONSUMABLES ARE NEVER JUNK,
+        // deliberately: a potion scores zero because it is not equippable,
+        // not because it is worthless, and this is the archetype that drinks
+        // them. Selling the party's healing to buy armour is the exact
+        // trade it exists not to make.
+        //
+        // One copy per call rather than the whole stack, because a sale
+        // renumbers the bag (InventoryOps.TryRemoveAt drops an emptied
+        // stack out of the list) and the driver rebuilds the view between
+        // calls -- so the next call sees the bag as it now is rather than
+        // acting on indices that moved.
+        //
+        // Buying is GreedyAggressive's rule with this archetype's weights
+        // underneath it: same evaluator, same "positive or not at all", and
+        // the armour-and-health preference lives in GearWeights.Defensive
+        // rather than in a second ranking here. No reroll: paying to see a
+        // different shelf is a gamble, and this archetype does not gamble.
+        public ShopChoice ChooseShop(ShopView shop, RunView view, SeededRandom rng)
+        {
+            foreach (var row in shop.Bag)
+            {
+                if (row.Consumable || row.SellPrice <= 0) continue;
+                if (row.Score > 0f && !row.Duplicate) continue;
+
+                return ShopChoice.Sell(row.BagIndex, 1);
+            }
+
+            int bestGear = -1;
+            float bestScore = 0f;
+
+            foreach (var card in shop.Cards)
+            {
+                if (card.Kind != ShopEntryKind.Gear || !card.Buyable) continue;
+                if (card.Score <= bestScore) continue;
+
+                bestScore = card.Score;
+                bestGear = card.Index;
+            }
+
+            if (bestGear >= 0) return ShopChoice.BuyGear(bestGear);
+
+            // CHEAPEST affordable relic, not the rarest -- the one place this
+            // archetype's shop rule differs from GreedyAggressive's on
+            // purpose. A relic's rarity says how seldom it is drawn, not what
+            // it does, so "rarest" is a bet; "cheapest" keeps the most gold
+            // in the purse for the next shelf, which is the defensive read of
+            // the same shelf.
+            int cheapestRelic = -1;
+            int cheapestPrice = 0;
+
+            foreach (var card in shop.Cards)
+            {
+                if (card.Kind != ShopEntryKind.Relic || !card.Buyable) continue;
+                if (cheapestRelic >= 0 && card.Price >= cheapestPrice) continue;
+
+                cheapestPrice = card.Price;
+                cheapestRelic = card.Index;
+            }
+
+            return cheapestRelic >= 0 ? ShopChoice.BuyRelic(cheapestRelic) : ShopChoice.Leave();
+        }
+
         public int ChooseRelic(IReadOnlyList<RelicOption> offer, RunView view, SeededRandom rng)
         {
             return BestIndexTiedByRng(offer.Count,
