@@ -53,6 +53,57 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsNull(spec.Tracking);
         }
 
+        // --- TypographySpec.ResolveSizeRange ---------------------------------------
+        //
+        // The precedence rule UiEmitter.ApplyTypography hands every roled
+        // label off to. ButtonLabel's 26-30 band throughout: no literal
+        // keeps it untouched; a literal inside it just narrows the max down
+        // to the literal; a literal below it pins BOTH ends to the literal
+        // (b955ceb's reservation -- see TypographyMigrationTests.
+        // AThemedButtonsLiteralBelowItsBand_PinsFontSizeMinToTheLiteral for
+        // the PlayMode half of the same fact); a literal above it raises
+        // only the max, the band's own min staying the floor.
+
+        [Test]
+        public void ResolveSizeRange_NoLiteral_KeepsTheRolesOwnBand()
+        {
+            var spec = Typography.Specs[TypographyRole.ButtonLabel];
+            var (min, max) = spec.ResolveSizeRange(null);
+
+            Assert.AreEqual(26f, min);
+            Assert.AreEqual(30f, max);
+        }
+
+        [Test]
+        public void ResolveSizeRange_LiteralInsideTheBand_BecomesTheMax_MinUnchanged()
+        {
+            var spec = Typography.Specs[TypographyRole.ButtonLabel];
+            var (min, max) = spec.ResolveSizeRange(28f);
+
+            Assert.AreEqual(26f, min);
+            Assert.AreEqual(28f, max);
+        }
+
+        [Test]
+        public void ResolveSizeRange_LiteralBelowTheBand_PinsBothEndsToIt()
+        {
+            var spec = Typography.Specs[TypographyRole.ButtonLabel];
+            var (min, max) = spec.ResolveSizeRange(24f);
+
+            Assert.AreEqual(24f, min);
+            Assert.AreEqual(24f, max);
+        }
+
+        [Test]
+        public void ResolveSizeRange_LiteralAboveTheBand_RaisesOnlyTheMax()
+        {
+            var spec = Typography.Specs[TypographyRole.ButtonLabel];
+            var (min, max) = spec.ResolveSizeRange(40f);
+
+            Assert.AreEqual(26f, min);
+            Assert.AreEqual(40f, max);
+        }
+
         // --- UiNode.Role / .Styled() ----------------------------------------------
 
         [Test]

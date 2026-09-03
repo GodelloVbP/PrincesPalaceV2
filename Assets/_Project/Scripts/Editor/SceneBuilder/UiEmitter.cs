@@ -265,20 +265,16 @@ public static class UiEmitter
         // node.FontSize > 0 is this project's existing "was this actually
         // set" sentinel (Ui.ApplyTheme's own label.FontSize fallback uses the
         // same test) -- kept here so a role can still hand a genuinely unset
-        // node its own authored max.
-        float fontSizeMax = node.FontSize > 0 ? node.FontSize : spec.MaxSize1080p;
+        // node its own authored max. The precedence rule itself (an explicit
+        // literal below the band pins both ends to it, one inside or above
+        // it just becomes the new max) is TypographySpec.ResolveSizeRange, a
+        // pure Domain function -- see its own comment.
+        float? literal = node.FontSize > 0 ? node.FontSize : (float?)null;
+        var (fontSizeMin, fontSizeMax) = spec.ResolveSizeRange(literal);
         text.fontSize = fontSizeMax;
         text.enableAutoSizing = true;
         text.fontSizeMax = fontSizeMax;
-
-        // An explicit literal below the role's own band wins outright: pin
-        // both ends to it rather than leaving fontSizeMin above fontSizeMax
-        // (dead, order-dependent metadata -- b955ceb's own reservation).
-        // Auto-sizing still applies from here down, just floored at the
-        // authored literal instead of the role's usual minimum, so a button
-        // built at 16-24 keeps rendering at exactly 16-24 and can still
-        // shrink further if its own text does not fit.
-        text.fontSizeMin = fontSizeMax < spec.MinSize1080p ? fontSizeMax : spec.MinSize1080p;
+        text.fontSizeMin = fontSizeMin;
     }
 
     // A LABEL'S ALIGNMENT, and only a label's: a button's caption fills its

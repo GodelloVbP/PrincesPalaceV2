@@ -54,6 +54,30 @@ namespace PrincesPalace.Domain.UiKit
             Tracking = tracking;
             LineSpacing = lineSpacing;
         }
+
+        // The autosize range a role's label actually gets, given whatever
+        // literal FontSize the screen wrote (null when it wrote none -- see
+        // UiEmitter.ApplyTypography's own "node.FontSize > 0" sentinel for
+        // where that null comes from).
+        //
+        // No literal: the role's own authored band, unchanged. A literal
+        // inside the band still becomes the max (a caller's explicit size
+        // always wins over the role's own default), with the band's min
+        // untouched below it. A literal BELOW the band's min wins outright:
+        // both ends pin to it rather than leaving fontSizeMin above
+        // fontSizeMax (dead, order-dependent metadata -- b955ceb's own
+        // reservation) -- auto-sizing still applies from there down, just
+        // floored at the literal instead of the role's usual minimum, so a
+        // button built at 16-24 keeps rendering at exactly 16-24 and can
+        // still shrink further if its own text does not fit. A literal ABOVE
+        // the band's max also just becomes the new max, with the band's min
+        // as its floor -- the same "explicit size wins" rule, unchanged.
+        public (float Min, float Max) ResolveSizeRange(float? literal)
+        {
+            float max = literal ?? MaxSize1080p;
+            float min = max < MinSize1080p ? max : MinSize1080p;
+            return (min, max);
+        }
     }
 
     public static class Typography
