@@ -2,7 +2,11 @@ using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using PrincesPalace;
+using PrincesPalace.Domain.Combat;
+using PrincesPalace.Domain.Combat.Session;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Rewards;
+using PrincesPalace.Domain.Rng;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -186,6 +190,129 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(ItemOfferTable.OfferCount, seen.Count);
             Assert.Greater(calls, ItemOfferTable.OfferCount,
                 "the randomness source was consulted too few times for a per-item plus roll");
+        }
+
+        // ---- RunOrchestrator.RollOffers: the reported floor-3-boss bug -----
+        //
+        // A floor-3 boss offering tier 1 / +1 items traced back to
+        // RunOrchestrator.RollOffers reading session.IsEliteFight only --
+        // IsBossFight was never checked, so every boss kill rolled as
+        // EncounterClass.Normal and RarityTable's TierFloorFor(Boss)==3
+        // guarantee never fired. Exercised through the real seam (a
+        // FightSession with IsBossFight true) rather than by calling
+        // ItemOfferRoll directly with EncounterClass.Boss, which would pass
+        // even with the bug still in place -- this is the test that would
+        // have caught it.
+        private static Domain.Combat.Session.FightSession BossSession()
+        {
+            var hero = new CombatantState("Hero", true, 100, 10, 20, 5);
+            var foe = new CombatantState("Boss", false, 500, 0, 40, 3);
+            var encounter = new CombatEncounter(new[] { hero }, new[] { foe });
+            var session = new Domain.Combat.Session.FightSession(
+                encounter, null, null, new SeededRandom(1), isBossFight: true, isEliteFight: false)
+            {
+                DepthStep = 23,
+            };
+            return session;
+        }
+
+        [Test]
+        public void RollOffers_RoutesABossKillToTheBossRewardBand()
+        {
+            var session = BossSession();
+            int floor = RarityTable.TierFloorFor(EncounterClass.Boss);
+
+            for (int seed = 0; seed < 50; seed++)
+            {
+                var rng = new SeededRandom((ulong)(seed + 1));
+                foreach (var offer in RunOrchestrator.RollOffers(session, n => rng.NextInt(0, n)))
+                {
+                    Assert.GreaterOrEqual(offer.Tier, floor - ItemOfferTable.TierSpread,
+                        $"seed {seed}: a boss fight (IsBossFight=true) must roll the Boss reward band, " +
+                        "not fall through to Normal's");
+                }
+            }
+        }
+
+        // ---- weapon/armour affix-pool split: a staff must never roll a
+        // defensive affix, and armour must never roll an offensive-only one.
+
+        [Test]
+        public void SeededStaffAndWeaponRolls_NeverCarryADefensiveAffix()
+        {
+            var effectById = Content.ContentDatabase.Modifiers
+                .Where(m => m != null && !string.IsNullOrEmpty(m.id) && m.effects != null && m.effects.Length > 0)
+                .ToDictionary(m => m.id, m => m.effects[0].type);
+            var kindById = Content.ContentDatabase.Items
+                .Where(i => i != null && !string.IsNullOrEmpty(i.id))
+                .ToDictionary(i => i.id, i => i.kind);
+
+            int weaponOffersChecked = 0;
+            int armorOffersChecked = 0;
+
+            for (int seed = 0; seed < 200; seed++)
+            {
+                // A real seeded stream, not a constant -- "200 seeded rolls"
+                // per the brief. favor: 1000 pushes RiftTier's own step
+                // chance to its cap (ModifierTable.MaxStep), so most of the
+                // 200 rolls actually carry affixes to check rather than
+                // mostly landing on RiftTier.Ordinary (zero modifiers).
+                var rng = new SeededRandom((ulong)(seed + 1));
+                var offers = ItemOfferRoll.Roll(EncounterClass.Boss, 40, 1000, n => rng.NextInt(0, n));
+
+                foreach (var offer in offers)
+                {
+                    if (!kindById.TryGetValue(offer.ItemId, out var kind)) continue;
+
+                    bool isWeapon = kind == Content.ItemKind.Weapon;
+                    if (isWeapon) weaponOffersChecked++; else armorOffersChecked++;
+
+                    foreach (var modifierId in offer.Modifiers)
+                    {
+                        if (!effectById.TryGetValue(modifierId, out var type)) continue;
+
+                        bool offensive = ModifierTable.IsOffensiveModifier(type);
+                        if (isWeapon)
+                        {
+                            Assert.IsTrue(offensive,
+                                $"seed {seed}: weapon '{offer.ItemId}' rolled '{modifierId}' ({type}), a defensive affix");
+                        }
+                        else
+                        {
+                            Assert.IsFalse(offensive,
+                                $"seed {seed}: armour '{offer.ItemId}' rolled '{modifierId}' ({type}), an offensive-only affix");
+                        }
+                    }
+                }
+            }
+
+            // The fixture assertion the rest is vacuous without: content
+            // must actually offer both kinds for this to have tested
+            // anything.
+            Assert.Greater(weaponOffersChecked, 0, "no weapon offers were sampled -- widen the roll");
+            Assert.Greater(armorOffersChecked, 0, "no armour offers were sampled -- widen the roll");
+        }
+
+        [Test]
+        public void RollOffers_ABossFightNeverReadsAsPlainNormal()
+        {
+            // The exact shape of the original bug: at depth 23 (floor 3),
+            // FloorTier(23) == 1, so an EncounterClass.Normal roll centres
+            // on tier 1 with no floor at all -- exactly the "tier 1 / +1"
+            // the report described. Once routed to Boss, TierFloorFor(Boss)
+            // forces every offer to tier 3 or better regardless of roll
+            // luck, so the Normal-band low end (tier 0-1) must never appear.
+            var session = BossSession();
+            var rng = new SeededRandom(20260903);
+            var nextIndex = new System.Func<int, int>(n => rng.NextInt(0, n));
+
+            var offers = RunOrchestrator.RollOffers(session, nextIndex);
+            Assert.IsNotEmpty(offers);
+            foreach (var offer in offers)
+            {
+                Assert.GreaterOrEqual(offer.Tier, 2,
+                    "a boss offer at floor 3 landed in the Normal band this fix exists to close off");
+            }
         }
     }
 }

@@ -183,12 +183,49 @@ namespace PrincesPalace.Domain.Rewards
             return uncapped > PlusMaxRungs ? PlusMaxRungs : uncapped;
         }
 
+        // A BOSS-ONLY FLAT ADD, on top of the climb, not a second draw --
+        // RollPlus still calls LootLadder.Climb exactly once whatever the
+        // encounter class, so a seeded run's draw count (and therefore its
+        // reproducibility) does not change with this constant.
+        //
+        // Needed because BossStep alone (0.38 vs Normal's 0.22) is not
+        // enough to make a boss's PLUS read as special: LootLadder.Climb's
+        // own shape means the single most likely outcome is STILL +0 for
+        // every encounter class -- at favor 0, P(rolled=0) is 62% even at
+        // Boss's step chance, so an un-boosted boss median plus is 0, same
+        // as a normal fight's. TIER already has an absolute, structural
+        // floor for this (TierFloorFor(Boss) == 3); PLUS had no equivalent,
+        // which is why a floor-3 boss could still hand over a +1 -- entirely
+        // ordinary for the roll, but not what "a boss should be worth more"
+        // is supposed to mean for the axis players actually feel first.
+        //
+        // 3, not 1 or 2: with P(rolled=0)=62% the dominant case, anything
+        // less than +3 still lands the boss's plus MEDIAN at 0 or 1 once the
+        // rolled-0 mass is shifted -- +3 is the smallest add that puts the
+        // boosted floor (rolled 0 -> final 3) AT the median, matching the
+        // brief's designer-legible target ("plus should be in the upper
+        // rungs") rather than merely nudging the average up.
+        //
+        // Clamped by RollPlus below to PlusMaxRungsFor(favor), the same
+        // ceiling every other plus roll respects -- this is a bonus on the
+        // SAME ladder, not a second one that can bypass its cap.
+        public const int BossBonusPlusRungs = 3;
+
         public static int RollPlus(EncounterClass encounter, int favor, Func<int, int> nextIndex)
         {
             float plusStep = LootLadder.StepChanceFor(encounter, favor,
                 LootLadder.NormalStep, LootLadder.EliteStep, LootLadder.BossStep,
                 PlusFavorPerPoint, PlusMaxStep);
-            return LootLadder.Climb(plusStep, PlusMaxRungsFor(favor), nextIndex);
+            int maxRungs = PlusMaxRungsFor(favor);
+            int rolled = LootLadder.Climb(plusStep, maxRungs, nextIndex);
+
+            if (encounter != EncounterClass.Boss)
+            {
+                return rolled;
+            }
+
+            int boosted = rolled + BossBonusPlusRungs;
+            return boosted > maxRungs ? maxRungs : boosted;
         }
 
 

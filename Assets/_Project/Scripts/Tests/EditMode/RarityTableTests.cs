@@ -417,5 +417,64 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
+        // ---- the reported bug: a floor-3 boss paying out tier 1 / +1 --------
+        //
+        // depthStep 23 is the exact step from the report -- floor 3 runs
+        // steps 16..23 (RunDepth.FloorFor: floor N starts at
+        // (N-1)*DescentMapGenerator.DefaultLegLength, DefaultLegLength==8),
+        // so 23 is the last step of that floor's leg, right where a boss
+        // room sits. The bug itself was never in these two rolls -- both
+        // already had the numbers to do this (TierFloorFor(Boss)==3;
+        // BossStep beats Normal's) -- it was RunOrchestrator.RollOffers
+        // never routing a boss kill to EncounterClass.Boss at all (it read
+        // IsEliteFight only), so every boss fight rolled as EncounterClass.
+        // Normal. See RunOrchestrator.RollOffers' own comment. That seam is
+        // Core-side and untestable from Domain; this pins what Domain now
+        // guarantees ONCE the caller passes EncounterClass.Boss correctly.
+        [Test]
+        public void AFloorThreeBoss_PaysAboveTheCommonBand_MedianPlusThreeOrBetter()
+        {
+            const int Step = 23;
+            var tiers = SampleTiers(EncounterClass.Boss, Step, maxTier: 10);
+            var pluses = SamplePluses(EncounterClass.Boss);
+
+            Assert.GreaterOrEqual(Share(tiers, t => t >= 2), 0.80,
+                "a floor-3 boss should clear the common band (tier 1-2) at least 4 times in 5");
+            Assert.AreEqual(3, RarityTable.TierFloorFor(EncounterClass.Boss),
+                "the absolute boss floor is what actually guarantees the line above");
+
+            double medianPlus = Median(pluses);
+            Assert.GreaterOrEqual(medianPlus, 3,
+                $"a boss's plus should sit in the upper rungs, not the modal +0 every other class rolls; got median {medianPlus}");
+        }
+
+        [Test]
+        public void BossBonusPlusRungs_NeverPushesPlusPastTheFavorCeiling()
+        {
+            foreach (int favor in new[] { 0, 15, 30, 150 })
+            {
+                var pluses = SamplePluses(EncounterClass.Boss, favor);
+                Assert.LessOrEqual(pluses.Max(), RarityTable.PlusMaxRungsFor(favor),
+                    $"favor {favor}: the boss bonus must clamp to the same ceiling every other roll respects");
+            }
+        }
+
+        [Test]
+        public void BossBonusPlusRungs_OnlyAppliesToBossEncounters()
+        {
+            // A rolled-0 climb (a source that never succeeds) makes the
+            // bonus visible directly: Normal/Elite stay at 0, Boss reads
+            // exactly the bonus constant.
+            Assert.AreEqual(0, RarityTable.RollPlus(EncounterClass.Normal, 0, _ => 999));
+            Assert.AreEqual(0, RarityTable.RollPlus(EncounterClass.Elite, 0, _ => 999));
+            Assert.AreEqual(RarityTable.BossBonusPlusRungs, RarityTable.RollPlus(EncounterClass.Boss, 0, _ => 999));
+        }
+
+        private static double Median(List<int> values)
+        {
+            var sorted = values.OrderBy(v => v).ToList();
+            int mid = sorted.Count / 2;
+            return sorted.Count % 2 == 0 ? (sorted[mid - 1] + sorted[mid]) / 2.0 : sorted[mid];
+        }
     }
 }

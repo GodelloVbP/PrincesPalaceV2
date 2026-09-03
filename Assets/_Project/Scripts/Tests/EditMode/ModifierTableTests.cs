@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Rewards;
 
@@ -297,6 +298,95 @@ namespace PrincesPalace.Domain.Tests
         {
             Assert.DoesNotThrow(() => ModifierTable.PickModifiers(FivePool, 3, _ => 9999));
             Assert.DoesNotThrow(() => ModifierTable.PickModifiers(FivePool, 3, _ => -5));
+        }
+
+        // ---- IsOffensiveModifier: the weapon/armour affix-pool split --------
+        //
+        // A staff (or any weapon) rolling a defensive affix -- Emberguard's
+        // fire resistance, Wardrune's mana-to-Ward -- is the bug this
+        // classifier exists to close. Pinned member-by-member rather than
+        // sampled, because this is a closed enum and every member's category
+        // is a deliberate authoring decision (see ModifierTable's own
+        // header), not a distribution to measure.
+        [Test]
+        public void EveryOnHitOrAttackRider_IsOffensive()
+        {
+            var offensive = new[]
+            {
+                ModifierEffectType.ElementalDamageOnHitPercent,
+                ModifierEffectType.FlatSpeedBonus,
+                ModifierEffectType.LifestealPercent,
+                ModifierEffectType.GuaranteedFirstAction,
+                ModifierEffectType.OnKillSplashPercent,
+                ModifierEffectType.PushBackOnHitChancePercent,
+                ModifierEffectType.NextSkillManaDiscountPercent,
+                ModifierEffectType.ChilledOnHitChancePercent,
+                ModifierEffectType.RootChancePercent,
+            };
+
+            foreach (var type in offensive)
+            {
+                Assert.IsTrue(ModifierTable.IsOffensiveModifier(type), $"{type} should be weapon-eligible");
+            }
+        }
+
+        [Test]
+        public void EveryPassiveOrResistanceRule_IsDefensive()
+        {
+            var defensive = new[]
+            {
+                ModifierEffectType.TypedResistanceFlat,
+                ModifierEffectType.FlatPhysicalDamageReduction,
+                ModifierEffectType.BreakShieldDepletionResistPercent,
+                ModifierEffectType.FlatMaxManaBonus,
+                ModifierEffectType.FlatManaRegenBonus,
+                ModifierEffectType.ManaToWardOnTurnStartPercent,
+                ModifierEffectType.FortunateFavorBonusFlat,
+                ModifierEffectType.DodgeRating,
+            };
+
+            foreach (var type in defensive)
+            {
+                Assert.IsFalse(ModifierTable.IsOffensiveModifier(type), $"{type} should be armour-eligible, not weapon-eligible");
+            }
+        }
+
+        [Test]
+        public void EveryModifierEffectTypeIsClassifiedOneWayOrTheOther()
+        {
+            // Closed enum, closed classification: a future member (None
+            // excepted -- never authored) must be sorted into one bucket or
+            // the other by hand, not fall through to a silent default that
+            // could land a new offensive rider on armour or vice versa.
+            var covered = new HashSet<ModifierEffectType>
+            {
+                ModifierEffectType.ElementalDamageOnHitPercent,
+                ModifierEffectType.FlatSpeedBonus,
+                ModifierEffectType.LifestealPercent,
+                ModifierEffectType.GuaranteedFirstAction,
+                ModifierEffectType.OnKillSplashPercent,
+                ModifierEffectType.PushBackOnHitChancePercent,
+                ModifierEffectType.NextSkillManaDiscountPercent,
+                ModifierEffectType.ChilledOnHitChancePercent,
+                ModifierEffectType.RootChancePercent,
+                ModifierEffectType.TypedResistanceFlat,
+                ModifierEffectType.FlatPhysicalDamageReduction,
+                ModifierEffectType.BreakShieldDepletionResistPercent,
+                ModifierEffectType.FlatMaxManaBonus,
+                ModifierEffectType.FlatManaRegenBonus,
+                ModifierEffectType.ManaToWardOnTurnStartPercent,
+                ModifierEffectType.FortunateFavorBonusFlat,
+                ModifierEffectType.DodgeRating,
+            };
+
+            foreach (ModifierEffectType type in Enum.GetValues(typeof(ModifierEffectType)))
+            {
+                if (type == ModifierEffectType.None) continue;
+
+                Assert.IsTrue(covered.Contains(type),
+                    $"{type} is a new modifier effect with no offensive/defensive classification -- " +
+                    "add it to ModifierTable.OffensiveEffects or leave it out deliberately, and to this test.");
+            }
         }
     }
 }

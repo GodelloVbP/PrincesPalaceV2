@@ -41,15 +41,38 @@ namespace PrincesPalace
                 .ToList();
         }
 
-        // Every modifier id in the pool, authored order. The Core-side
-        // bridge ModifierTable.PickModifiers needs -- Domain cannot see
-        // ContentDatabase or ModifierDefinition, the same reason Candidates()
-        // exists above for items rather than ItemOfferTable reading
-        // ContentDatabase itself.
-        private static IReadOnlyList<string> ModifierPool()
+        // Every modifier id in the pool that reads as OFFENSIVE (weaponPool
+        // true, staves included -- see ModifierTable.IsOffensiveModifier's
+        // own header) or DEFENSIVE (weaponPool false), authored order. The
+        // Core-side bridge ModifierTable.PickModifiers needs -- Domain
+        // cannot see ContentDatabase or ModifierDefinition, the same reason
+        // Candidates() exists above for items rather than ItemOfferTable
+        // reading ContentDatabase itself.
+        //
+        // TWO POOLS, NOT ONE FILTERED PER-DRAW: a staff rolling out of the
+        // same flat list as a breastplate is the bug this split closes (see
+        // ModifierTable's own header) -- picking the RIGHT list once per
+        // offer, before PickModifiers ever draws, is what keeps a weapon's
+        // three rolled slots from ever seeing a defensive id at all, rather
+        // than merely making one less likely.
+        //
+        // A modifier with no resolved effect (a raw entry the resolver
+        // rejected, or content mid-edit) reads as defensive by
+        // IsOffensiveModifier's own tolerant default, so it never appears in
+        // the weapon pool -- the safer direction for a still-forming id to
+        // fail into.
+        private static IReadOnlyList<string> ModifierPool(bool weaponPool)
         {
             return ContentDatabase.Modifiers
                 .Where(m => m != null && !string.IsNullOrEmpty(m.id))
+                .Where(m =>
+                {
+                    var effects = m.effects;
+                    var type = effects != null && effects.Length > 0
+                        ? effects[0].type
+                        : ModifierEffectType.None;
+                    return ModifierTable.IsOffensiveModifier(type) == weaponPool;
+                })
                 .Select(m => m.id)
                 .ToList();
         }
@@ -149,7 +172,17 @@ namespace PrincesPalace
 
             int maxTier = MaxTier;
             int targetTier = RarityTable.RollTier(encounter, depthStep, maxTier, favor, nextIndex);
-            var modifierPool = ModifierPool();
+
+            // Built once per offer set rather than per item -- same reason
+            // ModifierPool() itself is a Select().ToList() rather than a
+            // live query: it is read once per offer below, not once per
+            // effect, and ContentDatabase.Items/Modifiers do not change
+            // mid-roll.
+            var weaponModifierPool = ModifierPool(weaponPool: true);
+            var armorModifierPool = ModifierPool(weaponPool: false);
+            var itemKindById = ContentDatabase.Items
+                .Where(i => i != null && !string.IsNullOrEmpty(i.id))
+                .ToDictionary(i => i.id, i => i.kind);
 
             // Tier is rolled ONCE for the offer set and plus/RiftTier/which-
             // modifiers are rolled PER ITEM. Rolling tier per item would
@@ -162,6 +195,16 @@ namespace PrincesPalace
             {
                 int plus = RarityTable.RollPlus(encounter, favor, nextIndex);
                 var riftTier = ModifierTable.RollRiftTier(encounter, favor, nextIndex);
+
+                // WHICH POOL, not whether to roll at all -- a staff (kind ==
+                // ItemKind.Weapon) draws only offensive ids, everything else
+                // equippable only defensive ones. An id this roll cannot
+                // find in ContentDatabase.Items (should not happen -- every
+                // candidate came from ContentDatabase.Items itself) defaults
+                // to the defensive pool, the same "unknown reads as armour"
+                // posture ModifierPool's own tolerant default takes.
+                bool isWeapon = itemKindById.TryGetValue(offer.ItemId, out var kind) && kind == ItemKind.Weapon;
+                var modifierPool = isWeapon ? weaponModifierPool : armorModifierPool;
                 var modifiers = ModifierTable.PickModifiers(modifierPool, (int)riftTier, nextIndex);
 
                 offers.Add(offer.WithPlus(plus).WithModifiers(riftTier, modifiers));
