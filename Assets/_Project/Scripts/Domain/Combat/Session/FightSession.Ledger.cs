@@ -75,22 +75,6 @@ namespace PrincesPalace.Domain.Combat.Session
 
             var result = CombatMath.ApplyDamageDetailed(target, amount);
 
-            // Berserker's Vest: getting hit shortens every one of the
-            // wearer's own active cooldowns by 1, once per turn. Read
-            // BEFORE the crown/idol riders below -- it cares only that
-            // damage actually reached this combatant's health, not about
-            // anything either of those two mechanics does afterward.
-            if (target != null && target.IsPlayerSide && amount > 0
-                && HasRelic(target, RelicEffect.BerserkersVest)
-                && _locks.OncePerTurn(FightTuning.BerserkersVestLockKeyFor(LedgerIdOf(target))))
-            {
-                int shortened = ReduceCooldowns(target, FightTuning.BerserkersVestCooldownReduction);
-                if (shortened > 0)
-                {
-                    AppendMessage($"{target.Name}'s vest bristles at the blow - cooldowns tick down.");
-                }
-            }
-
             // Both mechanic (c)'s stack and mechanic (b)'s crossing-check
             // read what THIS call just produced -- CursedIdolOnHit stacks
             // on the target being hit, WorldEndersCrownCheck reads that
@@ -103,6 +87,26 @@ namespace PrincesPalace.Domain.Combat.Session
             // confusion this split exists to avoid.
             int toHealth = amount - result.Absorbed;
             if (toHealth < 0) toHealth = 0;
+
+            // Berserker's Vest: getting hit shortens every one of the
+            // wearer's own active cooldowns by 1, once per turn. Gated on
+            // toHealth (POST-absorb), not the raw amount -- a hit a shield
+            // or ward ate in full never reached the wearer at all, and
+            // "getting hit" is a claim about health lost, not about a swing
+            // having been thrown. Read after toHealth is computed for
+            // exactly that reason (it used to gate on `amount > 0`, before
+            // absorption was even known, so a fully-absorbed hit still
+            // shaved a cooldown for a blow that landed on the shield).
+            if (target != null && target.IsPlayerSide && toHealth > 0
+                && HasRelic(target, RelicEffect.BerserkersVest)
+                && _locks.OncePerTurn(FightTuning.BerserkersVestLockKeyFor(LedgerIdOf(target))))
+            {
+                int shortened = ReduceCooldowns(target, FightTuning.BerserkersVestCooldownReduction);
+                if (shortened > 0)
+                {
+                    AppendMessage($"{target.Name}'s vest bristles at the blow - cooldowns tick down.");
+                }
+            }
 
             Ledger.Dealt(LedgerIdOf(actor), type, amount);
             Ledger.Took(LedgerIdOf(target), toHealth, result.Absorbed);
