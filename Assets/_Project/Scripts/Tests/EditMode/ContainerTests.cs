@@ -295,6 +295,33 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(PlaceKind.Stretch, content.Place.Kind);
 
+            // LITERAL, worked by hand from ContainerArt's own tables rather
+            // than recomputed from the production formula this test is
+            // supposed to be checking (CLAUDE.md gotcha 5 -- a test that
+            // recomputes a formula to build its own expected value is a
+            // tautology and cannot catch that formula breaking).
+            //
+            // ContainerArt.ContainerAspect3x4 = 0.588, so at height 569:
+            //   size.X = 569 * 0.588 = 334.572
+            //   size.Y = 569
+            // ContainerArt.Inset(Container, ThreeByFour) =
+            //   left 0.065, right 0.065, top 0.045, bottom 0.04, so:
+            //   Left   = 334.572 * 0.065 = 21.74718
+            //   Right  = 334.572 * 0.065 = 21.74718
+            //   Top    = 569     * 0.045 = 25.605
+            //   Bottom = 569     * 0.04  = 22.76
+            Assert.AreEqual(21.74718f, content.Place.Left, 0.01f);
+            Assert.AreEqual(21.74718f, content.Place.Right, 0.01f);
+            Assert.AreEqual(25.605f, content.Place.Top, 0.01f);
+            Assert.AreEqual(22.76f, content.Place.Bottom, 0.01f);
+
+            // The formula check stays too, as a second, independent-in-name
+            // but not in fact assertion -- kept because it still catches a
+            // caller/production DRIFT (Container built at a different size
+            // than ContainerContent insets against), which the literal check
+            // above cannot: it only proves the numbers ContainerArt SHOULD
+            // produce at height 569 today, not that this call site keeps
+            // agreeing with ContainerArt as both evolve.
             var inset = Ui.ContainerContentInset(ContainerRatio.ThreeByFour);
             Assert.AreEqual(size.X * inset.Left, content.Place.Left, 0.01f);
             Assert.AreEqual(size.X * inset.Right, content.Place.Right, 0.01f);
