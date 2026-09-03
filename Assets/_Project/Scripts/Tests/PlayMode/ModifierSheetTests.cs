@@ -364,10 +364,10 @@ namespace PrincesPalace.PlayModeTests
                 Enumerable.Range(1, 2).Any(n => messages.Any(m => m.Contains($"{n} bonus {element} damage")));
 
             Assert.IsTrue(FiredInRange("Fire"),
-                "fiery's on-hit proc must fire and land in [1,4] -- three rolled modifiers on one item, none " +
+                "fiery's on-hit proc must fire and land in [1,2] -- three rolled modifiers on one item, none " +
                 "silently overriding another, reached by the roll this test actually rolled");
             Assert.IsTrue(FiredInRange("Arcane"),
-                "astral's on-hit proc must ALSO fire alongside fiery's, and land in [1,4] the same way");
+                "astral's on-hit proc must ALSO fire alongside fiery's, and land in [1,2] the same way");
 
             // The message text, not a net CurrentHealth delta or the ledger's
             // Healed total -- lifesteal calls CombatMath.Heal directly
