@@ -162,7 +162,6 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(menu.Select(2, manaCost: 7));
 
             Assert.AreEqual(2, menu.Selection);
-            Assert.AreEqual(7, menu.ManaPreview);
         }
 
         [Test]
@@ -199,7 +198,6 @@ namespace PrincesPalace.Domain.Tests
             menu.OpenBranch(MenuBranch.Item);
 
             Assert.AreEqual(-1, menu.Selection);
-            Assert.AreEqual(0, menu.ManaPreview);
         }
 
         [Test]
@@ -217,7 +215,6 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(MenuDepth.Root, menu.Depth);
             Assert.AreEqual(MenuBranch.None, menu.Branch);
             Assert.AreEqual(-1, menu.Selection);
-            Assert.AreEqual(0, menu.ManaPreview);
         }
 
         // ---- what the HUD reads -------------------------------------------------

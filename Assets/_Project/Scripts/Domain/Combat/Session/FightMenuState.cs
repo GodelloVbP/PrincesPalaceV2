@@ -40,9 +40,6 @@ namespace PrincesPalace.Domain.Combat.Session
         // column feel instant, and confirming is a separate click.
         public int Selection { get; private set; } = -1;
 
-        // What the hovered row would spend, for the mana bar's cost preview.
-        public int ManaPreview { get; private set; }
-
         public bool IsOpen => Branch != MenuBranch.None;
 
         // Driven by THE BRANCH ALONE, never by a second "can the player act"
@@ -80,7 +77,6 @@ namespace PrincesPalace.Domain.Combat.Session
             Branch = MenuBranch.Attack;
             Depth = MenuDepth.Target;
             Selection = -1;
-            ManaPreview = 0;
         }
 
         public void OpenBranch(MenuBranch branch)
@@ -95,7 +91,6 @@ namespace PrincesPalace.Domain.Combat.Session
             Branch = branch;
             Depth = MenuDepth.Sub;
             Selection = -1;
-            ManaPreview = 0;
         }
 
         // Hovering or arrowing onto a row. Returns false when nothing changed,
@@ -106,7 +101,6 @@ namespace PrincesPalace.Domain.Combat.Session
             if (Depth != MenuDepth.Sub || index == Selection) return false;
 
             Selection = index;
-            ManaPreview = manaCost;
             return true;
         }
 
@@ -132,7 +126,6 @@ namespace PrincesPalace.Domain.Combat.Session
                     {
                         Branch = MenuBranch.None;
                         Selection = -1;
-                        ManaPreview = 0;
                     }
                     return true;
 
@@ -140,7 +133,6 @@ namespace PrincesPalace.Domain.Combat.Session
                     Depth = MenuDepth.Root;
                     Branch = MenuBranch.None;
                     Selection = -1;
-                    ManaPreview = 0;
                     return true;
 
                 default:
@@ -155,7 +147,6 @@ namespace PrincesPalace.Domain.Combat.Session
             Depth = MenuDepth.Root;
             Branch = MenuBranch.None;
             Selection = -1;
-            ManaPreview = 0;
         }
 
         // Which verb row is lit. Exactly one can be, so this is an index rather
