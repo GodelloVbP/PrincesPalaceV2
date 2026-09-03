@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace PrincesPalace.Domain.Combat.Session
@@ -42,10 +43,22 @@ namespace PrincesPalace.Domain.Combat.Session
         }
 
         // Called once per turn boundary (a fresh actor's GrantTurnStart) --
-        // per-turn locks are gone, per-combat locks are untouched.
-        public void ResetTurn()
+        // ONLY that actor's per-turn locks clear. Every *LockKeyFor helper in
+        // FightTuning suffixes the key with the owning combatant's ledger id
+        // (see that file's header), so a key ending ":<ownerId>" belongs to
+        // this owner and nobody else's.
+        //
+        // Clearing the whole set here (the bug this replaced) meant any
+        // combatant's turn re-armed every OTHER combatant's once-per-turn
+        // lock too: two enemies each hitting a Berserker's Vest wearer in
+        // one round shaved a cooldown twice, because the second enemy's own
+        // turn start wiped the first enemy's hit out from under the wearer.
+        public void ResetTurn(string ownerId)
         {
-            _perTurn.Clear();
+            if (string.IsNullOrEmpty(ownerId)) return;
+
+            string suffix = ":" + ownerId;
+            _perTurn.RemoveWhere(key => key.EndsWith(suffix, StringComparison.Ordinal));
         }
     }
 }

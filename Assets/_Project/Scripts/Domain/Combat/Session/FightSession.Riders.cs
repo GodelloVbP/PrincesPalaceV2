@@ -250,10 +250,11 @@ namespace PrincesPalace.Domain.Combat.Session
             var actor = _encounter.Current;
             if (actor == null) return;
 
-            // Mechanic (f): a fresh actor's turn is the turn boundary every
-            // OncePerTurn lock resets against -- see CombatLocks' own
-            // header.
-            _locks.ResetTurn();
+            // Mechanic (f): a fresh actor's turn is the turn boundary that
+            // actor's own OncePerTurn locks reset against -- see CombatLocks'
+            // own header. Scoped to this actor only: another combatant's
+            // once-per-turn locks must survive until THEIR turn starts.
+            _locks.ResetTurn(LedgerIdOf(actor));
 
             RegenerateMana(actor);
             ApplyRunicWardConversion(actor);

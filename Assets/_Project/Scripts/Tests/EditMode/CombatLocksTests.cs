@@ -11,11 +11,11 @@ namespace PrincesPalace.Domain.Tests
         {
             var locks = new CombatLocks();
 
-            Assert.IsTrue(locks.OncePerCombat("x"), "the first call must be free");
-            Assert.IsFalse(locks.OncePerCombat("x"), "a second call in the same combat must be refused");
+            Assert.IsTrue(locks.OncePerCombat("x:hero1"), "the first call must be free");
+            Assert.IsFalse(locks.OncePerCombat("x:hero1"), "a second call in the same combat must be refused");
 
-            locks.ResetTurn();
-            Assert.IsFalse(locks.OncePerCombat("x"), "a turn boundary does not reset a per-combat lock");
+            locks.ResetTurn("hero1");
+            Assert.IsFalse(locks.OncePerCombat("x:hero1"), "a turn boundary does not reset a per-combat lock");
         }
 
         [Test]
@@ -23,11 +23,11 @@ namespace PrincesPalace.Domain.Tests
         {
             var locks = new CombatLocks();
 
-            Assert.IsTrue(locks.OncePerTurn("y"));
-            Assert.IsFalse(locks.OncePerTurn("y"), "spent for this turn");
+            Assert.IsTrue(locks.OncePerTurn("y:hero1"));
+            Assert.IsFalse(locks.OncePerTurn("y:hero1"), "spent for this turn");
 
-            locks.ResetTurn();
-            Assert.IsTrue(locks.OncePerTurn("y"), "a fresh turn re-arms it");
+            locks.ResetTurn("hero1");
+            Assert.IsTrue(locks.OncePerTurn("y:hero1"), "a fresh turn re-arms it");
         }
 
         [Test]
@@ -35,8 +35,29 @@ namespace PrincesPalace.Domain.Tests
         {
             var locks = new CombatLocks();
 
-            Assert.IsTrue(locks.OncePerCombat("a"));
-            Assert.IsTrue(locks.OncePerCombat("b"), "a different key must have its own gate");
+            Assert.IsTrue(locks.OncePerCombat("a:hero1"));
+            Assert.IsTrue(locks.OncePerCombat("b:hero1"), "a different key must have its own gate");
+        }
+
+        // Finding 1: ResetTurn used to clear the WHOLE per-turn set on any
+        // actor's turn boundary. A lock owned by "hero1" must survive an
+        // "enemy1" turn boundary and only clear on hero1's own.
+        [Test]
+        public void ResetTurnOnlyClearsTheGivenOwnersLocks()
+        {
+            var locks = new CombatLocks();
+
+            Assert.IsTrue(locks.OncePerTurn("berserkers_vest:hero1"));
+            Assert.IsTrue(locks.OncePerTurn("sparring_buckler:enemy1"));
+
+            // enemy1's turn starts -- hero1's lock must not be touched.
+            locks.ResetTurn("enemy1");
+            Assert.IsFalse(locks.OncePerTurn("berserkers_vest:hero1"), "another owner's turn boundary must not re-arm hero1's lock");
+            Assert.IsTrue(locks.OncePerTurn("sparring_buckler:enemy1"), "enemy1's own lock was cleared by enemy1's turn boundary");
+
+            // hero1's own turn starts -- now hero1's lock re-arms.
+            locks.ResetTurn("hero1");
+            Assert.IsTrue(locks.OncePerTurn("berserkers_vest:hero1"), "hero1's own turn boundary must re-arm hero1's lock");
         }
     }
 }

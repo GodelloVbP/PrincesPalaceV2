@@ -382,6 +382,105 @@ namespace PrincesPalace.Domain.Tests
                 "once per turn -- the second hit does nothing more");
         }
 
+        // Finding 1: ResetTurn used to clear the WHOLE per-turn lock set on
+        // ANY combatant's turn boundary, not just the owner's. Two enemies
+        // both acting (and both hitting hero) inside the same round means
+        // GrantTurnStart fires for foe1, THEN for foe2, before hero's own
+        // turn comes back around -- the exact shape that caught the bug,
+        // where foe2's turn boundary wiped the lock foe1's hit had already
+        // spent and let a second shave through.
+        //
+        // Isolated by comparison rather than a hardcoded post-CastSkill
+        // cooldown value: CastSkill only returns once every enemy in the
+        // round has acted, so the normal per-turn cooldown tick and any
+        // Berserker's Vest shaves all land before this test ever gets
+        // control back, and pinning their combined total would mean
+        // re-deriving TickCooldowns' own arithmetic (CLAUDE.md gotcha 5).
+        // Two otherwise-identical fights that differ ONLY in whether a
+        // second, ALSO-hitting enemy exists must land hero on the exact
+        // same cooldown -- one shave per round, not one per attacker.
+        [Test]
+        public void TwoEnemiesHittingHeroInOneRoundOnlyShaveTheCooldownOnce()
+        {
+            ResolvedSkill Skill() => new ResolvedSkill("s", "S", "", "hero", 1, SkillEffect.HealSelf,
+                SkillTargeting.Self, 0, 0, false, 0, 1, false, null, SpellPresentation.None, 0, cooldownTurns: 20);
+
+            // One live attacker: foe2 is killed off before it can act, so
+            // only foe1 lands a hit this round.
+            var (soloSession, soloHero, _, soloFoe2) = Fight(RelicEffect.BerserkersVest,
+                heroSpeed: 100, foeSpeed: 1, foeAttack: 5, skills: new List<ResolvedSkill> { Skill() });
+            soloFoe2.CurrentHealth = 0;
+            soloSession.CastSkill(0, soloHero);
+            int soloCooldown = soloSession.CooldownRemaining(soloHero, "s");
+
+            // Two live attackers: foe1 AND foe2 both land a hit this round.
+            var (duoSession, duoHero, _, _) = Fight(RelicEffect.BerserkersVest,
+                heroSpeed: 100, foeSpeed: 1, foeAttack: 5, skills: new List<ResolvedSkill> { Skill() });
+            duoSession.CastSkill(0, duoHero);
+            int duoCooldown = duoSession.CooldownRemaining(duoHero, "s");
+
+            Assert.AreEqual(soloCooldown, duoCooldown,
+                "a second enemy also hitting hero in the same round must not shave a second cooldown turn");
+        }
+
+        // Finding 5 (code review): Berserker's Vest used to gate on the RAW
+        // `amount > 0`, read before absorption was even computed -- so a hit
+        // a signature resource ate IN FULL still shaved a cooldown for a
+        // blow that never reached the wearer's health at all. Fixed to gate
+        // on `toHealth > 0` (post-absorb).
+        [Test]
+        public void AFullyAbsorbedHitDoesNotShaveTheCooldown()
+        {
+            var skill = new ResolvedSkill("s", "S", "", "hero", 1, SkillEffect.HealSelf, SkillTargeting.Self,
+                0, 0, false, 0, 1, false, null, SpellPresentation.None, 0, cooldownTurns: 20);
+
+            var (session, hero, foe1, _) = Fight(RelicEffect.BerserkersVest, heroSpeed: 100, foeSpeed: 100,
+                skills: new List<ResolvedSkill> { skill });
+
+            session.CastSkill(0, hero);
+            int before = session.CooldownRemaining(hero, "s");
+            Assert.Greater(before, 0, "fixture: the skill should still be on cooldown at all");
+
+            // Set AFTER the baseline read, not before: CastSkill's own
+            // internal enemy turn(s) would otherwise chip the resource with
+            // an incidental hit before the test's own hit ever lands.
+            // AbsorbPerPoint 1, Current 10: a 10-point hit is absorbed in
+            // full (min(10*1, 10) == 10), toHealth == 0.
+            hero.Signature = new SignatureResource("shield", "Shield", 10, 0, 0, 0,
+                absorbPerPoint: 1, absorbsDamage: true) { Current = 10 };
+
+            session.DealDamageForTest(foe1, hero, 10, DamageType.Physical);
+
+            Assert.AreEqual(before, session.CooldownRemaining(hero, "s"),
+                "a hit absorbed in full never reached the wearer's health -- the vest must not fire");
+        }
+
+        [Test]
+        public void APartiallyAbsorbedHitStillShavesTheCooldown()
+        {
+            var skill = new ResolvedSkill("s", "S", "", "hero", 1, SkillEffect.HealSelf, SkillTargeting.Self,
+                0, 0, false, 0, 1, false, null, SpellPresentation.None, 0, cooldownTurns: 20);
+
+            var (session, hero, foe1, _) = Fight(RelicEffect.BerserkersVest, heroSpeed: 100, foeSpeed: 100,
+                skills: new List<ResolvedSkill> { skill });
+
+            session.CastSkill(0, hero);
+            int before = session.CooldownRemaining(hero, "s");
+            Assert.Greater(before, 0, "fixture: the skill should still be on cooldown at all");
+
+            // Set AFTER the baseline read -- see the sibling test's own
+            // comment. AbsorbPerPoint 1, Current 3: a 10-point hit is only
+            // absorbed for 3 (min(3*1, 10) == 3), toHealth == 7 -- the
+            // wearer is genuinely hit, so the vest must still fire.
+            hero.Signature = new SignatureResource("shield", "Shield", 10, 0, 0, 0,
+                absorbPerPoint: 1, absorbsDamage: true) { Current = 3 };
+
+            session.DealDamageForTest(foe1, hero, 10, DamageType.Physical);
+
+            Assert.AreEqual(before - 1, session.CooldownRemaining(hero, "s"),
+                "a hit that partially reached the wearer's health must still shave the cooldown once");
+        }
+
         // ---- phoenix egg -----------------------------------------------------------------
 
         [Test]
