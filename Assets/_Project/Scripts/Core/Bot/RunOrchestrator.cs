@@ -82,10 +82,20 @@ namespace PrincesPalace
             // relics are drafted in the hub, before a fight's party is
             // chosen.
             var squad = save?.ActiveSquad() ?? new List<Character>();
-            bool hasConvergence = squad
-                .Where(c => c != null)
-                .SelectMany(c => ContentDatabase.AvailableSkillsFor(c))
-                .Any(s => s != null && s.effect == Domain.Combat.SkillEffect.Transform);
+            bool hasConvergence = false;
+            foreach (var c in squad)
+            {
+                if (c == null) continue;
+                foreach (var s in ContentDatabase.AvailableSkillsFor(c))
+                {
+                    if (s != null && ConvergenceGate.IsConvergenceEffect(s.effect))
+                    {
+                        hasConvergence = true;
+                        break;
+                    }
+                }
+                if (hasConvergence) break;
+            }
 
             // Already-drafted relics are out of the pool. Draft() draws without
             // replacement WITHIN one offer, which was the whole story when

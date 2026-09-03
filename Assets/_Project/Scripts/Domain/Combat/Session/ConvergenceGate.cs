@@ -23,8 +23,15 @@ namespace PrincesPalace.Domain.Combat.Session
     {
         public static bool HasConvergenceAbility(IEnumerable<ResolvedSkill> skills)
         {
-            return skills != null && skills.Any(s => s.Effect == SkillEffect.Transform);
+            return skills != null && skills.Any(s => IsConvergenceEffect(s.Effect));
         }
+
+        // The single definition of "counts as convergence", exposed so a
+        // caller holding raw SkillEffect values (Core's SkillDefinition,
+        // rather than Domain's ResolvedSkill -- the active squad in the hub
+        // has not been resolved into a fight kit yet) can ask the same
+        // question without wrapping its skills first.
+        public static bool IsConvergenceEffect(SkillEffect effect) => effect == SkillEffect.Transform;
 
         // The kit-level convenience -- what a fight actually has in hand.
         public static bool HasConvergenceAbility(IEnumerable<PlayerKit> party)
