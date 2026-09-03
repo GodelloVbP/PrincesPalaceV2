@@ -396,16 +396,75 @@ against `bookOnly`/`bookTier` (2/3) since both are off the level ladder now.
 Full suite green: `EditMode 2740/2740`, `PlayMode 740/765` (25 skipped, same
 skip count as gate 3 — no new skips introduced).
 
-**NOT done, both process blocks carried forward from gates 2/3, not new
-here:** the human usability checklist (§7.1 point 9) and any live UI walk
-test — `Scenes/` is still carrying another live session's uncommitted work
-as of this recording, so nothing that needs a built scene has run. **Also
-not done:** the gate-4 exit balance batch measuring combat outcomes with the
-flip live (the plan's own reason for staging this gate last — "combat
-outcomes now genuinely depend on learned spells"). This is a genuine gap:
-the code is tested for correctness but not yet measured for balance impact,
-and the role-rider removal in particular (five characters losing a passive
-they always had) is exactly the kind of change that batch is for.
+**NOT done, carried forward from gates 2/3, not new here:** the human
+usability checklist (§7.1 point 9) and any live UI walk test — `Scenes/` is
+still carrying another live session's uncommitted work as of this recording,
+so nothing that needs a built scene has run.
+
+**Post-commit code review (2026-09-03, medium effort, 8 finder angles + 1-vote
+verify) found and fixed two real latent bugs and one plausible one, both in
+files this gate touched:**
+
+- `FightController.Hud.cs`'s `CurrentDetail()` indexed `kit.Skills` by the raw
+  submenu row position instead of the selected option's own kit index — the
+  moment any skill authors a `requires` ability-score gate (a real, validated,
+  currently-unused content field), a filtered-out skill earlier in the list
+  would desync every row after it from the detail panel it's supposed to
+  describe. Fixed to route through `SkillOptionsFor`, matching how
+  `FightController.Input.cs`'s `CastSkill` calls already dispatch.
+- `FightEncounterAdapter.cs`'s new `TierAtLevel` reimplemented
+  `ContentDatabase.GetSpellTierForLevel` level-only, silently dropping the
+  ability-score requirement gate the canonical method enforces — inert only
+  because no `SpellTierDefinition` currently authors a non-zero
+  `requirements` above level 1. Fixed by routing both `KitFor` overloads
+  through the existing `ContentDatabase.EffectiveSkillPowerMultiplier`
+  (in-run) / `GetSpellTierForLevel` (definition-only, no `Character` to ask)
+  instead of a second, narrower lookup.
+- `FightController.Input.cs`'s Skill verb opened the submenu with no guard
+  for a character having zero castable rows, unlike the Item verb three
+  lines below it (`"No items to use."`). Not reachable with any of the three
+  currently-shipped playable characters, but this gate is the change that
+  makes a bookOnly skill with no `unlockLevel` a live content shape, so the
+  next character or spell authored without a remaining level-1 skill would
+  hit an empty, silent dead end. Fixed with the same guard shape as Item.
+
+Also flagged and fixed: a stale comment on `RelicsAfterCast` still claiming
+`skill` can be null for the (now-removed) basic Skill action, contradicting
+`TryFirstRune`'s own updated comment 80 lines below; and three uses of the
+banned intensifier "genuinely"/"genuine" in new comments/docs (global
+`CLAUDE.md`'s voice rule). Not fixed (reported, not acted on): ~11 near-
+identical `ResolvedSkill`/`PlayerKit` test fixture blocks copy-pasted across
+8 PlayMode files, and a 5th/6th near-identical "bolt" skill test helper added
+to EditMode tests rather than one shared factory — real duplication, left for
+a `/simplify` pass rather than folded into this gate's commit.
+
+**Gate-4 exit batch: 12,000 runs** (4 archetypes × 3 profiles × 1,000 seeds),
+`reports/bot/20260903-205526`, commit `3aee8a1` (this gate's own commit —
+the flip is live for this batch, unlike gate 3's acquisition-only numbers).
+Spell-acquisition shares are within noise of gate 3's batch (expected: the
+roll/pricing logic didn't change here) — median depth still reaches the
+40-step cap for every archetype but RandomLegal in every profile, so the
+flip did not collapse run length at the population level.
+
+**A real regression found, not a Gate-4-introduced bug but a Gate-4-worsened
+one.** 26 of 12,000 runs (0.22%) hit the `TooManyCommands` invariant — a
+fight stalemate where neither side loses health for 60 commands running,
+all 26 alternating `Skill:provoke`/`Skill:woolgathering` (both non-damaging),
+concentrated in `GreedyAggressive`/`GreedyDefensive` at the `Late` profile.
+This exact invariant, with the exact same archetype/profile concentration,
+already existed in gate 3's own exit batch (`reports/bot/20260903-190102`) —
+but at 3 of 12,000 runs (0.025%), and there the spammed action was `provoke`
+alone, never paired with `woolgathering`. The roughly 9x frequency increase
+and the new co-occurring action are consistent with (not proven by, no
+further root-causing done this session) BasicSpell's removal: a Greedy
+policy stuck scoring every damaging option at zero in a defensive standoff
+used to have one more legal action in its pool (the free basic spell) that
+could occasionally break the tie; with it gone, the tie increasingly
+resolves onto two non-damaging utility skills instead. Pre-existing bug,
+not fixed here, not investigated further — flagged because a livelock a
+player could actually hit (not just the bot) is a real defect regardless of
+its rate, and the rate moving in this gate's own batch is worth a second
+look before this ships.
 
 ## Audit table
 

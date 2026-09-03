@@ -598,7 +598,7 @@ namespace PrincesPalace
                 .ToList();
 
             return new PlayerKit(definition.id, definition.role, skills, relics,
-                definition.attackType, level, SkillPowerMultiplierAtLevel(level));
+                definition.attackType, level, DefinitionOnlySkillPowerMultiplier(level));
         }
 
         // The IN-RUN kit: the character's own strip PLUS whatever their tree
@@ -633,7 +633,7 @@ namespace PrincesPalace
                 .ToList();
 
             return new PlayerKit(definition.id, definition.role, skills, relics,
-                definition.attackType, character.level, SkillPowerMultiplierAtLevel(character.level));
+                definition.attackType, character.level, ContentDatabase.EffectiveSkillPowerMultiplier(character));
         }
 
         // THE SPELL TIER'S OWN powerMultiplier, kept even though the tier's
@@ -643,17 +643,21 @@ namespace PrincesPalace
         // damage skill (frost_flare, lightning_bolt) by this alongside
         // EffectiveSkillScaling's INT/WIS grade -- "the two never stood in
         // for each other" is that file's own words for why dropping this to
-        // 1 would have been a silent damage nerf, not a cleanup. 1f (the
-        // ladder's own "before tier 1" reading) for a level the ladder has
-        // not reached yet.
-        private static float SkillPowerMultiplierAtLevel(int level) =>
-            TierAtLevel(level)?.powerMultiplier ?? 1f;
-
-        private static SpellTierDefinition TierAtLevel(int level) =>
-            ContentDatabase.SpellTiers
-                .Where(t => t != null && t.level <= level)
-                .OrderByDescending(t => t.level)
-                .FirstOrDefault();
+        // 1 would have been a silent damage nerf, not a cleanup.
+        //
+        // THROUGH ContentDatabase, not a private re-walk of SpellTiers: the
+        // in-run overload above uses EffectiveSkillPowerMultiplier, which is
+        // ability-score-aware (a tier's `requirements` can gate it, same as
+        // AvailableSkillsFor's own level gate). A first cut of this method
+        // re-implemented the tier lookup locally, level-only, with no scores
+        // parameter -- silently correct today only because no authored tier
+        // carries a non-zero requirement yet, and a live divergence from
+        // every other Effective* consumer the moment one does. This overload
+        // has no Character to ask (see its own header: "no run to ask"), so
+        // it falls back to the level-only GetSpellTierForLevel instead --
+        // still one canonical lookup, not a second one.
+        private static float DefinitionOnlySkillPowerMultiplier(int level) =>
+            ContentDatabase.GetSpellTierForLevel(level)?.powerMultiplier ?? 1.5f;
 
         // The other half of the content conversion. Mechanical, field for field:
         // ResolvedSkill was designed as the shape SkillDefinition already had.

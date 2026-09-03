@@ -655,8 +655,8 @@ namespace PrincesPalace.Domain.Tests
             var rows = FightHudModel.SkillRows(session, stranger);
 
             // BasicSpell (docs/PLAN_SHOP.md Gate 4) is gone, so a combatant
-            // with no kit behind it now genuinely has nothing to offer --
-            // an empty list rather than a throw is still the graceful part.
+            // with no kit behind it now has nothing to offer -- an empty
+            // list rather than a throw is still the graceful part.
             Assert.AreEqual(0, rows.Count);
         }
 

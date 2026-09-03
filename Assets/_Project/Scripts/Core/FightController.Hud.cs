@@ -900,16 +900,26 @@ namespace PrincesPalace
 
             if (_menu.Branch == MenuBranch.Item) return FightHudModel.DetailForItem(_satchel[index]);
 
-            var kit = _session?.KitFor(actor);
-            if (kit != null && index < kit.Skills.Count)
+            // THROUGH THE OPTION'S OWN INDEX, not the row position: a row can
+            // sit at a different position than its skill's kit.Skills slot the
+            // moment any skill's Requirements aren't met (SkillOptionsFor
+            // filters those out before FightHudModel builds rows from the
+            // same sequence). FightController.Input.cs's CastSkill calls
+            // already dispatch through options[row].Index for this reason --
+            // reading kit.Skills[index] directly here would show a different
+            // skill's detail than the row actually selected the moment one
+            // exists.
+            var options = _session?.SkillOptionsFor(actor);
+            if (options != null && index < options.Count)
             {
-                return FightHudModel.DetailForSkill(_session, actor, kit.Skills[index], actor?.Signature?.DisplayName);
+                var skill = options[index].Skill;
+                return FightHudModel.DetailForSkill(_session, actor, skill, actor?.Signature?.DisplayName);
             }
 
             // Every skill-branch row now has a ResolvedSkill behind it --
             // the basic spell's row, which did not, is gone (docs/PLAN_SHOP.md
-            // §4 Phase E). Reaching here means the index does not match the
-            // kit after all; the same honest empty panel DetailForNoSelection
+            // §4 Phase E). Reaching here means the index does not match an
+            // option after all; the same empty panel DetailForNoSelection
             // already gives an out-of-range Column C selection.
             return FightHudModel.DetailForNoSelection(_menu.Branch);
         }

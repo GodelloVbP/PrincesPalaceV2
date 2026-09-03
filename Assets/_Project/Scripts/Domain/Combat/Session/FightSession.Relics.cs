@@ -106,10 +106,14 @@ namespace PrincesPalace.Domain.Combat.Session
             BeginSpellPotency(actor);
         }
 
-        // `skill` is null for the basic Skill action, which has no
-        // ResolvedSkill behind it -- it is the global spell tier, not a
-        // character's own kit entry. Relics that care which spell it was must
-        // handle that; relics that only care THAT one happened need not.
+        // `skill` stays nullable in the signature, but every caller now
+        // supplies a real one -- the basic Skill action that used to leave
+        // it null had no ResolvedSkill of its own (it was the global spell
+        // tier, not a character's kit entry) and is gone (docs/PLAN_SHOP.md
+        // §4 Phase E; see TryFirstRune's own comment below for the same
+        // fact from the other side). Relics that care which spell it was
+        // can rely on it being real; relics that only care THAT one
+        // happened still need not.
         private void RelicsAfterCast(CombatantState actor, ResolvedSkill? skill, CombatantState target,
                                      int resourceSpent)
         {

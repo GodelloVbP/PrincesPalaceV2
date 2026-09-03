@@ -146,6 +146,18 @@ namespace PrincesPalace
                     break;
 
                 case 1:
+                    // Same reasoning as the Item branch below: BasicSpell
+                    // (docs/PLAN_SHOP.md §4 Phase E) used to guarantee every
+                    // character at least one row here regardless of what
+                    // they had learned. It's gone, and bookOnly skills with
+                    // no unlockLevel are now a live authoring shape, so an
+                    // empty list is reachable content, not just a test
+                    // fixture -- refuse rather than open nothing to back out of.
+                    if (_session.SkillOptionsFor(_session.Current).Count == 0)
+                    {
+                        _session.AppendMessage("No skills to use.");
+                        break;
+                    }
                     _menu.OpenBranch(MenuBranch.Skill);
                     break;
 
