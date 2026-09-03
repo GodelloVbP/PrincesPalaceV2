@@ -566,7 +566,12 @@ namespace PrincesPalace.Domain.UiKit
 
             return Clamp01(fast * 0.55f + slow * 0.45f);
         }
-        public const float HaloCrackleSeconds = 4.6f;
+        // Doubled from 4.6 to 9.2, i.e. 50% slower (session brief,
+        // 2026-09-03): the earlier "halve the crackle" ask was aimed at this
+        // halo crackle on the orb auras, not TalentEdgeCrackle's edge
+        // flicker -- that got reverted back to 17/29. This is the one the
+        // user actually meant slowed down.
+        public const float HaloCrackleSeconds = 9.2f;
         public const float ReadyPulseSeconds = 2.4f;
         public const float CapCoronaSeconds = 5.0f;
 

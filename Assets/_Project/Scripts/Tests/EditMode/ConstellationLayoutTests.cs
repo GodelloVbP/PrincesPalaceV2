@@ -691,5 +691,15 @@ namespace PrincesPalace.Domain.Tests
                 "part of a constellation is drawn off the canvas - move ConstellationLayout." +
                 "TreeOriginY, do not shrink the stones");
         }
+
+        // The user's "halve the crackle" ask (session brief, 2026-09-03) meant
+        // the halo crackle on the orb auras, not TalentEdgeCrackle's edge
+        // flicker -- that one got reverted to 17/29. 50% slower here means the
+        // period grows, so it's a double: 4.6 to 9.2.
+        [Test]
+        public void HaloCrackleIsFiftyPercentSlowerPerTheUsersRequest()
+        {
+            Assert.AreEqual(9.2f, ConstellationLayout.HaloCrackleSeconds);
+        }
     }
 }
