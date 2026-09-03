@@ -277,6 +277,11 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 case StatusEffectType.Poison: return EnemyIntentKind.Poison;
                 case StatusEffectType.Stun: return EnemyIntentKind.Stun;
+                // Feared reads as the same "your turn is not going to go the
+                // way you planned" warning Stun already carries -- there is
+                // no dedicated fear icon, and Stun's is the closer lie than
+                // the generic Skill fallback would be.
+                case StatusEffectType.Feared: return EnemyIntentKind.Stun;
                 case StatusEffectType.Vulnerable: return EnemyIntentKind.Weaken;
                 case StatusEffectType.Regen: return EnemyIntentKind.Heal;
                 case StatusEffectType.Protect: return EnemyIntentKind.Shield;

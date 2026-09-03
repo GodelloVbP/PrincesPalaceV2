@@ -589,6 +589,10 @@ namespace PrincesPalace.Domain.Combat.Session
                     return new BuffBadge("ROT",
                         $"Rooted -- {ItemStatLines.Coloured(ItemStatLines.LossHex, "Skill Only")}, {PluralTerse(status.TurnsRemaining, "turn")}",
                         false, StatusEffectType.Rooted);
+                case StatusEffectType.Feared:
+                    return new BuffBadge("FR", $"Feared: cannot act as normal, {turns}.", false);
+                case StatusEffectType.Marked:
+                    return new BuffBadge("MK", $"Marked: takes increased damage from focused attacks, {turns}.", false);
                 default:
                     return new BuffBadge("?", status.Type.ToString(), true);
             }
@@ -665,6 +669,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 case StatusEffectType.Poison:
                 case StatusEffectType.Vulnerable:
                 case StatusEffectType.Stun:
+                case StatusEffectType.Feared:
+                case StatusEffectType.Marked:
                     return PillCategory.Harm;
                 case StatusEffectType.Provoked:
                 case StatusEffectType.Chilled:
@@ -694,6 +700,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 case StatusEffectType.Empowered: return "EM";
                 case StatusEffectType.Chilled: return "CH";
                 case StatusEffectType.Rooted: return "RO";
+                case StatusEffectType.Feared: return "FR";
+                case StatusEffectType.Marked: return "MK";
                 default: return "??";
             }
         }
