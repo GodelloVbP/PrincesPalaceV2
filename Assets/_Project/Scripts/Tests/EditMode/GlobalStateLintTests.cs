@@ -53,6 +53,26 @@ namespace PrincesPalace.Domain.Tests
                 @"BeatSpeedMultiplier\s*=",
                 @"BeatSpeedMultiplier\s*=\s*1f"),
 
+            ("ReckoningController.SpeedMultiplier",
+                @"ReckoningController\.SpeedMultiplier\s*=",
+                @"ReckoningController\.SpeedMultiplier\s*=\s*1f"),
+
+            ("RewardTrackController.SpeedMultiplier",
+                @"RewardTrackController\.SpeedMultiplier\s*=",
+                @"RewardTrackController\.SpeedMultiplier\s*=\s*1f"),
+
+            ("TalentController.MotionSpeedMultiplier",
+                @"TalentController\.MotionSpeedMultiplier\s*=",
+                @"TalentController\.MotionSpeedMultiplier\s*=\s*1f"),
+
+            ("HubController.MotionSpeedMultiplier",
+                @"HubController\.MotionSpeedMultiplier\s*=",
+                @"HubController\.MotionSpeedMultiplier\s*=\s*1f"),
+
+            ("FightController.BreathSpeedMultiplier",
+                @"BreathSpeedMultiplier\s*=",
+                @"BreathSpeedMultiplier\s*=\s*1f"),
+
             ("RequirementCurve.Percent",
                 @"RequirementCurve\.Percent\s*=",
                 @"RequirementCurve\.Percent\s*=\s*RequirementCurve\.DefaultPercent"),

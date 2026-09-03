@@ -63,6 +63,11 @@ namespace PrincesPalace.PlayModeTests
             // simply never finish, and it surfaces as an unrelated timeout.
             UnityEngine.Time.timeScale = 1f;
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
+            ReckoningController.SpeedMultiplier = 1f;
+            RewardTrackController.SpeedMultiplier = 1f;
+            TalentController.MotionSpeedMultiplier = 1f;
+            HubController.MotionSpeedMultiplier = 1f;
+            FightController.BreathSpeedMultiplier = 1f;
             RequirementCurve.Percent = RequirementCurve.DefaultPercent;
             RequirementCurve.GearRequirementsEnabled = false;
         }
