@@ -57,11 +57,26 @@ namespace PrincesPalace.PlayModeTests
             RunManager.ResetForTests();
             Navigation.LoadOverride = _ => { };
             FightBeatPlayer.BeatSpeedMultiplier = 60f;
+
+            // PINNED SOLO. This file's own header states the design: outcome
+            // is steered by exactly two dials, character level and carried
+            // health, "a squad walking in on 1 HP loses one". That dial
+            // stops being reliable once a squad fields more than one
+            // attacker -- three characters each landing a hit before the
+            // enemy's own turn can kill it outright, so a "1 HP squad" wins
+            // instead of losing, which is not what any test here is about.
+            // Squad SIZE is not what this file tests (every assertion below
+            // already walks save.roster / ActiveSquad() generically); the
+            // settlement rulebook does not care how many characters it is
+            // folding. Pinning to solo keeps the one dial these tests are
+            // built on doing what its own comment says it does.
+            SaveData.TestSquadOfThreeEnabled = false;
         }
 
         [TearDown]
         public void Restore()
         {
+            SaveData.TestSquadOfThreeEnabled = null;
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
             LogAssert.ignoreFailingMessages = false;
             Navigation.Reset();

@@ -41,12 +41,18 @@ namespace PrincesPalace.PlayModeTests
             // any of the things this file checks -- see HubController's
             // BeginDescentTransition. Set absurdly high rather than to
             // something merely fast: AnimateZoom/FadeToBlack decide whether
-            // to yield AFTER scaling elapsed time by this multiplier, so a
-            // value this large clears all three phases inside the same frame
-            // the gate was pressed in regardless of how fast batchmode
-            // happens to be framing, which is what lets every assertion
-            // below keep counting "yield return null" the same way it did
-            // before the transition existed.
+            // to yield AFTER scaling elapsed time by this multiplier, so each
+            // phase's own loop resolves on its first check regardless of how
+            // fast batchmode happens to be framing. That is NOT the same as
+            // the whole transition finishing in the same frame the gate was
+            // pressed in, though -- BeginDescentTransition strings three such
+            // phases together with `yield return AnimateZoom(...)` /
+            // `yield return FadeToBlack(...)`, and stepping from one to the
+            // next still costs Unity's coroutine driver a real engine frame
+            // apiece. PressStartRunGateAndWaitForTheDraft (and the resume
+            // wait in ResumingARunDoesNotOfferAgain) poll for the actual
+            // outcome instead of assuming a fixed frame count for exactly
+            // that reason.
             HubController.MotionSpeedMultiplier = 100000f;
         }
 
@@ -86,15 +92,36 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(_draft, "the draft was never wired into the hub");
         }
 
+        // Presses the gate and waits for the mock-up transition to hand off
+        // to the draft, POLLED rather than a fixed frame count.
+        //
+        // MotionSpeedMultiplier (see HubController's own comment on it)
+        // makes each AnimateZoom/FadeToBlack phase resolve on its very first
+        // check, but stepping from one of BeginDescentTransition's own
+        // `yield return AnimateZoom(...)` statements to the next still costs
+        // Unity's coroutine driver a real engine frame per phase -- three
+        // phases, so up to three real frames before Open() actually runs,
+        // not the one a naive reading of "the multiplier clears it inside a
+        // single check" would suggest. A fixed two-frame wait passed most of
+        // the time and failed unpredictably depending on where in a run this
+        // particular click landed; polling with a bounded real-time deadline
+        // is exact either way and still fails the calling test (via its own
+        // subsequent assertion) if the draft genuinely never opens.
+        private IEnumerator PressStartRunGateAndWaitForTheDraft()
+        {
+            Click("StartRunGate");
+
+            float deadline = Time.realtimeSinceStartup + 2f;
+            while (!_draft.gameObject.activeSelf && Time.realtimeSinceStartup < deadline) yield return null;
+        }
+
         [UnityTest]
         public IEnumerator TheDraftStartsClosedAndTheGateOpensIt()
         {
             yield return OpenTheHub();
             Assert.IsFalse(_draft.gameObject.activeSelf);
 
-            Click("StartRunGate");
-            yield return null;
-            yield return null;
+            yield return PressStartRunGateAndWaitForTheDraft();
 
             Assert.IsTrue(_draft.gameObject.activeSelf, "beginning a descent did not offer a relic");
             Assert.AreEqual(0, _navigations, "the map loaded before the draft was answered");
@@ -104,9 +131,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator ThreeCardsAreOfferedAndTheyAreAllDifferent()
         {
             yield return OpenTheHub();
-            Click("StartRunGate");
-            yield return null;
-            yield return null;
+            yield return PressStartRunGateAndWaitForTheDraft();
 
             var shown = Enumerable.Range(0, 3)
                 .Select(i => Named($"DraftCard{i}"))
@@ -127,9 +152,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator TakingOneWritesItToTheRunAndReachesTheMap()
         {
             yield return OpenTheHub();
-            Click("StartRunGate");
-            yield return null;
-            yield return null;
+            yield return PressStartRunGateAndWaitForTheDraft();
 
             Click("DraftCard0");
             yield return null;
@@ -149,9 +172,7 @@ namespace PrincesPalace.PlayModeTests
             // again, which is why relicDrafted is its own flag rather than
             // being inferred from the list being empty.
             yield return OpenTheHub();
-            Click("StartRunGate");
-            yield return null;
-            yield return null;
+            yield return PressStartRunGateAndWaitForTheDraft();
 
             Click("DraftDescendButton");
             yield return null;
@@ -166,9 +187,7 @@ namespace PrincesPalace.PlayModeTests
             // The screen's whole job is comparing three things. A first click
             // that is final would be a trap.
             yield return OpenTheHub();
-            Click("StartRunGate");
-            yield return null;
-            yield return null;
+            yield return PressStartRunGateAndWaitForTheDraft();
 
             Click("DraftCard0");
             yield return null;
@@ -187,16 +206,21 @@ namespace PrincesPalace.PlayModeTests
             // player re-roll the draft by walking back and forth, which is the
             // same class of problem as a map that regenerates.
             yield return OpenTheHub();
-            Click("StartRunGate");
-            yield return null;
-            yield return null;
+            yield return PressStartRunGateAndWaitForTheDraft();
             Click("DraftDescendButton");
             yield return null;
 
             int before = _navigations;
 
             Click("StartRunGate");
-            yield return null;
+
+            // POLLED for the same reason PressStartRunGateAndWaitForTheDraft
+            // is: the mock-up transition costs up to three real engine
+            // frames stepping through its own phases regardless of
+            // MotionSpeedMultiplier, whether it ends at the draft or (like
+            // here, on resume) walks straight past it to the map.
+            float deadline = Time.realtimeSinceStartup + 2f;
+            while (_navigations == before && Time.realtimeSinceStartup < deadline) yield return null;
 
             Assert.IsFalse(_draft.gameObject.activeSelf, "a resumed run was offered a second relic");
             Assert.AreEqual(before + 1, _navigations, "resuming did not go straight to the map");
@@ -208,9 +232,7 @@ namespace PrincesPalace.PlayModeTests
             // Rolled from the run's own seed, so quitting to the hub and coming
             // back cannot re-roll a draft the player did not like.
             yield return OpenTheHub();
-            Click("StartRunGate");
-            yield return null;
-            yield return null;
+            yield return PressStartRunGateAndWaitForTheDraft();
 
             var first = Enumerable.Range(0, 3)
                 .Select(i => Named($"DraftCard{i}").GetComponentsInChildren<TMPro.TMP_Text>(true)
@@ -218,9 +240,7 @@ namespace PrincesPalace.PlayModeTests
                 .ToList();
 
             yield return OpenTheHub();
-            Click("StartRunGate");
-            yield return null;
-            yield return null;
+            yield return PressStartRunGateAndWaitForTheDraft();
 
             var second = Enumerable.Range(0, 3)
                 .Select(i => Named($"DraftCard{i}").GetComponentsInChildren<TMPro.TMP_Text>(true)
@@ -246,9 +266,7 @@ namespace PrincesPalace.PlayModeTests
         public IEnumerator BelowLevelSeventyTheDraftIsStillThreeRandomCards()
         {
             yield return OpenTheHub();
-            Click("StartRunGate");
-            yield return null;
-            yield return null;
+            yield return PressStartRunGateAndWaitForTheDraft();
 
             Assert.IsFalse(Named("DraftNextPage").activeSelf,
                 "an unlevelled squad is shown paging it has not earned");
@@ -261,9 +279,7 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenTheHub();
             LevelTheSquadTo(70);
 
-            Click("StartRunGate");
-            yield return null;
-            yield return null;
+            yield return PressStartRunGateAndWaitForTheDraft();
 
             Assert.IsTrue(Named("DraftNextPage").activeSelf,
                 "the whole pool is on offer and there is no way to page through it");
@@ -303,9 +319,7 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenTheHub();
             LevelTheSquadTo(70);
 
-            Click("StartRunGate");
-            yield return null;
-            yield return null;
+            yield return PressStartRunGateAndWaitForTheDraft();
 
             string picked = OnScreenNames().First();
             Click("DraftCard0");
@@ -344,9 +358,7 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenTheHub();
             LevelTheSquadTo(25);
 
-            Click("StartRunGate");
-            yield return null;
-            yield return null;
+            yield return PressStartRunGateAndWaitForTheDraft();
 
             // Round one.
             Click("DraftCard0");
@@ -375,9 +387,7 @@ namespace PrincesPalace.PlayModeTests
             // The fallback is part of the reward: getting it wrong takes the
             // draft away from every character below level 25.
             yield return OpenTheHub();
-            Click("StartRunGate");
-            yield return null;
-            yield return null;
+            yield return PressStartRunGateAndWaitForTheDraft();
 
             Click("DraftCard0");
             yield return null;
@@ -398,9 +408,7 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenTheHub();
             LevelTheSquadTo(60);
 
-            Click("StartRunGate");
-            yield return null;
-            yield return null;
+            yield return PressStartRunGateAndWaitForTheDraft();
 
             Click("DraftCard0");
             yield return null;
@@ -432,9 +440,7 @@ namespace PrincesPalace.PlayModeTests
             yield return OpenTheHub();
             LevelTheSquadTo(60);
 
-            Click("StartRunGate");
-            yield return null;
-            yield return null;
+            yield return PressStartRunGateAndWaitForTheDraft();
 
             Click("DraftDescendButton");
             yield return null;

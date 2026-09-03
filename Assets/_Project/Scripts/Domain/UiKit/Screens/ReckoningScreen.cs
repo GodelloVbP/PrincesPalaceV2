@@ -92,9 +92,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public const string EmberTint = "#FFFFFFB4";
 
         // Fixed at build time, so it must cover the largest party the save can
-        // field. Base squad is 1 today and the design's stated target is 3;
-        // four leaves headroom without costing anything, since unused rows are
-        // hidden. Pinned against EffectiveMaxSquadSize by ReckoningTests.
+        // field. Base squad is 3 once both placeholder seats resolve in
+        // content (SaveData.SquadOfThreeReady); unused rows are hidden, so
+        // there is no cost to this covering the common case exactly rather
+        // than leaving headroom above it. Pinned against EffectiveMaxSquadSize
+        // by ReckoningTests -- a save that also buys the one purchasable
+        // extra slot outgrows this by one row.
         public const int RowCount = 3;
 
         public UiNode Root;
@@ -731,12 +734,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // ITEM-MODIFIER PLAN PHASE F: 400 -> 590. The AFFIXES section moved
         // from ONE shared block above every member to its OWN block inside
         // EACH member's (ItemStatLines.SquadBody, ModifierComparisonLines) --
-        // the max squad is two (SaveData.BaseMaxSquadSize + the one
-        // purchasable extra slot), and a fully different three-slot
-        // Convergent item on both sides can now print a heading, up to three
-        // gain lines, AND up to three "Losing: <name>" lines PER MEMBER,
-        // where before the whole squad shared one heading and three lines
-        // total.
+        // the max squad is now three (SaveData.EffectiveMaxSquadSize, plus
+        // the one purchasable extra slot on top), and a fully different
+        // three-slot Convergent item on both sides can now print a heading,
+        // up to three gain lines, AND up to three "Losing: <name>" lines PER
+        // MEMBER, where before the whole squad shared one heading and three
+        // lines total. FitTooltipToBody (below) is what keeps a body bigger
+        // than this authored ceiling from breaking the box rather than a
+        // wider constant here.
         //
         // 590, not the ~598 the ~615px interior would allow: the panel is
         // AUTHORED at Place.At(0,0) -- the panel's centre -- specifically so

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using PrincesPalace.Content;
+using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Economy;
 using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Relics;
@@ -44,25 +45,29 @@ namespace PrincesPalace
         // the same plain-string-content-id convention already used
         // elsewhere in this codebase (e.g. "health_potion"), not a
         // dedicated registry for what is currently a single lookup.
-        // Solo (Shawn only) for now. Deliberately a squad-SIZE change rather
-        // than trimming the roster: Fly/Dog/Turtle/Owl still exist, keep
-        // their talent trees and Character Sheet pages, and come back the
-        // moment this returns to 3 — nothing about them is deleted. Buying
-        // extra_recruit_slot still adds one, so a 2-member party is
-        // reachable in-game today.
+        // Solo (Shawn only) when the two placeholder seats aren't authored —
+        // see SquadOfThreeReady below for when this widens to 3 on its own.
         private const int BaseMaxSquadSize = 1;
-
-        // TEST-ONLY SWITCH. Off by default, so nothing here changes the live
-        // game's solo default above -- that is a deliberate design decision
-        // (see the comment above BaseMaxSquadSize), not an oversight this
-        // field is meant to quietly reverse. Set true by
-        // BalanceBotRunner.RunFromCommandLine and by tests that need a real
-        // three-member squad to exercise (placeholder_brawler and
-        // placeholder_caster fill the other two seats once this is on).
-        // A caller that sets it must set it back, since it is static and
-        // survives past the call that set it.
-        public static bool TestSquadOfThreeEnabled;
         private const int TestSquadOfThreeSize = 3;
+
+        // THE single switch, but its DEFAULT is derived rather than hardcoded
+        // false. Null (the state every fresh process starts in) means "decide
+        // from content": once both placeholder_brawler and placeholder_caster
+        // resolve in ContentDatabase.Characters, a new save fields all three
+        // without anyone having to flip anything. Set true/false to override
+        // that either way -- BalanceBotRunner forces true regardless of
+        // content shape, and a test pinning the solo-default behaviour forces
+        // false. A caller that overrides it must set it back to null, since
+        // it is static and survives past the call that set it.
+        public static bool? TestSquadOfThreeEnabled;
+
+        // Deliberately re-checks content rather than caching: ContentDatabase
+        // can be (re)loaded mid-process (Editor domain reload, tests), and a
+        // stale "yes" here would field a placeholder seat content no longer
+        // has.
+        private static bool SquadOfThreeReady =>
+            ContentDatabase.Characters.Any(c => c.id == "placeholder_brawler")
+            && ContentDatabase.Characters.Any(c => c.id == "placeholder_caster");
         // PUBLIC because the squad's ceiling has to be assertable against the
         // stage's slot count, and a test that wrote "extra_recruit_slot" as a
         // literal would be the drift it is meant to catch.
@@ -172,10 +177,25 @@ namespace PrincesPalace
         // Character Select is out of the active flow for now (see #21
         // follow-up), so this isn't enforced by picking — it caps how many
         // of the roster get auto-selected in CreateNew()/Reconcile().
+        //
+        // CAPPED AT THE STAGE, always -- FightHudSpec.StageSlotsPerSide (3)
+        // is how many fight-scene slots exist on the player's side of the
+        // stage, built once at scene-build time; FieldableParty does not
+        // clamp past it on its own (see FightAfterTheEliteTests'
+        // TheBiggestSquadTheSaveAllowsStillFitsTheStage, which exists for
+        // exactly this reason). Solo base + extra_recruit_slot tops out at 2,
+        // safely under 3; squad-of-three base + the same upgrade would
+        // reach 4 without this Min, which is exactly the "extra hero fights
+        // from off screen" case that test refuses to ship. Capping here
+        // rather than widening the stage keeps the upgrade's own promise
+        // ("one more seat") honest without a stage that already fits the
+        // whole roster having anything left to grow into.
         public int EffectiveMaxSquadSize()
         {
-            int baseSize = TestSquadOfThreeEnabled ? TestSquadOfThreeSize : BaseMaxSquadSize;
-            return baseSize + (purchasedUpgradeIds.Contains(ExtraRecruitSlotUpgradeId) ? ExtraRecruitSlotBonus : 0);
+            bool squadOfThree = TestSquadOfThreeEnabled ?? SquadOfThreeReady;
+            int baseSize = squadOfThree ? TestSquadOfThreeSize : BaseMaxSquadSize;
+            int withUpgrade = baseSize + (purchasedUpgradeIds.Contains(ExtraRecruitSlotUpgradeId) ? ExtraRecruitSlotBonus : 0);
+            return Math.Min(withUpgrade, FightHudSpec.StageSlotsPerSide);
         }
 
         // THE single definition of "who is in the party right now".

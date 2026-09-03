@@ -313,6 +313,16 @@ namespace PrincesPalace
             // crash is the single least forgivable thing this screen could do.
             SaveSlotManager.SaveCurrent();
             Refresh();
+
+            // PRIMED HERE, not left for the next Update(). Refresh() above
+            // just painted the settled GlowTaken state (PaintOrbs has no idea
+            // a beat is running), and the earliest Update() can override that
+            // with the beat's own t=0 frame is next frame -- a whole frame
+            // where the stone reads as already lit before the beat has drawn
+            // once. A zero-delta call folds the override into THIS frame,
+            // same call, so the beat owns the paint from the instant it
+            // exists rather than from one frame later.
+            DriveKindling(0f);
         }
 
         // Gives back everything this character has committed, so they can

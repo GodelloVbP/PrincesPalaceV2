@@ -221,7 +221,17 @@ namespace PrincesPalace.PlayModeTests
 
             var plateRect = attackState.Plate.rectTransform;
             var glowRect = attackState.GlowRect;
-            Assert.Greater(glowRect.lossyScale.x, 1f, "Open state should scale the glow rect past 1.0");
+
+            // Compared against the PLATE'S OWN lossyScale, not a literal 1f --
+            // the fight scene's CanvasScaler is ScaleWithScreenSize, so a
+            // batchmode window that does not match ReferenceResolution gives
+            // every rect on this canvas a lossyScale off 1 already (that
+            // factor is what plateRect.lossyScale.x IS here). What the
+            // feature actually promises is SelectedGlowScale on top of
+            // whatever the canvas is doing, which is exactly what
+            // localScale.x below pins directly and canvas-independently.
+            Assert.Greater(glowRect.lossyScale.x, plateRect.lossyScale.x,
+                "Open state should scale the glow rect past the plate's own scale");
             Assert.AreEqual(ThemedButtonState.SelectedGlowScale, glowRect.localScale.x, 0.01f);
 
             float plateWidth = plateRect.rect.width * plateRect.lossyScale.x;

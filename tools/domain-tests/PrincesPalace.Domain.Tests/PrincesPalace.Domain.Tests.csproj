@@ -55,9 +55,13 @@
 
     <!--
       EXCLUSION POLICY, in one line: a test stays Unity-only when it needs
-      the ENGINE, not merely when it mentions it. Five files qualify, all
-      five for a reason no shim can honestly stand in for. Adding to this
+      the ENGINE, not merely when it mentions it. Four files qualify, all
+      four for a reason no shim can honestly stand in for. Adding to this
       list costs coverage in the fast loop, so justify each one here.
+      (SaveDataSquadOfThreeTests used to be a fifth, for needing Core types
+      this project has no reference to. It moved to
+      Tests/PlayMode/SaveDataSquadOfThreeTests.cs instead, which is outside
+      this glob entirely rather than an exclusion inside it.)
     -->
 
     <!-- JsonUtility. Unity's serializer, and the thing under test IS its
@@ -84,10 +88,6 @@
          test is for: a rig manifest that exists but never imported is
          exactly the failure it catches. -->
     <Compile Remove="..\..\..\Assets\_Project\Scripts\Tests\EditMode\RigAnimationContentTests.cs" />
-
-    <!-- SaveData and ContentDatabase, both Core (not Domain) types this
-         project has no reference to. See its own header. -->
-    <Compile Remove="..\..\..\Assets\_Project\Scripts\Tests\EditMode\SaveDataSquadOfThreeTests.cs" />
 
     <!-- The Mathf stand-in for RewardTrackLayoutTests. See its own header. -->
     <Compile Include="MathfShim.cs" />

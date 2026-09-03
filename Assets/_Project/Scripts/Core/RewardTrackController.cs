@@ -210,6 +210,13 @@ namespace PrincesPalace
         // Read off the same character BestLevel picked, not off the whole
         // squad: a watermark from one character against a level from another
         // would show rewards as collected that nobody has had.
+        //
+        // STABLE ON A TIE, matching RewardTrackController.Input's
+        // BestCharacter() exactly (`<`, not `<=`, below -- inverted from
+        // that method's `<=` because this loop's condition is the SKIP
+        // test, keep-first either way): the two have to agree on which
+        // character a tie resolves to, or Claim() could pay one character
+        // while this reads the watermark off another.
         private static int ClaimedLevel()
         {
             var save = SaveSlotManager.CurrentSave;
@@ -217,11 +224,13 @@ namespace PrincesPalace
 
             int best = RewardTrack.StartingLevel;
             int claimed = 0;
+            bool any = false;
             foreach (var character in save.ActiveSquad())
             {
                 if (character == null) continue;
-                if (character.level < best) continue;
+                if (any && character.level <= best) continue;
 
+                any = true;
                 best = character.level;
                 claimed = character.claimedTrackLevel;
             }

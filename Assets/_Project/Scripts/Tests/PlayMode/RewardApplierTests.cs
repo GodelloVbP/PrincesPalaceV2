@@ -81,15 +81,22 @@ namespace PrincesPalace.PlayModeTests
         public void ADownedCharacterGetsARowAndNothingElse()
         {
             // They used to vanish from the reward entirely, so a party of three
-            // came back as two rows with nothing saying why.
-            int before = First().exp;
+            // came back as two rows with nothing saying why. Squad-of-three is
+            // now the live default (SaveData.SquadOfThreeReady), so this test's
+            // own "party of three" IS the fielded squad rather than a stand-in
+            // for it -- every member should get a row, not a literal one.
+            var squad = SaveSlotManager.CurrentSave.ActiveSquad();
+            var before = squad.Select(c => c.exp).ToList();
 
             var reward = RewardApplier.Apply(new VictoryRewards.Payout(50, 0), new List<string>());
 
-            Assert.AreEqual(1, reward.Characters.Count, "the row is still there");
-            Assert.IsTrue(reward.Characters[0].IsDowned);
-            Assert.AreEqual(0, reward.Characters[0].ExpGained);
-            Assert.AreEqual(before, First().exp, "and they gained nothing");
+            Assert.AreEqual(squad.Count, reward.Characters.Count, "every fielded member still gets a row");
+            for (int i = 0; i < reward.Characters.Count; i++)
+            {
+                Assert.IsTrue(reward.Characters[i].IsDowned);
+                Assert.AreEqual(0, reward.Characters[i].ExpGained);
+                Assert.AreEqual(before[i], squad[i].exp, "and they gained nothing");
+            }
         }
 
         [Test]

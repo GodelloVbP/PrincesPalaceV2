@@ -179,11 +179,21 @@ namespace PrincesPalace
             var save = SaveSlotManager.CurrentSave;
             if (save == null) return null;
 
+            // STABLE ON A TIE: the FIRST squad member at the top level wins,
+            // not the last. `<=` (not `<`) is what makes that so -- with `<`,
+            // an equal-level later member still clears the "not strictly
+            // less" check and overwrites `best`, so a fresh squad (every
+            // member at level 1) silently claimed against whichever character
+            // happened to be fielded last rather than the one Squad()[0] and
+            // every other "First()" caller in this codebase means. Invisible
+            // while the squad was solo -- there was nothing to tie against --
+            // and live the moment a second member is fielded at the same
+            // level, which is now the default (SaveData.SquadOfThreeReady).
             Character best = null;
             foreach (var character in save.ActiveSquad())
             {
                 if (character == null) continue;
-                if (best != null && character.level < best.level) continue;
+                if (best != null && character.level <= best.level) continue;
 
                 best = character;
             }
