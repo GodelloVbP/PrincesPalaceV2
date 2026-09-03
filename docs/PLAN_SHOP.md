@@ -116,6 +116,19 @@ weights it was arithmetic off no longer apply; the bot's `runs.jsonl` records
 room — more so now than when this paragraph was first written, since the
 raw-weight shortcut it took has gotten less reliable, not more.
 
+**Now traced, not estimated.** A real 2000-seed x 5-legs-per-seed trace
+(`GenerateLeg` output, every node counted, not the table weight) put Shop at
+6.1% of all nodes and found **31% of legs had no Shop node on any branch at
+all** — a player could clear a whole leg, boss included, without a shop
+option ever appearing. Decision: one Shop guaranteed per leg, not a bigger
+weight (a weight bump only shrinks the gap, it cannot close it, and every
+point taken from Fight to feed Shop erodes the 53-57% Fight-share band
+`DescentRoadVariationTests` pins). `DescentMapGenerator.EnsureLegHasShop`
+(`Domain/Dungeon/DescentMap.cs`, run after `EnforceEveryRoadHasVariety`)
+retypes exactly one non-forced, non-entry node to Shop on any leg that rolled
+none; a leg that already has one is untouched. Tested in
+`DescentRoadVariationTests`.
+
 Nothing about this changes. The build replaces one enum case's meaning, not the
 map.
 

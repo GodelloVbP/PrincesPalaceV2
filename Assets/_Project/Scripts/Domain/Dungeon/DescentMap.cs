@@ -184,6 +184,19 @@ namespace PrincesPalace.Domain.Dungeon
         // as before) lands the measured share at 54.6%, comfortably inside
         // the 53-57% band DescentRoadVariationTests pins without sitting on
         // either edge of it.
+        //
+        // Shop's weight (3, same as Rest) reads generous on paper but is not
+        // in practice: measured over 2000 seeds at this table, Shop lands on
+        // only 5.9% of rolled nodes, and because a node's odds compound
+        // across a whole leg, 31% of generated legs contained ZERO Shop node
+        // on ANY branch — a player could reach the boss having never once
+        // seen a shop. Raising Shop's table weight would only shrink that
+        // number, not remove it, and every point taken from Fight to do it
+        // erodes the 53-57% band above. EnsureLegHasShop (below,
+        // after EnforceEveryRoadHasVariety) guarantees at least one Shop per
+        // leg directly instead: a leg that already rolled one is untouched,
+        // and one that did not gets a single node retyped, same shape as
+        // EnforceEveryRoadHasVariety's own (b) fix-up.
         private static readonly (RoomType Type, int Weight)[] MiddleRooms =
         {
             (RoomType.Fight, 250),
@@ -304,6 +317,7 @@ namespace PrincesPalace.Domain.Dungeon
             LinkColumns(map, columns, random);
             RollTypes(columns, random, startStep, restBeforeBoss);
             EnforceEveryRoadHasVariety(map, columns, startStep, restBeforeBoss);
+            EnsureLegHasShop(map, columns, startStep, restBeforeBoss);
             return map;
         }
 
@@ -507,6 +521,65 @@ namespace PrincesPalace.Domain.Dungeon
                 // documented exception to (b) rather than forcing a
                 // violation of the other two rules to satisfy this one.
             }
+        }
+
+        // ONE SHOP GUARANTEED PER LEG. Shop's table weight (see MiddleRooms)
+        // leaves 31% of legs with no Shop node on any branch at all — a
+        // per-node weight cannot fix a whole-leg property any more than (b)
+        // could be fixed at roll time, so this runs the same way (b) does:
+        // after every other pass, only when the leg-wide property is
+        // already missing.
+        //
+        // No-op (byte-identical output) whenever the leg already rolled a
+        // Shop naturally, so this only ever touches the legs the 31% figure
+        // is about. When it does act, it retypes exactly one non-forced,
+        // non-entry node — picked as the FIRST such node (non-Fight
+        // candidates before Fight ones, columns in order and then slot
+        // within each group) for which RespectsLocalRules holds, so this
+        // stays deterministic without spending an extra draw from
+        // `random`: nothing after this point in GenerateLeg consumes the
+        // rng, and keeping this pass rng-free means it can never perturb
+        // any other seeded output.
+        //
+        // Non-Fight-first, not just first-in-column-order: Fight is over
+        // half of every rolled node, so a plain in-order scan converts a
+        // Fight room into the guaranteed Shop most of the time, and
+        // measured over DescentRoadVariationTests' own 500-seed x 5-leg
+        // sample that alone dragged Fight's share from 54.6% to 52.7% —
+        // out of the 53-57% band the road-variation tests pin, and by
+        // nearly 2 points, not the "well under 1%" a single retype per
+        // ~31% of legs would suggest if the retype landed on a random type.
+        // Preferring a non-Fight room to give up its slot instead — an
+        // Event or Treasure becoming the Shop, which the leg already had
+        // in surplus — leaves Fight's share at 54.6%, back inside the band,
+        // while the leg-has-a-Shop guarantee itself is unaffected either
+        // way.
+        private static void EnsureLegHasShop(DescentMap map, List<List<DescentNode>> columns, int startStep,
+            bool restBeforeBoss)
+        {
+            if (map.Nodes.Any(n => n.Type == RoomType.Shop))
+            {
+                return;
+            }
+
+            bool IsForced(DescentNode n) => n.Depth == 0 || ForcedTypeAt(startStep + n.Depth, restBeforeBoss).HasValue;
+
+            var candidates = map.Nodes.Where(n => !IsForced(n)).OrderBy(n => n.Type == RoomType.Fight ? 1 : 0);
+            foreach (var node in candidates)
+            {
+                if (!RespectsLocalRules(node, RoomType.Shop, columns, startStep, restBeforeBoss))
+                {
+                    continue;
+                }
+
+                node.Type = RoomType.Shop;
+                return;
+            }
+
+            // No candidate node in the whole leg could become Shop without
+            // breaking (a) or (c) — leaves the leg as the one documented
+            // exception to the guarantee, same shape as
+            // EnforceEveryRoadHasVariety's own exception to (b).
         }
 
         // Whether NODE could legally become CANDIDATE without breaking (a)

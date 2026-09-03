@@ -16,6 +16,10 @@ namespace PrincesPalace.Domain.Tests
     //       (a forced room breaks a streak but is not counted itself);
     //   (b) every road has at least one non-Fight rolled room;
     //   (c) a column of 2+ nodes is never all one type.
+    //
+    // A fourth guarantee lives in the same file (EnsureLegHasShop, run
+    // after (a)/(b)/(c)) and is tested at the bottom of this class: every
+    // leg has at least one Shop node, full stop.
     public class DescentRoadVariationTests
     {
         private const int Seeds = 500;
@@ -200,6 +204,82 @@ namespace PrincesPalace.Domain.Tests
             Assert.Greater(fightShare, 0.53, "Fight's measured share dropped below the tuned band (53-57%)");
             Assert.Less(fightShare, 0.57, "Fight's measured share grew past the tuned band (53-57%)");
             CollectionAssert.DoesNotContain(counts.Keys.ToList(), RoomType.Unknown, "Unknown should never roll");
+        }
+
+        // ONE SHOP GUARANTEED PER LEG (DescentMapGenerator.EnsureLegHasShop).
+        // Measured baseline before this pass existed: Shop was 5.9% of all
+        // nodes, and 31% of generated legs (2000 seeds x 5 legs/seed)
+        // contained no Shop node on any branch at all. These three tests
+        // pin the guarantee that replaced that gap: every leg has one, the
+        // node it lands on is never a forced or entry step, and a leg that
+        // already rolled a Shop naturally is left untouched.
+        [Test]
+        public void EveryLegHasAtLeastOneShop_AndItIsNeverOnAForcedOrEntryStep()
+        {
+            void CheckLegSet(int startStep, bool restBeforeBoss)
+            {
+                for (ulong seed = 1; seed <= 2000; seed++)
+                {
+                    var map = DescentMapGenerator.GenerateLeg(new SeededRandom(seed), startStep,
+                        DescentMapGenerator.DefaultLegLength, restBeforeBoss);
+
+                    var shops = map.Nodes.Where(n => n.Type == RoomType.Shop).ToList();
+                    Assert.IsNotEmpty(shops,
+                        $"start {startStep} restBeforeBoss={restBeforeBoss} seed {seed}: leg has no Shop node");
+
+                    foreach (var shop in shops)
+                    {
+                        Assert.AreNotEqual(0, shop.Depth,
+                            $"start {startStep} seed {seed}: the entry itself was retyped to Shop");
+                        Assert.IsFalse(
+                            DescentMapGenerator.ForcedTypeAt(startStep + shop.Depth, restBeforeBoss).HasValue,
+                            $"start {startStep} seed {seed}: a forced step (elite/boss/rest) was retyped to Shop");
+                    }
+                }
+            }
+
+            CheckLegSet(1, false);
+            CheckLegSet(9, true);
+        }
+
+        // Seed 47 at startStep 1 rolls three Shop nodes on its own, well
+        // before EnsureLegHasShop ever gets a say — its early-return
+        // ("leg already has a Shop, do nothing") means this exact sequence
+        // is what RollTypes/EnforceEveryRoadHasVariety alone produce.
+        // Literal, not recomputed, so a regression that started overwriting
+        // an already-satisfied leg would show up here instead of hiding
+        // behind the guarantee it was supposed to be a no-op for.
+        [Test]
+        public void ALegThatAlreadyRolledAShopIsLeftUntouchedByTheGuarantee()
+        {
+            var map = DescentMapGenerator.GenerateLeg(new SeededRandom(47), 1);
+
+            var actual = map.Nodes.Select(n => $"{n.Id}:{n.Depth}:{n.Slot}:{n.Type}").ToArray();
+            var expected = new[]
+            {
+                "0:0:0:Entry",
+                "1:1:0:Fight",
+                "2:1:1:Fight",
+                "3:1:2:Event",
+                "4:2:0:Fight",
+                "5:2:1:Fight",
+                "6:2:2:Shop",
+                "7:3:0:EliteFight",
+                "8:4:0:Fight",
+                "9:4:1:Event",
+                "10:5:0:Fight",
+                "11:5:1:Rest",
+                "12:6:0:Treasure",
+                "13:6:1:Shop",
+                "14:7:0:Boss",
+                "15:8:0:Fight",
+                "16:8:1:Shop",
+                "17:8:2:Fight",
+            };
+
+            CollectionAssert.AreEqual(expected, actual, "seed 47 startStep 1 should already carry 3 Shop nodes " +
+                "before the guarantee runs, and the guarantee must not touch a leg that already has one");
+            Assert.AreEqual(3, actual.Count(n => n.EndsWith(":Shop")), "expected exactly 3 Shop nodes on this leg");
         }
     }
 }
