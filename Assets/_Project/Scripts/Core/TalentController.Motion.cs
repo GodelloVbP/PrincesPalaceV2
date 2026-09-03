@@ -134,11 +134,87 @@ namespace PrincesPalace
 
         // ---- the kindling beat -----------------------------------------------
         //
-        // Four parts over 1.12s, overlapping: the crust cracks (0.52s), the
+        // Five parts over 1.12s, overlapping: the crust cracks (0.52s), the
         // stone catches and overshoots (0.90s), the edge below it runs bright
-        // (0.62s), and six motes leave on widening gaps (0.70s each, staggered
-        // to 0.42s). Overlapping is the point -- played end to end it reads as
-        // a machine finishing steps rather than as something igniting.
+        // (0.62s), the drop-shadow grows out from the centre (0.57s) with the
+        // ring's spark answering 120ms behind it (0.48s), and six motes leave
+        // on widening gaps (0.70s each, staggered to 0.42s). Overlapping is
+        // the point -- played end to end it reads as a machine finishing
+        // steps rather than as something igniting. These constants live here
+        // rather than in ConstellationLayout because that file is Domain/UiKit,
+        // owned by another session while this branch is live -- see the
+        // session brief. Kept private to this file for the same reason
+        // CatchScale's own peak constant is local to its method.
+        private const float GlowKindleStartScale = 0.2f;
+        private const float GlowKindleOvershootScale = 1.08f;
+        private const float GlowKindleRiseSeconds = 0.35f;
+        private const float GlowKindleOvershootSeconds = 0.10f;
+        private const float GlowKindleSettleSeconds = 0.12f;
+
+        private const float RingKindleDelaySeconds = 0.12f;
+        private const float RingKindleRiseSeconds = 0.14f;
+        private const float RingKindleFadeSeconds = 0.22f;
+
+        private static float EaseOut(float t)
+        {
+            t = Mathf.Clamp01(t);
+            return 1f - (1f - t) * (1f - t);
+        }
+
+        // 0.2 to 1.0 ease-out over 350ms -- the expand-from-centre the design
+        // asked for -- then a brief overshoot to 1.08 and an ease-out settle
+        // back to 1, the same shape CatchScale already gives the stone
+        // itself, so the glow reads as catching alight with it rather than
+        // as a second, unrelated animation layered underneath.
+        private static float GlowKindleScale(float elapsed)
+        {
+            if (elapsed <= 0f) return GlowKindleStartScale;
+
+            if (elapsed < GlowKindleRiseSeconds)
+            {
+                return Mathf.Lerp(GlowKindleStartScale, 1f, EaseOut(elapsed / GlowKindleRiseSeconds));
+            }
+
+            float afterRise = elapsed - GlowKindleRiseSeconds;
+            if (afterRise < GlowKindleOvershootSeconds)
+            {
+                return Mathf.Lerp(1f, GlowKindleOvershootScale, afterRise / GlowKindleOvershootSeconds);
+            }
+
+            float afterOvershoot = afterRise - GlowKindleOvershootSeconds;
+            if (afterOvershoot < GlowKindleSettleSeconds)
+            {
+                return Mathf.Lerp(
+                    GlowKindleOvershootScale, 1f, EaseOut(afterOvershoot / GlowKindleSettleSeconds));
+            }
+
+            return 1f;
+        }
+
+        // A spark, not a rise-and-hold: a taken stone carries no invitation
+        // ring at rest (PaintOrbs paints RingOff for AlreadyTaken), so this
+        // climbs to RingReady's own alpha 120ms after the glow starts and
+        // fades straight back to nothing, rather than settling on a state
+        // PaintOrbs would then have to fight every subsequent repaint.
+        private static float RingKindleAlpha(float elapsed)
+        {
+            float sinceDelay = elapsed - RingKindleDelaySeconds;
+            if (sinceDelay <= 0f) return 0f;
+
+            if (sinceDelay < RingKindleRiseSeconds)
+            {
+                return RingReady.a * (sinceDelay / RingKindleRiseSeconds);
+            }
+
+            float afterRise = sinceDelay - RingKindleRiseSeconds;
+            if (afterRise < RingKindleFadeSeconds)
+            {
+                return RingReady.a * (1f - EaseOut(afterRise / RingKindleFadeSeconds));
+            }
+
+            return 0f;
+        }
+
         private void DriveKindling(float delta)
         {
             if (_kindlingSlot < 0) return;
@@ -181,6 +257,38 @@ namespace PrincesPalace
                 orbAuras[index].color = new Color(a.r, a.g, a.b, a.a * edge);
             }
 
+            // The drop-shadow growing from the centre out, so the stone reads
+            // as coming alive rather than as switching on. PaintOrbs already
+            // wrote the settled GlowTaken colour this same frame (see Kindle
+            // -- the beat has to own the stone before the repaint lands); this
+            // starts the scale small and the alpha at zero and animates both
+            // up to exactly that colour, the same "paint the end state, then
+            // let the beat override it for its own duration" shape the crust
+            // and the aura already use above.
+            if (Has(orbGlows, index))
+            {
+                float glowScale = GlowKindleScale(_kindlingElapsed);
+
+                var rect = orbGlows[index].rectTransform;
+                if (rect != null) rect.localScale = new Vector3(glowScale, glowScale, 1f);
+
+                float glowRise = ConstellationLayout.Phase(_kindlingElapsed, GlowKindleRiseSeconds);
+                orbGlows[index].color = new Color(GlowTaken.r, GlowTaken.g, GlowTaken.b, GlowTaken.a * glowRise);
+            }
+
+            // The ring answers the glow rather than leading it -- a fixed
+            // delay so the eye lands on the stone first. It is not the
+            // stone's steady state (a taken stone carries no invitation ring,
+            // see PaintOrbs), so this is a flash that decays back to nothing
+            // rather than a rise that holds: the spark of the stone catching,
+            // travelling out along the ring that fed it, then fading once the
+            // stone can stand on its own light.
+            if (Has(orbRings, index))
+            {
+                float ringAlpha = RingKindleAlpha(_kindlingElapsed);
+                orbRings[index].color = new Color(RingReady.r, RingReady.g, RingReady.b, ringAlpha);
+            }
+
             if (_kindlingElapsed >= ConstellationLayout.KindleSeconds)
             {
                 // Handed back to the resting loops. The scale is reset
@@ -192,6 +300,14 @@ namespace PrincesPalace
                     var rect = orbs[index].transform as RectTransform;
                     if (rect != null) rect.localScale = Vector3.one;
                 }
+
+                if (Has(orbGlows, index))
+                {
+                    orbGlows[index].rectTransform.localScale = Vector3.one;
+                    orbGlows[index].color = GlowTaken;
+                }
+
+                if (Has(orbRings, index)) orbRings[index].color = RingOff;
 
                 _kindlingSlot = -1;
                 _kindlingPath = -1;

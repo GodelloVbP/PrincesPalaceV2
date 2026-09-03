@@ -36,11 +36,24 @@ namespace PrincesPalace.PlayModeTests
 
             _navigations = 0;
             Navigation.LoadOverride = _ => _navigations++;
+
+            // The gate now plays a ~0.7s mock-up transition before it does
+            // any of the things this file checks -- see HubController's
+            // BeginDescentTransition. Set absurdly high rather than to
+            // something merely fast: AnimateZoom/FadeToBlack decide whether
+            // to yield AFTER scaling elapsed time by this multiplier, so a
+            // value this large clears all three phases inside the same frame
+            // the gate was pressed in regardless of how fast batchmode
+            // happens to be framing, which is what lets every assertion
+            // below keep counting "yield return null" the same way it did
+            // before the transition existed.
+            HubController.MotionSpeedMultiplier = 100000f;
         }
 
         [TearDown]
         public void Restore()
         {
+            HubController.MotionSpeedMultiplier = 1f;
             Navigation.Reset();
             SaveSystem.RootOverride = null;
             SaveSlotManager.Forget();

@@ -29,8 +29,17 @@ namespace PrincesPalace
         // opposite of what an invested edge means.
         private const float MinAlphaScale = 0.6f;
 
-        private const float FrequencyA = 17f;
-        private const float FrequencyB = 29f;
+        // Halved from 17/29 (session brief, 2026-09-03): the crackle read too
+        // busy against the slower kindle beat next to it. Still non-harmonic
+        // -- 8.5 and 14.5 share no factor either -- so the "irregular
+        // flicker, not a blinking pulse" property the header describes holds
+        // at the new speed too. Public, the same way ConstellationLayout's
+        // own timing constants are: a curve's SPEED is not the gameplay
+        // state PlayMode tests are barred from reaching into (see Core's
+        // AssemblyInfo.cs), so a test pins it directly rather than inferring
+        // it from measured wave crossings.
+        public const float FrequencyA = 8.5f;
+        public const float FrequencyB = 14.5f;
 
         private Image _image;
         private Color _baseColor;

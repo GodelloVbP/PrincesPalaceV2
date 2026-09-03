@@ -127,5 +127,16 @@ namespace PrincesPalace.PlayModeTests
             Assert.Greater(alphas.Min(), 0f,
                 "the crackle takes the core to nothing, which reads as the connection failing");
         }
+
+        // HALVED, LITERALLY -- 17/29 to 8.5/14.5 (session brief, 2026-09-03).
+        // Pinned rather than inferred from measured wave crossings, which
+        // would recompute the thing under test against its own random phase
+        // offset and could pass at either speed.
+        [Test]
+        public void TheCrackleFrequenciesAreHalvedFromTheirOriginalValues()
+        {
+            Assert.AreEqual(8.5f, TalentEdgeCrackle.FrequencyA);
+            Assert.AreEqual(14.5f, TalentEdgeCrackle.FrequencyB);
+        }
     }
 }

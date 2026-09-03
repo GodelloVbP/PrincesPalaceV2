@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -27,6 +29,15 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text currencyLabel;
         [SerializeField] internal TMP_Text startRunCaption;
         [SerializeField] internal Button[] unbuiltButtons;
+
+        // THE TEST SEAM FOR THE DESCENT TRANSITION'S OWN CLOCK, the same
+        // shape TalentController.MotionSpeedMultiplier already gives its
+        // screen. 1 outside a test, so play is unchanged; a test sets it high
+        // enough that BeginDescentTransition finishes inside a couple of
+        // frames instead of ~0.7 real seconds.
+        public static float MotionSpeedMultiplier = 1f;
+
+        private bool _descending;
 
         // OnEnable, not Start: the hub is returned to repeatedly -- from a
         // finished fight, from an abandoned run -- and Start fires once. Gold
@@ -256,7 +267,162 @@ namespace PrincesPalace
         // decision. A second button would also need a rule for what happens
         // when it is pressed with no run, which is a state the design does not
         // have.
+        //
+        // The press itself only starts the MOCK-UP transition below; every
+        // rule this comment used to describe (seeding a fresh run, skipping a
+        // drafted relic on resume) now lives in EnterTheDescent, which the
+        // transition calls once it has finished playing.
         private void StartOrResumeRun()
+        {
+            if (_descending) return; // one gate press, not a queue of them
+            StartCoroutine(BeginDescentTransition());
+        }
+
+        // ---- the descent transition ------------------------------------------
+
+        // Zoom out, then a fast zoom into the gate with a fade at the tail of
+        // it, THEN whatever the gate always did. Playing dumb about which of
+        // StartRun/ResumeRun/relic-draft comes next is the point: this is
+        // pure camera-work sitting in front of a decision that already
+        // existed, not a second copy of it that could drift from the first.
+        //
+        // Scales the hub's own panel rather than a camera: HubController has
+        // no camera reference and the panel IS the framing the screen already
+        // has (a full-bleed root RectTransform under the canvas), the same
+        // thing PushInScale zooms on the talent screen for the same reason
+        // -- Screen Space Overlay has no camera to push.
+        private const float ZoomOutScale = 0.94f;
+        private const float ZoomOutSeconds = 0.25f;
+        private const float ZoomInScale = 2.5f;
+        private const float ZoomInSeconds = 0.35f;
+        private const float FadeSeconds = 0.12f;
+
+        private IEnumerator BeginDescentTransition()
+        {
+            _descending = true;
+            if (startRunButton != null) startRunButton.interactable = false;
+
+            var panel = transform as RectTransform;
+            Vector2 startPos = panel != null ? panel.anchoredPosition : Vector2.zero;
+
+            // THE POINT THE ZOOM HOLDS STILL, captured once before any
+            // scaling starts -- read after the panel has moved and it would
+            // be chasing a target that is itself sliding.
+            Vector2 gateLocal = Vector2.zero;
+            var gateRect = startRunButton != null ? startRunButton.transform as RectTransform : null;
+            if (panel != null && gateRect != null)
+            {
+                var screenPoint = RectTransformUtility.WorldToScreenPoint(null, gateRect.position);
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(panel, screenPoint, null, out gateLocal);
+            }
+
+            yield return AnimateZoom(panel, 1f, ZoomOutScale, ZoomOutSeconds, EaseInOut, startPos, gateLocal);
+            yield return AnimateZoom(panel, ZoomOutScale, ZoomInScale, ZoomInSeconds, EaseIn, startPos, gateLocal);
+            yield return FadeToBlack(panel, FadeSeconds);
+
+            EnterTheDescent();
+
+            // Left disabled deliberately when a scene load follows -- the
+            // panel is about to be destroyed with the rest of the Hub scene.
+            // The relic-draft path is the one that stays on this screen, so
+            // that is the one that needs the gate (and the panel it sits on)
+            // handed back.
+            if (relicDraft != null && relicDraft.gameObject.activeSelf)
+            {
+                if (panel != null)
+                {
+                    panel.localScale = Vector3.one;
+                    panel.anchoredPosition = startPos;
+                    var group = panel.GetComponent<CanvasGroup>();
+                    if (group != null) group.alpha = 1f;
+                }
+
+                if (startRunButton != null) startRunButton.interactable = true;
+            }
+
+            _descending = false;
+        }
+
+        // Zooming AROUND A POINT OTHER THAN THE PIVOT, without a pivot that
+        // sits on that point: at every scale s the panel is repositioned so
+        // gateLocal lands back where it started, which is the standard
+        // "hold this point still while everything around it grows" trick for
+        // a transform scaled from its own centre.
+        //
+        // THE ACCUMULATE-THEN-DECIDE ORDER IS THE TEST SEAM. Time.
+        // unscaledDeltaTime is already valid the instant this coroutine
+        // starts -- Unity sets it once per frame, before anything the frame
+        // runs -- so a MotionSpeedMultiplier large enough to clear `seconds`
+        // in a single step never reaches the `yield return null` below at
+        // all: the whole phase resolves in the same frame the gate was
+        // pressed in, same as every render-then-yield loop this project
+        // already writes it the other way around (render, THEN yield) would
+        // have cost it a guaranteed frame per phase no multiplier could skip.
+        private static IEnumerator AnimateZoom(
+            RectTransform panel, float fromScale, float toScale, float seconds,
+            Func<float, float> ease, Vector2 startPos, Vector2 gateLocal)
+        {
+            if (panel == null) yield break;
+
+            float elapsed = 0f;
+            while (true)
+            {
+                elapsed += Time.unscaledDeltaTime * MotionSpeedMultiplier;
+                if (elapsed >= seconds) break;
+
+                float scale = Mathf.Lerp(fromScale, toScale, ease(elapsed / seconds));
+                ApplyZoom(panel, scale, startPos, gateLocal);
+                yield return null;
+            }
+
+            ApplyZoom(panel, toScale, startPos, gateLocal);
+        }
+
+        private static void ApplyZoom(RectTransform panel, float scale, Vector2 startPos, Vector2 gateLocal)
+        {
+            panel.localScale = new Vector3(scale, scale, 1f);
+            panel.anchoredPosition = startPos - gateLocal * (scale - 1f);
+        }
+
+        // A GET-OR-ADD CanvasGroup, the same move ReckoningController's own
+        // BlurGroup makes on an existing node rather than a scene change: the
+        // Hub panel was never built with one because nothing needed to fade
+        // it before this.
+        private static IEnumerator FadeToBlack(RectTransform panel, float seconds)
+        {
+            if (panel == null) yield break;
+
+            var group = panel.GetComponent<CanvasGroup>();
+            if (group == null) group = panel.gameObject.AddComponent<CanvasGroup>();
+
+            float elapsed = 0f;
+            while (true)
+            {
+                elapsed += Time.unscaledDeltaTime * MotionSpeedMultiplier;
+                if (elapsed >= seconds) break;
+
+                group.alpha = 1f - (elapsed / seconds);
+                yield return null;
+            }
+
+            group.alpha = 0f;
+        }
+
+        private static float EaseInOut(float t)
+        {
+            t = Mathf.Clamp01(t);
+            return t * t * (3f - 2f * t);
+        }
+
+        private static float EaseIn(float t)
+        {
+            t = Mathf.Clamp01(t);
+            return t * t;
+        }
+
+        // EVERYTHING THE GATE ALWAYS DID, unchanged, now called once the
+        // mock-up has played instead of on the press itself.
+        private void EnterTheDescent()
         {
             if (!RunManager.HasRun)
             {
