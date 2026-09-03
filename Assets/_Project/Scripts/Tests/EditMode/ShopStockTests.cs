@@ -49,9 +49,9 @@ namespace PrincesPalace.EditModeTests
         [Test]
         public void TheSectionsAreTheCountsTheScreenWillBuildFor()
         {
-            Assert.AreEqual(3, ShopStock.GearCount);
-            Assert.AreEqual(1, ShopStock.BookCount);
-            Assert.AreEqual(2, ShopStock.RelicCount);
+            Assert.AreEqual(4, ShopStock.GearCount);
+            Assert.AreEqual(3, ShopStock.BookCount);
+            Assert.AreEqual(3, ShopStock.RelicCount);
             Assert.AreEqual(3, ShopStock.SectionCount);
 
             // One order everywhere: gear, books, relics. The section index is

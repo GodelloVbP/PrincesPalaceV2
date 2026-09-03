@@ -142,18 +142,28 @@ namespace PrincesPalace.Domain.Rewards
     {
         // ---- what the shelves hold ------------------------------------------
         //
-        // Six primary offers, down from §2d's ten (§7.1 point 3): ten cards
-        // priced against measured arrival gold is a wall, not a choice. The
-        // book section is ONE card because the whole pool is five entries and
-        // the fielded squad is one character -- three cards would show 60% of
-        // the pool at every shop.
+        // Ten cards down to §7.1 point 3's six, revised again 2026-09-03 (c)
+        // against gate 1's own numbers (docs/handoffs/shop_v2/GAP_AUDIT.md,
+        // "Gate exit checks -> Gate 1"): even a policy that buys every
+        // affordable, positive-scoring card on a 3/1/2 shelf left runs with
+        // 6-9x the pre-shop median gold at death, so the shelf was the
+        // binding constraint, not price. Widened to 4 gear / 3 books / 3
+        // relics -- ten offers again, but no longer ten offers priced
+        // against a shelf nobody could empty. The book count no longer
+        // matches "one card because the pool is five" (that reasoning is
+        // superseded, not wrong on its own terms); gate 3 is what tests
+        // whether three book cards against a five-entry pool reads as
+        // repetitive once real content rolls there.
+        //
+        // This is also the UI design: the five-panel grid's Gear / Spell
+        // Books / Relics panels each show exactly this many cards (§3f).
         //
         // Constants rather than layout: the screen emits exactly this many
         // cards and ScreenDef.CountBindings pairs each array with its
         // constant, so the two cannot drift.
-        public const int GearCount = 3;
-        public const int BookCount = 1;
-        public const int RelicCount = 2;
+        public const int GearCount = 4;
+        public const int BookCount = 3;
+        public const int RelicCount = 3;
 
         // ---- where they sit -------------------------------------------------
         //

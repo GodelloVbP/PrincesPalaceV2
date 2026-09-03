@@ -167,6 +167,18 @@ None of the above is applied in this gate; §7.3 requires the counts to be
 **re-decided in writing** before gate 2's screen is laid out, and this is
 that writing.
 
+**Decided 2026-09-03 (author).** `GearCount = 4`, `RelicCount = 3`,
+`BookCount = 3` — ten offers, same as §2d's original count, arrived at
+independently rather than reverted to. Reroll stays exponential per section
+(`15 · 2^n`, ceiling 9999, unchanged) — proposal 4 above already showed
+rerolling was not the constraint, so it needed no change. The book count no
+longer follows the "one card, pool is five" reasoning §7.1 point 3 gave;
+whether three book cards against a five-entry pool reads as repetitive is
+gate 3's question, not this one's, since no book content rolls until then.
+Applied in `ShopStock.cs`, `ShopStockTests.cs`; the shelf is also the UI
+design — the five-panel grid's three card panels are sized to these counts
+directly, not laid out first and reconciled after.
+
 ### Gate 2
 
 ### Gate 3
