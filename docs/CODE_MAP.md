@@ -49,7 +49,13 @@ living at construction sites. There are no construction sites now.
 `UiVec` · `UiRect` · `Place` · `UiSize` · `UiPad` · `UiAlign` · `UiTextAlign` ·
 `UiNode` ·
 `NodeRef` · `Ui` (the factories) · `UiString` · `UiStrings` · `UiSolver` ·
-`SolvedNode` · `UiAudit` · `UiAuditError` · `UiFrames` · `FightSubmenuLayout`
+`SolvedNode` · `UiAudit` · `UiAuditError` · `UiFrames` · `FightSubmenuLayout` ·
+`ButtonPlateArt` (the button-plate kit's measured shape/selection rule) ·
+`ContainerArt` (the container/flag-banner kit's measured aspect/inset,
+one `ContainerSpec` table keyed on kind+ratio) ·
+`Typography` (the `TypographyRole` vocabulary and each role's
+`TypographySpec`, including `ResolveSizeRange` — the explicit-literal-vs-
+role-band autosize precedence `UiEmitter.ApplyTypography` calls into)
 
 Screens live in `Domain/UiKit/Screens/` — one class per screen returning a tree
 plus typed handles (`MainMenuScreen`, `MainMenuAmbience`).
@@ -106,7 +112,7 @@ EditMode-testable):
 | Folder | Covers |
 |---|---|
 | `Audio/` | Adaptive music: `MusicIntensity` (the four tiers), the `music_layers.json` raw shapes and `MusicLayerResolver`, the resolved `MusicLayerSet`/`MusicLayerLibrary`, and `MusicClock` (bar-boundary arithmetic) |
-| `Combat/` | `CombatMath` (armour is diminishing returns via `Mitigate`, not a subtraction — see its header for the floor-one-boss-took-130-turns bug this replaced), `CombatEncounter`, `CombatantState`, damage/effectiveness formulas, plus the talent-rework additions: `TalentEffect` (the closed rule vocabulary a talent can grant), `TalentEffectSet` (a character's rules, flattened once per fight) and `Transformation`/`TransformGrant` (Black Ram Mode) |
+| `Combat/` | `CombatMath` (armour is diminishing returns via `Mitigate`, not a subtraction — see its header for the floor-one-boss-took-130-turns bug this replaced), `CombatEncounter`, `CombatantState`, damage/effectiveness formulas, plus the talent-rework additions: `TalentEffect` (the closed rule vocabulary a talent can grant), `TalentEffectSet` (a character's rules, flattened once per fight) and `Transformation`/`TransformGrant` (Black Ram Mode); the balance-pass status/gate primitives `Marks` (spend-on-a-later-hit debuff), `Fear` (Stunned+Vulnerable for a fixed duration), `FallingOffStacks` (a stack pile where every stack carries its own expiry), `Session/CombatLocks` (a once-per-X gate keyed by an arbitrary string) and `Session/ConvergenceGate` (whether a relic wanting "a party member has a convergence ability" should be offered); `Session/FightSession.BalanceRelics.cs`/`.BalanceRelics2.cs` (the two balance passes' own relics' code) |
 | `Content/` | Raw/resolved content shapes + `*EntryResolver`s (validation) for every JSON-authored content type, plus the content enums they parse (`CharacterRole`, `RelicEffect`) |
 | `Dungeon/` | `DifficultyCurve`, room/map generation logic |
 | `Economy/` | `Wallet`, `CurrencyType` |
@@ -135,7 +141,10 @@ binding constraint since it's a static class, not a MonoBehaviour),
 primitives (`StarTwinkle`, `LanternFlicker`, `SlowDrift`, `MoteDrift`,
 `KenBurnsDrift` — see `docs/CODE_STANDARDS.md` §2), and
 `FrameSequenceLoader.cs` (the one f0..fN Resources probe behind
-`StanceAnimationLibrary`, `SpellVfxPlayer` and `HubBuildingAnimator`).
+`StanceAnimationLibrary`, `SpellVfxPlayer` and `HubBuildingAnimator`), and
+`ThemedButtonState.cs` (what `FightController.RefreshVerbs` distinguishes
+about a themed root's runtime state — hover/press/disabled — separate from
+the plate art `Ui.ApplyTheme` already baked in at build time).
 
 Audio is the one family that does NOT go through `ContentDatabase`, because
 `MusicController` and `SoundController` self-bootstrap before any scene loads
@@ -155,7 +164,12 @@ every ScriptableObject from `ContentData/*.json`), `ScreenshotTool.cs`
 usage text in sync with it), `EnemySpriteImportPostprocessor.cs`,
 `StanceSpriteImporter.cs` (forces Sprite import under `Resources/Enemies`,
 `Resources/Characters` AND `Resources/Spells` — anything runtime-loaded as a
-Sprite must be listed there or it silently loads as null).
+Sprite must be listed there or it silently loads as null),
+`SceneBuilder/SceneBuilder.Typography.cs` (`FontFor`/`MaterialFor`: resolves
+a `TypographyRole` to the generated font/material assets `TmpBootstrap.
+Typography.cs` produced, null on a not-yet-generated asset rather than
+throwing) and `SceneBuilder/TmpBootstrap.Typography.cs` (generates the
+static-weight SDF font assets and per-role TMP material presets themselves).
 
 `tools/` (all PowerShell/Python, see `docs/WORKFLOW.md` §8 for when to use
 which):

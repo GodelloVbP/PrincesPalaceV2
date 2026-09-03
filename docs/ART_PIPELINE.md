@@ -14,6 +14,7 @@ project, and where each kit's pieces actually live.
 | Enemy/item/spell sheets | raw sheet per type | grid slice (`slice_actor_sheet.py` / `slice_item_sheet.py` / `slice_spell_sheet.py`) | one PNG per frame/stance/level, or `{stance}/f0..fN` for an animated stance (see §4) | ongoing |
 | Backgrounds | `Art/Backgrounds/` | none — full-frame opaque | same folder | ongoing, one outstanding: `Relics.png` |
 | Map icons | raw | flood-fill (`process_map_icons.py`) | `Art/Backgrounds/Processed/` | delivered |
+| Six-theme UI kit | `Art/UI/Buttons/` sheets (button plates legacy/3x1/5x1, row 6x1, containers 3x4/9x16/3x2/2x1, flag banners 3x4/9x16), one set per theme (Gold/Crimson/Violet/Blue/Green/Silver) | grid slice (`tools/splice_ui_kit.py`), nominal filenames but measured aspect — see `ButtonPlateArt`/`ContainerArt`'s own headers for the per-shape numbers | `Art/UI/Buttons/Processed/` | delivered |
 
 ## 2. Keying conventions
 
