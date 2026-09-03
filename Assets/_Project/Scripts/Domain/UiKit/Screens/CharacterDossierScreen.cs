@@ -143,6 +143,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var children = new List<UiNode>();
 
+            // ITS OWN GROUND, restored -- the same flat #120a18 fill this pane
+            // drew before 2f3ccd0's container, back again since the outer
+            // Blue 2:1 frame that replaced it is gone (balance-bot item 2,
+            // 2026-09-03). This pane opens over the hub and the fight, and a
+            // transparent sheet lets a painted background read straight
+            // through the numerals. The DossierVeil "light from above" wash
+            // is NOT reinstated with it -- it was a hierarchy fix for a flat
+            // field of equal-weight columns, and column A's own Blue 3:4 card
+            // already gives this pane the hierarchy it needs.
+            children.Add(Ui.Solid("DossierGround", Ground,
+                    new UiVec(DossierLayout.Width, DossierLayout.Height), Place.At(0f, 0f))
+                .AsDecor());
+
             children.Add(screen.BuildColumnAFrame());
             children.AddRange(screen.BuildColumnB());
             children.AddRange(screen.BuildColumnC());
@@ -164,21 +177,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // And the tooltip over everything.
             children.Add(screen.BuildTooltip());
 
-            // A BLUE 2:1 CONTAINER now (balance-bot, 2026-09-02), not the flat
-            // #120a18 Solid ground plus a violet "light from above" veil --
-            // same conversion as Exits/Options/RunStats (see SystemMenuLayout.
-            // PaneInset's own comment). The container's own painted art
-            // supplies the hierarchy the veil used to fake with a gradient, so
-            // the veil is gone rather than carried over as a second wash on
-            // top of themed art. DossierLayout.Width/Height (1600x804) stay
-            // the declared FRAME size; the container's own measured inset is
-            // what everything above is actually laid out against now
-            // (DossierLayout.HalfWidth/HalfHeight).
-            var ground = Ui.Container("CharacterDossier", ButtonTheme.Blue, ContainerRatio.TwoByOne,
-                Place.At(0f, 0f), new UiVec(DossierLayout.Width, DossierLayout.Height));
-            Ui.ContainerContent(ground, ContainerRatio.TwoByOne, "DossierPaneContent", children.ToArray());
+            // NO OUTER FRAME (balance-bot item 2, 2026-09-03) -- the Blue 2:1
+            // container 2f3ccd0 wrapped this pane in was "the big blue
+            // container": a second frame around column A's own Blue 3:4
+            // card, reading as one frame nested in another rather than one
+            // clear card. Column A keeps its card; this pane goes back to a
+            // bare panel the size of the content area, same as before that
+            // commit and same as the flat ground it briefly replaced (no veil
+            // reinstated either -- the system menu's own pane background
+            // already grounds this, which is what let the veil be dropped
+            // for the container's border in the first place).
+            var pane = Ui.Panel("CharacterDossier", Place.At(0f, 0f),
+                UiSize.Fixed(DossierLayout.Width, DossierLayout.Height), children.ToArray());
 
-            screen.Root = ground;
+            screen.Root = pane;
             return screen;
         }
 

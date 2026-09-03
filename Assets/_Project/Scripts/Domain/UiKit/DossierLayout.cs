@@ -35,62 +35,39 @@ namespace PrincesPalace.Domain.UiKit
         public const float Width = SystemMenuLayout.PanelWidth;                              // 1600
         public const float Height = SystemMenuLayout.PanelHeight - SystemMenuLayout.BarHeight; // 804
 
-        // THE OUTER PANE IS A BLUE 2:1 CONTAINER now (balance-bot, 2026-09-02),
-        // not a flat Solid ground -- HalfWidth/HalfHeight read SystemMenu
-        // Layout.PaneContentHalfWidth/HalfHeight, the container's own measured
-        // inset boundary, instead of Width/Height * 0.5f. Same conversion as
-        // Exits/Options/RunStats (see SystemMenuLayout.PaneInset's own
-        // comment): 744/357.78 against the old 800/402. Width/Height above
-        // stay exactly what they were -- still the FRAME's declared size
-        // (SystemMenuPaneTests.EveryHostedPaneIsTheSizeOfTheContentArea pins
-        // them against the panel), which needed no aspect nudge at all.
-        public static float HalfWidth => SystemMenuLayout.PaneContentHalfWidth;
-        public static float HalfHeight => SystemMenuLayout.PaneContentHalfHeight;
+        // BACK TO NO OUTER FRAME (balance-bot item 2, 2026-09-03). The Blue
+        // 2:1 container added 2f3ccd0 read as "the big blue container" -- a
+        // second frame wrapping column A's own Blue 3:4 card, competing with
+        // it rather than housing it. Column A keeps its card; the pane around
+        // it goes back to no frame at all (BuildColumnAFrame's Container is
+        // the only Container this screen draws now; the flat #120a18 Ground/
+        // DossierVeil wash this container itself replaced is not reinstated
+        // either -- the system menu's own pane background already grounds it,
+        // same as it did before either treatment existed). HalfWidth/HalfHeight
+        // go back to a plain half of the declared frame.
+        public static float HalfWidth => Width * 0.5f;
+        public static float HalfHeight => Height * 0.5f;
 
-        // The columns' own canvas -- narrower than the declared frame (Width)
-        // now that the ground is a bordered container rather than a flat fill.
         public static float ContentWidth => HalfWidth * 2f;
 
         // Three columns, no gap; the dividers are borders.
         //
-        // COLUMN A'S WIDTH IS DERIVED NOW, not authored. It used to be a flat
-        // 449 (374 base, plus 75 the loadout column gave up -- "a tenth of
-        // its width", see the git log for that reasoning), which fit a Blue
-        // 3:4 container at 763.6 tall inside the old flat 804-tall ground
-        // with room to spare. It does not fit inside the OUTER container's
-        // own content box any more: that box is only HalfHeight * 2 (715.56)
-        // tall, 48px shorter than 763.6 before any margin is even spent. So
-        // column A is capped instead -- the widest 3:4 frame that clears the
-        // outer container's content height with the same 4px slack margin
-        // ExitsLayout.ContentMargin/OptionsLayout.PadX use over THEIR
-        // container's own inset.
-        public const float ColumnAFrameMargin = 4f;
+        // COLUMN A'S WIDTH GOES BACK UP now that it only has to clear ITS
+        // OWN card's content height, not a second outer container's -- 449
+        // (374 base, plus 75 the loadout column gave up, "a tenth of its
+        // width", see the git log for that reasoning), same as before
+        // 2f3ccd0.
+        public const float ColumnBGivesUp = 75f;
+        public const float ColumnAWidth = 374f + ColumnBGivesUp;  // 449
 
-        public static float ColumnAMaxFrameHeight => HalfHeight * 2f - ColumnAFrameMargin * 2f;  // 707.56, was 804
-        public static float ColumnAWidth => ColumnAMaxFrameHeight * ContainerArt.ContainerAspect3x4;  // 416.05, was 449
-
-        // UNCHANGED IN FORM -- still ColumnAWidth over the kit's measured 3:4
-        // aspect -- and now comes back out at ColumnAMaxFrameHeight exactly,
-        // by construction: see ColumnAWidth's own comment.
-        public static float ColumnAFrameHeight => ColumnAWidth / ContainerArt.ContainerAspect3x4; // 707.56, was 763.61
+        public static float ColumnAFrameHeight => ColumnAWidth / ContainerArt.ContainerAspect3x4; // 763.61
         public const float ColumnCWidth = 480f;
 
-        // ContentWidth, NOT Width -- the columns share the outer container's
-        // own inset canvas (1488, was 1600), not the declared frame.
-        public static float ColumnBWidth => ContentWidth - ColumnAWidth - ColumnCWidth;   // 591.95, was 671
+        public static float ColumnBWidth => ContentWidth - ColumnAWidth - ColumnCWidth;   // 671
 
-        // 4f, was 32f (balance-bot, 2026-09-02) -- it no longer clears the
-        // outer container's own border the way it did against the old flat
-        // Solid ground: HalfHeight already stops short of the painted edge
-        // (357.78, the container's own measured inset), so the old 32px
-        // stacked a second margin on top of one the container already pays
-        // for. Left at 32 the stat list lost a row it cannot spare (column C
-        // holds 7 of the 8 SheetStats.Derived rows and Build() refuses to
-        // emit a list that does not fit) -- dropped to the same 4px slack
-        // ExitsLayout.ContentMargin/OptionsLayout.PadX use over their own
-        // container's inset, it returns exactly the row back (8, with 30px
-        // to spare rather than a full row of headroom).
-        public const float PadY = 4f;
+        // 32f again -- the outer container's own border no longer eats a
+        // second margin on top of this one; see the comment above.
+        public const float PadY = 32f;
         public const float ColumnAPadX = 30f;
         public const float ColumnBPadLeft = 40f;
         public const float ColumnCPadX = 40f;

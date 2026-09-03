@@ -489,15 +489,15 @@ namespace PrincesPalace.Domain.Tests
                 DossierLayout.ColumnAWidth + DossierLayout.ColumnBWidth + DossierLayout.ColumnCWidth,
                 0.001f, "the three columns no longer fill the pane's content canvas");
 
-            // COLUMN A'S WIDTH IS DERIVED, not the old authored 449 (374 base
-            // + a 75px give-up from column B) -- it is capped now by fitting
-            // its own Blue 3:4 container inside the OUTER container's shrunk
-            // content height, with the same 4px margin ExitsLayout/
-            // OptionsLayout use over their own container's inset. Pinned
-            // literal, not a re-derivation of DossierLayout's own formula
-            // (that would be a tautology) -- 416.05, was 449.
-            Assert.AreEqual(416.04528f, DossierLayout.ColumnAWidth, 0.01f,
-                "column A's width no longer matches what fits the outer container's content height");
+            // BACK TO 449 (374 base + a 75px give-up from column B),
+            // authored rather than derived, since the outer Blue 2:1
+            // container this used to be capped against is gone again
+            // (balance-bot item 2, 2026-09-03 -- "the big blue container"
+            // read as a frame around column A's own Blue 3:4 card rather
+            // than housing it). It was briefly 416.05 while that outer
+            // frame existed; see DossierLayout.ColumnAWidth's own comment.
+            Assert.AreEqual(449f, DossierLayout.ColumnAWidth, 0.01f,
+                "column A's authored width regressed");
         }
 
         // ---- the pack, two abreast and scrolling ---------------------------------
