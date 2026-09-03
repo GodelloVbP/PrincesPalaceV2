@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
+using UnityEngine;
 using PrincesPalace;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Content;
@@ -156,9 +157,15 @@ namespace PrincesPalace.PlayModeTests
         [Test]
         public void EveryRelicIsOfferableByThePool()
         {
+            // requiresConvergenceAbility carried through from the definition,
+            // not left at RelicOption's own false default -- a test that
+            // never sets it can never see mechanic (g)'s gate refuse
+            // anything, which is exactly how this test missed
+            // rampaging_bulls_horn being unofferable without a convergence
+            // party (finding 6, code review).
             var all = ContentDatabase.Relics
                 .Where(r => r != null)
-                .Select(r => new Domain.Relics.RelicOption(r.id, r.rarity, r.unlockedBy))
+                .Select(r => new Domain.Relics.RelicOption(r.id, r.rarity, r.unlockedBy, r.requiresConvergenceAbility))
                 .ToList();
 
             // Every relic unlocked from the start (unlockedBy empty) must
@@ -175,9 +182,100 @@ namespace PrincesPalace.PlayModeTests
                 .Select(r => r.id)
                 .ToList();
 
-            Assert.IsEmpty(stuck,
+            // rampaging_bulls_horn is EXPECTED to be stuck here -- it needs a
+            // convergence-ability party, which "no achievements earned" says
+            // nothing about either way. Excluded from the general assertion
+            // and pinned on its own below, alongside the same check with a
+            // convergence party.
+            var unexpectedlyStuck = stuck.Where(id => id != "rampaging_bulls_horn").ToList();
+            Assert.IsEmpty(unexpectedlyStuck,
                 "These relics need no achievement but are not offerable on a fresh save: " +
-                string.Join(", ", stuck));
+                string.Join(", ", unexpectedlyStuck));
+
+            var withoutConvergence = Domain.Relics.RelicPool.Available(all, earned, partyHasConvergenceAbility: false)
+                .Select(o => o.Id).ToHashSet();
+            var withConvergence = Domain.Relics.RelicPool.Available(all, earned, partyHasConvergenceAbility: true)
+                .Select(o => o.Id).ToHashSet();
+
+            Assert.IsFalse(withoutConvergence.Contains("rampaging_bulls_horn"),
+                "rampaging_bulls_horn requires a convergence ability -- it must not be offerable without one");
+            Assert.IsTrue(withConvergence.Contains("rampaging_bulls_horn"),
+                "rampaging_bulls_horn must become offerable once the party has a convergence ability");
+
+            // Every OTHER unlocked-from-the-start relic must appear in BOTH
+            // -- the convergence gate is specific to mechanic (g), not a
+            // general filter that happens to catch more than it should.
+            var otherUnlocked = ContentDatabase.Relics
+                .Where(r => r != null && string.IsNullOrEmpty(r.unlockedBy) && r.id != "rampaging_bulls_horn")
+                .Select(r => r.id)
+                .ToList();
+
+            var missingWithout = otherUnlocked.Where(id => !withoutConvergence.Contains(id)).ToList();
+            var missingWith = otherUnlocked.Where(id => !withConvergence.Contains(id)).ToList();
+
+            Assert.IsEmpty(missingWithout,
+                "unlocked relics missing WITHOUT a convergence party: " + string.Join(", ", missingWithout));
+            Assert.IsEmpty(missingWith,
+                "unlocked relics missing WITH a convergence party: " + string.Join(", ", missingWith));
+        }
+
+        // END TO END, through the real draft entry point: a squad with no
+        // Transform skill must never be offered rampaging_bulls_horn across
+        // several rounds/seeds, and a squad that has one must be able to see
+        // it. RunOrchestrator.RelicDraftOffer is where partyHasConvergenceAbility
+        // actually gets computed (from ContentDatabase.AvailableSkillsFor the
+        // ACTIVE SQUAD) -- EveryRelicIsOfferableByThePool above proves the pool
+        // rule alone; this proves the wiring INTO that rule from a real save.
+        [Test]
+        public void RelicDraftOfferRespectsConvergenceAcrossARealSquad()
+        {
+            // A Transform skill authored in content, if there is one --
+            // reused rather than invented, so this proves the real wiring
+            // rather than a fixture that happens to agree with itself.
+            // ContentDatabase.AvailableSkillsFor needs a live Character (it
+            // reads .level), which is what mechanic (g)'s production code
+            // queries too -- so this reads the raw skill list directly
+            // instead, and the fixture below grants it by LEVEL, the same
+            // route AvailableSkillsFor itself checks first.
+            var convergenceSkill = ContentDatabase.Skills
+                .FirstOrDefault(s => s != null && s.effect == Domain.Combat.SkillEffect.Transform);
+
+            Assert.IsNotNull(convergenceSkill,
+                "fixture: no Transform skill exists in content -- cannot prove the convergence wiring without one");
+
+            bool SeenAcrossRounds(List<string> squad, out bool seenBullsHorn)
+            {
+                SaveSlotManager.CurrentSave.selectedCharacterIds = squad;
+                SaveSlotManager.SaveCurrent();
+
+                seenBullsHorn = false;
+                for (ulong seed = 1; seed <= 30 && !seenBullsHorn; seed++)
+                {
+                    foreach (var option in RunOrchestrator.RelicDraftOffer(seed))
+                    {
+                        if (option.Id == "rampaging_bulls_horn") { seenBullsHorn = true; break; }
+                    }
+                }
+
+                return seenBullsHorn;
+            }
+
+            SeenAcrossRounds(OneParty(), out bool seenWithoutConvergence);
+            Assert.IsFalse(seenWithoutConvergence,
+                "rampaging_bulls_horn was offered to a squad with no convergence ability, across 30 seeds");
+
+            // Levelled up so the Transform skill is actually AVAILABLE
+            // (unlockLevel <= character.level), not just owned by id --
+            // production reads AvailableSkillsFor, which checks exactly
+            // that.
+            var convergenceCharacter = SaveSlotManager.CurrentSave.roster
+                .First(c => c.definitionId == convergenceSkill.characterId);
+            convergenceCharacter.level = Mathf.Max(convergenceCharacter.level, convergenceSkill.unlockLevel);
+
+            SeenAcrossRounds(new List<string> { convergenceCharacter.definitionId }, out bool seenWithConvergence);
+            Assert.IsTrue(seenWithConvergence,
+                "rampaging_bulls_horn was never offered to a squad WITH a convergence ability, across 30 seeds -- " +
+                "either the wiring is broken or 30 seeds is not enough draws to see a 1-of-many rare");
         }
     }
 }
