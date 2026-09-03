@@ -675,6 +675,25 @@ namespace PrincesPalace.Editor.Bot
                 }
                 sb.Append(']');
 
+                // SPELL ACQUISITION (docs/PLAN_SHOP.md §1g/§2g, gate 3),
+                // recorded for every room the same reason goldOnArrival is:
+                // gate 3's own exit numbers ask about a specific step, not
+                // only the run's last one.
+                sb.Append(",\"learnedSpellCountAfterRoom\":").Append(r.LearnedSpellCountAfterRoom);
+                sb.Append(",\"unassignedSpellBookCountAfterRoom\":").Append(r.UnassignedSpellBookCountAfterRoom);
+                sb.Append(",\"spellAssignments\":[");
+                for (int k = 0; k < r.SpellAssignments.Count; k++)
+                {
+                    if (k > 0) sb.Append(',');
+                    var a = r.SpellAssignments[k];
+                    sb.Append("{\"skillId\":").Append(Str(a.SkillId));
+                    sb.Append(",\"assigned\":").Append(a.Assigned ? "true" : "false");
+                    sb.Append(",\"characterId\":").Append(Str(a.CharacterId));
+                    sb.Append(",\"slot\":").Append(a.Slot);
+                    sb.Append(",\"outcome\":").Append(Str(a.Outcome)).Append('}');
+                }
+                sb.Append(']');
+
                 sb.Append('}');
             }
             sb.Append("],");
