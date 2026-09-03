@@ -136,34 +136,16 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
+        // The frame's container theme/ratio and content inset (Violet 3:2 at
+        // 1500x1000 -- nudged from the flat panel's 1500x820 to clear the
+        // aspect band, see the build site's own comment) are covered by
+        // KitContainerPlacementTests; only the screen-specific fact -- the
+        // old flat #241736F5 fill is gone -- stays here.
         [Test]
-        public void TheFrameIsAVioletThreeByTwoContainer()
+        public void TheFrameHasNoLeftoverFlatFill()
         {
-            // Was a flat #241736F5 panel at 1500x820 -- the frame moved to
-            // the kit's Violet 3:2 container 2026-09-02, nudged to 1500x1000
-            // to clear the aspect band (see the build site's own comment).
-            var frame = RelicDraftScreen.Build().Frame.Node;
-
-            Assert.IsFalse(frame.Decor,
-                "the wrapper must stay non-Decor, or content beneath it audits clean against itself");
-            var art = frame.Children.Single(c => c.Kind == UiNodeKind.Sprite);
-            Assert.AreEqual("UI/Buttons/Processed/container_violet_3x2.png", art.SpriteKey);
-            Assert.IsTrue(art.Decor);
-            Assert.IsNull(frame.ColorHex, "the old flat fill must be gone -- the art is the only frame now");
-        }
-
-        [Test]
-        public void TheFrameContentSitsInsideTheMeasuredInset()
-        {
-            var frame = RelicDraftScreen.Build().Frame.Node;
-            var content = frame.Children.Single(c => c.Name == "DraftFrameContent");
-            var inset = Ui.ContainerContentInset(ContainerRatio.ThreeByTwo);
-
-            Assert.AreEqual(PlaceKind.Stretch, content.Place.Kind);
-            Assert.AreEqual(1500f * inset.Left, content.Place.Left, 0.01f);
-            Assert.AreEqual(1500f * inset.Right, content.Place.Right, 0.01f);
-            Assert.AreEqual(1000f * inset.Top, content.Place.Top, 0.01f);
-            Assert.AreEqual(1000f * inset.Bottom, content.Place.Bottom, 0.01f);
+            Assert.IsNull(RelicDraftScreen.Build().Frame.Node.ColorHex,
+                "the old flat fill must be gone -- the art is the only frame now");
         }
 
         [Test]

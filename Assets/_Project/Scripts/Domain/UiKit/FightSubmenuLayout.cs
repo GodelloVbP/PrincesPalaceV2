@@ -184,17 +184,6 @@ namespace PrincesPalace.Domain.UiKit
         public static float FrameContentCentreY =>
             FrameCentreY + FrameHeight * (FrameInset.Bottom - FrameInset.Top) * 0.5f;
 
-        // How far every ABSOLUTE position below RowsBottom moves once the
-        // rows/scrollbar/BACK are reparented under FrameContentCentreY instead
-        // of the old ContainerCentreY. Nothing that reads its own POSITION
-        // relative to its immediate parent (RowYInContent, ContentY, the
-        // scroll math) needs this -- Unity's own nesting applies it for free.
-        // It exists for the one place that does need it: a test comparing a
-        // BUILT tree's absolute row position back against RowY's literal
-        // output (FightScreenTests.TheSubmenuRowsComeFromTheSharedLayout
-        // Function).
-        public static float FrameRecentreShiftY => FrameContentCentreY - ContainerCentreY;
-
         // NO LONGER CONCENTRIC WITH THE VIEWPORT. It was, while the container
         // held nothing but the list; the back row hangs below the viewport now,
         // so the two centres are a back row and a gap apart. Written from the

@@ -106,20 +106,15 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreNotEqual(screen.Root.Name, screen.Frame.Node.Name);
         }
 
+        // The frame's container theme/ratio and content inset are covered by
+        // KitContainerPlacementTests; only the screen-specific fact -- the
+        // old flat #2A1230F5 fill is gone now that the painted 3:2 container
+        // art is the only frame -- stays here.
         [Test]
-        public void TheFrameIsACrimsonThreeByTwoContainer()
+        public void TheFrameHasNoLeftoverFlatFill()
         {
-            // Was a flat #2A1230F5 panel -- the frame moved to the kit's
-            // Crimson 3:2 container 2026-09-02, and the old fill is gone
-            // entirely so the painted art is the only frame.
-            var frame = DefeatScreen.Build().Frame.Node;
-
-            Assert.IsFalse(frame.Decor,
-                "the wrapper must stay non-Decor, or content beneath it audits clean against itself");
-            var art = frame.Children.Single(c => c.Kind == UiNodeKind.Sprite);
-            Assert.AreEqual("UI/Buttons/Processed/container_crimson_3x2.png", art.SpriteKey);
-            Assert.IsTrue(art.Decor);
-            Assert.IsNull(frame.ColorHex, "the old flat fill must be gone -- the art is the only frame now");
+            Assert.IsNull(DefeatScreen.Build().Frame.Node.ColorHex,
+                "the old flat fill must be gone -- the art is the only frame now");
         }
 
         [Test]
@@ -133,20 +128,6 @@ namespace PrincesPalace.Domain.Tests
             // literal, same as ContainerTests' own SpriteKey literals.
             Assert.AreEqual(1344f, rect.Width, 0.01f);
             Assert.AreEqual(1344f / 1.49f, rect.Height, 0.01f, "902.01, was 896");
-        }
-
-        [Test]
-        public void TheFrameContentSitsInsideTheMeasuredInset()
-        {
-            var frame = DefeatScreen.Build().Frame.Node;
-            var content = frame.Children.Single(c => c.Name == "DefeatFrameContent");
-            var inset = Ui.ContainerContentInset(ContainerRatio.ThreeByTwo);
-
-            Assert.AreEqual(PlaceKind.Stretch, content.Place.Kind);
-            Assert.AreEqual(DefeatScreen.PanelWidth * inset.Left, content.Place.Left, 0.01f);
-            Assert.AreEqual(DefeatScreen.PanelWidth * inset.Right, content.Place.Right, 0.01f);
-            Assert.AreEqual(DefeatScreen.FrameHeight * inset.Top, content.Place.Top, 0.01f);
-            Assert.AreEqual(DefeatScreen.FrameHeight * inset.Bottom, content.Place.Bottom, 0.01f);
         }
 
         [Test]
@@ -174,13 +155,13 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void NoChildCollidesWithAButtonsGeneratedCaption()
         {
-            // A THEMED button's own "<Name>Label" is not a collision -- it is
-            // Ui.ApplyTheme's real, intended child (see UiNode.Themed). This
-            // guard is only for a button that generates NO label of its own
-            // (untethered), where a same-named child would still be the
-            // emitter-name clash it was written to catch.
-            var offenders = Walk(Tree())
-                .Where(n => n.Kind == UiNodeKind.Button && n.Theme == null)
+            // UiTreeTestHelpers.UnthemedButtons narrows past a THEMED
+            // button's own "<Name>Label" child (Ui.ApplyTheme's real,
+            // intended output -- see UiNode.Themed). This guard is only for
+            // a button that generates NO label of its own (untethered),
+            // where a same-named child would still be the emitter-name
+            // clash it was written to catch.
+            var offenders = UiTreeTestHelpers.UnthemedButtons(Tree())
                 .SelectMany(b => b.Children.Where(c => c.Name == b.Name + "Label").Select(c => c.Name))
                 .ToList();
 

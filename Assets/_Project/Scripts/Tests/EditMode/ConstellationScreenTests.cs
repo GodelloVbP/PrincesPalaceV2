@@ -158,30 +158,8 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- the Violet 9:16 container ---------------------------------------
 
-        [Test]
-        public void ThePanelIsAVioletNineBySixteenContainer()
-        {
-            var panel = Walk(TalentScreen.Build().Root).First(n => n.Name == "TalentPanelColumn");
-
-            Assert.IsFalse(panel.Decor, "the wrapper must stay non-Decor, or content beneath it audits clean against itself");
-            var frame = panel.Children.Single(c => c.Kind == UiNodeKind.Sprite);
-            Assert.AreEqual("UI/Buttons/Processed/container_violet_9x16.png", frame.SpriteKey);
-            Assert.IsTrue(frame.Decor);
-        }
-
-        [Test]
-        public void ThePanelContentSitsInsideTheMeasuredInset()
-        {
-            var panel = Walk(TalentScreen.Build().Root).First(n => n.Name == "TalentPanelColumn");
-            var content = panel.Children.Single(c => c.Name == "TalentPanelContent");
-            var inset = Ui.ContainerContentInset(ContainerRatio.NineBySixteen);
-
-            Assert.AreEqual(PlaceKind.Stretch, content.Place.Kind);
-            Assert.AreEqual(ConstellationLayout.PanelWidth * inset.Left, content.Place.Left, 0.01f);
-            Assert.AreEqual(ConstellationLayout.PanelWidth * inset.Right, content.Place.Right, 0.01f);
-            Assert.AreEqual(ConstellationLayout.PanelHeight * inset.Top, content.Place.Top, 0.01f);
-            Assert.AreEqual(ConstellationLayout.PanelHeight * inset.Bottom, content.Place.Bottom, 0.01f);
-        }
+        // The panel's container theme/ratio and content inset are covered
+        // by KitContainerPlacementTests, not repeated here.
 
         // The confirmation is the one thing on this screen that MUST start
         // hidden: it is a modal over everything, and a screen that opens asking

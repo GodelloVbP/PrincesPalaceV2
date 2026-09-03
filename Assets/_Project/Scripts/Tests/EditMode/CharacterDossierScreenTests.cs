@@ -26,33 +26,8 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
-        [Test]
-        public void ColumnAIsABlueThreeByFourContainer()
-        {
-            var frame = Walk(CharacterDossierScreen.Build().Root)
-                .First(n => n.Name == "DossierColumnAFrame");
-
-            Assert.IsFalse(frame.Decor,
-                "the wrapper must stay non-Decor, or content beneath it audits clean against itself");
-            var art = frame.Children.Single(c => c.Kind == UiNodeKind.Sprite);
-            Assert.AreEqual("UI/Buttons/Processed/container_blue_3x4.png", art.SpriteKey);
-            Assert.IsTrue(art.Decor);
-        }
-
-        [Test]
-        public void ColumnAContentSitsInsideTheMeasuredInset()
-        {
-            var frame = Walk(CharacterDossierScreen.Build().Root)
-                .First(n => n.Name == "DossierColumnAFrame");
-            var content = frame.Children.Single(c => c.Name == "DossierColumnAContent");
-            var inset = Ui.ContainerContentInset(ContainerRatio.ThreeByFour);
-
-            Assert.AreEqual(PlaceKind.Stretch, content.Place.Kind);
-            Assert.AreEqual(DossierLayout.ColumnAWidth * inset.Left, content.Place.Left, 0.01f);
-            Assert.AreEqual(DossierLayout.ColumnAWidth * inset.Right, content.Place.Right, 0.01f);
-            Assert.AreEqual(DossierLayout.ColumnAFrameHeight * inset.Top, content.Place.Top, 0.01f);
-            Assert.AreEqual(DossierLayout.ColumnAFrameHeight * inset.Bottom, content.Place.Bottom, 0.01f);
-        }
+        // Column A's container theme/ratio and content inset are covered by
+        // KitContainerPlacementTests, not repeated here.
 
         [Test]
         public void ColumnAIdentityContentRidesInsideTheFrame()

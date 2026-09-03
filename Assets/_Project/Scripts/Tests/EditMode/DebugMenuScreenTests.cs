@@ -121,12 +121,11 @@ namespace PrincesPalace.Domain.Tests
             // child by that name produces two GameObjects with one name under
             // one parent, and every by-name lookup takes the emitter's empty
             // one. This screen shipped that bug for one build.
-            // n.Theme == null: a themed button's own "<Name>Label" child is
-            // Ui.ApplyTheme's real, intended output (see UiNode.Themed), not
-            // the emitter-name collision this check exists to catch -- the
-            // same narrowing DefeatScreenTests made for the same reason.
-            var offenders = Walk(Tree())
-                .Where(n => n.Kind == UiNodeKind.Button && n.Theme == null)
+            // UiTreeTestHelpers.UnthemedButtons narrows past a themed
+            // button's own "<Name>Label" child, which is Ui.ApplyTheme's
+            // real, intended output (see UiNode.Themed), not the
+            // emitter-name collision this check exists to catch.
+            var offenders = UiTreeTestHelpers.UnthemedButtons(Tree())
                 .SelectMany(button => button.Children
                     .Where(c => c.Name == button.Name + "Label")
                     .Select(c => c.Name))
@@ -153,13 +152,5 @@ namespace PrincesPalace.Domain.Tests
                 "the audit did not object to a child named exactly '<button>Label'");
         }
 
-        private static IEnumerable<UiNode> Walk(UiNode node)
-        {
-            yield return node;
-            foreach (var child in node.Children)
-            {
-                foreach (var found in Walk(child)) yield return found;
-            }
-        }
     }
 }

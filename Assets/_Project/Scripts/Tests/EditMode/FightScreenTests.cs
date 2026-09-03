@@ -170,31 +170,8 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(-500f, rect.Centre.Y - rect.Height * 0.5f, 0.01f, "the bottom edge must not move");
         }
 
-        [Test]
-        public void ThePartyPlateIsABlueTwoByOneContainer()
-        {
-            var plate = Walk(Screen().Root).First(n => n.Name == "PartyPlate");
-
-            Assert.IsFalse(plate.Decor,
-                "the wrapper must stay non-Decor, or content beneath it audits clean against itself");
-            var art = plate.Children.Single(c => c.Kind == UiNodeKind.Sprite);
-            Assert.AreEqual("UI/Buttons/Processed/container_blue_2x1.png", art.SpriteKey);
-            Assert.IsTrue(art.Decor);
-        }
-
-        [Test]
-        public void ThePartyPlateContentSitsInsideTheMeasuredInset()
-        {
-            var plate = Walk(Screen().Root).First(n => n.Name == "PartyPlate");
-            var content = plate.Children.Single(c => c.Name == "PartyPlateContent");
-            var inset = Ui.ContainerContentInset(ContainerRatio.TwoByOne);
-
-            Assert.AreEqual(PlaceKind.Stretch, content.Place.Kind);
-            Assert.AreEqual(FightScreen.PartyPlateWidth * inset.Left, content.Place.Left, 0.01f);
-            Assert.AreEqual(FightScreen.PartyPlateWidth * inset.Right, content.Place.Right, 0.01f);
-            Assert.AreEqual(FightScreen.PartyPlateHeight * inset.Top, content.Place.Top, 0.01f);
-            Assert.AreEqual(FightScreen.PartyPlateHeight * inset.Bottom, content.Place.Bottom, 0.01f);
-        }
+        // The party plate's container theme/ratio and content inset are
+        // covered by KitContainerPlacementTests, not repeated here.
 
         [Test]
         public void ThePartyPlateChildrenRideInsideTheFrame()
@@ -257,14 +234,16 @@ namespace PrincesPalace.Domain.Tests
             // The single most important binding on this screen: the same
             // function the runtime controller calls to RE-anchor these rows is
             // the one that placed them here. v1 had two hand-mirrored copies.
-            // + FrameRecentreShiftY: the rows are reparented under the Violet
-            // 3:4 frame's content inset now (balance-bot 2026-09-02), not a
-            // bare Panel at the old ContainerCentreY -- see that constant's
-            // own comment. RowY itself is untouched.
+            // + (FrameContentCentreY - ContainerCentreY): the rows are
+            // reparented under the Violet 3:4 frame's content inset now
+            // (balance-bot 2026-09-02), not a bare Panel at the old
+            // ContainerCentreY -- see that constant's own comment. RowY
+            // itself is untouched.
+            float shift = FightSubmenuLayout.FrameContentCentreY - FightSubmenuLayout.ContainerCentreY;
             int count = FightSubmenuLayout.PoolSize;
             for (int i = 0; i < count; i++)
             {
-                Assert.AreEqual(FightSubmenuLayout.RowY(count, i) + FightSubmenuLayout.FrameRecentreShiftY,
+                Assert.AreEqual(FightSubmenuLayout.RowY(count, i) + shift,
                     RectOf($"CharacterSkill{i}").Centre.Y, 0.01f);
             }
         }
@@ -749,31 +728,8 @@ namespace PrincesPalace.Domain.Tests
         // Same pattern as CharacterDossierScreenTests/RelicDraftScreenTests: a
         // flat Solid + Ui.Rim became Ui.Container(Violet, ThreeByFour) sized
         // from FightSubmenuLayout.FrameWidth/FrameHeight, balance-bot 2026-09-02.
-        [Test]
-        public void TheSubmenuFrameIsAVioletThreeByFourContainer()
-        {
-            var frame = Walk(Screen().Root).First(n => n.Name == "SubmenuContainer");
-
-            Assert.IsFalse(frame.Decor,
-                "the wrapper must stay non-Decor, or content beneath it audits clean against itself");
-            var art = frame.Children.Single(c => c.Kind == UiNodeKind.Sprite);
-            Assert.AreEqual("UI/Buttons/Processed/container_violet_3x4.png", art.SpriteKey);
-            Assert.IsTrue(art.Decor);
-        }
-
-        [Test]
-        public void TheSubmenuFrameContentSitsInsideTheMeasuredInset()
-        {
-            var frame = Walk(Screen().Root).First(n => n.Name == "SubmenuContainer");
-            var content = frame.Children.Single(c => c.Name == "SubmenuFrameContent");
-            var inset = Ui.ContainerContentInset(ContainerRatio.ThreeByFour);
-
-            Assert.AreEqual(PlaceKind.Stretch, content.Place.Kind);
-            Assert.AreEqual(FightSubmenuLayout.FrameWidth * inset.Left, content.Place.Left, 0.01f);
-            Assert.AreEqual(FightSubmenuLayout.FrameWidth * inset.Right, content.Place.Right, 0.01f);
-            Assert.AreEqual(FightSubmenuLayout.FrameHeight * inset.Top, content.Place.Top, 0.01f);
-            Assert.AreEqual(FightSubmenuLayout.FrameHeight * inset.Bottom, content.Place.Bottom, 0.01f);
-        }
+        // The submenu frame's container theme/ratio and content inset are
+        // covered by KitContainerPlacementTests, not repeated here.
 
         [Test]
         public void TheSubmenuFrameChildrenRideInsideTheFrame()

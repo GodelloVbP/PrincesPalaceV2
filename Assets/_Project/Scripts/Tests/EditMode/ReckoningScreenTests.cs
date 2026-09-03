@@ -317,13 +317,12 @@ namespace PrincesPalace.Domain.Tests
             // UiEmitter names a button's caption "<button>Label" and it never
             // appears in the tree, so a child by that name is invisible to
             // every by-name lookup. Three screens had shipped that bug.
-            // n.Theme == null: a themed button's own "<Name>Label" child is
-            // Ui.ApplyTheme's real, intended output (see UiNode.Themed), not
-            // the emitter-name collision this check exists to catch -- the
-            // same narrowing DebugMenuScreenTests/DefeatScreenTests made for
-            // the same reason (ReckoningRerollButton wears Violet now).
-            var offenders = Walk(Tree())
-                .Where(n => n.Kind == UiNodeKind.Button && n.Theme == null)
+            // UiTreeTestHelpers.UnthemedButtons narrows past a themed
+            // button's own "<Name>Label" child, which is Ui.ApplyTheme's
+            // real, intended output (see UiNode.Themed), not the
+            // emitter-name collision this check exists to catch
+            // (ReckoningRerollButton wears Violet now).
+            var offenders = UiTreeTestHelpers.UnthemedButtons(Tree())
                 .SelectMany(b => b.Children.Where(c => c.Name == b.Name + "Label").Select(c => c.Name))
                 .ToList();
 
