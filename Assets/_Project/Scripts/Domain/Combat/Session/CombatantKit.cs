@@ -35,6 +35,11 @@ namespace PrincesPalace.Domain.Combat.Session
         public readonly IReadOnlyList<ResolvedSkill> Skills;
         public readonly IReadOnlyList<ResolvedRelic> Relics;
 
+        // Which effects this kit's Relics carry, resolved once here rather
+        // than rescanned on every HasRelic call -- DealDamage and the
+        // after-swing/cast hooks ask up to ~10 times per hit.
+        private readonly HashSet<RelicEffect> _relicEffects;
+
         // Only player characters carry an attack type; only enemies carry an
         // elemental affinity. A rudimentary, one-directional system by design.
         public readonly DamageType? AttackType;
@@ -56,7 +61,15 @@ namespace PrincesPalace.Domain.Combat.Session
             Relics = relics ?? new List<ResolvedRelic>();
             AttackType = attackType;
             BasicSpell = basicSpell;
+
+            _relicEffects = new HashSet<RelicEffect>();
+            for (int i = 0; i < Relics.Count; i++)
+            {
+                _relicEffects.Add(Relics[i].Effect);
+            }
         }
+
+        public bool HasRelic(RelicEffect effect) => _relicEffects.Contains(effect);
     }
 
     public sealed class EnemyKit

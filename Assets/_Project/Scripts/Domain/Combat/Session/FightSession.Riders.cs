@@ -231,14 +231,7 @@ namespace PrincesPalace.Domain.Combat.Session
         private bool HasRelic(CombatantState actor, RelicEffect effect)
         {
             var kit = KitFor(actor);
-            if (kit == null) return false;
-
-            for (int i = 0; i < kit.Relics.Count; i++)
-            {
-                if (kit.Relics[i].Effect == effect) return true;
-            }
-
-            return false;
+            return kit != null && kit.HasRelic(effect);
         }
 
         // The next actor's turn opens: mana regenerates, statuses tick, and a

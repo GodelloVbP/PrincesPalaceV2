@@ -1,4 +1,3 @@
-using System.Linq;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Stats;
 
@@ -72,11 +71,18 @@ namespace PrincesPalace.Domain.Combat.Session
                 var actor = kit.Key;
                 if (!HasRelic(actor, RelicEffect.LoadedDice)) continue;
 
-                var living = _encounter.LivingEnemies.ToList();
-                if (living.Count == 0) return;
+                int livingCount = 0;
+                foreach (var e in _encounter.LivingEnemies) livingCount++;
+                if (livingCount == 0) return;
 
-                int index = _rng?.NextInt(0, living.Count) ?? 0;
-                var target = living[index];
+                int index = _rng?.NextInt(0, livingCount) ?? 0;
+                CombatantState target = null;
+                int seen = 0;
+                foreach (var e in _encounter.LivingEnemies)
+                {
+                    if (seen == index) { target = e; break; }
+                    seen++;
+                }
 
                 StatusEffects.Apply(target.Statuses, StatusEffectType.Stun, 0, 1, actor);
                 AppendMessage($"{actor.Name} palms the loaded dice - {target.Name} stumbles, stunned!");
@@ -173,7 +179,13 @@ namespace PrincesPalace.Domain.Combat.Session
         {
             if (summoner == null || summoner.IsPlayerSide) return;
 
-            var holder = _encounter.LivingPlayerParty.FirstOrDefault(p => HasRelic(p, RelicEffect.DisgruntledLackey));
+            CombatantState holder = null;
+            foreach (var p in _encounter.LivingPlayerParty)
+            {
+                if (!HasRelic(p, RelicEffect.DisgruntledLackey)) continue;
+                holder = p;
+                break;
+            }
             if (holder == null) return;
 
             int damage = System.Math.Max(1, holder.MaxHealth);
