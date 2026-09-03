@@ -97,7 +97,7 @@ public static class UiWiringSweep
         var sb = new StringBuilder();
         sb.AppendLine($"[SceneBuilder] FAILED: '{screenName}' has {problems.Count} unwired reference(s):");
         foreach (var p in problems) sb.AppendLine(p);
-        sb.AppendLine("  Fix by: assigning it in this screen's Wire step; or, if it is genuinely optional, ");
+        sb.AppendLine("  Fix by: assigning it in this screen's Wire step; or, if it is optional, ");
         sb.AppendLine("  dropping the [SerializeField] so nothing claims it will be there.");
         throw new System.Exception(sb.ToString());
     }

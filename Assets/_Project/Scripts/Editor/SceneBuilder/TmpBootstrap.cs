@@ -17,7 +17,7 @@ public static partial class TmpBootstrap
 
     // Deliberately NOT under Resources/Content: ContentBuilder deletes that
     // whole tree with no prompt on every run, and a font asset vanishing
-    // mid-build would be a genuinely baffling failure.
+    // mid-build would be a baffling failure.
     private const string SourceFontDir = "Assets/_Project/Resources/Fonts";
 
     // Typography-role static SDF fonts and materials (TmpBootstrap.Typography.cs).

@@ -73,7 +73,7 @@ namespace PrincesPalace.Domain.UiKit
                     $"'{node.Path}' is a {node.Kind} solved to {node.Rect.Width:0.#}x{node.Rect.Height:0.#} - it would " +
                     $"render as nothing, or as a solid white quad if it has no sprite. " +
                     $"Fix by: giving it a Fixed size; or letting it Fill a parent that has one; or removing the node " +
-                    $"if it is genuinely not meant to be seen.",
+                    $"if it is not meant to be seen.",
             });
         }
 
@@ -315,7 +315,7 @@ namespace PrincesPalace.Domain.UiKit
                     $"decoration, which A1 already exempts -- so the allowance waives nothing and its " +
                     $"reason reads as a mechanism that is not there. " +
                     $"Fix by: deleting the AllowOverlap and keeping the reason as a comment if it says " +
-                    $"something AsDecor does not; or, if this node genuinely needs to take clicks, " +
+                    $"something AsDecor does not; or, if this node needs to take clicks, " +
                     $"dropping AsDecor instead and letting the allowance do the work.",
             });
         }
