@@ -6,6 +6,7 @@ using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Economy;
 using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Relics;
+using PrincesPalace.Domain.Rewards;
 
 namespace PrincesPalace
 {
@@ -464,6 +465,8 @@ namespace PrincesPalace
             activeRun.inventory.RemoveAll(entry => entry == null || ContentDatabase.GetItem(entry.itemId) == null);
             activeRun.currentHealth.RemoveAll(entry => entry == null || ContentDatabase.GetCharacter(entry.characterId) == null);
 
+            ReconcileShopStock(activeRun);
+
             roster.RemoveAll(c => c == null || ContentDatabase.GetCharacter(c.definitionId) == null);
 
             foreach (var definition in ContentDatabase.Characters)
@@ -587,6 +590,82 @@ namespace PrincesPalace
                         selectedCharacterIds.Add(character.definitionId);
                     }
                 }
+            }
+        }
+
+        // THE SHOP SHELF, RECONCILED THE SAME TOLERANT WAY EVERYTHING ELSE
+        // IN Reconcile IS -- a content update between quitting and resuming
+        // is not worth discarding a run over (docs/PLAN_SHOP.md §2e).
+        //
+        // Four rules, and each one is a different kind of broken:
+        //
+        //  - A contentId that no longer resolves becomes NO OFFER IN PLACE.
+        //    Not removed: removal renumbers the indices the screen binds
+        //    cards by, so a deleted item would silently shift every card
+        //    after it onto the wrong slot.
+        //  - A SOLD entry stays sold whatever happened to its content. The
+        //    gold was spent; the card is not a refund.
+        //  - Stock belonging to a node the party is not standing on is
+        //    dropped whole, rerolls and all. It cannot be repaired -- it is
+        //    an answer to a question about somewhere else -- and arriving at
+        //    a shop rolls a fresh shelf anyway.
+        //  - The reroll array is normalised to SectionCount. See
+        //    RunSnapshot.shopRerollsUsed for what can make it the wrong
+        //    length.
+        private static void ReconcileShopStock(RunSnapshot run)
+        {
+            run.shopStock ??= new List<ShopStockEntry>();
+
+            if (run.shopRerollsUsed == null || run.shopRerollsUsed.Length != ShopStock.SectionCount)
+            {
+                var rerolls = new int[ShopStock.SectionCount];
+                int carried = Math.Min(run.shopRerollsUsed?.Length ?? 0, rerolls.Length);
+                for (int i = 0; i < carried; i++) rerolls[i] = run.shopRerollsUsed[i];
+                run.shopRerollsUsed = rerolls;
+            }
+
+            if (run.shopNodeId != run.currentNodeId || run.shopNodeId < 0)
+            {
+                run.shopStock.Clear();
+                run.shopNodeId = -1;
+                run.shopStockVersion = 0;
+                Array.Clear(run.shopRerollsUsed, 0, run.shopRerollsUsed.Length);
+                return;
+            }
+
+            // A null entry cannot be repaired IN PLACE -- there is nothing on
+            // it to say which section or index it was -- and dropping it
+            // would renumber the rest, which is the one thing this method is
+            // careful not to do. So the shelf goes as a unit and the next
+            // arrival rolls a fresh one.
+            if (run.shopStock.Any(entry => entry == null))
+            {
+                run.shopStock.Clear();
+                run.shopNodeId = -1;
+                run.shopStockVersion = 0;
+                Array.Clear(run.shopRerollsUsed, 0, run.shopRerollsUsed.Length);
+                return;
+            }
+
+            foreach (var entry in run.shopStock)
+            {
+                if (entry.noOffer || entry.sold || Resolves(entry)) continue;
+
+                entry.noOffer = true;
+            }
+        }
+
+        // Whether the thing a card is selling still exists. Books answer
+        // false until gate 3 authors them, which is the same answer their
+        // NO OFFER placeholder already gives -- so nothing changes shape when
+        // they arrive.
+        private static bool Resolves(ShopStockEntry entry)
+        {
+            switch (entry.kind)
+            {
+                case ShopEntryKind.Gear: return ContentDatabase.GetItem(entry.contentId) != null;
+                case ShopEntryKind.Relic: return ContentDatabase.GetRelic(entry.contentId) != null;
+                default: return false;
             }
         }
     }

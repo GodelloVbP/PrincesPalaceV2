@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using PrincesPalace.Domain.Rewards;
 
 namespace PrincesPalace
 {
@@ -181,5 +182,46 @@ namespace PrincesPalace
         //
         // Purely additive, so CurrentVersion does not move.
         public int bonusDamagePercent;
+
+        // ---- the shop ------------------------------------------------------
+        //
+        // What the shop at shopNodeId has on its shelves, quoted prices and
+        // all. Empty when the party is not standing in an unresolved shop --
+        // LeaveShop clears it, which is also what makes "a run holds exactly
+        // one uncleared shop" true (docs/PLAN_SHOP.md §2e).
+        public List<ShopStockEntry> shopStock = new List<ShopStockEntry>();
+
+        // Rerolls spent AT THIS NODE, one count per section
+        // (ShopStock.SectionCount, indexed ShopStock.GearSection etc).
+        //
+        // PER SECTION rather than one scalar because reroll is per section
+        // (§7.1 point 7), and this array position is BOTH the reroll price's
+        // n and the RNG's third coordinate -- naming it after the section is
+        // what makes those two read the same number rather than two numbers
+        // that agree by coincidence.
+        //
+        // JsonUtility instantiates through the default constructor, so a save
+        // written before this field existed keeps the initialiser below and
+        // loads a correctly-sized zero array -- which is exactly "has
+        // rerolled nothing". What it does NOT protect against is a save
+        // written when SectionCount was a different number, or an explicit
+        // null in hand-edited JSON: both load an array of the wrong length
+        // and every read site would then need a bounds check. Normalised once
+        // in SaveData.Reconcile instead.
+        public int[] shopRerollsUsed = new int[ShopStock.SectionCount];
+
+        // WHICH NODE THE STOCK ABOVE BELONGS TO. The guard, not an
+        // optimisation: without it a stale list from a previous shop paints
+        // the next one. -1 is "no shop stock" -- and it must be, since 0 is a
+        // real node id, which is the same reason currentNodeId above starts
+        // at -1 rather than 0.
+        public int shopNodeId = -1;
+
+        // Which generator produced shopStock (ShopStock.StockVersion). An
+        // open shop from an older build is left exactly as it was rolled and
+        // the new generator applies at the next node: a shop that reshuffles
+        // itself because the game updated is a free reroll granted by a patch
+        // note.
+        public int shopStockVersion;
     }
 }

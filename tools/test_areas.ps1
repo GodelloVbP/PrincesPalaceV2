@@ -84,7 +84,11 @@ $Areas = @{
     # the loot roll via ItemOfferRoll.FavorOf/CurrentSquadFavor, both in
     # Core, not a combat rule), even though Fortunate's own bonus is now read
     # live off equipment rather than written anywhere.
-    run     = "Dungeon|Map|FullRun|RunState|Currency|MetaProgression|Level|Save|ActiveSquad|Run|Resume|Snapshot|Seed|Descent|Depth|Difficulty|EnemyBand|Wallet|Reward|Reckoning|Ember|Ledger|Settlement|Encounter|Room|GlobalState|CarriedHealth|Playtime|Favor"
+    # 'Shop' for the in-run shop (ShopPricingTests, ShopStockTests,
+    # ShopMutationTests) -- the shop is a run-economy rule, the same subject
+    # Wallet/Reward/Ember/Favor already cover here, and it spends RUN gold
+    # rather than the permanent currency the hub's 'Store' pattern names.
+    run     = "Dungeon|Map|FullRun|RunState|Currency|MetaProgression|Level|Save|ActiveSquad|Run|Resume|Snapshot|Seed|Descent|Depth|Difficulty|EnemyBand|Wallet|Reward|Reckoning|Ember|Ledger|Settlement|Encounter|Room|GlobalState|CarriedHealth|Playtime|Favor|Shop"
     # 'OfferRow' rather than a bare 'Offer': the offer ROW is a layout and
     # belongs here, but ItemOfferTests and ItemOfferRollTests are reward rules
     # that already sit in 'content' and 'run', and a bare pattern would drag

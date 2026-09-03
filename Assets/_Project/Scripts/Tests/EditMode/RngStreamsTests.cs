@@ -129,5 +129,96 @@ namespace PrincesPalace.EditModeTests
 
             CollectionAssert.AreNotEqual(a, b, "Two different nodes produced identical fights.");
         }
+
+        // ---- the third position input --------------------------------------
+        //
+        // The shop needs three coordinates -- step, node, reroll index -- and
+        // the extension has to be free for every caller written before it
+        // existed, or it renumbers every save in the world.
+        //
+        // THIS IS THE TEST THAT CATCHES A TIDY. `c` is a separate XOR line
+        // precisely because `0 * K` is 0 and `z ^ 0` is `z`; folding it into
+        // the multiply chain instead would still "look right" and would move
+        // every existing seed. Pinned by property here and by literal below.
+        [Test]
+        public void OmittingTheThirdCoordinate_IsTheSameAsPassingZero()
+        {
+            var streams = new[] { RngStreams.Leg, RngStreams.Boss, RngStreams.Fight, RngStreams.Treasure };
+
+            foreach (ulong seed in new ulong[] { 0UL, 1UL, 12345UL, 999999UL, ulong.MaxValue })
+            {
+                foreach (uint stream in streams)
+                {
+                    for (int a = 0; a < 6; a++)
+                    {
+                        for (int b = 0; b < 6; b++)
+                        {
+                            Assert.AreEqual(
+                                RngStreams.Derive(seed, stream, a, b),
+                                RngStreams.Derive(seed, stream, a, b, 0),
+                                $"Adding the third coordinate moved the seed for ({seed}, {stream}, {a}, {b}) -- " +
+                                "which renumbers every run ever seeded through that position.");
+                        }
+                    }
+                }
+            }
+        }
+
+        // Same provenance as the four-argument literals above: produced by an
+        // independent implementation of the algorithm, not copied out of a
+        // failing run. The first row is the pre-existing Fight literal read
+        // through the five-argument overload, so a change that only broke the
+        // DEFAULT would still be caught; the rest pin the three shop streams
+        // at a non-zero third coordinate.
+        [TestCase(12345UL, RngStreams.Fight, 1, 7, 0, 12881891470559542815UL)]
+        [TestCase(12345UL, RngStreams.Fight, 1, 7, 3, 15148803583783660044UL)]
+        [TestCase(999UL, RngStreams.ShopGear, 12, 4, 0, 8559632178966823291UL)]
+        [TestCase(999UL, RngStreams.ShopBooks, 12, 4, 0, 13513051749714980753UL)]
+        [TestCase(999UL, RngStreams.ShopRelics, 12, 4, 1, 17972045689052808779UL)]
+        public void Derive_WithAThirdCoordinate_ProducesItsPinnedValue(
+            ulong runSeed, uint stream, int a, int b, int c, ulong expected)
+        {
+            Assert.AreEqual(expected, RngStreams.Derive(runSeed, stream, a, b, c));
+        }
+
+        // A reroll is one coordinate moving, and it has to move the WHOLE
+        // shelf -- otherwise the player pays and sees the same cards.
+        [Test]
+        public void AdjacentRerollCounts_ProduceUnrelatedStreams()
+        {
+            var byReroll = Enumerable.Range(0, 32)
+                .Select(n => RngStreams.Derive(31337UL, RngStreams.ShopGear, 12, 4, n))
+                .ToList();
+
+            CollectionAssert.AllItemsAreUnique(byReroll, "Two reroll counts collided, so a paid reroll would return the same shelf.");
+        }
+
+        // The three shop shelves are three streams so that rerolling one
+        // cannot move another. If they collided, the relic shelf would draw in
+        // lockstep with the gear shelf at every node.
+        [Test]
+        public void TheThreeShopStreams_DoNotCollideAtOnePosition()
+        {
+            var seeds = new[] { RngStreams.ShopGear, RngStreams.ShopBooks, RngStreams.ShopRelics }
+                .Select(s => RngStreams.Derive(4242UL, s, 5, 5, 2))
+                .ToList();
+
+            CollectionAssert.AllItemsAreUnique(seeds);
+        }
+
+        // New streams take a NEW NUMBER; reusing one renumbers every run that
+        // was ever seeded through it. Stated as a test because the rule lives
+        // in a comment, and a comment cannot fail.
+        [Test]
+        public void EveryStreamNumberIsDistinct()
+        {
+            var numbers = new[]
+            {
+                RngStreams.Leg, RngStreams.Boss, RngStreams.Fight, RngStreams.Treasure,
+                RngStreams.ShopGear, RngStreams.ShopBooks, RngStreams.ShopRelics,
+            };
+
+            CollectionAssert.AllItemsAreUnique(numbers);
+        }
     }
 }

@@ -44,10 +44,15 @@ namespace PrincesPalace
             }
         }
 
-        public static void SaveCurrent()
+        // Whether the write landed, passed straight through from
+        // SaveSystem.Save -- see its header for why it answers rather than
+        // throwing. Nothing with no save loaded to write is a false: it is
+        // not an error, but it is also not a persisted mutation, and a caller
+        // asking "did this reach the disk" is asking about the disk.
+        public static bool SaveCurrent()
         {
-            if (_cached == null) return;
-            SaveSystem.Save(_cached, CurrentSlot);
+            if (_cached == null) return false;
+            return SaveSystem.Save(_cached, CurrentSlot);
         }
 
         // For tests, which move between slots and throwaway roots freely.

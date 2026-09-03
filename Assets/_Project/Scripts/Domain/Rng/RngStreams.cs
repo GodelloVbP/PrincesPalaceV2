@@ -31,6 +31,19 @@ namespace PrincesPalace.Domain.Rng
         public const uint Fight = 3;
         public const uint Treasure = 4;
 
+        // THE SHOP IS THREE STREAMS, NOT ONE, and the split is what makes a
+        // per-section reroll possible at all. Rerolling the gear shelf must
+        // not move the relics beside it, so "which section" is carried by the
+        // stream number rather than by arithmetic on a position coordinate --
+        // arithmetic would make two sections' positions collide the day
+        // either number grows a bound (docs/PLAN_SHOP.md F9, §7.1 point 7).
+        //
+        // All three open on the same position: (step, currentNodeId, that
+        // section's own reroll count).
+        public const uint ShopGear = 5;
+        public const uint ShopBooks = 6;
+        public const uint ShopRelics = 7;
+
         // SplitMix64's finalizer, the same mixing SeededRandom itself uses.
         // Applied to the packed inputs rather than to a running state, so this
         // is a pure hash: same inputs, same answer, forever, with no ordering
@@ -41,12 +54,25 @@ namespace PrincesPalace.Domain.Rng
         // ids — still land far apart. Without them, neighbouring positions
         // produce neighbouring seeds, and neighbouring seeds are exactly the
         // case a player would notice as "the next room felt the same".
-        public static ulong Derive(ulong runSeed, uint stream, int a, int b = 0)
+        //
+        // THE THIRD POSITION INPUT `c` IS AN XOR AND MUST STAY ONE. The shop
+        // needs three coordinates (step, node, reroll index) and packing two
+        // of them into `b` would alias two distinct positions onto one seed
+        // the day either grew a bound -- silently, since an aliased seed
+        // throws nothing and logs nothing (docs/PLAN_SHOP.md F9). Left as a
+        // separate XOR line rather than folded into the mix because `c`
+        // defaults to 0, `0 * K` is 0 and `z ^ 0` is `z`: every caller
+        // written before this line existed derives the identical seed it
+        // always did, which is what the "serialized format" warning above
+        // demands. Pinned by RngStreamsTests, so tidying it into the
+        // multiply chain fails a test rather than renumbering every save.
+        public static ulong Derive(ulong runSeed, uint stream, int a, int b = 0, int c = 0)
         {
             ulong z = runSeed;
             z ^= stream * 0x9E3779B97F4A7C15UL;
             z ^= unchecked((ulong)(long)a) * 0xBF58476D1CE4E5B9UL;
             z ^= unchecked((ulong)(long)b) * 0x94D049BB133111EBUL;
+            z ^= unchecked((ulong)(long)c) * 0xD6E8FEB86659FD93UL;
 
             z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9UL;
             z = (z ^ (z >> 27)) * 0x94D049BB133111EBUL;
@@ -55,9 +81,9 @@ namespace PrincesPalace.Domain.Rng
 
         // Convenience for the common shape: derive a seed and open a generator
         // on it. Callers never hold the seed itself, only the stream.
-        public static SeededRandom Open(ulong runSeed, uint stream, int a, int b = 0)
+        public static SeededRandom Open(ulong runSeed, uint stream, int a, int b = 0, int c = 0)
         {
-            return new SeededRandom(Derive(runSeed, stream, a, b));
+            return new SeededRandom(Derive(runSeed, stream, a, b, c));
         }
     }
 }

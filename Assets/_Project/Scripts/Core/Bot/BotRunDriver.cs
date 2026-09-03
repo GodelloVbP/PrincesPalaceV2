@@ -359,6 +359,10 @@ namespace PrincesPalace
 
                 bool isFight = RunOrchestrator.IsFight(node.Type);
 
+                // BEFORE ArriveAt, so a treasure room's stash is not already
+                // counted -- this is what the party WALKED IN WITH.
+                roomTrace.GoldOnArrival = RunManager.Run.gold;
+
                 RunOrchestrator.Arrival arrival;
                 using (BotPhaseTimers.Measure(BotPhase.RoomResolve))
                 {
@@ -377,6 +381,17 @@ namespace PrincesPalace
                 roomTrace.Step = RunManager.Run.step;
                 roomTrace.Floor = RunManager.Run.floor;
 
+                // THE isFight SPLIT IS NO LONGER TWO-WAY. A shop is the
+                // second room that does not resolve itself on arrival, so
+                // "not a fight" no longer means "already done".
+                if (arrival == RunOrchestrator.Arrival.Shop)
+                {
+                    VisitShop(roomTrace);
+                    result.Trace.Rooms.Add(roomTrace);
+                    CaptureWhatTheRunHolds(save, result);
+                    continue;
+                }
+
                 if (!isFight)
                 {
                     result.Trace.Rooms.Add(roomTrace);
@@ -389,6 +404,52 @@ namespace PrincesPalace
 
                 if (!alive) return;
             }
+        }
+
+        // WHAT THE BOT DOES IN A SHOP, FOR NOW: LOOK AND LEAVE.
+        //
+        // Gate 1 builds the economy and measures it; the policy call
+        // (IRunPolicy.ChooseShop) is gate 1's other half and is not this
+        // agent's. Leaving immediately still produces every number the gate
+        // needs except the purchase ones -- arrival gold, forgone gold, what
+        // was on the shelf and at what price -- and it produces them from the
+        // real roll rather than from an estimate.
+        //
+        // The shelf is read BEFORE LeaveShop, which clears it.
+        private static void VisitShop(RoomTrace roomTrace)
+        {
+            var run = RunManager.Run;
+
+            roomTrace.PurchasesBySection = new int[ShopStock.SectionCount];
+            roomTrace.RerollsBySection = new int[ShopStock.SectionCount];
+
+            foreach (var entry in RunOrchestrator.CurrentShopStock)
+            {
+                if (entry == null || entry.noOffer) continue;
+
+                roomTrace.ShopOffers.Add(new ShopOfferTrace
+                {
+                    Kind = entry.kind.ToString(),
+                    ContentId = entry.contentId,
+                    Price = entry.price,
+                    Sold = entry.sold,
+                });
+
+                if (entry.sold) roomTrace.PurchasesBySection[entry.section]++;
+            }
+
+            for (int section = 0; section < ShopStock.SectionCount; section++)
+            {
+                roomTrace.RerollsBySection[section] =
+                    run.shopRerollsUsed != null && section < run.shopRerollsUsed.Length
+                        ? run.shopRerollsUsed[section]
+                        : 0;
+            }
+
+            RunOrchestrator.LeaveShop();
+
+            roomTrace.GoldOnLeave = run.gold;
+            roomTrace.GoldSpent = roomTrace.GoldOnArrival - roomTrace.GoldOnLeave;
         }
 
         // ---- the relic draft -----------------------------------------------------

@@ -178,7 +178,36 @@ namespace PrincesPalace
                     Navigation.Go(Navigation.Fight);
                     return;
 
+                case RunOrchestrator.Arrival.Shop:
+                    // GATE 1 HAS NO SHOP SCREEN YET, and a room that opens
+                    // nothing and clears nothing would strand a human player
+                    // on a node they cannot leave. So the stock rolls (that
+                    // is the half being measured), the room is left
+                    // immediately, and the map says what it has always said
+                    // about a shop.
+                    //
+                    // Gate 2 replaces this with OpenShop() -- a nested panel,
+                    // so no Navigation.Go -- and LeaveShop moves to the
+                    // panel's own LEAVE button.
+                    RunOrchestrator.LeaveShop();
+                    RoomResolver.Resolve(RunManager.Run, RoomType.Shop);
+                    Refresh();
+                    return;
+
+                case RunOrchestrator.Arrival.Resolved:
+                    Refresh();
+                    return;
+
                 default:
+                    // EXPLICIT, and the default arm is now the one that
+                    // SHOUTS rather than the one that swallows. It used to
+                    // be the catch-all every non-fight arrival fell through,
+                    // which meant a new Arrival value would silently
+                    // clear-and-redraw -- the wrong failure, and an invisible
+                    // one (docs/PLAN_SHOP.md F3).
+                    Debug.LogWarning(
+                        "[MapController] Arrival value not handled; the map redrew and the room may not have " +
+                        "been resolved. A new Arrival case needs an arm here.");
                     Refresh();
                     return;
             }

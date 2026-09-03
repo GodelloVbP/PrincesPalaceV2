@@ -38,7 +38,11 @@ namespace PrincesPalace
     // Static and stateless, exactly like RunManager and RunLedger, and for the
     // same reason: the SAVE is the state, and a second copy held here would be
     // a second thing that can disagree with the disk.
-    public static class RunOrchestrator
+    // Split across two files (CODE_STANDARDS §4): this root file owns the
+    // class declaration and everything a run has always done, and
+    // RunOrchestrator.Shop.cs owns the shop's own mutations -- one topic per
+    // file, and the shop half is the one that grows through gates 2 and 3.
+    public static partial class RunOrchestrator
     {
         // ---- starting a descent -------------------------------------------------
 
@@ -66,6 +70,40 @@ namespace PrincesPalace
         // re-offers the same cards. A counter in the screen would reset to
         // round one and hand out a fresh offer, which is a re-roll by quitting.
         public static IEnumerable<RelicOption> RelicDraftOffer(ulong seed)
+        {
+            var alreadyHeld = RunManager.Run?.relicIds ?? new List<string>();
+            var available = AvailableRelicOptions();
+
+            // LEVEL 70: THE WHOLE POOL, IN AUTHORED ORDER, NOT A DRAW.
+            //
+            // "Choose your starting relics (instead of a random draft)" read
+            // literally: at this level there is no roll left to make, so there
+            // is no seed involved either. ContentDatabase.Relics is ordered
+            // content (IOrderedContent), so the order is the one somebody
+            // authored rather than whatever Resources.LoadAll returned -- which
+            // matters more here than usual, because the player is now scanning a
+            // list rather than reacting to three cards.
+            if (SquadTrack.HasUnlocked(TrackReward.ChosenStartingRelics))
+            {
+                return available;
+            }
+
+            // Weighted, so a Godlike relic stays a story. The seed is the run's
+            // own PLUS the round, so reloading before choosing offers the same
+            // three and the second round is not a repeat of the first.
+            var rng = new SeededRandom(seed + (ulong)alreadyHeld.Count);
+            return RelicPool.DraftWeighted(available, bound => rng.NextInt(0, bound));
+        }
+
+        // THE RELIC POOL THIS RUN COULD STILL BE OFFERED -- unlocked, gated
+        // on a convergence ability where the relic asks for one, and minus
+        // whatever the run already holds.
+        //
+        // Extracted so the draft and the shop's relic shelf ask the same
+        // question. Being offered what you are already carrying reads as a
+        // bug in both places, and two copies of that filter would be two
+        // rulebooks (docs/PLAN_SHOP.md §2d).
+        public static List<RelicOption> AvailableRelicOptions()
         {
             var save = SaveSlotManager.CurrentSave;
             var earned = Achievements.EarnedIds(save);
@@ -106,25 +144,7 @@ namespace PrincesPalace
                 .Where(r => !alreadyHeld.Contains(r.Id))
                 .ToList();
 
-            // LEVEL 70: THE WHOLE POOL, IN AUTHORED ORDER, NOT A DRAW.
-            //
-            // "Choose your starting relics (instead of a random draft)" read
-            // literally: at this level there is no roll left to make, so there
-            // is no seed involved either. ContentDatabase.Relics is ordered
-            // content (IOrderedContent), so the order is the one somebody
-            // authored rather than whatever Resources.LoadAll returned -- which
-            // matters more here than usual, because the player is now scanning a
-            // list rather than reacting to three cards.
-            if (SquadTrack.HasUnlocked(TrackReward.ChosenStartingRelics))
-            {
-                return available;
-            }
-
-            // Weighted, so a Godlike relic stays a story. The seed is the run's
-            // own PLUS the round, so reloading before choosing offers the same
-            // three and the second round is not a repeat of the first.
-            var rng = new SeededRandom(seed + (ulong)alreadyHeld.Count);
-            return RelicPool.DraftWeighted(available, bound => rng.NextInt(0, bound));
+            return available;
         }
 
         // Writes a drafted relic onto the run. A null id is the "took nothing"
@@ -178,6 +198,12 @@ namespace PrincesPalace
             // clears itself on the way out through the settlement below.
             Fight,
 
+            // A shop. THE SECOND ROOM THAT LEADS TO A SCREEN, and therefore
+            // the second that must not clear itself on arrival -- the stock
+            // is rolled and persisted here, and the room clears when the
+            // player leaves, through LeaveShop.
+            Shop,
+
             // Anything else resolved on the spot and the room is cleared.
             Resolved,
         }
@@ -201,6 +227,21 @@ namespace PrincesPalace
             {
                 RoomResolver.Reset();
                 return Arrival.Fight;
+            }
+
+            // A SHOP RESOLVES INTO A SCREEN, NOT INTO A MESSAGE.
+            //
+            // The stock is rolled AFTER MoveTo above has already persisted,
+            // and is persisted again itself, which is what makes quitting
+            // inside a shop unable to reroll it -- the same property
+            // RoomResolver's treasure stream exists for, stated as an
+            // ordering rather than left to luck. No ClearCurrentRoom: the
+            // room is still live until LeaveShop says otherwise.
+            if (target.Type == RoomType.Shop)
+            {
+                RoomResolver.Reset();
+                EnsureShopStock();
+                return Arrival.Shop;
             }
 
             // Everything else resolves HERE and the map redraws, which is where

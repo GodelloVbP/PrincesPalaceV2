@@ -152,6 +152,68 @@ namespace PrincesPalace
                     .FirstOrDefault(d => d != null && d.id == c.definitionId))));
         }
 
+        // WHAT "ONE ROLLED COPY" MEANS, WITH TWO CALLERS.
+        //
+        // The reward path (Roll, below) and the shop's gear shelf
+        // (ShopStock.RollGear) must not drift on this: a shop card and a
+        // fight reward are the same object rolled the same way, and a second
+        // copy of the three axes would be a second rulebook (docs/PLAN_SHOP.md
+        // §2d). Extracted rather than reimplemented, so the extraction is a
+        // pure move -- the draw ORDER inside it (plus, then rift tier, then
+        // which modifiers) is what a seeded stream reproduces, and reordering
+        // it would renumber every reward every existing seed has ever rolled.
+        //
+        // The pools come in as a Context rather than being looked up per
+        // item: they are read once per offer set, ContentDatabase does not
+        // change mid-roll, and building them per item would be the same
+        // answer computed N times.
+        public readonly struct RollContext
+        {
+            public readonly IReadOnlyList<string> WeaponModifiers;
+            public readonly IReadOnlyList<string> ArmorModifiers;
+            public readonly IReadOnlyDictionary<string, ItemKind> KindById;
+
+            public RollContext(IReadOnlyList<string> weaponModifiers, IReadOnlyList<string> armorModifiers,
+                IReadOnlyDictionary<string, ItemKind> kindById)
+            {
+                WeaponModifiers = weaponModifiers;
+                ArmorModifiers = armorModifiers;
+                KindById = kindById;
+            }
+        }
+
+        public static RollContext BuildRollContext()
+        {
+            return new RollContext(
+                ModifierPool(weaponPool: true),
+                ModifierPool(weaponPool: false),
+                ContentDatabase.Items
+                    .Where(i => i != null && !string.IsNullOrEmpty(i.id))
+                    .ToDictionary(i => i.id, i => i.kind));
+        }
+
+        // One candidate, honed. WHICH POOL, not whether to roll at all -- a
+        // staff (kind == ItemKind.Weapon) draws only offensive ids,
+        // everything else equippable only defensive ones. An id this roll
+        // cannot find in ContentDatabase.Items (should not happen -- every
+        // candidate came from ContentDatabase.Items itself) defaults to the
+        // defensive pool, the same "unknown reads as armour" posture
+        // ModifierPool's own tolerant default takes.
+        public static ItemOffer RollOne(ItemOffer offer, RollContext context, EncounterClass encounter,
+            int favor, Func<int, int> nextIndex)
+        {
+            int plus = RarityTable.RollPlus(encounter, favor, nextIndex);
+            var riftTier = ModifierTable.RollRiftTier(encounter, favor, nextIndex);
+
+            bool isWeapon = context.KindById != null
+                && context.KindById.TryGetValue(offer.ItemId, out var kind)
+                && kind == ItemKind.Weapon;
+            var modifierPool = isWeapon ? context.WeaponModifiers : context.ArmorModifiers;
+            var modifiers = ModifierTable.PickModifiers(modifierPool, (int)riftTier, nextIndex);
+
+            return offer.WithPlus(plus).WithModifiers(riftTier, modifiers);
+        }
+
         // The offers, each with its own independently rolled plus.
         //
         // `nextIndex` is upper-bound-exclusive and injected, matching the shape
@@ -178,11 +240,7 @@ namespace PrincesPalace
             // live query: it is read once per offer below, not once per
             // effect, and ContentDatabase.Items/Modifiers do not change
             // mid-roll.
-            var weaponModifierPool = ModifierPool(weaponPool: true);
-            var armorModifierPool = ModifierPool(weaponPool: false);
-            var itemKindById = ContentDatabase.Items
-                .Where(i => i != null && !string.IsNullOrEmpty(i.id))
-                .ToDictionary(i => i.id, i => i.kind);
+            var context = BuildRollContext();
 
             // Tier is rolled ONCE for the offer set and plus/RiftTier/which-
             // modifiers are rolled PER ITEM. Rolling tier per item would
@@ -193,21 +251,7 @@ namespace PrincesPalace
             // granularity as plus rather than tier's.
             foreach (var offer in ItemOfferTable.Choose(candidates, targetTier, maxTier, nextIndex, count))
             {
-                int plus = RarityTable.RollPlus(encounter, favor, nextIndex);
-                var riftTier = ModifierTable.RollRiftTier(encounter, favor, nextIndex);
-
-                // WHICH POOL, not whether to roll at all -- a staff (kind ==
-                // ItemKind.Weapon) draws only offensive ids, everything else
-                // equippable only defensive ones. An id this roll cannot
-                // find in ContentDatabase.Items (should not happen -- every
-                // candidate came from ContentDatabase.Items itself) defaults
-                // to the defensive pool, the same "unknown reads as armour"
-                // posture ModifierPool's own tolerant default takes.
-                bool isWeapon = itemKindById.TryGetValue(offer.ItemId, out var kind) && kind == ItemKind.Weapon;
-                var modifierPool = isWeapon ? weaponModifierPool : armorModifierPool;
-                var modifiers = ModifierTable.PickModifiers(modifierPool, (int)riftTier, nextIndex);
-
-                offers.Add(offer.WithPlus(plus).WithModifiers(riftTier, modifiers));
+                offers.Add(RollOne(offer, context, encounter, favor, nextIndex));
             }
 
             return offers;

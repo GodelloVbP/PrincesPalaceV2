@@ -127,7 +127,16 @@ namespace PrincesPalace
         // Written to a sibling .tmp first; only a fully-written temp file
         // ever replaces the real one, and the rename itself is a single
         // filesystem operation rather than an in-place overwrite.
-        public static void Save(SaveData data, int slot)
+        //
+        // RETURNS WHETHER THE WRITE LANDED. It used to return void, and the
+        // failure above was therefore visible only in the console: a shop
+        // purchase could mutate the run in memory, fail to reach the disk,
+        // and tell the player nothing. The caller can now say so
+        // (RunOrchestrator's ShopResult.AppliedNotPersisted). Still does not
+        // THROW -- the exception is caught here on purpose, because a torn
+        // save is a worse answer than a logged one -- so a caller that
+        // ignores the bool behaves exactly as it did before this change.
+        public static bool Save(SaveData data, int slot)
         {
             if (InMemory)
             {
@@ -141,7 +150,7 @@ namespace PrincesPalace
                     MemoryWrittenAt[slot] = ++_memoryClock;
                 }
 
-                return;
+                return true;
             }
 
             string path = PathForSlot(slot);
@@ -187,7 +196,11 @@ namespace PrincesPalace
                 {
                     // Deliberately swallowed — nothing more useful to do.
                 }
+
+                return false;
             }
+
+            return true;
         }
 
         public static void DeleteSlot(int slot)

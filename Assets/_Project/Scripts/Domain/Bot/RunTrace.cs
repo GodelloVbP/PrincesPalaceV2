@@ -96,6 +96,50 @@ namespace PrincesPalace.Domain.Bot
         // which is the honest answer: a player does not re-dress after every
         // fight either.
         public List<EquipTrace> Equipped = new List<EquipTrace>();
+
+        // ---- gold, and what the shop did with it -----------------------------
+        //
+        // GoldOnArrival IS RECORDED FOR EVERY ROOM, not only for shops, and
+        // that is the point of it. §2a priced the shop off medians over WON
+        // fights and lifetime cumulative gold; neither is what a player
+        // actually holds when a door opens (§7.1 point 1). Capturing it at
+        // every step costs one int and answers the question at every depth
+        // rather than only where a shop happened to generate.
+        //
+        // Read BEFORE the room resolves, so a treasure room's stash is not
+        // already in it.
+        public int GoldOnArrival;
+
+        // Zero for every room that is not a shop. GoldSpent is what left the
+        // purse here (purchases and rerolls both), and GoldOnLeave is what
+        // remained -- kept as two numbers rather than one difference so a
+        // sale, which moves gold the other way, cannot hide inside a
+        // subtraction.
+        public int GoldSpent;
+        public int GoldOnLeave;
+
+        // Indexed by ShopStock's section constants. Sized by the runner, so
+        // a section added later widens these without a shape change here.
+        public int[] PurchasesBySection = new int[0];
+        public int[] RerollsBySection = new int[0];
+
+        // The shelf as it stood when the visit ENDED -- what was offered and
+        // what was taken. "Rerolls followed by no purchase in that section"
+        // and "arrived with less than the cheapest card" are both read off
+        // this plus the counters above.
+        public List<ShopOfferTrace> ShopOffers = new List<ShopOfferTrace>();
+    }
+
+    // One shop card, as the trace records it. Deliberately flat strings and
+    // ints rather than the live ShopStockEntry: a trace row is written once
+    // and read by a Python merge, so it carries what a report needs and not
+    // an object that can still change.
+    public sealed class ShopOfferTrace
+    {
+        public string Kind = "";
+        public string ContentId = "";
+        public int Price;
+        public bool Sold;
     }
 
     // One whole run, one archetype, one profile, one seed.
