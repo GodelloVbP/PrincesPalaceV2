@@ -337,11 +337,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .Styled(TypographyRole.TacticalData);
 
             var sellOne = Ui.Button($"ShopPackRow{index}SellOne", UiStrings.ShopSellOneButton,
-                    new UiVec(90f, 40f), 14, Place.At(330f, 0f))
+                    new UiVec(90f, 40f), 14, Place.At(320f, 0f))
                 .Themed(ButtonTheme.Green);
 
+            // 120 wide, not 90: UiTextFitAudit measured "SELL ALL 99" (the
+            // string's AuditSample) at 109px at size 14, and this was the
+            // first scene build to run it against this screen. Sits flush
+            // to the row's right edge (430 + 60 = 490 = RowWidth / 2);
+            // SellOne moved 10px left to keep a 5px gap.
             var sellAll = Ui.Button($"ShopPackRow{index}SellAll", UiStrings.ShopSellAllButton,
-                    new UiVec(90f, 40f), 14, Place.At(430f, 0f))
+                    new UiVec(120f, 40f), 14, Place.At(430f, 0f))
                 .Themed(ButtonTheme.Crimson)
                 .Inactive();
 
