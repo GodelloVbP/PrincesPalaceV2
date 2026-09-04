@@ -43,5 +43,23 @@ namespace PrincesPalace.Domain.Stage
         // not breathe", because the value that says so is the one that means
         // unset. Nothing needs it today; a statue would.
         public float breath;
+
+        // WHETHER THIS ACTOR FLIES, and how. Absent (null) or all-zero means
+        // grounded, which is every actor but one. Stage pixels, not canvas
+        // pixels -- see HoverSpec for why the difference matters at depth.
+        public RawHover hover;
+    }
+
+    [Serializable]
+    public class RawHover
+    {
+        // Resting altitude above the ground line.
+        public float height;
+
+        // Excursion either side of that altitude over one period.
+        public float bob;
+
+        // Zero means HoverCurve.DefaultPeriodSeconds.
+        public float periodSeconds;
     }
 }

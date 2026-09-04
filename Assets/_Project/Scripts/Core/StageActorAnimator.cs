@@ -150,6 +150,23 @@ namespace PrincesPalace
         private float _stretch;
         private float _breath;
 
+        // THE TWO DISPLACEMENTS, held the same way and for the same reason.
+        // A travel is transient and belongs to a beat -- lunge, recoil,
+        // charge, the anticipation crouch. A hover is continuous and belongs
+        // to an actor that flies (StanceManifest's hover block, driven every
+        // frame from FightController's idle loop like the breath). Composed
+        // in WritePosition, so the idle driver pushing a hover cannot
+        // overwrite a lunge mid-arc and a lunge ending cannot drop a flyer
+        // onto the floor. Nothing here writes anchoredPosition any other way.
+        private Vector2 _travel;
+        private float _hover;
+
+        // Whether WritePosition has pushed the foot shadow off its own zero
+        // to hold it on the ground under a hover -- so a grounded figure's
+        // shadow is never written at all, and a flyer landing gets its one
+        // write back to zero.
+        private bool _shadowHeld;
+
         public Vector2 Home => _home;
 
         // The depth scale the slot carries, which the stretch multiplies onto.
@@ -222,7 +239,11 @@ namespace PrincesPalace
             // overload's whole job is to read what is there -- and the animator
             // is the one thing that knows exactly how much of what is there is
             // its own doing.
-            Rehome(_rect.anchoredPosition, UndeformedScale());
+            // AND WITHOUT THE DISPLACEMENTS, for the same reason as the scale:
+            // a flyer's rect sits its hover above the mark on every frame it
+            // exists for, and reading that back as the mark would fold the
+            // hover in and lift the figure again on the next write.
+            Rehome(_rect.anchoredPosition - _travel - new Vector2(0f, _hover), UndeformedScale());
         }
 
         // The authoritative form: the caller states the mark and the size, and
@@ -259,8 +280,10 @@ namespace PrincesPalace
             // can see.
             _stretch = 0f;
             _breath = 0f;
+            _travel = Vector2.zero;
+            _hover = 0f;
 
-            _rect.anchoredPosition = mark;
+            WritePosition();
             WriteScale();
         }
 
@@ -326,7 +349,7 @@ namespace PrincesPalace
                 // than stacking on it — stacking would compound the offset and
                 // drag the figure across the field.
                 StopCoroutine(_running);
-                _rect.anchoredPosition = _home;
+                SetTravel(Vector2.zero);
                 ApplyStretch(0f);
             }
 
@@ -352,7 +375,9 @@ namespace PrincesPalace
 
             if (_rect != null)
             {
-                _rect.anchoredPosition = _home;
+                _travel = Vector2.zero;
+                _hover = 0f;
+                WritePosition();
 
                 // The stretch too. A coroutine stopped mid-arc leaves the
                 // figure deformed, and unlike a position offset that is not
@@ -454,19 +479,20 @@ namespace PrincesPalace
             // while the figure was still sliding back, leaving it parked
             // mid-stage. Anything driven by a beat has to run on the beat's own
             // clock or it desynchronises from the thing it illustrates.
-            var target = _home + offset;
+            var target = offset;
 
             // The strike leaves from wherever the crouch got to, not from the
             // mark. Written as a variable rather than reading the live rect
-            // unconditionally so the no-lead path still passes _home exactly,
-            // which is what makes this change invisible to every existing
-            // caller: a rect nudged by something else would otherwise start
-            // the tween somewhere new.
-            var from = _home;
+            // unconditionally so the no-lead path still passes zero travel
+            // exactly, which is what makes this change invisible to every
+            // existing caller. Travel space throughout: offsets from the mark,
+            // never absolute positions, so a hover under the figure is never
+            // read back into the tween.
+            var from = Vector2.zero;
             if (leadSeconds > 0f)
             {
                 yield return Anticipate(offset, FightBeatPlayer.Scaled(leadSeconds));
-                from = _rect.anchoredPosition;
+                from = _travel;
             }
 
             float outFor = outSeconds < 0f ? LungeSeconds : outSeconds;
@@ -476,8 +502,8 @@ namespace PrincesPalace
                 yield return new WaitForSeconds(holdSeconds);
             }
 
-            yield return TweenBack(target, _home, FightBeatPlayer.Scaled(ReturnSeconds));
-            _rect.anchoredPosition = _home;
+            yield return TweenBack(target, Vector2.zero, FightBeatPlayer.Scaled(ReturnSeconds));
+            SetTravel(Vector2.zero);
             _running = null;
         }
 
@@ -499,18 +525,18 @@ namespace PrincesPalace
         // slides a figure through the floor.
         private IEnumerator Anticipate(Vector2 offset, float seconds)
         {
-            var back = _home - offset * AnticipationFraction;
+            var back = -offset * AnticipationFraction;
 
             for (float t = 0f; t < seconds; t += Time.deltaTime)
             {
                 float n = t / seconds;
                 float k = n * n;
-                _rect.anchoredPosition = Vector2.Lerp(_home, back, k);
+                SetTravel(Vector2.Lerp(Vector2.zero, back, k));
                 ApplyStretch(AnticipationStretch * k);
                 yield return null;
             }
 
-            _rect.anchoredPosition = back;
+            SetTravel(back);
             ApplyStretch(AnticipationStretch);
         }
 
@@ -551,12 +577,12 @@ namespace PrincesPalace
                 }
 
                 previous = at;
-                _rect.anchoredPosition = at;
+                SetTravel(at);
                 ApplyStretch(OutStretch * Arc(n));
                 yield return null;
             }
 
-            _rect.anchoredPosition = to;
+            SetTravel(to);
             ApplyStretch(0f);
         }
 
@@ -588,12 +614,12 @@ namespace PrincesPalace
             for (float t = 0f; t < seconds; t += Time.deltaTime)
             {
                 float n = t / seconds;
-                _rect.anchoredPosition = Vector2.Lerp(from, to, Mathf.SmoothStep(0f, 1f, n));
+                SetTravel(Vector2.Lerp(from, to, Mathf.SmoothStep(0f, 1f, n)));
                 ApplyStretch(BackStretch * Arc(n));
                 yield return null;
             }
 
-            _rect.anchoredPosition = to;
+            SetTravel(to);
             ApplyStretch(0f);
         }
 
@@ -767,6 +793,66 @@ namespace PrincesPalace
 
             _breath = amount;
             WriteScale();
+        }
+
+        // ---- the altitude a flyer holds --------------------------------------
+
+        // How far above its mark this figure rides right now, in stage pixels.
+        //
+        // Pushed in by FightController's idle loop from HoverCurve, the same
+        // way the breath is and for the same reasons (see SetBreath): this
+        // class knows nothing about which actors fly, and a value pushed from
+        // outside is a value a test can pin. Unlike the breath it is pushed
+        // in EVERY stance but defeated -- a flyer is airborne while it casts
+        // and while it is hit -- and it composes with a travel rather than
+        // stopping for one, so a lunge leaves from the air and returns to it.
+        public void SetHover(float pixels)
+        {
+            if (_rect == null) return;
+            if (Mathf.Abs(_hover - pixels) < 0.01f) return;
+
+            _hover = pixels;
+            WritePosition();
+        }
+
+        private void SetTravel(Vector2 offset)
+        {
+            _travel = offset;
+            WritePosition();
+        }
+
+        // THE ONE PLACE anchoredPosition IS ASSIGNED, WriteScale's twin.
+        private void WritePosition()
+        {
+            if (_rect == null) return;
+
+            _rect.anchoredPosition = _home + _travel + new Vector2(0f, _hover);
+
+            // THE SHADOW STAYS ON THE GROUND. The foot shadow is the slot's
+            // first child (FightScreen builds it there and PlaceShadow reads it
+            // there), so lifting the slot lifts the shadow with it -- and a
+            // shadow hanging in the air under a flying figure is the one thing
+            // that says "floating sprite" rather than "flying creature". Held
+            // down by the inverse offset, in the slot's own scaled space,
+            // because the hover is applied in the parent's.
+            //
+            // Only ever written while a hover is on, plus the one write back
+            // to zero when it comes off: a grounded figure's shadow is
+            // PlaceShadow's alone. PlaceShadow re-zeroes the y on every stage
+            // repaint; the next hover push (every frame for a flyer, since it
+            // bobs) puts it back, so a repaint costs one frame of shadow.
+            if (_hover != 0f || _shadowHeld)
+            {
+                if (_rect.childCount > 0 && _rect.GetChild(0) is RectTransform shadow)
+                {
+                    float scaleY = Mathf.Abs(_rect.localScale.y) < 0.0001f ? 1f : _rect.localScale.y;
+                    var at = shadow.anchoredPosition;
+                    at.y = -_hover / scaleY;
+                    shadow.anchoredPosition = at;
+                }
+
+                _shadowHeld = _hover != 0f;
+            }
         }
 
         // THE ONE PLACE localScale IS ASSIGNED.

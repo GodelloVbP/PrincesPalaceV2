@@ -50,7 +50,8 @@
     {
       "spritePath": "Characters/owl",
       "groundLine": 8,
-      "_hoverNote": "Odette FLIES. Her five airborne stances were sliced with a 35px upward nudge (tools/slice_actor_sheet.py --nudge ... --max-ground-spread 40) so their talons hang 35px above this ground line while defeated lies on it -- see Art/Characters/owl/README.md. The ground line itself is the canvas pad, same as every other actor; the hover lives in the drawings' placement, not in this number."
+      "hover": { "height": 70, "bob": 10, "periodSeconds": 2.4 },
+      "_hoverNote": "Odette FLIES. hover.height is her resting altitude above the ground line in STAGE pixels and hover.bob the excursion either side of it (HoverCurve); FightController pushes it every frame in every stance but defeated, and the animator composes it with lunges and recoils. Height 70 is what lifts her body clear of the front-row figure standing in front of her far slot -- see Art/Characters/owl/README.md. All six stills stand on the same floor; nothing about the hover is baked into the drawings."
     },
     {
       "spritePath": "Characters/sheep",

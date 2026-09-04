@@ -38,23 +38,31 @@ resized. Defeated legitimately loses mass.
 ```
 python tools/slice_actor_sheet.py --sheet Assets/_Project/Art/Characters/owl/sheet_poses.png \
     --actor Characters/owl --stances idle,attack,cast,hurt,defeated,victory \
-    --key white_flood --pocket-max-area 4000 \
-    --nudge idle:0,-35 --nudge attack:0,-35 --nudge cast:0,-35 --nudge hurt:0,-35 --nudge victory:0,-35 \
-    --max-ground-spread 40 --prune
+    --key white_flood --pocket-max-area 4000 --prune
 ```
 
-- `delivery_scale` 1.0: idle content height 345px against Shawn's delivered
-  349px, so the two stand at one height with no correction.
-- **The hover.** The stage pins every actor's canvas bottom to one authored
-  ground line, and the slicer refuses stances whose lowest rows differ by
-  more than 6px because that is how a figure accidentally floats. Odette
-  floats on purpose: the five airborne stances are nudged 35px up (a tenth
-  of her height) and `defeated` stays on the floor, with the check widened
-  to 40px for this one run. Canvas 634x401, `groundLine 8`.
-- Two slicer flags were added for her: `--pocket-max-area` (restored after
-  the tools rewrite dropped the treant's per-sheet cap) and
-  `--max-ground-spread`, plus the canvas making room for an upward nudge so
-  the crown is not clipped.
+No nudges. Canvas 649x366, `groundLine 8`, `delivery_scale` 1.0: idle content
+height 345px against Shawn's delivered 349px, so the two stand at one height
+with no correction.
+
+- **The hover moved out of the drawings.** The first delivery baked a 35px
+  upward nudge into the five airborne stances so Odette would clear the
+  party's front row. It was replaced the same day: she was still hidden
+  behind the front-row figure at her far slot, a baked height cannot be
+  tuned without re-slicing (every fix meant a new sheet), and a still cannot
+  bob — a flyer held dead level reads as pasted on, not aloft. The altitude
+  now lives in `StanceManifest.json`'s `hover` block for this actor and is
+  pushed every frame, in every stance but `defeated`, by
+  `FightController.StageVisuals.HoverIdle` calling
+  `StageActorAnimator.SetHover`. All six stills sit on the one shared floor
+  the slicer checks by default.
+- `--max-ground-spread` stays available on the slicer for a future actor
+  whose drawings must legitimately disagree about where the floor is; Odette
+  no longer needs it now that her lift is a runtime channel instead of a
+  baked offset.
+- `--pocket-max-area` was restored after the tools rewrite dropped the
+  treant's per-sheet cap; the wings enclose checkerboard pockets well over
+  the 200px default speck cap.
 
 ## Content
 

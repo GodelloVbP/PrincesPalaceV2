@@ -30,11 +30,13 @@ namespace PrincesPalace.Domain.Stage
 
         private readonly Dictionary<string, float> _groundLines;
         private readonly Dictionary<string, float> _breaths;
+        private readonly Dictionary<string, HoverSpec> _hovers;
 
         public StanceManifest(RawStanceManifest raw)
         {
             _groundLines = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
             _breaths = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
+            _hovers = new Dictionary<string, HoverSpec>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var actor in raw?.actors ?? new List<RawStanceActor>())
             {
@@ -46,7 +48,24 @@ namespace PrincesPalace.Domain.Stage
                 string path = Normalise(actor.spritePath);
                 _groundLines[path] = actor.groundLine;
                 _breaths[path] = actor.breath;
+                if (actor.hover != null)
+                {
+                    _hovers[path] = new HoverSpec(actor.hover.height, actor.hover.bob, actor.hover.periodSeconds);
+                }
             }
+        }
+
+        // Whether and how this actor flies. Grounded for anyone without a
+        // hover block, which is the whole roster but Odette; the idle driver
+        // asks every frame and does nothing for a grounded answer.
+        public HoverSpec HoverFor(string spritePath)
+        {
+            if (string.IsNullOrWhiteSpace(spritePath) || !_hovers.TryGetValue(Normalise(spritePath), out var spec))
+            {
+                return HoverSpec.Grounded;
+            }
+
+            return spec;
         }
 
         public IReadOnlyCollection<string> ActorPaths => _groundLines.Keys as IReadOnlyCollection<string>;

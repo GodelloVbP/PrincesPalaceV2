@@ -259,6 +259,71 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(mark.x, animator.Home.x, 0.5f, "the re-homes moved the mark itself");
         }
 
+        // A FLYER'S ALTITUDE IS A CHANNEL, NOT A POSITION. The hover is pushed
+        // in every frame like the breath and a lunge is a travel on top of it;
+        // if either wrote anchoredPosition outright, the lunge would end by
+        // dropping the figure onto the floor (or the hover would yank it out
+        // of its swing). Driven directly rather than through the manifest, so
+        // it holds for any actor the manifest ever calls airborne.
+        [UnityTest]
+        public IEnumerator AFlyerRidesItsHoverThroughALungeAndBack()
+        {
+            yield return AFightAgainst("Enemies/rat");
+
+            var slot = (RectTransform)Named("Enemy0Slot").transform;
+            var animator = slot.GetComponent<StageActorAnimator>();
+            var mark = animator.Home;
+
+            animator.SetHover(40f);
+
+            Assert.AreEqual(mark.y + 40f, slot.anchoredPosition.y, 0.01f, "the hover did not lift the figure");
+            Assert.AreEqual(mark.y, animator.Home.y, 0.01f, "the hover moved the mark itself");
+
+            // The foot shadow is the slot's first child and must stay on the
+            // ground under a flyer, in the slot's own scaled space. Read on
+            // the same frame as the push, before any stage repaint re-zeroes
+            // it (WritePosition's own note covers that one-frame cost).
+            var shadow = (RectTransform)slot.GetChild(0);
+            Assert.AreEqual(-40f / slot.localScale.y, shadow.anchoredPosition.y, 1.5f,
+                "the shadow rose with the figure -- it reads as a floating sprite, not a flying creature");
+
+            animator.Play(new Vector2(120f, 0f), 0.05f);
+
+            float deadline = Time.realtimeSinceStartup + 3f;
+            while (animator.IsPlaying && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.IsFalse(animator.IsPlaying, "the lunge never finished");
+
+            Assert.AreEqual(mark.x, slot.anchoredPosition.x, 0.01f, "the lunge did not come back to its mark");
+            Assert.AreEqual(mark.y + 40f, slot.anchoredPosition.y, 0.01f,
+                "the lunge dropped the flyer onto the floor when it returned");
+        }
+
+        // The reading Rehome() takes the rect as it stands to be the mark.
+        // A flyer's rect stands its hover above the mark on every frame, so
+        // without the correction each re-home would lift the mark by one
+        // hover and the figure would climb -- the same fold the breath test
+        // above guards on the scale axis.
+        [UnityTest]
+        public IEnumerator ReHomingAFlyerDoesNotFoldTheHoverIntoItsMark()
+        {
+            yield return AFightAgainst("Enemies/rat");
+
+            var slot = (RectTransform)Named("Enemy0Slot").transform;
+            var animator = slot.GetComponent<StageActorAnimator>();
+            var mark = animator.Home;
+
+            animator.SetHover(40f);
+
+            for (int i = 0; i < 4; i++)
+            {
+                animator.Rehome();
+                yield return null;
+            }
+
+            Assert.AreEqual(mark.y, animator.Home.y, 0.01f,
+                $"four re-homes took the mark from {mark.y:F2} to {animator.Home.y:F2} - the hover is being folded in");
+        }
+
         // A swing and a breath both deform the figure, and they overlap
         // constantly -- something is always breathing when something else
         // lands. The failure mode is not subtle: two callers each assigning

@@ -689,6 +689,7 @@ namespace PrincesPalace
             // the next encounter's are different objects -- the old entries
             // would otherwise sit here for the session's life.
             _idleClock.Clear();
+            _hoverClock.Clear();
 
             if (_idling != null || !isActiveAndEnabled) return;
 
@@ -743,10 +744,24 @@ namespace PrincesPalace
             if (slot != null) slot.GetComponent<StageActorAnimator>()?.SetBreath(amount);
         }
 
-        // Advances one idle figure's breath.
+        // A flyer's own clock, separate from the breath's because it does not
+        // stop when the breath does: the breath is idle-only, the hover is
+        // every stance but defeated.
+        private readonly Dictionary<CombatantState, float> _hoverClock =
+            new Dictionary<CombatantState, float>();
+
+        // Advances one idle figure's breath, and one flyer's hover.
         private void BreatheIdle(CombatantState combatant, int index)
         {
             if (combatant == null) return;
+
+            // BEFORE THE IDLE GATE BELOW, because a flyer rides its hover in
+            // every stance but defeated -- Odette is airborne while she
+            // casts, while she is hit and while she lunges (the animator
+            // composes the two, see StageActorAnimator.WritePosition). Only
+            // the fallen touch the floor, and they do so at once: the drop is
+            // the knock-down, not a glide.
+            HoverIdle(combatant, index);
 
             // StanceOf, not _stance, so a corpse is excluded by the same rule
             // the rest of the stage reads it by -- including the beat-confirmed
@@ -784,6 +799,37 @@ namespace PrincesPalace
             BreatheFigure(combatant,
                 BreathCurve.At(clock,
                                StanceManifestLoader.Manifest.BreathFor(SpriteFolderFor(combatant))));
+        }
+
+        private void HoverIdle(CombatantState combatant, int index)
+        {
+            var spec = StanceManifestLoader.Manifest.HoverFor(SpriteFolderFor(combatant));
+            if (!spec.IsAirborne) return;
+
+            if (StanceOf(combatant) == FightSession.Stances.Defeated)
+            {
+                _hoverClock.Remove(combatant);
+                HoverFigure(combatant, 0f);
+                return;
+            }
+
+            if (!_hoverClock.TryGetValue(combatant, out float clock))
+            {
+                clock = BreathCurve.PhaseFor(index);
+            }
+
+            // Same clock rules as the breath: unscaled by BeatSpeedMultiplier,
+            // collapsed by BreathSpeedMultiplier in a test.
+            clock += Time.unscaledDeltaTime * BreathSpeedMultiplier;
+            _hoverClock[combatant] = clock;
+
+            HoverFigure(combatant, HoverCurve.At(clock, spec));
+        }
+
+        private void HoverFigure(CombatantState combatant, float pixels)
+        {
+            var slot = SlotFor(combatant);
+            if (slot != null) slot.GetComponent<StageActorAnimator>()?.SetHover(pixels);
         }
 
         // Puts every figure back for a fresh encounter. The fade is the reason

@@ -150,5 +150,50 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(StanceManifest.DefaultGroundLine, manifest.GroundLineFor("Enemies/golem"), 0.001f);
             Assert.AreEqual(StanceManifest.DefaultBreath, manifest.BreathFor("Enemies/golem"), 0.0001f);
         }
+
+        // ---- whether an actor flies --------------------------------------------
+
+        // Every actor but one is grounded, and says nothing about it: an
+        // absent hover block is the default, not an error.
+        [Test]
+        public void AnActorWithNoHoverBlock_IsGrounded()
+        {
+            var manifest = Build(Actor("Enemies/rat", 8f));
+
+            Assert.IsFalse(manifest.HoverFor("Enemies/rat").IsAirborne);
+            Assert.IsFalse(manifest.HoverFor("Enemies/nobody").IsAirborne);
+        }
+
+        [Test]
+        public void AnAuthoredHover_ComesBackWithItsNumbers()
+        {
+            var manifest = Build(new RawStanceActor
+            {
+                spritePath = "Characters/owl",
+                groundLine = 8f,
+                hover = new RawHover { height = 70f, bob = 10f, periodSeconds = 2.4f },
+            });
+
+            var spec = manifest.HoverFor("Characters/owl");
+            Assert.IsTrue(spec.IsAirborne);
+            Assert.AreEqual(70f, spec.Height, 0.0001f);
+            Assert.AreEqual(10f, spec.Bob, 0.0001f);
+            Assert.AreEqual(2.4f, spec.PeriodSeconds, 0.0001f);
+        }
+
+        // A block that is present but all zero is what JsonUtility hands back
+        // for `"hover": {}` -- grounded, the same as absent.
+        [Test]
+        public void AnEmptyHoverBlock_IsGrounded()
+        {
+            var manifest = Build(new RawStanceActor
+            {
+                spritePath = "Characters/owl",
+                groundLine = 8f,
+                hover = new RawHover(),
+            });
+
+            Assert.IsFalse(manifest.HoverFor("Characters/owl").IsAirborne);
+        }
     }
 }

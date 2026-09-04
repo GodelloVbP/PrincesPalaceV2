@@ -120,7 +120,7 @@ EditMode-testable):
 | `Relics/` | `RelicLoadout` (party-wide relic ownership/assignment) |
 | `Rewards/` | `CombatReward`, `CharacterReward`, offer tables |
 | `Rng/` | `SeededRandom` (built, not yet wired — see `AUDIT.md`) |
-| `Stage/` | Stage-side/depth/layout pure geometry, `SpriteFacing`, `StanceManifest` (authored ground line + breath, one row per actor — no per-stance timing, because a stance is one drawing), `BreathCurve` (the continuous scale transform every idle figure gets, and the only thing that moves a figure between blows — see its own header) |
+| `Stage/` | Stage-side/depth/layout pure geometry, `SpriteFacing`, `StanceManifest` (authored ground line + breath, one row per actor — no per-stance timing, because a stance is one drawing), `BreathCurve` (the continuous scale transform every idle figure gets, and the only thing that moves a figure between blows — see its own header), `HoverCurve` + `HoverSpec` (the altitude an airborne actor rides at and bobs around, authored per actor as the manifest's `hover` block; Odette is the one flyer) |
 | `Stats/` | `StatBlock`, `StatType`, `AbilityDerivation` |
 
 ## Core map
