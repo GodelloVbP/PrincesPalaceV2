@@ -201,15 +201,16 @@ which):
   through one runtime path
 - `sheet_slicing.py` — cell-cutting geometry shared by the two grid slicers
   (not run directly)
-- `actor_stance_qa.py` — visual QA contact sheets + onion skins for actor
-  stance art, rendered offline from the committed PNGs without booting Unity
+- `actor_stance_qa.py` — visual QA contact sheets for actor stance STILLS,
+  rendered offline from the committed PNGs without booting Unity
   (`screenshot.ps1 -Runtime` covers animation that only exists in-engine);
-  also reports the **redraw ratio** — churn per step over how far the figure
-  actually moves — and ranks the roster by it, which is the check that names
-  a sheet whose frames are redrawn rather than animated
+  each cell shows the canvas bounds, the ground-line guide, the alpha
+  centroid and a scale caption; a folder still holding old per-frame
+  sequences is skipped with a notice rather than misread as a stance
 - `capture_strip.py` — assembles one PlayMode frame-series capture into a
   stamped contact strip and a real-time GIF, plus a `before_vs_after.png`
-  once both labels exist; reuses `rig_clip_qa.py`'s frame discovery
+  once both labels exist; frame discovery is self-contained, inlined when
+  `rig_clip_qa.py` was retired
 - `static_pilot_qa.ps1` — the static-combat pilot's one-command loop:
   `graphics_tests.ps1 -Filter StaticPilotStageCaptureTests -Label <label>`,
   copies the frames back from the runner copy, then runs `capture_strip.py`
@@ -226,8 +227,8 @@ which):
 
 ## Tests map
 
-`Assets/_Project/Scripts/Tests/EditMode/` — 39 test classes, Domain-only.
-`Assets/_Project/Scripts/Tests/PlayMode/` — 49 test classes (`GameplayTestBase.cs`
+`Assets/_Project/Scripts/Tests/EditMode/` — 178 test classes, Domain-only.
+`Assets/_Project/Scripts/Tests/PlayMode/` — 99 test classes (`GameplayTestBase.cs`
 is the shared base, not a suite itself). Core+Domain. Class counts are from
 `tools/test.ps1 -List`, the live, authoritative source — trust it over a
 file count, since a single file can hold more than one test fixture.

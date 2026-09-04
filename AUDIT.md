@@ -1600,7 +1600,7 @@ The GUID-consistency assertion added while hardening against theory 1 is kept. I
 the wrong cause but is a reasonable check in its own right, and removing it now would be
 churn.
 
-### 59. A flat-art CHARGE lands its blow before the charger has crossed, and its own travel floor is why
+### ~~59. A flat-art CHARGE lands its blow before the charger has crossed, and its own travel floor is why~~ — fixed in `d0f9944`: `FightBeatPlayer.Charge` now returns the `outSeconds` it computes, and `PlayBeats` waits out that exact value (`StaticSwing.Windup(seconds)`) before firing the impact, the same shape `StaticSwing` already gives a Lunge. The contact effects fire too, burst only (no slash arc) per `docs/STATIC_COMBAT_ART_DEEP_DIVE.md`'s Blunt row
 
 `FightBeatPlayer.Charge` (`Core/FightBeatPlayer.cs:622-639`) times the rush so
 the figure arrives on the impact frame: `outSeconds = Max(ChargeMinOutSeconds,

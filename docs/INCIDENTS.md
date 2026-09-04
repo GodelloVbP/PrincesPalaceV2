@@ -362,3 +362,41 @@ irreplaceable legible only to the tool most likely to overwrite it.
 
 A pin can be updated. Art is meant to change; it is meant to cost one deliberate
 edit in the same commit as the art, rather than happening while nobody chose it.
+
+## Two sessions on `static-pilot`, same working tree, same day (2026-09-04)
+
+The rig-removal and static-art work landed as two sessions committing to the
+same branch and the same working tree at once, and none of `docs/WORKFLOW.md`
+§4's rules held for either of them.
+
+`d761b0d` (the treant's six-still delivery, from the other session) landed
+between two of this session's own commits, `a9c0d49` and `5e7d24e`. Both
+sessions were rewriting `tools/slice_actor_sheet.py` the same afternoon --
+from a multi-sheet frame slicer to a single-sheet key-pose slicer -- and the
+version that shipped in `d761b0d` already contains that rewrite: `5e7d24e`'s
+own commit message describes making the same cut, but its diff never touches
+the file, because there was nothing left in it to change. This session's
+in-progress rework was overwritten on disk before it was ever committed, with
+no merge and no conflict to notice it by. WORKFLOW.md §4's "one dedicated
+branch per session" is the rule that was skipped; two branches would have
+turned this into a reviewable merge instead of a silent loss.
+
+Two `run_tests_parallel.ps1` gate runs came back unusable mid-session,
+clobbered by a concurrent Unity batchmode run from the other session.
+WORKFLOW.md §4's "check the TestRunner lock before test runs" is the rule
+that would have caught it before the run started rather than after it
+finished.
+
+An untracked file, `Art/Rigs/rat/full_body_for_skinning.png`, went with
+`Art/Rigs/` when `a9c0d49` deleted the directory. It was never committed, so
+the deletion left nothing in history to recover it from -- unrecoverable, not
+merely inconvenient. WORKFLOW.md §4's "nothing uncommitted at session end" is
+the rule that would have kept a git-recoverable copy of it past the moment
+its own directory was removed.
+
+None of these is a new failure mode. They are three rules `docs/WORKFLOW.md`
+§4 already states, not followed by both sessions on the same day -- worth
+recording because the two-sessions-one-tree hazard has cost real work before
+(see "`git add -A` deleted another session's work (once)", above) and will
+again the next time a session assumes it has the tree to itself without
+checking.
