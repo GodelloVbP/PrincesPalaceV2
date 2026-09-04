@@ -303,11 +303,28 @@ namespace PrincesPalace
                     foreach (var line in beat.Messages) PushLine?.Invoke(line);
                 }
 
-                // The poses the session recorded, applied to the stage. Every
-                // combatant the beat mentions, not just the actor: a blow poses
-                // the one taking it too, which is what makes a hit visible on
-                // the stage and not only in the log.
-                foreach (var pair in beat.Stances) SetStance?.Invoke(pair.Key, pair.Value);
+                // THE ACTOR'S POSE NOW; EVERYONE ELSE'S AT THE IMPACT INSTANT.
+                //
+                // The beat records a stance for every combatant it mentions,
+                // and all of them used to be applied here, when the beat
+                // opened. For the one taking the blow that is the wrong
+                // moment: the victim wore its "hurt" drawing through the
+                // attacker's whole wind-up, so a figure flinched from a swing
+                // that had not left its mark. Invisible while a still-drawing
+                // attacker had no wind-up at all (impact WAS the opening
+                // frame); four frames of pre-emptive flinching once
+                // StaticStancePlayback gave it one, and a full stance's worth
+                // for any animated attacker or any spell with a travel time.
+                // Cause has to come before effect on the stage as well as in
+                // the log, which is the same argument the two snapshots make.
+                //
+                // The actor is different: its stance IS the wind-up, so it has
+                // to be worn from the first frame. PoseVictims below is the
+                // other half, called from the impact block.
+                if (beat.Actor != null && beat.Stances.TryGetValue(beat.Actor, out var actorStance))
+                {
+                    SetStance?.Invoke(beat.Actor, actorStance);
+                }
 
                 // BEFORE THE LUNGE AND BEFORE THE SPELL, and it yields, so
                 // everything below waits for the figure to arrive. That is the
@@ -380,6 +397,15 @@ namespace PrincesPalace
                 // degradation, not a silence.
                 try
                 {
+                    // FIRST, before the flash: SetStance is what re-syncs the
+                    // hit-flash overlay's silhouette to the drawing under it,
+                    // and a flash shaped like the pose the victim just left
+                    // is worse than no flash. FlinchFrames further down
+                    // resolves each victim's playback off the pose this
+                    // applied, which is the ordering PlaybackFor's own header
+                    // relies on.
+                    PoseVictims(beat);
+
                     PaintVitals?.Invoke(beat.Snapshot);
                     ShowAmount(beat);
                     FlashTarget?.Invoke(beat);
@@ -569,7 +595,7 @@ namespace PrincesPalace
         {
             if (beat.Approach != StageApproach.Lunge) return;
 
-            var (animator, offset) = TravelFor(beat, LungeFraction);
+            var (animator, offset) = TravelFor(beat, staticSwing ? StaticLungeFraction : LungeFraction);
             float hold = Scaled(BeatHoldSeconds) * 0.45f;
             float lead = staticSwing ? StageActorAnimator.AnticipationSeconds : 0f;
             animator?.Play(offset, hold, -1f, lead);
@@ -702,6 +728,18 @@ namespace PrincesPalace
             return (animator, new Vector2(dx, 0f));
         }
 
+        // Every stance the beat recorded for someone OTHER than its actor,
+        // applied on the frame the blow lands. See the note at the top of
+        // PlayBeats for why these do not go on with the actor's.
+        private void PoseVictims(CombatBeat beat)
+        {
+            foreach (var pair in beat.Stances)
+            {
+                if (ReferenceEquals(pair.Key, beat.Actor)) continue;
+                SetStance?.Invoke(pair.Key, pair.Value);
+            }
+        }
+
         // The other half of a blow: the figure taking it flinches AWAY.
         //
         // Away is decided by which side it is on rather than by where the blow
@@ -729,6 +767,18 @@ namespace PrincesPalace
         }
 
         private const float LungeFraction = 0.35f;
+
+        // HOW FAR A STILL-DRAWING SWING TRAVELS. Twice the lean-in above, and
+        // the difference is what the pilot capture showed: at 0.35 the witch
+        // stopped 210px into a ~600px gap, her staff swinging at air a figure
+        // and a half short of Shawn, while his flash and number said he had
+        // been hit. An animated actor's sheet draws its weapon reaching out,
+        // so a lean is enough to sell the contact; a single drawing's weapon
+        // reaches exactly as far as the figure is carried, so the figure has
+        // to be carried to where the weapon lands. Short of Close's 0.78 so
+        // the depth-scaled front figure does not swallow the one it hits.
+        private const float StaticLungeFraction = 0.70f;
+
         private const float RecoilDistance = 45f;
 
         // Nearly all the way. Not all of it -- two figures sharing a mark
