@@ -273,22 +273,6 @@
       "slotSpan": 2
     },
     {
-      "id": "warden",
-      "minFloor": 2,
-      "displayName": "Dungeon Warden",
-      "maxHealth": 105,
-      "speed": 8,
-      "attack": 30,
-      "physicalDefense": 20,
-      "magicalDefense": 20,
-      "expReward": 100,
-      "currencyReward": 60,
-      "isBoss": true,
-      "weakness": "Arcane",
-      "resistance": "Fire",
-      "active": true
-    },
-    {
       "id": "hollow_choir",
       "minFloor": 1,
       "displayName": "The Hollow Choir",
@@ -337,22 +321,6 @@
         }
       ],
       "attackWeight": 0
-    },
-    {
-      "id": "throne_colossus",
-      "minFloor": 3,
-      "displayName": "Throne Colossus",
-      "maxHealth": 140,
-      "speed": 3,
-      "attack": 45,
-      "physicalDefense": 40,
-      "magicalDefense": 15,
-      "expReward": 135,
-      "currencyReward": 82,
-      "isBoss": true,
-      "weakness": "Poison",
-      "resistance": "Physical",
-      "active": true
     }
   ]
 }

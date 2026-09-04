@@ -358,7 +358,8 @@ public static class ContentBuilder
     // zero defense); bog_witch resists the same type Sheep deals, giving
     // Sheep a bad matchup to offset its free win against golem; crystal_bat
     // is brittle but resists Arcane, punishing the same Physical attackers
-    // golem/wolf also punish. warden (the only boss, fought in every
+    // golem/wolf also punish. warden (v1's only boss, since removed; the
+    // note stays for the reasoning) fought in every
     // dungeon clear) deliberately resists Fire — the one type no character
     //'s attackType used at the time — after Poison here once silently
     // gutted the Assassin's execute bonus in every single boss fight.

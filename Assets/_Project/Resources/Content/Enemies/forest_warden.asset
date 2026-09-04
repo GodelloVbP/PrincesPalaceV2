@@ -31,7 +31,7 @@ MonoBehaviour:
   breakShieldPoints: 3
   spritePath: Enemies/forest_warden
   facing: 1
-  sortOrder: 16
+  sortOrder: 15
   skillName: 
   skillPower: 1.5
   skillChance: 0.35

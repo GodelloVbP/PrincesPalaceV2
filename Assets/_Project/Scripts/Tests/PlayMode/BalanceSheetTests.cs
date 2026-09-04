@@ -282,70 +282,11 @@ namespace PrincesPalace.PlayModeTests
                 expectedBossDmg: 28, expectedHitsToDie: 13);
         }
 
-        [Test]
-        public void LowTalentF2_vs_Warden_Step16()
-        {
-            // §P intended: raw 13, afterDef 10, TTK ~26, bossDmg 39,
-            // hitsToDie ~10 -- "dies". Boss HP here (333) is one point below
-            // §P's own stated 334 -- §P's hand-derivation multiplied against
-            // its own PUBLISHED, already-rounded 3.181x figure (105 x 3.181 =
-            // 334.005); the real DifficultyCurve.ScaleHealth keeps full
-            // double precision throughout and floors 105 x 3.180793... =
-            // 333.98 to 333. A rounding-of-a-rounding artifact, not a design
-            // disagreement. raw/afterDef/hitsToDie reproduce §P almost
-            // exactly; TTK (23) sits comfortably in "dies", just short of
-            // §P's ~26.
-            AssertFight("LowTalent@F2 vs warden@16", LowTalentF2(), () => RealEnemy("warden", 16), DamageType.Nature,
-                expectedBossHp: 333, expectedRaw: 13, expectedAfterDef: 10, expectedTtk: 23,
-                expectedBossDmg: 38, expectedHitsToDie: 10);
-        }
-
-        [Test]
-        public void CompetentF3_vs_Warden_Step24()
-        {
-            // §P intended: raw 39, afterDef 32, TTK ~12.5, bossDmg 46,
-            // hitsToDie ~11 -- "survives with heals, thin - okay-ish run".
-            // Every figure lands within a point or two of §P's own.
-            AssertFight("Competent@F3 vs warden@24", CompetentF3(), () => RealEnemy("warden", 24), DamageType.Nature,
-                expectedBossHp: 595, expectedRaw: 39, expectedAfterDef: 32, expectedTtk: 13,
-                expectedBossDmg: 45, expectedHitsToDie: 12);
-        }
-
-        [Test]
-        public void CompetentF3_vs_ThroneColossus_Step24()
-        {
-            // §P intended: raw 39, afterDef 33, TTK ~16, bossDmg 64,
-            // hitsToDie ~8 -- "at death's door - the hard draw". raw/afterDef/
-            // TTK/hitsToDie land within a point of §P; bossDmg (69) runs 5
-            // over §P's 64, still reads as "the hard draw".
-            AssertFight("Competent@F3 vs throne_colossus@24", CompetentF3(), () => RealEnemy("throne_colossus", 24), DamageType.Nature,
-                expectedBossHp: 794, expectedRaw: 39, expectedAfterDef: 33, expectedTtk: 17,
-                expectedBossDmg: 69, expectedHitsToDie: 8);
-        }
-
-        [Test]
-        public void CompetentF5_vs_Warden_Step40()
-        {
-            // §P intended: raw 99, afterDef 82, TTK ~15.5, bossDmg 72,
-            // hitsToDie ~9 -- "dies without talents/relics/potions - the meat".
-            // Every figure lands within a point of §P's own.
-            AssertFight("Competent@F5 vs warden@40", CompetentF5(), () => RealEnemy("warden", 40), DamageType.Nature,
-                expectedBossHp: 1894, expectedRaw: 99, expectedAfterDef: 82, expectedTtk: 16,
-                expectedBossDmg: 71, expectedHitsToDie: 9);
-        }
-
-        [Test]
-        public void CompetentF5_vs_ThroneColossus_Step40()
-        {
-            // §P intended: raw 99, afterDef 86, TTK ~20, bossDmg 94,
-            // hitsToDie ~7 -- "the wall boss". raw/afterDef/TTK match §P
-            // exactly or within a point; bossDmg (108) runs 14 over §P's 94
-            // -- worth a second look (flagged in the session report), though
-            // hitsToDie still reads as "the wall boss".
-            AssertFight("Competent@F5 vs throne_colossus@40", CompetentF5(), () => RealEnemy("throne_colossus", 40), DamageType.Nature,
-                expectedBossHp: 2526, expectedRaw: 99, expectedAfterDef: 86, expectedTtk: 20,
-                expectedBossDmg: 108, expectedHitsToDie: 6);
-        }
+        // The Dungeon Warden and Throne Colossus fights that stood here were
+        // removed with the bosses themselves (2026-09-04): both were v1
+        // placeholders with no art and no kit, and the Forest Troll is the
+        // roster's boss now. Section P's boss bands are therefore unpinned
+        // until a boss with a real kit is authored to them.
 
         // ---- non-boss TTK bands ---------------------------------------------
         //

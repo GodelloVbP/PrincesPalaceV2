@@ -100,22 +100,6 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(1, Resolved["forest_warden"].MinFloor, "forest_warden: minFloor");
         }
 
-        [Test]
-        public void Warden_MatchesD5Table()
-        {
-            AssertStats("warden", hp: 105, speed: 8, atk: 30, pdef: 20, mdef: 20, attackType: DamageType.Physical);
-            Assert.IsTrue(Resolved["warden"].IsBoss);
-            Assert.AreEqual(2, Resolved["warden"].MinFloor, "warden: minFloor");
-        }
-
-        [Test]
-        public void ThroneColossus_MatchesD5Table()
-        {
-            AssertStats("throne_colossus", hp: 140, speed: 3, atk: 45, pdef: 40, mdef: 15, attackType: DamageType.Physical);
-            Assert.IsTrue(Resolved["throne_colossus"].IsBoss);
-            Assert.AreEqual(3, Resolved["throne_colossus"].MinFloor, "throne_colossus: minFloor");
-        }
-
         // The one deliberately non-obvious number in the whole D5 table: no
         // boss's MDEF exceeds 25, because Shawn's Nature basic attack meets
         // enemy MDEF and a high-MDEF boss would wall the only real character.
@@ -123,7 +107,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void NoBossExceedsTheTwentyFiveMdefCap()
         {
-            var bosses = new[] { "hollow_choir", "forest_warden", "warden", "throne_colossus" };
+            var bosses = new[] { "hollow_choir", "forest_warden" };
             foreach (var id in bosses)
             {
                 Assert.LessOrEqual(Resolved[id].BaseStats.magicalDefense, 25,
