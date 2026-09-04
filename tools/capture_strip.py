@@ -44,10 +44,27 @@ try:
 except ImportError:
     sys.exit("Pillow is required: pip install Pillow")
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from rig_clip_qa import discover_frames  # reuse, not a second implementation
-
 TOOLS = os.path.dirname(os.path.abspath(__file__))
+
+
+def discover_frames(stance_dir):
+    """f0.png, f1.png, ... until the sequence breaks -- the same probe order
+    StaticPilotStageCaptureTests wrote them in. Inlined rather than imported:
+    this used to come from tools/rig_clip_qa.py, which no rig pipeline needs
+    any more (the project moved to single-still stances, see
+    docs/STANCE_SHEET_SPEC.md) and was deleted with it. A static-pilot
+    capture is a runtime PlayMode screenshot series, not sliced actor art,
+    so it keeps its own frame folders regardless of that policy change.
+    """
+    frames = []
+    i = 0
+    while True:
+        path = os.path.join(stance_dir, f"f{i}.png")
+        if not os.path.isfile(path):
+            break
+        frames.append(Image.open(path).convert("RGBA"))
+        i += 1
+    return frames
 DEFAULT_ROOT = os.path.join(TOOLS, "screenshots", "runtime", "static_pilot")
 
 # Wide enough that a figure is still readable at a glance, narrow enough that a

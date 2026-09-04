@@ -9,10 +9,9 @@
 # comparison, so the same fixture has to be run twice against two folders and
 # the second run must be byte-for-byte the same procedure as the first.
 #
-# THE REVIEW SPLIT, same as tools/rig_qa.ps1: Claude reads strip.png and
-# timing.json -- frame indices, the impact millisecond, whether anything moved.
-# Only a human can judge whether playback.gif READS as a blow. One run produces
-# both halves.
+# THE REVIEW SPLIT: Claude reads strip.png and timing.json -- frame indices,
+# the impact millisecond, whether anything moved. Only a human can judge
+# whether playback.gif READS as a blow. One run produces both halves.
 #
 # Pure ASCII, no BOM -- CLAUDE.md's PowerShell gotcha applies here too.
 #
@@ -30,7 +29,8 @@ $code = $LASTEXITCODE
 
 # The test runs against the isolated -TestRunner copy (graphics_tests.ps1's own
 # header says why), so Application.dataPath resolves THERE and so does the
-# capture. Copied back the same way rig_qa.ps1 copies its rig frames.
+# capture. Copied back the same way any PlayMode capture tool syncs its
+# frames from the runner copy to main.
 $project = Split-Path $PSScriptRoot -Parent
 $runnerDir = (Split-Path $project -Parent) + "\" + (Split-Path $project -Leaf) +
              "-TestRunner\tools\screenshots\runtime\static_pilot\" + $Label
