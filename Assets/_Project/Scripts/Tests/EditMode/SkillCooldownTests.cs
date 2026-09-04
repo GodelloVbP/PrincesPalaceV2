@@ -19,9 +19,7 @@ namespace PrincesPalace.Domain.Tests
     public class SkillCooldownTests
     {
         private static ResolvedSkill Bolt(int cooldown) =>
-            new ResolvedSkill("bolt", "Bolt", "", "hero", 1, SkillEffect.DamageSingle,
-                SkillTargeting.SingleEnemy, 0, 0, false, 0, 20, ignoresDefense: true,
-                null, SpellPresentation.None, 0, cooldownTurns: cooldown);
+            TestSkills.Bolt(flat: 20, cooldown: cooldown);
 
         private static (FightSession session, CombatantState hero, CombatantState foe) Fight(
             ResolvedSkill skill, RelicEffect? relic = null)

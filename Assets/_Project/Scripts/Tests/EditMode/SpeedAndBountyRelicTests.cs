@@ -141,9 +141,7 @@ namespace PrincesPalace.Domain.Tests
                 var hero = new CombatantState("Shawn", true, 999999, 999, 5, 10);
                 var foe = new CombatantState("Dummy", false, 999999, 0, 10, 11);
 
-                var bolt = new ResolvedSkill("bolt", "Bolt", "", "hero", 1,
-                    SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, 0, 0, false, 0, 1, true,
-                    null, SpellPresentation.None, 0);
+                var bolt = TestSkills.Bolt(flat: 1);
 
                 var relics = relic.HasValue
                     ? new List<ResolvedRelic> { Relic(relic.Value) }

@@ -31,11 +31,6 @@ namespace PrincesPalace.Domain.Tests
         private static ResolvedRelic Relic(RelicEffect effect) =>
             new ResolvedRelic(effect.ToString(), effect.ToString(), "", effect, 0);
 
-        private static ResolvedSkill Bolt(int flat) =>
-            new ResolvedSkill("bolt", "Bolt", "", "hero", 1, SkillEffect.DamageSingle,
-                SkillTargeting.SingleEnemy, 0, 0, false, 0, flat, ignoresDefense: true,
-                null, SpellPresentation.None, 0);
-
         // ignoresDefense so armour cannot move the figures between the two
         // worlds these tests compare. The base is still the caster's scaled
         // attack PLUS the flat amount, not the flat amount alone -- which is
@@ -78,7 +73,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheFourthCastIsTheOneThatIsCharged()
         {
-            var bolt = Bolt(50);
+            var bolt = TestSkills.Bolt(flat: 50);
             var (session, hero, foe) = Fight(RelicEffect.ChargingCrystal, bolt);
 
             var dealt = Enumerable.Range(0, 8)
@@ -133,7 +128,7 @@ namespace PrincesPalace.Domain.Tests
         // board. Four casts, because the fourth is the one that counts.
         private static int ChargeBonus(bool vulnerable, int flat = 50)
         {
-            var bolt = Bolt(flat);
+            var bolt = TestSkills.Bolt(flat: flat);
             var (session, hero, foe) = Fight(RelicEffect.ChargingCrystal, bolt);
 
             if (vulnerable)
@@ -158,7 +153,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void WithoutTheRelicNoCastIsEverCharged()
         {
-            var bolt = Bolt(50);
+            var bolt = TestSkills.Bolt(flat: 50);
             var (session, hero, foe) = Fight(null, bolt);
 
             var dealt = Enumerable.Range(0, 8)
@@ -206,7 +201,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheTwoCountersDoNotFeedEachOther()
         {
-            var bolt = Bolt(50);
+            var bolt = TestSkills.Bolt(flat: 50);
             var (session, hero, foe) = Fight(RelicEffect.ChargingCrystal, bolt);
 
             // Three swings first. If they advanced the spell tally, the very

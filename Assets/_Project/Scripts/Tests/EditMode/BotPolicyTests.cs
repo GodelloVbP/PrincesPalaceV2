@@ -16,17 +16,6 @@ namespace PrincesPalace.Domain.Tests
         private static CombatantState Fighter(string name, bool isPlayerSide, int maxHealth = 100, int attack = 20, int speed = 5) =>
             new CombatantState(name, isPlayerSide, maxHealth, 10, attack, speed);
 
-        // Stands in for the old free BasicSpell wherever a fixture needs a
-        // way to reach a back-rank foe (Attack is front-rank-only -- see
-        // CombatEncounter.CanMeleeReach). Fixed damage rather than
-        // scaled, so its output does not ride the same Attack stat as
-        // melee and callers can dial it below or above Attack on purpose.
-        private static ResolvedSkill RangedSkill(int fixedDamage = 100) =>
-            new ResolvedSkill("bolt", "Bolt", "", "hero", 1, SkillEffect.DamageSingle,
-                SkillTargeting.SingleEnemy, 0, 0, false, 0, 0, false,
-                new[] { new DamageInstance(DamageType.Physical, fixedDamage) },
-                SpellPresentation.None, 0);
-
         private static (FightSession session, CombatantState hero, List<CombatantState> foes) HeroVsMany(
             params int[] foeHealths)
         {
@@ -36,13 +25,13 @@ namespace PrincesPalace.Domain.Tests
                 .ToList();
 
             var encounter = new CombatEncounter(new[] { hero }, foes);
-            // RangedSkill stands in for the old free basic spell so a
-            // target behind the front rank is reachable at all -- Attack is
+            // TestSkills.RangedPacket stands in for the old free basic spell
+            // so a target behind the front rank is reachable at all -- Attack is
             // front-rank-only (see CombatEncounter.CanMeleeReach), and with
             // more than one foe that is the only way this fixture can show
             // GreedyAggressive choosing BETWEEN targets rather than being
             // handed just one.
-            var skills = new List<ResolvedSkill> { RangedSkill() };
+            var skills = new List<ResolvedSkill> { TestSkills.RangedPacket() };
             var kit = new PlayerKit("hero", CharacterRole.Tank, skills, null, DamageType.Physical);
             var session = new FightSession(encounter, new List<PlayerKit> { kit }, null, new SeededRandom(1))
             {
@@ -260,7 +249,7 @@ namespace PrincesPalace.Domain.Tests
             var foe0 = Fighter("Foe0", false, maxHealth: 10, attack: 1, speed: 1);
             var foe1 = Fighter("Foe1", false, maxHealth: 200, attack: 100, speed: 1);
             var encounter = new CombatEncounter(new[] { hero }, new[] { foe0, foe1 });
-            var skills = new List<ResolvedSkill> { RangedSkill() };
+            var skills = new List<ResolvedSkill> { TestSkills.RangedPacket() };
             var kit = new PlayerKit("hero", CharacterRole.Tank, skills, null, DamageType.Physical);
             var session = new FightSession(encounter, new List<PlayerKit> { kit }, null, new SeededRandom(1))
             {
@@ -372,7 +361,7 @@ namespace PrincesPalace.Domain.Tests
                 var encounter = new CombatEncounter(new[] { hero }, new[] { foe });
                 // Fixed at 1 damage so the ranged skill never ties or beats
                 // the melee Attack on raw damage alone.
-                var skills = new List<ResolvedSkill> { RangedSkill(fixedDamage: 1) };
+                var skills = new List<ResolvedSkill> { TestSkills.RangedPacket(fixedDamage: 1) };
                 var kit = new PlayerKit("hero", CharacterRole.Tank, skills, null, DamageType.Physical);
                 var session = new FightSession(encounter, new List<PlayerKit> { kit }, null, new SeededRandom(1))
                 {

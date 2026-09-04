@@ -16,14 +16,6 @@ namespace PrincesPalace.Domain.Tests
         private static ResolvedRelic Relic(RelicEffect effect) =>
             new ResolvedRelic(effect.ToString(), effect.ToString(), "", effect, 0);
 
-        // ignoresDefense throughout so a base amount reads as exactly its
-        // flatAmount, which is what lets these tests name literal numbers.
-        private static ResolvedSkill Bolt(int flat, SkillEffect effect = SkillEffect.DamageSingle) =>
-            new ResolvedSkill("bolt", "Bolt", "", "hero", 1, effect,
-                effect == SkillEffect.DamageAll ? SkillTargeting.AllEnemies : SkillTargeting.SingleEnemy,
-                0, 0, false, 0, flat, ignoresDefense: true,
-                null, SpellPresentation.None, 0);
-
         private static (FightSession session, CombatantState hero, CombatantState foe) Fight(
             RelicEffect relic, ResolvedSkill? skill = null, int foeCount = 1, int heroSpeed = 10)
         {
@@ -56,7 +48,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ACastFollowsWithAFreeAttackOnTheSameTarget()
         {
-            var bolt = Bolt(50);
+            var bolt = TestSkills.Bolt(flat: 50);
 
             var (withRelic, heroA, foeA) = Fight(RelicEffect.SwordInABox, bolt);
             int beforeA = foeA.CurrentHealth;
@@ -95,7 +87,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ASpellMarksItsTargetAndAnAttackConsumesItForBonusDamage()
         {
-            var bolt = Bolt(50);
+            var bolt = TestSkills.Bolt(flat: 50);
             var (session, hero, foe) = Fight(RelicEffect.DrownedLantern, bolt);
 
             session.CastSkill(bolt, foe);
@@ -119,7 +111,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void AMarkIsOnlySpentOnce()
         {
-            var bolt = Bolt(50);
+            var bolt = TestSkills.Bolt(flat: 50);
             var (session, hero, foe) = Fight(RelicEffect.DrownedLantern, bolt);
 
             session.CastSkill(bolt, foe);
@@ -142,7 +134,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ASingleTargetSpellLandsAgainForFree()
         {
-            var bolt = Bolt(50);
+            var bolt = TestSkills.Bolt(flat: 50);
 
             var (withRelic, heroA, foeA) = Fight(RelicEffect.FirstRune, bolt);
             int beforeA = foeA.CurrentHealth;
@@ -187,7 +179,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ADamageAllSpellDoesNotTriggerTheRune()
         {
-            var sweep = Bolt(50, SkillEffect.DamageAll);
+            var sweep = TestSkills.Bolt(flat: 50, effect: SkillEffect.DamageAll);
 
             var (withRelic, heroA, foeA) = Fight(RelicEffect.FirstRune, sweep, foeCount: 2);
             int beforeA = foeA.CurrentHealth;
@@ -210,7 +202,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void CastingTwiceInARowNeverCascades()
         {
-            var bolt = Bolt(999999);
+            var bolt = TestSkills.Bolt(flat: 999999);
             var (session, hero, foe) = Fight(RelicEffect.FirstRune, bolt);
 
             Assert.IsTrue(session.CastSkill(bolt, foe), "the cast should have been accepted");

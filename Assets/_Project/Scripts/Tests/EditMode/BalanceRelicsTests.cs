@@ -45,16 +45,11 @@ namespace PrincesPalace.Domain.Tests
 
         // ---- magic marker -------------------------------------------------------
 
-        private static ResolvedSkill CastableSkill() =>
-            new ResolvedSkill("bolt", "Bolt", "", "hero", 1,
-                SkillEffect.DamageSingle, SkillTargeting.SingleEnemy, 0, 0, false, 100, 0, false,
-                null, SpellPresentation.None, 0);
-
         [Test]
         public void MagicMarkerMarksASpellTarget()
         {
             var (session, hero, foe1, _) = Fight(RelicEffect.MagicMarker,
-                skills: new List<ResolvedSkill> { CastableSkill() });
+                skills: new List<ResolvedSkill> { TestSkills.CastableSkill() });
 
             session.CastSkill(0, foe1);
 
@@ -65,7 +60,7 @@ namespace PrincesPalace.Domain.Tests
         public void MagicMarkerConsumesTheMarkAndRestoresTwentyPercentOfMissingMana()
         {
             var (session, hero, foe1, _) = Fight(RelicEffect.MagicMarker, heroMaxMana: 100,
-                skills: new List<ResolvedSkill> { CastableSkill() });
+                skills: new List<ResolvedSkill> { TestSkills.CastableSkill() });
             hero.CurrentMana = 50; // 50 missing
 
             session.CastSkill(0, foe1); // marks foe1, costs 0 mana (test skill is authored free)
