@@ -111,14 +111,25 @@ namespace PrincesPalace.Domain.Combat.Session
         // than left as a belt: a second copy of a rule that cannot fire is not
         // a safety net, it is a claim that the list can contain locked entries,
         // and it reads as one to anyone deciding where to add the next gate.
-        public static IReadOnlyList<SubmenuRow> SkillRows(FightSession session, CombatantState actor)
+        public static IReadOnlyList<SubmenuRow> SkillRows(FightSession session, CombatantState actor) =>
+            SkillRows(session?.SkillOptionsFor(actor), actor);
+
+        // Same rows, built from an OPTION LIST ALREADY IN HAND rather than
+        // asking the session for it -- FightController's RefreshMenuChrome
+        // computes SkillOptionsFor(actor) once per repaint and hands it
+        // straight through here, so this overload is what lets that single
+        // computation serve the submenu without a second call to the
+        // session hiding inside it. The (session, actor) overload above
+        // still exists for callers -- the EditMode tests among them -- who
+        // only have the session, and just forwards into this one.
+        public static IReadOnlyList<SubmenuRow> SkillRows(IReadOnlyList<ResolvedSkillOption> options, CombatantState actor)
         {
             var rows = new List<SubmenuRow>();
-            if (session == null || actor == null) return rows;
+            if (options == null || actor == null) return rows;
 
             string resourceName = actor.Signature?.DisplayName;
 
-            foreach (var option in session.SkillOptionsFor(actor))
+            foreach (var option in options)
             {
                 var skill = option.Skill;
                 if (!actor.AbilityScores.Meets(RequirementCurve.Apply(skill.Requirements))) continue;

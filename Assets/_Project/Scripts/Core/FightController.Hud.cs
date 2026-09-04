@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -112,10 +113,54 @@ namespace PrincesPalace
         // matters.
         private void RefreshMenuChrome()
         {
+            // CLEARED HERE, the one seam both repaint entry points share --
+            // RefreshUi calls this first thing, and AfterResolution calls it
+            // directly (see AfterResolution's own comment on why it skips
+            // the rest of RefreshUi). Everything below that asks the session
+            // for the acting character's skill options -- RefreshSubmenu,
+            // RefreshDetail and RefreshTargetPrompt here, plus
+            // RefreshEnemyPlates and RefreshInitiative later in the same
+            // RefreshUi pass -- goes through SkillOptions() instead of
+            // FightSession.SkillOptionsFor directly, so one dropped-menu
+            // click that used to recompute the same filtered, allocated list
+            // five to eight times now computes it once and everyone downstream
+            // of this method reads that. Clearing here rather than caching it
+            // for longer is what keeps it from ever surviving into a repaint
+            // where the turn, cooldowns or mana have moved on: nothing
+            // between one RefreshMenuChrome and the next is allowed to leave
+            // the memo standing.
+            _skillOptionsMemoActor = null;
+            _skillOptionsMemo = null;
+
             RefreshVerbs();
             RefreshSubmenu();
             RefreshDetail();
             RefreshTargetPrompt();
+        }
+
+        // The one place FightSession.SkillOptionsFor is actually called from
+        // this file. Every other call site below reads through here so a
+        // single RefreshMenuChrome pass pays for the list once regardless of
+        // how many of RefreshSubmenu/RefreshDetail/RefreshTargetPrompt/
+        // RefreshEnemyPlates/RefreshInitiative ask for it. Keyed on actor
+        // reference rather than unconditionally trusted, because
+        // ActingCharacter() can hand back a different combatant than
+        // _session.Current (see its own comment) and a memo answering for
+        // the wrong actor is worse than no memo at all.
+        private CombatantState _skillOptionsMemoActor;
+        private IReadOnlyList<ResolvedSkillOption> _skillOptionsMemo;
+
+        private IReadOnlyList<ResolvedSkillOption> SkillOptions(CombatantState actor)
+        {
+            if (_session == null || actor == null) return Array.Empty<ResolvedSkillOption>();
+
+            if (_skillOptionsMemo == null || !ReferenceEquals(_skillOptionsMemoActor, actor))
+            {
+                _skillOptionsMemoActor = actor;
+                _skillOptionsMemo = _session.SkillOptionsFor(actor);
+            }
+
+            return _skillOptionsMemo;
         }
 
         private void RefreshVerbs()
@@ -210,10 +255,10 @@ namespace PrincesPalace
             // saying. The warning was right and the channel was wrong: a fact
             // about the menu does not belong in the narration of the battle, and
             // a line re-sent every frame stops being read at all.
-            int hidden = CurrentRows().Count - submenuRows.Length;
+            int hidden = rows.Count - submenuRows.Length;
             if (hidden > 0)
             {
-                submenuHint.SetContent($"SHOWING {submenuRows.Length} OF {CurrentRows().Count}");
+                submenuHint.SetContent($"SHOWING {submenuRows.Length} OF {rows.Count}");
             }
             else
             {
@@ -333,7 +378,7 @@ namespace PrincesPalace
         {
             if (_menu.Branch != MenuBranch.Skill || _session?.Current == null) return false;
 
-            var options = _session.SkillOptionsFor(_session.Current);
+            var options = SkillOptions(_session.Current);
             int row = _menu.Selection;
             if (row < 0 || row >= options.Count) return false;
 
@@ -351,7 +396,7 @@ namespace PrincesPalace
             if (_menu.Branch == MenuBranch.Attack) return true;
             if (_menu.Branch != MenuBranch.Skill || _session?.Current == null) return false;
 
-            var options = _session.SkillOptionsFor(_session.Current);
+            var options = SkillOptions(_session.Current);
             int row = _menu.Selection;
             if (row < 0 || row >= options.Count) return false;
 
@@ -858,7 +903,7 @@ namespace PrincesPalace
         {
             if (_menu.Branch != MenuBranch.Skill || _session?.Current == null) return 0;
 
-            var options = _session.SkillOptionsFor(_session.Current);
+            var options = SkillOptions(_session.Current);
             int row = _menu.Selection;
             if (row < 0 || row >= options.Count) return 0;
 
@@ -870,7 +915,7 @@ namespace PrincesPalace
         private IReadOnlyList<SubmenuRow> CurrentRows() =>
             _menu.Branch == MenuBranch.Item
                 ? FightHudModel.ItemRows(_satchel)
-                : FightHudModel.SkillRows(_session, ActingCharacter());
+                : FightHudModel.SkillRows(SkillOptions(ActingCharacter()), ActingCharacter());
 
         // Same seam as HoveredEnemyIndexForTest/FocusedVerbForTest
         // (FightController.Input.cs) -- the click handler stays private
@@ -909,7 +954,7 @@ namespace PrincesPalace
             // reading kit.Skills[index] directly here would show a different
             // skill's detail than the row actually selected the moment one
             // exists.
-            var options = _session?.SkillOptionsFor(actor);
+            var options = _session != null ? SkillOptions(actor) : null;
             if (options != null && index < options.Count)
             {
                 var skill = options[index].Skill;

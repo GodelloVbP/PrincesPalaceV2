@@ -153,7 +153,16 @@ namespace PrincesPalace
                     // no unlockLevel are now a live authoring shape, so an
                     // empty list is reachable content, not just a test
                     // fixture -- refuse rather than open nothing to back out of.
-                    if (_session.SkillOptionsFor(_session.Current).Count == 0)
+                    //
+                    // THROUGH HasAnySkillOption, not SkillOptionsFor(...).Count
+                    // -- this fires ahead of RefreshUi, so nothing has
+                    // memoized the list yet, and the emptiness check is the
+                    // only place in the controller that ever wants a yes/no
+                    // answer rather than the rows themselves. Building and
+                    // then discarding a full ResolvedSkillOption list just to
+                    // read its Count is the allocation HasAnySkillOption
+                    // exists to skip.
+                    if (!_session.HasAnySkillOption(_session.Current))
                     {
                         _session.AppendMessage("No skills to use.");
                         break;
@@ -228,7 +237,7 @@ namespace PrincesPalace
             // which one was actually clicked -- see its own header.
             if (_menu.Branch == MenuBranch.Skill)
             {
-                var options = _session.SkillOptionsFor(_session.Current);
+                var options = SkillOptions(_session.Current);
                 if (index < options.Count)
                 {
                     var targeting = options[index].Skill.Targeting;
@@ -268,7 +277,7 @@ namespace PrincesPalace
             bool validSkillRow = false;
             if (_menu.Branch == MenuBranch.Skill)
             {
-                options = _session.SkillOptionsFor(_session.Current);
+                options = SkillOptions(_session.Current);
                 row = _menu.Selection;
                 validSkillRow = row >= 0 && row < options.Count;
             }

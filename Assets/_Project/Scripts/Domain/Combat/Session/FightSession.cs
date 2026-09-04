@@ -189,6 +189,25 @@ namespace PrincesPalace.Domain.Combat.Session
                 .ToList();
         }
 
+        // Same question SkillOptionsFor's own filter answers -- does the
+        // actor have ANYTHING to show in the Skill branch -- without paying
+        // for the list it builds. OnVerbPressed only ever asks "is this
+        // empty", never for a skill out of it, so it does not need
+        // affordability, cooldowns or a ResolvedSkillOption per entry: just
+        // the one requirement gate SkillOptionsFor's Where clause already
+        // states.
+        public bool HasAnySkillOption(CombatantState actor)
+        {
+            var kit = KitFor(actor);
+            if (kit == null) return false;
+
+            foreach (var skill in kit.Skills)
+            {
+                if (actor.AbilityScores.Meets(RequirementCurve.Apply(skill.Requirements))) return true;
+            }
+            return false;
+        }
+
         // ---- commands ------------------------------------------------------
 
         // Opens the fight: the first actor gets its turn start, any monsters
