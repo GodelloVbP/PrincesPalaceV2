@@ -501,6 +501,43 @@ Three items noticed while refreshing the audit table below, none acted on here:
   state (`Assets/_Project/ContentData/relics.json:3,86-91`). Not a gap to
   close, just documented here so it isn't mistaken for one.
 
+### Post-fix batch, 2026-09-04
+
+**12,000 runs, `reports/bot/20260904-092240`, commit `0b61fcf`** (livelock
+fix, one-Shop-per-leg `d07ffb4`, and the cleanups `ce25617`/`803ed1b`
+included). The `TooManyCommands` livelock the gate-4 batch surfaced at
+26/12,000 is at **0/12,000**; determinism 1200/1200 clean. Root cause and
+fix are in `0b61fcf`'s message: both Greedy policies chose a target enemy
+first (lowest HP / most threatening) and then discarded every action that
+could not reach it — Attack included — so a back-rank `rat` reachable only
+by the non-damaging `provoke` locked the policy into provoke/woolgathering
+forever. Bot-policy bug, not a combat rule: a human keeps attacking the front
+beetle. BasicSpell's removal (gate 4) exposed it because the free ranged
+spell used to be the one action that could always reach the locked target.
+Fixed by selecting the target only among enemies a damaging action can
+reach (`Domain/Bot/DamagingTargetSelection.cs`), wiring
+`NonDamagingSkillGuard` into both policies' fallback, and no longer
+expanding Self/AllEnemies/Party skills into one action per enemy
+(`FightAction.LegalActions`).
+
+Shop visits per run roughly doubled (RandomLegal/Fresh 2.9 → 4.0,
+GreedyDefensive/Mid 2.9 → 5.3) — the per-leg guarantee doing its job; first
+learned spell by step 8 unchanged within noise (57-69% per cell); median
+depth unchanged (40 for every non-Random archetype in every profile).
+
+**Open, found by this batch: the bot is ~28x slower per run than
+`tools/bot.ps1`'s own documented baseline.** The header records 79.5 s for a
+12,000-run batch on 4 shards (~6.6 ms/run); this batch took 2211 s
+(~184 ms/run) and the gate-4 batch 1760 s. Machine contention was real (an
+interactive Editor, its import workers, and the test-runner copies were all
+up) but does not explain the magnitude. Being profiled at the time of this
+note; suspects are the per-visit stock roll (visits just doubled), spell
+assignment after every room, or the per-run trace/JSON writer.
+
+Still not run: the human usability checklists (gates 2-4) and any live UI
+walk — the scene rebuild that needs `Scenes/` (held by another session) was
+handed to the user to run.
+
 ## Audit table
 
 | Handoff section | Spec'd | Built | Verdict | Decision served |
