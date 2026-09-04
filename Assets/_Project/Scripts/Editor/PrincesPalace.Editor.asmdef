@@ -9,10 +9,7 @@
         "Unity.RenderPipelines.Core.Runtime",
         "UnityEngine.UI",
         "Unity.TextMeshPro",
-        "Unity.2D.Animation.Runtime",
-        "Unity.2D.Animation.Editor",
-        "Unity.2D.Sprite.Editor",
-        "Unity.2D.Common.Runtime"
+        "Unity.2D.Sprite.Editor"
     ],
     "includePlatforms": [
         "Editor"

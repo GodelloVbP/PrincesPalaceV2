@@ -1,23 +1,19 @@
 using System;
 using System.Collections;
 using UnityEngine;
-using PrincesPalace.Core.Rig;
 using PrincesPalace.Domain.Combat;
-using PrincesPalace.Domain.Rig;
 using PrincesPalace.Domain.Stage;
 
 namespace PrincesPalace
 {
     // One beat's actor animation, spoken in the vocabulary FightBeatPlayer
     // needs regardless of which art style is underneath: how long the
-    // wind-up and the whole stance take, and three phases to play. The seam
-    // Phase 4's hybrid stage was built to receive -- see the plan's own
-    // "Critical files" note on FightBeatPlayer.cs.
+    // wind-up and the whole stance take, and three phases to play.
     //
     // FrameStancePlayback reproduces today's StanceStepper/FrameHoldCurve
-    // math unchanged; RigStancePlayback drives a RigActor off a
-    // RigStanceClip instead. FightBeatPlayer calls only this interface, so
-    // it never again needs to know which art style it is driving.
+    // math unchanged, and StillStancePlayback below covers the one-drawing
+    // case. FightBeatPlayer calls only this interface, so it never needs to
+    // know which art style it is driving.
     public interface IStancePlayback
     {
         // Real seconds the wind-up [start, impact) takes, UNSCALED -- what
@@ -208,42 +204,5 @@ namespace PrincesPalace
         public IEnumerator Release() { yield break; }
 
         public void ResetToRest() => _wrapped.ResetToRest();
-    }
-
-    // Drives a RigActor off a RigStanceClip instead of a frame sheet. See
-    // RigStancePlayer for the sampling/timing itself; this is only the
-    // adapter that speaks IStancePlayback.
-    public sealed class RigStancePlayback : IStancePlayback
-    {
-        private readonly RigActor _rigActor;
-        private readonly RigStanceClip _clip;
-        private readonly Func<bool> _abandon;
-
-        public RigStancePlayback(RigActor rigActor, RigStanceClip clip, Func<bool> abandon = null)
-        {
-            _rigActor = rigActor;
-            _clip = clip ?? RigStanceClip.Empty;
-            _abandon = abandon;
-        }
-
-        public float WindupSeconds => _clip.ImpactAt;
-        public float TotalSeconds => _clip.DurationSeconds;
-        public bool HasMotion => !_clip.IsEmpty;
-
-        // No rig clip authors a return-to-start release during the pilot --
-        // every clip is drawn to already end back at rest, so there is
-        // nothing for a release phase to play. A future clip that wants one
-        // adds a flag the same way StanceAnimation.ReturnsToStart is
-        // authored today; nothing about this interface stops it.
-        public bool ReturnsToStart => false;
-
-        public IEnumerator Windup() => RigStancePlayer.PlaySegment(_rigActor, _clip, 0f, _clip.ImpactAt, _abandon);
-
-        public IEnumerator FollowThrough() =>
-            RigStancePlayer.PlaySegment(_rigActor, _clip, _clip.ImpactAt, _clip.DurationSeconds, _abandon);
-
-        public IEnumerator Release() { yield break; }
-
-        public void ResetToRest() => _rigActor?.ResetToRest();
     }
 }

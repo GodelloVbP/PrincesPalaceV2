@@ -105,7 +105,6 @@ public static partial class SceneBuilder
         {
             var tree = screen.BuildTree();
             var result = UiEmitter.Emit(tree, canvas.transform);
-            WireWorldInterleavedCanvases(canvas.transform, camera);
 
             screen.Wire?.Invoke(result);
 
@@ -122,25 +121,6 @@ public static partial class SceneBuilder
         Debug.Log($"[SceneBuilder] built {scenePath} with {screens.Count} screen(s)");
     }
 
-    // Points every WorldInterleaved nested canvas emitted so far at the
-    // scene's real camera and the same planeDistance the root canvas uses.
-    // UiEmitter.EmitNestedCanvas can't do this itself -- it only ever sees
-    // the node it's building, not the scene's camera -- so this runs as a
-    // post-pass after each screen's tree is emitted, same posture as
-    // ScreenRegistry's own post-build component wiring (StageActorAnimator,
-    // StageDeathFade, ...). Idempotent to call after every screen: a canvas
-    // already wired from an earlier screen this scene is just overwritten
-    // with the same values.
-    private static void WireWorldInterleavedCanvases(Transform root, Camera camera)
-    {
-        foreach (var canvas in root.GetComponentsInChildren<Canvas>(includeInactive: true))
-        {
-            if (canvas.renderMode != RenderMode.ScreenSpaceCamera || canvas.transform == root) continue;
-            canvas.worldCamera = camera;
-            canvas.planeDistance = 10f; // matches CreateCanvas's own root planeDistance
-        }
-    }
-
     private static Camera CreateMainCamera()
     {
         var cameraGO = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener));
@@ -150,15 +130,12 @@ public static partial class SceneBuilder
         camera.backgroundColor = new Color(0.05f, 0.05f, 0.08f, 1f);
         camera.orthographic = true;
 
-        // 1 world unit = 1 canvas unit, everywhere, always -- not something
-        // any screen has needed until a rig actor's SpriteRenderers had to
-        // interleave with the SAME canvas. CanvasScaler already makes 1
-        // canvas-local unit resolution-independent (that's its entire job);
-        // matching it here with a FIXED orthographicSize (not a per-frame
-        // resize sync) gets the same resolution-independence for world-space
-        // content for free, verified against a real render: a rig placed
-        // with this exact camera setup landed at the hand-computed bone
-        // positions to within a few units of rounding.
+        // 1 world unit = 1 canvas unit. CanvasScaler already makes a
+        // canvas-local unit resolution-independent (that is its whole job);
+        // pinning orthographicSize to the same reference resolution -- a
+        // fixed value, not a per-frame resize sync -- means anything ever
+        // placed in world space agrees with the canvas about what a unit is
+        // instead of inheriting Unity's arbitrary default 5.
         camera.orthographicSize = ReferenceResolution.y / 2f;
 
         // The whole point of the URP move. Without this the Volume exists and

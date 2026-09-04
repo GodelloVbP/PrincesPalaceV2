@@ -34,10 +34,6 @@ $Areas = @{
     # TalentEffectType/TalentEffectSet exactly, so it belongs beside them
     # rather than in 'content' (where ModifierEntryResolverTests already
     # matches on its own via 'Resolver' -- the overlap is fine).
-    # 'Rig' for the skeletal-rig pipeline (RigImportIntegrityTests,
-    # RigRawSpriteTests, and whatever Domain/Rig sampler/timing tests Phase 5
-    # adds) -- combat because the fight stage is the only thing that loads a
-    # rig, same reasoning as the frame-sheet stance tests already here.
     # 'Wisdom' for WisdomManaRegenTests (the WIS-derived Mana Regen pass) --
     # a real-fight PlayMode test over CombatantState.ManaRegen and the
     # per-turn regen tick, the same subject FightSession.Riders' own regen
@@ -51,7 +47,7 @@ $Areas = @{
     # 'Squad' for SquadOfThreeTests/SaveDataSquadOfThreeTests -- the
     # three-member-party placeholders and their fight/paging/bot coverage,
     # same PathAreas folder as Party/Bot above.
-    combat  = "Fight|Wool|Spell|Combat|Enemy|Party|Squad|Stage|Boss|Turn|Skill|Damage|Defeat|Teardown|BreakShield|Status|Signature|Ward|Gift|Empower|Cooldown|Relic|Balance|Modifier|Rig|Bot|Wisdom|Mark|Fear|Falling|Penetration|Convergence"
+    combat  = "Fight|Wool|Spell|Combat|Enemy|Party|Squad|Stage|Boss|Turn|Skill|Damage|Defeat|Teardown|BreakShield|Status|Signature|Ward|Gift|Empower|Cooldown|Relic|Balance|Modifier|Bot|Wisdom|Mark|Fear|Falling|Penetration|Convergence"
     hub     = "Hub|Talent|Principality|CharacterSheet|SheetStat|Store|Constellation|Glossary"
     # 'ModifierTable' explicitly, alongside the bare 'Modifier' already
     # matching combat above -- ModifierTableTests (Phase A3) covers the
@@ -109,11 +105,7 @@ $Areas = @{
     # half of what LoopCycle started -- how big a figure is at rest, against
     # which drawing it is showing -- so it belongs in the same area for the
     # same reason.
-    # 'Rig' joins art too, alongside combat above -- a rig cut is an art-
-    # pipeline output (atlas.png/rig.json from tools/rig_actor.py) same as
-    # every stance frame sheet, and belongs beside Stance/FrameHold for the
-    # same reason the overlap between combat and art already exists here.
-    art     = "Stance|FrameHold|LoopCycle|BreathCurve|Shadow|WhiteQuad|SpriteFacing|BattleBackground|ItemArt|TalentArt|ArtPath|HandAssembled|Flash|Legibility|PostProcessing|Rig"
+    art     = "Stance|FrameHold|LoopCycle|BreathCurve|Shadow|WhiteQuad|SpriteFacing|BattleBackground|ItemArt|TalentArt|ArtPath|HandAssembled|Flash|Legibility|PostProcessing"
     rng     = "Rng|SeededRandom|Seed"
 }
 
@@ -339,10 +331,6 @@ $PathAreas = @(
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Rewards/';   Areas = @('run', 'content') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Rng/';       Areas = @('rng') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Stage/';     Areas = @('combat', 'art') }
-    # Domain/Rig -- the engine-free half of the skeletal-rig pipeline (bone
-    # tree/clip data, sampler math). Empty until Phase 5 adds it; the row
-    # exists now so the first file dropped there is never a day-one orphan.
-    @{ Pattern = '^Assets/_Project/Scripts/Domain/Rig/';       Areas = @('combat', 'art') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Stats/';     Areas = @('content') }
     # The UI construction layer lives in Domain (engine-free) so a screen can be
     # built, solved and audited from EditMode in under a second -- see
@@ -366,15 +354,11 @@ $PathAreas = @(
     @{ Pattern = '^Assets/_Project/Scripts/Core/(Music|Sound|Audio)'; Areas = @('ui') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/(Hub|Talent|Store|CharacterSheet|CharacterSelect|CharacterTab)'; Areas = @('hub') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/(DescentMapView|Map)'; Areas = @('run', 'ui') }
-    # Core/Rig -- RigLibrary and whatever RigActor/RigStancePlayer land here
-    # in Phase 4/5. Above the Core/ catch-all deliberately: that fallback
-    # would otherwise claim it as 'ui' alone and miss combat/art entirely.
-    @{ Pattern = '^Assets/_Project/Scripts/Core/Rig/'; Areas = @('combat', 'art') }
     # Core/Bot -- RunOrchestrator (the whole rulebook of a run: arrival, fight
     # build, settlement, offers) plus BotRunDriver/ProfilePresets. Above the
-    # Core/ catch-all deliberately, for the same reason Core/Rig is: that
-    # fallback would claim it as 'ui' alone, and 'ui' runs none of the fight
-    # settlement or run-state suites this code is actually the seam for.
+    # Core/ catch-all deliberately: that fallback would claim it as 'ui'
+    # alone, and 'ui' runs none of the fight settlement or run-state suites
+    # this code is actually the seam for.
     @{ Pattern = '^Assets/_Project/Scripts/Core/Bot/'; Areas = @('combat', 'run') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/'; Areas = @('ui') }
     @{ Pattern = '^Assets/_Project/Scripts/Data/'; Areas = @('run') }
@@ -393,12 +377,6 @@ $PathAreas = @(
     # placeholder-fight enemy pick -- exercises the same combat bootstrap
     # path as everything else under Core/, nothing UI- or content-specific.
     @{ Pattern = '^Assets/_Project/Scripts/Editor/QuickFightMenu'; Areas = @('combat') }
-    # Editor/Rigging -- RigImporter/RigPrefabBuilder/RigBuildPilot/MiniJson/
-    # StageActorsSortingLayer. RigAtlasImportPostprocessor.cs also already
-    # matches the broader ImportPostprocessor row below; the overlap is fine
-    # per this file's own header, and this row is what covers the rest of
-    # the directory, which that row alone does not.
-    @{ Pattern = '^Assets/_Project/Scripts/Editor/Rigging/'; Areas = @('combat', 'art') }
     # Import-time texture coercion (Enemy/Item/Intent/Status sprite folders).
     # None of these had a $PathAreas row before StatusIconImportPostprocessor
     # was added alongside this file, which meant -Changed would have refused
@@ -432,12 +410,9 @@ $PathAreas = @(
     # stage is the only thing that loads any of it.
     @{ Pattern = '^Assets/_Project/Resources/(Enemies|Spells)/'; Areas = @('art', 'combat') }
     @{ Pattern = '^Assets/_Project/Resources/StanceManifest\.json'; Areas = @('art', 'combat') }
-    # Rig outputs (atlas.png/rig.json/the generated prefab) -- same
-    # reasoning as Enemies/Spells immediately above, one folder over.
-    @{ Pattern = '^Assets/_Project/Resources/Rigs/'; Areas = @('art', 'combat') }
-    # Runtime-loaded shaders/materials. Today that's UIHitFlash and
-    # RigHitFlash -- both stage hit reactions -- so 'combat'+'art' rather
-    # than a bespoke 'shader' area of its own for two files.
+    # Runtime-loaded shaders/materials. Today that is UIHitFlash, the
+    # stage's hit reaction, so 'combat'+'art' rather than a bespoke
+    # 'shader' area of its own for one file.
     @{ Pattern = '^Assets/_Project/Resources/(Shaders|Materials)/'; Areas = @('art', 'combat') }
     @{ Pattern = '^Assets/_Project/Art/';         Areas = @('art') }
     # TMP font assets. 'ui' rather than 'art': the thing that breaks when one

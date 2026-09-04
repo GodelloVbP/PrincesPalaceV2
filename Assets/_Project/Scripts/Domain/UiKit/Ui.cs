@@ -432,21 +432,6 @@ namespace PrincesPalace.Domain.UiKit
             return node;
         }
 
-        // Same shape as NestedCanvas, but ScreenSpaceCamera instead of
-        // Overlay -- see UiNode.WorldInterleaved for why that distinction is
-        // load-bearing rather than cosmetic. `sortingLayerName` places this
-        // canvas's WHOLE subtree in the SAME SortingLayer comparison as
-        // whatever world-space SpriteRenderers it needs to sandwich against
-        // by SortingOrder; pass the layer those renderers use.
-        public static UiNode WorldInterleavedCanvas(string name, string sortingLayerName, int sortingOrder, params UiNode[] children)
-        {
-            var node = Node(name, UiNodeKind.NestedCanvas, Place.Stretch(), UiSize.Fill, children);
-            node.SortingOrder = sortingOrder;
-            node.WorldInterleaved = true;
-            node.SortingLayerName = sortingLayerName;
-            return node;
-        }
-
         // A dimmer plus its content, with the stacking stated once.
         //
         // Stacking comes from SIBLING ORDER, not from a canvas. This docstring

@@ -304,9 +304,8 @@ namespace PrincesPalace.PlayModeTests
         // that a direct method call cannot.
         // The NEAREST canvas above `from`, NOT the root one -- FightScreen
         // wraps its whole HUD (submenu included) in "FightHud", a nested
-        // Canvas built by Ui.WorldInterleavedCanvas so the HUD can sort by
-        // SortingLayer against stage actor SpriteRenderers (see
-        // BuildSubmenuColumn's own tree and EmitNestedCanvas). UiEmitter
+        // Canvas built by Ui.NestedCanvas (see BuildSubmenuColumn's own
+        // tree and EmitNestedCanvas). UiEmitter
         // gives every NestedCanvas its OWN GraphicRaycaster (EmitNestedCanvas,
         // line ~573) precisely because Unity's GraphicRegistry books a
         // raycastable Graphic against its NEAREST enclosing Canvas, not the

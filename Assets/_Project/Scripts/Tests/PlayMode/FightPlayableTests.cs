@@ -83,29 +83,10 @@ namespace PrincesPalace.PlayModeTests
 
             var fallback = Named("EnemyPlate0") == null ? null : _fight.FallbackSprite;
 
-            var enemySprite = Named("Enemy0Sprite");
-            var enemy = enemySprite.GetComponent<Image>();
-            if (!enemySprite.activeSelf)
-            {
-                // The graceful-degradation branch: a rig-resolvable enemy
-                // (the rat, during the pilot) hides its frame-sheet Image
-                // entirely and wears its own SpriteRenderers instead -- see
-                // FightController.StageVisuals.cs's RefreshRigActor. "own
-                // art, not the fallback plate" still has to hold, it just
-                // has to be checked on the world slot rather than the Image
-                // this specific combatant no longer uses.
-                var worldSlot = Named("Enemy0WorldSlot");
-                Assert.IsNotNull(worldSlot, "Enemy0Sprite is hidden but there's no Enemy0WorldSlot to check instead");
-                var rigRenderers = worldSlot.GetComponentsInChildren<SpriteRenderer>(includeInactive: true);
-                Assert.IsNotEmpty(rigRenderers, "Enemy0Sprite is hidden and its world slot has no rig renderers either - nothing is wearing any art at all");
-                Assert.IsTrue(rigRenderers.All(r => r.sprite != null), "a rig part with no sprite renders as nothing at all");
-            }
-            else
-            {
-                Assert.IsNotNull(enemy.sprite, "an Image with no sprite renders as a solid white quad");
-                Assert.AreNotSame(fallback, enemy.sprite,
-                    "the monster fell back to the plate - its sheet did not load from Resources");
-            }
+            var enemy = Named("Enemy0Sprite").GetComponent<Image>();
+            Assert.IsNotNull(enemy.sprite, "an Image with no sprite renders as a solid white quad");
+            Assert.AreNotSame(fallback, enemy.sprite,
+                "the monster fell back to the plate - its sheet did not load from Resources");
 
             var hero = Named("Party0Sprite").GetComponent<Image>();
             Assert.IsNotNull(hero.sprite);
@@ -120,14 +101,7 @@ namespace PrincesPalace.PlayModeTests
             // is perfectly legal and completely invisible. "The art loaded" and
             // "the actor is on screen" are different claims and only the second
             // one is the point.
-            // A rig-resolved enemy's Image is SUPPOSED to be inactive (its
-            // own SpriteRenderers, checked and asserted enabled above, are
-            // what's actually on screen instead) -- only assert this for
-            // whichever path this enemy actually took.
-            if (enemySprite.activeSelf)
-            {
-                Assert.IsTrue(enemy.gameObject.activeInHierarchy, "the monster is loaded but not on screen");
-            }
+            Assert.IsTrue(enemy.gameObject.activeInHierarchy, "the monster is loaded but not on screen");
             Assert.IsTrue(hero.gameObject.activeInHierarchy, "the party member is loaded but not on screen");
         }
 

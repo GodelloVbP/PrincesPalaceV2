@@ -60,8 +60,6 @@ namespace PrincesPalace
 
         public RectTransform SlotForTest(CombatantState combatant) => SlotFor(combatant);
 
-        public RectTransform WorldSlotForTest(CombatantState combatant) => WorldSlotFor(combatant);
-
         public FightSession SessionForTest => _session;
 
         public StageShake[] StageShakesForTest => stageShakes;

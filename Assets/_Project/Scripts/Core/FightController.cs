@@ -36,13 +36,6 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text[] enemyNameplates;
         [SerializeField] internal Image[] enemyFootShadows;
 
-        // Positioning-only anchors, no Graphic -- a rig actor's world-space
-        // SpriteRenderers are instantiated as children of these instead of
-        // an Image, same slot index, same FightStageAnchors position/scale.
-        // See FightScreen.BuildWorldSlots.
-        [SerializeField] internal RectTransform[] enemyWorldSlots;
-        [SerializeField] internal RectTransform[] partyWorldSlots;
-
         [SerializeField] internal RectTransform[] partySlots;
 
         // The two stage racks' shakers. Both kick together: a blow shakes the
@@ -400,7 +393,6 @@ namespace PrincesPalace
             if (beatPlayer == null) return;
 
             beatPlayer.SlotFor = SlotFor;
-            beatPlayer.WorldAnimatorFor = WorldAnimatorFor;
             beatPlayer.PaintVitals = PaintVitals;
             beatPlayer.PushLine = PushLogLine;
             beatPlayer.SetStance = PoseCombatant;
@@ -445,15 +437,6 @@ namespace PrincesPalace
             return null;
         }
 
-        // SlotFor's own index-mirror over the world-slot arrays, for the
-        // exact reason SlotFor exists: something has to answer "where is
-        // this combatant" without the caller knowing anything about slots.
-        // Returned unconditionally rather than gated on "is this combatant
-        // rig-resolved" -- a world slot with nothing instantiated under it
-        // is a real RectTransform with no StageActorAnimator's *effect*
-        // visible, but the component itself is on every world slot
-        // (ScreenRegistry), so moving one costs nothing and a second rigged
-        // creature needs zero wiring here to start working.
         // The cross-dissolve layer for this combatant, or null. Indexed the
         // same way SlotFor is -- position in the encounter's own list.
         private Image BlendFor(CombatantState combatant)
@@ -473,35 +456,6 @@ namespace PrincesPalace
             }
 
             return null;
-        }
-
-        private RectTransform WorldSlotFor(CombatantState combatant)
-        {
-            if (_session == null || combatant == null) return null;
-
-            var enemies = _session.Encounter.Enemies;
-            for (int i = 0; i < enemies.Count && i < enemyWorldSlots.Length; i++)
-            {
-                if (ReferenceEquals(enemies[i], combatant)) return enemyWorldSlots[i];
-            }
-
-            var party = _session.Encounter.PlayerParty;
-            for (int i = 0; i < party.Count && i < partyWorldSlots.Length; i++)
-            {
-                if (ReferenceEquals(party[i], combatant)) return partyWorldSlots[i];
-            }
-
-            return null;
-        }
-
-        // The world-space MIRROR of SlotFor(...).GetComponent<StageActorAnimator>() --
-        // FightBeatPlayer's Recoil/Punch/TravelFor drive both this and the
-        // uGUI one with identical args, so a rig actor's shadow and the rig
-        // itself move together instead of only the (hidden) shadow moving.
-        private StageActorAnimator WorldAnimatorFor(CombatantState combatant)
-        {
-            var slot = WorldSlotFor(combatant);
-            return slot == null ? null : slot.GetComponent<StageActorAnimator>();
         }
 
         // Repaints the HUD from a RECORDED set of vitals rather than from live

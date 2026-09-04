@@ -479,27 +479,19 @@ namespace PrincesPalace.Domain.Tests
         // uGUI, where sibling order is the only stacking rule.
         private static IEnumerable<SolvedNode> PanelsDrawnOverTheStage(SolvedNode root)
         {
-            // The stages moved one level deeper (into "FightHud", a
-            // world-interleaved nested canvas sandwiched between the
-            // backdrop and a rig actor's own SpriteRenderers -- see
-            // FightScreen.Build) without changing their RELATIVE order
-            // against everything that used to occlude them: FightHud's own
-            // children still run stage-then-HUD-panels in the exact same
-            // sequence root's children used to. Scan whichever level
-            // actually holds one of the two uGUI stage nodes, so this
-            // test's real invariant (nothing declared after the stage
-            // stands on a figure's feet) survives the nesting change
-            // unchanged.
+            // The stages live one level deeper than root, inside the
+            // "FightHud" nested canvas (see FightScreen.Build), without
+            // that changing their RELATIVE order against everything that
+            // occludes them: FightHud's own children still run
+            // stage-then-HUD-panels in the same sequence root's children
+            // once did. Scan whichever level actually holds one of the two
+            // stage nodes, so this test's real invariant -- nothing
+            // declared after the stage stands on a figure's feet --
+            // survives the nesting.
             //
-            // EXACT NAME, not EndsWith("Stage") -- EnemyWorldStage and
-            // PartyWorldStage also end in "Stage" (see FightScreen's own
-            // BuildWorldSlots) and live at ROOT, one level above FightHud.
-            // A substring match found THOSE at root and concluded root was
-            // already the right scope, which skipped the drill-down into
-            // FightHud entirely and scanned the wrong panels against the
-            // wrong bands -- caught by this test itself going from "no
-            // offenders" to a wall of spurious ones the moment the world
-            // stages existed, not by anything targeting this file.
+            // EXACT NAME, not EndsWith("Stage"), so a future sibling whose
+            // name merely ends that way cannot be mistaken for the stage
+            // and silently move the whole scan to the wrong scope.
             bool IsUiStage(string name) => name == "EnemyStage" || name == "PartyStage";
 
             var scope = root;

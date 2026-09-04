@@ -116,15 +116,6 @@ namespace PrincesPalace
         // standing without knowing anything about stages or slots.
         internal Func<CombatantState, RectTransform> SlotFor;
 
-        // The world-space MIRROR of SlotFor -- a rig-resolved combatant's
-        // own animator, so a lunge/recoil/punch moves the rig itself and
-        // not only the (hidden) uGUI slot's shadow/nameplate rack. Returns
-        // null for a combatant with no world slot animator resolvable,
-        // which every AlsoPlay*/AlsoPunch* call below already treats as
-        // "nothing to do" via the null-conditional -- see
-        // FightController.WorldAnimatorFor for why this is safe to call
-        // unconditionally rather than gated on "is this rig-resolved".
-        internal Func<CombatantState, StageActorAnimator> WorldAnimatorFor;
         // Paints a set of vitals. Called TWICE per beat -- once with what stood
         // before the blow, once with what stood after.
         internal Action<IReadOnlyDictionary<CombatantState, Vitals>> PaintVitals;
@@ -152,12 +143,11 @@ namespace PrincesPalace
 
         // How a combatant's chosen stance actually PLAYS -- windup, impact
         // timing, follow-through, whether it returns to rest -- regardless
-        // of whether it is a frame sheet or a rig underneath. Resolved by
+        // of whether one drawing or a whole sheet is underneath. Resolved by
         // the controller, the only thing that knows which art style a
         // combatant wears; the `abandon` param is threaded straight through
-        // to whichever StanceStepper/RigStancePlayer call ends up driving
-        // it, so a flinch on a victim can still be cut short mid-beat the
-        // way it always could.
+        // to whichever StanceStepper call ends up driving it, so a flinch on
+        // a victim can still be cut short mid-beat the way it always could.
         internal Func<CombatantState, string, Func<bool>, IStancePlayback> PlaybackFor;
         internal Action<CombatBeat> FlashTarget;
 
@@ -599,7 +589,6 @@ namespace PrincesPalace
             float hold = Scaled(BeatHoldSeconds) * 0.45f;
             float lead = staticSwing ? StageActorAnimator.AnticipationSeconds : 0f;
             animator?.Play(offset, hold, -1f, lead);
-            AlsoPlayWorld(beat.Actor, offset, hold, leadSeconds: lead);
         }
 
         // Whether this blow should draw the house's own contact effects.
@@ -614,22 +603,6 @@ namespace PrincesPalace
             if (beat == null || beat.Amount <= 0 || beat.IsHealing) return false;
 
             return beat.Vfx == null || string.IsNullOrEmpty(beat.Vfx.path);
-        }
-
-        // Plays the SAME travel on the world-space mirror of `who`'s slot.
-        // Never gated on the uGUI animator existing -- a combatant can be
-        // rig-resolved with no uGUI StageActorAnimator doing anything
-        // visible, and the two are independent lookups (SlotFor vs
-        // WorldAnimatorFor), so this always tries on its own.
-        private void AlsoPlayWorld(CombatantState who, Vector2 offset, float holdSeconds, float outSeconds = -1f,
-                                   float leadSeconds = 0f)
-        {
-            WorldAnimatorFor?.Invoke(who)?.Play(offset, holdSeconds, outSeconds, leadSeconds);
-        }
-
-        private void AlsoPunchWorld(CombatantState who, float strength)
-        {
-            WorldAnimatorFor?.Invoke(who)?.Punch(strength);
         }
 
         // THE COMMITTED RUSH. Like Lunge in order -- the travel runs alongside
@@ -669,7 +642,6 @@ namespace PrincesPalace
 
             float hold = Scaled(HitStopFor(beat) + ChargeContactSeconds);
             animator.Play(offset, hold, outSeconds);
-            AlsoPlayWorld(beat.Actor, offset, hold, outSeconds);
         }
 
         // THE OTHER APPROACH: get there FIRST, then swing.
@@ -704,7 +676,6 @@ namespace PrincesPalace
             // home again halfway through its own slam.
             float hold = Scaled(BeatHoldSeconds + CloseSeconds);
             animator.Play(offset, hold);
-            AlsoPlayWorld(beat.Actor, offset, hold);
             yield return new WaitForSeconds(Scaled(CloseSeconds));
         }
 
@@ -763,7 +734,6 @@ namespace PrincesPalace
             var offset = new Vector2(dx, 0f);
             float hold = Scaled(BeatHoldSeconds) * 0.45f;
             animator.Play(offset, hold);
-            AlsoPlayWorld(beat.Target, offset, hold);
         }
 
         private const float LungeFraction = 0.35f;
@@ -837,8 +807,8 @@ namespace PrincesPalace
             //   inside, and the rush would arrive late by its own length.
             //
             //   NO MOTION, because that is what "one drawing" means here. A
-            //   multi-frame or rig actor's stance already spends real time on
-            //   its own wind-up and must stay pixel-identical.
+            //   multi-frame actor's stance already spends real time on its
+            //   own wind-up and must stay pixel-identical.
             //
             //   A TARGET THAT IS SOMEBODY ELSE, because there is no crossing
             //   to a self-targeted beat, and TravelFor would return no
@@ -874,7 +844,6 @@ namespace PrincesPalace
             // either deforms the target properly or leaves it alone.
             float squash = Mathf.Max(0.55f, strength);
             animator?.Punch(squash);
-            AlsoPunchWorld(beat.Target, squash);
         }
 
         // EVERY POSED VICTIM'S OWN FRAMES, which nothing stepped until now.

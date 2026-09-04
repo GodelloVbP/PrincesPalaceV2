@@ -3,10 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
-using PrincesPalace.Core.Rig;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
-using PrincesPalace.Domain.Rig;
 using PrincesPalace.Domain.Stage;
 
 namespace PrincesPalace
@@ -99,19 +97,14 @@ namespace PrincesPalace
             }
 
             AnchorStageSlots(enemySlots, onStage, mirrored: false, StageScaleForSlot);
-            AnchorStageSlots(enemyWorldSlots, onStage, mirrored: false, StageScaleForSlot);
 
             for (int i = 0; i < enemySprites.Length; i++)
             {
                 var enemy = i < enemies.Count && IsOnStage(enemies[i]) ? enemies[i] : null;
                 enemySlots[i].gameObject.SetShown(enemy != null);
-                // Deactivating the world slot also deactivates whatever rig
-                // instance is parented under it -- same lifecycle as the
-                // uGUI slot, no separate rig-instance cleanup needed.
-                WorldSlotAt(enemyWorldSlots, i)?.gameObject.SetShown(enemy != null);
                 if (enemy == null) continue;
 
-                RefreshCombatantSprite(enemySprites[i], WorldSlotAt(enemyWorldSlots, i), enemy, StageSide.Right, StanceOf(enemy));
+                RefreshCombatantSprite(enemySprites[i], enemy, StageSide.Right, StanceOf(enemy));
                 RefreshNameplate(enemyNameplates[i], enemy);
             }
 
@@ -119,27 +112,17 @@ namespace PrincesPalace
 
             var party = _session.Encounter.PlayerParty;
             AnchorStageSlots(partySlots, party.Count, mirrored: true);
-            AnchorStageSlots(partyWorldSlots, party.Count, mirrored: true);
 
             for (int i = 0; i < partySprites.Length; i++)
             {
                 var member = i < party.Count ? party[i] : null;
                 partySlots[i].gameObject.SetShown(member != null);
-                WorldSlotAt(partyWorldSlots, i)?.gameObject.SetShown(member != null);
                 if (member == null) continue;
 
-                RefreshCombatantSprite(partySprites[i], WorldSlotAt(partyWorldSlots, i), member, StageSide.Left, StanceOf(member));
+                RefreshCombatantSprite(partySprites[i], member, StageSide.Left, StanceOf(member));
                 RefreshNameplate(partyNameplates[i], member);
             }
         }
-
-        // Defensive against index mismatch rather than a bare array index --
-        // enemyWorldSlots/partyWorldSlots are declared to always match
-        // enemySlots/partySlots 1:1 (E4's own count audit enforces it at
-        // build time), but a null here should degrade to "no rig for this
-        // slot" rather than throw and take the whole stage refresh down.
-        private static RectTransform WorldSlotAt(RectTransform[] worldSlots, int i) =>
-            worldSlots != null && i < worldSlots.Length ? worldSlots[i] : null;
 
         // What pose a combatant is holding. Public so a PlayMode test can assert
         // the round ended idle rather than stuck on an attack frame -- there is
@@ -466,40 +449,11 @@ namespace PrincesPalace
 
         // ---- one combatant ----------------------------------------------------
 
-        // One rig instance per combatant that has one, reused across
-        // refreshes rather than instantiated fresh every repaint (this runs
-        // every frame during an attack animation -- see AnchorStageSlots).
-        // Never removed on its own: a combatant leaving the stage hides it
-        // via its world slot's SetShown(false) instead (see RefreshStage),
-        // so a returning combatant (a summon re-shown, a flee that comes
-        // back) reuses the same instance rather than re-instantiating.
-        private readonly Dictionary<CombatantState, GameObject> _rigInstances = new Dictionary<CombatantState, GameObject>();
-
-        // Cached alongside the instance itself, computed once on first
-        // instantiation rather than re-read from RigMeta every repaint.
-        private readonly Dictionary<CombatantState, float> _rigScale = new Dictionary<CombatantState, float>();
-
-        private void RefreshCombatantSprite(Image image, RectTransform worldSlot, CombatantState combatant, StageSide side, string stance)
+        private void RefreshCombatantSprite(Image image, CombatantState combatant, StageSide side, string stance)
         {
             if (image == null) return;
 
             var slotRect = image.transform.parent as RectTransform;
-
-            // Graceful degradation, per-combatant: only a resolvable folder
-            // gets the rig path (today, only "Enemies/rat" during the
-            // pilot); everything else falls straight through to the
-            // existing frame-sheet Image path completely unchanged below.
-            var rigPrefab = worldSlot != null ? RigLibrary.Resolve(SpriteFolderFor(combatant)) : null;
-            if (rigPrefab != null)
-            {
-                RefreshRigActor(rigPrefab, worldSlot, combatant, side);
-                image.gameObject.SetShown(false);
-                // A rig samples its bones continuously -- there are no discrete
-                // frames to dissolve between, and a stale layer left showing
-                // would be a second rat.
-                HideBlend(combatant);
-                return;
-            }
 
             var sprite = LoadStanceSprite(combatant, stance);
 
@@ -559,68 +513,6 @@ namespace PrincesPalace
             // headless assertion about "the sprite loaded" passed.
             image.gameObject.SetShown(true);
             image.enabled = true;
-        }
-
-        // Instantiates (or reuses) a rig actor under its world slot, sized
-        // and mirrored to match what the frame-sheet Image path does for
-        // everyone else. Static bind pose only for now -- no stance/frame
-        // sampling yet, that's the animation-data phase this pilot lands
-        // before.
-        private void RefreshRigActor(GameObject prefab, RectTransform worldSlot, CombatantState combatant, StageSide side)
-        {
-            GameObject instance;
-            bool fresh = !_rigInstances.TryGetValue(combatant, out instance) || instance == null;
-            if (fresh)
-            {
-                instance = Object.Instantiate(prefab, worldSlot, worldPositionStays: false);
-                _rigInstances[combatant] = instance;
-
-                // Added at instantiation time rather than baked into the
-                // prefab -- see RigActor's own header for why. "bones" is
-                // the holder GameObject RigPrefabBuilder creates as a
-                // direct child of the prefab root, one level above the
-                // named bone Transforms themselves.
-                var rigActor = instance.AddComponent<RigActor>();
-                rigActor.Initialize(instance.transform.Find("bones"));
-                instance.AddComponent<RigHitFlash>();
-                instance.AddComponent<RigDeathFade>();
-            }
-            else if (instance.transform.parent != worldSlot)
-            {
-                instance.transform.SetParent(worldSlot, worldPositionStays: false);
-            }
-
-            instance.transform.localPosition = Vector3.zero;
-            instance.transform.localRotation = Quaternion.identity;
-
-            // RigLibrary.ScaleFor undoes the rig's own bind-pose-pixel-to-
-            // Unity-unit conversion (RigPrefabBuilder's PixelsPerUnit) AND
-            // corrects for the bind pose's own content height disagreeing
-            // with what this creature rendered at before it had a rig (see
-            // RigLibrary's own comment) -- landing back at "1 unit = 1
-            // canvas pixel, at the RIGHT apparent size" under a world slot
-            // whose OWN scale already carries SlotScale (AnchorStageSlots),
-            // so this multiplier is exactly what the world slot's local
-            // space needs, nothing more. Mirror flips the same way the
-            // frame-sheet Image path already does (StageFacing.MirrorScaleX),
-            // just as a negative X scale here instead of on an
-            // Image.rectTransform.
-            //
-            // RigMeta lookup only on a freshly-instantiated instance -- a
-            // reused one already carries the right scale from last time,
-            // and GetComponent on every repaint (this runs every frame
-            // during an attack, see AnchorStageSlots) is needless work.
-            if (fresh)
-            {
-                var meta = instance.GetComponent<RigMeta>();
-                _rigScale[combatant] = RigLibrary.ScaleFor(SpriteFolderFor(combatant), meta != null ? meta.ReferenceHeightPx : 0f);
-            }
-            float scale = _rigScale.TryGetValue(combatant, out var s) ? s : RigLibrary.PixelsPerUnit;
-
-            float mirror = StageFacing.MirrorScaleX(FacingOf(combatant), side);
-            instance.transform.localScale = new Vector3(scale * mirror, scale, 1f);
-
-            instance.SetActive(true);
         }
 
         // No authored art: fall back to the plain plate so the slot still reads
@@ -943,11 +835,6 @@ namespace PrincesPalace
                 // every beat after the one that killed it, so this is asked
                 // repeatedly and must only ever fade once.
                 fade?.PlayIfNotAlready();
-
-                if (_rigInstances.TryGetValue(pair.Key, out var rigInstance) && rigInstance != null)
-                {
-                    rigInstance.GetComponent<RigDeathFade>()?.PlayIfNotAlready();
-                }
             }
         }
 
@@ -967,10 +854,8 @@ namespace PrincesPalace
         private IEnumerator PlayDefeatedFrames(CombatantState combatant)
         {
             // Through the same seam Windup/FollowThrough always used, rather
-            // than StanceStepper directly -- what makes a rig-resolved
-            // combatant's own defeated clip (a collapse, once one is
-            // authored) play here too, instead of this coroutine only ever
-            // driving the frame-sheet path.
+            // than StanceStepper directly, so a single-drawing defeated
+            // stance settles through the same phases a sheet's does.
             var playback = PlaybackFor(combatant, FightSession.Stances.Defeated, () => _session == null);
             yield return playback.Windup();
             yield return playback.FollowThrough();
@@ -1019,17 +904,6 @@ namespace PrincesPalace
         private readonly Dictionary<CombatantState, float> _idleClock =
             new Dictionary<CombatantState, float>();
 
-        // The rig twin of _idleClock, kept SEPARATE rather than shared: a
-        // rig-resolved combatant runs both this clock (StepRigIdlePose, the
-        // bone-driven clip) and _idleClock itself (the frame-sheet transform
-        // breath still plays on top -- see StepIdleFrame's own comment) in
-        // the same call, and the two clocks are not interchangeable units --
-        // one wraps against a clip's DurationSeconds, the other against a
-        // frame sheet's SecondsPerFrame. Sharing the dictionary would have
-        // each overwrite the other's accumulation and double-advance both.
-        private readonly Dictionary<CombatantState, float> _rigIdleClock =
-            new Dictionary<CombatantState, float>();
-
         // How far apart two figures' breaths are pushed, in frames.
         //
         // Two Ironback Beetles side by side breathing in perfect lockstep read
@@ -1046,7 +920,6 @@ namespace PrincesPalace
             // the next encounter's are different objects -- the old entries
             // would otherwise sit here for the session's life.
             _idleClock.Clear();
-            _rigIdleClock.Clear();
 
             if (_idling != null || !isActiveAndEnabled) return;
 
@@ -1109,10 +982,6 @@ namespace PrincesPalace
         // the two drawings are 50/50 whichever of them is currently "the"
         // frame.
         //
-        // Deliberately NOT applied to a rig actor: its bones are already
-        // sampled continuously, so there are no discrete frames to blend and
-        // the layer stays hidden (RefreshCombatantSprite returns before ever
-        // touching it).
         //
         // Capped below a true 50/50 (2026-08-30): a full half-opacity blend
         // means the WORST-registered pair of frames on a sheet gets shown at
@@ -1178,69 +1047,6 @@ namespace PrincesPalace
         {
             var slot = SlotFor(combatant);
             if (slot != null) slot.GetComponent<StageActorAnimator>()?.SetBreath(amount);
-
-            // The world-space mirror too -- see WorldAnimatorFor's own
-            // header. A rig actor ALSO breathes through its own idle clip
-            // (StepRigIdlePose below), on a completely different Transform;
-            // the two do not compete.
-            WorldAnimatorFor(combatant)?.SetBreath(amount);
-        }
-
-        // Phase offset between two identical rigs breathing side by side, as
-        // a fraction of their own clip's length -- the rig twin of
-        // IdlePhaseFrames, which is stated in frames a rig clip does not
-        // have. See AnchorStageSlots' own note on why two identical figures
-        // in lockstep read as one animation drawn twice.
-        private const float RigIdlePhaseFraction = 0.28f;
-
-        // Drives a rig's idle clip continuously rather than per beat, on top
-        // of (not instead of) the frame-sheet transform breath below -- see
-        // StepIdleFrame's own comment for why both run.
-        //
-        // Its own clock (_rigIdleClock), not _idleClock: the frame-sheet
-        // breath below runs unconditionally for every idle combatant,
-        // rig-resolved or not, and would otherwise fight this over the
-        // same dictionary entry. NO REPAINT: nothing here writes
-        // _actorFrame, so there is no frame index for FrameFor/RefreshStage
-        // to disagree about -- the rig's own bone Transforms are what
-        // actually moved, and SpriteSkin reads them directly every render.
-        private void StepRigIdlePose(CombatantState combatant, int index, GameObject rigInstance)
-        {
-            var rigActor = rigInstance.GetComponent<RigActor>();
-            if (rigActor == null) return;
-
-            var clip = RigManifestLoader.ClipFor(SpriteFolderFor(combatant), FightSession.Stances.Idle);
-            if (clip.IsEmpty)
-            {
-                // NO CLIP, NO POSE TO DRIVE: back to bind pose rather than
-                // leaving whatever a previous beat's swing left the bones
-                // in -- this only runs while StanceOf is already Idle, so
-                // nothing else is animating this rig right now either.
-                _rigIdleClock.Remove(combatant);
-                rigActor.ResetToRest();
-                return;
-            }
-
-            // UNSCALED, like the frame-sheet clock below, so a fight paused
-            // behind a modal does not bank up a breath. Multiplied by
-            // BeatSpeedMultiplier rather than scaling the clip's own
-            // duration (RigSampler has no seam for that) -- algebraically
-            // the same effect: the clock crosses the clip's length that
-            // many times faster, which is what makes a PlayMode test's
-            // 60x-speed fight also breathe at 60x rather than stand frozen
-            // for the whole (real-time-short) test.
-            float multiplier = FightBeatPlayer.BeatSpeedMultiplier;
-            float dt = multiplier <= 0f ? 0f : Time.unscaledDeltaTime * multiplier;
-
-            if (!_rigIdleClock.TryGetValue(combatant, out float clock))
-            {
-                clock = index * clip.DurationSeconds * RigIdlePhaseFraction;
-            }
-
-            clock += dt;
-            _rigIdleClock[combatant] = clock;
-
-            rigActor.ApplyPose(RigSampler.Sample(clip, clock));
         }
 
         // Advances one figure's breath. True when the drawing changed.
@@ -1255,24 +1061,9 @@ namespace PrincesPalace
             if (StanceOf(combatant) != FightSession.Stances.Idle)
             {
                 _idleClock.Remove(combatant);
-                _rigIdleClock.Remove(combatant);
                 BreatheFigure(combatant, 0f);
                 HideBlend(combatant);
                 return false;
-            }
-
-            // The rig path ALSO breathes through its own authored idle clip
-            // -- a bob/sway/tail-flick played on top of, not instead of, the
-            // transform-scale breath below. The two animate different
-            // things entirely (this combatant's bone Transforms under its
-            // world slot, versus the uGUI slot's own localScale, which
-            // still matters for a rig-resolved combatant: it is the SAME
-            // slot Lunge/Recoil/Charge move, and the same slot
-            // StageAnimationTests asserts a flat-art actor breathes on --
-            // rig-resolved or not, that contract does not change here.
-            if (_rigInstances.TryGetValue(combatant, out var rigInstance) && rigInstance != null)
-            {
-                StepRigIdlePose(combatant, index, rigInstance);
             }
 
             var animation = StanceAnimationFor(combatant, FightSession.Stances.Idle);
@@ -1411,34 +1202,6 @@ namespace PrincesPalace
                 slot.GetComponent<StageActorAnimator>()?.ResetToHome();
             }
 
-            // World slots have no StageDeathFade (rigs use RigDeathFade) but
-            // DO carry a StageActorAnimator now -- same re-home, so a hit
-            // that landed mid-lunge just before the fight ended does not
-            // leave the next encounter's rig starting off its own mark.
-            foreach (var slot in enemyWorldSlots.Concat(partyWorldSlots))
-            {
-                if (slot == null) continue;
-                slot.GetComponent<StageActorAnimator>()?.ResetToHome();
-            }
-
-            // Rig instances are keyed by CombatantState, and a new Bind()
-            // means every existing CombatantState this fight ever cached an
-            // instance for is about to become unreachable -- nothing will
-            // look those dictionary entries up again, but nothing was
-            // destroying the GameObjects either. World slots are fixed
-            // scene objects, not per-session, so a re-bind without this
-            // left the PREVIOUS fight's rig actor still parented under the
-            // same world slot as the new fight's, doubling its rendered
-            // parts (confirmed: RigStageTests caught this at 14 renderers
-            // under Enemy0WorldSlot instead of 7, the exact "two stale
-            // copies" signature).
-            foreach (var instance in _rigInstances.Values)
-            {
-                if (instance != null) Destroy(instance);
-            }
-            _rigInstances.Clear();
-            _rigScale.Clear();
-
             // The racks too, for the same reason the figures are: a kick
             // interrupted by a fight ending would leave the whole stage parked
             // a few pixels off for the next encounter, and nothing else writes
@@ -1460,20 +1223,6 @@ namespace PrincesPalace
             // Read off the BEAT, not off the target's health -- by the time this
             // plays, live health has already moved through the rest of the round.
             //
-            // Both paths get a chance to fire: a rig-resolved combatant's
-            // Image is hidden, so its (harmless, invisible) StageHitFlash
-            // firing costs nothing, and the reverse holds if a target ever
-            // has no rig instance yet.
-            if (beat.Target != null && _rigInstances.TryGetValue(beat.Target, out var rigInstance) && rigInstance != null)
-            {
-                var rigFlash = rigInstance.GetComponent<RigHitFlash>();
-                if (rigFlash != null)
-                {
-                    if (beat.IsHealing) rigFlash.FlashHeal();
-                    else rigFlash.Flash();
-                }
-            }
-
             var slot = SlotFor(beat.Target);
             if (slot == null) return;
 
@@ -1537,26 +1286,8 @@ namespace PrincesPalace
         // The seam FightBeatPlayer actually drives: how this combatant's
         // chosen stance plays, regardless of which art style is underneath.
         //
-        // A rig-resolved combatant only counts if RefreshRigActor has
-        // actually run for it -- which every beat guarantees, because
-        // PlayBeats poses every combatant in beat.Stances (SetStance ->
-        // PoseCombatant -> RefreshStage) BEFORE it asks for a playback, for
-        // both the beat's own actor and every victim FlinchFrames later
-        // resolves. A combatant with no rig instance yet (never posed this
-        // fight, or resolves to the frame-sheet path) falls straight
-        // through to FrameStancePlayback, identical to before this seam.
         private IStancePlayback PlaybackFor(CombatantState combatant, string stance, System.Func<bool> abandon)
         {
-            if (combatant != null && _rigInstances.TryGetValue(combatant, out var instance) && instance != null)
-            {
-                var rigActor = instance.GetComponent<RigActor>();
-                if (rigActor != null)
-                {
-                    var clip = RigManifestLoader.ClipFor(SpriteFolderFor(combatant), stance);
-                    return new RigStancePlayback(rigActor, clip, abandon);
-                }
-            }
-
             var animation = StanceAnimationFor(combatant, stance);
             return new FrameStancePlayback(combatant, animation, SetActorFrame, abandon);
         }

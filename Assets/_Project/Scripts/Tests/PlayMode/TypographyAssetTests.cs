@@ -11,7 +11,7 @@ namespace PrincesPalace.PlayModeTests
     // required glyphs, and render with the briefed colours.
     //
     // Loaded straight off AssetDatabase by path, the same way
-    // RigRawSpriteTests reads a generated atlas -- not through
+    // EnemyStanceCaptureTests reads a generated sheet -- not through
     // SceneBuilder.FontFor/MaterialFor, which live in the Editor assembly
     // and are not a reference PlayMode tests are allowed to take
     // (CODE_STANDARDS.md 1: reference direction only ever points toward

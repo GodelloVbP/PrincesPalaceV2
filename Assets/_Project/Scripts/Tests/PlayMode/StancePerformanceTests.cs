@@ -1,6 +1,5 @@
 using NUnit.Framework;
 using PrincesPalace.Domain.Combat;
-using PrincesPalace.Domain.Rig;
 using PrincesPalace.Domain.Stage;
 using UnityEngine;
 
@@ -8,7 +7,7 @@ namespace PrincesPalace.PlayModeTests
 {
     // The IStancePlayback seam FightBeatPlayer now drives instead of
     // StanceStepper/FrameHoldCurve directly. Lives in PlayMode rather than
-    // EditMode because FrameStancePlayback/RigStancePlayback are Core types
+    // EditMode because FrameStancePlayback is a Core type
     // (StanceAnimation itself references UnityEngine.Sprite), which the
     // EditMode assembly's own asmdef does not reference at all.
     //
@@ -88,7 +87,7 @@ namespace PrincesPalace.PlayModeTests
 
             playback.ResetToRest();
 
-            Assert.AreEqual(0, seen, "the frame-sheet twin of the rig's bind pose is frame 0 -- the same reset every beat always applied");
+            Assert.AreEqual(0, seen, "rest is frame 0 -- the same reset every beat always applied");
         }
 
         // ---- the still-drawing wrapper ------------------------------------
@@ -165,47 +164,6 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(new StaticStancePlayback(FlatPlayback()).HasMotion,
                 "Flinch skips a victim whose playback has no motion; a wrapper claiming motion would " +
                 "start a coroutine that shows nothing for an eighth of a second");
-        }
-
-        // ---- the rig side of the same seam -------------------------------
-
-        private static RigStanceClip Clip(float duration, float impactAt) =>
-            new RigStanceClip(duration, impactAt, impactAt, false,
-                new[] { new RigBoneTrack("head", new[] { new RigKeyframe(0f, 0f), new RigKeyframe(duration, 10f) } ) });
-
-        [Test]
-        public void RigWindupSecondsIsTheClipsOwnImpactAt()
-        {
-            var playback = new RigStancePlayback(null, Clip(0.5f, 0.32f));
-
-            Assert.AreEqual(0.32f, playback.WindupSeconds, 0.0001f,
-                "Charge needs to know the rig's own authored impact moment before either phase plays a single frame");
-        }
-
-        [Test]
-        public void RigTotalSecondsIsTheClipsOwnDuration()
-        {
-            var playback = new RigStancePlayback(null, Clip(0.5f, 0.32f));
-
-            Assert.AreEqual(0.5f, playback.TotalSeconds, 0.0001f);
-        }
-
-        [Test]
-        public void RigStancesNeverReturnToStart()
-        {
-            var playback = new RigStancePlayback(null, Clip(0.5f, 0.32f));
-
-            Assert.IsFalse(playback.ReturnsToStart,
-                "no rig clip authors a release phase during the pilot -- every clip is drawn to already end at rest");
-        }
-
-        [Test]
-        public void AnEmptyRigClipHasNoMotion()
-        {
-            var playback = new RigStancePlayback(null, RigStanceClip.Empty);
-
-            Assert.IsFalse(playback.HasMotion,
-                "a folder with no animations.json resolves to RigStanceClip.Empty, and Flinch relies on HasMotion to skip it");
         }
     }
 }

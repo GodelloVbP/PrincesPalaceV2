@@ -102,7 +102,7 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.AreEqual(0, fired,
                 "an actor with real wind-up frames got the flat-art treatment on top of them; " +
-                "multi-frame and rig actors have to stay exactly as they were");
+                "multi-frame actors have to stay exactly as they were");
         }
 
         // ---- fixture -------------------------------------------------------------

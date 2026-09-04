@@ -6,9 +6,7 @@
         "UnityEngine.UI",
         "Unity.TextMeshPro",
         "Unity.RenderPipelines.Universal.Runtime",
-        "Unity.RenderPipelines.Core.Runtime",
-        "Unity.2D.Animation.Runtime",
-        "Unity.2D.Common.Runtime"
+        "Unity.RenderPipelines.Core.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -8,8 +8,7 @@
         "UnityEditor.TestRunner",
         "UnityEngine.UI",
         "Unity.TextMeshPro",
-        "Unity.RenderPipelines.Core.Runtime",
-        "Unity.2D.Animation.Runtime"
+        "Unity.RenderPipelines.Core.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
