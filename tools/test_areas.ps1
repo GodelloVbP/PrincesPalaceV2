@@ -97,15 +97,10 @@ $Areas = @{
     # bind to (audio/resolution/window mode/fps), the same UI-presentation
     # subject 'Options' already covers here.
     ui      = "Button|Audio|Splash|PauseMenu|DebugMenu|MainMenu|SystemMenu|Cursor|Dialogue|Bark|Inventory|Equipment|Dossier|Options|Settings|Music|Screen|UiKit|Flicker|Ambience|Overlay|OfferRow|Tooltip|Typography|Container"
-    # 'LoopCycle' rather than widening 'Loop': the idle loop's pacing is art
-    # timing and belongs here, and a bare 'Loop' would be a word common enough
-    # to drag in anything.
-    #
-    # 'BreathCurve' likewise, and not a bare 'Breath': the curve is the other
-    # half of what LoopCycle started -- how big a figure is at rest, against
-    # which drawing it is showing -- so it belongs in the same area for the
-    # same reason.
-    art     = "Stance|StaticSwing|LoopCycle|BreathCurve|Shadow|WhiteQuad|SpriteFacing|BattleBackground|ItemArt|TalentArt|ArtPath|HandAssembled|Flash|Legibility|PostProcessing"
+    # 'BreathCurve' rather than a bare 'Breath': the curve is art timing --
+    # how big a figure is at rest between blows -- and belongs here, while a
+    # bare 'Breath' would be a word common enough to drag in anything.
+    art     = "Stance|StaticSwing|BreathCurve|Shadow|WhiteQuad|SpriteFacing|BattleBackground|ItemArt|TalentArt|ArtPath|HandAssembled|Flash|Legibility|PostProcessing"
     rng     = "Rng|SeededRandom|Seed"
 }
 

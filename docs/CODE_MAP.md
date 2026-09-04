@@ -120,7 +120,7 @@ EditMode-testable):
 | `Relics/` | `RelicLoadout` (party-wide relic ownership/assignment) |
 | `Rewards/` | `CombatReward`, `CharacterReward`, offer tables |
 | `Rng/` | `SeededRandom` (built, not yet wired — see `AUDIT.md`) |
-| `Stage/` | Stage-side/depth/layout pure geometry, `SpriteFacing`, `StanceManifest` (authored ground line + breath, one row per actor — no per-stance timing, because a stance is one drawing), `BreathCurve` (the continuous scale transform every idle figure gets, and the only thing that moves a figure between blows — see its own header), `LoopCycle` (frame-index arithmetic; no production caller since the stance sheets went, kept with its tests) |
+| `Stage/` | Stage-side/depth/layout pure geometry, `SpriteFacing`, `StanceManifest` (authored ground line + breath, one row per actor — no per-stance timing, because a stance is one drawing), `BreathCurve` (the continuous scale transform every idle figure gets, and the only thing that moves a figure between blows — see its own header) |
 | `Stats/` | `StatBlock`, `StatType`, `AbilityDerivation` |
 
 ## Core map

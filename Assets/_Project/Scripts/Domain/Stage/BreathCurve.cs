@@ -4,10 +4,9 @@ namespace PrincesPalace.Domain.Stage
 {
     // HOW BIG A FIGURE IS AT REST, given a clock.
     //
-    // Beside LoopCycle, which answers a neighbouring question in the same
-    // shape, for the same reason: it is arithmetic about a number, it decides
-    // what the stage looks like while nothing is happening, and a rule an
-    // EditMode test cannot reach is a rule nothing checks.
+    // It is arithmetic about a number, it decides what the stage looks like
+    // while nothing is happening, and a rule an EditMode test cannot reach is
+    // a rule nothing checks.
     //
     // THE PROBLEM IT SOLVES. Every stance in this game is a single drawing
     // (docs/STANCE_SHEET_SPEC.md), so nothing on the stage moves at all
