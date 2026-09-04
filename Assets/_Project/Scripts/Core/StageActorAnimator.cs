@@ -35,6 +35,35 @@ namespace PrincesPalace
         internal const float LungeSeconds = 0.055f;
         private const float ReturnSeconds = 0.16f;
 
+        // THE CROUCH BEFORE THE SNAP, for a figure whose art cannot draw one.
+        //
+        // An animated actor's wind-up frames already say "this is about to
+        // happen"; a single drawing says nothing at all, so its blow arrives
+        // with no warning and reads as a slide rather than a strike. This is
+        // the transform standing in for those frames: a short load away from
+        // the target, and the outbound tween is the release of it.
+        //
+        // Internal, and read by StaticStancePlayback: the impact instant has
+        // to be pushed back by exactly this much or the flash and the damage
+        // number fire while the figure is still loading. One home, two
+        // readers, no chance of them disagreeing.
+        //
+        // 0.07s is under two thirds of a beat's own gap and just over four
+        // frames at 60Hz -- long enough to register as a decision, short
+        // enough that a round of swings does not read as hesitation.
+        internal const float AnticipationSeconds = 0.07f;
+
+        // How far back the load goes, as a fraction of the travel it precedes.
+        // A tenth: the eye reads the DIRECTION reversing, not the distance,
+        // and anything larger turns a lean into a wind-up step.
+        private const float AnticipationFraction = 0.10f;
+
+        // Wider and shorter at the bottom of the crouch -- positive stretch,
+        // the same sign a lunge uses and the opposite of Punch's. Half the
+        // lunge's own OutStretch, because this is the figure gathering rather
+        // than the figure travelling.
+        private const float AnticipationStretch = 0.06f;
+
         // How far the figure stretches along its travel, at the fastest point
         // of each leg. The strike gets nearly three times the recovery's,
         // because that is the half being emphasised — the same asymmetry the
@@ -84,6 +113,11 @@ namespace PrincesPalace
         private Image _spriteImage;
         private readonly List<Image> _ghosts = new List<Image>();
         private float _sinceGhost;
+
+        // How many the OUTBOUND leg dropped, read by TweenBack to decide
+        // whether the return earns its single contact ghost. Reset at the top
+        // of each outbound leg rather than accumulated across a fight.
+        private int _ghostsOutbound;
 
         // How far the figure must travel between two afterimages. Wide enough
         // that a lunge's short lean drops at most one and a cast drops none;
@@ -274,7 +308,12 @@ namespace PrincesPalace
         // travel reads as a rush across the stage rather than a flick; the
         // return is always ReturnSeconds either way, since nothing is being
         // emphasised on the way back.
-        public void Play(Vector2 offset, float holdSeconds, float outSeconds = -1f)
+        //
+        // leadSeconds > 0 buys an anticipation leg in FRONT of the travel --
+        // see PlayRoutine. Zero by default and only ever passed for a
+        // single-drawing actor's lunge, so every other caller in the game
+        // moves byte-for-byte as it did before the parameter existed.
+        public void Play(Vector2 offset, float holdSeconds, float outSeconds = -1f, float leadSeconds = 0f)
         {
             if (!isActiveAndEnabled)
             {
@@ -291,7 +330,7 @@ namespace PrincesPalace
                 ApplyStretch(0f);
             }
 
-            _running = StartCoroutine(PlayRoutine(offset, holdSeconds, outSeconds));
+            _running = StartCoroutine(PlayRoutine(offset, holdSeconds, outSeconds, leadSeconds));
         }
 
         // Snaps home immediately, for a fight ending or the panel closing
@@ -406,7 +445,8 @@ namespace PrincesPalace
             _punching = null;
         }
 
-        private IEnumerator PlayRoutine(Vector2 offset, float holdSeconds, float outSeconds = -1f)
+        private IEnumerator PlayRoutine(Vector2 offset, float holdSeconds, float outSeconds = -1f,
+                                        float leadSeconds = 0f)
         {
             // SCALED, through the same seam SpellVfxPlayer and StageHitFlash
             // already use. This one did not, and the mismatch is visible rather
@@ -415,8 +455,22 @@ namespace PrincesPalace
             // mid-stage. Anything driven by a beat has to run on the beat's own
             // clock or it desynchronises from the thing it illustrates.
             var target = _home + offset;
+
+            // The strike leaves from wherever the crouch got to, not from the
+            // mark. Written as a variable rather than reading the live rect
+            // unconditionally so the no-lead path still passes _home exactly,
+            // which is what makes this change invisible to every existing
+            // caller: a rect nudged by something else would otherwise start
+            // the tween somewhere new.
+            var from = _home;
+            if (leadSeconds > 0f)
+            {
+                yield return Anticipate(offset, FightBeatPlayer.Scaled(leadSeconds));
+                from = _rect.anchoredPosition;
+            }
+
             float outFor = outSeconds < 0f ? LungeSeconds : outSeconds;
-            yield return TweenOut(_home, target, FightBeatPlayer.Scaled(outFor));
+            yield return TweenOut(from, target, FightBeatPlayer.Scaled(outFor));
             if (holdSeconds > 0f)
             {
                 yield return new WaitForSeconds(holdSeconds);
@@ -427,16 +481,51 @@ namespace PrincesPalace
             _running = null;
         }
 
+        // The load before the release: a short drift AWAY from the travel,
+        // squashing wider and shorter as it goes.
+        //
+        // EASE-IN, and it is the whole reason this reads as a wind-up rather
+        // than as a stumble backwards. n*n leaves the figure almost still for
+        // the first half of the lead and gathers it fast at the end, so the
+        // motion the eye catches is the loading, immediately before the snap.
+        // A linear drift over the same distance reads as the figure being
+        // pushed.
+        //
+        // FEET STAY PLANTED BY CONSTRUCTION: this only ever writes
+        // anchoredPosition on the x/y it was handed and ApplyStretch, and the
+        // stretch scales about the slot's own (0.5, 0) ground pivot. There is
+        // no rotation here on purpose -- the pilot has no verified ground
+        // contact for a rotating actor, and a rotation about the wrong point
+        // slides a figure through the floor.
+        private IEnumerator Anticipate(Vector2 offset, float seconds)
+        {
+            var back = _home - offset * AnticipationFraction;
+
+            for (float t = 0f; t < seconds; t += Time.deltaTime)
+            {
+                float n = t / seconds;
+                float k = n * n;
+                _rect.anchoredPosition = Vector2.Lerp(_home, back, k);
+                ApplyStretch(AnticipationStretch * k);
+                yield return null;
+            }
+
+            _rect.anchoredPosition = back;
+            ApplyStretch(AnticipationStretch);
+        }
+
         // Outbound uses ease-OUT (fast off the mark, decelerating into the
         // target) rather than the symmetrical smoothstep this used to use.
         // Smoothstep eases IN as well, so the strike began slowly — which is
         // exactly what made it read as gliding rather than striking.
         private IEnumerator TweenOut(Vector2 from, Vector2 to, float seconds)
         {
-            // The afterimage is dropped on the OUTBOUND leg only -- that is the
+            // The TRAIL is dropped on the OUTBOUND leg only -- that is the
             // fast, emphasised half (ease-out, off the mark hard), and the one
             // the eye reads as the strike. The recovery is slow and unemphasised
             // and a trail on it would just look like the figure smearing home.
+            // The return gets exactly ONE ghost, at the contact position, and
+            // TweenBack's own note says why that is not the same thing.
             //
             // Accumulated from ZERO, so the first ghost lands one GhostSpacing
             // into the travel and a move shorter than that spacing -- a cast's
@@ -444,6 +533,7 @@ namespace PrincesPalace
             // property of DISTANCE crossed, which is what makes it a fast-part
             // cue rather than something on every twitch.
             _sinceGhost = 0f;
+            _ghostsOutbound = 0;
             Vector2 previous = from;
 
             for (float t = 0f; t < seconds; t += Time.deltaTime)
@@ -457,6 +547,7 @@ namespace PrincesPalace
                 {
                     EmitGhost();
                     _sinceGhost = 0f;
+                    _ghostsOutbound++;
                 }
 
                 previous = at;
@@ -474,6 +565,26 @@ namespace PrincesPalace
         // the strike just established.
         private IEnumerator TweenBack(Vector2 from, Vector2 to, float seconds)
         {
+            // ONE GHOST AT THE CONTACT POSITION, and only one.
+            //
+            // Not a trail: TweenBack's own spacing would smear the figure home
+            // and undo the recovery, which is what the outbound-only rule
+            // above exists to prevent. This is a single copy left standing
+            // where the blow landed, so the eye has something marking the
+            // point of contact while the body pulls back off it. In a still
+            // drawing that residue is most of what says a hit HAPPENED there.
+            //
+            // GATED ON THE OUTBOUND LEG having trailed, which is what keeps it
+            // off every small move: a 45px recoil never reaches GhostSpacing,
+            // so it emitted nothing on the way out and gets nothing here. The
+            // ghost is still a property of distance crossed; this only borrows
+            // the outbound leg's verdict rather than measuring again.
+            if (_ghostsOutbound > 0)
+            {
+                EmitGhost();
+                _ghostsOutbound = 0;
+            }
+
             for (float t = 0f; t < seconds; t += Time.deltaTime)
             {
                 float n = t / seconds;

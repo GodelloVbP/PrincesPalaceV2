@@ -206,6 +206,19 @@ which):
   also reports the **redraw ratio** — churn per step over how far the figure
   actually moves — and ranks the roster by it, which is the check that names
   a sheet whose frames are redrawn rather than animated
+- `capture_strip.py` — assembles one PlayMode frame-series capture into a
+  stamped contact strip and a real-time GIF, plus a `before_vs_after.png`
+  once both labels exist; reuses `rig_clip_qa.py`'s frame discovery
+- `static_pilot_qa.ps1` — the static-combat pilot's one-command loop:
+  `graphics_tests.ps1 -Filter StaticPilotStageCaptureTests -Label <label>`,
+  copies the frames back from the runner copy, then runs `capture_strip.py`
+- `make_contact_fx.py` — generates the melee contact effects procedurally
+  rather than cutting them from a delivered sheet: `Resources/Vfx/slash_arc/`
+  and `Resources/Vfx/impact_burst/` (six frames each, alpha from the luminance
+  falloff, impact dead-centre because `FightController.PlayContactFx` applies
+  no impact-point correction), plus `--audio` for the two synthesised
+  **placeholder** one-shots the same cues play. Paths and durations live in
+  `Core/ContactCues.cs`
 - `trim_wav.py` — audio trimming utility
 
 ---
@@ -213,7 +226,7 @@ which):
 ## Tests map
 
 `Assets/_Project/Scripts/Tests/EditMode/` — 39 test classes, Domain-only.
-`Assets/_Project/Scripts/Tests/PlayMode/` — 48 test classes (`GameplayTestBase.cs`
+`Assets/_Project/Scripts/Tests/PlayMode/` — 49 test classes (`GameplayTestBase.cs`
 is the shared base, not a suite itself). Core+Domain. Class counts are from
 `tools/test.ps1 -List`, the live, authoritative source — trust it over a
 file count, since a single file can hold more than one test fixture.
@@ -286,6 +299,20 @@ are plain logic; only the PAINTING needs Unity.
 | `Core/FightBeatPlayer.cs` | playback, paint-first-then-move, `Flush` reclaims |
 | `Core/DamagePopup.cs` | the rise-and-fade, with `Reclaim` |
 | `Core/StageHitFlash.cs` | the white silhouette, over `Resources/Shaders/UIHitFlash.shader` |
+| `Core/ContactCues.cs` | the melee contact cues' asset paths, durations and box size — one home shared by `StaticStancePlayback` (the wind-up whoosh) and `FightController.PlayContactFx` (the arc, the burst, the thud) |
+
+**Phase 1 of the static-art pilot (`docs/STATIC_COMBAT_ART_DEEP_DIVE.md`) —
+the five cues a single-drawing actor's swing was missing.** Keyed on the CLASS
+of beat, never on a creature: a `StageApproach.Lunge` whose actor's playback
+reports `HasMotion == false`. Multi-frame and rig actors are untouched.
+
+| File | What it adds |
+|---|---|
+| `Core/StancePerformance.cs` | `StaticStancePlayback` — wraps the resolved playback so the wind-up reports anticipation + travel, which is what moves the impact instant to when the figure actually arrives |
+| `Core/StageActorAnimator.cs` | `Play`'s optional `leadSeconds` (the crouch before the snap, `Anticipate`), and one afterimage at the contact position when `TweenBack` opens |
+| `Core/FightBeatPlayer.cs` | `PlaybackOf`'s wrap gate, the `PlayContactFx` delegate and `WantsContactFx` |
+| `Core/FightController.SpellVfx.cs` | `PlayContactFx`/`ContactBoxFor` — the arc and the burst through spell-pool members 0 and 1 |
+| Tests | `FightContactCueTests` (which beats get the effects), plus the `StaticStancePlayback` cases in `StancePerformanceTests` and `AnAnticipatedLungeStillEndsExactlyOnItsMark` in `StageAnimationTests` |
 
 **Skeletal rig pilot (the Giant Rat) — hybrid world-space actors alongside
 the frame-sheet Image path above.** `RigLibrary.Resolve(folder)` returns
@@ -368,6 +395,15 @@ All three are graphics-gated and self-skip under the headless commit gate. Run
 them with `tools/graphics_tests.ps1`, which drives the isolated runner copy --
 and note it needs the Unity editor CLOSED, since the licensing client will not
 hand a second instance a token while the editor holds one.
+
+`StaticPilotStageCaptureTests` is the fourth, and the only one that photographs
+MOTION rather than a still: it plays one beat of the Bog Witch's plain swing at
+`BeatSpeedMultiplier` 1 and samples the stage every 1/30s of game time
+(`Time.captureDeltaTime`), writing `f{i}.png` + `timing.json` under
+`tools/screenshots/runtime/static_pilot/<PP_CAPTURE_LABEL>/` so the same fixture
+records a before and an after. Its plain swing is forced by handing `EnemyKit` a
+one-entry ability pool, not by a seed. Run it through `tools/static_pilot_qa.ps1
+-Label <label>`.
 
 ### The stage (`FightController.StageVisuals.cs`)
 

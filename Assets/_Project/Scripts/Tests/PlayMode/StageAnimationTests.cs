@@ -471,6 +471,61 @@ namespace PrincesPalace.PlayModeTests
             Object.Destroy(stage.gameObject);
         }
 
+        // ---- the anticipation leg in front of a lunge --------------------------
+
+        // EVERY TRANSFORM BACK TO BASELINE when a lead-in lunge ends.
+        //
+        // The anticipation leg drifts the figure the WRONG WAY and squashes it
+        // before the strike leaves, which means two new ways for a move to end
+        // somewhere other than where it started: a lead that returns early
+        // leaves the mark stale, and a squash left unwound is not
+        // self-correcting -- nothing else writes localScale, so the figure
+        // simply stays deformed for the rest of the fight (ResetToHome's own
+        // comment records that trap).
+        //
+        // Position and scale only. Where the figure GETS to mid-lead is a
+        // perception question and sampling it would be timing-sensitive; that
+        // belongs to a captured pilot, not here.
+        [UnityTest]
+        public IEnumerator AnAnticipatedLungeStillEndsExactlyOnItsMark()
+        {
+            var stage = new GameObject("Stage", typeof(RectTransform)).GetComponent<RectTransform>();
+            var slot = new GameObject("Slot", typeof(RectTransform), typeof(StageActorAnimator));
+            slot.transform.SetParent(stage, false);
+            var animator = slot.GetComponent<StageActorAnimator>();
+
+            yield return null;   // let Awake resolve the rect
+            animator.Rehome();
+
+            var rect = (RectTransform)slot.transform;
+            var mark = animator.Home;
+            var size = animator.BaseScale;
+
+            // 0.07 is StageActorAnimator.AnticipationSeconds, written out
+            // rather than read: the constant is internal to Core, and a test
+            // that read it back would move with any change to it instead of
+            // noticing one.
+            animator.Play(new Vector2(180f, 0f), 0f, -1f, 0.07f);
+
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (animator.IsPlaying && Time.realtimeSinceStartup < deadline) yield return null;
+
+            Assert.IsFalse(animator.IsPlaying, "the lunge never finished, so the checks below mean nothing");
+
+            Assert.AreEqual(mark.x, rect.anchoredPosition.x, 0.0001f,
+                "the figure came to rest off its mark - the anticipation leg moved it and the return " +
+                "did not account for the whole distance");
+            Assert.AreEqual(mark.y, rect.anchoredPosition.y, 0.0001f,
+                "the figure came to rest off its mark vertically");
+            Assert.AreEqual(size.x, rect.localScale.x, 0.0001f,
+                "the anticipation squash was never unwound, and nothing else writes localScale - " +
+                "the figure stays deformed for the rest of the fight");
+            Assert.AreEqual(size.y, rect.localScale.y, 0.0001f,
+                "the anticipation squash was never unwound vertically");
+
+            Object.Destroy(stage.gameObject);
+        }
+
         private IEnumerator AFightAgainst(string spritePath)
         {
             yield return OpenAFight();

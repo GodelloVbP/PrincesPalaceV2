@@ -1,0 +1,628 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Text;
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.TestTools;
+using UnityEngine.UI;
+using PrincesPalace;
+using PrincesPalace.Content;
+using PrincesPalace.Domain.Combat;
+using PrincesPalace.Domain.Combat.Session;
+using PrincesPalace.Domain.Rewards;
+using PrincesPalace.Domain.Stage;
+using PrincesPalace.Domain.UiKit;
+
+namespace PrincesPalace.PlayModeTests
+{
+    // ONE BEAT OF ONE MONSTER'S PLAIN SWING, PHOTOGRAPHED AT NORMAL SPEED.
+    //
+    // The static-combat pilot (docs/STATIC_COMBAT_ART_DEEP_DIVE.md, "Recommended
+    // pilot") asks a question no existing fixture answers: does an ordinary
+    // melee blow by a still-art creature READ as a blow at the speed a player
+    // actually sees it? Every other capture in this suite is a single still
+    // (EnemyStanceCaptureTests, FightMenuCaptureTests) or runs the fight at
+    // 8x-60x to keep the suite quick, and both of those throw away the only
+    // thing under examination here, which is timing.
+    //
+    // So this is a frame SERIES at BeatSpeedMultiplier 1, written to
+    // tools/screenshots/runtime/static_pilot/<PP_CAPTURE_LABEL>/f{i}.png plus a
+    // timing.json, and stitched into a contact strip and a real-time GIF by
+    // tools/capture_strip.py. The label is an environment variable so the same
+    // fixture records the "before" and the "after" of an art change and the two
+    // are directly comparable frame for frame.
+    //
+    // The Bog Witch is the pilot subject because every one of its stances is a
+    // single still (Resources/Enemies/bog_witch/*.png), so what the strip shows
+    // is the PROCEDURAL performance -- lunge, flash, recoil, punch, settle --
+    // with no frame animation underneath to flatter it.
+    public class StaticPilotStageCaptureTests
+    {
+        private const string EnemyId = "bog_witch";
+
+        // 30fps, and it is the GAME clock rather than the wall clock -- see
+        // Time.captureDeltaTime below.
+        private const float SampleSeconds = 1f / 30f;
+
+        // 1.4s: past the beat's own settle by a wide margin, which is the half
+        // of the pilot's four questions ("does the actor return cleanly to
+        // formation?") that a shorter window cannot answer.
+        //
+        // The window is longer than the fight leaves free. Measured, this beat
+        // opens at frame 0, is back on its mark by frame 14 and the NEXT enemy
+        // turn opens at frame 24 -- so a 1.2s window that simply let the fight
+        // run would photograph a second swing. TheBeat stops playback once the
+        // stage is at rest instead; see its Flush call.
+        private const int FrameCount = 42;
+
+        // A slot is back at its mark or it is not; the tween assigns the home
+        // position outright rather than easing into it.
+        private const float MarkTolerance = 0.01f;
+
+        private static string LabelDir =>
+            Path.GetFullPath(Path.Combine(
+                Directory.GetParent(Application.dataPath).FullName,
+                "tools", "screenshots", "runtime", "static_pilot",
+                Environment.GetEnvironmentVariable("PP_CAPTURE_LABEL") ?? "unlabelled"));
+
+        private FightController _fight;
+        private FightBeatPlayer _player;
+        private CombatantState _hero;
+        private CombatantState _witch;
+
+        // NORMAL SPEED IS THE WHOLE POINT, so this fixture states it rather
+        // than inheriting whatever the previous class left behind: every other
+        // fight test in this suite sets a multiplier in its own [SetUp], and a
+        // leaked 60x would silently turn this capture into four frames.
+        [SetUp]
+        public void RealTime() => FightBeatPlayer.BeatSpeedMultiplier = 1f;
+
+        [TearDown]
+        public void Restore()
+        {
+            FightBeatPlayer.BeatSpeedMultiplier = 1f;
+            Time.captureDeltaTime = 0f;
+        }
+
+        // ---- the fixture ------------------------------------------------------
+
+        private GameObject Named(string name) =>
+            _fight.GetComponentsInChildren<Transform>(includeInactive: true)
+                  .FirstOrDefault(t => t.name == name)?.gameObject;
+
+        private static Canvas RootCanvas() =>
+            UnityEngine.Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)
+                .FirstOrDefault(c => c.isRootCanvas);
+
+        // Opens the scene, throws away the bootstrap's own fight, and stands the
+        // witch opposite Shawn.
+        //
+        // THE PLAIN SWING IS FORCED BY THE POOL, not by a seed. EnemyKit's
+        // constructor already takes the ability list (it only falls back to
+        // building one from the definition when handed none), so a pool holding
+        // exactly one entry -- the plain swing every pool carries anyway --
+        // makes EnemyAbilityDraw.Pick's weighted draw return index 0 whatever
+        // roll it is given. The witch's own bog_mud_burst (weight 2 against
+        // attackWeight 3) is simply not in the pool to be drawn, so this cannot
+        // drift when the RNG's consumption order changes upstream. Nothing in
+        // production is touched to achieve it.
+        //
+        // Everything else about the monster is the REAL resolved content --
+        // stats, sprite path, stage scale, and the Lunge approach its blank
+        // attackApproach parses to -- so the capture shows what the game fields.
+        private IEnumerator StandTheFixtureUp()
+        {
+            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            _fight = UnityEngine.Object.FindAnyObjectByType<FightController>();
+            Assert.IsNotNull(_fight, "the Fight scene has no FightController");
+
+            _player = UnityEngine.Object.FindAnyObjectByType<FightBeatPlayer>();
+            Assert.IsNotNull(_player, "the Fight scene has no FightBeatPlayer");
+
+            // The scene's own FightBootstrap has already started a fight and is
+            // playing its opening beats. Left running, its playback holds
+            // FightController busy and the Hold Back click below is swallowed.
+            _player.Flush();
+            yield return null;
+            yield return null;
+
+            var enemy = ContentDatabase.Enemies.FirstOrDefault(e => e.id == EnemyId);
+            Assert.IsNotNull(enemy, $"'{EnemyId}' is not in the content database");
+
+            var shawn = ContentDatabase.Characters
+                .FirstOrDefault(c => !string.IsNullOrWhiteSpace(c.battleSpritePath));
+            Assert.IsNotNull(shawn, "no character has battle art, so the target would be a grey plate");
+
+            // Speed 1 against the witch's authored 8, so the monster wins
+            // initiative and FightSession.Begin resolves its swing into the beat
+            // queue before the player ever gets a turn. That queued beat is then
+            // the FIRST thing drained when the player acts, which is what lets
+            // the capture start on the witch's own beat rather than a third of a
+            // second into someone else's.
+            //
+            // 500 health so it survives the blow: a kill would route the target
+            // to its defeated pose and this is a capture of a hit, not a death.
+            var resolved = FightEncounterAdapter.Resolve(enemy);
+
+            _hero = new CombatantState(shawn.displayName, true, 500, 30, 20, 1);
+            _witch = new CombatantState(resolved.DisplayName, false, 5000, 0,
+                                        resolved.BaseStats.attack, resolved.BaseStats.speed);
+
+            var plainSwingOnly = new List<EnemyAbility>
+            {
+                EnemyAbility.LegacyAttack(FightSession.IntentAttack, 1f, 1f),
+            };
+
+            var session = new FightSession(
+                new CombatEncounter(new[] { _hero }, new[] { _witch }),
+                new List<PlayerKit> { null },
+                new List<EnemyKit> { new EnemyKit(resolved, false, plainSwingOnly) },
+                new Domain.Rng.SeededRandom(7));
+
+            session.Begin();
+
+            // ASSERTED RATHER THAN SKIPPED PAST (docs/CODE_STANDARDS.md §8): if
+            // initiative ever stops going on Speed the witch's beat is not in
+            // the queue and this fixture would quietly photograph a Hold Back.
+            Assert.Less(_hero.CurrentHealth, _hero.MaxHealth,
+                "the witch did not win initiative, so its swing is not queued and there is no beat to capture");
+
+            _fight.Bind(session, EncounterClass.Normal);
+            _fight.BindPartyArt(new[] { _hero }, new[] { shawn.battleSpritePath });
+
+            yield return null;
+            yield return null;
+        }
+
+        // ---- what one sampled frame knows ------------------------------------
+
+        private struct Sample
+        {
+            public int PopupsBusy;
+            public Vector2 EnemyAt;
+            public Vector3 EnemyScale;
+            public Vector2 PartyAt;
+            public string EnemyStanceSprite;
+        }
+
+        private sealed class Recording
+        {
+            public readonly List<Sample> Samples = new List<Sample>();
+            public RectTransform EnemySlot;
+            public RectTransform PartySlot;
+            public StageActorAnimator EnemyAnimator;
+            public StageActorAnimator PartyAnimator;
+            public string IdleSprite;
+
+            // Every frame on which the busy-popup count ROSE. A popup is taken
+            // out of the pool on the exact frame FightBeatPlayer lands the blow
+            // (ShowAmount runs in the same guarded block as FlashTarget), and it
+            // stays out for the whole of its rise -- so the rise of the count,
+            // not its value, is the impact instant.
+            public readonly List<int> ImpactFrames = new List<int>();
+
+            // How far each figure actually travelled from its mark, in canvas
+            // pixels. The pilot's whole question is whether a still-art blow
+            // READS as a blow, and these two numbers are the measurable half of
+            // it -- a before/after that changes nothing here changed nothing
+            // about the staging either.
+            public float EnemyTravelPeak;
+            public float PartyTravelPeak;
+
+            // The frame on which playback was stopped, once the beat had
+            // settled. Everything after it is a deliberately still stage.
+            public int StoppedAt = -1;
+        }
+
+        private Sample Read(Recording rec)
+        {
+            int busy = _player.Popups.Count(p => p != null && !p.IsFree);
+            var sprite = rec.EnemySlot.GetComponentsInChildren<Image>(includeInactive: true)
+                .FirstOrDefault(i => i.gameObject.name.EndsWith("Sprite", StringComparison.Ordinal));
+
+            return new Sample
+            {
+                PopupsBusy = busy,
+                EnemyAt = rec.EnemySlot.anchoredPosition,
+                EnemyScale = rec.EnemySlot.localScale,
+                PartyAt = rec.PartySlot.anchoredPosition,
+                EnemyStanceSprite = sprite == null || sprite.sprite == null ? "" : sprite.sprite.name,
+            };
+        }
+
+        // Finds the one slot per side that actually has somebody standing in it.
+        // The stage is built for FightHudSpec.StageSlotsPerSide and the
+        // unoccupied slots are switched off, so "which index" is a runtime fact
+        // rather than something this fixture is entitled to assume.
+        private RectTransform OccupiedSlot(string prefix)
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                var go = Named($"{prefix}{i}Slot");
+                if (go != null && go.activeSelf) return go.GetComponent<RectTransform>();
+            }
+
+            return null;
+        }
+
+        // Runs the witch's beat and records one Sample per 1/30s of GAME time.
+        //
+        // Time.captureDeltaTime is what makes that sentence true. Writing a
+        // frame costs real milliseconds, and Unity's clock is real time by
+        // default, so a capture loop that simply sampled every frame would watch
+        // the beat run away from it -- the harder the frame is to produce, the
+        // more of the animation is missed between samples, which is precisely
+        // backwards. Pinning the delta makes every rendered frame worth exactly
+        // one sample interval regardless of how long it took to produce, so the
+        // series is a fixed-rate recording of the beat and two runs are
+        // comparable frame for frame.
+        private IEnumerator TheBeat(Recording rec, Action<int> onFrame)
+        {
+            rec.EnemySlot = OccupiedSlot("Enemy");
+            rec.PartySlot = OccupiedSlot("Party");
+            Assert.IsNotNull(rec.EnemySlot, "no enemy slot is occupied");
+            Assert.IsNotNull(rec.PartySlot, "no party slot is occupied");
+
+            rec.EnemyAnimator = rec.EnemySlot.GetComponent<StageActorAnimator>();
+            rec.PartyAnimator = rec.PartySlot.GetComponent<StageActorAnimator>();
+            Assert.IsNotNull(rec.EnemyAnimator, "the enemy slot has no StageActorAnimator, so nothing can lunge");
+            Assert.IsNotNull(rec.PartyAnimator, "the party slot has no StageActorAnimator, so nothing can recoil");
+
+            rec.IdleSprite = Read(rec).EnemyStanceSprite;
+
+            Time.captureDeltaTime = SampleSeconds;
+
+            // HOLD BACK (verb index 3 -- see FightController.Hud's
+            // HoldBackVerbIndex) rather than an attack, and the choice is
+            // load-bearing: it drains the queued beats, so the witch's swing
+            // plays first, and the player's own beat that follows it records no
+            // target and no amount. That makes the rest of the capture window
+            // provably free of a second blow, which is what lets the impact
+            // assertion below be an exact count rather than a guess.
+            var verb = Named("Verb3");
+            Assert.IsNotNull(verb, "the fight scene has no Verb3 (HOLD BACK)");
+            verb.GetComponent<Button>().onClick.Invoke();
+
+            // The baseline the first frame is compared against, taken BEFORE the
+            // click. Without it a popup still in flight from the scene's own
+            // bootstrap fight reads as an impact on frame 0.
+            var previous = Read(rec);
+
+            for (int i = 0; i < FrameCount; i++)
+            {
+                yield return null;
+
+                var sample = Read(rec);
+                if (sample.PopupsBusy > previous.PopupsBusy) rec.ImpactFrames.Add(i);
+                previous = sample;
+
+                rec.Samples.Add(sample);
+                rec.EnemyTravelPeak = Mathf.Max(rec.EnemyTravelPeak,
+                    Vector2.Distance(sample.EnemyAt, rec.EnemyAnimator.Home));
+                rec.PartyTravelPeak = Mathf.Max(rec.PartyTravelPeak,
+                    Vector2.Distance(sample.PartyAt, rec.PartyAnimator.Home));
+
+                // ONE BEAT, and this is what holds the window to one.
+                //
+                // The fight does not pause between turns to be photographed:
+                // the player's Hold Back is folded away (a beat with no target
+                // and no amount records nothing to play) and the witch's NEXT
+                // swing opens 0.8s after this one, well inside a window long
+                // enough to show the settle. Stopping playback the moment both
+                // figures are home leaves the rest of the capture a still stage
+                // -- which is the correct picture of "she returned to her mark
+                // and stayed there", and keeps the impact count below an exact
+                // assertion rather than a range.
+                //
+                // Flush rather than a shorter window because the two are not
+                // the same claim: a window that simply ended early could not
+                // tell a figure that settled from one whose next beat happened
+                // to start it moving again.
+                if (rec.StoppedAt < 0 && rec.ImpactFrames.Count > 0 && i > rec.ImpactFrames[0]
+                    && AtRest(rec, sample))
+                {
+                    _player.Flush();
+                    rec.StoppedAt = i;
+                }
+
+                onFrame?.Invoke(i);
+            }
+
+            Time.captureDeltaTime = 0f;
+        }
+
+        // The witch is posed idle again and both figures are standing on their
+        // own marks -- the beat is over as far as the stage is concerned.
+        private static bool AtRest(Recording rec, Sample s) =>
+            s.EnemyStanceSprite == rec.IdleSprite
+            && Vector2.Distance(s.EnemyAt, rec.EnemyAnimator.Home) <= MarkTolerance
+            && Vector2.Distance(s.PartyAt, rec.PartyAnimator.Home) <= MarkTolerance;
+
+        // The first frame after the blow on which that is true. -1 means it
+        // never happened inside the window.
+        private static int SettledFrame(Recording rec)
+        {
+            int after = rec.ImpactFrames.Count > 0 ? rec.ImpactFrames[0] : 0;
+
+            for (int i = after + 1; i < rec.Samples.Count; i++)
+            {
+                if (AtRest(rec, rec.Samples[i])) return i;
+            }
+
+            return -1;
+        }
+
+        // A compact per-frame picture of the whole window, so a failure says
+        // WHAT the stage was doing rather than only that a count was wrong.
+        // "idle" is the drawing the witch wore before the beat opened; the
+        // number after each frame is how far she stood from her mark.
+        private static string Timeline(Recording rec)
+        {
+            var line = new StringBuilder();
+            for (int i = 0; i < rec.Samples.Count; i++)
+            {
+                var s = rec.Samples[i];
+                line.Append(i).Append(':')
+                    .Append(s.EnemyStanceSprite == rec.IdleSprite ? "idle" : s.EnemyStanceSprite)
+                    .Append('/')
+                    .Append(Mathf.RoundToInt(Vector2.Distance(s.EnemyAt, rec.EnemyAnimator.Home)))
+                    .Append('/')
+                    .Append(s.PopupsBusy)
+                    .Append(' ');
+            }
+
+            return line.ToString();
+        }
+
+        private void AssertTheBeatBehaved(Recording rec)
+        {
+            Assert.AreEqual(1, rec.ImpactFrames.Count,
+                "the window should hold exactly one blow -- the witch's. Impacts at frames: " +
+                string.Join(", ", rec.ImpactFrames) + ". Timeline: " + Timeline(rec));
+
+            Assert.IsTrue(_witch.IsAlive,
+                "the witch died mid-capture, so the strip shows a corpse rather than a swing");
+
+            Assert.IsTrue(rec.Samples.Any(s => s.EnemyStanceSprite != rec.IdleSprite),
+                "the witch never left her idle drawing, so no attack pose reached the stage");
+
+            Assert.Greater(rec.PartyTravelPeak, MarkTolerance,
+                "the target never moved, so nothing on the stage said it had been hit");
+
+            int settled = SettledFrame(rec);
+            Assert.GreaterOrEqual(settled, 0,
+                "the stage never returned to rest inside the window: the witch is still posed or a figure " +
+                "is parked off its mark, which is the leak StageActorAnimator.ResetToHome exists to prevent");
+
+            var last = rec.Samples[settled];
+            Assert.AreEqual(rec.EnemyAnimator.BaseScale.x, last.EnemyScale.x,
+                BreathCurve.FullAmplitude * 2f,
+                "the witch is left deformed after her own swing -- the squash never unwound");
+        }
+
+        // ---- the assertions, which run in the commit gate ---------------------
+
+        // Everything the capture depends on, checked WITHOUT pixels so the
+        // headless suite still covers it. A capture test that self-skips under
+        // -nographics and asserts nothing else would mean the pilot's fixture
+        // could rot for weeks with the gate green.
+        [UnityTest]
+        public IEnumerator ThePlainSwingPlaysAndTheStageReturnsToRest()
+        {
+            var enemy = ContentDatabase.Enemies.FirstOrDefault(e => e.id == EnemyId);
+            Assert.IsNotNull(enemy, $"'{EnemyId}' is not in the content database");
+
+            foreach (string stance in new[] { "idle", "attack" })
+            {
+                Assert.IsFalse(StanceAnimationLibrary.Resolve(enemy.spritePath, stance).IsEmpty,
+                    $"{EnemyId} has no '{stance}' art, so the pilot would photograph a nameplate");
+            }
+
+            yield return StandTheFixtureUp();
+
+            var rec = new Recording();
+            yield return TheBeat(rec, null);
+            AssertTheBeatBehaved(rec);
+        }
+
+        // ---- the picture ------------------------------------------------------
+
+        [UnityTest]
+        public IEnumerator CaptureThePlainSwingAsAFrameSeries()
+        {
+            if (!CanvasCapture.IsSupported)
+            {
+                Assert.Ignore("No graphics device. Run: tools/graphics_tests.ps1 " +
+                              "-Filter PrincesPalace.PlayModeTests.StaticPilotStageCaptureTests");
+                yield break;
+            }
+
+            yield return StandTheFixtureUp();
+
+            var canvas = RootCanvas();
+            Assert.IsNotNull(canvas, "the Fight scene has no root Canvas");
+
+            var rig = new StageCameraRig(canvas);
+            var frames = new List<Texture2D>(FrameCount);
+            var rec = new Recording();
+
+            try
+            {
+                // Read back, do not encode. EncodeToPNG is the expensive half,
+                // and doing it per frame stretches the wall clock the beat's own
+                // unscaled-time reactions (StageActorAnimator.Punch, StageShake)
+                // still run against. The frames are held and written once the
+                // beat is over.
+                yield return TheBeat(rec, i => frames.Add(rig.Grab()));
+            }
+            finally
+            {
+                rig.Restore();
+            }
+
+            if (Directory.Exists(LabelDir)) Directory.Delete(LabelDir, recursive: true);
+            Directory.CreateDirectory(LabelDir);
+
+            for (int i = 0; i < frames.Count; i++)
+            {
+                File.WriteAllBytes(Path.Combine(LabelDir, $"f{i}.png"), frames[i].EncodeToPNG());
+                UnityEngine.Object.DestroyImmediate(frames[i]);
+            }
+
+            File.WriteAllText(Path.Combine(LabelDir, "timing.json"), TimingJson(rec, rig));
+            Debug.Log($"[StaticPilotCapture] wrote {frames.Count} frames to {LabelDir}");
+
+            AssertTheBeatBehaved(rec);
+        }
+
+        private string TimingJson(Recording rec, StageCameraRig rig)
+        {
+            int impact = rec.ImpactFrames.Count > 0 ? rec.ImpactFrames[0] : -1;
+            int settled = SettledFrame(rec);
+
+            string Ms(int frame) => frame < 0
+                ? "null"
+                : (frame * SampleSeconds * 1000f).ToString("F1", CultureInfo.InvariantCulture);
+
+            var json = new StringBuilder();
+            json.AppendLine("{");
+            json.AppendLine($"  \"label\": \"{Environment.GetEnvironmentVariable("PP_CAPTURE_LABEL") ?? "unlabelled"}\",");
+            json.AppendLine($"  \"enemyId\": \"{EnemyId}\",");
+            json.AppendLine($"  \"beatSpeedMultiplier\": {FightBeatPlayer.BeatSpeedMultiplier.ToString("F2", CultureInfo.InvariantCulture)},");
+            json.AppendLine($"  \"captureIntervalMs\": {(SampleSeconds * 1000f).ToString("F3", CultureInfo.InvariantCulture)},");
+            json.AppendLine($"  \"frameCount\": {rec.Samples.Count},");
+            json.AppendLine($"  \"impactFrame\": {impact},");
+            json.AppendLine($"  \"impactMs\": {Ms(impact)},");
+            json.AppendLine($"  \"impactFrames\": [{string.Join(", ", rec.ImpactFrames)}],");
+            json.AppendLine($"  \"settledFrame\": {settled},");
+            json.AppendLine($"  \"playbackStoppedFrame\": {rec.StoppedAt},");
+            json.AppendLine($"  \"beatDurationMs\": {Ms(settled)},");
+            json.AppendLine($"  \"cropX\": {rig.CropX}, \"cropY\": {rig.CropY},");
+            json.AppendLine($"  \"cropWidth\": {rig.CropWidth}, \"cropHeight\": {rig.CropHeight},");
+            json.AppendLine($"  \"attackerTravelPeakPx\": {rec.EnemyTravelPeak.ToString("F2", CultureInfo.InvariantCulture)},");
+            json.AppendLine($"  \"targetTravelPeakPx\": {rec.PartyTravelPeak.ToString("F2", CultureInfo.InvariantCulture)}");
+            json.Append("}");
+            return json.ToString();
+        }
+
+        // ---- the camera -------------------------------------------------------
+
+        // CanvasCapture.RenderToFile's setup, held OPEN across a whole series
+        // instead of built and torn down per shot, and reading back the stage
+        // box rather than the full frame.
+        //
+        // Not a change to CanvasCapture: that method's contract is one canvas,
+        // one file, byte-comparable with the Edit Mode screenshot tool, and a
+        // frame series wants neither of the last two. What is duplicated here is
+        // the part that is load-bearing for correctness -- the ConstantPixelSize
+        // scaler swap, without which the canvas scales itself against the
+        // window's real size rather than the render target, and the explicit
+        // camera.aspect, without which the lazy targetTexture sync can leave a
+        // gap down one edge. Both have their reasoning in CanvasCapture's own
+        // header.
+        private sealed class StageCameraRig
+        {
+            public readonly int CropX;
+            public readonly int CropY;
+            public readonly int CropWidth;
+            public readonly int CropHeight;
+
+            private readonly Canvas _canvas;
+            private readonly CanvasScaler _scaler;
+            private readonly RenderMode _mode;
+            private readonly Camera _previousCamera;
+            private readonly float _planeDistance;
+            private readonly CanvasScaler.ScaleMode _scaleMode;
+
+            private readonly GameObject _cameraGo;
+            private readonly Camera _camera;
+            private readonly RenderTexture _rt;
+
+            public StageCameraRig(Canvas canvas)
+            {
+                int width = CanvasCapture.DefaultWidth;
+                int height = CanvasCapture.DefaultHeight;
+
+                // The stage's own box, centred like the stage panel is, so the
+                // crop is derived from the layout rather than eyeballed -- it
+                // follows FightStageAnchors if the stage is ever resized.
+                CropWidth = (int)FightStageAnchors.StageSize.X;
+                CropHeight = (int)FightStageAnchors.StageSize.Y;
+                CropX = (width - CropWidth) / 2;
+                CropY = (height - CropHeight) / 2;
+
+                _canvas = canvas;
+                _mode = canvas.renderMode;
+                _previousCamera = canvas.worldCamera;
+                _planeDistance = canvas.planeDistance;
+                _scaler = canvas.GetComponent<CanvasScaler>();
+                _scaleMode = _scaler != null ? _scaler.uiScaleMode : CanvasScaler.ScaleMode.ConstantPixelSize;
+
+                if (_scaler != null)
+                {
+                    _scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
+                    _scaler.scaleFactor = 1f;
+                }
+
+                _cameraGo = new GameObject("StaticPilotCaptureCamera");
+                _camera = _cameraGo.AddComponent<Camera>();
+                _rt = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
+
+                _camera.orthographic = true;
+                _camera.orthographicSize = height / 2f;
+                _camera.aspect = (float)width / height;
+                _camera.nearClipPlane = 0.01f;
+                _camera.farClipPlane = 10f;
+                _camera.clearFlags = CameraClearFlags.SolidColor;
+                _camera.backgroundColor = new Color(0.06f, 0.06f, 0.08f, 1f);
+                _camera.targetTexture = _rt;
+                _cameraGo.transform.position = new Vector3(0f, 0f, -1f);
+
+                canvas.renderMode = RenderMode.ScreenSpaceCamera;
+                canvas.worldCamera = _camera;
+                canvas.planeDistance = 1f;
+            }
+
+            public Texture2D Grab()
+            {
+                Canvas.ForceUpdateCanvases();
+                _camera.Render();
+
+                var previous = RenderTexture.active;
+                RenderTexture.active = _rt;
+                var texture = new Texture2D(CropWidth, CropHeight, TextureFormat.RGB24, false);
+                texture.ReadPixels(new Rect(CropX, CropY, CropWidth, CropHeight), 0, 0);
+                texture.Apply();
+                RenderTexture.active = previous;
+                return texture;
+            }
+
+            public void Restore()
+            {
+                _canvas.renderMode = _mode;
+                _canvas.worldCamera = _previousCamera;
+                _canvas.planeDistance = _planeDistance;
+                if (_scaler != null) _scaler.uiScaleMode = _scaleMode;
+
+                _camera.targetTexture = null;
+                RenderTexture.active = null;
+
+                // DestroyImmediate for the reason CanvasCapture gives: a
+                // deferred Destroy leaves this camera alive with no target
+                // texture long enough to render the scene straight to the
+                // screen once more.
+                UnityEngine.Object.DestroyImmediate(_cameraGo);
+                _rt.Release();
+                UnityEngine.Object.DestroyImmediate(_rt);
+            }
+        }
+    }
+}

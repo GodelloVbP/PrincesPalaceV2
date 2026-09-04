@@ -396,7 +396,13 @@ namespace PrincesPalace.PlayModeTests
 
             Click("Verb0");
             Click("EnemyPlate0");
-            yield return null;
+
+            // A still-drawing Lunge (this fixture has no art on either side)
+            // spends StaticStancePlayback's wind-up before its number pops --
+            // a frame or two at 60x, not zero -- so this waits for the popup
+            // rather than sampling the frame after the click.
+            float deadline = Time.realtimeSinceStartup + 2f;
+            while (Time.realtimeSinceStartup < deadline && !player.Popups.Any(p => !p.IsFree)) yield return null;
 
             Assert.IsTrue(player.Popups.Any(p => !p.IsFree), "fixture: at least one popup is in flight");
 

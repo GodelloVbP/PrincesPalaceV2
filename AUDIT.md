@@ -1599,3 +1599,35 @@ And the Phase 6 observation of a *different* test, `ContinueAfterVictory…`, sh
 The GUID-consistency assertion added while hardening against theory 1 is kept. It was aimed at
 the wrong cause but is a reasonable check in its own right, and removing it now would be
 churn.
+
+### 59. A flat-art CHARGE lands its blow before the charger has crossed, and its own travel floor is why
+
+`FightBeatPlayer.Charge` (`Core/FightBeatPlayer.cs:622-639`) times the rush so
+the figure arrives on the impact frame: `outSeconds = Max(ChargeMinOutSeconds,
+windup + impactDelay)` at `:634`. For an actor with a single-drawing stance the
+wind-up is zero (`FrameStancePlayback.WindupSeconds` returns 0 for `FrameCount
+<= 1`, `Core/StancePerformance.cs:99`), so the travel falls through to the
+`ChargeMinOutSeconds` floor of 0.18s at `:747` -- deliberately, per that
+constant's own comment, or "the figure would teleport into the target".
+
+The IMPACT INSTANT is not moved to match. `PlayBeats` fires the flash, the
+recoil, the squash and the damage number one frame after `playback.Windup()`
+returns (`Core/FightBeatPlayer.cs:375-382`), and for a flat pose that is
+immediate. So the blow lands roughly 0.18s before the charger arrives: the whole
+point of the approach -- "the bump falls out of that timing", `StageApproach.cs`
+-- does not happen, and what is on screen is a target flinching at nothing,
+followed by a creature arriving at a target that has already reacted.
+
+This is the same defect Phase 1 of the static-art pilot fixed for
+`StageApproach.Lunge`, via `StaticStancePlayback` reporting anticipation plus
+travel as its wind-up. Charge was deliberately left out of that wrap and the
+reason is recorded at `PlaybackOf`'s gate: Charge derives its travel time FROM
+`WindupSeconds`, so wrapping it would feed the rush a wind-up that already
+contains the travel it is trying to fit inside, and it would then arrive late by
+its own length. The fix is therefore not "wrap it too" -- it is a wrapper whose
+reported wind-up IS the charge's own `outSeconds`, computed once and read by
+both sides rather than each deriving it from the other.
+
+Not urgent: no shipped enemy pairs flat art with a charge today (the Beetle's
+Barrel Roll, the approach's own reason for existing, is a six-frame sheet). It
+becomes visible the moment one does.

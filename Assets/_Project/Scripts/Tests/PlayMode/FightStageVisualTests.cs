@@ -259,7 +259,13 @@ namespace PrincesPalace.PlayModeTests
 
             Click("Verb0");
             Click("EnemyPlate0");
-            yield return null;
+
+            // A still-drawing Lunge spends StaticStancePlayback's wind-up
+            // before the blow lands -- a frame or two at 60x -- so the flash
+            // is waited for rather than read off the frame after the click.
+            // What is asserted is unchanged: that it woke at all.
+            float deadline = Time.realtimeSinceStartup + 2f;
+            while (Time.realtimeSinceStartup < deadline && !Named("Enemy0HitFlash").activeSelf) yield return null;
 
             Assert.IsTrue(Named("Enemy0HitFlash").activeSelf,
                 "the overlay is built inactive and has to wake itself - StartCoroutine on an inactive " +

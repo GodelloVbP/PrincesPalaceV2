@@ -91,6 +91,82 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(0, seen, "the frame-sheet twin of the rig's bind pose is frame 0 -- the same reset every beat always applied");
         }
 
+        // ---- the still-drawing wrapper ------------------------------------
+        //
+        // What this class exists to do is move the impact instant, so its
+        // TIMING is the whole contract. Pinned as a literal for the reason
+        // this file's header already gives: derived from the two constants it
+        // adds up, this would pass whatever those constants became.
+
+        private static IStancePlayback FlatPlayback() =>
+            new FrameStancePlayback(new CombatantState("Test", true, 30, 10, 5, 5),
+                new StanceAnimation(new Sprite[] { null }, 0.1f, 1, 1), (a, f) => { });
+
+        [Test]
+        public void TheStaticWindupCoversTheAnticipationAndTheLungeTogether()
+        {
+            var playback = new StaticStancePlayback(FlatPlayback());
+
+            // 0.07s of anticipation plus the 0.055s outbound tween.
+            Assert.AreEqual(0.125f, playback.WindupSeconds, 0.0001f,
+                "the impact instant is timed off this -- shorten it and the flash, the recoil and " +
+                "the damage number fire while the attacker is still crossing, which is the exact " +
+                "defect this wrapper exists to fix");
+        }
+
+        [Test]
+        public void TheStaticStanceSpendsExactlyItsWindupAndNoMore()
+        {
+            var playback = new StaticStancePlayback(FlatPlayback());
+
+            Assert.AreEqual(0.125f, playback.TotalSeconds, 0.0001f,
+                "FightBeatPlayer.SettleAfter budgets the beat against this; reporting anything other " +
+                "than what Windup actually waits either lengthens the beat or eats the settle");
+            Assert.AreEqual(playback.WindupSeconds, playback.TotalSeconds, 0.0001f,
+                "a still has no follow-through, so the whole performance is the wind-up");
+        }
+
+        [Test]
+        public void TheStaticStancesReleaseAndFollowThroughDoNothing()
+        {
+            var playback = new StaticStancePlayback(FlatPlayback());
+
+            Assert.IsFalse(playback.ReturnsToStart,
+                "there is no second drawing to play back down through");
+
+            // Driven rather than merely inspected: an enumerator that yielded
+            // even once would add a frame to every beat, and "empty" is only
+            // true if running it ends immediately. No scene and no clock
+            // needed for that, which is why this is a plain [Test].
+            Assert.IsFalse(playback.FollowThrough().MoveNext(),
+                "the follow-through yielded, so the beat is longer than TotalSeconds claims");
+            Assert.IsFalse(playback.Release().MoveNext(),
+                "the release yielded, and FightBeatPlayer adds a release's time to the beat outright");
+        }
+
+        [Test]
+        public void TheStaticStanceForwardsTheResetToWhatItWraps()
+        {
+            int? seen = null;
+            var actor = new CombatantState("Test", true, 30, 10, 5, 5);
+            var wrapped = new FrameStancePlayback(actor,
+                new StanceAnimation(new Sprite[] { null }, 0.1f, 1, 1), (a, f) => seen = f);
+
+            new StaticStancePlayback(wrapped).ResetToRest();
+
+            Assert.AreEqual(0, seen,
+                "the wrapper swallowed the between-beats reset, so the real drawing keeps whatever " +
+                "pose the last blow left on it");
+        }
+
+        [Test]
+        public void TheStaticStanceHasNoMotionEvenThoughItTakesTime()
+        {
+            Assert.IsFalse(new StaticStancePlayback(FlatPlayback()).HasMotion,
+                "Flinch skips a victim whose playback has no motion; a wrapper claiming motion would " +
+                "start a coroutine that shows nothing for an eighth of a second");
+        }
+
         // ---- the rig side of the same seam -------------------------------
 
         private static RigStanceClip Clip(float duration, float impactAt) =>

@@ -161,6 +161,40 @@ namespace PrincesPalace
         internal Func<CombatantState, string, Func<bool>, IStancePlayback> PlaybackFor;
         internal Action<CombatBeat> FlashTarget;
 
+        // The attack graphic and the impact burst, for a blow that draws
+        // neither for itself.
+        //
+        // SEPARATE FROM PlayVfx rather than folded into it, because the two
+        // answer different questions. PlayVfx plays what a SKILL authored --
+        // its own sheet, its own size, its own travel, all content. This is
+        // the house's default contact language for a swing that authored
+        // nothing, and it fires at the impact instant rather than at the top
+        // of the beat. Merging them would put "did this beat author a spell"
+        // inside a method whose whole job is playing the spell it authored.
+        internal Action<CombatBeat> PlayContactFx;
+
+        // THE WIRING SEAM FOR A PLAYMODE TEST, and the only public door onto
+        // any of the delegates above.
+        //
+        // Every one of them is internal and Core grants InternalsVisibleTo to
+        // the EDITOR assembly alone -- deliberately, so a PlayMode test cannot
+        // reach into controller state to make itself pass (Core/AssemblyInfo.
+        // cs states the rule). That costs nothing anywhere else on this
+        // screen, because everything else is observable by driving a real
+        // fight. WHICH BEATS GET CONTACT EFFECTS is not: it is a decision
+        // rather than a picture, and reproducing its six cases through content
+        // would mean authoring six enemies to assert a rule that has nothing
+        // to do with any of them.
+        //
+        // Deliberately narrow -- two delegates in, nothing readable back out,
+        // the same posture FightController's own *ForTest seams take.
+        public void WirePlaybackForTest(Func<CombatantState, string, Func<bool>, IStancePlayback> playbackFor,
+                                        Action<CombatBeat> playContactFx)
+        {
+            PlaybackFor = playbackFor;
+            PlayContactFx = playContactFx;
+        }
+
         public void Play(IReadOnlyList<CombatBeat> beats, Action onFinished)
         {
             // CLEARED BEFORE THE FLUSH, so the flush below has nobody to notify.
@@ -286,16 +320,33 @@ namespace PrincesPalace
                 // Written as an unconditional yield it therefore delayed the
                 // hit flash and the damage popup by a frame on EVERY beat in
                 // the game, for a feature three skills use -- caught by two
-                // PlayMode tests that sample exactly one frame after the click,
+                // PlayMode tests that sampled exactly one frame after the click,
                 // which is the only reason it was caught at all.
+                //
+                // THOSE TESTS NOW POLL FOR THE IMPACT WITH A DEADLINE instead,
+                // because a still-drawing Lunge has since gained a real
+                // wind-up (StaticStancePlayback, below) and lands a frame or
+                // two later on purpose. The trap above is still a trap; it is
+                // only no longer one that a frame-after-the-click sample would
+                // catch, so a new unconditional yield here has to be caught by
+                // reading, not by the suite.
                 // COMPUTED BEFORE THE APPROACH FIRES, because a Charge needs it:
                 // its whole point is to arrive on the impact frame, so it has to
                 // know how long the wind-up runs before it dispatches the travel.
                 var playback = PlaybackOf(beat);
 
+                // WHETHER THIS BEAT'S SWING IS THE STILL-DRAWING KIND, decided
+                // ONCE here and read twice below (the lunge's anticipation
+                // lead, and the contact effects at impact). Asking PlaybackOf
+                // again at the impact instant would resolve the stance a
+                // second time and could disagree with the performance actually
+                // in flight -- the two cues would then be gated on different
+                // answers to the same question.
+                bool staticSwing = playback is StaticStancePlayback;
+
                 if (beat.Approach == StageApproach.Close) yield return CloseIn(beat);
 
-                Lunge(beat);
+                Lunge(beat, staticSwing);
                 Charge(beat, playback);
                 PlayVfx?.Invoke(beat);
 
@@ -332,6 +383,7 @@ namespace PrincesPalace
                     PaintVitals?.Invoke(beat.Snapshot);
                     ShowAmount(beat);
                     FlashTarget?.Invoke(beat);
+                    if (staticSwing && WantsContactFx(beat)) PlayContactFx?.Invoke(beat);
                     Recoil(beat);
                     FlinchFrames(beat);
                     Punch(beat);
@@ -390,6 +442,25 @@ namespace PrincesPalace
                     yield return playback.Release();
                 }
 
+                // WHAT THE STILL-DRAWING WRAPPER DOES TO THIS, in numbers,
+                // because "the beat got longer" is the failure mode
+                // SettleAfter's own header records going unnoticed once.
+                //
+                // A flat pose used to report TotalSeconds 0.08 (one frame at
+                // the manifest's pace) and actually spend nothing: its
+                // Windup() yield-broke immediately. So the beat charged 0.08
+                // against the 0.45 budget and then spent only 0.37 of it. The
+                // wrapper reports 0.125 (anticipation 0.07 + lunge 0.055) and
+                // spends exactly that, so the beat now runs the full 0.45 it
+                // was always budgeted -- 0.08 longer in wall time, none of it
+                // new budget.
+                //
+                // The floor is the only thing that can take it further, and
+                // only at the very top of the range: at HitStop.MaxSeconds
+                // (0.18) the remainder is 0.145, which clamps up to
+                // MinSettleSeconds 0.16 and adds 0.015. AFlatPoseKeepsTheBeat-
+                // ItAlreadyHad still holds -- it pins SettleAfter's own
+                // arithmetic for a 0.08 stance, which is unchanged.
                 float remaining = SettleAfter(playback.TotalSeconds + stop);
                 yield return new WaitForSeconds(Scaled(remaining));
 
@@ -486,14 +557,37 @@ namespace PrincesPalace
         // attack art is itself a stationary pose. Without that check the view
         // lunged a ground-slamming golem across the stage while its art showed
         // it rooted, which read as the creature flying.
-        private void Lunge(CombatBeat beat)
+        //
+        // `staticSwing` buys the anticipation leg, and ONLY a still-drawing
+        // actor gets one. An animated actor's sheet already draws its own
+        // wind-up frames, so a transform crouch in front of them would be two
+        // wind-ups played back to back; and the impact instant is only pushed
+        // back to match for the wrapped case (StaticStancePlayback.
+        // WindupSeconds), so handing a lead to anything else would land the
+        // blow before the figure had finished loading.
+        private void Lunge(CombatBeat beat, bool staticSwing)
         {
             if (beat.Approach != StageApproach.Lunge) return;
 
             var (animator, offset) = TravelFor(beat, LungeFraction);
             float hold = Scaled(BeatHoldSeconds) * 0.45f;
-            animator?.Play(offset, hold);
-            AlsoPlayWorld(beat.Actor, offset, hold);
+            float lead = staticSwing ? StageActorAnimator.AnticipationSeconds : 0f;
+            animator?.Play(offset, hold, -1f, lead);
+            AlsoPlayWorld(beat.Actor, offset, hold, leadSeconds: lead);
+        }
+
+        // Whether this blow should draw the house's own contact effects.
+        //
+        // NOT for a beat that authored a spell: a cast brings its own sheet,
+        // its own impact point and its own sound, and adding a slash arc on
+        // top of a frost flare is two effects arguing about what just
+        // happened. NOT for a heal or a zero-amount beat either -- there is no
+        // contact to punctuate, and a miss already says so with its own popup.
+        private static bool WantsContactFx(CombatBeat beat)
+        {
+            if (beat == null || beat.Amount <= 0 || beat.IsHealing) return false;
+
+            return beat.Vfx == null || string.IsNullOrEmpty(beat.Vfx.path);
         }
 
         // Plays the SAME travel on the world-space mirror of `who`'s slot.
@@ -501,9 +595,10 @@ namespace PrincesPalace
         // rig-resolved with no uGUI StageActorAnimator doing anything
         // visible, and the two are independent lookups (SlotFor vs
         // WorldAnimatorFor), so this always tries on its own.
-        private void AlsoPlayWorld(CombatantState who, Vector2 offset, float holdSeconds, float outSeconds = -1f)
+        private void AlsoPlayWorld(CombatantState who, Vector2 offset, float holdSeconds, float outSeconds = -1f,
+                                   float leadSeconds = 0f)
         {
-            WorldAnimatorFor?.Invoke(who)?.Play(offset, holdSeconds, outSeconds);
+            WorldAnimatorFor?.Invoke(who)?.Play(offset, holdSeconds, outSeconds, leadSeconds);
         }
 
         private void AlsoPunchWorld(CombatantState who, float strength)
@@ -678,7 +773,32 @@ namespace PrincesPalace
                 ? pose
                 : FightSession.Stances.Idle;
 
-            return PlaybackFor(beat.Actor, stance, null) ?? EmptyStancePlayback.Instance;
+            var playback = PlaybackFor(beat.Actor, stance, null) ?? EmptyStancePlayback.Instance;
+
+            // KEYED ON THE CLASS OF BEAT, never on who is swinging. The three
+            // conditions are the whole definition of "a still-drawing melee
+            // swing", and every one of them is load-bearing:
+            //
+            //   LUNGE, because Hold is a cast delivered from where it stands
+            //   (nothing crosses, so there is nothing to anticipate), Close
+            //   already arrives before the stance opens, and Charge times its
+            //   own travel against WindupSeconds -- wrapping it would feed
+            //   Charge a wind-up that includes the travel it is trying to fit
+            //   inside, and the rush would arrive late by its own length.
+            //
+            //   NO MOTION, because that is what "one drawing" means here. A
+            //   multi-frame or rig actor's stance already spends real time on
+            //   its own wind-up and must stay pixel-identical.
+            //
+            //   A TARGET THAT IS SOMEBODY ELSE, because there is no crossing
+            //   to a self-targeted beat, and TravelFor would return no
+            //   animator for it anyway -- so the wrapper would push the impact
+            //   back by a travel that never happens.
+            if (beat.Approach != StageApproach.Lunge) return playback;
+            if (playback.HasMotion) return playback;
+            if (beat.Target == null || ReferenceEquals(beat.Target, beat.Actor)) return playback;
+
+            return new StaticStancePlayback(playback);
         }
 
         // The squash a struck figure takes, scaled by how hard it was hit.

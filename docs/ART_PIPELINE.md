@@ -715,6 +715,50 @@ re-running the tool does not restore. The slicer refuses them, and
 the suite. See `docs/INCIDENTS.md`.
 
 
+## 5c. Melee contact effects (`Resources/Vfx/{name}/f0..fN`)
+
+A third VFX root, and the reason it is not `Resources/Spells/` is ownership: a
+spell effect belongs to a SKILL and is authored in `skills.json` beside its
+damage. These belong to no skill at all. They are the house's default contact
+language for a plain swing -- the beat that authors nothing -- and
+`FightBeatPlayer` decides when they play from the class of beat rather than from
+content.
+
+Two sequences today, both **generated rather than delivered**:
+
+    Resources/Vfx/slash_arc/f0..f5.png       the attack graphic
+    Resources/Vfx/impact_burst/f0..f5.png    the impact burst
+
+`tools/make_contact_fx.py` draws them from polar arithmetic -- there is no sheet
+to cut and nothing to key, so none of §2's keying conventions apply. Re-running
+it is the only way to change them; editing the PNGs by hand puts them in the
+same position as the hand-assembled art §5b's last section describes, without
+any of the protection.
+
+Three conventions the runtime depends on, all stated in the tool's own
+docstring and worth repeating because breaking one is silent:
+
+- **The impact sits at the exact centre of the frame**, both axes, every frame.
+  `FightController.PlayContactFx` aims the box centre at the target's content
+  centre and applies no impact-point correction -- unlike a spell, which can
+  author `impactX`/`impactY`. A sequence whose bright part drifts off centre
+  lands beside the body.
+- **Alpha is the luminance falloff**, the same synthesis `slice_spell_sheet.py`
+  applies to delivered glows.
+- **The arc is drawn sweeping left to right.** A monster's blow mirrors the
+  whole sheet through `SpellVfxPlayer.SetFacing`, which needs a direction to
+  mirror.
+
+`StanceSpriteImporter` covers `/Resources/Vfx/` alongside the stance and spell
+roots, so a PNG dropped here imports as a readable Sprite. Without that it loads
+as `null` and the effect simply never appears -- that importer's header records
+the same trap catching `Resources/Spells/` for four months.
+
+The two clips these fire with are **placeholders**; see
+`Resources/Audio/README.md`. Paths and durations for all four assets live in
+`Core/ContactCues.cs`.
+
+
 ## 6. Per-kit README index
 
 - `Assets/_Project/Art/UI/Hub/README.md`

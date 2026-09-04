@@ -407,6 +407,7 @@ namespace PrincesPalace
             beatPlayer.PlaybackFor = PlaybackFor;
             beatPlayer.FlashTarget = FlashCombatant;
             beatPlayer.PlayVfx = PlaySpellVfx;
+            beatPlayer.PlayContactFx = PlayContactFx;
             beatPlayer.FadeTheFallen = FadeTheFallen;
             beatPlayer.ImpactDelayFor = ImpactDelayFor;
             beatPlayer.StopVfx = StopSpellVfx;

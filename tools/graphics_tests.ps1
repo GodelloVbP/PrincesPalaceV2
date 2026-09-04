@@ -14,9 +14,19 @@
 # Usage:
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tools/graphics_tests.ps1
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tools/graphics_tests.ps1 -Filter PrincesPalace.PlayModeTests
-param([string]$Filter = "PrincesPalace.PlayModeTests.HitFlashPixelTests")
+#   powershell -NoProfile -ExecutionPolicy Bypass -File tools/graphics_tests.ps1 -Filter ... -Label before
+param([string]$Filter = "PrincesPalace.PlayModeTests.HitFlashPixelTests",
+      [string]$Label = "")
 
 $ErrorActionPreference = "Stop"
+
+# Names this run's output for a fixture that writes a SERIES rather than one
+# file -- StaticPilotStageCaptureTests reads PP_CAPTURE_LABEL to decide which
+# folder its frames land in, so the same test records a "before" and an "after"
+# and the two can be compared. A parameter rather than a pre-set environment
+# variable because this script is normally invoked as `powershell -File ...`,
+# which is a fresh process and inherits nothing the caller exported.
+if ($Label -ne "") { $env:PP_CAPTURE_LABEL = $Label }
 
 . (Join-Path $PSScriptRoot "unity_path.ps1")
 $UnityExe = Get-UnityExe
@@ -55,6 +65,15 @@ $unityArgs = @(
 
 & $UnityExe @unityArgs
 
+# Unity has been seen to return from a clean, completed run a moment before
+# its results file lands on disk -- the log said "Exiting with code 0 (Ok)"
+# and the XML appeared afterwards, so the run was reported as a failure with
+# nothing wrong with it. Waited out rather than trusted, and briefly: a run
+# that genuinely produced nothing still reports within seconds.
+for ($waited = 0; $waited -lt 30 -and -not (Test-Path $results); $waited++) {
+    Start-Sleep -Seconds 1
+}
+
 if (-not (Test-Path $results)) {
     Write-Host "no results file; tail of log:"
     Get-Content $log -Tail 25
@@ -73,3 +92,9 @@ foreach ($tc in $xml.SelectNodes("//test-case")) {
 
 if ($failed -gt 0) { exit 1 }
 Write-Host "All graphics tests passed."
+
+# STATED, not left to whatever the last native call set. A wrapper reading
+# $LASTEXITCODE after "& graphics_tests.ps1" got Unity's own exit code, which
+# is not zero on a passing batchmode run -- so tools/static_pilot_qa.ps1 threw
+# away a capture that had in fact succeeded.
+exit 0

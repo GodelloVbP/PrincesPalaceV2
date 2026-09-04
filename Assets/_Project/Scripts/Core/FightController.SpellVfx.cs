@@ -159,6 +159,91 @@ namespace PrincesPalace
                 BoxCentreFor(beat, aim, box, facing: 1f, standing: !SpellAnchorNames.Centred(anchor)), box);
         }
 
+        // ---- the house's own contact language, for a swing that authored none --
+
+        // THE ATTACK GRAPHIC AND THE IMPACT BURST for a single-drawing melee
+        // blow. Fired at the impact instant by FightBeatPlayer, which owns the
+        // decision of WHICH beats get this (see its WantsContactFx); all this
+        // owns is where the two effects go.
+        //
+        // MEMBERS 0 AND 1 OF THE SPELL POOL, borrowed rather than pooled
+        // separately. FightBeatPlayer only calls this for a beat with no
+        // authored VFX path, and PlaySpellVfx returns on its first line for
+        // exactly that beat -- so the whole pool is idle whenever this runs,
+        // and a second pool would be three more Images on the canvas for a
+        // case that cannot overlap the first.
+        private void PlayContactFx(CombatBeat beat)
+        {
+            if (beat?.Target == null) return;
+            if (spellVfxPlayers == null || spellVfxPlayers.Length < 2) return;
+
+            var arc = spellVfxPlayers[0];
+            var burst = spellVfxPlayers[1];
+            if (arc == null || burst == null) return;
+
+            var parent = arc.transform.parent;
+            if (parent == null) return;
+
+            var targetRect = SlotFor(beat.Target);
+            if (targetRect == null) return;
+
+            // THE CONTENT CENTRE, not the ground line. A slash lands on the
+            // body; the standing/letterbox correction BoxCentreFor applies is
+            // for an effect drawn erupting from a floor, and neither of these
+            // sheets is. Both are generated with their impact at the exact
+            // centre of the frame (tools/make_contact_fx.py), so the aim point
+            // IS the box centre and there is no offset to cancel.
+            var aim = AimPoint(parent, targetRect, centred: true);
+            var box = ContactBoxFor(targetRect);
+
+            // MIRRORED FOR A MONSTER, the same rule PlayTravellingVfx follows
+            // and for the same reason: the arc is drawn sweeping left to
+            // right, so a blow coming back across the stage has to run the
+            // other way or the sweep trails the strike instead of leading it.
+            // Read off which SIDE the attacker is on rather than off slot
+            // positions, so a back-row monster hit by a status tick cannot
+            // flip it (the identical trap Recoil's own header records).
+            arc.SetFacing(beat.Actor != null && !beat.Actor.IsPlayerSide ? -1f : 1f);
+
+            // The burst is radially symmetrical, so it has no direction to
+            // mirror -- set anyway, because the pool member keeps whatever
+            // facing the last thing to use it left behind.
+            burst.SetFacing(1f);
+
+            arc.PlayAt(ContactCues.SlashArcPath, ContactCues.SlashSeconds, aim, box);
+            burst.PlayAt(ContactCues.ImpactBurstPath, ContactCues.BurstSeconds, aim, box);
+
+            SoundController.PlayClip(ContactCues.ThudClipPath);
+        }
+
+        // The effect box, shrunk to the depth the target is standing at.
+        //
+        // A back-row figure is drawn smaller (FightStageAnchors.SlotScale), so
+        // an effect at a fixed canvas size would be correct on the front rank
+        // and swallow the one behind it. Taken from the animator's BaseScale
+        // rather than the live localScale because the target is being punched
+        // on this exact frame and its localScale is mid-squash -- the same
+        // distinction AnchorStageSlots draws when it compares marks.
+        //
+        // The spell path deliberately does NOT do this: a spell authors its
+        // own size per skill and a caster tunes it against what they see. This
+        // one has no authored size to tune, so the depth has to come from
+        // somewhere.
+        private static Vector2 ContactBoxFor(RectTransform slot)
+        {
+            var animator = slot.GetComponent<StageActorAnimator>();
+            float depth = animator != null
+                ? Mathf.Abs(animator.BaseScale.x)
+                : Mathf.Abs(slot.localScale.x);
+
+            // A zero scale is a slot that has not been anchored yet; drawing
+            // the effect at full size beats drawing it at nothing.
+            if (depth <= 0.01f) depth = 1f;
+
+            float size = ContactCues.BoxSize * depth;
+            return new Vector2(size, size);
+        }
+
         // THE POINT ON A COMBATANT AN EFFECT IS AIMED AT, in the effect pool's
         // own coordinates.
         //

@@ -36,6 +36,13 @@ public class StanceSpriteImporter : AssetPostprocessor
     private const string CharacterStanceRoot = "/Resources/Characters/";
     private const string SpellVfxRoot = "/Resources/Spells/";
 
+    // The house's own contact effects (slash arc, impact burst), which are not
+    // a spell and so were not covered by the root above. Same
+    // Resources.Load<Sprite> door via FrameSequenceLoader, therefore the same
+    // silent trap: a texture imported as a plain Texture2D loads as null and
+    // the swing simply plays no effect, with nothing anywhere reporting it.
+    private const string ContactVfxRoot = "/Resources/Vfx/";
+
     private void OnPreprocessTexture()
     {
         if (!IsStanceSprite(assetPath))
@@ -67,7 +74,8 @@ public class StanceSpriteImporter : AssetPostprocessor
 
         return path.Contains(EnemyStanceRoot)
             || path.Contains(CharacterStanceRoot)
-            || path.Contains(SpellVfxRoot);
+            || path.Contains(SpellVfxRoot)
+            || path.Contains(ContactVfxRoot);
     }
 
     // OnPreprocessTexture only fires on an actual (re)import — editing this
@@ -83,6 +91,7 @@ public class StanceSpriteImporter : AssetPostprocessor
             "Assets/_Project/Resources/Enemies",
             "Assets/_Project/Resources/Characters",
             "Assets/_Project/Resources/Spells",
+            "Assets/_Project/Resources/Vfx",
         });
 
         foreach (var guid in guids)

@@ -92,6 +92,25 @@ namespace PrincesPalace.PlayModeTests
             return label.color;
         }
 
+        // THE BLOW NO LONGER LANDS ON THE FRAME AFTER THE CLICK. Neither
+        // figure in this fixture has art, so both are still drawings, and a
+        // still-drawing Lunge now spends StaticStancePlayback's wind-up
+        // (anticipation plus the lunge itself) before the popup appears -- one
+        // or two frames at 60x, where it used to be zero. Polled against a
+        // deadline rather than counted in frames, because "how many frames"
+        // is exactly the number this test has no business pinning.
+        private IEnumerator WaitForThePopup()
+        {
+            var player = Object.FindAnyObjectByType<FightBeatPlayer>();
+            Assert.IsNotNull(player);
+
+            float deadline = Time.realtimeSinceStartup + 2f;
+            while (Time.realtimeSinceStartup < deadline && !player.Popups.Any(p => p != null && !p.IsFree))
+            {
+                yield return null;
+            }
+        }
+
         private static Color Hex(string hex) =>
             ColorUtility.TryParseHtmlString(hex, out var parsed) ? parsed : Color.magenta;
 
@@ -109,7 +128,7 @@ namespace PrincesPalace.PlayModeTests
 
             Click("Verb0");
             Click("EnemyPlate0");
-            yield return null;
+            yield return WaitForThePopup();
 
             AssertSameColor(Hex(FightHudPalette.DamageTypeFire), ActivePopupColor(),
                 "a Fire-typed attack's popup did not pop in the Fire token");
@@ -122,7 +141,7 @@ namespace PrincesPalace.PlayModeTests
 
             Click("Verb0");
             Click("EnemyPlate0");
-            yield return null;
+            yield return WaitForThePopup();
 
             AssertSameColor(Hex(FightHudPalette.DamageTypePoison), ActivePopupColor(),
                 "a Poison-typed attack's popup did not pop in the Poison token");
@@ -138,7 +157,7 @@ namespace PrincesPalace.PlayModeTests
 
             Click("Verb0");
             Click("EnemyPlate0");
-            yield return null;
+            yield return WaitForThePopup();
 
             AssertSameColor(Hex(FightHudPalette.DamageTypePhysical), ActivePopupColor(),
                 "a Physical attack's popup drifted off the flat red every hit used to show");
