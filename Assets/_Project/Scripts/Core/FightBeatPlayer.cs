@@ -316,10 +316,26 @@ namespace PrincesPalace
                 // at the impact instant is how they would come to disagree.
                 bool staticSwing = IsStaticSwing(beat);
 
+                // THE CHARGE TWIN OF staticSwing -- see IsStaticCharge. A
+                // Charge never gets a lunge-style anticipation lead (it is not
+                // a lean, it is a committed rush that is already crossing
+                // during the swing), so this is read for the wind-up and the
+                // contact effects only, never for Lunge's third use above.
+                bool staticCharge = IsStaticCharge(beat);
+
                 if (beat.Approach == StageApproach.Close) yield return CloseIn(beat);
 
                 Lunge(beat, staticSwing);
-                Charge(beat);
+
+                // THE CHARGE'S OWN OUTBOUND TRAVEL TIME, computed once and
+                // read on both sides of AUDIT.md #59: Charge below hands it to
+                // the animator as the out-tween's duration, and the wind-up a
+                // few lines down waits out the SAME number before the impact
+                // instant fires. One value rather than each side deriving its
+                // own is what keeps the charger's arrival and the target's
+                // flinch from drifting apart again.
+                float chargeOutSeconds = Charge(beat);
+
                 PlayVfx?.Invoke(beat);
 
                 // A beat's own clip, if it authored one. Unconditional and
@@ -328,14 +344,22 @@ namespace PrincesPalace
                 // no-op, which is why this needs no guard of its own.
                 SoundController.PlayClip(beat.Vfx.sfxPath);
 
-                // Wind-up: the crouch and the cross, up to the moment the blow
-                // would connect. A spell instead waits out its VFX's impact
-                // fraction -- whichever of the two this beat has, only one of
-                // them is non-zero, so they add rather than compete.
+                // Wind-up: the crouch and the cross for a Lunge, or the
+                // charge's own outbound travel (chargeOutSeconds, floored at
+                // ChargeMinOutSeconds) for a Charge -- up to the moment the
+                // blow would connect either way. A spell instead waits out its
+                // VFX's impact fraction below; only one of these three is ever
+                // non-zero for a given beat, so they add rather than compete.
                 if (staticSwing) yield return StaticSwing.Windup();
+                else if (staticCharge) yield return StaticSwing.Windup(chargeOutSeconds);
 
+                // SKIPPED FOR A STATIC CHARGE: chargeOutSeconds already IS
+                // Max(ChargeMinOutSeconds, impact) -- see ChargeOutSeconds --
+                // so the wind-up just waited out at least this much. Waiting
+                // it again here would either do nothing (the common case, no
+                // spell) or double an authored spell's own impact delay.
                 float impact = ImpactDelayFor == null ? 0f : ImpactDelayFor(beat);
-                if (impact > 0f) yield return new WaitForSeconds(Scaled(impact));
+                if (impact > 0f && !staticCharge) yield return new WaitForSeconds(Scaled(impact));
 
                 // The blow lands: the numbers move, the target flashes and the
                 // floating figure appears, all on the same frame.
@@ -361,7 +385,7 @@ namespace PrincesPalace
                     PaintVitals?.Invoke(beat.Snapshot);
                     ShowAmount(beat);
                     FlashTarget?.Invoke(beat);
-                    if (staticSwing && WantsContactFx(beat)) PlayContactFx?.Invoke(beat);
+                    if ((staticSwing || staticCharge) && WantsContactFx(beat)) PlayContactFx?.Invoke(beat);
                     Recoil(beat);
                     Punch(beat);
                     ShakeStage?.Invoke(ShakeStrength(beat));
@@ -397,13 +421,20 @@ namespace PrincesPalace
                 // failure mode SettleAfter's own header records going
                 // unnoticed once.
                 //
-                // A swing spends StaticSwing.WindupSeconds and reports exactly
-                // that; everything else spends nothing and is charged
-                // StillPoseSeconds, which is what a flat pose has always cost.
-                // The floor is the only thing that can take a beat further,
-                // and only at the top of the range: at HitStop.MaxSeconds a
-                // swing's remainder clamps up to MinSettleSeconds.
-                float spent = staticSwing ? StaticSwing.WindupSeconds : StillPoseSeconds;
+                // A swing spends StaticSwing.WindupSeconds and a charge spends
+                // chargeOutSeconds -- both report exactly what their own
+                // wind-up wait just spent, or SettleAfter would hand back a
+                // settle sized for a shorter beat than the one that actually
+                // played, and the whole beat would run long (the "no pause"
+                // bug SettleAfter's own header records). Everything else
+                // spends nothing and is charged StillPoseSeconds, which is
+                // what a flat pose has always cost. The floor is the only
+                // thing that can take a beat further, and only at the top of
+                // the range: at HitStop.MaxSeconds a swing's or a charge's
+                // remainder clamps up to MinSettleSeconds.
+                float spent = staticSwing ? StaticSwing.WindupSeconds
+                    : staticCharge ? chargeOutSeconds
+                    : StillPoseSeconds;
                 yield return new WaitForSeconds(Scaled(SettleAfter(spent + stop)));
 
                 // Back to idle before the next beat opens, so a pose belongs to
@@ -527,36 +558,54 @@ namespace PrincesPalace
         //
         // The two numbers that make it "arrive on the impact frame":
         //
-        //   OUT takes as long as the beat has before the blow lands, so the
-        //   figure is still crossing while the wind-up runs and plants as the
-        //   blow connects. A Charge is not a Lunge, so it buys no anticipation
-        //   of its own (IsStaticSwing); what is left is the impact delay -- a
-        //   spell's VFX lead, zero for a plain rush -- floored below, because
-        //   without one the out-tween would be near-zero and the figure would
-        //   teleport into the target rather than cross to it.
+        //   OUT (ChargeOutSeconds, below) takes as long as the beat has before
+        //   the blow lands, so the figure is still crossing while the wind-up
+        //   runs and plants as the blow connects. Returned rather than only
+        //   consumed here, because PlayBeats' own wind-up wait -- the fix for
+        //   AUDIT.md #59 -- has to wait out this EXACT number too, or the
+        //   impact instant fires before the charger arrives again.
         //
         //   HOLD keeps the charger planted against its target through the
         //   hit-stop, so the bump is a beat of contact rather than an instant
         //   graze, and the return then plays out over the follow-through.
         //
         // Fire-and-forget like Lunge, NOT a coroutine like CloseIn: it costs
-        // the beat no extra time, because it fits inside the wind-up the beat
-        // already spends.
-        private void Charge(CombatBeat beat)
+        // the beat no extra time on its own, because it fits inside the
+        // wind-up the beat spends waiting on the same value.
+        //
+        // Returns 0 for a beat that is not a Charge, or a Charge with nobody
+        // to travel to -- the caller has nothing to wait on either way.
+        private float Charge(CombatBeat beat)
         {
-            if (beat.Approach != StageApproach.Charge) return;
+            if (beat.Approach != StageApproach.Charge) return 0f;
+
+            // ONE HOME for the out-tween's length: computed here so Play
+            // below and PlayBeats' wind-up wait can never disagree about it.
+            float outSeconds = ChargeOutSeconds(beat);
 
             var (animator, offset) = TravelFor(beat, ChargeFraction);
-            if (animator == null) return;
+            if (animator != null)
+            {
+                // Unscaled, because Play scales the out-tween itself -- the
+                // one place a duration handed to Play is expected raw rather
+                // than pre-scaled (holdSeconds is the other way round; see
+                // PlayRoutine).
+                float hold = Scaled(HitStopFor(beat) + ChargeContactSeconds);
+                animator.Play(offset, hold, outSeconds);
+            }
 
-            // Unscaled, because Play scales the out-tween itself -- the one
-            // place a duration handed to Play is expected raw rather than
-            // pre-scaled (holdSeconds is the other way round; see PlayRoutine).
+            return outSeconds;
+        }
+
+        // THE FLOOR-OR-LONGER TRAVEL TIME a Charge commits to. A spell's own
+        // VFX lead if it authored one and that lead is the longer of the two
+        // (ImpactDelayFor); otherwise ChargeMinOutSeconds, because without a
+        // floor the out-tween would be near-zero for a plain rush and the
+        // figure would teleport into the target rather than cross to it.
+        private float ChargeOutSeconds(CombatBeat beat)
+        {
             float impactDelay = ImpactDelayFor == null ? 0f : ImpactDelayFor(beat);
-            float outSeconds = Mathf.Max(ChargeMinOutSeconds, impactDelay);
-
-            float hold = Scaled(HitStopFor(beat) + ChargeContactSeconds);
-            animator.Play(offset, hold, outSeconds);
+            return Mathf.Max(ChargeMinOutSeconds, impactDelay);
         }
 
         // THE OTHER APPROACH: get there FIRST, then swing.
@@ -693,7 +742,7 @@ namespace PrincesPalace
         // blow already dwells longer and this is the shared minimum on top.
         private const float ChargeContactSeconds = 0.06f;
 
-        // WHETHER THIS BEAT IS A SWING THAT HAS TO CROSS THE STAGE, which is
+        // WHETHER THIS BEAT IS A LUNGE THAT HAS TO CROSS THE STAGE, which is
         // the whole of what "give it a crouch, then a wind-up, then the house's
         // contact effects" is keyed on. KEYED ON THE CLASS OF BEAT, never on
         // who is swinging -- every actor in the game wears a single drawing per
@@ -701,20 +750,40 @@ namespace PrincesPalace
         //
         //   LUNGE, because Hold is a cast delivered from where it stands
         //   (nothing crosses, so there is nothing to anticipate), Close already
-        //   arrives before the stance opens, and Charge times its own travel
-        //   against the impact delay -- giving it a wind-up would feed the rush
-        //   a number that includes the travel it is trying to fit inside, and
-        //   it would arrive late by its own length.
+        //   arrives before the stance opens, and Charge is its own case
+        //   (IsStaticCharge, below) -- it does not buy Lunge's separate
+        //   anticipation lead, because the rush IS the travel rather than a
+        //   lean in front of it.
         //
-        //   A TARGET THAT IS SOMEBODY ELSE, because there is no crossing to a
-        //   self-targeted beat, and TravelFor would return no animator for it
-        //   anyway -- so the impact would be pushed back by a travel that never
-        //   happens.
+        //   TARGETS SOMEBODY ELSE (CrossesToATarget) -- see that helper.
         private static bool IsStaticSwing(CombatBeat beat)
         {
-            if (beat?.Actor == null || beat.Approach != StageApproach.Lunge) return false;
+            return beat != null && beat.Approach == StageApproach.Lunge && CrossesToATarget(beat);
+        }
 
-            return beat.Target != null && !ReferenceEquals(beat.Target, beat.Actor);
+        // THE CHARGE TWIN OF IsStaticSwing. A Charge always crosses -- that is
+        // the whole point of the approach -- so this exists only to gate the
+        // beats a rush cannot happen for: a self-targeted beat (nothing to
+        // travel to) or one missing an actor or target entirely.
+        //
+        // Once this fix (AUDIT.md #59) went in, a Charge's wind-up stopped
+        // being "none" and became ChargeOutSeconds -- the SAME value Charge()
+        // hands the animator, read once by both. Wrapping it in IsStaticSwing
+        // instead was rejected on purpose: that predicate also gates Lunge's
+        // separate anticipation lead, and a Charge must never get one (the
+        // rush IS the travel, not a lean before it).
+        private static bool IsStaticCharge(CombatBeat beat)
+        {
+            return beat != null && beat.Approach == StageApproach.Charge && CrossesToATarget(beat);
+        }
+
+        // Shared by both: there is no crossing to a self-targeted beat, and
+        // TravelFor would return no animator for one missing an actor or
+        // target anyway -- so the impact would be pushed back by a wind-up
+        // that waits on a travel that never happens.
+        private static bool CrossesToATarget(CombatBeat beat)
+        {
+            return beat.Actor != null && beat.Target != null && !ReferenceEquals(beat.Target, beat.Actor);
         }
 
         // The squash a struck figure takes, scaled by how hard it was hit.

@@ -108,6 +108,49 @@ namespace PrincesPalace.PlayModeTests
                 "wind-up would be waiting out a travel that never happens");
         }
 
+        // ---- a charge gets the same contact effects a lunge does, once its travel completes --
+        //
+        // AUDIT.md #59: a flat-art Charge fired these on the very first frame,
+        // before the charger had crossed the stage at all. FightBeatPlayer now
+        // waits out the charge's own out-tween first -- see IsStaticCharge and
+        // FightBeatPacingTests.AChargeWaitsOutItsOwnTravelBeforeTheImpactInstant
+        // for the wall-clock pin on HOW LONG; this only pins that the effect
+        // fires exactly once, and not on the opening frame.
+        [UnityTest]
+        public IEnumerator AChargeFiresTheContactEffectsExactlyOnceAndNotOnTheOpeningFrame()
+        {
+            var go = new GameObject("BeatPlayerUnderTest");
+            _spawned.Add(go);
+            var player = go.AddComponent<FightBeatPlayer>();
+
+            // Fast, same seam every other test in this file uses -- polled to
+            // completion below rather than slept for a guessed duration, so
+            // this cannot become a test that samples one mid-beat frame.
+            FightBeatPlayer.BeatSpeedMultiplier = 60f;
+
+            int fired = 0;
+            int frameFired = -1;
+            int frame = 0;
+            player.WireContactFxForTest(b => { fired++; if (frameFired < 0) frameFired = frame; });
+
+            bool finished = false;
+            player.Play(new List<CombatBeat> { Charge() }, () => finished = true);
+
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (!finished && Time.realtimeSinceStartup < deadline)
+            {
+                yield return null;
+                frame++;
+            }
+
+            Assert.IsTrue(finished, "the charge beat never finished, so the counts below mean nothing");
+            Assert.AreEqual(1, fired,
+                "a charge landed the house's contact effects more than once, or not at all");
+            Assert.Greater(frameFired, 0,
+                "a charge's contact effect fired on the very frame the beat opened -- before the " +
+                "charger had crossed the stage, which is the defect AUDIT.md #59 records");
+        }
+
         // ---- fixture -------------------------------------------------------------
 
         private readonly List<GameObject> _spawned = new List<GameObject>();
@@ -136,6 +179,20 @@ namespace PrincesPalace.PlayModeTests
                 Target = Fighter("Victim", false),
                 Amount = 7,
                 Approach = StageApproach.Lunge,
+            };
+
+            beat.Stances[beat.Actor] = FightSession.Stances.Attack;
+            return beat;
+        }
+
+        private static CombatBeat Charge()
+        {
+            var beat = new CombatBeat
+            {
+                Actor = Fighter("Charger", true),
+                Target = Fighter("Victim", false),
+                Amount = 7,
+                Approach = StageApproach.Charge,
             };
 
             beat.Stances[beat.Actor] = FightSession.Stances.Attack;

@@ -170,6 +170,17 @@ namespace PrincesPalace
         // exactly that beat -- so the whole pool is idle whenever this runs,
         // and a second pool would be three more Images on the canvas for a
         // case that cannot overlap the first.
+        //
+        // THE ARC IS SKIPPED FOR A CHARGE. The slash arc reads a lean-and-cut
+        // (docs/STATIC_COMBAT_ART_DEEP_DIVE.md's "Attack families" draws that
+        // language for Slash, not for a committed rush), and a Charge is a
+        // bump rather than a cut -- the same table's "Blunt" row calls for a
+        // burst and a longer hit-stop instead of an arc. This is the burst
+        // half of that: the simplest honest version of the distinction, and
+        // it costs nothing the pool did not already have. The hit-stop half
+        // is not implemented -- HitStopFor is keyed on the blow's weight for
+        // every approach alike, and giving Charge a longer one is a separate,
+        // undecided change to that shared curve.
         private void PlayContactFx(CombatBeat beat)
         {
             if (beat?.Target == null) return;
@@ -194,21 +205,26 @@ namespace PrincesPalace
             var aim = AimPoint(parent, targetRect, centred: true);
             var box = ContactBoxFor(targetRect);
 
-            // MIRRORED FOR A MONSTER, the same rule PlayTravellingVfx follows
-            // and for the same reason: the arc is drawn sweeping left to
-            // right, so a blow coming back across the stage has to run the
-            // other way or the sweep trails the strike instead of leading it.
-            // Read off which SIDE the attacker is on rather than off slot
-            // positions, so a back-row monster hit by a status tick cannot
-            // flip it (the identical trap Recoil's own header records).
-            arc.SetFacing(beat.Actor != null && !beat.Actor.IsPlayerSide ? -1f : 1f);
+            bool wantsArc = beat.Approach != StageApproach.Charge;
+
+            if (wantsArc)
+            {
+                // MIRRORED FOR A MONSTER, the same rule PlayTravellingVfx
+                // follows and for the same reason: the arc is drawn sweeping
+                // left to right, so a blow coming back across the stage has
+                // to run the other way or the sweep trails the strike instead
+                // of leading it. Read off which SIDE the attacker is on
+                // rather than off slot positions, so a back-row monster hit
+                // by a status tick cannot flip it (the identical trap
+                // Recoil's own header records).
+                arc.SetFacing(beat.Actor != null && !beat.Actor.IsPlayerSide ? -1f : 1f);
+                arc.PlayAt(ContactCues.SlashArcPath, ContactCues.SlashSeconds, aim, box);
+            }
 
             // The burst is radially symmetrical, so it has no direction to
             // mirror -- set anyway, because the pool member keeps whatever
             // facing the last thing to use it left behind.
             burst.SetFacing(1f);
-
-            arc.PlayAt(ContactCues.SlashArcPath, ContactCues.SlashSeconds, aim, box);
             burst.PlayAt(ContactCues.ImpactBurstPath, ContactCues.BurstSeconds, aim, box);
 
             SoundController.PlayClip(ContactCues.ThudClipPath);

@@ -24,6 +24,12 @@ namespace PrincesPalace
     // whoever is swinging. The stance's own drawing is put on by
     // FightController.PoseCombatant before the beat opens and taken off after
     // it, so nothing here touches a sprite.
+    //
+    // THE Windup(seconds) OVERLOAD BELOW IS NOT A SWING -- it is a Charge
+    // borrowing this class's wait-then-fire-the-impact shape for a wind-up
+    // that is not the crouch-and-cross above, because a rush's own travel
+    // time has to stay one number shared with the animator's out-tween
+    // rather than a second copy read from here (AUDIT.md #59).
     public static class StaticSwing
     {
         // The crouch plus the travel. Both numbers live on StageActorAnimator
@@ -39,6 +45,21 @@ namespace PrincesPalace
             SoundController.PlayClip(ContactCues.WhooshClipPath);
 
             yield return new WaitForSeconds(FightBeatPlayer.Scaled(WindupSeconds));
+        }
+
+        // THE CALLER-SUPPLIED TWIN, for a beat whose wind-up is not the
+        // crouch-and-cross above -- a Charge's is its own outbound travel
+        // time (FightBeatPlayer.ChargeOutSeconds, at least ChargeMinOutSeconds),
+        // which has to be the SAME number the animator's out-tween was given
+        // or the two can drift apart again (AUDIT.md #59). Not a second
+        // WindupSeconds-shaped property, because a Charge's figure is not
+        // making the crouch-and-cross this class is named for; it is
+        // borrowing the wait-then-flash shape and nothing else.
+        public static IEnumerator Windup(float seconds)
+        {
+            SoundController.PlayClip(ContactCues.WhooshClipPath);
+
+            yield return new WaitForSeconds(FightBeatPlayer.Scaled(seconds));
         }
     }
 }

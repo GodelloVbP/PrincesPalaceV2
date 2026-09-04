@@ -4,6 +4,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using PrincesPalace;
+using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Stage;
 
@@ -45,6 +46,81 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(SwingSeconds, StaticSwing.WindupSeconds, 0.0001f,
                 "the crouch and the cross are one number precisely so the impact instant cannot " +
                 "drift apart from the travel it waits on");
+        }
+
+        // ---- a charge's impact waits for the charger to arrive (AUDIT.md #59) --
+
+        // THE FLOOR under a plain rush's out-tween, pinned as a literal rather
+        // than read off FightBeatPlayer's own private constant -- the private
+        // copy is what this test exists to hold honest, so reading it back
+        // would make the assertion a tautology (docs/CODE_STANDARDS.md #8).
+        private const float ChargeWindupFloorSeconds = 0.18f;
+
+        // MEASUREMENT SLOP, not a loosened floor. WaitForSeconds resolves on
+        // the frame where accumulated deltaTime first reaches its target, and
+        // that comparison can land inside a millisecond of the target rather
+        // than exactly on it -- observed here as low as 0.1795s against a
+        // 0.18s wait. Smaller than a single 60fps frame (~16.7ms), so a
+        // regression that skipped the wait entirely (firing on frame one)
+        // still fails this assertion by two orders of magnitude.
+        private const float TimingSlop = 0.005f;
+
+        // THE BUG THIS PINS: a flat-art Charge fired its impact instant (the
+        // flash, the recoil, the damage number) on the very frame the beat
+        // opened, while its own out-tween took ChargeWindupFloorSeconds to
+        // cross the stage -- so the target reacted a beat before the charger
+        // arrived. FightBeatPlayer now waits out the charge's own travel time
+        // before firing the impact, the same shape StaticSwing already gives
+        // a Lunge.
+        //
+        // RUN AT REAL SPEED (BeatSpeedMultiplier = 1), deliberately unlike
+        // every other test in this file: the floor is 0.18s of WALL-CLOCK
+        // time, and scaling it down to milliseconds would put it under a
+        // single frame's own length, at which point any measured elapsed time
+        // -- however short the true wait -- clears the assertion and the test
+        // stops being able to catch the regression it exists for.
+        [UnityTest]
+        public IEnumerator AChargeWaitsOutItsOwnTravelBeforeTheImpactInstant()
+        {
+            var player = NewPlayer();
+            FightBeatPlayer.BeatSpeedMultiplier = 1f;
+
+            var beat = ChargeBeat();
+            float fireTime = -1f;
+            player.WireContactFxForTest(b => { if (fireTime < 0f) fireTime = Time.realtimeSinceStartup; });
+
+            float start = Time.realtimeSinceStartup;
+            bool finished = false;
+            player.Play(new List<CombatBeat> { beat }, () => finished = true);
+
+            float deadline = start + 5f;
+            while (fireTime < 0f && Time.realtimeSinceStartup < deadline) yield return null;
+
+            Assert.Greater(fireTime, 0f,
+                "the charge never fired its contact effect, so the timing below means nothing");
+            Assert.GreaterOrEqual(fireTime - start, ChargeWindupFloorSeconds - TimingSlop,
+                "a charge's impact instant fired before its own floor travel time had elapsed -- " +
+                "the target flashed and recoiled before the charger crossed the stage");
+
+            while (!finished && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.IsTrue(finished, "the charge beat never finished");
+        }
+
+        private static CombatantState Fighter(string name, bool playerSide) =>
+            new CombatantState(name, playerSide, 30, 10, 5, 5);
+
+        private static CombatBeat ChargeBeat()
+        {
+            var beat = new CombatBeat
+            {
+                Actor = Fighter("Charger", true),
+                Target = Fighter("Victim", false),
+                Amount = 7,
+                Approach = StageApproach.Charge,
+            };
+
+            beat.Stances[beat.Actor] = FightSession.Stances.Attack;
+            return beat;
         }
 
         // ---- what the hit-stop takes out of the beat ---------------------------
