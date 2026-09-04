@@ -838,7 +838,22 @@ namespace PrincesPalace
             if (flash.transform is RectTransform flashRect)
             {
                 flashRect.localScale = new Vector3(mirror, 1f, 1f);
+
+                // AND THE GROUND OFFSET, exactly as the dissolve layer below
+                // copies it. The flash is a stretch sibling of the sprite, so
+                // it inherits the slot's box for free -- but GroundTheFigure
+                // writes the figure's drop and drift onto the SPRITE's own
+                // offsets, and a silhouette that does not carry them whitens a
+                // figure standing somewhere else. On Shawn the hurt drawing's
+                // feet sit 41px higher on its canvas than idle's, so the flash
+                // floated up by that much: head and hands went white, boots
+                // and cloak-hem stayed in colour, and the flash read as a
+                // different pose laid over the one he was in. Same failure the
+                // mirror line above already fixed on the other axis.
+                flashRect.offsetMin = sprite.rectTransform.offsetMin;
+                flashRect.offsetMax = sprite.rectTransform.offsetMax;
             }
+            flash.image.preserveAspect = sprite.preserveAspect;
         }
 
         // ---- what playback drives -----------------------------------------------
