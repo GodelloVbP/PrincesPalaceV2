@@ -181,45 +181,9 @@
     },
     {
       "spritePath": "Enemies/treant",
-      "groundLine": 12,
-      "_groundLineNote": "As above. The slam lands when the trunk is fully over (f3) and the spore burst when the arms reach their widest (f4).",
+      "groundLine": 8,
+      "_groundLineNote": "Six stills sliced from sheet_poses.png (2026-09-04), all on one 617x456 canvas; the slicer measured this ground line and every pose agrees within 0px. No stance entries because every pose is a single drawing -- FightBeatPlayer's static cues carry the motion.",
       "stances": [
-        {
-          "stance": "idle",
-          "secondsPerFrame": 0.14,
-          "impactFrame": 1,
-          "soundFrame": 1
-        },
-        {
-          "stance": "attack",
-          "secondsPerFrame": 0.08,
-          "impactFrame": 4,
-          "soundFrame": 4
-        },
-        {
-          "stance": "trunk_slam",
-          "secondsPerFrame": 0.09,
-          "impactFrame": 3,
-          "soundFrame": 3
-        },
-        {
-          "stance": "cast",
-          "secondsPerFrame": 0.1,
-          "impactFrame": 4,
-          "soundFrame": 4
-        },
-        {
-          "stance": "hurt",
-          "secondsPerFrame": 0.08,
-          "impactFrame": 1,
-          "soundFrame": 1
-        },
-        {
-          "stance": "defeated",
-          "secondsPerFrame": 0.12,
-          "impactFrame": 1,
-          "soundFrame": 1
-        }
       ]
     }
   ]

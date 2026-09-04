@@ -1,121 +1,82 @@
 #!/usr/bin/env python3
-"""Slice ACTOR sprite sheets into per-stance/per-frame combat art.
+"""Slice one Stage-1 design sheet into an actor's key-pose stance stills.
 
-"Actor" rather than "enemy" because the party's side of the stage is the
-same thing: `Resources/Characters/sheep/idle.png` and
-`Resources/Enemies/rat/idle.png` are resolved by one runtime path
-(`StanceAnimationLibrary.Resolve` -> `FightController.RefreshCombatantSprite`)
-and held to one set of invariants, so they are produced by one tool. The
-only thing that differs is which Resources root the output lands in, which
-is a per-entry `root` in the manifest.
+## The policy this tool implements
 
-Driven by a committed per-actor manifest (ACTORS below) instead of one-off
-shell commands typed at the terminal and never recorded anywhere — which is
-exactly how the rat attack sheet's irregular row layout ("manual row
-split"), every creature's stance/frame naming, and the whole of Shawn's
-battle art ended up living only in someone's command-line history.
+Every combat actor now ships as **one still drawing per stance** (idle,
+attack, cast, hurt, defeated, plus any skill-specific pose), posed
+procedurally at runtime. No skeletal rigs, no multi-frame animation sheets.
+See docs/STANCE_SHEET_SPEC.md for the commissioning work order this tool is
+the delivery step of.
 
-## What changed and why (2026-08-03 rewrite)
+The commissioning format is one 1536x1024 image, a grid of cells (3x2 by
+default, `--grid` overrides), one distinct pose per cell, same creature,
+faces right, identical scale. Those cells ARE the delivery: this tool cuts
+them out, keys the background if needed, and composites every stance onto
+ONE shared canvas per actor so a single authored ground line holds across
+every pose the actor has.
 
-A previous pass tried to make every pose "the same size" by tight-cropping
-each one and scaling it so its CONTENT HEIGHT matched the tallest pose in
-the set. That is wrong: bbox height is POSE-DEPENDENT (a crouch is shorter
-than a rear-up even when drawn at the same scale) — sqrt(opaque pixel
-count) is the pose-INVARIANT proxy for "how big is this creature drawn",
-and measurement showed the raw art already held that to within +-5% per
-sheet. Height-matching inverted a good invariant into a bad one, and the
-creature visibly pulsed size between frames.
+## CLI
 
-So: **this tool never scales an individual pose.** Every piece is pasted
-at its native size (after, optionally, one literal per-SHEET correction —
-see `scale` below). The only thing "auto" here is `--suggest-scales`,
-which measures and prints a number; a human copies it into the manifest,
-where it shows up in a diff. An automatic per-sheet scale would fail for
-exactly the reason the per-pose version did: VFX/debris in a frame
-contaminate the mass measurement, the suggestion moves every time a frame
-is added, and it is unreviewed.
+    python tools/slice_actor_sheet.py --sheet Assets/_Project/Art/Enemies/beetle/sheet_poses.png \\
+        --actor Enemies/beetle \\
+        --stances idle,attack,turtle_up,shell_closed,hurt,defeated
 
-## Manifest shape
+Optional:
+    --grid COLSxROWS         default 3x2 (six cells, row-major top-left first)
+    --key alpha|white_flood|green   default alpha (real transparency)
+    --anchor ground_band|centroid   default ground_band (see below)
+    --delivery-scale FLOAT    one uniform multiplier applied after native-
+                               scale compositing, to restore on-screen
+                               presence -- see docs/ART_PIPELINE.md's sizing
+                               note. Default 1.0.
+    --nudge STANCE:DX,DY      per-stance pixel offset, repeatable. Only ever
+                               a reposition, never a resize -- see the
+                               ground-line assertion below for why a size
+                               correction is refused instead.
+    --drop-far-components-px N   a neighbouring cell's stray limb/tail bled
+                               across a gutter and survived as its own
+                               component -- keep the largest component plus
+                               anything within N px of it, zero out the rest.
+                               Off by default; every clean Stage-1 sheet
+                               needs nothing here.
+    --out-root PATH            default Assets/_Project/Resources
+    --prune                    delete stance PNGs already in the output
+                               folder that this run did not (re)write
+    --quiet
 
-    ACTORS = {
-        "<id>": {
-            "root": OUTPUT_ROOT_ENEMIES | OUTPUT_ROOT_CHARACTERS,
-            "sheets": [
-                {
-                    "file": "<name>.png",         # under Assets/_Project/Art/Enemies/
-                    "key": "alpha" | "white_flood" | "green",
-                    "grid": (rows, cols),          # OR "bands" below, not both
-                    "bands": {"rows": [(y0,y1), ...], "cols": N},
-                    "scale": 1.0,                  # literal; see module docstring
-                    "names": ["idle", None, "cast/f0", ...],  # row-major,
-                              # None skips that cell; "x/f0" writes an
-                              # animated-stance frame at <out>/x/f0.png
-                    "drop_far_components_px": 40,  # OPTIONAL. A neighbouring
-                              # cell's stray paw/tail-tip bled across the cut
-                              # line and survived as its own disconnected
-                              # component -- keep the largest component plus
-                              # anything within this many px of it (a raised
-                              # limb, detail that legitimately reaches away
-                              # from the body), zero out anything further
-                              # (contamination, which lands alone in dead
-                              # space). Absent means off -- every existing
-                              # sheet reproduces byte-identically without it.
-                },
-                ...
-            ],
-            "aliases": {"attack": "cast"},   # byte-for-byte copy, whole shape
-            "anchor": "centroid" | "ground_band",
-            "delivery_scale": 1.0,           # ONE uniform multiplier, applied
-                                              # AFTER native-scale compositing,
-                                              # to restore on-screen presence
-            "nudge": {"cast/f3": (0, -18)},  # per-output-name 2D pixel offset
-        },
-    }
-
-`bands` exists because a sheet is not always an even grid — the rat's
-attack sheet has two irregularly-spaced rows with dead space between and
-around them, and a nominal even split lands the cut inside a pose. `bands`
-gives explicit row ranges; column cuts inside each band still get the
-usual `best_cut` nudging.
+A stance name of "-" or "skip" leaves that grid cell out entirely (a design
+sheet with a dead cell, or a stance the actor doesn't ship).
 
 ## Anchoring
 
-"centroid" is a faithful port of the tool's original behaviour (horizontal
-alignment on whole-mask alpha centroid, ground line at bbox bottom) and
-exists so a creature that has never been touched (bog_witch) can be
-regenerated PIXEL-IDENTICAL to what already shipped, proving this rewrite
-is a superset rather than a rewrite-and-hope.
+"ground_band" (default): largest-connected-component (ignores detached
+debris) intersected with a thin band at the creature's own ground line
+(ignores a raised tail or outflung fist -- anatomy far from the ground
+cannot move where the creature is anchored). "centroid": whole-mask alpha
+centroid, ground line at bbox bottom -- the older, simpler behaviour, kept
+for a pose whose mass legitimately touches the ground away from its feet
+(a staff, a dragging tail) where ground_band would mis-anchor.
 
-"ground_band" is the improved anchor: largest-connected-component (to
-ignore detached debris — a golem's flying earth shards should not drag the
-horizontal anchor sideways) intersected with a thin band at the CREATURE'S
-ground line (to ignore a raised tail or an outflung fist — anatomy far from
-the ground cannot move where the creature is anchored, whereas a whole-mass
-centroid moves with it). See `ground_band_anchor`.
+## One shared canvas, one ground line
+
+Every stance is composited onto a canvas sized to the LARGEST stance's
+content plus uniform padding, with every stance's content bottom-aligned to
+the same row. `FightController.StageVisuals` sizes each combatant's slot to
+its sprite's own canvas and stands it on that one authored ground line --
+a per-stance canvas would make the actor visibly resize or float the moment
+its stance changes. `_assert_one_ground_line` below checks the PNGs this
+tool actually wrote, not the in-memory pieces, and refuses to leave a
+mismatch on disk silently.
 
 ## Safety guards
 
-- Refuses any input path under `Assets/_Project/Resources/` — processing
-  already-processed output and compounding resample loss is exactly how
-  the previous bad pass happened.
-- Refuses to write a creature whose sheets disagree >10% in corrected
-  LCC-median mass unless at least one of the disagreeing sheets carries an
-  explicit `scale` (i.e. a human already looked at it). Run
-  `--suggest-scales <id>` to get the number to copy in.
-- Warns (does not refuse) when LCC drops more than 15% of a frame's total
-  opaque mass — usually means real content, not debris, got excluded.
-- Never adds or removes an output filename — every name in a creature's
-  manifest must already exist on disk (or you are deliberately adding a
-  new stance, which also touches Unity's asset GUIDs, so do it knowingly).
-  Files present in the output folder that the manifest does not produce
-  are listed, not deleted, unless `--prune` is passed.
-
-Usage:
-    python tools/slice_actor_sheet.py bog_witch
-    python tools/slice_actor_sheet.py golem rat
-    python tools/slice_actor_sheet.py --all
-    python tools/slice_actor_sheet.py --suggest-scales rat
-    python tools/slice_actor_sheet.py golem --prune
+- Refuses any input path under `Assets/_Project/Resources/` -- processing
+  already-processed output compounds resample loss.
+- Never scales an individual pose -- only one literal `--delivery-scale`
+  for the whole sheet. `sqrt(opaque pixel count)` is measured per stance
+  and printed, not `bbox height` -- bbox height is pose-dependent (a crouch
+  is shorter than a rear-up at identical draw scale).
 """
 
 import argparse
@@ -124,15 +85,15 @@ import sys
 
 try:
     import numpy as np
-    from PIL import Image
+    from PIL import Image, ImageFilter
 except ImportError:
     sys.exit("Pillow and numpy are required: pip install Pillow numpy")
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from remove_portrait_backgrounds import flood_fill_background_mask
 from key_green_screen import key_out_green
-# Cell-cutting geometry, shared with slice_item_sheet.py -- see that module's
-# own header for why it exists.
+# Cell-cutting geometry, shared with slice_item_sheet.py -- see that
+# module's own header for why it exists.
 from sheet_slicing import (
     ALPHA_THRESHOLD,
     SEARCH_FRACTION,
@@ -143,20 +104,18 @@ from sheet_slicing import (
     best_cut,
 )
 
-# Ground-contact band size, as a fraction of the creature's own shared
-# canvas height (NOT of any one pose's own bbox — a fraction of the pose's
-# own height would be pose-dependent by construction, the exact error
-# class this anchor exists to avoid).
+# Ground-contact band size, as a fraction of the CREATURE'S shared canvas
+# height (not any one pose's own bbox -- that would be pose-dependent by
+# construction, the exact error this anchor exists to avoid).
 GROUND_BAND_FRACTION = 0.08
 GROUND_BAND_MAX_FRACTION = 0.24
 GROUND_BAND_STEP = 0.04
-# A band holding less than this fraction of the core's own pixels is
-# "thin contact" (one toe) -- widen before trusting it.
+# A band holding less than this fraction of the core's own pixels is "thin
+# contact" (one toe) -- widen before trusting it.
 GROUND_BAND_MIN_MASS_FRACTION = 0.005
 
-# Enclosed background pockets (see key_sheet's "white_flood" branch).
-# A pocket is NEUTRAL (channels within this many levels of each other) --
-# the art's own light pixels on these sheets are warm by comparison --
+# Enclosed background pockets (see key_sheet's "white_flood" branch). A
+# pocket is NEUTRAL (channels within this many levels of each other) --
 # BRIGHT, and SMALL, since a pocket trapped inside a silhouette cannot be
 # large without being a real hole in the drawing.
 NEUTRAL_SATURATION_MAX = 12
@@ -169,492 +128,45 @@ POCKET_MAX_AREA = 200
 RINGING_MIN_BRIGHTNESS = 195
 RINGING_MIN_EXCESS = 40
 
-# Two sheets of one creature disagreeing by more than this in corrected
-# LCC-median mass, with neither carrying an explicit `scale`, is refused
-# rather than silently written mismatched.
-SHEET_SCALE_MISMATCH_GUARD = 0.10
-# A frame where LCC excludes more than this fraction of total opaque mass
-# is worth a human glance -- likely real content, not debris.
-LCC_DROP_WARN_FRACTION = 0.15
+DEFAULT_OUT_ROOT = "Assets/_Project/Resources"
 
-# Sheets live under one of two source folders depending on who authored
-# them; an entry names its own via "source_dir" when it is not the default.
-SOURCE_DIR = "Assets/_Project/Art/Enemies"
-SOURCE_DIR_SHEETS = "Assets/_Project/Art/Sheets"
-
-# Both roots are Resources-relative at runtime ("Enemies/rat",
-# "Characters/sheep") and are what EnemyDefinition.spritePath /
-# CharacterDefinition.battleSpritePath point at.
-OUTPUT_ROOT_ENEMIES = "Assets/_Project/Resources/Enemies"
-OUTPUT_ROOT_CHARACTERS = "Assets/_Project/Resources/Characters"
-
-
-ACTORS = {
-    "bog_witch": {
-        # Untouched by the bad pass and already alpha-keyed -- the control
-        # this whole rewrite is validated against (see module docstring).
-        "sheets": [
-            {
-                "file": "bog_witch_sheet.png",
-                "key": "alpha",
-                "grid": (2, 3),
-                "scale": 1.0,
-                "names": ["idle", "cast", "attack", "hurt", "defeated", "taunt"],
-            },
-        ],
-        # Deliberately left on "centroid" -- this creature was never broken
-        # (see module docstring) and the parity proof above already covers
-        # it. ground_band was validated against it directly during
-        # development: comparable onion-skin tightness, canvas ~10% wider
-        # (bog_witch's "attack" pose has her staff touching the ground,
-        # which ground_band correctly treats as ground contact) -- not
-        # worse, just a different, equally defensible read. Not worth
-        # shipping a change to art nobody reported a problem with.
-        "aliases": {},
-        "anchor": "centroid",
-        "delivery_scale": 1.0,
-        "nudge": {},
-    },
-
-    "golem": {
-        "sheets": [
-            {
-                # Cells 1 and 2 (cast, attack) are superseded by the
-                # dedicated attack sheet below -- golem_sheet.png's own
-                # cast/attack poses were single static frames, replaced
-                # once the 6-frame earth-shard sequence was authored.
-                "file": "golem_sheet.png",
-                "key": "alpha",
-                "grid": (2, 3),
-                "scale": 1.0,
-                "names": ["idle", None, None, "hurt", "defeated", "guard"],
-            },
-            {
-                "file": "golem_sheet_attack.png",
-                "key": "alpha",
-                "grid": (2, 3),
-                "scale": 1.0,  # measured ratio to golem_sheet.png: 0.988 -- inside the 10% guard
-                "names": ["cast/f0", "cast/f1", "cast/f2", "cast/f3", "cast/f4", "cast/f5"],
-            },
-        ],
-        # "attack" reuses the earth-shard slam wholesale -- see
-        # TheGolemsAttackAnimation_ReusesTheEarthShardSequence.
-        "aliases": {"attack": "cast"},
-        "anchor": "ground_band",
-        "delivery_scale": 1.0,
-        "nudge": {},
-    },
-
-    "rat": {
-        "sheets": [
-            {
-                # RGB, ZERO alpha -- has always been white-backed (single
-                # commit in its whole git history). There is no committed
-                # keyed intermediate to reproduce; this key is a genuine
-                # re-derivation, not a reproduction (see the risk table in
-                # the design plan). Cell r0c2 (484x266) carries no pose
-                # any shipped output uses and is intentionally skipped.
-                #
-                # Cell 0 (idle) is superseded by the dedicated 12-frame idle
-                # sheet below -- same relationship golem's base sheet has
-                # with its earth-shard cast sequence -- because this flat
-                # single-drawing idle is what the rig pipeline (ART_PIPELINE
-                # #9) was built to replace in the first place. Kept here as
-                # None, not deleted, per that section's "keep a creature's
-                # old art even after it ships a rig" rule -- the rig is
-                # currently disabled (mid-overhaul on another rig, see
-                # RigLibrary), so this flat art is exactly the fallback that
-                # rule exists for; the new animated idle just fell in ahead
-                # of it because it happened to ship first.
-                "file": "Giant_rat_sheet.png",
-                "key": "white_flood",
-                "grid": (2, 3),
-                "scale": 1.0,  # the reference sheet for this creature
-                "names": [None, "cast", None, "hurt", "defeated", "extra"],
-            },
-            {
-                # Poses occupy y=112..489 and y=560..880 -- NOT a nominal
-                # even 2-row split (that lands at y=750, inside a pose).
-                #
-                # Superseded (2026-08-30) by the dedicated 12-frame attack
-                # sheet below -- same "keep the old art, supersede with
-                # None" rule as the flat idle cell above. This 6-frame swing
-                # is still a real, usable attack; the new one just has more
-                # frames drawn in the same house style as the new idle.
-                "file": "giant_rat_attack_sheet.png",
-                "key": "alpha",
-                "bands": {"rows": [(112, 490), (560, 881)], "cols": 3},
-                "scale": 0.766,  # drawn ~1.306x larger (linear) than the base
-                                 # sheet; always scale the LARGER sheet down.
-                "names": [None, None, None, None, None, None],
-            },
-            {
-                # 12-frame attack. REGENERATED 2026-08-30 in the same 3x4
-                # 1448x1086 layout as the idle sheet, replacing the earlier
-                # 2x6 1774x887 one at the same filename. The grid here MUST
-                # match the file on disk: it was left at (2, 6) for one
-                # slice after the new art landed, which cut a 3x4 sheet on
-                # 2x6 lines and shredded a third of the frames into
-                # ~90x110px fragments (attack f1/f4/f7/f10). Nothing warned
-                # -- the slicer has no way to know the intended layout, and
-                # every frame still "sliced successfully".
-                "file": "Giant_rat_attack_sheet_12_frame.png",
-                "key": "white_flood",
-                "grid": (3, 4),
-                "scale": 1.247,  # re-measured via --suggest-scales rat for
-                                 # the regenerated sheet (median sqrt-mass
-                                 # 183.5 vs the reference sheet's 228.9).
-                "drop_far_components_px": 0,  # 6 of 12 cells carry a
-                                 # detached fragment that bled in from a
-                                 # neighbouring cell (a floating tail-tip on
-                                 # f1/f2/f3/f4/f6, a stray claw on f8; f6 and
-                                 # f11 also each carry a sub-20px keying
-                                 # speck) -- confirmed by eye, then measured:
-                                 # every one sits a clear 24-67px from the
-                                 # main silhouette with nothing in between,
-                                 # never touching or nearly touching it the
-                                 # way a real attached limb would. 0 keeps
-                                 # ONLY whatever the largest component is per
-                                 # frame and drops every other one outright
-                                 # -- deliberately not a nonzero "keep what's
-                                 # close" margin here, because unlike the
-                                 # mushroom/raised-limb case this key exists
-                                 # for generally, nothing separate on THIS
-                                 # sheet is ever legitimate.
-                "names": ["attack/f0", "attack/f1", "attack/f2", "attack/f3", "attack/f4", "attack/f5",
-                          "attack/f6", "attack/f7", "attack/f8", "attack/f9", "attack/f10", "attack/f11"],
-            },
-            {
-                # Regenerated 2026-08-30 under docs/STANCE_SHEET_SPEC.md --
-                # see Art/Enemies/rat/idle_regeneration_prompt.txt for the
-                # exact prompt and why each clause is in it. Replaces the
-                # 2026-08-29 sheet, which failed Protocol A #9 (figures wider
-                # than their own cells, so every tail was severed at a gutter)
-                # and Protocol B travel (11.4% against an 8% reject).
-                #
-                # 3x4 at 1448x1086 -> 362x362 SQUARE cells. The old sheet was
-                # 2x6 -> 286x458, and the rat's own content is 288 wide: it
-                # physically could not fit, which is why no amount of prompt
-                # wording kept it inside the cell. Square cells fix that by
-                # construction, and are the reason this sheet needs no
-                # drop_far_components_px entry -- with clean gutters there are
-                # no severed-tail strays to delete.
-                #
-                # Background came back near-white (247-255) with a faint baked
-                # checkerboard rather than real alpha, so "white_flood" like
-                # this creature's other sheets -- NOT the previous sheet's
-                # "green". The checkerboard spans ~7 levels, well inside the
-                # flood tolerance.
-                "file": "Giant_rat_idle_sheet_12_frame.png",
-                "key": "white_flood",
-                "grid": (3, 4),
-                "scale": 1.126,  # measured via --suggest-scales rat (median
-                                 # sqrt-mass 203.2 vs the reference sheet's
-                                 # 228.9). Drawn closer to the reference than
-                                 # the previous sheet was (which needed 1.208),
-                                 # so it is being upscaled less and stays
-                                 # correspondingly sharper.
-                # Natural row-major order: this sheet is directed as a single
-                # monotonic rise (frame 1 exhaled/lowest -> frame 12 peak), so
-                # the cells already play in the right order. The previous
-                # entry carried a hand-shuffled list that sorted THAT sheet's
-                # frames by measured height to hide its non-monotonic drift;
-                # a correctly-directed sheet must not inherit that.
-                "names": ["idle/f0", "idle/f1", "idle/f2", "idle/f3",
-                          "idle/f4", "idle/f5", "idle/f6", "idle/f7",
-                          "idle/f8", "idle/f9", "idle/f10", "idle/f11"],
-                # Still needed, but for 2 cells rather than the old sheet's 9.
-                # This sheet's columns 1|2 and 2|3 have real empty gutters
-                # (15px and 10px); the 3|4 boundary has NONE -- its thinnest
-                # column still carries 46px of ink, so those two neighbours
-                # touch and the cut severs whatever crosses. f3 and f10 are
-                # the casualties. A genuinely clean sheet would not need this
-                # key at all; it is a mitigation for a Protocol A #9 failure
-                # that is now confined to one boundary instead of all five.
-                "drop_far_components_px": 0,
-                # Row 3's two right-hand rats OVERLAP by 9px (766..1099 and
-                # 1090..1422), so no empty column exists between them and
-                # best_cut's "emptiest column near the split" lands at 1155,
-                # inside the fourth rat -- it severed 65px of its tail and
-                # left f11 a stub with its anchor shifted 40px right, which
-                # is the "last frame cuts out of the box" that was reported.
-                # Rows 1 and 2 have real gutters and cut correctly at ~1100
-                # on their own, so only row 2 (0-indexed) is overridden.
-                # 1095 splits the overlap: rat 3 loses 4px, rat 4 loses 5px,
-                # against 65px lost to the automatic choice.
-                "col_cuts": {2: [383, 740, 1095]},
-            },
-        ],
-        "aliases": {"guard": "extra"},
-        "anchor": "ground_band",
-        "delivery_scale": 1.0,
-        # Deliberately EMPTY for the regenerated idle (2026-08-30), and it
-        # should stay that way unless a fresh measurement says otherwise.
-        #
-        # The previous sheet carried twelve per-frame dx values. They were
-        # measured off bbox centres that the severed-tail strays were
-        # dragging around, so they corrected an artefact rather than a real
-        # drift -- ground_band's actual anchor (largest component only) had
-        # been stable throughout. Carrying those numbers onto a different
-        # sheet would apply a correction derived from a defect this sheet
-        # does not have.
-        #
-        # Re-measured 2026-08-30 on the PLANTED PAWS, not the whole-figure
-        # bbox centre. That distinction is the point: this sheet's tail
-        # sweeps by design, so a bbox centre moves with the tail and
-        # "correcting" it would translate the body to cancel intended motion
-        # -- exactly the mistake FightController.SidewaysDrift was making at
-        # runtime until it was scoped to per-frame-cropped art. The paws are
-        # pinned by the sheet's own direction, so spread there is genuine
-        # misregistration and is what a nudge should remove. 6.8px measured
-        # across the twelve frames; these close it.
-        "nudge": {
-            "idle/f0": (-11, 0), "idle/f1": (-15, 0), "idle/f2": (-1, 0),
-            "idle/f3": (6, 0), "idle/f4": (1, 0), "idle/f5": (0, 0),
-            "idle/f6": (-3, 0), "idle/f7": (6, 0), "idle/f8": (-3, 0),
-            "idle/f9": (-4, 0), "idle/f10": (-7, 0), "idle/f11": (2, 0),
-        },
-    },
-
-    # --- Regenerated under docs/STANCE_SHEET_SPEC.md -----------------------
-    #
-    # PLACEHOLDERS. Every "sheets" entry below names a file that does not
-    # exist yet -- these three actors are mid-regeneration (see the spec doc's
-    # own work-order table, section 2). `scale` and `delivery_scale` are left
-    # at 1.0 until Protocol B's delivery step (spec section 8) measures the
-    # real ones; do not guess ahead of that measurement.
-    #
-    # Six SEPARATE sheets each, one per stance -- unlike bog_witch/golem/rat's
-    # single multi-pose sheet, because the spec commissions one full
-    # 3x2-of-six-frames animation sheet PER STANCE (section 5), not six poses
-    # sharing one sheet. `names` is a plain list because every cell in a
-    # Stage-2 sheet belongs to the same stance; there is no `None` skip and no
-    # cross-sheet alias to make here.
-    "beetle": {
-        "sheets": [
-            {"file": "beetle/sheet_idle.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
-             "names": ["idle/f0", "idle/f1", "idle/f2", "idle/f3", "idle/f4", "idle/f5"]},
-            {"file": "beetle/sheet_attack.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
-             "names": ["attack/f0", "attack/f1", "attack/f2", "attack/f3", "attack/f4", "attack/f5"]},
-            {"file": "beetle/sheet_turtle_up.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
-             "names": ["turtle_up/f0", "turtle_up/f1", "turtle_up/f2", "turtle_up/f3", "turtle_up/f4", "turtle_up/f5"]},
-            {"file": "beetle/sheet_shell_closed.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
-             "names": ["shell_closed/f0", "shell_closed/f1", "shell_closed/f2", "shell_closed/f3", "shell_closed/f4", "shell_closed/f5"]},
-            {"file": "beetle/sheet_hurt.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
-             "names": ["hurt/f0", "hurt/f1", "hurt/f2", "hurt/f3", "hurt/f4", "hurt/f5"]},
-            {"file": "beetle/sheet_defeated.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
-             "names": ["defeated/f0", "defeated/f1", "defeated/f2", "defeated/f3", "defeated/f4", "defeated/f5"]},
-        ],
-        "aliases": {},
-        "anchor": "ground_band",
-        "delivery_scale": 0.972,  # 243 / measured idle f0 height 250px, per spec section 8
-        "nudge": {},
-    },
-
-    "treant": {
-        "sheets": [
-            {"file": "treant/sheet_idle.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
-             "names": ["idle/f0", "idle/f1", "idle/f2", "idle/f3", "idle/f4", "idle/f5"]},
-            {"file": "treant/sheet_attack.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
-             "names": ["attack/f0", "attack/f1", "attack/f2", "attack/f3", "attack/f4", "attack/f5"]},
-            {"file": "treant/sheet_trunk_slam.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
-             "names": ["trunk_slam/f0", "trunk_slam/f1", "trunk_slam/f2", "trunk_slam/f3", "trunk_slam/f4", "trunk_slam/f5"]},
-            {"file": "treant/sheet_cast.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
-             "names": ["cast/f0", "cast/f1", "cast/f2", "cast/f3", "cast/f4", "cast/f5"]},
-            {"file": "treant/sheet_hurt.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
-             "names": ["hurt/f0", "hurt/f1", "hurt/f2", "hurt/f3", "hurt/f4", "hurt/f5"]},
-            {"file": "treant/sheet_defeated.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
-             "names": ["defeated/f0", "defeated/f1", "defeated/f2", "defeated/f3", "defeated/f4", "defeated/f5"]},
-        ],
-        "aliases": {},
-        "anchor": "ground_band",
-        "delivery_scale": 1.0,  # measure per spec section 8; target idle f0 height 441px
-        "nudge": {},
-    },
-
-    # Delivered id is "forest_warden" -- the content id enemies.json has
-    # always used -- but the art folder is "forest_troll" and has never been
-    # renamed to match. Not a typo: SOURCE_DIR-relative "file" paths below
-    # point into the folder that actually exists.
-    "forest_warden": {
-        "sheets": [
-            {"file": "forest_troll/sheet_idle.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
-             "names": ["idle/f0", "idle/f1", "idle/f2", "idle/f3", "idle/f4", "idle/f5"]},
-            {"file": "forest_troll/sheet_attack.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
-             "names": ["attack/f0", "attack/f1", "attack/f2", "attack/f3", "attack/f4", "attack/f5"]},
-            {"file": "forest_troll/sheet_attack_roar.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
-             "names": ["attack_roar/f0", "attack_roar/f1", "attack_roar/f2", "attack_roar/f3", "attack_roar/f4", "attack_roar/f5"]},
-            {"file": "forest_troll/sheet_attack_charge.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
-             "names": ["attack_charge/f0", "attack_charge/f1", "attack_charge/f2", "attack_charge/f3", "attack_charge/f4", "attack_charge/f5"]},
-            {"file": "forest_troll/sheet_hurt.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
-             "names": ["hurt/f0", "hurt/f1", "hurt/f2", "hurt/f3", "hurt/f4", "hurt/f5"]},
-            {"file": "forest_troll/sheet_defeated.png", "key": "alpha", "grid": (2, 3), "scale": 1.0,
-             "names": ["defeated/f0", "defeated/f1", "defeated/f2", "defeated/f3", "defeated/f4", "defeated/f5"]},
-        ],
-        "aliases": {},
-        "anchor": "ground_band",
-        "delivery_scale": 1.0,  # measure per spec section 8; target idle f0 height 473px
-        "nudge": {},
-    },
-
-    # --- Party side ------------------------------------------------------
-    # Shawn is the one PC with battle art. Until this entry existed, no
-    # committed tool wrote Resources/Characters at ALL -- his six stances
-    # were produced by an invocation that survives nowhere, which made the
-    # most-seen sprite in the game the least reproducible thing in it.
-    "sheep": {
-        "root": OUTPUT_ROOT_CHARACTERS,
-        "source_dir": SOURCE_DIR_SHEETS,
-        "sheets": [
-            {
-                # Already alpha-keyed, and an honest even grid: the two rows
-                # of figures occupy y=104..452 and y=555..851, so the
-                # nominal split at y=512 lands in the empty band between
-                # them and needs no `bands` override.
-                #
-                # NOT switched to explicit bands, even though they would be
-                # tidier. There is a 4px sliver of stray alpha at
-                # y=450..454 -- keying noise in the source -- which the
-                # even grid sweeps into the top row and which is therefore
-                # baked into the shipped art: it is what makes idle's
-                # canvas 366px rather than 364. Bands that exclude it
-                # produce cleaner output that is NOT what shipped, and this
-                # entry's job is to reproduce. See the note in
-                # docs/ART_PIPELINE.md before "fixing" it.
-                #
-                # Cell order was reverse-engineered by silhouette IoU
-                # against the six shipped PNGs -- every cell matched its
-                # pose at 0.95-0.99 with the runner-up below 0.72. Worth
-                # recording because the middle of the top row is ATTACK,
-                # not cast: the alphabetical-looking guess is wrong, and a
-                # transposition here shows up only as the wrong pose
-                # playing, never as a test failure.
-                "file": "shawn.png",
-                "key": "alpha",
-                "grid": (2, 3),
-                "scale": 1.0,
-                # Cell 1 (the flat attack pose) is superseded by the
-                # dedicated attack sheet below -- same relationship the
-                # golem's base sheet has with its earth-shard sequence.
-                "names": ["idle", None, "cast", "hurt", "defeated", "victory"],
-            },
-            {
-                # Authored alongside shawn.png and then never wired up:
-                # until this entry existed the party was the only thing on
-                # the stage that could not animate, while every enemy could.
-                #
-                # Rows sit at y=164..440 and y=608..877, so the nominal even
-                # split at y=512 falls in the empty band between them and a
-                # plain grid is correct here.
-                #
-                # scale 1.0 is measured, not assumed: this sheet's six cells
-                # span sqrt(area) 219.8-235.1 against the base sheet's idle
-                # at 222.9 -- a 1.07 ratio, comfortably inside the tool's own
-                # 10% cross-sheet guard, so no correction is wanted. (The rat
-                # needed 0.766 for the same comparison; Shawn does not.)
-                "file": "Shawn_attack_sheet.png",
-                "key": "alpha",
-                "grid": (2, 3),
-                "scale": 1.0,
-                "names": ["attack/f0", "attack/f1", "attack/f2", "attack/f3", "attack/f4", "attack/f5"],
-            },
-        ],
-        # Started on "centroid", which reproduced the six shipped flat
-        # stances byte-identical (the parity proof that this entry describes
-        # what actually made the art). Moved to "ground_band" only when the
-        # attack ANIMATION was added, for the same reason golem and rat
-        # moved: a whole-mass centroid tracks the staff, so the frames where
-        # Shawn thrusts furthest (f1, f4) pushed his body left to compensate
-        # and he slid along the ground mid-swing. Measured ground-contact x
-        # across all ten non-prone frames: centroid spread 32.7px,
-        # ground_band 3.8px.
-        #
-        # This is why the flat stances' canvas is 525x366 rather than the
-        # 470x366 that shipped -- the shared canvas has to fit the widest
-        # pose, and the lunge is wider than anything in the base sheet.
-        "aliases": {},
-        "anchor": "ground_band",
-        "delivery_scale": 1.0,
-        "nudge": {},
-    },
-}
+# Poses whose feet legitimately do not share the standing ground line get
+# no special case here -- everything the actor ships stands on one line by
+# construction (see the module docstring). A defeated/prone pose is still
+# checked; if it fails, it needs a nudge like anything else.
 
 
 # ---------------------------------------------------------------------------
-# Legacy math -- unchanged shapes/behaviour from the original tool. The cell-
-# cutting primitives it used to declare here (opaque_mask, column_weights,
-# row_weights, best_cut) now live in sheet_slicing.py and are imported above;
-# only the "centroid" anchor, which nothing else shares, remains local.
+# Cell cutting
 # ---------------------------------------------------------------------------
 
-def alpha_centroid_x(mask, box):
-    """Horizontal centre of alpha mass within box, in ABSOLUTE coordinates."""
-    region = mask.crop(box)
-    w, h = region.size
-    px = region.load()
-    total = 0
-    weighted = 0
-    for x in range(w):
-        col = sum(1 for y in range(h) if px[x, y])
-        total += col
-        weighted += col * x
-    if total == 0:
-        return box[0] + (box[2] - box[0]) // 2
-    return box[0] + weighted / total
-
-
-def cut_cells(mask, sheet_w, sheet_h, cols, rows=None, bands=None, col_cuts=None):
+def cut_cells(mask, sheet_w, sheet_h, rows, cols):
     """Row-major list of tight ABSOLUTE boxes (or None for an empty cell).
 
-    Either `rows` (nominal even grid, each row cut nudged to the emptiest
-    gutter) or `bands` (explicit [(y0,y1), ...] row ranges, used verbatim)
-    must be given. Column cuts are always computed PER ROW/BAND and always
-    nudged -- bleed on one row says nothing about another.
-
-    `col_cuts` overrides that search for specific rows, and exists because
-    `best_cut` assumes A GUTTER EXISTS. It finds the emptiest column near
-    the nominal split, which is right whenever the artist left a gap and
-    catastrophically wrong when two figures actually OVERLAP: every column
-    between them has ink from both, so the emptiest column in the window is
-    somewhere INSIDE one of the figures, and the cut lands there. On the
-    rat's regenerated idle that severed 65px of a tail (row 3 cut at 1155
-    instead of ~1095, because its two right-hand rats overlap by 9px and
-    rows 1-2 -- which do have gutters -- cut cleanly at ~1100).
-
-    Shape: {row_index: [x1, x2, ...]} giving the INTERIOR cuts for that row
-    verbatim, `cols - 1` of them. Rows absent from the dict keep the normal
-    search. Same posture as `bands`: state it explicitly when the automatic
-    choice cannot be right, and only for the rows that need it.
+    Nominal even grid, each cut nudged to the emptiest nearby gutter via
+    `best_cut` -- the generator does not lay figures out on an exact grid,
+    and a plain even split has amputated limbs on real sheets. See
+    docs/ART_PIPELINE.md's slicing note.
     """
-    if bands is not None:
-        row_ranges = list(bands)
-    else:
-        cell_h = sheet_h // rows
-        y_search = int(cell_h * SEARCH_FRACTION)
-        y_cuts = [0]
-        weights = row_weights(mask, 0, sheet_w, 0, sheet_h)
-        for r in range(1, rows):
-            y_cuts.append(best_cut(weights, 0, r * cell_h, y_search))
-        y_cuts.append(sheet_h)
-        row_ranges = [(y_cuts[r], y_cuts[r + 1]) for r in range(rows)]
+    cell_h = sheet_h // rows
+    y_search = int(cell_h * SEARCH_FRACTION)
+    y_weights = row_weights(mask, 0, sheet_w, 0, sheet_h)
+    y_cuts = [0]
+    for r in range(1, rows):
+        y_cuts.append(best_cut(y_weights, 0, r * cell_h, y_search))
+    y_cuts.append(sheet_h)
 
     cell_w = sheet_w // cols
     x_search = int(cell_w * SEARCH_FRACTION)
-    col_cuts = col_cuts or {}
 
     cells = []
-    for row_index, (y0, y1) in enumerate(row_ranges):
-        override = col_cuts.get(row_index)
-        if override is not None:
-            if len(override) != cols - 1:
-                sys.exit(f"col_cuts[{row_index}] has {len(override)} cuts, expected {cols - 1}")
-            x_cuts = [0] + list(override) + [sheet_w]
-        else:
-            weights = column_weights(mask, 0, sheet_w, y0, y1)
-            x_cuts = [0]
-            for c in range(1, cols):
-                x_cuts.append(best_cut(weights, 0, c * cell_w, x_search))
-            x_cuts.append(sheet_w)
+    for r in range(rows):
+        y0, y1 = y_cuts[r], y_cuts[r + 1]
+        x_weights = column_weights(mask, 0, sheet_w, y0, y1)
+        x_cuts = [0]
+        for c in range(1, cols):
+            x_cuts.append(best_cut(x_weights, 0, c * cell_w, x_search))
+        x_cuts.append(sheet_w)
         for c in range(cols):
             box = (x_cuts[c], y0, x_cuts[c + 1], y1)
             sub = mask.crop(box).getbbox()
@@ -674,55 +186,26 @@ def key_sheet(image, mode):
     if mode == "alpha":
         return image.convert("RGBA")
     if mode == "white_flood":
-        from PIL import ImageFilter
         rgba = image.convert("RGBA")
         arr = np.array(rgba)
         is_bg = flood_fill_background_mask(arr[:, :, :3], tolerance=35.0)
 
-        # ALSO clear background POCKETS the border flood cannot reach.
-        #
-        # flood_fill_background_mask starts at the border and spreads, so it
-        # only ever finds background that is connected to the outside. Any
-        # pocket enclosed by the art -- the gaps between the rat's fur tufts,
-        # the inside of its tail curl -- stays opaque, and renders as a white
-        # speck on the creature. 141 such pockets across the twelve idle
-        # frames, which is the "white spots" that survived the edge fix.
-        #
-        # Distinguished from the art's own light pixels by SATURATION, not by
-        # brightness: this sheet's background is neutral (r==g==b to within a
-        # few levels) while every legitimately light thing on the rat is warm
-        # -- cream fangs and highlights measure 28-52 levels of spread
-        # between their channels against the background's 2-4. Brightness
-        # alone would eat the fangs.
-        #
-        # Bounded by size as well, so a large neutral highlight (a grey
-        # metal, a white belly) cannot be deleted wholesale by this: a real
-        # background pocket trapped inside a silhouette is small by
-        # construction.
+        # Clear background POCKETS the border flood cannot reach -- a pocket
+        # enclosed by the art stays opaque and renders as a light speck.
+        # Distinguished from the art's own light pixels by SATURATION, not
+        # brightness (a background is neutral; a cream highlight is warm).
         rgb_i = arr[:, :, :3].astype(np.int16)
         neutral = (rgb_i.max(axis=2) - rgb_i.min(axis=2)) < NEUTRAL_SATURATION_MAX
         pocket = (rgb_i.min(axis=2) > POCKET_MIN_BRIGHTNESS) & neutral & (~is_bg)
         if pocket.any():
-            labelled = _all_components(pocket)
-            for comp in labelled:
+            for comp in _all_components(pocket):
                 if comp.sum() <= POCKET_MAX_AREA:
                     is_bg = is_bg | comp
-        # BLEED THE SPRITE'S OWN COLOUR OUTWARD BEFORE FEATHERING THE ALPHA.
-        #
-        # The blur below deliberately softens the alpha edge, which means the
-        # boundary pixels end up PARTLY transparent -- and a partly
-        # transparent pixel still shows its own RGB. On a white-backed sheet
-        # that RGB is the white background, so every softened edge composites
-        # as a pale fringe over the dark stage: the "white outline" reported
-        # on the rat's regenerated idle, worst in the notches of its fur
-        # fringe where the edge is most convoluted.
-        #
-        # Dilating the nearest real colour into the background band first
-        # means the feathered pixels carry the creature's own outline colour
-        # instead, so softening reads as a soft edge rather than a halo. Two
-        # passes covers a 1.2px blur with margin. Background pixels far from
-        # the art keep their white but are fully transparent, so nothing sees
-        # them.
+
+        # Bleed the sprite's own colour outward before feathering the alpha,
+        # so a softened edge pixel carries the creature's outline colour
+        # rather than the white background -- otherwise every feathered edge
+        # composites as a pale halo over the dark stage.
         rgb = arr[:, :, :3].astype(np.float32)
         known = ~is_bg
         for _ in range(2):
@@ -754,16 +237,8 @@ def key_sheet(image, mode):
 # ---------------------------------------------------------------------------
 
 def _label_components(mask_bool):
-    """4-connected component labelling of a boolean 2D numpy array, shared by
-    largest_connected_component and _all_components. O(number of runs), not
-    per-pixel BFS -- a per-row run extraction plus union-find against the
-    previous row's overlapping runs. Returns (row_runs, row_ids, find, size)
-    -- callers walk row_runs/row_ids and call find(gid) to get each run's
-    component root.
-    """
     h = mask_bool.shape[0]
-    parent = []
-    size = []
+    parent, size = [], []
 
     def find(a):
         while parent[a] != a:
@@ -780,8 +255,7 @@ def _label_components(mask_bool):
         parent[rb] = ra
         size[ra] += size[rb]
 
-    row_runs = []
-    row_ids = []
+    row_runs, row_ids = [], []
     for y in range(h):
         row = mask_bool[y].astype(np.int8)
         if not row.any():
@@ -809,14 +283,11 @@ def _label_components(mask_bool):
 
 
 def largest_connected_component(mask_bool):
-    """4-connected LCC of a boolean 2D numpy array -- see _label_components."""
     row_runs, row_ids, find, size = _label_components(mask_bool)
     if not size:
         return np.zeros_like(mask_bool, dtype=bool)
-
     roots = set(find(g) for g in range(len(size)))
     best_root = max(roots, key=lambda r: size[r])
-
     out = np.zeros_like(mask_bool, dtype=bool)
     for y, (runs, ids) in enumerate(zip(row_runs, row_ids)):
         for (x0, x1), gid in zip(runs, ids):
@@ -830,31 +301,19 @@ def _all_components(mask_bool):
     row_runs, row_ids, find, size = _label_components(mask_bool)
     if not size:
         return []
-
     root_total = {}
     for y, (runs, ids) in enumerate(zip(row_runs, row_ids)):
         for (x0, x1), gid in zip(runs, ids):
             root_total[find(gid)] = root_total.get(find(gid), 0) + (x1 - x0)
-
     masks = {r: np.zeros_like(mask_bool, dtype=bool) for r in root_total}
     for y, (runs, ids) in enumerate(zip(row_runs, row_ids)):
         for (x0, x1), gid in zip(runs, ids):
             masks[find(gid)][y, x0:x1] = True
-
     ordered = sorted(root_total.items(), key=lambda kv: kv[1], reverse=True)
     return [masks[r] for r, _ in ordered]
 
 
 def _boundary_points(mask_bool):
-    """(row, col) of every True pixel that has at least one False (or
-    out-of-bounds) 4-neighbour -- a component's outline, at a small fraction
-    of its full pixel count. What actually separates two components in
-    space is how close their OUTLINES get, not their interiors; a tail
-    curling back under a body's own bounding box is nowhere near touching it
-    in pixels despite the boxes overlapping, which is exactly why a bbox-gap
-    check (tried first here) measured 0px for every real stray on this sheet
-    and had to be replaced.
-    """
     interior = np.ones_like(mask_bool)
     interior[:-1, :] &= mask_bool[1:, :]
     interior[1:, :] &= mask_bool[:-1, :]
@@ -866,14 +325,6 @@ def _boundary_points(mask_bool):
 
 
 def _nearest_gap(mask_a, mask_b):
-    """Minimum Euclidean distance between any pixel of mask_a and any pixel
-    of mask_b, measured outline-to-outline (see _boundary_points). Brute-
-    force pairwise distance over boundary points only -- offline art
-    tooling, run per cell at slice time, not per frame at runtime, so a few
-    thousand x a few hundred points is cheap enough without pulling in
-    scipy's KD-tree (largest_connected_component already avoids that
-    dependency on purpose -- see its own docstring).
-    """
     pa, pb = _boundary_points(mask_a), _boundary_points(mask_b)
     if len(pa) == 0 or len(pb) == 0:
         return float("inf")
@@ -882,19 +333,14 @@ def _nearest_gap(mask_a, mask_b):
 
 
 def drop_far_components(mask_bool, threshold_px):
-    """Keeps the largest component plus any other component within
-    threshold_px of it (nearest-pixel distance); zeroes every component
-    further away. See docs/ART_PIPELINE.md's slicing section: a
-    neighbouring pose's stray foot/hand routinely pokes into a cell, and the
-    tell is DISTANCE from the main silhouette, not size -- real detail that
-    legitimately reaches away from the body (a raised limb, a loose
-    tail-tip still inked in) sits close against it; contamination lands
-    alone in dead space.
+    """Keeps the largest component plus any other within threshold_px of it
+    (nearest-pixel distance); zeroes every component further away. The tell
+    for contamination bleeding across a gutter is DISTANCE from the main
+    silhouette, not size -- see the module docstring.
     """
     components = _all_components(mask_bool)
     if len(components) <= 1:
         return mask_bool
-
     main = components[0]
     kept = main.copy()
     for extra in components[1:]:
@@ -904,18 +350,12 @@ def drop_far_components(mask_bool, threshold_px):
 
 
 def ground_band_anchor(mask_bool, canvas_h):
-    """(anchor_x, core_mask, path) in the LOCAL coordinate frame of
-    mask_bool (caller passes an already-tight-cropped piece's mask).
-
-    `path` is one of "ground_band", "widened_band" or "core_centroid" --
-    logged by the caller so a degenerate frame is visible, not silent.
-    Returns None if the mask is entirely empty (caller falls back further).
-    """
+    """(anchor_x, core_mask, path) in mask_bool's own LOCAL coordinates.
+    None if the mask is entirely empty."""
     core = largest_connected_component(mask_bool)
     ys, xs = np.nonzero(core)
     if len(xs) == 0:
         return None
-
     core_count = len(xs)
     bottom = int(ys.max())
     fraction = GROUND_BAND_FRACTION
@@ -931,45 +371,40 @@ def ground_band_anchor(mask_bool, canvas_h):
         widened = True
         if fraction > GROUND_BAND_MAX_FRACTION:
             break
-
     return float(xs.mean()), core, "core_centroid_fallback"
 
 
+def alpha_centroid_x(mask, box):
+    region = mask.crop(box)
+    w, h = region.size
+    px = region.load()
+    total, weighted = 0, 0
+    for x in range(w):
+        col = sum(1 for y in range(h) if px[x, y])
+        total += col
+        weighted += col * x
+    if total == 0:
+        return box[0] + (box[2] - box[0]) // 2
+    return box[0] + weighted / total
+
+
 # ---------------------------------------------------------------------------
-# Resampling
+# Resampling (only exercised when --delivery-scale != 1.0)
 # ---------------------------------------------------------------------------
 
 def despeckle_resample_ringing(image):
-    """Darken isolated bright pixels a sharp resample overshot into.
-
-    LANCZOS is chosen for the piece resize because it holds a cel edge
-    crisply, and its cost is RINGING: at a hard dark/light boundary it
-    overshoots past both ends, which on this art leaves single near-white
-    pixels sitting inside the creature. They are not background -- keying
-    already ran on the source sheet, before any resize -- so no keying
-    change can reach them; they are manufactured afterwards, which is why
-    the pocket pass upstream cleared 141 specks and left these behind.
-
-    Only a pixel that is BOTH much brighter than its own neighbourhood and
-    neutral (the ringing inherits the near-white background's lack of hue,
-    while the creature's own light pixels -- cream fangs, warm highlights --
-    carry 28-52 levels of channel spread) is pulled back to the local
-    median. Isolated by construction: an overshoot spans a pixel or two,
-    so anything with bright company is real art and is left alone.
-    """
+    """Darken isolated bright pixels a sharp LANCZOS resize overshot into --
+    see the original tool's rationale, unchanged: only a pixel both much
+    brighter than its neighbourhood and neutral (no hue) is pulled back."""
     arr = np.asarray(image.convert("RGBA")).copy()
     rgb = arr[:, :, :3].astype(np.int16)
     alpha = arr[:, :, 3]
-
     bright = rgb.min(axis=2) > RINGING_MIN_BRIGHTNESS
     neutral = (rgb.max(axis=2) - rgb.min(axis=2)) < NEUTRAL_SATURATION_MAX
     inside = alpha > 200
     candidate = bright & neutral & inside
     if not candidate.any():
         return image
-
-    # Local median over the 8-neighbourhood, and how many neighbours are
-    # themselves bright -- a real highlight has bright company.
     h, w = alpha.shape
     stack = []
     bright_neighbours = np.zeros((h, w), np.int16)
@@ -980,21 +415,17 @@ def despeckle_resample_ringing(image):
             stack.append(np.roll(np.roll(rgb, dy, axis=0), dx, axis=1))
             bright_neighbours += np.roll(np.roll(bright, dy, axis=0), dx, axis=1)
     local_median = np.median(np.stack(stack, axis=0), axis=0)
-
     overshoot = candidate & (bright_neighbours <= 1)
     overshoot &= (rgb.min(axis=2) - local_median.min(axis=2)) > RINGING_MIN_EXCESS
     if not overshoot.any():
         return image
-
     arr[:, :, :3][overshoot] = local_median[overshoot].astype(np.uint8)
     return Image.fromarray(arr, "RGBA")
 
 
 def resize_premultiplied(image, new_size):
     """LANCZOS resize with alpha premultiplied first, so a transparent
-    pixel's own RGB (often black) cannot bleed a dark fringe into the
-    resized edge.
-    """
+    pixel's own RGB cannot bleed a dark fringe into the resized edge."""
     if image.size == tuple(new_size):
         return image
     arr = np.asarray(image.convert("RGBA"), dtype=np.float32)
@@ -1011,178 +442,179 @@ def resize_premultiplied(image, new_size):
 
 
 # ---------------------------------------------------------------------------
-# Per-creature processing
+# Ground-line consistency, checked against what was actually WRITTEN
 # ---------------------------------------------------------------------------
 
-def _cells_for_sheet(mask, sheet_w, sheet_h, sheet_spec):
-    if "bands" in sheet_spec:
-        return cut_cells(mask, sheet_w, sheet_h, cols=sheet_spec["bands"]["cols"],
-                         bands=sheet_spec["bands"]["rows"], col_cuts=sheet_spec.get("col_cuts"))
-    rows, cols = sheet_spec["grid"]
-    return cut_cells(mask, sheet_w, sheet_h, cols=cols, rows=rows, col_cuts=sheet_spec.get("col_cuts"))
+def _assert_one_ground_line(actor_label, out_dir, written_names, verbose):
+    """Every pose an actor ships has to STAND in the same place -- the stage
+    pins each actor's canvas bottom to the ground line, so a pose sitting
+    higher in its own canvas visibly takes off the moment the stance
+    changes. Reads the PNGs actually written, not the in-memory pieces, so
+    it also covers nudges and anything a future change does between
+    placement and disk.
+    """
+    MAX_SPREAD_PX = 6
+    feet = []
+    for name in sorted(written_names):
+        path = os.path.join(out_dir, f"{name}.png")
+        if not os.path.exists(path):
+            continue
+        with Image.open(path) as img:
+            mask = np.array(img.convert("RGBA"))[:, :, 3] > ALPHA_THRESHOLD
+        if not mask.any():
+            continue
+        core = largest_connected_component(mask)
+        rows = np.nonzero(core)[0]
+        if not len(rows):
+            continue
+        feet.append((name, int(rows.max())))
+
+    if len(feet) < 2:
+        return
+    lowest = min(f for _, f in feet)
+    highest = max(f for _, f in feet)
+    spread = highest - lowest
+    if spread <= MAX_SPREAD_PX:
+        if verbose:
+            print(f"  ground line: all {len(feet)} stance(s) within {spread}px")
+        return
+    table = ", ".join(f"{n}={row}" for n, row in sorted(feet, key=lambda t: t[1]))
+    sys.exit(
+        f"[{actor_label}]: stances do not share one ground line -- they span {spread}px "
+        f"(max {MAX_SPREAD_PX}). The figure will appear to fly when its stance changes. "
+        f"Rows are measured from the top, so a SMALLER number means the figure stands "
+        f"HIGHER in its canvas: {table}"
+    )
 
 
-def _load_and_key(sheet_spec, source_dir=SOURCE_DIR):
-    path = os.path.join(source_dir, sheet_spec["file"])
-    if not os.path.isfile(path):
-        sys.exit(f"Missing source sheet: {path}")
-    if "/Resources/" in os.path.abspath(path).replace("\\", "/"):
-        sys.exit(f"Refusing to read from a Resources/ path (would compound a previous pass): {path}")
-    image = Image.open(path)
-    return key_sheet(image, sheet_spec["key"])
+def _report_stray_files(out_dir, written_names, prune, verbose):
+    existing = [f[:-4] for f in os.listdir(out_dir) if f.lower().endswith(".png")] if os.path.isdir(out_dir) else []
+    stray = sorted(set(existing) - written_names)
+    if not stray:
+        return
+    if prune:
+        for name in stray:
+            for suffix in (".png", ".png.meta"):
+                p = os.path.join(out_dir, name + suffix)
+                if os.path.exists(p):
+                    os.remove(p)
+        if verbose:
+            print(f"  pruned {len(stray)} file(s) this run did not (re)write: {', '.join(stray)}")
+    else:
+        print(f"  NOTE: {len(stray)} file(s) in {out_dir} were not written by this run "
+              f"(pass --prune to remove): {', '.join(stray)}")
 
 
-def _sheet_pieces(sheet_spec, verbose, source_dir=SOURCE_DIR):
-    """[(output_name, cropped_native_piece_RGBA), ...] for one sheet, at its
-    OWN native size (grid-cut, tight-cropped) -- no scale applied yet."""
-    keyed = _load_and_key(sheet_spec, source_dir)
+# ---------------------------------------------------------------------------
+# CLI plumbing
+# ---------------------------------------------------------------------------
+
+def parse_actor(actor_arg, out_root):
+    """"Enemies/beetle" -> (out_dir, label). Also accepts "Characters/sheep".
+    "Actor", not "enemy": a party member's stance art
+    (Resources/Characters/<id>/) and a monster's (Resources/Enemies/<id>/)
+    are resolved by one runtime path and held to one set of invariants."""
+    parts = actor_arg.replace("\\", "/").strip("/").split("/")
+    if len(parts) != 2 or parts[0] not in ("Enemies", "Characters"):
+        sys.exit(f"--actor must be 'Enemies/<id>' or 'Characters/<id>', got {actor_arg!r}")
+    root_kind, actor_id = parts
+    out_dir = os.path.join(out_root, root_kind, actor_id)
+    return out_dir, f"{root_kind}/{actor_id}"
+
+
+def parse_grid(grid_arg):
+    cols_s, _, rows_s = grid_arg.lower().partition("x")
+    try:
+        cols, rows = int(cols_s), int(rows_s)
+    except ValueError:
+        sys.exit(f"--grid must be COLSxROWS, e.g. 3x2, got {grid_arg!r}")
+    if cols < 1 or rows < 1:
+        sys.exit(f"--grid must have at least one row and column, got {grid_arg!r}")
+    return rows, cols
+
+
+def parse_nudges(nudge_args):
+    nudges = {}
+    for raw in nudge_args or []:
+        name, _, rest = raw.partition(":")
+        dx_s, _, dy_s = rest.partition(",")
+        try:
+            nudges[name] = (int(dx_s), int(dy_s))
+        except ValueError:
+            sys.exit(f"--nudge must be STANCE:DX,DY, e.g. idle:-3,0, got {raw!r}")
+    return nudges
+
+
+SKIP_TOKENS = {"-", "skip", "none", ""}
+
+
+def process(sheet_path, actor_arg, stances_arg, grid_arg, key_mode, anchor_mode,
+            delivery_scale, nudges, drop_far_px, out_root, prune, verbose):
+    if "/Resources/" in os.path.abspath(sheet_path).replace("\\", "/"):
+        sys.exit(f"Refusing to read from a Resources/ path (would compound a previous pass): {sheet_path}")
+    if not os.path.isfile(sheet_path):
+        sys.exit(f"Missing source sheet: {sheet_path}")
+
+    rows, cols = parse_grid(grid_arg)
+    out_dir, label = parse_actor(actor_arg, out_root)
+    names = [s.strip() for s in stances_arg.split(",")]
+    if len(names) != rows * cols:
+        sys.exit(f"--stances has {len(names)} name(s) but the {grid_arg} grid has {rows * cols} cell(s)")
+
+    print(f"[{label}] sheet={sheet_path} grid={grid_arg} key={key_mode} anchor={anchor_mode} "
+          f"delivery_scale={delivery_scale} -> {out_dir}")
+
+    keyed = key_sheet(Image.open(sheet_path), key_mode)
     mask = opaque_mask(keyed)
-    boxes = _cells_for_sheet(mask, keyed.width, keyed.height, sheet_spec)
-    names = sheet_spec["names"]
-    pieces = []
+    boxes = cut_cells(mask, keyed.width, keyed.height, rows, cols)
+
+    # Pass 0: tight-cropped native-size pieces per named cell.
+    pieces = []  # [(name, piece_RGBA, mask_bool)]
     for i, box in enumerate(boxes):
         name = names[i] if i < len(names) else None
-        if box is None:
-            if name is not None and verbose:
-                print(f"  WARNING: '{name}' cell is empty (no opaque pixels) -- skipped")
+        if name is None or name.lower() in SKIP_TOKENS:
             continue
-        if name is None:
+        if box is None:
+            print(f"  WARNING: '{name}' cell is empty (no opaque pixels) -- skipped")
             continue
         piece = keyed.crop(box)
-        pieces.append((name, piece))
-    return pieces
 
-
-def _sqrt_lcc_mass(piece):
-    mask = np.array(opaque_mask(piece)) > 0
-    core = largest_connected_component(mask)
-    return float(np.sqrt(core.sum())) if core.any() else 0.0
-
-
-def suggest_scales(actor_id):
-    spec = ACTORS[actor_id]
-    source_dir = spec.get("source_dir", SOURCE_DIR)
-    print(f"[{actor_id}] measured per-sheet median sqrt(LCC-mass), native scale:")
-    medians = []
-    for sheet_spec in spec["sheets"]:
-        pieces = _sheet_pieces(sheet_spec, verbose=False, source_dir=source_dir)
-        masses = sorted(_sqrt_lcc_mass(p) for _, p in pieces)
-        median = masses[len(masses) // 2] if masses else 0.0
-        medians.append((sheet_spec["file"], median))
-        print(f"  {sheet_spec['file']:30s} median={median:7.1f}  (declared scale: {sheet_spec.get('scale', 1.0)})")
-
-    if len(medians) >= 2:
-        reference = medians[0][1]
-        print(f"  Suggested 'scale' relative to '{medians[0][0]}' (the first sheet listed):")
-        for name, median in medians[1:]:
-            if median > 0:
-                print(f"    {name}: {reference / median:.3f}")
-
-
-def _guard_cross_sheet_scale(actor_id, spec, sheet_pieces_by_index):
-    if len(spec["sheets"]) < 2:
-        return
-    correcteds = []
-    for sheet_spec, pieces in zip(spec["sheets"], sheet_pieces_by_index):
-        masses = sorted(_sqrt_lcc_mass(p) for _, p in pieces)
-        median = masses[len(masses) // 2] if masses else 0.0
-        scale = sheet_spec.get("scale", 1.0)
-        correcteds.append((sheet_spec, median * scale))
-
-    for i in range(len(correcteds)):
-        for j in range(i + 1, len(correcteds)):
-            spec_a, mass_a = correcteds[i]
-            spec_b, mass_b = correcteds[j]
-            if mass_a <= 0 or mass_b <= 0:
-                continue
-            ratio = max(mass_a, mass_b) / min(mass_a, mass_b)
-            both_default = "scale" not in spec_a and "scale" not in spec_b
-            if ratio - 1.0 > SHEET_SCALE_MISMATCH_GUARD and both_default:
-                sys.exit(
-                    f"[{actor_id}] '{spec_a['file']}' and '{spec_b['file']}' disagree by "
-                    f"{(ratio - 1.0) * 100:.0f}% in corrected mass and neither carries an explicit "
-                    f"'scale'. Run --suggest-scales {actor_id} and add one before writing."
-                )
-
-
-def process_actor(actor_id, verbose=True, prune=False):
-    if actor_id not in ACTORS:
-        sys.exit(f"Unknown actor '{actor_id}'. Known: {', '.join(sorted(ACTORS))}")
-    spec = ACTORS[actor_id]
-    out_dir = os.path.join(spec.get("root", OUTPUT_ROOT_ENEMIES), actor_id)
-    source_dir = spec.get("source_dir", SOURCE_DIR)
-    anchor_mode = spec.get("anchor", "centroid")
-    delivery_scale = spec.get("delivery_scale", 1.0)
-    nudges = spec.get("nudge", {})
-
-    print(f"[{actor_id}] anchor={anchor_mode} delivery_scale={delivery_scale} -> {out_dir}")
-
-    # Pass 0: native-scale pieces per sheet (for the cross-sheet guard,
-    # which must see UNCORRECTED mass to judge whether a correction was
-    # actually needed).
-    per_sheet_pieces = [_sheet_pieces(s, verbose, source_dir) for s in spec["sheets"]]
-    _guard_cross_sheet_scale(actor_id, spec, per_sheet_pieces)
-
-    # Pass 1: apply each sheet's own scale + the creature's delivery_scale,
-    # producing the pieces that will actually be composited. Also recompute
-    # each piece's tight bbox post-resize (LANCZOS can leave a few
-    # near-transparent border pixels).
-    pieces = []  # [(name, piece_image, local_mask_bool, local_bbox)]
-    for sheet_spec, raw_pieces in zip(spec["sheets"], per_sheet_pieces):
-        total_scale = sheet_spec.get("scale", 1.0) * delivery_scale
-        for name, piece in raw_pieces:
-            if total_scale != 1.0:
-                new_size = (max(1, round(piece.width * total_scale)), max(1, round(piece.height * total_scale)))
-                piece = resize_premultiplied(piece, new_size)
-                piece = despeckle_resample_ringing(piece)
-            mask_img = opaque_mask(piece)
-            bbox = mask_img.getbbox()
+        if delivery_scale != 1.0:
+            new_size = (max(1, round(piece.width * delivery_scale)), max(1, round(piece.height * delivery_scale)))
+            piece = resize_premultiplied(piece, new_size)
+            piece = despeckle_resample_ringing(piece)
+            bbox = opaque_mask(piece).getbbox()
             if bbox is None:
-                if verbose:
-                    print(f"  WARNING: '{name}' has no opaque pixels after scaling -- skipped")
+                print(f"  WARNING: '{name}' has no opaque pixels after scaling -- skipped")
                 continue
             piece = piece.crop(bbox)
-            mask_bool = np.array(opaque_mask(piece)) > 0
 
-            drop_px = sheet_spec.get("drop_far_components_px")
-            if drop_px is not None:
-                cleaned = drop_far_components(mask_bool, drop_px)
-                if not np.array_equal(cleaned, mask_bool):
-                    arr = np.asarray(piece.convert("RGBA")).copy()
-                    arr[~cleaned, 3] = 0
-                    piece = Image.fromarray(arr, "RGBA")
-                    tight = opaque_mask(piece).getbbox()
-                    piece = piece.crop(tight)
-                    mask_bool = np.array(opaque_mask(piece)) > 0
-                    if verbose:
-                        print(f"  '{name}': dropped a stray component beyond {drop_px}px")
+        mask_bool = np.array(opaque_mask(piece)) > 0
 
-            pieces.append((name, piece, mask_bool))
+        if drop_far_px is not None:
+            cleaned = drop_far_components(mask_bool, drop_far_px)
+            if not np.array_equal(cleaned, mask_bool):
+                arr = np.asarray(piece.convert("RGBA")).copy()
+                arr[~cleaned, 3] = 0
+                piece = Image.fromarray(arr, "RGBA")
+                tight = opaque_mask(piece).getbbox()
+                piece = piece.crop(tight)
+                mask_bool = np.array(opaque_mask(piece)) > 0
+                if verbose:
+                    print(f"  '{name}': dropped a stray component beyond {drop_far_px}px")
+
+        content_h = mask_bool.shape[0]
+        if verbose:
+            core = largest_connected_component(mask_bool)
+            print(f"  '{name}': content {piece.width}x{piece.height}  "
+                  f"sqrt(LCC-mass)={np.sqrt(core.sum()):.1f}")
+        pieces.append((name, piece, mask_bool))
 
     if not pieces:
-        sys.exit(f"[{actor_id}]: no pieces produced at all.")
+        sys.exit(f"[{label}]: no stances produced at all.")
 
-    # Pass 2: where each piece's FEET are, in its own local rows.
-    #
-    # Not the same thing as the bottom of its bounding box, and conflating the
-    # two is what made the golem appear to fly. Its slam frames throw dust and
-    # gravel that settles 30-55px BELOW the creature's own feet, with a band of
-    # completely empty rows in between. Landing the bbox bottom on the ground
-    # line therefore lands the DUST on the ground line and hoists the golem
-    # into the air -- by 54px on its recovery frames, against an idle frame
-    # whose feet sit right on the line. Switching pose then read as taking off.
-    #
-    # The largest connected component already answers this correctly (dust is
-    # a separate component; the creature is the big one) and was already being
-    # computed for the horizontal anchor -- it had simply never been consulted
-    # for the vertical one.
-    #
-    # "centroid" mode keeps using the bbox bottom, deliberately: it is the
-    # faithful port of the original behaviour and bog_witch rides on it as the
-    # untouched control. The arithmetic below is arranged so that mode comes
-    # out byte-identical (foot_y = height-1 makes max_below 0, which collapses
-    # every formula here back to what it was).
-    footed = []  # [(name, piece, foot_y)]
+    # Pass 1: per-piece foot row, in its own local coordinates.
+    footed = []
     for name, piece, mask_bool in pieces:
         if anchor_mode == "ground_band":
             core = largest_connected_component(mask_bool)
@@ -1190,41 +622,25 @@ def process_actor(actor_id, verbose=True, prune=False):
             foot_y = int(core_rows.max()) if len(core_rows) else piece.height - 1
         else:
             foot_y = piece.height - 1
-        footed.append((name, piece, foot_y))
+        footed.append((name, piece, mask_bool, foot_y))
 
-    # The canvas has to hold the tallest piece measured UP from its feet, plus
-    # the deepest anything hangs BELOW its feet -- otherwise the dust the fix
-    # above stops standing on would simply fall off the bottom edge instead.
-    max_above = max(foot_y + 1 for _, _, foot_y in footed)
-    max_below = max(p.height - 1 - foot_y for _, p, foot_y in footed)
+    max_above = max(foot_y + 1 for _, _, _, foot_y in footed)
+    max_below = max(p.height - 1 - foot_y for _, p, _, foot_y in footed)
     canvas_h = int(max_above + max_below) + PADDING * 2
-    # One past the foot row, matching the convention the old bbox-bottom
-    # placement used, so "centroid" pieces land on exactly the pixel they did
-    # before.
     ground_y = PADDING + int(max_above)
-    foot_of = {name: foot_y for name, _, foot_y in footed}
+    print(f"  groundLine {canvas_h - ground_y}  (StanceManifest.json wants that number)")
 
-    # THE NUMBER StanceManifest.json's per-actor "groundLine" WANTS: pixels
-    # from the canvas's bottom edge up to the ground every frame is placed on.
-    # canvas_h - ground_y rather than a second constant, so it can never drift
-    # from the canvas this function just built -- it is PADDING for anchor
-    # modes that place every foot on the same row (which is every mode here),
-    # printed rather than assumed because a future anchor mode could vary it.
-    if verbose:
-        print(f"  groundLine {canvas_h - ground_y}  (StanceManifest.json wants that number)")
-
-    # Pass 3: per-piece anchor_x in LOCAL (post-crop) coordinates.
+    # Pass 2: per-piece horizontal anchor.
     anchored = []
-    for name, piece, mask_bool in pieces:
+    for name, piece, mask_bool, foot_y in footed:
         if anchor_mode == "ground_band":
             result = ground_band_anchor(mask_bool, canvas_h)
             if result is None:
-                cx = piece.width / 2.0
-                path = "empty_fallback"
+                cx, path = piece.width / 2.0, "empty_fallback"
             else:
                 cx, core, path = result
                 core_frac = core.sum() / max(1, mask_bool.sum())
-                if core_frac < 1.0 - LCC_DROP_WARN_FRACTION:
+                if core_frac < 0.85:
                     print(f"  WARNING: '{name}' -- largest connected component covers only "
                           f"{core_frac * 100:.0f}% of opaque mass (debris or a detached part?)")
             if path != "ground_band" and verbose:
@@ -1232,175 +648,63 @@ def process_actor(actor_id, verbose=True, prune=False):
         else:
             local_mask_img = Image.fromarray((mask_bool * 255).astype(np.uint8), "L")
             cx = alpha_centroid_x(local_mask_img, (0, 0, piece.width, piece.height))
-        anchored.append((name, piece, cx))
+        anchored.append((name, piece, cx, foot_y))
 
-    max_left = max(cx for _, piece, cx in anchored)
-    max_right = max(piece.width - cx for _, piece, cx in anchored)
+    max_left = max(cx for _, _, cx, _ in anchored)
+    max_right = max(piece.width - cx for _, piece, cx, _ in anchored)
     canvas_w = int(max_left + max_right) + PADDING * 2
     anchor_x = int(max_left) + PADDING
 
     os.makedirs(out_dir, exist_ok=True)
-    written_relpaths = set()
-    for name, piece, cx in anchored:
+    written = set()
+    for name, piece, cx, foot_y in anchored:
         canvas = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))
         dx, dy = nudges.get(name, (0, 0))
         paste_x = int(round(anchor_x - cx)) + dx
-        # Aligned on the FEET, not the bounding box -- see Pass 2. Reduces to
-        # the old `ground_y - piece.height` whenever foot_y is the last row,
-        # which is every "centroid" piece.
-        paste_y = int(ground_y - 1 - foot_of[name]) + dy
+        paste_y = int(ground_y - 1 - foot_y) + dy
         canvas.paste(piece, (paste_x, paste_y), piece)
-
-        rel_path = f"{name}.png"
-        full_path = os.path.join(out_dir, rel_path)
-        os.makedirs(os.path.dirname(full_path), exist_ok=True)
-        canvas.save(full_path)
-        written_relpaths.add(rel_path.replace("\\", "/"))
+        canvas.save(os.path.join(out_dir, f"{name}.png"))
+        written.add(name)
         if verbose:
-            print(f"  {rel_path}  {canvas_w}x{canvas_h}")
+            print(f"  {name}.png  {canvas_w}x{canvas_h}")
 
-    # Aliases: byte-for-byte copies, preserving shape (flat file vs frame folder).
-    for alias_name, target_name in spec.get("aliases", {}).items():
-        flat_target = f"{target_name}.png"
-        if flat_target.replace("\\", "/") in written_relpaths:
-            src = os.path.join(out_dir, flat_target)
-            dst = os.path.join(out_dir, f"{alias_name}.png")
-            _copy_file(src, dst)
-            written_relpaths.add(f"{alias_name}.png")
-            if verbose:
-                print(f"  {alias_name}.png = alias of {flat_target}")
-            continue
-
-        folder_prefix = f"{target_name}/"
-        matched = [r for r in written_relpaths if r.startswith(folder_prefix)]
-        if not matched:
-            print(f"  WARNING: alias '{alias_name}' -> '{target_name}' has no target output to copy")
-            continue
-        for rel in matched:
-            frame_name = rel[len(folder_prefix):]
-            src = os.path.join(out_dir, target_name, frame_name)
-            dst_dir = os.path.join(out_dir, alias_name)
-            os.makedirs(dst_dir, exist_ok=True)
-            dst = os.path.join(dst_dir, frame_name)
-            _copy_file(src, dst)
-            written_relpaths.add(f"{alias_name}/{frame_name}")
-        if verbose:
-            print(f"  {alias_name}/ = alias of {target_name}/ ({len(matched)} frame(s))")
-
-    _assert_one_ground_line(actor_id, out_dir, written_relpaths, verbose)
-    _report_stray_files(out_dir, written_relpaths, prune, verbose)
-    return written_relpaths
-
-
-# Every pose an actor ships has to STAND in the same place.
-#
-# The stage pins each actor's canvas bottom to the ground line, so a pose whose
-# figure sits higher inside its own canvas visibly takes off the moment the
-# stance changes. The golem shipped exactly that: its slam frames throw dust
-# that settles 30-55px below its feet, the old placement aligned the bottom of
-# the whole BOUNDING BOX (dust included), and the creature got hoisted 54px
-# into the air against an idle frame standing right on the line. Shawn had the
-# same defect at 34px. In game both read as the figure launching upward.
-#
-# Verified against the PNGs actually WRITTEN rather than against the in-memory
-# pieces, so it also covers nudges, aliases, and anything a future change does
-# between placement and disk.
-#
-# This lives in the tool and not in a PlayMode test on purpose, for the same
-# reason the cross-sheet scale guard does. A C# test reads the sprite Unity
-# imported, and these textures import COMPRESSED (BC3 quantises alpha in 4x4
-# blocks) -- measured through that, a prone pose's largest component moved by
-# over 100px, which is noise swamping the 6px signal. The tool reads the source
-# pixels and can be exact.
-def _assert_one_ground_line(actor_id, out_dir, written_relpaths, verbose):
-    MAX_SPREAD_PX = 6
-
-    feet = []
-    for rel in sorted(written_relpaths):
-        path = os.path.join(out_dir, rel.replace("/", os.sep))
-        if not os.path.exists(path):
-            continue
-        with Image.open(path) as img:
-            mask = np.array(img.convert("RGBA"))[:, :, 3] > ALPHA_THRESHOLD
-        if not mask.any():
-            continue  # a legitimately empty frame has no footing to compare
-        core = largest_connected_component(mask)
-        rows = np.nonzero(core)[0]
-        if not len(rows):
-            continue
-        feet.append((rel, int(rows.max())))
-
-    if len(feet) < 2:
-        return
-
-    lowest = min(f for _, f in feet)
-    highest = max(f for _, f in feet)
-    spread = highest - lowest
-    if spread <= MAX_SPREAD_PX:
-        if verbose:
-            print(f"  ground line: all {len(feet)} pose(s) within {spread}px")
-        return
-
-    table = ", ".join(f"{rel}={row}" for rel, row in sorted(feet, key=lambda t: t[1]))
-    sys.exit(
-        f"[{actor_id}]: poses do not share one ground line -- they span {spread}px "
-        f"(max {MAX_SPREAD_PX}). The figure will appear to fly when its stance changes. "
-        f"Rows are measured from the top, so a SMALLER number means the figure stands "
-        f"HIGHER in its canvas: {table}"
-    )
-
-
-def _copy_file(src, dst):
-    with open(src, "rb") as f:
-        data = f.read()
-    with open(dst, "wb") as f:
-        f.write(data)
-
-
-def _report_stray_files(out_dir, written_relpaths, prune, verbose):
-    existing = []
-    for root, _dirs, files in os.walk(out_dir):
-        for fname in files:
-            if not fname.lower().endswith(".png"):
-                continue
-            rel = os.path.relpath(os.path.join(root, fname), out_dir).replace("\\", "/")
-            existing.append(rel)
-
-    stray = sorted(set(existing) - written_relpaths)
-    if not stray:
-        return
-    if prune:
-        for rel in stray:
-            os.remove(os.path.join(out_dir, rel))
-            meta = os.path.join(out_dir, rel + ".meta")
-            if os.path.exists(meta):
-                os.remove(meta)
-        if verbose:
-            print(f"  pruned {len(stray)} file(s) the manifest did not produce: {', '.join(stray)}")
-    else:
-        print(f"  NOTE: {len(stray)} file(s) in {out_dir} were not produced by this run "
-              f"(pass --prune to remove): {', '.join(stray)}")
+    _assert_one_ground_line(label, out_dir, written, verbose)
+    _report_stray_files(out_dir, written, prune, verbose)
+    return written
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("creatures", nargs="*", help="Creature ids to process (default: all)")
-    ap.add_argument("--all", action="store_true", help="Process every creature in ACTORS")
-    ap.add_argument("--suggest-scales", metavar="CREATURE", help="Print measured per-sheet scale ratios and stop")
-    ap.add_argument("--prune", action="store_true", help="Delete output files the manifest no longer produces")
+    ap.add_argument("--sheet", required=True, help="Path to the Stage-1 design sheet")
+    ap.add_argument("--actor", required=True, help="'Enemies/<id>' or 'Characters/<id>'")
+    ap.add_argument("--stances", required=True,
+                    help="Comma-separated stance names, row-major, one per grid cell. "
+                         "Use '-' to skip a cell.")
+    ap.add_argument("--grid", default="3x2", help="COLSxROWS, default 3x2 (six cells)")
+    ap.add_argument("--key", default="alpha", choices=("alpha", "white_flood", "green"))
+    ap.add_argument("--anchor", default="ground_band", choices=("ground_band", "centroid"))
+    ap.add_argument("--delivery-scale", type=float, default=1.0)
+    ap.add_argument("--nudge", action="append", metavar="STANCE:DX,DY", default=[])
+    ap.add_argument("--drop-far-components-px", type=int, default=None)
+    ap.add_argument("--out-root", default=DEFAULT_OUT_ROOT)
+    ap.add_argument("--prune", action="store_true")
     ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args()
 
-    if args.suggest_scales:
-        suggest_scales(args.suggest_scales)
-        return
-
-    ids = list(ACTORS.keys()) if args.all else args.creatures
-    if not ids:
-        ap.error("Give one or more creature ids, or --all, or --suggest-scales <id>")
-
-    for actor_id in ids:
-        process_actor(actor_id, verbose=not args.quiet, prune=args.prune)
+    process(
+        sheet_path=args.sheet,
+        actor_arg=args.actor,
+        stances_arg=args.stances,
+        grid_arg=args.grid,
+        key_mode=args.key,
+        anchor_mode=args.anchor,
+        delivery_scale=args.delivery_scale,
+        nudges=parse_nudges(args.nudge),
+        drop_far_px=args.drop_far_components_px,
+        out_root=args.out_root,
+        prune=args.prune,
+        verbose=not args.quiet,
+    )
 
 
 if __name__ == "__main__":
