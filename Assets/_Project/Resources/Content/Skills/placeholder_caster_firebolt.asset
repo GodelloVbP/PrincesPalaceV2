@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Firebolt
   description: Placeholder kit. A second element so a fight can show off weakness/resistance
     on her.
-  characterId: placeholder_caster
+  characterId: owl
   unlockLevel: 1
   effect: 0
   targeting: 0

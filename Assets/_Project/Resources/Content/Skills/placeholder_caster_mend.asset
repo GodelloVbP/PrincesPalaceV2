@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Mend
   description: Placeholder kit. A party heal so a three-member squad has one to lean
     on.
-  characterId: placeholder_caster
+  characterId: owl
   unlockLevel: 1
   effect: 3
   targeting: 3

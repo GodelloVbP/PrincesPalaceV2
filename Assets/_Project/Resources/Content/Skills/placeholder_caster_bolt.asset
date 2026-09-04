@@ -15,7 +15,7 @@ MonoBehaviour:
   id: placeholder_caster_bolt
   displayName: Arcane Bolt
   description: Placeholder kit. A plain ranged hit, typed to match her attackType.
-  characterId: placeholder_caster
+  characterId: owl
   unlockLevel: 1
   effect: 0
   targeting: 0

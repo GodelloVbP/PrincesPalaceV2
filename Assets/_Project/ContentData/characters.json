@@ -50,8 +50,8 @@
       "battleSpriteFacing": "Right"
     },
     {
-      "id": "placeholder_caster",
-      "displayName": "Placeholder Caster",
+      "id": "owl",
+      "displayName": "Odette",
       "role": "Support",
       "attackType": "Arcane",
       "maxHealth": 140,
@@ -66,7 +66,7 @@
       "intelligence": 16,
       "charisma": 6,
       "portraitPath": "Assets/_Project/Art/Portraits/Sheep/Processed/Shawn_neutral.png",
-      "battleSpritePath": "Characters/sheep",
+      "battleSpritePath": "Characters/owl",
       "battleSpriteFacing": "Right"
     }
   ]

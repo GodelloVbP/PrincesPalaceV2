@@ -56,11 +56,12 @@ python tools/slice_actor_sheet.py --sheet Assets/_Project/Art/Characters/owl/she
   `--max-ground-spread`, plus the canvas making room for an upward nudge so
   the crown is not clipped.
 
-## Not yet done
+## Content
 
-She has stills and a ground line, nothing else. `characters.json` still
-carries `placeholder_caster` wearing Shawn's art; Odette is its replacement
-(id, display name, portrait, `battleSpritePath: Characters/owl`, an
-INT-scaled skill set). That is a content change with a `-BuildContent`
-rebuild and a save-data reference in `SaveData.cs`, held until the test
-runners are free.
+She replaced `placeholder_caster` in `characters.json` (id `owl`) with that
+entry's INT/WIS build kept as her starting numbers and its three skills
+(`placeholder_caster_bolt`, `_firebolt`, `_mend`) re-pointed at her. Two
+things are still borrowed and say so: the skill ids and descriptions still
+read "placeholder", and her portrait is Shawn's neutral until an owl
+portrait exists. A proper design pass on stats, skill ids and an INT-scaled
+kit is the next step, not this one.

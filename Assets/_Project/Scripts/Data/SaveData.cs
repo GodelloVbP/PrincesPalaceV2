@@ -53,7 +53,7 @@ namespace PrincesPalace
 
         // THE single switch, but its DEFAULT is derived rather than hardcoded
         // false. Null (the state every fresh process starts in) means "decide
-        // from content": once both placeholder_brawler and placeholder_caster
+        // from content": once both placeholder_brawler and owl (Odette)
         // resolve in ContentDatabase.Characters, a new save fields all three
         // without anyone having to flip anything. Set true/false to override
         // that either way -- BalanceBotRunner forces true regardless of
@@ -68,7 +68,7 @@ namespace PrincesPalace
         // has.
         private static bool SquadOfThreeReady =>
             ContentDatabase.Characters.Any(c => c.id == "placeholder_brawler")
-            && ContentDatabase.Characters.Any(c => c.id == "placeholder_caster");
+            && ContentDatabase.Characters.Any(c => c.id == "owl");
         // PUBLIC because the squad's ceiling has to be assertable against the
         // stage's slot count, and a test that wrote "extra_recruit_slot" as a
         // literal would be the drift it is meant to catch.

@@ -5,7 +5,7 @@ namespace PrincesPalace.PlayModeTests
 {
     // SaveData.TestSquadOfThreeEnabled: the single switch that decides
     // whether a save fields a three-member squad (Shawn + placeholder_brawler
-    // + placeholder_caster). Null (its default) means "derive from content" --
+    // + owl, i.e. Odette). Null (its default) means "derive from content" --
     // see the comment on SaveData.SquadOfThreeReady -- and true/false force it
     // either way. BalanceBotRunner.RunBatch is the one place that forces it on
     // (and back to null) today.
@@ -49,7 +49,7 @@ namespace PrincesPalace.PlayModeTests
             var save = new SaveData();
 
             // The live behaviour this whole switch exists for: nobody has to
-            // flip anything once placeholder_brawler and placeholder_caster
+            // flip anything once placeholder_brawler and owl
             // are authored content, which they are (characters.json).
             Assert.AreEqual(3, save.EffectiveMaxSquadSize());
         }
@@ -63,7 +63,7 @@ namespace PrincesPalace.PlayModeTests
             var ids = save.ActiveSquadIds();
 
             Assert.AreEqual(3, ids.Count);
-            CollectionAssert.AreEqual(new[] { "sheep", "placeholder_brawler", "placeholder_caster" }, ids,
+            CollectionAssert.AreEqual(new[] { "sheep", "placeholder_brawler", "owl" }, ids,
                 "characters.json's own file order (CLAUDE.md gotcha 4)");
         }
 
@@ -88,7 +88,7 @@ namespace PrincesPalace.PlayModeTests
             }
 
             CollectionAssert.AreEqual(
-                new[] { "sheep", "placeholder_brawler", "placeholder_caster", "sheep" }, visitedIds);
+                new[] { "sheep", "placeholder_brawler", "owl", "sheep" }, visitedIds);
         }
     }
 }

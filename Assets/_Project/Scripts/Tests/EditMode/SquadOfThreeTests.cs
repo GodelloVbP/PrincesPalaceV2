@@ -10,8 +10,9 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // Two placeholder party members (placeholder_brawler, placeholder_caster)
-    // exist purely so a three-member squad can be tested against Shawn --
+    // The other two party members (placeholder_brawler, and owl -- Odette,
+    // who replaced placeholder_caster on 2026-09-04 and still wears its kit)
+    // exist so a three-member squad can be tested against Shawn --
     // see characters.json's own entries. This file covers the two things
     // that are hard to see from content alone: a fight actually seats three
     // on the player side without throwing, and SaveData.EffectiveMaxSquadSize
@@ -47,7 +48,7 @@ namespace PrincesPalace.Domain.Tests
             {
                 new PlayerKit("sheep", CharacterRole.Utility, null, null, DamageType.Nature),
                 new PlayerKit("placeholder_brawler", CharacterRole.Tank, null, null, DamageType.Physical),
-                new PlayerKit("placeholder_caster", CharacterRole.Support, null, null, DamageType.Arcane),
+                new PlayerKit("owl", CharacterRole.Support, null, null, DamageType.Arcane),
             };
 
             var session = new FightSession(encounter, kits, null, new SeededRandom(1))
@@ -117,7 +118,7 @@ namespace PrincesPalace.Domain.Tests
             // SaveData.ActiveSquad() -- already fully general over squad
             // size, so this test is pinning that arithmetic directly rather
             // than standing up the MonoBehaviour (which needs a scene).
-            var ids = new List<string> { "sheep", "placeholder_brawler", "placeholder_caster" };
+            var ids = new List<string> { "sheep", "placeholder_brawler", "owl" };
 
             int index = 0;
             var visited = new List<string> { ids[index] };
@@ -130,7 +131,7 @@ namespace PrincesPalace.Domain.Tests
             // Three forward steps from index 0 over 3 members returns to the
             // start -- the same wraparound Step() relies on.
             CollectionAssert.AreEqual(
-                new[] { "sheep", "placeholder_brawler", "placeholder_caster", "sheep" }, visited);
+                new[] { "sheep", "placeholder_brawler", "owl", "sheep" }, visited);
         }
     }
 }
