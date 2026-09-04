@@ -392,9 +392,9 @@ namespace PrincesPalace
 
         // THE OTHER HALF OF A HIT LANDING. The attacker deforms as it swings
         // (OutStretch above) and the target only ever moved -- Recoil slides it
-        // back and nothing changed its shape. On art with a six-frame flinch
-        // that was survivable; on the flat single-frame poses most of the
-        // roster still has, a hit moved a rigid cut-out and read as a bump.
+        // back and nothing changed its shape. Every pose in the game is one
+        // drawing, so without this a hit moves a rigid cut-out and reads as a
+        // bump rather than as a blow.
         //
         // Snap in, ease out: the compression is instant and the recovery is
         // what the eye actually reads, which is the same asymmetry the lunge
