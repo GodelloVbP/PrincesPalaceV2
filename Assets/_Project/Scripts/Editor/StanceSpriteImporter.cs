@@ -57,7 +57,7 @@ public class StanceSpriteImporter : AssetPostprocessor
         // edges pick up a halo where Unity premultiplies against black.
         importer.alphaIsTransparency = true;
         // Read/write enabled so FightController.StageVisuals can sample the
-        // sprite's actual opaque bounds at runtime (ContentCenterOffsetFraction)
+        // sprite's actual opaque bounds at runtime (ContentCentreFraction)
         // — delivered stance art doesn't always keep its figure centered in
         // its own canvas (Elite Bog Witch's idle frame in particular), and
         // the foot shadow needs the real content center, not the canvas

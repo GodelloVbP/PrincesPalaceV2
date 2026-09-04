@@ -18,10 +18,9 @@ namespace PrincesPalace
     // and the shadow's X is measured from the IDLE frame only.
     public partial class FightController
     {
-        // The pose each combatant is currently holding, and which frame of it.
-        // Playback writes these; every repaint reads them.
+        // The pose each combatant is currently holding. Playback writes it;
+        // every repaint reads it.
         private readonly Dictionary<CombatantState, string> _stance = new Dictionary<CombatantState, string>();
-        private readonly Dictionary<CombatantState, int> _actorFrame = new Dictionary<CombatantState, int>();
 
         // Who has actually been SHOWN dying, as of the beats painted so far --
         // not who Domain already knows is dead. FightSession resolves a whole
@@ -130,12 +129,6 @@ namespace PrincesPalace
         // is a sprite that may not exist for a combatant with no authored art.
         public string StanceFor(CombatantState combatant) => StanceOf(combatant);
 
-        // Which frame of that pose. Public for the same reason StanceFor is: a
-        // test sampling this mid-beat is the only way to see that an animation
-        // actually stepped, since the round ends back on frame 0 either way.
-        public int FrameFor(CombatantState combatant) =>
-            combatant != null && _actorFrame.TryGetValue(combatant, out var frame) ? frame : 0;
-
         private string StanceOf(CombatantState combatant)
         {
             if (combatant != null)
@@ -205,16 +198,13 @@ namespace PrincesPalace
                 // ONLY WHEN IT ACTUALLY MOVED, and that guard is the whole of
                 // this function's correctness.
                 //
-                // RefreshStage is not an occasional event. It runs from the HUD
-                // refresh and from SetActorFrame -- once per FRAME of every
-                // attack animation. Writing the mark unconditionally therefore
-                // fought the lunge tween for the rect all the way through the
-                // swing, and telling the animator unconditionally CANCELLED
-                // that tween outright, since Rehome stops whatever is in
-                // flight. The result was an attack where nobody moved, on
-                // every combatant with more than one frame of art -- and the
-                // single-frame poses still moved, which is what made it look
-                // like it happened at random.
+                // RefreshStage is not an occasional event -- the HUD refresh
+                // and the idle breath both reach it. Writing the mark
+                // unconditionally therefore fought the lunge tween for the
+                // rect all the way through the swing, and telling the animator
+                // unconditionally CANCELLED that tween outright, since Rehome
+                // stops whatever is in flight. The result was an attack where
+                // nobody moved.
                 //
                 // Compared against the ANIMATOR'S mark, never the live rect:
                 // mid-lunge the rect is somewhere between here and the target
@@ -455,12 +445,11 @@ namespace PrincesPalace
 
             var slotRect = image.transform.parent as RectTransform;
 
-            var sprite = LoadStanceSprite(combatant, stance);
+            var sprite = StanceSpriteFor(combatant, stance);
 
             if (sprite == null)
             {
                 ShowFallbackPlate(image, slotRect);
-                HideBlend(combatant);
                 return;
             }
 
@@ -475,7 +464,7 @@ namespace PrincesPalace
             image.rectTransform.localScale = new Vector3(mirror, 1f, 1f);
 
             string folder = SpriteFolderFor(combatant);
-            GroundTheFigure(image, slotRect, folder, SidewaysDrift(combatant, folder, stance, mirror));
+            GroundTheFigure(image, slotRect, folder);
             PlaceShadow(slotRect, folder, mirror);
 
             // Synced AFTER the mirror and carrying it: the flash overlay is a
@@ -487,23 +476,8 @@ namespace PrincesPalace
 
             // The afterimage copies this exact Image, so the animator is handed
             // it through the same door -- once bound it clones the live node
-            // whenever it trails, picking up the current frame and flip for
+            // whenever it trails, picking up the current drawing and flip for
             // free. Same-sprite rebinds are cheap and idempotent.
-            // The dissolve layer must sit EXACTLY where the sprite does, or a
-            // blend reads as a double image rather than one drawing becoming
-            // another. It is a stretch sibling, so it inherits the slot's box
-            // for free, but the mirror and the ground offset are written onto
-            // the sprite's own rect and have to be copied across.
-            var blend = BlendFor(combatant);
-            if (blend != null)
-            {
-                blend.preserveAspect = true;
-                blend.rectTransform.localScale = image.rectTransform.localScale;
-                blend.rectTransform.offsetMin = image.rectTransform.offsetMin;
-                blend.rectTransform.offsetMax = image.rectTransform.offsetMax;
-                blend.raycastTarget = false;
-            }
-
             slotRect?.GetComponent<StageActorAnimator>()?.BindSprite(image);
 
             // ACTIVATED, not merely enabled. The sprite node is built inactive
@@ -541,10 +515,9 @@ namespace PrincesPalace
         }
 
         // THE GROUND LINE IS THE SLOT'S BOTTOM, and this is what puts each
-        // frame's feet on it.
+        // drawing's feet on it.
         //
-        // Delivered art does not agree about where the feet sit inside the
-        // canvas, and the disagreement is per FRAME, not per actor. Pinning the
+        // Delivered art does not put the feet on the canvas bottom. Pinning the
         // raw canvas to the ground line made a figure JUMP as it changed pose --
         // 52px for the golem going idle->attack, which is the "golem flies
         // upwards in its attack" playtest report.
@@ -553,16 +526,18 @@ namespace PrincesPalace
         // art's alpha and was wrong twice over: the golem's slam erupts an earth
         // spike ~50px below its own feet and Shawn's idle plants a staff ~33px
         // below his, so both were read as the floor and both figures were
-        // hoisted into the air. A sheet states where its feet are, and
-        // StanceManifestValidationTests fails if that stops matching the pixels
-        // -- the case a runtime measurement can never report, because it just
-        // quietly believes whatever it finds.
+        // hoisted into the air. A kit states where its feet are, which is the
+        // one thing a runtime measurement can never report -- it just quietly
+        // believes whatever it finds.
         //
-        // ONE value per actor rather than per frame, and that is load-bearing:
+        // ONE value per actor rather than per stance, and that is load-bearing:
         // the bug being designed out is a figure MOVING VERTICALLY between
-        // stances, and a constant offset cannot do that by construction, where a
-        // recomputed one merely usually doesn't.
-        private static void GroundTheFigure(Image image, RectTransform slotRect, string folder, float drift)
+        // poses, and a constant offset cannot do that by construction, where a
+        // recomputed one merely usually doesn't. It is only meaningful because
+        // every one of an actor's drawings sits on one shared canvas --
+        // EnemyStanceCaptureTests.EveryStanceOfAnActorSharesOneCanvas is what
+        // keeps that true.
+        private static void GroundTheFigure(Image image, RectTransform slotRect, string folder)
         {
             if (slotRect == null) return;
 
@@ -574,134 +549,15 @@ namespace PrincesPalace
 
             // The sprite is anchor-stretched across the slot, so it is nudged
             // with offsetMin/Max rather than anchoredPosition. THE SAME VALUE
-            // ON BOTH, per axis, which is what makes this a translation rather
-            // than a resize -- the drift correction rides the identical
-            // mechanism the ground line already uses, so the two cannot fight
-            // over the rect.
-            image.rectTransform.offsetMin = new Vector2(-drift, -drop);
-            image.rectTransform.offsetMax = new Vector2(-drift, -drop);
-        }
-
-        // HOW FAR THIS PARTICULAR DRAWING SITS OFF THE POSE'S OWN CENTRE.
-        //
-        // Zero for every stance that is not marked steady, which today is
-        // every stance but idle. See StanceTiming.Steady for why cancelling
-        // this in a swing would nail the figure to the spot mid-lunge.
-        //
-        // MEASURED AGAINST FRAME 0 OF THE SAME STANCE, not against the frame's
-        // geometric middle. The question being asked is "has the creature moved
-        // since this pose began"; answering it against the canvas instead would
-        // shove an idle sideways for any sheet whose figure is simply drawn off
-        // centre, which is a property of the art rather than a wobble.
-        private float SidewaysDrift(CombatantState combatant, string folder, string stance, float mirror)
-        {
-            if (combatant == null || string.IsNullOrWhiteSpace(folder)) return 0f;
-
-            var animation = StanceAnimationLibrary.Resolve(folder, stance);
-            if (!animation.Steady || animation.FrameCount <= 1) return 0f;
-
-            // ONLY for art that was cropped per FRAME. See SharesOneCanvas.
-            //
-            // This correction exists to cancel a CROPPING ARTEFACT -- its
-            // originating commit measured a "28px shuffle with no pattern"
-            // across six drawings and called it exactly that. It cannot tell
-            // a cropping artefact from real motion, because both move the
-            // content's bounding box, so it must only run where the artefact
-            // is actually possible.
-            //
-            // It is not possible on a shared canvas: slice_actor_sheet.py
-            // aligns every frame of an actor onto ONE canvas by its
-            // ground-contact silhouette ("ground_band"), so those frames are
-            // already registered and a runtime re-registration on a
-            // different, weaker basis (whole-figure bbox centre) can only
-            // undo correct work. On the Giant Rat's re-authored idle -- whose
-            // tail sweeps on purpose -- it was translating the whole creature
-            // up to 18px per frame and reading in play as the rat gliding
-            // around the floor, which is the bug that led here. Measured
-            // across the roster's idles: rat 18.0px, treant 28.5px, beetle
-            // 15.5px, all on one canvas, all animation rather than artefact.
-            //
-            // forest_warden is the one actor that still needs it: its six
-            // idle frames are on six DIFFERENT canvases (documented in
-            // docs/ART_PIPELINE.md, and its own manifest entry admits to the
-            // pop), which is precisely the per-frame cropping this was
-            // written for.
-            if (SharesOneCanvas(animation, folder, stance)) return 0f;
-
-            int frame = FrameFor(combatant);
-            if (frame <= 0) return 0f;
-
-            var sprite = animation.FrameAt(frame);
-            var first = animation.FrameAt(0);
-            if (sprite == null || first == null) return 0f;
-
-            float here = ContentCentreFor(folder, stance, frame, sprite);
-            float home = ContentCentreFor(folder, stance, 0, first);
-
-            // The centres are fractions of the frame's width, so the pixels come
-            // back out by multiplying by it. Mirrored for the same reason
-            // PlaceShadow is: a figure leaning right appears to lean left once
-            // flipped, and a correction blind to that would double the error
-            // instead of cancelling it.
-            return (here - home) * sprite.rect.width * mirror;
-        }
-
-        // Do every frame of this stance sit on one identically-sized canvas?
-        //
-        // That is the runtime-visible signature of art the slicer registered
-        // for us: slice_actor_sheet.py composites a whole actor onto a single
-        // shared canvas, aligned on each pose's ground contact, so equal
-        // frame sizes mean equal registration. Per-frame-cropped art
-        // (forest_warden) has a different size per frame and cannot make that
-        // promise.
-        //
-        // Cached per folder+stance: it opens no pixels (Sprite.rect is
-        // metadata) but it is asked once per idle frame per combatant, and
-        // the answer is a property of the art rather than of the moment.
-        private static readonly Dictionary<string, bool> OneCanvasCache = new Dictionary<string, bool>();
-
-        private static bool SharesOneCanvas(StanceAnimation animation, string folder, string stance)
-        {
-            if (animation.IsEmpty || animation.FrameCount <= 1) return true;
-
-            string key = folder + "/" + stance;
-            if (OneCanvasCache.TryGetValue(key, out var cached)) return cached;
-
-            var first = animation.FrameAt(0);
-            bool shared = first != null;
-            if (shared)
-            {
-                var size = first.rect.size;
-                for (int i = 1; i < animation.FrameCount; i++)
-                {
-                    var f = animation.FrameAt(i);
-                    if (f == null || f.rect.size != size) { shared = false; break; }
-                }
-            }
-
-            OneCanvasCache[key] = shared;
-            return shared;
-        }
-
-        // Per-FRAME, unlike ContentCentreFractionForActor, which answers for the
-        // actor as a whole from its idle frame 0 and is what the badge and the
-        // shadow want. Cached for the same reason that one is: the measurement
-        // opens a texture's pixels, which must never happen per repaint.
-        private static readonly Dictionary<string, float> FrameCentreCache = new Dictionary<string, float>();
-
-        private static float ContentCentreFor(string folder, string stance, int frame, Sprite sprite)
-        {
-            string key = folder + "/" + stance + "#" + frame;
-            if (FrameCentreCache.TryGetValue(key, out var cached)) return cached;
-
-            float centre = ContentCentreFraction(sprite);
-            FrameCentreCache[key] = centre;
-            return centre;
+            // ON BOTH, which is what makes this a translation rather than a
+            // resize.
+            image.rectTransform.offsetMin = new Vector2(0f, -drop);
+            image.rectTransform.offsetMax = new Vector2(0f, -drop);
         }
 
         // The ring stays ON the ground line. Only its X needs correcting, for art
         // whose figure is not centred in its own canvas, and that is read from
-        // the IDLE frame so a pose that swings an arm out cannot drag the ring
+        // the IDLE drawing so a pose that swings an arm out cannot drag the ring
         // sideways with it.
         //
         // STILL MEASURED, unlike the ground line. Horizontal centring has never
@@ -758,26 +614,6 @@ namespace PrincesPalace
             if (combatant == null) return;
 
             _stance[combatant] = stance;
-
-            // Frame 0 on every pose CHANGE, not on every repaint: a stance that
-            // reset its own frame each time it was painted would never advance
-            // past the first one.
-            _actorFrame[combatant] = 0;
-
-            RefreshStage();
-        }
-
-        // Steps a combatant to frame N of the pose it is already holding.
-        //
-        // Separate from PoseCombatant, which resets the frame: choosing a pose
-        // and stepping through it are different events, and collapsing them
-        // would re-resolve the animation on every frame -- and reset the index
-        // it was trying to advance.
-        private void SetActorFrame(CombatantState combatant, int frame)
-        {
-            if (combatant == null) return;
-
-            _actorFrame[combatant] = frame;
             RefreshStage();
         }
 
@@ -798,35 +634,11 @@ namespace PrincesPalace
                 // The pose's own confirmation, alongside the fade's. Same
                 // beat-scoped moment, same reason: this is the first point
                 // "actually dead" is allowed to become visible.
-                //
                 // The RETURN of Add is the "first time we have seen this
-                // corpse" signal, and it is load-bearing below: a body is in
-                // the snapshot of every beat after the one that killed it, so
-                // everything here is asked repeatedly.
-                bool firstSight = _confirmedDefeated.Add(pair.Key);
-
-                // THE DEATH ANIMATION, which until now never played.
-                //
-                // FightBeatPlayer steps frames for the beat's ACTOR only --
-                // reasonably, since a target's reaction is a recoil and a
-                // flash rather than an animation. But the thing that DIES is
-                // the target, so a corpse held whatever frame PoseCombatant
-                // reset it to, which is 0, and then faded.
-                //
-                // That was invisible for every kit on the roster because their
-                // defeated art opens already collapsed -- frame 0 is a body on
-                // the floor and the remaining frames are it settling. The
-                // Ironback Beetle's does not: its six frames run from standing
-                // through the flip onto its back, so it died by standing
-                // perfectly still and fading out. Reported from play, not
-                // caught here, which is the whole reason it is worth saying
-                // out loud that a multi-frame defeated pose was decorative.
-                //
-                // Timed to fit what StageDeathFade already allows: 0.35s of
-                // hold before the fade starts and 0.6s of fade, against a
-                // six-frame collapse at ~0.11s a frame. The body finishes
-                // falling roughly as it starts to go.
-                if (firstSight) StartCoroutine(PlayDefeatedFrames(pair.Key));
+                // corpse" signal: a body is in the snapshot of every beat after
+                // the one that killed it, so everything here is asked
+                // repeatedly.
+                _confirmedDefeated.Add(pair.Key);
 
                 var slot = SlotFor(pair.Key);
                 var fade = slot == null ? null : slot.GetComponent<StageDeathFade>();
@@ -838,54 +650,22 @@ namespace PrincesPalace
             }
         }
 
-        // Walks a corpse through its own defeated frames.
-        //
-        // Its own coroutine rather than playback's, because it OUTLIVES the
-        // beat that caused it -- the body keeps falling while the next line of
-        // the log is already being written, and a beat owns its own length.
-        // The pacing is shared all the same (StanceStepper): this used to walk
-        // the frames flat, which animated the corpse and still made it read as
-        // a slideshow.
-        //
-        // The abandon check is polled every frame: the fight can end, or the
-        // stage reset, while a body is still going down, and writing frames for
-        // a combatant whose slot the next encounter has reused is how a fresh
-        // fight opens with someone else's corpse in it.
-        private IEnumerator PlayDefeatedFrames(CombatantState combatant)
-        {
-            // Through the same seam Windup/FollowThrough always used, rather
-            // than StanceStepper directly, so a single-drawing defeated
-            // stance settles through the same phases a sheet's does.
-            var playback = PlaybackFor(combatant, FightSession.Stances.Defeated, () => _session == null);
-            yield return playback.Windup();
-            yield return playback.FollowThrough();
-        }
-
         // ---- the breath between blows --------------------------------------------
 
-        // NOBODY BREATHED. Every idle sheet in the game was a still.
+        // NOBODY BREATHES BY THEMSELVES. Every stance in the game is a single
+        // drawing, so a stage between blows is six figures standing perfectly
+        // still -- which reads as a paused game rather than as a fight waiting
+        // on the player. The whole of the motion is a transform swell; see
+        // Domain/Stage/BreathCurve for why that beat sheets of drawn frames.
         //
-        // Three actors ship a six-frame idle -- the Beetle, the Treant and the
-        // Forest Warden -- and the manifest authors a pace for each of them
-        // (0.12s to 0.14s a frame). Nothing ever stepped those frames, so all
-        // three stood on frame 0 for the whole fight. The art and the timing
-        // were both already there; what was missing was anything to drive them.
-        //
-        // FightBeatPlayer could not be that thing, and its own comment says why
-        // without realising it: "Idle is a single frame today, so this is a
-        // no-op". Playback steps the beat's ACTOR, and the beat's actor is
-        // never idle -- it is swinging. An idle loop is the opposite shape from
-        // everything in that class: it belongs to no beat, it has to run while
-        // the game sits waiting for a click, and it never ends.
-        //
-        // So it lives here, beside the corpse stepper, which is the other
-        // animation the controller owns for the same reason: playback does not
-        // drive it and it outlives the beat.
+        // IT LIVES HERE RATHER THAN IN PLAYBACK because it is the opposite
+        // shape from everything in that class: it belongs to no beat, it has
+        // to run while the game sits waiting for a click, and it never ends.
         private Coroutine _idling;
 
         // THE TEST SEAM FOR THE BREATH SPECIFICALLY, separate from
-        // FightBeatPlayer.BeatSpeedMultiplier on purpose. StepIdleFrame's own
-        // comment explains why the breath clock below is UNSCALED by that
+        // FightBeatPlayer.BeatSpeedMultiplier on purpose. BreatheIdle's own
+        // comment explains why the breath clock is UNSCALED by that
         // multiplier -- a paused fight must not bank up a breath -- so
         // speeding the fight's beats up for a test does nothing to how long
         // the ~2.8s breath cycle (BreathCurve) takes in real time. Four
@@ -898,21 +678,10 @@ namespace PrincesPalace
         public static float BreathSpeedMultiplier = 1f;
 
         // Where each figure is in its own breath. Cleared per combatant the
-        // moment it stops being idle, which is what makes the loop restart from
-        // frame 0 on the way back rather than resuming mid-inhale from before
-        // the blow.
+        // moment it stops being idle, so the breath restarts from rest on the
+        // way back rather than resuming mid-inhale from before the blow.
         private readonly Dictionary<CombatantState, float> _idleClock =
             new Dictionary<CombatantState, float>();
-
-        // How far apart two figures' breaths are pushed, in frames.
-        //
-        // Two Ironback Beetles side by side breathing in perfect lockstep read
-        // as one animation drawn twice rather than as two animals -- the same
-        // failure AnchorStageSlots' own note describes for two rats overlapping
-        // into "one monster with a spare tail". Offsetting by slot index is
-        // free and deterministic, which matters: a random phase would make a
-        // capture test's screenshot differ run to run.
-        private const float IdlePhaseFrames = 1.6f;
 
         private void StartIdleBreathing()
         {
@@ -936,7 +705,7 @@ namespace PrincesPalace
         //
         // That rule is also what keeps this off playback's toes. A figure being
         // driven by a beat is in `attack`, `cast`, `hurt` or `defeated`, never
-        // in `idle`, so the two can never write the same combatant's frame.
+        // in `idle`, so the two can never write one figure's transform at once.
         private IEnumerator IdleBreathing()
         {
             while (true)
@@ -945,92 +714,12 @@ namespace PrincesPalace
 
                 if (_session == null) continue;
 
-                // ONE REPAINT FOR THE WHOLE STAGE, and only when a frame
-                // actually turned over. Stepping through SetActorFrame would
-                // refresh once per combatant per frame for a picture that is
-                // drawn once either way.
-                bool moved = false;
-
                 var enemies = _session.Encounter.Enemies;
-                for (int i = 0; i < enemies.Count; i++) moved |= StepIdleFrame(enemies[i], i);
+                for (int i = 0; i < enemies.Count; i++) BreatheIdle(enemies[i], i);
 
                 var party = _session.Encounter.PlayerParty;
-                for (int i = 0; i < party.Count; i++) moved |= StepIdleFrame(party[i], i);
-
-                if (moved) RefreshStage();
+                for (int i = 0; i < party.Count; i++) BreatheIdle(party[i], i);
             }
-        }
-
-        // ---- the cross-dissolve between two drawings ---------------------------
-
-        // A stance sheet is shown at its authored pace -- the rat's idle is
-        // twelve drawings over 1.92s, about six a second -- and swapping one
-        // sprite for the next at that rate reads as a slideshow no matter how
-        // well the frames are registered. Fixing it with more frames is an art
-        // problem; fixing it with a dissolve is a rendering one, and the
-        // information needed was already being computed and discarded:
-        // LoopCycle rounds a continuous position to pick an index, and the
-        // fraction it throws away is exactly how far between two drawings the
-        // loop has got.
-        //
-        // The base drawing stays on the sprite at full opacity and its
-        // NEIGHBOUR is faded in on top, capped at MaxBlendAmount below, so the
-        // composite is a lerp weighted toward whichever drawing is "the"
-        // frame rather than a true 50/50 at the midpoint. Which neighbour depends on
-        // which way the loop is travelling, which is what keeps it continuous
-        // across the point where the rounded index flips: at exactly halfway
-        // the two drawings are 50/50 whichever of them is currently "the"
-        // frame.
-        //
-        //
-        // Capped below a true 50/50 (2026-08-30): a full half-opacity blend
-        // means the WORST-registered pair of frames on a sheet gets shown at
-        // its most visible, exactly at the midpoint crossing. On art with
-        // real inter-frame inconsistency (the rat's tail, still redrawn
-        // rather than posed after two regeneration attempts -- see
-        // Art/Enemies/rat/idle_regeneration_prompt.txt) that reads as two
-        // ring patterns mushed together rather than one tail moving. Lower
-        // trades a little of the smoothing this dissolve exists for against
-        // less ghosting on exactly the content that can't hold a blend.
-        private const float MaxBlendAmount = 0.35f;
-
-        private void StepIdleBlend(CombatantState combatant, StanceAnimation animation,
-                                   float clock, float perFrame, int frame)
-        {
-            var blend = BlendFor(combatant);
-            if (blend == null) return;
-
-            float position = LoopCycle.FramePositionAt(clock, animation.FrameCount, perFrame,
-                                                       animation.Loop,
-                                                       FightBeatPlayer.Scaled(animation.EndHoldSeconds));
-
-            int neighbour = position > frame ? frame + 1 : frame - 1;
-            if (neighbour < 0 || neighbour >= animation.FrameCount)
-            {
-                HideBlend(combatant);
-                return;
-            }
-
-            float amount = Mathf.Clamp(Mathf.Abs(position - frame), 0f, MaxBlendAmount);
-            var sprite = animation.FrameAt(neighbour);
-            if (sprite == null || amount <= 0.001f)
-            {
-                HideBlend(combatant);
-                return;
-            }
-
-            blend.sprite = sprite;
-            var c = blend.color;
-            blend.color = new Color(c.r, c.g, c.b, amount);
-            blend.gameObject.SetShown(true);
-            blend.enabled = true;
-        }
-
-        private void HideBlend(CombatantState combatant)
-        {
-            var blend = BlendFor(combatant);
-            if (blend == null) return;
-            if (blend.gameObject.activeSelf) blend.gameObject.SetShown(false);
         }
 
         // Hands one figure's breath to the thing that wears it.
@@ -1039,6 +728,11 @@ namespace PrincesPalace
         // scale and the bottom pivot -- so a breath scales about the figure's
         // own ground line and cannot lift it off the floor. Same component,
         // same reasoning, as the lunge and the recoil.
+        //
+        // NO REPAINT. The breath is a transform write, so nothing about the
+        // picture RefreshStage paints has changed; calling it per figure per
+        // frame is what the old sprite-swapping loop had to do and this does
+        // not.
         //
         // Silent when there is no slot or no animator: a combatant that is not
         // on stage (a summon still being held back by _confirmedPresent) has
@@ -1049,10 +743,10 @@ namespace PrincesPalace
             if (slot != null) slot.GetComponent<StageActorAnimator>()?.SetBreath(amount);
         }
 
-        // Advances one figure's breath. True when the drawing changed.
-        private bool StepIdleFrame(CombatantState combatant, int index)
+        // Advances one idle figure's breath.
+        private void BreatheIdle(CombatantState combatant, int index)
         {
-            if (combatant == null) return false;
+            if (combatant == null) return;
 
             // StanceOf, not _stance, so a corpse is excluded by the same rule
             // the rest of the stage reads it by -- including the beat-confirmed
@@ -1062,45 +756,21 @@ namespace PrincesPalace
             {
                 _idleClock.Remove(combatant);
                 BreatheFigure(combatant, 0f);
-                HideBlend(combatant);
-                return false;
+                return;
             }
 
-            var animation = StanceAnimationFor(combatant, FightSession.Stances.Idle);
-
-            // NO ART, NO BREATH, and the check is IsEmpty rather than
-            // FrameCount because those are now different questions. A figure
-            // with a single drawing is exactly the case the transform breath
-            // exists for; a figure with NO drawing is a fallback plate, and a
-            // UI frame that swells and settles reads as a rendering fault.
-            if (animation.IsEmpty)
+            // NO ART, NO BREATH. A figure with no drawing is a fallback plate,
+            // and a UI frame that swells and settles reads as a rendering
+            // fault rather than as a creature.
+            if (StanceSpriteFor(combatant, FightSession.Stances.Idle) == null)
             {
                 BreatheFigure(combatant, 0f);
-                HideBlend(combatant);
-                return false;
-            }
-
-            // NOT FrameHoldCurve, and not a flat step either.
-            //
-            // FrameHoldCurve shapes a motion around its impact frame -- a long
-            // wind-up, a snap, a long settle -- which is right for a blow and
-            // wrong for a loop, since an idle authors impactFrame 1 because it
-            // has no impact. A flat step is what made this read as "a loop of 6
-            // sprites" in the first place. LoopCycle owns both halves of the
-            // answer and its header carries the measurements.
-            float perFrame = FightBeatPlayer.Scaled(animation.SecondsPerFrame);
-            if (perFrame <= 0f)
-            {
-                // Cleared rather than left alone. Nothing STOPS pushing a
-                // breath, so an early return that skips the push freezes the
-                // figure at whatever point of the cycle it reached.
-                BreatheFigure(combatant, 0f);
-                return false;
+                return;
             }
 
             if (!_idleClock.TryGetValue(combatant, out float clock))
             {
-                clock = index * perFrame * IdlePhaseFrames;
+                clock = BreathCurve.PhaseFor(index);
             }
 
             // UNSCALED BY BeatSpeedMultiplier, like every other clock on this
@@ -1111,45 +781,9 @@ namespace PrincesPalace
             clock += Time.unscaledDeltaTime * BreathSpeedMultiplier;
             _idleClock[combatant] = clock;
 
-            // THE TRANSFORM HALF OF THE BREATH, and it runs for every idle
-            // figure rather than only for the three with a six-frame sheet.
-            // That is the point of it: the rat, the golem, the bog witch and
-            // Shawn have one drawing each and stood perfectly still through
-            // every fight.
-            //
-            // OFFSET SEPARATELY from the sheet loop, not sharing
-            // IdlePhaseFrames. Two figures' DRAWINGS are separated in units of
-            // their own sheet's pace; their BREATHS are separated against a
-            // fixed period, so deriving one from the other would make a slow
-            // sheet separate its breaths less. See BreathCurve.PhaseFor.
             BreatheFigure(combatant,
-                BreathCurve.At(clock + BreathCurve.PhaseFor(index),
-                               StanceManifestLoader.Manifest.BreathFor(
-                                   SpriteFolderFor(combatant), animation.FrameCount)));
-
-            if (animation.FrameCount <= 1)
-            {
-                HideBlend(combatant);
-                return false;
-            }
-
-            int frame = LoopCycle.FrameAt(clock, animation.FrameCount, perFrame, animation.Loop,
-                                          FightBeatPlayer.Scaled(animation.EndHoldSeconds));
-
-            // EVERY TICK, not only when the index turns over -- the whole point
-            // is the motion BETWEEN two drawings, so this cannot be gated on
-            // `moved` the way the repaint below is. Cheap enough to run
-            // unconditionally: one sprite assignment and one colour write per
-            // idle figure, no layout and no RefreshStage.
-            StepIdleBlend(combatant, animation, clock, perFrame, frame);
-
-            if (FrameFor(combatant) == frame) return false;
-
-            // Written straight into the map rather than through SetActorFrame,
-            // which would repaint the stage per combatant -- see the batching
-            // note in IdleBreathing.
-            _actorFrame[combatant] = frame;
-            return true;
+                BreathCurve.At(clock,
+                               StanceManifestLoader.Manifest.BreathFor(SpriteFolderFor(combatant))));
         }
 
         // Puts every figure back for a fresh encounter. The fade is the reason
@@ -1157,27 +791,25 @@ namespace PrincesPalace
         // fight invisible, and its slot is reused rather than rebuilt.
         private void ResetStagePresentation()
         {
-            // These three are `static readonly Dictionary`s keyed by folder
-            // (+stance+frame) -- they cache a PIXEL MEASUREMENT taken the
+            // Both of these are `static readonly Dictionary`s keyed by folder
+            // -- they cache a PIXEL MEASUREMENT taken the
             // first time each key is asked for, and nothing ever invalidated
             // them. Resources.Load happily picks up a re-sliced/re-ordered
             // sprite the moment its .meta reimports, but these dictionaries
             // do not know that happened -- a script recompile clears them
             // (new static instances on domain reload), but an ASSET-ONLY
-            // edit (repainting/re-slicing/re-nudging an enemy's frames,
-            // exactly what iterating on stage art actually is) does not
+            // edit (repainting or re-slicing an enemy's stances, exactly
+            // what iterating on stage art actually is) does not
             // recompile anything, so a long-lived Editor session can carry
             // a stale measurement for hours after the art it was taken from
             // is gone. Symptom: a frame-drift fix that is provably correct
             // on disk (measured directly off the delivered PNGs) still
-            // wobbles on stage, because SidewaysDrift/PlaceShadow/the badge
-            // are all still positioning off the OLD numbers. Clearing once
-            // per fight costs a few pixel-scans (a handful of enemies, a
-            // few frames each) against never risking this again.
+            // wobbles on stage, because PlaceShadow and the intent badge
+            // are both still positioning off the OLD numbers. Clearing once
+            // per fight costs a few pixel-scans (a handful of enemies, one
+            // drawing each) against never risking this again.
             ContentCentreCache.Clear();
             ContentTopCache.Clear();
-            FrameCentreCache.Clear();
-            OneCanvasCache.Clear();
 
             _confirmedDefeated.Clear();
 
@@ -1271,41 +903,25 @@ namespace PrincesPalace
             return SpriteFacing.Right;
         }
 
-        // The one funnel every stage sprite paints through. RefreshStage calls it
-        // on every repaint, so it is also the one place a combatant's CURRENT
-        // frame has to be read, not just its stance.
-        private Sprite LoadStanceSprite(CombatantState combatant, string stance)
-        {
-            var animation = StanceAnimationFor(combatant, stance);
-            if (animation.IsEmpty) return null;
-
-            int frame = _actorFrame.TryGetValue(combatant, out var f) ? f : 0;
-            return animation.FrameAt(frame);
-        }
-
-        // The seam FightBeatPlayer actually drives: how this combatant's
-        // chosen stance plays, regardless of which art style is underneath.
-        //
-        private IStancePlayback PlaybackFor(CombatantState combatant, string stance, System.Func<bool> abandon)
-        {
-            var animation = StanceAnimationFor(combatant, stance);
-            return new FrameStancePlayback(combatant, animation, SetActorFrame, abandon);
-        }
-
-        // Falls back through requested stance -> idle. A sheet is allowed to be
-        // missing a pose (only idle is really mandatory), and a monster frozen in
-        // the wrong-but-present pose beats one that blinks out of existence
+        // The one drawing this combatant is showing, falling back through
+        // requested stance -> idle. A kit is allowed to be missing a pose (only
+        // idle is really mandatory), and a monster frozen in the
+        // wrong-but-present pose beats one that blinks out of existence
         // mid-fight.
-        public StanceAnimation StanceAnimationFor(CombatantState combatant, string stance)
+        //
+        // Public so a PlayMode test can assert a stance actually resolved: the
+        // visible result of a miss is the fallback plate, which looks like a
+        // layout choice rather than like missing art.
+        public Sprite StanceSpriteFor(CombatantState combatant, string stance)
         {
             string folder = SpriteFolderFor(combatant);
-            if (string.IsNullOrWhiteSpace(folder)) return StanceAnimation.Empty;
+            if (string.IsNullOrWhiteSpace(folder)) return null;
 
-            var animation = StanceAnimationLibrary.Resolve(folder, stance);
-            if (!animation.IsEmpty) return animation;
+            var sprite = StanceAnimationLibrary.Resolve(folder, stance);
+            if (sprite != null) return sprite;
 
             return stance == FightSession.Stances.Idle
-                ? StanceAnimation.Empty
+                ? null
                 : StanceAnimationLibrary.Resolve(folder, FightSession.Stances.Idle);
         }
 
@@ -1315,23 +931,23 @@ namespace PrincesPalace
             if (ContentCentreCache.TryGetValue(folder, out var cached)) return cached;
 
             var idle = StanceAnimationLibrary.Resolve(folder, FightSession.Stances.Idle);
-            float centre = idle.IsEmpty ? 0f : ContentCentreFraction(idle.FrameAt(0));
+            float centre = ContentCentreFraction(idle);
             ContentCentreCache[folder] = centre;
             return centre;
         }
 
-        // How far the topmost opaque pixel of the IDLE pose sits above the frame's
-        // bottom, in frame pixels. Cached per actor.
+        // How far the topmost opaque pixel of the IDLE pose sits above the
+        // canvas's bottom, in canvas pixels. Cached per actor.
         //
-        // This exists because a slot is sized to the sprite's FRAME, and a frame
-        // is cut to fit the tallest pose on the sheet -- so an idle golem leaves
-        // a great deal of empty canvas above its head. Pinning the intent badge
-        // to the frame's top put the golem's badge 106px above it, floating in
-        // open sky next to somebody else's HP plate, while the rat's and the
-        // witch's looked fine. It read as a bug in the badge rather than as the
-        // frame being taller than the pose.
+        // This exists because a slot is sized to the sprite's CANVAS, and an
+        // actor's canvas is cut to fit its tallest pose -- so an idle golem
+        // leaves a great deal of empty space above its head. Pinning the intent
+        // badge to the canvas top put the golem's badge 106px above it,
+        // floating in open sky next to somebody else's HP plate, while the
+        // rat's and the witch's looked fine. It read as a bug in the badge
+        // rather than as the canvas being taller than the pose.
         //
-        // Measured rather than authored, and from the IDLE frame only, for the
+        // Measured rather than authored, and from the IDLE pose only, for the
         // same reasons ContentCentreFraction is: a pose that raises an arm must
         // not drag the badge up with it, and one more authored number per actor
         // is a number that can rot. The ground line stays authored -- that one is
@@ -1342,7 +958,7 @@ namespace PrincesPalace
             if (ContentTopCache.TryGetValue(folder, out var cached)) return cached;
 
             var idle = StanceAnimationLibrary.Resolve(folder, FightSession.Stances.Idle);
-            float top = idle.IsEmpty ? 0f : ContentTop(idle.FrameAt(0));
+            float top = ContentTop(idle);
             ContentTopCache[folder] = top;
             return top;
         }

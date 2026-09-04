@@ -398,7 +398,7 @@ namespace PrincesPalace.PlayModeTests
             Click("EnemyPlate0");
 
             // A still-drawing Lunge (this fixture has no art on either side)
-            // spends StaticStancePlayback's wind-up before its number pops --
+            // spends StaticSwing's wind-up before its number pops --
             // a frame or two at 60x, not zero -- so this waits for the popup
             // rather than sampling the frame after the click.
             float deadline = Time.realtimeSinceStartup + 2f;

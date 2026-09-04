@@ -2,7 +2,7 @@ namespace PrincesPalace
 {
     // WHERE THE MELEE CONTACT CUES LIVE, all in one place.
     //
-    // Three different files fire these -- StaticStancePlayback plays the
+    // Three different files fire these -- StaticSwing plays the
     // whoosh at the top of the crouch, FightController.PlayContactFx plays the
     // two frame sequences and the thud at the impact instant -- and they have
     // to agree about which asset is which. A path spelled twice is a cue that

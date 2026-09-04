@@ -10,7 +10,7 @@ using UnityEditor;
 //
 // It has to be an importer rule rather than a one-off fix because these
 // assets are dropped in by hand (a generated sheet sliced by
-// tools/slice_enemy_sheet.py) and are NOT referenced by any scene, so
+// tools/slice_actor_sheet.py) and are NOT referenced by any scene, so
 // SceneBuilder's LoadSprite — which is what coerces textureType for every
 // other sprite in the project — never touches them. A future enemy sheet
 // would otherwise hit exactly the same invisible failure.

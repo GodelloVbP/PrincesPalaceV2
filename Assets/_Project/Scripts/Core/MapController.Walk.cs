@@ -63,8 +63,7 @@ namespace PrincesPalace
             string folder = definition != null ? definition.battleSpritePath : null;
             if (string.IsNullOrWhiteSpace(folder)) return;
 
-            var animation = StanceAnimationLibrary.Resolve(folder, WalkStance);
-            var sprite = animation.FrameCount > 0 ? animation.FrameAt(0) : null;
+            var sprite = StanceAnimationLibrary.Resolve(folder, WalkStance);
             if (sprite == null) return;
 
             walker.sprite = sprite;

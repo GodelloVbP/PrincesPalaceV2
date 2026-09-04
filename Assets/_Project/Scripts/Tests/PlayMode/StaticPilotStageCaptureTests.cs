@@ -422,7 +422,7 @@ namespace PrincesPalace.PlayModeTests
 
             foreach (string stance in new[] { "idle", "attack" })
             {
-                Assert.IsFalse(StanceAnimationLibrary.Resolve(enemy.spritePath, stance).IsEmpty,
+                Assert.IsNotNull(StanceAnimationLibrary.Resolve(enemy.spritePath, stance),
                     $"{EnemyId} has no '{stance}' art, so the pilot would photograph a nameplate");
             }
 

@@ -156,41 +156,47 @@ namespace PrincesPalace.PlayModeTests
                 "the menu did not return to the root, so no second turn could be taken");
         }
 
+        // A STILL DRAWING STILL HAS TO SWING, and the swing is the only thing
+        // that can carry it: there are no frames to step, so if the transform
+        // does not move the figure then nothing happened at all.
+        //
+        // Sampled while the beat is mid-flight, because the round ends back on
+        // the mark either way -- checking afterwards would pass whether or not
+        // the figure ever left it. The same shape StaticPilotStageCaptureTests
+        // records over a whole beat, asserted here on the party leader.
         [UnityTest]
-        public IEnumerator AMultiFrameStanceActuallyAnimates()
+        public IEnumerator AStillDrawingSwingCarriesTheFigureAndBringsItBack()
         {
-            // The last missing piece. Both sheep and golem author multi-frame
-            // attacks, so a beat should walk the actor through them rather than
-            // holding frame 0 for the whole swing.
             yield return OpenTheScene();
 
             var hero = _fight.Session.Encounter.PlayerParty[0];
-            var attack = _fight.StanceAnimationFor(hero, FightSession.Stances.Attack);
 
-            // ASSERTED, not skipped. The comment above already states the design
-            // -- both sheep and golem author multi-frame attacks -- so a party
-            // leader whose attack is one flat frame is a content regression, and
-            // skipping would hide exactly the case that makes this test's
-            // subject disappear.
-            Assert.Greater(attack.FrameCount, 1,
-                "the party leader's attack is a single flat frame, so there is nothing for a beat to step through");
+            // ASSERTED, not skipped: a party leader with no attack drawing
+            // would make this pass by never being asked to swing.
+            Assert.IsNotNull(_fight.StanceSpriteFor(hero, FightSession.Stances.Attack),
+                "the party leader has no attack drawing, so there is nothing for a beat to show");
+
+            var slot = (RectTransform)Named("Party0Slot").transform;
+            var animator = slot.GetComponent<StageActorAnimator>();
+            Assert.IsNotNull(animator, "the party slot has no animator, so nothing can lunge");
 
             Click("Verb0");
             Click("EnemyPlate0");
 
-            // Sampled while the beat is mid-flight rather than after it, because
-            // the round ends back on idle at frame 0 -- checking afterwards would
-            // pass whether or not a single frame was ever shown.
-            int highest = 0;
+            float travelled = 0f;
             float deadline = Time.realtimeSinceStartup + 10f;
             while (_fight.IsBusy && Time.realtimeSinceStartup < deadline)
             {
-                highest = Mathf.Max(highest, _fight.FrameFor(hero));
+                travelled = Mathf.Max(travelled,
+                    Vector2.Distance(slot.anchoredPosition, animator.Home));
                 yield return null;
             }
 
-            Assert.Greater(highest, 0,
-                $"the actor never advanced past frame 0 of its {attack.FrameCount}-frame attack");
+            Assert.IsFalse(_fight.IsBusy, "playback never finished");
+            Assert.Greater(travelled, 1f,
+                "the attacker never left its mark, so a single-drawing swing showed nothing at all");
+            Assert.Less(Vector2.Distance(slot.anchoredPosition, animator.Home), 1f,
+                "the attacker never came home, so it fights the next round from wherever it stopped");
         }
     
         // ---- the one that has to be looked at ------------------------------------

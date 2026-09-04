@@ -20,7 +20,7 @@ namespace PrincesPalace.Domain.Stage
     // WHICH DRAWING A LOOPING STANCE IS SHOWING, given a clock.
     //
     // In Domain, and not beside the coroutine that calls it, for the reason
-    // FrameHoldCurve and HitStop are here: this is arithmetic about a number,
+    // BreathCurve and HitStop are here: this is arithmetic about a number,
     // it decides what the stage looks like at rest, and a rule an EditMode
     // test cannot reach is a rule nothing checks.
     //

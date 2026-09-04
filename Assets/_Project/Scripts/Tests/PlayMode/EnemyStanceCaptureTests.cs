@@ -27,7 +27,7 @@ namespace PrincesPalace.PlayModeTests
     // the frames were cropped independently.
     //
     // So this asserts the two halves a test CAN check -- every authored stance
-    // resolves to a real sprite, and every frame of an actor shares one canvas
+    // resolves to a real sprite, and every stance of an actor shares one canvas
     // -- and then writes a contact sheet for the half it cannot, which is
     // whether the creature looks right.
     //
@@ -39,14 +39,21 @@ namespace PrincesPalace.PlayModeTests
             Path.GetFullPath(Path.Combine(
                 Directory.GetParent(Application.dataPath).FullName, "tools", "screenshots", "runtime"));
 
-        // The two kits this file was written for, and their stances -- read
-        // from content where the fight drives them and named here where a skill
+        // The kits this file was written for, and their stances -- read from
+        // content where the fight drives them and named here where a skill
         // does, because a skill's stance is a string on a ScriptableObject and
         // "which stances does this monster have" has no other home.
+        //
+        // The Forest Warden earns its place alongside the other two: its six
+        // drawings arrived on six DIFFERENT canvases each (a per-frame crop
+        // plus a uniform pad, which is not a registration) and were
+        // recomposited onto one, so it is the one kit on the roster whose
+        // one-canvas promise was made by hand rather than by the slicer.
         private static readonly Dictionary<string, string[]> Kits = new Dictionary<string, string[]>
         {
             ["beetle"] = new[] { "idle", "attack", "turtle_up", "shell_closed", "hurt", "defeated" },
             ["treant"] = new[] { "idle", "attack", "trunk_slam", "cast", "hurt", "defeated" },
+            ["forest_warden"] = new[] { "idle", "attack", "attack_roar", "attack_charge", "hurt", "defeated" },
         };
 
         [SetUp]
@@ -67,12 +74,11 @@ namespace PrincesPalace.PlayModeTests
             go.GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
         }
 
-        // A stance folder that fails to load is INVISIBLE at runtime -- the
-        // stage falls through to its nameplate and nothing logs. The same
-        // silent failure EnemySpriteImportPostprocessor exists to stop, checked
-        // for the two kits that postprocessor has never seen before.
+        // A stance that fails to load is INVISIBLE at runtime -- the stage
+        // falls through to its nameplate and nothing logs. The same silent
+        // failure EnemySpriteImportPostprocessor exists to stop.
         [Test]
-        public void EveryAuthoredStanceResolvesToRealFrames()
+        public void EveryAuthoredStanceResolvesToADrawing()
         {
             var missing = new List<string>();
 
@@ -80,8 +86,7 @@ namespace PrincesPalace.PlayModeTests
             {
                 foreach (string stance in stances)
                 {
-                    var frames = Resources.LoadAll<Sprite>($"Enemies/{id}/{stance}");
-                    if (frames == null || frames.Length == 0)
+                    if (Resources.Load<Sprite>($"Enemies/{id}/{stance}") == null)
                     {
                         missing.Add($"Enemies/{id}/{stance}");
                     }
@@ -89,19 +94,19 @@ namespace PrincesPalace.PlayModeTests
             }
 
             Assert.IsEmpty(missing,
-                "these stance folders load nothing, so the stage shows a nameplate instead of a monster: " +
+                "these stances load nothing, so the stage shows a nameplate instead of a monster: " +
                 string.Join(", ", missing));
         }
 
         // ONE CANVAS PER ACTOR, which is what makes StanceManifest's single
         // authored ground line mean anything: the stage sizes each slot to the
-        // sprite it is showing (FightController.StageVisuals), so frames of
-        // different sizes move the figure by the difference. Both these kits
-        // arrived cropped per frame and were re-delivered onto a shared canvas
-        // by tools/pad_actor_frames.py -- this is that delivery asserted rather
+        // sprite it is showing (FightController.StageVisuals), so drawings of
+        // different sizes move the figure by the difference as it changes pose.
+        // Every one of these kits was composited onto its shared canvas by the
+        // slicer's ground-band anchor -- this is that delivery asserted rather
         // than trusted.
         [Test]
-        public void EveryFrameOfAnActorSharesOneCanvas()
+        public void EveryStanceOfAnActorSharesOneCanvas()
         {
             foreach (var (id, stances) in Kits.Select(k => (k.Key, k.Value)))
             {
@@ -109,18 +114,16 @@ namespace PrincesPalace.PlayModeTests
 
                 foreach (string stance in stances)
                 {
-                    foreach (var frame in Resources.LoadAll<Sprite>($"Enemies/{id}/{stance}"))
-                    {
-                        sizes[$"{stance}/{frame.name}"] = frame.rect.size;
-                    }
+                    var sprite = Resources.Load<Sprite>($"Enemies/{id}/{stance}");
+                    if (sprite != null) sizes[stance] = sprite.rect.size;
                 }
 
-                Assert.IsNotEmpty(sizes, $"{id} has no frames at all");
+                Assert.IsNotEmpty(sizes, $"{id} has no drawings at all");
 
                 var distinct = sizes.Values.Distinct().ToList();
                 Assert.AreEqual(1, distinct.Count,
-                    $"{id}'s frames span {distinct.Count} canvas sizes, so it changes size and position as it " +
-                    $"animates: {string.Join(", ", sizes.Take(8).Select(p => $"{p.Key}={p.Value}"))}");
+                    $"{id}'s stances span {distinct.Count} canvas sizes, so it changes size and position as it " +
+                    $"changes pose: {string.Join(", ", sizes.Take(8).Select(p => $"{p.Key}={p.Value}"))}");
             }
         }
 
@@ -128,7 +131,7 @@ namespace PrincesPalace.PlayModeTests
         // on its own canvas bottom -- which for a padded canvas is 12px of
         // nothing, and reads as hovering.
         [Test]
-        public void BothKitsAreInTheStanceManifest()
+        public void EveryKitIsInTheStanceManifest()
         {
             foreach (string id in Kits.Keys)
             {
@@ -187,7 +190,7 @@ namespace PrincesPalace.PlayModeTests
                 foreach (string stance in wanted)
                 {
                     probed++;
-                    if (StanceAnimationLibrary.Resolve(enemy.spritePath, stance).IsEmpty)
+                    if (StanceAnimationLibrary.Resolve(enemy.spritePath, stance) == null)
                     {
                         missing.Add($"{enemy.id}:{stance}");
                     }
@@ -198,133 +201,6 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsEmpty(missing,
                 "these monsters can reach a pose they have no art for, and will show a nameplate " +
                 "(or nothing) on the turn they do: " + string.Join(", ", missing));
-        }
-
-        // ---- the pose nobody was watching -------------------------------------
-
-        // A CORPSE HAS TO FINISH FALLING. FightBeatPlayer steps frames for the
-        // beat's actor only, which is right for a swing and wrong for a death:
-        // the thing that dies is the TARGET, so a body held frame 0 of its
-        // defeated pose and then faded.
-        //
-        // Every kit that predates the Beetle hid this, because their defeated
-        // art opens already collapsed -- frame 0 is a body on the floor. The
-        // Beetle's runs from standing through the flip onto its back, so it
-        // died by standing still, and that is what a player reported.
-        //
-        // Sampled MID-FADE rather than after, for the reason FightController's
-        // own FrameFor comment gives: everything ends back on frame 0 either
-        // way, so the only place an animation is visible is while it runs.
-        [UnityTest]
-        public IEnumerator ADefeatedBodyStepsThroughItsOwnFrames()
-        {
-            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
-
-            var fight = Object.FindAnyObjectByType<FightController>();
-            Assert.IsNotNull(fight);
-
-            var beetle = ContentDatabase.Enemies.FirstOrDefault(e => e.id == "beetle");
-            Assert.IsNotNull(beetle, "beetle is not in the content database");
-
-            int frames = StanceAnimationLibrary.Resolve(beetle.spritePath, "defeated").FrameCount;
-            Assert.Greater(frames, 1,
-                "the beetle's defeated pose is a single frame, so this pin proves nothing");
-
-            // One swing kills it, and Shawn goes first.
-            var hero = new CombatantState("Shawn", true, 300, 30, 400, 20);
-            var doomed = new CombatantState(beetle.displayName, false, 1, 0, 1, 1);
-
-            var encounter = new CombatEncounter(new[] { hero }, new[] { doomed });
-            var session = new FightSession(encounter,
-                new List<PlayerKit> { null },
-                new List<EnemyKit> { new EnemyKit(FightEncounterAdapter.Resolve(beetle), false) },
-                new Domain.Rng.SeededRandom(4));
-
-            session.Begin();
-            fight.Bind(session, EncounterClass.Normal);
-            yield return null;
-
-            // THROUGH THE BUTTONS, not through the session. The death
-            // animation is driven from FadeTheFallen, which only runs while
-            // FightBeatPlayer is playing a beat -- so calling
-            // session.ExecuteAttack directly resolves the combat and skips the
-            // entire presentation layer this test is about. That mistake is
-            // worth a comment because the test still goes red when it is made,
-            // and it goes red pointing at the code under test.
-            Click(fight, "Verb0");
-            Click(fight, "EnemyPlate0");
-
-            // Watched rather than waited out: the highest frame the body ever
-            // reaches is the assertion, and it is only true for an instant.
-            int highest = 0;
-            for (float t = 0f; t < 5f; t += Time.deltaTime)
-            {
-                highest = Mathf.Max(highest, fight.FrameFor(doomed));
-                if (highest >= frames - 1) break;
-                yield return null;
-            }
-
-            Assert.IsFalse(doomed.IsAlive, "fixture: the swing should have killed it");
-
-            Assert.AreEqual(frames - 1, highest,
-                $"the body never got past frame {highest} of {frames}. A defeated pose that does not " +
-                "step is a death animation nobody sees -- and for a kit whose first frame is still " +
-                "standing, it is a monster that dies by not moving.");
-        }
-
-        // THE SAME BUG ONE POSE OVER. "Only the beat's actor animates" was the
-        // real rule, and it is wrong twice: for the body that dies (above) and
-        // for the body that is merely hit. A six-frame flinch held frame 0 and
-        // looked like a monster that had not noticed.
-        //
-        // Survives the blow deliberately -- a kill would route the pose to
-        // defeated and test the other fix instead.
-        [UnityTest]
-        public IEnumerator AStruckBodyStepsThroughItsFlinch()
-        {
-            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
-            yield return null;
-            yield return null;
-
-            var fight = Object.FindAnyObjectByType<FightController>();
-            Assert.IsNotNull(fight);
-
-            var beetle = ContentDatabase.Enemies.FirstOrDefault(e => e.id == "beetle");
-            Assert.IsNotNull(beetle);
-
-            int frames = StanceAnimationLibrary.Resolve(beetle.spritePath, "hurt").FrameCount;
-            Assert.Greater(frames, 1, "the beetle's hurt pose is a single frame, so this pin proves nothing");
-
-            var hero = new CombatantState("Shawn", true, 300, 30, 20, 20);
-            var struck = new CombatantState(beetle.displayName, false, 9000, 0, 1, 1);
-
-            var encounter = new CombatEncounter(new[] { hero }, new[] { struck });
-            var session = new FightSession(encounter,
-                new List<PlayerKit> { null },
-                new List<EnemyKit> { new EnemyKit(FightEncounterAdapter.Resolve(beetle), false) },
-                new Domain.Rng.SeededRandom(4));
-
-            session.Begin();
-            fight.Bind(session, EncounterClass.Normal);
-            yield return null;
-
-            Click(fight, "Verb0");
-            Click(fight, "EnemyPlate0");
-
-            int highest = 0;
-            for (float t = 0f; t < 5f; t += Time.deltaTime)
-            {
-                highest = Mathf.Max(highest, fight.FrameFor(struck));
-                if (highest >= frames - 1) break;
-                yield return null;
-            }
-
-            Assert.IsTrue(struck.IsAlive, "fixture: it was supposed to survive and flinch, not die");
-            Assert.AreEqual(frames - 1, highest,
-                $"the struck body never got past frame {highest} of {frames} -- it takes the hit " +
-                "without moving.");
         }
 
         // ---- the picture ------------------------------------------------------
@@ -371,14 +247,9 @@ namespace PrincesPalace.PlayModeTests
             fight.Bind(session, EncounterClass.Normal);
 
             // Long enough for the stage to settle -- the fly-in, the plates,
-            // the shadows.
-            //
-            // NOT long enough for the idle to have moved, because nothing
-            // animates an idle: no code path steps frames for a stance the
-            // beat player is not driving, so both kits' six-frame breathing
-            // sits on frame 0 forever. This comment used to claim the wait was
-            // for exactly that, which was wishful. When an idle loop exists,
-            // this is where it would start being worth waiting for.
+            // the shadows. Both figures are mid-breath by then, and where in
+            // the breath is deterministic (BreathCurve.PhaseFor off the slot
+            // index), so the shot does not differ run to run.
             yield return new WaitForSecondsRealtime(1.2f);
 
             var canvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)

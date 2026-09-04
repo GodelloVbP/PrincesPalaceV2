@@ -1,29 +1,33 @@
 {
   "_comment": [
-    "WHERE AN ACTOR'S FEET ARE, AND HOW ITS ANIMATIONS ARE TIMED -- authored,",
-    "not guessed. Before this file the runtime inferred all three of those",
-    "numbers by scanning pixels and applying global constants, and every",
-    "inference was eventually wrong about something: the golem's ground slam",
-    "erupts an earth spike ~50px BELOW its feet and Shawn's idle plants a staff",
-    "~33px below his, so a scan for 'the lowest opaque pixel' read both as the",
-    "floor and hoisted the figures off the ground. See docs/ART_PIPELINE.md.",
+    "WHERE AN ACTOR'S FEET ARE, AND HOW HARD IT BREATHES -- authored, not",
+    "guessed. Before this file the runtime inferred the ground line by scanning",
+    "pixels and applying a global constant, and the inference was eventually",
+    "wrong about something: the golem's ground slam erupts an earth spike ~50px",
+    "BELOW its feet and Shawn's idle plants a staff ~33px below his, so a scan",
+    "for 'the lowest opaque pixel' read both as the floor and hoisted the",
+    "figures off the ground. See docs/ART_PIPELINE.md.",
     "",
     "groundLine: pixels from the sprite canvas's BOTTOM EDGE up to the surface",
     "the figure stands on. One value per actor, not per stance, because a",
     "character's feet do not move relative to their own art -- only the effects",
-    "drawn around them do. That is what stops a figure jumping between poses.",
+    "drawn around them do. That is what stops a figure jumping between poses,",
+    "and it is only meaningful because every one of an actor's stances is",
+    "sliced onto ONE shared canvas (docs/STANCE_SHEET_SPEC.md).",
     "",
     "breath: how hard this creature breathes, as a multiplier on the transform",
-    "breath every idle figure now carries (see Domain/Stage/BreathCurve). It is",
-    "the one number here that is a JUDGEMENT rather than a measurement, so it is",
-    "also the one with a rule behind it: unset means 1.0 for an actor whose idle",
-    "is a single drawing and 0.35 for one whose sheet already moves. Author it",
-    "only where that rule is wrong about a particular sheet. Negative means none.",
+    "breath every idle figure carries (see Domain/Stage/BreathCurve). It is the",
+    "one number here that is a JUDGEMENT rather than a measurement. Unset means",
+    "1.0 -- every stance in the game is now a single drawing, so the transform",
+    "breath is the only thing moving an idle figure and there is nothing for it",
+    "to compete with. Negative means none; nothing needs that today, a statue",
+    "would.",
     "",
-    "stances: only poses with MORE THAN ONE FRAME need an entry, since timing",
-    "is meaningless for a still. StanceManifestValidationTests fails if a",
-    "multi-frame stance is missing one, so this cannot silently fall behind the",
-    "art. Single-frame poses take the defaults in StanceManifestResolver.",
+    "There are no per-stance entries because there is no per-stance timing left",
+    "to author: a still has nothing to time. What used to live here",
+    "(secondsPerFrame, impactFrame, soundFrame, loop, endHold, returns) belonged",
+    "to frame sheets, and the wind-up a still swing needs is a transform move",
+    "rather than a drawing -- see StaticStancePlayback.",
     "",
     "Lives in Resources/ rather than ContentData/ because it is read at RUNTIME",
     "rather than baked by ContentBuilder, and deliberately NOT under",
@@ -32,159 +36,34 @@
   "actors": [
     {
       "spritePath": "Enemies/golem",
-      "groundLine": 69,
-      "stances": [
-        {
-          "stance": "attack",
-          "secondsPerFrame": 0.08,
-          "impactFrame": 3,
-          "soundFrame": 3
-        },
-        {
-          "stance": "cast",
-          "secondsPerFrame": 0.08,
-          "impactFrame": 3,
-          "soundFrame": 3
-        }
-      ]
+      "groundLine": 69
     },
     {
       "spritePath": "Enemies/rat",
       "groundLine": 8,
-      "_groundLineNote": "Dropped from 12 to 8 when the flat single-drawing idle was replaced by a 12-frame idle sheet -- re-slicing the whole actor together moves every stance onto one shared canvas, and 8 is what that canvas measures. Re-confirmed 2026-08-30 against the regenerated 3x4 idle sheet: still 8, now with all 29 poses agreeing within 1px (was 2px).",
-      "stances": [
-        {
-          "stance": "idle",
-          "secondsPerFrame": 0.16,
-          "impactFrame": 1,
-          "soundFrame": 1,
-          "_paceNote": "Doubled from 0.08 (2026-08-30) -- reported as breathing much too fast. 0.08 was inherited from the 6-frame sheet this stance used to have, where it meant 0.48s per half-breath; the 12-frame sheet kept the per-FRAME number and so ran the same motion in the same time with twice the frames, which is not the same animation. At 0.16 a half-breath is 1.92s and the full ping-pong cycle 3.84s, the slowest idle on the roster -- correct for a creature that is standing still and waiting. Compare beetle 6x0.20 (2.40s full) and treant 6x0.14 (1.68s full)."
-        },
-        {
-          "stance": "attack",
-          "secondsPerFrame": 0.08,
-          "impactFrame": 6,
-          "soundFrame": 6,
-          "_impactFrameNote": "Re-measured (2026-08-30) against the CURRENTLY delivered 12-frame sheet -- the previous note here (impactFrame 7, f6) was already stale, measured against an earlier version of this same sheet before it was re-sliced; the numbers it quoted (519px, next-highest 504px) do not match what is on disk now. Fresh measurement: f5 (0-indexed, so frame 6 here) has the furthest bbox right edge of all 12 delivered frames (608px, next-highest f6 at 570px), and is also visibly the peak of the leap by eye -- fully airborne, mouth widest, claws at full extension -- with f6 already showing the front paws landing. Re-measure again if this sheet is re-sliced; a note that says a specific pixel value is only true of one specific file on disk, not of 'the attack sheet' in general."
-        }
-      ]
+      "_groundLineNote": "Dropped from 12 to 8 when the whole actor was re-sliced onto one shared canvas; 8 is what that canvas measures, re-confirmed 2026-08-30 with every pose agreeing within 1px. Unchanged by the move to stills -- idle.png and attack.png are two of those same frames, on that same canvas."
     },
     {
       "spritePath": "Enemies/bog_witch",
-      "groundLine": 10.5,
-      "stances": []
+      "groundLine": 10.5
     },
     {
       "spritePath": "Characters/sheep",
-      "groundLine": 43,
-      "stances": [
-        {
-          "stance": "attack",
-          "secondsPerFrame": 0.08,
-          "impactFrame": 3,
-          "soundFrame": 3
-        }
-      ]
+      "groundLine": 43
     },
     {
       "spritePath": "Enemies/forest_warden",
-      "groundLine": 14,
-      "breath": 0.7,
-      "_breathNote": "Higher than the 0.35 a six-frame idle defaults to, because this sheet barely moves. Measured across its own delivered idle, aligned as the stage aligns it: the head travels 7px on a 470px figure, against the Treant's 22px on 425px. The default assumes a sheet that already breathes is doing a third of the work; this one is doing closer to a tenth, and the churn it does have (13% of the silhouette per step) is redrawing rather than motion. See BreathCurve.",
-      "_groundLineNote": "Every forest_warden frame was cropped independently to its own content bounding box plus a uniform 14px pad on every side, rather than sliced off one shared-canvas sheet the way golem/rat were -- so this value is that pad, not a measured foot position. It should hold well for idle/attack/attack_roar/attack_charge, where the feet are consistently each frame's lowest point; hurt and defeated change body orientation enough that a small vertical pop between stances is possible and worth an eyeball pass in the editor.",
-      "stances": [
-        {
-          "stance": "idle",
-          "secondsPerFrame": 0.12,
-          "impactFrame": 1,
-          "soundFrame": 1
-        },
-        {
-          "stance": "attack",
-          "secondsPerFrame": 0.08,
-          "impactFrame": 5,
-          "soundFrame": 5
-        },
-        {
-          "stance": "attack_roar",
-          "_note": "0.2 rather than the 0.1 every other Warden stance runs at, on request -- the roar reads as the fight's turning point and was over faster than its plain swing. Doubling the pace doubles the beat: FightBeatPlayer budgets a beat at secondsPerFrame x FrameCount, so nothing in code had to change for this.",
-          "secondsPerFrame": 0.2,
-          "impactFrame": 4,
-          "soundFrame": 4
-        },
-        {
-          "stance": "attack_charge",
-          "secondsPerFrame": 0.07,
-          "impactFrame": 5,
-          "soundFrame": 5
-        },
-        {
-          "stance": "hurt",
-          "secondsPerFrame": 0.08,
-          "impactFrame": 1,
-          "soundFrame": 1
-        },
-        {
-          "stance": "defeated",
-          "secondsPerFrame": 0.1,
-          "impactFrame": 1,
-          "soundFrame": 1
-        }
-      ]
+      "groundLine": 8,
+      "_groundLineNote": "Re-measured 2026-09-04. Was 14, which was never a foot position at all -- it was the uniform pad around six independently cropped frames per stance, and the entry admitted to a possible vertical pop between stances because of it. The six delivered stills were recomposited onto ONE 741x499 canvas by the same ground-band anchor slice_actor_sheet.py uses, so the pop is gone and this is a measured ground line like every other entry here."
     },
     {
       "spritePath": "Enemies/beetle",
-      "groundLine": 8,
-      "_deliveryNote": "Delivered via docs/STANCE_SHEET_SPEC.md's Stage 1/Stage 2 process -- one ChatGPT-generated animation sheet per stance, sliced by tools/slice_actor_sheet.py. Supersedes the earlier undocumented pad_actor_frames.py delivery. groundLine measured from the sliced idle sheet. The idle is a half-breath, ping-pong by default (see Domain/Stage/LoopCycle) -- not a complete cycle, so no loop override.",
-      "stances": [
-        {
-          "stance": "idle",
-          "secondsPerFrame": 0.2,
-          "impactFrame": 1,
-          "soundFrame": 1,
-          "endHold": 0.5,
-          "_idleNote": "Slower than the delivered 0.14 (it read as breathing too fast) with a half-second hold on the full-inhale peak -- endHold is dead time at the top of the ping-pong so the breath pauses there rather than lingering equally at both ends. See LoopCycle.FrameAt."
-        },
-        {
-          "stance": "attack",
-          "secondsPerFrame": 0.07,
-          "impactFrame": 3,
-          "soundFrame": 3
-        },
-        {
-          "stance": "turtle_up",
-          "secondsPerFrame": 0.07,
-          "impactFrame": 5,
-          "soundFrame": 5
-        },
-        {
-          "stance": "shell_closed",
-          "secondsPerFrame": 0.12,
-          "impactFrame": 1,
-          "soundFrame": 1,
-          "returns": true,
-          "_returnsNote": "Shell Up curls into the sealed ball (frames 1-6) then uncurls back to neutral (6-1) rather than snapping from the ball to idle. The uncurl is the curl played backwards -- no extra art. See StanceStepper.PlayReverse."
-        },
-        {
-          "stance": "hurt",
-          "secondsPerFrame": 0.08,
-          "impactFrame": 1,
-          "soundFrame": 1
-        },
-        {
-          "stance": "defeated",
-          "secondsPerFrame": 0.11,
-          "impactFrame": 1,
-          "soundFrame": 1
-        }
-      ]
+      "groundLine": 8
     },
     {
       "spritePath": "Enemies/treant",
       "groundLine": 8,
-      "_groundLineNote": "Six stills sliced from sheet_poses.png (2026-09-04), all on one 617x456 canvas; the slicer measured this ground line and every pose agrees within 0px. No stance entries because every pose is a single drawing -- FightBeatPlayer's static cues carry the motion.",
-      "stances": [
-      ]
+      "_groundLineNote": "Six stills sliced from sheet_poses.png (2026-09-04), all on one 646x478 canvas; the slicer measured this ground line and every pose agrees within 0px."
     }
   ]
 }

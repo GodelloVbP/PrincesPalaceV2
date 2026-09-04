@@ -528,7 +528,7 @@ namespace PrincesPalace
                 // the two impossible to disagree.
                 if (Has(enemyPlateIcons, i))
                 {
-                    var art = LoadStanceSprite(enemy, FightSession.Stances.Idle);
+                    var art = StanceSpriteFor(enemy, FightSession.Stances.Idle);
                     enemyPlateIcons[i].gameObject.SetShown(art != null);
                     if (art != null)
                     {

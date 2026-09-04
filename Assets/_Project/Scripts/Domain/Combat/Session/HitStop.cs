@@ -10,7 +10,7 @@ namespace PrincesPalace.Domain.Combat.Session
     // than a lot of real animation, and it costs no art at all.
     //
     // IN DOMAIN, not beside the coroutine that yields on it, and for the reason
-    // Domain/Stage/FrameHoldCurve and Domain/Ambience/FlickerCurve are here:
+    // Domain/Stage/BreathCurve and Domain/Ambience/FlickerCurve are here:
     // this is arithmetic about a number, it decides how a whole round is paced,
     // and a rule that cannot be reached from an EditMode test is a rule nothing
     // checks. FightBeatPlayer keeps the yielding, which genuinely needs an

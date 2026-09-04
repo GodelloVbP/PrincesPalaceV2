@@ -120,7 +120,7 @@ EditMode-testable):
 | `Relics/` | `RelicLoadout` (party-wide relic ownership/assignment) |
 | `Rewards/` | `CombatReward`, `CharacterReward`, offer tables |
 | `Rng/` | `SeededRandom` (built, not yet wired — see `AUDIT.md`) |
-| `Stage/` | Stage-side/depth/layout pure geometry, `SpriteFacing`, `StanceManifest` (authored ground lines + stance timing + per-actor breath), `BreathCurve` (the continuous scale transform every idle figure gets, sheet-driven or not — see its own header) |
+| `Stage/` | Stage-side/depth/layout pure geometry, `SpriteFacing`, `StanceManifest` (authored ground line + breath, one row per actor — no per-stance timing, because a stance is one drawing), `BreathCurve` (the continuous scale transform every idle figure gets, and the only thing that moves a figure between blows — see its own header), `LoopCycle` (frame-index arithmetic; no production caller since the stance sheets went, kept with its tests) |
 | `Stats/` | `StatBlock`, `StatType`, `AbilityDerivation` |
 
 ## Core map
@@ -140,8 +140,9 @@ binding constraint since it's a static class, not a MonoBehaviour),
 `BeaconPulse`, `SolidCircleImage`, `SpellVfxPlayer`), the ambient-motion
 primitives (`StarTwinkle`, `LanternFlicker`, `SlowDrift`, `MoteDrift`,
 `KenBurnsDrift` — see `docs/CODE_STANDARDS.md` §2), and
-`FrameSequenceLoader.cs` (the one f0..fN Resources probe behind
-`StanceAnimationLibrary`, `SpellVfxPlayer` and `HubBuildingAnimator`), and
+`FrameSequenceLoader.cs` (the one f0..fN Resources probe, behind
+`SpellVfxPlayer` and `HubBuildingAnimator` — spell and ambient effects still
+ship frame sequences; actor stances do not), and
 `ThemedButtonState.cs` (what `FightController.RefreshVerbs` distinguishes
 about a themed root's runtime state — hover/press/disabled — separate from
 the plate art `Ui.ApplyTheme` already baked in at build time).
@@ -299,20 +300,20 @@ are plain logic; only the PAINTING needs Unity.
 | `Core/FightBeatPlayer.cs` | playback, paint-first-then-move, `Flush` reclaims |
 | `Core/DamagePopup.cs` | the rise-and-fade, with `Reclaim` |
 | `Core/StageHitFlash.cs` | the white silhouette, over `Resources/Shaders/UIHitFlash.shader` |
-| `Core/ContactCues.cs` | the melee contact cues' asset paths, durations and box size — one home shared by `StaticStancePlayback` (the wind-up whoosh) and `FightController.PlayContactFx` (the arc, the burst, the thud) |
+| `Core/ContactCues.cs` | the melee contact cues' asset paths, durations and box size — one home shared by `StaticSwing` (the wind-up whoosh) and `FightController.PlayContactFx` (the arc, the burst, the thud) |
 
-**Phase 1 of the static-art pilot (`docs/STATIC_COMBAT_ART_DEEP_DIVE.md`) —
-the five cues a single-drawing actor's swing was missing.** Keyed on the CLASS
-of beat, never on a creature: a `StageApproach.Lunge` whose actor's playback
-reports `HasMotion == false`. Multi-frame actors are untouched.
+**The static-art pilot (`docs/STATIC_COMBAT_ART_DEEP_DIVE.md`) — the five
+cues a single-drawing actor's swing was missing.** Every actor is a single
+drawing per stance now, so the gate is purely the CLASS of beat, never a
+creature: a `StageApproach.Lunge` at a target that is somebody else.
 
 | File | What it adds |
 |---|---|
-| `Core/StancePerformance.cs` | `StaticStancePlayback` — wraps the resolved playback so the wind-up reports anticipation + travel, which is what moves the impact instant to when the figure actually arrives |
+| `Core/StaticSwing.cs` | the wind-up a still cannot draw — reports anticipation + travel as one number, which is what moves the impact instant to when the figure actually arrives, and plays the whoosh at the top of the crouch |
 | `Core/StageActorAnimator.cs` | `Play`'s optional `leadSeconds` (the crouch before the snap, `Anticipate`), and one afterimage at the contact position when `TweenBack` opens |
-| `Core/FightBeatPlayer.cs` | `PlaybackOf`'s wrap gate, the `PlayContactFx` delegate and `WantsContactFx` |
+| `Core/FightBeatPlayer.cs` | `IsStaticSwing`, the `PlayContactFx` delegate and `WantsContactFx` |
 | `Core/FightController.SpellVfx.cs` | `PlayContactFx`/`ContactBoxFor` — the arc and the burst through spell-pool members 0 and 1 |
-| Tests | `FightContactCueTests` (which beats get the effects), plus the `StaticStancePlayback` cases in `StancePerformanceTests` and `AnAnticipatedLungeStillEndsExactlyOnItsMark` in `StageAnimationTests` |
+| Tests | `FightContactCueTests` (which beats get the effects), the `StaticSwing` timing pin in `FightBeatPacingTests`, `AnAnticipatedLungeStillEndsExactlyOnItsMark` in `StageAnimationTests`, and `StaticPilotStageCaptureTests` (the whole beat, sampled and photographed) |
 
 Two measurements the plan said to make rather than predict, both now made --
 and the first one found a defect that had made every previous visual judgement
@@ -375,16 +376,15 @@ Actors, poses and grounding. Ported with its two hard-won rules intact, both of
 which were playtest bugs that read as art problems:
 
 - **The ground line comes from the manifest, never from measuring alpha.**
-  Delivered art disagrees about where feet sit inside the canvas, per FRAME.
-  Pinning the raw canvas to the floor made the golem jump 52px going
-  idle -> attack -- the "golem flies upwards in its attack" report. The runtime
-  used to scan for the lowest opaque pixel, which found the golem's earth spike
-  and Shawn's staff instead of their feet and hoisted both into the air. One
-  authored value per actor; `StanceManifestValidationTests` fails if it stops
-  matching the pixels, which is the case a measurement can never report because
-  it just believes whatever it finds.
-- **The shadow's X is still measured, and only from the idle frame**, so a pose
-  that swings an arm out cannot drag the ring sideways. Horizontal centring has
+  Delivered art does not put the feet on the canvas bottom. Pinning the raw
+  canvas to the floor made the golem jump 52px going idle -> attack -- the
+  "golem flies upwards in its attack" report. The runtime used to scan for the
+  lowest opaque pixel, which found the golem's earth spike and Shawn's staff
+  instead of their feet and hoisted both into the air. One authored value per
+  actor, which only works because all of an actor's drawings share one canvas
+  (`EnemyStanceCaptureTests.EveryStanceOfAnActorSharesOneCanvas`).
+- **The shadow's X is still measured, and only from the idle drawing**, so a
+  pose that swings an arm out cannot drag the ring sideways. Horizontal centring has
   never caused a bug -- an arm's width moves a ring a few pixels, where a
   mistaken floor moves a whole creature off the stage.
 
@@ -396,9 +396,9 @@ target if something landed, then returns everyone to idle so a pose belongs to t
 blow that caused it. The defeated stay defeated -- that is read from `IsAlive`, not
 from the beat. A skill authors its approach; a monster's plain attack authors one
 too via `attackApproach` on the enemy entry (both parse through
-`StageApproaches.Parse`). The idle's continuous `BreathCurve` scale and its
-per-actor `endHold` peak dwell (a beat held longer at the top of the ping-pong)
-are both driven from `.StageVisuals`'s idle stepper.
+`StageApproaches.Parse`). Between blows the only motion on stage is the
+continuous `BreathCurve` swell, driven per idle figure from `.StageVisuals`'s
+`IdleBreathing` loop — a transform write, not a repaint.
 
 Party art is a **parallel map** (`BindPartyArt`), deliberately not part of
 `PlayerKit`. The kit is what combat needs and a sprite folder is not that; v1

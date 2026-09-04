@@ -10,7 +10,7 @@ namespace PrincesPalace.Domain.Stage
     // populates fields -- see RawEnemyEntry for the same constraint. Numbers
     // are deliberately NOT nullable: JsonUtility cannot express absence, so
     // "unset" has to be an in-band sentinel rather than null, and the
-    // resolver below is what turns a sentinel into the documented default.
+    // resolver is what turns a sentinel into the documented default.
     [Serializable]
     public class RawStanceManifest
     {
@@ -33,73 +33,15 @@ namespace PrincesPalace.Domain.Stage
         // BreathCurve.FullAmplitude. See BreathCurve for the shape and for
         // what it is worth in pixels.
         //
-        // ZERO MEANS UNSET, the same in-band sentinel the three numbers on
-        // RawStanceTiming use and for the same reason: JsonUtility cannot
-        // express absence. The default that fills it in is not a constant --
-        // an actor whose sheet already breathes wants a third of what a single
-        // still drawing wants -- so see StanceManifest.BreathFor.
+        // ZERO MEANS UNSET, an in-band sentinel because JsonUtility cannot
+        // express absence, and the default it stands for is 1: a stance is a
+        // single drawing, so the transform breath is the only thing moving an
+        // idle figure and has nothing to share the motion with.
         //
         // A NEGATIVE VALUE MEANS NONE. It is the escape hatch the sentinel
         // costs: without it there would be no way to author "this thing does
         // not breathe", because the value that says so is the one that means
         // unset. Nothing needs it today; a statue would.
         public float breath;
-
-        public List<RawStanceTiming> stances = new List<RawStanceTiming>();
-    }
-
-    [Serializable]
-    public class RawStanceTiming
-    {
-        public string stance = "";
-
-        // Zero means "unset, take the default" for all three. A real
-        // animation cannot run at 0 seconds per frame or impact on frame 0
-        // (frames are 1-based), so the sentinel can never collide with a
-        // value someone meant to author.
-        public float secondsPerFrame;
-        public int impactFrame;
-        public int soundFrame;
-
-        // HOW LONG THE PEAK OF A PING-PONG IDLE IS HELD, in seconds, on top of
-        // the sweep. A breath that pauses at the top of the inhale reads as
-        // breathing rather than as a metronome; without this the raised cosine
-        // lingers equally at both ends, so "hold the full breath a beat longer"
-        // could not be said. Zero is unset and means no extra hold -- the
-        // symmetric linger LoopCycle always had. Ignored on anything that does
-        // not ping-pong, which has no single peak to dwell on.
-        public float endHold;
-
-        // HOW THIS STANCE PLAYS WHEN IT LOOPS. "forward" or "pingpong", and
-        // empty means the default -- ping-pong, because that is what an idle
-        // sheet almost always is (see LoopCycle). Only consulted for a stance
-        // something actually loops, which today is idle and nothing else, so
-        // authoring it on a swing is harmless and pointless.
-        //
-        // A STRING rather than the enum, for the reason SpellPresentation.anchor
-        // is one: JsonUtility writes an enum as its ordinal, so the file would
-        // read "loop": 1 and reordering the enum would silently repoint every
-        // sheet in the game.
-        public string loop = "";
-
-        // WHETHER THE FIGURE'S CENTRE IS HELD STILL ACROSS THE FRAMES.
-        //
-        // A three-state bool, because false has to be distinguishable from
-        // unset: "on" and "off" are both authored answers and the default
-        // differs by whether the stance loops. See StanceTiming.Steady.
-        public string steady = "";
-
-        // WHETHER THIS ONE-SHOT PLAYS BACK DOWN TO ITS FIRST FRAME.
-        //
-        // A "there and back" gesture: forward to the last drawing, then the
-        // same drawings in reverse to the first. The beetle's Shell Up curls
-        // into a sealed ball and this is what lets it UNCURL again rather than
-        // snapping from the ball straight to the idle stance.
-        //
-        // A plain bool, not the tri-state `steady` is: the default is off for
-        // every stance and nothing needs "explicitly off over a defaulted-on",
-        // so false-means-unset costs nothing here. Meaningless on a looping
-        // stance, which never ends to play back from.
-        public bool returns;
     }
 }

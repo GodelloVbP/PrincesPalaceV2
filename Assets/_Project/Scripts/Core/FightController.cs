@@ -32,7 +32,6 @@ namespace PrincesPalace
         [SerializeField] internal RectTransform[] enemySlots;
         [SerializeField] internal Image[] enemySprites;
         [SerializeField] internal Image[] enemyHitFlashes;
-        [SerializeField] internal Image[] enemyBlends;
         [SerializeField] internal TMP_Text[] enemyNameplates;
         [SerializeField] internal Image[] enemyFootShadows;
 
@@ -44,7 +43,6 @@ namespace PrincesPalace
         [SerializeField] internal StageShake[] stageShakes;
         [SerializeField] internal Image[] partySprites;
         [SerializeField] internal Image[] partyHitFlashes;
-        [SerializeField] internal Image[] partyBlends;
         [SerializeField] internal TMP_Text[] partyNameplates;
         [SerializeField] internal Image[] partyFootShadows;
 
@@ -396,7 +394,6 @@ namespace PrincesPalace
             beatPlayer.PaintVitals = PaintVitals;
             beatPlayer.PushLine = PushLogLine;
             beatPlayer.SetStance = PoseCombatant;
-            beatPlayer.PlaybackFor = PlaybackFor;
             beatPlayer.FlashTarget = FlashCombatant;
             beatPlayer.PlayVfx = PlaySpellVfx;
             beatPlayer.PlayContactFx = PlayContactFx;
@@ -432,27 +429,6 @@ namespace PrincesPalace
             for (int i = 0; i < party.Count && i < partySlots.Length; i++)
             {
                 if (ReferenceEquals(party[i], combatant)) return partySlots[i];
-            }
-
-            return null;
-        }
-
-        // The cross-dissolve layer for this combatant, or null. Indexed the
-        // same way SlotFor is -- position in the encounter's own list.
-        private Image BlendFor(CombatantState combatant)
-        {
-            if (_session == null || combatant == null) return null;
-
-            var enemies = _session.Encounter.Enemies;
-            for (int i = 0; i < enemies.Count && enemyBlends != null && i < enemyBlends.Length; i++)
-            {
-                if (ReferenceEquals(enemies[i], combatant)) return enemyBlends[i];
-            }
-
-            var party = _session.Encounter.PlayerParty;
-            for (int i = 0; i < party.Count && partyBlends != null && i < partyBlends.Length; i++)
-            {
-                if (ReferenceEquals(party[i], combatant)) return partyBlends[i];
             }
 
             return null;

@@ -43,7 +43,7 @@ namespace PrincesPalace
         // the transform standing in for those frames: a short load away from
         // the target, and the outbound tween is the release of it.
         //
-        // Internal, and read by StaticStancePlayback: the impact instant has
+        // Internal, and read by StaticSwing: the impact instant has
         // to be pushed back by exactly this much or the flash and the damage
         // number fire while the figure is still loading. One home, two
         // readers, no chance of them disagreeing.

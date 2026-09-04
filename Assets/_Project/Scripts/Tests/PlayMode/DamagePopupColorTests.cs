@@ -94,7 +94,7 @@ namespace PrincesPalace.PlayModeTests
 
         // THE BLOW NO LONGER LANDS ON THE FRAME AFTER THE CLICK. Neither
         // figure in this fixture has art, so both are still drawings, and a
-        // still-drawing Lunge now spends StaticStancePlayback's wind-up
+        // still-drawing Lunge now spends StaticSwing's wind-up
         // (anticipation plus the lunge itself) before the popup appears -- one
         // or two frames at 60x, where it used to be zero. Polled against a
         // deadline rather than counted in frames, because "how many frames"

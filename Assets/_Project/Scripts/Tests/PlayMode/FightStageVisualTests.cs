@@ -260,7 +260,7 @@ namespace PrincesPalace.PlayModeTests
             Click("Verb0");
             Click("EnemyPlate0");
 
-            // A still-drawing Lunge spends StaticStancePlayback's wind-up
+            // A still-drawing Lunge spends StaticSwing's wind-up
             // before the blow lands -- a frame or two at 60x -- so the flash
             // is waited for rather than read off the frame after the click.
             // What is asserted is unchanged: that it woke at all.

@@ -55,8 +55,9 @@ namespace PrincesPalace
             {
                 // Not a throw: an empty manifest resolves every actor to the
                 // canvas-bottom default, which is the stage's pre-manifest
-                // behaviour. StanceManifestValidationTests is what makes the
-                // absence loud, rather than a crash at runtime.
+                // behaviour. The warning is what makes the absence loud, rather
+                // than a crash at runtime -- and EnemyStanceCaptureTests asks
+                // per kit whether it has an entry at all.
                 Debug.LogWarning($"No stance manifest at Resources/{ResourcePath} -- every actor will fall back to " +
                                  "standing on its own canvas bottom, which is wrong for any art with padding below the feet.");
                 return new StanceManifest(null);

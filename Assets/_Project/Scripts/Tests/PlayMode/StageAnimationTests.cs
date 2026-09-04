@@ -150,83 +150,19 @@ namespace PrincesPalace.PlayModeTests
 
         // ---- the breath between blows ---------------------------------------
 
-        // NOBODY BREATHED, and every test in this file passed.
-        //
-        // Three actors ship a six-frame idle and the manifest authors a pace
-        // for each, and all three stood on frame 0 for the whole fight because
-        // nothing stepped them. This file's own header names the failure mode
-        // exactly -- an animation that is never driven is a silent no-op, not
-        // an error -- and then went on to test the three animations that DO
-        // belong to a beat while the one that belongs to no beat at all had no
-        // driver and no test.
-        //
-        // Asserted on a beetle specifically: the roster is mostly flat art, and
-        // a test that took whatever enemy happened to be handy would pass by
-        // testing a single-frame idle that legitimately never moves.
-        [UnityTest]
-        public IEnumerator AnIdleFigureBreathesWhileNothingIsHappening()
-        {
-            yield return AFightAgainst("Enemies/beetle");
-
-            var foe = _fight.SessionForTest.Encounter.Enemies[0];
-            Assert.AreEqual(FightSession.Stances.Idle, _fight.StanceFor(foe),
-                "the stage is not at rest, so this would be testing playback rather than the idle loop");
-
-            var seen = new HashSet<int>();
-            for (int i = 0; i < 90; i++)
-            {
-                seen.Add(_fight.FrameFor(foe));
-                yield return null;
-            }
-
-            Assert.Greater(seen.Count, 1,
-                "the idle pose never left frame 0 - a six-frame sheet is being shown as a still");
-        }
-
-        // The other half of the rule, and the reason the loop asks the sheet
-        // rather than a flag: flat art has one drawing and must simply sit on
-        // it. A loop that wrapped a single frame would repaint the whole stage
-        // every frame for a picture that never changes.
-        //
-        // Asserted on the golem, not the rat -- the rat shipped a 12-frame
-        // idle sheet (tools/slice_actor_sheet.py, 2026-08-29) and is no
-        // longer a single-frame-idle creature. The golem is: see the comment
-        // below on which of the roster still qualifies.
-        [UnityTest]
-        public IEnumerator FlatArtStaysPutRatherThanFlickering()
-        {
-            yield return AFightAgainst("Enemies/golem");
-
-            var foe = _fight.SessionForTest.Encounter.Enemies[0];
-
-            for (int i = 0; i < 30; i++)
-            {
-                Assert.AreEqual(0, _fight.FrameFor(foe),
-                    "a single-frame idle moved off its only drawing");
-                yield return null;
-            }
-        }
-
         // ---- and the breath that needs no drawings at all ----------------------
 
-        // THE FIGURES THAT NEVER MOVED. FlatArtStaysPutRatherThanFlickering
-        // above is still right -- a single-frame idle must stay on its only
-        // drawing -- and for as long as swapping drawings was the only thing
-        // that could animate anything, "stays put" and "stands perfectly still"
-        // were the same sentence.
+        // THE FIGURES THAT NEVER MOVED, which is every figure in the game:
+        // a stance is one drawing (docs/STANCE_SHEET_SPEC.md), so nothing can
+        // animate itself and a stage between blows is six creatures standing
+        // perfectly still.
         //
-        // They are not any more, and that is the whole point of the transform
-        // breath. The golem, the bog witch and Shawn ship one idle.png each
-        // (the rat did too, until its 12-frame idle sheet shipped 2026-08-29
-        // -- see StanceManifest.json and tools/slice_actor_sheet.py); on a
-        // stage where the troll wobbles and everything around it is frozen,
-        // the troll reads as broken rather than as rough.
-        //
-        // ASSERTED ON THE GOLEM SPECIFICALLY, the mirror of the beetle above:
-        // an enemy picked for having no idle sheet, so this cannot pass by
-        // accident on art that was already animating.
+        // The transform breath is the whole of the answer, and this is the
+        // test that something is actually driving it -- an idle loop that is
+        // never started is a silent no-op rather than an error, which is the
+        // failure mode this file's own header names.
         [UnityTest]
-        public IEnumerator FlatArtStillBreathesEvenThoughItsDrawingCannot()
+        public IEnumerator AnIdleFigureBreathesEvenThoughItsDrawingCannot()
         {
             yield return AFightAgainst("Enemies/golem");
 
@@ -252,9 +188,6 @@ namespace PrincesPalace.PlayModeTests
                 $"a single-frame idle stood at exactly {baseHeight:F4} for three seconds - it has " +
                 "no second drawing to step to, so the transform breath is the only thing that can " +
                 "move it and nothing is pushing one");
-
-            Assert.AreEqual(0, _fight.FrameFor(_fight.SessionForTest.Encounter.Enemies[0]),
-                "the breath moved the drawing as well - it is supposed to be a transform");
         }
 
         // THE OTHER HALF OF THE RULE, and it is about what "authored size"

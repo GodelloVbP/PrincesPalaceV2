@@ -105,7 +105,7 @@ $Areas = @{
     # half of what LoopCycle started -- how big a figure is at rest, against
     # which drawing it is showing -- so it belongs in the same area for the
     # same reason.
-    art     = "Stance|FrameHold|LoopCycle|BreathCurve|Shadow|WhiteQuad|SpriteFacing|BattleBackground|ItemArt|TalentArt|ArtPath|HandAssembled|Flash|Legibility|PostProcessing"
+    art     = "Stance|StaticSwing|LoopCycle|BreathCurve|Shadow|WhiteQuad|SpriteFacing|BattleBackground|ItemArt|TalentArt|ArtPath|HandAssembled|Flash|Legibility|PostProcessing"
     rng     = "Rng|SeededRandom|Seed"
 }
 
@@ -350,7 +350,7 @@ $PathAreas = @(
     @{ Pattern = '^Assets/_Project/Scripts/Core/Content/';     Areas = @('content') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/Fight';        Areas = @('combat') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/(GameplayManager|RunState|SaveSystem|SaveSlot)'; Areas = @('run') }
-    @{ Pattern = '^Assets/_Project/Scripts/Core/(Stance|Stage|Sprite|Procedural)'; Areas = @('art', 'combat') }
+    @{ Pattern = '^Assets/_Project/Scripts/Core/(Stance|StaticSwing|Stage|Sprite|Procedural)'; Areas = @('art', 'combat') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/(Music|Sound|Audio)'; Areas = @('ui') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/(Hub|Talent|Store|CharacterSheet|CharacterSelect|CharacterTab)'; Areas = @('hub') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/(DescentMapView|Map)'; Areas = @('run', 'ui') }
