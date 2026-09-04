@@ -89,9 +89,6 @@ namespace PrincesPalace
                 case RoomResolution.Kind.Rest:
                     text = UiStrings.MapRoomRest;
                     return true;
-                case RoomResolution.Kind.ShopNotBuilt:
-                    text = UiStrings.MapRoomShop;
-                    return true;
                 case RoomResolution.Kind.EventNotBuilt:
                     text = UiStrings.MapRoomEvent;
                     return true;

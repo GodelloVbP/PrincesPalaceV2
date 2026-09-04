@@ -27,6 +27,12 @@ namespace PrincesPalace.EditModeTests
         {
             foreach (RoomType type in Enum.GetValues(typeof(RoomType)))
             {
+                // Shop hands off to a screen too, but RunOrchestrator.ArriveAt
+                // handles it before RoomResolution.Resolve is ever called, so
+                // Resolve itself throws for it rather than returning an
+                // Outcome -- covered separately below.
+                if (type == RoomType.Shop) continue;
+
                 var outcome = RoomResolution.Resolve(type, Rng(1));
 
                 bool handsOffToAScreen =
@@ -44,6 +50,17 @@ namespace PrincesPalace.EditModeTests
                         $"{type} resolves on the map and must say so, not clear in silence");
                 }
             }
+        }
+
+        // Shop is not a placeholder any more -- RunOrchestrator.ArriveAt
+        // resolves it into a screen before RoomResolver ever runs. A call
+        // that reaches here anyway skipped ArriveAt, so it should fail loudly
+        // rather than quietly resolve as if the shop had nothing behind it.
+        [Test]
+        public void ResolvingAShopDirectlyThrowsBecauseArriveAtMustHandleItFirst()
+        {
+            Assert.Throws<InvalidOperationException>(
+                () => RoomResolution.Resolve(RoomType.Shop, Rng(1)));
         }
 
         // ---- treasure ------------------------------------------------------
@@ -179,7 +196,6 @@ namespace PrincesPalace.EditModeTests
 
         // The whole point of the rule: an unbuilt room is entered, cleared, and
         // ADMITS it. Paying nothing while saying nothing is the bug.
-        [TestCase(RoomType.Shop, RoomResolution.Kind.ShopNotBuilt)]
         [TestCase(RoomType.Event, RoomResolution.Kind.EventNotBuilt)]
         [TestCase(RoomType.ItemSpawn, RoomResolution.Kind.ItemNotBuilt)]
         [TestCase(RoomType.Unknown, RoomResolution.Kind.Empty)]

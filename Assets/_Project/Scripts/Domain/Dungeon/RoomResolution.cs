@@ -1,3 +1,4 @@
+using System;
 using PrincesPalace.Domain.Rng;
 
 namespace PrincesPalace.Domain.Dungeon
@@ -32,7 +33,6 @@ namespace PrincesPalace.Domain.Dungeon
             None,
             Treasure,
             Rest,
-            ShopNotBuilt,
             EventNotBuilt,
             ItemNotBuilt,
             Empty,
@@ -87,6 +87,18 @@ namespace PrincesPalace.Domain.Dungeon
                 case RoomType.Rest:
                     return new Outcome(Kind.Rest, healsPartyToFull: true);
 
+                // Shop is not a placeholder any more -- it resolves into a
+                // screen. RunOrchestrator.ArriveAt handles RoomType.Shop
+                // itself, BEFORE this method is ever called, so this case
+                // must never run. Throwing rather than returning an Outcome
+                // makes a caller that skips ArriveAt fail loudly instead of
+                // quietly resolving a shop as if it had nothing behind it.
+                case RoomType.Shop:
+                    throw new InvalidOperationException(
+                        "RoomType.Shop is resolved by RunOrchestrator.ArriveAt, " +
+                        "not by RoomResolution.Resolve -- ArriveAt should have " +
+                        "handled it before this was called.");
+
                 // Placeholders. They generate, they draw on the map, they can
                 // be entered and cleared -- only the content behind them is
                 // missing, and each says so rather than resolving in silence.
@@ -96,9 +108,6 @@ namespace PrincesPalace.Domain.Dungeon
                 // Porting it needs the spell-teaching path, which is a larger
                 // job than restoring the rooms; until then an honest placeholder
                 // beats a silent one.
-                case RoomType.Shop:
-                    return new Outcome(Kind.ShopNotBuilt);
-
                 case RoomType.Event:
                     return new Outcome(Kind.EventNotBuilt);
 
