@@ -371,6 +371,14 @@ records a before and an after. Its plain swing is forced by handing `EnemyKit` a
 one-entry ability pool, not by a seed. Run it through `tools/static_pilot_qa.ps1
 -Label <label>`.
 
+`PartyFormationCaptureTests` photographs the real three-member party at rest
+instead of a swing -- four real-time samples (`WaitForSecondsRealtime`, not
+`Time.captureDeltaTime`) under `tools/screenshots/runtime/party_formation/<label>/`
+plus a `slots.json` of each party slot's position, animator home, sprite rect
+and foot-shadow position at the first and last frame, so a human can judge
+whether the far-slot flyer (Odette) clears the two figures standing in front
+of her and whether her shadow stays grounded while she hovers.
+
 ### The stage (`FightController.StageVisuals.cs`)
 
 Actors, poses and grounding. Ported with its two hard-won rules intact, both of
