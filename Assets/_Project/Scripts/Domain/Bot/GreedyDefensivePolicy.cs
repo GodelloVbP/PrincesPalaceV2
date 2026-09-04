@@ -74,7 +74,11 @@ namespace PrincesPalace.Domain.Bot
         // Shared with Lookahead2Policy's own no-progress backstop -- see
         // NonDamagingSkillGuard's header. This was the original of the two
         // (found first, at seed 629) and is the reason the type exists at
-        // all; only the ward key is ever recorded here.
+        // all. Originally ward-only; now also guards any other repeated
+        // 0-damage Skill pick reached by the "hit back" branch's own
+        // fallback below, each tracked under its own skill id so the ward
+        // count and (say) a repeated Provoke count never bleed into each
+        // other.
         private readonly NonDamagingSkillGuard _repeatGuard = new NonDamagingSkillGuard();
         private const string WardGuardKey = "ward";
 
@@ -146,51 +150,70 @@ namespace PrincesPalace.Domain.Bot
             }
 
             // Nothing safer to do -- hit back, aimed at whoever THREATENS
-            // the party most, not whoever is closest to dead (that read is
-            // GreedyAggressive's job, not this one's).
+            // the party most among enemies something here can actually
+            // DAMAGE, not whoever threatens most full stop. Locking onto
+            // the most-threatening enemy before checking reach used to drop
+            // Attack outright whenever that enemy sat outside melee range,
+            // leaving nothing but a 0-damage Skill aimed at the same enemy
+            // (fleece_ward's own ward branch above already had an identical
+            // livelock, at seed 629, for the identical reason: a per-turn
+            // pick with no memory of not converting). See
+            // DamagingTargetSelection's own header for the full shape.
             var damaging = legal.Where(a =>
                 a.Kind == FightActionKind.Attack ||
                 a.Kind == FightActionKind.Skill).ToList();
 
-            if (damaging.Count > 0)
+            if (DamagingTargetSelection.TryChooseDamagingAction(
+                    damaging,
+                    a => EstimateDamage(session, actor, a),
+                    targets => targets.OrderByDescending(t => ThreatOf(session, t)).First(),
+                    out var best))
             {
-                var mostThreatening = damaging
-                    .Select(a => a.Target)
-                    .Distinct()
-                    .OrderByDescending(t => ThreatOf(session, t))
-                    .First();
-
-                FightAction best = default;
-                int bestEstimate = int.MinValue;
-                bool found = false;
-
-                foreach (var candidate in damaging)
+                // Only reset the guard when the swing actually reduced
+                // total enemy HP since this actor was last asked -- see
+                // _enemyHpAtLastCheck's header. An attempted swing that
+                // did not land is not "progress" for livelock-guard
+                // purposes even though it is still this turn's chosen
+                // action.
+                if (madeRealProgressSinceLastAsk)
                 {
-                    if (candidate.Target != mostThreatening) continue;
-
-                    int estimate = EstimateDamage(session, actor, candidate);
-                    if (!found || estimate > bestEstimate)
-                    {
-                        best = candidate;
-                        bestEstimate = estimate;
-                        found = true;
-                    }
+                    _repeatGuard.RecordProgress(actor);
                 }
 
-                if (found)
-                {
-                    // Only reset the guard when the swing actually reduced
-                    // total enemy HP since this actor was last asked -- see
-                    // _enemyHpAtLastCheck's header. An attempted swing that
-                    // did not land is not "progress" for livelock-guard
-                    // purposes even though it is still this turn's chosen
-                    // action.
-                    if (madeRealProgressSinceLastAsk)
-                    {
-                        _repeatGuard.RecordProgress(actor);
-                    }
+                return best;
+            }
 
-                    return best;
+            // Nothing in `legal` can put a positive number on anyone right
+            // now -- every damaging candidate whiffs and only non-damaging
+            // Skills remain (fleece_ward included, once its own guard above
+            // has already capped it for this turn). Same guard, generalised
+            // past "ward" specifically: any repeated 0-damage Skill pick is
+            // tracked under its own skill id, so alternating between two
+            // different non-progressing skills does not let either dodge the
+            // cap by hiding behind the other's count.
+            var nonDamagingSkill = legal.FirstOrDefault(a =>
+                a.Kind == FightActionKind.Skill && EstimateDamage(session, actor, a) == 0);
+
+            if (nonDamagingSkill.Kind == FightActionKind.Skill)
+            {
+                string skillId = SkillIdFor(session, actor, nonDamagingSkill);
+                if (_repeatGuard.MayChoose(actor, skillId, NonDamagingSkillGuard.DefaultMaxConsecutive))
+                {
+                    _repeatGuard.RecordChosen(actor, skillId);
+                    return nonDamagingSkill;
+                }
+
+                // Guard tripped: treated as unavailable this turn. An Attack
+                // would already have been picked above (its Max(1, ...)
+                // floor always keeps its own target eligible), so this is
+                // reachable only when no Attack is legal at all.
+                // FirstOrDefault + a Kind check is not safe here on its own --
+                // FightActionKind.Attack is enum value 0, the same as
+                // default(FightAction).Kind, so an empty match would read as
+                // a false "yes, found one". Any() first.
+                if (legal.Any(a => a.Kind == FightActionKind.Attack))
+                {
+                    return legal.First(a => a.Kind == FightActionKind.Attack);
                 }
             }
 
@@ -199,13 +222,21 @@ namespace PrincesPalace.Domain.Bot
             // Brave-boosted swing -- it is an OFFENSIVE economy move, the
             // same one GreedyAggressive would be just as happy to make, and
             // "actually defensive" per the brief is exactly what it is not.
-            // A defensive archetype under threat with no heal and no ward
-            // left is not made safer by passing a turn that does not reduce
-            // incoming damage at all, so it falls through to the same
-            // most-threatening-target swing above. HoldBack still exists in
+            // Reached only when there is truly nothing left to spend the
+            // turn on that does anything at all -- HoldBack still exists in
             // `legal` for RandomLegal/GreedyAggressive to reach, and for
             // FightAction.LegalActions' own "never empty" guarantee.
             return legal.First(a => a.Kind == FightActionKind.HoldBack);
+        }
+
+        // The authored skill id behind one legal Skill action -- the key
+        // NonDamagingSkillGuard tracks repeats under, read the same way
+        // FirstSkillWithEffect below already reads a skill's own SkillEffect
+        // off SkillOptionsFor rather than guessing from SkillIndex alone.
+        private static string SkillIdFor(FightSession session, CombatantState actor, FightAction action)
+        {
+            var option = session.SkillOptionsFor(actor).FirstOrDefault(o => o.Index == action.SkillIndex);
+            return option.Skill.Id;
         }
 
         // How much this enemy is about to hurt the party, read off its own

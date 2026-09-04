@@ -20,6 +20,19 @@ namespace PrincesPalace.Domain.Bot
         // else on the menu -- see the plan's own archetype description.
         private const float HealBelowHealthFraction = 0.30f;
 
+        // Livelock guard for the fallback below: when NOTHING in `legal`
+        // can put a positive number on anyone (DamagingTargetSelection
+        // found no eligible target), a non-damaging Skill is picked at
+        // most twice in a row before HoldBack/Attack takes over instead --
+        // see GreedyDefensivePolicy's own repeat guard for the seed this
+        // shape of bug was first found at (629, a ward rather than a
+        // provoke, but the same "re-scored identically every turn with
+        // nothing to show for it" livelock). Not stateless by construction
+        // any more than GreedyDefensive is: BotRunDriver holds one policy
+        // instance per archetype for a whole run, same as that policy's own
+        // _repeatGuard.
+        private readonly NonDamagingSkillGuard _repeatGuard = new NonDamagingSkillGuard();
+
         public FightAction Choose(FightSession session, CombatantState actor, IReadOnlyList<FightAction> legal, SeededRandom rng)
         {
             if (actor != null && actor.MaxHealth > 0 &&
@@ -37,43 +50,77 @@ namespace PrincesPalace.Domain.Bot
                 }
             }
 
-            // Every damaging option, grouped onto the lowest-HP reachable
-            // enemy so the whole party's worth of pressure lands on one
-            // target instead of spreading thin across the board.
+            // Every damaging option, locked onto the lowest-HP enemy AMONG
+            // THE ONES SOMETHING HERE CAN ACTUALLY DAMAGE -- not just the
+            // lowest-HP enemy full stop. Locking on HP alone and only then
+            // filtering by target used to drop Attack outright whenever the
+            // lowest-HP enemy sat outside melee reach (a back-rank foe with
+            // avoidsFrontSlot, say), leaving nothing but a 0-damage Skill
+            // (Provoke) aimed at that same enemy -- which never changes
+            // anyone's HP, so the same target got picked again next turn.
+            // See DamagingTargetSelection's own header for the full shape.
             var damaging = legal.Where(a =>
                 a.Kind == FightActionKind.Attack ||
                 a.Kind == FightActionKind.Skill).ToList();
 
-            if (damaging.Count > 0)
+            if (DamagingTargetSelection.TryChooseDamagingAction(
+                    damaging,
+                    a => EstimateDamage(session, actor, a),
+                    targets => targets.OrderBy(t => t.CurrentHealth).First(),
+                    out var best))
             {
-                var lowestHp = damaging
-                    .Select(a => a.Target)
-                    .OrderBy(t => t.CurrentHealth)
-                    .First();
-
-                FightAction best = default;
-                int bestEstimate = int.MinValue;
-                bool found = false;
-
-                foreach (var candidate in damaging)
-                {
-                    if (candidate.Target != lowestHp) continue;
-
-                    int estimate = EstimateDamage(session, actor, candidate);
-                    if (!found || estimate > bestEstimate)
-                    {
-                        best = candidate;
-                        bestEstimate = estimate;
-                        found = true;
-                    }
-                }
-
-                if (found) return best;
+                _repeatGuard.RecordProgress(actor);
+                return best;
             }
 
-            // Nothing to hit and no reason to heal -- HoldBack is the only
+            // Nothing in `legal` can put a positive number on anyone right
+            // now -- every damaging candidate whiffs (no reachable enemy for
+            // any of them) and only non-damaging Skills remain. Take one,
+            // but only while the guard says it has not already been tried
+            // and failed to convert -- see NonDamagingSkillGuard's own
+            // header for why a per-turn score alone cannot be the whole fix.
+            var nonDamagingSkill = legal.FirstOrDefault(a =>
+                a.Kind == FightActionKind.Skill && EstimateDamage(session, actor, a) == 0);
+
+            if (nonDamagingSkill.Kind == FightActionKind.Skill)
+            {
+                string skillId = SkillIdFor(session, actor, nonDamagingSkill);
+                if (_repeatGuard.MayChoose(actor, skillId, NonDamagingSkillGuard.DefaultMaxConsecutive))
+                {
+                    _repeatGuard.RecordChosen(actor, skillId);
+                    return nonDamagingSkill;
+                }
+
+                // Guard tripped: the non-damaging Skill is treated as
+                // unavailable this turn. An Attack would already have been
+                // picked above (its Max(1, ...) floor always keeps its own
+                // target eligible), so this is reachable only when no
+                // Attack is legal at all -- kept anyway so this fallback
+                // reads the same way GreedyDefensive's does.
+                // FirstOrDefault + a Kind check is not safe here on its own --
+                // FightActionKind.Attack is enum value 0, the same as
+                // default(FightAction).Kind, so an empty match would read as
+                // a false "yes, found one". Any() first.
+                if (legal.Any(a => a.Kind == FightActionKind.Attack))
+                {
+                    return legal.First(a => a.Kind == FightActionKind.Attack);
+                }
+            }
+
+            // Nothing to hit, nothing safe to repeat -- HoldBack is the only
             // thing left standing (it is always in `legal`).
             return legal.First(a => a.Kind == FightActionKind.HoldBack);
+        }
+
+        // The authored skill id behind one legal Skill action -- the key
+        // NonDamagingSkillGuard tracks repeats under, read the same way
+        // GreedyDefensivePolicy.FirstSkillWithEffect already reads a
+        // skill's own SkillEffect off SkillOptionsFor rather than guessing
+        // from SkillIndex alone.
+        private static string SkillIdFor(FightSession session, CombatantState actor, FightAction action)
+        {
+            var option = session.SkillOptionsFor(actor).FirstOrDefault(o => o.Index == action.SkillIndex);
+            return option.Skill.Id;
         }
 
         // Pre-mitigation reads off the session's own preview queries --

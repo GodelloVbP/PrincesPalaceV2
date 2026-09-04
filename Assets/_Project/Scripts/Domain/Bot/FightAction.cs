@@ -114,6 +114,27 @@ namespace PrincesPalace.Domain.Bot
             {
                 if (!option.Ready) continue;
 
+                // ONE ACTION PER ENEMY ONLY FOR SkillTargeting.SingleEnemy --
+                // the only targeting the resolve path actually reads `target`
+                // for (FightSession.Skills.ResolveDamageSingle/Provoke/...).
+                // Self (HealSelf/Ward/Transform/Summon), AllEnemies
+                // (DamageAll/Shatter) and Party (HealParty/BuffParty/
+                // RestorePartyMana/GiftHaste) all resolve off the actor and
+                // ignore the target parameter outright (ResolveCharacterSkillInner
+                // passes `actor` to BeginBeat/SkillResolution.Amount for every
+                // one of them) -- looping this over every enemy used to hand
+                // a bot policy N identical copies of the same cast that
+                // differ only in a Target field nothing downstream reads,
+                // which is not "more options", it is the same option wearing
+                // a different enemy's name. A Skill Choose() has to filter
+                // "which candidates target enemy X" now leans on that Target
+                // meaning something -- see DamagingTargetSelection.
+                if (option.Skill.Targeting != SkillTargeting.SingleEnemy)
+                {
+                    actions.Add(new FightAction(FightActionKind.Skill, actor, option.Index));
+                    continue;
+                }
+
                 var reach = option.Skill.MeleeReach ? meleeTargets : allTargets;
                 foreach (var target in reach)
                 {

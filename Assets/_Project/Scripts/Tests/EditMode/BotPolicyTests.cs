@@ -129,6 +129,15 @@ namespace PrincesPalace.Domain.Tests
             new ResolvedSkill("mend", "Mend", "", "hero", 1, SkillEffect.HealSelf,
                 SkillTargeting.Self, 0, 0, false, 50, 0, false, null, SpellPresentation.None, 0);
 
+        // The provoke shape (Domain/Combat/SkillEntryResolver.DefaultTargetingFor
+        // falls through to SingleEnemy for Provoke, and it authors no
+        // meleeReach flag) that reproduces the seed 42/35/64 TooManyCommands
+        // livelock: a RANGED, NON-DAMAGING SingleEnemy skill, legal against
+        // any living enemy regardless of front rank.
+        private static ResolvedSkill ProvokeSkill() =>
+            new ResolvedSkill("provoke", "Provoke", "", "hero", 1, SkillEffect.Provoke,
+                SkillTargeting.SingleEnemy, 0, 0, false, 0, 0, false, null, SpellPresentation.None, 0);
+
         [Test]
         public void GreedyDefensivePolicy_FinishesAFight_WithNoInvariantHits()
         {
@@ -263,6 +272,112 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(foe1, chosen.Target,
                 "foe1's higher Attack makes it the bigger threat despite foe0 having lower HP");
+        }
+
+        // ---- target-first livelock (TooManyCommands, seeds 42/35/64) -------
+        //
+        // foes[0] (front rank, 200 HP): reachable by Attack or Provoke.
+        // foes[1] (back rank, 40 HP -- LOWER than foes[0]): reachable only
+        // by Provoke, which deals no damage. Before the fix, both policies
+        // locked onto whichever target their own priority read first (lowest
+        // HP for aggressive, most-threatening for defensive) and only THEN
+        // filtered candidates by that target -- which here always resolves
+        // to foes[1], discards Attack for targeting the wrong enemy, and
+        // leaves Provoke as the only legal damaging-kind action, forever.
+        // Both archetypes must now recognise foes[1] is not a real option
+        // (nothing legal can put a positive number on it) and hit foes[0]
+        // with Attack instead.
+
+        [Test]
+        public void GreedyAggressivePolicy_LowerHpFoeReachableOnlyByNonDamagingSkill_AttacksTheReachableFoeInstead()
+        {
+            var skills = new List<ResolvedSkill> { ProvokeSkill() };
+            var (session, hero, foes) = HeroVsManyWithSkills(skills, 200, 40);
+            var policy = new GreedyAggressivePolicy();
+            var legal = FightAction.LegalActions(session, hero, System.Array.Empty<SatchelStack>());
+
+            var chosen = policy.Choose(session, hero, legal, new SeededRandom(1));
+
+            Assert.AreEqual(FightActionKind.Attack, chosen.Kind,
+                "Attack on the reachable front foe must win over a 0-damage Provoke aimed at the unreachable lower-HP one");
+            Assert.AreEqual(foes[0], chosen.Target);
+        }
+
+        [Test]
+        public void GreedyDefensivePolicy_LowerHpFoeReachableOnlyByNonDamagingSkill_AttacksTheReachableFoeInstead()
+        {
+            var skills = new List<ResolvedSkill> { ProvokeSkill() };
+            var (session, hero, foes) = HeroVsManyWithSkills(skills, 200, 40);
+            var policy = new GreedyDefensivePolicy();
+            var legal = FightAction.LegalActions(session, hero, System.Array.Empty<SatchelStack>());
+
+            var chosen = policy.Choose(session, hero, legal, new SeededRandom(1));
+
+            Assert.AreEqual(FightActionKind.Attack, chosen.Kind,
+                "Attack on the reachable front foe must win over a 0-damage Provoke aimed at the unreachable lower-HP one");
+            Assert.AreEqual(foes[0], chosen.Target);
+        }
+
+        // ---- NonDamagingSkillGuard wiring -----------------------------------
+        //
+        // `legal` is built by hand rather than through FightAction.LegalActions
+        // for these two: whenever ANY enemy is alive, CombatEncounter.
+        // CanMeleeReach always allows Attack against the front rank (Max(1, ...)
+        // in CombatMath.ComputeAttackDamage means it is never a 0-damage
+        // candidate), so the guarded fallback below can never actually be
+        // reached through LegalActions' own output in this game's current
+        // rules -- there is always a real Attack for TryChooseDamagingAction
+        // to prefer first. The wiring is still real production code (a future
+        // status effect or kit that legitimately strips Attack would hit it),
+        // and this is the only way to exercise it directly: a `legal` with a
+        // repeatable 0-damage Skill and NO Attack action at all.
+
+        [Test]
+        public void GreedyAggressivePolicy_WithOnlyANonDamagingSkillRepeated_StopsPickingItAfterTheGuardCap()
+        {
+            var skills = new List<ResolvedSkill> { ProvokeSkill() };
+            var (session, hero, foes) = HeroVsManyWithSkills(skills, 200);
+            var provokeOption = session.SkillOptionsFor(hero).First(o => o.Skill.Effect == SkillEffect.Provoke);
+            var legal = new List<FightAction>
+            {
+                new FightAction(FightActionKind.Skill, foes[0], provokeOption.Index),
+                new FightAction(FightActionKind.HoldBack),
+            };
+            var policy = new GreedyAggressivePolicy();
+            var rng = new SeededRandom(1);
+
+            var first = policy.Choose(session, hero, legal, rng);
+            var second = policy.Choose(session, hero, legal, rng);
+            var third = policy.Choose(session, hero, legal, rng);
+
+            Assert.AreEqual(FightActionKind.Skill, first.Kind);
+            Assert.AreEqual(FightActionKind.Skill, second.Kind);
+            Assert.AreNotEqual(FightActionKind.Skill, third.Kind,
+                "the guard's default cap is 2 -- a third straight ask with no Attack legal and no progress made must not repeat the same non-damaging skill");
+        }
+
+        [Test]
+        public void GreedyDefensivePolicy_WithOnlyANonDamagingSkillRepeated_StopsPickingItAfterTheGuardCap()
+        {
+            var skills = new List<ResolvedSkill> { ProvokeSkill() };
+            var (session, hero, foes) = HeroVsManyWithSkills(skills, 200);
+            var provokeOption = session.SkillOptionsFor(hero).First(o => o.Skill.Effect == SkillEffect.Provoke);
+            var legal = new List<FightAction>
+            {
+                new FightAction(FightActionKind.Skill, foes[0], provokeOption.Index),
+                new FightAction(FightActionKind.HoldBack),
+            };
+            var policy = new GreedyDefensivePolicy();
+            var rng = new SeededRandom(1);
+
+            var first = policy.Choose(session, hero, legal, rng);
+            var second = policy.Choose(session, hero, legal, rng);
+            var third = policy.Choose(session, hero, legal, rng);
+
+            Assert.AreEqual(FightActionKind.Skill, first.Kind);
+            Assert.AreEqual(FightActionKind.Skill, second.Kind);
+            Assert.AreNotEqual(FightActionKind.Skill, third.Kind,
+                "the guard's default cap is 2 -- a third straight ask with no Attack legal and no progress made must not repeat the same non-damaging skill");
         }
 
         // ---- Lookahead2Policy ----------------------------------------------
