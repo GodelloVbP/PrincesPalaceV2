@@ -73,11 +73,22 @@ namespace PrincesPalace
         // the one new cost in this phase worth being able to see grow.
         Equip = 14,
         LevelUp = 15,
+
+        // A WHOLE SHOP VISIT (up to MaxShopChoices rounds of ShopViewOf +
+        // ChooseShop + Apply) and the spell-book placement that follows a
+        // shop or a fight. Added after these two ran with no timer around
+        // them at all and the batch that found the 2026-09 shop-visit
+        // regression (VisitShop rescoring every shelf card and every bag row
+        // from scratch on every one of a visit's choices) had to be read as
+        // "half of WALL is unaccounted for" before the culprit could even be
+        // named.
+        Shop = 16,
+        SpellAssign = 17,
     }
 
     public static class BotPhaseTimers
     {
-        private const int PhaseCount = 16;
+        private const int PhaseCount = 18;
 
         private static readonly long[] Elapsed = new long[PhaseCount];
         private static readonly long[] Calls = new long[PhaseCount];

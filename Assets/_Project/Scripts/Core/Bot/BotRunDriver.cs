@@ -413,8 +413,14 @@ namespace PrincesPalace
                 // "not a fight" no longer means "already done".
                 if (arrival == RunOrchestrator.Arrival.Shop)
                 {
-                    VisitShop(seed, save, runPolicy, roomTrace);
-                    ResolvePendingSpellAssignments(seed, save, runPolicy, roomTrace);
+                    using (BotPhaseTimers.Measure(BotPhase.Shop))
+                    {
+                        VisitShop(seed, save, runPolicy, roomTrace);
+                    }
+                    using (BotPhaseTimers.Measure(BotPhase.SpellAssign))
+                    {
+                        ResolvePendingSpellAssignments(seed, save, runPolicy, roomTrace);
+                    }
                     result.Trace.Rooms.Add(roomTrace);
                     CaptureWhatTheRunHolds(save, result);
                     continue;
@@ -434,7 +440,10 @@ namespace PrincesPalace
                 // not the party survives the room, same reason a dead run's
                 // empty pool below is simply a no-op rather than a case to
                 // special-case.
-                ResolvePendingSpellAssignments(seed, save, runPolicy, roomTrace);
+                using (BotPhaseTimers.Measure(BotPhase.SpellAssign))
+                {
+                    ResolvePendingSpellAssignments(seed, save, runPolicy, roomTrace);
+                }
                 result.Trace.Rooms.Add(roomTrace);
 
                 if (!alive) return;
@@ -478,9 +487,27 @@ namespace PrincesPalace
 
             int step = run.step;
 
+            // ONE SCORE CACHE FOR THE WHOLE VISIT, not one ScoreOffer call per
+            // (choice, shelf card) and per (choice, bag row). ScoreOffer's
+            // result depends only on (itemId, plus) against the squad's
+            // CURRENTLY WORN gear, and nothing in this loop ever changes what
+            // is worn -- EquipPass only runs on the way out of a fight, never
+            // mid-shop -- so the same card and the same bag stack scored the
+            // same thing on choice 1 score the same thing on choice 12. Before
+            // this cache, a visit with a dozen choices against a bag that had
+            // grown to twenty-odd items over the run was rescoring the whole
+            // shelf AND the whole bag from scratch on every single choice --
+            // the measured cost of that was half the batch's wall clock
+            // (BotPhase.Shop, ~85ms/visit against ~5ms for everything else a
+            // visit does). A fresh dictionary per visit, not per batch: a
+            // purchase or a level-up between VISITS can change what is worn,
+            // and a stale score carried across visits would be wrong rather
+            // than merely repeated.
+            var scoreCache = new Dictionary<(string, int), float>();
+
             for (int choiceIndex = 0; choiceIndex < MaxShopChoices; choiceIndex++)
             {
-                var shopView = ShopViewOf(save, runPolicy);
+                var shopView = ShopViewOf(save, runPolicy, scoreCache);
                 if (shopView.Cards.Count == 0) break;
 
                 var choice = runPolicy.ChooseShop(
@@ -668,7 +695,8 @@ namespace PrincesPalace
         // do, so the score is computed HERE, by the same GearEvaluator the
         // reward offer uses, against the archetype's own weights -- and a
         // policy sees a number rather than a content database.
-        private static ShopView ShopViewOf(SaveData save, IRunPolicy runPolicy)
+        private static ShopView ShopViewOf(
+            SaveData save, IRunPolicy runPolicy, Dictionary<(string, int), float> scoreCache)
         {
             var run = RunManager.Run;
             var stock = RunOrchestrator.CurrentShopStock;
@@ -690,7 +718,7 @@ namespace PrincesPalace
                 // and paying that for a NO OFFER placeholder or a card
                 // already bought buys nothing.
                 float score = entry.kind == ShopEntryKind.Gear && !entry.noOffer && !entry.sold
-                    ? GearEvaluator.ScoreOffer(save, entry.contentId, entry.plus, weights)
+                    ? ScoreCached(save, entry.contentId, entry.plus, weights, scoreCache)
                     : 0f;
 
                 cards.Add(new ShopCardView(entry.section, entry.index, entry.kind, entry.contentId,
@@ -707,10 +735,28 @@ namespace PrincesPalace
                     : 0;
             }
 
-            return new ShopView(cards, rerollPrices, rerollsUsed, BagRowsOf(save, weights), run.gold);
+            return new ShopView(
+                cards, rerollPrices, rerollsUsed, BagRowsOf(save, weights, scoreCache), run.gold);
         }
 
-        private static List<ShopBagRow> BagRowsOf(SaveData save, GearWeights weights)
+        // itemId+plus is the whole of what GearEvaluator.ScoreOffer reads
+        // besides `save` (worn gear, constant across a visit) and `weights`
+        // (the archetype, constant for the run) -- see the cache's own note
+        // at its one call site in VisitShop.
+        private static float ScoreCached(
+            SaveData save, string itemId, int plus, GearWeights weights,
+            Dictionary<(string, int), float> cache)
+        {
+            var key = (itemId, plus);
+            if (cache.TryGetValue(key, out float cached)) return cached;
+
+            float score = GearEvaluator.ScoreOffer(save, itemId, plus, weights);
+            cache[key] = score;
+            return score;
+        }
+
+        private static List<ShopBagRow> BagRowsOf(
+            SaveData save, GearWeights weights, Dictionary<(string, int), float> scoreCache)
         {
             var rows = new List<ShopBagRow>();
             var bag = save?.stockpiledItems;
@@ -734,7 +780,7 @@ namespace PrincesPalace
 
                 float score = consumable
                     ? 0f
-                    : GearEvaluator.ScoreOffer(save, entry.itemId, entry.plus, weights);
+                    : ScoreCached(save, entry.itemId, entry.plus, weights, scoreCache);
 
                 rows.Add(new ShopBagRow(i, entry.itemId, entry.count,
                     RunOrchestrator.SellPriceOf(entry), score, duplicate, consumable));
