@@ -48,6 +48,11 @@
       "groundLine": 10.5
     },
     {
+      "spritePath": "Characters/owl",
+      "groundLine": 8,
+      "_hoverNote": "Odette FLIES. Her five airborne stances were sliced with a 35px upward nudge (tools/slice_actor_sheet.py --nudge ... --max-ground-spread 40) so their talons hang 35px above this ground line while defeated lies on it -- see Art/Characters/owl/README.md. The ground line itself is the canvas pad, same as every other actor; the hover lives in the drawings' placement, not in this number."
+    },
+    {
       "spritePath": "Characters/sheep",
       "groundLine": 43
     },

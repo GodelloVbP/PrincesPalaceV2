@@ -34,6 +34,13 @@ Optional:
                                a reposition, never a resize -- see the
                                ground-line assertion below for why a size
                                correction is refused instead.
+    --max-ground-spread PX     allow the stances' lowest rows to differ by up to
+                               PX (default 6). Only for a deliberate hover, with
+                               --nudge lifting the airborne stances and defeated
+                               left on the floor.
+    --pocket-max-area N        white_flood only: key enclosed neutral-bright
+                               pockets up to N px (default 200). Raise it for a
+                               checkerboard sheet whose art encloses a real hole.
     --drop-far-components-px N   a neighbouring cell's stray limb/tail bled
                                across a gutter and survived as its own
                                component -- keep the largest component plus
@@ -182,7 +189,7 @@ def cut_cells(mask, sheet_w, sheet_h, rows, cols):
 # Keying
 # ---------------------------------------------------------------------------
 
-def key_sheet(image, mode):
+def key_sheet(image, mode, pocket_max_area=POCKET_MAX_AREA):
     if mode == "alpha":
         return image.convert("RGBA")
     if mode == "white_flood":
@@ -199,7 +206,7 @@ def key_sheet(image, mode):
         pocket = (rgb_i.min(axis=2) > POCKET_MIN_BRIGHTNESS) & neutral & (~is_bg)
         if pocket.any():
             for comp in _all_components(pocket):
-                if comp.sum() <= POCKET_MAX_AREA:
+                if comp.sum() <= pocket_max_area:
                     is_bg = is_bg | comp
 
         # Bleed the sprite's own colour outward before feathering the alpha,
@@ -445,7 +452,7 @@ def resize_premultiplied(image, new_size):
 # Ground-line consistency, checked against what was actually WRITTEN
 # ---------------------------------------------------------------------------
 
-def _assert_one_ground_line(actor_label, out_dir, written_names, verbose):
+def _assert_one_ground_line(actor_label, out_dir, written_names, verbose, max_spread_px=6):
     """Every pose an actor ships has to STAND in the same place -- the stage
     pins each actor's canvas bottom to the ground line, so a pose sitting
     higher in its own canvas visibly takes off the moment the stance
@@ -453,7 +460,7 @@ def _assert_one_ground_line(actor_label, out_dir, written_names, verbose):
     it also covers nudges and anything a future change does between
     placement and disk.
     """
-    MAX_SPREAD_PX = 6
+    MAX_SPREAD_PX = max_spread_px
     feet = []
     for name in sorted(written_names):
         path = os.path.join(out_dir, f"{name}.png")
@@ -549,7 +556,8 @@ SKIP_TOKENS = {"-", "skip", "none", ""}
 
 
 def process(sheet_path, actor_arg, stances_arg, grid_arg, key_mode, anchor_mode,
-            delivery_scale, nudges, drop_far_px, out_root, prune, verbose):
+            delivery_scale, nudges, drop_far_px, out_root, prune, verbose,
+            pocket_max_area=POCKET_MAX_AREA, max_ground_spread=6):
     if "/Resources/" in os.path.abspath(sheet_path).replace("\\", "/"):
         sys.exit(f"Refusing to read from a Resources/ path (would compound a previous pass): {sheet_path}")
     if not os.path.isfile(sheet_path):
@@ -564,7 +572,7 @@ def process(sheet_path, actor_arg, stances_arg, grid_arg, key_mode, anchor_mode,
     print(f"[{label}] sheet={sheet_path} grid={grid_arg} key={key_mode} anchor={anchor_mode} "
           f"delivery_scale={delivery_scale} -> {out_dir}")
 
-    keyed = key_sheet(Image.open(sheet_path), key_mode)
+    keyed = key_sheet(Image.open(sheet_path), key_mode, pocket_max_area)
     mask = opaque_mask(keyed)
     boxes = cut_cells(mask, keyed.width, keyed.height, rows, cols)
 
@@ -625,6 +633,11 @@ def process(sheet_path, actor_arg, stances_arg, grid_arg, key_mode, anchor_mode,
         footed.append((name, piece, mask_bool, foot_y))
 
     max_above = max(foot_y + 1 for _, _, _, foot_y in footed)
+    # A stance nudged UP (negative dy -- a deliberate hover) still needs
+    # its full height above the ground row, or the canvas clips its crown
+    # by the nudge. Room is made here so the printed groundLine stays what
+    # it would be without the hover: canvas bottom to the ground row.
+    max_above += max([0] + [-nudges.get(name, (0, 0))[1] for name, _, _, _ in footed])
     max_below = max(p.height - 1 - foot_y for _, p, _, foot_y in footed)
     canvas_h = int(max_above + max_below) + PADDING * 2
     ground_y = PADDING + int(max_above)
@@ -668,7 +681,7 @@ def process(sheet_path, actor_arg, stances_arg, grid_arg, key_mode, anchor_mode,
         if verbose:
             print(f"  {name}.png  {canvas_w}x{canvas_h}")
 
-    _assert_one_ground_line(label, out_dir, written, verbose)
+    _assert_one_ground_line(label, out_dir, written, verbose, max_ground_spread)
     _report_stray_files(out_dir, written, prune, verbose)
     return written
 
@@ -686,6 +699,16 @@ def main():
     ap.add_argument("--delivery-scale", type=float, default=1.0)
     ap.add_argument("--nudge", action="append", metavar="STANCE:DX,DY", default=[])
     ap.add_argument("--drop-far-components-px", type=int, default=None)
+    ap.add_argument("--max-ground-spread", type=int, default=6, metavar="PX",
+                    help="How far apart the stances' lowest rows may sit before the one-ground-line "
+                         "check refuses the output (default 6). Raise it ONLY for a deliberate hover: an "
+                         "actor whose airborne stances are nudged up while its defeated pose stays on the "
+                         "floor. The accidental float the default catches is still caught for everyone else.")
+    ap.add_argument("--pocket-max-area", type=int, default=POCKET_MAX_AREA,
+                    help="white_flood only: largest enclosed neutral-bright pocket (px) still keyed "
+                         "to transparent. The 200px default catches specks; a sheet whose art "
+                         "closes around a real hole of checkerboard (the treant's roots enclose "
+                         "~1500px) needs this raised for that one run.")
     ap.add_argument("--out-root", default=DEFAULT_OUT_ROOT)
     ap.add_argument("--prune", action="store_true")
     ap.add_argument("--quiet", action="store_true")
@@ -701,6 +724,8 @@ def main():
         delivery_scale=args.delivery_scale,
         nudges=parse_nudges(args.nudge),
         drop_far_px=args.drop_far_components_px,
+        pocket_max_area=args.pocket_max_area,
+        max_ground_spread=args.max_ground_spread,
         out_root=args.out_root,
         prune=args.prune,
         verbose=not args.quiet,
