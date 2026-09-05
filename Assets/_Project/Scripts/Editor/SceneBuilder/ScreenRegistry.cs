@@ -230,6 +230,21 @@ public static class ScreenRegistry
                     })
                     .ToArray();
 
+                // THE SHARED GROUND LAYER. Same component, same three settings,
+                // one instance -- the difference is where it sits in the tree
+                // (behind the racks; see FightScreen.BuildSpellGroundVfx) and
+                // that its size is recomputed per cast rather than authored.
+                fight.spellGroundVfx = result.Image(screen.SpellGroundVfx);
+                fight.spellGroundVfxPlayer = result.Attach<SpellVfxPlayer>(screen.SpellGroundVfx);
+                fight.spellGroundVfxPlayer.image = fight.spellGroundVfx;
+                fight.spellGroundVfxPlayer.image.raycastTarget = false;
+                fight.spellGroundVfxPlayer.image.preserveAspect = true;
+                fight.spellGroundVfxPlayer.image.enabled = false;
+                fight.spellGroundVfxPlayer.fade = result.Image(screen.SpellGroundVfxNext);
+                fight.spellGroundVfxPlayer.fade.raycastTarget = false;
+                fight.spellGroundVfxPlayer.fade.preserveAspect = true;
+                fight.spellGroundVfxPlayer.fade.enabled = false;
+
                 fight.damagePopups = screen.DamagePopups.Select(result.Go).ToArray();
                 fight.damagePopupLabels = screen.DamagePopupLabels.Select(result.Tmp).ToArray();
 

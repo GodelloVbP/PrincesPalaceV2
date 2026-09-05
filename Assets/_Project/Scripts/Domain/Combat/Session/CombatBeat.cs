@@ -130,6 +130,17 @@ using PrincesPalace.Domain.Content;
         // means by "the target". This is only ever read by the view.
         public List<CombatantState> SplashTargets;
 
+        // WHAT EACH OF THEM ACTUALLY TOOK. Null for every beat that lands on
+        // one thing, which is nearly all of them -- see BeatTargetResult for
+        // why the single Amount above could not answer for a sweep and what
+        // shipped wrong while it was the only answer available.
+        public List<BeatTargetResult> Results;
+
+        // Whether this beat has per-target numbers worth reading. The one
+        // question a view asks before deciding which of the two it is drawing,
+        // so neither side has to repeat the null-and-empty check.
+        public bool HasPerTargetResults => Results != null && Results.Count > 0;
+
         // WHETHER THE ACTOR CROSSES THE STAGE, AND HOW FAR.
         //
         // Was a bool, ActorHoldsPosition, and a bool could only ever answer one

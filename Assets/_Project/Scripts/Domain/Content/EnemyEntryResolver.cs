@@ -258,6 +258,8 @@ namespace PrincesPalace.Domain.Content
 
             if (!ArtPathConvention.Check(label, "vfx.path", raw.vfx.path, out error)) return false;
             if (!ArtPathConvention.Check(label, "vfx.sfxPath", raw.vfx.sfxPath, out error)) return false;
+            if (!ArtPathConvention.Check(label, "vfx.groundPath", raw.vfx.groundPath, out error)) return false;
+            if (!ArtPathConvention.Check(label, "vfx.castSfxPath", raw.vfx.castSfxPath, out error)) return false;
 
             var baseStats = new StatBlock(raw.maxHealth, speed, attack,
                 physicalDefense: physicalDefense, magicalDefense: magicalDefense);

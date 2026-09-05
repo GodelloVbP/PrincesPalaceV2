@@ -294,6 +294,8 @@ namespace PrincesPalace.Domain.Content
 
             if (!ArtPathConvention.Check(label, "vfx.path", raw.vfx.path, out error)) return false;
             if (!ArtPathConvention.Check(label, "vfx.sfxPath", raw.vfx.sfxPath, out error)) return false;
+            if (!ArtPathConvention.Check(label, "vfx.groundPath", raw.vfx.groundPath, out error)) return false;
+            if (!ArtPathConvention.Check(label, "vfx.castSfxPath", raw.vfx.castSfxPath, out error)) return false;
 
             resolvedSkill = new ResolvedSkill(raw.id, raw.displayName, raw.description ?? "", raw.characterId.Trim(),
                 unlockLevel, effect, targeting, manaCost, resourceCost, raw.spendsAllResource,

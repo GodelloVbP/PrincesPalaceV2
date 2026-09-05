@@ -892,16 +892,36 @@ namespace PrincesPalace
 
         private void FlashCombatant(CombatBeat beat)
         {
+            if (beat == null) return;
+
+            // EVERY ENEMY A SWEEP LANDED ON, each judged on its OWN amount. The
+            // beat-wide Amount holds the largest single hit, so testing it once
+            // would flash an enemy that dodged the same cast the two beside it
+            // took -- see BeatTargetResult.
+            if (beat.HasPerTargetResults)
+            {
+                foreach (var result in beat.Results)
+                {
+                    if (result.Amount > 0) FlashOne(beat, result.Target);
+                }
+
+                return;
+            }
+
             // Only a beat that actually LANDED something flashes. A beat that
             // recorded no amount is a hold-back, a refusal or a status tick, and
             // flashing those would make the one signal that means "you were hit"
             // stop meaning anything.
-            if (beat == null || beat.Amount <= 0) return;
+            if (beat.Amount <= 0) return;
 
-            // Read off the BEAT, not off the target's health -- by the time this
-            // plays, live health has already moved through the rest of the round.
-            //
-            var slot = SlotFor(beat.Target);
+            FlashOne(beat, beat.Target);
+        }
+
+        // Read off the BEAT, not off the target's health -- by the time this
+        // plays, live health has already moved through the rest of the round.
+        private void FlashOne(CombatBeat beat, CombatantState target)
+        {
+            var slot = SlotFor(target);
             if (slot == null) return;
 
             var flash = slot.GetComponentInChildren<StageHitFlash>(includeInactive: true);

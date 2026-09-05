@@ -338,11 +338,12 @@ namespace PrincesPalace
 
                 PlayVfx?.Invoke(beat);
 
-                // A beat's own clip, if it authored one. Unconditional and
-                // BEFORE the positioning work, because a spell with a sound but
-                // no frames should still be audible -- an empty path is a silent
-                // no-op, which is why this needs no guard of its own.
-                SoundController.PlayClip(beat.Vfx.sfxPath);
+                // THE CAST CUE, at the moment the beat opens. The pressure
+                // building through a spell's wind-up, as against the transient
+                // that punctuates its contact -- see SpellPresentation's
+                // castSfxPath for why the two are separate paths and not one.
+                // An empty path is a silent no-op, so this needs no guard.
+                SoundController.PlayClip(beat.Vfx.castSfxPath);
 
                 // Wind-up: the crouch and the cross for a Lunge, or the
                 // charge's own outbound travel (chargeOutSeconds, floored at
@@ -383,6 +384,20 @@ namespace PrincesPalace
                     PoseVictims(beat);
 
                     PaintVitals?.Invoke(beat.Snapshot);
+
+                    // THE IMPACT CLIP, HERE RATHER THAN AT THE TOP OF THE BEAT.
+                    //
+                    // It used to fire beside PlayVfx, which put a spell's own
+                    // sound a whole impact delay ahead of the blow it describes
+                    // -- half a second early for Frost Flare, and the wrong half
+                    // second, because the number, the flash and the recoil all
+                    // happen here. The comment that defended the old position
+                    // gave one reason: a spell with a sound but no frames should
+                    // still be audible. It still is -- ImpactDelayFor returns 0
+                    // for a beat with no frames, so a frames-less cast reaches
+                    // this line on the same frame it used to.
+                    SoundController.PlayClip(beat.Vfx.sfxPath);
+
                     ShowAmount(beat);
                     FlashTarget?.Invoke(beat);
                     if ((staticSwing || staticCharge) && WantsContactFx(beat)) PlayContactFx?.Invoke(beat);
@@ -459,7 +474,34 @@ namespace PrincesPalace
             finished?.Invoke();
         }
 
+        // ONE NUMBER PER THING THE BEAT LANDED ON.
+        //
+        // A sweep records what each enemy took (CombatBeat.Results); everything
+        // else records one Amount against one Target. Both reach the same
+        // placement below, so the two paths cannot drift apart on WHERE a
+        // number appears -- only on how many there are.
         private void ShowAmount(CombatBeat beat)
+        {
+            if (beat.HasPerTargetResults)
+            {
+                foreach (var result in beat.Results)
+                {
+                    // Each result carries its own hit/miss, so the rule the
+                    // single-target case applies once is applied per enemy: a
+                    // dodge shows its own popup, a landed nothing shows none.
+                    if (result.Target == null) continue;
+                    if (!result.Missed && result.Amount <= 0) continue;
+
+                    PopNumber(beat, result.Target, result.Amount, result.Missed);
+                }
+
+                return;
+            }
+
+            ShowSingleAmount(beat);
+        }
+
+        private void ShowSingleAmount(CombatBeat beat)
         {
             // PHASE D1: a miss shows its OWN popup even though Amount stays
             // 0 -- the exact case FlashCombatant/Recoil/Punch above still
@@ -470,37 +512,34 @@ namespace PrincesPalace
             if (beat.Target == null) return;
             if (!beat.Missed && beat.Amount <= 0) return;
 
+            PopNumber(beat, beat.Target, beat.Amount, beat.Missed);
+        }
+
+        // ONE NUMBER, WHEREVER IT CAME FROM. Both paths above end here, so the
+        // headroom arithmetic has one home rather than one per path.
+        //
+        // ABOVE THE FIGURE, not on it. This used to spawn at the slot's own
+        // centre, which is the middle of the combatant -- so the number rose
+        // out from behind the sprite it was describing and spent its first
+        // frames, the opaque ones, hidden by it. Starting a head above means
+        // the whole punch is visible and the rise carries it clear rather than
+        // into view.
+        //
+        // MEASURED OFF THE SLOT rather than a constant: enemy and party slots
+        // are not the same height, and a fixed offset would sit on one and
+        // float over the other.
+        private void PopNumber(CombatBeat beat, CombatantState target, int amount, bool missed)
+        {
             var popup = FreePopup();
             if (popup == null) return;   // every one still in flight; the number is dropped, not queued
 
-            // ABOVE THE FIGURE, not on it.
-            //
-            // This used to spawn at the slot's own centre, which is the middle
-            // of the combatant -- so the number rose out from behind the sprite
-            // it was describing and spent its first frames, the opaque ones,
-            // hidden by it. Starting a head above means the whole punch is
-            // visible and the rise carries it clear rather than into view.
-            //
-            // Measured off the slot rather than a constant: enemy and party
-            // slots are not the same height, and a fixed offset would sit on
-            // one and float over the other.
-            var slot = SlotFor?.Invoke(beat.Target);
-            var at = Vector2.zero;
+            var slot = SlotFor?.Invoke(target);
+            var at = slot == null
+                ? Vector2.zero
+                : slot.anchoredPosition + new Vector2(0f, slot.rect.height * 0.5f + PopupHeadroom);
 
-            if (slot != null)
-            {
-                at = slot.anchoredPosition
-                     + new Vector2(0f, slot.rect.height * 0.5f + PopupHeadroom);
-            }
-
-            if (beat.Missed)
-            {
-                popup.PlayMiss(at);
-            }
-            else
-            {
-                popup.Play(at, beat.Amount, beat.IsHealing, beat.DamageType);
-            }
+            if (missed) popup.PlayMiss(at);
+            else popup.Play(at, amount, beat.IsHealing, beat.DamageType);
         }
 
         private DamagePopup FreePopup()
@@ -684,17 +723,38 @@ namespace PrincesPalace
         // TOWARD the party when it was hit from behind by a status tick.
         private void Recoil(CombatBeat beat)
         {
-            if (beat.Target == null || beat.Amount <= 0) return;
+            // EVERYONE THE SWEEP LANDED ON, not only its primary. A sweep's
+            // Results carry a per-enemy amount, so "nothing landed, nothing
+            // flinches" is applied per enemy rather than once for the whole
+            // cast -- an enemy that dodged Cinderfault must not recoil from it
+            // while the two beside it do.
+            if (beat.HasPerTargetResults)
+            {
+                foreach (var result in beat.Results)
+                {
+                    if (result.Amount > 0) RecoilOne(beat, result.Target);
+                }
+
+                return;
+            }
+
+            if (beat.Amount <= 0) return;
+            RecoilOne(beat, beat.Target);
+        }
+
+        private void RecoilOne(CombatBeat beat, CombatantState target)
+        {
+            if (target == null) return;
 
             // Nobody flinches away from themselves. A self-heal still gets its
             // number, just no recoil.
-            if (ReferenceEquals(beat.Target, beat.Actor)) return;
+            if (ReferenceEquals(target, beat.Actor)) return;
 
-            var slot = SlotFor?.Invoke(beat.Target);
+            var slot = SlotFor?.Invoke(target);
             var animator = slot == null ? null : slot.GetComponent<StageActorAnimator>();
             if (animator == null) return;
 
-            float dx = beat.Target.IsPlayerSide ? -RecoilDistance : RecoilDistance;
+            float dx = target.IsPlayerSide ? -RecoilDistance : RecoilDistance;
             var offset = new Vector2(dx, 0f);
             float hold = Scaled(BeatHoldSeconds) * 0.45f;
             animator.Play(offset, hold);

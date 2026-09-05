@@ -157,6 +157,85 @@ VFX = {
             {"from": "f5", "hold": 5, "scale": (1.0, 1.04)},
         ],
     },
+
+    # ---- Cinderfault: two sheets, one timeline ------------------------------
+    #
+    # The spell is a shared ground fault plus one eruption per living enemy, and
+    # the two have to peak on the SAME frame index or the damage lands on one of
+    # them and not the other. Both recipes below therefore compose NINE frames
+    # with their peak at index 4 -- 1-based frame 5, which is the single
+    # impactFrame skills.json authors for both layers. A change to either
+    # sequence's length is a change to the other's; CinderfaultSpellTests pins
+    # the pair.
+    "cinderfault_ground": {
+        "sheet": "Spells/cinderfault_ground/cinderfault_ground_6frame_sheet.png",
+        "grid": (2, 3),
+        "names": ["f0", "f1", "f2", "f3", "f4", "f5"],
+
+        # AUTHORED ALPHA, and keying it would be actively wrong here rather
+        # than merely unnecessary: the fault is black basalt with molten seams
+        # through it, so luminance and coverage disagree by the whole width of
+        # the drawing. Keyed, the rock would vanish and leave the lava floating.
+        "keyed": False,
+
+        # THE SHEET IS DRAWN ON TWO DIFFERENT FLOORS. Measured, cell by cell,
+        # the lowest substantially-opaque row runs 441 / 458 / 458 across the
+        # top row and 294 / 290 / 285 across the bottom one -- so at the exact
+        # moment the fault ruptures it also jumps 164px (a third of the cell)
+        # up the screen. That is a delivery inconsistency, not animation: a
+        # crack in the floor does not change where the floor is. See base_align.
+        "base_align": True,
+
+        # A GATHERING, A RUPTURE, A COOLING. Nine frames from six drawings.
+        #
+        # The rupture is HELD for two and grows 5% into the second, the same
+        # trick frost_flare's strike uses and for the same reason: a peak that
+        # lasts one frame reads as a dropped frame rather than as the ground
+        # opening. Grown about the fault's own ground line (256, 458) rather
+        # than the cell's centre, so it spreads where it stands instead of
+        # sliding down the screen as it swells.
+        "sequence": [
+            {"from": "f0", "scale": (0.92, 0.92), "pivot": (256, 458)},
+            {"from": "f0"},
+            {"from": "f1"},
+            {"from": "f2"},
+            {"from": "f3", "hold": 2, "scale": (1.0, 1.05), "pivot": (256, 458)},
+            {"from": "f4"},
+            {"from": "f5"},
+            {"from": "f5", "scale": (0.98, 0.98), "pivot": (256, 458)},
+        ],
+    },
+    "cinderfault_eruption": {
+        "sheet": "Spells/cinderfault_eruption/cinderfault_eruption_6frame_sheet.png",
+        "grid": (2, 3),
+        "names": ["f0", "f1", "f2", "f3", "f4", "f5"],
+        "keyed": False,
+
+        # NO base_align, and that is a measurement rather than an omission: this
+        # sheet's six cells already sit on 446 / 446 / 446 / 446 / 445 / 445, so
+        # the pass would shift five of them by a pixel and the sixth by nothing.
+        # Declared absent so the difference from the ground sheet is legible.
+
+        # THE PEAK IS DRAWING 3, not 4 -- cell f2 carries 17.5% coverage against
+        # f3's 14.0% and reaches 149px up the cell against f3's 186. So the
+        # anticipation gets FOUR slots and the peak lands on index 4, which is
+        # where the ground sheet's rupture lands. Trimming the anticipation
+        # instead would have been the other way to satisfy the timing contract,
+        # and it throws away the two drawings that make the eruption read as
+        # coming out of the ground rather than appearing on top of it.
+        #
+        # Grown about (256, 446) -- its own base -- so the shards rise instead
+        # of the whole burst inflating around its middle.
+        "sequence": [
+            {"from": "f0", "scale": (0.85, 0.85), "pivot": (256, 446)},
+            {"from": "f0"},
+            {"from": "f1", "hold": 2, "scale": (0.96, 1.0), "pivot": (256, 446)},
+            {"from": "f2", "hold": 2, "scale": (1.0, 1.06), "pivot": (256, 446)},
+            {"from": "f3"},
+            {"from": "f4"},
+            {"from": "f5"},
+        ],
+    },
 }
 
 # VFX that exist on disk but that this tool did NOT produce and cannot
@@ -449,6 +528,65 @@ def feather_edges(frame, width=12.0):
     return frame
 
 
+# A row this covered counts as the drawing's floor rather than as a stray
+# speck. 0.6% of a 512-wide cell is three pixels, which no anti-aliased edge
+# reaches on its own and every real lip of a fault clears easily.
+GROUND_ROW_COVERAGE = 0.006
+
+
+def ground_row(cell):
+    """The lowest row of `cell` that carries real ink, or None if it is blank.
+
+    Deliberately NOT getbbox(): a bbox believes a single stray pixel, and these
+    sheets have them. See GROUND_ROW_COVERAGE.
+    """
+    width, height = cell.size
+    alpha = cell.getchannel("A").load()
+    floor = max(1, int(width * GROUND_ROW_COVERAGE))
+
+    for y in range(height - 1, -1, -1):
+        if sum(1 for x in range(width) if alpha[x, y] > 8) >= floor:
+            return y
+
+    return None
+
+
+def align_to_common_ground(cells):
+    """Slide every cell down so they all stand on the same floor.
+
+    THE OPPOSITE OF THIS FILE'S DEFAULT, and only for a sheet that asks. Where
+    an effect sits inside its cell IS the animation for a bolt or a flare --
+    that is this tool's whole argument against slice_actor_sheet's baseline
+    pass. It is not true of a sheet drawn ON a floor: a fault opening in the
+    ground cannot also move the ground, and cinderfault_ground arrived with its
+    bottom row drawn a third of a cell higher than its top row, so the frame
+    the ground ruptures is also the frame the whole floor jumps.
+
+    Aligned DOWN to the lowest floor any cell reaches, so nothing is ever
+    pushed off the bottom of its own cell: every shift is zero or positive and
+    the deepest cell does not move at all.
+    """
+    floors = {name: ground_row(cell) for name, cell in cells.items()}
+    reached = [y for y in floors.values() if y is not None]
+    if not reached:
+        return cells
+
+    target = max(reached)
+    aligned = {}
+    for name, cell in cells.items():
+        shift = 0 if floors[name] is None else target - floors[name]
+        if shift == 0:
+            aligned[name] = cell
+            continue
+
+        moved = Image.new("RGBA", cell.size, (0, 0, 0, 0))
+        moved.paste(cell, (0, shift))
+        aligned[name] = moved
+        print(f"  {name}: floor {floors[name]} -> {target} (+{shift}px)")
+
+    return aligned
+
+
 def turned(cell, degrees, pivot, scale):
     """One cell, rotated about `pivot` and scaled about the same point.
 
@@ -474,7 +612,7 @@ def turned(cell, degrees, pivot, scale):
 
 
 def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=None,
-                preview=False, vfx_id=None):
+                base_align=False, preview=False, vfx_id=None):
     """Cut a sheet into frames.
 
     `keyed` picks between the two kinds of sheet this has to handle:
@@ -565,6 +703,13 @@ def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=Non
             print(f"  {name}: erased {borders} cell border line(s)")
 
         cells[name] = frame
+
+    # AFTER the border pass and BEFORE the sequence, which is the only order
+    # that works: a border still welded to a cell's bottom edge would be read
+    # as that cell's floor, and a sequence step's pivot is stated in the
+    # aligned cell's coordinates.
+    if base_align:
+        cells = align_to_common_ground(cells)
 
     # The cells ARE the frames unless a recipe says otherwise. Every sheet
     # before mud_blast shipped one for one, and those still do.
@@ -914,6 +1059,7 @@ def main():
         slice_sheet(os.path.join(SOURCE_DIR, spec["sheet"]),
                     os.path.join(OUTPUT_ROOT, vfx_id), rows, cols, spec["names"],
                     keyed=spec.get("keyed", True), sequence=spec.get("sequence"),
+                    base_align=spec.get("base_align", False),
                     preview=args.preview, vfx_id=vfx_id)
 
 

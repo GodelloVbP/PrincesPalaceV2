@@ -45,6 +45,12 @@ MonoBehaviour:
     impactX: -1
     impactY: -1
     sfxPath: 
+    groundPath: 
+    groundSeconds: 0
+    groundImpactFrame: 0
+    groundAspect: 0
+    groundImpactY: -1
+    castSfxPath: 
   abilities: []
   attackWeight: 1
   appliesStatus: 0

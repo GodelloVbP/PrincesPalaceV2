@@ -43,6 +43,12 @@ MonoBehaviour:
     impactX: 0.5
     impactY: 0.18
     sfxPath: Audio/Sfx/frost_flare
+    groundPath: 
+    groundSeconds: 0
+    groundImpactFrame: 0
+    groundAspect: 0
+    groundImpactY: -1
+    castSfxPath: 
   appliesStatus: 0
   hasStatus: 0
   statusMagnitude: 0

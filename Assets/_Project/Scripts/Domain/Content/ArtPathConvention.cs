@@ -65,6 +65,13 @@ namespace PrincesPalace.Domain.Content
                 // send someone looking for a field that is not in the file.
                 { "vfx.path", ArtPathKind.RuntimeLoaded },
                 { "vfx.sfxPath", ArtPathKind.RuntimeLoaded },
+
+                // The shared ground layer and the cue that leads into it --
+                // same block, same convention, and classified here on the day
+                // they were added rather than on the day one of them silently
+                // showed nothing. See SpellPresentation.groundPath.
+                { "vfx.groundPath", ArtPathKind.RuntimeLoaded },
+                { "vfx.castSfxPath", ArtPathKind.RuntimeLoaded },
             };
 
         // Extensions checked for explicitly rather than "contains a dot",

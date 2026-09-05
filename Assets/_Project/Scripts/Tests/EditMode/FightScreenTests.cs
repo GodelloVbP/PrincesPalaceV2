@@ -141,6 +141,9 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(s.DetailDamageType.IsValid);
             Assert.IsTrue(s.TargetPrompt.IsValid);
             Assert.IsTrue(s.SpellVfxPool.IsValid);
+            Assert.IsTrue(s.SpellGroundVfxPool.IsValid);
+            Assert.IsTrue(s.SpellGroundVfx.IsValid, "the shared ground layer was never assigned a node");
+            Assert.IsTrue(s.SpellGroundVfxNext.IsValid, "its dissolve layer was never assigned a node");
             Assert.IsTrue(s.ContinueButton.IsValid);
         }
 
@@ -370,12 +373,20 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void PoolMembersAreTheOnlyRuntimePositionedElements()
         {
-            // The exemption's whole boundary, asserted. If a third pool ever
+            // The exemption's whole boundary, asserted. If a FOURTH pool ever
             // appears, this test is where the decision gets re-made rather than
             // where it quietly widens.
+            //
+            // SpellGroundVfx is the third, and the decision was made rather
+            // than inherited: it is runtime-positioned in exactly the way the
+            // other two are -- its position AND its size come from the slots
+            // the living enemies actually occupy, which is precisely what
+            // UiSolver cannot compute -- and it could not be a member of the
+            // SpellVfx pool beside it, because depth in uGUI is sibling order
+            // and this one has to draw BEHIND the racks that one draws over.
             var pools = AllNodes(Screen().Root).Where(n => n.Kind == UiNodeKind.Pool).Select(n => n.Name).ToList();
 
-            CollectionAssert.AreEquivalent(new[] { "SpellVfx", "DamagePopups" }, pools);
+            CollectionAssert.AreEquivalent(new[] { "SpellVfx", "SpellGroundVfx", "DamagePopups" }, pools);
         }
 
         // ---- the tree does not restate a string ------------------------------------

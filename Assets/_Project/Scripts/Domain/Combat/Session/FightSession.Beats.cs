@@ -114,6 +114,23 @@ namespace PrincesPalace.Domain.Combat.Session
             _recordingBeat.SplashTargets = extra.Count == 0 ? null : extra;
         }
 
+        // WHAT ONE COMBATANT OF SEVERAL TOOK, recorded per enemy as the sweep
+        // resolves rather than derived afterwards. It cannot be derived: by the
+        // time the beat is committed, live health has already moved through the
+        // rest of the round, and the beat's own Amount holds the largest single
+        // hit rather than any particular enemy's. See BeatTargetResult.
+        private void RecordTargetResult(CombatantState target, int amount, bool missed = false)
+        {
+            if (_recordingBeat == null || target == null) return;
+
+            if (_recordingBeat.Results == null)
+            {
+                _recordingBeat.Results = new List<BeatTargetResult>();
+            }
+
+            _recordingBeat.Results.Add(new BeatTargetResult(target, amount, missed));
+        }
+
         // How hard this beat insists the stage is kicked, whatever it landed.
         private void RecordShake(float shake)
         {

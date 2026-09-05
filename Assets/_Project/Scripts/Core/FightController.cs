@@ -188,6 +188,14 @@ namespace PrincesPalace
         // only ever run for an effect that lands on more than one thing.
         [SerializeField] internal SpellVfxPlayer[] spellVfxPlayers;
 
+        // THE SHARED GROUND LAYER, and there is exactly one of it. A fault
+        // opening under the whole enemy formation is one drawing however many
+        // enemies stand on it -- see FightScreen.BuildSpellGroundVfx for why it
+        // is a separate node at a different depth rather than a fourth member
+        // of the pool above.
+        [SerializeField] internal Image spellGroundVfx;
+        [SerializeField] internal SpellVfxPlayer spellGroundVfxPlayer;
+
         // The plate every combatant with no authored battle art falls back to.
         // Assigned at build time from the same sprite the enemy plates use, so a
         // slot with nothing behind it reads as a real combatant rather than
@@ -487,6 +495,12 @@ namespace PrincesPalace
                     if (player != null) player.StopImmediately();
                 }
             }
+
+            // The ground layer clears with them. It is a separate node with a
+            // separate lifetime, so an abandoned fight would otherwise leave a
+            // fault frozen mid-rupture behind an empty stage -- the exact case
+            // FightBeatPlayer.Flush calls this for.
+            if (spellGroundVfxPlayer != null) spellGroundVfxPlayer.StopImmediately();
         }
 
         // Three backdrops on ONE Image, swapped by encounter class -- v1's

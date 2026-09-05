@@ -298,7 +298,8 @@ are plain logic; only the PAINTING needs Unity.
 | `Domain/.../FightHudModel.cs` | submenu rows, the detail panel, the breadcrumb, the standing count |
 | `Core/FightController.Hud.cs` | painting, and nothing else |
 | `Core/FightController.Input.cs` | clicks in, session commands out; `CanAct` asked in ONE place |
-| `Core/FightBeatPlayer.cs` | playback, paint-first-then-move, `Flush` reclaims |
+| `Core/FightBeatPlayer.cs` | playback, paint-first-then-move, `Flush` reclaims; per-target numbers and recoils |
+| `Domain/Combat/Session/BeatTargetResult.cs` | what one combatant of several took, for a beat that landed on more than one |
 | `Core/DamagePopup.cs` | the rise-and-fade, with `Reclaim` |
 | `Core/StageHitFlash.cs` | the white silhouette, over `Resources/Shaders/UIHitFlash.shader` |
 | `Core/ContactCues.cs` | the melee contact cues' asset paths, durations and box size — one home shared by `StaticSwing` (the wind-up whoosh) and `FightController.PlayContactFx` (the arc, the burst, the thud) |
@@ -444,6 +445,30 @@ anatomically wrong:
    down the screen as it faded) but the MINIMUM margin across the sheet. A blank
    wind-up frame reports "unmeasurable" rather than 0, because claiming the effect
    reaches the floor before it has appeared is confidently wrong.
+
+**The shared ground layer (Cinderfault).** A spell can author a SECOND sheet,
+drawn once behind the whole enemy formation rather than once per target:
+`SpellPresentation.groundPath` and the five fields beside it. Three files hold
+it and nothing else knows it exists —
+
+| File | What it owns |
+|---|---|
+| `Domain/Content/SpellPresentation.cs` | `groundPath`/`groundSeconds`/`groundImpactFrame`/`groundAspect`/`groundImpactY`/`castSfxPath`, and `HasGroundLayer` — the one gate the view asks |
+| `Domain/UiKit/Screens/FightScreen.cs` | `BuildSpellGroundVfx` — a pool of ONE, declared *before* the racks so uGUI draws it behind the figures standing on it |
+| `Core/FightController.SpellVfx.cs` | `PlaySpellGroundVfx`/`GroundBoxFor`/`StruckBy` — the fault sized to the slots the living targets actually occupy, not to a slot and not to a constant |
+
+Wired in `ScreenRegistry.cs` to the same `SpellVfxPlayer` the per-target pool
+uses; the differences are its depth in the tree and that its size is recomputed
+per cast. `FightController.StopSpellVfx` clears it with the pool, so
+`FightBeatPlayer.Flush` reclaims both.
+
+**Per-target results (`Domain/Combat/Session/BeatTargetResult.cs`).** A sweep
+records what EACH enemy took, beside the beat's single `Amount` rather than
+instead of it. `FightBeatPlayer.ShowAmount`/`Recoil` and
+`FightController.FlashCombatant` read the list when there is one. Before it, an
+all-enemies cast showed the largest single hit, once, over the beat's primary —
+so three enemies with three different resistances were described by one number
+that matched at most one of them.
 
 **`PreSnapshot` finally does its job.** Playback now paints what stood BEFORE the
 blow when a beat opens, waits `VfxSeconds * ImpactFraction`, then lands the

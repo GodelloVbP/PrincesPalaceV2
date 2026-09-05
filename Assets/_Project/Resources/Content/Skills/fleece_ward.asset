@@ -39,6 +39,12 @@ MonoBehaviour:
     impactX: -1
     impactY: -1
     sfxPath: 
+    groundPath: 
+    groundSeconds: 0
+    groundImpactFrame: 0
+    groundAspect: 0
+    groundImpactY: -1
+    castSfxPath: 
   appliesStatus: 0
   hasStatus: 0
   statusMagnitude: 0
@@ -67,4 +73,4 @@ MonoBehaviour:
   meleeReach: 0
   bookOnly: 0
   bookTier: 0
-  sortOrder: 11
+  sortOrder: 12

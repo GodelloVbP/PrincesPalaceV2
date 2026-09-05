@@ -118,8 +118,66 @@ namespace PrincesPalace.Domain.Content
         public float impactX = Unauthored;
         public float impactY = Unauthored;
 
-        // Where the sound is, if there is one.
+        // Where the sound is, if there is one. Played at the moment the blow
+        // lands -- see FightBeatPlayer's impact instant.
         public string sfxPath = "";
+
+        // ---- the shared ground layer, and the cue that leads into it -----------
+        //
+        // OPTIONAL, AND EVERY FIELD BELOW IS INERT WHEN groundPath IS EMPTY.
+        // Every spell shipped before Cinderfault authors none of them and is
+        // byte-identical in behaviour for it: HasGroundLayer is the single gate
+        // the view asks, and it is false for an empty path.
+        //
+        // WHY A SECOND LAYER RATHER THAN A SECOND SPELL. Cinderfault is one
+        // connected fault opening under the whole enemy formation and one
+        // eruption per enemy standing on it. The per-target half is exactly
+        // what the existing pool already draws; the fault is not, because
+        // there is only ever ONE of it however many enemies are hit, and its
+        // size is a property of the FORMATION rather than of any one target.
+        // Two paths on one presentation is what lets the view draw both from
+        // one beat without the controller learning any spell's id.
+        public string groundPath = "";
+
+        // How long the ground layer runs and which frame it ruptures on.
+        //
+        // BOTH DEFAULT TO THE PER-TARGET SEQUENCE'S OWN NUMBERS, which is the
+        // only default that can be right: the two layers have to peak on the
+        // same instant or the damage lands on one of them and not the other.
+        // Authored separately only for a sheet pair that cannot be composed to
+        // the same length -- Cinderfault's are (nine frames each, rupture on
+        // five, see tools/slice_spell_sheet.py), so it authors neither.
+        public float groundSeconds;
+        public int groundImpactFrame;
+
+        // THE SHAPE OF THE BOX THE FAULT IS FITTED INTO, width over height.
+        //
+        // The per-target box is square (see FightController.BoxFor) because
+        // that is what every sheet before this one was drawn as. A fault is a
+        // horizontal thing sized to the rack it opens under, and forcing it
+        // into a square would letterbox it into a strip a third of the width
+        // it was asked to span.
+        //
+        // ZERO means "take the sheet's own frame aspect", which is what a
+        // square sheet with a wide drawing on it wants: the box matches the
+        // frame, preserveAspect adds no letterbox, and the empty top and
+        // bottom of the frame cost nothing because they are transparent.
+        public float groundAspect;
+
+        // WHERE THE FAULT'S OWN GROUND LINE SITS INSIDE ITS FRAME, as a
+        // fraction from the BOTTOM edge -- the same measurement impactY makes,
+        // for the same reason it is authored rather than scanned. The per-frame
+        // lowest opaque pixel of a fault is its near lip in one drawing and a
+        // thrown fragment in the next.
+        public float groundImpactY = Unauthored;
+
+        // THE CUE THAT RUNS THROUGH THE CAST, as against sfxPath's one
+        // transient at contact. Rock under strain, ending before the rupture.
+        //
+        // A SECOND PATH RATHER THAN A SECOND CLIP ON sfxPath, because the two
+        // fire at different instants: this one when the beat opens, sfxPath
+        // when the blow lands. One field could only ever have meant one of them.
+        public string castSfxPath = "";
 
         // Left unset, a spell runs for this long and lands on this frame. Both
         // were the resolver's private constants and belong beside the fields
@@ -144,6 +202,22 @@ namespace PrincesPalace.Domain.Content
 
         // THE ONE THING A CONSUMER ASKS BEFORE DRAWING ANYTHING.
         public bool HasAnimation => !string.IsNullOrEmpty(path) && seconds > 0f;
+
+        // The same question for the shared layer, and the ONE gate the view
+        // asks: a spell that authored no ground path draws no ground layer, and
+        // that is every spell but one.
+        public bool HasGroundLayer => !string.IsNullOrEmpty(groundPath) && GroundSeconds > 0f;
+
+        // The ground layer's timing, falling back to the per-target sequence's.
+        // See groundSeconds' own header for why that fallback is the point
+        // rather than a convenience.
+        public float GroundSeconds => groundSeconds > 0f ? groundSeconds : seconds;
+        public int GroundImpactFrame => groundImpactFrame >= 1 ? groundImpactFrame : impactFrame;
+
+        // Whether the fault states its own ground line. One axis only, unlike
+        // HasImpactPoint: a fault is placed horizontally by the FORMATION it
+        // opens under, so there is no x for a sheet to state.
+        public bool HasGroundImpactY => groundImpactY >= 0f && groundImpactY <= 1f;
 
         // A FRESH ONE EVERY TIME, not a shared static.
         //
@@ -187,6 +261,12 @@ namespace PrincesPalace.Domain.Content
             impactX = impactX,
             impactY = impactY,
             sfxPath = sfxPath,
+            groundPath = groundPath,
+            groundSeconds = groundSeconds,
+            groundImpactFrame = groundImpactFrame,
+            groundAspect = groundAspect,
+            groundImpactY = groundImpactY,
+            castSfxPath = castSfxPath,
         };
     }
 }

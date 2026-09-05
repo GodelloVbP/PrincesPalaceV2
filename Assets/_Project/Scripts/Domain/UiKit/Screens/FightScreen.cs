@@ -179,6 +179,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef SpellVfxPool;
         public List<NodeRef> SpellVfx = new List<NodeRef>();
         public List<NodeRef> SpellVfxNext = new List<NodeRef>();
+
+        // The shared ground layer -- ONE of it, however many enemies are hit,
+        // and behind all of them. See BuildSpellGroundVfx.
+        public NodeRef SpellGroundVfxPool;
+        public NodeRef SpellGroundVfx;
+        public NodeRef SpellGroundVfxNext;
         public NodeRef DamagePopupPool;
         public List<NodeRef> DamagePopups = new List<NodeRef>();
         public List<NodeRef> DamagePopupLabels = new List<NodeRef>();
@@ -203,6 +209,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // dims the painting from behind every figure standing on it,
             // whatever their own sibling order down there.
             children.AddRange(s.BuildScrim());
+
+            // BEHIND BOTH RACKS, which is the entire reason it is declared here
+            // and not beside the per-target pool three hundred lines down. uGUI
+            // draws later siblings on top, so a fault opening in the floor has
+            // to be an EARLIER sibling than the figures standing on it -- drawn
+            // after them it would paint over their feet, which reads as the
+            // stone erupting in front of the enemy rather than under it.
+            hud.Add(s.BuildSpellGroundVfx());
 
             // Party stage FIRST so enemies, built after and therefore later
             // siblings, paint over it where the two halves meet near the shared
@@ -1867,6 +1881,53 @@ namespace PrincesPalace.Domain.UiKit.Screens
             }).AllowOverlap("a pool's own rect is the whole canvas because its members are placed at runtime; it draws nothing itself and takes no clicks");
 
             SpellVfxPool = pool;
+            return pool;
+        }
+
+        // THE SHARED GROUND LAYER: one fault, behind everyone standing on it.
+        //
+        // A SEPARATE POOL FROM THE ONE ABOVE, and the two differences are the
+        // whole argument. The per-target pool holds one member per stage slot
+        // because an all-enemies cast draws one effect per enemy; this holds
+        // exactly ONE because a formation-wide fault is one drawing however
+        // many enemies are standing on it, and a second copy of it stacked on
+        // the first would read as a rendering fault rather than as two casts.
+        // It also sits at a different DEPTH -- behind the racks rather than
+        // over them (see the call site) -- and depth in uGUI is sibling order,
+        // which a pool member cannot have two of.
+        //
+        // A POOL OF ONE rather than a bare sprite because that is what it is:
+        // a node whose position and SIZE are computed at runtime from the slots
+        // the living enemies actually occupy, which is the case Ui.Pool exists
+        // for and the case UiAudit cannot solve statically.
+        private UiNode BuildSpellGroundVfx()
+        {
+            var pool = Ui.Pool("SpellGroundVfx", 1, i =>
+            {
+                // NO AUTHORED SIZE WORTH THE NAME. The per-target pool's 380
+                // square is a starting point a spell then overrides; this one
+                // is ALWAYS overridden, because the fault spans from the
+                // leftmost living enemy to the rightmost and neither is known
+                // until a cast. The value here only has to be non-zero, which
+                // is UiAudit's rule about zero-sized graphics.
+                var image = Ui.Sprite($"SpellGroundVfx{i}", null, new UiVec(380f, 380f), Place.At(0f, 0f))
+                    .Inactive();
+
+                // The same dissolve layer the per-target pool carries, and for
+                // the same reason -- see BuildSpellVfx. A child rather than a
+                // sibling so it inherits position and size for free, which
+                // matters more here than there: this layer's size changes on
+                // every cast.
+                var next = Ui.Sprite($"SpellGroundVfx{i}Next", null, Place.Stretch(), UiSize.Fill)
+                    .AsDecor();
+                image.Children.Add(next);
+
+                SpellGroundVfx = image;
+                SpellGroundVfxNext = next;
+                return image;
+            }).AllowOverlap("a pool's own rect is the whole canvas because its members are placed at runtime; it draws nothing itself and takes no clicks");
+
+            SpellGroundVfxPool = pool;
             return pool;
         }
 

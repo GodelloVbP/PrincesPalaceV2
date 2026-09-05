@@ -181,6 +181,22 @@
       "peakDb": -10.2
     },
     {
+      "path": "Sfx/cinderfault_impact",
+      "gainDb": -0.15,
+      "gain": 0.9829,
+      "metric": "rms",
+      "measuredDb": -18.2,
+      "peakDb": -0.8
+    },
+    {
+      "path": "Sfx/cinderfault_pressure",
+      "gainDb": -5.4,
+      "gain": 0.537,
+      "metric": "rms",
+      "measuredDb": -12.6,
+      "peakDb": -2.9
+    },
+    {
       "path": "Sfx/frost_flare",
       "gainDb": -1.1,
       "gain": 0.881,

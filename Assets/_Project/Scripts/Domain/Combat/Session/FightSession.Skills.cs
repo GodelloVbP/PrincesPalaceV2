@@ -448,6 +448,51 @@ namespace PrincesPalace.Domain.Combat.Session
                 // corpse.
                 if (!enemy.IsAlive) continue;
 
+                // A SWEEP WITH AUTHORED PACKETS goes through the same
+                // per-element resolution a single-target packet spell does, and
+                // through nothing else. Before Cinderfault this branch did not
+                // exist and a DamageAll skill with damageInstances would have
+                // fallen straight through to the Attack-scaled arithmetic
+                // below -- which reads Power and FlatAmount, both zero on a
+                // packet skill, so the spell would have dealt the floor of 1
+                // per enemy with no elemental check anywhere in it. Silent, and
+                // wrong in exactly the way a packet spell exists to avoid.
+                //
+                // Deliberately NOT routed through TotalDamage: the single-
+                // target packet branch does not either (see ResolveDamageSingle),
+                // and a sweep taking a relic multiplier its own single-target
+                // twin does not take would be a balance change riding in on a
+                // presentation change.
+                if (skill.HasFixedDamage)
+                {
+                    var packets = new StringBuilder();
+                    int packetTotal = ResolveDamageInstances(actor, skill, enemy, packets, out bool packetsDodged);
+
+                    if (packetsDodged)
+                    {
+                        summary.Append($" {enemy.Name} dodges!");
+                        RecordTargetResult(enemy, 0, missed: true);
+                        continue;
+                    }
+
+                    ApplyFinalDamage(actor, enemy, packetTotal);
+                    RecordTargetResult(enemy, packetTotal);
+
+                    largestLanded = System.Math.Max(packetTotal, largestLanded);
+                    RecordBeatAmount(largestLanded);
+                    summary.Append($" {enemy.Name} takes {packetTotal}! -{packets}");
+
+                    ApplyMark(actor, enemy);
+                    MagicMarkerApplyMark(actor, enemy);
+
+                    if (enemy.IsAlive)
+                    {
+                        ApplySkillStatus(skill, enemy, actor);
+                    }
+
+                    continue;
+                }
+
                 // Effectiveness is resolved PER ENEMY: one cast can be super
                 // effective against one target and resisted by another in the
                 // same fight.
@@ -478,6 +523,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 if (outcome.IsMiss)
                 {
                     summary.Append($" {enemy.Name} dodges!");
+                    RecordTargetResult(enemy, 0, missed: true);
                     continue;
                 }
 
@@ -504,6 +550,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 // AttackType -> Physical) -- so this still counts as the
                 // CAST's type, not the caster's swing, exactly as before.
                 ApplyFinalDamage(actor, enemy, landed);
+
+                RecordTargetResult(enemy, landed);
 
                 largestLanded = System.Math.Max(landed, largestLanded);
                 RecordBeatAmount(largestLanded);

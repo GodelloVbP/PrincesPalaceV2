@@ -64,6 +64,12 @@ namespace PrincesPalace
 
         public StageShake[] StageShakesForTest => stageShakes;
 
+        // The shared ground layer. Public for the same reason the seams above
+        // are: InternalsVisibleTo names the EDITOR assembly only, so a PlayMode
+        // test reaches this or reaches nothing -- and "is there exactly one
+        // fault, behind everyone" is only answerable from a running scene.
+        public SpellVfxPlayer GroundVfxPlayerForTest => spellGroundVfxPlayer;
+
         // Index 0, and the only one the measurement helpers ever touch. Frames
         // and dead space are properties of the SHEET, so asking any member
         // gives the same answer -- asking a fixed one keeps that obvious.
@@ -81,21 +87,155 @@ namespace PrincesPalace
         private void PlaySpellVfx(CombatBeat beat)
         {
             if (beat == null) return;
+
+            // FIRST, and outside the path guard below, because the two layers
+            // are independent: a spell is allowed to author a ground fault and
+            // no per-target sheet, or the reverse. Missing art on either side
+            // costs that side and nothing else.
+            PlaySpellGroundVfx(beat);
+
             if (PrimaryPlayer == null || string.IsNullOrEmpty(beat.Vfx.path) || beat.Target == null) return;
 
-            PlaySpellVfxOn(beat, beat.Target, 0);
+            int member = 0;
+            foreach (var struck in StruckBy(beat))
+            {
+                if (member >= spellVfxPlayers.Length) break;
 
-            if (beat.SplashTargets == null) return;
+                PlaySpellVfxOn(beat, struck, member);
+                member++;
+            }
+        }
 
-            int member = 1;
+        // ---- the shared ground layer ---------------------------------------------
+        //
+        // ONE FAULT UNDER THE WHOLE FORMATION, sized to the enemies actually
+        // standing in it rather than to a slot or to a constant.
+        //
+        // WHY THE SPAN IS MEASURED AND NOT AUTHORED. A formation is one, two or
+        // three figures at different depths, and a fault authored wide enough
+        // for three reaches half the stage past a lone rat -- the effect then
+        // describes ground nothing is standing on, which is the same class of
+        // wrongness as an impact landing off the target. The slots know where
+        // they are; nothing else does.
+        //
+        // MEASURED THROUGH EACH SLOT'S OWN EDGES, not from its centre plus a
+        // margin. A back-row slot is depth-scaled, so its half-width in the
+        // renderer's coordinates is not the same number as a front-row slot's
+        // -- one authored margin would over-reach on one rank and under-reach
+        // on the other. Transforming xMin and xMax gets both for free and
+        // leaves no constant to be wrong.
+        private void PlaySpellGroundVfx(CombatBeat beat)
+        {
+            var player = spellGroundVfxPlayer;
+            if (player == null || beat?.Vfx == null || !beat.Vfx.HasGroundLayer) return;
+
+            var parent = player.transform.parent;
+            if (parent == null) return;
+
+            // THE PRE-DAMAGE SNAPSHOT, which is the whole reason the beat
+            // carries one: an enemy killed by this very cast still stood in the
+            // fault when it opened, and reading the living list here would
+            // shrink the fault away from a corpse that is still on screen.
+            float left = float.MaxValue;
+            float right = float.MinValue;
+            float ground = 0f;
+            int standing = 0;
+
+            foreach (var struck in StruckBy(beat))
+            {
+                var slot = SlotFor(struck);
+                if (slot == null) continue;
+
+                var rect = slot.rect;
+                float slotLeft = parent.InverseTransformPoint(
+                    slot.TransformPoint(new Vector3(rect.xMin, 0f, 0f))).x;
+                float slotRight = parent.InverseTransformPoint(
+                    slot.TransformPoint(new Vector3(rect.xMax, 0f, 0f))).x;
+
+                if (slotLeft > slotRight) (slotLeft, slotRight) = (slotRight, slotLeft);
+
+                left = Mathf.Min(left, slotLeft);
+                right = Mathf.Max(right, slotRight);
+                ground += parent.InverseTransformPoint(
+                    slot.TransformPoint(new Vector3(0f, rect.yMin, 0f))).y;
+                standing++;
+            }
+
+            // Nobody with a slot: an off-stage or synthetic target. Drawing a
+            // fault of no width would be a zero-sized graphic, so draw none.
+            if (standing == 0 || right <= left) return;
+
+            // THE AVERAGE GROUND LINE across the ranks it opens under, not the
+            // front one's. The racks stand at different depths and the fault is
+            // one flat drawing: pinned to the front rank it would float above
+            // the back one, and pinned to the back it would cut through the
+            // front one's feet. Halfway is the only choice that is wrong by the
+            // same small amount at both ends.
+            ground /= standing;
+
+            var box = GroundBoxFor(beat.Vfx, right - left);
+            if (box.x <= 0f || box.y <= 0f) return;
+
+            // The sheet's own ground line onto the formation's, the same
+            // arithmetic BoxCentreFor does for an authored impact point --
+            // against the RENDERED size rather than the box, because a box
+            // whose aspect the author overrode letterboxes inside itself.
+            var art = RenderedSize(beat.Vfx.groundPath, box);
+            float sheetGround = beat.Vfx.HasGroundImpactY ? beat.Vfx.groundImpactY : 0.5f;
+
+            // A fault is symmetrical about the rack it opens under, so it has
+            // no direction to mirror -- set anyway, because a pool member keeps
+            // whatever facing the last thing to use it left behind.
+            player.SetFacing(1f);
+            player.PlayAt(beat.Vfx.groundPath, beat.Vfx.GroundSeconds,
+                new Vector2((left + right) * 0.5f, ground + (0.5f - sheetGround) * art.y),
+                box);
+        }
+
+        // Everyone this beat's effect is drawn on, primary first. The same walk
+        // PlaySpellVfx makes over the pool, extracted so the ground layer and
+        // the per-target layer cannot disagree about who was struck.
+        private static IEnumerable<CombatantState> StruckBy(CombatBeat beat)
+        {
+            if (beat.Target != null) yield return beat.Target;
+            if (beat.SplashTargets == null) yield break;
+
             foreach (var also in beat.SplashTargets)
             {
                 if (also == null || ReferenceEquals(also, beat.Target)) continue;
-                if (member >= spellVfxPlayers.Length) break;
-
-                PlaySpellVfxOn(beat, also, member);
-                member++;
+                yield return also;
             }
+        }
+
+        // The box the fault is fitted into: as wide as the formation, and as
+        // tall as its own shape says.
+        //
+        // NOT SQUARE, which is the one thing that separates it from BoxFor. A
+        // square box for a sheet drawn as a wide fault is not merely inelegant
+        // -- preserveAspect would letterbox the drawing into a strip a third of
+        // the width it was asked to span, so the fault would stop short of the
+        // enemies at both ends of the rack it is supposed to run under.
+        //
+        // ZERO groundAspect means "the sheet's own", which is the right default
+        // and not a fallback: a frame's width over its height IS the shape the
+        // artist drew, and authoring a second copy of it would be a number with
+        // two homes. Authored only where the box must differ from the frame.
+        private Vector2 GroundBoxFor(SpellPresentation vfx, float span)
+        {
+            float aspect = vfx.groundAspect;
+
+            if (aspect <= 0f)
+            {
+                var frames = PrimaryPlayer?.Frames(vfx.groundPath);
+                var frame = frames != null && frames.Length > 0 ? frames[0] : null;
+                aspect = frame != null && frame.rect.height > 0f
+                    ? frame.rect.width / frame.rect.height
+                    : 1f;
+            }
+
+            if (aspect <= 0f) aspect = 1f;
+
+            return new Vector2(span, span / aspect);
         }
 
         private void PlaySpellVfxOn(CombatBeat beat, CombatantState target, int member)

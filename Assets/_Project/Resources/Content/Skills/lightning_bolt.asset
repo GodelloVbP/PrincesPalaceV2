@@ -41,6 +41,12 @@ MonoBehaviour:
     impactX: 0.5
     impactY: 0.23
     sfxPath: Audio/Sfx/lightning_strike
+    groundPath: 
+    groundSeconds: 0
+    groundImpactFrame: 0
+    groundAspect: 0
+    groundImpactY: -1
+    castSfxPath: 
   appliesStatus: 0
   hasStatus: 0
   statusMagnitude: 0
@@ -69,4 +75,4 @@ MonoBehaviour:
   meleeReach: 0
   bookOnly: 1
   bookTier: 3
-  sortOrder: 7
+  sortOrder: 8

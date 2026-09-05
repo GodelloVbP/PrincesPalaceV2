@@ -104,6 +104,21 @@ namespace PrincesPalace.PlayModeTests
                 }
             }
 
+            // THE SHARED GROUND LAYER IS A SECOND PATH ON THE SAME BLOCK, and a
+            // sweep that only walked `path` would leave half of a two-layer
+            // spell unguarded -- exactly the gap this test exists to close, one
+            // field along.
+            foreach (var skill in ContentDatabase.Skills)
+            {
+                if (skill == null || string.IsNullOrWhiteSpace(skill.vfx.groundPath)) continue;
+
+                var frames = FrameSequenceLoader.Load(skill.vfx.groundPath);
+                if (frames == null || frames.Length == 0)
+                {
+                    missing.Add($"skill '{skill.id}' declares vfx.groundPath '{skill.vfx.groundPath}'");
+                }
+            }
+
             foreach (var enemy in ContentDatabase.Enemies)
             {
                 if (enemy == null || string.IsNullOrWhiteSpace(enemy.vfx.path)) continue;
@@ -420,7 +435,17 @@ namespace PrincesPalace.PlayModeTests
             // FindAnyObjectByType skips inactive objects entirely, so the
             // global lookup finds nothing and the failure reads as "the component
             // was never wired" rather than "it is asleep".
-            _player = _fight.GetComponentInChildren<SpellVfxPlayer>(includeInactive: true);
+            //
+            // AND EXPLICITLY NOT THE GROUND LAYER, which carries the same
+            // component and is now the FIRST one in the hierarchy -- it is
+            // declared before the racks so uGUI draws it behind them (see
+            // FightScreen.BuildSpellGroundVfx). GetComponentInChildren walks in
+            // sibling order, so a bare call here silently returns the fault
+            // rather than pool member 0, and every placement assertion below
+            // would be measuring a layer PlaySpellVfx never puts a per-target
+            // effect on.
+            _player = _fight.GetComponentsInChildren<SpellVfxPlayer>(includeInactive: true)
+                .FirstOrDefault(p => !ReferenceEquals(p, _fight.GroundVfxPlayerForTest));
 
             var hero = new CombatantState("Shawn", true, 300, 30, 40, 10);
             // The first stays "Front": a sibling test looks its stage slot up
@@ -1011,6 +1036,178 @@ namespace PrincesPalace.PlayModeTests
 
             Assert.IsFalse(_player.Image.enabled);
             Assert.IsFalse(FadeLayer().enabled, "the dissolve layer is still drawing a frame of a stopped spell");
+        }
+
+        // ---- the shared ground layer ----------------------------------------------
+        //
+        // ONE FAULT, HOWEVER MANY ENEMIES, and it is the "one" that needs a
+        // test. The per-target pool draws one effect per thing struck, which is
+        // the behaviour the splash tests above pin; the ground layer is the
+        // opposite rule living beside it, and the two are one loop apart.
+
+        private const string GroundPath = "Spells/cinderfault_ground";
+        private const string EruptionPath = "Spells/cinderfault_eruption";
+
+        private static CombatBeat TwoLayerBeat(CombatantState actor, List<CombatantState> struck)
+        {
+            return new CombatBeat
+            {
+                Actor = actor,
+                Target = struck[0],
+                SplashTargets = struck.Skip(1).ToList(),
+                Vfx = new SpellPresentation
+                {
+                    path = EruptionPath,
+                    seconds = 0.78f,
+                    impactFrame = 5,
+                    impactX = 0.5f,
+                    impactY = 0.129f,
+                    groundPath = GroundPath,
+                    groundImpactY = 0.104f,
+                },
+            };
+        }
+
+        private SpellVfxPlayer Ground => _fight.GroundVfxPlayerForTest;
+
+        private List<SpellVfxPlayer> DrawnEruptions() =>
+            _fight.GetComponentsInChildren<SpellVfxPlayer>(includeInactive: true)
+                .Where(p => p != null && !ReferenceEquals(p, Ground))
+                .Where(p => p.Image != null && p.Image.enabled)
+                .ToList();
+
+        [UnityTest]
+        public IEnumerator AFullFormationGetsThreeEruptionsAndExactlyOneFault()
+        {
+            yield return LoadFight(FightHudSpec.StageSlotsPerSide);
+
+            var enemies = _fight.SessionForTest.Encounter.Enemies.Where(e => e != null && e.IsAlive).ToList();
+            Assert.AreEqual(FightHudSpec.StageSlotsPerSide, enemies.Count,
+                "the fixture did not field a full stage, so this would prove nothing about a formation");
+
+            var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
+            _fight.PlaySpellVfxForTest(TwoLayerBeat(hero, enemies));
+            yield return null;
+
+            Assert.IsNotNull(Ground, "the scene has no shared ground layer");
+            Assert.IsTrue(Ground.Image.enabled, "the fault was never drawn");
+            Assert.AreEqual(enemies.Count, DrawnEruptions().Count,
+                "one eruption per enemy standing in the fault");
+        }
+
+        // PARTIAL FORMATIONS. Empty and dead slots are simply not in the beat's
+        // target list, so the count of eruptions follows the list rather than
+        // the stage -- and the fault still appears exactly once.
+        [UnityTest]
+        public IEnumerator ALoneEnemyGetsOneEruptionAndStillOneFault()
+        {
+            yield return LoadFight(FightHudSpec.StageSlotsPerSide);
+
+            var enemies = _fight.SessionForTest.Encounter.Enemies.Where(e => e != null && e.IsAlive).ToList();
+            var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
+
+            _fight.PlaySpellVfxForTest(TwoLayerBeat(hero, new List<CombatantState> { enemies[0] }));
+            yield return null;
+
+            Assert.AreEqual(1, DrawnEruptions().Count,
+                "two empty slots must not be given eruptions of their own");
+            Assert.IsTrue(Ground.Image.enabled, "one enemy is still standing on a fault");
+        }
+
+        // THE FAULT IS SIZED TO THE FORMATION, not to a slot and not to a
+        // constant. Asserted as a RELATION between two casts rather than
+        // against a pixel figure: the exact span depends on where the stage
+        // anchored its slots, which is not a number this test should own -- but
+        // three enemies must produce a wider fault than one, or the size is
+        // coming from somewhere other than the enemies.
+        [UnityTest]
+        public IEnumerator TheFaultIsWiderUnderThreeEnemiesThanUnderOne()
+        {
+            yield return LoadFight(FightHudSpec.StageSlotsPerSide);
+
+            var enemies = _fight.SessionForTest.Encounter.Enemies.Where(e => e != null && e.IsAlive).ToList();
+            var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
+
+            _fight.PlaySpellVfxForTest(TwoLayerBeat(hero, new List<CombatantState> { enemies[0] }));
+            yield return null;
+            float alone = Ground.Image.rectTransform.sizeDelta.x;
+
+            _fight.PlaySpellVfxForTest(TwoLayerBeat(hero, enemies));
+            yield return null;
+            float formation = Ground.Image.rectTransform.sizeDelta.x;
+
+            Assert.Greater(formation, alone,
+                "the fault is the same width for one enemy as for three, so it is not measured off the slots");
+            Assert.Greater(alone, 0f, "a fault of no width is a zero-sized graphic");
+        }
+
+        // A SPELL THAT AUTHORS NO GROUND LAYER MUST DRAW NONE. Every spell in
+        // the game but one is in this case, and the whole claim that the new
+        // fields are inert rests on it.
+        [UnityTest]
+        public IEnumerator AnOrdinarySpellDrawsNoGroundLayerAtAll()
+        {
+            yield return LoadFight();
+
+            var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
+            var foe = _fight.SessionForTest.Encounter.Enemies.First(c => c != null);
+
+            _fight.PlaySpellVfxForTest(new CombatBeat
+            {
+                Actor = hero,
+                Target = foe,
+                Vfx = new SpellPresentation { path = "Spells/frost_flare", seconds = 0.52f, impactFrame = 5 },
+            });
+            yield return null;
+
+            Assert.IsFalse(Ground.Image.enabled,
+                "a single-layer spell lit the shared ground layer");
+        }
+
+        // BOTH LAYERS RUPTURE ON THE SAME INSTANT, which is what makes the
+        // damage number, the flash and the rock landing one event rather than
+        // three. Measured off the sliced sequences themselves rather than
+        // asserted about the content: the frame COUNT is a property of
+        // tools/slice_spell_sheet.py's recipe, and a recipe edit that changed
+        // one sequence's length and not the other's is exactly what would break
+        // this without touching a single number in skills.json.
+        [Test]
+        public void TheGroundAndTheEruptionRuptureTogether()
+        {
+            var ground = FrameSequenceLoader.Load(GroundPath);
+            var eruption = FrameSequenceLoader.Load(EruptionPath);
+
+            Assert.IsNotNull(ground, GroundPath + " resolves to no frames");
+            Assert.IsNotNull(eruption, EruptionPath + " resolves to no frames");
+            Assert.AreEqual(9, ground.Length, "the ground recipe composes nine frames");
+            Assert.AreEqual(9, eruption.Length, "the eruption recipe composes nine, so one impactFrame drives both");
+
+            // Frame 5 of 9 in both, so the same fraction of the same duration.
+            Assert.AreEqual(CombatBeat.ImpactFraction(5, ground.Length),
+                CombatBeat.ImpactFraction(5, eruption.Length), 0.0001f,
+                "the two layers no longer land on the same instant");
+        }
+
+        // FLUSH RECLAIMS BOTH POOLS. The ground layer is a separate node with a
+        // separate lifetime, so an abandoned fight would otherwise leave a fault
+        // frozen mid-rupture behind an empty stage.
+        [UnityTest]
+        public IEnumerator FlushReleasesTheGroundLayerAndEveryEruption()
+        {
+            yield return LoadFight(FightHudSpec.StageSlotsPerSide);
+
+            var enemies = _fight.SessionForTest.Encounter.Enemies.Where(e => e != null && e.IsAlive).ToList();
+            var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
+
+            _fight.PlaySpellVfxForTest(TwoLayerBeat(hero, enemies));
+            yield return null;
+
+            Assert.IsTrue(Ground.Image.enabled, "nothing was playing, so this would prove nothing about Flush");
+
+            _fight.GetComponentInChildren<FightBeatPlayer>(includeInactive: true).Flush();
+
+            Assert.IsFalse(Ground.Image.enabled, "the fault is still drawing over an abandoned fight");
+            Assert.IsEmpty(DrawnEruptions(), "an eruption is still drawing over an abandoned fight");
         }
 
         // Reached by NAME rather than through the component's field: a PlayMode
