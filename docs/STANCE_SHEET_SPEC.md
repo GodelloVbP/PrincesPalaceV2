@@ -35,6 +35,16 @@ solved the same redraw problem a different way and is retired for the same
 reason a still is simpler than both: nothing to keep consistent across, by
 construction.
 
+**Said once more, flatly, because it decides what to deliver: a stance is
+ONE DRAWING, and frame animation on an actor is not supported.** This is the
+owner's decision, and it is settled — the question is not open and does not
+need re-asking per kit. There is no code path in the engine that plays actor
+frames, so a frame sheet delivered here is not merely unwelcome, it is
+unusable: `Core/StanceAnimationLibrary.cs` resolves a stance to exactly one
+sprite and there is nowhere for a second frame to go. (Spell and contact
+VFX are frame sequences and always have been — see `docs/ART_PIPELINE.md`
+§5b and §5c. This rule is about actors.)
+
 ---
 
 ## 1. The rule that matters

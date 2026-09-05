@@ -99,6 +99,16 @@ cast, hurt, defeated, plus any skill-specific pose (the beetle's
 multi-frame animation sheets: `Core/StanceAnimationLibrary.cs` resolves a
 stance to exactly one sprite.
 
+**This is an owner decision, not a stopgap, and it is not open.** Frame
+animation on an actor is not supported and nothing in the engine plays it —
+there is no code path that would, so a delivered frame sheet is not "not
+wired up yet", it is unusable. `docs/STANCE_SHEET_SPEC.md` §0 records why:
+three animated enemies shipped with six-frame stance sheets and all three
+played badly, for a reason no better prompt closes. Spell and contact VFX
+are the exception and always were — they are frame sequences under
+`Resources/Spells/` and `Resources/Vfx/` (§5b, §5c), and nothing about this
+rule touches them.
+
 **Full commissioning work order:** `docs/STANCE_SHEET_SPEC.md` — the
 prompt template, per-actor SUBJECT/FEATURES/POSES, the accept/reject
 checklist and the delivery steps all live there. This section covers what

@@ -483,7 +483,22 @@ $PathAreas = @(
     # content is fine, and it is precise enough that a real UNMAPPED editor
     # file still refuses loudly.
     @{ Pattern = '^Assets/_Project/Scripts/Editor/.*ImportPostprocessor'; Areas = @('combat', 'ui', 'art', 'content') }
-    @{ Pattern = '^Assets/_Project/ContentData/'; Areas = @('content') }
+    # THE THREE FILES WHOSE ROWS REACH THE STAGE. A mob, its skills and the
+    # spell tiers all decide what gets DRAWN as well as what gets computed: an
+    # enemy row names a spritePath, a skill row names the stance its caster
+    # strikes in and the vfx folder its cast plays. So an edit to one of them
+    # has to re-run the art sweeps (EnemyArtCompletenessTests resolves every
+    # pose every mob can reach; the stance-manifest tests measure them) and the
+    # fight suites, not just the resolver tests.
+    #
+    # Above the general ContentData row deliberately -- first match wins.
+    @{ Pattern = '^Assets/_Project/ContentData/(enemies|skills|spells)\.json$'; Areas = @('content', 'combat', 'art') }
+    # Every other content table -- items, weapons, itemsets, talents, relics,
+    # achievements, modifiers, characters. These change what a fight COMPUTES
+    # (stats, effects, offers) without changing what it draws, so combat comes
+    # along and art does not. 'content' alone was the old mapping and it meant a
+    # relic's effect could be rewritten with the fight suites never run.
+    @{ Pattern = '^Assets/_Project/ContentData/'; Areas = @('content', 'combat') }
     # Runtime-loaded config that is NOT baked by ContentBuilder -- the two
     # audio tables (audio_levels.json, music_layers.json) and the generated
     # content tree. Both were UNMAPPED, which made "-Changed" fail loudly the
