@@ -400,7 +400,17 @@ if ($BuildContent -or $BuildScenesHere) {
     Stamp "generation done"
     Write-Host "Syncing generated content and scenes back to main..."
     $primary = $Runners[0].Path
-    robocopy "$primary\Assets\_Project\Resources\Content" "$SourceProject\Assets\_Project\Resources\Content" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
+
+    # THE STAMP GOES LAST, and it is excluded from the mirror above to make
+    # that true. robocopy /MIR is not atomic: a reader looking at main halfway
+    # through sees some of the new assets and some of the old. content_stamp.json
+    # is what ContentFreshnessTests reads to decide the tree is trustworthy, so
+    # if it arrived with the rest, a torn sync would be indistinguishable from a
+    # finished one. Copied after every asset, its presence-with-a-matching-hash
+    # means the whole sync completed. ContentBuilder writes it last inside the
+    # runner for the same reason, one layer down.
+    robocopy "$primary\Assets\_Project\Resources\Content" "$SourceProject\Assets\_Project\Resources\Content" /MIR /NFL /NDL /NJH /NJS /NP /XF content_stamp.json content_stamp.json.meta | Out-Null
+    robocopy "$primary\Assets\_Project\Resources\Content" "$SourceProject\Assets\_Project\Resources\Content" content_stamp.json content_stamp.json.meta /NFL /NDL /NJH /NJS /NP | Out-Null
 
     # THE ONE COPY THAT IS GATED, and everything either side of it is not.
     #

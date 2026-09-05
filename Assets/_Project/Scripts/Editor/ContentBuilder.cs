@@ -36,9 +36,32 @@ public static class ContentBuilder
     // paths of twenty-one slots, which is a confident wrong answer sitting in
     // the first file anyone adding content opens.
 
+    // The stamp file every freshness check reads. Under ContentRoot on
+    // purpose: RecreateFolder(ContentRoot) deletes the whole tree first, so a
+    // build that dies before it gets here leaves NO stamp rather than a stamp
+    // describing a catalogue that is no longer on disk.
+    private const string StampPath = ContentRoot + "/content_stamp.json";
+
+    // Folder leaf -> the asset names actually written into it this run, and
+    // the labels of the types that failed to produce anything.
+    //
+    // ACCUMULATED AT THE POINT OF WRITING, never restated. The stamp used to
+    // be conceivable as a second list built beside the builders, and a second
+    // list is a list that drifts -- this project has the scars (the scene-set
+    // guard that named four of five scenes, the per-field asset copy that
+    // dropped `transform`). Every CreateAsset in this file goes through
+    // CreateContentAsset below, so the stamp cannot describe anything but what
+    // was written.
+    private static readonly SortedDictionary<string, List<string>> WrittenByFolder =
+        new SortedDictionary<string, List<string>>(System.StringComparer.Ordinal);
+    private static readonly List<string> FailedTypes = new List<string>();
+
     [MenuItem("Prince's Palace/Build Default Content")]
     public static void BuildDefaultContent()
     {
+        WrittenByFolder.Clear();
+        FailedTypes.Clear();
+
         // PHASE TIMINGS, permanently, for the same reason GenerationRun.Mark
         // exists: "the content build is slow" was unactionable until the phases
         // were stamped, and the answer was the per-asset import, not the
@@ -142,6 +165,9 @@ public static class ContentBuilder
 
         Debug.Log($"Default content generated under {ContentRoot}");
 
+        WriteStamp();
+        Mark("stamp");
+
         // The completion sentinel run_tests_parallel.ps1's gate requires.
         // Reachable only past every throw above, which is the entire point: a
         // build that dies partway leaves the PREVIOUS content on disk, where
@@ -190,6 +216,7 @@ public static class ContentBuilder
         if (!File.Exists(jsonPath))
         {
             Debug.LogError($"{label}: no file at '{jsonPath}' -- no {noun} were created.");
+            RecordFailure(label);
             return none;
         }
 
@@ -201,6 +228,7 @@ public static class ContentBuilder
             // possible failure -- so one bad entry fails the whole type.
             Debug.LogError($"{label}: {jsonPath} has {errors.Count} problem(s) -- no {noun} were created:\n" +
                            string.Join("\n", errors));
+            RecordFailure(label);
             return none;
         }
 
@@ -214,7 +242,7 @@ public static class ContentBuilder
 
             var asset = ScriptableObject.CreateInstance<TDef>();
             store(asset, record);
-            AssetDatabase.CreateAsset(asset, $"{folder}/{assetName(record)}.asset");
+            CreateContentAsset(asset, $"{folder}/{assetName(record)}.asset");
             written++;
         }
 
@@ -295,7 +323,7 @@ public static class ContentBuilder
         asset.cost = cost;
         asset.sortOrder = sortOrder;
         asset.startingGoldBonus = startingGoldBonus;
-        AssetDatabase.CreateAsset(asset, $"{UpgradesPath}/{id}.asset");
+        CreateContentAsset(asset, $"{UpgradesPath}/{id}.asset");
     }
 
     // Weakness/resistance pairs, chosen so every one of the 5 characters'
@@ -378,6 +406,7 @@ public static class ContentBuilder
         if (!File.Exists(jsonPath))
         {
             Debug.LogError($"BuildItems: no file at '{jsonPath}' — no items were created.");
+            RecordFailure("BuildItems");
             return;
         }
 
@@ -386,6 +415,7 @@ public static class ContentBuilder
         {
             Debug.LogError($"BuildItems: {jsonPath} has {errors.Count} problem(s) — no items were created:\n" +
                             string.Join("\n", errors));
+            RecordFailure("BuildItems");
             return;
         }
 
@@ -410,7 +440,7 @@ public static class ContentBuilder
             asset.cost = item.Cost;
             asset.iconPath = item.IconPath;
             asset.sortOrder = item.SortOrder;
-            AssetDatabase.CreateAsset(asset, $"{ItemsPath}/{item.Id}.asset");
+            CreateContentAsset(asset, $"{ItemsPath}/{item.Id}.asset");
         }
 
         BuildItemSets();
@@ -429,6 +459,7 @@ public static class ContentBuilder
         if (!File.Exists(jsonPath))
         {
             Debug.LogError($"BuildWeapons: no file at '{jsonPath}' — no weapons were created.");
+            RecordFailure("BuildWeapons");
             return;
         }
 
@@ -437,6 +468,7 @@ public static class ContentBuilder
         {
             Debug.LogError($"BuildWeapons: {jsonPath} has {errors.Count} problem(s) — no weapons were created:\n" +
                             string.Join("\n", errors));
+            RecordFailure("BuildWeapons");
             return;
         }
 
@@ -472,7 +504,7 @@ public static class ContentBuilder
             asset.weaponFamilyId = weapon.FamilyId;
             asset.iconPath = weapon.IconPath;
             asset.sortOrder = WeaponSortOffset + weapon.SortOrder;
-            AssetDatabase.CreateAsset(asset, assetPath);
+            CreateContentAsset(asset, assetPath);
         }
 
         Debug.Log($"BuildWeapons: generated {resolved.Count} weapon(s) from {file.families.Length} famil(y/ies).");
@@ -510,6 +542,7 @@ public static class ContentBuilder
         if (!File.Exists(jsonPath))
         {
             Debug.LogError($"BuildItemSets: no file at '{jsonPath}' — no armour sets were created.");
+            RecordFailure("BuildItemSets");
             return;
         }
 
@@ -518,6 +551,7 @@ public static class ContentBuilder
         {
             Debug.LogError($"BuildItemSets: {jsonPath} has {errors.Count} problem(s) — no armour sets were created:\n" +
                             string.Join("\n", errors));
+            RecordFailure("BuildItemSets");
             return;
         }
 
@@ -547,7 +581,7 @@ public static class ContentBuilder
             asset.tier = piece.Tier;
             asset.iconPath = piece.IconPath;
             asset.sortOrder = SetSortOffset + piece.SortOrder;
-            AssetDatabase.CreateAsset(asset, assetPath);
+            CreateContentAsset(asset, assetPath);
         }
 
         Debug.Log($"BuildItemSets: generated {resolved.Count} set piece(s) from {file.sets.Length} set(s).");
@@ -568,6 +602,60 @@ public static class ContentBuilder
             default:
                 throw new System.ArgumentOutOfRangeException(nameof(kind), kind, "ContentBuilder has no ItemKind wired up for this ResolvedItemKind.");
         }
+    }
+
+    // THE ONE PLACE AN ASSET IS CREATED, so the stamp below cannot describe
+    // anything the build did not write. Every CreateAsset in this file goes
+    // through here; there are five call sites and adding a sixth that does not
+    // is the only way to make the stamp lie.
+    private static void CreateContentAsset(ScriptableObject asset, string assetPath)
+    {
+        AssetDatabase.CreateAsset(asset, assetPath);
+
+        string folder = Path.GetFileName(Path.GetDirectoryName(assetPath));
+        string name = Path.GetFileNameWithoutExtension(assetPath);
+
+        if (!WrittenByFolder.TryGetValue(folder, out var names))
+        {
+            names = new List<string>();
+            WrittenByFolder[folder] = names;
+        }
+
+        names.Add(name);
+    }
+
+    // Called from every "no X were created" branch. What it buys is the fourth
+    // acceptance case in the plan: a resolver error in one entry makes that
+    // whole type write nothing, and without this the build would still finish,
+    // still log BUILD-COMPLETE, and still stamp a catalogue silently missing a
+    // type. No stamp is the honest outcome -- the freshness check then says
+    // "not built", which is exactly what happened.
+    private static void RecordFailure(string label)
+    {
+        if (!FailedTypes.Contains(label)) FailedTypes.Add(label);
+    }
+
+    // LAST, past every asset and past validation. A reader that finds a stamp
+    // whose hash matches is therefore reading a build that ran to completion,
+    // which is the entire claim -- see ContentStamp's own header for what it
+    // deliberately does NOT claim.
+    private static void WriteStamp()
+    {
+        if (FailedTypes.Count > 0)
+        {
+            Debug.LogError($"[ContentBuilder] no stamp written: {string.Join(", ", FailedTypes)} produced nothing. " +
+                           "Fix the authoring error above and rebuild -- the generated tree is incomplete until then.");
+            return;
+        }
+
+        var stamp = new ContentStamp { InputHash = ContentInputHash.Compute(Directory.GetCurrentDirectory()) };
+        foreach (var pair in WrittenByFolder)
+        {
+            stamp.IdsByFolder[pair.Key] = pair.Value;
+        }
+
+        File.WriteAllText(StampPath, stamp.Render());
+        AssetDatabase.ImportAsset(StampPath);
     }
 
     private static void RecreateFolder(string path)
