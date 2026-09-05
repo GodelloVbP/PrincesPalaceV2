@@ -8,7 +8,7 @@ project, and where each kit's pieces actually live.
 | Kit | Source | Keying | Output | Status |
 |---|---|---|---|---|
 | Hub buildings | `Art/UI/Hub/` | grouped, green `#00FF00` | `Resources/Hub/<building>/f0.png..` | delivered |
-| Relic icons | `Art/Items/Relics/` | direct, green `#00FF00` | `Art/Items/Relics/Processed/` | delivered (3/3) |
+| Relic icons | `Art/Items/Relics/` | direct, mostly real alpha delivered (two files, and so far only two, arrived green `#08D111`-ish and needed the keyer) | `Art/Items/Relics/Processed/` | delivered (36/38) — `dancers_anklet` and `loaded_dice` still on placeholder, see the Relics README |
 | Talent Tree kit | `Art/UI/TalentTree/` | direct, green `#00FF00` | `Art/UI/TalentTree/Processed/` | delivered, not yet wired (gated on Phase 7 design confirmation — see `docs/handoffs/talent_tree/`) |
 | Portraits | `Art/Portraits/<Character>/` | flood-fill from border (`tools/remove_portrait_backgrounds.py`, `PORTRAITS` manifest) | `Art/Portraits/<Character>/Processed/` | ongoing, per-character — **Sheep does not reproduce, see below** |
 | Actor stance sheets | one design sheet per actor | grid slice (`slice_actor_sheet.py`) | one still `Resources/<Enemies\|Characters>/<id>/<stance>.png` per pose, shared canvas (see §4) | ongoing — `docs/STANCE_SHEET_SPEC.md` is the commissioning work order |

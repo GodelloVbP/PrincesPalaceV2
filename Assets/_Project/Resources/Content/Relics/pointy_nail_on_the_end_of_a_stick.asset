@@ -26,4 +26,4 @@ MonoBehaviour:
     hasAgainst: 0
     againstMagical: 0
   sortOrder: 23
-  iconPath: Assets/_Project/Art/Generated/disc_metal.png
+  iconPath: Assets/_Project/Art/Items/Relics/Processed/pointy_nail_on_the_end_of_a_stick.png

@@ -181,7 +181,7 @@
       "description": "Your spells mark the enemy they hit. Hitting a marked enemy with an attack consumes the mark and restores 20% of your missing mana (or signature resource).",
       "effect": "MagicMarker",
       "rarity": "common",
-      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/magic_marker.png"
     },
     {
       "id": "jar_of_bear_urine",
@@ -189,7 +189,7 @@
       "description": "Marks every enemy the instant combat begins.",
       "effect": "JarOfBearUrine",
       "rarity": "common",
-      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/jar_of_bear_urine.png"
     },
     {
       "id": "world_enders_crown",
@@ -197,7 +197,7 @@
       "description": "The instant you drop below 30% health, every enemy is feared for 1 turn. Re-arms once you climb back above 30%.",
       "effect": "WorldEndersCrown",
       "rarity": "mythic",
-      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/world_enders_crown.png"
     },
     {
       "id": "cursed_idol",
@@ -205,7 +205,7 @@
       "description": "Damaging an enemy lowers its resistances by 3% for 3 turns, stacking up to 15%. Each stack falls off on its own.",
       "effect": "CursedIdol",
       "rarity": "rare",
-      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/cursed_idol.png"
     },
     {
       "id": "amassing_star",
@@ -213,14 +213,14 @@
       "description": "Every enemy you kill (summons excluded) grants +2% damage for the rest of the run.",
       "effect": "AmassingStar",
       "rarity": "rare",
-      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/amassing_star.png"
     },
     {
       "id": "pointy_nail_on_the_end_of_a_stick",
       "displayName": "Pointy Nail on the End of a Stick",
       "description": "Melee attacks gain 35 flat armour penetration.",
       "rarity": "common",
-      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/pointy_nail_on_the_end_of_a_stick.png",
       "modifiers": [
         {
           "type": "ArmorPenetrationFlat",
@@ -235,7 +235,7 @@
       "effect": "RampagingBullsHorn",
       "rarity": "rare",
       "requiresConvergenceAbility": true,
-      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/rampaging_bulls_horn.png"
     },
     {
       "id": "ice_fingernail",
@@ -243,7 +243,7 @@
       "description": "Attacks apply a 10% slow, stacking up to 40%.",
       "effect": "IceFingernail",
       "rarity": "common",
-      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/ice_fingernail.png"
     },
     {
       "id": "loaded_dice",
@@ -259,14 +259,14 @@
       "description": "Your melee attacks can reach any enemy, regardless of position.",
       "effect": "MonkeyKingsScepter",
       "rarity": "ultrarare",
-      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/monkey_kings_scepter.png"
     },
     {
       "id": "jo_suns_book_of_anatomy",
       "displayName": "Jo-Sun's Book of Anatomy",
       "description": "Super-effective damage is multiplied by an extra 20%.",
       "rarity": "rare",
-      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/jo_suns_book_of_anatomy.png",
       "modifiers": [
         {
           "type": "WeaknessDamageBonusPercent",
@@ -280,7 +280,7 @@
       "description": "Altering your own position in the turn order grants +30% Speed for 1 turn.",
       "effect": "SparringSaber",
       "rarity": "common",
-      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/sparring_saber.png"
     },
     {
       "id": "sparring_buckler",
@@ -288,7 +288,7 @@
       "description": "Casting an ability that alters anyone's position grants a 15% ward, once per turn.",
       "effect": "SparringBuckler",
       "rarity": "rare",
-      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/sparring_buckler.png"
     },
     {
       "id": "essence_siphon",
@@ -296,7 +296,7 @@
       "description": "After an enemy dies (summons excluded), heal 3% of your max health.",
       "effect": "EssenceSiphon",
       "rarity": "rare",
-      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/essence_siphon.png"
     },
     {
       "id": "disgruntled_lackey",
@@ -304,7 +304,7 @@
       "description": "Whenever an enemy summons a unit, deal 100% of your max health as damage to the summoner.",
       "effect": "DisgruntledLackey",
       "rarity": "mythic",
-      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/disgruntled_lackey.png"
     },
     {
       "id": "inconspicuous_key",
@@ -312,7 +312,7 @@
       "description": "They say hell and heaven have the same master key. Once per combat, an enemy you kill answers its call for one last blow against its own side.",
       "effect": "InconspicuousKey",
       "rarity": "mythic",
-      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/inconspicuous_key.png"
     },
     {
       "id": "dancers_anklet",
@@ -328,14 +328,14 @@
       "description": "Getting hit lowers all of your active cooldowns by 1 turn, once per turn.",
       "effect": "BerserkersVest",
       "rarity": "ultrarare",
-      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/berserkers_vest.png"
     },
     {
       "id": "vampire_dentures",
       "displayName": "Vampire Dentures",
       "description": "10% vampirism - heal for a tenth of the damage your attacks deal.",
       "rarity": "common",
-      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png",
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/vampire_dentures.png",
       "modifiers": [
         {
           "type": "LifestealPercent",
@@ -349,7 +349,7 @@
       "description": "Taking what would be fatal damage instead turns you into an egg for 3 turns, with its own HP pool. Revive with whatever fraction of it survives, or die if it breaks. Once per combat.",
       "effect": "PhoenixEgg",
       "rarity": "ultrarare",
-      "iconPath": "Assets/_Project/Art/Generated/disc_metal.png"
+      "iconPath": "Assets/_Project/Art/Items/Relics/Processed/phoenix_egg.png"
     }
   ]
 }
