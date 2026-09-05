@@ -87,10 +87,11 @@ public static class PreviewRequestWatcher
         public string action;
         public string enemyId;
 
-        // tools/preview.ps1 -Spell. Ends in the same placeholder fight the
-        // enemy route uses; what differs is which DevForced* keys are set
-        // before Play starts.
+        // tools/preview.ps1 -Spell / -Character. Both end in the same
+        // placeholder fight the enemy route uses; what differs is which
+        // DevForced* keys are set before Play starts.
         public string skillId;
+        public string characterId;
 
         public string formation;
         public bool launch;
@@ -176,6 +177,9 @@ public static class PreviewRequestWatcher
                 return;
             case "spell":
                 Spell(request);
+                return;
+            case "character":
+                CharacterPreview(request);
                 return;
             default:
                 WriteResult(request.requestId, "failed",
@@ -275,6 +279,45 @@ public static class PreviewRequestWatcher
             // No enemy id: the spell preview is about the caster, and the
             // placeholder's own art-filtered pick is a perfectly good thing to
             // aim at. See QuickFightMenu's own note on the empty id.
+            QuickFightMenu.StartPlaceholderFight(null);
+        }
+        catch (Exception e)
+        {
+            Debug.LogException(e);
+            WriteResult(request.requestId, "failed", e.Message);
+        }
+    }
+
+    // tools/preview.ps1 -Character <id> -Launch.
+    //
+    // The squad is this one character -- DevForcedSquad, consumed by
+    // FightBootstrap like every other preview key -- and turn one casts
+    // whatever their own kit puts first, through the same ForceFirstAction
+    // seam the spell route uses. Nothing is granted here: the opener is a row
+    // they already have, so what is on screen is the character as authored.
+    private static void CharacterPreview(Request request)
+    {
+        string id = request.characterId;
+        if (string.IsNullOrEmpty(id))
+        {
+            WriteResult(request.requestId, "failed", "no characterId in the request");
+            return;
+        }
+
+        try
+        {
+            var plan = PreviewFight.ForCharacter(id);
+            if (!plan.Ok)
+            {
+                WriteResult(request.requestId, "failed", plan.Refusal);
+                return;
+            }
+
+            FightBootstrap.DevForcedSquad = id;
+            if (plan.Skill != null) FightBootstrap.DevForcedFirstAction = plan.Skill.Id;
+
+            WriteResult(request.requestId, "ok", "entering Play mode: " + PreviewFight.Describe(plan));
+
             QuickFightMenu.StartPlaceholderFight(null);
         }
         catch (Exception e)

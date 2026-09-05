@@ -228,6 +228,73 @@ namespace PrincesPalace
             return definition != null && definition.data.HasSignatureResource ? definition.data.SignatureId : null;
         }
 
+        // ---- the character plan ----------------------------------------------
+
+        // tools/preview.ps1 -Character <id>. Far less to decide than a spell:
+        // the squad is this one character, and turn one is whatever their own
+        // kit puts first.
+        public static Plan ForCharacter(string characterId)
+        {
+            var plan = new Plan();
+
+            var definition = ContentDatabase.Characters.FirstOrDefault(c => c != null && c.id == characterId);
+            if (definition == null)
+            {
+                plan.Refusal = $"no character '{characterId}' in the content database -- rebuild content, " +
+                               "or check the id against ContentData/characters.json";
+                return plan;
+            }
+
+            plan.CasterId = definition.id;
+
+            // NOT A REFUSAL. A character with no battle art still has a
+            // portrait and a dossier worth looking at, and the fallback plate
+            // on the stage IS the report -- refusing would hide the very thing
+            // the author most likely wants to see the state of.
+            if (string.IsNullOrWhiteSpace(definition.data.BattleSpritePath))
+            {
+                plan.Notes.Add("no battleSpritePath, so the stage shows a fallback plate rather than art");
+            }
+
+            if (string.IsNullOrWhiteSpace(definition.data.PortraitPath))
+            {
+                plan.Notes.Add("no portraitPath, so the dossier shows whatever it falls back to");
+            }
+
+            string opener = FirstSelectableSkillFor(definition.id);
+            if (opener == null)
+            {
+                plan.Notes.Add("no skill they can press at level 1, so turn one is left to whoever is watching");
+            }
+            else
+            {
+                var skill = ContentDatabase.Skills.FirstOrDefault(sk => sk != null && sk.id == opener);
+                plan.Skill = skill?.data;
+                plan.Notes.Add($"turn one casts '{opener}', the first row on their own kit");
+            }
+
+            return plan;
+        }
+
+        // THEIR FIRST ROW, through the one function that already knows what
+        // "this character can press this" means.
+        //
+        // ContentDatabase.AvailableSkillsFor rather than a fourth hand-rolled
+        // union of PlayerSelectable/CharacterId/UnlockLevel: the in-run kit
+        // asks exactly this question through exactly this door, and the last
+        // time somebody wrote their own copy of it the level filter went
+        // missing and a level-1 Shawn walked in holding the whole talent tree
+        // (see FightEncounterAdapter.KitFor's own header). A bare level-1
+        // Character with no talents is what the preview's placeholder kit is
+        // built at, so the answers agree.
+        public static string FirstSelectableSkillFor(string characterId)
+        {
+            if (string.IsNullOrWhiteSpace(characterId)) return null;
+
+            var available = ContentDatabase.AvailableSkillsFor(new Character(characterId));
+            return available.Count > 0 ? available[0].id : null;
+        }
+
         // WHO IS ON THE OTHER SIDE. Art-filtered, because a preview exists to
         // be looked at and a party of fallback plates defeats it; ordered by
         // sortOrder only as a tie-break, exactly as FightBootstrap's own pick
@@ -293,7 +360,10 @@ namespace PrincesPalace
             // Raising exactly the scores the skill demands, to exactly what it
             // demands, is the smallest lie that lets the row be pressed, and
             // every point of it is named below.
-            var required = RequirementCurve.Apply(plan.Skill.Requirements);
+            var required = plan.Skill == null
+                ? default(AbilityScoreBlock)
+                : RequirementCurve.Apply(plan.Skill.Requirements);
+
             if (!caster.AbilityScores.Meets(required))
             {
                 var raised = new List<string>();
@@ -330,8 +400,16 @@ namespace PrincesPalace
             if (!plan.Ok) return "REFUSED: " + plan.Refusal;
 
             string notes = plan.Notes.Count == 0 ? "nothing waived" : string.Join("; ", plan.Notes);
-            return $"'{plan.Skill.Id}' ({plan.Skill.Effect}) cast by '{plan.CasterId}' " +
-                   $"against a {plan.Formation} formation -- {notes}";
+
+            // A character plan may carry no skill at all -- see ForCharacter's
+            // "no skill they can press at level 1" note -- so the subject of
+            // the sentence is the caster either way and the spell is the
+            // optional half.
+            string subject = plan.Skill == null
+                ? $"'{plan.CasterId}'"
+                : $"'{plan.Skill.Id}' ({plan.Skill.Effect}) cast by '{plan.CasterId}'";
+
+            return $"{subject} against a {plan.Formation} formation -- {notes}";
         }
     }
 }

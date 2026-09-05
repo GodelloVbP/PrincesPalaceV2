@@ -4,6 +4,13 @@
 #
 # Usage:
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tools/preview.ps1 -Build
+#   ... -Enemy <id> [-Launch] [-Formation lone|full]
+#   ... -Spell <id> [-Launch]
+#   ... -Character <id> [-Launch]
+#
+# Without -Launch every mode writes pictures into tools/screenshots/preview/
+# and never opens a window; with it, the Fight scene is played in the Editor.
+# What each mode photographs is in its own function's header below.
 #
 # ONE COMMAND, TWO ROUTES, AND THE AUTHOR PICKS NEITHER.
 #
@@ -35,6 +42,10 @@ param(
     # decided by Scripts/Core/PreviewFight.cs, not here -- those are content
     # questions and PowerShell has no business answering them a second time.
     [string]$Spell = "",
+
+    # The character to look at, by its characters.json id. Fields them alone
+    # so the stage, the map figure and the dossier are all unambiguously them.
+    [string]$Character = "",
 
     # Play the fight in the Editor instead of photographing it headlessly.
     [switch]$Launch,
@@ -345,6 +356,41 @@ function Invoke-SpellPreview {
 # mobs, lifted out so -Spell does not grow its own copy of the "Unity wipes
 # Temp/ on boot, so start it and wait for the lockfile before writing the
 # request" sequence. Returns the timeout to wait with, or -1 on failure.
+# --- character mode ---------------------------------------------------------
+#
+# Three pictures rather than one, because a character is three different
+# drawings in three different places and each has its own way of being wrong:
+# the map figure (walk stance, sized off its own aspect), the dossier portrait
+# (a different image entirely from the battle art), and the fight stance sheet.
+# The Step 0 baseline lost about two minutes to guessing which capture class
+# fields a real squad; this asks for the character, not for a fixture.
+function Invoke-CharacterPreview {
+    param([string]$Id)
+
+    $resolved = Resolve-ContentId -Id $Id -File "characters.json" -Collection "characters" -Noun "character"
+    if (-not $resolved) { return 2 }
+
+    if (-not $NoBuild) {
+        if (-not (Invoke-ContentBuild)) {
+            Write-Host "content build failed -- not previewing against a tree that did not build."
+            return 1
+        }
+    }
+
+    if (-not $Launch) {
+        return (Invoke-PreviewCapture -Variable "PP_PREVIEW_CHARACTER" -Value $resolved `
+            -Prefix "character_$resolved")
+    }
+
+    $timeout = Start-EditorIfNeeded
+    if ($timeout -lt 0) { return 1 }
+
+    $answer = Invoke-EditorRequest -Payload @{ action = "character"; characterId = $resolved } -Timeout $timeout
+    Write-Host "  $($answer.State): $($answer.Message)"
+    if ($answer.State -ne "ok") { return 1 }
+    return 0
+}
+
 function Start-EditorIfNeeded {
     $lock = Get-UnityLockState -ProjectRoot $Project
     [void](Clear-StaleUnityLock -State $lock)
@@ -443,6 +489,10 @@ if ($Spell -ne "") {
     exit (Invoke-SpellPreview -Id $Spell)
 }
 
+if ($Character -ne "") {
+    exit (Invoke-CharacterPreview -Id $Character)
+}
+
 if ($Build) {
     if (Invoke-ContentBuild) { exit 0 } else { exit 1 }
 }
@@ -451,4 +501,5 @@ Write-Host "Nothing asked for. Modes:"
 Write-Host "  -Build                          regenerate Resources/Content by whichever route is available"
 Write-Host "  -Enemy <id> -Launch [-Formation lone|full]   build, then play a fight against that mob"
 Write-Host "  -Spell <id> [-Launch]           build, then cast that spell once and photograph the impact"
+Write-Host "  -Character <id> [-Launch]       build, then photograph them on the map, in the dossier and in a fight"
 exit 2

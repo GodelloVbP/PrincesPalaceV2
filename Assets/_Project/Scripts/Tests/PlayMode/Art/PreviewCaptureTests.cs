@@ -49,6 +49,7 @@ namespace PrincesPalace.PlayModeTests
         // script that sets it, and nowhere else.
         private const string IdsVariable = "PP_PREVIEW_IDS";
         private const string SpellVariable = "PP_PREVIEW_SPELL";
+        private const string CharacterVariable = "PP_PREVIEW_CHARACTER";
 
         private static string OutputDir =>
             Path.GetFullPath(Path.Combine(
@@ -402,6 +403,206 @@ namespace PrincesPalace.PlayModeTests
             foreach (var name in wanted.Values)
             {
                 Debug.Log("[PreviewCapture] wrote " + Path.Combine(OutputDir, name));
+            }
+        }
+
+        // ---- tools/preview.ps1 -Character <id> --------------------------------
+
+        // A CHARACTER IS THREE DRAWINGS IN THREE PLACES, so this is three
+        // pictures.
+        //
+        // The map figure is the `walk` stance, sized off its own aspect ratio
+        // by MapController.ResolveWalkerArt; the dossier portrait is a
+        // different image entirely (portraitPath, not battleSpritePath); the
+        // fight stage is the battle art with its ground line and its hover.
+        // Each has its own way of being wrong -- a portrait that was never
+        // authored, a walk stance the slicer never produced, a ground line
+        // half a body off -- and none of the three is visible from the others.
+        //
+        // The Step 0 baseline lost about two minutes here to picking a capture
+        // class by its name and finding it fielded a solo fixture rather than
+        // the real squad. This does not ask the author to know which fixture
+        // fields what: it stands up a throwaway save whose squad IS this one
+        // character, so the map, the dossier and the stage all agree about who
+        // is being looked at.
+        //
+        // A THROWAWAY SAVE ROOT, and it is put back in the teardown. The map
+        // walker and the dossier both read SaveSlotManager.CurrentSave rather
+        // than any DevForced key -- they are not fight code and know nothing
+        // about the preview -- so the only honest way to point them at one
+        // character is to be that character for the length of the capture.
+        // Same pattern PartyFormationCaptureTests uses to reach a real squad.
+        [UnityTest, Explicit("Written by tools/preview.ps1 -Character <id>.")]
+        public IEnumerator CaptureCharacter()
+        {
+            var ids = Requested(CharacterVariable);
+            Assert.IsNotEmpty(ids,
+                CharacterVariable + " is empty; run this through tools/preview.ps1 -Character <id>.");
+
+            if (!CanvasCapture.IsSupported)
+            {
+                Assert.Ignore("No graphics device. tools/preview.ps1 runs this through graphics_tests.ps1, " +
+                              "which omits -nographics for exactly this reason.");
+            }
+
+            Directory.CreateDirectory(OutputDir);
+
+            foreach (string id in ids)
+            {
+                yield return CaptureOneCharacter(id);
+            }
+        }
+
+        private string _saveRoot;
+
+        private void StandUpASaveWhoseSquadIs(string id)
+        {
+            _saveRoot = Path.Combine(Path.GetTempPath(), "pp-preview-" + System.Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(_saveRoot);
+
+            SaveSystem.RootOverride = _saveRoot;
+            SaveSlotManager.CurrentSlot = 0;
+            SaveSlotManager.Forget();
+            RunManager.ResetForTests();
+            RunManager.StartRun(20260906UL);
+
+            var save = SaveSlotManager.CurrentSave;
+            Assert.IsNotNull(save, "no save was created for the preview");
+
+            // SQUAD OF ONE, deliberately. Three figures on the map would be
+            // three drawings and the author asked about one; the dossier would
+            // open on whoever sorts first rather than on them.
+            save.selectedCharacterIds = new List<string> { id };
+            SaveSlotManager.SaveCurrent();
+        }
+
+        private void PutTheSaveBack()
+        {
+            SaveSystem.RootOverride = null;
+            SaveSlotManager.Forget();
+            RunManager.ResetForTests();
+
+            if (!string.IsNullOrEmpty(_saveRoot) && Directory.Exists(_saveRoot))
+            {
+                Directory.Delete(_saveRoot, recursive: true);
+            }
+
+            _saveRoot = null;
+        }
+
+        private IEnumerator CaptureOneCharacter(string id)
+        {
+            var plan = PreviewFight.ForCharacter(id);
+            Assert.IsTrue(plan.Ok, PreviewFight.Describe(plan));
+            Debug.Log("[PreviewCapture] " + PreviewFight.Describe(plan));
+
+            string prefix = "character_" + id;
+            StandUpASaveWhoseSquadIs(id);
+
+            try
+            {
+                // 1. THE MAP FIGURE. MapController places the walker from the
+                // squad LEADER's battleSpritePath in the walk stance -- with a
+                // squad of one, that is unambiguously this character.
+                yield return SceneManager.LoadSceneAsync("Map", LoadSceneMode.Single);
+                yield return null;
+                yield return null;
+                yield return new WaitForSecondsRealtime(0.5f);
+
+                var mapCanvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)
+                    .FirstOrDefault(c => c.isRootCanvas);
+                Assert.IsNotNull(mapCanvas, "the Map scene has no root canvas");
+                CanvasCapture.RenderToFile(mapCanvas, Path.Combine(OutputDir, prefix + "_map.png"));
+
+                // 2. THE DOSSIER PORTRAIT. The panel lives inside the Hub's
+                // system menu and is emitted inactive, so it is switched on
+                // and refreshed rather than navigated to -- the picture wanted
+                // is of the panel, not of the three clicks that reach it.
+                yield return SceneManager.LoadSceneAsync("Hub", LoadSceneMode.Single);
+                yield return null;
+                yield return null;
+
+                var dossier = Object.FindObjectsByType<CharacterDossierController>(FindObjectsInactive.Include)
+                    .FirstOrDefault();
+                Assert.IsNotNull(dossier, "the Hub scene has no CharacterDossierController");
+
+                for (var t = dossier.transform; t != null; t = t.parent)
+                {
+                    if (!t.gameObject.activeSelf) t.gameObject.SetActive(true);
+                }
+
+                dossier.Refresh();
+                yield return null;
+                yield return new WaitForSecondsRealtime(0.3f);
+
+                var hubCanvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)
+                    .FirstOrDefault(c => c.isRootCanvas);
+                Assert.IsNotNull(hubCanvas, "the Hub scene has no root canvas");
+                CanvasCapture.RenderToFile(hubCanvas, Path.Combine(OutputDir, prefix + "_dossier.png"));
+
+                // 3. THE FIGHT. Their own stance sheet on the real stage, and
+                // turn one casts the first row on their kit through the same
+                // seam the spell preview uses.
+                yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
+                yield return null;
+                yield return null;
+
+                var fight = Object.FindAnyObjectByType<FightController>();
+                Assert.IsNotNull(fight, "the fight scene has no controller");
+
+                var player = Object.FindAnyObjectByType<FightBeatPlayer>();
+                Assert.IsNotNull(player, "the fight scene has no beat player");
+                player.Flush();
+                yield return null;
+                yield return null;
+
+                var enemies = PreviewFight.EnemiesWithArt(3);
+                var built = FightEncounterAdapter.Build(
+                    new List<string> { id },
+                    enemies,
+                    new Domain.Rng.SeededRandom(20260810),
+                    relicIds: null,
+                    depthStep: 0);
+
+                Assert.IsNotNull(built?.Session, "'" + id + "' could not be built into an encounter");
+
+                built.Session.Begin();
+                fight.Bind(built.Session, EncounterClass.Normal);
+                fight.BindPartyArt(built.Party, built.PartyArt);
+                yield return null;
+                yield return new WaitForSecondsRealtime(0.8f);
+
+                var fightCanvas = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude)
+                    .FirstOrDefault(c => c.isRootCanvas);
+                Assert.IsNotNull(fightCanvas, "the fight scene has no root canvas");
+                CanvasCapture.RenderToFile(fightCanvas, Path.Combine(OutputDir, prefix + "_fight_idle.png"));
+
+                if (plan.Skill != null)
+                {
+                    fight.ForceFirstAction(plan.Skill.Id);
+
+                    float armed = Time.realtimeSinceStartup;
+                    while (!fight.IsBusy && Time.realtimeSinceStartup - armed < 15f) yield return null;
+
+                    if (!fight.IsBusy)
+                    {
+                        Debug.LogWarning("[PreviewCapture] '" + id + "' never cast '" + plan.Skill.Id +
+                                         "' -- the fight log says what it refused");
+                    }
+                    else
+                    {
+                        yield return new WaitForSecondsRealtime(0.5f);
+                        CanvasCapture.RenderToFile(fightCanvas,
+                            Path.Combine(OutputDir, prefix + "_fight_cast.png"));
+                    }
+                }
+
+                Debug.Log("[PreviewCapture] wrote " + prefix + "_{map,dossier,fight_idle,fight_cast}.png to " +
+                          OutputDir);
+            }
+            finally
+            {
+                PutTheSaveBack();
             }
         }
 
