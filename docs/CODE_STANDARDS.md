@@ -71,11 +71,6 @@ is the signal to promote it here instead of a third.
   needs no spawner). `KenBurnsDrift` composes the last one with a scale that
   is guaranteed never to drop below 1 — under a full-bleed background that
   would show bare camera colour down the sides.
-- `CharacterTabStrip.Wire` / `.SetVisibleCount` / `.Refresh` — the character-
-  switcher tab row's click-wiring, squad-count show/hide, and colour+label
-  refresh, shared by CharacterSheetController, RelicsController and
-  TalentController. Each screen still owns its own active/inactive colors.
-
 **Screen authoring (`Domain/UiKit/`, engine-free):**
 - `Ui.Panel/Column/Row/Grid/Label/Button/Sprite/Solid/Space/Modal/Each/Pool` —
   the whole vocabulary. Note what a flow child has no parameter for: a
