@@ -110,7 +110,7 @@ the shards rise instead of the burst inflating about its middle.
 
 Verified after slicing — every output frame's floor:
 
-    ground     459 459 459 459 459 460 459 459 460
+    ground     194 194 194 194 194 195 194 194 195   (512x207 canvas, see below)
     eruption   446 446 447 446 446 446 446 446 445
 
 Which is what the authored contact points are read off:
@@ -118,15 +118,36 @@ Which is what the authored contact points are read off:
 | | authored | measured from |
 |---|---|---|
 | `vfx.impactY` (eruption) | `0.129` | (512 − 446) / 512 = 0.1289 |
-| `vfx.groundImpactY` | `0.104` | (512 − 459) / 512 = 0.1035 |
+| `vfx.groundImpactY` | `0.063` | (207 − 194) / 207 = 0.0628 |
 | `vfx.impactX` (eruption) | `0.5` | centre 256 of 512, constant across all nine frames |
 
-`vfx.groundAspect` is left unset (0), which means "the sheet's own frame
-aspect". These frames are square with a wide drawing on them, so the box is
-square, `preserveAspect` adds no letterbox, and the transparent top and bottom
-of the frame cost nothing. The field exists for a future sheet cut at a wide
-aspect; authoring 1.0 here would be a second home for a number the frame
-already states.
+**GROUND CROPPED TO ITS OWN CONTENT, 2026-09-05 — the paragraph this replaces
+was wrong.** It read "these frames are square with a wide drawing on them, so
+the box is square... and the transparent top and bottom of the frame cost
+nothing." They do not: `GroundBoxFor`'s fallback aspect is the sheet's own
+CANVAS, and the ground sheet's uncropped 512x512 canvas held its crack in only
+the bottom ~35%. Sized off a real three-enemy formation of wide monster art
+(`Enemies/rat`, not the narrow placeholder the pre-visual-review capture
+used), the span came out ~670 units and forced an equally tall box — half of
+it above the crack's own content — so the fault rendered erupting around the
+enemies' shoulders instead of at their feet
+(`tools/screenshots/runtime/cinderfault/unlabelled/f6.png`, `f10.png`,
+`f14.png`; `docs/handoffs/cinderfault/GAP_AUDIT.md` row 24). Fixed by adding
+`content_crop` to `tools/slice_spell_sheet.py` and setting it on the
+`cinderfault_ground` entry: every one of the nine composed frames is cropped
+to the union of what any frame draws (one shared rect, so a growing rupture
+does not slide around inside a shrinking canvas), padded 8px. The ground
+sheet's canvas is now 512x207 — its own aspect (~2.47) IS the content's
+aspect, so `GroundBoxFor`'s existing "0 means the sheet's own frame aspect"
+fallback needed no code change, only honest input. `groundImpactY` was
+re-measured against the cropped canvas (0.104 -> 0.063) for the same reason.
+The eruption sheet is untouched: its own 512x512 canvas and content still
+roughly agree (see its own peak/registration numbers above), which is why
+only the ground entry declares `content_crop`.
+
+`vfx.groundAspect` is still left unset (0) — the crop is what makes "the
+sheet's own frame aspect" a true statement about this art instead of an
+assumption that happened to go unnoticed for one release.
 
 **Reproduce:**
 
@@ -146,6 +167,11 @@ cooling tail is the remaining 0.347s. This is the number most likely to want
 retuning in a full fight — the handover's own advice — and it is authored in
 exactly one place (`skills.json`), with `tools/make_cinderfault_audio.py`
 restating it at the top of the file as the contract the two clips are cut to.
+
+None of this timing changed on 2026-09-05 — the ground-fault placement fix
+above (a canvas crop and a re-measured `groundImpactY`) touches WHERE the
+fault renders, not WHEN. `impactFrame`, `seconds` and the two audio clips are
+exactly as this section already described.
 
 ---
 

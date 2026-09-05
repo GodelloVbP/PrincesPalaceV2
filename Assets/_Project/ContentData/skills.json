@@ -147,7 +147,7 @@
         "impactY": 0.129,
         "sfxPath": "Audio/Sfx/cinderfault_impact",
         "groundPath": "Spells/cinderfault_ground",
-        "groundImpactY": 0.104,
+        "groundImpactY": 0.063,
         "castSfxPath": "Audio/Sfx/cinderfault_pressure"
       },
       "bookTier": 2

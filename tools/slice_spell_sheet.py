@@ -186,6 +186,17 @@ VFX = {
         # crack in the floor does not change where the floor is. See base_align.
         "base_align": True,
 
+        # EVERY 512x512 CELL HOLDS A WIDE, SHORT CRACK, and GroundBoxFor's
+        # fallback aspect is the sprite's OWN canvas -- so an uncropped square
+        # canvas asked for a square box. Spanning a three-enemy formation that
+        # box came out roughly 670 units on a side, half of it above the
+        # crack's own content, which read as the fault erupting around the
+        # enemies' shoulders instead of at their feet (photographed,
+        # tools/screenshots/runtime/cinderfault/unlabelled/f6.png and f10.png,
+        # 2026-09-05). See crop_to_shared_content's own header for the fix and
+        # why it is a crop rather than a GroundBoxFor change.
+        "content_crop": True,
+
         # A GATHERING, A RUPTURE, A COOLING. Nine frames from six drawings.
         #
         # The rupture is HELD for two and grows 5% into the second, the same
@@ -611,8 +622,57 @@ def turned(cell, degrees, pivot, scale):
     return frame.rotate(degrees, resample=Image.BICUBIC, center=(cx, cy))
 
 
+def crop_to_shared_content(frames, pad=8):
+    """Trim every frame to ONE shared rect: the union of what any frame draws.
+
+    THE SAME RECT FOR EVERY FRAME, not a per-frame tight crop -- a per-frame
+    crop would slide a growing rupture around inside a shrinking canvas and
+    call it alignment. Union first (the smallest box that loses no frame's
+    content), then one crop applied identically everywhere, so a frame with
+    less ink than its neighbours just carries more transparent margin rather
+    than a different origin.
+
+    WHY THIS EXISTS AT ALL: GroundBoxFor's fallback aspect is the SPRITE'S
+    OWN CANVAS, on the reasoning (its own comment) that "a frame's width over
+    its height IS the shape the artist drew" -- true for a sheet whose canvas
+    and content roughly agree, false for cinderfault_ground, whose 512x512
+    cells hold a wide, short crack with the top half of every cell empty.
+    Read literally, that square canvas asked for a square box; spanning a
+    three-enemy formation that box came out ~670 units on a side, and half of
+    it above the crack's own content -- which is most of why the fault read
+    as erupting somewhere around the enemies' shoulders instead of at their
+    feet. Cropping to the content makes the canvas's own aspect the thing the
+    comment already claimed it was, with no change to the placement code at
+    all: GroundBoxFor keeps reading frame.rect, and now that ratio is honest.
+
+    PAD, small and fixed, so an anti-aliased edge one frame's own alpha
+    happens to call "background" is not shaved off by the next. A plain
+    getbbox() on the alpha channel rather than ground_row's coverage-gated
+    scan: that guards against a single stray pixel dragging the CROP wide,
+    which matters when a bbox feeds a measurement but not much when it feeds
+    a crop with padding already built in -- checked by hand against these
+    nine frames (no stray pixels near the canvas edges) before relying on it
+    here.
+    """
+    boxes = [f.getchannel("A").getbbox() for f in frames]
+    boxes = [b for b in boxes if b is not None]
+    if not boxes:
+        return frames
+
+    width, height = frames[0].size
+    left = max(0, min(b[0] for b in boxes) - pad)
+    top = max(0, min(b[1] for b in boxes) - pad)
+    right = min(width, max(b[2] for b in boxes) + pad)
+    bottom = min(height, max(b[3] for b in boxes) + pad)
+
+    print(f"  content_crop: ({left}, {top}, {right}, {bottom}) of {width}x{height} "
+          f"-> {right - left}x{bottom - top}")
+
+    return [f.crop((left, top, right, bottom)) for f in frames]
+
+
 def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=None,
-                base_align=False, preview=False, vfx_id=None):
+                base_align=False, content_crop=False, preview=False, vfx_id=None):
     """Cut a sheet into frames.
 
     `keyed` picks between the two kinds of sheet this has to handle:
@@ -719,6 +779,15 @@ def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=Non
     else:
         frames = [cells[name] for name in names]
 
+    # AFTER the sequence, not before: cropping a CELL would leave every scale
+    # step's pivot (stated in the uncropped cell's own coordinates) pointing
+    # at the wrong spot. Cropping the finished FRAMES instead changes nothing
+    # about how they were composed, only how much dead canvas ships around
+    # them -- see crop_to_shared_content's own header for why a sheet would
+    # ask for this at all.
+    if content_crop:
+        frames = crop_to_shared_content(frames)
+
     # The names on disk are always f0..fN in play order. A recipe emits more
     # frames than the sheet has cells, so the cell names cannot also be the
     # file names -- and the player reads the directory in order.
@@ -726,14 +795,19 @@ def slice_sheet(sheet_path, out_dir, rows, cols, names, keyed=True, sequence=Non
 
     blanks = []
     for index, (name, frame) in enumerate(zip(written, frames)):
+        # frame.size RATHER THAN cell_w/cell_h: content_crop changes what
+        # ships without changing the cell grid it was cut from, and printing
+        # the pre-crop size here would report every cropped frame's coverage
+        # against a canvas it is no longer drawn on.
+        frame_w, frame_h = frame.size
         opaque = sum(1 for a in frame.getchannel("A").getdata() if a > 8)
-        coverage = opaque * 100 // (cell_w * cell_h)
+        coverage = opaque * 100 // (frame_w * frame_h)
         if opaque == 0:
             blanks.append(index)
 
         out_path = os.path.join(out_dir, f"{name}.png")
         frame.save(out_path)
-        print(f"  {name}.png  {cell_w}x{cell_h}  {coverage}% visible")
+        print(f"  {name}.png  {frame_w}x{frame_h}  {coverage}% visible")
 
     names = written
 
@@ -1060,6 +1134,7 @@ def main():
                     os.path.join(OUTPUT_ROOT, vfx_id), rows, cols, spec["names"],
                     keyed=spec.get("keyed", True), sequence=spec.get("sequence"),
                     base_align=spec.get("base_align", False),
+                    content_crop=spec.get("content_crop", False),
                     preview=args.preview, vfx_id=vfx_id)
 
 

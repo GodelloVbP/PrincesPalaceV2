@@ -1063,7 +1063,7 @@ namespace PrincesPalace.PlayModeTests
                     impactX = 0.5f,
                     impactY = 0.129f,
                     groundPath = GroundPath,
-                    groundImpactY = 0.104f,
+                    groundImpactY = 0.063f,
                 },
             };
         }
@@ -1139,6 +1139,64 @@ namespace PrincesPalace.PlayModeTests
             Assert.Greater(formation, alone,
                 "the fault is the same width for one enemy as for three, so it is not measured off the slots");
             Assert.Greater(alone, 0f, "a fault of no width is a zero-sized graphic");
+        }
+
+        // THE PLACEMENT ITSELF, not just the width relation above -- two things
+        // that both have to hold in the SAME cast: the box has to physically
+        // REACH every enemy standing in it (a fault that is merely wider for
+        // three than for one can still sit centred on the wrong one), and it
+        // has to sit near the formation's own ground line rather than however
+        // tall the sheet's own canvas happens to be.
+        //
+        // A FIXED TOLERANCE FOR THE GROUND LINE, not the exact arithmetic:
+        // the box's bottom edge sits the sheet's own authored bottom margin
+        // (groundImpactY times the box's own height) below the ground line,
+        // and recomputing that formula here to check itself is exactly the
+        // tautology CLAUDE.md gotcha 5 warns against -- a bug in the formula
+        // would reproduce itself in the test. A fixed bound is not: at the
+        // square aspect this pins against (tools/screenshots/runtime/
+        // cinderfault/unlabelled/f6.png and f10.png, 2026-09-05), the ground
+        // sheet's uncropped 512x512 canvas held content only ~40% as tall as
+        // it was wide, so a three-enemy formation's box came out several
+        // hundred units on a side and put this edge 70+ units off the ground
+        // line. 40 fails that and passes the aspect the sheet was cropped to
+        // (see content_crop in tools/slice_spell_sheet.py).
+        [UnityTest]
+        public IEnumerator TheFaultReachesEveryEnemyAndSitsNearTheGroundLine()
+        {
+            yield return LoadFight(FightHudSpec.StageSlotsPerSide);
+
+            var enemies = _fight.SessionForTest.Encounter.Enemies.Where(e => e != null && e.IsAlive).ToList();
+            var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
+            var parent = _player.transform.parent;
+
+            float CentreX(CombatantState c) =>
+                parent.InverseTransformPoint(_fight.SlotForTest(c).TransformPoint(Vector3.zero)).x;
+            float GroundY(CombatantState c)
+            {
+                var slot = _fight.SlotForTest(c);
+                return parent.InverseTransformPoint(slot.TransformPoint(new Vector3(0f, slot.rect.yMin, 0f))).y;
+            }
+
+            float leftmost = enemies.Min(CentreX);
+            float rightmost = enemies.Max(CentreX);
+            float averageGround = enemies.Average(GroundY);
+
+            _fight.PlaySpellVfxForTest(TwoLayerBeat(hero, enemies));
+            yield return null;
+
+            var rect = Ground.Image.rectTransform;
+            float left = rect.anchoredPosition.x - rect.sizeDelta.x * 0.5f;
+            float right = rect.anchoredPosition.x + rect.sizeDelta.x * 0.5f;
+            float bottom = rect.anchoredPosition.y - rect.sizeDelta.y * 0.5f;
+
+            Assert.LessOrEqual(left, leftmost + 1f,
+                "the fault's left edge does not reach the leftmost enemy's own slot centre");
+            Assert.GreaterOrEqual(right, rightmost - 1f,
+                "the fault's right edge does not reach the rightmost enemy's own slot centre");
+            Assert.Less(Mathf.Abs(bottom - averageGround), 40f,
+                "the fault's box does not sit near the formation's own ground line -- " +
+                "see content_crop in tools/slice_spell_sheet.py for the aspect bug this pins");
         }
 
         // A SPELL THAT AUTHORS NO GROUND LAYER MUST DRAW NONE. Every spell in

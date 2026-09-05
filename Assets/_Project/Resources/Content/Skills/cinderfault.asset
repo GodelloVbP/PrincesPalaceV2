@@ -47,7 +47,7 @@ MonoBehaviour:
     groundSeconds: 0
     groundImpactFrame: 0
     groundAspect: 0
-    groundImpactY: 0.104
+    groundImpactY: 0.063
     castSfxPath: Audio/Sfx/cinderfault_pressure
   appliesStatus: 0
   hasStatus: 0
