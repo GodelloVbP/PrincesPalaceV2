@@ -162,7 +162,7 @@
       "manaCost": 11,
       "damageInstances": [
         {
-          "type": "Arcane",
+          "type": "Lightning",
           "amount": 20
         }
       ],

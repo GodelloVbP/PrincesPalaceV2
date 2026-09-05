@@ -12,6 +12,18 @@ namespace PrincesPalace.Domain.Stats
         Ice,
         Nature,
         Poison,
-        Arcane
+        Arcane,
+
+        // APPENDED, never inserted -- ContentBuilder-generated
+        // ScriptableObjects under Resources/Content/ store this enum as a
+        // raw int, so reordering (or inserting) an existing member would
+        // silently relabel every already-authored weakness/resistance and
+        // damageInstance on the next load. New members only ever go on
+        // the end, in whatever order they were added.
+        Earth,
+        Water,
+        Wind,
+        Lightning,
+        Void
     }
 }

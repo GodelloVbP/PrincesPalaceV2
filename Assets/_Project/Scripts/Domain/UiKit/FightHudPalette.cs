@@ -168,6 +168,23 @@ namespace PrincesPalace.Domain.UiKit
         // other numeric HUD readout on this screen is tinted with.
         public const string DamageTypeArcane = "#C69AF1FF";
 
+        // FIVE MORE, added the moment DamageType grew five more members.
+        // Earth/Water/Wind/Lightning are read straight off the brief with no
+        // clash against the six above (ochre, sky blue and electric yellow
+        // each sit in a different hue band from anything already claimed).
+        public const string DamageTypeEarth = "#C98A3AFF";
+        public const string DamageTypeWater = "#3F9BE8FF";
+        public const string DamageTypeWind = "#A8F0E0FF";
+        public const string DamageTypeLightning = "#F5F06AFF";
+
+        // NOT the brief's own #B03CCF -- that hue (~287) sits only 17 degrees
+        // from Arcane's own #C69AF1 (~270), and both are the same
+        // blue-violet family at a glance despite Arcane being the far
+        // lighter, pastel-desaturated one. Pushed to hue ~307 (true
+        // magenta-violet) for a separation that reads as two different
+        // colours rather than two shades of one.
+        public const string DamageTypeVoid = "#C22FB0FF";
+
         // Every Stats.DamageType member, explicitly -- no default fallthrough
         // to white, and no default fallthrough to Physical either for a type
         // this switch has heard of; only a genuinely FUTURE enum member (one
@@ -185,6 +202,11 @@ namespace PrincesPalace.Domain.UiKit
                 case DamageType.Nature: return DamageTypeNature;
                 case DamageType.Poison: return DamageTypePoison;
                 case DamageType.Arcane: return DamageTypeArcane;
+                case DamageType.Earth: return DamageTypeEarth;
+                case DamageType.Water: return DamageTypeWater;
+                case DamageType.Wind: return DamageTypeWind;
+                case DamageType.Lightning: return DamageTypeLightning;
+                case DamageType.Void: return DamageTypeVoid;
                 default: return DamageTypePhysical;
             }
         }

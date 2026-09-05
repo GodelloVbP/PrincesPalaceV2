@@ -147,6 +147,43 @@ namespace PrincesPalace.PlayModeTests
                 "a Poison-typed attack's popup did not pop in the Poison token");
         }
 
+        // ONE case from the five types this pass added, not all five --
+        // this fixture pays for a full scene load per case, and every case
+        // is mechanically identical (see Fire/Poison above); it only needs
+        // to prove a NEW type reaches the popup the same way, not that
+        // FightHudPalette's own per-type mapping is exhaustive (that is
+        // DamageTypeCompletenessTests' job, cheaply, without a scene).
+        [UnityTest]
+        public IEnumerator AVoidHitPopsInTheVoidColour()
+        {
+            yield return LoadFightWithAttackType(DamageType.Void);
+
+            Click("Verb0");
+            Click("EnemyPlate0");
+            yield return WaitForThePopup();
+
+            AssertSameColor(Hex(FightHudPalette.DamageTypeVoid), ActivePopupColor(),
+                "a Void-typed attack's popup did not pop in the Void token");
+        }
+
+        // A second case worth the scene load rather than left to
+        // DamageTypeCompletenessTests alone: Lightning Bolt (skills.json)
+        // is the first authored content in the game to actually deal this
+        // type, so this is the first time the token gets exercised by real
+        // content rather than only by the synthetic fixture above.
+        [UnityTest]
+        public IEnumerator ALightningHitPopsInTheLightningColour()
+        {
+            yield return LoadFightWithAttackType(DamageType.Lightning);
+
+            Click("Verb0");
+            Click("EnemyPlate0");
+            yield return WaitForThePopup();
+
+            AssertSameColor(Hex(FightHudPalette.DamageTypeLightning), ActivePopupColor(),
+                "a Lightning-typed attack's popup did not pop in the Lightning token");
+        }
+
         // The control: a Physical hit still shows the same colour it always
         // did, so this whole feature is additive rather than a reskin of the
         // common case.

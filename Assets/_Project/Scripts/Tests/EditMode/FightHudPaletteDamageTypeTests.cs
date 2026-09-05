@@ -25,6 +25,11 @@ namespace PrincesPalace.Domain.Tests
             { DamageType.Nature, "#5FA24AFF" },
             { DamageType.Poison, "#A8E63CFF" },
             { DamageType.Arcane, "#C69AF1FF" },
+            { DamageType.Earth, "#C98A3AFF" },
+            { DamageType.Water, "#3F9BE8FF" },
+            { DamageType.Wind, "#A8F0E0FF" },
+            { DamageType.Lightning, "#F5F06AFF" },
+            { DamageType.Void, "#C22FB0FF" },
         };
 
         [Test]

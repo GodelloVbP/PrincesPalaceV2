@@ -90,12 +90,12 @@ namespace PrincesPalace.Domain.Tests
         public void AnUnrecognizedAttackType_ProducesAClearError()
         {
             var entry = Minimal();
-            entry.attackType = "Lightning";
+            entry.attackType = "Shadow";
 
             bool ok = EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { entry }, out _, out var errors);
 
             Assert.IsFalse(ok);
-            StringAssert.Contains("Lightning", errors[0]);
+            StringAssert.Contains("Shadow", errors[0]);
         }
 
         [Test]
@@ -270,7 +270,10 @@ namespace PrincesPalace.Domain.Tests
         public void DerivingAWeaknessAroundALongResistanceList_FindsTheOneFreeElement()
         {
             var entry = Minimal();
-            entry.resistance = "Physical, Fire, Ice, Nature, Poison";
+            // Every DamageType member but Arcane -- DamageType grew five more
+            // (Earth/Water/Wind/Lightning/Void) after this test was written,
+            // so "long" now means ten of eleven, not five of six.
+            entry.resistance = "Physical, Fire, Ice, Nature, Poison, Earth, Water, Wind, Lightning, Void";
 
             bool ok = EnemyEntryResolver.TryResolveAll(new List<RawEnemyEntry> { entry }, out var resolved, out var errors);
 

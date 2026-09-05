@@ -23,10 +23,11 @@ namespace PrincesPalace.Domain.Stats
     // precisely as they did, which is why this could go in without retuning a
     // single existing item.
     //
-    // A STRUCT WITH ONE FIELD PER TYPE rather than a dictionary. There are five
-    // damage types and there will not be fifty; a dictionary would allocate per
-    // combatant, serialise awkwardly, and buy only the ability to ask about a
-    // type that does not exist.
+    // A STRUCT WITH ONE FIELD PER TYPE rather than a dictionary. There are
+    // eleven damage types (was five when this struct was written) and there
+    // will not be fifty; a dictionary would allocate per combatant, serialise
+    // awkwardly, and buy only the ability to ask about a type that does not
+    // exist.
     [Serializable]
     public struct ResistanceByType
     {
@@ -47,6 +48,16 @@ namespace PrincesPalace.Domain.Stats
         // as every other stat this codebase adds fields to.
         public int Arcane;
 
+        // FIVE MORE FIELDS, added the moment DamageType grew five more
+        // members -- same "zero for every relic and modifier authored
+        // before this field existed" grandfathering the Arcane field's own
+        // comment above already argues for.
+        public int Earth;
+        public int Water;
+        public int Wind;
+        public int Lightning;
+        public int Void;
+
         public int For(DamageType type)
         {
             switch (type)
@@ -57,6 +68,11 @@ namespace PrincesPalace.Domain.Stats
                 case DamageType.Nature: return Nature;
                 case DamageType.Poison: return Poison;
                 case DamageType.Arcane: return Arcane;
+                case DamageType.Earth: return Earth;
+                case DamageType.Water: return Water;
+                case DamageType.Wind: return Wind;
+                case DamageType.Lightning: return Lightning;
+                case DamageType.Void: return Void;
                 default: return 0;
             }
         }
@@ -72,6 +88,11 @@ namespace PrincesPalace.Domain.Stats
                 case DamageType.Nature: copy.Nature += amount; break;
                 case DamageType.Poison: copy.Poison += amount; break;
                 case DamageType.Arcane: copy.Arcane += amount; break;
+                case DamageType.Earth: copy.Earth += amount; break;
+                case DamageType.Water: copy.Water += amount; break;
+                case DamageType.Wind: copy.Wind += amount; break;
+                case DamageType.Lightning: copy.Lightning += amount; break;
+                case DamageType.Void: copy.Void += amount; break;
             }
 
             return copy;
@@ -85,8 +106,10 @@ namespace PrincesPalace.Domain.Stats
         // relic offering it is offering four things at once, and saying that
         // once here beats saying it in every relic that offers it.
         //
-        // NOW FIVE, not four -- Arcane joins Fire/Ice/Nature/Poison the
-        // moment it has its own field to add to.
+        // NOW TEN, not five -- Earth/Water/Wind/Lightning/Void join
+        // Fire/Ice/Nature/Poison/Arcane the moment each has its own field
+        // to add to. Same rule as before: every non-Physical type is
+        // "magical", no exceptions carved out per element.
         public ResistanceByType WithMagical(int amount)
         {
             var copy = this;
@@ -95,10 +118,16 @@ namespace PrincesPalace.Domain.Stats
             copy.Nature += amount;
             copy.Poison += amount;
             copy.Arcane += amount;
+            copy.Earth += amount;
+            copy.Water += amount;
+            copy.Wind += amount;
+            copy.Lightning += amount;
+            copy.Void += amount;
             return copy;
         }
 
         public bool IsEmpty =>
-            Physical == 0 && Fire == 0 && Ice == 0 && Nature == 0 && Poison == 0 && Arcane == 0;
+            Physical == 0 && Fire == 0 && Ice == 0 && Nature == 0 && Poison == 0 && Arcane == 0 &&
+            Earth == 0 && Water == 0 && Wind == 0 && Lightning == 0 && Void == 0;
     }
 }

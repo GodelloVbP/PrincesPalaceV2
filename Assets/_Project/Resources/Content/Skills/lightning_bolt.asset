@@ -27,7 +27,7 @@ MonoBehaviour:
   flatAmount: 0
   ignoresDefense: 0
   damageInstances:
-  - type: 5
+  - type: 9
     amount: 20
   cooldownTurns: 0
   playerSelectable: 1
