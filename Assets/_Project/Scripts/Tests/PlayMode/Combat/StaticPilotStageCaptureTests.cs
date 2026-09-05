@@ -37,10 +37,22 @@ namespace PrincesPalace.PlayModeTests
     // fixture records the "before" and the "after" of an art change and the two
     // are directly comparable frame for frame.
     //
-    // The Bog Witch is the pilot subject because every one of its stances is a
-    // single still (Resources/Enemies/bog_witch/*.png), so what the strip shows
-    // is the PROCEDURAL performance -- lunge, flash, recoil, punch, settle --
-    // with no frame animation underneath to flatter it.
+    // THE SUBJECT IS FIXED, AND STAYS FIXED. Every other hand-kept list in
+    // these capture fixtures became content-derived -- the stance kits, the
+    // spell list -- because a list is the thing that stops covering what was
+    // added after it. This one did not, and the reason is in the paragraph
+    // above: the whole instrument is a BEFORE and an AFTER of the same art,
+    // stitched frame for frame. A subject that moved to whichever monster
+    // happens to sort first would make the two strips incomparable on the day
+    // somebody adds a mob, which is the one thing this fixture must never do.
+    //
+    // The Bog Witch specifically, and the original reason for it has expired:
+    // it was picked because every one of its stances was a single still, and
+    // that is now true of every actor in the game (docs/ART_PIPELINE.md -- an
+    // actor stance is one drawing, frame animation is not supported). What
+    // keeps it here is continuity with the strips already taken against it.
+    // Its art is asserted below rather than assumed, so a Bog Witch that lost
+    // its stances fails by name instead of photographing a nameplate.
     public class StaticPilotStageCaptureTests
     {
         private const string EnemyId = "bog_witch";

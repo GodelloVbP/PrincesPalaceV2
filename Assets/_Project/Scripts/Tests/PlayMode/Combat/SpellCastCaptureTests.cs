@@ -26,10 +26,28 @@ namespace PrincesPalace.PlayModeTests
     // picture, and every placement bug this file's siblings record was found by
     // looking at one.
     //
-    // Six shots across a single cast, at the real speed rather than the 60x the
-    // behaviour tests run at: the point is the timing.
+    // Eight shots across a single cast, at the real speed rather than the 60x
+    // the behaviour tests run at: the point is the timing.
+    //
+    // EVERY SPELL WITH FRAMES, read from content. It named three ids -- and
+    // the roster had six, so cinderfault, boulder_slam and bog_mud_burst were
+    // authored, shipped and never once photographed. A hand-kept list in a
+    // capture fixture stops covering the spell added after it, silently, and
+    // the only symptom is a picture nobody looks at because it does not exist.
+    // The Step 0 baseline paid for this directly: adding one skills.json row
+    // required editing this file before the new spell could be seen at all.
     public class SpellCastCaptureTests
     {
+        // Skills that authored frames. A skill with no vfx.path has no
+        // sequence to photograph -- the beat plays, the number moves, and
+        // there is nothing in flight -- so it is not a gap, it is a spell that
+        // does not animate.
+        private static List<SkillDefinition> Animated() =>
+            ContentDatabase.Skills
+                .Where(s => s != null && s.data.Vfx != null && !string.IsNullOrEmpty(s.data.Vfx.path))
+                .OrderBy(s => s.id, System.StringComparer.Ordinal)
+                .ToList();
+
         private static string OutputDir =>
             Path.GetFullPath(Path.Combine(
                 Directory.GetParent(Application.dataPath).FullName, "tools", "screenshots", "runtime"));
@@ -94,10 +112,10 @@ namespace PrincesPalace.PlayModeTests
             // Set, it froze every shot on the second frame of the sequence and
             // produced six identical pictures of a glyph.
 
-            yield return Shoot(fight, canvas, hero, foe, "mud_burst", "away");
-            yield return Shoot(fight, canvas, foe, hero, "mud_burst", "back");
+            var animated = Animated();
+            Assert.IsNotEmpty(animated, "no skill in content authors a vfx.path, so this capture is vacuous");
 
-            // All three of Shawn's spells, and all three read from CONTENT.
+            // EVERY spell that has frames, and all of them read from CONTENT.
             //
             // They used to be captured through a presentation this file built
             // by hand, which quietly made the pictures useless for the one
@@ -106,8 +124,18 @@ namespace PrincesPalace.PlayModeTests
             // spell's. Both of the placement bugs the impact point exists to
             // fix were invisible here for exactly that reason, and both were
             // reported by a player instead.
-            yield return Shoot(fight, canvas, hero, foe, "frost_flare", "frost");
-            yield return Shoot(fight, canvas, hero, foe, "lightning_bolt", "bolt");
+            foreach (var skill in animated)
+            {
+                yield return Shoot(fight, canvas, hero, foe, skill.id, skill.id);
+            }
+
+            // ONE OF THEM FIRED THE OTHER WAY, which is the only shot here
+            // that is about mirroring rather than about a particular spell: a
+            // cast travelling right-to-left has to arrive at the hero's anchor
+            // and not at where the enemy's would have been. First in the
+            // ordered list rather than a named one, so this survives whichever
+            // spell is authored next.
+            yield return Shoot(fight, canvas, foe, hero, animated[0].id, animated[0].id + "_back");
         }
 
         // One cast, sampled six times across its own length. The sample points

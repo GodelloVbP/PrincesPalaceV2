@@ -26,35 +26,59 @@ namespace PrincesPalace.PlayModeTests
     // ground line is wrong, a pose that jumps sideways between frames because
     // the frames were cropped independently.
     //
-    // So this asserts the two halves a test CAN check -- every authored stance
-    // resolves to a real sprite, and every stance of an actor shares one canvas
-    // -- and then writes a contact sheet for the half it cannot, which is
-    // whether the creature looks right.
+    // WHAT IT NO LONGER DOES, and why the file is shorter for it. This used to
+    // carry three assertions of its own -- every authored stance resolves,
+    // every stance of an actor shares one canvas, every kit is in the
+    // StanceManifest -- each run over a hand-written dictionary of three
+    // monsters. EnemyArtCompletenessTests already asks all three questions of
+    // EVERY enemy in the catalogue, headless, and has since Step 1. Two copies
+    // of one rule where one covers three mobs and the other covers all of them
+    // is not defence in depth; it is a smaller rule that quietly reports green
+    // about a smaller set, and the smaller one is the one sitting in the file
+    // an author opens when they add art. So the assertions are gone and the
+    // sweep is the only home for them.
     //
-    // Graphics device only for the capture: tools/screenshot.ps1 -Runtime
-    // -RuntimeFilter EnemyStanceCaptureTests. The assertions run headless.
+    // What is left is the half a test cannot check: whether the creature LOOKS
+    // right. Over the whole roster now rather than three named kits, three to
+    // a stage because that is what the stage holds.
+    //
+    // Graphics device only: tools/screenshot.ps1 -Runtime -RuntimeFilter
+    // EnemyStanceCaptureTests. Headless, it self-skips -- the assertions that
+    // used to justify running it headless live next door now.
     public class EnemyStanceCaptureTests
     {
         private static string OutputDir =>
             Path.GetFullPath(Path.Combine(
                 Directory.GetParent(Application.dataPath).FullName, "tools", "screenshots", "runtime"));
 
-        // The kits this file was written for, and their stances -- read from
-        // content where the fight drives them and named here where a skill
-        // does, because a skill's stance is a string on a ScriptableObject and
-        // "which stances does this monster have" has no other home.
+        // EVERY MONSTER WITH ART, and every stance it can reach, both read from
+        // content.
         //
-        // The Forest Warden earns its place alongside the other two: its six
-        // drawings arrived on six DIFFERENT canvases each (a per-frame crop
-        // plus a uniform pad, which is not a registration) and were
-        // recomposited onto one, so it is the one kit on the roster whose
-        // one-canvas promise was made by hand rather than by the slicer.
-        private static readonly Dictionary<string, string[]> Kits = new Dictionary<string, string[]>
-        {
-            ["beetle"] = new[] { "idle", "attack", "turtle_up", "shell_closed", "hurt", "defeated" },
-            ["treant"] = new[] { "idle", "attack", "trunk_slam", "cast", "hurt", "defeated" },
-            ["forest_warden"] = new[] { "idle", "attack", "attack_roar", "attack_charge", "hurt", "defeated" },
-        };
+        // This was a dictionary naming three ids and their six stances each,
+        // written when three mobs had art. The roster has grown past it, and a
+        // hand-kept list in a capture fixture fails in the quietest possible
+        // way: the mob added after it is simply never photographed, and there
+        // is no missing picture to notice because nobody knows to look for one.
+        // The Step 0 baseline paid the other half of that bill -- adding a mob
+        // meant editing this file's literals before it could be seen at all.
+        //
+        // StancesReachableBy is EnemyArtCompletenessTests' walk, borrowed
+        // rather than restated: the four the fight drives plus whatever every
+        // ability the mob can draw asks for. A second copy of that rule here is
+        // exactly how the photograph would come to show a smaller kit than the
+        // sweep checks.
+        private static Dictionary<string, string[]> Kits() =>
+            ContentDatabase.Enemies
+                .Where(e => e != null && !string.IsNullOrWhiteSpace(e.data.SpritePath))
+                .OrderBy(e => e.id, System.StringComparer.Ordinal)
+                .ToDictionary(
+                    e => e.id,
+                    e => EnemyArtCompletenessTests.StancesReachableBy(e).OrderBy(x => x).ToArray());
+
+        // What the stage holds at once (FightHudSpec.StageSlotsPerSide), so a
+        // roster of any size is photographed in full rather than truncated to
+        // whatever fits in one shot.
+        private const int PerStage = 3;
 
         [SetUp]
         public void PlayBeatsFast() => FightBeatPlayer.BeatSpeedMultiplier = 8f;
@@ -66,101 +90,45 @@ namespace PrincesPalace.PlayModeTests
             StanceManifestLoader.Reset();
         }
 
-        private static void Click(FightController fight, string name)
-        {
-            var go = fight.GetComponentsInChildren<Transform>(includeInactive: true)
-                .FirstOrDefault(t => t.name == name)?.gameObject;
-            Assert.IsNotNull(go, $"no object named '{name}' in the fight scene");
-            go.GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
-        }
-
-        // A stance that fails to load is INVISIBLE at runtime -- the stage
-        // falls through to its nameplate and nothing logs. The same silent
-        // failure EnemySpriteImportPostprocessor exists to stop.
-        [Test]
-        public void EveryAuthoredStanceResolvesToADrawing()
-        {
-            var missing = new List<string>();
-
-            foreach (var (id, stances) in Kits.Select(k => (k.Key, k.Value)))
-            {
-                foreach (string stance in stances)
-                {
-                    if (Resources.Load<Sprite>($"Enemies/{id}/{stance}") == null)
-                    {
-                        missing.Add($"Enemies/{id}/{stance}");
-                    }
-                }
-            }
-
-            Assert.IsEmpty(missing,
-                "these stances load nothing, so the stage shows a nameplate instead of a monster: " +
-                string.Join(", ", missing));
-        }
-
-        // ONE CANVAS PER ACTOR, which is what makes StanceManifest's single
-        // authored ground line mean anything: the stage sizes each slot to the
-        // sprite it is showing (FightController.StageVisuals), so drawings of
-        // different sizes move the figure by the difference as it changes pose.
-        // Every one of these kits was composited onto its shared canvas by the
-        // slicer's ground-band anchor -- this is that delivery asserted rather
-        // than trusted.
-        [Test]
-        public void EveryStanceOfAnActorSharesOneCanvas()
-        {
-            foreach (var (id, stances) in Kits.Select(k => (k.Key, k.Value)))
-            {
-                var sizes = new Dictionary<string, Vector2>();
-
-                foreach (string stance in stances)
-                {
-                    var sprite = Resources.Load<Sprite>($"Enemies/{id}/{stance}");
-                    if (sprite != null) sizes[stance] = sprite.rect.size;
-                }
-
-                Assert.IsNotEmpty(sizes, $"{id} has no drawings at all");
-
-                var distinct = sizes.Values.Distinct().ToList();
-                Assert.AreEqual(1, distinct.Count,
-                    $"{id}'s stances span {distinct.Count} canvas sizes, so it changes size and position as it " +
-                    $"changes pose: {string.Join(", ", sizes.Take(8).Select(p => $"{p.Key}={p.Value}"))}");
-            }
-        }
-
-        // And the ground line has to be authored at all, or the figure stands
-        // on its own canvas bottom -- which for a padded canvas is 12px of
-        // nothing, and reads as hovering.
-        [Test]
-        public void EveryKitIsInTheStanceManifest()
-        {
-            foreach (string id in Kits.Keys)
-            {
-                Assert.IsTrue(StanceManifestLoader.Manifest.HasActor($"Enemies/{id}"),
-                    $"Enemies/{id} has no StanceManifest entry, so it falls back to the canvas bottom");
-            }
-        }
-
-        // ---- the whole roster ------------------------------------------------
-        //
-        // EveryStanceEveryEnemyCanReachResolvesToFrames USED TO LIVE HERE and
-        // moved to EnemyArtCompletenessTests, beside the canvas and manifest
-        // sweeps that ask the same question of the same set. It was the one
-        // rule in this file that had nothing to do with photographing a kit --
-        // it swept every enemy in the catalogue -- and leaving it here meant a
-        // completeness check sitting in a capture fixture, where a reader
-        // looking for "what proves new art is finished" would not find it.
-        // Nothing about it changed in the move.
-
         // ---- the picture ------------------------------------------------------
 
         [UnityTest]
-        public IEnumerator CaptureBothKitsOnTheStage()
+        public IEnumerator CaptureEveryDrawnMonsterOnTheStage()
         {
             if (!CanvasCapture.IsSupported)
             {
                 Assert.Ignore("No graphics device. Run: tools/screenshot.ps1 -Runtime -RuntimeFilter EnemyStanceCaptureTests");
             }
 
+            var kits = Kits();
+            Assert.IsNotEmpty(kits, "no enemy in content has art, so this capture is vacuous");
+
+            Directory.CreateDirectory(OutputDir);
+
+            var ids = kits.Keys.ToList();
+            for (int start = 0; start < ids.Count; start += PerStage)
+            {
+                var batch = ids.Skip(start).Take(PerStage).ToList();
+                yield return CaptureStage(batch);
+
+                // THE STANCES EACH ONE CAN REACH, logged beside the picture.
+                // A photograph shows one pose; what an author needs when they
+                // look at it is which OTHER poses that mob has, because a
+                // typo'd ability stance is a monster that vanishes for exactly
+                // one turn and there is no shot of that turn to take.
+                foreach (string id in batch)
+                {
+                    Debug.Log($"[EnemyStanceCapture] {id} can reach: {string.Join(", ", kits[id])}");
+                }
+            }
+        }
+
+        // One stageful. THE REAL CONTENT, resolved the way a real room
+        // resolves it, so the shot shows what the game would actually field --
+        // stats, facing, ground line and all -- rather than a fixture wearing
+        // the right sprite folder.
+        private IEnumerator CaptureStage(List<string> ids)
+        {
             yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
             yield return null;
             yield return null;
@@ -168,34 +136,33 @@ namespace PrincesPalace.PlayModeTests
             var fight = Object.FindAnyObjectByType<FightController>();
             Assert.IsNotNull(fight, "the fight scene has no controller");
 
-            // THE REAL CONTENT, resolved the way a real room resolves it, so
-            // the shot shows what the game would actually field -- stats,
-            // facing, ground line and all -- rather than a fixture wearing the
-            // right sprite folder.
-            var beetle = ContentDatabase.Enemies.FirstOrDefault(e => e.id == "beetle");
-            var treant = ContentDatabase.Enemies.FirstOrDefault(e => e.id == "treant");
-            Assert.IsNotNull(beetle, "beetle is not in the content database");
-            Assert.IsNotNull(treant, "treant is not in the content database");
+            var definitions = ids
+                .Select(id => ContentDatabase.Enemies.FirstOrDefault(e => e.id == id))
+                .Where(e => e != null)
+                .ToList();
+
+            Assert.IsNotEmpty(definitions, "none of " + string.Join(", ", ids) + " is in the content database");
 
             var hero = new CombatantState("Shawn", true, 300, 30, 40, 10);
-            var one = new CombatantState(beetle.data.DisplayName, false, 5000, 0, 4, 5);
-            var two = new CombatantState(treant.data.DisplayName, false, 5000, 0, 6, 3);
 
-            var encounter = new CombatEncounter(new[] { hero }, new[] { one, two });
-            var session = new FightSession(encounter,
+            // Health high enough that nothing dies inside the window, speed
+            // spread so the stage settles in a fixed order -- the same
+            // arrangement this fixture always used, now over a variable list.
+            var foes = definitions
+                .Select((e, i) => new CombatantState(e.data.DisplayName, false, 5000, 0, 4 + i, 5 - i))
+                .ToList();
+
+            var session = new FightSession(
+                new CombatEncounter(new[] { hero }, foes),
                 new List<PlayerKit> { null },
-                new List<EnemyKit>
-                {
-                    new EnemyKit(FightEncounterAdapter.Resolve(beetle), false),
-                    new EnemyKit(FightEncounterAdapter.Resolve(treant), false),
-                },
+                definitions.Select(e => new EnemyKit(FightEncounterAdapter.Resolve(e), false)).ToList(),
                 new Domain.Rng.SeededRandom(4));
 
             session.Begin();
             fight.Bind(session, EncounterClass.Normal);
 
             // Long enough for the stage to settle -- the fly-in, the plates,
-            // the shadows. Both figures are mid-breath by then, and where in
+            // the shadows. Every figure is mid-breath by then, and where in
             // the breath is deterministic (BreathCurve.PhaseFor off the slot
             // index), so the shot does not differ run to run.
             yield return new WaitForSecondsRealtime(1.2f);
@@ -204,8 +171,7 @@ namespace PrincesPalace.PlayModeTests
                 .FirstOrDefault(c => c.isRootCanvas);
             Assert.IsNotNull(canvas);
 
-            Directory.CreateDirectory(OutputDir);
-            string path = Path.Combine(OutputDir, "Enemies_beetle_treant.png");
+            string path = Path.Combine(OutputDir, "Enemies_" + string.Join("_", definitions.Select(e => e.id)) + ".png");
             CanvasCapture.RenderToFile(canvas, path);
             Assert.IsTrue(File.Exists(path));
             Debug.Log($"[EnemyStanceCapture] wrote {path}");
