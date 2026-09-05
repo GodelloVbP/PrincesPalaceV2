@@ -182,19 +182,8 @@ namespace PrincesPalace
             SetFill(0f);
         }
 
-        // Authored full width and driven to zero on wiring -- UiAudit refuses
-        // a zero-sized graphic, so the fill is built at its real size and
-        // shrunk here rather than the other way round. See MainMenuScreen's
-        // own comment on why it is pivoted to its left edge rather than
-        // centred: growing sizeDelta.x from a pinned edge is what lets one
-        // number track the hold; growing from the centre would grow both ways
-        // at once and paint outside the track.
-        private void SetFill(float progress)
-        {
-            if (confirmFill == null) return;
-
-            confirmFill.sizeDelta = new Vector2(
-                MainMenuScreen.ResetHoldWidth * Mathf.Clamp01(progress), MainMenuScreen.ResetHoldHeight);
-        }
+        // See HoldFillMath's own header for why sizeDelta rather than anchors.
+        private void SetFill(float progress) =>
+            HoldFillMath.SetFill(confirmFill, progress, MainMenuScreen.ResetHoldWidth, MainMenuScreen.ResetHoldHeight);
     }
 }

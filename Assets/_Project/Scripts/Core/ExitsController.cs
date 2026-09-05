@@ -269,15 +269,9 @@ namespace PrincesPalace
 
         // ---- the hold's fill ----------------------------------------------------------
 
-        // Authored full width and driven from here, because UiAudit refuses a
-        // zero-sized graphic and a fill that starts at zero is exactly that.
-        private void SetFill(float progress)
-        {
-            if (abandonFill == null) return;
-
-            abandonFill.sizeDelta = new Vector2(
-                ExitsLayout.HoldWidth * Mathf.Clamp01(progress), ExitsLayout.HoldHeight);
-        }
+        // See HoldFillMath's own header for why sizeDelta rather than anchors.
+        private void SetFill(float progress) =>
+            HoldFillMath.SetFill(abandonFill, progress, ExitsLayout.HoldWidth, ExitsLayout.HoldHeight);
 
         private void OnExitHover(int index, bool entered)
         {
