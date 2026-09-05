@@ -37,15 +37,18 @@ namespace PrincesPalace.Domain.Content
     {
         // Resources-relative folder of this spell's animation frames, played
         // over the stage when it resolves. Empty means no visual.
+        [ContentDoc("Resources-relative folder of this spell's animation frames; empty means no visual.")]
         public string path = "";
 
         // How long the whole animation takes, in seconds.
+        [ContentDoc("How long the whole per-target animation takes, in seconds.")]
         public float seconds = DefaultSeconds;
 
         // Which frame the spell actually LANDS on, counting from 1. A bolt is
         // drawn arriving, not sitting still: the damage, the flash and the
         // number belong to the moment it connects, which is partway through the
         // sequence rather than at the end of it.
+        [ContentDoc("Which frame (1-based) the spell actually lands on.")]
         public int impactFrame = DefaultImpactFrame;
 
         // WHERE THE EFFECT HAPPENS. One of SpellAnchor, spelled as a word.
@@ -65,6 +68,7 @@ namespace PrincesPalace.Domain.Content
         // Unrecognised spellings fall back to Target and say so once -- the
         // house style, and the right one here: a typo should misplace one
         // effect, not stop a fight resolving.
+        [ContentDoc("Where the effect happens: a SpellAnchor name (Target, Caster, ...), parsed case-insensitively; unrecognised falls back to Target.")]
         public string anchor = "";
 
         // THE BOX THE ART IS FITTED INTO, square, in reference-frame units.
@@ -74,6 +78,7 @@ namespace PrincesPalace.Domain.Content
         // obvious next things: a boss's slam that should fill the stage, and a
         // status tick that should be a glint. Authored per spell now, and left
         // out it is still 380.
+        [ContentDoc("The square box the art is fitted into, in reference-frame units; 0 means the default size.")]
         public float size = DefaultSize;
 
         // WHICH FRAME THE EFFECT LEAVES ON, for a fromCaster sheet. 1-based
@@ -84,6 +89,7 @@ namespace PrincesPalace.Domain.Content
         // halfway across the stage -- it tumbled through the air instead of
         // charging where it was cast. The sequence has two phases and the flight
         // belongs to the second: hold at the caster for the charge, then throw.
+        [ContentDoc("Which frame (1-based) a from-caster effect leaves on; 0 means from the first frame.")]
         public int departFrame;
 
         // WHERE THE BLOW LANDS INSIDE THE SHEET, as fractions of one frame:
@@ -115,11 +121,14 @@ namespace PrincesPalace.Domain.Content
         // not state a point moves. -1 rather than 0, because 0 is a legitimate
         // point (the bottom-left corner) and a sentinel that collides with a
         // real value is a bug waiting for its first author.
+        [ContentDoc("Where the blow lands inside the sheet, as a fraction from the left edge; -1 means unauthored (use the measured fallback).")]
         public float impactX = Unauthored;
+        [ContentDoc("Where the blow lands inside the sheet, as a fraction from the bottom edge; -1 means unauthored (use the measured fallback).")]
         public float impactY = Unauthored;
 
         // Where the sound is, if there is one. Played at the moment the blow
         // lands -- see FightBeatPlayer's impact instant.
+        [ContentDoc("Resources-relative path to the sound played the moment the blow lands.")]
         public string sfxPath = "";
 
         // ---- the shared ground layer, and the cue that leads into it -----------
@@ -137,6 +146,7 @@ namespace PrincesPalace.Domain.Content
         // size is a property of the FORMATION rather than of any one target.
         // Two paths on one presentation is what lets the view draw both from
         // one beat without the controller learning any spell's id.
+        [ContentDoc("Resources-relative folder of the shared ground-layer frames drawn once behind every enemy struck; empty means no ground layer at all.")]
         public string groundPath = "";
 
         // How long the ground layer runs and which frame it ruptures on.
@@ -147,7 +157,9 @@ namespace PrincesPalace.Domain.Content
         // Authored separately only for a sheet pair that cannot be composed to
         // the same length -- Cinderfault's are (nine frames each, rupture on
         // five, see tools/slice_spell_sheet.py), so it authors neither.
+        [ContentDoc("How long the ground layer runs, in seconds; 0 falls back to the per-target sequence's own seconds.")]
         public float groundSeconds;
+        [ContentDoc("Which frame (1-based) the ground layer ruptures on; 0 falls back to the per-target sequence's own impactFrame.")]
         public int groundImpactFrame;
 
         // THE SHAPE OF THE BOX THE FAULT IS FITTED INTO, width over height.
@@ -162,6 +174,7 @@ namespace PrincesPalace.Domain.Content
         // square sheet with a wide drawing on it wants: the box matches the
         // frame, preserveAspect adds no letterbox, and the empty top and
         // bottom of the frame cost nothing because they are transparent.
+        [ContentDoc("Width-over-height of the ground layer's box; 0 means take the sheet's own frame aspect.")]
         public float groundAspect;
 
         // WHERE THE FAULT'S OWN GROUND LINE SITS INSIDE ITS FRAME, as a
@@ -169,6 +182,7 @@ namespace PrincesPalace.Domain.Content
         // for the same reason it is authored rather than scanned. The per-frame
         // lowest opaque pixel of a fault is its near lip in one drawing and a
         // thrown fragment in the next.
+        [ContentDoc("Where the ground layer's own ground line sits, as a fraction from the bottom edge; -1 means unauthored.")]
         public float groundImpactY = Unauthored;
 
         // THE CUE THAT RUNS THROUGH THE CAST, as against sfxPath's one
@@ -177,6 +191,7 @@ namespace PrincesPalace.Domain.Content
         // A SECOND PATH RATHER THAN A SECOND CLIP ON sfxPath, because the two
         // fire at different instants: this one when the beat opens, sfxPath
         // when the blow lands. One field could only ever have meant one of them.
+        [ContentDoc("Resources-relative path to the sound that runs through the cast, ending before the rupture.")]
         public string castSfxPath = "";
 
         // Left unset, a spell runs for this long and lands on this frame. Both

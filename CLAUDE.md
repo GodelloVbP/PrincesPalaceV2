@@ -71,6 +71,10 @@ ScriptableObject under `Assets/_Project/Resources/Content/`. Regeneration is
 **destructive** — it deletes the whole tree first. Never hand-author an asset
 in there.
 
+Looking up a `Raw*Entry` field, its default, or the valid names for the enum
+it parses against: `docs/CONTENT_SCHEMA.md`, generated from the types
+themselves so it cannot drift.
+
 ---
 
 ## Verification, in brief
@@ -86,11 +90,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/test.ps1 wool
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/test.ps1 -Changed
 ```
 Fuzzy class name, comma-separated list, or a named area (`combat`, `hub`,
-`content`, `run`, `ui`, `art`, `rng` — defined in `tools/test_areas.ps1`).
+`content`, `run`, `ui`, `art`, `rng`). **A test's area is the folder it sits
+in** — `Tests/EditMode/<Area>/` and `Tests/PlayMode/<Area>/`, with a `Shared/`
+beside them for helpers that carry no tests. There is no pattern to keep in
+sync: `run_tests_parallel.ps1` refuses to run at all while any test file sits
+outside an area folder (or a testable file sits in `Shared/`), and the fix is
+a `git mv`. `tools/test_areas.ps1`'s header says what belongs in each area.
 `-Changed` maps whatever is uncommitted to the areas/classes it touches.
-`-List` shows everything, including any class an area pattern has drifted out
-of sync with (`run_tests_parallel.ps1` refuses to run at all while one exists —
-fix the pattern, don't bypass it). No argument runs the full suite.
+`-List` shows every class with its area and host. No argument runs the full
+suite.
 
 **Before committing** — everything, ~120-130s:
 ```bash

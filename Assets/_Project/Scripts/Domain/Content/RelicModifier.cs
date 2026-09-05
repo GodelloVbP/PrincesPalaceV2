@@ -87,13 +87,16 @@ namespace PrincesPalace.Domain.Content
     [Serializable]
     public class RawRelicModifier
     {
+        [ContentDoc("Which RelicModifierType this changes, matched case-insensitively.")]
         public string type = "";
+        [ContentDoc("How much this modifier changes the stat, percent or flat depending on type.")]
         public int amount;
 
         // Which kind of harm, for ResistanceFlat. One of the DamageType names,
         // or "magical" for every type that is not physical. Required by that
         // type and refused on every other -- an author who names a damage type
         // on an AttackPercent believes they have made a typed thing.
+        [ContentDoc("A DamageType name (or 'magical' for every non-Physical type), required by ResistanceFlat only.")]
         public string damageType = "";
     }
 

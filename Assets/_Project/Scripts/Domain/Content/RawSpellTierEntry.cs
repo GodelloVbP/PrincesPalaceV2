@@ -14,10 +14,14 @@ namespace PrincesPalace.Domain.Content
         // whichever tier has the highest level not exceeding the caster's
         // actual level, so tiers don't need to be a gapless 1..9 run to
         // work — but that's the intended shape.
+        [ContentDoc("The character level this tier applies from; the highest tier not exceeding the caster's level is used.")]
         public int level;
 
+        [ContentDoc("The name shown for the Skill action at this tier.")]
         public string displayName;
+        [ContentDoc("Mana cost of the Skill action at this tier.")]
         public int manaCost;
+        [ContentDoc("The multiplier applied to the Skill action's power at this tier.")]
         public float powerMultiplier;
 
         // Which ability scores this tier's spell rides, as "<score> <grade>"
@@ -29,6 +33,7 @@ namespace PrincesPalace.Domain.Content
         //
         // Empty means no scaling, which is what every tier did before this
         // existed and is still a valid authoring choice.
+        [ContentDoc("'<ability score> <grade>' lines this tier's Skill scales on, alongside powerMultiplier.")]
         public string[] scalesWith = Array.Empty<string>();
 
         // What a character needs before THIS tier is the one their Skill
@@ -38,6 +43,7 @@ namespace PrincesPalace.Domain.Content
         // never to no spell at all. The level-1 tier must always have none —
         // content validation enforces it, since Skill has to be castable
         // from the very first fight.
+        [ContentDoc("'<ability score> <amount>' lines gating whether this tier is the one used; unmet falls back to the highest tier that is met.")]
         public string[] requires = Array.Empty<string>();
     }
 
@@ -46,6 +52,7 @@ namespace PrincesPalace.Domain.Content
     [Serializable]
     public class RawSpellTierFile
     {
+        [ContentDoc("This file's tiers; see RawSpellTierEntry.")]
         public RawSpellTierEntry[] tiers = Array.Empty<RawSpellTierEntry>();
     }
 }

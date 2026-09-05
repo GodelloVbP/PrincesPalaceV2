@@ -12,8 +12,11 @@ namespace PrincesPalace.Domain.Content
     [Serializable]
     public class RawModifierEntry
     {
+        [ContentDoc("Stable identifier; written into save data on a rolled item instance.")]
         public string id;
+        [ContentDoc("The name shown for this modifier ('Rift affix').")]
         public string displayName;
+        [ContentDoc("Flavor/rules text shown to the player.")]
         public string description = "";
 
         // The rule this modifier grants. `type` is a
@@ -35,6 +38,7 @@ namespace PrincesPalace.Domain.Content
         // message; a scalar field would silently make a second effect
         // impossible to even attempt, which hides the rule instead of
         // stating it.
+        [ContentDoc("The single rule this modifier grants; more than one entry is rejected.")]
         public RawModifierEffect[] effects = Array.Empty<RawModifierEffect>();
     }
 
@@ -47,8 +51,11 @@ namespace PrincesPalace.Domain.Content
     [Serializable]
     public class RawModifierEffect
     {
+        [ContentDoc("Which Domain.Combat.ModifierEffectType this rule grants, matched case-insensitively.")]
         public string type = "";
+        [ContentDoc("The rule's UNSCALED base magnitude; the fight reads base x TierMultiplier x RiftMultiplier.")]
         public int magnitude;
+        [ContentDoc("The rule's threshold; meaning depends on type.")]
         public int threshold;
 
         // TypedResistanceFlat's target only — one of the DamageType names,
@@ -57,6 +64,7 @@ namespace PrincesPalace.Domain.Content
         // RelicEntryResolver already enforces for RawRelicModifier.damageType
         // (RelicEntryResolver.cs) — an author who names a damage type on a
         // FlatSpeedBonus believes they have made a typed thing.
+        [ContentDoc("A DamageType name (or 'magical') this rule targets; required by TypedResistanceFlat only.")]
         public string damageType = "";
     }
 
@@ -64,6 +72,7 @@ namespace PrincesPalace.Domain.Content
     [Serializable]
     public class RawModifierFile
     {
+        [ContentDoc("This file's modifiers; see RawModifierEntry.")]
         public RawModifierEntry[] modifiers = Array.Empty<RawModifierEntry>();
     }
 }

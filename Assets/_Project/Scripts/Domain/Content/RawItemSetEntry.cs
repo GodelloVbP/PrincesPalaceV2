@@ -22,12 +22,15 @@ namespace PrincesPalace.Domain.Content
         // Stable identifier. Item ids are built from it, and item ids are
         // written into save files, so renaming a set orphans everything
         // anyone was wearing.
+        [ContentDoc("Stable identifier; generated item ids are built from it and item ids live in save files.")]
         public string id;
 
         // What the material is called in item names: "Leather" gives
         // "Hardened Leather Coif".
+        [ContentDoc("What the material is called in item names, e.g. 'Leather' gives 'Hardened Leather Coif'.")]
         public string displayName;
 
+        [ContentDoc("Flavor text shown to the player.")]
         public string description = "";
 
         // One word per tier, lowest first — "Ragged" through "Sovereign".
@@ -35,6 +38,7 @@ namespace PrincesPalace.Domain.Content
         // not, which is why a top-tier coif used to be called "Leather Coif
         // +10" and read as a number rather than as a better object. Short
         // lists are fine: the last adjective covers every tier past the end.
+        [ContentDoc("One adjective per tier, lowest first; the last covers every tier past the list's end.")]
         public string[] tierAdjectives = Array.Empty<string>();
 
         // The highest tier this set goes to. Every piece is generated at
@@ -42,12 +46,16 @@ namespace PrincesPalace.Domain.Content
         // piece. RAISING it later is safe — the existing tiers keep their
         // exact values, because a piece's numbers are anchored at both ends
         // rather than accumulated per step.
+        [ContentDoc("The highest tier this set goes to; every piece is generated at tier 0..maxTier.")]
         public int maxTier = -1;
 
         // Gold for the tier-0 piece, and how much each further tier adds.
+        [ContentDoc("Gold cost of the tier-0 piece.")]
         public int cost = -1;
+        [ContentDoc("Gold added per tier above 0.")]
         public int costPerTier = -1;
 
+        [ContentDoc("Sort position among item sets.")]
         public int sortOrder = -1;
 
         // WHAT THIS MATERIAL IS FOR, as a share per ability score, and the
@@ -67,6 +75,7 @@ namespace PrincesPalace.Domain.Content
         // balancing: 1.00 is point-neutral against a pure single-stat style,
         // and the dual sets deliberately run at 1.10, because breadth is worth
         // less than reaching a threshold.
+        [ContentDoc("'<ability score> <hundredths>' lines: this material's per-score share of the ability-score half of the budget, e.g. 'strength 40' is a weight of 0.40.")]
         public string[] styleWeights = Array.Empty<string>();
 
         // WHAT THIS MATERIAL PROTECTS WITH, as a percentage share per combat
@@ -92,8 +101,10 @@ namespace PrincesPalace.Domain.Content
         // a piece override this by hand; they are GONE from the schema. A
         // piece naming either is a content-build error now, not a silent
         // override -- see ItemSetEntryResolver.
+        [ContentDoc("'<combat stat> <percent>' lines spending the combat-stat half of the budget; the five lines must sum to exactly 100.")]
         public string[] statProfile = Array.Empty<string>();
 
+        [ContentDoc("This set's pieces; see RawSetPiece.")]
         public RawSetPiece[] pieces = Array.Empty<RawSetPiece>();
     }
 
@@ -106,14 +117,17 @@ namespace PrincesPalace.Domain.Content
         // The "p" is historical — it stood for plus, and now the number
         // after it is the tier. Ids are save-file contracts, so the letter
         // stays exactly where it is rather than being tidied.
+        [ContentDoc("Stable identifier, unique only within its own set; the generated item id is '<set>_<piece>_p<tier>'.")]
         public string id;
 
         // The piece's own name, which is what makes a set read as a
         // material rather than a prefix: steel has a Helmet where leather
         // has a Coif.
+        [ContentDoc("The piece's own name, e.g. a Helmet for steel where leather has a Coif.")]
         public string displayName;
 
         // Head, Necklace, Torso, Legs, Shoes, Gloves, Weapon1, Weapon2.
+        [ContentDoc("Which paperdoll slot this piece is worn in.")]
         public string slot;
 
         // REMOVED from the schema, balance redesign Phase 4 (D4) -- "derive
@@ -127,7 +141,9 @@ namespace PrincesPalace.Domain.Content
         // way an unrecognised JsonUtility field always does. Do not author
         // either one; ItemSetEntryResolver refuses any piece where they are
         // non-empty.
+        [ContentDoc("REMOVED from the schema; a piece naming this fails the content build, pointing at statProfile instead.")]
         public string[] baseStats = Array.Empty<string>();
+        [ContentDoc("REMOVED from the schema; a piece naming this fails the content build, pointing at statProfile instead.")]
         public string[] topStats = Array.Empty<string>();
 
         // What a character needs, from everything ELSE worn plus base scores
@@ -136,7 +152,9 @@ namespace PrincesPalace.Domain.Content
         // ability-score lines only (see AbilityScoreLineParser). A legendary
         // piece is high-tier, and tier interpolation is what makes it demand
         // a high score.
+        [ContentDoc("'<ability score> <amount>' lines gating whether the tier-0 piece counts as worn.")]
         public string[] requiresAtZero = Array.Empty<string>();
+        [ContentDoc("'<ability score> <amount>' lines gating whether the maxTier piece counts as worn, interpolated with requiresAtZero.")]
         public string[] requiresAtMax = Array.Empty<string>();
 
         // Folder of this piece's art, sliced one PNG per item level by
@@ -147,6 +165,7 @@ namespace PrincesPalace.Domain.Content
         // Levels are spread across the tier range rather than mapped one to
         // one, because a sheet has ten drawings and a set has eleven tiers.
         // See ItemSetEntryResolver.IconLevelFor.
+        [ContentDoc("Folder of this piece's art, one PNG per item level ('level_1.png' upward); empty means no art yet.")]
         public string iconSheet = "";
 
         // How many levels that sheet holds. Zero means the standard ten.
@@ -154,6 +173,7 @@ namespace PrincesPalace.Domain.Content
         // every piece that uses it — the resolver has no filesystem to count
         // them with, and a wrong count here shows up as a missing-art warning
         // at scene build rather than as a quietly wrong icon.
+        [ContentDoc("How many levels iconSheet holds; 0 means the standard ten.")]
         public int iconLevels;
     }
 
@@ -161,6 +181,7 @@ namespace PrincesPalace.Domain.Content
     [Serializable]
     public class RawItemSetFile
     {
+        [ContentDoc("This file's item sets; see RawItemSetEntry.")]
         public RawItemSetEntry[] sets = Array.Empty<RawItemSetEntry>();
     }
 }

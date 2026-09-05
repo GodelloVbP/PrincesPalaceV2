@@ -1,4 +1,5 @@
 {
+  "_readme": "Every talent in the tree, three paths of a fixed skeleton per character (Talent Tree v2, 2026-08-02). column/row are slot coordinates into that shared skeleton, not free layout — the skeleton geometry itself lives in SceneBuilder.Talents.cs/TalentController.cs, not here. prerequisites names a chain node's one parent, or a convergence node's three (any ONE invested unlocks it — OR, not AND); cycles are impossible by construction since a prerequisite must sit on a strictly lower row. Edit this file, then run Prince's Palace > Build Default Content. Field-by-field documentation, defaults and valid enum values: docs/CONTENT_SCHEMA.md.",
   "talents": [
     {
       "id": "sheep_ram_root",

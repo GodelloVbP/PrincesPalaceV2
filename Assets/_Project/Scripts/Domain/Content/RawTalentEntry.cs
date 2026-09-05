@@ -14,14 +14,18 @@ namespace PrincesPalace.Domain.Content
     [Serializable]
     public class RawTalentEntry
     {
+        [ContentDoc("Stable identifier; written into save files as an unlocked-talent id.")]
         public string id;
+        [ContentDoc("The name shown on this talent's node.")]
         public string displayName;
+        [ContentDoc("Flavor/rules text shown to the player.")]
         public string description = "";
 
         // CharacterDefinition.id of the only character who can take this, or
         // empty for a node every character shares. Empty is the old
         // behaviour — before this field existed, every talent was available
         // to everyone.
+        [ContentDoc("The one character who can take this talent, or empty for a node every character shares.")]
         public string characterId = "";
 
         // column = which of the 3 paths (0-2). row = slot index (0-20) into
@@ -35,7 +39,9 @@ namespace PrincesPalace.Domain.Content
         // rows). Two talents available to the same character may not share
         // a (column,row) slot; talents belonging to DIFFERENT characters
         // may, since only one of them is ever on screen at a time.
+        [ContentDoc("Which of the 3 paths (0-2) this talent sits in.")]
         public int column;
+        [ContentDoc("The slot index (0-20) into that path's fixed skeleton.")]
         public int row;
 
         // Ids of talents that unlock this one. A chain node names exactly
@@ -47,6 +53,7 @@ namespace PrincesPalace.Domain.Content
         // convergence. Must belong to the same character (or be shared) and
         // sit on a strictly lower row/slot, which makes cycles impossible
         // by construction rather than by a check.
+        [ContentDoc("Ids of talents that unlock this one; a chain node names one, a convergence node names all of its parents (any one invested is enough).")]
         public string[] prerequisites = Array.Empty<string>();
 
         // Point-gate (new, Talent Tree v2): in addition to the prerequisite
@@ -57,18 +64,26 @@ namespace PrincesPalace.Domain.Content
         // in the delivered design (8 at the first convergence, 20 at the
         // capstone), but it is a normal per-node field, not special-cased
         // to convergence talents specifically.
+        [ContentDoc("Requires at least this many points already spent in this talent's own path before it can be taken; 0 means no gate.")]
         public int minSpent;
 
+        [ContentDoc("Combat stats granted while this talent is unlocked.")]
         public StatBlock statBonus;
+        [ContentDoc("Ability scores granted while this talent is unlocked.")]
         public AbilityScoreBlock abilityScoreBonus;
 
+        [ContentDoc("Maximum mana granted while this talent is unlocked.")]
         public int maxManaBonus;
+        [ContentDoc("Percent reduction to skill mana costs granted while this talent is unlocked.")]
         public int skillManaCostReduction;
 
         // Signature-resource upgrades: a deeper fleece, and a faster one.
+        [ContentDoc("Signature-resource capacity granted while this talent is unlocked.")]
         public int signatureCapacityBonus;
+        [ContentDoc("Signature resource gained per turn, granted while this talent is unlocked.")]
         public int signaturePerTurnBonus;
 
+        [ContentDoc("An items.json id granted once into the owner's stash when this talent is taken.")]
         public string grantsStartingItemId = "";
 
         // Rules this talent grants that are not a number added to a stat —
@@ -81,6 +96,7 @@ namespace PrincesPalace.Domain.Content
         // two rules at once: the Black Ram's root is "+1 wool per hit taken"
         // AND two health-gated per-turn tiers, which is one idea expressed as
         // three entries rather than three nodes.
+        [ContentDoc("Non-numeric rules this talent grants; see RawTalentEffect.")]
         public RawTalentEffect[] effects = Array.Empty<RawTalentEffect>();
 
         // A skills.json id this talent puts on the owner's combat strip —
@@ -93,6 +109,7 @@ namespace PrincesPalace.Domain.Content
         // route to unlock one other than levelling. Authored with an unlock
         // level no character can reach (999), the same marker skills.json
         // already uses for the two event-taught spells.
+        [ContentDoc("A skills.json id this talent adds to the owner's combat strip.")]
         public string grantsSkillId = "";
 
         // Editor-time path to this talent's archetype glyph, loaded by
@@ -101,6 +118,7 @@ namespace PrincesPalace.Domain.Content
         // is not a sane art budget, so most talents share one of a small
         // set of archetype icons by grant shape (HP, attack, mana, ...)
         // rather than each carrying its own.
+        [ContentDoc("Editor-time path to this talent's archetype glyph; empty is a supported state, most talents share a small set of archetype icons.")]
         public string iconPath = "";
     }
 
@@ -116,8 +134,11 @@ namespace PrincesPalace.Domain.Content
     [Serializable]
     public class RawTalentEffect
     {
+        [ContentDoc("Which Domain.Combat.TalentEffectType this rule grants, matched case-insensitively.")]
         public string type = "";
+        [ContentDoc("The rule's magnitude; meaning depends on type.")]
         public int magnitude;
+        [ContentDoc("The rule's threshold; meaning depends on type.")]
         public int threshold;
     }
 
@@ -125,6 +146,7 @@ namespace PrincesPalace.Domain.Content
     [Serializable]
     public class RawTalentFile
     {
+        [ContentDoc("This file's talents; see RawTalentEntry.")]
         public RawTalentEntry[] talents = Array.Empty<RawTalentEntry>();
     }
 }

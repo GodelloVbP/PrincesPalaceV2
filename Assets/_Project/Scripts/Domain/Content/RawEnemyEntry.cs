@@ -12,21 +12,31 @@ namespace PrincesPalace.Domain.Content
     [Serializable]
     public class RawEnemyEntry
     {
+        [ContentDoc("Stable identifier; used to derive an unauthored weakness/resistance pair and matched against monster references elsewhere in content.")]
         public string id;
+        [ContentDoc("The name shown for this monster in the fight UI.")]
         public string displayName;
+        [ContentDoc("The monster's maximum health.")]
         public int maxHealth = -1;
+        [ContentDoc("The monster's base attack stat.")]
         public int attack = -1;
 
         // The old single `defense` field is GONE, not renamed to either of
         // these — see StatType's own header. Both optional; -1 means
         // "derive it" (EnemyEntryResolver.DefensePerHealth and its half),
         // same sentinel convention as every other omittable stat here.
+        [ContentDoc("Flat damage reduction against Physical attacks; -1 derives it from maxHealth.")]
         public int physicalDefense = -1;
+        [ContentDoc("Flat damage reduction against non-Physical attacks; -1 derives it from maxHealth.")]
         public int magicalDefense = -1;
 
+        [ContentDoc("The monster's speed, which drives how often it acts in the charge-based turn order.")]
         public int speed = -1;
+        [ContentDoc("Experience granted to the party on defeating this monster.")]
         public int expReward = -1;
+        [ContentDoc("Currency granted to the party on defeating this monster.")]
         public int currencyReward = -1;
+        [ContentDoc("Whether this monster only ever appears in the dungeon's final room.")]
         public bool isBoss;
 
         // The shallowest floor this enemy may be drawn on.
@@ -54,6 +64,7 @@ namespace PrincesPalace.Domain.Content
         //
         // 0 or absent means floor 1, so an unbanded enemy is available from the
         // start rather than never -- content should degrade into the game.
+        [ContentDoc("The shallowest floor this enemy may be drawn on; 0 or absent means floor 1.")]
         public int minFloor;
 
         // The damage type this monster's own attacks and abilities carry.
@@ -64,6 +75,7 @@ namespace PrincesPalace.Domain.Content
         // against every monster in the game -- nothing a monster did was
         // ever typed. Case-insensitive, parsed the same way
         // CharacterEntryResolver parses a character's own attackType.
+        [ContentDoc("The DamageType this monster's attacks and abilities carry; blank means Physical.")]
         public string attackType = "";
 
         // WHAT THIS MONSTER TAKES BADLY AND WHAT IT SHRUGS OFF.
@@ -88,7 +100,9 @@ namespace PrincesPalace.Domain.Content
         // other optional field here uses. To say a monster genuinely has no
         // weakness, write "none": that is an authored answer, and it is the one
         // thing an empty list could never be distinguished from an omission.
+        [ContentDoc("A comma-separated list of DamageType names this monster takes +50% from; blank derives one from the id, 'none' means genuinely no weakness.")]
         public string weakness = "";
+        [ContentDoc("A comma-separated list of DamageType names this monster takes -50% from; blank derives one from the id, 'none' means genuinely no resistance.")]
         public string resistance = "";
 
         // Stagger meter capacity. -1 means "derive it from maxHealth", same
@@ -96,10 +110,12 @@ namespace PrincesPalace.Domain.Content
         // EnemyEntryResolver.BreakShieldPerHealth. 0 is a real, authorable
         // value distinct from "omitted": it means this enemy has no stagger
         // meter at all and cannot be broken.
+        [ContentDoc("Stagger meter capacity; -1 derives it from maxHealth, 0 means this monster has no stagger meter at all.")]
         public int breakShieldPoints = -1;
 
         // Optional. Resources-relative folder of stance sprites; omitted
         // for monsters that have no art yet.
+        [ContentDoc("Resources-relative folder of this monster's stance sprites; empty means no art yet.")]
         public string spritePath = "";
 
         // Optional second action. A monster with a skillName can choose it
@@ -116,8 +132,11 @@ namespace PrincesPalace.Domain.Content
         // authored this way still behaves exactly as it did.
         //
         // Prefer `abilities` for anything new -- see below.
+        [ContentDoc("The legacy single second action's telegraph name; superseded by abilities for anything new.")]
         public string skillName = "";
+        [ContentDoc("The legacy second action's multiplier on this monster's own basic attack.")]
         public float skillPower = -1f;
+        [ContentDoc("The legacy second action's odds of being picked on any given turn.")]
         public float skillChance = -1f;
 
         // WHAT THIS MONSTER CAN DO, as real skills with relative weights.
@@ -135,12 +154,14 @@ namespace PrincesPalace.Domain.Content
         // Non-empty, this REPLACES the trio above rather than adding to it. Two
         // ways of saying what a monster does, both live at once, is the drift
         // this project keeps writing rules against.
+        [ContentDoc("This monster's real skills (skills.json ids) with relative selection weights; replaces skillName/skillPower/skillChance when non-empty.")]
         public RawEnemyAbility[] abilities = Array.Empty<RawEnemyAbility>();
 
         // HOW OFTEN IT JUST SWINGS, on the same relative scale as the ability
         // weights above. The basic attack is always in the pool -- a monster
         // whose every turn is a special reads as scripted rather than as
         // dangerous -- and this is the dial for it. 0 takes it out entirely.
+        [ContentDoc("The relative weight of the monster's plain attack against its ability weights; 0 removes plain attacks entirely.")]
         public float attackWeight = 1f;
 
         // Benched, not deleted. An inactive monster keeps its full entry
@@ -149,6 +170,7 @@ namespace PrincesPalace.Domain.Content
         // monsters that actually have art while the stage is being tuned;
         // flipping it back is a one-word edit, with nothing to re-type.
         // Defaults to true so an entry that never mentions it still spawns.
+        [ContentDoc("Whether this monster can actually spawn; false benches the entry without deleting it.")]
         public bool active = true;
 
         // Which way this monster's art is drawn in its source file, so the
@@ -156,12 +178,14 @@ namespace PrincesPalace.Domain.Content
         // both sheets authored so far (Bog Witch, Stone Golem) face right —
         // stated explicitly rather than left implicit, since a wrong
         // default here shows up as a monster fighting with its back turned.
+        [ContentDoc("Which way this monster's art is drawn in its source file, so the stage knows whether to mirror it.")]
         public string facing = "right";
 
         // Optional VFX played over the TARGET when this monster's skill
         // lands, nested under "vfx" -- the SAME value a skill carries, so a
         // monster's skill shows a prop near the player it hit exactly the way a
         // player skill shows one near the enemy it hit. See SpellPresentation.
+        [ContentDoc("VFX played over the target when this monster's skill lands; see SpellPresentation.")]
         public SpellPresentation vfx = new SpellPresentation();
 
         // Optional status this monster's ATTACK (basic attack or skill,
@@ -171,8 +195,11 @@ namespace PrincesPalace.Domain.Content
         // "its claws bleed" shouldn't need an authored skill just to carry
         // that. Required together, same "mixing field sets is rejected"
         // rule as the skill version.
+        [ContentDoc("Which StatusEffectType this monster's basic attack or skill applies to whoever it hits, or empty for none.")]
         public string appliesStatus = "";
+        [ContentDoc("The magnitude of the applied status; required together with appliesStatus.")]
         public int statusMagnitude = -1;
+        [ContentDoc("How many of the afflicted combatant's own turns the applied status lasts; required together with appliesStatus.")]
         public int statusDuration = -1;
 
         // Encounter-placement gimmick: this monster is never put in the
@@ -182,6 +209,7 @@ namespace PrincesPalace.Domain.Content
         // (e.g. every pick this room avoids the front) rather than an
         // error: it's a preference, not a hard rule content authoring can
         // violate.
+        [ContentDoc("Whether this monster is never placed in the front stage slot when the room's other picks give an alternative.")]
         public bool avoidsFrontSlot;
 
         // For a monster whose plain-Attack ART is a stationary pose rather
@@ -195,6 +223,7 @@ namespace PrincesPalace.Domain.Content
         // often climbs toward the target while its art shows a rooted slam,
         // which reads as the monster flying rather than striking. True marks
         // the plain attack as holding position exactly the way a cast does.
+        [ContentDoc("Whether this monster's plain-attack art is a stationary pose rather than a forward strike.")]
         public bool attackHoldsPosition;
 
         // HOW THIS MONSTER'S PLAIN ATTACK TRAVELS, when it is not holding
@@ -208,6 +237,7 @@ namespace PrincesPalace.Domain.Content
         // never collide: attackHoldsPosition still wins outright, since a
         // stationary slam that also declared a charge is a contradiction the
         // hold resolves in favour of not moving.
+        [ContentDoc("How this monster's plain attack travels when not holding position: lunge (default), close, or charge.")]
         public string attackApproach = "";
 
         // HOW BIG THIS MONSTER STANDS, as a multiplier on the depth scale its
@@ -223,6 +253,7 @@ namespace PrincesPalace.Domain.Content
         // MULTIPLIED, not substituted, so the perspective survives: a big
         // monster in the back row is still smaller than the same monster in
         // front, which is the whole illusion the stage rests on.
+        [ContentDoc("A multiplier on this monster's stage size, on top of its slot's own depth scale; 0 means unset and reads as 1.")]
         public float stageScale;
 
         // HOW MANY OF THE STAGE'S POSITIONS THIS MONSTER OCCUPIES.
@@ -234,6 +265,7 @@ namespace PrincesPalace.Domain.Content
         // Counted by the encounter builder against the same three slots the
         // stage has, so a room can never be dealt more creature than there is
         // floor to stand on.
+        [ContentDoc("How many of the stage's positions this monster occupies; 0 means unset and reads as 1.")]
         public int slotSpan;
     }
 
@@ -249,11 +281,13 @@ namespace PrincesPalace.Domain.Content
         // keeps it out of every player's button strip (AvailableSkillsFor
         // matches on a character's definitionId) while leaving a typo'd owner
         // just as catchable as it is for a character skill.
+        [ContentDoc("A skill id from skills.json this monster may draw.")]
         public string skillId = "";
 
         // Relative likelihood. Zero means "authored but never chosen", which is
         // a legitimate thing to want while tuning and is refused at build time
         // only if EVERY entry is zero.
+        [ContentDoc("The relative likelihood this ability is chosen; 0 means authored but never drawn unless every entry is 0.")]
         public float weight = 1f;
     }
 

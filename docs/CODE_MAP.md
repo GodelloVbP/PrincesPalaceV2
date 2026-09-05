@@ -111,7 +111,7 @@ EditMode-testable):
 |---|---|
 | `Audio/` | Adaptive music: `MusicIntensity` (the four tiers), the `music_layers.json` raw shapes and `MusicLayerResolver`, the resolved `MusicLayerSet`/`MusicLayerLibrary`, and `MusicClock` (bar-boundary arithmetic) |
 | `Combat/` | `CombatMath` (armour is diminishing returns via `Mitigate`, not a subtraction — see its header for the floor-one-boss-took-130-turns bug this replaced), `CombatEncounter`, `CombatantState`, damage/effectiveness formulas, plus the talent-rework additions: `TalentEffect` (the closed rule vocabulary a talent can grant), `TalentEffectSet` (a character's rules, flattened once per fight) and `Transformation`/`TransformGrant` (Black Ram Mode); the balance-pass status/gate primitives `Marks` (spend-on-a-later-hit debuff), `Fear` (Stunned+Vulnerable for a fixed duration), `FallingOffStacks` (a stack pile where every stack carries its own expiry), `Session/CombatLocks` (a once-per-X gate keyed by an arbitrary string) and `Session/ConvergenceGate` (whether a relic wanting "a party member has a convergence ability" should be offered); `Session/FightSession.RelicMechanics.cs` (the non-numeric relic mechanics from both balance passes) |
-| `Content/` | Raw/resolved content shapes + `*EntryResolver`s (validation) for every JSON-authored content type, plus the content enums they parse (`CharacterRole`, `RelicEffect`) |
+| `Content/` | Raw/resolved content shapes + `*EntryResolver`s (validation) for every JSON-authored content type, plus the content enums they parse (`CharacterRole`, `RelicEffect`); `ContentDocAttribute` + `ContentSchema` (reflects over every `Raw*Entry` to generate `docs/CONTENT_SCHEMA.md` — see `ContentSchemaTests.cs`) |
 | `Dungeon/` | `DifficultyCurve`, room/map generation logic |
 | `Economy/` | `Wallet`, `CurrencyType` |
 | `Equipment/` | `EquipmentSlot(s)`, `EquipmentLoadout` |
@@ -179,15 +179,18 @@ which):
 - `run_tests.ps1` — original serial full-suite runner, still works
 - `run_tests_parallel.ps1` — the "before committing" runner (~90-100s), two
   isolated copies in parallel, `-BuildContent`/`-BuildScenes`/`-SkipSync`,
-  the `Assert-GuidsMatch` hardening (see `AUDIT.md` #24), and a test-area
-  gate that refuses to run at all if a class matches no area or was never
-  discovered (see `test_areas.ps1` below)
+  the `Assert-GuidsMatch` hardening (see `AUDIT.md` #24), and a structural
+  gate that refuses to run at all if a test file sits outside an area folder
+  or its class was never discovered (see `test_areas.ps1` below)
 - `test.ps1` — the fast edit-run-edit loop (~12s for one class, more for a
   broad area; `-Changed` maps uncommitted files to the areas/classes they
   affect)
-- `test_areas.ps1` — single source of truth for test-class discovery and the
-  `combat`/`hub`/`content`/`run`/`ui`/`art`/`rng` area patterns, shared by
-  both scripts above
+- `test_areas.ps1` — single source of truth for test-class discovery, the
+  structural gate, and the placement guide for the seven areas
+  (`combat`/`hub`/`content`/`run`/`ui`/`art`/`rng`), which are folders under
+  `Tests/EditMode/` and `Tests/PlayMode/`, not name patterns. Shared by both
+  scripts above. Also holds `$PathAreas`, which maps *production* paths to
+  areas for `-Changed`
 - `screenshot.ps1` — headless screenshots. `-Panel`/`-All` capture the STATIC
   scene as `SceneBuilder` authored it (Edit Mode, no `Update()`); `-Runtime`
   captures the game ACTUALLY RUNNING by driving `RuntimeScreenshotTests`
@@ -229,11 +232,19 @@ which):
 
 ## Tests map
 
-`Assets/_Project/Scripts/Tests/EditMode/` — 178 test classes, Domain-only.
-`Assets/_Project/Scripts/Tests/PlayMode/` — 99 test classes (`GameplayTestBase.cs`
-is the shared base, not a suite itself). Core+Domain. Class counts are from
-`tools/test.ps1 -List`, the live, authoritative source — trust it over a
-file count, since a single file can hold more than one test fixture.
+`Assets/_Project/Scripts/Tests/EditMode/` — Domain-only.
+`Assets/_Project/Scripts/Tests/PlayMode/` — Core+Domain.
+
+Both are split one folder per area: `Combat/`, `Hub/`, `Content/`, `Run/`,
+`Ui/`, `Art/`, `Rng/`, plus `Shared/` for helpers with no tests of their own.
+**The folder is the area** — that is the whole mechanism, and
+`run_tests_parallel.ps1` refuses to run while a test file sits outside one.
+`tools/test_areas.ps1`'s header is the placement guide; read it before adding
+a file rather than guessing from the neighbours.
+
+Class counts come from `tools/test.ps1 -List`, the live, authoritative source
+— trust it over a file count, since a single file can hold more than one test
+fixture.
 
 
 ## The Fight screen (v2)

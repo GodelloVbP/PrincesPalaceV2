@@ -8,18 +8,24 @@ namespace PrincesPalace.Domain.Content
     [Serializable]
     public class RawAchievementEntry
     {
+        [ContentDoc("Stable identifier; written into save data the moment this is earned, so never rename it.")]
         public string id;
+        [ContentDoc("The name shown for this achievement.")]
         public string displayName;
+        [ContentDoc("Flavor text shown to the player.")]
         public string description = "";
 
         // Parsed against AchievementCondition by name (case-insensitive).
+        [ContentDoc("Which AchievementCondition this is earned by, matched case-insensitively.")]
         public string condition = "";
 
         // What the condition compares against. Meaning depends on the
         // condition -- a level, a room count, a depth.
+        [ContentDoc("What the condition compares against; meaning depends on the condition, and a counting condition rejects 0.")]
         public int threshold;
 
         // The condition's subject, when it has one: a boss id, today.
+        [ContentDoc("The condition's subject when it has one; today only DefeatSpecificBoss uses it, naming a boss enemy id.")]
         public string parameter = "";
     }
 
