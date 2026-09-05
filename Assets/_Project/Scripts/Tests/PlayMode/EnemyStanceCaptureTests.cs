@@ -169,28 +169,28 @@ namespace PrincesPalace.PlayModeTests
                 // No art authored at all is a deliberate state -- the stage
                 // shows a nameplate and says so. Only a monster that HAS a
                 // sprite folder is promising anything.
-                if (enemy == null || string.IsNullOrWhiteSpace(enemy.spritePath)) continue;
+                if (enemy == null || string.IsNullOrWhiteSpace(enemy.data.SpritePath)) continue;
 
                 var wanted = new HashSet<string> { "idle", "attack", "hurt", "defeated" };
 
-                foreach (var ability in enemy.abilities ?? System.Array.Empty<RawEnemyAbility>())
+                foreach (var ability in enemy.data.Abilities ?? System.Array.Empty<EnemyAbilityRef>())
                 {
-                    if (ability == null || string.IsNullOrWhiteSpace(ability.skillId)) continue;
+                    if (string.IsNullOrWhiteSpace(ability.SkillId)) continue;
 
-                    var skill = ContentDatabase.Skills.FirstOrDefault(s => s.id == ability.skillId);
+                    var skill = ContentDatabase.Skills.FirstOrDefault(s => s.id == ability.SkillId);
                     Assert.IsNotNull(skill,
-                        $"{enemy.id} draws on skill '{ability.skillId}', which is not in the catalogue");
+                        $"{enemy.id} draws on skill '{ability.SkillId}', which is not in the catalogue");
 
                     wanted.Add(string.IsNullOrEmpty(skill.data.Stance) ? "cast" : skill.data.Stance);
                 }
 
                 // The legacy single-action trio poses as a cast.
-                if (!string.IsNullOrWhiteSpace(enemy.skillName)) wanted.Add("cast");
+                if (!string.IsNullOrWhiteSpace(enemy.data.SkillName)) wanted.Add("cast");
 
                 foreach (string stance in wanted)
                 {
                     probed++;
-                    if (StanceAnimationLibrary.Resolve(enemy.spritePath, stance) == null)
+                    if (StanceAnimationLibrary.Resolve(enemy.data.SpritePath, stance) == null)
                     {
                         missing.Add($"{enemy.id}:{stance}");
                     }
@@ -230,8 +230,8 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(treant, "treant is not in the content database");
 
             var hero = new CombatantState("Shawn", true, 300, 30, 40, 10);
-            var one = new CombatantState(beetle.displayName, false, 5000, 0, 4, 5);
-            var two = new CombatantState(treant.displayName, false, 5000, 0, 6, 3);
+            var one = new CombatantState(beetle.data.DisplayName, false, 5000, 0, 4, 5);
+            var two = new CombatantState(treant.data.DisplayName, false, 5000, 0, 6, 3);
 
             var encounter = new CombatEncounter(new[] { hero }, new[] { one, two });
             var session = new FightSession(encounter,

@@ -12,13 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6da02db8c4530f747adcb0b4f87d4af4, type: 3}
   m_Name: magical_shield
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
-  id: magical_shield
-  displayName: Magical Shield
-  description: After casting, the next hit this character takes is reduced by half.
-  effect: 2
-  rarity: 0
-  unlockedBy: 
-  requiresConvergenceAbility: 0
-  modifiers: []
-  sortOrder: 1
-  iconPath: Assets/_Project/Art/Items/Relics/Processed/magical_shield.png
+  data:
+    Id: magical_shield
+    DisplayName: Magical Shield
+    Description: After casting, the next hit this character takes is reduced by half.
+    Effect: 2
+    SortOrder: 1
+    IconPath: Assets/_Project/Art/Items/Relics/Processed/magical_shield.png
+    Rarity: 0
+    UnlockedBy: 
+    Modifiers: []
+    RequiresConvergenceAbility: 0

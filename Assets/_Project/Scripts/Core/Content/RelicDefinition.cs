@@ -1,5 +1,4 @@
 using PrincesPalace.Domain.Content;
-using PrincesPalace.Domain.Stats;
 using UnityEngine;
 
 namespace PrincesPalace.Content
@@ -9,85 +8,29 @@ namespace PrincesPalace.Content
     // generated into an asset by ContentBuilder — never hand-edited under
     // Resources/Content, which ContentBuilder deletes wholesale on every
     // build.
+    //
+    // A WRAPPER ROUND ONE VALUE. This restated ResolvedRelic's fields and
+    // carried a RelicModifierEntry mirror of RelicModifier beside them, with a
+    // hand-written conversion in each direction (ToModifiers here, a Select in
+    // ContentBuilder). RelicModifier is [Serializable] itself now, so the asset
+    // STORES the resolved value and both conversions are gone.
     public class RelicDefinition : ScriptableObject, IOrderedContent
     {
-        [Tooltip("Stable identifier written into save files. Never rename this after a save exists.")]
-        public string id;
+        public ResolvedRelic data = new ResolvedRelic();
 
-        public string displayName;
+        // The one field the Get*(id) family and every content check read off
+        // the asset itself rather than through `data`.
+        public string id => data != null ? data.Id : "";
 
-        [TextArea]
-        public string description;
-
-        [Tooltip("What this relic actually does — one case in FightSession per value. None means no mechanic yet.")]
-        public RelicEffect effect;
-
-        [Tooltip("How rare the offer is. Authored, not derived — a relic has no tier to compute it from.")]
-        public RelicRarity rarity;
-
-        [Tooltip("Achievement id required before this relic can appear at all. Empty means available from the first run.")]
-        public string unlockedBy;
-
-        [Tooltip("Mechanic (g): only offered to a party with a convergence/ultimate ability (a Transform skill).")]
-        public bool requiresConvergenceAbility;
-
-        [Tooltip("Numeric changes. Authored in JSON; no C# needed. A relic may carry these AND an effect.")]
-        public RelicModifierEntry[] modifiers = System.Array.Empty<RelicModifierEntry>();
-
-        // Asked in one place rather than by every caller testing the string.
-        public bool IsUnlockedFromTheStart => string.IsNullOrEmpty(unlockedBy);
-
-        public System.Collections.Generic.List<RelicModifier> ToModifiers()
-        {
-            var list = new System.Collections.Generic.List<RelicModifier>();
-            if (modifiers == null) return list;
-
-            foreach (var entry in modifiers)
-            {
-                if (entry != null)
-                {
-                    // Nullable<DamageType> itself does not round-trip through
-                    // Unity's serializer -- hasAgainst is the flag that
-                    // carries "unset" across a domain reload/asset write,
-                    // since Physical is DamageType's own zero value and would
-                    // otherwise be indistinguishable from "no target".
-                    DamageType? against = entry.hasAgainst ? entry.against : (DamageType?)null;
-                    list.Add(new RelicModifier(entry.type, entry.amount, against, entry.againstMagical));
-                }
-            }
-
-            return list;
-        }
-
-        // Resources.LoadAll returns assets in filename (alphabetical) order,
-        // not authoring order — the same trap Characters/Enemies/Talents/
-        // Upgrades already guard against with an explicit sortOrder.
-        public int sortOrder;
-
-        [Tooltip("Editor-time path under Assets/_Project/Art/Items/Relics/Processed/, loaded by SceneBuilder. Empty until the art lands.")]
-        public string iconPath;
+        // FORWARDED, not stored. ScreenRegistry's four icon tables read this
+        // off the definition while walking ContentDatabase.Relics; a property
+        // keeps that call shape without putting the string on the asset twice.
+        public string iconPath => data != null ? data.IconPath : "";
 
         // Listed by the authored order ContentBuilder stamped on it.
-        public int SortOrder => sortOrder;
-    }
-
-    // A serializable pair, because Unity cannot serialize a readonly struct
-    // into an inspector array. The Domain RelicModifier stays the shape
-    // everything reasons about; this is only its on-disk form.
-    [System.Serializable]
-    public class RelicModifierEntry
-    {
-        public RelicModifierType type;
-        public int amount;
-
-        // ResistanceFlat's target. Two fields rather than a nullable
-        // DamageType -- Unity's serializer does not round-trip
-        // System.Nullable, and Physical is DamageType's own zero value, so a
-        // dropped nullable would silently read back as "resists Physical"
-        // instead of "resists nothing." hasAgainst is what actually survives
-        // the write.
-        public DamageType against;
-        public bool hasAgainst;
-        public bool againstMagical;
+        // Resources.LoadAll returns assets in filename (alphabetical) order,
+        // not authoring order — the same trap Characters/Enemies/Talents/
+        // Upgrades already guard against.
+        public int SortOrder => data != null ? data.SortOrder : 0;
     }
 }

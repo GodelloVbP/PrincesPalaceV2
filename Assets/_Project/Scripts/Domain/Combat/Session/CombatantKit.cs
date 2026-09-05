@@ -129,7 +129,9 @@ namespace PrincesPalace.Domain.Combat.Session
         // shape.
         private static IReadOnlyList<EnemyAbility> LegacyPoolFor(ResolvedEnemy source)
         {
-            float chance = source.HasSkill ? Clamp01(source.SkillChance) : 0f;
+            // NULL-TOLERANT since ResolvedEnemy became a class: a kit built
+            // without a source still fields a plain attack rather than throwing.
+            float chance = source != null && source.HasSkill ? Clamp01(source.SkillChance) : 0f;
 
             var pool = new List<EnemyAbility>
             {
@@ -150,6 +152,6 @@ namespace PrincesPalace.Domain.Combat.Session
         // -- see ElementalAffinity. Two properties for two single elements is
         // what this was, and the pair had to be threaded through every damage
         // call site together anyway.
-        public ElementalAffinity Affinity => Source.Affinity;
+        public ElementalAffinity Affinity => Source?.Affinity ?? ElementalAffinity.Neutral;
     }
 }

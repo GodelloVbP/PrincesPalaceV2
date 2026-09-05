@@ -101,221 +101,135 @@ public static class ContentBuilder
         Debug.Log("BUILD-COMPLETE: ContentBuilder");
     }
 
-    // Authored in Assets/_Project/ContentData/characters.json now, not
-    // here. Same pattern as BuildEnemies/BuildRelics/BuildSkills: the
-    // Domain-layer CharacterEntryResolver validates, and this is the thin
-    // Editor-only glue.
+    // THE SHAPE EIGHT OF THE ELEVEN CONTENT TYPES SHARE, written once.
     //
+    // Read the JSON, hand the raw entries to the type's own resolver, and
+    // write one asset per resolved record. Every one of those steps used to be
+    // copied per type -- same File.Exists guard, same "no X were created"
+    // wording, same TryResolveAll signature, same CreateInstance/CreateAsset
+    // loop -- and the only line that differed was the per-field copy the
+    // Resolved* collapse already deleted. What is left over eight types is
+    // four lambdas apiece.
+    //
+    // THE THREE THAT STAY BESPOKE do real work here rather than restating a
+    // pattern: weapons expand one authored family into N items, item sets
+    // expand one set into N pieces (both then colliding against items.json's
+    // own output in a shared folder), and items map the Domain-side
+    // ResolvedItemKind onto the Unity-side ItemKind. A hook for each would be
+    // a generalisation over three one-off jobs.
+    //
+    // Returns the resolved records so a caller that needs them -- achievements,
+    // whose ids gate the relics built after -- can read them without a second
+    // pass over the assets.
+    private delegate bool ResolveAll<TRaw, TResolved>(
+        IReadOnlyList<TRaw> entries, out List<TResolved> resolved, out List<string> errors);
+
+    private static IReadOnlyList<TResolved> Build<TRaw, TResolved, TDef>(
+        string label,
+        string jsonPath,
+        string folder,
+        string noun,
+        System.Func<string, TRaw[]> entriesOf,
+        ResolveAll<TRaw, TResolved> resolve,
+        System.Action<TDef, TResolved> store,
+        System.Func<TResolved, string> assetName,
+        System.Func<TResolved, bool> include = null)
+        where TDef : ScriptableObject
+    {
+        var none = new List<TResolved>();
+
+        if (!File.Exists(jsonPath))
+        {
+            Debug.LogError($"{label}: no file at '{jsonPath}' -- no {noun} were created.");
+            return none;
+        }
+
+        var entries = entriesOf(File.ReadAllText(jsonPath)) ?? System.Array.Empty<TRaw>();
+        if (!resolve(entries, out var resolved, out var errors))
+        {
+            // NOTHING IS WRITTEN when any entry fails. A partial catalogue
+            // looks like content that merely lost a row, which is the quietest
+            // possible failure -- so one bad entry fails the whole type.
+            Debug.LogError($"{label}: {jsonPath} has {errors.Count} problem(s) -- no {noun} were created:\n" +
+                           string.Join("\n", errors));
+            return none;
+        }
+
+        int written = 0;
+        foreach (var record in resolved)
+        {
+            if (include != null && !include(record))
+            {
+                continue;
+            }
+
+            var asset = ScriptableObject.CreateInstance<TDef>();
+            store(asset, record);
+            AssetDatabase.CreateAsset(asset, $"{folder}/{assetName(record)}.asset");
+            written++;
+        }
+
+        Debug.Log($"{label}: generated {written} {noun} from {entries.Length} entr(y/ies).");
+        return resolved;
+    }
+
     // Characters were the last content type still written as C# object
     // initializers (Upgrades is the only one left), which meant the roster
     // could not be touched without a recompile and its design rationale
     // lived in code comments rather than beside the data. That prose moved
     // to characters.json's _readme, where the person editing the numbers is
     // actually looking.
-    private static void BuildCharacters()
-    {
-        const string jsonPath = "Assets/_Project/ContentData/characters.json";
-        if (!File.Exists(jsonPath))
-        {
-            Debug.LogError($"BuildCharacters: no file at '{jsonPath}' — no characters were created.");
-            return;
-        }
+    private static void BuildCharacters() =>
+        Build<RawCharacterEntry, ResolvedCharacter, CharacterDefinition>(
+            "BuildCharacters", "Assets/_Project/ContentData/characters.json", CharactersPath, "characters",
+            json => JsonUtility.FromJson<RawCharacterFile>(json).characters,
+            CharacterEntryResolver.TryResolveAll,
+            (asset, character) => asset.data = character,
+            character => character.Id);
 
-        var file = JsonUtility.FromJson<RawCharacterFile>(File.ReadAllText(jsonPath));
-        if (!CharacterEntryResolver.TryResolveAll(file.characters, out var resolved, out var errors))
-        {
-            Debug.LogError($"BuildCharacters: {jsonPath} has {errors.Count} problem(s) — no characters were created:\n" +
-                            string.Join("\n", errors));
-            return;
-        }
-
-        foreach (var character in resolved)
-        {
-            var asset = ScriptableObject.CreateInstance<CharacterDefinition>();
-            asset.id = character.Id;
-            asset.displayName = character.DisplayName;
-            asset.role = character.Role;
-            asset.baseStats = character.BaseStats;
-            // Set EXPLICITLY even when unauthored, rather than leaning on
-            // CharacterDefinition's field initializer. The initializer is
-            // what every existing asset silently inherited, which meant the
-            // authored value and the default lived in two different files
-            // and only agreed by luck.
-            asset.baseAbilityScores = character.AbilityScores;
-            asset.portraitPath = character.PortraitPath;
-            asset.attackType = character.AttackType;
-            asset.battleSpritePath = character.BattleSpritePath;
-            asset.battleSpriteFacing = character.BattleSpriteFacing;
-            asset.signatureResourceId = character.SignatureId;
-            asset.signatureResourceDisplayName = character.SignatureDisplayName;
-            asset.signatureResourceCapacity = character.SignatureCapacity;
-            asset.signatureGainPerTurn = character.SignatureGainPerTurn;
-            asset.signatureGainOnAttack = character.SignatureGainOnAttack;
-            asset.signatureGainOnDamageTaken = character.SignatureGainOnDamageTaken;
-            asset.signatureAbsorbsDamage = character.SignatureAbsorbsDamage;
-            asset.princesFavor = character.PrincesFavor;
-            asset.sortOrder = character.SortOrder;
-            AssetDatabase.CreateAsset(asset, $"{CharactersPath}/{character.Id}.asset");
-        }
-    }
-
-
-    // Authored in Assets/_Project/ContentData/talents.json now, not here.
-    // Same pattern as BuildEnemies/BuildItems/BuildSpellTiers/BuildSkills:
-    // the Domain-layer TalentEntryResolver validates, and this is the thin
-    // Editor-only glue.
-    //
     // What this replaces is worth recording. The tree used to be generated by
     // a nested loop as 30 nodes literally named "Talent 1".."Talent 30", all
     // costing 1, with stat bonuses derived from `column % 4` — so columns 4
     // and 5 silently duplicated columns 0 and 1. Every character saw the same
     // 30 placeholder nodes and could take any of them.
-    private static void BuildTalents()
+    private static void BuildTalents() =>
+        Build<RawTalentEntry, ResolvedTalent, TalentDefinition>(
+            "BuildTalents", "Assets/_Project/ContentData/talents.json", TalentsPath, "talents",
+            json => JsonUtility.FromJson<RawTalentFile>(json).talents,
+            TalentEntryResolver.TryResolveAll,
+            (asset, talent) => asset.data = talent,
+            talent => talent.Id);
+
+    // A relic has no cross-references to wire up; RelicEntryResolver
+    // validates everything (a known id, a known effect, no two relics sharing
+    // an effect) up front.
+    private static void BuildRelics(IReadOnlyCollection<string> achievementIds)
     {
-        const string jsonPath = "Assets/_Project/ContentData/talents.json";
-        if (!File.Exists(jsonPath))
-        {
-            Debug.LogError($"BuildTalents: no file at '{jsonPath}' — no talents were created.");
-            return;
-        }
+        // A LOCAL FUNCTION, because RelicEntryResolver is the one resolver
+        // that takes a second argument: the achievement ids a relic may name
+        // as its unlock gate. Closing over them here is what lets relics use
+        // the shared Build path rather than a fourth bespoke copy of it.
+        bool Resolve(IReadOnlyList<RawRelicEntry> entries, out List<ResolvedRelic> resolved, out List<string> errors) =>
+            RelicEntryResolver.TryResolveAll(entries, achievementIds, out resolved, out errors);
 
-        var file = JsonUtility.FromJson<RawTalentFile>(File.ReadAllText(jsonPath));
-        if (!TalentEntryResolver.TryResolveAll(file.talents, out var resolved, out var errors))
-        {
-            Debug.LogError($"BuildTalents: {jsonPath} has {errors.Count} problem(s) — no talents were created:\n" +
-                            string.Join("\n", errors));
-            return;
-        }
-
-        // Two passes, for the same reason the old loop needed them:
-        // prerequisites are asset REFERENCES, so every asset has to exist
-        // before any of them can be wired.
-        var created = new Dictionary<string, TalentDefinition>();
-        foreach (var talent in resolved)
-        {
-            var asset = ScriptableObject.CreateInstance<TalentDefinition>();
-            asset.id = talent.Id;
-            asset.displayName = talent.DisplayName;
-            asset.description = talent.Description;
-            asset.characterId = talent.CharacterId;
-            asset.column = talent.Column;
-            asset.row = talent.Row;
-            asset.statBonus = talent.StatBonus;
-            asset.abilityScoreBonus = talent.AbilityScoreBonus;
-            asset.maxManaBonus = talent.MaxManaBonus;
-            asset.skillManaCostReduction = talent.SkillManaCostReduction;
-            asset.signatureCapacityBonus = talent.SignatureCapacityBonus;
-            asset.signaturePerTurnBonus = talent.SignaturePerTurnBonus;
-            asset.grantsStartingItemId = talent.GrantsStartingItemId;
-            asset.iconPath = talent.IconPath;
-            asset.minSpent = talent.MinSpent;
-            asset.grantsSkillId = talent.GrantsSkillId;
-            asset.effects = talent.Effects
-                .Select(e => new TalentDefinition.TalentEffectEntry
-                {
-                    type = e.Type,
-                    magnitude = e.Magnitude,
-                    threshold = e.Threshold,
-                })
-                .ToArray();
-            AssetDatabase.CreateAsset(asset, $"{TalentsPath}/{talent.Id}.asset");
-            created[talent.Id] = asset;
-        }
-
-        foreach (var talent in resolved)
-        {
-            if (talent.Prerequisites.Count == 0)
-            {
-                continue;
-            }
-
-            var asset = created[talent.Id];
-            asset.prerequisites = talent.Prerequisites.Select(id => created[id]).ToArray();
-            EditorUtility.SetDirty(asset);
-        }
-    }
-
-    // One pass, unlike BuildTalents — a relic has no cross-references to
-    // wire up in a second pass; RelicEntryResolver validates everything
-    // (a known id, a known effect, no two relics sharing an effect) up front.
-    private static void BuildRelics(System.Collections.Generic.IReadOnlyCollection<string> achievementIds)
-    {
-        const string jsonPath = "Assets/_Project/ContentData/relics.json";
-        if (!File.Exists(jsonPath))
-        {
-            Debug.LogError($"BuildRelics: no file at '{jsonPath}' — no relics were created.");
-            return;
-        }
-
-        var file = JsonUtility.FromJson<RawRelicFile>(File.ReadAllText(jsonPath));
-        if (!RelicEntryResolver.TryResolveAll(file.relics, achievementIds, out var resolved, out var errors))
-        {
-            Debug.LogError($"BuildRelics: {jsonPath} has {errors.Count} problem(s) — no relics were created:\n" +
-                            string.Join("\n", errors));
-            return;
-        }
-
-        foreach (var relic in resolved)
-        {
-            var asset = ScriptableObject.CreateInstance<RelicDefinition>();
-            asset.id = relic.Id;
-            asset.displayName = relic.DisplayName;
-            asset.description = relic.Description;
-            asset.effect = relic.Effect;
-            asset.sortOrder = relic.SortOrder;
-            asset.iconPath = relic.IconPath;
-            asset.rarity = relic.Rarity;
-            asset.unlockedBy = relic.UnlockedBy;
-            asset.requiresConvergenceAbility = relic.RequiresConvergenceAbility;
-            asset.modifiers = relic.Modifiers
-                .Select(m => new RelicModifierEntry
-                {
-                    type = m.Type,
-                    amount = m.Amount,
-                    against = m.Against ?? default,
-                    hasAgainst = m.Against.HasValue,
-                    againstMagical = m.AgainstMagical
-                })
-                .ToArray();
-            AssetDatabase.CreateAsset(asset, $"{RelicsPath}/{relic.Id}.asset");
-        }
+        Build<RawRelicEntry, ResolvedRelic, RelicDefinition>(
+            "BuildRelics", "Assets/_Project/ContentData/relics.json", RelicsPath, "relics",
+            json => JsonUtility.FromJson<RawRelicFile>(json).relics,
+            Resolve,
+            (asset, relic) => asset.data = relic,
+            relic => relic.Id);
     }
 
     // Returns the ids it created, because BuildRelics validates against them.
-    private static System.Collections.Generic.IReadOnlyCollection<string> BuildAchievements()
-    {
-        const string jsonPath = "Assets/_Project/ContentData/achievements.json";
-        if (!File.Exists(jsonPath))
-        {
-            Debug.LogError($"BuildAchievements: no file at '{jsonPath}' -- no achievements were created.");
-            return new string[0];
-        }
-
-        var file = JsonUtility.FromJson<RawAchievementFile>(File.ReadAllText(jsonPath));
-        if (!AchievementEntryResolver.TryResolveAll(file.achievements, out var resolved, out var errors))
-        {
-            Debug.LogError($"BuildAchievements: {jsonPath} has {errors.Count} problem(s) -- no achievements were created:\n" +
-                           string.Join("\n", errors));
-            return new string[0];
-        }
-
-        var ids = new System.Collections.Generic.List<string>();
-        foreach (var achievement in resolved)
-        {
-            var asset = ScriptableObject.CreateInstance<AchievementDefinition>();
-            asset.id = achievement.Id;
-            asset.displayName = achievement.DisplayName;
-            asset.description = achievement.Description;
-            asset.condition = achievement.Condition;
-            asset.threshold = achievement.Threshold;
-            asset.parameter = achievement.Parameter;
-            asset.sortOrder = achievement.SortOrder;
-            AssetDatabase.CreateAsset(asset, $"{AchievementsPath}/{achievement.Id}.asset");
-            ids.Add(achievement.Id);
-        }
-
-        return ids;
-    }
+    private static IReadOnlyCollection<string> BuildAchievements() =>
+        Build<RawAchievementEntry, ResolvedAchievement, AchievementDefinition>(
+            "BuildAchievements", "Assets/_Project/ContentData/achievements.json", AchievementsPath, "achievements",
+            json => JsonUtility.FromJson<RawAchievementFile>(json).achievements,
+            AchievementEntryResolver.TryResolveAll,
+            (asset, achievement) => asset.data = achievement,
+            achievement => achievement.Id)
+        .Select(achievement => achievement.Id)
+        .ToList();
 
     private static void BuildUpgrades()
     {
@@ -363,144 +277,45 @@ public static class ContentBuilder
     // dungeon clear) deliberately resists Fire — the one type no character
     //'s attackType used at the time — after Poison here once silently
     // gutted the Assassin's execute bonus in every single boss fight.
-    private static void BuildEnemies()
-    {
-        const string jsonPath = "Assets/_Project/ContentData/enemies.json";
-        if (!File.Exists(jsonPath))
-        {
-            Debug.LogError($"BuildEnemies: no file at '{jsonPath}' — no enemies were created.");
-            return;
-        }
+    private static void BuildEnemies() =>
+        Build<RawEnemyEntry, ResolvedEnemy, EnemyDefinition>(
+            "BuildEnemies", "Assets/_Project/ContentData/enemies.json", EnemiesPath, "enemies",
+            json => JsonUtility.FromJson<RawEnemyFile>(json).enemies,
+            EnemyEntryResolver.TryResolveAll,
+            (asset, enemy) => asset.data = enemy,
+            enemy => enemy.Id,
 
-        var file = JsonUtility.FromJson<RawEnemyFile>(File.ReadAllText(jsonPath));
-        if (!EnemyEntryResolver.TryResolveAll(file.enemies, out var resolved, out var errors))
-        {
-            Debug.LogError($"BuildEnemies: {jsonPath} has {errors.Count} problem(s) — no enemies were created:\n" +
-                            string.Join("\n", errors));
-            return;
-        }
-
-        foreach (var enemy in resolved)
-        {
-            // Benched monsters are validated like every other entry — a typo
+            // BENCHED MONSTERS ARE VALIDATED LIKE EVERY OTHER ENTRY -- a typo
             // in a disabled one still fails the build rather than lying in
-            // wait until it is switched back on — but no asset is written,
-            // so ContentDatabase never sees them and they cannot spawn.
-            if (!enemy.Active)
-            {
-                continue;
-            }
+            // wait until it is switched back on -- but no asset is written, so
+            // ContentDatabase never sees them and they cannot spawn.
+            include: enemy => enemy.Active);
 
-            var asset = ScriptableObject.CreateInstance<EnemyDefinition>();
-            asset.id = enemy.Id;
-            asset.displayName = enemy.DisplayName;
-            asset.baseStats = enemy.BaseStats;
-            asset.expReward = enemy.ExpReward;
-            asset.currencyReward = enemy.CurrencyReward;
-            asset.isBoss = enemy.IsBoss;
-            asset.minFloor = enemy.MinFloor;
-            asset.weaknesses = enemy.Affinity.Weaknesses.ToArray();
-            asset.resistances = enemy.Affinity.Resistances.ToArray();
-            asset.spritePath = enemy.SpritePath;
-            asset.facing = enemy.Facing;
-            asset.skillName = enemy.SkillName;
-            asset.skillPower = enemy.SkillPower;
-            asset.skillChance = enemy.SkillChance;
-            asset.sortOrder = enemy.SortOrder;
-            asset.breakShieldPoints = enemy.BreakShieldPoints;
-            asset.vfx = enemy.Vfx.Copy();
-            asset.attackWeight = enemy.AttackWeight;
-            asset.abilities = enemy.Abilities
-                .Select(a => new RawEnemyAbility { skillId = a.SkillId, weight = a.Weight })
-                .ToArray();
-            asset.hasStatus = enemy.AppliesStatus.HasValue;
-            if (enemy.AppliesStatus.HasValue)
-            {
-                asset.appliesStatus = enemy.AppliesStatus.Value;
-            }
-            asset.statusMagnitude = enemy.StatusMagnitude;
-            asset.statusDuration = enemy.StatusDuration;
-            asset.avoidsFrontSlot = enemy.AvoidsFrontSlot;
-            asset.attackHoldsPosition = enemy.AttackHoldsPosition;
-            asset.attackApproach = enemy.AttackApproach.ToString().ToLowerInvariant();
-            asset.stageScale = enemy.StageScale;
-            asset.slotSpan = enemy.SlotSpan;
-            asset.attackType = enemy.AttackType;
-            AssetDatabase.CreateAsset(asset, $"{EnemiesPath}/{enemy.Id}.asset");
-        }
-    }
+    private static void BuildSpellTiers() =>
+        Build<RawSpellTierEntry, ResolvedSpellTier, SpellTierDefinition>(
+            "BuildSpellTiers", "Assets/_Project/ContentData/spells.json", SpellTiersPath, "spell tiers",
+            json => JsonUtility.FromJson<RawSpellTierFile>(json).tiers,
+            SpellTierEntryResolver.TryResolveAll,
+            (asset, tier) => asset.data = tier,
 
-    // Same pattern as BuildEnemies: authored outside this file (see
-    // Assets/_Project/ContentData/spells.json), validated and resolved by
-    // the Domain-layer SpellTierEntryResolver, this method is just the
-    // thin Editor-only glue that turns the result into assets.
-    private static void BuildSpellTiers()
-    {
-        const string jsonPath = "Assets/_Project/ContentData/spells.json";
-        if (!File.Exists(jsonPath))
-        {
-            Debug.LogError($"BuildSpellTiers: no file at '{jsonPath}' — no spell tiers were created.");
-            return;
-        }
+            // BY LEVEL, not by id -- a tier has no id of its own, and the
+            // filename is what ContentDatabase browses.
+            tier => $"level_{tier.Level}");
 
-        var file = JsonUtility.FromJson<RawSpellTierFile>(File.ReadAllText(jsonPath));
-        if (!SpellTierEntryResolver.TryResolveAll(file.tiers, out var resolved, out var errors))
-        {
-            Debug.LogError($"BuildSpellTiers: {jsonPath} has {errors.Count} problem(s) — no spell tiers were created:\n" +
-                            string.Join("\n", errors));
-            return;
-        }
-
-        foreach (var tier in resolved)
-        {
-            var asset = ScriptableObject.CreateInstance<SpellTierDefinition>();
-            asset.level = tier.Level;
-            asset.displayName = tier.DisplayName;
-            asset.manaCost = tier.ManaCost;
-            asset.powerMultiplier = tier.PowerMultiplier;
-            asset.scaling = tier.Scaling;
-            asset.requirements = tier.Requirements;
-            asset.sortOrder = tier.SortOrder;
-            AssetDatabase.CreateAsset(asset, $"{SpellTiersPath}/level_{tier.Level}.asset");
-        }
-    }
-
-    // Same pattern as BuildEnemies/BuildSpellTiers/BuildItems: authored in
-    // Assets/_Project/ContentData/skills.json, validated by the Domain-layer
-    // SkillEntryResolver, and this is just the thin Editor-only glue.
-    //
     // No enum mapping step here, unlike BuildItems: SkillEffect and
     // SkillTargeting live in Domain and are used directly on both sides.
-    private static void BuildSkills()
-    {
-        const string jsonPath = "Assets/_Project/ContentData/skills.json";
-        if (!File.Exists(jsonPath))
-        {
-            Debug.LogError($"BuildSkills: no file at '{jsonPath}' — no skills were created.");
-            return;
-        }
-
-        var file = JsonUtility.FromJson<RawSkillFile>(File.ReadAllText(jsonPath));
-        if (!SkillEntryResolver.TryResolveAll(file.skills, out var resolved, out var errors))
-        {
-            Debug.LogError($"BuildSkills: {jsonPath} has {errors.Count} problem(s) — no skills were created:\n" +
-                            string.Join("\n", errors));
-            return;
-        }
-
-        foreach (var skill in resolved)
-        {
-            var asset = ScriptableObject.CreateInstance<SkillDefinition>();
+    private static void BuildSkills() =>
+        Build<RawSkillEntry, ResolvedSkill, SkillDefinition>(
+            "BuildSkills", "Assets/_Project/ContentData/skills.json", SkillsPath, "skills",
+            json => JsonUtility.FromJson<RawSkillFile>(json).skills,
+            SkillEntryResolver.TryResolveAll,
 
             // ONE ASSIGNMENT, not thirty-four. The asset stores the resolved
             // value itself, so there is no per-field copy here to forget a
             // line of -- which is what dropped `transform` and then
             // `bookOnly`/`bookTier` on the way back out. See SkillDefinition.
-            asset.data = skill;
-
-            AssetDatabase.CreateAsset(asset, $"{SkillsPath}/{skill.Id}.asset");
-        }
-    }
+            (asset, skill) => asset.data = skill,
+            skill => skill.Id);
 
     // Authored outside this file (Assets/_Project/ContentData/items.json),
     // validated by the Domain-layer ItemEntryResolver — same pattern as
@@ -614,55 +429,18 @@ public static class ContentBuilder
         Debug.Log($"BuildWeapons: generated {resolved.Count} weapon(s) from {file.families.Length} famil(y/ies).");
     }
 
-    // Item modifiers ("Rift affixes"), generated from
-    // Assets/_Project/ContentData/modifiers.json. Same pattern as
-    // BuildTalents/BuildItems/BuildRelics: the Domain-layer
-    // ModifierEntryResolver validates, and this is the thin Editor-only glue
-    // that turns a ResolvedModifier into a ModifierDefinition asset.
-    //
     // ITS OWN FOLDER (Resources/Content/Modifiers), unlike BuildWeapons/
     // BuildItemSets — those generate ItemDefinition assets that live beside
     // items.json's own output and need the collision check that implies. A
     // modifier is a different asset type in a different folder with its own
     // id space, so there is nothing for it to collide with.
-    private static void BuildModifiers()
-    {
-        const string jsonPath = "Assets/_Project/ContentData/modifiers.json";
-        if (!File.Exists(jsonPath))
-        {
-            Debug.LogError($"BuildModifiers: no file at '{jsonPath}' — no modifiers were created.");
-            return;
-        }
-
-        var file = JsonUtility.FromJson<RawModifierFile>(File.ReadAllText(jsonPath));
-        if (!ModifierEntryResolver.TryResolveAll(file.modifiers, out var resolved, out var errors))
-        {
-            Debug.LogError($"BuildModifiers: {jsonPath} has {errors.Count} problem(s) — no modifiers were created:\n" +
-                            string.Join("\n", errors));
-            return;
-        }
-
-        foreach (var modifier in resolved)
-        {
-            var asset = ScriptableObject.CreateInstance<ModifierDefinition>();
-            asset.id = modifier.Id;
-            asset.displayName = modifier.DisplayName;
-            asset.description = modifier.Description;
-            asset.effects = modifier.Effects.Select(e => new ModifierDefinition.ModifierEffectEntry
-            {
-                type = e.Type,
-                magnitude = e.Magnitude,
-                threshold = e.Threshold,
-                against = e.Against ?? default,
-                hasAgainst = e.Against.HasValue,
-                againstMagical = e.AgainstMagical,
-            }).ToArray();
-            asset.sortOrder = modifier.SortOrder;
-            AssetDatabase.CreateAsset(asset, $"{ModifiersPath}/{modifier.Id}.asset");
-        }
-
-        Debug.Log($"BuildModifiers: generated {resolved.Count} modifier(s) from {file.modifiers.Length} entr(y/ies).");
-    }
+    private static void BuildModifiers() =>
+        Build<RawModifierEntry, ResolvedModifier, ModifierDefinition>(
+            "BuildModifiers", "Assets/_Project/ContentData/modifiers.json", ModifiersPath, "modifiers",
+            json => JsonUtility.FromJson<RawModifierFile>(json).modifiers,
+            ModifierEntryResolver.TryResolveAll,
+            (asset, modifier) => asset.data = modifier,
+            modifier => modifier.Id);
 
     // Armour sets, generated from Assets/_Project/ContentData/itemsets.json.
     //

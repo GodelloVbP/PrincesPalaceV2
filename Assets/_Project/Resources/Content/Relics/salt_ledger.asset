@@ -12,13 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6da02db8c4530f747adcb0b4f87d4af4, type: 3}
   m_Name: salt_ledger
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
-  id: salt_ledger
-  displayName: The Salt Ledger
-  description: Every attack you land reduces all of your active cooldowns by 1 turn.
-  effect: 13
-  rarity: 3
-  unlockedBy: 
-  requiresConvergenceAbility: 0
-  modifiers: []
-  sortOrder: 4
-  iconPath: Assets/_Project/Art/Items/Relics/Processed/salt_ledger.png
+  data:
+    Id: salt_ledger
+    DisplayName: The Salt Ledger
+    Description: Every attack you land reduces all of your active cooldowns by 1
+      turn.
+    Effect: 13
+    SortOrder: 4
+    IconPath: Assets/_Project/Art/Items/Relics/Processed/salt_ledger.png
+    Rarity: 3
+    UnlockedBy: 
+    Modifiers: []
+    RequiresConvergenceAbility: 0

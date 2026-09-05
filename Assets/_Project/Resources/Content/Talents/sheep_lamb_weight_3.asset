@@ -12,44 +12,46 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 78462e746feff2e4c945a0159eb6e76a, type: 3}
   m_Name: sheep_lamb_weight_3
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.TalentDefinition
-  id: sheep_lamb_weight_3
-  displayName: Afterweight
-  description: Triple on yourself -- and it does not vanish the instant the ward
-    does. One turn of grace to make the loss count for something.
-  characterId: sheep
-  column: 1
-  row: 9
-  prerequisites:
-  - {fileID: 11400000, guid: b4bf0b4e14f3f7b468f6c5eddb4e933b, type: 2}
-  minSpent: 0
-  statBonus:
-    maxHealth: 0
-    speed: 0
-    attack: 0
-    manaRegen: 0
-    physicalDefense: 0
-    magicalDefense: 0
-  abilityScoreBonus:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  grantsStartingItemId: 
-  maxManaBonus: 0
-  skillManaCostReduction: 0
-  signatureCapacityBonus: 0
-  signaturePerTurnBonus: 0
-  effects:
-  - type: 26
-    magnitude: 50
-    threshold: 0
-  - type: 27
-    magnitude: 200
-    threshold: 0
-  - type: 28
-    magnitude: 1
-    threshold: 0
-  grantsSkillId: 
-  iconPath: 
+  data:
+    Id: sheep_lamb_weight_3
+    DisplayName: Afterweight
+    Description: Triple on yourself -- and it does not vanish the instant the ward
+      does. One turn of grace to make the loss count for something.
+    CharacterId: sheep
+    Column: 1
+    Row: 9
+    Prerequisites:
+    - sheep_lamb_weight_2
+    StatBonus:
+      maxHealth: 0
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 0
+    AbilityScoreBonus:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    MaxManaBonus: 0
+    SkillManaCostReduction: 0
+    SignatureCapacityBonus: 0
+    SignaturePerTurnBonus: 0
+    GrantsStartingItemId: 
+    SortOrder: 30
+    IconPath: 
+    MinSpent: 0
+    Effects:
+    - Type: 26
+      Magnitude: 50
+      Threshold: 0
+    - Type: 27
+      Magnitude: 200
+      Threshold: 0
+    - Type: 28
+      Magnitude: 1
+      Threshold: 0
+    GrantsSkillId: 

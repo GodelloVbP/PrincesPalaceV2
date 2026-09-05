@@ -12,16 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8eb37102d2241c54eae4db6c08bbb7c5, type: 3}
   m_Name: antivenom
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
-  id: antivenom
-  displayName: Antivenom
-  description: 'The wearer has long since built up a tolerance. Elemental family:
-    Poison, the resistance half -- Venomous is Poison''s separate on-hit-sting affix.
-    Split off Venomous''s old bundle so a roll grants one or the other, never both.'
-  effects:
-  - type: 2
-    magnitude: 8
-    threshold: 0
-    against: 4
-    hasAgainst: 1
-    againstMagical: 0
-  sortOrder: 9
+  data:
+    Id: antivenom
+    DisplayName: Antivenom
+    Description: 'The wearer has long since built up a tolerance. Elemental family:
+      Poison, the resistance half -- Venomous is Poison''s separate on-hit-sting
+      affix. Split off Venomous''s old bundle so a roll grants one or the other,
+      never both.'
+    SortOrder: 9
+    Effects:
+    - Type: 2
+      Magnitude: 8
+      Threshold: 0
+      AgainstType: 4
+      HasAgainst: 1
+      AgainstMagical: 0

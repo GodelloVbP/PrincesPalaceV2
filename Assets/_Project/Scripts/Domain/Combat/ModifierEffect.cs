@@ -1,3 +1,4 @@
+using System;
 using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Combat
@@ -301,7 +302,14 @@ namespace PrincesPalace.Domain.Combat
     // One rule an item modifier grants. Immutable and engine-free; the
     // combat pipeline reads these through ModifierEffectSet, never one at a
     // time — see that class' own header.
-    public readonly struct ModifierEffect
+    // [Serializable] with public fields because ResolvedModifier is what the
+    // ModifierDefinition asset now stores. The asset used to carry a parallel
+    // ModifierEffectEntry for exactly this reason -- "Unity will not serialise
+    // a readonly struct's fields" -- with a Select in each direction. Telling
+    // System.Serializable about the struct is cheaper than maintaining its
+    // mirror, and System.Serializable is BCL, so Domain stays engine-free.
+    [Serializable]
+    public struct ModifierEffect
     {
         // Authored as the enum MEMBER NAME in modifiers.json
         // ("ElementalDamageOnHitPercent"), not as an integer, for the
@@ -309,7 +317,7 @@ namespace PrincesPalace.Domain.Combat
         // deserialise an enum from a string, so the raw shape carries the
         // name and ModifierEntryResolver parses it, matching
         // TalentEntryResolver's own Enum.TryParse<TalentEffectType> pattern.
-        public readonly ModifierEffectType Type;
+        public ModifierEffectType Type;
 
         // How much. Percent for every *Percent member, otherwise a flat
         // count (Speed points, Max Mana points, Favor). Ignored outright by
@@ -321,14 +329,14 @@ namespace PrincesPalace.Domain.Combat
         // `base x TierMultiplier x RiftMultiplier` multiplication happens.
         // A ModifierDefinition's own authored effects (before that seam)
         // still carry the raw, unscaled base.
-        public readonly int Magnitude;
+        public int Magnitude;
 
         // The rule's health-gate number, percent of max health — unused
         // (always 0) by every member today; see this file's own header.
         // Kept as a real field rather than added later so ModifierEffect's
         // constructor shape never has to change out from under
         // ModifierEntryResolver once a health-gated member does land.
-        public readonly int Threshold;
+        public int Threshold;
 
         // TypedResistanceFlat's and ElementalDamageOnHitPercent's target
         // only. Null/false for every other member.
@@ -348,8 +356,16 @@ namespace PrincesPalace.Domain.Combat
         // member. Mirroring the existing precedent costs two idle fields;
         // inventing a second shape costs a parallel type hierarchy for two
         // rules.
-        public readonly DamageType? Against;
-        public readonly bool AgainstMagical;
+        // THE FLAG IS NOT DECORATION: Nullable<DamageType> does not survive a
+        // serializer, and Physical is DamageType's own zero, so a dropped
+        // nullable reads back as "resists Physical" rather than "resists
+        // nothing" -- the same pair RelicModifier keeps for the same reason.
+        public DamageType AgainstType;
+        public bool HasAgainst;
+        public bool AgainstMagical;
+
+        // The nullable reading every consumer already asks in.
+        public DamageType? Against => HasAgainst ? (DamageType?)AgainstType : null;
 
         public ModifierEffect(ModifierEffectType type, int magnitude, int threshold = 0,
             DamageType? against = null, bool againstMagical = false)
@@ -357,7 +373,8 @@ namespace PrincesPalace.Domain.Combat
             Type = type;
             Magnitude = magnitude;
             Threshold = threshold;
-            Against = against;
+            AgainstType = against ?? default;
+            HasAgainst = against.HasValue;
             AgainstMagical = againstMagical;
         }
     }

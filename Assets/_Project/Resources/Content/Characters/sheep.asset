@@ -12,33 +12,34 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 587fe3da128cb904da22de232329c98f, type: 3}
   m_Name: sheep
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.CharacterDefinition
-  id: sheep
-  displayName: Shawn
-  role: 0
-  baseStats:
-    maxHealth: 200
-    speed: 10
-    attack: 7
-    manaRegen: 0
-    physicalDefense: 32
-    magicalDefense: 16
-  baseAbilityScores:
-    strength: 7
-    dexterity: 7
-    constitution: 16
-    wisdom: 14
-    intelligence: 6
-    charisma: 10
-  portraitPath: Assets/_Project/Art/Portraits/Sheep/Processed/Shawn_neutral.png
-  battleSpritePath: Characters/sheep
-  battleSpriteFacing: 1
-  attackType: 3
-  signatureResourceId: wool
-  signatureResourceDisplayName: Wool
-  signatureResourceCapacity: 10
-  signatureGainPerTurn: 1
-  signatureGainOnAttack: 0
-  signatureGainOnDamageTaken: 0
-  signatureAbsorbsDamage: 0
-  princesFavor: 4
-  sortOrder: 0
+  data:
+    Id: sheep
+    DisplayName: Shawn
+    Role: 0
+    BaseStats:
+      maxHealth: 200
+      speed: 10
+      attack: 7
+      manaRegen: 0
+      physicalDefense: 32
+      magicalDefense: 16
+    AbilityScores:
+      strength: 7
+      dexterity: 7
+      constitution: 16
+      wisdom: 14
+      intelligence: 6
+      charisma: 10
+    PortraitPath: Assets/_Project/Art/Portraits/Sheep/Processed/Shawn_neutral.png
+    BattleSpritePath: Characters/sheep
+    BattleSpriteFacing: 1
+    AttackType: 3
+    SignatureId: wool
+    SignatureDisplayName: Wool
+    SignatureCapacity: 10
+    SignatureGainPerTurn: 1
+    SignatureGainOnAttack: 0
+    SignatureGainOnDamageTaken: 0
+    SignatureAbsorbsDamage: 0
+    PrincesFavor: 4
+    SortOrder: 0

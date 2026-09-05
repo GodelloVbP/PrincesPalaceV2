@@ -12,14 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6da02db8c4530f747adcb0b4f87d4af4, type: 3}
   m_Name: dancers_anklet
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
-  id: dancers_anklet
-  displayName: Dancer's Anklet
-  description: After you attack, cast a spell or use an ability, you slip one position
-    forward in the turn order.
-  effect: 29
-  rarity: 3
-  unlockedBy: 
-  requiresConvergenceAbility: 0
-  modifiers: []
-  sortOrder: 34
-  iconPath: Assets/_Project/Art/Generated/disc_metal.png
+  data:
+    Id: dancers_anklet
+    DisplayName: Dancer's Anklet
+    Description: After you attack, cast a spell or use an ability, you slip one position
+      forward in the turn order.
+    Effect: 29
+    SortOrder: 34
+    IconPath: Assets/_Project/Art/Generated/disc_metal.png
+    Rarity: 3
+    UnlockedBy: 
+    Modifiers: []
+    RequiresConvergenceAbility: 0

@@ -12,17 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8eb37102d2241c54eae4db6c08bbb7c5, type: 3}
   m_Name: ironclad
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
-  id: ironclad
-  displayName: Ironclad
-  description: 'Plating enough to turn aside a plain blow. Elemental family: Physical,
-    the resistance half -- Hardened carries the on-hit damage and Juggernaut carries
-    the old bundle''s stagger proc; this used to ride along with both on one bundled
-    Hardened roll, now it is its own affix.'
-  effects:
-  - type: 2
-    magnitude: 8
-    threshold: 0
-    against: 0
-    hasAgainst: 1
-    againstMagical: 0
-  sortOrder: 13
+  data:
+    Id: ironclad
+    DisplayName: Ironclad
+    Description: 'Plating enough to turn aside a plain blow. Elemental family: Physical,
+      the resistance half -- Hardened carries the on-hit damage and Juggernaut carries
+      the old bundle''s stagger proc; this used to ride along with both on one bundled
+      Hardened roll, now it is its own affix.'
+    SortOrder: 13
+    Effects:
+    - Type: 2
+      Magnitude: 8
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 1
+      AgainstMagical: 0

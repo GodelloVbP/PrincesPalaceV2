@@ -111,7 +111,7 @@ namespace PrincesPalace
 
             var all = ContentDatabase.Relics
                 .Where(r => r != null)
-                .Select(r => new RelicOption(r.id, r.rarity, r.unlockedBy, r.requiresConvergenceAbility))
+                .Select(r => new RelicOption(r.id, r.data.Rarity, r.data.UnlockedBy, r.data.RequiresConvergenceAbility))
                 .ToList();
 
             // Mechanic (g): does anybody in the squad actually have a

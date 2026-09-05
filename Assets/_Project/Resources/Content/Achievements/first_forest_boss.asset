@@ -12,10 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35d3dd6bb8630dc4faef37dfc7e47e6b, type: 3}
   m_Name: first_forest_boss
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.AchievementDefinition
-  id: first_forest_boss
-  displayName: The Wood Yields
-  description: Put down the thing that guards the first forest.
-  condition: 1
-  threshold: 0
-  parameter: forest_warden
-  sortOrder: 0
+  data:
+    Id: first_forest_boss
+    DisplayName: The Wood Yields
+    Description: Put down the thing that guards the first forest.
+    Condition: 1
+    Threshold: 0
+    Parameter: forest_warden
+    SortOrder: 0

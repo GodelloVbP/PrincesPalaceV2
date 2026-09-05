@@ -1,31 +1,71 @@
+using System;
 using PrincesPalace.Domain.Stage;
 using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Content
 {
-    // A validated character, ready for ContentBuilder to copy onto a
-    // CharacterDefinition. Every string has been parsed to its enum, every
+    // A validated character -- and the shape CharacterDefinition now STORES
+    // rather than restates. Every string has been parsed to its enum and every
     // number checked, so the Editor-side glue has no decisions left to make.
-    public readonly struct ResolvedCharacter
+    //
+    // [Serializable] class with public fields, for the reason ResolvedSkill
+    // records. System.Serializable is BCL, so Domain stays engine-free.
+    [Serializable]
+    public sealed class ResolvedCharacter
     {
-        public readonly string Id;
-        public readonly string DisplayName;
-        public readonly CharacterRole Role;
-        public readonly StatBlock BaseStats;
-        public readonly AbilityScoreBlock AbilityScores;
-        public readonly string PortraitPath;
-        public readonly string BattleSpritePath;
-        public readonly SpriteFacing BattleSpriteFacing;
-        public readonly DamageType AttackType;
-        public readonly string SignatureId;
-        public readonly string SignatureDisplayName;
-        public readonly int SignatureCapacity;
-        public readonly int SignatureGainPerTurn;
-        public readonly int SignatureGainOnAttack;
-        public readonly int SignatureGainOnDamageTaken;
-        public readonly bool SignatureAbsorbsDamage;
-        public readonly int PrincesFavor;
-        public readonly int SortOrder;
+        public string Id = "";
+        public string DisplayName = "";
+        public CharacterRole Role;
+
+        // Stats and ability scores before any talents are applied.
+        public StatBlock BaseStats;
+        public AbilityScoreBlock AbilityScores;
+
+        // Editor-relative path to a neutral head-and-shoulders portrait, for
+        // the Character Sheet. Distinct from BattleSpritePath, which is the
+        // full-body figure that stands on the fight stage; empty means no art
+        // yet and the screen falls back to a plain plate rather than showing a
+        // broken sprite.
+        public string PortraitPath = "";
+        public string BattleSpritePath = "";
+
+        // Which way BattleSpritePath's art is drawn in its source file. The
+        // stage mirrors it as needed so they always face the enemy -- it does
+        // NOT assume every sprite faces the same way.
+        public SpriteFacing BattleSpriteFacing = SpriteFacing.Right;
+
+        // The elemental type of this character's Attack and Skill, checked
+        // against an enemy's weakness/resistance.
+        public DamageType AttackType = DamageType.Physical;
+
+        // This character's own private combat resource (e.g. "wool"). An empty
+        // id means they have none, which is everyone but Shawn.
+        public string SignatureId = "";
+        public string SignatureDisplayName = "";
+        public int SignatureCapacity;
+        public int SignatureGainPerTurn;
+        public int SignatureGainOnAttack;
+        public int SignatureGainOnDamageTaken;
+
+        // Whether the resource soaks incoming damage before health. False for
+        // Wool since the talent rework -- see RawCharacterEntry.
+        public bool SignatureAbsorbsDamage;
+
+        // Prince's Favor: this character's luck. The squad's HIGHEST value
+        // drives loot rolls -- it never compounds across members.
+        public int PrincesFavor;
+
+        public int SortOrder;
+
+        // Empty id means no resource at all, rather than a zero-capacity one
+        // -- see CombatantState.Signature for why that distinction is kept
+        // sharp.
+        public bool HasSignatureResource => !string.IsNullOrWhiteSpace(SignatureId);
+
+        // For the serializer only.
+        public ResolvedCharacter()
+        {
+        }
 
         public ResolvedCharacter(
             string id, string displayName, CharacterRole role, StatBlock baseStats,
@@ -35,17 +75,17 @@ namespace PrincesPalace.Domain.Content
             int signatureCapacity, int signatureGainPerTurn, int signatureGainOnAttack,
             int signatureGainOnDamageTaken, bool signatureAbsorbsDamage, int princesFavor, int sortOrder)
         {
-            Id = id;
-            DisplayName = displayName;
+            Id = id ?? "";
+            DisplayName = displayName ?? "";
             Role = role;
             BaseStats = baseStats;
             AbilityScores = abilityScores;
-            PortraitPath = portraitPath;
-            BattleSpritePath = battleSpritePath;
+            PortraitPath = portraitPath ?? "";
+            BattleSpritePath = battleSpritePath ?? "";
             BattleSpriteFacing = battleSpriteFacing;
             AttackType = attackType;
-            SignatureId = signatureId;
-            SignatureDisplayName = signatureDisplayName;
+            SignatureId = signatureId ?? "";
+            SignatureDisplayName = signatureDisplayName ?? "";
             SignatureCapacity = signatureCapacity;
             SignatureGainPerTurn = signatureGainPerTurn;
             SignatureGainOnAttack = signatureGainOnAttack;
@@ -54,7 +94,5 @@ namespace PrincesPalace.Domain.Content
             PrincesFavor = princesFavor;
             SortOrder = sortOrder;
         }
-
-        public bool HasSignatureResource => !string.IsNullOrWhiteSpace(SignatureId);
     }
 }

@@ -12,38 +12,40 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 78462e746feff2e4c945a0159eb6e76a, type: 3}
   m_Name: sheep_ram_trample_3
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.TalentDefinition
-  id: sheep_ram_trample_3
-  displayName: Momentum
-  description: A kill does not cost you the turn. Once per turn -- he is heavy, not
-    infinite.
-  characterId: sheep
-  column: 0
-  row: 9
-  prerequisites:
-  - {fileID: 11400000, guid: 9025fc7fdb7371644a7d06c3f0676dbe, type: 2}
-  minSpent: 0
-  statBonus:
-    maxHealth: 0
-    speed: 0
-    attack: 0
-    manaRegen: 0
-    physicalDefense: 0
-    magicalDefense: 0
-  abilityScoreBonus:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  grantsStartingItemId: 
-  maxManaBonus: 0
-  skillManaCostReduction: 0
-  signatureCapacityBonus: 0
-  signaturePerTurnBonus: 0
-  effects:
-  - type: 12
-    magnitude: 1
-    threshold: 0
-  grantsSkillId: 
-  iconPath: 
+  data:
+    Id: sheep_ram_trample_3
+    DisplayName: Momentum
+    Description: A kill does not cost you the turn. Once per turn -- he is heavy,
+      not infinite.
+    CharacterId: sheep
+    Column: 0
+    Row: 9
+    Prerequisites:
+    - sheep_ram_trample_2
+    StatBonus:
+      maxHealth: 0
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 0
+    AbilityScoreBonus:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    MaxManaBonus: 0
+    SkillManaCostReduction: 0
+    SignatureCapacityBonus: 0
+    SignaturePerTurnBonus: 0
+    GrantsStartingItemId: 
+    SortOrder: 9
+    IconPath: 
+    MinSpent: 0
+    Effects:
+    - Type: 12
+      Magnitude: 1
+      Threshold: 0
+    GrantsSkillId: 

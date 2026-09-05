@@ -12,19 +12,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8eb37102d2241c54eae4db6c08bbb7c5, type: 3}
   m_Name: hardened
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
-  id: hardened
-  displayName: Hardened
-  description: 'A brute, physical edge on every hit. Elemental family: Physical,
-    the damage half -- Ironclad is Physical''s resistance affix and Juggernaut is
-    Physical''s stagger-proc affix, both split off this modifier''s old three-effect
-    bundle (the one family with a third effect, since Physical had no typed-resistance
-    twin worth calling out the way the other five elements do -- see Ironclad and
-    Juggernaut''s own descriptions).'
-  effects:
-  - type: 1
-    magnitude: 10
-    threshold: 0
-    against: 0
-    hasAgainst: 1
-    againstMagical: 0
-  sortOrder: 12
+  data:
+    Id: hardened
+    DisplayName: Hardened
+    Description: 'A brute, physical edge on every hit. Elemental family: Physical,
+      the damage half -- Ironclad is Physical''s resistance affix and Juggernaut
+      is Physical''s stagger-proc affix, both split off this modifier''s old three-effect
+      bundle (the one family with a third effect, since Physical had no typed-resistance
+      twin worth calling out the way the other five elements do -- see Ironclad and
+      Juggernaut''s own descriptions).'
+    SortOrder: 12
+    Effects:
+    - Type: 1
+      Magnitude: 10
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 1
+      AgainstMagical: 0

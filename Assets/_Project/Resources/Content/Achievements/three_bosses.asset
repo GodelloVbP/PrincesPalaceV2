@@ -12,10 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35d3dd6bb8630dc4faef37dfc7e47e6b, type: 3}
   m_Name: three_bosses
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.AchievementDefinition
-  id: three_bosses
-  displayName: Three Crowns
-  description: Defeat three different bosses.
-  condition: 2
-  threshold: 3
-  parameter: 
-  sortOrder: 1
+  data:
+    Id: three_bosses
+    DisplayName: Three Crowns
+    Description: Defeat three different bosses.
+    Condition: 2
+    Threshold: 3
+    Parameter: 
+    SortOrder: 1

@@ -12,38 +12,40 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 78462e746feff2e4c945a0159eb6e76a, type: 3}
   m_Name: sheep_ram_stand_3
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.TalentDefinition
-  id: sheep_ram_stand_3
-  displayName: Not Yet
-  description: Once a fight, the hit that would put him down leaves him standing
-    on 1.
-  characterId: sheep
-  column: 0
-  row: 18
-  prerequisites:
-  - {fileID: 11400000, guid: 87bb71992de80ed41878b8b60c400f0a, type: 2}
-  minSpent: 0
-  statBonus:
-    maxHealth: 0
-    speed: 0
-    attack: 0
-    manaRegen: 0
-    physicalDefense: 0
-    magicalDefense: 0
-  abilityScoreBonus:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  grantsStartingItemId: 
-  maxManaBonus: 0
-  skillManaCostReduction: 0
-  signatureCapacityBonus: 0
-  signaturePerTurnBonus: 0
-  effects:
-  - type: 18
-    magnitude: 0
-    threshold: 0
-  grantsSkillId: 
-  iconPath: 
+  data:
+    Id: sheep_ram_stand_3
+    DisplayName: Not Yet
+    Description: Once a fight, the hit that would put him down leaves him standing
+      on 1.
+    CharacterId: sheep
+    Column: 0
+    Row: 18
+    Prerequisites:
+    - sheep_ram_stand_2
+    StatBonus:
+      maxHealth: 0
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 0
+    AbilityScoreBonus:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    MaxManaBonus: 0
+    SkillManaCostReduction: 0
+    SignatureCapacityBonus: 0
+    SignaturePerTurnBonus: 0
+    GrantsStartingItemId: 
+    SortOrder: 16
+    IconPath: 
+    MinSpent: 0
+    Effects:
+    - Type: 18
+      Magnitude: 0
+      Threshold: 0
+    GrantsSkillId: 

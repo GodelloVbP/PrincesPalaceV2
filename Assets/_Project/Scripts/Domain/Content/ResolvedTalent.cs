@@ -1,41 +1,67 @@
+using System;
 using System.Collections.Generic;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Content
 {
-    // One validated talent — the shape ContentBuilder needs to create a
-    // TalentDefinition asset from. Prerequisites stay as ids here; the
-    // builder resolves them to asset references in a second pass, because
-    // the assets they point at may not exist yet on the first.
-    public readonly struct ResolvedTalent
+    // One validated talent — and the shape TalentDefinition now STORES rather
+    // than restates.
+    //
+    // PREREQUISITES STAY AS IDS. The asset used to hold TalentDefinition
+    // object references, wired in a second ContentBuilder pass because the
+    // assets they point at may not exist yet on the first; the only thing
+    // anything ever read off those references was `.id`, so holding the ids
+    // directly deletes the second pass and the reference graph with it.
+    //
+    // [Serializable] class with public fields, for the reason ResolvedSkill
+    // records. System.Serializable is BCL, so Domain stays engine-free.
+    [Serializable]
+    public sealed class ResolvedTalent
     {
-        public readonly string Id;
-        public readonly string DisplayName;
-        public readonly string Description;
-        public readonly string CharacterId;
-        public readonly int Column;
-        public readonly int Row;
-        public readonly IReadOnlyList<string> Prerequisites;
-        public readonly StatBlock StatBonus;
-        public readonly AbilityScoreBlock AbilityScoreBonus;
-        public readonly int MaxManaBonus;
-        public readonly int SkillManaCostReduction;
-        public readonly int SignatureCapacityBonus;
-        public readonly int SignaturePerTurnBonus;
-        public readonly string GrantsStartingItemId;
-        public readonly int SortOrder;
-        public readonly string IconPath;
-        public readonly int MinSpent;
+        public string Id = "";
+        public string DisplayName = "";
+        public string Description = "";
+        public string CharacterId = "";
+        public int Column;
+        public int Row;
+
+        // ANY ONE of these unlocked is enough (OR, not AND) -- a chain node
+        // names exactly one parent, so this only matters for the two
+        // convergence nodes per path, which name all three.
+        public string[] Prerequisites = Array.Empty<string>();
+
+        public StatBlock StatBonus;
+        public AbilityScoreBlock AbilityScoreBonus;
+        public int MaxManaBonus;
+        public int SkillManaCostReduction;
+        public int SignatureCapacityBonus;
+        public int SignaturePerTurnBonus;
+        public string GrantsStartingItemId = "";
+        public int SortOrder;
+        public string IconPath = "";
+
+        // Point-gate: also requires at least this many points already spent in
+        // this talent's own path (same CharacterId + Column), on top of the
+        // prerequisite check. 0 means no gate.
+        public int MinSpent;
 
         // The triggered/conditional rules this talent grants. Never null;
-        // empty for every node still using the old additive vocabulary,
-        // which is all 252 belonging to the other four characters.
-        public readonly IReadOnlyList<TalentEffect> Effects;
+        // empty for every node still using the old additive vocabulary.
+        public TalentEffect[] Effects = Array.Empty<TalentEffect>();
 
         // A skills.json id this talent puts on the owner's combat strip, or
         // empty — see RawTalentEntry.grantsSkillId.
-        public readonly string GrantsSkillId;
+        public string GrantsSkillId = "";
+
+        // True when this node is available to everyone rather than owned by
+        // one character.
+        public bool IsShared => string.IsNullOrEmpty(CharacterId);
+
+        // For the serializer only.
+        public ResolvedTalent()
+        {
+        }
 
         // No `cost`. A talent's price in embers is derived from WHERE it sits
         // in the skeleton (ContentDatabase.OrbCost), never authored — and the
@@ -51,29 +77,33 @@ namespace PrincesPalace.Domain.Content
             string iconPath = "", int minSpent = 0, IReadOnlyList<TalentEffect> effects = null,
             string grantsSkillId = "")
         {
-            Effects = effects ?? new List<TalentEffect>();
+            Effects = ToArray(effects);
             GrantsSkillId = grantsSkillId ?? "";
-            Id = id;
-            DisplayName = displayName;
-            Description = description;
-            CharacterId = characterId;
+            Id = id ?? "";
+            DisplayName = displayName ?? "";
+            Description = description ?? "";
+            CharacterId = characterId ?? "";
             Column = column;
             Row = row;
-            Prerequisites = prerequisites;
+            Prerequisites = ToArray(prerequisites);
             StatBonus = statBonus;
             AbilityScoreBonus = abilityScoreBonus;
             MaxManaBonus = maxManaBonus;
             SkillManaCostReduction = skillManaCostReduction;
             SignatureCapacityBonus = signatureCapacityBonus;
             SignaturePerTurnBonus = signaturePerTurnBonus;
-            GrantsStartingItemId = grantsStartingItemId;
+            GrantsStartingItemId = grantsStartingItemId ?? "";
             SortOrder = sortOrder;
-            IconPath = iconPath;
+            IconPath = iconPath ?? "";
             MinSpent = minSpent;
         }
 
-        // True when this node is available to everyone rather than owned by
-        // one character.
-        public bool IsShared => string.IsNullOrEmpty(CharacterId);
+        private static T[] ToArray<T>(IReadOnlyList<T> source)
+        {
+            if (source == null || source.Count == 0) return Array.Empty<T>();
+            var copy = new T[source.Count];
+            for (int i = 0; i < source.Count; i++) copy[i] = source[i];
+            return copy;
+        }
     }
 }

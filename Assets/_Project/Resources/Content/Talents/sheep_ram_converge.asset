@@ -12,38 +12,40 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 78462e746feff2e4c945a0159eb6e76a, type: 3}
   m_Name: sheep_ram_converge
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.TalentDefinition
-  id: sheep_ram_converge
-  displayName: Black Ram Mode
-  description: 'The three roots gather. Unlocks the transform: 7 wool for three turns
-    of splash, weight and speed, plus temporary health that leaves again when it
-    does. Free, but it wants 9 embers spent in this path first.'
-  characterId: sheep
-  column: 0
-  row: 10
-  prerequisites:
-  - {fileID: 11400000, guid: ab67996d7c0296941a82b53e0d7bc5e8, type: 2}
-  - {fileID: 11400000, guid: 39f0d4a8f1043a34c9b88bb81494fd6f, type: 2}
-  - {fileID: 11400000, guid: 2bc4789daaf3b734aa0738900d96810a, type: 2}
-  minSpent: 9
-  statBonus:
-    maxHealth: 0
-    speed: 0
-    attack: 0
-    manaRegen: 0
-    physicalDefense: 0
-    magicalDefense: 0
-  abilityScoreBonus:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  grantsStartingItemId: 
-  maxManaBonus: 0
-  skillManaCostReduction: 0
-  signatureCapacityBonus: 0
-  signaturePerTurnBonus: 0
-  effects: []
-  grantsSkillId: black_ram_mode
-  iconPath: 
+  data:
+    Id: sheep_ram_converge
+    DisplayName: Black Ram Mode
+    Description: 'The three roots gather. Unlocks the transform: 7 wool for three
+      turns of splash, weight and speed, plus temporary health that leaves again
+      when it does. Free, but it wants 9 embers spent in this path first.'
+    CharacterId: sheep
+    Column: 0
+    Row: 10
+    Prerequisites:
+    - sheep_ram_horns_3
+    - sheep_ram_provoke_3
+    - sheep_ram_trample_3
+    StatBonus:
+      maxHealth: 0
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 0
+    AbilityScoreBonus:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    MaxManaBonus: 0
+    SkillManaCostReduction: 0
+    SignatureCapacityBonus: 0
+    SignaturePerTurnBonus: 0
+    GrantsStartingItemId: 
+    SortOrder: 10
+    IconPath: 
+    MinSpent: 9
+    Effects: []
+    GrantsSkillId: black_ram_mode

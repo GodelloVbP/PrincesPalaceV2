@@ -91,7 +91,7 @@ namespace PrincesPalace
         {
             if (LevelFor(profile) <= 1) return 0;
 
-            int bosses = ContentDatabase.Enemies.Count(e => e != null && e.isBoss);
+            int bosses = ContentDatabase.Enemies.Count(e => e != null && e.data.IsBoss);
             int budget = EmberPayout.EmbersFor(bosses);
 
             // Never past what one character may ever commit. A save that

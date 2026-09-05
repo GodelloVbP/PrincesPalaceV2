@@ -388,10 +388,10 @@ namespace PrincesPalace
                 case ShopEntryKind.Relic:
                 {
                     var relic = ContentDatabase.GetRelic(entry.contentId);
-                    string name = relic?.displayName ?? entry.contentId;
+                    string name = relic?.data.DisplayName ?? entry.contentId;
                     string meta = relic == null
                         ? ""
-                        : UiStrings.DraftRarity.Format(RelicRarityNames.Of(relic.rarity));
+                        : UiStrings.DraftRarity.Format(RelicRarityNames.Of(relic.data.Rarity));
                     return (name, meta);
                 }
                 default:
@@ -424,7 +424,7 @@ namespace PrincesPalace
             string description = entry.kind switch
             {
                 ShopEntryKind.Gear => ContentDatabase.GetItem(entry.contentId)?.description ?? "",
-                ShopEntryKind.Relic => ContentDatabase.GetRelic(entry.contentId)?.description ?? "",
+                ShopEntryKind.Relic => ContentDatabase.GetRelic(entry.contentId)?.data.Description ?? "",
                 _ => ContentDatabase.GetSkill(entry.contentId)?.data.Description ?? "",
             };
 
@@ -546,7 +546,7 @@ namespace PrincesPalace
         private static string DisplayNameOf(Character character)
         {
             var definition = ContentDatabase.Characters.FirstOrDefault(c => c != null && c.id == character.definitionId);
-            return definition?.displayName ?? character.definitionId;
+            return definition?.data.DisplayName ?? character.definitionId;
         }
 
         private static ShopStockEntry EntryAt(int section, int index)

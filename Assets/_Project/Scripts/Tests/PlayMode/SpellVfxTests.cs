@@ -121,12 +121,12 @@ namespace PrincesPalace.PlayModeTests
 
             foreach (var enemy in ContentDatabase.Enemies)
             {
-                if (enemy == null || string.IsNullOrWhiteSpace(enemy.vfx.path)) continue;
+                if (enemy == null || string.IsNullOrWhiteSpace(enemy.data.Vfx.path)) continue;
 
-                var frames = FrameSequenceLoader.Load(enemy.vfx.path);
+                var frames = FrameSequenceLoader.Load(enemy.data.Vfx.path);
                 if (frames == null || frames.Length == 0)
                 {
-                    missing.Add($"enemy '{enemy.id}' declares vfxPath '{enemy.vfx.path}'");
+                    missing.Add($"enemy '{enemy.id}' declares vfxPath '{enemy.data.Vfx.path}'");
                 }
             }
 
@@ -205,10 +205,10 @@ namespace PrincesPalace.PlayModeTests
 
             foreach (var enemy in ContentDatabase.Enemies)
             {
-                if (enemy == null || enemy.vfx == null) continue;
-                if (!SpellAnchorNames.IsKnown(enemy.vfx.anchor))
+                if (enemy == null || enemy.data.Vfx == null) continue;
+                if (!SpellAnchorNames.IsKnown(enemy.data.Vfx.anchor))
                 {
-                    wrong.Add($"enemy '{enemy.id}' anchors to '{enemy.vfx.anchor}'");
+                    wrong.Add($"enemy '{enemy.id}' anchors to '{enemy.data.Vfx.anchor}'");
                 }
             }
 
@@ -235,8 +235,8 @@ namespace PrincesPalace.PlayModeTests
 
             foreach (var enemy in ContentDatabase.Enemies)
             {
-                if (enemy?.vfx == null || string.IsNullOrEmpty(enemy.vfx.path)) continue;
-                if (enemy.vfx.size <= 0f) wrong.Add($"enemy '{enemy.id}' has size {enemy.vfx.size}");
+                if (enemy?.data?.Vfx == null || string.IsNullOrEmpty(enemy.data.Vfx.path)) continue;
+                if (enemy.data.Vfx.size <= 0f) wrong.Add($"enemy '{enemy.id}' has size {enemy.data.Vfx.size}");
             }
 
             Assert.IsEmpty(wrong,
@@ -277,7 +277,7 @@ namespace PrincesPalace.PlayModeTests
             }
 
             foreach (var skill in ContentDatabase.Skills) Check($"skill '{skill?.id}'", skill?.data.Vfx);
-            foreach (var enemy in ContentDatabase.Enemies) Check($"enemy '{enemy?.id}'", enemy?.vfx);
+            foreach (var enemy in ContentDatabase.Enemies) Check($"enemy '{enemy?.id}'", enemy?.data?.Vfx);
 
             Assert.IsEmpty(wrong,
                 "an impact point needs BOTH impactX and impactY, each between 0 and 1 -- these are " +
@@ -295,12 +295,12 @@ namespace PrincesPalace.PlayModeTests
 
             foreach (var enemy in ContentDatabase.Enemies)
             {
-                if (enemy == null || string.IsNullOrWhiteSpace(enemy.vfx.path)) continue;
+                if (enemy == null || string.IsNullOrWhiteSpace(enemy.data.Vfx.path)) continue;
 
-                int count = FrameSequenceLoader.Load(enemy.vfx.path)?.Length ?? 0;
-                if (count > 0 && (enemy.vfx.impactFrame < 1 || enemy.vfx.impactFrame > count))
+                int count = FrameSequenceLoader.Load(enemy.data.Vfx.path)?.Length ?? 0;
+                if (count > 0 && (enemy.data.Vfx.impactFrame < 1 || enemy.data.Vfx.impactFrame > count))
                 {
-                    wrong.Add($"enemy '{enemy.id}' impacts on frame {enemy.vfx.impactFrame} of {count}");
+                    wrong.Add($"enemy '{enemy.id}' impacts on frame {enemy.data.Vfx.impactFrame} of {count}");
                 }
             }
 

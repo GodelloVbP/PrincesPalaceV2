@@ -12,17 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8eb37102d2241c54eae4db6c08bbb7c5, type: 3}
   m_Name: runic
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
-  id: runic
-  displayName: Runic
-  description: A deeper well of mana. Manaflow is this family's regen affix, Quickcast
-    its mana-discount tempo affix, and Wardrune its mana-to-ward affix -- all four
-    used to roll together as one bundled Runic modifier; split so each rolls on its
-    own like every other affix.
-  effects:
-  - type: 10
-    magnitude: 5
-    threshold: 0
-    against: 0
-    hasAgainst: 0
-    againstMagical: 0
-  sortOrder: 20
+  data:
+    Id: runic
+    DisplayName: Runic
+    Description: A deeper well of mana. Manaflow is this family's regen affix, Quickcast
+      its mana-discount tempo affix, and Wardrune its mana-to-ward affix -- all four
+      used to roll together as one bundled Runic modifier; split so each rolls on
+      its own like every other affix.
+    SortOrder: 20
+    Effects:
+    - Type: 10
+      Magnitude: 5
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0

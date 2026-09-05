@@ -12,18 +12,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8eb37102d2241c54eae4db6c08bbb7c5, type: 3}
   m_Name: bulwark
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
-  id: bulwark
-  displayName: Bulwark
-  description: A guard that gives less ground under pressure. BreakShieldDepletionResistPercent
-    (30) is forward-looking infrastructure -- no player combatant carries a BreakShield
-    today, only some bosses/elites do, so this is inert on the wearer until a future
-    fight puts one on the player's own side. Split off Stalwart's old bundle so a
-    roll grants the flat mitigation or the shield-resist, never both.
-  effects:
-  - type: 7
-    magnitude: 15
-    threshold: 0
-    against: 0
-    hasAgainst: 0
-    againstMagical: 0
-  sortOrder: 17
+  data:
+    Id: bulwark
+    DisplayName: Bulwark
+    Description: A guard that gives less ground under pressure. BreakShieldDepletionResistPercent
+      (30) is forward-looking infrastructure -- no player combatant carries a BreakShield
+      today, only some bosses/elites do, so this is inert on the wearer until a future
+      fight puts one on the player's own side. Split off Stalwart's old bundle so
+      a roll grants the flat mitigation or the shield-resist, never both.
+    SortOrder: 17
+    Effects:
+    - Type: 7
+      Magnitude: 15
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0

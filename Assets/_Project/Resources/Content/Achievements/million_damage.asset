@@ -12,10 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35d3dd6bb8630dc4faef37dfc7e47e6b, type: 3}
   m_Name: million_damage
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.AchievementDefinition
-  id: million_damage
-  displayName: Attrition
-  description: Deal a million damage across every run.
-  condition: 6
-  threshold: 1000000
-  parameter: 
-  sortOrder: 5
+  data:
+    Id: million_damage
+    DisplayName: Attrition
+    Description: Deal a million damage across every run.
+    Condition: 6
+    Threshold: 1000000
+    Parameter: 
+    SortOrder: 5

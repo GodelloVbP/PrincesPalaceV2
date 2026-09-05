@@ -68,13 +68,13 @@ namespace PrincesPalace
                 .Where(r => r != null)
                 .Select(r =>
                 {
-                    bool locked = !r.IsUnlockedFromTheStart && !earned.Contains(r.unlockedBy);
+                    bool locked = !r.data.IsUnlockedFromTheStart && !earned.Contains(r.data.UnlockedBy);
                     return new GlossaryEntry(
-                        r.id, r.displayName,
-                        RelicRarityNames.Of(r.rarity),
-                        r.description,
+                        r.id, r.data.DisplayName,
+                        RelicRarityNames.Of(r.data.Rarity),
+                        r.data.Description,
                         locked,
-                        locked ? AchievementName(r.unlockedBy) : "",
+                        locked ? AchievementName(r.data.UnlockedBy) : "",
                         r.id);
                 })
                 .ToList();
@@ -84,11 +84,10 @@ namespace PrincesPalace
             ContentDatabase.Enemies
                 .Where(e => e != null)
                 .Select(e => new GlossaryEntry(
-                    e.id, e.displayName,
-                    // Off baseStats, which is where an enemy's numbers actually
-                    // live -- there are no maxHealth/attack fields on the
-                    // definition itself.
-                    $"{e.baseStats.maxHealth} HP  ·  {e.baseStats.attack} ATK{(e.isBoss ? "  ·  BOSS" : "")}",
+                    e.id, e.data.DisplayName,
+                    // Off BaseStats, which is where an enemy's numbers actually
+                    // live -- there are no maxHealth/attack fields beside it.
+                    $"{e.data.BaseStats.maxHealth} HP  ·  {e.data.BaseStats.attack} ATK{(e.data.IsBoss ? "  ·  BOSS" : "")}",
                     // Enemies carry no authored prose, so the row says what it
                     // actually knows rather than showing an empty plate.
                     AffinityLine(e),
@@ -104,7 +103,7 @@ namespace PrincesPalace
             // READ ONCE EACH. Weaknesses and Resistances materialise a fresh
             // list on every get (see ElementalAffinity.Listed), so asking twice
             // per half built four lists to print two sentences.
-            var affinity = enemy.Affinity;
+            var affinity = enemy.data.Affinity;
             var weaknesses = affinity.Weaknesses;
             var resistances = affinity.Resistances;
             var parts = new List<string>();
@@ -153,9 +152,9 @@ namespace PrincesPalace
             ContentDatabase.Talents
                 .Where(t => t != null)
                 .Select(t => new GlossaryEntry(
-                    t.id, t.displayName,
-                    t.characterId,
-                    t.description,
+                    t.id, t.data.DisplayName,
+                    t.data.CharacterId,
+                    t.data.Description,
                     iconId: t.id))
                 .ToList();
 
@@ -218,11 +217,11 @@ namespace PrincesPalace
                 .Where(a => a != null)
                 .Select(a =>
                 {
-                    bool earned = AchievementProgress.IsEarned(a.ToResolved(), facts);
+                    bool earned = AchievementProgress.IsEarned(a.data, facts);
                     return new GlossaryEntry(
-                        a.id, a.displayName,
+                        a.id, a.data.DisplayName,
                         earned ? "EARNED" : "NOT YET",
-                        a.description,
+                        a.data.Description,
                         locked: !earned,
                         lockedBy: "",
                         iconId: a.id);
@@ -235,7 +234,7 @@ namespace PrincesPalace
             var definition = ContentDatabase.Achievements
                 .FirstOrDefault(a => a != null && a.id == achievementId);
 
-            return definition == null ? achievementId : definition.displayName;
+            return definition == null ? achievementId : definition.data.DisplayName;
         }
 
     }

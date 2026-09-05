@@ -12,59 +12,61 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 429d83c7acd1e6546892363aadea2846, type: 3}
   m_Name: forest_warden
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.EnemyDefinition
-  id: forest_warden
-  displayName: Forest Troll
-  baseStats:
-    maxHealth: 110
-    speed: 4
-    attack: 40
-    manaRegen: 0
-    physicalDefense: 30
-    magicalDefense: 10
-  attackType: 0
-  expReward: 100
-  currencyReward: 60
-  isBoss: 1
-  minFloor: 1
-  weaknesses: 0100000002000000
-  resistances: 0000000004000000
-  breakShieldPoints: 3
-  spritePath: Enemies/forest_warden
-  facing: 1
-  sortOrder: 15
-  skillName: 
-  skillPower: 1.5
-  skillChance: 0.35
-  vfx:
-    path: 
-    seconds: 0.6
-    impactFrame: 3
-    anchor: 
-    size: 380
-    departFrame: 0
-    impactX: -1
-    impactY: -1
-    sfxPath: 
-    groundPath: 
-    groundSeconds: 0
-    groundImpactFrame: 0
-    groundAspect: 0
-    groundImpactY: -1
-    castSfxPath: 
-  abilities:
-  - skillId: overhead_slam
-    weight: 3
-  - skillId: roar
-    weight: 2
-  - skillId: grapple
-    weight: 2
-  attackWeight: 0
-  appliesStatus: 0
-  hasStatus: 0
-  statusMagnitude: 0
-  statusDuration: 0
-  avoidsFrontSlot: 0
-  attackHoldsPosition: 0
-  attackApproach: lunge
-  stageScale: 1.5
-  slotSpan: 1
+  data:
+    Id: forest_warden
+    DisplayName: Forest Troll
+    BaseStats:
+      maxHealth: 110
+      speed: 4
+      attack: 40
+      manaRegen: 0
+      physicalDefense: 30
+      magicalDefense: 10
+    ExpReward: 100
+    CurrencyReward: 60
+    IsBoss: 1
+    Weaknesses: 0100000002000000
+    Resistances: 0000000004000000
+    SortOrder: 15
+    BreakShieldPoints: 3
+    StageScale: 1.5
+    SlotSpan: 1
+    SpritePath: Enemies/forest_warden
+    Abilities:
+    - SkillId: overhead_slam
+      Weight: 3
+    - SkillId: roar
+      Weight: 2
+    - SkillId: grapple
+      Weight: 2
+    AttackWeight: 0
+    SkillName: 
+    SkillPower: 1.5
+    SkillChance: 0.35
+    Facing: 1
+    Active: 1
+    Vfx:
+      path: 
+      seconds: 0.6
+      impactFrame: 3
+      anchor: 
+      size: 380
+      departFrame: 0
+      impactX: -1
+      impactY: -1
+      sfxPath: 
+      groundPath: 
+      groundSeconds: 0
+      groundImpactFrame: 0
+      groundAspect: 0
+      groundImpactY: -1
+      castSfxPath: 
+    Status: 0
+    StatusAuthored: 0
+    StatusMagnitude: 0
+    StatusDuration: 0
+    AvoidsFrontSlot: 0
+    AttackHoldsPosition: 0
+    AttackApproach: 1
+    MinFloor: 1
+    AttackType: 0

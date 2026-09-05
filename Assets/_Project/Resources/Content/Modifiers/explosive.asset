@@ -12,19 +12,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8eb37102d2241c54eae4db6c08bbb7c5, type: 3}
   m_Name: explosive
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
-  id: explosive
-  displayName: Explosive
-  description: Whatever the wearer finishes off does not go quietly -- the kill splashes
-    onto whoever was standing next to it. The exact mechanism Trample already uses,
-    so a Black Ram wearing this alongside his own talent gets two independent splashes
-    off one kill rather than one doubled splash -- see OnKillSplashPercent's own
-    comment on why that is deliberate, not a bug to fix later. Already single-effect
-    since Phase C; untouched by the affix split.
-  effects:
-  - type: 8
-    magnitude: 15
-    threshold: 0
-    against: 0
-    hasAgainst: 0
-    againstMagical: 0
-  sortOrder: 18
+  data:
+    Id: explosive
+    DisplayName: Explosive
+    Description: Whatever the wearer finishes off does not go quietly -- the kill
+      splashes onto whoever was standing next to it. The exact mechanism Trample
+      already uses, so a Black Ram wearing this alongside his own talent gets two
+      independent splashes off one kill rather than one doubled splash -- see OnKillSplashPercent's
+      own comment on why that is deliberate, not a bug to fix later. Already single-effect
+      since Phase C; untouched by the affix split.
+    SortOrder: 18
+    Effects:
+    - Type: 8
+      Magnitude: 15
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0

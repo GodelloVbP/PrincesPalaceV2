@@ -758,9 +758,9 @@ namespace PrincesPalace
         private void RefreshIdentity(Character character)
         {
             var definition = ContentDatabase.GetCharacter(character.definitionId);
-            string name = definition == null || string.IsNullOrWhiteSpace(definition.displayName)
+            string name = definition == null || string.IsNullOrWhiteSpace(definition.data.DisplayName)
                 ? character.definitionId
-                : definition.displayName;
+                : definition.data.DisplayName;
 
             if (characterName != null) characterName.SetContent(name);
             if (subLine != null) subLine.SetContent($"Level {character.level}");

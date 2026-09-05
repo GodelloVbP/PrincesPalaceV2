@@ -12,15 +12,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6da02db8c4530f747adcb0b4f87d4af4, type: 3}
   m_Name: phoenix_egg
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
-  id: phoenix_egg
-  displayName: Phoenix Egg
-  description: Taking what would be fatal damage instead turns you into an egg for
-    3 turns, with its own HP pool. Revive with whatever fraction of it survives,
-    or die if it breaks. Once per combat.
-  effect: 31
-  rarity: 3
-  unlockedBy: 
-  requiresConvergenceAbility: 0
-  modifiers: []
-  sortOrder: 37
-  iconPath: Assets/_Project/Art/Items/Relics/Processed/phoenix_egg.png
+  data:
+    Id: phoenix_egg
+    DisplayName: Phoenix Egg
+    Description: Taking what would be fatal damage instead turns you into an egg
+      for 3 turns, with its own HP pool. Revive with whatever fraction of it survives,
+      or die if it breaks. Once per combat.
+    Effect: 31
+    SortOrder: 37
+    IconPath: Assets/_Project/Art/Items/Relics/Processed/phoenix_egg.png
+    Rarity: 3
+    UnlockedBy: 
+    Modifiers: []
+    RequiresConvergenceAbility: 0

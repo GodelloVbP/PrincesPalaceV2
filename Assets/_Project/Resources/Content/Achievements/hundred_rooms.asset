@@ -12,10 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35d3dd6bb8630dc4faef37dfc7e47e6b, type: 3}
   m_Name: hundred_rooms
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.AchievementDefinition
-  id: hundred_rooms
-  displayName: Well Travelled
-  description: Clear a hundred rooms.
-  condition: 4
-  threshold: 100
-  parameter: 
-  sortOrder: 3
+  data:
+    Id: hundred_rooms
+    DisplayName: Well Travelled
+    Description: Clear a hundred rooms.
+    Condition: 4
+    Threshold: 100
+    Parameter: 
+    SortOrder: 3

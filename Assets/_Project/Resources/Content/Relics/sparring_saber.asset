@@ -12,14 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6da02db8c4530f747adcb0b4f87d4af4, type: 3}
   m_Name: sparring_saber
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
-  id: sparring_saber
-  displayName: Sparring Saber
-  description: Altering your own position in the turn order grants +30% Speed for
-    1 turn.
-  effect: 24
-  rarity: 0
-  unlockedBy: 
-  requiresConvergenceAbility: 0
-  modifiers: []
-  sortOrder: 29
-  iconPath: Assets/_Project/Art/Items/Relics/Processed/sparring_saber.png
+  data:
+    Id: sparring_saber
+    DisplayName: Sparring Saber
+    Description: Altering your own position in the turn order grants +30% Speed for
+      1 turn.
+    Effect: 24
+    SortOrder: 29
+    IconPath: Assets/_Project/Art/Items/Relics/Processed/sparring_saber.png
+    Rarity: 0
+    UnlockedBy: 
+    Modifiers: []
+    RequiresConvergenceAbility: 0

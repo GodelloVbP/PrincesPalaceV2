@@ -12,22 +12,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 06eaac145d03bc24b92e1461ad97f711, type: 3}
   m_Name: level_7
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SpellTierDefinition
-  level: 7
-  displayName: Maelstrom
-  manaCost: 22
-  powerMultiplier: 3.1
-  scaling:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 3
-    intelligence: 5
-    charisma: 0
-  requirements:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  sortOrder: 6
+  data:
+    Level: 7
+    DisplayName: Maelstrom
+    ManaCost: 22
+    PowerMultiplier: 3.1
+    SortOrder: 6
+    Scaling:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 3
+      intelligence: 5
+      charisma: 0
+    Requirements:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0

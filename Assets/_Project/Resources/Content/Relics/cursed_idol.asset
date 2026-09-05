@@ -12,14 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6da02db8c4530f747adcb0b4f87d4af4, type: 3}
   m_Name: cursed_idol
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
-  id: cursed_idol
-  displayName: Cursed Idol
-  description: Damaging an enemy lowers its resistances by 3% for 3 turns, stacking
-    up to 15%. Each stack falls off on its own.
-  effect: 18
-  rarity: 2
-  unlockedBy: 
-  requiresConvergenceAbility: 0
-  modifiers: []
-  sortOrder: 21
-  iconPath: Assets/_Project/Art/Items/Relics/Processed/cursed_idol.png
+  data:
+    Id: cursed_idol
+    DisplayName: Cursed Idol
+    Description: Damaging an enemy lowers its resistances by 3% for 3 turns, stacking
+      up to 15%. Each stack falls off on its own.
+    Effect: 18
+    SortOrder: 21
+    IconPath: Assets/_Project/Art/Items/Relics/Processed/cursed_idol.png
+    Rarity: 2
+    UnlockedBy: 
+    Modifiers: []
+    RequiresConvergenceAbility: 0

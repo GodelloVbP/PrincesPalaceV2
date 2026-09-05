@@ -9,32 +9,21 @@ namespace PrincesPalace.Content
     // Authored in Assets/_Project/ContentData/achievements.json and generated
     // by ContentBuilder -- never hand-edited under Resources/Content, which
     // ContentBuilder deletes wholesale on every build.
+    //
+    // A WRAPPER ROUND ONE VALUE. This type already carried a ToResolved() that
+    // restated its own field list -- the half-precedent the rest of the
+    // collapse generalised. The asset stores the resolved value now, so there
+    // is no copy left to keep in step.
     public class AchievementDefinition : ScriptableObject, IOrderedContent
     {
-        [Tooltip("Stable identifier written into save files the moment this is earned. NEVER rename after a save exists.")]
-        public string id;
+        public ResolvedAchievement data = new ResolvedAchievement();
 
-        public string displayName;
-
-        [TextArea]
-        public string description;
-
-        [Tooltip("How it is earned. Every value has a case in AchievementProgress.")]
-        public AchievementCondition condition;
-
-        [Tooltip("What the condition compares against — a level, a room count, a depth. Meaning depends on the condition.")]
-        public int threshold;
-
-        [Tooltip("The condition's subject when it has one. Today only DefeatSpecificBoss uses it, naming a boss enemy id.")]
-        public string parameter;
-
-        // Resources.LoadAll returns filename order, not authoring order.
-        public int sortOrder;
-
-        public ResolvedAchievement ToResolved() =>
-            new ResolvedAchievement(id, displayName, description, condition, threshold, parameter, sortOrder);
+        // The one field the Get*(id) family and every content check read off
+        // the asset itself rather than through `data`.
+        public string id => data != null ? data.Id : "";
 
         // Listed by the authored order ContentBuilder stamped on it.
-        public int SortOrder => sortOrder;
+        // Resources.LoadAll returns filename order, not authoring order.
+        public int SortOrder => data != null ? data.SortOrder : 0;
     }
 }

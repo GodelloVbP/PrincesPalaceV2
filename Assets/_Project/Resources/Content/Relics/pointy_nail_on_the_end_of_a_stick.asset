@@ -12,18 +12,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6da02db8c4530f747adcb0b4f87d4af4, type: 3}
   m_Name: pointy_nail_on_the_end_of_a_stick
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
-  id: pointy_nail_on_the_end_of_a_stick
-  displayName: Pointy Nail on the End of a Stick
-  description: Melee attacks gain 35 flat armour penetration.
-  effect: 0
-  rarity: 0
-  unlockedBy: 
-  requiresConvergenceAbility: 0
-  modifiers:
-  - type: 12
-    amount: 35
-    against: 0
-    hasAgainst: 0
-    againstMagical: 0
-  sortOrder: 23
-  iconPath: Assets/_Project/Art/Items/Relics/Processed/pointy_nail_on_the_end_of_a_stick.png
+  data:
+    Id: pointy_nail_on_the_end_of_a_stick
+    DisplayName: Pointy Nail on the End of a Stick
+    Description: Melee attacks gain 35 flat armour penetration.
+    Effect: 0
+    SortOrder: 23
+    IconPath: Assets/_Project/Art/Items/Relics/Processed/pointy_nail_on_the_end_of_a_stick.png
+    Rarity: 0
+    UnlockedBy: 
+    Modifiers:
+    - Type: 12
+      Amount: 35
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0
+    RequiresConvergenceAbility: 0

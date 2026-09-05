@@ -12,20 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8eb37102d2241c54eae4db6c08bbb7c5, type: 3}
   m_Name: stalwart
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
-  id: stalwart
-  displayName: Stalwart
-  description: Armour plating a percentage curve cannot express. FlatPhysicalDamageReduction's
-    base (3) is small on purpose at Ordinary/tier-0 -- it is a FLAT subtraction,
-    so it matters far more against the many small hits of a swarm than against one
-    boss-sized blow, which is the intended shape (a Stalwart wearer shrugs off chip
-    damage, not a haymaker). Bulwark is this affix's split-off sibling -- the guard
-    that gives less ground under pressure, split into its own roll so the two can
-    no longer only ever be found together.
-  effects:
-  - type: 6
-    magnitude: 2
-    threshold: 0
-    against: 0
-    hasAgainst: 0
-    againstMagical: 0
-  sortOrder: 16
+  data:
+    Id: stalwart
+    DisplayName: Stalwart
+    Description: Armour plating a percentage curve cannot express. FlatPhysicalDamageReduction's
+      base (3) is small on purpose at Ordinary/tier-0 -- it is a FLAT subtraction,
+      so it matters far more against the many small hits of a swarm than against
+      one boss-sized blow, which is the intended shape (a Stalwart wearer shrugs
+      off chip damage, not a haymaker). Bulwark is this affix's split-off sibling
+      -- the guard that gives less ground under pressure, split into its own roll
+      so the two can no longer only ever be found together.
+    SortOrder: 16
+    Effects:
+    - Type: 6
+      Magnitude: 2
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0

@@ -12,37 +12,39 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 78462e746feff2e4c945a0159eb6e76a, type: 3}
   m_Name: sheep_ram_horns_2
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.TalentDefinition
-  id: sheep_ram_horns_2
-  displayName: Honed Horns
-  description: Half, now.
-  characterId: sheep
-  column: 0
-  row: 4
-  prerequisites:
-  - {fileID: 11400000, guid: bcbcbbab28430ba4fb7ea34dac1a8ef9, type: 2}
-  minSpent: 0
-  statBonus:
-    maxHealth: 0
-    speed: 0
-    attack: 0
-    manaRegen: 0
-    physicalDefense: 0
-    magicalDefense: 0
-  abilityScoreBonus:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  grantsStartingItemId: 
-  maxManaBonus: 0
-  skillManaCostReduction: 0
-  signatureCapacityBonus: 0
-  signaturePerTurnBonus: 0
-  effects:
-  - type: 5
-    magnitude: 50
-    threshold: 0
-  grantsSkillId: 
-  iconPath: 
+  data:
+    Id: sheep_ram_horns_2
+    DisplayName: Honed Horns
+    Description: Half, now.
+    CharacterId: sheep
+    Column: 0
+    Row: 4
+    Prerequisites:
+    - sheep_ram_horns_1
+    StatBonus:
+      maxHealth: 0
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 0
+    AbilityScoreBonus:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    MaxManaBonus: 0
+    SkillManaCostReduction: 0
+    SignatureCapacityBonus: 0
+    SignaturePerTurnBonus: 0
+    GrantsStartingItemId: 
+    SortOrder: 2
+    IconPath: 
+    MinSpent: 0
+    Effects:
+    - Type: 5
+      Magnitude: 50
+      Threshold: 0
+    GrantsSkillId: 

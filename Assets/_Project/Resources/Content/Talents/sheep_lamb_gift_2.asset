@@ -12,38 +12,40 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 78462e746feff2e4c945a0159eb6e76a, type: 3}
   m_Name: sheep_lamb_gift_2
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.TalentDefinition
-  id: sheep_lamb_gift_2
-  displayName: Gift of Fury
-  description: 'Unlocks Gift: Fury (3 wool) -- an ally''s next swing lands half again
-    as hard.'
-  characterId: sheep
-  column: 1
-  row: 15
-  prerequisites:
-  - {fileID: 11400000, guid: 24fe788dba87b22479b0f9b43711e293, type: 2}
-  minSpent: 0
-  statBonus:
-    maxHealth: 0
-    speed: 0
-    attack: 0
-    manaRegen: 0
-    physicalDefense: 0
-    magicalDefense: 0
-  abilityScoreBonus:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  grantsStartingItemId: 
-  maxManaBonus: 0
-  skillManaCostReduction: 0
-  signatureCapacityBonus: 0
-  signaturePerTurnBonus: 0
-  effects:
-  - type: 32
-    magnitude: 50
-    threshold: 0
-  grantsSkillId: gift_fury
-  iconPath: 
+  data:
+    Id: sheep_lamb_gift_2
+    DisplayName: Gift of Fury
+    Description: 'Unlocks Gift: Fury (3 wool) -- an ally''s next swing lands half
+      again as hard.'
+    CharacterId: sheep
+    Column: 1
+    Row: 15
+    Prerequisites:
+    - sheep_lamb_gift_1
+    StatBonus:
+      maxHealth: 0
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 0
+    AbilityScoreBonus:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    MaxManaBonus: 0
+    SkillManaCostReduction: 0
+    SignatureCapacityBonus: 0
+    SignaturePerTurnBonus: 0
+    GrantsStartingItemId: 
+    SortOrder: 36
+    IconPath: 
+    MinSpent: 0
+    Effects:
+    - Type: 32
+      Magnitude: 50
+      Threshold: 0
+    GrantsSkillId: gift_fury

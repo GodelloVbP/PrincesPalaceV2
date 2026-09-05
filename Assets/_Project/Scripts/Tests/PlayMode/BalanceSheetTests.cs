@@ -169,7 +169,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(built, "no fight could be built from the current content");
             var state = built.Session.Encounter.Enemies.FirstOrDefault();
             Assert.IsNotNull(state, "the built fight has no enemies");
-            return (state, definition.Affinity, definition.attackType);
+            return (state, definition.data.Affinity, definition.data.AttackType);
         }
 
         // hollow_choir is fully authored in enemies.json (HP100/SPD14/ATK24/

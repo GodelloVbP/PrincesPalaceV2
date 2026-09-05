@@ -12,16 +12,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8eb37102d2241c54eae4db6c08bbb7c5, type: 3}
   m_Name: manaflow
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
-  id: manaflow
-  displayName: Manaflow
-  description: A faster trickle of mana each turn. Runic's old bundle split four
-    ways -- see Runic, Quickcast and Wardrune's own descriptions for the rest of
-    the family.
-  effects:
-  - type: 11
-    magnitude: 1
-    threshold: 0
-    against: 0
-    hasAgainst: 0
-    againstMagical: 0
-  sortOrder: 21
+  data:
+    Id: manaflow
+    DisplayName: Manaflow
+    Description: A faster trickle of mana each turn. Runic's old bundle split four
+      ways -- see Runic, Quickcast and Wardrune's own descriptions for the rest of
+      the family.
+    SortOrder: 21
+    Effects:
+    - Type: 11
+      Magnitude: 1
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0

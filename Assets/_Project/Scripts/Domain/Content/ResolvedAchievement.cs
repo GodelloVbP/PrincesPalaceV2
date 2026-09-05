@@ -29,16 +29,37 @@ namespace PrincesPalace.Domain.Content
         public RawAchievementEntry[] achievements = Array.Empty<RawAchievementEntry>();
     }
 
-    // One validated achievement.
-    public readonly struct ResolvedAchievement
+    // One validated achievement -- and the shape AchievementDefinition now
+    // STORES rather than restates. It carried a ToResolved() of its own, which
+    // was the half-precedent the whole collapse generalised.
+    //
+    // [Serializable] class with public fields; System.Serializable is BCL, so
+    // Domain stays engine-free.
+    [Serializable]
+    public sealed class ResolvedAchievement
     {
-        public readonly string Id;
-        public readonly string DisplayName;
-        public readonly string Description;
-        public readonly AchievementCondition Condition;
-        public readonly int Threshold;
-        public readonly string Parameter;
-        public readonly int SortOrder;
+        // Written into save files the moment this is earned. NEVER rename
+        // after a save exists.
+        public string Id = "";
+        public string DisplayName = "";
+        public string Description = "";
+
+        // How it is earned. Every value has a case in AchievementProgress.
+        public AchievementCondition Condition;
+
+        // What the condition compares against -- a level, a room count, a
+        // depth. Meaning depends on the condition.
+        public int Threshold;
+
+        // The condition's subject when it has one. Today only
+        // DefeatSpecificBoss uses it, naming a boss enemy id.
+        public string Parameter = "";
+        public int SortOrder;
+
+        // For the serializer only.
+        public ResolvedAchievement()
+        {
+        }
 
         public ResolvedAchievement(string id, string displayName, string description,
             AchievementCondition condition, int threshold, string parameter, int sortOrder)

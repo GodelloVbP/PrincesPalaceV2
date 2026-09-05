@@ -22,7 +22,7 @@ namespace PrincesPalace.PlayModeTests
 {
     // ONE BEAT OF ONE MONSTER'S PLAIN SWING, PHOTOGRAPHED AT NORMAL SPEED.
     //
-    // The static-combat pilot (docs/STATIC_COMBAT_ART_DEEP_DIVE.md, "Recommended
+    // The static-combat pilot (docs/archive/STATIC_COMBAT_ART_DEEP_DIVE.md, "Recommended
     // pilot") asks a question no existing fixture answers: does an ordinary
     // melee blow by a still-art creature READ as a blow at the speed a player
     // actually sees it? Every other capture in this suite is a single still
@@ -134,7 +134,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(enemy, $"'{EnemyId}' is not in the content database");
 
             var shawn = ContentDatabase.Characters
-                .FirstOrDefault(c => !string.IsNullOrWhiteSpace(c.battleSpritePath));
+                .FirstOrDefault(c => !string.IsNullOrWhiteSpace(c.data.BattleSpritePath));
             Assert.IsNotNull(shawn, "no character has battle art, so the target would be a grey plate");
 
             // Speed 1 against the witch's authored 8, so the monster wins
@@ -148,7 +148,7 @@ namespace PrincesPalace.PlayModeTests
             // to its defeated pose and this is a capture of a hit, not a death.
             var resolved = FightEncounterAdapter.Resolve(enemy);
 
-            _hero = new CombatantState(shawn.displayName, true, 500, 30, 20, 1);
+            _hero = new CombatantState(shawn.data.DisplayName, true, 500, 30, 20, 1);
             _witch = new CombatantState(resolved.DisplayName, false, 5000, 0,
                                         resolved.BaseStats.attack, resolved.BaseStats.speed);
 
@@ -172,7 +172,7 @@ namespace PrincesPalace.PlayModeTests
                 "the witch did not win initiative, so its swing is not queued and there is no beat to capture");
 
             _fight.Bind(session, EncounterClass.Normal);
-            _fight.BindPartyArt(new[] { _hero }, new[] { shawn.battleSpritePath });
+            _fight.BindPartyArt(new[] { _hero }, new[] { shawn.data.BattleSpritePath });
 
             yield return null;
             yield return null;
@@ -418,7 +418,7 @@ namespace PrincesPalace.PlayModeTests
 
             foreach (string stance in new[] { "idle", "attack" })
             {
-                Assert.IsNotNull(StanceAnimationLibrary.Resolve(enemy.spritePath, stance),
+                Assert.IsNotNull(StanceAnimationLibrary.Resolve(enemy.data.SpritePath, stance),
                     $"{EnemyId} has no '{stance}' art, so the pilot would photograph a nameplate");
             }
 

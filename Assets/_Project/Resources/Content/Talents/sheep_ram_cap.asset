@@ -12,40 +12,42 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 78462e746feff2e4c945a0159eb6e76a, type: 3}
   m_Name: sheep_ram_cap
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.TalentDefinition
-  id: sheep_ram_cap
-  displayName: What He Is Now
-  description: Below a quarter health the transformation stops being a button. Free,
-    gated at 20 embers spent in this path.
-  characterId: sheep
-  column: 0
-  row: 20
-  prerequisites:
-  - {fileID: 11400000, guid: eda866573d946b94c926a5bf041f2a1b, type: 2}
-  - {fileID: 11400000, guid: 1bb5a0652d8d60a4c926be58afd3120d, type: 2}
-  - {fileID: 11400000, guid: 04ab24fa00ddeda458d2f07fe1f032da, type: 2}
-  minSpent: 20
-  statBonus:
-    maxHealth: 0
-    speed: 0
-    attack: 0
-    manaRegen: 0
-    physicalDefense: 0
-    magicalDefense: 0
-  abilityScoreBonus:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  grantsStartingItemId: 
-  maxManaBonus: 0
-  skillManaCostReduction: 0
-  signatureCapacityBonus: 0
-  signaturePerTurnBonus: 0
-  effects:
-  - type: 21
-    magnitude: 0
-    threshold: 25
-  grantsSkillId: 
-  iconPath: 
+  data:
+    Id: sheep_ram_cap
+    DisplayName: What He Is Now
+    Description: Below a quarter health the transformation stops being a button.
+      Free, gated at 20 embers spent in this path.
+    CharacterId: sheep
+    Column: 0
+    Row: 20
+    Prerequisites:
+    - sheep_ram_wrath_3
+    - sheep_ram_stand_3
+    - sheep_ram_charge_3
+    StatBonus:
+      maxHealth: 0
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 0
+    AbilityScoreBonus:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    MaxManaBonus: 0
+    SkillManaCostReduction: 0
+    SignatureCapacityBonus: 0
+    SignaturePerTurnBonus: 0
+    GrantsStartingItemId: 
+    SortOrder: 20
+    IconPath: 
+    MinSpent: 20
+    Effects:
+    - Type: 21
+      Magnitude: 0
+      Threshold: 25
+    GrantsSkillId: 

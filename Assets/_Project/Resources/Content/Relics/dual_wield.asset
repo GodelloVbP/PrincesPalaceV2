@@ -12,14 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6da02db8c4530f747adcb0b4f87d4af4, type: 3}
   m_Name: dual_wield
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
-  id: dual_wield
-  displayName: Dual Wield
-  description: Whenever this character attacks, they strike the same target a second
-    time.
-  effect: 1
-  rarity: 0
-  unlockedBy: 
-  requiresConvergenceAbility: 0
-  modifiers: []
-  sortOrder: 0
-  iconPath: Assets/_Project/Art/Items/Relics/Processed/dual_wield.png
+  data:
+    Id: dual_wield
+    DisplayName: Dual Wield
+    Description: Whenever this character attacks, they strike the same target a second
+      time.
+    Effect: 1
+    SortOrder: 0
+    IconPath: Assets/_Project/Art/Items/Relics/Processed/dual_wield.png
+    Rarity: 0
+    UnlockedBy: 
+    Modifiers: []
+    RequiresConvergenceAbility: 0

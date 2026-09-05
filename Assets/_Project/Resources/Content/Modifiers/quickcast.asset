@@ -12,16 +12,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8eb37102d2241c54eae4db6c08bbb7c5, type: 3}
   m_Name: quickcast
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
-  id: quickcast
-  displayName: Quickcast
-  description: A plain swing buys a cheaper follow-up cast. Runic's old bundle split
-    four ways -- see Runic, Manaflow and Wardrune's own descriptions for the rest
-    of the family.
-  effects:
-  - type: 12
-    magnitude: 13
-    threshold: 0
-    against: 0
-    hasAgainst: 0
-    againstMagical: 0
-  sortOrder: 22
+  data:
+    Id: quickcast
+    DisplayName: Quickcast
+    Description: A plain swing buys a cheaper follow-up cast. Runic's old bundle
+      split four ways -- see Runic, Manaflow and Wardrune's own descriptions for
+      the rest of the family.
+    SortOrder: 22
+    Effects:
+    - Type: 12
+      Magnitude: 13
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0

@@ -12,10 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35d3dd6bb8630dc4faef37dfc7e47e6b, type: 3}
   m_Name: character_level_30
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.AchievementDefinition
-  id: character_level_30
-  displayName: Long Service
-  description: Bring a character to level 30.
-  condition: 3
-  threshold: 30
-  parameter: 
-  sortOrder: 2
+  data:
+    Id: character_level_30
+    DisplayName: Long Service
+    Description: Bring a character to level 30.
+    Condition: 3
+    Threshold: 30
+    Parameter: 
+    SortOrder: 2

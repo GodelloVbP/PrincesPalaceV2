@@ -75,7 +75,7 @@ namespace PrincesPalace
             }
 
             return scaled
-                .Select(pair => new ModifierAffixLines.Effect(pair.Modifier.id, pair.Modifier.displayName, pair.Effect))
+                .Select(pair => new ModifierAffixLines.Effect(pair.Modifier.id, pair.Modifier.data.DisplayName, pair.Effect))
                 .ToList();
         }
 
@@ -95,7 +95,7 @@ namespace PrincesPalace
             return equippedModifierIds.Select(id =>
             {
                 var modifier = ContentDatabase.GetModifier(id);
-                string name = modifier == null || string.IsNullOrEmpty(modifier.displayName) ? id : modifier.displayName;
+                string name = modifier == null || string.IsNullOrEmpty(modifier.data.DisplayName) ? id : modifier.data.DisplayName;
                 return new ModifierAffixLines.EquippedModifier(id, name);
             }).ToList();
         }
@@ -316,9 +316,9 @@ namespace PrincesPalace
             {
                 if (member == null) continue;
                 var definition = ContentDatabase.GetCharacter(member.definitionId);
-                string name = definition == null || string.IsNullOrWhiteSpace(definition.displayName)
+                string name = definition == null || string.IsNullOrWhiteSpace(definition.data.DisplayName)
                     ? member.definitionId
-                    : definition.displayName;
+                    : definition.data.DisplayName;
                 var equippedModifierIds = EquippedModifierIds(member, candidate);
                 rows.Add((name, Compare(member, candidate, candidatePlus),
                     ModifierComparisonLines(candidate, riftTier, modifierIds, equippedModifierIds)));

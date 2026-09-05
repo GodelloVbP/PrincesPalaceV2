@@ -7,10 +7,16 @@ namespace PrincesPalace.Domain.Content
 {
     // A monster's ability, before the skill behind it has been looked up. See
     // ResolvedEnemy.Abilities for why the id survives this far.
-    public readonly struct EnemyAbilityRef
+    //
+    // [Serializable] with public fields because ResolvedEnemy is what the
+    // EnemyDefinition asset now stores, and Unity only serializes a struct it
+    // has been told about. Immutable by convention, like everything else in
+    // this folder -- the constructor is still the only thing that trims.
+    [Serializable]
+    public struct EnemyAbilityRef
     {
-        public readonly string SkillId;
-        public readonly float Weight;
+        public string SkillId;
+        public float Weight;
 
         public EnemyAbilityRef(string skillId, float weight)
         {
@@ -20,39 +26,53 @@ namespace PrincesPalace.Domain.Content
     }
 
     // A monster after every omitted field in its RawEnemyEntry has been
-    // filled in and every provided field has been validated — the shape
-    // ContentBuilder actually needs to create an EnemyDefinition asset from.
-    public readonly struct ResolvedEnemy
+    // filled in and every provided field has been validated -- and the shape
+    // EnemyDefinition now STORES rather than restates.
+    //
+    // WHY THIS IS A [Serializable] CLASS WITH PUBLIC FIELDS rather than a
+    // readonly struct: the same measurement ResolvedSkill records one file
+    // over. EnemyDefinition carried a second copy of 29 of these fields,
+    // ContentBuilder copied them across one by one and FightEncounterAdapter
+    // copied all 34 arguments back -- three field lists for one set of facts,
+    // and a hand-written copy of that length is exactly the shape where a
+    // dropped line is invisible (it happened twice on the skill side).
+    // System.Serializable is BCL, not UnityEngine, so Domain stays engine-free.
+    [Serializable]
+    public sealed class ResolvedEnemy
     {
-        public readonly string Id;
-        public readonly string DisplayName;
-        public readonly StatBlock BaseStats;
-        public readonly int ExpReward;
-        public readonly int CurrencyReward;
-        public readonly bool IsBoss;
+        public string Id = "";
+        public string DisplayName = "";
+        public StatBlock BaseStats;
+        public int ExpReward;
+        public int CurrencyReward;
+        public bool IsBoss;
 
-        // Every element this monster takes badly and every one it shrugs off.
-        // Two DamageType fields until multi-element affinities landed -- see
-        // ElementalAffinity for why the pair became one value rather than two
-        // arrays.
-        public readonly ElementalAffinity Affinity;
-        public readonly int SortOrder;
+        // EVERY ELEMENT THIS MONSTER TAKES BADLY AND EVERY ONE IT SHRUGS OFF,
+        // as the two authored lists rather than the packed ElementalAffinity.
+        // The affinity itself is a readonly struct over two private int masks,
+        // which no serializer can write; the lists are what was authored and
+        // what EnemyDefinition already stored, so nothing is lost round-
+        // tripping through them. Read the pair through Affinity below.
+        public DamageType[] Weaknesses = Array.Empty<DamageType>();
+        public DamageType[] Resistances = Array.Empty<DamageType>();
+
+        public int SortOrder;
 
         // 0 means this enemy carries no stagger meter and cannot be broken.
-        public readonly int BreakShieldPoints;
+        public int BreakShieldPoints;
 
         // See RawEnemyEntry.stageScale and .slotSpan. Both default to 1, so a
         // monster that says nothing stands exactly as it always has.
-        public readonly float StageScale;
-        public readonly int SlotSpan;
+        public float StageScale = 1f;
+        public int SlotSpan = 1;
 
         // Resources-relative FOLDER holding this monster's stance
         // sprites (e.g. "Enemies/golem", which contains idle.png,
         // attack.png and so on). Empty for the many monsters with no art
         // yet — the fight stage falls back to a plain nameplate rather
         // than showing a broken sprite, same graceful-missing-art rule as
-        // CharacterDefinition.portraitPath.
-        public readonly string SpritePath;
+        // ResolvedCharacter.PortraitPath.
+        public string SpritePath = "";
 
         // WHAT THIS MONSTER CAN DO, as skill ids and relative weights.
         //
@@ -63,51 +83,58 @@ namespace PrincesPalace.Domain.Content
         // already built from content -- FightEncounterAdapter -- which is the
         // one place that legitimately sees both.
         //
+        // An ARRAY rather than IReadOnlyList because that is what serializes;
+        // every consumer reads it as the interface, which an array satisfies.
         // Empty means this monster uses the legacy SkillName trio below.
-        public readonly IReadOnlyList<EnemyAbilityRef> Abilities;
+        public EnemyAbilityRef[] Abilities = Array.Empty<EnemyAbilityRef>();
 
         // The basic attack's own weight in that pool. See RawEnemyEntry.
-        public readonly float AttackWeight;
+        public float AttackWeight = 1f;
 
         // Empty SkillName means this monster has no second action at all.
-        public readonly string SkillName;
-        public readonly float SkillPower;
-        public readonly float SkillChance;
+        public string SkillName = "";
+        public float SkillPower = 1.5f;
+        public float SkillChance;
 
         // Which way SpritePath's art is drawn. The stage mirrors from this
         // rather than assuming a house convention — see StageFacing.
-        public readonly PrincesPalace.Domain.Stage.SpriteFacing Facing;
+        public PrincesPalace.Domain.Stage.SpriteFacing Facing;
 
         // False means benched: the entry is still authored and validated,
         // but ContentBuilder builds no asset for it, so it never spawns.
-        public readonly bool Active;
+        public bool Active = true;
 
         // A skill's VFX, shown over the TARGET when it lands — see
-        // RawEnemyEntry's own comment. Empty VfxPath means no prop.
+        // RawEnemyEntry's own comment. Empty path means no prop.
         // ONE VALUE, like a skill's. See SpellPresentation for the
         // measurement that collapsed the four fields that were here.
-        public readonly SpellPresentation Vfx;
+        public SpellPresentation Vfx = new SpellPresentation();
 
-        // The status this monster's attacks apply on a hit, regardless of
-        // whether that hit was the skill or a plain attack. Null means it
-        // applies nothing — see RawEnemyEntry's own comment on why this
-        // isn't skill-gated the way SkillDefinition's own status is.
-        public readonly StatusEffectType? AppliesStatus;
-        public readonly int StatusMagnitude;
-        public readonly int StatusDuration;
+        // THE PAIR THAT REPLACES A NULLABLE, same trade ResolvedSkill makes:
+        // StatusEffectType has a valid zero, so the FLAG is what says whether
+        // anyone authored one. Read it through AppliesStatus below.
+        //
+        // StatusAuthored rather than HasStatus because HasStatus already means
+        // something narrower here and has since v1 -- authored AND lasting at
+        // least a turn.
+        public StatusEffectType Status;
+        public bool StatusAuthored;
+        public int StatusMagnitude;
+        public int StatusDuration;
 
         // See RawEnemyEntry.avoidsFrontSlot.
-        public readonly bool AvoidsFrontSlot;
+        public bool AvoidsFrontSlot;
 
         // See RawEnemyEntry.attackHoldsPosition.
-        public readonly bool AttackHoldsPosition;
+        public bool AttackHoldsPosition;
 
         // See RawEnemyEntry.attackApproach. How the plain attack travels when it
         // is not holding position. Lunge is the default and the old behaviour.
-        public readonly PrincesPalace.Domain.Combat.Session.StageApproach AttackApproach;
+        public PrincesPalace.Domain.Combat.Session.StageApproach AttackApproach =
+            PrincesPalace.Domain.Combat.Session.StageApproach.Lunge;
 
         // See RawEnemyEntry.minFloor.
-        public readonly int MinFloor;
+        public int MinFloor = 1;
 
         // The damage type this monster's own attacks and abilities carry —
         // see RawEnemyEntry.attackType. Defaults to Physical, same as an
@@ -117,15 +144,62 @@ namespace PrincesPalace.Domain.Content
         // fall through to for a combatant with no player kit registered —
         // without it, MagicalDefense was a dead stat against every enemy in
         // the game, since nothing an enemy did was ever typed.
-        public readonly DamageType AttackType;
+        public DamageType AttackType = DamageType.Physical;
+
+        // The packed pair every damage call site wants, built once and kept.
+        //
+        // CACHED because FightSession.AffinityOf asks for it on every packet
+        // of damage in the game and the lists behind it never change after the
+        // resolver hands this over -- the same immutable-by-convention rule
+        // the rest of the type runs on. [NonSerialized] so a freshly
+        // deserialized asset rebuilds it from the arrays that WERE written.
+        [NonSerialized] private ElementalAffinity _affinity;
+        [NonSerialized] private bool _affinityBuilt;
+
+        public ElementalAffinity Affinity
+        {
+            get
+            {
+                if (!_affinityBuilt)
+                {
+                    _affinity = ElementalAffinity.Of(
+                        Weaknesses ?? Array.Empty<DamageType>(),
+                        Resistances ?? Array.Empty<DamageType>());
+                    _affinityBuilt = true;
+                }
+
+                return _affinity;
+            }
+        }
+
+        // The nullable reading of the Status/StatusAuthored pair, kept because
+        // it is the shape every consumer already asks in.
+        public StatusEffectType? AppliesStatus => StatusAuthored ? (StatusEffectType?)Status : null;
+
+        // "Authored a skill" is a name, not a chance: an enemy with a named
+        // skill and skillChance 0 still HAS one (a future rule could raise the
+        // chance), while a blank name with a chance of 1 is nothing to use.
+        public bool HasSkill => !string.IsNullOrWhiteSpace(SkillName);
+
+        // Ported from v1's EnemyDefinition, which derived both the same way at
+        // the same place. They live here rather than at the call site so the
+        // enemy turn does not re-decide what "has a skill" means each time.
+        public bool HasStatus => StatusAuthored && StatusDuration > 0;
+
+        // For the serializer only. Every field carries its own initialiser so
+        // an instance built this way is still safe to read before Unity fills
+        // it in.
+        public ResolvedEnemy()
+        {
+        }
 
         // THE SINGLE-ELEMENT CONVENIENCE, kept because it is how nearly every
-        // fixture reads. NOT because the roster is authored through it -- both
-        // production callers (EnemyEntryResolver and FightEncounterAdapter)
-        // build an ElementalAffinity and use the other constructor, so nothing
-        // shipped reaches this. It is one line of delegation, not a second
-        // definition of anything: both forms end up in the same Affinity field,
-        // so there is no shape here that can drift out of step with the other.
+        // fixture reads. NOT because the roster is authored through it -- the
+        // production caller (EnemyEntryResolver) builds an ElementalAffinity
+        // and uses the other constructor, so nothing shipped reaches this. It
+        // is one line of delegation, not a second definition of anything: both
+        // forms end up in the same two lists, so there is no shape here that
+        // can drift out of step with the other.
         public ResolvedEnemy(string id, string displayName, StatBlock baseStats, int expReward, int currencyReward,
             bool isBoss, DamageType weakness, DamageType resistance, int sortOrder, string spritePath = "",
             PrincesPalace.Domain.Stage.SpriteFacing facing = PrincesPalace.Domain.Stage.SpriteFacing.Right,
@@ -169,8 +243,8 @@ namespace PrincesPalace.Domain.Content
             SkillChance = skillChance;
             Facing = facing;
             Active = active;
-            Id = id;
-            DisplayName = displayName;
+            Id = id ?? "";
+            DisplayName = displayName ?? "";
             BaseStats = baseStats;
             ExpReward = expReward;
             CurrencyReward = currencyReward;
@@ -180,14 +254,15 @@ namespace PrincesPalace.Domain.Content
             // first floor, and a negative would let a filter of the form
             // `minFloor <= floor` pass everything forever.
             MinFloor = minFloor < 1 ? 1 : minFloor;
-            Affinity = affinity;
+            SetAffinity(affinity);
             SortOrder = sortOrder;
             SpritePath = spritePath ?? "";
             BreakShieldPoints = breakShieldPoints;
             Vfx = (presentation ?? SpellPresentation.None).Copy();
-            Abilities = abilities ?? Array.Empty<EnemyAbilityRef>();
+            Abilities = ToArray(abilities);
             AttackWeight = attackWeight < 0f ? 0f : attackWeight;
-            AppliesStatus = appliesStatus;
+            StatusAuthored = appliesStatus.HasValue;
+            Status = appliesStatus ?? default;
             StatusMagnitude = statusMagnitude;
             StatusDuration = statusDuration;
             AvoidsFrontSlot = avoidsFrontSlot;
@@ -196,14 +271,28 @@ namespace PrincesPalace.Domain.Content
             AttackType = attackType;
         }
 
-        // "Authored a skill" is a name, not a chance: an enemy with a named
-        // skill and skillChance 0 still HAS one (a future rule could raise the
-        // chance), while a blank name with a chance of 1 is nothing to use.
-        public bool HasSkill => !string.IsNullOrWhiteSpace(SkillName);
+        private void SetAffinity(ElementalAffinity affinity)
+        {
+            var weaknesses = affinity.Weaknesses;
+            var resistances = affinity.Resistances;
+            Weaknesses = new DamageType[weaknesses.Count];
+            for (int i = 0; i < weaknesses.Count; i++) Weaknesses[i] = weaknesses[i];
+            Resistances = new DamageType[resistances.Count];
+            for (int i = 0; i < resistances.Count; i++) Resistances[i] = resistances[i];
 
-        // Ported from v1's EnemyDefinition, which derived both the same way at
-        // the same place. They live here rather than at the call site so the
-        // enemy turn does not re-decide what "has a skill" means each time.
-        public bool HasStatus => AppliesStatus.HasValue && StatusDuration > 0;
+            // Seeded rather than left to the lazy path: the packed value is
+            // already in hand here and rebuilding it from the lists we just
+            // wrote would answer the same question twice.
+            _affinity = affinity;
+            _affinityBuilt = true;
+        }
+
+        private static EnemyAbilityRef[] ToArray(IReadOnlyList<EnemyAbilityRef> abilities)
+        {
+            if (abilities == null || abilities.Count == 0) return Array.Empty<EnemyAbilityRef>();
+            var copy = new EnemyAbilityRef[abilities.Count];
+            for (int i = 0; i < abilities.Count; i++) copy[i] = abilities[i];
+            return copy;
+        }
     }
 }

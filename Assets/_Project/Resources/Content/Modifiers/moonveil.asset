@@ -12,16 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8eb37102d2241c54eae4db6c08bbb7c5, type: 3}
   m_Name: moonveil
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
-  id: moonveil
-  displayName: Moonveil
-  description: 'A veil of the same Rift-sliver turns arcane harm aside. Elemental
-    family: Arcane, the resistance half -- Astral is Arcane''s separate on-hit affix.
-    Split off Astral''s old bundle so a roll grants one or the other, never both.'
-  effects:
-  - type: 2
-    magnitude: 8
-    threshold: 0
-    against: 5
-    hasAgainst: 1
-    againstMagical: 0
-  sortOrder: 11
+  data:
+    Id: moonveil
+    DisplayName: Moonveil
+    Description: 'A veil of the same Rift-sliver turns arcane harm aside. Elemental
+      family: Arcane, the resistance half -- Astral is Arcane''s separate on-hit
+      affix. Split off Astral''s old bundle so a roll grants one or the other, never
+      both.'
+    SortOrder: 11
+    Effects:
+    - Type: 2
+      Magnitude: 8
+      Threshold: 0
+      AgainstType: 5
+      HasAgainst: 1
+      AgainstMagical: 0

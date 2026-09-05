@@ -12,13 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6da02db8c4530f747adcb0b4f87d4af4, type: 3}
   m_Name: ice_fingernail
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
-  id: ice_fingernail
-  displayName: Ice Fingernail
-  description: Attacks apply a 10% slow, stacking up to 40%.
-  effect: 21
-  rarity: 0
-  unlockedBy: 
-  requiresConvergenceAbility: 0
-  modifiers: []
-  sortOrder: 25
-  iconPath: Assets/_Project/Art/Items/Relics/Processed/ice_fingernail.png
+  data:
+    Id: ice_fingernail
+    DisplayName: Ice Fingernail
+    Description: Attacks apply a 10% slow, stacking up to 40%.
+    Effect: 21
+    SortOrder: 25
+    IconPath: Assets/_Project/Art/Items/Relics/Processed/ice_fingernail.png
+    Rarity: 0
+    UnlockedBy: 
+    Modifiers: []
+    RequiresConvergenceAbility: 0

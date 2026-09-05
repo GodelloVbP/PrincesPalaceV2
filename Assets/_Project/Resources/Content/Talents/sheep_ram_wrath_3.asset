@@ -12,38 +12,40 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 78462e746feff2e4c945a0159eb6e76a, type: 3}
   m_Name: sheep_ram_wrath_3
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.TalentDefinition
-  id: sheep_ram_wrath_3
-  displayName: No Way Back
-  description: Below a third health the timer simply stops running. Played right,
-    the transform is no longer a timer at all.
-  characterId: sheep
-  column: 0
-  row: 17
-  prerequisites:
-  - {fileID: 11400000, guid: c7e0e949e01d89d4f811350a1d6b556d, type: 2}
-  minSpent: 0
-  statBonus:
-    maxHealth: 0
-    speed: 0
-    attack: 0
-    manaRegen: 0
-    physicalDefense: 0
-    magicalDefense: 0
-  abilityScoreBonus:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  grantsStartingItemId: 
-  maxManaBonus: 0
-  skillManaCostReduction: 0
-  signatureCapacityBonus: 0
-  signaturePerTurnBonus: 0
-  effects:
-  - type: 15
-    magnitude: 0
-    threshold: 33
-  grantsSkillId: 
-  iconPath: 
+  data:
+    Id: sheep_ram_wrath_3
+    DisplayName: No Way Back
+    Description: Below a third health the timer simply stops running. Played right,
+      the transform is no longer a timer at all.
+    CharacterId: sheep
+    Column: 0
+    Row: 17
+    Prerequisites:
+    - sheep_ram_wrath_2
+    StatBonus:
+      maxHealth: 0
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 0
+    AbilityScoreBonus:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    MaxManaBonus: 0
+    SkillManaCostReduction: 0
+    SignatureCapacityBonus: 0
+    SignaturePerTurnBonus: 0
+    GrantsStartingItemId: 
+    SortOrder: 13
+    IconPath: 
+    MinSpent: 0
+    Effects:
+    - Type: 15
+      Magnitude: 0
+      Threshold: 33
+    GrantsSkillId: 

@@ -12,13 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6da02db8c4530f747adcb0b4f87d4af4, type: 3}
   m_Name: monkey_kings_scepter
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
-  id: monkey_kings_scepter
-  displayName: Monkey King's Scepter
-  description: Your melee attacks can reach any enemy, regardless of position.
-  effect: 23
-  rarity: 3
-  unlockedBy: 
-  requiresConvergenceAbility: 0
-  modifiers: []
-  sortOrder: 27
-  iconPath: Assets/_Project/Art/Items/Relics/Processed/monkey_kings_scepter.png
+  data:
+    Id: monkey_kings_scepter
+    DisplayName: Monkey King's Scepter
+    Description: Your melee attacks can reach any enemy, regardless of position.
+    Effect: 23
+    SortOrder: 27
+    IconPath: Assets/_Project/Art/Items/Relics/Processed/monkey_kings_scepter.png
+    Rarity: 3
+    UnlockedBy: 
+    Modifiers: []
+    RequiresConvergenceAbility: 0

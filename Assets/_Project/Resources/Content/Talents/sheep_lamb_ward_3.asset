@@ -12,38 +12,40 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 78462e746feff2e4c945a0159eb6e76a, type: 3}
   m_Name: sheep_lamb_ward_3
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.TalentDefinition
-  id: sheep_lamb_ward_3
-  displayName: Second Nature
-  description: Warding stops costing the turn. She can cover herself AND do something
-    with the day.
-  characterId: sheep
-  column: 1
-  row: 7
-  prerequisites:
-  - {fileID: 11400000, guid: 0fb835a3c23020547a9e2aa363f42cdc, type: 2}
-  minSpent: 0
-  statBonus:
-    maxHealth: 0
-    speed: 0
-    attack: 0
-    manaRegen: 0
-    physicalDefense: 0
-    magicalDefense: 0
-  abilityScoreBonus:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  grantsStartingItemId: 
-  maxManaBonus: 0
-  skillManaCostReduction: 0
-  signatureCapacityBonus: 0
-  signaturePerTurnBonus: 0
-  effects:
-  - type: 23
-    magnitude: 0
-    threshold: 0
-  grantsSkillId: 
-  iconPath: 
+  data:
+    Id: sheep_lamb_ward_3
+    DisplayName: Second Nature
+    Description: Warding stops costing the turn. She can cover herself AND do something
+      with the day.
+    CharacterId: sheep
+    Column: 1
+    Row: 7
+    Prerequisites:
+    - sheep_lamb_ward_2
+    StatBonus:
+      maxHealth: 0
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 0
+    AbilityScoreBonus:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    MaxManaBonus: 0
+    SkillManaCostReduction: 0
+    SignatureCapacityBonus: 0
+    SignaturePerTurnBonus: 0
+    GrantsStartingItemId: 
+    SortOrder: 24
+    IconPath: 
+    MinSpent: 0
+    Effects:
+    - Type: 23
+      Magnitude: 0
+      Threshold: 0
+    GrantsSkillId: 

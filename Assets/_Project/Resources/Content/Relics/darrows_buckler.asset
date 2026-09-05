@@ -12,23 +12,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6da02db8c4530f747adcb0b4f87d4af4, type: 3}
   m_Name: darrows_buckler
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
-  id: darrows_buckler
-  displayName: Darrow's Buckler
-  description: +25 physical resistance and +25 magical resistance.
-  effect: 0
-  rarity: 0
-  unlockedBy: 
-  requiresConvergenceAbility: 0
-  modifiers:
-  - type: 6
-    amount: 25
-    against: 0
-    hasAgainst: 1
-    againstMagical: 0
-  - type: 6
-    amount: 25
-    against: 0
-    hasAgainst: 0
-    againstMagical: 1
-  sortOrder: 14
-  iconPath: Assets/_Project/Art/Items/Relics/Processed/darrows_buckler.png
+  data:
+    Id: darrows_buckler
+    DisplayName: Darrow's Buckler
+    Description: +25 physical resistance and +25 magical resistance.
+    Effect: 0
+    SortOrder: 14
+    IconPath: Assets/_Project/Art/Items/Relics/Processed/darrows_buckler.png
+    Rarity: 0
+    UnlockedBy: 
+    Modifiers:
+    - Type: 6
+      Amount: 25
+      AgainstType: 0
+      HasAgainst: 1
+      AgainstMagical: 0
+    - Type: 6
+      Amount: 25
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 1
+    RequiresConvergenceAbility: 0

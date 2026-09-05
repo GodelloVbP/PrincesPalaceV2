@@ -64,7 +64,7 @@ namespace PrincesPalace
 
             foreach (var definition in ContentDatabase.Achievements)
             {
-                if (definition != null && AchievementProgress.IsEarned(definition.ToResolved(), facts))
+                if (definition != null && AchievementProgress.IsEarned(definition.data, facts))
                 {
                     earned.Add(definition.id);
                 }
@@ -78,7 +78,7 @@ namespace PrincesPalace
             if (string.IsNullOrEmpty(achievementId)) return false;
 
             var definition = ContentDatabase.Achievements.FirstOrDefault(a => a != null && a.id == achievementId);
-            return definition != null && AchievementProgress.IsEarned(definition.ToResolved(), FactsFor(save));
+            return definition != null && AchievementProgress.IsEarned(definition.data, FactsFor(save));
         }
     }
 }

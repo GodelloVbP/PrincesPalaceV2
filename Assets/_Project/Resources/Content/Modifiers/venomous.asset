@@ -12,16 +12,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8eb37102d2241c54eae4db6c08bbb7c5, type: 3}
   m_Name: venomous
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
-  id: venomous
-  displayName: Venomous
-  description: 'Every strike leaves a sting behind. Elemental family: Poison, the
-    damage half -- Antivenom is Poison''s separate resistance affix, split off this
-    modifier''s old two-effect bundle.'
-  effects:
-  - type: 1
-    magnitude: 10
-    threshold: 0
-    against: 4
-    hasAgainst: 1
-    againstMagical: 0
-  sortOrder: 8
+  data:
+    Id: venomous
+    DisplayName: Venomous
+    Description: 'Every strike leaves a sting behind. Elemental family: Poison, the
+      damage half -- Antivenom is Poison''s separate resistance affix, split off
+      this modifier''s old two-effect bundle.'
+    SortOrder: 8
+    Effects:
+    - Type: 1
+      Magnitude: 10
+      Threshold: 0
+      AgainstType: 4
+      HasAgainst: 1
+      AgainstMagical: 0

@@ -95,7 +95,7 @@ namespace PrincesPalace.Content
             EnsureLoaded();
 
             var definition = character != null ? GetCharacter(character.definitionId) : null;
-            var floor = definition == null ? AbilityScoreBlock.Zero : definition.baseAbilityScores;
+            var floor = definition == null ? AbilityScoreBlock.Zero : definition.data.AbilityScores;
 
             if (character != null)
             {
@@ -104,7 +104,7 @@ namespace PrincesPalace.Content
                     var talent = GetTalent(talentId);
                     if (talent != null)
                     {
-                        floor += talent.abilityScoreBonus;
+                        floor += talent.data.AbilityScoreBonus;
                     }
                 }
 
@@ -159,14 +159,14 @@ namespace PrincesPalace.Content
             EnsureLoaded();
 
             var definition = GetCharacter(character.definitionId);
-            var total = definition == null ? StatBlock.Zero : definition.baseStats;
+            var total = definition == null ? StatBlock.Zero : definition.data.BaseStats;
 
             foreach (string talentId in character.unlockedTalentIds)
             {
                 var talent = GetTalent(talentId);
                 if (talent != null)
                 {
-                    total += talent.statBonus;
+                    total += talent.data.StatBonus;
                 }
             }
 
@@ -238,7 +238,7 @@ namespace PrincesPalace.Content
             EnsureLoaded();
 
             var definition = GetCharacter(character.definitionId);
-            if (definition == null || !definition.HasSignatureResource)
+            if (definition == null || !definition.data.HasSignatureResource)
             {
                 return null;
             }
@@ -246,9 +246,9 @@ namespace PrincesPalace.Content
             // Charisma moves the per-turn rate only. Capacity and the
             // situational gains stay authored, so a high-CHA build fills
             // faster without also getting a deeper tank for free.
-            int perTurn = definition.signatureGainPerTurn
+            int perTurn = definition.data.SignatureGainPerTurn
                           + AbilityDerivation.SignatureGainBonus(EffectiveAbilityScores(character));
-            int capacity = definition.signatureResourceCapacity;
+            int capacity = definition.data.SignatureCapacity;
 
             // Talents deepen the fleece and speed it up. Same tolerant lookup
             // as everywhere else — an unlocked id that no longer resolves is
@@ -266,22 +266,22 @@ namespace PrincesPalace.Content
                 var talent = GetTalent(talentId);
                 if (talent != null)
                 {
-                    capacity += talent.signatureCapacityBonus;
-                    perTurn += talent.signaturePerTurnBonus;
+                    capacity += talent.data.SignatureCapacityBonus;
+                    perTurn += talent.data.SignaturePerTurnBonus;
                 }
             }
 
             return new SignatureResource(
-                definition.signatureResourceId,
-                string.IsNullOrWhiteSpace(definition.signatureResourceDisplayName)
-                    ? definition.signatureResourceId
-                    : definition.signatureResourceDisplayName,
+                definition.data.SignatureId,
+                string.IsNullOrWhiteSpace(definition.data.SignatureDisplayName)
+                    ? definition.data.SignatureId
+                    : definition.data.SignatureDisplayName,
                 capacity,
                 Mathf.Max(0, perTurn),
-                Mathf.Max(0, definition.signatureGainOnAttack),
-                Mathf.Max(0, definition.signatureGainOnDamageTaken),
+                Mathf.Max(0, definition.data.SignatureGainOnAttack),
+                Mathf.Max(0, definition.data.SignatureGainOnDamageTaken),
                 SignatureAbsorbPerPoint,
-                definition.signatureAbsorbsDamage);
+                definition.data.SignatureAbsorbsDamage);
         }
 
         // Every triggered/conditional rule this character's unlocked talents
@@ -305,13 +305,13 @@ namespace PrincesPalace.Content
             foreach (string talentId in character.unlockedTalentIds)
             {
                 var talent = GetTalent(talentId);
-                if (talent == null || talent.effects == null || talent.effects.Length == 0)
+                if (talent == null || talent.data.Effects == null || talent.data.Effects.Length == 0)
                 {
                     continue;
                 }
 
                 found = found ?? new List<TalentEffect>();
-                found.AddRange(talent.ResolvedEffects());
+                found.AddRange(talent.data.Effects);
             }
 
             return found == null ? TalentEffectSet.Empty : new TalentEffectSet(found);
@@ -393,7 +393,7 @@ namespace PrincesPalace.Content
                     continue;
                 }
 
-                foreach (var raw in modifier.ResolvedEffects())
+                foreach (var raw in modifier.data.Effects)
                 {
                     // Threshold/Against/AgainstMagical pass through UNSCALED
                     // -- Threshold is a health-gate percentage, not a power
@@ -442,12 +442,12 @@ namespace PrincesPalace.Content
             foreach (string talentId in character.unlockedTalentIds)
             {
                 var talent = GetTalent(talentId);
-                if (talent == null || string.IsNullOrEmpty(talent.grantsSkillId))
+                if (talent == null || string.IsNullOrEmpty(talent.data.GrantsSkillId))
                 {
                     continue;
                 }
 
-                var skill = GetSkill(talent.grantsSkillId);
+                var skill = GetSkill(talent.data.GrantsSkillId);
 
                 // Owner-checked. A talent may only grant its OWN character's
                 // skill: AvailableSkillsFor filters the level ladder by
@@ -549,7 +549,7 @@ namespace PrincesPalace.Content
                 var talent = GetTalent(talentId);
                 if (talent != null)
                 {
-                    total += talent.maxManaBonus;
+                    total += talent.data.MaxManaBonus;
                 }
             }
 
@@ -567,14 +567,14 @@ namespace PrincesPalace.Content
             EnsureLoaded();
 
             var tier = GetSpellTierForLevel(character.level, EffectiveAbilityScores(character));
-            int total = tier != null ? tier.manaCost : CombatMath.SkillManaCost;
+            int total = tier != null ? tier.data.ManaCost : CombatMath.SkillManaCost;
 
             foreach (string talentId in character.unlockedTalentIds)
             {
                 var talent = GetTalent(talentId);
                 if (talent != null)
                 {
-                    total -= talent.skillManaCostReduction;
+                    total -= talent.data.SkillManaCostReduction;
                 }
             }
 
@@ -600,7 +600,7 @@ namespace PrincesPalace.Content
             EnsureLoaded();
 
             var tier = GetSpellTierForLevel(character.level, EffectiveAbilityScores(character));
-            return tier != null ? tier.powerMultiplier : 1.5f;
+            return tier != null ? tier.data.PowerMultiplier : 1.5f;
         }
 
         // What a character's PLAIN SWING rides: the main-hand weapon's own
@@ -656,7 +656,7 @@ namespace PrincesPalace.Content
 
             var loadout = ActiveLoadout(character);
             var tier = GetSpellTierForLevel(character.level, loadout.Scores);
-            var spellTierProfile = tier != null ? tier.scaling : ScalingProfile.None;
+            var spellTierProfile = tier != null ? tier.data.Scaling : ScalingProfile.None;
 
             var mainHand = ScalingProfile.None;
             var offHand = ScalingProfile.None;
@@ -684,7 +684,7 @@ namespace PrincesPalace.Content
             EnsureLoaded();
 
             var tier = GetSpellTierForLevel(character.level, EffectiveAbilityScores(character));
-            return tier != null ? tier.displayName : "Skill";
+            return tier != null ? tier.data.DisplayName : "Skill";
         }
     }
 }

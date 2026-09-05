@@ -12,44 +12,46 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 78462e746feff2e4c945a0159eb6e76a, type: 3}
   m_Name: sheep_ram_root
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.TalentDefinition
-  id: sheep_ram_root
-  displayName: The Black Ram
-  description: Your allegiance. He gains wool from being hit, and gains it faster
-    the worse the day is going. Free -- but you may swear to only one path's engine
-    at a time, and respeccing is the only way to change your mind.
-  characterId: sheep
-  column: 0
-  row: 0
-  prerequisites: []
-  minSpent: 0
-  statBonus:
-    maxHealth: 0
-    speed: 0
-    attack: 0
-    manaRegen: 0
-    physicalDefense: 0
-    magicalDefense: 0
-  abilityScoreBonus:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  grantsStartingItemId: 
-  maxManaBonus: 0
-  skillManaCostReduction: 0
-  signatureCapacityBonus: 0
-  signaturePerTurnBonus: 0
-  effects:
-  - type: 1
-    magnitude: 1
-    threshold: 0
-  - type: 2
-    magnitude: 2
-    threshold: 67
-  - type: 2
-    magnitude: 3
-    threshold: 33
-  grantsSkillId: 
-  iconPath: 
+  data:
+    Id: sheep_ram_root
+    DisplayName: The Black Ram
+    Description: Your allegiance. He gains wool from being hit, and gains it faster
+      the worse the day is going. Free -- but you may swear to only one path's engine
+      at a time, and respeccing is the only way to change your mind.
+    CharacterId: sheep
+    Column: 0
+    Row: 0
+    Prerequisites: []
+    StatBonus:
+      maxHealth: 0
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 0
+    AbilityScoreBonus:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    MaxManaBonus: 0
+    SkillManaCostReduction: 0
+    SignatureCapacityBonus: 0
+    SignaturePerTurnBonus: 0
+    GrantsStartingItemId: 
+    SortOrder: 0
+    IconPath: 
+    MinSpent: 0
+    Effects:
+    - Type: 1
+      Magnitude: 1
+      Threshold: 0
+    - Type: 2
+      Magnitude: 2
+      Threshold: 67
+    - Type: 2
+      Magnitude: 3
+      Threshold: 33
+    GrantsSkillId: 

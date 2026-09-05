@@ -12,23 +12,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6da02db8c4530f747adcb0b4f87d4af4, type: 3}
   m_Name: thick_hide
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
-  id: thick_hide
-  displayName: Thick Hide
-  description: Forty more health, carried slowly.
-  effect: 0
-  rarity: 0
-  unlockedBy: 
-  requiresConvergenceAbility: 0
-  modifiers:
-  - type: 9
-    amount: 40
-    against: 0
-    hasAgainst: 0
-    againstMagical: 0
-  - type: 5
-    amount: -5
-    against: 0
-    hasAgainst: 0
-    againstMagical: 0
-  sortOrder: 12
-  iconPath: Assets/_Project/Art/Items/Relics/Processed/thick_hide.png
+  data:
+    Id: thick_hide
+    DisplayName: Thick Hide
+    Description: Forty more health, carried slowly.
+    Effect: 0
+    SortOrder: 12
+    IconPath: Assets/_Project/Art/Items/Relics/Processed/thick_hide.png
+    Rarity: 0
+    UnlockedBy: 
+    Modifiers:
+    - Type: 9
+      Amount: 40
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0
+    - Type: 5
+      Amount: -5
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0
+    RequiresConvergenceAbility: 0

@@ -184,13 +184,13 @@ namespace PrincesPalace.PlayModeTests
             foreach (var talent in all)
             {
                 int cost = ContentDatabase.OrbCost(talent);
-                string kind = TalentSkeleton.Kind[talent.row];
-                bool landmark = kind == "merge" || kind == "cap" || TalentSkeleton.Depth[talent.row] == 0;
+                string kind = TalentSkeleton.Kind[talent.data.Row];
+                bool landmark = kind == "merge" || kind == "cap" || TalentSkeleton.Depth[talent.data.Row] == 0;
 
                 if (landmark)
                 {
                     Assert.AreEqual(0, cost, $"'{talent.id}' is a {kind} at depth " +
-                        $"{TalentSkeleton.Depth[talent.row]} and should be free");
+                        $"{TalentSkeleton.Depth[talent.data.Row]} and should be free");
                 }
                 else
                 {

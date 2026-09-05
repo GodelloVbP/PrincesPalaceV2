@@ -12,15 +12,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6da02db8c4530f747adcb0b4f87d4af4, type: 3}
   m_Name: lucky_deck
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
-  id: lucky_deck
-  displayName: Lucky Deck
-  description: Every landed attack rolls one of three outcomes at random - heal 5%
-    health and 10% mana, splash 25% of the damage onto every other enemy, or slow
-    the target by 30% speed for a turn.
-  effect: 10
-  rarity: 3
-  unlockedBy: 
-  requiresConvergenceAbility: 0
-  modifiers: []
-  sortOrder: 16
-  iconPath: Assets/_Project/Art/Items/Relics/Processed/lucky_deck.png
+  data:
+    Id: lucky_deck
+    DisplayName: Lucky Deck
+    Description: Every landed attack rolls one of three outcomes at random - heal
+      5% health and 10% mana, splash 25% of the damage onto every other enemy, or
+      slow the target by 30% speed for a turn.
+    Effect: 10
+    SortOrder: 16
+    IconPath: Assets/_Project/Art/Items/Relics/Processed/lucky_deck.png
+    Rarity: 3
+    UnlockedBy: 
+    Modifiers: []
+    RequiresConvergenceAbility: 0

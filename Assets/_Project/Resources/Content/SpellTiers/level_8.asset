@@ -12,22 +12,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 06eaac145d03bc24b92e1461ad97f711, type: 3}
   m_Name: level_8
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SpellTierDefinition
-  level: 8
-  displayName: Cataclysm
-  manaCost: 25
-  powerMultiplier: 3.6
-  scaling:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 3
-    intelligence: 5
-    charisma: 0
-  requirements:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  sortOrder: 7
+  data:
+    Level: 8
+    DisplayName: Cataclysm
+    ManaCost: 25
+    PowerMultiplier: 3.6
+    SortOrder: 7
+    Scaling:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 3
+      intelligence: 5
+      charisma: 0
+    Requirements:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0

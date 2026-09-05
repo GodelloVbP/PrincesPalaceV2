@@ -12,57 +12,59 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 429d83c7acd1e6546892363aadea2846, type: 3}
   m_Name: treant
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.EnemyDefinition
-  id: treant
-  displayName: Elder Treant
-  baseStats:
-    maxHealth: 95
-    speed: 3
-    attack: 15
-    manaRegen: 0
-    physicalDefense: 30
-    magicalDefense: 5
-  attackType: 0
-  expReward: 40
-  currencyReward: 24
-  isBoss: 0
-  minFloor: 2
-  weaknesses: 01000000
-  resistances: 0200000004000000
-  breakShieldPoints: 8
-  spritePath: Enemies/treant
-  facing: 1
-  sortOrder: 13
-  skillName: 
-  skillPower: 1.5
-  skillChance: 0.35
-  vfx:
-    path: 
-    seconds: 0.6
-    impactFrame: 3
-    anchor: 
-    size: 380
-    departFrame: 0
-    impactX: -1
-    impactY: -1
-    sfxPath: 
-    groundPath: 
-    groundSeconds: 0
-    groundImpactFrame: 0
-    groundAspect: 0
-    groundImpactY: -1
-    castSfxPath: 
-  abilities:
-  - skillId: trunk_slam
-    weight: 3
-  - skillId: spore_cloud
-    weight: 2
-  attackWeight: 2
-  appliesStatus: 0
-  hasStatus: 0
-  statusMagnitude: 0
-  statusDuration: 0
-  avoidsFrontSlot: 1
-  attackHoldsPosition: 0
-  attackApproach: lunge
-  stageScale: 1.45
-  slotSpan: 2
+  data:
+    Id: treant
+    DisplayName: Elder Treant
+    BaseStats:
+      maxHealth: 95
+      speed: 3
+      attack: 15
+      manaRegen: 0
+      physicalDefense: 30
+      magicalDefense: 5
+    ExpReward: 40
+    CurrencyReward: 24
+    IsBoss: 0
+    Weaknesses: 01000000
+    Resistances: 0200000004000000
+    SortOrder: 13
+    BreakShieldPoints: 8
+    StageScale: 1.45
+    SlotSpan: 2
+    SpritePath: Enemies/treant
+    Abilities:
+    - SkillId: trunk_slam
+      Weight: 3
+    - SkillId: spore_cloud
+      Weight: 2
+    AttackWeight: 2
+    SkillName: 
+    SkillPower: 1.5
+    SkillChance: 0.35
+    Facing: 1
+    Active: 1
+    Vfx:
+      path: 
+      seconds: 0.6
+      impactFrame: 3
+      anchor: 
+      size: 380
+      departFrame: 0
+      impactX: -1
+      impactY: -1
+      sfxPath: 
+      groundPath: 
+      groundSeconds: 0
+      groundImpactFrame: 0
+      groundAspect: 0
+      groundImpactY: -1
+      castSfxPath: 
+    Status: 0
+    StatusAuthored: 0
+    StatusMagnitude: 0
+    StatusDuration: 0
+    AvoidsFrontSlot: 1
+    AttackHoldsPosition: 0
+    AttackApproach: 1
+    MinFloor: 2
+    AttackType: 0

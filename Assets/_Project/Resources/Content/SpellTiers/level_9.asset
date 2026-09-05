@@ -12,22 +12,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 06eaac145d03bc24b92e1461ad97f711, type: 3}
   m_Name: level_9
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SpellTierDefinition
-  level: 9
-  displayName: Ascendance
-  manaCost: 28
-  powerMultiplier: 4.2
-  scaling:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 3
-    intelligence: 6
-    charisma: 0
-  requirements:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  sortOrder: 8
+  data:
+    Level: 9
+    DisplayName: Ascendance
+    ManaCost: 28
+    PowerMultiplier: 4.2
+    SortOrder: 8
+    Scaling:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 3
+      intelligence: 6
+      charisma: 0
+    Requirements:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0

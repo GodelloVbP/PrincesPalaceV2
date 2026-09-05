@@ -329,9 +329,18 @@ namespace PrincesPalace.Domain.Combat
         WardsNeverExpire,
     }
 
-    // One rule a talent grants. Immutable and engine-free; the combat
-    // pipeline reads these through TalentEffectSet, never one at a time.
-    public readonly struct TalentEffect
+    // One rule a talent grants. Engine-free; the combat pipeline reads these
+    // through TalentEffectSet, never one at a time.
+    //
+    // [Serializable] with public fields because ResolvedTalent is what the
+    // TalentDefinition asset now stores. TalentDefinition used to carry a
+    // parallel TalentEffectEntry carrier for exactly this reason -- "Unity
+    // will not serialise a readonly struct's fields" -- with a Select in each
+    // direction. Telling System.Serializable about the struct is cheaper than
+    // maintaining its mirror, and System.Serializable is BCL, so Domain stays
+    // engine-free. Immutable by convention, like every other DTO here.
+    [Serializable]
+    public struct TalentEffect
     {
         // Authored as the enum MEMBER NAME in talents.json
         // ("IgnoreDefensePercent"), not as an integer — a number in content
@@ -339,12 +348,12 @@ namespace PrincesPalace.Domain.Combat
         // the moment anyone inserts an enum member. JsonUtility cannot
         // deserialise an enum from a string, so the raw shape carries the
         // name and TalentEntryResolver parses it.
-        public readonly TalentEffectType Type;
+        public TalentEffectType Type;
 
         // How much. Percent for every *Percent member, otherwise a flat
         // count (wool, defense points, turns). Ignored outright by the four
         // flag-shaped members, which say so in their own comments.
-        public readonly int Magnitude;
+        public int Magnitude;
 
         // The rule's SECOND number, and 0 for the majority that need only
         // one. For all seven health-gated members it is a percent of max
@@ -353,7 +362,7 @@ namespace PrincesPalace.Domain.Combat
         // reads it as a cap in turns — a second number that is not a health
         // gate. Which of the two a member means is stated in its own comment
         // above and enforced by TalentEntryResolver.
-        public readonly int Threshold;
+        public int Threshold;
 
         public TalentEffect(TalentEffectType type, int magnitude, int threshold = 0)
         {

@@ -12,55 +12,57 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 429d83c7acd1e6546892363aadea2846, type: 3}
   m_Name: golem
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.EnemyDefinition
-  id: golem
-  displayName: Stone Golem
-  baseStats:
-    maxHealth: 80
-    speed: 3
-    attack: 15
-    manaRegen: 0
-    physicalDefense: 45
-    magicalDefense: 10
-  attackType: 0
-  expReward: 35
-  currencyReward: 20
-  isBoss: 0
-  minFloor: 5
-  weaknesses: 03000000
-  resistances: 00000000
-  breakShieldPoints: 2
-  spritePath: Enemies/golem
-  facing: 1
-  sortOrder: 3
-  skillName: 
-  skillPower: 1.5
-  skillChance: 0.35
-  vfx:
-    path: 
-    seconds: 0.6
-    impactFrame: 3
-    anchor: 
-    size: 380
-    departFrame: 0
-    impactX: -1
-    impactY: -1
-    sfxPath: 
-    groundPath: 
-    groundSeconds: 0
-    groundImpactFrame: 0
-    groundAspect: 0
-    groundImpactY: -1
-    castSfxPath: 
-  abilities:
-  - skillId: boulder_slam
-    weight: 1
-  attackWeight: 0
-  appliesStatus: 0
-  hasStatus: 0
-  statusMagnitude: 0
-  statusDuration: 0
-  avoidsFrontSlot: 0
-  attackHoldsPosition: 1
-  attackApproach: lunge
-  stageScale: 1
-  slotSpan: 1
+  data:
+    Id: golem
+    DisplayName: Stone Golem
+    BaseStats:
+      maxHealth: 80
+      speed: 3
+      attack: 15
+      manaRegen: 0
+      physicalDefense: 45
+      magicalDefense: 10
+    ExpReward: 35
+    CurrencyReward: 20
+    IsBoss: 0
+    Weaknesses: 03000000
+    Resistances: 00000000
+    SortOrder: 3
+    BreakShieldPoints: 2
+    StageScale: 1
+    SlotSpan: 1
+    SpritePath: Enemies/golem
+    Abilities:
+    - SkillId: boulder_slam
+      Weight: 1
+    AttackWeight: 0
+    SkillName: 
+    SkillPower: 1.5
+    SkillChance: 0.35
+    Facing: 1
+    Active: 1
+    Vfx:
+      path: 
+      seconds: 0.6
+      impactFrame: 3
+      anchor: 
+      size: 380
+      departFrame: 0
+      impactX: -1
+      impactY: -1
+      sfxPath: 
+      groundPath: 
+      groundSeconds: 0
+      groundImpactFrame: 0
+      groundAspect: 0
+      groundImpactY: -1
+      castSfxPath: 
+    Status: 0
+    StatusAuthored: 0
+    StatusMagnitude: 0
+    StatusDuration: 0
+    AvoidsFrontSlot: 0
+    AttackHoldsPosition: 1
+    AttackApproach: 1
+    MinFloor: 5
+    AttackType: 0

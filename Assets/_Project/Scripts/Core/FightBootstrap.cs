@@ -187,7 +187,7 @@ namespace PrincesPalace
             {
                 enemies = ContentDatabase.Enemies
                     .Where(HasArt)
-                    .OrderBy(e => e.sortOrder)
+                    .OrderBy(e => e.SortOrder)
                     .Take(enemyCount)
                     .Select(e => e.id)
                     .ToList();
@@ -221,10 +221,10 @@ namespace PrincesPalace
         }
 
         private static bool HasArt(CharacterDefinition definition) =>
-            !string.IsNullOrWhiteSpace(definition.battleSpritePath);
+            !string.IsNullOrWhiteSpace(definition.data.BattleSpritePath);
 
         private static bool HasArt(EnemyDefinition definition) =>
-            !string.IsNullOrWhiteSpace(definition.spritePath);
+            !string.IsNullOrWhiteSpace(definition.data.SpritePath);
     
         // Which backdrop and which reward multiplier. Reads the ROOM, so an
         // elite room is elite everywhere at once rather than in each place that

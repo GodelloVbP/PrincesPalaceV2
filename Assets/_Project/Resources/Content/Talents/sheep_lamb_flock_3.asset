@@ -12,40 +12,42 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 78462e746feff2e4c945a0159eb6e76a, type: 3}
   m_Name: sheep_lamb_flock_3
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.TalentDefinition
-  id: sheep_lamb_flock_3
-  displayName: Nobody Left Out
-  description: Everyone, at full strength, for the same two wool.
-  characterId: sheep
-  column: 1
-  row: 17
-  prerequisites:
-  - {fileID: 11400000, guid: 7181e8c436fe30e4bbd73887d0e168df, type: 2}
-  minSpent: 0
-  statBonus:
-    maxHealth: 0
-    speed: 0
-    attack: 0
-    manaRegen: 0
-    physicalDefense: 0
-    magicalDefense: 0
-  abilityScoreBonus:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  grantsStartingItemId: 
-  maxManaBonus: 0
-  skillManaCostReduction: 0
-  signatureCapacityBonus: 0
-  signaturePerTurnBonus: 0
-  effects:
-  - type: 29
-    magnitude: 100
-    threshold: 0
-  - type: 30
-    magnitude: 0
-    threshold: 0
-  grantsSkillId: 
-  iconPath: 
+  data:
+    Id: sheep_lamb_flock_3
+    DisplayName: Nobody Left Out
+    Description: Everyone, at full strength, for the same two wool.
+    CharacterId: sheep
+    Column: 1
+    Row: 17
+    Prerequisites:
+    - sheep_lamb_flock_2
+    StatBonus:
+      maxHealth: 0
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 0
+    AbilityScoreBonus:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    MaxManaBonus: 0
+    SkillManaCostReduction: 0
+    SignatureCapacityBonus: 0
+    SignaturePerTurnBonus: 0
+    GrantsStartingItemId: 
+    SortOrder: 34
+    IconPath: 
+    MinSpent: 0
+    Effects:
+    - Type: 29
+      Magnitude: 100
+      Threshold: 0
+    - Type: 30
+      Magnitude: 0
+      Threshold: 0
+    GrantsSkillId: 

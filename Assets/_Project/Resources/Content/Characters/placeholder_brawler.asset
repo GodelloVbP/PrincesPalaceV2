@@ -12,33 +12,34 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 587fe3da128cb904da22de232329c98f, type: 3}
   m_Name: placeholder_brawler
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.CharacterDefinition
-  id: placeholder_brawler
-  displayName: Placeholder Brawler
-  role: 3
-  baseStats:
-    maxHealth: 260
-    speed: 8
-    attack: 10
-    manaRegen: 0
-    physicalDefense: 40
-    magicalDefense: 12
-  baseAbilityScores:
-    strength: 18
-    dexterity: 6
-    constitution: 18
-    wisdom: 6
-    intelligence: 4
-    charisma: 8
-  portraitPath: Assets/_Project/Art/Portraits/Sheep/Processed/Shawn_neutral.png
-  battleSpritePath: Characters/sheep
-  battleSpriteFacing: 1
-  attackType: 0
-  signatureResourceId: 
-  signatureResourceDisplayName: 
-  signatureResourceCapacity: 0
-  signatureGainPerTurn: 0
-  signatureGainOnAttack: 0
-  signatureGainOnDamageTaken: 0
-  signatureAbsorbsDamage: 0
-  princesFavor: 0
-  sortOrder: 1
+  data:
+    Id: placeholder_brawler
+    DisplayName: Placeholder Brawler
+    Role: 3
+    BaseStats:
+      maxHealth: 260
+      speed: 8
+      attack: 10
+      manaRegen: 0
+      physicalDefense: 40
+      magicalDefense: 12
+    AbilityScores:
+      strength: 18
+      dexterity: 6
+      constitution: 18
+      wisdom: 6
+      intelligence: 4
+      charisma: 8
+    PortraitPath: Assets/_Project/Art/Portraits/Sheep/Processed/Shawn_neutral.png
+    BattleSpritePath: Characters/sheep
+    BattleSpriteFacing: 1
+    AttackType: 0
+    SignatureId: 
+    SignatureDisplayName: 
+    SignatureCapacity: 0
+    SignatureGainPerTurn: 0
+    SignatureGainOnAttack: 0
+    SignatureGainOnDamageTaken: 0
+    SignatureAbsorbsDamage: 0
+    PrincesFavor: 0
+    SortOrder: 1

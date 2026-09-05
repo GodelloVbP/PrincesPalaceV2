@@ -35,45 +35,15 @@ namespace PrincesPalace
 
         // ---- content -> Domain ------------------------------------------------
 
-        // The one conversion that has to exist. Every field is copied straight
-        // across: ResolvedEnemy was designed as the shape EnemyDefinition already
-        // had, so there are no mirror enums and no translation to get wrong.
-        public static ResolvedEnemy Resolve(EnemyDefinition definition)
-        {
-            return new ResolvedEnemy(
-                definition.id, definition.displayName, definition.baseStats,
-                definition.expReward, definition.currencyReward, definition.isBoss,
-                definition.Affinity, definition.sortOrder,
-                spritePath: definition.spritePath,
-                facing: definition.facing,
-                active: true,
-                skillName: definition.skillName,
-                skillPower: definition.skillPower,
-                skillChance: definition.skillChance,
-                breakShieldPoints: definition.breakShieldPoints,
-                presentation: definition.vfx,
-                abilities: (definition.abilities ?? Array.Empty<RawEnemyAbility>())
-                    .Where(a => a != null && !string.IsNullOrWhiteSpace(a.skillId))
-                    .Select(a => new EnemyAbilityRef(a.skillId, a.weight))
-                    .ToList(),
-                attackWeight: definition.attackWeight,
-
-                // hasStatus is the AUTHORING gate, and it is deliberately not the
-                // same question as "is a status type set". appliesStatus is a
-                // plain enum with a valid zero value, so every enemy has one
-                // whether or not anyone meant it to. Reading the flag is what
-                // stops every monster in the game inflicting the first entry.
-                appliesStatus: definition.hasStatus ? definition.appliesStatus : (StatusEffectType?)null,
-                statusMagnitude: definition.statusMagnitude,
-                statusDuration: definition.statusDuration,
-                avoidsFrontSlot: definition.avoidsFrontSlot,
-                attackHoldsPosition: definition.attackHoldsPosition,
-                stageScale: definition.stageScale,
-                slotSpan: definition.slotSpan,
-                attackApproach: PrincesPalace.Domain.Combat.Session.StageApproaches.Parse(
-                    definition.attackApproach, PrincesPalace.Domain.Combat.Session.StageApproach.Lunge),
-                attackType: definition.attackType);
-        }
+        // The conversion that used to have to exist, and no longer converts
+        // anything.
+        //
+        // This WAS a hand-written copy of 34 arguments out of EnemyDefinition
+        // and back into a ResolvedEnemy -- one of the three field lists this
+        // type's facts were written on, and the same shape that dropped
+        // `transform` and then `bookOnly`/`bookTier` on the skill side. The
+        // asset now STORES the ResolvedEnemy, so there is nothing here to drop.
+        public static ResolvedEnemy Resolve(EnemyDefinition definition) => definition.data;
 
         // PHASE 5B (D6): closes AUDIT #54. An Elite pack's stats used to be
         // the authored baseStats verbatim -- StatBlock.ScaledForElite existed,
@@ -99,7 +69,7 @@ namespace PrincesPalace
         // axes grow at different speeds. See DifficultyCurve.
         private static CombatantState ToCombatant(EnemyDefinition definition, int depthStep, bool isElite)
         {
-            var stats = definition.baseStats;
+            var stats = definition.data.BaseStats;
             if (isElite)
             {
                 stats = stats.ScaledForElite(EliteHealthMultiplier, EliteDefenseMultiplier, EliteAttackMultiplier);
@@ -116,7 +86,7 @@ namespace PrincesPalace
             // Elite's speed DOES ride the elite multiplier above, same as its
             // health and mana regen -- ScaledForElite's own main `multiplier`
             // parameter, unchanged behaviour from before this phase.)
-            var state = new CombatantState(definition.displayName, false,
+            var state = new CombatantState(definition.data.DisplayName, false,
                 DifficultyCurve.ScaleHealth(stats.maxHealth, depthStep),
                 GameplayConstants.DefaultMaxMana,
                 DifficultyCurve.ScaleAttack(stats.attack, depthStep),
@@ -132,10 +102,10 @@ namespace PrincesPalace
             state.PhysicalDefense = stats.physicalDefense;
             state.MagicalDefense = stats.magicalDefense;
 
-            if (definition.breakShieldPoints > 0)
+            if (definition.data.BreakShieldPoints > 0)
             {
                 state.BreakShield = new BreakShield(
-                    DifficultyCurve.ScaleShield(definition.breakShieldPoints, depthStep));
+                    DifficultyCurve.ScaleShield(definition.data.BreakShieldPoints, depthStep));
             }
 
             return state;
@@ -155,9 +125,11 @@ namespace PrincesPalace
                 var definition = ContentDatabase.Relics.FirstOrDefault(r => r != null && r.id == id);
                 if (definition == null) continue;
 
-                resolved.Add(new ResolvedRelic(definition.id, definition.displayName, definition.description,
-                    definition.effect, definition.sortOrder, definition.iconPath,
-                    definition.rarity, definition.unlockedBy, definition.ToModifiers()));
+                // Was a ten-argument copy out of RelicDefinition and back into
+                // a ResolvedRelic, with a second hand-written conversion
+                // (ToModifiers) for the modifier list. The asset stores the
+                // resolved value now.
+                resolved.Add(definition.data);
             }
 
             return resolved;
@@ -194,7 +166,7 @@ namespace PrincesPalace
             // is the one place the two are chosen between.
             int attack = ContentDatabase.EquippedWeaponPower(character) ?? stats.attack;
 
-            var state = new CombatantState(definition.displayName, true,
+            var state = new CombatantState(definition.data.DisplayName, true,
                 RelicModifiers.Apply(stats.maxHealth, RelicStat.MaxHealth, modifiers),
                 RelicModifiers.Apply(ContentDatabase.EffectiveMaxMana(character), RelicStat.MaxMana, modifiers),
                 RelicModifiers.Apply(attack, RelicStat.Attack, modifiers),
@@ -309,8 +281,8 @@ namespace PrincesPalace
         private static CombatantState ToCombatant(CharacterDefinition definition,
                                                   IReadOnlyList<RelicModifier> modifiers = null)
         {
-            var stats = definition.baseStats;
-            var scores = definition.baseAbilityScores;
+            var stats = definition.data.BaseStats;
+            var scores = definition.data.AbilityScores;
 
             // Health and mana are BASE PLUS DERIVED, because that is what the
             // ability scores are for -- reading the StatBlock alone would give a
@@ -327,7 +299,7 @@ namespace PrincesPalace
             // AbilityDerivation's header); `stats.attack` alone is what this
             // path swings for, same as the save-backed overload's `total`
             // already reflects via DerivedStats.
-            var state = new CombatantState(definition.displayName, true,
+            var state = new CombatantState(definition.data.DisplayName, true,
                 RelicModifiers.Apply(maxHealth, RelicStat.MaxHealth, modifiers),
                 RelicModifiers.Apply(maxMana, RelicStat.MaxMana, modifiers),
                 RelicModifiers.Apply(stats.attack, RelicStat.Attack, modifiers),
@@ -366,13 +338,13 @@ namespace PrincesPalace
             // which drafts every relic alone and checks every stat moved.
             state.TypedResistance = RelicModifiers.ApplyResistance(state.TypedResistance, modifiers);
 
-            if (definition.HasSignatureResource)
+            if (definition.data.HasSignatureResource)
             {
                 state.Signature = new SignatureResource(
-                    definition.signatureResourceId, definition.signatureResourceDisplayName,
-                    definition.signatureResourceCapacity, definition.signatureGainPerTurn,
-                    definition.signatureGainOnAttack, definition.signatureGainOnDamageTaken,
-                    absorbsDamage: definition.signatureAbsorbsDamage);
+                    definition.data.SignatureId, definition.data.SignatureDisplayName,
+                    definition.data.SignatureCapacity, definition.data.SignatureGainPerTurn,
+                    definition.data.SignatureGainOnAttack, definition.data.SignatureGainOnDamageTaken,
+                    absorbsDamage: definition.data.SignatureAbsorbsDamage);
             }
 
             // NO EQUIVALENT ModifierEffects LINE HERE, EXPLICITLY. This
@@ -464,7 +436,7 @@ namespace PrincesPalace
                     kits.Add(KitFor(definition, relics));
                 }
 
-                art.Add(definition.battleSpritePath);
+                art.Add(definition.data.BattleSpritePath);
             }
 
             var enemies = new List<CombatantState>();
@@ -528,7 +500,7 @@ namespace PrincesPalace
         private static EnemyKit EnemyKitFor(EnemyDefinition definition, bool isElite)
         {
             var source = Resolve(definition);
-            if (source.Abilities == null || source.Abilities.Count == 0)
+            if (source.Abilities == null || source.Abilities.Length == 0)
             {
                 // No list authored: the kit synthesises the legacy pool itself.
                 return new EnemyKit(source, isElite);
@@ -597,8 +569,8 @@ namespace PrincesPalace
                 .Select(Resolve)
                 .ToList();
 
-            return new PlayerKit(definition.id, definition.role, skills, relics,
-                definition.attackType, level, DefinitionOnlySkillPowerMultiplier(level));
+            return new PlayerKit(definition.id, definition.data.Role, skills, relics,
+                definition.data.AttackType, level, DefinitionOnlySkillPowerMultiplier(level));
         }
 
         // The IN-RUN kit: the character's own strip PLUS whatever their tree
@@ -632,8 +604,8 @@ namespace PrincesPalace
                 .Select(Resolve)
                 .ToList();
 
-            return new PlayerKit(definition.id, definition.role, skills, relics,
-                definition.attackType, character.level, ContentDatabase.EffectiveSkillPowerMultiplier(character));
+            return new PlayerKit(definition.id, definition.data.Role, skills, relics,
+                definition.data.AttackType, character.level, ContentDatabase.EffectiveSkillPowerMultiplier(character));
         }
 
         // THE SPELL TIER'S OWN powerMultiplier, kept even though the tier's
@@ -657,7 +629,7 @@ namespace PrincesPalace
         // it falls back to the level-only GetSpellTierForLevel instead --
         // still one canonical lookup, not a second one.
         private static float DefinitionOnlySkillPowerMultiplier(int level) =>
-            ContentDatabase.GetSpellTierForLevel(level)?.powerMultiplier ?? 1.5f;
+            ContentDatabase.GetSpellTierForLevel(level)?.data.PowerMultiplier ?? 1.5f;
 
         // The other half of the content conversion, and it is no longer a
         // conversion at all.

@@ -60,9 +60,9 @@ namespace PrincesPalace.PlayModeTests
             var golem = ContentDatabase.GetEnemy("golem");
             Assert.IsNotNull(golem, "the golem is gone from content");
 
-            Assert.IsNotEmpty(golem.abilities, "the golem has no abilities authored");
+            Assert.IsNotEmpty(golem.data.Abilities, "the golem has no abilities authored");
 
-            var named = golem.abilities[0].skillId;
+            var named = golem.data.Abilities[0].SkillId;
             var slam = ContentDatabase.GetSkill(named);
 
             Assert.IsNotNull(slam, $"the golem names '{named}', which no skill matches");

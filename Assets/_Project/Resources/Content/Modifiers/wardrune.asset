@@ -12,18 +12,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8eb37102d2241c54eae4db6c08bbb7c5, type: 3}
   m_Name: wardrune
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
-  id: wardrune
-  displayName: Wardrune
-  description: Unspent mana becomes a ward at the top of the wearer's own turn. Deliberately
-    the WEAK affix of the old Runic family (see FightTuning.RunicWardConversionRate's
-    own comment) -- a safety net for mana a caster was going to leave on the table
-    anyway, not a build-around tank strategy. Runic's old bundle split four ways
-    -- see Runic, Manaflow and Quickcast's own descriptions for the rest of the family.
-  effects:
-  - type: 13
-    magnitude: 0
-    threshold: 0
-    against: 0
-    hasAgainst: 0
-    againstMagical: 0
-  sortOrder: 23
+  data:
+    Id: wardrune
+    DisplayName: Wardrune
+    Description: Unspent mana becomes a ward at the top of the wearer's own turn.
+      Deliberately the WEAK affix of the old Runic family (see FightTuning.RunicWardConversionRate's
+      own comment) -- a safety net for mana a caster was going to leave on the table
+      anyway, not a build-around tank strategy. Runic's old bundle split four ways
+      -- see Runic, Manaflow and Quickcast's own descriptions for the rest of the
+      family.
+    SortOrder: 23
+    Effects:
+    - Type: 13
+      Magnitude: 0
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0

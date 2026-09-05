@@ -12,22 +12,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 06eaac145d03bc24b92e1461ad97f711, type: 3}
   m_Name: level_2
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SpellTierDefinition
-  level: 2
-  displayName: Surge
-  manaCost: 12
-  powerMultiplier: 1.7
-  scaling:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 1
-    intelligence: 2
-    charisma: 0
-  requirements:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  sortOrder: 1
+  data:
+    Level: 2
+    DisplayName: Surge
+    ManaCost: 12
+    PowerMultiplier: 1.7
+    SortOrder: 1
+    Scaling:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 1
+      intelligence: 2
+      charisma: 0
+    Requirements:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0

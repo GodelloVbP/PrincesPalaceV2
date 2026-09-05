@@ -12,34 +12,37 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 78462e746feff2e4c945a0159eb6e76a, type: 3}
   m_Name: sheep_ram_provoke_1
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.TalentDefinition
-  id: sheep_ram_provoke_1
-  displayName: Provoke
-  description: 'Unlocks Provoke: one enemy can see nothing but you on its next turn.'
-  characterId: sheep
-  column: 0
-  row: 2
-  prerequisites:
-  - {fileID: 11400000, guid: d16c554a452e38842a66edd31806833b, type: 2}
-  minSpent: 0
-  statBonus:
-    maxHealth: 0
-    speed: 0
-    attack: 0
-    manaRegen: 0
-    physicalDefense: 0
-    magicalDefense: 0
-  abilityScoreBonus:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  grantsStartingItemId: 
-  maxManaBonus: 0
-  skillManaCostReduction: 0
-  signatureCapacityBonus: 0
-  signaturePerTurnBonus: 0
-  effects: []
-  grantsSkillId: provoke
-  iconPath: 
+  data:
+    Id: sheep_ram_provoke_1
+    DisplayName: Provoke
+    Description: 'Unlocks Provoke: one enemy can see nothing but you on its next
+      turn.'
+    CharacterId: sheep
+    Column: 0
+    Row: 2
+    Prerequisites:
+    - sheep_ram_root
+    StatBonus:
+      maxHealth: 0
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 0
+    AbilityScoreBonus:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    MaxManaBonus: 0
+    SkillManaCostReduction: 0
+    SignatureCapacityBonus: 0
+    SignaturePerTurnBonus: 0
+    GrantsStartingItemId: 
+    SortOrder: 4
+    IconPath: 
+    MinSpent: 0
+    Effects: []
+    GrantsSkillId: provoke

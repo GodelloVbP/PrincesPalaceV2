@@ -12,33 +12,34 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 587fe3da128cb904da22de232329c98f, type: 3}
   m_Name: owl
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.CharacterDefinition
-  id: owl
-  displayName: Odette
-  role: 4
-  baseStats:
-    maxHealth: 140
-    speed: 11
-    attack: 4
-    manaRegen: 0
-    physicalDefense: 12
-    magicalDefense: 30
-  baseAbilityScores:
-    strength: 4
-    dexterity: 6
-    constitution: 8
-    wisdom: 20
-    intelligence: 16
-    charisma: 6
-  portraitPath: Assets/_Project/Art/Portraits/Sheep/Processed/Shawn_neutral.png
-  battleSpritePath: Characters/owl
-  battleSpriteFacing: 1
-  attackType: 5
-  signatureResourceId: 
-  signatureResourceDisplayName: 
-  signatureResourceCapacity: 0
-  signatureGainPerTurn: 0
-  signatureGainOnAttack: 0
-  signatureGainOnDamageTaken: 0
-  signatureAbsorbsDamage: 0
-  princesFavor: 0
-  sortOrder: 2
+  data:
+    Id: owl
+    DisplayName: Odette
+    Role: 4
+    BaseStats:
+      maxHealth: 140
+      speed: 11
+      attack: 4
+      manaRegen: 0
+      physicalDefense: 12
+      magicalDefense: 30
+    AbilityScores:
+      strength: 4
+      dexterity: 6
+      constitution: 8
+      wisdom: 20
+      intelligence: 16
+      charisma: 6
+    PortraitPath: Assets/_Project/Art/Portraits/Sheep/Processed/Shawn_neutral.png
+    BattleSpritePath: Characters/owl
+    BattleSpriteFacing: 1
+    AttackType: 5
+    SignatureId: 
+    SignatureDisplayName: 
+    SignatureCapacity: 0
+    SignatureGainPerTurn: 0
+    SignatureGainOnAttack: 0
+    SignatureGainOnDamageTaken: 0
+    SignatureAbsorbsDamage: 0
+    PrincesFavor: 0
+    SortOrder: 2

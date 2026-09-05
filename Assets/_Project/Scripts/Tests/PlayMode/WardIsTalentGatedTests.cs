@@ -107,7 +107,7 @@ namespace PrincesPalace.PlayModeTests
         {
             var talent = ContentDatabase.GetTalent(WardTalentId);
             Assert.IsNotNull(talent, "fixture: content still has " + WardTalentId);
-            Assert.AreEqual(WardSkillId, talent.grantsSkillId,
+            Assert.AreEqual(WardSkillId, talent.data.GrantsSkillId,
                 "fixture: " + WardTalentId + " is still the node that grants Ward");
 
             var warded = new Character(SheepId);

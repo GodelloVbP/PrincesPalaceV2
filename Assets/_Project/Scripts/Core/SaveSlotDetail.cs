@@ -56,7 +56,7 @@ namespace PrincesPalace
             // ActiveSquad's own fallback), so this is empty only when the
             // roster itself is empty, which CreateNew never leaves it.
             var lead = save.ActiveSquad().FirstOrDefault();
-            string name = lead == null ? "" : ContentDatabase.GetCharacter(lead.definitionId)?.displayName ?? "";
+            string name = lead == null ? "" : ContentDatabase.GetCharacter(lead.definitionId)?.data.DisplayName ?? "";
 
             int floor = RunDepth.FloorFor(save.lifetimeDeepestStep);
 

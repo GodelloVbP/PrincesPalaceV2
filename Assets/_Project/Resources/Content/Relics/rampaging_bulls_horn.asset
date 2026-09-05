@@ -12,14 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6da02db8c4530f747adcb0b4f87d4af4, type: 3}
   m_Name: rampaging_bulls_horn
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
-  id: rampaging_bulls_horn
-  displayName: Rampaging Bull's Horn
-  description: After casting a convergence ability, gain 50% damage reduction for
-    2 turns. Only offered to a party with a convergence ability.
-  effect: 20
-  rarity: 2
-  unlockedBy: 
-  requiresConvergenceAbility: 1
-  modifiers: []
-  sortOrder: 24
-  iconPath: Assets/_Project/Art/Items/Relics/Processed/rampaging_bulls_horn.png
+  data:
+    Id: rampaging_bulls_horn
+    DisplayName: Rampaging Bull's Horn
+    Description: After casting a convergence ability, gain 50% damage reduction for
+      2 turns. Only offered to a party with a convergence ability.
+    Effect: 20
+    SortOrder: 24
+    IconPath: Assets/_Project/Art/Items/Relics/Processed/rampaging_bulls_horn.png
+    Rarity: 2
+    UnlockedBy: 
+    Modifiers: []
+    RequiresConvergenceAbility: 1

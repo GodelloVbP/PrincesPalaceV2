@@ -12,55 +12,57 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 429d83c7acd1e6546892363aadea2846, type: 3}
   m_Name: bog_witch
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.EnemyDefinition
-  id: bog_witch
-  displayName: Bog Witch
-  baseStats:
-    maxHealth: 48
-    speed: 8
-    attack: 15
-    manaRegen: 0
-    physicalDefense: 5
-    magicalDefense: 20
-  attackType: 4
-  expReward: 22
-  currencyReward: 14
-  isBoss: 0
-  minFloor: 2
-  weaknesses: 04000000
-  resistances: 03000000
-  breakShieldPoints: 2
-  spritePath: Enemies/bog_witch
-  facing: 1
-  sortOrder: 5
-  skillName: 
-  skillPower: 1.5
-  skillChance: 0.35
-  vfx:
-    path: 
-    seconds: 0.6
-    impactFrame: 3
-    anchor: 
-    size: 380
-    departFrame: 0
-    impactX: -1
-    impactY: -1
-    sfxPath: 
-    groundPath: 
-    groundSeconds: 0
-    groundImpactFrame: 0
-    groundAspect: 0
-    groundImpactY: -1
-    castSfxPath: 
-  abilities:
-  - skillId: bog_mud_burst
-    weight: 2
-  attackWeight: 3
-  appliesStatus: 0
-  hasStatus: 0
-  statusMagnitude: 0
-  statusDuration: 0
-  avoidsFrontSlot: 0
-  attackHoldsPosition: 0
-  attackApproach: lunge
-  stageScale: 1
-  slotSpan: 1
+  data:
+    Id: bog_witch
+    DisplayName: Bog Witch
+    BaseStats:
+      maxHealth: 48
+      speed: 8
+      attack: 15
+      manaRegen: 0
+      physicalDefense: 5
+      magicalDefense: 20
+    ExpReward: 22
+    CurrencyReward: 14
+    IsBoss: 0
+    Weaknesses: 04000000
+    Resistances: 03000000
+    SortOrder: 5
+    BreakShieldPoints: 2
+    StageScale: 1
+    SlotSpan: 1
+    SpritePath: Enemies/bog_witch
+    Abilities:
+    - SkillId: bog_mud_burst
+      Weight: 2
+    AttackWeight: 3
+    SkillName: 
+    SkillPower: 1.5
+    SkillChance: 0.35
+    Facing: 1
+    Active: 1
+    Vfx:
+      path: 
+      seconds: 0.6
+      impactFrame: 3
+      anchor: 
+      size: 380
+      departFrame: 0
+      impactX: -1
+      impactY: -1
+      sfxPath: 
+      groundPath: 
+      groundSeconds: 0
+      groundImpactFrame: 0
+      groundAspect: 0
+      groundImpactY: -1
+      castSfxPath: 
+    Status: 0
+    StatusAuthored: 0
+    StatusMagnitude: 0
+    StatusDuration: 0
+    AvoidsFrontSlot: 0
+    AttackHoldsPosition: 0
+    AttackApproach: 1
+    MinFloor: 2
+    AttackType: 4

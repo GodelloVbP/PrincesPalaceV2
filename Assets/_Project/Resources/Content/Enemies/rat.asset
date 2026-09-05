@@ -12,53 +12,55 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 429d83c7acd1e6546892363aadea2846, type: 3}
   m_Name: rat
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.EnemyDefinition
-  id: rat
-  displayName: Giant Rat
-  baseStats:
-    maxHealth: 40
-    speed: 7
-    attack: 10
-    manaRegen: 0
-    physicalDefense: 5
-    magicalDefense: 0
-  attackType: 0
-  expReward: 15
-  currencyReward: 8
-  isBoss: 0
-  minFloor: 1
-  weaknesses: 02000000
-  resistances: 04000000
-  breakShieldPoints: 2
-  spritePath: Enemies/rat
-  facing: 1
-  sortOrder: 0
-  skillName: 
-  skillPower: 1.5
-  skillChance: 0.35
-  vfx:
-    path: 
-    seconds: 0.6
-    impactFrame: 3
-    anchor: 
-    size: 380
-    departFrame: 0
-    impactX: -1
-    impactY: -1
-    sfxPath: 
-    groundPath: 
-    groundSeconds: 0
-    groundImpactFrame: 0
-    groundAspect: 0
-    groundImpactY: -1
-    castSfxPath: 
-  abilities: []
-  attackWeight: 1
-  appliesStatus: 0
-  hasStatus: 1
-  statusMagnitude: 8
-  statusDuration: 3
-  avoidsFrontSlot: 1
-  attackHoldsPosition: 0
-  attackApproach: lunge
-  stageScale: 1
-  slotSpan: 1
+  data:
+    Id: rat
+    DisplayName: Giant Rat
+    BaseStats:
+      maxHealth: 40
+      speed: 7
+      attack: 10
+      manaRegen: 0
+      physicalDefense: 5
+      magicalDefense: 0
+    ExpReward: 15
+    CurrencyReward: 8
+    IsBoss: 0
+    Weaknesses: 02000000
+    Resistances: 04000000
+    SortOrder: 0
+    BreakShieldPoints: 2
+    StageScale: 1
+    SlotSpan: 1
+    SpritePath: Enemies/rat
+    Abilities: []
+    AttackWeight: 1
+    SkillName: 
+    SkillPower: 1.5
+    SkillChance: 0.35
+    Facing: 1
+    Active: 1
+    Vfx:
+      path: 
+      seconds: 0.6
+      impactFrame: 3
+      anchor: 
+      size: 380
+      departFrame: 0
+      impactX: -1
+      impactY: -1
+      sfxPath: 
+      groundPath: 
+      groundSeconds: 0
+      groundImpactFrame: 0
+      groundAspect: 0
+      groundImpactY: -1
+      castSfxPath: 
+    Status: 0
+    StatusAuthored: 1
+    StatusMagnitude: 8
+    StatusDuration: 3
+    AvoidsFrontSlot: 1
+    AttackHoldsPosition: 0
+    AttackApproach: 1
+    MinFloor: 1
+    AttackType: 0

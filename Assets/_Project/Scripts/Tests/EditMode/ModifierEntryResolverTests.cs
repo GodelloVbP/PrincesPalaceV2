@@ -27,7 +27,7 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
             Assert.AreEqual("fiery_test", resolved[0].Id);
-            Assert.AreEqual(1, resolved[0].Effects.Count);
+            Assert.AreEqual(1, resolved[0].Effects.Length);
             Assert.AreEqual(ModifierEffectType.ElementalDamageOnHitPercent, resolved[0].Effects[0].Type);
             Assert.AreEqual(15, resolved[0].Effects[0].Magnitude);
             Assert.AreEqual(DamageType.Fire, resolved[0].Effects[0].Against);
@@ -315,7 +315,7 @@ namespace PrincesPalace.Domain.Tests
             bool ok = ModifierEntryResolver.TryResolveAll(new List<RawModifierEntry> { entry }, out var resolved, out var errors);
 
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
-            Assert.AreEqual(1, resolved[0].Effects.Count);
+            Assert.AreEqual(1, resolved[0].Effects.Length);
         }
 
         [Test]

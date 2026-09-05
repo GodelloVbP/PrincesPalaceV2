@@ -240,7 +240,7 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.IsTrue(ok, string.Join("; ", errors ?? new List<string>()));
             Assert.AreEqual(RelicEffect.DualWield, resolved[0].Effect);
-            Assert.AreEqual(1, resolved[0].Modifiers.Count);
+            Assert.AreEqual(1, resolved[0].Modifiers.Length);
             Assert.IsTrue(resolved[0].HasBehaviour);
         }
 

@@ -12,14 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6da02db8c4530f747adcb0b4f87d4af4, type: 3}
   m_Name: seven_teeth
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
-  id: seven_teeth
-  displayName: Bounty Hunter Contract
-  description: Killing an enemy pays gold equal to about 30% of its own experience
-    reward (minimum 1 gold).
-  effect: 8
-  rarity: 1
-  unlockedBy: 
-  requiresConvergenceAbility: 0
-  modifiers: []
-  sortOrder: 3
-  iconPath: Assets/_Project/Art/Items/Relics/Processed/seven_teeth.png
+  data:
+    Id: seven_teeth
+    DisplayName: Bounty Hunter Contract
+    Description: Killing an enemy pays gold equal to about 30% of its own experience
+      reward (minimum 1 gold).
+    Effect: 8
+    SortOrder: 3
+    IconPath: Assets/_Project/Art/Items/Relics/Processed/seven_teeth.png
+    Rarity: 1
+    UnlockedBy: 
+    Modifiers: []
+    RequiresConvergenceAbility: 0

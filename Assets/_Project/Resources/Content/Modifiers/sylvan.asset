@@ -12,16 +12,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8eb37102d2241c54eae4db6c08bbb7c5, type: 3}
   m_Name: sylvan
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
-  id: sylvan
-  displayName: Sylvan
-  description: 'Thorns answer every blow. Elemental family: Nature, the damage half
-    -- Thornhide is Nature''s resistance affix and Entangling is Nature''s root-proc
-    affix, both split off this modifier''s old three-effect bundle.'
-  effects:
-  - type: 1
-    magnitude: 10
-    threshold: 0
-    against: 3
-    hasAgainst: 1
-    againstMagical: 0
-  sortOrder: 5
+  data:
+    Id: sylvan
+    DisplayName: Sylvan
+    Description: 'Thorns answer every blow. Elemental family: Nature, the damage
+      half -- Thornhide is Nature''s resistance affix and Entangling is Nature''s
+      root-proc affix, both split off this modifier''s old three-effect bundle.'
+    SortOrder: 5
+    Effects:
+    - Type: 1
+      Magnitude: 10
+      Threshold: 0
+      AgainstType: 3
+      HasAgainst: 1
+      AgainstMagical: 0

@@ -12,22 +12,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 06eaac145d03bc24b92e1461ad97f711, type: 3}
   m_Name: level_6
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SpellTierDefinition
-  level: 6
-  displayName: Torrent
-  manaCost: 20
-  powerMultiplier: 2.7
-  scaling:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 2
-    intelligence: 4
-    charisma: 0
-  requirements:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  sortOrder: 5
+  data:
+    Level: 6
+    DisplayName: Torrent
+    ManaCost: 20
+    PowerMultiplier: 2.7
+    SortOrder: 5
+    Scaling:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 2
+      intelligence: 4
+      charisma: 0
+    Requirements:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0

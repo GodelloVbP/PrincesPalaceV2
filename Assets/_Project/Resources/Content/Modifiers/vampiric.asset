@@ -12,17 +12,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8eb37102d2241c54eae4db6c08bbb7c5, type: 3}
   m_Name: vampiric
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
-  id: vampiric
-  displayName: Vampiric
-  description: Every hit landed feeds the wearer a little of what it took. Base 15%
-    at Ordinary tier 0 -- deliberately modest; Vampiric compounds with the healer
-    role rather than replacing it, and the tier/rift curve is where a build actually
-    gets scary. Already single-effect since Phase C; untouched by the affix split.
-  effects:
-  - type: 4
-    magnitude: 8
-    threshold: 0
-    against: 0
-    hasAgainst: 0
-    againstMagical: 0
-  sortOrder: 15
+  data:
+    Id: vampiric
+    DisplayName: Vampiric
+    Description: Every hit landed feeds the wearer a little of what it took. Base
+      15% at Ordinary tier 0 -- deliberately modest; Vampiric compounds with the
+      healer role rather than replacing it, and the tier/rift curve is where a build
+      actually gets scary. Already single-effect since Phase C; untouched by the
+      affix split.
+    SortOrder: 15
+    Effects:
+    - Type: 4
+      Magnitude: 8
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0

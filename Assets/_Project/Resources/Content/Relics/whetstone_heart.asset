@@ -12,23 +12,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6da02db8c4530f747adcb0b4f87d4af4, type: 3}
   m_Name: whetstone_heart
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
-  id: whetstone_heart
-  displayName: Whetstone Heart
-  description: Strikes 20% harder, and bruises just as easily.
-  effect: 0
-  rarity: 1
-  unlockedBy: 
-  requiresConvergenceAbility: 0
-  modifiers:
-  - type: 1
-    amount: 20
-    against: 0
-    hasAgainst: 0
-    againstMagical: 0
-  - type: 2
-    amount: -10
-    against: 0
-    hasAgainst: 0
-    againstMagical: 0
-  sortOrder: 11
-  iconPath: Assets/_Project/Art/Items/Relics/Processed/whetstone_heart.png
+  data:
+    Id: whetstone_heart
+    DisplayName: Whetstone Heart
+    Description: Strikes 20% harder, and bruises just as easily.
+    Effect: 0
+    SortOrder: 11
+    IconPath: Assets/_Project/Art/Items/Relics/Processed/whetstone_heart.png
+    Rarity: 1
+    UnlockedBy: 
+    Modifiers:
+    - Type: 1
+      Amount: 20
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0
+    - Type: 2
+      Amount: -10
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0
+    RequiresConvergenceAbility: 0

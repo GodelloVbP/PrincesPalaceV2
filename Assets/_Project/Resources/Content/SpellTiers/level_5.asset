@@ -12,22 +12,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 06eaac145d03bc24b92e1461ad97f711, type: 3}
   m_Name: level_5
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SpellTierDefinition
-  level: 5
-  displayName: Current
-  manaCost: 18
-  powerMultiplier: 2.4
-  scaling:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 2
-    intelligence: 4
-    charisma: 0
-  requirements:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  sortOrder: 4
+  data:
+    Level: 5
+    DisplayName: Current
+    ManaCost: 18
+    PowerMultiplier: 2.4
+    SortOrder: 4
+    Scaling:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 2
+      intelligence: 4
+      charisma: 0
+    Requirements:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0

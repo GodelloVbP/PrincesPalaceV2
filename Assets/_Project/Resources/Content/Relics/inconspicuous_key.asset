@@ -12,14 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6da02db8c4530f747adcb0b4f87d4af4, type: 3}
   m_Name: inconspicuous_key
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
-  id: inconspicuous_key
-  displayName: Inconspicuous Key
-  description: They say hell and heaven have the same master key. Once per combat,
-    an enemy you kill answers its call for one last blow against its own side.
-  effect: 28
-  rarity: 4
-  unlockedBy: 
-  requiresConvergenceAbility: 0
-  modifiers: []
-  sortOrder: 33
-  iconPath: Assets/_Project/Art/Items/Relics/Processed/inconspicuous_key.png
+  data:
+    Id: inconspicuous_key
+    DisplayName: Inconspicuous Key
+    Description: They say hell and heaven have the same master key. Once per combat,
+      an enemy you kill answers its call for one last blow against its own side.
+    Effect: 28
+    SortOrder: 33
+    IconPath: Assets/_Project/Art/Items/Relics/Processed/inconspicuous_key.png
+    Rarity: 4
+    UnlockedBy: 
+    Modifiers: []
+    RequiresConvergenceAbility: 0

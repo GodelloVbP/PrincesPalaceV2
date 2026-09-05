@@ -98,23 +98,40 @@ namespace PrincesPalace.Domain.Content
     }
 
     // One validated numeric change.
-    public readonly struct RelicModifier
+    //
+    // [Serializable] with public fields because ResolvedRelic is what the
+    // RelicDefinition asset now stores. This is the shape Content's
+    // RelicModifierEntry used to hold beside it -- the same five values,
+    // written twice, with a hand-copy in each direction. There is one now.
+    [Serializable]
+    public struct RelicModifier
     {
-        public readonly RelicModifierType Type;
-        public readonly int Amount;
+        public RelicModifierType Type;
+        public int Amount;
 
-        // Set only for ResistanceFlat. Against names one element; AgainstMagical
-        // means every type that is not physical, resolved from the "magical"
-        // shorthand once at authoring time so nothing downstream knows the word.
-        public readonly DamageType? Against;
-        public readonly bool AgainstMagical;
+        // Set only for ResistanceFlat. AgainstType names one element and
+        // HasAgainst says whether anyone meant it; AgainstMagical means every
+        // type that is not physical, resolved from the "magical" shorthand
+        // once at authoring time so nothing downstream knows the word.
+        //
+        // THE FLAG IS NOT DECORATION: Nullable<DamageType> does not survive a
+        // serializer, and Physical is DamageType's own zero, so a dropped
+        // nullable reads back as "resists Physical" rather than "resists
+        // nothing".
+        public DamageType AgainstType;
+        public bool HasAgainst;
+        public bool AgainstMagical;
+
+        // The nullable reading every consumer already asks in.
+        public DamageType? Against => HasAgainst ? (DamageType?)AgainstType : null;
 
         public RelicModifier(RelicModifierType type, int amount,
                              DamageType? against = null, bool againstMagical = false)
         {
             Type = type;
             Amount = amount;
-            Against = against;
+            AgainstType = against ?? default;
+            HasAgainst = against.HasValue;
             AgainstMagical = againstMagical;
         }
 

@@ -211,7 +211,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 var kind = isPlainSwing
                     ? EnemyIntentKind.Attack
                     : EnemyIntentIcons.KindFor(true,
-                        source?.AppliesStatus, source.HasValue && source.Value.HasStatus);
+                        source?.AppliesStatus, source != null && source.HasStatus);
 
                 return new EnemyIntent(ability.Label, kind, target,
                     PreviewDamage(enemy, target, !isPlainSwing, source, ability.Power), chosen);
@@ -277,12 +277,12 @@ namespace PrincesPalace.Domain.Combat.Session
         // yet when the icon is drawn. The number is therefore a centre, not a
         // promise, and the tooltip says "about" for that reason.
         private static int PreviewDamage(CombatantState enemy, CombatantState target, bool useSkill,
-                                         ResolvedEnemy? source, float power)
+                                         ResolvedEnemy source, float power)
         {
             if (enemy == null || target == null) return 0;
 
             int damage = CombatMath.ComputeAttackDamage(enemy, target);
-            if (useSkill && source.HasValue)
+            if (useSkill && source != null)
             {
                 damage = System.Math.Max(1, Rounding.AwayFromZero(damage * power));
             }
@@ -502,7 +502,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // lie after the fact.
             var kit = SourceFor(enemy);
             bool hasSource = kit != null;
-            var source = hasSource ? kit.Source : default(ResolvedEnemy);
+            var source = kit?.Source;
 
             // BY INDEX, not by comparing the label back to a name.
             //

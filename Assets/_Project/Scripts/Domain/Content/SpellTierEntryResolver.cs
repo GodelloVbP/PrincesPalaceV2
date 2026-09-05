@@ -102,9 +102,12 @@ namespace PrincesPalace.Domain.Content
         // every tier requires a level higher than `characterLevel` — with a
         // real spells.json (starting at level 1) that second case can't
         // happen for any real character, since Character.level starts at 1.
-        public static ResolvedSpellTier? TierForLevel(IReadOnlyList<ResolvedSpellTier> tiers, int characterLevel)
+        public static ResolvedSpellTier TierForLevel(IReadOnlyList<ResolvedSpellTier> tiers, int characterLevel)
         {
-            ResolvedSpellTier? best = null;
+            // A plain reference null since ResolvedSpellTier became a class --
+            // the same shape change ResolvedSkill made; `?.DisplayName` at the
+            // call sites reads identically either way.
+            ResolvedSpellTier best = null;
             foreach (var tier in tiers)
             {
                 if (tier.Level <= characterLevel)

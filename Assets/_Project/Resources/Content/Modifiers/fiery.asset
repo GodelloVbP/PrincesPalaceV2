@@ -12,16 +12,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8eb37102d2241c54eae4db6c08bbb7c5, type: 3}
   m_Name: fiery
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
-  id: fiery
-  displayName: Fiery
-  description: 'Burns on every landed hit. Elemental family: Fire, the damage half
-    -- Emberguard is Fire''s separate resistance affix; a Fiery item does not also
-    resist fire the way the original bundled Fiery/Frosty/etc. modifiers used to.'
-  effects:
-  - type: 1
-    magnitude: 10
-    threshold: 0
-    against: 1
-    hasAgainst: 1
-    againstMagical: 0
-  sortOrder: 0
+  data:
+    Id: fiery
+    DisplayName: Fiery
+    Description: 'Burns on every landed hit. Elemental family: Fire, the damage half
+      -- Emberguard is Fire''s separate resistance affix; a Fiery item does not also
+      resist fire the way the original bundled Fiery/Frosty/etc. modifiers used to.'
+    SortOrder: 0
+    Effects:
+    - Type: 1
+      Magnitude: 10
+      Threshold: 0
+      AgainstType: 1
+      HasAgainst: 1
+      AgainstMagical: 0

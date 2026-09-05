@@ -203,7 +203,7 @@ namespace PrincesPalace.PlayModeTests
             // what keeps this a genuine proof of the chill firing, rather
             // than a coin flip that usually lands on Inconclusive.
             var toughestEnemyId = ContentDatabase.Enemies
-                .OrderByDescending(e => e.baseStats.maxHealth)
+                .OrderByDescending(e => e.data.BaseStats.maxHealth)
                 .Select(e => e.id)
                 .FirstOrDefault();
             Assert.IsNotNull(toughestEnemyId, "fixture: content has at least one enemy");

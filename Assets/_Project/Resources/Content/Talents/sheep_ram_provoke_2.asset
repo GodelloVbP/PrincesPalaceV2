@@ -12,37 +12,39 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 78462e746feff2e4c945a0159eb6e76a, type: 3}
   m_Name: sheep_ram_provoke_2
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.TalentDefinition
-  id: sheep_ram_provoke_2
-  displayName: Draw the Blow
-  description: A goaded enemy swings wide. They hit you a fifth softer.
-  characterId: sheep
-  column: 0
-  row: 5
-  prerequisites:
-  - {fileID: 11400000, guid: 4285454025efec1458217cb10739fbf6, type: 2}
-  minSpent: 0
-  statBonus:
-    maxHealth: 0
-    speed: 0
-    attack: 0
-    manaRegen: 0
-    physicalDefense: 0
-    magicalDefense: 0
-  abilityScoreBonus:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  grantsStartingItemId: 
-  maxManaBonus: 0
-  skillManaCostReduction: 0
-  signatureCapacityBonus: 0
-  signaturePerTurnBonus: 0
-  effects:
-  - type: 7
-    magnitude: 20
-    threshold: 0
-  grantsSkillId: 
-  iconPath: 
+  data:
+    Id: sheep_ram_provoke_2
+    DisplayName: Draw the Blow
+    Description: A goaded enemy swings wide. They hit you a fifth softer.
+    CharacterId: sheep
+    Column: 0
+    Row: 5
+    Prerequisites:
+    - sheep_ram_provoke_1
+    StatBonus:
+      maxHealth: 0
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 0
+    AbilityScoreBonus:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    MaxManaBonus: 0
+    SkillManaCostReduction: 0
+    SignatureCapacityBonus: 0
+    SignaturePerTurnBonus: 0
+    GrantsStartingItemId: 
+    SortOrder: 5
+    IconPath: 
+    MinSpent: 0
+    Effects:
+    - Type: 7
+      Magnitude: 20
+      Threshold: 0
+    GrantsSkillId: 

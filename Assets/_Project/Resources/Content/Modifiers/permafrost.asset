@@ -12,16 +12,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8eb37102d2241c54eae4db6c08bbb7c5, type: 3}
   m_Name: permafrost
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
-  id: permafrost
-  displayName: Permafrost
-  description: 'Frost does not bite the wearer back. Elemental family: Ice, the resistance
-    half -- Frosty is Ice''s separate on-hit-frost affix and Frostbite carries the
-    old bundle''s chill proc. Split off so each rule rolls on its own.'
-  effects:
-  - type: 2
-    magnitude: 8
-    threshold: 0
-    against: 2
-    hasAgainst: 1
-    againstMagical: 0
-  sortOrder: 3
+  data:
+    Id: permafrost
+    DisplayName: Permafrost
+    Description: 'Frost does not bite the wearer back. Elemental family: Ice, the
+      resistance half -- Frosty is Ice''s separate on-hit-frost affix and Frostbite
+      carries the old bundle''s chill proc. Split off so each rule rolls on its own.'
+    SortOrder: 3
+    Effects:
+    - Type: 2
+      Magnitude: 8
+      Threshold: 0
+      AgainstType: 2
+      HasAgainst: 1
+      AgainstMagical: 0

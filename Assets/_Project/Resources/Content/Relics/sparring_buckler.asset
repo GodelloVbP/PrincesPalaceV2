@@ -12,14 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6da02db8c4530f747adcb0b4f87d4af4, type: 3}
   m_Name: sparring_buckler
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.RelicDefinition
-  id: sparring_buckler
-  displayName: Sparring Buckler
-  description: Casting an ability that alters anyone's position grants a 15% ward,
-    once per turn.
-  effect: 25
-  rarity: 2
-  unlockedBy: 
-  requiresConvergenceAbility: 0
-  modifiers: []
-  sortOrder: 30
-  iconPath: Assets/_Project/Art/Items/Relics/Processed/sparring_buckler.png
+  data:
+    Id: sparring_buckler
+    DisplayName: Sparring Buckler
+    Description: Casting an ability that alters anyone's position grants a 15% ward,
+      once per turn.
+    Effect: 25
+    SortOrder: 30
+    IconPath: Assets/_Project/Art/Items/Relics/Processed/sparring_buckler.png
+    Rarity: 2
+    UnlockedBy: 
+    Modifiers: []
+    RequiresConvergenceAbility: 0

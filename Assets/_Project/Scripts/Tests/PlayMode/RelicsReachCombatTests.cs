@@ -59,7 +59,7 @@ namespace PrincesPalace.PlayModeTests
         // A relic that actually carries a mechanic, whatever the content is
         // called today.
         private static RelicDefinition AnEffectRelic() =>
-            ContentDatabase.Relics.FirstOrDefault(r => r != null && r.effect != RelicEffect.None);
+            ContentDatabase.Relics.FirstOrDefault(r => r != null && r.data.Effect != RelicEffect.None);
 
         [Test]
         public void ADraftedRelicArrivesOnTheKit()
@@ -72,7 +72,7 @@ namespace PrincesPalace.PlayModeTests
 
             CollectionAssert.IsNotEmpty(kit.Relics.ToList(),
                 "the relic never reached the fight -- KitFor is passing null again");
-            Assert.AreEqual(relic.effect, kit.Relics[0].Effect);
+            Assert.AreEqual(relic.data.Effect, kit.Relics[0].Effect);
         }
 
         [Test]
@@ -151,8 +151,8 @@ namespace PrincesPalace.PlayModeTests
             // exists to prevent. Two relics carry modifiers today and only one
             // of them is an attack relic.
             var withAttack = ContentDatabase.Relics.FirstOrDefault(r =>
-                r != null && r.modifiers != null &&
-                r.ToModifiers().Any(m => m.Stat == RelicStat.Attack));
+                r != null && r.data.Modifiers != null &&
+                r.data.Modifiers.Any(m => m.Stat == RelicStat.Attack));
 
             Assert.IsNotNull(withAttack,
                 "no relic in content carries an Attack modifier - RelicModifiers.Apply is unreachable again, " +

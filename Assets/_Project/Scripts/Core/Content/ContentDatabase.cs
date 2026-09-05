@@ -96,8 +96,8 @@ namespace PrincesPalace.Content
 
             return _talents
                 .Where(t => t.IsAvailableTo(character))
-                .OrderBy(t => t.row)
-                .ThenBy(t => t.column)
+                .OrderBy(t => t.data.Row)
+                .ThenBy(t => t.data.Column)
                 .ToList();
         }
 
@@ -388,7 +388,7 @@ namespace PrincesPalace.Content
             SpellTierDefinition best = null;
             foreach (var tier in _spellTiers)
             {
-                if (tier.level <= characterLevel)
+                if (tier.data.Level <= characterLevel)
                 {
                     best = tier;
                 }
@@ -415,12 +415,12 @@ namespace PrincesPalace.Content
             SpellTierDefinition best = null;
             foreach (var tier in _spellTiers)
             {
-                if (tier.level > characterLevel)
+                if (tier.data.Level > characterLevel)
                 {
                     break;
                 }
 
-                if (scores.Meets(RequirementCurve.Apply(tier.requirements)))
+                if (scores.Meets(RequirementCurve.Apply(tier.data.Requirements)))
                 {
                     best = tier;
                 }
@@ -430,19 +430,20 @@ namespace PrincesPalace.Content
         }
 
         // True when ANY ONE prerequisite of `talent` is already unlocked
-        // (OR, not AND) -- see TalentDefinition.prerequisites' own comment.
+        // (OR, not AND) -- see ResolvedTalent.Prerequisites' own comment.
         // A chain node names exactly one parent, so AND and OR agree there;
         // this only actually branches behaviour for the two convergence
         // nodes per path, which name all 3 and unlock from any completed
         // route.
         public static bool PrerequisitesMet(TalentDefinition talent, Character character)
         {
-            if (talent.prerequisites == null || talent.prerequisites.Length == 0)
+            var prerequisites = talent.data.Prerequisites;
+            if (prerequisites == null || prerequisites.Length == 0)
             {
                 return true;
             }
 
-            return talent.prerequisites.Any(p => p != null && character.unlockedTalentIds.Contains(p.id));
+            return prerequisites.Any(id => !string.IsNullOrEmpty(id) && character.unlockedTalentIds.Contains(id));
         }
 
         // What one orb costs in EMBERS.
@@ -459,7 +460,7 @@ namespace PrincesPalace.Content
         //
         // A talent's `row` IS its slot index in the skeleton and its `column`
         // IS its path — TalentController reads both that way when it fills the
-        // tree (`tree.Set(talent.column, talent.row, …)`), and
+        // tree (`tree.Set(talent.data.Column, talent.data.Row, …)`), and
         // TalentEntryResolver bounds them against TalentPage.PathCount and
         // TalentSkeleton.SlotCount. That is what makes this lookup legitimate
         // rather than a coincidence.
@@ -526,7 +527,7 @@ namespace PrincesPalace.Content
                 return 0;
             }
 
-            int slot = talent.row;
+            int slot = talent.data.Row;
             if (slot < 0 || slot >= TalentSkeleton.SlotCount)
             {
                 return OrbCostUnplaced;
@@ -614,7 +615,7 @@ namespace PrincesPalace.Content
             }
 
             return TalentsFor(character)
-                .FirstOrDefault(t => t.row == 0 && character.unlockedTalentIds.Contains(t.id));
+                .FirstOrDefault(t => t.data.Row == 0 && character.unlockedTalentIds.Contains(t.id));
         }
 
         // Whether this specific talent is blocked by an allegiance already
@@ -622,7 +623,7 @@ namespace PrincesPalace.Content
         // root already lit (so the UI can still offer to refund it).
         public static bool IsBlockedByAllegiance(TalentDefinition talent, Character character)
         {
-            if (talent == null || talent.row != 0)
+            if (talent == null || talent.data.Row != 0)
             {
                 return false;
             }
@@ -638,7 +639,7 @@ namespace PrincesPalace.Content
         public static int SpentInPath(Character character, TalentDefinition talent)
         {
             return TalentsFor(character)
-                .Where(t => t.column == talent.column && character.unlockedTalentIds.Contains(t.id))
+                .Where(t => t.data.Column == talent.data.Column && character.unlockedTalentIds.Contains(t.id))
                 .Sum(t => OrbCost(t));
         }
 
@@ -646,7 +647,7 @@ namespace PrincesPalace.Content
         // passes -- most nodes carry no gate at all.
         public static bool MinSpentMet(TalentDefinition talent, Character character)
         {
-            return talent.minSpent <= 0 || SpentInPath(character, talent) >= talent.minSpent;
+            return talent.data.MinSpent <= 0 || SpentInPath(character, talent) >= talent.data.MinSpent;
         }
 
         // Every rule about whether a node may be lit, EXCEPT affordability.

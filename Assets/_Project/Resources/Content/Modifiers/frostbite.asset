@@ -12,17 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8eb37102d2241c54eae4db6c08bbb7c5, type: 3}
   m_Name: frostbite
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
-  id: frostbite
-  displayName: Frostbite
-  description: 'A lucky strike leaves the target chilled to the bone. Elemental family:
-    Ice, the chill-proc half -- Frosty carries the on-hit damage and Permafrost carries
-    the resistance; this used to ride along with both on one bundled Frosty roll,
-    now it is its own affix.'
-  effects:
-  - type: 16
-    magnitude: 10
-    threshold: 0
-    against: 0
-    hasAgainst: 0
-    againstMagical: 0
-  sortOrder: 4
+  data:
+    Id: frostbite
+    DisplayName: Frostbite
+    Description: 'A lucky strike leaves the target chilled to the bone. Elemental
+      family: Ice, the chill-proc half -- Frosty carries the on-hit damage and Permafrost
+      carries the resistance; this used to ride along with both on one bundled Frosty
+      roll, now it is its own affix.'
+    SortOrder: 4
+    Effects:
+    - Type: 16
+      Magnitude: 10
+      Threshold: 0
+      AgainstType: 0
+      HasAgainst: 0
+      AgainstMagical: 0

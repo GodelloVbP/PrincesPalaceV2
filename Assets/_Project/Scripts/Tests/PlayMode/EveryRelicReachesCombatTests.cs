@@ -58,7 +58,7 @@ namespace PrincesPalace.PlayModeTests
         public void EveryRelicWithAnEffectResolvesToThatExactEffectOnTheKit()
         {
             var withEffect = ContentDatabase.Relics
-                .Where(r => r != null && r.effect != RelicEffect.None)
+                .Where(r => r != null && r.data.Effect != RelicEffect.None)
                 .ToList();
 
             Assert.IsNotEmpty(withEffect, "fixture: content should have at least one effect relic");
@@ -72,9 +72,9 @@ namespace PrincesPalace.PlayModeTests
 
                 var kitRelics = built.Session.KitFor(built.Party[0]).Relics.ToList();
 
-                if (kitRelics.Count != 1 || kitRelics[0].Effect != relic.effect)
+                if (kitRelics.Count != 1 || kitRelics[0].Effect != relic.data.Effect)
                 {
-                    wrong.Add($"{relic.id} authored as {relic.effect} but the kit carried " +
+                    wrong.Add($"{relic.id} authored as {relic.data.Effect} but the kit carried " +
                               (kitRelics.Count == 0 ? "nothing" : string.Join(",", kitRelics.Select(r => r.Effect))));
                 }
             }
@@ -92,7 +92,7 @@ namespace PrincesPalace.PlayModeTests
         public void EveryRelicWithModifiersActuallyChangesAStat()
         {
             var withModifiers = ContentDatabase.Relics
-                .Where(r => r != null && r.modifiers != null && r.modifiers.Length > 0)
+                .Where(r => r != null && r.data.Modifiers != null && r.data.Modifiers.Length > 0)
                 .ToList();
 
             Assert.IsNotEmpty(withModifiers, "fixture: content should have at least one modifier relic");
@@ -165,7 +165,7 @@ namespace PrincesPalace.PlayModeTests
             // party (finding 6, code review).
             var all = ContentDatabase.Relics
                 .Where(r => r != null)
-                .Select(r => new Domain.Relics.RelicOption(r.id, r.rarity, r.unlockedBy, r.requiresConvergenceAbility))
+                .Select(r => new Domain.Relics.RelicOption(r.id, r.data.Rarity, r.data.UnlockedBy, r.data.RequiresConvergenceAbility))
                 .ToList();
 
             // Every relic unlocked from the start (unlockedBy empty) must
@@ -178,7 +178,7 @@ namespace PrincesPalace.PlayModeTests
                 .ToHashSet();
 
             var stuck = ContentDatabase.Relics
-                .Where(r => r != null && string.IsNullOrEmpty(r.unlockedBy) && !available.Contains(r.id))
+                .Where(r => r != null && r.data.IsUnlockedFromTheStart && !available.Contains(r.id))
                 .Select(r => r.id)
                 .ToList();
 
@@ -206,7 +206,7 @@ namespace PrincesPalace.PlayModeTests
             // -- the convergence gate is specific to mechanic (g), not a
             // general filter that happens to catch more than it should.
             var otherUnlocked = ContentDatabase.Relics
-                .Where(r => r != null && string.IsNullOrEmpty(r.unlockedBy) && r.id != "rampaging_bulls_horn")
+                .Where(r => r != null && r.data.IsUnlockedFromTheStart && r.id != "rampaging_bulls_horn")
                 .Select(r => r.id)
                 .ToList();
 

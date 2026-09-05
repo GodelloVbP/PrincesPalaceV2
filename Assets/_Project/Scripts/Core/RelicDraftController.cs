@@ -199,9 +199,9 @@ namespace PrincesPalace
                 var option = _offer[absolute];
                 var definition = ContentDatabase.Relics.FirstOrDefault(r => r != null && r.id == option.Id);
 
-                cardNames[i].SetContent(definition?.displayName ?? option.Id);
+                cardNames[i].SetContent(definition?.data.DisplayName ?? option.Id);
                 cardRarities[i].Set(UiStrings.DraftRarity, RelicRarityNames.Of(option.Rarity));
-                cardBodies[i].SetContent(definition?.description ?? "");
+                cardBodies[i].SetContent(definition?.data.Description ?? "");
 
                 ItemIcons.Apply(cardIcons[i], icons, option.Id);
 

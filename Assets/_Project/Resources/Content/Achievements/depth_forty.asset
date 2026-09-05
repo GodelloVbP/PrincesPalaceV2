@@ -12,10 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35d3dd6bb8630dc4faef37dfc7e47e6b, type: 3}
   m_Name: depth_forty
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.AchievementDefinition
-  id: depth_forty
-  displayName: Deep Water
-  description: Reach step forty of a single descent.
-  condition: 5
-  threshold: 40
-  parameter: 
-  sortOrder: 4
+  data:
+    Id: depth_forty
+    DisplayName: Deep Water
+    Description: Reach step forty of a single descent.
+    Condition: 5
+    Threshold: 40
+    Parameter: 
+    SortOrder: 4

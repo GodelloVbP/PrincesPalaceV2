@@ -12,17 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8eb37102d2241c54eae4db6c08bbb7c5, type: 3}
   m_Name: emberguard
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.ModifierDefinition
-  id: emberguard
-  displayName: Emberguard
-  description: 'Fire glances off the wearer rather than catching. Elemental family:
-    Fire, the resistance half -- Fiery is Fire''s separate on-hit-burn affix. Split
-    off Fiery''s old bundle so a roll grants one or the other, never both from a
-    single slot.'
-  effects:
-  - type: 2
-    magnitude: 8
-    threshold: 0
-    against: 1
-    hasAgainst: 1
-    againstMagical: 0
-  sortOrder: 1
+  data:
+    Id: emberguard
+    DisplayName: Emberguard
+    Description: 'Fire glances off the wearer rather than catching. Elemental family:
+      Fire, the resistance half -- Fiery is Fire''s separate on-hit-burn affix. Split
+      off Fiery''s old bundle so a roll grants one or the other, never both from
+      a single slot.'
+    SortOrder: 1
+    Effects:
+    - Type: 2
+      Magnitude: 8
+      Threshold: 0
+      AgainstType: 1
+      HasAgainst: 1
+      AgainstMagical: 0

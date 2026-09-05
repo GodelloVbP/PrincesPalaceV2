@@ -12,41 +12,43 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 78462e746feff2e4c945a0159eb6e76a, type: 3}
   m_Name: sheep_lamb_shatter_3
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.TalentDefinition
-  id: sheep_lamb_shatter_3
-  displayName: Sacrifice
-  description: Breaking your OWN ward hits three times as hard and leaves the target
-    open -- and leaves you with nothing between you and the room.
-  characterId: sheep
-  column: 1
-  row: 19
-  prerequisites:
-  - {fileID: 11400000, guid: a38110ccf68276e4ba373428e8e5bc17, type: 2}
-  minSpent: 0
-  statBonus:
-    maxHealth: 0
-    speed: 0
-    attack: 0
-    manaRegen: 0
-    physicalDefense: 0
-    magicalDefense: 0
-  abilityScoreBonus:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  grantsStartingItemId: 
-  maxManaBonus: 0
-  skillManaCostReduction: 0
-  signatureCapacityBonus: 0
-  signaturePerTurnBonus: 0
-  effects:
-  - type: 35
-    magnitude: 300
-    threshold: 0
-  - type: 36
-    magnitude: 0
-    threshold: 0
-  grantsSkillId: 
-  iconPath: 
+  data:
+    Id: sheep_lamb_shatter_3
+    DisplayName: Sacrifice
+    Description: Breaking your OWN ward hits three times as hard and leaves the target
+      open -- and leaves you with nothing between you and the room.
+    CharacterId: sheep
+    Column: 1
+    Row: 19
+    Prerequisites:
+    - sheep_lamb_shatter_2
+    StatBonus:
+      maxHealth: 0
+      speed: 0
+      attack: 0
+      manaRegen: 0
+      physicalDefense: 0
+      magicalDefense: 0
+    AbilityScoreBonus:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    MaxManaBonus: 0
+    SkillManaCostReduction: 0
+    SignatureCapacityBonus: 0
+    SignaturePerTurnBonus: 0
+    GrantsStartingItemId: 
+    SortOrder: 40
+    IconPath: 
+    MinSpent: 0
+    Effects:
+    - Type: 35
+      Magnitude: 300
+      Threshold: 0
+    - Type: 36
+      Magnitude: 0
+      Threshold: 0
+    GrantsSkillId: 

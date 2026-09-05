@@ -14,9 +14,14 @@ namespace PrincesPalace.Content
         // in characters.json, the resolver that validates that file owns the
         // number and this reads it.
         //
-        // Still asserted here as well as in the resolver, which is not
-        // redundant: an asset created through the [CreateAssetMenu] hazard
-        // CLAUDE.md flags never passes through the resolver at all.
+        // Still asserted here as well as in the resolver, and the reason is
+        // now the only reason left: this sees the WHOLE catalogue at once,
+        // where the resolver sees one file. The justification this comment
+        // used to give -- "an asset created through the [CreateAssetMenu]
+        // hazard never passes through the resolver" -- named a hazard that
+        // does not exist in this tree: there is no [CreateAssetMenu] anywhere,
+        // and ScriptableObject.CreateInstance<*Definition> appears in exactly
+        // one file, ContentBuilder.
         private const int AbilityScoreBudget = Domain.Content.CharacterEntryResolver.AbilityScoreBudget;
 
         // Wide enough for real characterisation, narrow enough that the
@@ -25,41 +30,68 @@ namespace PrincesPalace.Content
         private const int MinAbilityScore = 3;
         private const int MaxAbilityScore = 20;
 
-        // Checks the kind of mistakes that are easy to make when hand-adding
-        // a new definition and that nothing else catches until something
-        // breaks at runtime: a duplicate/empty id, a 0-HP combatant, a talent
-        // that grants an item id that doesn't exist, an enemy that's weak to
-        // and resistant to the same type (an authoring slip, not a valid
-        // design — see CombatMath.EffectivenessMultiplier's own comment on
-        // why that case still needs a defined answer rather than being
-        // rejected outright there). Returns one message per problem found;
-        // an empty list means content is internally consistent. Does not
-        // check cross-content references outside what's listed above — this
-        // is a floor, not exhaustive validation.
+        // THE CHECKS NO SINGLE RESOLVER CAN MAKE, and only those.
+        //
+        // Every entry reaching this point has already been through its own
+        // Domain resolver, which rejected the empty ids, the unparseable
+        // enums and the out-of-range numbers -- ContentBuilder is the only
+        // thing in the project that constructs a *Definition, and it writes
+        // nothing at all for a file whose resolver refused it. So a per-type
+        // "is this id empty" loop here could only ever fire on input the
+        // resolver had already accepted, which is to say never. Those loops
+        // are gone.
+        //
+        // What is left is the half a resolver structurally cannot do, because
+        // it sees ONE file: ids unique ACROSS catalogues (a relic sharing an
+        // id with an item resolves a save to the wrong definition), a talent
+        // naming an item or skill that does not exist, a relic naming an
+        // achievement, a skill owned by no character, an enemy weak to and
+        // resistant to the same type, and the ability-score reachability
+        // ceiling. Returns one message per problem found; an empty list means
+        // the catalogues agree with each other.
         public static List<string> ValidateContent()
         {
             EnsureLoaded();
             var errors = new List<string>();
-            var seenIds = new HashSet<string>();
-
-            void CheckId(string id, string kind)
+            // ONE SWEEP FOR ID COLLISIONS, across every catalogue at once.
+            //
+            // This was eight `CheckId(x.id, "Kind")` calls threaded through
+            // eight per-type loops, and the empty-id half of it was
+            // unreachable (see the header). What survives is the half that is
+            // not: `seen` is SHARED, so this is the only place in the project
+            // that can notice a relic and an item claiming the same id -- and
+            // ids are what saves store, so that collision surfaces later as a
+            // save resolving to the wrong definition. AUDIT.md #20's blind
+            // spot was exactly this check missing for one type; stating it
+            // once over a list of catalogues is what stops the next type
+            // added from being forgotten the same way.
+            var seen = new HashSet<string>();
+            foreach (var (kind, ids) in new (string, IEnumerable<string>)[]
+                     {
+                         ("Character", _characters.Select(x => x.id)),
+                         ("Talent", _talents.Select(x => x.id)),
+                         ("Upgrade", _upgrades.Select(x => x.id)),
+                         ("Relic", _relics.Select(x => x.id)),
+                         ("Modifier", _modifiers.Select(x => x.id)),
+                         ("Enemy", _enemies.Select(x => x.id)),
+                         ("Item", _items.Select(x => x.id)),
+                         ("Skill", _skills.Select(x => x.id)),
+                     })
             {
-                if (string.IsNullOrEmpty(id))
+                foreach (string id in ids)
                 {
-                    errors.Add($"{kind} has an empty id.");
-                }
-                else if (!seenIds.Add(id))
-                {
-                    errors.Add($"Duplicate id '{id}' (on a {kind}) — every id must be unique across all content types.");
+                    if (!seen.Add(id))
+                    {
+                        errors.Add($"Duplicate id '{id}' (on a {kind}) — every id must be unique across all content types.");
+                    }
                 }
             }
 
             foreach (var character in _characters)
             {
-                CheckId(character.id, "Character");
-                if (character.baseStats.maxHealth <= 0)
+                if (character.data.BaseStats.maxHealth <= 0)
                 {
-                    errors.Add($"Character '{character.id}' has non-positive baseStats.maxHealth ({character.baseStats.maxHealth}).");
+                    errors.Add($"Character '{character.id}' has non-positive baseStats.maxHealth ({character.data.BaseStats.maxHealth}).");
                 }
 
                 // Ability scores are a fixed budget, not a free stat line.
@@ -67,7 +99,7 @@ namespace PrincesPalace.Content
                 // without this a new character could be above average at
                 // everything and simply outclass the roster. To be tough
                 // somewhere you have to be feeble somewhere else.
-                var scores = character.baseAbilityScores;
+                var scores = character.data.AbilityScores;
                 int total = scores.strength + scores.dexterity + scores.constitution
                             + scores.wisdom + scores.intelligence + scores.charisma;
                 if (total != AbilityScoreBudget)
@@ -96,37 +128,36 @@ namespace PrincesPalace.Content
                 // looks like a bug. Named here for the same reason the talent
                 // check below exists, and caught at build time where a typo is
                 // still a typo.
-                if (enemy?.abilities == null) continue;
+                if (enemy?.data?.Abilities == null) continue;
 
-                foreach (var ability in enemy.abilities)
+                foreach (var ability in enemy.data.Abilities)
                 {
-                    if (ability == null || string.IsNullOrEmpty(ability.skillId)) continue;
+                    if (string.IsNullOrEmpty(ability.SkillId)) continue;
 
-                    if (GetSkill(ability.skillId) == null)
+                    if (GetSkill(ability.SkillId) == null)
                     {
                         errors.Add($"Enemy '{enemy.id}' has an ability naming unknown skill id " +
-                                   $"'{ability.skillId}'.");
+                                   $"'{ability.SkillId}'.");
                     }
                 }
             }
 
             foreach (var talent in _talents)
             {
-                CheckId(talent.id, "Talent");
 
                 // A talent-granted ability that points at nothing puts a
                 // button on the combat strip that cannot be pressed —
                 // exactly the same failure mode as grantsStartingItemId
                 // below, and worth the same named check rather than a null
                 // silently reaching FightController's skill strip.
-                if (!string.IsNullOrEmpty(talent.grantsSkillId))
+                if (!string.IsNullOrEmpty(talent.data.GrantsSkillId))
                 {
-                    var granted = GetSkill(talent.grantsSkillId);
+                    var granted = GetSkill(talent.data.GrantsSkillId);
                     if (granted == null)
                     {
-                        errors.Add($"Talent '{talent.id}' grants unknown skill id '{talent.grantsSkillId}'.");
+                        errors.Add($"Talent '{talent.id}' grants unknown skill id '{talent.data.GrantsSkillId}'.");
                     }
-                    else if (!talent.IsSharedByEveryCharacter && granted.data.CharacterId != talent.characterId)
+                    else if (!talent.IsSharedByEveryCharacter && granted.data.CharacterId != talent.data.CharacterId)
                     {
                         // Caught for real: the Fragile Lamb's ward ability was
                         // first authored as "ward", which the OWL already
@@ -137,8 +168,8 @@ namespace PrincesPalace.Content
                         // collision between two characters' kits is a typo,
                         // and it should fail the content build rather than
                         // quietly delete a talent's whole payload.
-                        errors.Add($"Talent '{talent.id}' belongs to '{talent.characterId}' but grants skill " +
-                                   $"'{talent.grantsSkillId}', which belongs to '{granted.data.CharacterId}'. " +
+                        errors.Add($"Talent '{talent.id}' belongs to '{talent.data.CharacterId}' but grants skill " +
+                                   $"'{talent.data.GrantsSkillId}', which belongs to '{granted.data.CharacterId}'. " +
                                    "A character cannot hand out another character's kit.");
                     }
                 }
@@ -151,24 +182,24 @@ namespace PrincesPalace.Content
                 // the monotonicity the whole algorithm rests on.
                 foreach (AbilityScore score in System.Enum.GetValues(typeof(AbilityScore)))
                 {
-                    if (talent.abilityScoreBonus[score] < 0)
+                    if (talent.data.AbilityScoreBonus[score] < 0)
                     {
-                        errors.Add($"Talent '{talent.id}' has a negative {score} bonus ({talent.abilityScoreBonus[score]}) — ability-score bonuses must never be negative, or RequirementResolver's fixpoint is no longer guaranteed to converge on the same set regardless of order.");
+                        errors.Add($"Talent '{talent.id}' has a negative {score} bonus ({talent.data.AbilityScoreBonus[score]}) — ability-score bonuses must never be negative, or RequirementResolver's fixpoint is no longer guaranteed to converge on the same set regardless of order.");
                     }
                 }
 
-                if (!string.IsNullOrEmpty(talent.grantsStartingItemId) && GetItem(talent.grantsStartingItemId) == null)
+                if (!string.IsNullOrEmpty(talent.data.GrantsStartingItemId) && GetItem(talent.data.GrantsStartingItemId) == null)
                 {
-                    errors.Add($"Talent '{talent.id}' grants unknown item id '{talent.grantsStartingItemId}'.");
+                    errors.Add($"Talent '{talent.id}' grants unknown item id '{talent.data.GrantsStartingItemId}'.");
                 }
 
                 // A talent owned by a character who does not exist can never
                 // be taken by anyone, so it is dead content that still shows
                 // up in the global Talents list. Mirrors the same check on
                 // skills and on grantsStartingItemId.
-                if (!talent.IsSharedByEveryCharacter && GetCharacter(talent.characterId) == null)
+                if (!talent.IsSharedByEveryCharacter && GetCharacter(talent.data.CharacterId) == null)
                 {
-                    errors.Add($"Talent '{talent.id}' belongs to unknown character id '{talent.characterId}'.");
+                    errors.Add($"Talent '{talent.id}' belongs to unknown character id '{talent.data.CharacterId}'.");
                 }
 
                 // The one invariant the talent PANEL depends on: two nodes
@@ -185,38 +216,29 @@ namespace PrincesPalace.Content
 
                     var sameCell = _talents.Where(other =>
                         other != talent
-                        && other.column == talent.column
-                        && other.row == talent.row
+                        && other.data.Column == talent.data.Column
+                        && other.data.Row == talent.data.Row
                         && other.IsAvailableTo(new Character(character.id))).ToList();
 
                     if (sameCell.Count > 0)
                     {
                         errors.Add($"'{character.id}' sees both '{talent.id}' and '{sameCell[0].id}' at grid cell " +
-                                   $"({talent.column},{talent.row}) — one cell renders one node.");
+                                   $"({talent.data.Column},{talent.data.Row}) — one cell renders one node.");
                     }
                 }
             }
 
             foreach (var upgrade in _upgrades)
             {
-                CheckId(upgrade.id, "Upgrade");
                 if (upgrade.cost < 0)
                 {
                     errors.Add($"Upgrade '{upgrade.id}' has a negative cost ({upgrade.cost}).");
                 }
             }
 
-            // Relics were the one content type this function had never seen
-            // (AUDIT.md #20's blind spot, reopened on a type added after the
-            // finding was written). The id check matters more than it looks:
-            // `seenIds` is shared across every type above, so until relics
-            // were walked here, a relic sharing an id with an item or a talent
-            // went undetected — and ids are what saves store, so the collision
-            // surfaces later as a save resolving to the wrong definition.
             foreach (var relic in _relics)
             {
-                CheckId(relic.id, "Relic");
-                if (string.IsNullOrWhiteSpace(relic.displayName))
+                if (string.IsNullOrWhiteSpace(relic.data.DisplayName))
                 {
                     errors.Add($"Relic '{relic.id}' has no displayName; the Relics screen would show a blank row.");
                 }
@@ -224,8 +246,7 @@ namespace PrincesPalace.Content
 
             foreach (var modifier in _modifiers)
             {
-                CheckId(modifier.id, "Modifier");
-                if (string.IsNullOrWhiteSpace(modifier.displayName))
+                if (string.IsNullOrWhiteSpace(modifier.data.DisplayName))
                 {
                     errors.Add($"Modifier '{modifier.id}' has no displayName; a tooltip line would show a blank row.");
                 }
@@ -233,17 +254,16 @@ namespace PrincesPalace.Content
 
             foreach (var enemy in _enemies)
             {
-                CheckId(enemy.id, "Enemy");
-                if (enemy.baseStats.maxHealth <= 0)
+                if (enemy.data.BaseStats.maxHealth <= 0)
                 {
-                    errors.Add($"Enemy '{enemy.id}' has non-positive baseStats.maxHealth ({enemy.baseStats.maxHealth}).");
+                    errors.Add($"Enemy '{enemy.id}' has non-positive baseStats.maxHealth ({enemy.data.BaseStats.maxHealth}).");
                 }
 
                 // An element on BOTH lists, now that each is a list. Still an
                 // error rather than a precedence rule: CombatMath scores a
                 // weakness first, so the resistance would be authored, shown in
                 // the glossary, and never once apply.
-                var contradictions = enemy.Affinity.Contradictions;
+                var contradictions = enemy.data.Affinity.Contradictions;
                 if (contradictions.Count > 0)
                 {
                     errors.Add($"Enemy '{enemy.id}' lists {string.Join(" and ", contradictions)} " +
@@ -288,16 +308,15 @@ namespace PrincesPalace.Content
             {
                 foreach (AbilityScore score in System.Enum.GetValues(typeof(AbilityScore)))
                 {
-                    if (talent.abilityScoreBonus[score] > 0)
+                    if (talent.data.AbilityScoreBonus[score] > 0)
                     {
-                        talentBonusSum = talentBonusSum.With(score, talentBonusSum[score] + talent.abilityScoreBonus[score]);
+                        talentBonusSum = talentBonusSum.With(score, talentBonusSum[score] + talent.data.AbilityScoreBonus[score]);
                     }
                 }
             }
 
             foreach (var item in _items)
             {
-                CheckId(item.id, "Item");
                 if (item.cost < 0)
                 {
                     errors.Add($"Item '{item.id}' has a negative cost ({item.cost}).");
@@ -355,8 +374,6 @@ namespace PrincesPalace.Content
 
             foreach (var skill in _skills)
             {
-                CheckId(skill.id, "Skill");
-
                 // Mirrors the grantsStartingItemId check: a skill owned by a
                 // character who does not exist can never be pressed, and the
                 // typo is invisible until someone wonders where the button
@@ -449,7 +466,7 @@ namespace PrincesPalace.Content
                 if (skill.data.CostsResource)
                 {
                     var owner = GetCharacter(skill.data.CharacterId);
-                    if (owner != null && !owner.HasSignatureResource)
+                    if (owner != null && !owner.data.HasSignatureResource)
                     {
                         errors.Add($"Skill '{skill.id}' costs a signature resource, but '{skill.data.CharacterId}' has none.");
                     }
@@ -459,28 +476,28 @@ namespace PrincesPalace.Content
             var seenSpellTierLevels = new HashSet<int>();
             foreach (var tier in _spellTiers)
             {
-                if (!seenSpellTierLevels.Add(tier.level))
+                if (!seenSpellTierLevels.Add(tier.data.Level))
                 {
-                    errors.Add($"Duplicate spell tier for level {tier.level} — every level must appear at most once.");
+                    errors.Add($"Duplicate spell tier for level {tier.data.Level} — every level must appear at most once.");
                 }
 
-                if (tier.manaCost <= 0)
+                if (tier.data.ManaCost <= 0)
                 {
-                    errors.Add($"Spell tier level {tier.level} has non-positive manaCost ({tier.manaCost}).");
+                    errors.Add($"Spell tier level {tier.data.Level} has non-positive manaCost ({tier.data.ManaCost}).");
                 }
 
-                if (tier.powerMultiplier <= 0f)
+                if (tier.data.PowerMultiplier <= 0f)
                 {
-                    errors.Add($"Spell tier level {tier.level} has non-positive powerMultiplier ({tier.powerMultiplier}).");
+                    errors.Add($"Spell tier level {tier.data.Level} has non-positive powerMultiplier ({tier.data.PowerMultiplier}).");
                 }
 
                 // The level-1 tier is what GetSpellTierForLevel(1) has to
                 // resolve to for a brand new character — gating it on a
                 // requirement would leave Skill with no mana cost or
                 // damage to fall back on for anyone who has not yet met it.
-                if (tier.level == 1 && !tier.requirements.Equals(AbilityScoreBlock.Zero))
+                if (tier.data.Level == 1 && !tier.data.Requirements.Equals(AbilityScoreBlock.Zero))
                 {
-                    errors.Add($"Spell tier level 1 has a non-zero requirement ({tier.requirements}) — the level-1 tier must always be usable, since a fresh character has to have SOME spell tier available from the very first fight.");
+                    errors.Add($"Spell tier level 1 has a non-zero requirement ({tier.data.Requirements}) — the level-1 tier must always be usable, since a fresh character has to have SOME spell tier available from the very first fight.");
                 }
             }
 

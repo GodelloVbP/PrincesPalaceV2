@@ -12,57 +12,59 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 429d83c7acd1e6546892363aadea2846, type: 3}
   m_Name: beetle
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.EnemyDefinition
-  id: beetle
-  displayName: Ironback Beetle
-  baseStats:
-    maxHealth: 50
-    speed: 5
-    attack: 16
-    manaRegen: 0
-    physicalDefense: 25
-    magicalDefense: 5
-  attackType: 0
-  expReward: 24
-  currencyReward: 12
-  isBoss: 0
-  minFloor: 1
-  weaknesses: 0100000005000000
-  resistances: 0000000002000000
-  breakShieldPoints: 4
-  spritePath: Enemies/beetle
-  facing: 1
-  sortOrder: 12
-  skillName: 
-  skillPower: 1.5
-  skillChance: 0.35
-  vfx:
-    path: 
-    seconds: 0.6
-    impactFrame: 3
-    anchor: 
-    size: 380
-    departFrame: 0
-    impactX: -1
-    impactY: -1
-    sfxPath: 
-    groundPath: 
-    groundSeconds: 0
-    groundImpactFrame: 0
-    groundAspect: 0
-    groundImpactY: -1
-    castSfxPath: 
-  abilities:
-  - skillId: shell_up
-    weight: 1
-  - skillId: barrel_roll
-    weight: 2
-  attackWeight: 3
-  appliesStatus: 0
-  hasStatus: 0
-  statusMagnitude: 0
-  statusDuration: 0
-  avoidsFrontSlot: 0
-  attackHoldsPosition: 0
-  attackApproach: charge
-  stageScale: 1
-  slotSpan: 1
+  data:
+    Id: beetle
+    DisplayName: Ironback Beetle
+    BaseStats:
+      maxHealth: 50
+      speed: 5
+      attack: 16
+      manaRegen: 0
+      physicalDefense: 25
+      magicalDefense: 5
+    ExpReward: 24
+    CurrencyReward: 12
+    IsBoss: 0
+    Weaknesses: 0100000005000000
+    Resistances: 0000000002000000
+    SortOrder: 12
+    BreakShieldPoints: 4
+    StageScale: 1
+    SlotSpan: 1
+    SpritePath: Enemies/beetle
+    Abilities:
+    - SkillId: shell_up
+      Weight: 1
+    - SkillId: barrel_roll
+      Weight: 2
+    AttackWeight: 3
+    SkillName: 
+    SkillPower: 1.5
+    SkillChance: 0.35
+    Facing: 1
+    Active: 1
+    Vfx:
+      path: 
+      seconds: 0.6
+      impactFrame: 3
+      anchor: 
+      size: 380
+      departFrame: 0
+      impactX: -1
+      impactY: -1
+      sfxPath: 
+      groundPath: 
+      groundSeconds: 0
+      groundImpactFrame: 0
+      groundAspect: 0
+      groundImpactY: -1
+      castSfxPath: 
+    Status: 0
+    StatusAuthored: 0
+    StatusMagnitude: 0
+    StatusDuration: 0
+    AvoidsFrontSlot: 0
+    AttackHoldsPosition: 0
+    AttackApproach: 3
+    MinFloor: 1
+    AttackType: 0
