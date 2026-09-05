@@ -258,14 +258,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // them -- it draws one character -- but the game has five and no
             // other way to reach them from here, so dropping them would be a
             // capability regression dressed as a redesign.
-            var prev = Ui.Button("DossierPrevCharacter", UiStrings.OverlayPrev, new UiVec(34f, 34f), 18,
-                Place.At(cx - DossierLayout.ContentAWidth * 0.5f + 17f, DossierLayout.NameCentreY)).NoChrome();
-            var next = Ui.Button("DossierNextCharacter", UiStrings.OverlayNext, new UiVec(34f, 34f), 18,
-                Place.At(cx + DossierLayout.ContentAWidth * 0.5f - 17f, DossierLayout.NameCentreY)).NoChrome();
-            PrevCharacterButton = prev;
-            NextCharacterButton = next;
-            yield return prev;
-            yield return next;
+            var pager = Ui.Pager(
+                "DossierPrevCharacter",
+                Place.At(cx - DossierLayout.ContentAWidth * 0.5f + 17f, DossierLayout.NameCentreY),
+                "DossierNextCharacter",
+                Place.At(cx + DossierLayout.ContentAWidth * 0.5f - 17f, DossierLayout.NameCentreY),
+                new UiVec(34f, 34f), 18);
+            PrevCharacterButton = pager.Prev;
+            NextCharacterButton = pager.Next;
+            yield return pager.Prev;
+            yield return pager.Next;
 
             var sub = Ui.Label("DossierSubLine", UiString.Runtime,
                 new UiVec(DossierLayout.ContentAWidth, 24f), 14, Accent,

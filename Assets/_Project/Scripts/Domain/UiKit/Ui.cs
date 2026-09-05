@@ -532,6 +532,64 @@ namespace PrincesPalace.Domain.UiKit
             .AllowOverlap("a modal deliberately covers its siblings - intercepting their input is what modal means");
         }
 
+        // The three nodes a paging control is made of, so a caller can still
+        // decorate each one -- which every caller needs to do, see Pager.
+        public readonly struct PagerNodes
+        {
+            public readonly UiNode Prev;
+            public readonly UiNode Next;
+
+            // Null at the three sites that step through characters and
+            // constellations rather than pages, and so have nothing to count.
+            public readonly UiNode Label;
+
+            internal PagerNodes(UiNode prev, UiNode next, UiNode label)
+            {
+                Prev = prev;
+                Next = next;
+                Label = label;
+            }
+        }
+
+        // PREV, NEXT, and optionally the counter between them.
+        //
+        // Seven screens step through something, and what they share is smaller
+        // than it looks: both arrows are chromeless (there is no plate to
+        // reskin on a 40px glyph, and four sites carried a comment saying so),
+        // and both say the same two characters. THAT is what moves here. The
+        // strings in particular: five of the seven reached for
+        // UiStrings.TalentPrev/TalentNext, so the glossary, the debug menu, the
+        // shop and the relic draft were all labelling their arrows with a
+        // talent-screen string. They are UiStrings.PagerPrev/PagerNext now and
+        // TalentPrev/TalentNext are gone -- nothing talent-specific was left.
+        //
+        // WHAT DELIBERATELY DOES NOT MOVE is the decoration, and this is the
+        // CODE_STANDARDS SS2 line about a helper you are entitled to bypass.
+        // The seven disagree: the relic draft and the shop start all three
+        // nodes inactive, three sites mark the label AsDecor and the shop's is
+        // not decor at all, two style the label as TacticalData. Baking any of
+        // those in would silently change three trees; offering a flag for each
+        // would make the signature longer than the code it replaces. The nodes
+        // come back mutable and the caller says the rest in one line.
+        //
+        // Places are per-node rather than a centre and an offset because the
+        // sites are not symmetric: the relic draft's arrows sit at y 20 and its
+        // counter at y -280, and the talent tree's flank the sky at its edges.
+        public static PagerNodes Pager(
+            string prevName, Place prevPlace,
+            string nextName, Place nextPlace,
+            UiVec arrowSize, int arrowFontSize,
+            string labelName = null, UiString labelText = default, Place labelPlace = default,
+            UiVec labelSize = default, int labelFontSize = 0, string labelHex = null)
+        {
+            var prev = Button(prevName, UiStrings.PagerPrev, arrowSize, arrowFontSize, prevPlace).NoChrome();
+            var next = Button(nextName, UiStrings.PagerNext, arrowSize, arrowFontSize, nextPlace).NoChrome();
+            var label = labelName == null
+                ? null
+                : Label(labelName, labelText, labelSize, labelFontSize, labelHex, labelPlace);
+            return new PagerNodes(prev, next, label);
+        }
+
         // A HOVER TOOLTIP: a ground that takes no clicks, and the lines on it.
         //
         // Four screens built this by hand and each one re-derived the same two

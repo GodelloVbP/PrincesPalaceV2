@@ -608,25 +608,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 content.Add(row.Row.Node);
             }
 
-            var prev = Ui.Button("ShopPackPrev", UiStrings.TalentPrev, new UiVec(56f, 56f), 20,
-                    Place.At(-460f, -380f))
-                .NoChrome()
-                .Inactive();
-            var next = Ui.Button("ShopPackNext", UiStrings.TalentNext, new UiVec(56f, 56f), 20,
-                    Place.At(460f, -380f))
-                .NoChrome()
-                .Inactive();
-            var pageLabel = Ui.Label("ShopPackPage", UiStrings.ShopPackPage, new UiVec(200f, 28f), 20,
-                    MetaText, Place.At(0f, -380f))
-                .Styled(TypographyRole.TacticalData)
-                .Inactive();
-            PackPrevPage = prev;
-            PackNextPage = next;
-            PackPageLabel = pageLabel;
+            var pager = Ui.Pager("ShopPackPrev", Place.At(-460f, -380f),
+                "ShopPackNext", Place.At(460f, -380f), new UiVec(56f, 56f), 20,
+                "ShopPackPage", UiStrings.ShopPackPage, Place.At(0f, -380f),
+                new UiVec(200f, 28f), 20, MetaText);
+            pager.Prev.Inactive();
+            pager.Next.Inactive();
+            pager.Label.Styled(TypographyRole.TacticalData).Inactive();
+            PackPrevPage = pager.Prev;
+            PackNextPage = pager.Next;
+            PackPageLabel = pager.Label;
 
-            content.Add(prev);
-            content.Add(next);
-            content.Add(pageLabel);
+            content.Add(pager.Prev);
+            content.Add(pager.Next);
+            content.Add(pager.Label);
 
             var panel = Ui.Panel("ShopPackContent", Place.At(0f, 0f), UiSize.Fixed(modalSize), content);
             var modal = Ui.Modal("ShopPackModal", "#0A0614E0", panel).Inactive();

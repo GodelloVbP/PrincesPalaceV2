@@ -130,20 +130,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // --- pager --------------------------------------------------------------
             float pagerY = ListTop - DebugMenuCatalog.RowsPerPage * (RowHeight + RowSpacing) - 26f;
 
-            var page = Ui.Label("DebugPageLabel", UiStrings.DebugPage, new UiVec(320f, 40f), 18, "#B8A8D9",
-                Place.At(0f, pagerY)).AsDecor();
-            // NoChrome: narrow arrow icon buttons.
-            var prev = Ui.Button("DebugPrevPage", UiStrings.TalentPrev, new UiVec(56f, 44f), 20,
-                Place.At(-260f, pagerY)).NoChrome();
-            var next = Ui.Button("DebugNextPage", UiStrings.TalentNext, new UiVec(56f, 44f), 20,
-                Place.At(260f, pagerY)).NoChrome();
+            var pager = Ui.Pager("DebugPrevPage", Place.At(-260f, pagerY),
+                "DebugNextPage", Place.At(260f, pagerY), new UiVec(56f, 44f), 20,
+                "DebugPageLabel", UiStrings.DebugPage, Place.At(0f, pagerY),
+                new UiVec(320f, 40f), 18, "#B8A8D9");
+            pager.Label.AsDecor();
 
-            screen.PageLabel = page;
-            screen.PrevPageButton = prev;
-            screen.NextPageButton = next;
-            chrome.Add(page);
-            chrome.Add(prev);
-            chrome.Add(next);
+            screen.PageLabel = pager.Label;
+            screen.PrevPageButton = pager.Prev;
+            screen.NextPageButton = pager.Next;
+            chrome.Add(pager.Label);
+            chrome.Add(pager.Prev);
+            chrome.Add(pager.Next);
 
             var close = Ui.Button("DebugCloseButton", UiStrings.Close, new UiVec(220f, 56f), 18,
                     Place.At(0f, -470f))

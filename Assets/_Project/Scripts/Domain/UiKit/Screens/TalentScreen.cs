@@ -184,14 +184,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // hides the one that has nowhere to go: paging is a clamped line,
             // and an arrow that greys out is how a player finds the ends without
             // counting.
-            // NoChrome: narrow arrow icon buttons, the same category
-            // GlossaryScreen's and DebugMenuScreen's pagers stay chromeless for.
-            var prevPath = Ui.Button("PrevPathButton", UiStrings.TalentPrev,
-                new UiVec(ConstellationLayout.ArrowWidth, ConstellationLayout.ArrowHeight), 30,
-                Place.At(ConstellationLayout.ArrowLeftX, 0f)).NoChrome();
-            var nextPath = Ui.Button("NextPathButton", UiStrings.TalentNext,
-                new UiVec(ConstellationLayout.ArrowWidth, ConstellationLayout.ArrowHeight), 30,
-                Place.At(ConstellationLayout.ArrowRightX, 0f)).NoChrome();
+            var pathPager = Ui.Pager(
+                "PrevPathButton", Place.At(ConstellationLayout.ArrowLeftX, 0f),
+                "NextPathButton", Place.At(ConstellationLayout.ArrowRightX, 0f),
+                new UiVec(ConstellationLayout.ArrowWidth, ConstellationLayout.ArrowHeight), 30);
+            var prevPath = pathPager.Prev;
+            var nextPath = pathPager.Next;
             screen.PrevPathButton = prevPath;
             screen.NextPathButton = nextPath;
 
@@ -283,20 +281,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             // Hidden outright while there is one character -- see
             // TalentController.Refresh, and the reason written there.
-            // NoChrome: a 40x40 square icon button, the same category the
-            // path arrows above stay chromeless for.
-            var prevCharacter = Ui.Button("PrevCharacterButton", UiStrings.TalentPrev,
-                new UiVec(40f, 40f), 20,
+            var characterPager = Ui.Pager(
+                "PrevCharacterButton",
                 Place.At(-ConstellationLayout.PanelInnerWidth * 0.5f + 20f,
-                         ConstellationLayout.PanelHeaderY)).NoChrome();
-            var nextCharacter = Ui.Button("NextCharacterButton", UiStrings.TalentNext,
-                new UiVec(40f, 40f), 20,
+                         ConstellationLayout.PanelHeaderY),
+                "NextCharacterButton",
                 Place.At(ConstellationLayout.PanelInnerWidth * 0.5f - 20f,
-                         ConstellationLayout.PanelHeaderY)).NoChrome();
-            PrevCharacterButton = prevCharacter;
-            NextCharacterButton = nextCharacter;
-            parts.Add(prevCharacter);
-            parts.Add(nextCharacter);
+                         ConstellationLayout.PanelHeaderY),
+                new UiVec(40f, 40f), 20);
+            PrevCharacterButton = characterPager.Prev;
+            NextCharacterButton = characterPager.Next;
+            parts.Add(characterPager.Prev);
+            parts.Add(characterPager.Next);
 
             var pathName = Ui.Label("TalentPathName", UiString.Runtime,
                     new UiVec(ConstellationLayout.PanelInnerWidth, 34f), 28, "#B8A8D9",

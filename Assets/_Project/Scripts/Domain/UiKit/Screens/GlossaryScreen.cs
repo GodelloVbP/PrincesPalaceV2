@@ -82,20 +82,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.EmptyHint = empty;
             inside.Add(empty);
 
-            var page = Ui.Label("GlossaryPageLabel", UiStrings.GlossaryPage, new UiVec(260f, 34f), 16,
-                    "#B8A8D9", Place.At(ListX, -390f))
-                .AsDecor();
-            // NoChrome: narrow arrow icon buttons, no plate to reskin.
-            var prev = Ui.Button("GlossaryPrevPage", UiStrings.TalentPrev, new UiVec(52f, 44f), 20,
-                Place.At(ListX - 200f, -390f)).NoChrome();
-            var next = Ui.Button("GlossaryNextPage", UiStrings.TalentNext, new UiVec(52f, 44f), 20,
-                Place.At(ListX + 200f, -390f)).NoChrome();
-            screen.PageLabel = page;
-            screen.PrevPageButton = prev;
-            screen.NextPageButton = next;
-            inside.Add(page);
-            inside.Add(prev);
-            inside.Add(next);
+            var pager = Ui.Pager("GlossaryPrevPage", Place.At(ListX - 200f, -390f),
+                "GlossaryNextPage", Place.At(ListX + 200f, -390f), new UiVec(52f, 44f), 20,
+                "GlossaryPageLabel", UiStrings.GlossaryPage, Place.At(ListX, -390f),
+                new UiVec(260f, 34f), 16, "#B8A8D9");
+            pager.Label.AsDecor();
+            screen.PageLabel = pager.Label;
+            screen.PrevPageButton = pager.Prev;
+            screen.NextPageButton = pager.Next;
+            inside.Add(pager.Label);
+            inside.Add(pager.Prev);
+            inside.Add(pager.Next);
 
             // ---- the plate ---------------------------------------------------
             var icon = Ui.Sprite("GlossaryDetailIcon", null, Place.At(PlateX, 250f),

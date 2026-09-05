@@ -102,28 +102,24 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // left/right inset caps content at +/-697.5 (half of the 1500-
             // wide frame's own content bound), and 680+30 (this button's own
             // half-width) reached 710 -- 12.5px past it.
-            var prevPage = Ui.Button("DraftPrevPage", UiStrings.TalentPrev,
-                    new UiVec(60f, 60f), 22, Place.At(-660f, 20f))
-                .NoChrome()
-                .Inactive();
-            var nextPage = Ui.Button("DraftNextPage", UiStrings.TalentNext,
-                    new UiVec(60f, 60f), 22, Place.At(660f, 20f))
-                .NoChrome()
-                .Inactive();
+            //
+            // The counter sits between the cards (which stop at y -210) and
+            // Descend (at -350), which is why its y is its own rather than the
+            // arrows'.
+            var pager = Ui.Pager("DraftPrevPage", Place.At(-660f, 20f),
+                "DraftNextPage", Place.At(660f, 20f), new UiVec(60f, 60f), 22,
+                "DraftPageLabel", UiString.Runtime, Place.At(0f, -280f),
+                new UiVec(300f, 30f), 18, "#B8A8D9");
+            pager.Prev.Inactive();
+            pager.Next.Inactive();
+            pager.Label.AsDecor().Styled(TypographyRole.TacticalData).Inactive();
 
-            // Between the cards (which stop at y -210) and Descend (at -350).
-            var pageLabel = Ui.Label("DraftPageLabel", UiString.Runtime, new UiVec(300f, 30f), 18,
-                    "#B8A8D9", Place.At(0f, -280f))
-                .AsDecor()
-                .Styled(TypographyRole.TacticalData)
-                .Inactive();
-
-            screen.PrevPageButton = prevPage;
-            screen.NextPageButton = nextPage;
-            screen.PageLabel = pageLabel;
-            inside.Add(prevPage);
-            inside.Add(nextPage);
-            inside.Add(pageLabel);
+            screen.PrevPageButton = pager.Prev;
+            screen.NextPageButton = pager.Next;
+            screen.PageLabel = pager.Label;
+            inside.Add(pager.Prev);
+            inside.Add(pager.Next);
+            inside.Add(pager.Label);
 
             // Always pressable. A draft the player cannot leave is worse than a
             // draft they decline, and an empty pool has to have an exit.

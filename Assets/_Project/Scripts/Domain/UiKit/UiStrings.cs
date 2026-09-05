@@ -14,6 +14,17 @@ namespace PrincesPalace.Domain.UiKit
     // is the missing overloads and the lint, not the file count.
     public static class UiStrings
     {
+        // ---- paging ----------------------------------------------------------
+        //
+        // The two arrow glyphs, with no screen's name on them. These used to be
+        // TalentPrev/TalentNext, and five of the seven screens that step
+        // through something reached across for them -- the glossary, the debug
+        // menu, the shop's pack and the relic draft all labelled their arrows
+        // with a talent-screen string, which is how you can tell a string was
+        // named after its first caller rather than after what it says.
+        public static readonly UiString PagerPrev = UiString.Define("pager.prev", "<");
+        public static readonly UiString PagerNext = UiString.Define("pager.next", ">");
+
         // --- the confirmed drift pair -------------------------------------
         // v1 wrote this twice: SceneBuilder.Hub.cs:127 baked
         // "Gold: 0    Relics: 0" while HubController.cs:67 wrote
@@ -32,8 +43,6 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString TalentTaken = UiString.Define("talent.taken", "KINDLED");
         public static readonly UiString TalentLocked = UiString.Define("talent.locked", "LOCKED");
         public static readonly UiString TalentNoEmbers = UiString.Define("talent.no_embers", "NO EMBERS");
-        public static readonly UiString TalentPrev = UiString.Define("talent.prev", "<");
-        public static readonly UiString TalentNext = UiString.Define("talent.next", ">");
         public static readonly UiString TalentBack = UiString.Define("talent.back", "Back");
 
         // "RESPEC", matching the word the dossier's reward-track line uses
