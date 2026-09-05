@@ -7,7 +7,9 @@ using PrincesPalace.Content;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Rewards;
+using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Rng;
+using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.PlayModeTests
 {
@@ -96,6 +98,139 @@ namespace PrincesPalace.PlayModeTests
 
             var after = ContentDatabase.AvailableSkillsFor(character).Select(s => s.id).ToList();
             CollectionAssert.Contains(after, SkillId, "learning the book is what grants it");
+        }
+
+        // ---- a book belongs to whoever learned it (plan Step 4, E4) -----------
+
+        // ODETTE CASTS SHAWN'S SPELL, because it was never Shawn's -- it was
+        // whoever paid for the book's.
+        //
+        // Every one of the six book spells carries characterId "sheep",
+        // because Shawn is who they were first written for. The shop has never
+        // read that field (AvailableBookOptions offers any bookTier > 0 skill
+        // not already known by every fielded character), so Odette could buy
+        // Frost Flare, be charged, watch it land in one of her three slots --
+        // and then find it absent from her kit in the fight, because
+        // AvailableSkillsFor still asked whether the skill was hers by
+        // AUTHORSHIP. A purchase with no effect, and nothing anywhere said so.
+        private const string OtherCharacterId = "owl";
+
+        [Test]
+        public void ALearnedBookReachesTheCharacterWhoLearnedItWhoeverItWasAuthoredFor()
+        {
+            RunManager.StartRun(4242UL);
+
+            var skill = ContentDatabase.GetSkill(SkillId);
+            Assert.IsNotNull(skill);
+            Assert.AreNotEqual(OtherCharacterId, skill.data.CharacterId,
+                "this test is only worth anything if the book is authored against SOMEBODY ELSE");
+
+            var odette = new Character { definitionId = OtherCharacterId, level = 9 };
+
+            CollectionAssert.DoesNotContain(
+                ContentDatabase.AvailableSkillsFor(odette).Select(x => x.id).ToList(), SkillId,
+                "nothing should grant a book before it is learned");
+
+            GiveOneUnassignedCopy();
+            var result = RunOrchestrator.LearnSpell(OtherCharacterId, SkillId);
+            Assert.AreEqual(ShopOutcome.Ok, result.Outcome,
+                "the shop already lets anyone buy this book; learning it must agree");
+
+            CollectionAssert.Contains(
+                ContentDatabase.AvailableSkillsFor(odette).Select(x => x.id).ToList(), SkillId,
+                "the character who learned the book is the character who has it");
+        }
+
+        // THE OTHER HALF, and the half that would make the change wrong if it
+        // failed: a book is learned by ONE character, not by the party.
+        [Test]
+        public void ASquadMateWhoDidNotLearnItDoesNotSeeIt()
+        {
+            RunManager.StartRun(4242UL);
+
+            GiveOneUnassignedCopy();
+            Assert.AreEqual(ShopOutcome.Ok, RunOrchestrator.LearnSpell(OtherCharacterId, SkillId).Outcome);
+
+            var shawn = new Character { definitionId = CharacterId, level = 9 };
+
+            CollectionAssert.DoesNotContain(
+                ContentDatabase.AvailableSkillsFor(shawn).Select(x => x.id).ToList(), SkillId,
+                "Odette's book is Odette's -- even though this skill is authored against Shawn, " +
+                "which is exactly the case that would pass for the wrong reason if the check were dropped " +
+                "rather than moved");
+        }
+
+        // AND IT ACTUALLY RESOLVES. Availability is a list; a cast is mana
+        // leaving the pool and health leaving a monster. A skill that appears
+        // on the kit and does nothing when pressed would satisfy both tests
+        // above and be exactly as broken as the bug they describe.
+        [Test]
+        public void TheLearnerCanActuallyCastIt()
+        {
+            RunManager.StartRun(4242UL);
+
+            GiveOneUnassignedCopy();
+            Assert.AreEqual(ShopOutcome.Ok, RunOrchestrator.LearnSpell(OtherCharacterId, SkillId).Outcome);
+
+            var odette = new Character { definitionId = OtherCharacterId, level = 9 };
+            var available = ContentDatabase.AvailableSkillsFor(odette);
+            int row = available.ToList().FindIndex(x => x.id == SkillId);
+            Assert.GreaterOrEqual(row, 0, "the learned book should be on her kit");
+
+            var skills = available.Select(FightEncounterAdapter.Resolve).ToList();
+            var caster = new CombatantState("Odette", true, 300, 99, 40, 10);
+            var foe = new CombatantState("Target", false, 5000, 10, 8, 4);
+
+            var session = new FightSession(
+                new CombatEncounter(new[] { caster }, new[] { foe }),
+                new List<PlayerKit>
+                {
+                    new PlayerKit(OtherCharacterId, CharacterRole.Support, skills, null, null, level: 9),
+                },
+                new List<EnemyKit>
+                {
+                    new EnemyKit(new ResolvedEnemy("dummy", "Target", new StatBlock(), 1, 1, false,
+                        DamageType.Physical, DamageType.Physical, 0), false),
+                },
+                new SeededRandom(11));
+
+            session.Begin();
+
+            int manaBefore = caster.CurrentMana;
+            int healthBefore = foe.CurrentHealth;
+
+            var option = session.SkillOptionsFor(caster).FirstOrDefault(o => o.Skill.Id == SkillId);
+            Assert.IsNotNull(option.Skill, "the session's own option list should carry the learned book");
+            Assert.IsTrue(option.Affordable, "99 mana is enough for any authored book");
+
+            session.CastSkill(option.Index, foe);
+
+            Assert.Less(caster.CurrentMana, manaBefore, "casting it should cost mana");
+            Assert.Less(foe.CurrentHealth, healthBefore, "and the effect should resolve on the target");
+        }
+
+        // THE SHOP'S END OF THE SAME PROMISE, pinned rather than assumed. It
+        // was already true -- AvailableBookOptions never read the skill's
+        // characterId -- and it is precisely the half that made the other half
+        // a bug rather than a design: a shop that sells to anyone paired with
+        // a kit that only serves the author is a purchase with no effect.
+        [Test]
+        public void TheShopOffersABookToWhoeverIsBuying()
+        {
+            RunManager.StartRun(4242UL);
+
+            var offered = RunOrchestrator.ShopBookCandidatesForTest().Select(c => c.SkillId).ToList();
+            CollectionAssert.Contains(offered, SkillId,
+                "a book authored against Shawn is stock for whoever walks in");
+
+            // And it stays stock while only SOME of the squad know it -- the
+            // pool only drops a book everyone fielded already has.
+            GiveOneUnassignedCopy();
+            Assert.AreEqual(ShopOutcome.Ok, RunOrchestrator.LearnSpell(OtherCharacterId, SkillId).Outcome);
+
+            CollectionAssert.Contains(
+                RunOrchestrator.ShopBookCandidatesForTest().Select(c => c.SkillId).ToList(), SkillId,
+                "one buyer knowing it does not take it off the shelf for the rest");
         }
 
         // ---- CanLearn -------------------------------------------------------

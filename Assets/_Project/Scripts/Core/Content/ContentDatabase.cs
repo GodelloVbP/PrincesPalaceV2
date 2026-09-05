@@ -248,26 +248,41 @@ namespace PrincesPalace.Content
             // outside a run (a definition preview, a main-menu character
             // card) this contributes nothing, which is the correct reading.
             //
-            // GATED ON s.bookOnly, which stays false on every skill until
-            // Phase E flips it on the five spells (docs/handoffs/shop_v2/
-            // GAP_AUDIT.md, Gate 3). Until then this whole clause is a
-            // deliberate no-op: a character can OWN a learned spell
-            // (run.learnedSpells) without it changing what AvailableSkillsFor
-            // returns, which is what makes Phase A/gate 3 purely additive --
-            // the acquisition loop ships and is measurable before it can
-            // change a single fight.
+            // GATED ON s.bookOnly, and NOT on whose skill it is. That second
+            // half is the point (plan Step 4, E4).
+            //
+            // A book is a thing the player bought and handed to somebody. Who
+            // it was AUTHORED against is an artefact of where it was first
+            // written down -- every one of the six book spells carries
+            // characterId "sheep" because Shawn is who they were drafted for,
+            // and the shop has never once asked (RunOrchestrator.Shop's
+            // AvailableBookOptions offers any bookTier > 0 skill that not
+            // every fielded character already knows). So Odette could buy
+            // Frost Flare, be charged for it, watch it land in one of her
+            // three slots, and then find it was not on her kit in the fight,
+            // because this method still asked whether the skill was hers by
+            // authorship. It was a purchase with no effect.
+            //
+            // LearnedSpellEntry already carries the characterId it was learned
+            // for, and that -- not the skill's -- is the ownership that means
+            // anything for a book.
             var run = RunManager.Run;
             bool LearnedThisRun(SkillDefinition s) =>
                 s.data.BookOnly && run != null && run.learnedSpells != null
                 && run.learnedSpells.Exists(e => e.characterId == character.definitionId && e.skillId == s.id);
 
+            // TWO ROUTES WITH DIFFERENT OWNERSHIP RULES, so the CharacterId
+            // check sits inside the levelled branch rather than in front of
+            // both. A levelled/granted skill is available because it is THIS
+            // character's; a learned book is available because THIS character
+            // learned it.
             return _skills
                 .Where(s => s.data.PlayerSelectable
-                            && s.data.CharacterId == character.definitionId
-                    && (s.data.UnlockLevel <= character.level
-                        || character.unlockedSkillIds.Contains(s.id)
-                        || granted.Contains(s)
-                        || LearnedThisRun(s)))
+                            && (LearnedThisRun(s)
+                                || (s.data.CharacterId == character.definitionId
+                                    && (s.data.UnlockLevel <= character.level
+                                        || character.unlockedSkillIds.Contains(s.id)
+                                        || granted.Contains(s)))))
                 .OrderBy(s => s.data.UnlockLevel)
                 .ThenBy(s => s.data.SortOrder)
                 .ToList();

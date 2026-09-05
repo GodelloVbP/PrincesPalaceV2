@@ -408,6 +408,16 @@ namespace PrincesPalace
         // ownership context (§7.1 point 4 puts those facts on the card
         // itself instead, read from run.learnedSpells/unassignedSpellBooks
         // directly by whatever paints the card).
+        // The same pool, reachable from a PlayMode test. Public rather than
+        // internal because InternalsVisibleTo names the Editor assembly only,
+        // so a PlayMode fixture reaches this or reaches nothing -- and the
+        // half of the book rule that lives here ("offered to whoever is
+        // buying") is only worth anything if it is pinned beside the half
+        // that lives in AvailableSkillsFor. They were allowed to disagree for
+        // as long as neither was asserted against the other.
+        public static IReadOnlyList<ShopStock.BookCandidate> ShopBookCandidatesForTest() =>
+            AvailableBookOptions();
+
         private static List<ShopStock.BookCandidate> AvailableBookOptions()
         {
             var run = RunManager.Run;
