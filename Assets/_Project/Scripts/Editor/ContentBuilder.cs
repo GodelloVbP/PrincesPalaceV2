@@ -39,6 +39,21 @@ public static class ContentBuilder
     [MenuItem("Prince's Palace/Build Default Content")]
     public static void BuildDefaultContent()
     {
+        // PHASE TIMINGS, permanently, for the same reason GenerationRun.Mark
+        // exists: "the content build is slow" was unactionable until the phases
+        // were stamped, and the answer was the per-asset import, not the
+        // resolvers. NOT prefixed "[ContentBuilder]" -- that exact string is
+        // run_tests_parallel.ps1's failure grep, so a timing line wearing it
+        // would fail every build it measured.
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var last = System.TimeSpan.Zero;
+        void Mark(string what)
+        {
+            var now = watch.Elapsed;
+            Debug.Log($"[ContentTiming] {what}: {(now - last).TotalSeconds:N1}s (total {now.TotalSeconds:N1}s)");
+            last = now;
+        }
+
         RecreateFolder(ContentRoot);
         EnsureFolder(CharactersPath);
         EnsureFolder(TalentsPath);
@@ -50,25 +65,58 @@ public static class ContentBuilder
         EnsureFolder(RelicsPath);
         EnsureFolder(AchievementsPath);
         EnsureFolder(ModifiersPath);
+        Mark("folders");
 
-        BuildCharacters();
-        BuildTalents();
-        BuildUpgrades();
-        BuildEnemies();
-        BuildItems();
-        BuildSpellTiers();
-        BuildSkills();
-        BuildModifiers();
+        // ONE IMPORT PASS FOR THE WHOLE CATALOGUE, not one per asset.
+        //
+        // AssetDatabase.CreateAsset imports what it just wrote before it
+        // returns, and this method calls it ~950 times (192 content entries
+        // plus the expanded weapon and armour-set families). Measured on
+        // 2026-09-05: 50.8s warm for the whole method, of which the writes
+        // were 48.6s. Bracketing them tells the AssetDatabase to defer every
+        // import to the StopAssetEditing below, so the catalogue is imported
+        // once. Same assets, same order, same GUID churn -- only the number of
+        // import cycles changes.
+        //
+        // The folder creation above stays OUTSIDE the bracket deliberately:
+        // AssetDatabase.IsValidFolder/CreateFolder are the database's own view
+        // of the tree, and asking it to create a folder while it is not
+        // importing is asking for a folder that is not there yet when
+        // CreateAsset needs it.
+        //
+        // try/finally, not a bare pair: a resolver that throws inside here
+        // would otherwise leave the AssetDatabase paused for the rest of the
+        // process, and every later Editor operation -- including the ones that
+        // report the failure -- would see a database that never refreshes.
+        AssetDatabase.StartAssetEditing();
+        try
+        {
+            BuildCharacters();
+            BuildTalents();
+            BuildUpgrades();
+            BuildEnemies();
+            BuildItems();
+            BuildSpellTiers();
+            BuildSkills();
+            BuildModifiers();
 
-        // ACHIEVEMENTS BEFORE RELICS, and the order is load-bearing: relics
-        // are validated against the achievement ids this returns, so building
-        // them the other way round would validate against nothing and let a
-        // typo'd gate through.
-        var achievementIds = BuildAchievements();
-        BuildRelics(achievementIds);
+            // ACHIEVEMENTS BEFORE RELICS, and the order is load-bearing: relics
+            // are validated against the achievement ids this returns, so building
+            // them the other way round would validate against nothing and let a
+            // typo'd gate through.
+            var achievementIds = BuildAchievements();
+            BuildRelics(achievementIds);
+        }
+        finally
+        {
+            AssetDatabase.StopAssetEditing();
+        }
+
+        Mark("write assets");
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
+        Mark("import");
 
         // Runs only after every Build* call above has already completed, so
         // a failure here means the generated content itself is wrong (a
@@ -79,6 +127,7 @@ public static class ContentBuilder
         // already in in this process.
         ContentDatabase.Reset();
         var validationErrors = ContentDatabase.ValidateContent();
+        Mark("validate");
         if (validationErrors.Count > 0)
         {
             foreach (string error in validationErrors)
