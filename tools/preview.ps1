@@ -209,9 +209,7 @@ function Invoke-EnemyPreview {
     }
 
     if (-not $Launch) {
-        Write-Host "Headless capture is 1d and is not wired up in this build of the script yet."
-        Write-Host "Use -Launch to play the fight in the Editor."
-        return 2
+        return (Invoke-EnemyCapture -Id $resolved)
     }
 
     $lock = Get-UnityLockState -ProjectRoot $Project
@@ -253,6 +251,58 @@ function Invoke-EnemyPreview {
 
     Write-Host "  $($answer.State): $($answer.Message)"
     if ($answer.State -ne "ok") { return 1 }
+    return 0
+}
+
+# --- the picture route ------------------------------------------------------
+#
+# Runs the [Explicit] PreviewCaptureTests fixture through graphics_tests.ps1,
+# which is the script that already knows how to boot Unity WITHOUT -nographics
+# (camera.Render() is a silent no-op under that flag and ReadPixels returns
+# garbage, so every capture in the project self-skips there).
+#
+# PP_PREVIEW_IDS IS SET HERE AND READ IN EXACTLY ONE TEST FILE, which
+# PreviewEnvironmentLintTests enforces. The variable narrows a picture; it must
+# never narrow a gate.
+function Invoke-EnemyCapture {
+    param([string]$Id)
+
+    # graphics_tests.ps1 runs against the PRIMARY runner copy, not main -- the
+    # Editor is usually open on main and two Unity instances cannot share one
+    # project. So main's freshly built content has to get there first, which is
+    # the same mirror run_tests_parallel.ps1 does.
+    $runner = (Split-Path $Project -Parent) + "\" + (Split-Path $Project -Leaf) + "-TestRunner"
+    if (-not (Test-Path $runner)) {
+        Write-Host "No runner copy at $runner. Run run_tests_parallel.ps1 once to create it."
+        return 1
+    }
+
+    Write-Host "syncing main into the runner copy so it photographs the content you just built ..."
+    robocopy "$Project\Assets" "$runner\Assets" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
+
+    $env:PP_PREVIEW_IDS = $Id
+
+    $out = Join-Path $Project "tools\screenshots\preview"
+    Write-Host "capturing '$Id' -- pictures land in $out"
+
+    & powershell -NoProfile -ExecutionPolicy Bypass `
+        -File (Join-Path $PSScriptRoot "graphics_tests.ps1") `
+        -Filter "PrincesPalace.PlayModeTests.PreviewCaptureTests" | Out-Host
+
+    if ($LASTEXITCODE -ne 0) { return 1 }
+
+    # The runner writes into ITS OWN tools/screenshots. Bringing them back is
+    # what makes "the pictures are in tools/screenshots/preview" true from where
+    # the author is standing.
+    $runnerOut = Join-Path $runner "tools\screenshots\preview"
+    if (Test-Path $runnerOut) {
+        New-Item -ItemType Directory -Force -Path $out | Out-Null
+        robocopy $runnerOut $out /NFL /NDL /NJH /NJS /NP | Out-Null
+    }
+
+    Get-ChildItem -Path $out -Filter "$Id*.png" -ErrorAction SilentlyContinue |
+        ForEach-Object { Write-Host "  $($_.FullName)" }
+
     return 0
 }
 
