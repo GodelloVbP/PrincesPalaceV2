@@ -1,7 +1,7 @@
 # Treant — six key stills, one sheet
 
 Delivered 2026-09-04 under the static-art policy
-(`docs/STATIC_COMBAT_ART_DEEP_DIVE.md`): one drawing per stance, posed by
+(`docs/archive/STATIC_COMBAT_ART_DEEP_DIVE.md`): one drawing per stance, posed by
 `FightBeatPlayer`'s static cues rather than redrawn frame by frame. This
 replaces the six-frame kit delivered 2026-08-24, which was off-style
 (painterly against the rat's flat cel) and whose sheets were redraws rather

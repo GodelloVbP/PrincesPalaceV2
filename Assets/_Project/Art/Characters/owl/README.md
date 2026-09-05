@@ -2,7 +2,7 @@
 
 Delivered 2026-09-04. The second party member with battle art after Shawn,
 and the first actor commissioned directly under the static-art policy
-(`docs/STATIC_COMBAT_ART_DEEP_DIVE.md`): one still per stance, posed by the
+(`docs/archive/STATIC_COMBAT_ART_DEEP_DIVE.md`): one still per stance, posed by the
 fight's static cues. INT-based caster, fragile, and she flies.
 
 ## Source

@@ -78,7 +78,7 @@ replaced by recordings**. Their LENGTHS are derived from the spell's own timing
 rather than chosen -- the pressure cue is the pre-rupture window less a 40ms
 gap, the impact cue fits inside the cooling tail -- so retuning `vfx.seconds`
 means re-running the tool, not trimming a file. See
-`docs/handoffs/cinderfault/README.md`.
+`docs/handoffs/archive/cinderfault/README.md`.
 
 ## The background music
 
@@ -157,7 +157,7 @@ its clips the moment a crossfade completes.
 ### Export requirements
 
 Full list, with the reasoning, in
-`docs/handoffs/adaptive_music/README.md` section 6. The four that cannot be
+`docs/handoffs/archive/adaptive_music/README.md` section 6. The four that cannot be
 fixed in code afterwards:
 
 1. **Identical length, tempo, key and sample rate** across every stem in a set.

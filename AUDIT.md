@@ -265,7 +265,7 @@ Same class as #41 (`CurrencyType.Embers` with no live reader), and the tests are
 what make it expensive rather than merely untidy: eleven passing tests over a
 type the game never invokes read, from the outside, as coverage.
 
-**This one has already cost planning time.** `docs/PLAN_PROGRESSION_TRACK.md`
+**This one has already cost planning time.** `docs/archive/PLAN_PROGRESSION_TRACK.md`
 priced the track's level-25 and level-45 "extra relic slot" rewards as a
 widening of `RelicLoadout` from one entry per character to one per
 (characterId, slotIndex) -- following that class's own header, which specifies

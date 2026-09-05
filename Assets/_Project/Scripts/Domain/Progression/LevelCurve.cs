@@ -26,7 +26,7 @@ namespace PrincesPalace.Domain.Progression
     // step) and level 100 lands near 6.7M -- about fifty deep runs, which is a
     // track rather than a formality. The full working, including what happens
     // if the real depth ceiling turns out to be leg 6-8, is in
-    // docs/PLAN_PROGRESSION_TRACK.md.
+    // docs/archive/PLAN_PROGRESSION_TRACK.md.
     //
     // Worth knowing what this does to a save written before it: per-level cost
     // is LOWER than the old curve between roughly levels 2 and 44 and higher

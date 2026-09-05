@@ -17,7 +17,7 @@ namespace PrincesPalace
     // the character who has earned this". Fielding your best character is
     // supposed to be the choice.
     //
-    // This is docs/HANDOVER_PROGRESSION_TRACK.md 4c answered the cheap way
+    // This is docs/archive/HANDOVER_PROGRESSION_TRACK.md 4c answered the cheap way
     // while the squad is one character. The other reading -- a benefit that
     // applies only while its owner is fielded -- is more interesting and needs
     // a per-character notion of whose relic or whose reroll it is, which

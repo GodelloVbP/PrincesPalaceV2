@@ -312,7 +312,7 @@ namespace PrincesPalace
         // case that cannot overlap the first.
         //
         // THE ARC IS SKIPPED FOR A CHARGE. The slash arc reads a lean-and-cut
-        // (docs/STATIC_COMBAT_ART_DEEP_DIVE.md's "Attack families" draws that
+        // (docs/archive/STATIC_COMBAT_ART_DEEP_DIVE.md's "Attack families" draws that
         // language for Slash, not for a committed rush), and a Charge is a
         // bump rather than a cut -- the same table's "Blunt" row calls for a
         // burst and a longer hit-stop instead of an arc. This is the burst
