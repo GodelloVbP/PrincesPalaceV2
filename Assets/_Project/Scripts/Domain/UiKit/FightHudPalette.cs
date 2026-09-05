@@ -53,6 +53,23 @@ namespace PrincesPalace.Domain.UiKit
         public const string BorderQuiet = "#B496D233";       // 0.20
         public const string BorderSub = "#C8AAE647";         // 0.28
 
+        // ---- the shop's two additions ---------------------------------------
+        //
+        // Read off the shop_v2 prototype's own stylesheet (docs/handoffs/
+        // shop_v2/Shop Screen v2.dc.html): its `body { background: #0B0612 }`
+        // and the `#E7B25C` its section captions are set in. Both are the
+        // OPAQUE ends of ramps this palette already owns -- ScrollTrack is the
+        // same violet-black at 0.72, BorderGold the same amber at 0.70 -- not
+        // new hues, which is why they belong here and not in a shop-local
+        // constant.
+        //
+        // Opacity is the whole point of the first one. The shop is drawn over
+        // the run map and the design closes it off completely; the screen used
+        // PanelViolet (0.90) before, which left the map legible underneath and
+        // made the surface read as an overlay rather than as a room.
+        public const string ShopGround = "#0B0612FF";        // 1.00
+        public const string HeadingGold = "#E7B25CFF";       // 1.00
+
         // --- text -------------------------------------------------------------
         public const string TextPrimary = "#F4EBFF";
         public const string TextSecondary = "#BFB0D4";

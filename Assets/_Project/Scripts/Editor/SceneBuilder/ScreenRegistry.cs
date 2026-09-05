@@ -626,9 +626,26 @@ public static class ScreenRegistry
         shop.buyButton = result.Button(screen.BuyButton);
         shop.packButton = result.Button(screen.PackButton);
 
+        // Item and relic art, baked as parallel arrays. Resolved here rather
+        // than at runtime because Resources loading and AssetDatabase are
+        // different worlds and only the builder has the second one -- the same
+        // arrangement the relic draft and the Reckoning's offers already use.
+        // Skills author no iconPath, so a book card gets no table and
+        // ItemIcons.Apply hides its slot.
+        shop.itemArt = ContentDatabase.Items
+            .Where(i => i != null && !string.IsNullOrEmpty(i.iconPath))
+            .Select(i => new IconEntry(i.id, SceneBuilder.LoadSpriteByKey(i.iconPath)))
+            .ToArray();
+
+        shop.relicArt = ContentDatabase.Relics
+            .Where(r => r != null && !string.IsNullOrEmpty(r.iconPath))
+            .Select(r => new IconEntry(r.id, SceneBuilder.LoadSpriteByKey(r.iconPath)))
+            .ToArray();
+
         shop.gearReroll = result.Button(screen.GearReroll);
         shop.gearRerollLabel = result.Tmp(screen.GearRerollLabel);
         shop.gearCards = screen.GearCards.Select(c => result.Button(c.Button)).ToArray();
+        shop.gearIcons = screen.GearCards.Select(c => result.Image(c.Icon)).ToArray();
         shop.gearNames = screen.GearCards.Select(c => result.Tmp(c.Name)).ToArray();
         shop.gearMetas = screen.GearCards.Select(c => result.Tmp(c.Meta)).ToArray();
         shop.gearPrices = screen.GearCards.Select(c => result.Tmp(c.Price)).ToArray();
@@ -636,6 +653,7 @@ public static class ScreenRegistry
         shop.bookReroll = result.Button(screen.BookReroll);
         shop.bookRerollLabel = result.Tmp(screen.BookRerollLabel);
         shop.bookCards = screen.BookCards.Select(c => result.Button(c.Button)).ToArray();
+        shop.bookIcons = screen.BookCards.Select(c => result.Image(c.Icon)).ToArray();
         shop.bookNames = screen.BookCards.Select(c => result.Tmp(c.Name)).ToArray();
         shop.bookMetas = screen.BookCards.Select(c => result.Tmp(c.Meta)).ToArray();
         shop.bookPrices = screen.BookCards.Select(c => result.Tmp(c.Price)).ToArray();
@@ -643,6 +661,7 @@ public static class ScreenRegistry
         shop.relicReroll = result.Button(screen.RelicReroll);
         shop.relicRerollLabel = result.Tmp(screen.RelicRerollLabel);
         shop.relicCards = screen.RelicCards.Select(c => result.Button(c.Button)).ToArray();
+        shop.relicIcons = screen.RelicCards.Select(c => result.Image(c.Icon)).ToArray();
         shop.relicNames = screen.RelicCards.Select(c => result.Tmp(c.Name)).ToArray();
         shop.relicMetas = screen.RelicCards.Select(c => result.Tmp(c.Meta)).ToArray();
         shop.relicPrices = screen.RelicCards.Select(c => result.Tmp(c.Price)).ToArray();

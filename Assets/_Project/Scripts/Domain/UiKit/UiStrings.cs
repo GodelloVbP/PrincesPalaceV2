@@ -470,6 +470,20 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString ShopSectionBooks = UiString.Define("shop.section_books", "SPELL BOOKS");
         public static readonly UiString ShopSectionRelics = UiString.Define("shop.section_relics", "RELICS");
 
+        // The two panels in the design's right-hand column. "SHOP" twice over
+        // -- once as the screen's title, once as the actions panel's own
+        // caption -- is the prototype's own wording, and the two are separate
+        // entries because a translator sizing a panel caption is not sizing a
+        // 56pt title.
+        public static readonly UiString ShopSectionKeeper = UiString.Define("shop.section_keeper", "SHOPKEEPER");
+        public static readonly UiString ShopSectionActions = UiString.Define("shop.section_actions", "SHOP");
+
+        // The shopkeeper's portrait slot, standing empty. Says what it is
+        // rather than drawing a blank box: no shopkeeper art exists yet, and
+        // an unexplained hole photographs as a bug.
+        public static readonly UiString ShopKeeperPending =
+            UiString.Define("shop.keeper_pending", "PORTRAIT PENDING");
+
         // Per-section reroll (§7.1 point 7) -- one button per shelf, its own
         // price, its own counter.
         public static readonly UiString ShopReroll =
@@ -513,6 +527,10 @@ namespace PrincesPalace.Domain.UiKit
 
         public static readonly UiString ShopDetailEmpty = UiString.Define("shop.detail_empty", "SELECT A CARD");
 
+        // "THE PACK" on the modal's own title, "PACK" on the button that
+        // opens it -- the prototype's wording for each, and the reason they
+        // are two entries rather than one reused twice.
+        public static readonly UiString ShopPackTitle = UiString.Define("shop.pack_title", "THE PACK");
         public static readonly UiString ShopPackEmpty = UiString.Define("shop.pack_empty", "NOTHING TO SELL");
         public static readonly UiString ShopPackPage =
             UiString.Define("shop.pack_page", "{0} / {1}", "99 / 99");
@@ -909,10 +927,11 @@ namespace PrincesPalace.Domain.UiKit
             DraftTitle, DraftSubtitle, DraftTake, DraftNoRelics, DraftDescend, DraftRarity,
             ShopTitle, ShopGold, ShopLeave, ShopLeaveConfirm, ShopBuy, ShopPack,
             ShopSectionGear, ShopSectionBooks, ShopSectionRelics,
+            ShopSectionKeeper, ShopSectionActions, ShopKeeperPending,
             ShopReroll, ShopRerollNeed,
             ShopCardPrice, ShopCardConfirm, ShopCardNeed, ShopCardSold, ShopCardNoOffer,
             ShopGearMeta, ShopBookMeta, ShopDetailEmpty,
-            ShopPackEmpty, ShopPackPage, ShopSellPriceLabel, ShopSellOneButton, ShopSellAllButton,
+            ShopPackTitle, ShopPackEmpty, ShopPackPage, ShopSellPriceLabel, ShopSellOneButton, ShopSellAllButton,
             DossierSpellsRow, DossierSpellsCount, DossierUnassignedHeader, DossierUnassignedEmpty,
             DossierSlotEmpty, DossierSlotFilled,
             ShopBookKnownByOne, ShopBookKnownByMany, ShopBookAllSlotsFull,

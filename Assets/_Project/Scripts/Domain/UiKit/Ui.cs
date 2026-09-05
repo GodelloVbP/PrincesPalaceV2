@@ -347,6 +347,80 @@ namespace PrincesPalace.Domain.UiKit
             Solid(name, colorHex, size, Place.At(x, y))
                 .AsDecor();
 
+        // A FILL AND THE RIM THAT TRACES IT, as one box.
+        //
+        // Rim above gives the four edges; every caller that wanted a *card*
+        // rather than an outline then wrote the same three lines around it --
+        // a Solid the same size, the Rim, and a Panel to hold both (Options,
+        // Run statistics, Exits, the system menu's own frame). That triple is
+        // the shape, so it gets a name.
+        //
+        // `fillHex` may be null for a pure outline with nothing behind it --
+        // the shop's price chips and its outlined buttons sit on the panel
+        // they are already inside, and a second fill there would darken it
+        // twice.
+        public static UiNode OutlineBox(string name, Place place, UiVec size, string fillHex,
+            string rimHex, IEnumerable<UiNode> children = null)
+        {
+            var parts = new List<UiNode>();
+
+            if (!string.IsNullOrEmpty(fillHex))
+            {
+                parts.Add(Solid(name + "Fill", fillHex, size, Place.At(0f, 0f)).AsDecor());
+            }
+
+            parts.AddRange(Rim(name, size, rimHex));
+            if (children != null) parts.AddRange(children);
+
+            return Panel(name, place, UiSize.Fixed(size), parts);
+        }
+
+        // THE OUTLINED BUTTON: no painted plate at all, a 1px rim and a caption.
+        //
+        // Themed() gives a button one of the six painted plates, which is the
+        // right answer everywhere a button is a raised object. The shop's
+        // design draws its controls as hairline boxes on a flat ground instead,
+        // and a plate PNG cannot be talked into looking like one -- so this is
+        // Chromeless (transparent Image, still raycasting, see UiEmitter's own
+        // note on why the Image stays) plus Rim plus a label.
+        //
+        // THE CAPTION IS A DECLARED `<name>Caption` CHILD, and the button's
+        // own text is Runtime. Both halves of that are forced by the emitter,
+        // not preference:
+        //
+        //   - UiEmitter generates its own `<name>Label` for every button that
+        //     is not Themed(), white, centred, in the default UI font. It
+        //     cannot be styled or coloured from the tree, and A6 refuses a
+        //     declared child of that name outright (it would be shadowed).
+        //   - So the caption gets its own name, and the button's text is
+        //     UiString.Runtime so the emitter's label bakes to nothing rather
+        //     than drawing the same words in white underneath. This is the
+        //     shape the offer cards already had for the same reason.
+        public static UiNode OutlineButton(string name, UiString text, Place place, UiVec size,
+            int fontSize, string rimHex, string textHex)
+        {
+            var button = Button(name, UiString.Runtime, size, fontSize, place).NoChrome();
+
+            foreach (var edge in Rim(name, size, rimHex))
+            {
+                button.Children.Add(edge);
+            }
+
+            var caption = Label(name + "Caption", text, size, fontSize, textHex, Place.Stretch())
+                .AsDecor()
+                .Styled(TypographyRole.ButtonLabel);
+            button.Children.Add(caption);
+
+            return button;
+        }
+
+        // A button's caption node, whichever factory built it: OutlineButton's
+        // declared `<name>Caption`, or the `<name>Label` Themed() generates.
+        // The one way to reach a caption that changes at runtime.
+        public static UiNode CaptionOf(UiNode button) =>
+            button?.Children.Find(c => c.Name == button.Name + "Caption")
+            ?? button?.Children.Find(c => c.Name == button.Name + "Label");
+
         // These nodes are ALTERNATIVES: one box, one at a time.
         //
         // Tab pages, wizard phases, the panes of a menu -- anything a

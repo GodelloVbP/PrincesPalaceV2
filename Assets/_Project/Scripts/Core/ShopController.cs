@@ -32,9 +32,18 @@ namespace PrincesPalace
         [SerializeField] internal Button buyButton;
         [SerializeField] internal Button packButton;
 
+        // The card art, and the two lookup tables it comes from. Items and
+        // relics author an iconPath; skills do not, so a book card's slot is
+        // painted from a null table and ItemIcons.Apply hides the Image --
+        // which is the same graceful-degradation path a gear card with no
+        // authored art already takes, not a special case for books.
+        [SerializeField] internal IconEntry[] itemArt;
+        [SerializeField] internal IconEntry[] relicArt;
+
         [SerializeField] internal Button gearReroll;
         [SerializeField] internal TMP_Text gearRerollLabel;
         [SerializeField] internal Button[] gearCards;
+        [SerializeField] internal Image[] gearIcons;
         [SerializeField] internal TMP_Text[] gearNames;
         [SerializeField] internal TMP_Text[] gearMetas;
         [SerializeField] internal TMP_Text[] gearPrices;
@@ -42,6 +51,7 @@ namespace PrincesPalace
         [SerializeField] internal Button bookReroll;
         [SerializeField] internal TMP_Text bookRerollLabel;
         [SerializeField] internal Button[] bookCards;
+        [SerializeField] internal Image[] bookIcons;
         [SerializeField] internal TMP_Text[] bookNames;
         [SerializeField] internal TMP_Text[] bookMetas;
         [SerializeField] internal TMP_Text[] bookPrices;
@@ -49,6 +59,7 @@ namespace PrincesPalace
         [SerializeField] internal Button relicReroll;
         [SerializeField] internal TMP_Text relicRerollLabel;
         [SerializeField] internal Button[] relicCards;
+        [SerializeField] internal Image[] relicIcons;
         [SerializeField] internal TMP_Text[] relicNames;
         [SerializeField] internal TMP_Text[] relicMetas;
         [SerializeField] internal TMP_Text[] relicPrices;
@@ -295,16 +306,19 @@ namespace PrincesPalace
             if (leaveButtonLabel != null)
                 leaveButtonLabel.Set(_leaveArmed ? UiStrings.ShopLeaveConfirm : UiStrings.ShopLeave);
 
-            PaintSection(ShopStock.GearSection, gearCards, gearNames, gearMetas, gearPrices, gearReroll, gearRerollLabel);
-            PaintSection(ShopStock.BookSection, bookCards, bookNames, bookMetas, bookPrices, bookReroll, bookRerollLabel);
-            PaintSection(ShopStock.RelicSection, relicCards, relicNames, relicMetas, relicPrices, relicReroll, relicRerollLabel);
+            PaintSection(ShopStock.GearSection, gearCards, gearIcons, itemArt, gearNames, gearMetas,
+                gearPrices, gearReroll, gearRerollLabel);
+            PaintSection(ShopStock.BookSection, bookCards, bookIcons, null, bookNames, bookMetas,
+                bookPrices, bookReroll, bookRerollLabel);
+            PaintSection(ShopStock.RelicSection, relicCards, relicIcons, relicArt, relicNames, relicMetas,
+                relicPrices, relicReroll, relicRerollLabel);
 
             PaintDetail(run);
             PaintPack();
         }
 
-        private void PaintSection(int section, Button[] cards, TMP_Text[] names, TMP_Text[] metas,
-            TMP_Text[] prices, Button reroll, TMP_Text rerollLabel)
+        private void PaintSection(int section, Button[] cards, Image[] icons, IconEntry[] art,
+            TMP_Text[] names, TMP_Text[] metas, TMP_Text[] prices, Button reroll, TMP_Text rerollLabel)
         {
             var run = RunManager.Run;
             if (run == null || cards == null) return;
@@ -319,8 +333,11 @@ namespace PrincesPalace
                     if (names != null && i < names.Length) names[i].SetContent("");
                     if (metas != null && i < metas.Length) metas[i].SetContent("");
                     if (prices != null && i < prices.Length) prices[i].Set(UiStrings.ShopCardNoOffer);
+                    if (icons != null && i < icons.Length) ItemIcons.Apply(icons[i], art, null);
                     continue;
                 }
+
+                if (icons != null && i < icons.Length) ItemIcons.Apply(icons[i], art, entry.contentId);
 
                 var (name, meta) = DescribeEntry(entry);
                 if (names != null && i < names.Length) names[i].SetContent(name);
