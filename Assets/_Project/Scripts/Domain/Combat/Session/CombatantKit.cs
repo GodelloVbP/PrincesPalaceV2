@@ -11,9 +11,9 @@ namespace PrincesPalace.Domain.Combat.Session
     // strip Unity types out of the content definitions -- it turned out not to
     // be needed, because Domain/Content already holds ResolvedCharacter /
     // ResolvedEnemy / ResolvedSkill with complete field sets and no mirror
-    // enums. So a kit is a small bundle over structs that already exist, and
-    // the only real conversion left is Core's SkillDefinition -> ResolvedSkill
-    // in the adapter.
+    // enums. So a kit is a small bundle over values that already exist. The
+    // last real conversion, Core's SkillDefinition -> ResolvedSkill, is gone
+    // too: the asset stores the ResolvedSkill and the adapter hands it back.
     //
     // Kits carry COMBAT facts only. Portraits, sprite folders and voice clip
     // keys are view concerns and live in adapter-built parallel arrays -- v1's

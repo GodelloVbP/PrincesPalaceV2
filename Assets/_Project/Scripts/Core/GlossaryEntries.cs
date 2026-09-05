@@ -133,9 +133,9 @@ namespace PrincesPalace
             ContentDatabase.Skills
                 .Where(s => s != null)
                 .Select(s => new GlossaryEntry(
-                    s.id, s.displayName,
-                    s.manaCost > 0 ? $"{s.manaCost} MANA" : "NO COST",
-                    s.description,
+                    s.id, s.data.DisplayName,
+                    s.data.ManaCost > 0 ? $"{s.data.ManaCost} MANA" : "NO COST",
+                    s.data.Description,
                     iconId: s.id))
                 .ToList();
 

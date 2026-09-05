@@ -12,69 +12,70 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dace2591de5ca4247a661c0479d541c1, type: 3}
   m_Name: frost_flare
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SkillDefinition
-  id: frost_flare
-  displayName: Frost Flare
-  description: Burns and freezes in the same breath. Something out there hates one
-    half of it.
-  characterId: sheep
-  unlockLevel: 2147483647
-  effect: 0
-  targeting: 0
-  manaCost: 7
-  resourceCost: 0
-  spendsAllResource: 0
-  power: 0
-  flatAmount: 0
-  ignoresDefense: 0
-  damageInstances:
-  - type: 1
-    amount: 7
-  - type: 2
-    amount: 7
-  cooldownTurns: 0
-  playerSelectable: 1
-  vfx:
-    path: Spells/frost_flare
-    seconds: 0.52
-    impactFrame: 5
-    anchor: 
-    size: 380
-    departFrame: 0
-    impactX: 0.5
-    impactY: 0.18
-    sfxPath: Audio/Sfx/frost_flare
-    groundPath: 
-    groundSeconds: 0
-    groundImpactFrame: 0
-    groundAspect: 0
-    groundImpactY: -1
-    castSfxPath: 
-  appliesStatus: 0
-  hasStatus: 0
-  statusMagnitude: 0
-  statusDuration: 0
-  requirements:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  scalingAxis: 0
-  queuePushSlots: 0
-  transform:
-    displayName: 
-    turns: 0
-    attackPercent: 0
-    speedPercent: 0
-    temporaryHealthPercent: 0
-    splashPercent: 0
-  stance: 
-  approach: 0
-  shake: 0
-  summonEnemyId: 
-  summonCap: 0
-  meleeReach: 0
-  bookOnly: 1
-  bookTier: 2
-  sortOrder: 6
+  data:
+    Id: frost_flare
+    DisplayName: Frost Flare
+    Description: Burns and freezes in the same breath. Something out there hates
+      one half of it.
+    CharacterId: sheep
+    UnlockLevel: 2147483647
+    Effect: 0
+    Targeting: 0
+    ManaCost: 7
+    ResourceCost: 0
+    SpendsAllResource: 0
+    Power: 0
+    FlatAmount: 0
+    IgnoresDefense: 0
+    DamageInstances:
+    - type: 1
+      amount: 7
+    - type: 2
+      amount: 7
+    Vfx:
+      path: Spells/frost_flare
+      seconds: 0.52
+      impactFrame: 5
+      anchor: 
+      size: 380
+      departFrame: 0
+      impactX: 0.5
+      impactY: 0.18
+      sfxPath: Audio/Sfx/frost_flare
+      groundPath: 
+      groundSeconds: 0
+      groundImpactFrame: 0
+      groundAspect: 0
+      groundImpactY: -1
+      castSfxPath: 
+    SortOrder: 6
+    Status: 0
+    HasStatus: 0
+    StatusMagnitude: 0
+    StatusDuration: 0
+    Requirements:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    ScalingAxis: 0
+    QueuePushSlots: 0
+    Transform:
+      displayName: 
+      turns: 0
+      attackPercent: 0
+      speedPercent: 0
+      temporaryHealthPercent: 0
+      splashPercent: 0
+    CooldownTurns: 0
+    PlayerSelectable: 1
+    Shake: 0
+    Approach: 0
+    Stance: 
+    SummonEnemyId: 
+    SummonCap: 0
+    MeleeReach: 0
+    BookOnly: 1
+    BookTier: 2

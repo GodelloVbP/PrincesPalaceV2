@@ -95,12 +95,12 @@ namespace PrincesPalace.PlayModeTests
 
             foreach (var skill in ContentDatabase.Skills)
             {
-                if (skill == null || string.IsNullOrWhiteSpace(skill.vfx.path)) continue;
+                if (skill == null || string.IsNullOrWhiteSpace(skill.data.Vfx.path)) continue;
 
-                var frames = FrameSequenceLoader.Load(skill.vfx.path);
+                var frames = FrameSequenceLoader.Load(skill.data.Vfx.path);
                 if (frames == null || frames.Length == 0)
                 {
-                    missing.Add($"skill '{skill.id}' declares vfxPath '{skill.vfx.path}'");
+                    missing.Add($"skill '{skill.id}' declares vfxPath '{skill.data.Vfx.path}'");
                 }
             }
 
@@ -110,12 +110,12 @@ namespace PrincesPalace.PlayModeTests
             // field along.
             foreach (var skill in ContentDatabase.Skills)
             {
-                if (skill == null || string.IsNullOrWhiteSpace(skill.vfx.groundPath)) continue;
+                if (skill == null || string.IsNullOrWhiteSpace(skill.data.Vfx.groundPath)) continue;
 
-                var frames = FrameSequenceLoader.Load(skill.vfx.groundPath);
+                var frames = FrameSequenceLoader.Load(skill.data.Vfx.groundPath);
                 if (frames == null || frames.Length == 0)
                 {
-                    missing.Add($"skill '{skill.id}' declares vfx.groundPath '{skill.vfx.groundPath}'");
+                    missing.Add($"skill '{skill.id}' declares vfx.groundPath '{skill.data.Vfx.groundPath}'");
                 }
             }
 
@@ -164,9 +164,9 @@ namespace PrincesPalace.PlayModeTests
                 var skill = ContentDatabase.Skills.FirstOrDefault(s => s != null && s.id == id);
 
                 Assert.IsNotNull(skill, $"'{id}' is not in skills.json at all");
-                Assert.AreEqual("sheep", skill.characterId, $"'{id}' is no longer Shawn's");
-                Assert.IsTrue(skill.bookOnly, $"'{id}' should be learned-only, not levelled into");
-                Assert.AreEqual(bookTier, skill.bookTier,
+                Assert.AreEqual("sheep", skill.data.CharacterId, $"'{id}' is no longer Shawn's");
+                Assert.IsTrue(skill.data.BookOnly, $"'{id}' should be learned-only, not levelled into");
+                Assert.AreEqual(bookTier, skill.data.BookTier,
                     $"'{id}' moved off its rung - if that is deliberate, move it, but 0 means " +
                     "nobody can ever roll it in the shop and nothing else will say so");
 
@@ -174,8 +174,8 @@ namespace PrincesPalace.PlayModeTests
                 // declared path has frames; this checks the path is declared,
                 // which is the other half and the one a merge is likelier to
                 // drop.
-                Assert.AreEqual($"Spells/{id}", skill.vfx.path, $"'{id}' lost its vfxPath");
-                Assert.GreaterOrEqual(skill.vfx.impactFrame, 1,
+                Assert.AreEqual($"Spells/{id}", skill.data.Vfx.path, $"'{id}' lost its vfxPath");
+                Assert.GreaterOrEqual(skill.data.Vfx.impactFrame, 1,
                     $"'{id}' has no authored impact frame, so its blow lands on the resolver's " +
                     "default rather than on the peak the sequence was composed around");
             }
@@ -196,10 +196,10 @@ namespace PrincesPalace.PlayModeTests
 
             foreach (var skill in ContentDatabase.Skills)
             {
-                if (skill == null || skill.vfx == null) continue;
-                if (!SpellAnchorNames.IsKnown(skill.vfx.anchor))
+                if (skill == null || skill.data.Vfx == null) continue;
+                if (!SpellAnchorNames.IsKnown(skill.data.Vfx.anchor))
                 {
-                    wrong.Add($"skill '{skill.id}' anchors to '{skill.vfx.anchor}'");
+                    wrong.Add($"skill '{skill.id}' anchors to '{skill.data.Vfx.anchor}'");
                 }
             }
 
@@ -229,8 +229,8 @@ namespace PrincesPalace.PlayModeTests
 
             foreach (var skill in ContentDatabase.Skills)
             {
-                if (skill?.vfx == null || string.IsNullOrEmpty(skill.vfx.path)) continue;
-                if (skill.vfx.size <= 0f) wrong.Add($"skill '{skill.id}' has size {skill.vfx.size}");
+                if (skill?.data.Vfx == null || string.IsNullOrEmpty(skill.data.Vfx.path)) continue;
+                if (skill.data.Vfx.size <= 0f) wrong.Add($"skill '{skill.id}' has size {skill.data.Vfx.size}");
             }
 
             foreach (var enemy in ContentDatabase.Enemies)
@@ -276,7 +276,7 @@ namespace PrincesPalace.PlayModeTests
                 }
             }
 
-            foreach (var skill in ContentDatabase.Skills) Check($"skill '{skill?.id}'", skill?.vfx);
+            foreach (var skill in ContentDatabase.Skills) Check($"skill '{skill?.id}'", skill?.data.Vfx);
             foreach (var enemy in ContentDatabase.Enemies) Check($"enemy '{enemy?.id}'", enemy?.vfx);
 
             Assert.IsEmpty(wrong,
@@ -306,12 +306,12 @@ namespace PrincesPalace.PlayModeTests
 
             foreach (var skill in ContentDatabase.Skills)
             {
-                if (skill == null || string.IsNullOrWhiteSpace(skill.vfx.path)) continue;
+                if (skill == null || string.IsNullOrWhiteSpace(skill.data.Vfx.path)) continue;
 
-                int count = FrameSequenceLoader.Load(skill.vfx.path)?.Length ?? 0;
-                if (count > 0 && (skill.vfx.impactFrame < 1 || skill.vfx.impactFrame > count))
+                int count = FrameSequenceLoader.Load(skill.data.Vfx.path)?.Length ?? 0;
+                if (count > 0 && (skill.data.Vfx.impactFrame < 1 || skill.data.Vfx.impactFrame > count))
                 {
-                    wrong.Add($"skill '{skill.id}' impacts on frame {skill.vfx.impactFrame} of {count}");
+                    wrong.Add($"skill '{skill.id}' impacts on frame {skill.data.Vfx.impactFrame} of {count}");
                 }
             }
 

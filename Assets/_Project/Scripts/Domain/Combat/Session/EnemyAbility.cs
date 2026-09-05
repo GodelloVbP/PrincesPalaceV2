@@ -23,13 +23,14 @@ namespace PrincesPalace.Domain.Combat.Session
     // for a character in future is available to them for free.
     public readonly struct EnemyAbility
     {
-        // The skill itself.
+        // The skill itself, and null on a legacy attack.
         //
-        // A VALUE TYPE, so "no skill" cannot be null -- and is deliberately not
-        // spelled as a default() with an empty Id either. A default struct is
-        // what an uninitialised array slot already holds, so reading that as
-        // "this one is the legacy attack" would make a wiring bug
-        // indistinguishable from an authored choice. HasSkill says it outright.
+        // NEVER READ WITHOUT ASKING HasSkill FIRST. "No skill" is deliberately
+        // not spelled as an empty-Id instance: an unset field is what an
+        // uninitialised array slot already holds, so reading that as "this one
+        // is the legacy attack" would make a wiring bug indistinguishable from
+        // an authored choice. HasSkill says it outright, and both live readers
+        // (FightSession.Enemies' summon gate and its cast branch) check it.
         public readonly ResolvedSkill Skill;
 
         // False means THE LEGACY SCALED ATTACK: a monster authored with the old

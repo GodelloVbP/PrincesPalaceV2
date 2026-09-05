@@ -126,7 +126,7 @@ namespace PrincesPalace
                 if (c == null) continue;
                 foreach (var s in ContentDatabase.AvailableSkillsFor(c))
                 {
-                    if (s != null && ConvergenceGate.IsConvergenceEffect(s.effect))
+                    if (s != null && ConvergenceGate.IsConvergenceEffect(s.data.Effect))
                     {
                         hasConvergence = true;
                         break;
@@ -485,7 +485,7 @@ namespace PrincesPalace
                 // so the one SaveCurrent() that call already makes is the
                 // save this rides too, rather than a second write.
                 var bookIds = ContentDatabase.Skills
-                    .Where(s => s != null && s.bookTier > 0)
+                    .Where(s => s != null && s.data.BookTier > 0)
                     .Select(s => s.id)
                     .ToList();
                 var spellRng = RngStreams.Open(run.runSeed, RngStreams.SpellDrop, run.step, run.currentNodeId);

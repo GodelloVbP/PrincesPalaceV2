@@ -29,7 +29,7 @@ namespace PrincesPalace.PlayModeTests
         public void ATransformSkillKeepsItsGrantThroughTheAsset()
         {
             var transforms = ContentDatabase.Skills
-                .Where(s => s != null && s.effect == SkillEffect.Transform)
+                .Where(s => s != null && s.data.Effect == SkillEffect.Transform)
                 .ToList();
 
             Assert.IsNotEmpty(transforms,
@@ -37,7 +37,7 @@ namespace PrincesPalace.PlayModeTests
 
             foreach (var definition in transforms)
             {
-                Assert.IsNotNull(definition.transform,
+                Assert.IsNotNull(definition.data.Transform,
                     $"'{definition.id}' lost its grant on the way INTO the asset (ContentBuilder).");
 
                 var resolved = FightEncounterAdapter.Resolve(definition);
@@ -66,7 +66,7 @@ namespace PrincesPalace.PlayModeTests
             var slam = ContentDatabase.GetSkill(named);
 
             Assert.IsNotNull(slam, $"the golem names '{named}', which no skill matches");
-            Assert.IsFalse(slam.playerSelectable,
+            Assert.IsFalse(slam.data.PlayerSelectable,
                 "a monster's skill must never be offered on a player's strip");
 
             var resolved = FightEncounterAdapter.Resolve(slam);
@@ -86,7 +86,7 @@ namespace PrincesPalace.PlayModeTests
                 .ToHashSet();
 
             var leaked = ContentDatabase.Skills
-                .Where(s => s != null && s.playerSelectable && enemyIds.Contains(s.characterId))
+                .Where(s => s != null && s.data.PlayerSelectable && enemyIds.Contains(s.data.CharacterId))
                 .Select(s => s.id)
                 .ToList();
 

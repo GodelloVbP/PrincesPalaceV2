@@ -181,7 +181,7 @@ namespace PrincesPalace.PlayModeTests
                     Assert.IsNotNull(skill,
                         $"{enemy.id} draws on skill '{ability.skillId}', which is not in the catalogue");
 
-                    wanted.Add(string.IsNullOrEmpty(skill.stance) ? "cast" : skill.stance);
+                    wanted.Add(string.IsNullOrEmpty(skill.data.Stance) ? "cast" : skill.data.Stance);
                 }
 
                 // The legacy single-action trio poses as a cast.

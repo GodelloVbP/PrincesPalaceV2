@@ -258,18 +258,18 @@ namespace PrincesPalace.Content
             // change a single fight.
             var run = RunManager.Run;
             bool LearnedThisRun(SkillDefinition s) =>
-                s.bookOnly && run != null && run.learnedSpells != null
+                s.data.BookOnly && run != null && run.learnedSpells != null
                 && run.learnedSpells.Exists(e => e.characterId == character.definitionId && e.skillId == s.id);
 
             return _skills
-                .Where(s => s.playerSelectable
-                            && s.characterId == character.definitionId
-                    && (s.unlockLevel <= character.level
+                .Where(s => s.data.PlayerSelectable
+                            && s.data.CharacterId == character.definitionId
+                    && (s.data.UnlockLevel <= character.level
                         || character.unlockedSkillIds.Contains(s.id)
                         || granted.Contains(s)
                         || LearnedThisRun(s)))
-                .OrderBy(s => s.unlockLevel)
-                .ThenBy(s => s.sortOrder)
+                .OrderBy(s => s.data.UnlockLevel)
+                .ThenBy(s => s.data.SortOrder)
                 .ToList();
         }
 

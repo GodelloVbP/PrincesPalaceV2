@@ -126,7 +126,7 @@ namespace PrincesPalace.Content
                     {
                         errors.Add($"Talent '{talent.id}' grants unknown skill id '{talent.grantsSkillId}'.");
                     }
-                    else if (!talent.IsSharedByEveryCharacter && granted.characterId != talent.characterId)
+                    else if (!talent.IsSharedByEveryCharacter && granted.data.CharacterId != talent.characterId)
                     {
                         // Caught for real: the Fragile Lamb's ward ability was
                         // first authored as "ward", which the OWL already
@@ -138,7 +138,7 @@ namespace PrincesPalace.Content
                         // and it should fail the content build rather than
                         // quietly delete a talent's whole payload.
                         errors.Add($"Talent '{talent.id}' belongs to '{talent.characterId}' but grants skill " +
-                                   $"'{talent.grantsSkillId}', which belongs to '{granted.characterId}'. " +
+                                   $"'{talent.grantsSkillId}', which belongs to '{granted.data.CharacterId}'. " +
                                    "A character cannot hand out another character's kit.");
                     }
                 }
@@ -372,12 +372,12 @@ namespace PrincesPalace.Content
                 // anything unrecognised: the whole value of this check is that
                 // a typo'd owner is invisible until someone wonders where the
                 // button went, and that is exactly as true for a monster.
-                bool ownedByCharacter = GetCharacter(skill.characterId) != null;
-                bool ownedByEnemy = GetEnemy(skill.characterId) != null;
+                bool ownedByCharacter = GetCharacter(skill.data.CharacterId) != null;
+                bool ownedByEnemy = GetEnemy(skill.data.CharacterId) != null;
 
                 if (!ownedByCharacter && !ownedByEnemy)
                 {
-                    errors.Add($"Skill '{skill.id}' belongs to unknown owner id '{skill.characterId}'. " +
+                    errors.Add($"Skill '{skill.id}' belongs to unknown owner id '{skill.data.CharacterId}'. " +
                                "It must name a character or an enemy.");
                 }
 
@@ -389,15 +389,15 @@ namespace PrincesPalace.Content
                 // skill owned by a monster can never be pressed by anyone, and
                 // a non-selectable one owned by a character is a button the
                 // player has silently lost.
-                else if (skill.playerSelectable && ownedByEnemy)
+                else if (skill.data.PlayerSelectable && ownedByEnemy)
                 {
                     errors.Add($"Skill '{skill.id}' is player-selectable but belongs to enemy " +
-                               $"'{skill.characterId}', so no character can ever be offered it. " +
+                               $"'{skill.data.CharacterId}', so no character can ever be offered it. " +
                                "Set playerSelectable false, or give it a character owner.");
                 }
-                else if (!skill.playerSelectable && ownedByCharacter)
+                else if (!skill.data.PlayerSelectable && ownedByCharacter)
                 {
-                    errors.Add($"Skill '{skill.id}' belongs to character '{skill.characterId}' but is " +
+                    errors.Add($"Skill '{skill.id}' belongs to character '{skill.data.CharacterId}' but is " +
                                "not player-selectable, so it will never appear on their strip.");
                 }
 
@@ -408,20 +408,20 @@ namespace PrincesPalace.Content
                 // of the resolver's own authoring-time refusal: content is
                 // checked at both moments, and this is the one that would
                 // catch a hand-edited asset the resolver never saw.
-                if (!skill.bookOnly && skill.unlockLevel < 1)
+                if (!skill.data.BookOnly && skill.data.UnlockLevel < 1)
                 {
-                    errors.Add($"Skill '{skill.id}' unlocks at level {skill.unlockLevel}; characters start at level 1.");
+                    errors.Add($"Skill '{skill.id}' unlocks at level {skill.data.UnlockLevel}; characters start at level 1.");
                 }
 
-                if (skill.bookOnly && skill.unlockLevel != int.MaxValue)
+                if (skill.data.BookOnly && skill.data.UnlockLevel != int.MaxValue)
                 {
-                    errors.Add($"Skill '{skill.id}' is bookOnly but its unlockLevel is {skill.unlockLevel}, not " +
+                    errors.Add($"Skill '{skill.id}' is bookOnly but its unlockLevel is {skill.data.UnlockLevel}, not " +
                                "int.MaxValue -- bookOnly and unlockLevel cannot both be authored.");
                 }
 
-                if (skill.bookTier < 0)
+                if (skill.data.BookTier < 0)
                 {
-                    errors.Add($"Skill '{skill.id}' has a negative bookTier ({skill.bookTier}). 0 means not " +
+                    errors.Add($"Skill '{skill.id}' has a negative bookTier ({skill.data.BookTier}). 0 means not " +
                                "book-eligible.");
                 }
 
@@ -437,8 +437,8 @@ namespace PrincesPalace.Content
                 // argument is about a player weighing this action against
                 // another; a monster's abilities are drawn by weight and it has
                 // neither mana nor wool to spend either way.
-                if (skill.playerSelectable && skill.manaCost == 0 && !skill.CostsResource
-                    && skill.effect != SkillEffect.Provoke)
+                if (skill.data.PlayerSelectable && skill.data.ManaCost == 0 && !skill.data.CostsResource
+                    && skill.data.Effect != SkillEffect.Provoke)
                 {
                     errors.Add($"Skill '{skill.id}' costs nothing at all, so it strictly dominates every other action.");
                 }
@@ -446,12 +446,12 @@ namespace PrincesPalace.Content
                 // A character can only spend a resource they have. This is
                 // the cross-content check that catches authoring a Wool cost
                 // onto somebody who has no Wool.
-                if (skill.CostsResource)
+                if (skill.data.CostsResource)
                 {
-                    var owner = GetCharacter(skill.characterId);
+                    var owner = GetCharacter(skill.data.CharacterId);
                     if (owner != null && !owner.HasSignatureResource)
                     {
-                        errors.Add($"Skill '{skill.id}' costs a signature resource, but '{skill.characterId}' has none.");
+                        errors.Add($"Skill '{skill.id}' costs a signature resource, but '{skill.data.CharacterId}' has none.");
                     }
                 }
             }

@@ -12,64 +12,65 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dace2591de5ca4247a661c0479d541c1, type: 3}
   m_Name: shell_up
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.SkillDefinition
-  id: shell_up
-  displayName: Shell Up
-  description: The plates fold shut and the beetle becomes a stone with legs.
-  characterId: beetle
-  unlockLevel: 1
-  effect: 2
-  targeting: 2
-  manaCost: 0
-  resourceCost: 0
-  spendsAllResource: 0
-  power: 0
-  flatAmount: 2
-  ignoresDefense: 0
-  damageInstances: []
-  cooldownTurns: 0
-  playerSelectable: 0
-  vfx:
-    path: 
-    seconds: 0.6
-    impactFrame: 3
-    anchor: 
-    size: 380
-    departFrame: 0
-    impactX: -1
-    impactY: -1
-    sfxPath: 
-    groundPath: 
-    groundSeconds: 0
-    groundImpactFrame: 0
-    groundAspect: 0
-    groundImpactY: -1
-    castSfxPath: 
-  appliesStatus: 2
-  hasStatus: 1
-  statusMagnitude: 50
-  statusDuration: 2
-  requirements:
-    strength: 0
-    dexterity: 0
-    constitution: 0
-    wisdom: 0
-    intelligence: 0
-    charisma: 0
-  scalingAxis: 0
-  queuePushSlots: 0
-  transform:
-    displayName: 
-    turns: 0
-    attackPercent: 0
-    speedPercent: 0
-    temporaryHealthPercent: 0
-    splashPercent: 0
-  stance: shell_closed
-  approach: 0
-  shake: 0
-  summonEnemyId: 
-  summonCap: 0
-  meleeReach: 0
-  bookOnly: 0
-  bookTier: 0
-  sortOrder: 22
+  data:
+    Id: shell_up
+    DisplayName: Shell Up
+    Description: The plates fold shut and the beetle becomes a stone with legs.
+    CharacterId: beetle
+    UnlockLevel: 1
+    Effect: 2
+    Targeting: 2
+    ManaCost: 0
+    ResourceCost: 0
+    SpendsAllResource: 0
+    Power: 0
+    FlatAmount: 2
+    IgnoresDefense: 0
+    DamageInstances: []
+    Vfx:
+      path: 
+      seconds: 0.6
+      impactFrame: 3
+      anchor: 
+      size: 380
+      departFrame: 0
+      impactX: -1
+      impactY: -1
+      sfxPath: 
+      groundPath: 
+      groundSeconds: 0
+      groundImpactFrame: 0
+      groundAspect: 0
+      groundImpactY: -1
+      castSfxPath: 
+    SortOrder: 22
+    Status: 2
+    HasStatus: 1
+    StatusMagnitude: 50
+    StatusDuration: 2
+    Requirements:
+      strength: 0
+      dexterity: 0
+      constitution: 0
+      wisdom: 0
+      intelligence: 0
+      charisma: 0
+    ScalingAxis: 0
+    QueuePushSlots: 0
+    Transform:
+      displayName: 
+      turns: 0
+      attackPercent: 0
+      speedPercent: 0
+      temporaryHealthPercent: 0
+      splashPercent: 0
+    CooldownTurns: 0
+    PlayerSelectable: 0
+    Shake: 0
+    Approach: 0
+    Stance: shell_closed
+    SummonEnemyId: 
+    SummonCap: 0
+    MeleeReach: 0
+    BookOnly: 0
+    BookTier: 0

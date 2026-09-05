@@ -588,12 +588,12 @@ namespace PrincesPalace
             // no run to ask, so it could never grant a learned book even if
             // the level check somehow let one through.
             var skills = ContentDatabase.Skills
-                .Where(s => s.playerSelectable
-                            && s.characterId == definition.id
-                            && s.unlockLevel <= level
-                            && !s.bookOnly)
-                .OrderBy(s => s.unlockLevel)
-                .ThenBy(s => s.sortOrder)
+                .Where(s => s.data.PlayerSelectable
+                            && s.data.CharacterId == definition.id
+                            && s.data.UnlockLevel <= level
+                            && !s.data.BookOnly)
+                .OrderBy(s => s.data.UnlockLevel)
+                .ThenBy(s => s.data.SortOrder)
                 .Select(Resolve)
                 .ToList();
 
@@ -659,39 +659,23 @@ namespace PrincesPalace
         private static float DefinitionOnlySkillPowerMultiplier(int level) =>
             ContentDatabase.GetSpellTierForLevel(level)?.powerMultiplier ?? 1.5f;
 
-        // The other half of the content conversion. Mechanical, field for field:
-        // ResolvedSkill was designed as the shape SkillDefinition already had.
+        // The other half of the content conversion, and it is no longer a
+        // conversion at all.
         //
-        // AND IT DROPPED ONE. `transform` was written onto the asset by
-        // ContentBuilder and never read back here, so every skill resolved for
-        // a fight -- including the player's own -- arrived with a null grant and
-        // Black Ram Mode did nothing at all. Nothing caught it: the transform
-        // tests build a ResolvedSkill by hand and pass the grant in, which is
-        // the half of the journey that always worked.
+        // This WAS a hand-written copy of 34 fields out of SkillDefinition and
+        // back into a ResolvedSkill, and its own comment called it "mechanical,
+        // field for field" -- which is exactly the kind of copy where a missing
+        // line is invisible. Two lines went missing. `transform` was written
+        // onto the asset by ContentBuilder and never read back here, so every
+        // skill resolved for a fight -- including the player's own -- arrived
+        // with a null grant and Black Ram Mode did nothing at all. `bookOnly`
+        // and `bookTier` were dropped the same way afterwards, defaulting to
+        // false/0 for every skill in every fight.
         //
-        // "Mechanical, field for field" is exactly the kind of copy where one
-        // missing line is invisible, which is the argument SpellPresentation
-        // makes about the six VFX fields. This conversion is the next candidate
-        // for the same treatment.
-        public static ResolvedSkill Resolve(SkillDefinition definition)
-        {
-            return new ResolvedSkill(
-                definition.id, definition.displayName, definition.description,
-                definition.characterId, definition.unlockLevel, definition.effect,
-                definition.targeting, definition.manaCost, definition.resourceCost,
-                definition.spendsAllResource, definition.power, definition.flatAmount,
-                definition.ignoresDefense, definition.damageInstances,
-                definition.vfx, definition.sortOrder,
-
-                // Same authoring-gate rule as the enemy conversion: appliesStatus
-                // is an enum with a valid zero, so the FLAG is what says whether
-                // anyone meant it.
-                definition.hasStatus ? definition.appliesStatus : (StatusEffectType?)null,
-                definition.statusMagnitude, definition.statusDuration,
-                definition.requirements, definition.scalingAxis, definition.queuePushSlots,
-                definition.transform, definition.playerSelectable, definition.cooldownTurns,
-                definition.stance, definition.summonEnemyId, definition.summonCap,
-                definition.approach, definition.shake, definition.meleeReach);
-        }
+        // The fix was the one SpellPresentation already made for the six VFX
+        // fields, one level up: the asset now STORES the ResolvedSkill, so
+        // there is nothing here to drop. ContentRoundTripTests still guards
+        // the journey end to end.
+        public static ResolvedSkill Resolve(SkillDefinition definition) => definition.data;
     }
 }

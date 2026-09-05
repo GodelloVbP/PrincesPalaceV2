@@ -455,7 +455,7 @@ namespace PrincesPalace.Content
                 // the one route by which Shawn could end up holding the
                 // owl's kit. Content validation names the same mistake at
                 // build time; this is the runtime half of it.
-                if (skill != null && skill.characterId == character.definitionId && !granted.Contains(skill))
+                if (skill != null && skill.data.CharacterId == character.definitionId && !granted.Contains(skill))
                 {
                     granted.Add(skill);
                 }

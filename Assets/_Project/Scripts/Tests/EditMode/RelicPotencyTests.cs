@@ -36,7 +36,7 @@ namespace PrincesPalace.Domain.Tests
         // attack PLUS the flat amount, not the flat amount alone -- which is
         // why nothing here asserts an absolute number.
         private static (FightSession session, CombatantState hero, CombatantState foe) Fight(
-            RelicEffect? relic, ResolvedSkill? skill = null)
+            RelicEffect? relic, ResolvedSkill skill = null)
         {
             var hero = new CombatantState("Shawn", true, 999999, 300, 20, 10);
             // BIG ENOUGH TO SURVIVE EVERY BLOW THE TEST LANDS. A dummy that
@@ -49,7 +49,7 @@ namespace PrincesPalace.Domain.Tests
                 : new List<ResolvedRelic>();
 
             var kit = new PlayerKit("hero", CharacterRole.Tank,
-                skill.HasValue ? new List<ResolvedSkill> { skill.Value } : null, relics, null);
+                skill != null ? new List<ResolvedSkill> { skill } : null, relics, null);
 
             var session = new FightSession(new CombatEncounter(new[] { hero }, new[] { foe }),
                 new List<PlayerKit> { kit },

@@ -238,7 +238,7 @@ namespace PrincesPalace.PlayModeTests
             // instead, and the fixture below grants it by LEVEL, the same
             // route AvailableSkillsFor itself checks first.
             var convergenceSkill = ContentDatabase.Skills
-                .FirstOrDefault(s => s != null && s.effect == Domain.Combat.SkillEffect.Transform);
+                .FirstOrDefault(s => s != null && s.data.Effect == Domain.Combat.SkillEffect.Transform);
 
             Assert.IsNotNull(convergenceSkill,
                 "fixture: no Transform skill exists in content -- cannot prove the convergence wiring without one");
@@ -269,8 +269,8 @@ namespace PrincesPalace.PlayModeTests
             // production reads AvailableSkillsFor, which checks exactly
             // that.
             var convergenceCharacter = SaveSlotManager.CurrentSave.roster
-                .First(c => c.definitionId == convergenceSkill.characterId);
-            convergenceCharacter.level = Mathf.Max(convergenceCharacter.level, convergenceSkill.unlockLevel);
+                .First(c => c.definitionId == convergenceSkill.data.CharacterId);
+            convergenceCharacter.level = Mathf.Max(convergenceCharacter.level, convergenceSkill.data.UnlockLevel);
 
             SeenAcrossRounds(new List<string> { convergenceCharacter.definitionId }, out bool seenWithConvergence);
             Assert.IsTrue(seenWithConvergence,

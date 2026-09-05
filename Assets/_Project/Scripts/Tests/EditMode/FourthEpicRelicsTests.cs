@@ -17,7 +17,7 @@ namespace PrincesPalace.Domain.Tests
             new ResolvedRelic(effect.ToString(), effect.ToString(), "", effect, 0);
 
         private static (FightSession session, CombatantState hero, CombatantState foe) Fight(
-            RelicEffect relic, ResolvedSkill? skill = null, int foeCount = 1, int heroSpeed = 10)
+            RelicEffect relic, ResolvedSkill skill = null, int foeCount = 1, int heroSpeed = 10)
         {
             var hero = new CombatantState("Shawn", true, 999999, 999, 20, heroSpeed);
             var foes = Enumerable.Range(0, foeCount)
@@ -26,7 +26,7 @@ namespace PrincesPalace.Domain.Tests
 
             var relics = new List<ResolvedRelic> { Relic(relic) };
             var kit = new PlayerKit("hero", CharacterRole.Tank,
-                skill.HasValue ? new List<ResolvedSkill> { skill.Value } : null, relics, null);
+                skill != null ? new List<ResolvedSkill> { skill } : null, relics, null);
 
             var enemyKits = foes
                 .Select(f => new EnemyKit(new ResolvedEnemy(f.Name.ToLowerInvariant(), f.Name, new StatBlock(),

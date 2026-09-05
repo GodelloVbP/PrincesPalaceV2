@@ -397,7 +397,7 @@ namespace PrincesPalace
                 default:
                 {
                     var skill = ContentDatabase.GetSkill(entry.contentId);
-                    string name = skill?.displayName ?? entry.contentId;
+                    string name = skill?.data.DisplayName ?? entry.contentId;
                     string meta = BookFactLine(entry.contentId);
                     return (name, meta);
                 }
@@ -425,7 +425,7 @@ namespace PrincesPalace
             {
                 ShopEntryKind.Gear => ContentDatabase.GetItem(entry.contentId)?.description ?? "",
                 ShopEntryKind.Relic => ContentDatabase.GetRelic(entry.contentId)?.description ?? "",
-                _ => ContentDatabase.GetSkill(entry.contentId)?.description ?? "",
+                _ => ContentDatabase.GetSkill(entry.contentId)?.data.Description ?? "",
             };
 
             var (name, meta) = DescribeEntry(entry);

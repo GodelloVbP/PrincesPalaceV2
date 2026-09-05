@@ -694,6 +694,51 @@ shapes, in rising order of work:
 Recorded rather than actioned because 1 and 2 are different games and the
 choice belongs to the author.
 
+## Findings from the simplification pass, 2026-09-05
+
+### 60. The content chain restates every field list four to five times
+
+Eleven content types, 192 authored entries, and for each type the SAME field list is written
+out in four or five places: `Raw*Entry`, the resolver, `Resolved*`, `*Definition`, and
+`ContentBuilder.Build*`'s per-field copy -- plus, for skills, enemies and relics, a fifth in
+`FightEncounterAdapter`'s copy back the other way. Skills were the worst of them: **1,155 lines
+across five files to carry 34 fields**, of which the resolver's 571 are the only ones that
+decide anything.
+
+The cost is measured, not asserted. Adding `cooldownTurns` -- one integer, one behaviour --
+touched **13 files and 41 mentions**, and **six of those files are chain files that decide
+nothing**: `RawSkillEntry`, `SkillEntryResolver`, `ResolvedSkill`, `ContentBuilder`,
+`SkillDefinition`, `FightEncounterAdapter`. Cross-checks from the same count: `meleeReach` 23
+files, `bookTier` 19, `vfx.groundPath` only 8 -- lower because `SpellPresentation` had already
+collapsed the middle for those six fields, which is the fix generalised here.
+
+**The bug class is not hypothetical and it fired twice.** A mechanical 34-line copy is exactly
+the shape where a missing line is invisible: `FightEncounterAdapter.Resolve(SkillDefinition)`
+dropped `transform`, so every skill resolved for a fight arrived with a null grant and Black Ram
+Mode did nothing at all (fixed, and pinned by `ContentRoundTripTests`). The same method then
+dropped `bookOnly`/`bookTier` and nothing noticed -- harmless only because nothing yet reads
+`ResolvedSkill.BookTier` at combat time. The file's own header had ended "This conversion is the
+next candidate for the same treatment" since the first bug.
+
+**Skills are collapsed in this commit.** `ResolvedSkill` is a `[Serializable]` class and
+`SkillDefinition` is `{ ResolvedSkill data; string id; int SortOrder; }`, so the adapter returns
+`definition.data` and there is no copy to drop a line from. Adding a field to `skills.json` now
+touches three files: `RawSkillEntry`, `SkillEntryResolver`, `ResolvedSkill`. That is a **T2**
+fix in §9's ladder -- one code path owns the field list, so there is nowhere else to get it
+wrong.
+
+**The other ten types are pending**: enemies (5 restatements), relics (5), items, weapons,
+itemsets, talents, characters, modifiers, spell tiers (4 each), achievements (3, and already the
+closest to the target shape -- `AchievementDefinition` carries its own `ToResolved()`). Skills
+were the pilot precisely because they were the largest and carried the live defect; the
+remaining ten are the same edit and were deliberately left out of this commit so the shape could
+be verified once against the full gate before being repeated ten times.
+
+Two things the pilot proves for the rest: `System.Serializable` on a Domain type keeps Domain
+engine-free (the `noEngineReferences` asmdef still builds, and the dotnet domain suite is
+unchanged at 2699), and no scene or prefab references a `Resources/Content` asset by GUID, so
+changing an asset's serialized shape costs a content rebuild and nothing else.
+
 ## Open investigations
 
 ### ~~52. `SystemMenuExitsTests.OnePressOnAnExitDoesNothingButArmIt` flaked once, navigating to `"Hub"` — cause not found~~ — **ROOT CAUSE FOUND AND FIXED, 2026-08-21.** A `HoldToConfirm` left running by an earlier test in the same fixture. `HoldToConfirm` cancels itself `OnDisable`, and its comment explains why — but between two tests nothing disables it: the scene stays loaded until the next `LoadSceneAsync`, so a test that begins a hold and neither completes nor releases it leaves `Update()` advancing that hold into whatever runs next. When it completed it called `Abandon`, which navigates to the hub, and the navigation landed in the *next* test's recorder. The fixture's `TearDown` now cancels every live hold. **What made it findable:** the reward-track panel added ~450 nodes to the Hub scene, frames got long enough that the leftover hold finished inside the very next test every time, and a one-in-four flake became 3-for-3 — including in isolation, which it had never done. The extra nodes did not cause it; they made it reproducible enough to get a stack trace, which named `HoldToConfirm.Update` with no test above it. Guessing had blamed process-wide `Navigation.LoadOverride` state, which was wrong

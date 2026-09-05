@@ -491,43 +491,12 @@ public static class ContentBuilder
         foreach (var skill in resolved)
         {
             var asset = ScriptableObject.CreateInstance<SkillDefinition>();
-            asset.id = skill.Id;
-            asset.displayName = skill.DisplayName;
-            asset.description = skill.Description;
-            asset.characterId = skill.CharacterId;
-            asset.unlockLevel = skill.UnlockLevel;
-            asset.effect = skill.Effect;
-            asset.targeting = skill.Targeting;
-            asset.manaCost = skill.ManaCost;
-            asset.resourceCost = skill.ResourceCost;
-            asset.spendsAllResource = skill.SpendsAllResource;
-            asset.power = skill.Power;
-            asset.flatAmount = skill.FlatAmount;
-            asset.ignoresDefense = skill.IgnoresDefense;
-            asset.damageInstances = skill.DamageInstances;
-            asset.vfx = skill.Vfx.Copy();
-            asset.playerSelectable = skill.PlayerSelectable;
-            asset.cooldownTurns = skill.CooldownTurns;
-            asset.sortOrder = skill.SortOrder;
-            asset.requirements = skill.Requirements;
-            asset.scalingAxis = skill.ScalingAxis;
-            asset.queuePushSlots = skill.QueuePushSlots;
-            asset.transform = skill.Transform;
-            asset.stance = skill.Stance;
-            asset.approach = skill.Approach;
-            asset.shake = skill.Shake;
-            asset.summonEnemyId = skill.SummonEnemyId;
-            asset.summonCap = skill.SummonCap;
-            asset.meleeReach = skill.MeleeReach;
-            asset.bookOnly = skill.BookOnly;
-            asset.bookTier = skill.BookTier;
-            asset.hasStatus = skill.AppliesStatus.HasValue;
-            if (skill.AppliesStatus.HasValue)
-            {
-                asset.appliesStatus = skill.AppliesStatus.Value;
-                asset.statusMagnitude = skill.StatusMagnitude;
-                asset.statusDuration = skill.StatusDuration;
-            }
+
+            // ONE ASSIGNMENT, not thirty-four. The asset stores the resolved
+            // value itself, so there is no per-field copy here to forget a
+            // line of -- which is what dropped `transform` and then
+            // `bookOnly`/`bookTier` on the way back out. See SkillDefinition.
+            asset.data = skill;
 
             AssetDatabase.CreateAsset(asset, $"{SkillsPath}/{skill.Id}.asset");
         }

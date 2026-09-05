@@ -402,7 +402,7 @@ namespace PrincesPalace
                         else
                         {
                             var definition = ContentDatabase.GetSkill(skillId);
-                            spellSlotNames[i].Set(UiStrings.DossierSlotFilled, definition?.displayName ?? skillId);
+                            spellSlotNames[i].Set(UiStrings.DossierSlotFilled, definition?.data.DisplayName ?? skillId);
                         }
                     }
 
@@ -433,7 +433,7 @@ namespace PrincesPalace
                     if (unassignedNames != null && i < unassignedNames.Length)
                     {
                         var definition = ContentDatabase.GetSkill(_unassignedSnapshot[i]);
-                        unassignedNames[i].SetContent(definition?.displayName ?? _unassignedSnapshot[i]);
+                        unassignedNames[i].SetContent(definition?.data.DisplayName ?? _unassignedSnapshot[i]);
                     }
 
                     if (unassignedSelections != null && i < unassignedSelections.Length && unassignedSelections[i] != null)

@@ -636,7 +636,7 @@ namespace PrincesPalace
         private static bool IsBookEligible(string skillId)
         {
             var skill = ContentDatabase.GetSkill(skillId);
-            return skill != null && skill.bookTier > 0;
+            return skill != null && skill.data.BookTier > 0;
         }
 
         private static void ReconcileShopStock(RunSnapshot run)

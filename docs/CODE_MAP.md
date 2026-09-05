@@ -481,15 +481,26 @@ damage before the bolt had left the ceiling.
 
 **The adapter is the seam the whole decomposition exists for.** Above it is
 engine-free Domain that knows nothing about ScriptableObjects; below it is Core
-reading Resources. `EnemyDefinition -> ResolvedEnemy` and
-`SkillDefinition -> ResolvedSkill` are both mechanical, field for field, because
-the Resolved types were designed as the shape the definitions already had.
+reading Resources. `EnemyDefinition -> ResolvedEnemy` is mechanical, field for
+field, because the Resolved types were designed as the shape the definitions
+already had.
 
-One rule worth naming, applied in both conversions: **`hasStatus` is the
-authoring gate, and it is not the same question as "is a status type set".**
+**`SkillDefinition -> ResolvedSkill` is no longer a conversion.** It was the
+same 34-line hand copy, and it dropped a field twice -- `transform`, then
+`bookOnly`/`bookTier`. `ResolvedSkill` is now a `[Serializable]` class and
+`SkillDefinition` is `{ ResolvedSkill data; string id; int SortOrder; }`, so
+`Resolve(definition)` returns `definition.data` and adding a field to
+skills.json touches `RawSkillEntry`, `SkillEntryResolver` and `ResolvedSkill`
+only. The other ten content types still restate their field lists (AUDIT.md
+#60).
+
+One rule worth naming, and still live in the enemy conversion: **`hasStatus` is
+the authoring gate, and it is not the same question as "is a status type set".**
 `appliesStatus` is a plain enum with a valid zero value, so every definition has
 one whether anyone meant it or not. Reading the flag is what stops every monster
-in the game inflicting the first entry.
+in the game inflicting the first entry. `ResolvedSkill` carries the same pair as
+`Status`/`HasStatus` for the same reason -- Unity does not serialize a nullable
+enum -- with `AppliesStatus` the computed nullable reading over it.
 
 `FightBootstrap` starts a fight when the scene opens, and takes **one of two
 paths** depending on whether a descent is happening.
