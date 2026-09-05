@@ -24,6 +24,16 @@ Five asmdefs total, one per folder above (`PrincesPalace.Domain`,
 `PrincesPalace.PlayModeTests`). Reference direction only ever points from
 Editor/Tests toward Core toward Domain — never the reverse.
 
+**Deciding where a new piece of code goes,** in order: (1) does it need a
+`UnityEngine` type to do its job — not touch one in passing, *need*? If no,
+Domain. If yes: (2) does it need a content type (`ContentDatabase`, any
+`*Definition`, `CharacterRole`)? Then Core by construction — Domain can't see
+them. (3) Does it run only at build time? Editor, never shipped. (4) Is it a
+MonoBehaviour concern (lifetime, clock, input) wrapped around arithmetic?
+Split it — arithmetic to Domain, wrapper stays. The one-line test that covers
+most cases: **could an EditMode test call this?** If no, and the reason isn't
+a genuine engine dependency, it's in the wrong assembly.
+
 ## 2. Reuse-first helper registry
 
 Check this before writing a new helper — the second copy-paste of a pattern
@@ -166,9 +176,147 @@ never quietly reach into controller state to make itself pass.
   methods by name (`SceneBuilder.BuildCombatStage`, `SceneBuilder.CreateButton`,
   etc. — see `docs/CODE_MAP.md` for what's known to be referenced this
   way). A rename is a separate, deliberate change with its own call-site
-  sweep, not something to fold into a move.
+  sweep, not something to fold into a move — true of any rename, not just
+  ones riding along with a partial-class split.
 
-## 5. Test rules
+## 5. Functions
+
+- **The unit is a reason to change, not a line count.** A long function is
+  fine when it's a *declaration* — one description of one object with no
+  independently-meaningful parts (a screen's `Build`, a content type's
+  field-copy block in `ContentBuilder`). It's a problem when it's a
+  *procedure* that branches and accumulates, where a different paragraph
+  changes for a different reason each time
+  (`ContentDatabase.Validation.ValidateContent`, 360 lines, one arm per
+  content type — the project's own worst offender by this test). The
+  question isn't length, it's: **when this changes next, will the whole
+  thing change, or one paragraph of it?** Extract-as-reflex produces helpers
+  named `HandleRest`/`DoTheOtherPart` — a wrong name costs more than no name.
+  If you can't name the extracted piece after what it computes, you found a
+  line number, not a seam.
+- **Take the narrowest type that answers the question.** A function reading
+  `.Count` off a list should take the count, not the list — `FightHudSpec`
+  exists because Domain never needed the HUD's icon array, it needed a
+  number, and a design decision about the HUD had leaked into combat logic
+  through the array's length. This also keeps things EditMode-testable:
+  narrow enough is usually engine-free by construction.
+- **Past ~4 parameters, take an inputs struct.** Not for the count itself —
+  a struct field can't be transposed the way positional args can
+  (`new MainMenuInputs(5)` vs. `Build(5, 3, 24, true)`), and a field added
+  later isn't a signature break for every caller.
+- **A bool parameter is fine when it *is* the state**
+  (`OnSlotHover(int index, bool entered)`), refused when it *selects the
+  behaviour*. The tell: a call site reading `Refresh(true)`, where the reader
+  has to open the callee to learn what `true` meant. That's two functions
+  with two names and a shared tail, not one function with a flag.
+- **`out` is for the Try-pattern only** (`TryGetValue`, `TryParse`,
+  `TryResolveOne(..., out var resolved, out string error)`). An `out`
+  returning an unrelated second result should be a tuple or a struct.
+- **A default parameter value is a compatibility tool, not a design tool.**
+  Right when the default *is* the meaning (`Ui.Label(fontSize = 24)` — most
+  labels want body size); wrong when the value is a *decision*, which wants
+  a named constant so it isn't quietly living in two homes (the default and
+  the one caller that overrides it).
+- **Collect every error in one pass; never stop at the first.** Every
+  content resolver does this (`SkillEntryResolver.cs:26`) — a hand-edited
+  file gets fixed once, not once per typo. Any new validator, audit, or
+  lint inherits this: a `List<string>` of problems, empty for "fine."
+- **Degrade, but never quietly lie.** Domain throws on programmer error — an
+  encounter with no combatants, `Advance()` before `Start()` — because a
+  caller misusing a pure library should find out immediately. Core degrades
+  on missing content or art (a sprite-less `Image` disables itself rather
+  than rendering a white quad) because a missing asset should cost you that
+  asset, not the scene. The line that must never be crossed in either
+  posture is returning a *plausible wrong answer* — a zero, an empty list,
+  a default the caller can't distinguish from a real one.
+- **What this project rejects, and why it isn't a universal truth:**
+  line-count SRP (kept as a smell above, not a rule); an interface per class
+  plus a DI container (the seams here are asmdefs and pure statics —
+  `internal` + `[SerializeField]` + direct field assignment, §4a, makes a
+  wiring typo a *compile error*, which an `IFightControllerService` wouldn't
+  add); null-checking every argument at every level (one guard at the seam
+  plus graceful degradation — repeated checks make it ambiguous which layer
+  owns the invariant); `GameObject.Find`/`FindObjectOfType` for wiring (zero
+  production uses — `ScreenRegistry` binds everything at build time).
+  Changing any of these belongs in a commit message that argues it.
+
+## 6. Values — one home per number
+
+The rule underneath "make it dynamically adjustable" isn't *parameterise
+everything* — a parameter with exactly one call site is a **worse** constant,
+because the value now lives in two places (the default and the call) and
+neither is obviously authoritative. The version worth enforcing:
+
+> **Every number has exactly one home, and everything else derives from it.**
+
+A `const` satisfies this. A literal can satisfy this. The question to ask of
+a new value isn't "can this be configured," it's **"if a designer changes
+this, how many places have to change with it?"** One is correct; more than
+one is the defect, whatever mechanism produced it.
+
+Three grades — prefer the first, the second is fine, the third is never
+acceptable:
+
+- **Derived** — computed from what it depends on, so it can't disagree.
+  `TalentEntryResolver`'s bounds read `TalentPage.PathCount - 1` /
+  `TalentSkeleton.SlotCount - 1` rather than the literals `2`/`20`.
+- **Declared once** — a design decision with one name, referenced everywhere
+  else (`FightHudSpec.StageSlotsPerSide`, `FightHudPalette`'s tokens).
+  Correct when the number is a *choice*, not a *consequence*.
+- **Restated** — the same value written twice. Worse than an honest magic
+  number, because it fails *invisibly*: a restated colour once meant
+  "change the hairline" silently produced two different hairlines mid-edit
+  before anyone noticed, and a restated bound once meant a widened talent
+  tree started rejecting valid content because the resolver's copy of the
+  limit was never told.
+
+When the program can measure a value at runtime, measure it instead of
+authoring it — a text width, a sprite's bound, a child's measured height
+should be read, not typed (a hand-measured tab-width table shipped wrong for
+months because nobody re-measured it after the emitter's tracking changed).
+A build-time approximation plus a runtime correction is fine *if the
+authored figure's own test says it's an approximation* — not a value the
+design actually depends on.
+
+Checklist for a new value:
+1. Grep it first. If it exists, reference the name — aliasing beats
+   renaming (`const string CardRim = FightHudPalette.Hairline;` keeps the
+   better local name and removes the local *value*, which is the part that
+   rots).
+2. If it depends on something, compute it from that thing, not from a copy
+   of it.
+3. If the program could measure it, measure it. If it can't yet (build
+   time), say so at the declaration and in its test.
+4. If it's a reserved **capacity** (not a current count — reserving
+   `WoolPips = 16` is fine; reading a *current* count off a capacity
+   constant is the bug), write the reason and add a pin that fails when
+   content outgrows it.
+5. Don't add a parameter you have no second caller for. One call site plus a
+   default is two homes for one number.
+
+## 7. State, lifetime, and globals
+
+No DI container, no `GameObject.Find` graph — global state lives in static
+fields, the right call for a single-player game with no networking. Four
+rules, because statics are the one place the compiler stops helping:
+
+- **Cache or state — decide, and name it accordingly.** A cache is
+  rebuildable from something else and must be keyed by whatever it was built
+  from (`ContentDatabase`'s lists; a run's map keyed by its seed). State is
+  authoritative and belongs in the save, with the static as a thin accessor
+  over it — never a second copy that can disagree with disk.
+- **Every static cache gets a reset seam** (`ContentDatabase.Reset()`,
+  `Navigation.Reset()`, and siblings). Without one, the first test to touch
+  it poisons every later test in the same process.
+- **A public mutable static needs an argument in its header** for why it's
+  player-setting-shaped rather than a test escape hatch
+  (`FightBeatPlayer.BeatSpeedMultiplier`, `RequirementCurve.Percent`).
+  Otherwise make it `internal`.
+- **Nothing that outlives a scene may be a MonoBehaviour** unless it's
+  genuinely a scene object — a `DontDestroyOnLoad` singleton has a lifetime
+  nothing can test. Route run-lifetime state through the save instead.
+
+## 8. Test rules
 
 - **Pin formulas with literal expected values**, never recompute the
   expected value by calling the method under test — that makes the test a
@@ -186,8 +334,23 @@ never quietly reach into controller state to make itself pass.
   on first activation.
 - Tests reference production methods by name — a rename anywhere is a
   refactor with test impact, not a free action.
+- **`Assert.Ignore` on a condition keyed to content shape or run state is a
+  test that can turn itself off.** A skip guarding a genuine environment
+  limit (`-nographics`, no graphics device) is legitimate — a pixel test
+  with no pixels has nothing to assert. A skip guarding "does content
+  currently contain X" is not: content drift silently stops the test from
+  covering anything, and a green suite can't tell you which case happened.
+  This project has hit both the mild version (a skip that had simply never
+  fired because the fixture always satisfied it) and the costly one (a skip
+  that had *never once run*, on the only test covering a real code path).
+  Prefer asserting the precondition loudly, or building a fixture that
+  guarantees it, over skipping past it.
+- **A lint or audit needs a vacuity guard.** `MinimumFilesExpected = 40`,
+  `Assert.Greater(palette.Count, 30)` — a check that scans nothing passes
+  everything, and a path change that silently turns every rule into a
+  no-op still reports green.
 
-## 6. Comment voice
+## 9. Comment voice
 
 - Comments state the **why** — a hidden constraint, a subtle invariant, a
   workaround for a specific bug, something that would surprise a reader.
@@ -196,3 +359,23 @@ never quietly reach into controller state to make itself pass.
   its comment; a split file's class-level comment stays with the root part).
 - No changelog-shaped comments ("changed X to Y", "added for the Z flow").
   That belongs in the commit message, which doesn't rot as the code moves.
+- **A comment can't be compiled, tested, or linted — it's a restated value
+  in prose**, and §6's rule about restatement applies to it just as much as
+  to a duplicated literal. A comment saying "the bounds are 0-2 and 0-20" is
+  a second home for those numbers; a comment saying "bounded by
+  `TalentSkeleton.SlotCount`" is not, and stays true for free when the
+  skeleton changes. Prefer a reference to a restatement in prose as much as
+  in code. Where a comment must state a number, an assertion is the
+  strongest form available — a test that fails when the claim stops being
+  true is a comment that cannot rot.
+- **When you fix an instance of a bug, spend one sentence on which tier
+  could kill the whole class of it**, in descending order of strength:
+  **T1** — the API cannot express the mistake (a type, so the wrong thing
+  doesn't compile: `Ui.Label` takes `UiString`, not `string`). **T2** — one
+  code path owns the concern, so there's nowhere else to get it wrong
+  (`UiEmitter` is the only place calling `new GameObject` for UI). **T3** —
+  mechanised discipline as a fallback: a lint over source, with a vacuity
+  guard (see above) and its scoping written down as a judgement, since a
+  regex only approximates intent. A rule that can't be mechanised at all
+  still wants a greppable exemption (`AllowOverlap("reason")`) rather than a
+  silent one-off deviation.

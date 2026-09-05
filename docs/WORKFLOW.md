@@ -192,7 +192,7 @@ Rules, non-negotiable:
 - Reproduce with a test first when it's feasible to.
 - Fix the mechanism, not the symptom, where the two differ.
 - Pin the fix with literals where a formula's involved — see
-  `docs/CODE_STANDARDS.md` §5 on why.
+  `docs/CODE_STANDARDS.md` §8 on why.
 - If the bug closes an `AUDIT.md` finding, strike it in the *same* commit —
   see `AUDIT.md`'s own "how this register works" preamble.
 

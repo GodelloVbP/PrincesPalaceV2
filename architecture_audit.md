@@ -24,10 +24,11 @@ documentation and the code disagree, and the code won.
 
 **Standing relative to the other documents.** `CLAUDE.md` holds the two rules
 that destroy work when broken. `docs/CODE_STANDARDS.md` holds the conventions —
-layering, the helper registry, partial-class rules — and remains the reference
-for "how do I do X here". `AUDIT.md` is the debt register, and it spans two
-codebases: findings #1–#36 were written against v1 and each needs re-verifying
-before it means anything. This document is about the architecture itself and
+layering, the helper registry, partial-class rules, and (as of 2026-09-03) the
+function/value/state/test/comment rules this document used to restate — and is
+the reference for "how do I do X here". `AUDIT.md` is the debt register, native
+to this tree from #37 onward (its v1 findings #1–36 are archived at
+`docs/AUDIT_V1_ARCHIVE.md`). This document is about the architecture itself and
 about code that does not exist yet. Where it overlaps the others it defers to
 them and says so.
 
@@ -96,7 +97,7 @@ PrincesPalace.Editor          + Core, Domain, Editor-only
                               SceneBuilder, ContentBuilder, importers
 
 PrincesPalace.Domain.Tests    -> Domain only          (EditMode, 1,584 cases)
-PrincesPalace.PlayModeTests   -> Core + Domain        (PlayMode, 384 cases)
+PrincesPalace.PlayModeTests    -> Core + Domain        (PlayMode, 384 cases)
 ```
 
 Three properties of this are load-bearing and worth internalising:
@@ -318,412 +319,23 @@ as the price.
 
 ---
 
-# Part II — How to write code here
-
-## 8. Functions
-
-### 8.1 The unit is a reason to change, not a line count
-
-Measured at `c39db7e`: **1,413 production methods, 76 of them longer than 60
-lines.** That is a baseline for drift, not a target — the two longest are not
-the same kind of object, and treating them the same way would make one worse.
-
-`ContentDatabase.Validation.ValidateContent` is 360 lines
-([ContentDatabase.Validation.cs:39](Assets/_Project/Scripts/Core/Content/ContentDatabase.Validation.cs:39)).
-`SystemMenuScreen.Build` is 237
-([SystemMenuScreen.cs:67](Assets/_Project/Scripts/Domain/UiKit/Screens/SystemMenuScreen.cs:67)).
-Only the first is a problem. The screen `Build` is a **declaration** — a nested
-literal describing a tree, almost no branching, whose length is the size of the
-thing it describes and whose parts have no independent meaning. Cutting it into
-`BuildTopHalf`/`BuildBottomHalf` would buy nothing and cost the reader the one
-view where the whole screen is visible at once. `ValidateContent` is a
-**procedure**: it branches, it accumulates, and every new content type adds
-another arm. Those arms change for different reasons, at different times.
-
-So the test is not length: **when this file changes next, will the whole
-function change, or one paragraph of it?** One paragraph, and next time a
-different paragraph, means those paragraphs want to be separately nameable
-things. The whole thing, because it is one description of one object, means
-leave it whole however long it is.
-
-The instinct to extract until everything is under twenty lines is the
-industry-standard advice and it is wrong here often enough to name. It produces
-helpers called `HandleRest` and `DoTheOtherPart`, which are worse than the code
-they hide: a name is a claim, and a wrong claim costs more than no claim. **If
-you cannot name the extracted piece after the thing it computes, you have not
-found a seam — you have found a line number.**
-
-### 8.2 What a function accepts
-
-*Take the narrowest type that answers the question.* The strongest version of
-this rule here is a layer boundary. `FightHudSpec`
-([FightHudSpec.cs](Assets/_Project/Scripts/Domain/Combat/Session/FightHudSpec.cs))
-exists because v1 sized the turn-order projection from `initiativeIcons.Length`
-— a UI array length reaching into combat logic to decide how far ahead to
-simulate. The combat code did not need an array. It needed **a count**, and the
-count is a design decision about the HUD. Domain takes the number.
-
-Generalised: before adding a parameter, ask what the callee actually reads off
-it. A function taking a `CharacterDefinition` to read `.id` should take the id;
-one taking a list to read `.Count` should take the count. This is not
-miniaturism — it is what makes the EditMode suite able to test the thing at all,
-since anything narrow enough is usually engine-free by construction.
-
-*Past about four parameters, take an inputs struct.* Already the house pattern:
-`MainMenuInputs`
-([MainMenuScreen.cs:14](Assets/_Project/Scripts/Domain/UiKit/Screens/MainMenuScreen.cs:14))
-carries one field today and its comment explains why it exists anyway — the
-screen derives three separate things off the slot count, and a second copy of
-that number is the shape of every count-versus-footprint bug v1 shipped. The
-value shows up at the *call site*: `new MainMenuInputs(5)` cannot have its
-arguments transposed the way `Build(5, 3, 24, true)` can, and adding a field
-later is not a signature break for every caller.
-
-*Booleans are allowed when the parameter is the state, refused when it selects
-the behaviour.* `OnSlotHover(int index, bool entered)`
-([CharacterDossierController.cs:869](Assets/_Project/Scripts/Core/CharacterDossierController.cs:869))
-is fine — `entered` *is* the event; `ShowPack(bool open)` likewise. What is not
-fine is a flag that makes the body an `if` over two unrelated jobs. The tell is a
-call site reading `Refresh(true)`, where the literal conveys nothing and the
-reader must open the callee to learn what `true` meant. The two branches are two
-functions with two names, and the shared tail is a third.
-
-*`out` is for the Try-pattern and nothing else.* Every `out` in production is
-`TryGetValue`, `TryParse`, or a resolver's `TryResolveOne(raw, index, sortOrder,
-out var resolved, out string error)`
-([SkillEntryResolver.cs:65](Assets/_Project/Scripts/Domain/Content/SkillEntryResolver.cs:65)).
-An `out` used to return a second result — rather than to pair a value with a
-success flag — should be a tuple or a struct.
-
-*Default parameter values are a compatibility tool, not a design tool.*
-`Ui.Label` takes `int fontSize = 24`, which is right: the majority of labels want
-the body size and saying so at two hundred call sites is noise. But a default is
-a value with two homes the moment any caller passes something else. Give it a
-default when the default is the *meaning*; give it a named constant when the
-value is a *decision*.
-
-### 8.3 What a function returns
-
-*Return the fact, not the side effect.* `AmbienceCurves`
-([AmbienceCurves.cs](Assets/_Project/Scripts/Domain/Ambience/AmbienceCurves.cs))
-is the model and its header records why: the six curves used to be pure statics
-*sitting on six MonoBehaviours in Core*, written as seams, with comments saying a
-test could pin them — and none ever could, because the EditMode suite is
-Domain-only by asmdef. **A pure function on the wrong side of an assembly
-boundary is not a seam. It is a promise nothing can collect on.**
-
-The practical form: when a new behaviour has arithmetic in it, the arithmetic
-goes in a `static` in Domain that takes numbers and returns numbers, and the
-MonoBehaviour becomes the thing that reads the clock and assigns the result.
-`SplashController.AlphaAt` established the split; the whole ambience family
-follows it.
-
-*Degrade, but never quietly lie.* See §5 for the two postures. Domain throws on
-programmer error; Core logs and degrades on missing content or art. If a failure
-is not visible in the return type it needs the log line, and if it is a
-correctness failure rather than a cosmetic one it needs to fail the build.
-
-*Collect errors; do not stop at the first.* Every resolver reports everything
-wrong with a hand-edited file in one pass
-([SkillEntryResolver.cs:26](Assets/_Project/Scripts/Domain/Content/SkillEntryResolver.cs:26)).
-Any new validator, audit or lint inherits this. A `List<string>` of problems,
-empty for "fine", is the established return shape.
-
-### 8.4 Naming, and why a rename is not free
-
-The name is the contract, and here it is also a call-site sweep: tests reference
-production methods by name, `ScreenRegistry` wires screens by name, and
-`docs/CODE_MAP.md` records which methods are known to be referenced that way.
-`CODE_STANDARDS.md` §4 forbids folding a rename into a move for this reason. So
-**the cheapest moment to get the name right is before the first commit.**
-
-Two heuristics do most of the work. If the name needs an "and", it is two
-functions. And prefer the name that says what the caller gets over the name that
-says what the callee does — `EdgesPerPath` over `CountParents`.
-
-### 8.5 Where it lives — the placement procedure
-
-`CODE_STANDARDS.md` §1 is the authority on layering. The audit-level observation
-is about the *pull*: the instinct is to put a function where it is used, and that
-instinct is what put role-based Skill effects in `FightController` rather than in
-Domain. That case is a deliberate, documented call — content-layer concepts
-genuinely do not belong in Domain — but the same instinct without an argument
-behind it is how a layer erodes.
-
-Decision procedure, in order:
-
-1. **Does it need a `UnityEngine` type to do its job?** Not "does it touch one on
-   the way past" — need. If no, it goes in Domain, and an EditMode test can pin
-   it. If yes, continue.
-2. **Does it need a *content* type (`ContentDatabase`, any `*Definition`,
-   `CharacterRole`)?** Then it is Core by construction — Domain cannot see them.
-3. **Does it run only at build time?** Editor. Never shipped.
-4. **Is it a MonoBehaviour concern (lifetime, clock, input) wrapped around
-   arithmetic?** Split it: the arithmetic to Domain, the wrapper stays.
-
-The one-line test that covers most cases: **could an EditMode test call this?**
-If the answer is no and the reason is not a genuine engine dependency, the
-function is in the wrong assembly.
-
-### 8.6 What this project rejects, and why
-
-Stated plainly so a session does not import them from general practice:
-
-- **Line-count SRP.** See §8.1. Rejected as a rule, kept as a smell.
-- **An interface per class, and a DI container.** The seams here are asmdefs and
-  pure statics. `internal` + `[SerializeField]` + direct field assignment
-  (`CODE_STANDARDS.md` §4a) is the wiring mechanism, chosen because it makes a
-  typo a *compile error* — v1's reflection over field names produced no error at
-  all, at 330 sites. An `IFightControllerService` would add a layer without
-  adding a check.
-- **Null-checking every argument at every level.** One guard at the seam plus
-  graceful degradation. Repeated checks make it ambiguous which layer owns the
-  invariant.
-- **Extract-method as a reflex.** Justified by a second caller, a testability
-  gain, or a name worth having. Not by length.
-- **`GameObject.Find` / `FindObjectOfType` for wiring.** Zero production uses.
-  Everything is bound at build time by `ScreenRegistry`.
-
-These are calls, not universal truths. Changing any of them belongs in a commit
-message that argues it.
-
-## 9. Values, and what "dynamically adjustable" actually asks for
-
-### 9.1 The literal reading would damage this codebase
-
-Read literally — *make all new code dynamically adjustable* — the rule says
-parameterise everything, and that produces speculative generality: a parameter
-with exactly one call site is a **worse** constant, because the value now lives
-in two places (the declaration's default and the call) and neither is obviously
-the authority. `FightHudSpec` would lose its entire reason to exist.
-
-The version worth enforcing, and the one the last three commits are all
-instances of:
-
-> **Every number has exactly one home, and everything else derives from it.**
-
-That is a statement about *sources of truth*, not about parameters. A `const`
-satisfies it. A hard-coded literal can satisfy it. The question to ask of a new
-value is not "can this be configured" but **"if a designer changes this, how many
-places have to change with it?"** One is correct. More than one is the defect,
-whatever mechanism is used.
-
-### 9.2 Three grades of number
-
-**Derived** — computed from the thing it depends on, so it cannot disagree.
-`TalentEntryResolver` used to cap content at column 2 and row 20 as literals,
-with a comment noting they were "exactly the fixed skeleton's own bounds" — true,
-and precisely why writing them out again was wrong. They now read
-`TalentPage.PathCount - 1` and `TalentSkeleton.SlotCount - 1`
-([TalentEntryResolver.cs:37](Assets/_Project/Scripts/Domain/Content/TalentEntryResolver.cs:37)),
-so the skeleton is the only place the tree has a size. Prefer this grade.
-
-**Declared once** — a design decision with a home and a name, referenced
-everywhere else. `FightHudSpec.StageSlotsPerSide`, with `EnemyPlates` defined as
-`= StageSlotsPerSide` rather than as `3`. `FightHudPalette`'s tokens. Correct
-when the number is a *choice* rather than a *consequence*.
-
-**Restated** — the same value written twice. The defect class, and the only one
-of the three that is never acceptable.
-
-### 9.3 Restating is worse than a magic number, and it fails silently
-
-A magic number is at least honest about being local. A restated one lies about
-being authoritative, and every example this pass found failed *invisibly*:
-
-`5fd09d6` found `#C8AAE638` — `Hairline` in `FightHudPalette` — under five local
-names across the system menu's four panes; twenty-two restatements of palette
-values in total, measured rather than guessed. "Change the hairline" was a
-five-file edit that **nothing would have caught halfway through**: the menu would
-have had two different hairlines and looked merely slightly wrong. Note what that
-commit found in its own history, too — the design pass had already fixed this
-exact thing once, ending "the two hardcoded values are replaced, no new tokens
-needed", and the habit grew straight back the moment four screens were written in
-a row. **Tidying is not a fix.** See §11.
-
-`b407dbd` found the talent bounds above. Forgetting to widen the resolver after
-widening the tree would not have produced a visible gap — the resolver would have
-gone on **rejecting valid content**, insisting the row was out of range. The same
-commit buried `BagView.CellCount = 20`, dead since the pack became a scrolling
-window, and worse than dead: it read as the pack's capacity, and the footer had
-already once counted "24 of 27" against it.
-
-F1 in Part III is the same class, one layer out, and still live.
-
-### 9.4 Measured beats authored, when the program can measure
-
-`ee77ae6` is the sharpest case. `SystemMenuTabs` carried five authored label
-widths; renaming a tab meant opening a design tool, measuring the string, and
-typing the number in. Nobody did that reliably, **including whoever authored the
-table**: the five numbers were measured at `.14em` tracking in a browser while
-the emitter drew at zero, so every one was about a quarter too big — for months,
-on the most visible row in the game, found only because somebody measured the
-running scene on purpose.
-
-`SystemMenuLayout` is arithmetic over *label widths* now rather than over tab
-definitions. So: **when a number describes something the program can ask about at
-runtime, ask.** A value that is really an observation about the rendered world —
-a text width, a sprite's bounds, a child's measured height — should be read, not
-typed.
-
-Two riders that commit earned:
-
-- **A build-time approximation plus a runtime correction is a legitimate
-  two-stage answer**, because a scene must be emitted before any text exists to
-  measure. What makes it legitimate is that the authored figures' own test now
-  says they are an approximation instead of claiming the bar depends on them. If
-  you keep an authored number as a seed, its test states that it is a seed.
-- **Downstream geometry follows.** The underline was resized as well as moved,
-  because it is the width of the word plus a little, not of the box. When a
-  measurement replaces an assumption, sweep for everything sized off the
-  assumption.
-
-### 9.5 Where fixed is right, and what makes it right
-
-`FightHudSpec`'s header is the model, and copying it means copying all three
-parts: **the value, the reason it is fixed, and the pin that fails when reality
-outgrows it.**
-
-> Nothing here is derived from content at build time on purpose. These are
-> capacities the layout reserves; the RUNTIME fill count is a separate thing,
-> guarded at the Domain seam by layout functions that take a count, and by
-> content-side pins asserting no character or signature can exceed what is
-> reserved.
-
-`WoolPips = 16` carries its own argument for not deriving: hiding pips beyond the
-current maximum is proven behaviour, and deriving the count would change it for
-no gain. That is what a defensible constant looks like — an argument, not an
-omission.
-
-The distinction that matters is **reserved capacity versus current count.**
-Reserving a fixed capacity is fine and often correct, because the layout must be
-emitted before content is known. Reading the *current* count off that capacity is
-the bug (`BagView.CellCount` again). Keep them separately named, and never let a
-capacity constant answer a "how many are there" question.
-
-### 9.6 Checklist for a new value
-
-1. **Grep the value before typing it.** If it exists, reference the existing
-   name. Aliasing beats renaming: `private const string CardRim =
-   FightHudPalette.Hairline;` keeps the local name — often the better one at the
-   call site — and removes the local *value*, which is the part that rots.
-2. **If it depends on something, compute it from that something.** Not from a
-   copy of that something.
-3. **If the program could measure it, measure it.** If it cannot yet (build
-   time), say so at the declaration and in its test.
-4. **If it is a reserved capacity, write the reason and add the pin** — a test
-   that fails when content outgrows the reservation, so the failure arrives as a
-   red build rather than a clipped row.
-5. **Do not add a parameter you have no second caller for.** One call site plus a
-   default is two homes for one number.
-
-## 10. State, lifetime, and globals
-
-The static-service pattern (§3) is the right call for a single-player game with
-no networking, and it should not be replaced. But statics are the one place in
-this architecture where the compiler stops helping, so four rules:
-
-- **Cache or state — decide, and name it accordingly.** A cache is rebuildable
-  from something else and must be *keyed by whatever it was built from*
-  (`RunManager._mapSeed` is the model). State is authoritative and belongs in the
-  save, with the static as a thin accessor over it, never a second copy.
-- **Every static cache gets a reset seam.** `ContentDatabase.Reset()`,
-  `RunManager.ResetForTests()`, `Navigation.Reset()`, `AudioLevels`' seam and
-  `StanceManifestLoader`'s are the existing set; a new one joins them. Without a
-  seam the first test to touch it poisons every later test in the same process.
-- **A public mutable static needs an argument in its header.** Both existing ones
-  have it — `BeatSpeedMultiplier` and `RequirementCurve.Percent` are documented
-  as player-setting-shaped rather than test hatches. Follow that or make it
-  `internal`.
-- **Nothing that outlives a scene may be a MonoBehaviour** unless it is genuinely
-  a scene object. `RunManager`'s header states the reasoning: a
-  `DontDestroyOnLoad` singleton has a lifetime nothing can test.
-
-## 11. Tests
-
-Which suite, decided by what the test needs:
-
-- **EditMode** (`PrincesPalace.Domain.Tests`) can reference **Domain only**. The
-  moment a test needs `ContentDatabase`, `SaveData`, `GameplayManager` or a
-  scene, it is PlayMode. 1,584 cases run in seconds and this is where the
-  leverage is: any logic you can push into Domain becomes cheap to pin forever.
-- **PlayMode** references Core + Domain, drives real scenes, and cannot reach
-  internals (§1). `Start()` runs one frame after `SetActive(true)`, not
-  synchronously — `yield return null;` **twice** after activating a panel before
-  clicking its buttons.
-
-Three rules with teeth:
-
-**Pin formulas with literal expected values.** Never recompute the expectation by
-calling the method under test — that makes it a tautology (`return this` would
-pass). This project hit a real flake from exactly that shape: `Mathf.RoundToInt`
-(banker's rounding) and `Math.Round`/`AwayFromZero` disagree at `.5` after
-float32 precision loss, and the test used the same rounding both times.
-
-**`Assert.Ignore` on a data-dependent condition is a test that turns itself
-off.** Twenty exist; eleven are environment guards (headless, no graphics device)
-and are legitimate. The other nine are conditional on content shape, and they
-report green while covering nothing — see F6.
-
-**A lint or audit needs a vacuity guard.** `MinimumFilesExpected = 40`,
-`Assert.Greater(palette.Count, 30)`. A check that scans nothing passes
-everything, and it still reports green.
-
-## 12. Comments, and the tier ladder
-
-This project keeps its design record in comments and commit messages, on the
-stated grounds that chat context does not survive. That is correct, and it is why
-a fresh session can be productive here. Two consequences follow, and the second
-is this audit's central finding.
-
-**Comments state the why**, not the what — a hidden constraint, an invariant, a
-workaround for a specific bug. They travel with their code through a refactor. No
-changelog-shaped comments; that is what the commit message is for.
-
-**A comment cannot be compiled, tested, or linted, so it is a restated value in
-prose.** Everything §9 says about restatement applies to it, including the part
-about failing silently. Four of the thirteen findings in Part III are stale
-comments that still read as authoritative, and one of them is the justification
-for where a piece of code lives. So:
-
-> **Prefer a reference to a restatement, in prose as much as in code.** A comment
-> saying "the bounds are 0-2 and 0-20" is a second home for those numbers. A
-> comment saying "bounded by `TalentSkeleton.SlotCount`" is not — and when the
-> skeleton changes, it stays true for free.
-
-Where a comment must state a number, the strongest available form is an
-assertion, not a sentence. A test that fails when the claim stops being true is a
-comment that cannot rot.
-
-### The tier ladder
-
-`UiKitLintTests` ([UiKitLintTests.cs:10](Assets/_Project/Scripts/Tests/EditMode/UiKitLintTests.cs:10))
-states it, and it is the most useful three sentences in the codebase for planning
-work:
-
-> T1 is "the API cannot express the mistake", T2 is "one code path owns the
-> concern", and this is T3 — mechanised discipline. It exists because v1 proved
-> that a helper you are ENTITLED to bypass gets bypassed: `NewUiRect` reached 13
-> of 86 sites, and nobody was being careless.
-
-**When you fix an instance, ask which tier can kill the class.** T1 is best and is
-usually a type: `Ui.Label` takes `UiString` and has no `string` overload, so a
-bare literal does not compile. T2 is next: `UiEmitter` is the only place calling
-`new GameObject` for UI, so the rect preamble exists exactly once. T3 is the
-fallback, because a lint is a regex over source and regexes approximate intent.
-
-Three things a new lint needs, all demonstrated in that file: a **vacuity
-guard**; **scoping written down as a judgement** (the colour lint is scoped to
-`Domain/UiKit/` because it found `ItemStatLines.HeadingHex` — the same hex as
-`BackRowText` and *not* the same token; aliasing would have made the code say
-something untrue to satisfy a lint, and the comment says so out loud, because
-narrowing a rule to make it pass is exactly how a rule stops meaning anything);
-and **production-only scanning**, since tests use literals as fixtures and
-linting them teaches people to suppress the lint.
-
-Where a rule cannot be mechanised, the exemption must be greppable —
-`AllowOverlap("reason")` / `AllowOverflow("reason")`, which turn "the audit is
-wrong here" from a silent deletion into a searchable claim with an author.
+# Part II — How to write code here (moved to `docs/CODE_STANDARDS.md`)
+
+**Moved 2026-09-03.** This section (functions, values, state/lifetime, test
+rules, comment voice) restated `docs/CODE_STANDARDS.md` at greater length
+rather than deferring to it, contrary to the "standing relative to the other
+documents" note above — confirmed by comparing them side by side: this
+section's old Tests and Comments subsections tracked `CODE_STANDARDS.md`'s
+test rules and comment voice sections point for point, and its placement
+procedure restated its layering section.
+
+The reasoning that added something new — the derived/declared-once/restated
+grades for values, the cache-vs-state rules for statics, the T1/T2/T3 tier
+ladder for which mechanism kills a class of bug, the narrowest-type and
+inputs-struct rules for function signatures — is now in `CODE_STANDARDS.md`
+§5–9, in full, not summarised. Read it there. What's unique to *this* document
+is unchanged below: Part III's findings, Part IV's cost-to-extend tables, and
+Part V's risk register.
 
 ---
 
@@ -1358,9 +970,10 @@ nothing forever now that the door is fixed.
 
 ### Cross-references, not re-counted here
 
-`AUDIT.md` #1–#36 were written against v1 and each needs re-verifying against
-this tree before it means anything; #32 was re-confirmed live at
-`EnemyEntryResolver.cs:173` on 2026-08-17. This pass did not re-verify them.
+`AUDIT.md` #1–#36 (now archived at `docs/AUDIT_V1_ARCHIVE.md`) were written
+against v1 and each needs re-verifying against this tree before it means
+anything; #32 was re-confirmed live at `EnemyEntryResolver.cs:173` on
+2026-08-17. This pass did not re-verify them.
 
 ---
 
@@ -1459,13 +1072,13 @@ Ordered by expected cost, not likelihood.
 
 **Before writing new code**
 
-- Which assembly? Run §8.5's four questions. If an EditMode test could not call
-  it, know why.
-- Does a helper already exist? `CODE_STANDARDS.md` §2 is the registry; the second
-  copy-paste of a pattern is the signal to promote it there.
-- What is the acceptance check? Write it before the code — `docs/WORKFLOW.md` §2's
-  "Done when" line is the one most often missing and the one that does the most
-  work.
+- Which assembly? Run `CODE_STANDARDS.md` §1's four questions. If an EditMode
+  test could not call it, know why.
+- Does a helper already exist? `CODE_STANDARDS.md` §2 is the registry; the
+  second copy-paste of a pattern is the signal to promote it there.
+- What is the acceptance check? Write it before the code — `docs/WORKFLOW.md`
+  §2's "Done when" line is the one most often missing and the one that does
+  the most work.
 
 **Before writing a number**
 
@@ -1488,10 +1101,11 @@ Ordered by expected cost, not likelihood.
 **If you do only three things**
 
 1. **Grep the value before you type it**, and derive it from what it depends on
-   rather than restating it. §9 is one rule wearing three coats, and Part III is
-   mostly instances of breaking it.
+   rather than restating it. `CODE_STANDARDS.md` §6 is one rule wearing three
+   coats, and Part III is mostly instances of breaking it.
 2. **Draw the function boundary at a reason to change**, then check the name
-   survives without an "and". §8.1, §8.4.
+   survives without an "and". `CODE_STANDARDS.md` §5.
 3. **When you fix an instance, spend one sentence on which tier kills the class**
    — a type that refuses it, one path that owns it, or a lint with a vacuity
-   guard. The colour tokens were fixed by hand once and grew straight back. §12.
+   guard. The colour tokens were fixed by hand once and grew straight back.
+   `CODE_STANDARDS.md` §9.
