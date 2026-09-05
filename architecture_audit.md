@@ -285,8 +285,10 @@ Two design notes inside this stack are worth copying into any new check.
 `Assert.Greater(palette.Count, 30)` — because a lint that scans nothing passes
 everything, and a path change that silently turns every rule into a no-op still
 reports green. And `run_tests_parallel.ps1` refuses to run at all while a test
-class exists that no area pattern matches, rather than warning: a warning in a
-120-second run is a warning nobody reads.
+file sits outside its area folder, rather than warning: a warning in a
+120-second run is a warning nobody reads. (That gate used to match class
+NAMES against per-area regexes, which cost one commit per new test class;
+areas are folders now, so there is nothing left to keep in sync.)
 
 ## 7. Coupling: where the gravity is
 
@@ -509,8 +511,7 @@ touches, and whether the compiler or the build catches you when you miss one.
 | Register + wire | `Editor/SceneBuilder/ScreenRegistry.cs` | screen simply absent |
 | Controller | `Core/NewController.cs`, `internal` + `[SerializeField]` | compile error on typo; `UiWiringSweep` on null |
 | Declare counts | `CountBindings` in the registry entry | `UiCountAudit` (E4) |
-| Test | `Tests/EditMode/NewScreenTests.cs` | `run_tests_parallel` area-coverage refusal |
-| Area pattern | `tools/test_areas.ps1` | the same refusal — it aborts the run |
+| Test | `Tests/EditMode/Ui/NewScreenTests.cs` | `run_tests_parallel` structural refusal if it is not in an area folder |
 
 Strong. All seven steps have a mechanical catch. Layout correctness is free
 (`UiAudit` re-solves at four aspects). **F1's gap here is fixed:**
@@ -578,9 +579,11 @@ Ordered by expected cost, not likelihood.
    burned four rounds on a suspected variant of this, which is what the cost
    would have been.
 5. **Verification drifting out of sync with what it verifies.** The general form
-   of #1: `test_areas.ps1`'s patterns, the audits' exemption list, the lint's
-   scoping. All three currently have guards (the area-coverage refusal, greppable
-   reasons, the vacuity assertions), which is why this is fifth and not first.
+   of #1: `test_areas.ps1`'s `$PathAreas` production-path map, the audits'
+   exemption list, the lint's scoping. All three currently have guards (the
+   UNMAPPED refusal, greppable reasons, the vacuity assertions), which is why
+   this is fifth and not first. The area table itself is no longer on this
+   list: areas became folders, and a folder cannot drift.
 6. **`ContentDatabase` as a global reach.** Not a live defect. Worth watching: any
    Core file can touch all content from anywhere, so the layer that stops content
    concepts leaking is convention plus `EnsureLoaded`, not the compiler.

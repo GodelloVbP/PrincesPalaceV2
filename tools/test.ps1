@@ -60,13 +60,13 @@ param(
 #
 # This is for the edit-run-edit loop. Before committing, run the full thing:
 #     powershell -NoProfile -ExecutionPolicy Bypass -File tools/run_tests_parallel.ps1
-# ...which now REFUSES to run at all if any test class has drifted outside
-# every area or out of discovery's sight -- see tools/test_areas.ps1.
+# ...which REFUSES to run at all while a test file sits outside an area
+# folder, or out of discovery's sight -- see tools/test_areas.ps1.
 #
 # Usage:
 #     tools/test.ps1 wool            one class, host and platform auto-detected
-#     tools/test.ps1 combat          a named area (see $Areas below;
-#                                    also: hub, content, run, ui, art, rng)
+#     tools/test.ps1 combat          a named area -- the folder its tests sit
+#                                    in (also: hub, content, run, ui, art, rng)
 #     tools/test.ps1 Wool,Spell      several, comma-separated
 #     tools/test.ps1 -Changed        just what your uncommitted changes touch
 #     tools/test.ps1 -Unity          force everything through Unity, no dotnet
@@ -91,13 +91,15 @@ $RunnerFor = @{
     PlayMode = @{ Path = (Join-Path $ProjectParent "$ProjectLeaf-TestRunner2"); Product = "${RunnerProduct}TestRunner2" }
 }
 
-# $Areas, Get-TestClasses, Get-AreaOrphans, Get-DiscoveryBlindSpots all live
-# in test_areas.ps1 now -- shared with run_tests_parallel.ps1's orphan gate,
-# so there is exactly one place that knows what an "area" is.
+# Discovery, areas and the structural gate all live in test_areas.ps1 --
+# shared with run_tests_parallel.ps1, so there is exactly one place that
+# knows what an "area" is. An area is the folder a test file sits in.
 . (Join-Path $PSScriptRoot "test_areas.ps1")
 
-$classes = Get-TestClasses
-$testHosts = Get-TestHosts -Classes $classes
+$testIndex = Get-TestIndex
+$classes = Get-TestClasses -Index $testIndex
+$testAreas = Get-TestAreas -Index $testIndex
+$testHosts = Get-TestHosts -Index $testIndex
 
 if ($List) {
     Write-Host "`nTest classes by platform. [D] runs under dotnet (tools/domain-tests,"
@@ -108,33 +110,33 @@ if ($List) {
         Write-Host "  $platform ($($names.Count); $dCount on dotnet)"
         foreach ($n in $names) {
             $tag = if ($testHosts[$n] -eq "dotnet") { "D" } else { "U" }
-            Write-Host "    [$tag] $n"
+            Write-Host ("    [$tag] {0,-10} {1}" -f $testAreas[$n], $n)
         }
         Write-Host ""
     }
-    Write-Host "Named areas:`n"
-    foreach ($area in $Areas.Keys | Sort-Object) {
-        $hits = ($classes.Keys | Where-Object { $_ -match $Areas[$area] } | Sort-Object) -join ", "
+    Write-Host "Named areas -- the folder each class's file sits in:`n"
+    foreach ($area in $AreaNames) {
+        $hits = ($classes.Keys | Where-Object { $testAreas[$_] -eq $area } | Sort-Object) -join ", "
         Write-Host "  $area"
         Write-Host "    $hits`n"
     }
 
-    # A class matching no area is invisible to every area-based run, and a
-    # file whose class discovery never even saw is invisible to the orphan
-    # check ITSELF -- so both are reported here, and both fail
-    # run_tests_parallel.ps1 outright (see that script's own gate). -List
-    # stays report-only and exits 0 even when either list is non-empty; it
-    # is the diagnosis, not the enforcement.
-    $orphans = Get-AreaOrphans -ClassNames $classes.Keys
-    Write-Host "ORPHANS (no area):"
-    if ($orphans) {
-        foreach ($o in $orphans) { Write-Host "  $o" }
+    # Structure and discovery, reported here and REFUSED by
+    # run_tests_parallel.ps1 (see that script's own gate). A file outside an
+    # area folder is invisible to every area-based run; a file whose class
+    # discovery never saw is invisible to everything, including the structure
+    # check itself. -List stays report-only and exits 0 even when either list
+    # is non-empty; it is the diagnosis, not the enforcement.
+    $violations = Get-StructuralViolations
+    Write-Host "Structure (every test file in an area folder; nothing testable in Shared):"
+    if ($violations) {
+        foreach ($v in $violations) { Write-Host "  $v" }
     } else {
-        Write-Host "  (none)"
+        Write-Host "  (ok)"
     }
     Write-Host ""
 
-    $blindSpots = Get-DiscoveryBlindSpots -Classes $classes
+    $blindSpots = Get-DiscoveryBlindSpots -Index $testIndex
     Write-Host "Discovery blind spots (a [Test]/[UnityTest] file whose class was never discovered):"
     if ($blindSpots) {
         foreach ($b in $blindSpots) { Write-Host "  $b" }
@@ -213,8 +215,7 @@ if ($Changed) {
 
     $changedWanted = @()
     foreach ($area in $resolution.Areas) {
-        $pattern = $Areas[$area]
-        $changedWanted += $classes.Keys | Where-Object { $_ -match $pattern }
+        $changedWanted += $classes.Keys | Where-Object { $testAreas[$_] -eq $area }
     }
     $changedWanted += $resolution.Classes
 
@@ -237,9 +238,9 @@ if ($Changed) {
         $term = $term.Trim()
         if (-not $term) { continue }
 
-        if ($Areas.ContainsKey($term.ToLower())) {
-            $pattern = $Areas[$term.ToLower()]
-            $wanted += $classes.Keys | Where-Object { $_ -match $pattern }
+        if ($AreaNames -contains $term.ToLower()) {
+            $area = $term.ToLower()
+            $wanted += $classes.Keys | Where-Object { $testAreas[$_] -eq $area }
             continue
         }
 
@@ -313,6 +314,11 @@ if (-not $SkipSync) {
         robocopy "$SourceProject\Assets" "$($runner.Path)\Assets" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
         robocopy "$SourceProject\Packages" "$($runner.Path)\Packages" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
         robocopy "$SourceProject\ProjectSettings" "$($runner.Path)\ProjectSettings" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
+        # Not a Unity folder, but ContentSchemaTests reads docs/CONTENT_SCHEMA.md
+        # out of whatever tree it finds Assets/_Project/Scripts in -- which,
+        # under Unity, is this copy. Same line and same reason as Sync-Runner
+        # in run_tests_parallel.ps1.
+        robocopy "$SourceProject\docs" "$($runner.Path)\docs" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
 
         $settingsPath = Join-Path $runner.Path "ProjectSettings\ProjectSettings.asset"
         (Get-Content $settingsPath -Raw) -replace "productName: .*", "productName: $($runner.Product)" |

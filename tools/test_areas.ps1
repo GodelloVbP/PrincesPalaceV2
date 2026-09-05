@@ -13,157 +13,287 @@ $AreasProjectRoot = Split-Path $PSScriptRoot -Parent
 $AreasTestsRoot = Join-Path $AreasProjectRoot "Assets\_Project\Scripts\Tests"
 
 # ---------------------------------------------------------------------------
-# Named areas: regex patterns matched against CLASS names, not hand-listed
-# classes, so a new WhateverFightTests joins "combat" on its own tomorrow.
+# AN AREA IS A FOLDER.
 #
-# The invariant this whole file exists to hold: every class Get-TestClasses
-# discovers matches at least one pattern below. "tools/test.ps1 -List"
-# reports violations under ORPHANS; "tools/run_tests_parallel.ps1" refuses to
-# run at all while there are any (see Get-AreaOrphans and its caller there).
-# Extend a pattern rather than leaving a class unmatched -- an orphaned class
-# is invisible to every area-based AND -Changed run, which is worse than an
-# imprecise area. Overlap between areas is fine and already happens (a class
-# can and often does belong to two subjects at once).
-$Areas = @{
-    # 'Balance' for BalanceSheetTests (Phase 5D) -- the combat-math validation
-    # suite over §P's canonical profiles. It also needs real resolved enemy
-    # content and DifficultyCurve, which is why it lives in PlayMode, but
-    # combat is its subject, same reasoning as everything else in this area.
-    # 'Modifier' for the item-modifier effect bag (Phase A2, ModifierEffect/
-    # ModifierEffectSet) -- it lives in Domain/Combat and mirrors
-    # TalentEffectType/TalentEffectSet exactly, so it belongs beside them
-    # rather than in 'content' (where ModifierEntryResolverTests already
-    # matches on its own via 'Resolver' -- the overlap is fine).
-    # 'Wisdom' for WisdomManaRegenTests (the WIS-derived Mana Regen pass) --
-    # a real-fight PlayMode test over CombatantState.ManaRegen and the
-    # per-turn regen tick, the same subject FightSession.Riders' own regen
-    # rider lives in, not a content/stat-derivation subject on its own.
-    # 'Mark|Fear|Falling|Penetration|Convergence' for the balance-bot pass's
-    # own mechanic tests (MarksTests, FearTests, FallingOffStacksTests,
-    # ArmorPenetrationTests, ConvergenceGateTests) -- all five are Domain/
-    # Combat facilities (Marks.cs, Fear.cs, FallingOffStacks.cs,
-    # CombatantState.ArmorPenetration, ConvergenceGate.cs), the same
-    # PathAreas folder every other combat mechanic already lives in.
-    # 'Squad' for SquadOfThreeTests/SaveDataSquadOfThreeTests -- the
-    # three-member-party placeholders and their fight/paging/bot coverage,
-    # same PathAreas folder as Party/Bot above.
-    combat  = "Fight|Wool|Spell|Combat|Enemy|Party|Squad|Stage|Boss|Turn|Skill|Damage|Defeat|Teardown|BreakShield|Status|Signature|Ward|Gift|Empower|Cooldown|Relic|Balance|Modifier|Bot|Wisdom|Mark|Fear|Falling|Penetration|Convergence"
-    hub     = "Hub|Talent|Principality|CharacterSheet|SheetStat|Store|Constellation|Glossary"
-    # 'ModifierTable' explicitly, alongside the bare 'Modifier' already
-    # matching combat above -- ModifierTableTests (Phase A3) covers the
-    # RiftTier/which-modifiers ROLL, which lives in Domain/Rewards beside
-    # RarityTable and is a content/reward-economy subject, not a combat
-    # effect. The overlap with combat's 'Modifier' is fine per this file's
-    # own header; this is what makes "content,run" actually cover it too.
-    # 'RiftTier' alongside 'Rarity' -- RiftTierColorsTests (item-modifier plan
-    # Phase E) is the Unity-facing colour table for the ROLL, the exact same
-    # relationship RarityColorsTests already has to Rarity, so it belongs in
-    # the same area for the same reason.
-    content = "Content|ItemSet|Item|Resolver|ArtPath|AbilityScore|StatBlock|StatPoint|Invest|Character|Enemy|Scaling|Gear|Budget|Requirement|Rounding|AbilityDerivation|Weapon|Relic|Rarity|RiftTier|Achievement|RoundTrip|ModifierTable"
-    # GlobalState: the lint that keeps a test from leaving a static flipped for
-    # the rest of the process. It belongs to no single subject -- the statics it
-    # guards are save roots, the run, navigation and two tuning knobs -- and
-    # this file's own header says an imprecise area beats an orphan, since an
-    # orphan is invisible to every area run. 'run' because most of what it
-    # guards is run/save state.
-    # 'Level' joins MetaProgression here rather than starting a 'progression'
-    # area of its own: character level is what survives a run, so it belongs
-    # with Reward, Ember and Settlement rather than beside them. It matches
-    # exactly one class today (LevelCurveTests) and no other class in either
-    # assembly contains the word.
-    # 'CarriedHealth' rather than a bare 'Health': what it covers is health
-    # CARRIED BETWEEN ROOMS across a change of maximum, which is run state.
-    # A bare pattern would reach into combat, where most of the health in this
-    # game lives and where none of it is this.
-    # 'Favor' for FortunateFavorTests and ItemOfferFavorTests -- Prince's
-    # Favor is a run-economy value exactly like Wallet/Reward/Ember (it feeds
-    # the loot roll via ItemOfferRoll.FavorOf/CurrentSquadFavor, both in
-    # Core, not a combat rule), even though Fortunate's own bonus is now read
-    # live off equipment rather than written anywhere.
-    # 'Shop' for the in-run shop (ShopPricingTests, ShopStockTests,
-    # ShopMutationTests) -- the shop is a run-economy rule, the same subject
-    # Wallet/Reward/Ember/Favor already cover here, and it spends RUN gold
-    # rather than the permanent currency the hub's 'Store' pattern names.
-    run     = "Dungeon|Map|FullRun|RunState|Currency|MetaProgression|Level|Save|ActiveSquad|Run|Resume|Snapshot|Seed|Descent|Depth|Difficulty|EnemyBand|Wallet|Reward|Reckoning|Ember|Ledger|Settlement|Encounter|Room|GlobalState|CarriedHealth|Playtime|Favor|Shop"
-    # 'OfferRow' rather than a bare 'Offer': the offer ROW is a layout and
-    # belongs here, but ItemOfferTests and ItemOfferRollTests are reward rules
-    # that already sit in 'content' and 'run', and a bare pattern would drag
-    # them in for the sake of a shared word.
-    # 'Typography' for TypographyRoleTests -- the per-role font/material
-    # asset resolution (TmpBootstrap.Typography.cs, SceneBuilder.FontFor/
-    # MaterialFor) is UI presentation, same subject as everything else here.
-    # 'Settings' for GameSettingsTests (balance-bot item 7, 2026-09-03) --
-    # GameSettings is the model OptionsPaneTests/OptionsController's rows
-    # bind to (audio/resolution/window mode/fps), the same UI-presentation
-    # subject 'Options' already covers here.
-    ui      = "Button|Audio|Splash|PauseMenu|DebugMenu|MainMenu|SystemMenu|Cursor|Dialogue|Bark|Inventory|Equipment|Dossier|Options|Settings|Music|Screen|UiKit|Flicker|Ambience|Overlay|OfferRow|Tooltip|Typography|Container|UiBindingNames"
-    # 'BreathCurve' rather than a bare 'Breath': the curve is art timing --
-    # how big a figure is at rest between blows -- and belongs here, while a
-    # bare 'Breath' would be a word common enough to drag in anything.
-    art     = "Stance|StaticSwing|BreathCurve|Shadow|WhiteQuad|SpriteFacing|BattleBackground|ItemArt|TalentArt|ArtPath|HandAssembled|Flash|Legibility|PostProcessing"
-    rng     = "Rng|SeededRandom|Seed"
-}
+# Tests/EditMode/<Area>/ and Tests/PlayMode/<Area>/, seven areas, plus a
+# Shared/ folder per platform for helpers that carry no tests of their own.
+# A test's area is the folder its file sits in, full stop. There is no table
+# to extend, because there is nothing a new class could fail to match: a file
+# is in exactly one folder, always, and a folder cannot drift the way a regex
+# can.
+#
+# What replaced: a $Areas hashtable of class-NAME regexes, and an orphan gate
+# that refused the suite while any class matched none of them. It worked, and
+# it cost one commit per new test class -- 44 of its 47 commits in 90 days were
+# "add one word so the new class matches", the last being 8a5c3ab for
+# UiBindingNamesTests. The invariant was worth keeping; the tax was not.
+#
+# The gate is still mechanised and still unbypassable, it just checks a
+# different thing: run_tests_parallel.ps1 refuses to run while any .cs file
+# sits DIRECTLY in Tests/EditMode or Tests/PlayMode rather than in one of the
+# eight folders, while any other folder exists beside them, and while anything
+# under Shared/ carries a [Test] or [UnityTest]. See Get-StructuralViolations.
+#
+# ---------------------------------------------------------------------------
+# WHERE A NEW TEST GOES. One paragraph per area. These carry the reasoning the
+# old per-pattern comments carried, because the reasoning is the part that was
+# actually worth keeping; the placements it argued for are unchanged.
+#
+# Combat/ -- a fight and everything inside one. Sessions, turns, damage,
+#   status, shields, skills, spells, wards, cooldowns, marks, fear, armour
+#   penetration and the enemy AI that drives them. The balance bot lives here
+#   too: Domain/Bot's policies decide over FightSession the same way the fight
+#   screen's menu does, so BotPolicy/BotFightAction/BotGearWeights/BotShopPolicy
+#   are combat even where the decision is about gold or gear. BalanceSheetTests
+#   is here for the same reason and not in content: it needs resolved enemy
+#   content and DifficultyCurve, which is why it is a PlayMode test, but
+#   combat math is its subject. So is WisdomManaRegenTests -- a real-fight
+#   test over CombatantState.ManaRegen and the per-turn regen tick, not a
+#   stat-derivation subject on its own. Integration tests named
+#   "...ReachesCombat" belong here whatever they carry into the fight: what
+#   they catch is a fight-side wiring break. The tie-break that settled most
+#   of the combat/content overlaps at the move: a test that builds a real
+#   FightSession is Combat whatever content it feeds in -- RelicPotency,
+#   RelicMechanics, FourthEpicRelics and SpeedAndBountyRelic are here for
+#   that reason while RelicPool, RelicLoadout and RelicModifier, which touch
+#   no session, are in Content. The exception is a resolver test with an
+#   incidental session or two among forty (EnemyEntryResolver,
+#   SkillEntryResolver): those stay with their subject.
+#
+# Hub/ -- what persists between runs and the screens that show it. Talents
+#   (the tree, its gates, its effects, its layout), the constellation, the
+#   character sheet, the permanent store, the glossary, and the hub screen's
+#   own tree. Talent effects are here rather than in Combat even though most
+#   of them only ever fire in a fight, because Domain/Talents is where they
+#   are authored and where an edit that breaks them lands; the fight-side
+#   counterpart (FightTalentTests, WardIsTalentGatedTests) is in Combat.
+#
+# Content/ -- the authored data and the resolvers that turn it into records.
+#   Every *EntryResolverTests, the stat/scaling/rounding/requirement curves,
+#   item sets, rarities, achievements, and the half of the relics that is
+#   data: Domain/Relics is a content folder, so the offer pool, the loadout
+#   rules and a relic's numbers are content even though every one of them is
+#   felt in a fight. Weapon DAMAGE is not -- that is combat math over Domain/
+#   Combat, and only the weapon ENTRIES are here. ModifierTable is
+#   here and not in Combat for the matching reason -- it covers the RiftTier
+#   which-modifiers ROLL, which lives in Domain/Rewards beside RarityTable and
+#   is a reward-economy subject, not a combat effect. ArtPathConventionTests
+#   is here rather than in Art because what it guards is a pair of conventions
+#   authored in content JSON and distinguished only by field name.
+#
+# Run/ -- one descent, and what survives it. The map and its legs, encounters,
+#   rooms, depth and difficulty, the enemy BANDS a depth draws from, the
+#   wallet, embers, the ledger, settlement, the reckoning, saves and resumes,
+#   the reward track, playtime. Character LEVEL is here rather than in a
+#   progression area of its own: level is what survives a run, so it belongs
+#   with Reward, Ember and Settlement rather than beside them.
+#   CarriedHealthTests is here because what it covers is health carried
+#   BETWEEN ROOMS across a change of maximum, which is run state and not the
+#   combat health most of this game's health is. Prince's Favor is a
+#   run-economy value exactly like the wallet -- it feeds the loot roll
+#   through ItemOfferRoll.FavorOf -- so ItemOfferFavorTests is here even
+#   though the offer tables themselves are Content. The in-run shop is a run
+#   rule too: it spends RUN gold, unlike the permanent store in Hub.
+#   GlobalStateLintTests is here because most of what it guards -- save roots,
+#   the run, navigation -- is run state; it belongs to no single subject and
+#   this is the least wrong home for it.
+#
+# Ui/ -- presentation, and every screen tree. This is where the UiKit
+#   screen-tree tests go, ALL of them, including FightScreenTests,
+#   ShopScreenTests, MapScreenTests and DefeatScreenTests whose subjects live
+#   in another area. That is deliberate and it is the one placement rule here
+#   driven by something other than subject: $PathAreas below maps every
+#   Domain/UiKit/ edit to 'ui', so a screen-tree test in any other folder
+#   would not re-run when the tree it solves was edited. The exception is the
+#   hub's own screens (hub, constellation, glossary, character sheet), which
+#   have their own $PathAreas row mapping to hub+ui, so they stay in Hub with
+#   the rest of their subject. Beyond screens: buttons and their motion,
+#   audio and music, inventory and equipment panes, the dossier, options and
+#   GameSettings (the model those rows bind to), tooltips, containers,
+#   typography (per-role font and material resolution is presentation, not
+#   art), and UiBindingNames.
+#
+# Art/ -- how a figure is drawn and how it moves at rest. Stances and the
+#   stance manifest, sprite facing, hand-assembled sheets, shadows, the
+#   battle background, post-processing legibility, and the breath curve --
+#   how big a figure is at rest between blows is art timing, not combat.
+#   Capture tests that exist to photograph art (EnemyStanceCaptureTests) are
+#   here; capture tests that photograph a SCREEN are in Ui.
+#
+# Rng/ -- the random streams themselves. Two files. Seeding a run is Run's
+#   business; the generator's own behaviour is this.
+#
+# Shared/ -- per-platform helpers with no tests of their own: TestSkills,
+#   UiTreeTestHelpers, TestGlobals, PlayModeSparkFixture, StageCaptureRig.
+#   These are used from several areas, so no area owns them. The gate asserts
+#   nothing here carries a [Test] or [UnityTest] -- a suite parked in Shared
+#   would be a suite in no area, which is exactly the hole the old orphan gate
+#   existed to close.
+#
+# ONE FILE, ONE AREA. A file's classes share its folder. Nine files declare
+# more than one suite today and every one of them is single-subject; if that
+# ever stops being true, split the file rather than picking a folder for the
+# majority.
+$AreaFolders = @("Combat", "Hub", "Content", "Run", "Ui", "Art", "Rng")
+$SharedFolder = "Shared"
+# Lower-case, in the order -List prints them and the order CLAUDE.md names
+# them. What a caller types on the command line.
+$AreaNames = @("combat", "hub", "content", "run", "ui", "art", "rng")
 
 # ---------------------------------------------------------------------------
-# Discover which platform each test class lives on, read off the filesystem
-# rather than maintained by hand: EditMode and PlayMode are separate
-# assemblies in separate folders, so the folder a class sits in IS its
-# platform. One file can hold several classes (AudioTests.cs also holds
-# SplashTests), which is why this scans file CONTENTS and not filenames.
+# Discover every test class: which platform it runs on, which area owns it,
+# and which file declares it. All three are read off the filesystem rather
+# than maintained by hand -- EditMode and PlayMode are separate assemblies in
+# separate folders, and an area is a folder inside those.
+#
+# One file can hold several classes (WardTests.cs also holds EmpoweredTests
+# and GiftHasteTests), which is why this scans file CONTENTS and not
+# filenames.
 #
 # The class-declaration regex is deliberately wide: attributes ([TestFixture]
 # and the like), and "sealed"/"static"/"partial" modifiers, are all allowed
 # between "public" and "class" alongside the bare form the pattern matched
 # before this. A "public sealed class FooTests" used to be invisible here --
-# and therefore invisible to $Areas, to Get-AreaOrphans, and to the orphan
-# gate below, which would have reported a clean run while quietly never
-# running FooTests at all. "abstract" stays excluded: NUnit cannot
-# instantiate an abstract fixture, so GameplayTestBase correctly still does
-# not count as a suite.
-function Get-TestClasses {
+# and therefore invisible to every area run and to the gate below, which would
+# have reported a clean run while quietly never running FooTests at all.
+# "abstract" stays excluded: NUnit cannot instantiate an abstract fixture.
+$TestClassPattern = '(?m)^\s*(?:\[[^\]]*\]\s*)*public\s+(?:sealed\s+|static\s+|partial\s+)*class\s+(\w+)'
+$TestAttrPattern = '\[\s*(Test|UnityTest)\s*[\(\]]'
+
+# Cached because -List calls into this four times and a cold pass reads 272
+# files. $script: scope in a DOT-SOURCED file is the calling script's scope,
+# which is exactly the lifetime wanted: one process, one discovery.
+$script:TestIndexCache = $null
+
+# name -> PSCustomObject { Platform; Area; File; RelPath }
+function Get-TestIndex {
+    param([switch]$Fresh)
+    if ($script:TestIndexCache -and -not $Fresh) { return $script:TestIndexCache }
+
     $found = @{}
     foreach ($platform in @("EditMode", "PlayMode")) {
-        $dir = Join-Path $AreasTestsRoot $platform
-        if (-not (Test-Path $dir)) { continue }
-        foreach ($file in Get-ChildItem $dir -Filter *.cs -File) {
-            $content = Get-Content $file.FullName -Raw
-            foreach ($match in [regex]::Matches($content, '(?m)^\s*(?:\[[^\]]*\]\s*)*public\s+(?:sealed\s+|static\s+|partial\s+)*class\s+(\w+)')) {
-                $name = $match.Groups[1].Value
-                # A base class is not a suite; it has no tests of its own.
-                if ($name -like "*TestBase") { continue }
-                $found[$name] = $platform
+        foreach ($folder in ($AreaFolders + $SharedFolder)) {
+            $dir = Join-Path (Join-Path $AreasTestsRoot $platform) $folder
+            if (-not (Test-Path $dir)) { continue }
+            $area = if ($folder -eq $SharedFolder) { $SharedFolder.ToLower() } else { $folder.ToLower() }
+            foreach ($file in Get-ChildItem $dir -Filter *.cs -File) {
+                $content = Get-Content $file.FullName -Raw
+                foreach ($match in [regex]::Matches($content, $TestClassPattern)) {
+                    $name = $match.Groups[1].Value
+                    # A base class is not a suite; it has no tests of its own.
+                    if ($name -like "*TestBase") { continue }
+                    $found[$name] = [PSCustomObject]@{
+                        Platform = $platform
+                        Area     = $area
+                        File     = $file.Name
+                        RelPath  = "Assets/_Project/Scripts/Tests/$platform/$folder/$($file.Name)"
+                    }
+                }
             }
         }
     }
+
+    $script:TestIndexCache = $found
     return $found
+}
+
+# class name -> "EditMode"/"PlayMode". The shape callers had before areas
+# became folders, kept so nothing downstream had to change.
+function Get-TestClasses {
+    param([hashtable]$Index = (Get-TestIndex))
+    $map = @{}
+    foreach ($k in $Index.Keys) { $map[$k] = $Index[$k].Platform }
+    return $map
+}
+
+# class name -> area (lower-case folder name).
+function Get-TestAreas {
+    param([hashtable]$Index = (Get-TestIndex))
+    $map = @{}
+    foreach ($k in $Index.Keys) { $map[$k] = $Index[$k].Area }
+    return $map
+}
+
+# ---------------------------------------------------------------------------
+# THE STRUCTURAL GATE. What run_tests_parallel.ps1 refuses to run over.
+#
+# Three things, all of them things a FOLDER can be wrong about, since a class
+# name no longer can be:
+#
+#   1. A .cs file sitting directly in Tests/EditMode or Tests/PlayMode. It
+#      would be in no area, so no area-based tools/test.ps1 slice and no
+#      -Changed run would ever reach it -- the same invisibility the old
+#      orphan gate existed to prevent, arriving by the only route still open.
+#   2. A folder beside the eight. A ninth folder is either a typo or a new
+#      area, and a new area is a decision to make here in the guide above,
+#      not something to discover from a run that quietly skipped it.
+#   3. A [Test] or [UnityTest] under Shared/. Shared is for helpers; a suite
+#      parked there is a suite in no area.
+#
+# No bypass flag, and none is planned. The fix is a git mv.
+function Get-StructuralViolations {
+    $violations = @()
+    $allowed = $AreaFolders + $SharedFolder
+    $folderList = ($AreaFolders -join ", ") + " (or $SharedFolder for helpers with no tests)"
+
+    foreach ($platform in @("EditMode", "PlayMode")) {
+        $dir = Join-Path $AreasTestsRoot $platform
+        if (-not (Test-Path $dir)) { continue }
+
+        foreach ($file in Get-ChildItem $dir -Filter *.cs -File) {
+            $violations += "Assets/_Project/Scripts/Tests/$platform/$($file.Name) is not in an area folder. Move it into one of: $folderList"
+        }
+
+        foreach ($sub in Get-ChildItem $dir -Directory) {
+            if ($allowed -notcontains $sub.Name) {
+                $violations += "Assets/_Project/Scripts/Tests/$platform/$($sub.Name)/ is not an area folder. The areas are: $folderList"
+            }
+        }
+
+        $sharedDir = Join-Path $dir $SharedFolder
+        if (Test-Path $sharedDir) {
+            foreach ($file in Get-ChildItem $sharedDir -Filter *.cs -File) {
+                $content = Get-Content $file.FullName -Raw
+                if ($content -match $TestAttrPattern) {
+                    $violations += "Assets/_Project/Scripts/Tests/$platform/$SharedFolder/$($file.Name) carries a [Test]/[UnityTest]. $SharedFolder is for helpers only -- move it into its area folder."
+                }
+            }
+        }
+    }
+
+    return $violations
 }
 
 # ---------------------------------------------------------------------------
 # Files that carry a real [Test]/[UnityTest] but whose class(es)
-# Get-TestClasses missed entirely -- an "internal class", or any declaration
-# shape the widened regex above still does not cover. This is what keeps the
-# orphan gate honest: an orphan check can only see what discovery found, so a
-# class invisible to discovery would never even reach the orphan list, and
-# the gate would report a clean run while a whole suite silently never runs.
+# Get-TestIndex missed entirely -- an "internal class", or any declaration
+# shape the widened regex above still does not cover. Kept because a class
+# invisible to discovery is invisible to everything built on discovery,
+# including the structural gate's Shared check, and a suite that never runs
+# reports as a clean run.
 #
-# Kept independent of $Areas on purpose -- this catches a DISCOVERY failure,
-# not a categorization failure. Conflating the two into one check would make
-# a discovery bug look like nothing more than an uncategorized class.
+# Scoped to exactly the folders Get-TestIndex reads, which is what makes the
+# two checks a partition rather than a pile: every .cs under Tests/ is either
+# in one of the eight folders, where THIS looks, or outside them, where
+# Get-StructuralViolations does. Scanning recursively instead would report a
+# misplaced file as a discovery failure -- the wrong diagnosis and the wrong
+# fix, since discovery is working fine and the file is simply in no area.
 function Get-DiscoveryBlindSpots {
-    param([hashtable]$Classes = (Get-TestClasses))
+    param([hashtable]$Index = (Get-TestIndex))
 
     $discoveredNames = New-Object System.Collections.Generic.HashSet[string]
-    foreach ($k in $Classes.Keys) { [void]$discoveredNames.Add($k) }
+    foreach ($k in $Index.Keys) { [void]$discoveredNames.Add($k) }
 
     $blindSpots = @()
     foreach ($platform in @("EditMode", "PlayMode")) {
-        $dir = Join-Path $AreasTestsRoot $platform
+      foreach ($folder in ($AreaFolders + $SharedFolder)) {
+        $dir = Join-Path (Join-Path $AreasTestsRoot $platform) $folder
         if (-not (Test-Path $dir)) { continue }
         foreach ($file in Get-ChildItem $dir -Filter *.cs -File) {
             $content = Get-Content $file.FullName -Raw
-            if ($content -notmatch '\[\s*(Test|UnityTest)\s*[\(\]]') { continue }
+            if ($content -notmatch $TestAttrPattern) { continue }
 
-            $namesInFile = [regex]::Matches($content, '(?m)^\s*(?:\[[^\]]*\]\s*)*public\s+(?:sealed\s+|static\s+|partial\s+)*class\s+(\w+)') |
+            $namesInFile = [regex]::Matches($content, $TestClassPattern) |
                 ForEach-Object { $_.Groups[1].Value } |
                 Where-Object { $_ -notlike "*TestBase" }
 
@@ -177,29 +307,10 @@ function Get-DiscoveryBlindSpots {
                 $blindSpots += $rel
             }
         }
+      }
     }
 
     return $blindSpots | Sort-Object -Unique
-}
-
-# ---------------------------------------------------------------------------
-# Classes matched by NO $Areas pattern. Takes names as a PARAMETER (default:
-# a fresh discovery pass) specifically so this is provable in isolation --
-# "Get-AreaOrphans -ClassNames @('MadeUpTests')" answers the question without
-# touching the filesystem or booting Unity, which is how the gate's
-# non-vacuity gets checked cheaply and repeatedly rather than trusted.
-function Get-AreaOrphans {
-    param([string[]]$ClassNames = (Get-TestClasses).Keys)
-
-    $orphans = @()
-    foreach ($name in $ClassNames) {
-        $matched = $false
-        foreach ($pattern in $Areas.Values) {
-            if ($name -match $pattern) { $matched = $true; break }
-        }
-        if (-not $matched) { $orphans += $name }
-    }
-    return $orphans | Sort-Object -Unique
 }
 
 # ---------------------------------------------------------------------------
@@ -225,43 +336,32 @@ function Get-AreaOrphans {
 # never a skipped test.
 $DomainTestsCsproj = Join-Path $PSScriptRoot "domain-tests\PrincesPalace.Domain.Tests\PrincesPalace.Domain.Tests.csproj"
 
+# Matched on the BASENAME, with the area folder skipped over rather than
+# spelled out: an exclusion path is
+# "...\Tests\EditMode\<Area>\<File>.cs" now, and a file moving between areas
+# must not silently stop being recognised here.
 function Get-UnityOnlyTestFiles {
     if (-not (Test-Path $DomainTestsCsproj)) { return @() }
     $content = Get-Content $DomainTestsCsproj -Raw
     $names = @()
-    foreach ($m in [regex]::Matches($content, '<Compile\s+Remove="[^"]*EditMode[\\/]([A-Za-z0-9_]+\.cs)"')) {
+    foreach ($m in [regex]::Matches($content, '<Compile\s+Remove="[^"]*EditMode[\\/](?:[A-Za-z0-9_]+[\\/])*([A-Za-z0-9_]+\.cs)"')) {
         $names += $m.Groups[1].Value
     }
     return $names | Sort-Object -Unique
 }
 
-# class name -> "dotnet" or "Unity", for every class Get-TestClasses found.
+# class name -> "dotnet" or "Unity", for every class Get-TestIndex found.
 function Get-TestHosts {
-    param([hashtable]$Classes = (Get-TestClasses))
+    param([hashtable]$Index = (Get-TestIndex))
 
     $unityOnly = New-Object System.Collections.Generic.HashSet[string]
     foreach ($f in Get-UnityOnlyTestFiles) { [void]$unityOnly.Add($f) }
 
-    # Which file declares which EditMode class. Same regex Get-TestClasses
-    # uses, deliberately -- a class this cannot place is one Get-TestClasses
-    # never saw either, so there is nothing to disagree about.
-    $fileOf = @{}
-    $dir = Join-Path $AreasTestsRoot "EditMode"
-    if (Test-Path $dir) {
-        foreach ($file in Get-ChildItem $dir -Filter *.cs -File) {
-            $content = Get-Content $file.FullName -Raw
-            foreach ($match in [regex]::Matches($content, '(?m)^\s*(?:\[[^\]]*\]\s*)*public\s+(?:sealed\s+|static\s+|partial\s+)*class\s+(\w+)')) {
-                $fileOf[$match.Groups[1].Value] = $file.Name
-            }
-        }
-    }
-
     $hosts = @{}
-    foreach ($name in $Classes.Keys) {
-        if ($Classes[$name] -ne "EditMode") { $hosts[$name] = "Unity"; continue }
-        $declaringFile = $fileOf[$name]
-        if ($declaringFile -and $unityOnly.Contains($declaringFile)) { $hosts[$name] = "Unity"; continue }
-        if (-not $declaringFile) { $hosts[$name] = "Unity"; continue }
+    foreach ($name in $Index.Keys) {
+        $entry = $Index[$name]
+        if ($entry.Platform -ne "EditMode") { $hosts[$name] = "Unity"; continue }
+        if ($unityOnly.Contains($entry.File)) { $hosts[$name] = "Unity"; continue }
         $hosts[$name] = "dotnet"
     }
     return $hosts
@@ -271,6 +371,11 @@ function Get-TestHosts {
 # -Changed support: map an uncommitted source-file change to the area(s) it
 # belongs to, so "tools/test.ps1 -Changed" can run just the slice affected by
 # what is actually sitting in the working tree.
+#
+# This table is about PRODUCTION paths and is unrelated to the folder-per-area
+# move above -- production code does not live in area folders, so something
+# still has to say which area an edit to Domain/Combat belongs to. It is
+# where the remaining judgment in this file lives.
 #
 # Three tiers, checked in this order per file:
 #   1. $ChangedIgnore    -- cannot affect test behaviour (docs, .meta, ...).
@@ -306,8 +411,7 @@ $ChangedFullSuite = '^(tools/|Packages/|ProjectSettings/|Assets/_Project/Scripts
 # every one would itself rot the way the original five areas did. The
 # alternative -- no fallback, every new Core file UNMAPPED until someone adds
 # a row -- is more precise but pushes people toward "just run -Full", which
-# defeats the point of this flag. The area-orphan gate is where the loud,
-# unbypassable invariant belongs; this map is allowed to be a little soft.
+# defeats the point of this flag.
 $PathAreas = @(
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Combat/';    Areas = @('combat') }
     # The balance bot's brains -- policies decide over FightSession the same
@@ -338,9 +442,8 @@ $PathAreas = @(
     @{ Pattern = '^Assets/_Project/Scripts/Domain/UiKit/';     Areas = @('ui') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Talents/';   Areas = @('hub') }
     # Music/audio config. 'ui' rather than a new area of its own: every audio
-    # test class already matches the ui pattern (Audio|Music), and one more
-    # area for two folders would be the kind of over-precision this file's
-    # own header warns rots first.
+    # test already sits in Tests/*/Ui, and one more area for two folders would
+    # be the kind of over-precision the placement guide above warns about.
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Audio/';     Areas = @('ui') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/Content/';     Areas = @('content') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/Fight';        Areas = @('combat') }
@@ -377,8 +480,8 @@ $PathAreas = @(
     # was added alongside this file, which meant -Changed would have refused
     # to run at all while any of the three sat uncommitted. One broad pattern
     # rather than one row per postprocessor -- overlap across combat/ui/art/
-    # content is fine per this file's own header, and it is precise enough
-    # that a real UNMAPPED editor file still refuses loudly.
+    # content is fine, and it is precise enough that a real UNMAPPED editor
+    # file still refuses loudly.
     @{ Pattern = '^Assets/_Project/Scripts/Editor/.*ImportPostprocessor'; Areas = @('combat', 'ui', 'art', 'content') }
     @{ Pattern = '^Assets/_Project/ContentData/'; Areas = @('content') }
     # Runtime-loaded config that is NOT baked by ContentBuilder -- the two
@@ -388,15 +491,10 @@ $PathAreas = @(
     @{ Pattern = '^Assets/_Project/Resources/Audio/';   Areas = @('ui') }
     @{ Pattern = '^Assets/_Project/Resources/Content/'; Areas = @('content') }
     # The enemy intent badges. 'combat' for the lookup tables that name them and
-    # 'ui' for EnemyIntentIconTests, which loads the Fight scene and checks that
-    # every kind resolves to a sprite that actually imported -- the one test that
-    # would catch a new icon dropped in with the wrong texture type.
+    # 'ui' for the screen side.
     @{ Pattern = '^Assets/_Project/Resources/Intent/';   Areas = @('combat', 'ui') }
     # The party status badges (Chilled/Rooted so far). Same reasoning as
-    # Intent/ immediately above, one folder over: 'combat' for the lookup
-    # table that names them (FightHudModel.StatusBadgeIcons) and 'ui' for
-    # StatusBadgeIconTests, which checks every iconised kind resolves to a
-    # sprite that actually imported.
+    # Intent/ immediately above, one folder over.
     @{ Pattern = '^Assets/_Project/Resources/Status/';   Areas = @('combat', 'ui') }
     # Runtime-loaded ART: the stance folders a monster's spritePath names, the
     # f0..fN spell sequences, and the manifest that measures both. Unmapped
@@ -456,8 +554,12 @@ function Resolve-ChangedPaths {
     $fullSuite = @()
     $mapping = @()
 
-    $testFilePattern = '^Assets/_Project/Scripts/Tests/(EditMode|PlayMode)/[^/]+\.cs$'
-    $classDeclPattern = '(?m)^\s*(?:\[[^\]]*\]\s*)*public\s+(?:sealed\s+|static\s+|partial\s+)*class\s+(\w+)'
+    # The area segment is optional in this pattern on purpose: a test file
+    # that has NOT been moved into one is still a test file, and mapping it to
+    # its own classes is a better answer than calling it UNMAPPED. The
+    # structural gate is what refuses it, loudly, in the one place a refusal
+    # belongs.
+    $testFilePattern = '^Assets/_Project/Scripts/Tests/(EditMode|PlayMode)/([^/]+/)?[^/]+\.cs$'
 
     foreach ($path in $Paths) {
         if ($path -match $ChangedIgnore) {
@@ -483,7 +585,7 @@ function Resolve-ChangedPaths {
             }
 
             $content = Get-Content $fullPath -Raw
-            $namesInFile = [regex]::Matches($content, $classDeclPattern) |
+            $namesInFile = [regex]::Matches($content, $TestClassPattern) |
                 ForEach-Object { $_.Groups[1].Value } |
                 Where-Object { $_ -notlike "*TestBase" -and $Classes.ContainsKey($_) }
 
@@ -491,11 +593,12 @@ function Resolve-ChangedPaths {
                 $classesOut += $namesInFile
                 $mapping += "$path -> $($namesInFile -join ', ')"
             } else {
-                # A test file with no class Get-TestClasses recognizes is a
-                # discovery blind spot, not an unmapped path -- Get-
-                # DiscoveryBlindSpots (and the gate in run_tests_parallel.ps1)
-                # is what is supposed to catch that, not this function.
-                $mapping += "$path -> (no discovered class in this file; see -List's blind-spot section)"
+                # A test file with no class discovery recognizes is either a
+                # discovery blind spot or a file outside an area folder --
+                # Get-DiscoveryBlindSpots and Get-StructuralViolations (and
+                # the gate in run_tests_parallel.ps1) are what catch those,
+                # not this function.
+                $mapping += "$path -> (no discovered class in this file; see -List's structure section)"
             }
             continue
         }

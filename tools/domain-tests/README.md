@@ -37,20 +37,25 @@ edited for one host is edited for both, because there is only one of it.
   exclusion only after moving the file is ruled out, and say why in the
   csproj.
 - `PrincesPalace.Domain.Tests/` compiles `Tests/EditMode/**/*.cs` minus the
-  files listed below.
+  files listed below. The glob is recursive, so the per-area subfolders
+  (`Tests/EditMode/Combat/`, `.../Content/`, ...) need nothing added when a
+  file moves between them — only the exclusion paths below do.
 
 ## The exclusion policy
 
 **A test stays Unity-only when it needs the ENGINE, not merely when it
-mentions one.** Five files qualify today, 35 tests of 2384:
+mentions one.** Four files qualify today:
 
-| File | Tests | Why |
-|---|---:|---|
-| `EnemyContentPinTests.cs` | 9 | `JsonUtility` over the real `enemies.json` |
-| `RigAnimationContentTests.cs` | 13 | `Resources.Load<TextAsset>` — reading the same JSON with `File.ReadAllText` would skip the import, and a manifest that exists but never imported is exactly what it catches |
-| `ForestWardenTests.cs` | 7 | `UnityEngine.JsonUtility`, fully qualified rather than through a `using` |
-| `ItemModifierStorageTests.cs` | 4 | `JsonUtility` save-compat — the thing under test *is* Unity's serializer |
-| `HandAssembledArtTests.cs` | 2 | `Application.dataPath`, and it reads committed art off disk |
+| File | Why |
+|---|---|
+| `EditMode/Content/EnemyContentPinTests.cs` | `JsonUtility` over the real `enemies.json` |
+| `EditMode/Combat/ForestWardenTests.cs` | `UnityEngine.JsonUtility`, fully qualified rather than through a `using` |
+| `EditMode/Content/ItemModifierStorageTests.cs` | `JsonUtility` save-compat — the thing under test *is* Unity's serializer |
+| `EditMode/Art/HandAssembledArtTests.cs` | `Application.dataPath`, and it reads committed art off disk |
+
+(A fifth, `RigAnimationContentTests.cs`, was deleted with the rig pipeline in
+`a9c0d49`; its exclusion and its row here outlived the file by four months and
+went with the folder-per-area move.)
 
 `tools/test.ps1 -List` marks every class `[D]` or `[U]`. That marking is read
 out of `PrincesPalace.Domain.Tests.csproj`, not maintained separately, so the

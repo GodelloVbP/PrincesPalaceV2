@@ -341,6 +341,13 @@ rules, because statics are the one place the compiler stops helping:
   never caught the divergence because it used the same rounding both times.
 - EditMode = Domain-only logic. The moment a test needs `ContentDatabase`,
   `SaveData`, `GameplayManager`, or a scene, it's PlayMode.
+- **A test's area is the folder it sits in.** `Tests/<Platform>/<Area>/`, the
+  seven areas being `Combat`, `Hub`, `Content`, `Run`, `Ui`, `Art`, `Rng`,
+  with `Shared/` beside them for helpers carrying no `[Test]`. A file left
+  directly in `Tests/EditMode` or `Tests/PlayMode` refuses the whole run
+  (`tools/run_tests_parallel.ps1`), because a test in no area is invisible to
+  every area slice and to `-Changed`. `tools/test_areas.ps1`'s header says
+  what belongs where and why; one file, one area.
 - **`Start()` runs one frame after `SetActive(true)`, not synchronously.**
   PlayMode tests must `yield return null;` **twice** after activating a
   panel before clicking its buttons. `OnEnable()` fires synchronously with

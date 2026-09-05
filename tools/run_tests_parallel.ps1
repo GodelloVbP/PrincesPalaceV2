@@ -51,9 +51,8 @@ $SourceProject = Split-Path $PSScriptRoot -Parent
 . (Join-Path $PSScriptRoot "unity_path.ps1")
 $UnityExe = Get-UnityExe
 
-# Shares $Areas/Get-TestClasses/Get-AreaOrphans/Get-DiscoveryBlindSpots with
-# tools/test.ps1, so the gate immediately below checks against the exact same
-# definitions a slice would use.
+# Shares discovery, areas and the structural gate with tools/test.ps1, so the
+# gate below checks against the exact same definitions a slice would use.
 . (Join-Path $PSScriptRoot "test_areas.ps1")
 
 $ProjectLeaf = Split-Path $SourceProject -Leaf
@@ -179,6 +178,15 @@ function Sync-Runner {
     robocopy "$SourceProject\Packages" "$($Runner.Path)\Packages" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
     robocopy "$SourceProject\ProjectSettings" "$($Runner.Path)\ProjectSettings" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
 
+    # docs/ is not a Unity folder and the runner has no use for it -- except
+    # that a test now READS one of its files. ContentSchemaTests walks up from
+    # the working directory to whatever holds Assets/_Project/Scripts and
+    # compares docs/CONTENT_SCHEMA.md against what ContentSchema.Generate()
+    # produces. Under `dotnet test` that walk lands in the real repo and the
+    # test passes; under Unity it lands in this copy, which had no docs/ at
+    # all, so the test could only ever fail here. 5.6 MB, mirrored once.
+    robocopy "$SourceProject\docs" "$($Runner.Path)\docs" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
+
     $settingsPath = Join-Path $Runner.Path "ProjectSettings\ProjectSettings.asset"
     (Get-Content $settingsPath -Raw) -replace "productName: .*", "productName: $($Runner.Product)" |
         Set-Content $settingsPath -Encoding utf8
@@ -192,29 +200,35 @@ function Sync-Runner {
 # test class has to get caught -- an area-based tools/test.ps1 slice can only
 # ever be as trustworthy as the class list behind it.
 #
-# Blind spots are checked BEFORE orphans, and that ordering matters: a class
-# invisible to Get-TestClasses is also invisible to the orphan check, so a
-# discovery gap would otherwise report as "no orphans" -- a clean bill of
-# health for a suite that is quietly not running some of its own tests.
+# The two checks partition every .cs under Tests/ rather than overlapping:
+# blind spots cover the files inside the eight folders (a [Test] whose class
+# discovery could not see), structure covers everything outside them. Neither
+# can report clean over what the other is looking at, which is the property
+# that matters -- a suite quietly not running some of its own tests is what
+# both exist to prevent.
 #
-# No bypass flag, and none is planned. The fix is always a one-line pattern
-# edit in tools/test_areas.ps1, and a bypass would just institutionalize the
-# exact gap this exists to close.
-$discoveredClasses = Get-TestClasses
+# The structure check is what replaced the area-orphan gate when areas stopped
+# being class-name regexes and became folders. It is a smaller claim and a
+# stronger one: a class cannot fail to match a folder the way it could fail to
+# match a regex, so the only remaining way into no-area limbo is to leave a
+# file outside the area folders, and that is exactly what this refuses.
+#
+# No bypass flag, and none is planned. The fix is a git mv.
+$discoveredIndex = Get-TestIndex
 
-$blindSpots = Get-DiscoveryBlindSpots -Classes $discoveredClasses
+$blindSpots = Get-DiscoveryBlindSpots -Index $discoveredIndex
 if ($blindSpots.Count -gt 0) {
     Write-Host "TEST DISCOVERY BLIND SPOT ($($blindSpots.Count) file(s)) -- a [Test]/[UnityTest] exists here but its class was never discovered:"
     foreach ($b in $blindSpots) { Write-Host "  $b" }
-    Write-Host "`nFix the class declaration, or widen the regex in tools/test_areas.ps1's Get-TestClasses if this is a legitimate new shape."
+    Write-Host "`nFix the class declaration, or widen the regex in tools/test_areas.ps1's Get-TestIndex if this is a legitimate new shape."
     exit 1
 }
 
-$orphans = Get-AreaOrphans -ClassNames $discoveredClasses.Keys
-if ($orphans.Count -gt 0) {
-    Write-Host "TEST CLASS WITH NO AREA ($($orphans.Count)) -- invisible to every area-based tools/test.ps1 slice:"
-    foreach ($o in $orphans) { Write-Host "  $o" }
-    Write-Host "`nExtend a pattern in tools/test_areas.ps1's `$Areas so it matches this class."
+$violations = Get-StructuralViolations
+if ($violations.Count -gt 0) {
+    Write-Host "TEST FILE OUTSIDE ITS AREA ($($violations.Count)) -- a test's area is the folder it sits in, and these have none:"
+    foreach ($v in $violations) { Write-Host "  $v" }
+    Write-Host "`nMove the file with git mv. tools/test_areas.ps1's header says what belongs in each of the seven areas."
     exit 1
 }
 

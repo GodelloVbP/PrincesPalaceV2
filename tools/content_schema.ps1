@@ -5,7 +5,7 @@ param(
 # Regenerates docs/CONTENT_SCHEMA.md from the Raw*Entry types.
 #
 # The generator (Assets/_Project/Scripts/Domain/Content/ContentSchema.cs) and
-# the test that runs it (Tests/EditMode/ContentSchemaTests.cs) are the same
+# the test that runs it (Tests/EditMode/Content/ContentSchemaTests.cs) are the same
 # code either way - only CONTENT_SCHEMA_WRITE picks WRITE over COMPARE. That
 # is what keeps this script from being a second copy of the generation logic
 # that could itself drift from the one dotnet test actually runs.

@@ -3,7 +3,8 @@
   <!--
     The EditMode suite, compiled and run by `dotnet test` instead of Unity.
 
-    Same files. Included by path out of Assets/_Project/Scripts/Tests/EditMode,
+    Same files. Included by path out of Assets/_Project/Scripts/Tests/EditMode
+    (recursively, so the per-area subfolders are picked up automatically),
     never copied, so there is exactly one copy of every test in the repo and
     no way for the two hosts to drift apart file by file.
 
@@ -58,9 +59,14 @@
       the ENGINE, not merely when it mentions it. Four files qualify, all
       four for a reason no shim can honestly stand in for. Adding to this
       list costs coverage in the fast loop, so justify each one here.
+      Paths carry the AREA FOLDER now (Tests/EditMode/<Area>/<File>.cs) -
+      a test's area is the folder it sits in, so an exclusion follows the
+      file when it moves between areas. tools/test_areas.ps1 reads these
+      by BASENAME and skips the folder segment, so a stale folder here
+      shows up as a broken build, not as a silently un-excluded test.
       (SaveDataSquadOfThreeTests used to be a fifth, for needing Core types
       this project has no reference to. It moved to
-      Tests/PlayMode/SaveDataSquadOfThreeTests.cs instead, which is outside
+      Tests/PlayMode/Run/SaveDataSquadOfThreeTests.cs instead, which is outside
       this glob entirely rather than an exclusion inside it.)
     -->
 
@@ -68,26 +74,20 @@
          behaviour on an old-shaped save (which fields it fills, which it
          leaves at default). A System.Text.Json stand-in would test a
          different serializer and pass for the wrong reason. -->
-    <Compile Remove="..\..\..\Assets\_Project\Scripts\Tests\EditMode\ItemModifierStorageTests.cs" />
+    <Compile Remove="..\..\..\Assets\_Project\Scripts\Tests\EditMode\Content\ItemModifierStorageTests.cs" />
 
     <!-- JsonUtility again, over the real enemies.json. Same reasoning: the
          pin is on what Unity's parser produces from the authored file. -->
-    <Compile Remove="..\..\..\Assets\_Project\Scripts\Tests\EditMode\EnemyContentPinTests.cs" />
+    <Compile Remove="..\..\..\Assets\_Project\Scripts\Tests\EditMode\Content\EnemyContentPinTests.cs" />
 
     <!-- JsonUtility a third time, fully qualified as UnityEngine.JsonUtility
          rather than through a using, which is how it stayed invisible to a
          "using UnityEngine" grep. Same reasoning as the two above: the
          assertion is on what Unity's parser makes of enemies.json. -->
-    <Compile Remove="..\..\..\Assets\_Project\Scripts\Tests\EditMode\ForestWardenTests.cs" />
+    <Compile Remove="..\..\..\Assets\_Project\Scripts\Tests\EditMode\Combat\ForestWardenTests.cs" />
 
     <!-- Application.dataPath, and it reads committed art off disk. -->
-    <Compile Remove="..\..\..\Assets\_Project\Scripts\Tests\EditMode\HandAssembledArtTests.cs" />
-
-    <!-- Resources.Load of an imported TextAsset. Reading the same JSON with
-         File.ReadAllText would skip the import, which is half of what this
-         test is for: a rig manifest that exists but never imported is
-         exactly the failure it catches. -->
-    <Compile Remove="..\..\..\Assets\_Project\Scripts\Tests\EditMode\RigAnimationContentTests.cs" />
+    <Compile Remove="..\..\..\Assets\_Project\Scripts\Tests\EditMode\Art\HandAssembledArtTests.cs" />
 
     <!-- The Mathf stand-in for RewardTrackLayoutTests. See its own header. -->
     <Compile Include="MathfShim.cs" />
