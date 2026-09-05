@@ -37,6 +37,23 @@ public sealed class ScreenDef
 // third copy in screenshot.ps1's usage text, with a documented "nothing keeps
 // these in sync" hazard. There is one list now, so a screen cannot exist in the
 // game and be invisible to its own tooling.
+//
+// WHAT A Wire STEP STILL WRITES BY HAND. UiAutoBind, called once per attached
+// controller, binds every [SerializeField] whose own identifier mirrors a
+// NodeRef on the screen -- which was 372 lines of `ctrl.x = result.T(screen.X)`
+// here. Four shapes it cannot see, and every explicit assignment left in this
+// file is one of them:
+//   - the NAME DIFFERS, deliberately (exitLabels from ExitButtons, discs from
+//     Dots), or one node is wanted through two components (shimmer and
+//     shimmerRect, submenuRows and submenuRowRects);
+//   - the value comes from a SUB-OBJECT of a screen-side card or row struct
+//     (Shop's cards, MainMenu's slot cards), which is not a NodeRef field;
+//   - the value is not a NodeRef at all -- a Sprite off LoadSpriteByKey, an
+//     IconEntry[] built from ContentDatabase, another controller;
+//   - the node lives on a DIFFERENT screen object than the one being bound
+//     (a nested screen's Root, the dossier's door into the reward track).
+// A field the binder misses and nobody writes here fails the build: see
+// UiWiringSweep, which reads the serialized view of every attached controller.
 public static class ScreenRegistry
 {
     public const string MainMenuScene = SceneBuilder.ScenesDir + "/MainMenu.unity";
@@ -61,9 +78,9 @@ public static class ScreenRegistry
         Fight(),
     };
 
-    // The battle screen. The largest tree in the game, and the first to bind
-    // eight indexed arrays -- which is why every one of them is declared to E4
-    // below rather than trusted to have been built off the right list.
+    // The battle screen. The largest tree in the game, and the one the binder
+    // does the most for: seventy-eight of FightController's fields mirror a
+    // NodeRef name, so what survives below is only what a name cannot say.
     private static ScreenDef Fight()
     {
         FightScreen screen = null;
@@ -81,13 +98,12 @@ public static class ScreenRegistry
             Wire = result =>
             {
                 fight = result.Attach<FightController>(screen.Root);
+                UiAutoBind.Bind(result, fight, screen);
 
                 fight.backgroundImage = result.Image(screen.Background);
                 fight.normalBackground = fight.backgroundImage.sprite;
                 fight.eliteBackground = SceneBuilder.LoadSpriteByKey(FightScreen.EliteBackgroundKey);
                 fight.bossBackground = SceneBuilder.LoadSpriteByKey(FightScreen.BossBackgroundKey);
-
-                fight.enemySlots = screen.EnemySlots.Select(result.Rect).ToArray();
 
                 // ONE SHAKER PER RACK, not one for the whole screen. The two
                 // stages are separate containers and the HUD is neither of
@@ -98,97 +114,14 @@ public static class ScreenRegistry
                     result.Attach<StageShake>(screen.EnemyStage),
                     result.Attach<StageShake>(screen.PartyStage),
                 };
-                fight.enemySprites = screen.EnemySprites.Select(result.Image).ToArray();
-                fight.enemyHitFlashes = screen.EnemyHitFlashes.Select(result.Image).ToArray();
-                fight.enemyNameplates = screen.EnemyNameplates.Select(result.Tmp).ToArray();
-                fight.enemyFootShadows = screen.EnemyFootShadows.Select(result.Image).ToArray();
 
-                fight.partySlots = screen.PartySlots.Select(result.Rect).ToArray();
-                fight.partySprites = screen.PartySprites.Select(result.Image).ToArray();
-                fight.partyHitFlashes = screen.PartyHitFlashes.Select(result.Image).ToArray();
-                fight.partyNameplates = screen.PartyNameplates.Select(result.Tmp).ToArray();
-                fight.partyFootShadows = screen.PartyFootShadows.Select(result.Image).ToArray();
-
-                fight.initiativeIcons = screen.InitiativeIcons.Select(result.Image).ToArray();
-                fight.initiativeRings = screen.InitiativeRings.Select(result.Image).ToArray();
-                fight.initiativeLabels = screen.InitiativeLabels.Select(result.Tmp).ToArray();
-
-                fight.barkPortrait = result.Image(screen.BarkPortrait);
-                fight.barkLabel = result.Tmp(screen.BarkLabel);
-
-                fight.lowHpVignette = result.Go(screen.LowHpVignette);
-
-                fight.enemiesHint = result.Tmp(screen.EnemiesHint);
-                fight.enemyPlates = screen.EnemyPlates.Select(result.Button).ToArray();
-                fight.enemyPlateIcons = screen.EnemyPlateIcons.Select(result.Image).ToArray();
-                fight.enemyPlateNames = screen.EnemyPlateNames.Select(result.Tmp).ToArray();
-                fight.enemyPlateHps = screen.EnemyPlateHps.Select(result.Tmp).ToArray();
-                fight.enemyPlateHpFills = screen.EnemyPlateHpFills.Select(result.Image).ToArray();
-                fight.enemyPlateTags = screen.EnemyPlateTags.Select(result.Tmp).ToArray();
-                fight.enemyPlateReticles = screen.EnemyPlateReticles.Select(result.Go).ToArray();
-                fight.enemyPlateBreakTracks = screen.EnemyPlateBreakTracks.Select(result.Go).ToArray();
-                fight.enemyPlateBreakFills = screen.EnemyPlateBreakFills.Select(result.Image).ToArray();
-
-                fight.partyPortrait = result.Image(screen.PartyPortrait);
-                fight.partyName = result.Tmp(screen.PartyName);
-                fight.partyClass = result.Tmp(screen.PartyClass);
-                fight.partyHpFill = result.Image(screen.PartyHpFill);
-                fight.partyHpValue = result.Tmp(screen.PartyHpValue);
-                fight.partyMpFill = result.Image(screen.PartyMpFill);
-                fight.partyMpValue = result.Tmp(screen.PartyMpValue);
-                fight.partyBuffIcons = screen.PartyBuffIcons.Select(result.Go).ToArray();
-                fight.partyBuffTooltip = result.Go(screen.PartyBuffTooltip);
-                fight.partyBuffTooltipText = result.Tmp(screen.PartyBuffTooltipText);
-                fight.woolPips = screen.WoolPips.Select(result.Image).ToArray();
-                fight.woolValue = result.Tmp(screen.WoolValue);
-                fight.secondLifeBadge = result.Go(screen.SecondLifeBadge);
-                fight.transformStrip = result.Go(screen.TransformStrip);
-                fight.transformStripText = result.Tmp(screen.TransformStripText);
-                fight.rosterPlates = screen.RosterPlates.Select(result.Go).ToArray();
-                fight.rosterNames = screen.RosterNames.Select(result.Tmp).ToArray();
-                fight.rosterHpValues = screen.RosterHpValues.Select(result.Tmp).ToArray();
-                fight.rosterHpFills = screen.RosterHpFills.Select(result.Image).ToArray();
-
-                fight.verbButtons = screen.VerbButtons.Select(result.Button).ToArray();
-                fight.verbLabels = screen.VerbLabels.Select(result.Tmp).ToArray();
-                fight.verbCarets = screen.VerbCarets.Select(result.Go).ToArray();
-                fight.breadcrumb = result.Tmp(screen.Breadcrumb);
-                fight.continueButton = result.Button(screen.ContinueButton);
-
-                fight.enemyIntentIcons = screen.EnemyIntentIcons.Select(result.Go).ToArray();
-                fight.enemyHitAreas = screen.EnemyHitAreas.Select(result.Button).ToArray();
-                fight.targetCancelButton = result.Button(screen.TargetCancelButton);
                 // The reward screen owns Escape while it is up: opening this
                 // menu over a reckoning the player is trying to dismiss is the
                 // same wrong-thing-on-Escape the consumer list exists to stop.
                 WireSystemMenu(result, screen.Root, screen.SystemMenu, lockedForFight: true,
                     inDescent: true, screen.Reckoning.Root);
 
-                fight.intentTooltip = result.Go(screen.IntentTooltip);
-                fight.intentTooltipText = result.Tmp(screen.IntentTooltipText);
-
-                fight.submenuColumn = result.Go(screen.SubmenuColumn);
-                fight.submenuTitle = result.Tmp(screen.SubmenuTitle);
-                fight.submenuHint = result.Tmp(screen.SubmenuHint);
-                fight.submenuBackButton = result.Button(screen.SubmenuBackButton);
-                fight.submenuRows = screen.SubmenuRows.Select(result.Button).ToArray();
                 fight.submenuRowRects = screen.SubmenuRows.Select(result.Rect).ToArray();
-                fight.submenuViewport = result.Rect(screen.SubmenuViewport);
-                fight.submenuContent = result.Rect(screen.SubmenuContent);
-                fight.submenuScrollTrack = result.Rect(screen.SubmenuScrollTrack);
-                fight.submenuScrollThumb = result.Rect(screen.SubmenuScrollThumb);
-                fight.submenuNames = screen.SubmenuNames.Select(result.Tmp).ToArray();
-
-                fight.detailColumn = result.Go(screen.DetailColumn);
-                fight.detailName = result.Tmp(screen.DetailName);
-                fight.detailKind = result.Tmp(screen.DetailKind);
-                fight.detailBody = result.Tmp(screen.DetailBody);
-                fight.detailStatValues = screen.DetailStatValues.Select(result.Tmp).ToArray();
-                fight.detailStatKeys = screen.DetailStatKeys.Select(result.Tmp).ToArray();
-                fight.detailDamageType = result.Tmp(screen.DetailDamageType);
-
-                fight.targetPrompt = result.Go(screen.TargetPrompt);
-                fight.targetPromptLabel = result.Tmp(screen.TargetPromptLabel);
 
                 fight.reckoning = WireReckoning(result, screen.Reckoning);
                 fight.defeat = WireDefeat(result, screen.Defeat);
@@ -201,7 +134,6 @@ public static class ScreenRegistry
                 // node itself, so disabling that node is a real stop rather
                 // than something the controller has to remember -- the same
                 // arrangement FightBeatPlayer has with the popup pool.
-                fight.spellVfx = screen.SpellVfx.Select(result.Image).ToArray();
                 fight.spellVfxPlayers = screen.SpellVfx
                     .Select((node, i) =>
                     {
@@ -234,7 +166,6 @@ public static class ScreenRegistry
                 // one instance -- the difference is where it sits in the tree
                 // (behind the racks; see FightScreen.BuildSpellGroundVfx) and
                 // that its size is recomputed per cast rather than authored.
-                fight.spellGroundVfx = result.Image(screen.SpellGroundVfx);
                 fight.spellGroundVfxPlayer = result.Attach<SpellVfxPlayer>(screen.SpellGroundVfx);
                 fight.spellGroundVfxPlayer.image = fight.spellGroundVfx;
                 fight.spellGroundVfxPlayer.image.raycastTarget = false;
@@ -244,9 +175,6 @@ public static class ScreenRegistry
                 fight.spellGroundVfxPlayer.fade.raycastTarget = false;
                 fight.spellGroundVfxPlayer.fade.preserveAspect = true;
                 fight.spellGroundVfxPlayer.fade.enabled = false;
-
-                fight.damagePopups = screen.DamagePopups.Select(result.Go).ToArray();
-                fight.damagePopupLabels = screen.DamagePopupLabels.Select(result.Tmp).ToArray();
 
                 // The popups own their own rise-and-fade, so each gets its
                 // component and its label here rather than being animated by the
@@ -321,21 +249,20 @@ public static class ScreenRegistry
                 fight.beatPlayer = player;
             },
 
-            // E4. Every indexed array, declared against the list it was
-            // built from. Building each straight off its own list already
-            // makes the two agree; stating it here
-            // means a future edit that binds an array some OTHER way fails the
-            // build instead of shipping a strip whose length nobody re-checked.
+            // E4, and only where two DIFFERENT things are being counted.
+            //
+            // Eight declarations stood here, one per indexed array on
+            // FightController. UiAutoBind builds each of those from the very
+            // list the nodes were appended to, so there is no longer a second
+            // count for E4 to disagree with: the check had become `n == n`,
+            // which is the same thing WireRewardTrack's own comment says about
+            // never having written its ninety-nine.
+            //
+            // This one is not that. The popup pool is sized by FightScreen and
+            // filled into a SECOND controller, and nothing but this line says
+            // the two agree -- which is exactly the shipped Store bug's shape.
             CountBindings = () => new[]
             {
-                Count("FightController.enemySlots", screen.EnemySlots, () => fight.enemySlots.Length),
-                Count("FightController.partySlots", screen.PartySlots, () => fight.partySlots.Length),
-                Count("FightController.initiativeIcons", screen.InitiativeIcons, () => fight.initiativeIcons.Length),
-                Count("FightController.enemyPlates", screen.EnemyPlates, () => fight.enemyPlates.Length),
-                Count("FightController.woolPips", screen.WoolPips, () => fight.woolPips.Length),
-                Count("FightController.verbButtons", screen.VerbButtons, () => fight.verbButtons.Length),
-                Count("FightController.submenuRows", screen.SubmenuRows, () => fight.submenuRows.Length),
-                Count("FightController.damagePopups", screen.DamagePopups, () => fight.damagePopups.Length),
                 Count("FightBeatPlayer.popups", screen.DamagePopups, () => fight.beatPlayer.popups.Length),
             },
         };
@@ -360,15 +287,8 @@ public static class ScreenRegistry
             Wire = result =>
             {
                 var hub = result.Attach<HubController>(screen.Root);
-                hub.talentsButton = result.Button(screen.TalentsButton);
-                hub.principalityButton = result.Button(screen.PrincipalityButton);
-                hub.characterSheetButton = result.Button(screen.CharacterSheetButton);
-                hub.relicsButton = result.Button(screen.RelicsButton);
-                hub.startRunButton = result.Button(screen.StartRunButton);
-                hub.mainMenuButton = result.Button(screen.MainMenuButton);
-                hub.currencyLabel = result.Tmp(screen.CurrencyLabel);
+                UiAutoBind.Bind(result, hub, screen);
                 DressHub(result, screen);
-                hub.startRunCaption = result.Tmp(screen.StartRunCaption);
 
                 // The ONE whose screen does not exist yet. This array is the one
                 // place that list lives, and it shrinks as they land -- the
@@ -390,8 +310,6 @@ public static class ScreenRegistry
     private static ScreenDef MainMenu()
     {
         MainMenuScreen screen = null;
-        SaveSlotController slots = null;
-        ResetProgressController reset = null;
 
         return new ScreenDef
         {
@@ -406,27 +324,23 @@ public static class ScreenRegistry
             },
             Wire = result =>
             {
-                // Direct assignment through typed lookups. A typo or a type
-                // mismatch here is a compile error, which is the whole point of
-                // retiring SetField(controller, "playButton", ...).
                 var menu = result.Attach<MainMenuController>(screen.Root);
-                menu.playButton = result.Button(screen.PlayButton);
-                menu.exitButton = result.Button(screen.ExitButton);
-                menu.closeSaveSlotButton = result.Button(screen.CloseSaveSlotButton);
-                menu.saveSlotPanel = result.Go(screen.SaveSlotPanel);
-                menu.continueButton = result.Button(screen.ContinueButton);
+                UiAutoBind.Bind(result, menu, screen);
 
-                slots = result.Attach<SaveSlotController>(screen.SaveSlotPanel);
-                slots.slotButtons = screen.SlotButtons.Select(result.Button).ToArray();
+                // THREE CONTROLLERS OFF ONE SCREEN OBJECT, so each gets its own
+                // Bind against the same MainMenuScreen. The slot cards are the
+                // sub-object case: a SlotCardRefs is not a NodeRef field, so
+                // every column of it is still written out below.
+                var slots = result.Attach<SaveSlotController>(screen.SaveSlotPanel);
+                UiAutoBind.Bind(result, slots, screen);
                 slots.slotNumbers = screen.ChooseCards.Select(c => result.Tmp(c.Number)).ToArray();
                 slots.slotTops = screen.ChooseCards.Select(c => result.Tmp(c.Top)).ToArray();
                 slots.slotDetails = screen.ChooseCards.Select(c => result.Tmp(c.Detail)).ToArray();
                 slots.slotGolds = screen.ChooseCards.Select(c => result.Tmp(c.Gold)).ToArray();
-                slots.manageSavesButton = result.Button(screen.ManageSavesButton);
                 slots.managePanel = result.Go(screen.ManageSavesPanel);
 
-                reset = result.Attach<ResetProgressController>(screen.ManageSavesPanel);
-                reset.deleteButtons = screen.DeleteButtons.Select(result.Button).ToArray();
+                var reset = result.Attach<ResetProgressController>(screen.ManageSavesPanel);
+                UiAutoBind.Bind(result, reset, screen);
                 reset.slotNumbers = screen.ManageCards.Select(c => result.Tmp(c.Number)).ToArray();
                 reset.slotTops = screen.ManageCards.Select(c => result.Tmp(c.Top)).ToArray();
                 reset.slotDetails = screen.ManageCards.Select(c => result.Tmp(c.Detail)).ToArray();
@@ -438,7 +352,6 @@ public static class ScreenRegistry
                 reset.confirmFill = result.Rect(screen.ResetConfirmYesFill);
                 reset.confirmNoButton = result.Button(screen.ResetConfirmNoButton);
                 reset.backButton = result.Button(screen.CloseManageSavesButton);
-                reset.saveSlotPanel = result.Go(screen.SaveSlotPanel);
 
                 // NOT subscribing SaveSlotController.Refresh to a C# event here.
                 // This Wire step runs at BUILD time and delegates do not
@@ -453,25 +366,12 @@ public static class ScreenRegistry
                 DressAmbience(result, screen);
             },
 
-            // E4. Building each array straight off its declared list already
-            // makes these agree; stating it means a future edit that binds an
-            // array some OTHER way fails the build instead of shipping a strip
-            // whose length nobody re-checked.
-            CountBindings = () => new[]
-            {
-                new UiCountAudit.Binding
-                {
-                    Label = "SaveSlotController.slotButtons",
-                    Declared = screen.SlotButtons,
-                    BoundLength = () => slots.slotButtons.Length,
-                },
-                new UiCountAudit.Binding
-                {
-                    Label = "ResetProgressController.deleteButtons",
-                    Declared = screen.DeleteButtons,
-                    BoundLength = () => reset.deleteButtons.Length,
-                },
-            },
+            // NO CountBindings. Both that stood here -- slotButtons and
+            // deleteButtons -- are now built by UiAutoBind off the very list
+            // the nodes were appended to, so E4 would be comparing a count
+            // with itself. The cards those buttons sit on are a different
+            // matter and are still written by hand above; nothing indexes
+            // them against a separate number.
         };
     }
 
@@ -572,22 +472,7 @@ public static class ScreenRegistry
             Wire = result =>
             {
                 var map = result.Attach<MapController>(screen.Root);
-                map.viewport = result.Rect(screen.Viewport);
-                map.content = result.Rect(screen.Content);
-                map.backdrops = screen.Backdrops.Select(result.Image).ToArray();
-                map.fog = result.Rect(screen.Fog);
-                map.walker = result.Image(screen.Walker);
-                map.nodeButtons = screen.NodeButtons.Select(result.Button).ToArray();
-                map.nodeIcons = screen.NodeIcons.Select(result.Image).ToArray();
-                map.nodeLabels = screen.NodeLabels.Select(result.Tmp).ToArray();
-                map.nodeMarkers = screen.NodeMarkers.Select(result.Image).ToArray();
-                map.trailSegments = screen.TrailSegments.Select(result.Image).ToArray();
-                map.trailCores = screen.TrailCores.Select(result.Image).ToArray();
-                map.depthLabel = result.Tmp(screen.DepthLabel);
-                map.goldLabel = result.Tmp(screen.GoldLabel);
-                map.pendingBookLabel = result.Tmp(screen.PendingBookLabel);
-                map.roomMessageLabel = result.Tmp(screen.RoomMessageLabel);
-                map.abandonButton = result.Button(screen.AbandonButton);
+                UiAutoBind.Bind(result, map, screen);
 
                 // Unlocked, unlike the fight's copy: the map is where
                 // changing gear between rooms is supposed to happen.
@@ -616,6 +501,14 @@ public static class ScreenRegistry
             // revised in docs/handoffs/shop_v2/GAP_AUDIT.md's Gate 1 exit
             // record); this pairing is what stops a future count change on
             // one side from orphaning cards on the other.
+            //
+            // THE ONLY SCREEN-LEVEL ONES LEFT, and they are kept for a reason
+            // the deleted ones did not have: the shop's cards come off a
+            // sub-object, so UiAutoBind cannot see them and the lines in
+            // WireShop stay hand-written -- which is precisely the edit E4
+            // exists to catch. The arrays a binder now owns cannot be
+            // rewritten to read a different list, because there is no line
+            // left to rewrite.
             CountBindings = () => new[]
             {
                 Count("ShopController.gearCards", screen.Shop.GearCards.Select(c => c.Button).ToList(),
@@ -633,13 +526,7 @@ public static class ScreenRegistry
     private static ShopController WireShop(UiEmitResult result, ShopScreen screen)
     {
         var shop = result.Attach<ShopController>(screen.Root);
-
-        shop.goldLabel = result.Tmp(screen.GoldLabel);
-        shop.leaveButton = result.Button(screen.LeaveButton);
-        shop.leaveButtonLabel = result.Tmp(screen.LeaveButtonLabel);
-        shop.detailLabel = result.Tmp(screen.DetailLabel);
-        shop.buyButton = result.Button(screen.BuyButton);
-        shop.packButton = result.Button(screen.PackButton);
+        UiAutoBind.Bind(result, shop, screen);
 
         // Item and relic art, baked as parallel arrays. Resolved here rather
         // than at runtime because Resources loading and AssetDatabase are
@@ -657,36 +544,26 @@ public static class ScreenRegistry
             .Select(r => new IconEntry(r.id, SceneBuilder.LoadSpriteByKey(r.iconPath)))
             .ToArray();
 
-        shop.gearReroll = result.Button(screen.GearReroll);
-        shop.gearRerollLabel = result.Tmp(screen.GearRerollLabel);
         shop.gearCards = screen.GearCards.Select(c => result.Button(c.Button)).ToArray();
         shop.gearIcons = screen.GearCards.Select(c => result.Image(c.Icon)).ToArray();
         shop.gearNames = screen.GearCards.Select(c => result.Tmp(c.Name)).ToArray();
         shop.gearMetas = screen.GearCards.Select(c => result.Tmp(c.Meta)).ToArray();
         shop.gearPrices = screen.GearCards.Select(c => result.Tmp(c.Price)).ToArray();
 
-        shop.bookReroll = result.Button(screen.BookReroll);
-        shop.bookRerollLabel = result.Tmp(screen.BookRerollLabel);
         shop.bookCards = screen.BookCards.Select(c => result.Button(c.Button)).ToArray();
         shop.bookIcons = screen.BookCards.Select(c => result.Image(c.Icon)).ToArray();
         shop.bookNames = screen.BookCards.Select(c => result.Tmp(c.Name)).ToArray();
         shop.bookMetas = screen.BookCards.Select(c => result.Tmp(c.Meta)).ToArray();
         shop.bookPrices = screen.BookCards.Select(c => result.Tmp(c.Price)).ToArray();
 
-        shop.relicReroll = result.Button(screen.RelicReroll);
-        shop.relicRerollLabel = result.Tmp(screen.RelicRerollLabel);
         shop.relicCards = screen.RelicCards.Select(c => result.Button(c.Button)).ToArray();
         shop.relicIcons = screen.RelicCards.Select(c => result.Image(c.Icon)).ToArray();
         shop.relicNames = screen.RelicCards.Select(c => result.Tmp(c.Name)).ToArray();
         shop.relicMetas = screen.RelicCards.Select(c => result.Tmp(c.Meta)).ToArray();
         shop.relicPrices = screen.RelicCards.Select(c => result.Tmp(c.Price)).ToArray();
 
-        shop.packRoot = result.Go(screen.PackRoot);
-        shop.packCloseButton = result.Button(screen.PackCloseButton);
-        shop.packEmptyHint = result.Go(screen.PackEmptyHint);
         shop.packPrevButton = result.Button(screen.PackPrevPage);
         shop.packNextButton = result.Button(screen.PackNextPage);
-        shop.packPageLabel = result.Tmp(screen.PackPageLabel);
         shop.packRows = screen.PackRows.Select(r => result.Go(r.Row)).ToArray();
         shop.packNames = screen.PackRows.Select(r => result.Tmp(r.Name)).ToArray();
         shop.packMetas = screen.PackRows.Select(r => result.Tmp(r.Meta)).ToArray();
@@ -790,8 +667,7 @@ public static class ScreenRegistry
             Wire = result =>
             {
                 var talents = result.Attach<TalentController>(screen.Root);
-                talents.sky = result.Rect(screen.Sky);
-                talents.orbs = screen.Orbs.Select(result.Button).ToArray();
+                UiAutoBind.Bind(result, talents, screen);
 
                 // SIX BAKED VARIANTS, one per state. Wired here rather than
                 // loaded at runtime because they live under Art/ and not
@@ -809,22 +685,11 @@ public static class ScreenRegistry
                 talents.orbReachableSprite = SceneBuilder.LoadSpriteByKey(TalentScreen.OrbReachableKey);
                 talents.orbCostlySprite = SceneBuilder.LoadSpriteByKey(TalentScreen.OrbCostlyKey);
 
-                // A stone's own furniture, in the orbs' own order.
-                talents.orbAuras = screen.OrbAuras.Select(result.Image).ToArray();
-                talents.orbCores = screen.OrbCores.Select(result.Image).ToArray();
-                talents.orbRings = screen.OrbRings.Select(result.Image).ToArray();
-                talents.orbLabels = screen.OrbLabels.Select(result.Tmp).ToArray();
-                talents.orbPrices = screen.OrbPrices.Select(result.Tmp).ToArray();
-
-                // The gated pair only. These are SHORTER than the arrays above
-                // and indexed by their own position -- collarSlots is what maps
-                // that position back to a stone.
+                // Which stone each gated collar belongs to, and which stone each
+                // edge feeds. Plain int arrays, so no NodeRef and no binder:
+                // the collar arrays it does fill are SHORTER than the orb
+                // arrays, and this is what maps a collar's position back.
                 talents.collarSlots = screen.CollarSlots.ToArray();
-                talents.collarTracks = screen.CollarTracks.Select(result.Image).ToArray();
-                talents.collarFills = screen.CollarFills.Select(result.Image).ToArray();
-                talents.collarCounts = screen.CollarCounts.Select(result.Tmp).ToArray();
-
-                talents.edgeGlows = screen.EdgeGlows.Select(result.Go).ToArray();
                 talents.edgeChildSlots = screen.EdgeChildSlots.ToArray();
 
                 // The motion, attached here because Domain cannot name a
@@ -844,42 +709,16 @@ public static class ScreenRegistry
                         .SetLength(screen.EdgeLengths[i]);
                 }
 
-                talents.orbGlows = screen.OrbGlows.Select(result.Image).ToArray();
-                talents.characterName = result.Tmp(screen.CharacterName);
-                talents.pathName = result.Tmp(screen.PathName);
-                talents.emberCount = result.Tmp(screen.EmberCount);
-                talents.detailName = result.Tmp(screen.DetailName);
-                talents.detailBody = result.Tmp(screen.DetailBody);
-                talents.panelKicker = result.Tmp(screen.PanelKicker);
-                talents.panelPrice = result.Tmp(screen.PanelPrice);
-                talents.panelRefusal = result.Tmp(screen.PanelRefusal);
-                talents.panelMeterFill = result.Rect(screen.PanelMeterFill);
-                talents.investLabel = result.Tmp(screen.InvestLabel);
-                talents.investButton = result.Button(screen.InvestButton);
-
                 // THE BACKDROP, driven from the controller rather than by a
                 // component each. Both halves of every layer are bound -- the
                 // rect that moves and the graphic that fades -- because the
                 // fades and the drifts run on different periods and a single
-                // handle could only carry one of them.
-                talents.starFields = screen.StarFields.Select(result.Rect).ToArray();
-                talents.cloudWashes = screen.CloudWashes.Select(result.Rect).ToArray();
+                // handle could only carry one of them. The rect half mirrors
+                // the node's name and the binder took it; the SECOND view of
+                // the same node is what a name-matching binder cannot express.
                 talents.cloudImages = screen.CloudWashes.Select(result.Image).ToArray();
-                talents.dustMotes = screen.DustMotes.Select(result.Rect).ToArray();
                 talents.dustImages = screen.DustMotes.Select(result.Image).ToArray();
-                talents.shootingStars = screen.ShootingStars.Select(result.Rect).ToArray();
                 talents.shootingStarImages = screen.ShootingStars.Select(result.Image).ToArray();
-
-                talents.respecButton = result.Button(screen.RespecButton);
-                talents.respecDialog = result.Go(screen.RespecDialog);
-                talents.respecDialogBody = result.Tmp(screen.RespecDialogBody);
-                talents.respecConfirmButton = result.Button(screen.RespecConfirmButton);
-                talents.respecCancelButton = result.Button(screen.RespecCancelButton);
-                talents.prevPathButton = result.Button(screen.PrevPathButton);
-                talents.nextPathButton = result.Button(screen.NextPathButton);
-                talents.prevCharacterButton = result.Button(screen.PrevCharacterButton);
-                talents.nextCharacterButton = result.Button(screen.NextCharacterButton);
-                talents.backButton = result.Button(screen.BackButton);
             },
         };
     }
@@ -926,24 +765,14 @@ public static class ScreenRegistry
         //
         // SystemMenuTests.TheMenuIsListeningWhileItIsClosed pins it now.
         var controller = result.Attach<SystemMenuController>(host);
+        UiAutoBind.Bind(result, controller, menu);
 
         controller.panel = result.Go(menu.Root);
-        controller.tabButtons = menu.TabButtons.Select(result.Button).ToArray();
-        controller.tabHovers = menu.TabHovers.Select(result.Go).ToArray();
-        controller.tabUnderlines = menu.TabUnderlines.Select(result.Go).ToArray();
-        controller.tabDividers = menu.TabDividers.Select(result.Go).ToArray();
-        controller.panes = menu.Panes.Select(result.Go).ToArray();
         controller.escapeConsumers = escapeConsumers.Select(result.Go).ToArray();
 
         // Decided here rather than sniffed at runtime: the hub is not a
         // descent, and no state can make it one.
         controller.inDescent = inDescent;
-
-        controller.runTitle = result.Tmp(menu.RunTitle);
-        controller.contextLine = result.Tmp(menu.ContextLine);
-        controller.goldValue = result.Tmp(menu.GoldValue);
-        controller.embersValue = result.Tmp(menu.EmbersValue);
-        controller.closeButton = result.Button(menu.CloseButton);
 
         if (menu.Dossier != null) WireDossier(result, menu.Dossier, lockedForFight);
         if (menu.RewardTrack != null)
@@ -958,7 +787,6 @@ public static class ScreenRegistry
                 var dossierController = result.Go(menu.Dossier.Root).GetComponent<CharacterDossierController>();
                 if (dossierController != null)
                 {
-                    dossierController.trackRow = result.Button(menu.Dossier.TrackRow);
                     dossierController.trackPanel = result.Go(menu.RewardTrack.Root);
                 }
             }
@@ -979,9 +807,9 @@ public static class ScreenRegistry
     private static RunStatsController WireRunStats(UiEmitResult result, RunStatsScreen stats)
     {
         var controller = result.Attach<RunStatsController>(stats.Root);
+        UiAutoBind.Bind(result, controller, stats);
 
         controller.valueKeys = stats.ValueKeys.ToArray();
-        controller.values = stats.Values.Select(result.Tmp).ToArray();
 
         return controller;
     }
@@ -996,20 +824,13 @@ public static class ScreenRegistry
         UiEmitResult result, ExitsScreen exits, SystemMenuController menu)
     {
         var controller = result.Attach<ExitsController>(exits.Root);
-
-        controller.exitButtons = exits.ExitButtons.Select(result.Button).ToArray();
-        controller.exitHovers = exits.ExitHovers.Select(result.Go).ToArray();
+        UiAutoBind.Bind(result, controller, exits);
 
         // The label is a CHILD of the button, which result.Tmp already looks
         // down one level for -- so the same NodeRef serves both the click and
         // the text swap, and there is no second handle to keep in step.
         controller.exitLabels = exits.ExitButtons.Select(result.Tmp).ToArray();
 
-        controller.exitBlocks = exits.ExitBlocks.Select(result.Rect).ToArray();
-        controller.separator = result.Go(exits.Separator);
-        controller.abandonCard = result.Go(exits.AbandonCard);
-        controller.abandonHold = result.Button(exits.AbandonHold);
-        controller.abandonFill = result.Rect(exits.AbandonFill);
         controller.menu = menu;
 
         return controller;
@@ -1025,29 +846,15 @@ public static class ScreenRegistry
     private static OptionsController WireOptions(UiEmitResult result, OptionsScreen options)
     {
         var controller = result.Attach<OptionsController>(options.Root);
+        UiAutoBind.Bind(result, controller, options);
 
-        controller.rowHovers = options.RowHovers.Select(result.Go).ToArray();
-
+        // The keys themselves are string arrays, not nodes, so they stay here.
         controller.sliderKeys = options.SliderKeys.ToArray();
-        controller.sliderTracks = options.SliderTracks.Select(result.Image).ToArray();
-        controller.sliderFills = options.SliderFills.Select(result.Rect).ToArray();
-        controller.sliderValues = options.SliderValues.Select(result.Tmp).ToArray();
-
         controller.stepperKeys = options.StepperKeys.ToArray();
-        controller.stepPrev = options.StepPrev.Select(result.Button).ToArray();
-        controller.stepNext = options.StepNext.Select(result.Button).ToArray();
-        controller.stepperValues = options.StepperValues.Select(result.Tmp).ToArray();
-
-        controller.restoreDefaults = result.Button(options.RestoreDefaults);
 
         return controller;
     }
 
-    // The character dossier, inside the system menu's Character pane.
-    //
-    // Bound with the SAME icon arrays every other item surface uses, from every
-    // ItemDefinition with an authored iconPath -- an item whose art is missing
-    // disables its Image rather than painting a white quad.
     // The reward track, inside the system menu's own pane.
     //
     // Three parallel arrays of a hundred, which is the largest declared count
@@ -1058,11 +865,7 @@ public static class ScreenRegistry
         UiEmitResult result, RewardTrackScreen track)
     {
         var controller = result.Attach<RewardTrackController>(track.Root);
-
-        controller.viewport = result.Rect(track.Viewport);
-        controller.content = result.Rect(track.Content);
-        controller.railFill = result.Rect(track.RailFill);
-        controller.railGlowFill = result.Rect(track.RailGlowFill);
+        UiAutoBind.Bind(result, controller, track);
 
         // THE FOUR NODES THAT MOVE, each bound twice -- once as the Image whose
         // colour is animated and once as the RectTransform that is moved or
@@ -1071,31 +874,11 @@ public static class ScreenRegistry
         // runs sixty times a second for the life of the panel.
         controller.shimmer = result.Image(track.Shimmering);
         controller.shimmerRect = result.Rect(track.Shimmering);
-        controller.hereHalo = result.Image(track.HereHalo);
         controller.hereHaloRect = result.Rect(track.HereHalo);
-        controller.nextMark = result.Rect(track.NextMark);
-        controller.burstRoots = track.BurstRoots.Select(result.Rect).ToArray();
-        controller.burstCores = track.BurstCores.Select(result.Image).ToArray();
-        controller.burstRings = track.BurstRings.Select(result.Image).ToArray();
-        controller.burstRays = track.BurstRays.Select(result.Image).ToArray();
-        controller.burstSparks = track.BurstSparks.Select(result.Image).ToArray();
 
-        controller.summaryLevel = result.Tmp(track.SummaryLevel);
-        controller.summaryNextAt = result.Tmp(track.SummaryNextAt);
-        controller.summaryReward = result.Tmp(track.SummaryReward);
-        controller.collectButton = result.Button(track.CollectButton);
         controller.collectLabel = result.Tmp(track.CollectCaption);
-        controller.collectPip = result.Image(track.CollectPip);
-        controller.closeButton = result.Button(track.CloseButton);
 
         controller.cardRect = result.Rect(track.Card);
-        controller.cardMat = result.Image(track.CardMat);
-        controller.cardArt = result.Image(track.CardArt);
-        controller.cardKicker = result.Tmp(track.CardKicker);
-        controller.cardLevel = result.Tmp(track.CardLevel);
-        controller.cardCaption = result.Tmp(track.CardCaption);
-        controller.cardState = result.Tmp(track.CardState);
-        controller.cardStateDot = result.Image(track.CardStateDot);
 
         // ONE ENTRY PER LEVEL, resolved here rather than at runtime: the
         // controller lives in the runtime assembly and LoadSpriteByKey is
@@ -1107,39 +890,17 @@ public static class ScreenRegistry
             .Select(level => SceneBuilder.LoadSpriteByKey(RewardTrackLayout.CardArtFor(level)))
             .ToArray();
 
-        controller.ribbon = result.Rect(track.Ribbon);
-        controller.ribbonFill = result.Rect(track.RibbonFill);
-        controller.ribbonPlayhead = result.Rect(track.RibbonPlayhead);
-        controller.ribbonWindow = result.Rect(track.RibbonWindow);
-        controller.ribbonGrab = result.Button(track.RibbonGrab);
-
         // The disc is bound as BOTH the Button that takes the click and the
         // Image that carries the state's colour, for the same reason as above:
         // it is one GameObject wearing both, and the controller needs each on a
         // different path -- one at wiring time to attach a listener, one per
         // repaint.
-        controller.dots = track.Dots.Select(result.Button).ToArray();
         controller.discs = track.Dots.Select(result.Image).ToArray();
-
-        controller.rings = track.Rings.Select(result.Image).ToArray();
-        controller.pulses = track.Pulses.Select(result.Image).ToArray();
-        controller.mats = track.Mats.Select(result.Image).ToArray();
-        controller.icons = track.Icons.Select(result.Image).ToArray();
-        controller.seals = track.Seals.Select(result.Go).ToArray();
-        controller.captions = track.Captions.Select(result.Tmp).ToArray();
-        controller.levelNumbers = track.LevelNumbers.Select(result.Tmp).ToArray();
-
-        controller.milestoneAuras = track.MilestoneAuras.Select(result.Image).ToArray();
-        controller.milestoneRings = track.MilestoneRings.Select(result.Image).ToArray();
-
-        controller.ribbonTicks = track.RibbonTicks.Select(result.Image).ToArray();
-        controller.ribbonDots = track.RibbonDots.Select(result.Image).ToArray();
-        controller.ribbonNumbers = track.RibbonNumbers.Select(result.Tmp).ToArray();
 
         // NO CountBindings for any of these, and it is worth saying why rather
         // than leaving the absence to be read as an oversight. E4 exists to
         // catch a strip sized from one collection and filled from another;
-        // every array above is built by Select over the very list the nodes
+        // every array above is filled by UiAutoBind off the very list the nodes
         // were appended to, so the binding it would check is the same count
         // compared with itself. The reward track also has no ScreenDef of its
         // own -- it lives inside the system menu, which three scenes each build
@@ -1148,74 +909,19 @@ public static class ScreenRegistry
         return controller;
     }
 
+    // The character dossier, inside the system menu's Character pane.
+    //
+    // Bound with the SAME icon arrays every other item surface uses, from every
+    // ItemDefinition with an authored iconPath -- an item whose art is missing
+    // disables its Image rather than painting a white quad.
     private static CharacterDossierController WireDossier(
         UiEmitResult result, CharacterDossierScreen dossier, bool lockedForFight)
     {
         var controller = result.Attach<CharacterDossierController>(dossier.Root);
+        UiAutoBind.Bind(result, controller, dossier);
         controller.lockedForFight = lockedForFight;
 
-        controller.characterName = result.Tmp(dossier.CharacterName);
-        controller.subLine = result.Tmp(dossier.SubLine);
-        controller.xpFill = result.Rect(dossier.XpFill);
-        controller.xpRemaining = result.Tmp(dossier.XpRemaining);
-        controller.trackNext = result.Tmp(dossier.TrackNext);
-        controller.unspentPoints = result.Tmp(dossier.UnspentPoints);
-        controller.attributePluses = dossier.AttributePluses.Select(result.Button).ToArray();
-        controller.prevCharacterButton = result.Button(dossier.PrevCharacterButton);
-        controller.nextCharacterButton = result.Button(dossier.NextCharacterButton);
-
-        controller.skillsCount = result.Tmp(dossier.SkillsCount);
-        controller.packRow = result.Button(dossier.PackRow);
-        controller.packChevron = result.Tmp(dossier.PackChevron);
-        controller.packPanel = result.Go(dossier.PackPanel);
-        controller.packCloseButton = result.Button(dossier.PackCloseButton);
-
-        controller.spellsRow = result.Button(dossier.SpellsRow);
-        controller.spellsChevron = result.Tmp(dossier.SpellsChevron);
-        controller.spellsCount = result.Tmp(dossier.SpellsCount);
-        controller.spellsPanel = result.Go(dossier.SpellsPanel);
-        controller.spellsCloseButton = result.Button(dossier.SpellsCloseButton);
-        controller.spellSlots = dossier.SpellSlots.Select(result.Button).ToArray();
-        controller.spellSlotNames = dossier.SpellSlotNames.Select(result.Tmp).ToArray();
-        controller.spellSlotSelections = dossier.SpellSlotSelections.Select(result.Image).ToArray();
-        controller.unassignedEmptyHint = result.Go(dossier.UnassignedEmptyHint);
-        controller.unassignedRows = dossier.UnassignedRows.Select(result.Button).ToArray();
-        controller.unassignedNames = dossier.UnassignedNames.Select(result.Tmp).ToArray();
-        controller.unassignedSelections = dossier.UnassignedSelections.Select(result.Image).ToArray();
-
-        controller.slotCells = dossier.SlotCells.Select(result.Button).ToArray();
-        controller.slotIcons = dossier.SlotIcons.Select(result.Image).ToArray();
-        controller.slotLabels = dossier.SlotLabels.Select(result.Tmp).ToArray();
-        controller.slotBlockedCaptions = dossier.SlotBlockedCaptions.Select(result.Go).ToArray();
-
-        controller.attributeCells = dossier.AttributeCells.Select(result.Button).ToArray();
-        controller.attributeValues = dossier.AttributeValues.Select(result.Tmp).ToArray();
-        controller.attributeKeys = dossier.AttributeKeys.Select(result.Tmp).ToArray();
-
-        controller.slotRarityTicks = dossier.SlotRarityTicks.Select(result.Image).ToArray();
-        controller.slotRiftGlows = dossier.SlotRiftGlows.Select(result.Image).ToArray();
-
-        controller.packCells = dossier.PackCells.Select(result.Button).ToArray();
-        controller.packIcons = dossier.PackIcons.Select(result.Image).ToArray();
-        controller.packRarityTicks = dossier.PackRarityTicks.Select(result.Image).ToArray();
-        controller.packRiftGlows = dossier.PackRiftGlows.Select(result.Image).ToArray();
-        controller.packCounts = dossier.PackCounts.Select(result.Tmp).ToArray();
-        controller.packNames = dossier.PackNames.Select(result.Tmp).ToArray();
         controller.packSortTabs = dossier.PackFilterTabs.Select(result.Button).ToArray();
-        controller.packSortUnderlines = dossier.PackSortUnderlines.Select(result.Go).ToArray();
-        controller.packScrollTrack = result.Image(dossier.PackScrollTrack);
-        controller.packScrollThumb = result.Rect(dossier.PackScrollThumb);
-        controller.carriedValue = result.Tmp(dossier.CarriedValue);
-
-        controller.tooltip = result.Go(dossier.Tooltip);
-        controller.tooltipTitle = result.Tmp(dossier.TooltipTitle);
-        controller.tooltipBody = result.Tmp(dossier.TooltipBody);
-
-        controller.statValues = dossier.StatValues.Select(result.Tmp).ToArray();
-        controller.statPreviews = dossier.StatPreviews.Select(result.Tmp).ToArray();
-        controller.statHighlights = dossier.StatHighlights.Select(result.Go).ToArray();
-
-        controller.portrait = result.Image(dossier.Portrait);
 
         // Every character with an authored portrait. portraitPath is
         // Assets-relative by convention (ArtPathConvention), which is exactly
@@ -1243,30 +949,21 @@ public static class ScreenRegistry
     // child it holds a reference to rather than to itself.
     private static ReckoningController WireReckoning(UiEmitResult result, ReckoningScreen screen)
     {
+        // The controller takes the WIPE MASK and no handle on the painted frame
+        // at all -- there is no frame field for the binder to fill, deliberately.
+        // Everything the controller used to do to the frame -- scale it, lift
+        // it -- is now done to the mask around it, and a reference it does not
+        // hold cannot be squashed by accident a second time.
         var controller = result.Attach<ReckoningController>(screen.Root);
-
-        // The WIPE MASK, deliberately, and the painted frame is not bound at
-        // all. The controller has no business reaching the frame: everything it
-        // used to do to it -- scale it, lift it -- is now done to the mask
-        // around it, and a reference it does not hold cannot be squashed by
-        // accident a second time.
-        controller.frameWipe = result.Rect(screen.FrameWipe);
+        UiAutoBind.Bind(result, controller, screen);
 
         // The Continue arrow's heat, animated. Attached rather than wired into
         // the controller: it needs no state from the Reckoning, and a screen
         // controller that also owns an ambient loop is the shape every other
         // ambience component here was pulled OUT of.
         result.Attach<EmberFlare>(screen.ContinueGlow);
-        controller.goldLabel = result.Tmp(screen.GoldLabel);
-        controller.continueButton = result.Button(screen.ContinueButton);
 
-        controller.offerTooltip = result.Go(screen.OfferTooltip);
-        controller.offerTooltipText = result.Tmp(screen.OfferTooltipText);
-        controller.offerHalos = screen.OfferHalos.Select(result.Image).ToArray();
-        controller.offerBursts = screen.OfferBursts.Select(result.Image).ToArray();
         controller.offerBurstRects = screen.OfferBursts.Select(result.Rect).ToArray();
-        controller.offerIcons = screen.OfferIcons.Select(result.Image).ToArray();
-        controller.offerRiftGlows = screen.OfferRiftGlows.Select(result.Image).ToArray();
 
         // Every item that authored an icon, baked as two parallel arrays.
         // Resolved here rather than at runtime because Resources loading and
@@ -1280,44 +977,10 @@ public static class ScreenRegistry
             .Select(i => new IconEntry(i.id, SceneBuilder.LoadSpriteByKey(i.iconPath)))
             .ToArray();
 
-        controller.tabButtons = screen.TabButtons.Select(result.Button).ToArray();
-        controller.tabMarkers = screen.TabMarkers.Select(result.Image).ToArray();
-        controller.pages = screen.Pages.Select(result.Go).ToArray();
-
-        // The modal's own dimmer, so the gloom can be faded up rather than
-        // snapped on. Ui.Modal builds it; the screen holds the ref.
-        controller.dimmer = result.Image(screen.Dimmer);
-        controller.frameGlow = result.Image(screen.FrameGlow);
-        controller.offerPhase = result.Rect(screen.OfferPhase);
-        controller.summaryPhase = result.Rect(screen.SummaryPhase);
-
-        controller.relicEmptyHint = result.Go(screen.RelicEmptyHint);
-        controller.relicRows = screen.RelicRows.Select(result.Go).ToArray();
-        controller.relicNames = screen.RelicNames.Select(result.Tmp).ToArray();
-        controller.relicMetas = screen.RelicMetas.Select(result.Tmp).ToArray();
-        controller.relicBodies = screen.RelicBodies.Select(result.Tmp).ToArray();
-
-        controller.tallyRows = screen.TallyRows.Select(result.Go).ToArray();
-        controller.tallyNames = screen.TallyNames.Select(result.Tmp).ToArray();
-        controller.tallyStats = screen.TallyStats.Select(result.Tmp).ToArray();
-        controller.tallyKills = screen.TallyKills.Select(result.Tmp).ToArray();
-        controller.lootHeading = result.Go(screen.LootHeading);
-
-        controller.rowGroups = screen.RowGroups.Select(result.Go).ToArray();
-        controller.rowNames = screen.RowNames.Select(result.Tmp).ToArray();
-        controller.rowLevels = screen.RowLevels.Select(result.Tmp).ToArray();
-        controller.rowBarFills = screen.RowBarFills.Select(result.Image).ToArray();
-        controller.rowBarBefores = screen.RowBarBefores.Select(result.Image).ToArray();
-        controller.rowGains = screen.RowGains.Select(result.Tmp).ToArray();
-
-        controller.offerButtons = screen.OfferButtons.Select(result.Button).ToArray();
         controller.offerRects = screen.OfferButtons.Select(result.Rect).ToArray();
-        controller.rerollButton = result.Button(screen.RerollButton);
         // Require<T> looks one level down, which is where a button keeps its
         // caption -- so the label needs no NodeRef of its own.
         controller.rerollLabel = result.Tmp(screen.RerollButton);
-        controller.offerNames = screen.OfferNames.Select(result.Tmp).ToArray();
-        controller.offerMetas = screen.OfferMetas.Select(result.Tmp).ToArray();
 
         return controller;
     }
@@ -1325,19 +988,7 @@ public static class ScreenRegistry
     private static DefeatController WireDefeat(UiEmitResult result, DefeatScreen screen)
     {
         var controller = result.Attach<DefeatController>(screen.Root);
-
-        controller.frame = result.Rect(screen.Frame);
-        controller.goldLostLabel = result.Tmp(screen.GoldLostLabel);
-        controller.embersLabel = result.Tmp(screen.EmbersLabel);
-        controller.depthLabel = result.Tmp(screen.DepthLabel);
-        controller.expLabel = result.Tmp(screen.ExpLabel);
-
-        controller.rowGroups = screen.RowGroups.Select(result.Go).ToArray();
-        controller.rowNames = screen.RowNames.Select(result.Tmp).ToArray();
-        controller.rowStats = screen.RowStats.Select(result.Tmp).ToArray();
-
-        controller.returnButton = result.Button(screen.ReturnButton);
-        controller.inspectButton = result.Button(screen.InspectButton);
+        UiAutoBind.Bind(result, controller, screen);
 
         return controller;
     }
@@ -1346,29 +997,9 @@ public static class ScreenRegistry
     {
         var glossary = screen.Glossary;
         var controller = result.Attach<GlossaryController>(glossary.Root);
+        UiAutoBind.Bind(result, controller, glossary);
 
-        controller.categoryButtons = glossary.CategoryButtons.Select(result.Button).ToArray();
-        controller.categoryMarkers = glossary.CategoryMarkers.Select(result.Image).ToArray();
-        controller.categoryLabels = glossary.CategoryLabels.Select(result.Tmp).ToArray();
-        controller.categoryCounts = glossary.CategoryCounts.Select(result.Tmp).ToArray();
-
-        controller.rows = glossary.Rows.Select(result.Button).ToArray();
-        controller.rowMarkers = glossary.RowMarkers.Select(result.Image).ToArray();
-        controller.rowNames = glossary.RowNames.Select(result.Tmp).ToArray();
-        controller.rowMetas = glossary.RowMetas.Select(result.Tmp).ToArray();
-
-        controller.emptyHint = result.Go(glossary.EmptyHint);
-        controller.pageLabel = result.Tmp(glossary.PageLabel);
-        controller.prevPageButton = result.Button(glossary.PrevPageButton);
-        controller.nextPageButton = result.Button(glossary.NextPageButton);
-
-        controller.detailIcon = result.Image(glossary.DetailIcon);
-        controller.detailName = result.Tmp(glossary.DetailName);
-        controller.detailMeta = result.Tmp(glossary.DetailMeta);
-        controller.detailBody = result.Tmp(glossary.DetailBody);
-        controller.detailLockedBy = result.Go(glossary.DetailLockedBy);
         controller.detailLockedByLabel = result.Tmp(glossary.DetailLockedBy);
-        controller.closeButton = result.Button(glossary.CloseButton);
 
         // Icons for EVERY category at once, in two parallel arrays. Items and
         // relics are the only two with art today; the rest resolve to nothing
@@ -1393,21 +1024,7 @@ public static class ScreenRegistry
     {
         var draft = screen.Draft;
         var controller = result.Attach<RelicDraftController>(draft.Root);
-
-        controller.cards = draft.Cards.Select(result.Button).ToArray();
-        controller.cardSelections = draft.CardSelections.Select(result.Image).ToArray();
-        controller.cardIcons = draft.CardIcons.Select(result.Image).ToArray();
-        controller.cardNames = draft.CardNames.Select(result.Tmp).ToArray();
-        controller.cardRarities = draft.CardRarities.Select(result.Tmp).ToArray();
-        controller.cardBodies = draft.CardBodies.Select(result.Tmp).ToArray();
-        controller.cardHalos = draft.CardHalos.Select(result.Image).ToArray();
-        controller.cardBursts = draft.CardBursts.Select(result.Image).ToArray();
-
-        controller.emptyHint = result.Go(draft.EmptyHint);
-        controller.descendButton = result.Button(draft.DescendButton);
-        controller.prevPageButton = result.Button(draft.PrevPageButton);
-        controller.nextPageButton = result.Button(draft.NextPageButton);
-        controller.pageLabel = result.Tmp(draft.PageLabel);
+        UiAutoBind.Bind(result, controller, draft);
 
         // Relic icons, baked as two parallel arrays. Resolved here rather than
         // at runtime because Resources loading and AssetDatabase are different
@@ -1427,19 +1044,7 @@ public static class ScreenRegistry
     {
         var debug = screen.Debug;
         var controller = result.Attach<DebugMenuController>(debug.Root);
-
-        controller.closeButton = result.Button(debug.CloseButton);
-        controller.giveGoldButton = result.Button(debug.GiveGoldButton);
-        controller.giveEmbersButton = result.Button(debug.GiveEmbersButton);
-        controller.giveOneEmberButton = result.Button(debug.GiveOneEmberButton);
-
-        controller.filterButtons = debug.FilterButtons.Select(result.Button).ToArray();
-        controller.rowButtons = debug.RowButtons.Select(result.Button).ToArray();
-        controller.rowLabels = debug.RowLabels.Select(result.Tmp).ToArray();
-
-        controller.pageLabel = result.Tmp(debug.PageLabel);
-        controller.prevPageButton = result.Button(debug.PrevPageButton);
-        controller.nextPageButton = result.Button(debug.NextPageButton);
+        UiAutoBind.Bind(result, controller, debug);
 
         hub.debugMenuPanel = result.Go(debug.Root);
     }

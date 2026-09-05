@@ -94,10 +94,16 @@ is the signal to promote it here instead of a third.
 **Build-time (`Editor/SceneBuilder/`):**
 - `UiEmitter` — the **only** place in the project that calls `new GameObject`
   for UI. The rect preamble exists here exactly once. A lint test enforces it.
-- `UiEmitResult` — typed lookups (`Go`/`Tmp`/`Button`/`Image`) plus
-  `Attach<T>` for engine dressing whose type Domain cannot name.
+- `UiEmitResult` — typed lookups (`Go`/`Tmp`/`Button`/`Image`/`Rect`) plus
+  `Attach<T>` for engine dressing whose type Domain cannot name. `UiAutoBind`
+  is these same five lookups driven by a controller's own field names.
+- `UiAutoBind.Bind(result, controller, screen)` — call it once after each
+  `Attach<T>`; it fills every `[SerializeField]` whose identifier mirrors a
+  `NodeRef` on the screen (`UiBindingNames` states the rule), and writes
+  nothing else. §3 says why it is not the banned `SetField` idiom.
 - `ScreenRegistry.All` — the one list of screens, driving scene building, the
-  audits and the screenshot tool.
+  audits and the screenshot tool; its `Wire` steps now carry only what
+  `UiAutoBind` cannot bind, and its class header enumerates those four shapes.
 - `UiTextFitAudit` (E1), `UiCountAudit` (E4), `UiWiringSweep` (E3) — measured
   text, declared-vs-bound counts, and non-null wiring, all at build time.
 - `SceneBuilder.LoadSpriteByKey` — the one place a texture is force-imported
@@ -123,8 +129,21 @@ is the signal to promote it here instead of a third.
   `level` and a talent its grid position, which is exactly why the interface is
   a property rather than a required field — a second authored int could only
   disagree with the key those two are really sorted by.
-- **Wire controllers by direct field assignment**, never by reflection over a
-  field name. See §4a.
+- **Wire controllers by direct field assignment or through `UiAutoBind`** —
+  never by reflection over a field name *you had to type*. What is banned is
+  the `SetField(controller, "playButton", value)` idiom, and the reason is a
+  measured one: v1 carried 330 hand-written name strings, each independently
+  misspellable, and a misspelling produced no compile error, no runtime error
+  and a field that stayed null (`UiKitLintTests
+  .TheStringlyTypedSetFieldIdiom_IsNotReImported` keeps that regex out).
+  `UiAutoBind` has **zero** name strings: it keys on the controller field's
+  OWN identifier, which the compiler already checked and which a rename
+  carries with it, and `UiWiringSweep` refuses the build on any serialized
+  reference it failed to fill — so a miss cannot ship, and cannot even build.
+  Explicit assignment remains the rule for the residual an identifier cannot
+  say: the name differs deliberately (`exitLabels` from `ExitButtons`), the
+  value comes from a screen-side sub-object, or it is not a `NodeRef` at all.
+  See §4a.
 
 ### 4a. Controller UI references: `internal` + `[SerializeField]`
 

@@ -1,6 +1,9 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using NUnit.Framework;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
@@ -221,6 +224,83 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(background);
             Assert.IsFalse(background.GetComponent<UnityEngine.UI.Image>().raycastTarget,
                 "the full-bleed background must never intercept a click meant for a building");
+        }
+
+        // --- Fight ----------------------------------------------------------
+
+        [UnityTest]
+        public IEnumerator EveryAutoBindableFieldOnTheFightControllerSurvivedTheSave()
+        {
+            // UiWiringSweep makes the same claim at BUILD time, and this is not
+            // that claim twice. The sweep runs against the controller as it sits
+            // in memory moments after ScreenRegistry filled it; this runs against
+            // the .unity file that was written afterwards and loaded back. Between
+            // those two points is serialization, which is the one step that can
+            // drop a reference the builder assigned perfectly (an internal field
+            // without [SerializeField] does exactly that, silently). The Fight
+            // screen is the one to pin because UiAutoBind fills more of it than
+            // of anything else in the game.
+            yield return SceneManager.LoadSceneAsync("Fight", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            var fight = Find<FightController>();
+            Assert.IsNotNull(fight, "the Fight scene has no FightController");
+
+            var bindable = new[]
+            {
+                typeof(TMP_Text), typeof(Image), typeof(Button), typeof(GameObject), typeof(RectTransform),
+            };
+
+            var missing = new List<string>();
+            int examined = 0;
+
+            for (var type = fight.GetType(); type != null && type != typeof(MonoBehaviour); type = type.BaseType)
+            {
+                const BindingFlags declared = BindingFlags.Instance | BindingFlags.Public
+                                              | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+
+                foreach (var field in type.GetFields(declared))
+                {
+                    if (!field.IsDefined(typeof(SerializeField), inherit: true)) continue;
+
+                    var element = field.FieldType.IsArray ? field.FieldType.GetElementType() : field.FieldType;
+                    if (!bindable.Contains(element)) continue;
+
+                    examined++;
+                    var value = field.GetValue(fight);
+
+                    if (!field.FieldType.IsArray)
+                    {
+                        if ((Object)value == null) missing.Add(field.Name);
+                        continue;
+                    }
+
+                    var array = (System.Array)value;
+                    if (array == null || array.Length == 0)
+                    {
+                        missing.Add(field.Name + " (empty)");
+                        continue;
+                    }
+
+                    for (int i = 0; i < array.Length; i++)
+                    {
+                        if ((Object)array.GetValue(i) == null) missing.Add($"{field.Name}[{i}]");
+                    }
+                }
+            }
+
+            // A check that scans nothing passes everything. Seventy-eight of
+            // these are the binder's; the number only moves upward as the screen
+            // grows, so a drop below the floor means the walk stopped seeing the
+            // controller rather than that the screen shrank.
+            Assert.Greater(examined, 75,
+                $"only {examined} bindable fields found on FightController - the walk is not seeing it, " +
+                $"so this test would pass vacuously.");
+
+            CollectionAssert.IsEmpty(missing,
+                "these references were assigned at build time and are null in the SAVED scene:\n  "
+                + string.Join("\n  ", missing));
         }
 
         [UnityTest]
