@@ -140,68 +140,16 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
-        // ---- the whole roster, not just the two kits above --------------------
-
-        // EVERY POSE A MONSTER CAN REACH, resolved the way the stage resolves
-        // it. This is the question "are the animations actually in" asked of
-        // content rather than of a folder listing, and it covers two failures
-        // that look identical in play and have different causes:
+        // ---- the whole roster ------------------------------------------------
         //
-        //   - a stance folder that is missing or imported as a plain Texture,
-        //     which FightController answers with its no-art nameplate;
-        //   - a skill whose authored `stance` names a pose its caster does not
-        //     have, which is a one-character typo in JSON that no build step
-        //     reads and that only shows up as a monster VANISHING for exactly
-        //     the turn it casts.
-        //
-        // The four the fight drives on its own (idle/attack/hurt/defeated) plus
-        // whatever every ability it can draw asks for -- StanceFor's rule,
-        // restated here because it is private and one line: the skill's own
-        // stance if it authored one, "cast" otherwise.
-        [Test]
-        public void EveryStanceEveryEnemyCanReachResolvesToFrames()
-        {
-            var missing = new List<string>();
-            int probed = 0;
-
-            foreach (var enemy in ContentDatabase.Enemies)
-            {
-                // No art authored at all is a deliberate state -- the stage
-                // shows a nameplate and says so. Only a monster that HAS a
-                // sprite folder is promising anything.
-                if (enemy == null || string.IsNullOrWhiteSpace(enemy.data.SpritePath)) continue;
-
-                var wanted = new HashSet<string> { "idle", "attack", "hurt", "defeated" };
-
-                foreach (var ability in enemy.data.Abilities ?? System.Array.Empty<EnemyAbilityRef>())
-                {
-                    if (string.IsNullOrWhiteSpace(ability.SkillId)) continue;
-
-                    var skill = ContentDatabase.Skills.FirstOrDefault(s => s.id == ability.SkillId);
-                    Assert.IsNotNull(skill,
-                        $"{enemy.id} draws on skill '{ability.SkillId}', which is not in the catalogue");
-
-                    wanted.Add(string.IsNullOrEmpty(skill.data.Stance) ? "cast" : skill.data.Stance);
-                }
-
-                // The legacy single-action trio poses as a cast.
-                if (!string.IsNullOrWhiteSpace(enemy.data.SkillName)) wanted.Add("cast");
-
-                foreach (string stance in wanted)
-                {
-                    probed++;
-                    if (StanceAnimationLibrary.Resolve(enemy.data.SpritePath, stance) == null)
-                    {
-                        missing.Add($"{enemy.id}:{stance}");
-                    }
-                }
-            }
-
-            Assert.Greater(probed, 0, "no enemy has art, so this pin is vacuous");
-            Assert.IsEmpty(missing,
-                "these monsters can reach a pose they have no art for, and will show a nameplate " +
-                "(or nothing) on the turn they do: " + string.Join(", ", missing));
-        }
+        // EveryStanceEveryEnemyCanReachResolvesToFrames USED TO LIVE HERE and
+        // moved to EnemyArtCompletenessTests, beside the canvas and manifest
+        // sweeps that ask the same question of the same set. It was the one
+        // rule in this file that had nothing to do with photographing a kit --
+        // it swept every enemy in the catalogue -- and leaving it here meant a
+        // completeness check sitting in a capture fixture, where a reader
+        // looking for "what proves new art is finished" would not find it.
+        // Nothing about it changed in the move.
 
         // ---- the picture ------------------------------------------------------
 

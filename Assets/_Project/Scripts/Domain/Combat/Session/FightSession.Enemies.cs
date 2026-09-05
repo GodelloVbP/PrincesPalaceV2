@@ -30,6 +30,15 @@ namespace PrincesPalace.Domain.Combat.Session
 
         private readonly Dictionary<CombatantState, EnemyIntent> _intents = new Dictionary<CombatantState, EnemyIntent>();
 
+        // NULL IN EVERY FIGHT THE GAME BUILDS. Set only by tools/preview.ps1's
+        // route through FightBootstrap, where the point is to SEE a mob's kit
+        // rather than to play against it -- see EnemyShowcase's own header for
+        // why weighted randomness is the wrong tool for looking at new content.
+        // A property rather than a constructor argument because the session is
+        // built by FightEncounterAdapter, which has no business knowing that a
+        // preview exists.
+        public EnemyShowcase Showcase { get; set; }
+
         // Called whenever it becomes the player's turn, so every living enemy
         // has a declared action for the player to read and plan around.
         //
@@ -55,7 +64,17 @@ namespace PrincesPalace.Domain.Combat.Session
                 // monster can do rather than between its two hardcoded options.
                 var kit = SourceFor(enemy);
                 var pool = EffectivePoolFor(enemy, kit?.Abilities);
-                int chosen = EnemyAbilityDraw.Pick(pool, _rng?.NextFloat() ?? 0f);
+
+                // THE ROLL STILL HAPPENS EITHER WAY, and it has to: the draw's
+                // position in the RNG stream is what keeps a seeded run
+                // reproducible, and a preview that skipped the draw would give
+                // the fight a different shape from the one being previewed --
+                // different targets, different variance, a different fight.
+                // Only which entry is taken changes.
+                float roll = _rng?.NextFloat() ?? 0f;
+                int chosen = Showcase != null
+                    ? Showcase.Next(enemy, pool)
+                    : EnemyAbilityDraw.Pick(pool, roll);
 
                 var target = PickRandomLivingPlayerTarget();
                 _intents[enemy] = BuildIntent(enemy, target, pool, chosen);

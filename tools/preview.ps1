@@ -27,6 +27,21 @@ param(
     # Step 2 -Spell/-Character) build first and then show something.
     [switch]$Build,
 
+    # The mob to look at, by its enemies.json id.
+    [string]$Enemy = "",
+
+    # Play the fight in the Editor instead of photographing it headlessly.
+    [switch]$Launch,
+
+    # lone fields one copy; full fields three, so a summon has a slot to fail
+    # on and an all-target ability has something to hit.
+    [ValidateSet("lone", "full")]
+    [string]$Formation = "lone",
+
+    # Skip the content rebuild. See Invoke-ContentBuild's own note on why the
+    # default is to rebuild rather than to check.
+    [switch]$NoBuild,
+
     # Bounded, because an Editor that is compiling can legitimately take a
     # while and an Editor that has crashed will never answer at all. On expiry
     # the last state seen is reported rather than a bare "timed out".
@@ -116,6 +131,14 @@ function Invoke-EditorRequest {
 
 # --- route ------------------------------------------------------------------
 
+# ALWAYS BUILDS, rather than checking first, and that is a considered choice
+# rather than laziness. Whether the tree is stale is one sha256 over ~450 source
+# files -- but the only implementation of that hash lives in Domain
+# (ContentInputHash), where ContentBuilder and ContentFreshnessTests share it,
+# and a second one written in PowerShell would be a second definition of "the
+# inputs" that agrees with the first exactly until the day somebody adds a
+# source folder. The build is 14s warm. A duplicated hash is forever. -NoBuild
+# is there for the case where the author knows.
 function Invoke-ContentBuild {
     $lock = Get-UnityLockState -ProjectRoot $Project
     [void](Clear-StaleUnityLock -State $lock)
@@ -140,10 +163,134 @@ function Invoke-ContentBuild {
     return ($LASTEXITCODE -eq 0)
 }
 
+# --- enemy mode -------------------------------------------------------------
+
+# VALIDATED HERE, BEFORE ANY UNITY BOOT. A typo'd id is the single most likely
+# thing to be wrong about this command, and finding out 15 seconds later from a
+# fight against the wrong monster -- FightBootstrap falls back to its usual pick
+# when the forced id is unknown -- is the worst possible way to learn it.
+function Resolve-EnemyId {
+    param([string]$Id)
+
+    $jsonPath = Join-Path $Project "Assets\_Project\ContentData\enemies.json"
+    if (-not (Test-Path $jsonPath)) {
+        Write-Host "No enemies.json at $jsonPath."
+        return $null
+    }
+
+    $file = Get-Content $jsonPath -Raw | ConvertFrom-Json
+    $ids = @($file.enemies | ForEach-Object { $_.id })
+
+    if ($ids -contains $Id) { return $Id }
+
+    Write-Host "No enemy with id '$Id' in enemies.json. It knows:"
+    foreach ($known in ($ids | Sort-Object)) {
+        # Benched monsters are worth listing: they are valid ids, they resolve,
+        # and "why can I not preview it" has a real answer ("active": false
+        # means no asset is written for it) that a bare absence would not give.
+        $active = @($file.enemies | Where-Object { $_.id -eq $known }).active
+        $suffix = if ($active -eq $false) { "   (active: false -- no asset is generated for it)" } else { "" }
+        Write-Host "  $known$suffix"
+    }
+    return $null
+}
+
+function Invoke-EnemyPreview {
+    param([string]$Id)
+
+    $resolved = Resolve-EnemyId -Id $Id
+    if (-not $resolved) { return 2 }
+
+    if (-not $NoBuild) {
+        if (-not (Invoke-ContentBuild)) {
+            Write-Host "content build failed -- not previewing against a tree that did not build."
+            return 1
+        }
+    }
+
+    if (-not $Launch) {
+        Write-Host "Headless capture is 1d and is not wired up in this build of the script yet."
+        Write-Host "Use -Launch to play the fight in the Editor."
+        return 2
+    }
+
+    $lock = Get-UnityLockState -ProjectRoot $Project
+    [void](Clear-StaleUnityLock -State $lock)
+
+    $timeout = $TimeoutSeconds
+
+    if ($lock.Held) {
+        Write-Host "route: the Editor is open on this project."
+    }
+    else {
+        # THE EDITOR IS STARTED FIRST AND THE REQUEST IS WRITTEN AFTERWARDS,
+        # and that order cost a 20-minute Editor boot to learn: UNITY WIPES
+        # Temp/ WHEN IT STARTS. A request file written into Temp/ before the
+        # boot is deleted by the boot, so the watcher arms itself, finds
+        # nothing, and the caller waits out its whole timeout against an Editor
+        # that is sitting there perfectly healthy.
+        #
+        # Waiting for the lockfile is what makes "afterwards" well defined:
+        # Unity writes it early, right after it has claimed (and cleared) Temp/,
+        # and long before it finishes importing. The request then survives the
+        # rest of the boot and the watcher picks it up on its first ticks.
+        Write-Host "route: no Editor on this project, so one is started and asked once it has claimed the project."
+        Write-Host "(a cold Editor boot is minutes, not seconds -- leaving it open is the fast route)"
+
+        Start-Editor
+        if (-not (Wait-ForLockfile -Seconds 300)) {
+            Write-Host "the Editor never claimed the project (no Temp\UnityLockfile within 300s)."
+            return 1
+        }
+
+        # A cold boot imports before it ticks, so the bounded wait has to cover
+        # the Editor's whole startup, not just a request's round trip.
+        $timeout = [Math]::Max($TimeoutSeconds, 900)
+    }
+
+    $payload = @{ action = "preview"; enemyId = $resolved; formation = $Formation; launch = $true }
+    $answer = Invoke-EditorRequest -Payload $payload -Timeout $timeout
+
+    Write-Host "  $($answer.State): $($answer.Message)"
+    if ($answer.State -ne "ok") { return 1 }
+    return 0
+}
+
+function Start-Editor {
+    . (Join-Path $PSScriptRoot "unity_path.ps1")
+    $exe = Get-UnityExe
+    $log = Join-Path $Project "Temp\preview_editor.log"
+    Start-Process -FilePath $exe -ArgumentList @("-projectPath", "`"$Project`"", "-logFile", "`"$log`"") | Out-Null
+    Write-Host "started the Editor; its log will be $log"
+}
+
+function Wait-ForLockfile {
+    param([int]$Seconds)
+
+    $lockPath = Join-Path $Project "Temp\UnityLockfile"
+    $deadline = (Get-Date).AddSeconds($Seconds)
+    while ((Get-Date) -lt $deadline) {
+        if (Test-Path $lockPath) {
+            Write-Host "  the Editor has claimed the project; sending the request"
+            return $true
+        }
+        Start-Sleep -Milliseconds 500
+    }
+
+    return $false
+}
+
+# --- dispatch ---------------------------------------------------------------
+
+if ($Enemy -ne "") {
+    exit (Invoke-EnemyPreview -Id $Enemy)
+}
+
 if ($Build) {
     if (Invoke-ContentBuild) { exit 0 } else { exit 1 }
 }
 
 Write-Host "Nothing asked for. Modes:"
-Write-Host "  -Build            regenerate Resources/Content by whichever route is available"
+Write-Host "  -Build                          regenerate Resources/Content by whichever route is available"
+Write-Host "  -Enemy <id> -Launch [-Formation lone|full]   build, then play a fight against that mob"
 exit 2

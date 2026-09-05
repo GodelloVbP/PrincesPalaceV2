@@ -15,13 +15,35 @@ using UnityEngine;
 // field's own comment. Editor-only; ships in no build.
 public static class QuickFightMenu
 {
-    [MenuItem("Prince's Palace/Dev/Fight Giant Rat")]
-    public static void FightGiantRat()
+    // WHICH MOB, remembered rather than hardcoded.
+    //
+    // This item said "Fight Giant Rat" and passed the literal "rat", which was
+    // right for exactly as long as the rat was the only monster with art. An
+    // author looking at a mob they are in the middle of writing wants THAT one,
+    // and had to edit this file to get it.
+    //
+    // EditorPrefs, not SessionState: the DevForced* keys are one fight's
+    // opinion and die with the Editor, but "the last thing I was working on"
+    // should survive a restart -- that is the whole reason to remember it. Set
+    // by tools/preview.ps1 through PreviewRequestWatcher, and by this menu.
+    private const string LastPreviewedKey = "PrincesPalace.Dev.LastPreviewedEnemyId";
+
+    // The rat is the fallback, not the subject: it is the one mob that has had
+    // art for the whole life of the project, so a fresh checkout with no
+    // preview history still gets a fight rather than an error.
+    internal static string LastPreviewedEnemyId
     {
-        StartPlaceholderFight("rat");
+        get => EditorPrefs.GetString(LastPreviewedKey, "rat");
+        set => EditorPrefs.SetString(LastPreviewedKey, string.IsNullOrEmpty(value) ? "rat" : value);
     }
 
-    private static void StartPlaceholderFight(string enemyId)
+    [MenuItem("Prince's Palace/Dev/Fight last previewed id")]
+    public static void FightLastPreviewed()
+    {
+        StartPlaceholderFight(LastPreviewedEnemyId);
+    }
+
+    internal static void StartPlaceholderFight(string enemyId)
     {
         if (EditorApplication.isPlaying)
         {
@@ -36,6 +58,7 @@ public static class QuickFightMenu
 
         EditorSceneManager.OpenScene(ScreenRegistry.FightScene, OpenSceneMode.Single);
         FightBootstrap.DevForcedEnemyId = enemyId;
+        LastPreviewedEnemyId = enemyId;
         EditorApplication.isPlaying = true;
     }
 }

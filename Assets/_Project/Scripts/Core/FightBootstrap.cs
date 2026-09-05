@@ -55,16 +55,50 @@ namespace PrincesPalace
         // #if'd out of player builds, where UnityEditor isn't linked; the
         // plain-field fallback there is always null, so BuildPlaceholderFight
         // needs no #if of its own at the call site.
+        //
+        // TWO MORE KEYS BESIDE IT, and they belong here rather than anywhere
+        // nearer the content because they are the same kind of thing: a
+        // preview's opinion about ONE fight, consumed the instant it is read,
+        // never written to a record, a save or an asset. tools/preview.ps1 sets
+        // them through Editor/PreviewRequestWatcher.cs.
+        //
+        //   DevForcedFormation -- "full" fields three copies of the forced mob
+        //     instead of one, so a summon has a slot to fail on and an
+        //     all-target ability has something to hit.
+        //   DevForcedEnemyScript -- hands the session an EnemyShowcase, which
+        //     makes the mob take its authored abilities in order instead of
+        //     rolling. See that class's header.
 #if UNITY_EDITOR
         private const string DevForcedEnemyIdKey = "PrincesPalace.Dev.ForcedEnemyId";
+        private const string DevForcedFormationKey = "PrincesPalace.Dev.ForcedFormation";
+        private const string DevForcedEnemyScriptKey = "PrincesPalace.Dev.ForcedEnemyScript";
+
         internal static string DevForcedEnemyId
         {
             get => UnityEditor.SessionState.GetString(DevForcedEnemyIdKey, "");
             set => UnityEditor.SessionState.SetString(DevForcedEnemyIdKey, value ?? "");
         }
+
+        internal static string DevForcedFormation
+        {
+            get => UnityEditor.SessionState.GetString(DevForcedFormationKey, "");
+            set => UnityEditor.SessionState.SetString(DevForcedFormationKey, value ?? "");
+        }
+
+        internal static bool DevForcedEnemyScript
+        {
+            get => UnityEditor.SessionState.GetBool(DevForcedEnemyScriptKey, false);
+            set => UnityEditor.SessionState.SetBool(DevForcedEnemyScriptKey, value);
+        }
 #else
         internal static string DevForcedEnemyId;
+        internal static string DevForcedFormation;
+        internal static bool DevForcedEnemyScript;
 #endif
+
+        // How many copies of a forced mob "-Formation full" fields. The stage's
+        // own capacity, so every slot is occupied and nothing is hidden.
+        private const int FullFormationCount = 3;
 
         private void Start()
         {
@@ -178,10 +212,20 @@ namespace PrincesPalace
             // next time.
             List<string> enemies;
             string forcedId = DevForcedEnemyId;
+            string formation = DevForcedFormation;
+            bool showcase = DevForcedEnemyScript;
+
+            // ALL THREE CONSUMED TOGETHER, and before anything can throw. They
+            // are one preview's opinion about one fight; a leftover key is a
+            // scene reload later showing a fight nobody asked for.
             DevForcedEnemyId = null;
+            DevForcedFormation = null;
+            DevForcedEnemyScript = false;
+
             if (!string.IsNullOrEmpty(forcedId) && ContentDatabase.Enemies.Any(e => e.id == forcedId))
             {
-                enemies = new List<string> { forcedId };
+                int copies = formation == "full" ? FullFormationCount : 1;
+                enemies = Enumerable.Repeat(forcedId, copies).ToList();
             }
             else
             {
@@ -215,9 +259,22 @@ namespace PrincesPalace
             // to read the run defensively, which read as though a run could
             // reach here -- one can't, and RunOrchestrator.BuildFight is where
             // it goes.
-            return FightEncounterAdapter.Build(party, enemies, new SeededRandom((ulong)seed),
+            var built = FightEncounterAdapter.Build(party, enemies, new SeededRandom((ulong)seed),
                 relicIds: null,
                 depthStep: 0);
+
+            // AFTER the build and only for a preview. The session is the right
+            // owner (the showcase has to survive every turn of one fight and
+            // die with it), and the adapter is deliberately not told a preview
+            // exists.
+            if (showcase && built != null)
+            {
+                built.Session.Showcase = new EnemyShowcase(Debug.Log);
+                Debug.Log($"[FightBootstrap] showcase mode: '{forcedId}' will take its authored abilities in " +
+                          "order, then swing plainly. Any it cannot play this turn is named and skipped.");
+            }
+
+            return built;
         }
 
         private static bool HasArt(CharacterDefinition definition) =>

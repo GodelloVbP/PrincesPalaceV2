@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using PrincesPalace;
 using UnityEditor;
 using UnityEngine;
 
@@ -78,10 +79,11 @@ public static class PreviewRequestWatcher
     {
         public string requestId;
 
-        // What to do. "build" regenerates the content assets in this Editor;
-        // 1c adds the preview actions. An unknown action is `failed` with the
-        // name in the message rather than ignored -- a preview.ps1 from a
-        // newer checkout talking to an older Editor should say so.
+        // What to do: "build" regenerates the content assets in this Editor,
+        // "preview" opens the Fight scene against one mob and enters Play. An
+        // unknown action is `failed` with the name in the message rather than
+        // ignored -- a preview.ps1 from a newer checkout talking to an older
+        // Editor should say so.
         public string action;
         public string enemyId;
         public string formation;
@@ -163,6 +165,9 @@ public static class PreviewRequestWatcher
             case "build":
                 Build(request);
                 return;
+            case "preview":
+                Preview(request);
+                return;
             default:
                 WriteResult(request.requestId, "failed",
                     $"unknown action '{request.action}' -- this Editor's PreviewRequestWatcher does not implement it");
@@ -182,6 +187,44 @@ public static class PreviewRequestWatcher
             // The message, not the stack: preview.ps1 prints this straight to
             // the author, and a resolver error already names the offending
             // entry. The stack is in the Editor console for whoever needs it.
+            Debug.LogException(e);
+            WriteResult(request.requestId, "failed", e.Message);
+        }
+    }
+
+    // Opens the Fight scene against one named mob and enters Play.
+    //
+    // THE RESULT IS WRITTEN BEFORE PLAY STARTS, and that ordering is not
+    // cosmetic: entering Play mode runs a domain reload, and everything static
+    // in this class -- including the fact that a request was being handled --
+    // is gone on the other side of it. A result written afterwards would be
+    // written by nobody.
+    private static void Preview(Request request)
+    {
+        string id = request.enemyId;
+        if (string.IsNullOrEmpty(id))
+        {
+            WriteResult(request.requestId, "failed", "no enemyId in the request");
+            return;
+        }
+
+        try
+        {
+            // Remembered before the fight, not after, so a mob that crashes the
+            // scene is still the one the menu item offers to retry.
+            QuickFightMenu.LastPreviewedEnemyId = id;
+
+            FightBootstrap.DevForcedFormation = request.formation;
+            FightBootstrap.DevForcedEnemyScript = true;
+
+            WriteResult(request.requestId, "ok",
+                $"entering Play mode against '{id}' ({(request.formation == "full" ? "full formation" : "lone")}), " +
+                "showcasing its abilities in authored order");
+
+            QuickFightMenu.StartPlaceholderFight(id);
+        }
+        catch (Exception e)
+        {
             Debug.LogException(e);
             WriteResult(request.requestId, "failed", e.Message);
         }
