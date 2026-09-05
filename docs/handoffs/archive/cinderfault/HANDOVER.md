@@ -6,7 +6,7 @@ Prepared 5 September 2026. This is an implementation specification, not a claim 
 
 Implement a tier-2 global spell: one connected tectonic fault opens beneath the opposing formation, then compact basalt-and-lava eruptions strike every living enemy simultaneously. Earth dominates the silhouette; fire is revealed inside it. The fault cools away completely.
 
-Design authority: `docs/SPELL_DESIGN_STANDARD.md` and `docs/CINDERFAULT_ASSET_PROMPT_WORKFLOW.md`. The latter supplies the art direction and intended mechanics; its reference to a “current implementation” is not evidence that a Cinderfault content entry exists in this checkout.
+Design authority: `docs/SPELL_DESIGN_STANDARD.md` and `docs/archive/CINDERFAULT_ASSET_PROMPT_WORKFLOW.md`. The latter supplies the art direction and intended mechanics; its reference to a “current implementation” is not evidence that a Cinderfault content entry exists in this checkout.
 
 ## Gameplay contract
 

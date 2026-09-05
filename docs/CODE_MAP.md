@@ -158,7 +158,11 @@ them each intensity plays).
 
 `Assets/_Project/Scripts/Editor/` (`PrincesPalace.Editor`, one asmdef):
 `SceneBuilder.cs` + `SceneBuilder/` (above), `ContentBuilder.cs` (generates
-every ScriptableObject from `ContentData/*.json`), `ScreenshotTool.cs`
+every ScriptableObject from `ContentData/*.json`; eight of the eleven types go
+through one generic `Build<TRaw, TResolved, TDef>` that reads the file, calls
+the type's resolver and writes `asset.data = record` -- items, weapons and item
+sets stay bespoke because all three expand into `ItemDefinition` and need their
+own collision checks and sort offsets), `ScreenshotTool.cs`
 (headless panel capture, `KnownPanels` table — keep `tools/screenshot.ps1`'s
 usage text in sync with it), `EnemySpriteImportPostprocessor.cs`,
 `StanceSpriteImporter.cs` (forces Sprite import under `Resources/Enemies`,
@@ -302,8 +306,10 @@ are plain logic; only the PAINTING needs Unity.
 | `Core/StageHitFlash.cs` | the white silhouette, over `Resources/Shaders/UIHitFlash.shader` |
 | `Core/ContactCues.cs` | the melee contact cues' asset paths, durations and box size — one home shared by `StaticSwing` (the wind-up whoosh) and `FightController.PlayContactFx` (the arc, the burst, the thud) |
 
-**The static-art pilot (`docs/STATIC_COMBAT_ART_DEEP_DIVE.md`) — the five
-cues a single-drawing actor's swing was missing.** Every actor is a single
+**The static-art pilot (recommendation adopted from the now-archived
+`docs/STATIC_COMBAT_ART_DEEP_DIVE.md`; its still-cited rule lives on in
+`docs/ART_PIPELINE.md`) — the five cues a single-drawing actor's swing was
+missing.** Every actor is a single
 drawing per stance now, so the gate is purely the CLASS of beat, never a
 creature: a `StageApproach.Lunge` at a target that is somebody else.
 

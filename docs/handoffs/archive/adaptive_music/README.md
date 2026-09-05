@@ -139,7 +139,7 @@ current tier's set:
 
 That turns the music from a label on your location into a score for your
 actions, and it reinforces the exact mechanics in
-`docs/handoffs/shawn_talent_rework/`. Build the tier system first; leave a
+`docs/handoffs/archive/shawn_talent_rework/`. Build the tier system first; leave a
 hook for additive per-stem overrides.
 
 ---
@@ -400,5 +400,5 @@ than duplicate.
 - **Mixer groups / ducking.** Everything here is per-source volume. If
   voice lines later need to duck the music, that is an `AudioMixer` job and
   a separate piece of work.
-- **Anything in `docs/handoffs/shawn_talent_rework/`** beyond the §3 note
+- **Anything in `docs/handoffs/archive/shawn_talent_rework/`** beyond the §3 note
   that combat state is the natural next driver.

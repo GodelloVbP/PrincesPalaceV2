@@ -4,7 +4,7 @@ namespace PrincesPalace.Domain.Dungeon
     //
     // Adding one is deliberately cheap: put it here, give it a weight in
     // DescentMapGenerator.MiddleRooms (if it should generate at all), give it
-    // a glyph/label/colour/description in DescentMapView, and give it a case
+    // a glyph/label/colour/description in MapController, and give it a case
     // in GameplayManager.ResolveRoom, which is where a room's content runs
     // the moment it is picked on the map.
     //

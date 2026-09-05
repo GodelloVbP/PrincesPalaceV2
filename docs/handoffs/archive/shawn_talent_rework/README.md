@@ -2,7 +2,7 @@
 
 Design session 2026-08-07. This is a **mechanics** handoff, not a screen
 handoff — the talent tree's layout, art kit, and interaction model from
-`docs/handoffs/talent_tree_v2/` all survive unchanged. What changes is what
+`docs/handoffs/archive/talent_tree_v2/` all survive unchanged. What changes is what
 the nodes *do*, what they cost, and what the resource underneath them is for.
 
 Status markers used throughout:
@@ -421,7 +421,7 @@ What this rework actually breaks in the existing code:
   entirely untouched by this session. The strand structure in §5 should
   apply to them, but none of it is designed.
 - **Screen layout, art, and interaction model** — unchanged from
-  `docs/handoffs/talent_tree_v2/`. This handoff moves no pixels.
+  `docs/handoffs/archive/talent_tree_v2/`. This handoff moves no pixels.
 - **Fusion implementation** — parked, §8.
 - **Balance validation.** Every number above is first-pass. Nothing has
   been played.

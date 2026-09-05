@@ -298,6 +298,8 @@ the same commit:
 | Exclude a test file from the dotnet host (or add one back) | `tools/domain-tests/README.md`'s exclusion table, with the reason — `tools/test.ps1 -List` reads the split off the csproj and needs nothing |
 | Change what a balance batch writes, or what a metric means | `docs/BOT_SUMMARY_SCHEMA.md` (it is the contract between `BalanceBotRunner`, `tools/bot_merge.py` and `tools/bot_report.py`) |
 | Finish (or partially close) a handoff's implementation | its `GAP_AUDIT.md` verdicts |
+| A `PLAN_*`/`HANDOVER_*` doc's last phase lands | move it to `docs/archive/` in that commit |
+| A handoff's feature lands | move its `docs/handoffs/<slug>/` dir to `docs/handoffs/archive/<slug>/` |
 | Change a workflow rule, ritual, or convention | this file |
 | Change a rule that a hook enforces | that hook's script, plus §10 above |
 | Lose time to something avoidable | `docs/INCIDENTS.md`, with what now prevents it |

@@ -538,6 +538,15 @@ The two clips these fire with are **placeholders**; see
 `Resources/Audio/README.md`. Paths and durations for all four assets live in
 `Core/ContactCues.cs`.
 
+### Blunt contact language: burst only, no arc
+
+Relocated from `docs/STATIC_COMBAT_ART_DEEP_DIVE.md` (archived) — the one rule
+of that doc's attack-family table still cited elsewhere. A Blunt-family beat's
+contact language is deeper anticipation, a slower outbound, and a large target
+squash, paired with a longer hit-stop, dust chunks and a stronger low-frequency
+shake — **burst only, no slash arc**. `slash_arc` is a Slash-family cue; a Blunt
+swing should play `impact_burst` alone.
+
 
 ## 6. Per-kit README index
 

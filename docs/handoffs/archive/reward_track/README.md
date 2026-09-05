@@ -288,10 +288,10 @@ since `d01d49b` (`RelicDraftController.cs:152`).
 
 ## Out of scope
 
-- The dossier's XP bar — its own brief, `docs/handoffs/xp_bar/`.
+- The dossier's XP bar — its own brief, `docs/handoffs/archive/xp_bar/`.
 - What each level gives and what a level costs. That is balance; the table is
   `RewardTrack.Milestones` and `FillerMix`, and the reasoning is in
-  `docs/HANDOVER_PROGRESSION_TRACK.md`.
+  `docs/archive/HANDOVER_PROGRESSION_TRACK.md`.
 - The talent tree, which is the other meta-progression screen and has its own
   established look.
 

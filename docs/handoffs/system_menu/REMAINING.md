@@ -285,5 +285,5 @@ Unrelated to the menu, still true, recorded so they do not get lost:
 - **Attack reads 558 against Health 320** — the `DamageScale ×10` display
   question, open since the dossier landed.
 - **Skills reads "0 known"** — only talent-granted skills are counted.
-- The eight **container art prompts** in `docs/handoffs/dossier_containers/` are
+- The eight **container art prompts** in `docs/handoffs/archive/dossier_containers/` are
   written and none of the art is generated.

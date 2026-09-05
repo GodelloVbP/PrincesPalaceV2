@@ -76,7 +76,7 @@ things it looked like are already done and the third is bigger than it sounds.
 - **What is actually unfinished is the rework.** Dog, owl, fly and turtle are
   ~48 flat `statBonus` nodes each — 252 of the 294 — which is the exact "no build
   to make, only a stat total to accumulate" problem
-  `docs/handoffs/shawn_talent_rework/README.md` was written to kill. Only Shawn's
+  `docs/handoffs/archive/shawn_talent_rework/README.md` was written to kill. Only Shawn's
   42 use the `effects[]` vocabulary. And **Shawn's third path (the mage) does not
   exist**; `GAP_AUDIT_LAMB.md` records that its engine rule
   (`WoolPerStatusedEnemy`) is implemented and unit-tested, so the root is one

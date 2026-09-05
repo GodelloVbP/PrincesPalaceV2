@@ -5,7 +5,7 @@
 # A thin wrapper around tools/graphics_tests.ps1, naming
 # StaticPilotStageCaptureTests and passing it a LABEL -- which is the whole
 # reason this exists as a script rather than a command to retype. The
-# static-combat pilot (docs/STATIC_COMBAT_ART_DEEP_DIVE.md) is a before/after
+# static-combat pilot (docs/archive/STATIC_COMBAT_ART_DEEP_DIVE.md) is a before/after
 # comparison, so the same fixture has to be run twice against two folders and
 # the second run must be byte-for-byte the same procedure as the first.
 #

@@ -68,7 +68,7 @@ squad today there is one track. See §5.
 > Level 100 still reads as "the charge comes back at every boss", with the
 > charge itself run-scoped.
 >
-> Levels 25 and 45 also changed; see `docs/PLAN_PROGRESSION_TRACK.md` and
+> Levels 25 and 45 also changed; see `docs/archive/PLAN_PROGRESSION_TRACK.md` and
 > `AUDIT.md` #50-51. The relic line is now 25 -> 2 at start, 45 -> 3, 60 -> 4,
 > 70 -> pick them.
 
