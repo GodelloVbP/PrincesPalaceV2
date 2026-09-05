@@ -39,17 +39,7 @@ namespace PrincesPalace.Domain.Tests
         // below would agree with it.
         private const int MinimumFolders = 8;
 
-        private static string RepoRoot()
-        {
-            var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
-            while (dir != null && !Directory.Exists(Path.Combine(dir.FullName, "Assets", "_Project", "Scripts")))
-            {
-                dir = dir.Parent;
-            }
-
-            Assert.IsNotNull(dir, "Could not locate the repo root from the working directory.");
-            return dir.FullName;
-        }
+        private static string RepoRoot() => RepoTree.Root();
 
         private static string ContentRoot() =>
             Path.Combine(RepoRoot(), "Assets", "_Project", "Resources", "Content");
@@ -102,9 +92,10 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(stamp.InputHash, current,
                 "The generated content under Resources/Content was built from different inputs than the ones on " +
-                "disk now. Something under ContentData/, Scripts/Domain/, Scripts/Core/Content/ or " +
-                "Scripts/Editor/ContentBuilder.cs has changed since the last build, so every generated asset is " +
-                "suspect -- the fight, the shop and the talent tree are all reading stale records." + Fix);
+                "disk now. Something under ContentData/, Scripts/Domain/Content/, Scripts/Core/Content/, " +
+                "Scripts/Editor/ContentBuilder.cs, or one of the Domain files ContentInputHash names one by one " +
+                "has changed since the last build, so every generated asset is suspect -- the fight, the shop " +
+                "and the talent tree are all reading stale records." + Fix);
         }
 
         [Test]
@@ -210,8 +201,24 @@ namespace PrincesPalace.Domain.Tests
             CollectionAssert.Contains(inputs, "Assets/_Project/ContentData/enemies.json");
             CollectionAssert.Contains(inputs, "Assets/_Project/Scripts/Editor/ContentBuilder.cs");
 
-            Assert.IsTrue(inputs.Any(p => p.StartsWith("Assets/_Project/Scripts/Domain/", StringComparison.Ordinal)),
-                "no Domain source is in the hashed set, so a resolver edit would not mark content stale");
+            Assert.IsTrue(inputs.Any(p => p.StartsWith("Assets/_Project/Scripts/Domain/Content/", StringComparison.Ordinal)),
+                "no Domain/Content source is in the hashed set, so a resolver edit would not mark content stale");
+
+            // THE NARROWING, pinned from this side too. The whole of
+            // Scripts/Domain used to be hashed, which made every Domain edit
+            // redden the 4-second loop; ContentInputCoverageTests proves the
+            // replacement list is complete, and this proves it is still a
+            // list. Without it, "fix" the coverage failure by re-adding the
+            // folder and every test here would still pass.
+            var wholesale = inputs
+                .Where(p => p.StartsWith("Assets/_Project/Scripts/Domain/", StringComparison.Ordinal))
+                .Where(p => !p.StartsWith("Assets/_Project/Scripts/Domain/Content/", StringComparison.Ordinal))
+                .ToList();
+
+            Assert.Less(wholesale.Count, 60,
+                $"{wholesale.Count} files outside Domain/Content are hashed as content inputs, which is the whole " +
+                "of Scripts/Domain again rather than the enumerated set. See ContentInputHash's header for why " +
+                "that made the fast loop unusable.");
             Assert.IsTrue(inputs.Any(p => p.StartsWith("Assets/_Project/Scripts/Core/Content/", StringComparison.Ordinal)),
                 "no Core/Content source is in the hashed set, so a ValidateContent edit would not mark content stale");
 
@@ -251,7 +258,7 @@ namespace PrincesPalace.Domain.Tests
         private static string MakeFakeRepo(string root, string leaf, string newline)
         {
             string repo = Path.Combine(root, leaf);
-            string domain = Path.Combine(repo, "Assets", "_Project", "Scripts", "Domain");
+            string domain = Path.Combine(repo, "Assets", "_Project", "Scripts", "Domain", "Content");
             string data = Path.Combine(repo, "Assets", "_Project", "ContentData");
             Directory.CreateDirectory(domain);
             Directory.CreateDirectory(data);
