@@ -233,8 +233,14 @@ function Resolve-ContentId {
         return $null
     }
 
-    $file = Get-Content $jsonPath -Raw | ConvertFrom-Json
-    $ids = @($file.$Collection | ForEach-Object { $_.id })
+    # $parsed, NOT $file. PowerShell variables are case-INSENSITIVE, so a
+    # local called $file is the SAME variable as the [string]$File parameter:
+    # assigning the parsed object to it silently replaced the filename with a
+    # PSCustomObject, and the "no such id" message then printed the entire
+    # contents of skills.json -- readme and all -- where the filename should
+    # have been. Found the first time this ran for real.
+    $parsed = Get-Content $jsonPath -Raw | ConvertFrom-Json
+    $ids = @($parsed.$Collection | ForEach-Object { $_.id })
 
     if ($ids -contains $Id) { return $Id }
 
