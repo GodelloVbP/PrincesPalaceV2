@@ -1739,22 +1739,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // lines are written together by FightHudModel, so splitting them across
         // three nodes would put the sentence's grammar in the view and the words
         // in Domain.
-        //
-        // AsDecor because a tooltip that swallows a click on the enemy behind it
-        // would make the icon actively worse than no icon.
         private UiNode BuildIntentTooltip()
         {
             var label = Ui.Label("IntentTooltipText", UiString.Runtime, new UiVec(400f, 120f), 17,
                 FightHudPalette.GoldText, Place.At(0f, 0f));
             IntentTooltipText = label;
 
-            // a hover tooltip floats over whatever it has to - it is
-            // transient and takes no clicks
-            var panel = Ui.Sprite("IntentTooltip", PanelViolet, Place.At(-330f, 250f),
-                    UiSize.Fixed(420f, 140f))
-                .Inactive()
-                .AsDecor();
-            panel.Children.Add(label);
+            var panel = Ui.Tooltip("IntentTooltip", PanelViolet, null, Place.At(-330f, 250f),
+                UiSize.Fixed(420f, 140f), label);
             IntentTooltip = panel;
             return panel;
         }
@@ -1769,11 +1761,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 FightHudPalette.GoldText, Place.At(0f, 0f));
             PartyBuffTooltipText = label;
 
-            var panel = Ui.Sprite("PartyBuffTooltip", PanelViolet, Place.At(-540f, -250f),
-                    UiSize.Fixed(380f, 120f))
-                .Inactive()
-                .AsDecor();
-            panel.Children.Add(label);
+            var panel = Ui.Tooltip("PartyBuffTooltip", PanelViolet, null, Place.At(-540f, -250f),
+                UiSize.Fixed(380f, 120f), label);
             PartyBuffTooltip = panel;
             return panel;
         }

@@ -804,21 +804,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // button someone forgot to label; the pack's tooltip already
             // established a plain dark sheet as the house tooltip surface.
             //
+            // FULLY OPAQUE, where the pack's tooltip gets away with 95%: that
+            // one opens over the dossier's flat ground, this one over a
+            // neighbouring card's item art, and at F2 the coif behind it read
+            // straight through the comparison numbers -- confirmed in a
+            // capture, which is the only place it could be seen.
+            //
             // Declared at the panel's centre and moved on every hover, exactly
             // as the dossier's is -- an authored position an inactive node
             // never draws at, chosen because it is somewhere the containment
             // audit can solve.
-            var panel = Ui.Sprite("ReckoningOfferTooltip", null, Place.At(0f, 0f),
-                    UiSize.Fixed(TooltipWidth, TooltipHeight))
-                // FULLY OPAQUE. The pack's tooltip gets away with 95% because
-                // it opens over the dossier's flat ground; this one opens over
-                // a neighbouring card's item art, and at F2 the coif behind it
-                // read straight through the comparison numbers -- confirmed in
-                // a capture, which is the only place it could be seen.
-                .Coloured("#1D1226")
-                .Inactive()
-                .AsDecor();
-            panel.Children.Add(label);
+            var panel = Ui.Tooltip("ReckoningOfferTooltip", null, "#1D1226", Place.At(0f, 0f),
+                UiSize.Fixed(TooltipWidth, TooltipHeight), label);
             OfferTooltip = panel;
             return panel;
         }

@@ -989,14 +989,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             TooltipTitle = title;
             TooltipBody = body;
 
-            // a tooltip floats over whatever it has to - it is transient and
-            // takes no clicks
-            var panel = Ui.Sprite("DossierTooltip", null, Place.At(0f, 0f), UiSize.Fixed(300f, 480f))
-                .Coloured("#1D1226F2")
-                .Inactive()
-                .AsDecor();
-            panel.Children.Add(title);
-            panel.Children.Add(body);
+            var panel = Ui.Tooltip("DossierTooltip", null, "#1D1226F2", Place.At(0f, 0f),
+                UiSize.Fixed(300f, 480f), title, body);
             Tooltip = panel;
             return panel;
         }

@@ -532,6 +532,42 @@ namespace PrincesPalace.Domain.UiKit
             .AllowOverlap("a modal deliberately covers its siblings - intercepting their input is what modal means");
         }
 
+        // A HOVER TOOLTIP: a ground that takes no clicks, and the lines on it.
+        //
+        // Four screens built this by hand and each one re-derived the same two
+        // calls. Inactive() because a tooltip is hidden until something is
+        // hovered, and AsDecor() because it floats OVER the thing it explains
+        // -- a tooltip that swallowed the click meant for the enemy, the offer
+        // card or the pack cell underneath it would be worse than no tooltip at
+        // all. Both were remembered correctly at all four sites, which is the
+        // argument for the helper rather than against it: they were remembered
+        // because someone copied the site next door, and the fifth site is the
+        // one that copies only half.
+        //
+        // spriteKey OR groundHex, whichever the screen paints with: the fight's
+        // two wear the violet panel art, the reckoning's and the dossier's a
+        // flat dark sheet. Passing null for one of them is the normal case, not
+        // a degraded one.
+        //
+        // The lines are built by the caller, because what a tooltip SAYS is the
+        // one thing the four do not share -- one runtime label on the fight
+        // screen, a title and a body on the dossier.
+        public static UiNode Tooltip(string name, string spriteKey, string groundHex,
+                                     Place place, UiSize size, params UiNode[] lines)
+        {
+            var panel = Sprite(name, spriteKey, place, size);
+            if (groundHex != null) panel.Coloured(groundHex);
+            panel.Inactive().AsDecor();
+            if (lines != null)
+            {
+                foreach (var line in lines)
+                {
+                    if (line != null) panel.Children.Add(line);
+                }
+            }
+            return panel;
+        }
+
         // ONE declaration that is simultaneously the element count, the names,
         // and the refs the wiring binds. This is what makes v1's Store bug
         // (builder sized the strip off Items, controller filled it from
