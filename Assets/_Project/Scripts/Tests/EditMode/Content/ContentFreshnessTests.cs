@@ -221,6 +221,53 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(inputs.Count, inputs.Distinct().Count(), "ContentInputHash.Enumerate lists a file twice.");
         }
 
+        // A `git checkout` of a file git reports as CLEAN can still rewrite its
+        // bytes, because this repo is checked out with core.autocrlf on -- and
+        // a clone on a machine set the other way gets different bytes for the
+        // same commit. Hashing raw bytes made both of those say "the content is
+        // stale", which is a false alarm that costs a rebuild and teaches the
+        // reader to distrust the check. This is that fix pinned: the same text
+        // in either convention is the same input, because a resolver cannot see
+        // a line ending.
+        [Test]
+        public void LineEndingsDoNotChangeTheHash()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "pp_hash_" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                string lf = MakeFakeRepo(root, "lf", "\n");
+                string crlf = MakeFakeRepo(root, "crlf", "\r\n");
+
+                Assert.AreEqual(ContentInputHash.Compute(lf), ContentInputHash.Compute(crlf));
+            }
+            finally
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+        }
+
+        // Enough files to clear ContentInputHash's own vacuity guard, differing
+        // only in how their lines end.
+        private static string MakeFakeRepo(string root, string leaf, string newline)
+        {
+            string repo = Path.Combine(root, leaf);
+            string domain = Path.Combine(repo, "Assets", "_Project", "Scripts", "Domain");
+            string data = Path.Combine(repo, "Assets", "_Project", "ContentData");
+            Directory.CreateDirectory(domain);
+            Directory.CreateDirectory(data);
+
+            for (int i = 0; i < ContentInputHash.MinimumFilesHashed + 1; i++)
+            {
+                File.WriteAllText(Path.Combine(domain, $"File{i}.cs"),
+                    string.Join(newline, new[] { "// line one", $"class Fake{i} {{ }}", "" }));
+            }
+
+            File.WriteAllText(Path.Combine(data, "enemies.json"),
+                string.Join(newline, new[] { "{", "  \"enemies\": []", "}", "" }));
+
+            return repo;
+        }
+
         // Round-trip and refusal, so a change to the stamp format cannot
         // quietly become a stamp nothing can read back.
         [Test]

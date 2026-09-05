@@ -73,13 +73,46 @@ namespace PrincesPalace.Domain.Content
                     byte[] name = Encoding.UTF8.GetBytes(relative + "\n");
                     sha.TransformBlock(name, 0, name.Length, null, 0);
 
-                    byte[] body = File.ReadAllBytes(Path.Combine(repoRoot, relative.Replace('/', Path.DirectorySeparatorChar)));
+                    byte[] body = Normalised(Path.Combine(repoRoot, relative.Replace('/', Path.DirectorySeparatorChar)));
                     sha.TransformBlock(body, 0, body.Length, null, 0);
                 }
 
                 sha.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
                 return BitConverter.ToString(sha.Hash).Replace("-", "").ToLowerInvariant();
             }
+        }
+
+        // LINE ENDINGS ARE STRIPPED OUT OF THE HASH, and this is not a detail.
+        //
+        // Every input here is text (.cs and .json), and this repo is checked
+        // out with core.autocrlf on: `git checkout` on a file git reports as
+        // clean can still change its bytes on disk, and a clone on a machine
+        // with a different setting gets different bytes for the same commit.
+        // Hashing raw bytes made both of those "the content is stale, rebuild"
+        // -- a false alarm that costs 14s and, worse, teaches the reader that
+        // the freshness check cries wolf.
+        //
+        // Nothing is lost: a resolver cannot see a line ending, so two files
+        // that differ only there produce identical content by construction.
+        // Only \r immediately before \n is dropped, so a lone \r inside a
+        // string literal still counts as the change it is.
+        private static byte[] Normalised(string path)
+        {
+            byte[] raw = File.ReadAllBytes(path);
+            var kept = new byte[raw.Length];
+            int length = 0;
+
+            for (int i = 0; i < raw.Length; i++)
+            {
+                if (raw[i] == (byte)'\r' && i + 1 < raw.Length && raw[i + 1] == (byte)'\n') continue;
+                kept[length++] = raw[i];
+            }
+
+            if (length == raw.Length) return raw;
+
+            var trimmed = new byte[length];
+            Array.Copy(kept, trimmed, length);
+            return trimmed;
         }
 
         // Sorted, ordinal, forward-slashed -- the same order on every machine
