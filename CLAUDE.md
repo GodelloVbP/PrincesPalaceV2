@@ -188,6 +188,8 @@ not this tree; the live register starts at #37.)
   possible: `UiAudit`, `UiWiringSweep`, the area-coverage refusal in
   `run_tests_parallel.ps1`, and the two git hooks all exist for this reason.
 - Graceful degradation on missing content is the house style.
+- The `ui-ugui` skill's scene/prefab-editing steps are overridden here by rule 1 above: never edit a scene or prefab directly, edit the screen's tree in `Domain/UiKit/Screens/` and its wiring in `ScreenRegistry.cs` instead.
+- The `anti-ui-slop` skill is written for web/iOS coding agents with a UIZZE MCP; it is inert here without that MCP, and its "never report missing evidence" policy is not followed in this project — missing evidence gets reported, per this file's pushback rules.
 
 Full conventions, session rituals, and the doc-update-rules index:
 `docs/WORKFLOW.md`.
