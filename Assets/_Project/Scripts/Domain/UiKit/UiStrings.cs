@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.Reflection;
+
 namespace PrincesPalace.Domain.UiKit
 {
     // THE string manifest. AUDIT #35 asked for exactly this and v1 never had it.
@@ -107,16 +110,6 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString TalentPath =
             UiString.Define("talent.path", "CONSTELLATION {0} OF {1}   -   {2} KINDLED", "CONSTELLATION 3 OF 3   -   21 KINDLED");
 
-        // ---- the character overlay ------------------------------------------
-
-        public static readonly UiString OverlayCount =
-            UiString.Define("overlay.count", "x{0}", "x99");
-        public static readonly UiString OverlayPlus =
-            UiString.Define("overlay.plus", "+{0}", "+10");
-        // The dossier's spend-a-stat-point button. ITS OWN STRING, not
-        // OverlayPlus: that one is the FORMAT "+{0}" for an item's plus level,
-        // and a format emitted with no argument renders its widest-case sample
-        // -- so every one of these six buttons read "+10".
         public static readonly UiString TrackRow =
             UiString.Define("track.row", "Reward Track");
         public static readonly UiString TrackClose =
@@ -205,17 +198,6 @@ namespace PrincesPalace.Domain.UiKit
 
         public static readonly UiString DossierSpendPoint =
             UiString.Define("dossier.spend_point", "+");
-        public static readonly UiString OverlayPage =
-            UiString.Define("overlay.page", "PAGE {0} OF {1}", "PAGE 99 OF 99");
-        public static readonly UiString OverlayEquip = UiString.Define("overlay.equip", "EQUIP");
-        public static readonly UiString OverlayUnequip = UiString.Define("overlay.unequip", "UNEQUIP");
-        public static readonly UiString OverlayCannotWear = UiString.Define("overlay.cannot_wear", "CAN'T WEAR");
-        // An empty bag has to SAY it is empty. Twenty hidden cells and a lone
-        // "PAGE 1 OF 1" floating over dead space reads as a grid that failed to
-        // load, not as a bag with nothing in it.
-        public static readonly UiString OverlayBagEmpty =
-            UiString.Define("overlay.bag_empty", "YOU ARE CARRYING NOTHING");
-
         // ---- the hub -------------------------------------------------------
 
         // Three currencies, not two. Embers is what talents actually cost and
@@ -279,21 +261,6 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString MapRoomEmpty =
             UiString.Define("map.room.empty", "The room is empty.");
 
-        // ---- character sheet ---------------------------------------------------
-
-        // The two panes. The sheet deliberately does NOT show the bag: a
-        // paperdoll and a twenty-cell grid on one surface is what left the
-        // slot cells fighting the figure for space.
-        public static readonly UiString SheetTabCharacter =
-            UiString.Define("sheet.tab.character", "Character");
-        public static readonly UiString SheetTabInventory =
-            UiString.Define("sheet.tab.inventory", "Inventory");
-
-        // Worst-case sample is four digits: resistances are small today but a
-        // late-run stack of gear is what the box has to still fit.
-        public static readonly UiString SheetStatValue =
-            UiString.Define("sheet.stat.value", "{0}", "9999");
-
         // Short names, because the value beside them is what is being read.
         // Spelled out where the abbreviation would be a guess (Speed, Attack).
         public static readonly UiString StatStrength = UiString.Define("stat.str", "STR");
@@ -318,13 +285,6 @@ namespace PrincesPalace.Domain.UiKit
             UiString.Define("stat.physdef", "Physical DEF");
         public static readonly UiString StatMagicalDefense =
             UiString.Define("stat.magdef", "Magical DEF");
-
-        // Shown on the action button, and on the compare box, when a fight is
-        // in progress. Gear is locked for the duration of a battle -- being
-        // able to re-plate mid-swing would make every fight a loadout puzzle
-        // rather than a fight.
-        public static readonly UiString OverlayLockedInFight =
-            UiString.Define("overlay.locked", "Locked in battle");
 
         public static readonly UiString Play = UiString.Define("play", "Play");
         public static readonly UiString Exit = UiString.Define("exit", "Exit");
@@ -434,7 +394,6 @@ namespace PrincesPalace.Domain.UiKit
         // button you actually press. +1 exists only to sit on the
         // NotEnoughEmbers boundary, which is the one case +25 can never test.
         public static readonly UiString DebugGiveOneEmber = UiString.Define("debug.ember_one", "+1 EMBER");
-        public static readonly UiString DebugAdd = UiString.Define("debug.add", "ADD");
         public static readonly UiString DebugFilterAll = UiString.Define("debug.filter_all", "ALL");
         public static readonly UiString DebugFilterConsumable = UiString.Define("debug.filter_consumable", "POTIONS");
         public static readonly UiString DebugFilterWeapon = UiString.Define("debug.filter_weapon", "WEAPONS");
@@ -448,7 +407,6 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString DraftTitle = UiString.Define("draft.title", "TAKE ONE INTO THE DARK");
         public static readonly UiString DraftSubtitle =
             UiString.Define("draft.subtitle", "It is yours until the descent ends.");
-        public static readonly UiString DraftTake = UiString.Define("draft.take", "TAKE");
         public static readonly UiString DraftNoRelics =
             UiString.Define("draft.none", "NOTHING STIRS IN THE VAULT");
         public static readonly UiString DraftDescend = UiString.Define("draft.descend", "Descend");
@@ -505,8 +463,6 @@ namespace PrincesPalace.Domain.UiKit
 
         public static readonly UiString ShopGearMeta =
             UiString.Define("shop.gear_meta", "TIER {0} · +{1} · {2} AFFIX", "TIER 10 · +5 · 3 AFFIX");
-        public static readonly UiString ShopBookMeta =
-            UiString.Define("shop.book_meta", "MANA {0}", "MANA 999");
 
         // A book card's purchase-time facts (docs/PLAN_SHOP.md §7.1 point 4):
         // the shop carries no per-character context to show a badge against,
@@ -626,11 +582,7 @@ namespace PrincesPalace.Domain.UiKit
 
         // --- combat ---------------------------------------------------------
         public static readonly UiString CommandTitle = UiString.Define("command_title", "C O M M A N D");
-        public static readonly UiString Attack = UiString.Define("attack", "ATTACK");
         public static readonly UiString Back = UiString.Define("back", "BACK");
-
-        // --- character select -----------------------------------------------
-        public static readonly UiString ConfirmSquad = UiString.Define("confirm_squad", "Confirm Squad");
 
         // --- hub --------------------------------------------------------------
         public static readonly UiString HubTitle = UiString.Define("hub_title", "DIVINE PRINCIPALITY");
@@ -639,7 +591,6 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString HubPrincipality = UiString.Define("hub_principality", "PRINCIPALITY");
         public static readonly UiString HubCharacterSheet = UiString.Define("hub_character_sheet", "CHARACTER\nSHEET");
         public static readonly UiString HubRelics = UiString.Define("hub_relics", "RELICS");
-        public static readonly UiString HubStartRun = UiString.Define("hub_start_run", "START RUN");
         public static readonly UiString HubMainMenu = UiString.Define("hub_main_menu", "Main Menu");
 
         // --- the fight screen -------------------------------------------------
@@ -673,8 +624,6 @@ namespace PrincesPalace.Domain.UiKit
         // places, with the slash and spacing retyped each time.
         public static readonly UiString HealthValue =
             UiString.Define("health_value", "{0}/{1}", "9999/9999");
-        public static readonly UiString GuardValue =
-            UiString.Define("guard_value", "GUARD {0}/{1}", "GUARD 999/999");
         public static readonly UiString SignatureValue =
             UiString.Define("signature_value", "{0}/{1}", "16/16");
         public static readonly UiString StandingCount =
@@ -690,7 +639,6 @@ namespace PrincesPalace.Domain.UiKit
 
         // Detail column labels.
         public static readonly UiString DetailKindSkill = UiString.Define("detail_kind_skill", "SKILL");
-        public static readonly UiString DetailKindItem = UiString.Define("detail_kind_item", "ITEM");
         public static readonly UiString DetailStatCost = UiString.Define("detail_stat_cost", "COST");
         public static readonly UiString DetailStatPower = UiString.Define("detail_stat_power", "POWER");
         public static readonly UiString DetailStatTarget = UiString.Define("detail_stat_target", "TARGET");
@@ -716,13 +664,6 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString TargetPromptGroup =
             UiString.Define("target_prompt_group", "{0} — confirm on any enemy plate.",
                 "Boulder Slam — confirm on any enemy plate.");
-
-        // The rework's reach-block reason -- see FightHudModel.MeleeBlockReason,
-        // which decides whether it applies at all. Registered ahead of the
-        // plate/tooltip that will show it, same as every other string here
-        // waiting on its own screen.
-        public static readonly UiString TargetBlockedByFrontRank =
-            UiString.Define("target_blocked_by_front_rank", "BLOCKED BY FRONT RANK");
 
         // HOLD BACK's own label, with the banked-action count folded in --
         // the resource Hold Back BUILDS was invisible everywhere before this,
@@ -750,10 +691,6 @@ namespace PrincesPalace.Domain.UiKit
         // so a separate Inventory tab was a second door onto the same room.
         public static readonly UiString SystemTabCharacterInventory =
             UiString.Define("system.tab.character_inventory", "CHARACTER & INVENTORY");
-        // The design's overflow fallback, used before the bar is allowed to
-        // wrap or scroll: shorten this tab rather than re-laying the row.
-        public static readonly UiString SystemTabCharacterShort =
-            UiString.Define("system.tab.character_short", "CHARACTER");
         public static readonly UiString SystemTabFloorMap =
             UiString.Define("system.tab.floor_map", "FLOOR MAP");
         public static readonly UiString SystemTabRunStats =
@@ -898,99 +835,30 @@ namespace PrincesPalace.Domain.UiKit
         public static readonly UiString PackFilterWeapons = UiString.Define("dossier.filter_weapons", "Weapons");
         public static readonly UiString PackFilterSalves = UiString.Define("dossier.filter_salves", "Salves");
 
-        // Every entry declared above, for the manifest tests to sweep. Kept
-        // beside the entries deliberately: a new string that someone forgets to
-        // add here is invisible to the AuditSample check, so the test that walks
-        // this array also asserts it is not obviously short.
-        public static readonly UiString[] All =
+        // Every entry declared above, derived rather than restated.
+        //
+        // This was a hand-maintained 92-line second copy of the 317 names, and
+        // the copy was the whole problem: an entry left out of it was invisible
+        // to the AuditSample check and to the unique-key check, so the one place
+        // that could catch a bad string silently skipped it. Reflection over the
+        // class's own public static readonly UiString fields cannot skip one --
+        // the declaration IS the registration, and there is no second list to
+        // forget. System.Reflection is BCL, so Domain stays engine-free.
+        //
+        // Static, so the walk happens once per domain load rather than per test.
+        public static readonly UiString[] All = Declared();
+
+        private static UiString[] Declared()
         {
-            WalletSummary,
-            OverlayLoadout, OverlayAttributes, OverlayXp, OverlaySkills, OverlayPack,
-            OverlayPackTitle, OverlayPackClose, OverlayCarried, OverlayPrev, OverlayNext,
-            OverlayTwoHanded, PackFilterAll, PackFilterArmour, PackFilterWeapons, PackFilterSalves,
-            SystemTabCharacterInventory, SystemTabCharacterShort, SystemTabFloorMap, SystemTabRunStats,
-            SystemTabOptions, SystemTabMainMenu,
-            SystemPlaceholder, SystemEscHint, SystemClose,
-            SystemMenuTitle, SystemBetweenDescents,
-            OptionsAudio, OptionsSound, OptionsMusic, OptionsMusicNote,
-            OptionsDisplay, OptionsResolution, OptionsWindow, OptionsFrameLimit,
-            OptionsRestoreDefaults, OptionsAppliesImmediately,
-            Play, Exit, Close, Cancel, GameTitle, ContinueSlot,
-            ReckoningTitle, ReckoningExperience, ReckoningGold, ReckoningChooseOne,
-            ReckoningLevel, ReckoningLevelUp, ReckoningExpGain, ReckoningDowned,
-            ReckoningOfferMeta, ReckoningTaken,
-            ReckoningTabSpoils, ReckoningTabRelics, ReckoningTabTally,
-            ReckoningNoRelics, ReckoningRelicHeld, ReckoningTallyHeading,
-            ReckoningTallyLine, ReckoningKills,
-            DefeatTitle, DefeatLost, DefeatKept, DefeatGoldLost, DefeatEmbers, DefeatEmbersNone,
-            DefeatDepth, DefeatExp, DefeatStatsHeading, DefeatStatLine, DefeatToHub, DefeatInspect,
-            DraftTitle, DraftSubtitle, DraftTake, DraftNoRelics, DraftDescend, DraftRarity,
-            ShopTitle, ShopGold, ShopLeave, ShopLeaveConfirm, ShopBuy, ShopPack,
-            ShopSectionGear, ShopSectionBooks, ShopSectionRelics,
-            ShopSectionKeeper, ShopSectionActions, ShopKeeperPending,
-            ShopReroll, ShopRerollNeed,
-            ShopCardPrice, ShopCardConfirm, ShopCardNeed, ShopCardSold, ShopCardNoOffer,
-            ShopGearMeta, ShopBookMeta, ShopDetailEmpty,
-            ShopPackTitle, ShopPackEmpty, ShopPackPage, ShopSellPriceLabel, ShopSellOneButton, ShopSellAllButton,
-            DossierSpellsRow, DossierSpellsCount, DossierUnassignedHeader, DossierUnassignedEmpty,
-            DossierSlotEmpty, DossierSlotFilled,
-            ShopBookKnownByOne, ShopBookKnownByMany, ShopBookAllSlotsFull,
-            ShopBookUnassignedCopy, ShopBookUnassignedCopies, ShopBookEligible,
-            GlossaryTitle, GlossaryCount, GlossaryPage, GlossaryEmpty,
-            GlossaryLocked, GlossaryLockedBy, GlossaryPick,
-            DebugTitle, DebugGiveGold, DebugGiveEmbers, DebugGiveOneEmber, DebugAdd,
-            DebugFilterAll, DebugFilterConsumable, DebugFilterWeapon, DebugFilterEquipment,
-            DebugRow, DebugPage,
-            ChooseSlotHeader, SlotEmpty,
-            SlotNumber, SlotDetail, SlotGold, NewDescent,
-            ManageSaves, ManageSavesWarning, Delete, ConfirmDelete,
-            CommandTitle, Attack, Back,
-            ConfirmSquad,
-            HubTitle, HubSubtitle, HubTalents, HubPrincipality, HubCharacterSheet,
-            HubRelics, HubStartRun, HubMainMenu,
-            VerbAttack, VerbSkill, VerbItem, VerbHoldBack,
-            HotkeyOne, HotkeyTwo, HotkeyThree, HotkeyFour, HotkeyEscape,
-            VerbNestCaret, EnemiesHeading, WoolHeading, HpTag, MpTag, Continue,
-            HealthValue, GuardValue, SignatureValue, StandingCount, LevelAndRole,
-            SubmenuSkillsTitle, SubmenuItemsTitle, SubmenuHint,
-            DetailKindSkill, DetailKindItem,
-            DetailStatCost, DetailStatPower, DetailStatTarget, DetailStatEffect, DetailStatScaling,
-            TargetPrompt, TargetPromptGroup, TargetCancel, TargetBlockedByFrontRank, VerbHoldBackWithBank,
-            TransformStripTurns, TransformStripPermanent,
-            MapTitle, MapDepth, MapGold, MapAbandon, MapFog, MapPendingBook,
-            MapRoomTreasure, MapRoomRest, MapRoomShop, MapRoomEvent,
-            MapRoomItem, MapRoomEmpty,
-            SheetTabCharacter, SheetTabInventory, SheetStatValue, OverlayLockedInFight,
-            StatStrength, StatDexterity, StatConstitution, StatWisdom,
-            StatIntelligence, StatCharisma,
-            StatMaxHealth, StatAttack, StatSpeed, StatManaRegen,
-            StatPhysicalDefense, StatMagicalDefense, StatMaxMana, StatSignatureGain,
-            HubWallet, HubBeginDescent, HubResumeFloor,
-            OverlayCount, OverlayPlus, OverlayPage, DossierSpendPoint,
-            TrackRow, TrackClose, TrackLevelWord, TrackNextAt, TrackNextAtComplete,
-            TrackCollectOne, TrackCollectMany,
-            TrackRibbonTitle, TrackRibbonHint, TrackNext,
-            TrackCardNext, TrackCardHere, TrackCardWaiting, TrackCardCollected,
-            TrackCardToCome, TrackCardLvl,
-            TrackStateReady, TrackStateCollected, TrackStateLocked, TrackStateNextLevel,
-            OverlayEquip, OverlayUnequip, OverlayCannotWear, OverlayBagEmpty,
-            TalentEmbers, TalentInvest, TalentTaken, TalentLocked, TalentNoEmbers,
-            TalentPrev, TalentNext, TalentBack, TalentPath, TalentRespec,
-            TalentRespecTitle, TalentRespecCancel, TalentRespecConfirm,
-            TalentKickerLit, TalentKickerReady, TalentKickerCostly, TalentKickerGated,
-            TalentKickerLocked, TalentKickerUnwritten,
-            TalentWhyLocked, TalentWhyGated, TalentWhyPoor,
-            TalentPriceEmbers, TalentPriceGate,
-            TalentPickPrompt, TalentPickBody, TalentUnwrittenName, TalentUnwrittenBody,
-            TalentRespecPrompt,
-            PackSortTier, PackSortPlus, PackSortName,
-            RunStatBattle, RunStatFold, RunStatSpoils,
-            RunStatDamageDealt, RunStatDamagePhysical, RunStatDamageOther, RunStatDamageTaken,
-            RunStatHealed, RunStatShielded, RunStatKills, RunStatTimesDowned,
-            RunStatFloor, RunStatRoomsCleared, RunStatDeepestRoom, RunStatBosses,
-            RunStatGoldHeld, RunStatGoldEarned, RunStatExpEarned, RunStatRelics, RunStatPack,
-            ExitToTitle, ExitQuit, ExitConfirm, ExitToTitleNote, ExitQuitNote,
-            ExitAbandonHeading, ExitAbandonNote, ExitAbandonHold,
-        };
+            var fields = typeof(UiStrings).GetFields(BindingFlags.Public | BindingFlags.Static);
+            var found = new List<UiString>(fields.Length);
+            foreach (var f in fields)
+            {
+                // Exact type, not assignability: All itself is a UiString[] and
+                // must not enumerate itself.
+                if (f.FieldType == typeof(UiString)) found.Add((UiString)f.GetValue(null));
+            }
+            return found.ToArray();
+        }
     }
 }

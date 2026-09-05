@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Reflection;
 using NUnit.Framework;
 using PrincesPalace.Domain.UiKit;
 
@@ -31,6 +32,24 @@ namespace PrincesPalace.Domain.Tests
         {
             Assert.AreEqual("Play", UiStrings.Play.Format());
             Assert.AreEqual("C O M M A N D", UiStrings.CommandTitle.Format());
+        }
+
+        [Test]
+        public void All_EnumeratesEveryDeclaredEntry_AndIsNotVacuouslyShort()
+        {
+            // A vacuity guard, not a coverage check. All is derived by
+            // reflection now, so it cannot miss an entry the way the old
+            // hand-written 92-line copy could -- and that is exactly why the
+            // three tests below need this one: a walk that silently returned
+            // nothing would make all of them pass on an empty set.
+            var declared = typeof(UiStrings)
+                .GetFields(BindingFlags.Public | BindingFlags.Static)
+                .Count(f => f.FieldType == typeof(UiString));
+
+            Assert.AreEqual(declared, UiStrings.All.Length,
+                "All must enumerate every public static UiString field on UiStrings");
+            Assert.Greater(UiStrings.All.Length, 200,
+                "the manifest carries ~300 entries; a count this low means the walk found nothing");
         }
 
         [Test]
