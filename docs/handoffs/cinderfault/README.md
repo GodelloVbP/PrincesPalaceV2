@@ -23,9 +23,33 @@ Four distinct sheets were delivered, all 1536x1024 RGBA with authored alpha, all
 | `Art/Sheets/Spells/cinderfault_plume/cinderfault_plume_6frame_sheet.png` | `7a15a69d…` | rejected |
 | `Resources/Spells/cinderfault/cinderfault_target_local_6frame_sheet_v2.png` | `7a15a69d…` | identical bytes to the plume sheet |
 | `Resources/Spells/cinderfault/cinderfault_6frame_sheet.png` | `9cdabcfa…` | rejected (ground alternative) |
+| `Art/Sheets/Spells/cinderfault_eruption/cinderfault_eruption_plume_v2_6frame_sheet.png` | — | rejected, 2026-09-05 — registration, see below |
 
 So "v2" named a duplicate in one case and a genuinely different drawing in the
 other. Neither was approved by being called v2.
+
+### A fifth delivery, rejected on the same registration test: `cinderfault_eruption_plume_v2_6frame_sheet.png`
+
+Delivered untracked, 2026-09-05, alongside the current eruption master
+(`cinderfault_eruption_6frame_sheet.png`, still selected). Measured the same
+way the original eruption pair was measured above — `ground_row`/bbox-centre
+per cell, six cells, 1536x1024, 2x3 grid of 512x512:
+
+| | base row per cell | horizontal centre per cell |
+|---|---|---|
+| current master (unchanged) | 446, 446, 446, 446, 446, 445 | 256, 256, 256.5, 256, 256, 256 |
+| `plume_v2` (rejected) | 459, 464, 465, 448, 446, 444 | 268, 242, 238.5, 304, 269.5, 248 |
+
+Base row spans 21px (459-444) against the decision rule's 4px, and centre
+spans 65.5px (304-238.5) against the rule's 6px — both fail by a wide margin,
+same shape of problem as the original plume sheet's 66px/43px drift, and
+visible by eye at a downscaled preview: cell f3 (the peak) is both far larger
+than f0-f2 and leans right of the other five cells' shared centreline, with
+its tallest spike nearly touching the cell's own right edge. The drawing
+itself is reasonably on-brief — rock spikes with fire glowing through the
+cracks and base, earth dominating the silhouette — so the rejection is
+registration only, same as the first plume sheet. Master and slicer entry
+unchanged; the file is left untracked on disk per instruction.
 
 ### Ground: `cinderfault_ground_6frame_sheet.png`
 
@@ -148,6 +172,32 @@ only the ground entry declares `content_crop`.
 `vfx.groundAspect` is still left unset (0) — the crop is what makes "the
 sheet's own frame aspect" a true statement about this art instead of an
 assumption that happened to go unnoticed for one release.
+
+**Re-verified on a fresh capture, 2026-09-05 (after `189a679`).** The
+unlabelled screenshots this fix was diagnosed against were timestamped 15:12,
+before the 15:28 commit, so they could not be trusted to show the result.
+`CinderfaultSpellCaptureTests` was extended to write a `stage` block into
+`timing.json` — the ground box's own rect and every living slot's centre-x
+and ground-y, read in the identical parent-local space `PlaySpellGroundVfx`
+and `SpellVfxTests.TheFaultReachesEveryEnemyAndSitsNearTheGroundLine` both
+already use — and re-run. Measured: `groundLeft 66.12`, `groundRight 737.17`,
+`groundBottom -188.59`; slots at x `300.00`/`432.50`/`565.00`, ground-y
+`-218.00`/`-171.50`/`-125.00` (average `-171.50`). The box's bottom sits
+`17.09` units from that average — within the pinned test's 40-unit bound and
+close to the commit message's own "~17" estimate — and its left/right edges
+clear both outermost slot centres with well over 100 units to spare. A direct
+pixel read of the same capture (`tools/screenshots/runtime/cinderfault/
+after_189a679/`, ember-coloured pixels isolated by hue/brightness in the
+enemy-formation band) shows one continuous glowing seam running from under
+the front rat's front paws to the back rat's tail, present from the very
+first sampled frame of the cast — not the disconnected, shoulder-height crack
+`f6.png`/`f10.png`/`f14.png` showed before this commit. **The placement fix
+holds; nothing further changed.** The original pre-fix frames could not be
+diffed pixel-for-pixel against this capture: `tools/screenshots/` is
+gitignored and untracked, and re-running the same fixture into its own
+`unlabelled/` output overwrote them before a copy was taken — the before
+numbers above are the commit message's and this row's own record, not a
+fresh re-measurement of the old art.
 
 **Reproduce:**
 

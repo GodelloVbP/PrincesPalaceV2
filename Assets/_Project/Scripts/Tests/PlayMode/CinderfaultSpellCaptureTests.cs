@@ -290,13 +290,36 @@ namespace PrincesPalace.PlayModeTests
             var impactFrames = new List<int>();
             int groundOffFrame = -1;
 
+            // ONE STAGE-SPACE MEASUREMENT, taken the first sampled frame the
+            // ground layer is actually lit. GAP_AUDIT.md row 24's placement
+            // claim ("the fault reaches every slot and sits near the ground
+            // line") was only ever pinned with a fixed-bound PlayMode assert
+            // (SpellVfxTests.TheFaultReachesEveryEnemyAndSitsNearTheGroundLine);
+            // this writes the SAME numbers -- the ground box's own rect and
+            // every living slot's centre x / ground y, in the identical
+            // parent-local space that assert reads -- into timing.json so a
+            // capture can be checked against the screenshots it produced
+            // rather than trusted on the assert's word alone. The box does
+            // not move once PlaySpellGroundVfx sets it, so one reading is as
+            // good as forty-two.
+            string stageJson = null;
+
             try
             {
                 // Read back, do not encode -- EncodeToPNG is the expensive
                 // half, and doing it per frame stretches the wall clock the
                 // beat's own unscaled-time reactions still run against. The
                 // frames are held and written once the window is over.
-                yield return TheCast(impactFrames, i => frames.Add(rig.Grab()),
+                yield return TheCast(impactFrames, i =>
+                {
+                    frames.Add(rig.Grab());
+                    if (stageJson == null)
+                    {
+                        var ground = _fight.GroundVfxPlayerForTest;
+                        if (ground != null && ground.Image != null && ground.Image.enabled)
+                            stageJson = StageMeasurementJson(ground);
+                    }
+                },
                     i => { if (groundOffFrame < 0) groundOffFrame = i; });
             }
             finally
@@ -314,14 +337,54 @@ namespace PrincesPalace.PlayModeTests
             }
 
             int impact = impactFrames.Count > 0 ? impactFrames[0] : -1;
-            File.WriteAllText(Path.Combine(LabelDir, "timing.json"), TimingJson(impact, groundOffFrame, rig));
+            File.WriteAllText(Path.Combine(LabelDir, "timing.json"), TimingJson(impact, groundOffFrame, rig, stageJson));
             Debug.Log($"[CinderfaultCapture] wrote {frames.Count} frames to {LabelDir}");
 
             Assert.AreEqual(1, impactFrames.Count, "expected one shared impact frame for all three targets");
             Assert.Greater(groundOffFrame, 0, "the fault never cooled away inside the window");
         }
 
-        private string TimingJson(int impact, int settled, StageCaptureRig rig)
+        // The ground box's own rect, and every living slot's centre x / ground
+        // y -- both read in the SAME parent-local space PlaySpellGroundVfx
+        // itself measures in (see FightController.SpellVfx.cs), which is also
+        // what SpellVfxTests.TheFaultReachesEveryEnemyAndSitsNearTheGroundLine
+        // already asserts against. Duplicated here rather than shared because
+        // that test's helper is private to a different fixture and the two
+        // are allowed to drift apart in shape -- this one writes numbers, that
+        // one asserts a bound.
+        private string StageMeasurementJson(SpellVfxPlayer ground)
+        {
+            var rect = ground.Image.rectTransform;
+            float left = rect.anchoredPosition.x - rect.sizeDelta.x * 0.5f;
+            float right = rect.anchoredPosition.x + rect.sizeDelta.x * 0.5f;
+            float bottom = rect.anchoredPosition.y - rect.sizeDelta.y * 0.5f;
+            float top = rect.anchoredPosition.y + rect.sizeDelta.y * 0.5f;
+
+            var parent = ground.transform.parent;
+            var living = _enemies.Where(e => e != null && e.IsAlive).ToList();
+
+            string F(float v) => v.ToString("F2", CultureInfo.InvariantCulture);
+
+            var sb = new StringBuilder();
+            sb.Append("{");
+            sb.Append($"\"groundLeft\": {F(left)}, \"groundRight\": {F(right)}, ");
+            sb.Append($"\"groundBottom\": {F(bottom)}, \"groundTop\": {F(top)}, ");
+            sb.Append("\"slots\": [");
+            for (int i = 0; i < living.Count; i++)
+            {
+                var slot = _fight.SlotForTest(living[i]);
+                if (slot == null) continue;
+                float x = parent.InverseTransformPoint(slot.TransformPoint(Vector3.zero)).x;
+                float groundY = parent.InverseTransformPoint(
+                    slot.TransformPoint(new Vector3(0f, slot.rect.yMin, 0f))).y;
+                if (i > 0) sb.Append(", ");
+                sb.Append($"{{\"name\": \"{living[i].Name}\", \"x\": {F(x)}, \"groundY\": {F(groundY)}}}");
+            }
+            sb.Append("]}");
+            return sb.ToString();
+        }
+
+        private string TimingJson(int impact, int settled, StageCaptureRig rig, string stageJson)
         {
             string Ms(int frame) => frame < 0
                 ? "null"
@@ -340,7 +403,8 @@ namespace PrincesPalace.PlayModeTests
             json.AppendLine($"  \"settledFrame\": {settled},");
             json.AppendLine($"  \"settledMs\": {Ms(settled)},");
             json.AppendLine($"  \"cropX\": {rig.CropX}, \"cropY\": {rig.CropY},");
-            json.AppendLine($"  \"cropWidth\": {rig.CropWidth}, \"cropHeight\": {rig.CropHeight}");
+            json.AppendLine($"  \"cropWidth\": {rig.CropWidth}, \"cropHeight\": {rig.CropHeight},");
+            json.AppendLine($"  \"stage\": {stageJson ?? "null"}");
             json.Append("}");
             return json.ToString();
         }
