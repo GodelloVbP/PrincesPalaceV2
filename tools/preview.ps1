@@ -30,6 +30,12 @@ param(
     # The mob to look at, by its enemies.json id.
     [string]$Enemy = "",
 
+    # The spell to look at, by its skills.json id. Who casts it, how many
+    # enemies it needs to be visible against and what has to be waived are all
+    # decided by Scripts/Core/PreviewFight.cs, not here -- those are content
+    # questions and PowerShell has no business answering them a second time.
+    [string]$Spell = "",
+
     # Play the fight in the Editor instead of photographing it headlessly.
     [switch]$Launch,
 
@@ -195,6 +201,37 @@ function Resolve-EnemyId {
     return $null
 }
 
+# THE SAME VALIDATION Resolve-EnemyId DOES, and for the same reason: a typo
+# costs a Unity boot to discover otherwise, and the list is right there in the
+# file. What this deliberately does NOT do is decide anything about the
+# preview -- which character can cast the spell, whether the effect is one the
+# preview supports, what the formation should be. Those are answered once in
+# PreviewFight.cs and read by both routes; a PowerShell copy would be a second
+# opinion that agrees until the day it does not.
+function Resolve-ContentId {
+    param(
+        [string]$Id,
+        [string]$File,
+        [string]$Collection,
+        [string]$Noun
+    )
+
+    $jsonPath = Join-Path $Project "Assets\_Project\ContentData\$File"
+    if (-not (Test-Path $jsonPath)) {
+        Write-Host "No $File at $jsonPath."
+        return $null
+    }
+
+    $file = Get-Content $jsonPath -Raw | ConvertFrom-Json
+    $ids = @($file.$Collection | ForEach-Object { $_.id })
+
+    if ($ids -contains $Id) { return $Id }
+
+    Write-Host "No $Noun with id '$Id' in $File. It knows:"
+    foreach ($known in ($ids | Sort-Object)) { Write-Host "  $known" }
+    return $null
+}
+
 function Invoke-EnemyPreview {
     param([string]$Id)
 
@@ -261,16 +298,84 @@ function Invoke-EnemyPreview {
 # (camera.Render() is a silent no-op under that flag and ReadPixels returns
 # garbage, so every capture in the project self-skips there).
 #
-# PP_PREVIEW_IDS IS SET HERE AND READ IN EXACTLY ONE TEST FILE, which
-# PreviewEnvironmentLintTests enforces. The variable narrows a picture; it must
+# EVERY PP_PREVIEW_* VARIABLE IS SET HERE AND READ IN EXACTLY ONE TEST FILE,
+# which PreviewEnvironmentLintTests enforces. They narrow a picture; they must
 # never narrow a gate.
 function Invoke-EnemyCapture {
     param([string]$Id)
 
-    # graphics_tests.ps1 runs against the PRIMARY runner copy, not main -- the
-    # Editor is usually open on main and two Unity instances cannot share one
-    # project. So main's freshly built content has to get there first, which is
-    # the same mirror run_tests_parallel.ps1 does.
+    return (Invoke-PreviewCapture -Variable "PP_PREVIEW_IDS" -Value $Id -Prefix $Id)
+}
+
+# --- spell mode -------------------------------------------------------------
+#
+# Every question that could be answered wrongly here is answered in C# instead
+# (PreviewFight.ForSpell): the caster, the formation, whether the effect is one
+# a preview can honestly stand a fight up for. This script validates the id,
+# builds, and then either asks the Editor to play it or asks the capture
+# fixture to photograph it -- and prints whatever the answer was, refusal
+# included, without paraphrasing it.
+function Invoke-SpellPreview {
+    param([string]$Id)
+
+    $resolved = Resolve-ContentId -Id $Id -File "skills.json" -Collection "skills" -Noun "skill"
+    if (-not $resolved) { return 2 }
+
+    if (-not $NoBuild) {
+        if (-not (Invoke-ContentBuild)) {
+            Write-Host "content build failed -- not previewing against a tree that did not build."
+            return 1
+        }
+    }
+
+    if (-not $Launch) {
+        return (Invoke-PreviewCapture -Variable "PP_PREVIEW_SPELL" -Value $resolved -Prefix "spell_$resolved")
+    }
+
+    $timeout = Start-EditorIfNeeded
+    if ($timeout -lt 0) { return 1 }
+
+    $answer = Invoke-EditorRequest -Payload @{ action = "spell"; skillId = $resolved } -Timeout $timeout
+    Write-Host "  $($answer.State): $($answer.Message)"
+    if ($answer.State -ne "ok") { return 1 }
+    return 0
+}
+
+# The half of Invoke-EnemyPreview that is about the EDITOR rather than about
+# mobs, lifted out so -Spell does not grow its own copy of the "Unity wipes
+# Temp/ on boot, so start it and wait for the lockfile before writing the
+# request" sequence. Returns the timeout to wait with, or -1 on failure.
+function Start-EditorIfNeeded {
+    $lock = Get-UnityLockState -ProjectRoot $Project
+    [void](Clear-StaleUnityLock -State $lock)
+
+    if ($lock.Held) {
+        Write-Host "route: the Editor is open on this project."
+        return $TimeoutSeconds
+    }
+
+    Write-Host "route: no Editor on this project, so one is started and asked once it has claimed the project."
+    Write-Host "(a cold Editor boot is minutes, not seconds -- leaving it open is the fast route)"
+
+    Start-Editor
+    if (-not (Wait-ForLockfile -Seconds 300)) {
+        Write-Host "the Editor never claimed the project (no Temp\UnityLockfile within 300s)."
+        return -1
+    }
+
+    return ([Math]::Max($TimeoutSeconds, 900))
+}
+
+# Invoke-EnemyCapture's machinery, with the environment variable and the
+# filename prefix as parameters -- the sync, the fixture run and the copy-back
+# are identical for every mode and were never about enemies.
+function Invoke-PreviewCapture {
+    param(
+        [string]$Variable,
+        [string]$Value,
+        [string]$Prefix
+    )
+
     $runner = (Split-Path $Project -Parent) + "\" + (Split-Path $Project -Leaf) + "-TestRunner"
     if (-not (Test-Path $runner)) {
         Write-Host "No runner copy at $runner. Run run_tests_parallel.ps1 once to create it."
@@ -280,29 +385,27 @@ function Invoke-EnemyCapture {
     Write-Host "syncing main into the runner copy so it photographs the content you just built ..."
     robocopy "$Project\Assets" "$runner\Assets" /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
 
-    $env:PP_PREVIEW_IDS = $Id
+    Set-Item -Path "Env:$Variable" -Value $Value
 
     $out = Join-Path $Project "tools\screenshots\preview"
-    Write-Host "capturing '$Id' -- pictures land in $out"
+    Write-Host "capturing '$Value' -- pictures land in $out"
 
     & powershell -NoProfile -ExecutionPolicy Bypass `
         -File (Join-Path $PSScriptRoot "graphics_tests.ps1") `
         -Filter "PrincesPalace.PlayModeTests.PreviewCaptureTests" | Out-Host
 
-    if ($LASTEXITCODE -ne 0) { return 1 }
+    $exit = $LASTEXITCODE
 
-    # The runner writes into ITS OWN tools/screenshots. Bringing them back is
-    # what makes "the pictures are in tools/screenshots/preview" true from where
-    # the author is standing.
     $runnerOut = Join-Path $runner "tools\screenshots\preview"
     if (Test-Path $runnerOut) {
         New-Item -ItemType Directory -Force -Path $out | Out-Null
         robocopy $runnerOut $out /NFL /NDL /NJH /NJS /NP | Out-Null
     }
 
-    Get-ChildItem -Path $out -Filter "$Id*.png" -ErrorAction SilentlyContinue |
+    Get-ChildItem -Path $out -Filter "$Prefix*.png" -ErrorAction SilentlyContinue |
         ForEach-Object { Write-Host "  $($_.FullName)" }
 
+    if ($exit -ne 0) { return 1 }
     return 0
 }
 
@@ -336,6 +439,10 @@ if ($Enemy -ne "") {
     exit (Invoke-EnemyPreview -Id $Enemy)
 }
 
+if ($Spell -ne "") {
+    exit (Invoke-SpellPreview -Id $Spell)
+}
+
 if ($Build) {
     if (Invoke-ContentBuild) { exit 0 } else { exit 1 }
 }
@@ -343,4 +450,5 @@ if ($Build) {
 Write-Host "Nothing asked for. Modes:"
 Write-Host "  -Build                          regenerate Resources/Content by whichever route is available"
 Write-Host "  -Enemy <id> -Launch [-Formation lone|full]   build, then play a fight against that mob"
+Write-Host "  -Spell <id> [-Launch]           build, then cast that spell once and photograph the impact"
 exit 2

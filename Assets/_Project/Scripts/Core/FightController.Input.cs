@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using PrincesPalace.Domain.Combat;
@@ -115,6 +116,86 @@ namespace PrincesPalace
             var exit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
             exit.callback.AddListener(_ => OnEnemyUnhovered(index));
             trigger.triggers.Add(exit);
+        }
+
+        // ---- the preview's one scripted turn ---------------------------------
+        //
+        // tools/preview.ps1 -Spell / -Character wants the cast to happen
+        // WITHOUT a hand on the mouse, and to happen through the buttons a
+        // hand would use. Anything else -- calling FightSession.CastSkill
+        // directly, say -- photographs the session rather than the game: the
+        // menu chrome, the target prompt, the affordability grey and the
+        // front-rank refusal are all view-side rules that a direct call skips,
+        // and every one of them is a way a preview could be wrong while
+        // looking right.
+        //
+        // So this drives the SAME three handlers a click drives: OnVerbPressed
+        // for SKILL, OnRowPressed for the row, OnEnemyPressed to confirm a
+        // target when the skill needs one. If any of them refuses, the refusal
+        // is the session's own message and the author reads it in the log.
+        private string _forcedFirstAction;
+
+        // Set by FightBootstrap from DevForcedFirstAction. Public because the
+        // headless capture fixture is in the PlayMode assembly, which reaches
+        // internals of neither Core nor Editor.
+        public void ForceFirstAction(string skillId)
+        {
+            _forcedFirstAction = string.IsNullOrWhiteSpace(skillId) ? null : skillId;
+        }
+
+        // POLLED RATHER THAN FIRED AT Bind, because the player's turn may not
+        // be first: a monster faster than the whole party opens the fight, and
+        // a cast attempted before its beats have played is refused by CanAct
+        // and silently lost. Update is where "is it my turn yet" is already
+        // asked twice (RescueAStrandedTurn, RescueAStalledEnemyTurn), so it is
+        // where this waits too.
+        private void TryForcedFirstAction()
+        {
+            if (_forcedFirstAction == null || !CanAct) return;
+
+            string skillId = _forcedFirstAction;
+
+            // CONSUMED BEFORE THE PRESS, not after. A skill the caster cannot
+            // afford leaves OnRowPressed refusing every frame otherwise, which
+            // is a hang rather than a report.
+            _forcedFirstAction = null;
+
+            var options = SkillOptions(_session.Current);
+            int row = -1;
+            for (int i = 0; i < options.Count; i++)
+            {
+                if (options[i].Skill != null && options[i].Skill.Id == skillId) row = i;
+            }
+
+            if (row < 0)
+            {
+                _session.AppendMessage($"preview: '{skillId}' is not on this caster's kit this turn.");
+                Debug.LogWarning($"[FightController] forced first action '{skillId}' is not among the " +
+                                 $"{options.Count} option(s) for {_session.Current?.Name}: " +
+                                 string.Join(", ", options.Select(o => o.Skill?.Id)));
+                RefreshUi();
+                return;
+            }
+
+            OnVerbPressed(1);
+            OnRowPressed(row);
+
+            // Self and Party resolved inside OnRowPressed; everything else is
+            // waiting on a plate. Any living enemy will do -- ResolveDamageAll
+            // ignores which one confirmed it, and a single-target cast against
+            // the front rank is the encounter the preview built for it.
+            if (_menu.IsTargeting) OnEnemyPressed(FirstLivingEnemyIndex());
+        }
+
+        private int FirstLivingEnemyIndex()
+        {
+            var enemies = Enemies;
+            for (int i = 0; i < enemies.Count; i++)
+            {
+                if (enemies[i] != null && enemies[i].IsAlive) return i;
+            }
+
+            return 0;
         }
 
         private void OnEnemyHovered(int index)
@@ -700,6 +781,7 @@ namespace PrincesPalace
         {
             RescueAStrandedTurn();
             RescueAStalledEnemyTurn();
+            TryForcedFirstAction();
             PollGamepadNavigation();
 
             if (characterSheetPanel == null) return;

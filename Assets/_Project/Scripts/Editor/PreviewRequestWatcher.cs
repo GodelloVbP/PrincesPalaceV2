@@ -86,6 +86,12 @@ public static class PreviewRequestWatcher
         // Editor should say so.
         public string action;
         public string enemyId;
+
+        // tools/preview.ps1 -Spell. Ends in the same placeholder fight the
+        // enemy route uses; what differs is which DevForced* keys are set
+        // before Play starts.
+        public string skillId;
+
         public string formation;
         public bool launch;
     }
@@ -168,6 +174,9 @@ public static class PreviewRequestWatcher
             case "preview":
                 Preview(request);
                 return;
+            case "spell":
+                Spell(request);
+                return;
             default:
                 WriteResult(request.requestId, "failed",
                     $"unknown action '{request.action}' -- this Editor's PreviewRequestWatcher does not implement it");
@@ -222,6 +231,51 @@ public static class PreviewRequestWatcher
                 "showcasing its abilities in authored order");
 
             QuickFightMenu.StartPlaceholderFight(id);
+        }
+        catch (Exception e)
+        {
+            Debug.LogException(e);
+            WriteResult(request.requestId, "failed", e.Message);
+        }
+    }
+
+    // tools/preview.ps1 -Spell <id> -Launch.
+    //
+    // THE PLAN IS MADE BEFORE PLAY, in this Editor, so a refusal ("no
+    // character in content carries resource X", "Ward is not something the
+    // preview can stand a fight up for") reaches preview.ps1 as a `failed`
+    // result the author reads on their own terminal -- rather than as a
+    // warning buried in a console they would have to go and open, behind a
+    // Play mode they did not want to enter. PreviewFight.ForSpell touches
+    // nothing; it only answers.
+    private static void Spell(Request request)
+    {
+        string id = request.skillId;
+        if (string.IsNullOrEmpty(id))
+        {
+            WriteResult(request.requestId, "failed", "no skillId in the request");
+            return;
+        }
+
+        try
+        {
+            var plan = PreviewFight.ForSpell(id);
+            if (!plan.Ok)
+            {
+                WriteResult(request.requestId, "failed", plan.Refusal);
+                return;
+            }
+
+            FightBootstrap.DevForcedSkillId = id;
+            FightBootstrap.DevForcedFirstAction = id;
+            FightBootstrap.DevForcedFormation = plan.Formation;
+
+            WriteResult(request.requestId, "ok", "entering Play mode: " + PreviewFight.Describe(plan));
+
+            // No enemy id: the spell preview is about the caster, and the
+            // placeholder's own art-filtered pick is a perfectly good thing to
+            // aim at. See QuickFightMenu's own note on the empty id.
+            QuickFightMenu.StartPlaceholderFight(null);
         }
         catch (Exception e)
         {

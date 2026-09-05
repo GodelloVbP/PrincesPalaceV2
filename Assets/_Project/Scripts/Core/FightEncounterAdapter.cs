@@ -397,7 +397,21 @@ namespace PrincesPalace
             // When present, every party member is built from their EFFECTIVE
             // figures -- equipment, talents, upgrade levels and all -- instead
             // of from the bare content definition.
-            IReadOnlyList<Character> partyCharacters = null)
+            IReadOnlyList<Character> partyCharacters = null,
+
+            // PREVIEW ONLY, and it exists so tools/preview.ps1 -Spell can show
+            // a skill nobody has unlocked, bought the book for, or has the
+            // level to reach.
+            //
+            // Appended to the FIRST party member's kit and to nothing else.
+            // The alternative -- editing the skills.json row, or writing an
+            // unlock onto a save -- would make looking at a spell a thing that
+            // changes the game, and an author who previewed a level-20 spell
+            // would find their level-1 character still holding it afterwards.
+            // A kit is built fresh for each fight and dies with it, which is
+            // exactly the lifetime a preview wants. Null on every other path,
+            // including the whole of the real game.
+            IReadOnlyList<string> previewExtraSkillIds = null)
         {
             var party = new List<CombatantState>();
             var kits = new List<PlayerKit>();
@@ -434,6 +448,15 @@ namespace PrincesPalace
                 {
                     party.Add(ToCombatant(definition, modifiers));
                     kits.Add(KitFor(definition, relics));
+                }
+
+                // The first member only -- see previewExtraSkillIds' own note.
+                // Done here rather than inside either KitFor overload because
+                // both would need it and neither knows whether it is building
+                // the caster or a squad-mate.
+                if (kits.Count == 1 && previewExtraSkillIds != null && previewExtraSkillIds.Count > 0)
+                {
+                    kits[0] = WithPreviewSkills(kits[0], previewExtraSkillIds);
                 }
 
                 art.Add(definition.data.BattleSpritePath);
@@ -536,6 +559,33 @@ namespace PrincesPalace
             }
 
             return new EnemyKit(source, isElite, pool);
+        }
+
+        // A copy of a kit with extra skills on the end. PlayerKit's fields are
+        // readonly by design -- a kit describes what a combatant walked into
+        // the fight with and must not shift under them mid-round -- so the
+        // preview builds a new one rather than reaching into the old.
+        //
+        // Appended rather than merged into the sort: a preview exists to show
+        // ONE skill, and having it land wherever unlockLevel/sortOrder happen
+        // to put it would leave the author counting rows.
+        private static PlayerKit WithPreviewSkills(PlayerKit kit, IReadOnlyList<string> skillIds)
+        {
+            var skills = kit.Skills.ToList();
+
+            foreach (string id in skillIds)
+            {
+                if (string.IsNullOrWhiteSpace(id)) continue;
+                if (skills.Any(s => s != null && s.Id == id)) continue;
+
+                var definition = ContentDatabase.Skills.FirstOrDefault(s => s != null && s.id == id);
+                if (definition == null) continue;
+
+                skills.Add(Resolve(definition));
+            }
+
+            return new PlayerKit(kit.Id, kit.Role, skills, kit.Relics, kit.AttackType,
+                kit.Level, kit.SkillPowerMultiplier);
         }
 
         private static PlayerKit KitFor(CharacterDefinition definition,

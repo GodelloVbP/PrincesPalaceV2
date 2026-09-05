@@ -57,8 +57,19 @@ public static class QuickFightMenu
         }
 
         EditorSceneManager.OpenScene(ScreenRegistry.FightScene, OpenSceneMode.Single);
-        FightBootstrap.DevForcedEnemyId = enemyId;
-        LastPreviewedEnemyId = enemyId;
+
+        // AN EMPTY ID IS A REAL ASK, not a missing argument. preview.ps1
+        // -Spell and -Character want the Fight scene in Play with whatever
+        // monsters the placeholder normally fields -- they are looking at the
+        // caster, not at what is being hit -- and forcing an id here would
+        // also overwrite "the last mob I was working on" with something the
+        // author never named.
+        if (!string.IsNullOrEmpty(enemyId))
+        {
+            FightBootstrap.DevForcedEnemyId = enemyId;
+            LastPreviewedEnemyId = enemyId;
+        }
+
         EditorApplication.isPlaying = true;
     }
 }

@@ -7,9 +7,9 @@ namespace PrincesPalace.Domain.Tests
 {
     // A GATE THAT DEPENDS ON THE SHELL IT WAS STARTED FROM IS NOT A GATE.
     //
-    // tools/preview.ps1 narrows its capture fixture to one monster by setting
-    // an environment variable (the name is assembled in `Variable` below --
-    // this file cannot spell it, for the reason given there). That is fine for
+    // tools/preview.ps1 narrows its capture fixture to one id by setting an
+    // environment variable (the prefix is assembled in `Prefix` below -- this
+    // file cannot spell it, for the reason given there). That is fine for
     // a picture nobody gates on, and it would be poison anywhere else: a
     // verification fixture reading it would quietly
     // test a subset on the machine where the variable happened to be exported,
@@ -33,7 +33,17 @@ namespace PrincesPalace.Domain.Tests
         // exemptions", and an exemption keyed on a filename is one a second
         // fixture can be renamed into. Concatenated, the scan can stay honest
         // and cover every file including this one.
-        private static readonly string Variable = "PP_PREVIEW" + "_IDS";
+        //
+        // THE PREFIX, NOT ONE NAME -- and the same split applies to it, so
+        // this comment cannot spell that either.
+        //
+        // The rule used to name the enemy mode's variable exactly, which held
+        // for as long as the preview had one mode. -Spell and -Character each
+        // brought their own, and a rule naming only the first would have let
+        // the second be copied into a gate on the day it was added: the
+        // precise failure this file exists to prevent, arriving through the
+        // door the narrow version left open.
+        private static readonly string Prefix = "PP_" + "PREVIEW_";
         private const string OwningFile = "PreviewCaptureTests.cs";
 
         private static string TestsRoot()
@@ -58,16 +68,16 @@ namespace PrincesPalace.Domain.Tests
                 "would pass however many fixtures read the variable.");
 
             var mentions = all
-                .Where(f => File.ReadAllText(f).Contains(Variable, StringComparison.Ordinal))
+                .Where(f => File.ReadAllText(f).Contains(Prefix, StringComparison.Ordinal))
                 .Select(Path.GetFileName)
                 .OrderBy(n => n, StringComparer.Ordinal)
                 .ToList();
 
             CollectionAssert.AreEqual(new[] { OwningFile }, mentions,
-                $"{Variable} is what tools/preview.ps1 uses to narrow its capture to one monster. Exactly one " +
-                $"test file may read it, and that file is {OwningFile}, which is [Explicit] and never runs in " +
-                "the gate. Any other fixture reading it would test a different thing depending on the shell it " +
-                "was started from -- green here, and quietly covering less. Files naming it: " +
+                $"{Prefix}* is how tools/preview.ps1 narrows its capture to one id. Exactly one test file may " +
+                $"read any of those variables, and that file is {OwningFile}, which is [Explicit] and never runs " +
+                "in the gate. Any other fixture reading one would test a different thing depending on the shell " +
+                "it was started from -- green here, and quietly covering less. Files naming one: " +
                 string.Join(", ", mentions));
         }
     }

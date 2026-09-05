@@ -68,10 +68,27 @@ namespace PrincesPalace
         //   DevForcedEnemyScript -- hands the session an EnemyShowcase, which
         //     makes the mob take its authored abilities in order instead of
         //     rolling. See that class's header.
+        //   DevForcedSkillId -- tools/preview.ps1 -Spell. The skill is
+        //     appended to the preview's own kit (FightEncounterAdapter.Build's
+        //     previewExtraSkillIds), so unlock level and book ownership are
+        //     bypassed WITHOUT the content record or a save being touched, and
+        //     PreviewFight decides who casts it and what the stage has to look
+        //     like for the cast to be visible.
+        //   DevForcedSquad -- tools/preview.ps1 -Character. A comma-separated
+        //     party for this one fight, in place of the art-filtered pick
+        //     below.
+        //   DevForcedFirstAction -- a skill id the player's first turn casts
+        //     by itself, through the same buttons a hand would press
+        //     (FightController.ForceFirstAction). Separate from
+        //     DevForcedSkillId because character mode sets it to a skill the
+        //     kit already has, and spell mode sets both to the same id.
 #if UNITY_EDITOR
         private const string DevForcedEnemyIdKey = "PrincesPalace.Dev.ForcedEnemyId";
         private const string DevForcedFormationKey = "PrincesPalace.Dev.ForcedFormation";
         private const string DevForcedEnemyScriptKey = "PrincesPalace.Dev.ForcedEnemyScript";
+        private const string DevForcedSkillIdKey = "PrincesPalace.Dev.ForcedSkillId";
+        private const string DevForcedSquadKey = "PrincesPalace.Dev.ForcedSquad";
+        private const string DevForcedFirstActionKey = "PrincesPalace.Dev.ForcedFirstAction";
 
         internal static string DevForcedEnemyId
         {
@@ -90,10 +107,31 @@ namespace PrincesPalace
             get => UnityEditor.SessionState.GetBool(DevForcedEnemyScriptKey, false);
             set => UnityEditor.SessionState.SetBool(DevForcedEnemyScriptKey, value);
         }
+
+        internal static string DevForcedSkillId
+        {
+            get => UnityEditor.SessionState.GetString(DevForcedSkillIdKey, "");
+            set => UnityEditor.SessionState.SetString(DevForcedSkillIdKey, value ?? "");
+        }
+
+        internal static string DevForcedSquad
+        {
+            get => UnityEditor.SessionState.GetString(DevForcedSquadKey, "");
+            set => UnityEditor.SessionState.SetString(DevForcedSquadKey, value ?? "");
+        }
+
+        internal static string DevForcedFirstAction
+        {
+            get => UnityEditor.SessionState.GetString(DevForcedFirstActionKey, "");
+            set => UnityEditor.SessionState.SetString(DevForcedFirstActionKey, value ?? "");
+        }
 #else
         internal static string DevForcedEnemyId;
         internal static string DevForcedFormation;
         internal static bool DevForcedEnemyScript;
+        internal static string DevForcedSkillId;
+        internal static string DevForcedSquad;
+        internal static string DevForcedFirstAction;
 #endif
 
         // How many copies of a forced mob "-Formation full" fields. The stage's
@@ -152,6 +190,14 @@ namespace PrincesPalace
             fight.ItemUsed += OnItemUsed;
             fight.BindPartyArt(built.Party, built.PartyArt);
 
+            // AFTER Bind, because the controller resets its menu inside it and
+            // a queued action set beforehand would be thrown away with the rest
+            // of the previous fight's state. Consumed on read, like every other
+            // DevForced key -- one preview, one fight.
+            string firstAction = DevForcedFirstAction;
+            DevForcedFirstAction = null;
+            if (!string.IsNullOrEmpty(firstAction)) fight.ForceFirstAction(firstAction);
+
             // Banked the moment the last beat has PLAYED, not when the player
             // dismisses the screen.
             //
@@ -199,13 +245,11 @@ namespace PrincesPalace
             }
 
             // Same rule for the monsters, and for the same reason: three of the
-            // roster have sheets and the rest do not.
-            //
-            // Ordered by sortOrder ONLY as a tie-break. It is unset across the
-            // whole of enemies.json today, so every value is 0 and this is really
-            // Resources.LoadAll's incidental order -- which is exactly the trap
-            // CLAUDE.md gotcha 4 names. Filtering on ART first is what makes the
-            // selection stable regardless, because only three qualify.
+            // roster have sheets and the rest do not. That pick moved to
+            // PreviewFight.EnemiesWithArt, which is the one place both this
+            // route and the headless capture read it from -- a photograph of a
+            // different formation than the one -Launch fields is evidence
+            // about nothing.
             //
             // DevForcedEnemyId overrides all of that with exactly one named
             // enemy -- see its own field comment. Consumed here, not left for
@@ -214,13 +258,52 @@ namespace PrincesPalace
             string forcedId = DevForcedEnemyId;
             string formation = DevForcedFormation;
             bool showcase = DevForcedEnemyScript;
+            string forcedSkill = DevForcedSkillId;
+            string forcedSquad = DevForcedSquad;
 
-            // ALL THREE CONSUMED TOGETHER, and before anything can throw. They
+            // ALL FIVE CONSUMED TOGETHER, and before anything can throw. They
             // are one preview's opinion about one fight; a leftover key is a
             // scene reload later showing a fight nobody asked for.
             DevForcedEnemyId = null;
             DevForcedFormation = null;
             DevForcedEnemyScript = false;
+            DevForcedSkillId = null;
+            DevForcedSquad = null;
+
+            // THE SPELL PREVIEW DECIDES THE REST OF THE FIGHT, not the author.
+            // Who can cast it, how many enemies it needs to be visible against,
+            // whether the party has to be hurt first -- all of it falls out of
+            // the skill, so PreviewFight answers once and both this path and
+            // the headless capture read the same answer.
+            List<string> previewSkills = null;
+            PreviewFight.Plan plan = null;
+
+            if (!string.IsNullOrEmpty(forcedSkill))
+            {
+                plan = PreviewFight.ForSpell(forcedSkill);
+                Debug.Log("[FightBootstrap] spell preview: " + PreviewFight.Describe(plan));
+
+                // REFUSED MEANS REFUSED. Building the fight anyway would put a
+                // stage in front of the author that does not show what they
+                // asked for -- and they would believe it, because it looks
+                // exactly like one that does.
+                if (!plan.Ok) return null;
+
+                previewSkills = new List<string> { forcedSkill };
+                party = new List<string> { plan.CasterId };
+                if (string.IsNullOrEmpty(formation)) formation = plan.Formation;
+            }
+            else if (!string.IsNullOrEmpty(forcedSquad))
+            {
+                var squad = forcedSquad.Split(',')
+                    .Select(id => id.Trim())
+                    .Where(id => id.Length > 0 && ContentDatabase.Characters.Any(c => c != null && c.id == id))
+                    .ToList();
+
+                if (squad.Count > 0) party = squad;
+                else Debug.LogWarning($"[FightBootstrap] forced squad '{forcedSquad}' names nobody in content; " +
+                                      "the usual placeholder party stands instead.");
+            }
 
             if (!string.IsNullOrEmpty(forcedId) && ContentDatabase.Enemies.Any(e => e.id == forcedId))
             {
@@ -229,17 +312,13 @@ namespace PrincesPalace
             }
             else
             {
-                enemies = ContentDatabase.Enemies
-                    .Where(HasArt)
-                    .OrderBy(e => e.SortOrder)
-                    .Take(enemyCount)
-                    .Select(e => e.id)
-                    .ToList();
-
-                if (enemies.Count == 0)
-                {
-                    enemies = ContentDatabase.Enemies.Take(enemyCount).Select(e => e.id).ToList();
-                }
+                // THE FORMATION REACHES THIS BRANCH TOO, and it has to: a
+                // spell preview forces no enemy id at all (it does not care
+                // which monster it lands on) but a Summon still needs a free
+                // slot and an all-target cast still needs more than one thing
+                // to hit. Empty formation -- every non-preview fight -- keeps
+                // the authored enemyCount.
+                enemies = PreviewFight.EnemiesWithArt(PreviewFight.EnemyCountFor(formation, enemyCount));
             }
 
             if (party.Count == 0 || enemies.Count == 0) return null;
@@ -261,12 +340,21 @@ namespace PrincesPalace
             // it goes.
             var built = FightEncounterAdapter.Build(party, enemies, new SeededRandom((ulong)seed),
                 relicIds: null,
-                depthStep: 0);
+                depthStep: 0,
+                previewExtraSkillIds: previewSkills);
 
             // AFTER the build and only for a preview. The session is the right
             // owner (the showcase has to survive every turn of one fight and
             // die with it), and the adapter is deliberately not told a preview
             // exists.
+            // AFTER the build, because the preview's accommodations are made
+            // to the CombatantState the build produced -- see PreviewFight.
+            if (plan != null && built != null)
+            {
+                PreviewFight.Prepare(built, plan);
+                Debug.Log("[FightBootstrap] spell preview, prepared: " + PreviewFight.Describe(plan));
+            }
+
             if (showcase && built != null)
             {
                 built.Session.Showcase = new EnemyShowcase(Debug.Log);
@@ -280,8 +368,6 @@ namespace PrincesPalace
         private static bool HasArt(CharacterDefinition definition) =>
             !string.IsNullOrWhiteSpace(definition.data.BattleSpritePath);
 
-        private static bool HasArt(EnemyDefinition definition) =>
-            !string.IsNullOrWhiteSpace(definition.data.SpritePath);
     
         // Which backdrop and which reward multiplier. Reads the ROOM, so an
         // elite room is elite everywhere at once rather than in each place that

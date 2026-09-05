@@ -1,0 +1,337 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using PrincesPalace.Content;
+using PrincesPalace.Domain.Combat;
+using PrincesPalace.Domain.Combat.Session;
+using PrincesPalace.Domain.Content;
+using PrincesPalace.Domain.Stats;
+
+namespace PrincesPalace
+{
+    // WHAT tools/preview.ps1 -Spell AND -Character DECIDE, decided once.
+    //
+    // Both routes into a preview -- the Editor playing the fight (-Launch,
+    // through PreviewRequestWatcher and FightBootstrap) and the headless one
+    // photographing it (PreviewCaptureTests) -- have to set the fight up the
+    // same way, or the picture is evidence about something the author cannot
+    // reproduce by pressing play. So the setup lives here and both call it,
+    // rather than each growing its own copy of "who casts this and what has
+    // to be true before they can".
+    //
+    // THE POSTURE, and it is the whole design: an unsupported setup is
+    // REPORTED BY NAME AND REFUSED, never approximated. A preview that
+    // quietly substitutes a different caster, a different target count or a
+    // different effect is worse than no preview, because the author looks at
+    // it and believes it. Every accommodation this does make (mana filled, an
+    // ability requirement raised, a wounded party) is listed in Notes and
+    // printed, so nothing about the fight on screen is silently untrue.
+    //
+    // NOTHING HERE TOUCHES CONTENT OR A SAVE. The forced skill is appended to
+    // the kit this one fight is built with; skills.json is not edited, the
+    // asset is not edited, SaveSystem is never opened. See FightBootstrap's
+    // DevForced* block for the session-state half.
+    public static class PreviewFight
+    {
+        // Which SkillEffects the preview knows how to stand a fight up for.
+        //
+        // Deliberately a short list, and deliberately not "everything the
+        // session can resolve". Each member here has a stage arrangement that
+        // makes its cast visible -- a target to hit, a wound to heal, a slot
+        // to summon into. The rest (Ward, Shatter, the three Gifts, Provoke,
+        // RestorePartyMana) need a talent tree, an existing ward or a drained
+        // party before they show anything at all, and faking one would make
+        // the picture a picture of the fake.
+        private static readonly SkillEffect[] Supported =
+        {
+            SkillEffect.DamageSingle,
+            SkillEffect.DamageAll,
+            SkillEffect.HealSelf,
+            SkillEffect.HealParty,
+            SkillEffect.BuffParty,
+            SkillEffect.Summon,
+            SkillEffect.Transform,
+        };
+
+        // What one preview fight is, once every question about it is settled.
+        // A plan with a Refusal is a plan that must not be built: the caller
+        // prints the reason and stops.
+        public sealed class Plan
+        {
+            // Non-null means "do not build this fight". The reason names the
+            // id or the effect, so the author reads what is wrong rather than
+            // that something is.
+            public string Refusal;
+
+            public ResolvedSkill Skill;
+
+            // The character definition id who casts it.
+            public string CasterId;
+
+            // "lone" or "full", in FightBootstrap.DevForcedFormation's own
+            // vocabulary. Not a preference: Summon needs a free slot and
+            // DamageAll needs more than one thing to hit, so the formation is
+            // derived from the effect rather than left to the author to get
+            // right.
+            public string Formation = "lone";
+
+            // HealSelf/HealParty need something to heal. Half, not a sliver:
+            // a heal capped by missing health shows its real number, and a
+            // party at 1hp would make every heal look identical.
+            public bool PartyStartsWounded;
+
+            // Every accommodation made, in the author's words. Printed by
+            // whoever ran the preview.
+            public readonly List<string> Notes = new List<string>();
+
+            public bool Ok => Refusal == null;
+        }
+
+        // The fraction of max health HealSelf/HealParty previews open on.
+        private const float WoundedFraction = 0.5f;
+
+        // ---- the spell plan --------------------------------------------------
+
+        public static Plan ForSpell(string skillId)
+        {
+            var plan = new Plan();
+
+            var definition = ContentDatabase.Skills.FirstOrDefault(s => s != null && s.id == skillId);
+            if (definition == null)
+            {
+                plan.Refusal = $"no skill '{skillId}' in the content database -- rebuild content, " +
+                               "or check the id against ContentData/skills.json";
+                return plan;
+            }
+
+            var skill = definition.data;
+            plan.Skill = skill;
+
+            if (!Supported.Contains(skill.Effect))
+            {
+                plan.Refusal =
+                    $"'{skillId}' resolves as {skill.Effect}, which the spell preview does not know how to " +
+                    "stand a fight up for. It needs something the preview cannot fabricate honestly (a talent " +
+                    "tree, an existing ward, a drained party). Supported: " +
+                    string.Join(", ", Supported.Select(e => e.ToString())) + ". " +
+                    "Cast it from a real run instead of being shown an approximation of it.";
+                return plan;
+            }
+
+            plan.CasterId = ChooseCaster(skill, plan);
+            if (plan.CasterId == null) return plan;
+
+            // THE FORMATION IS THE EFFECT'S, not the author's. A Summon into a
+            // full stage has no slot and reports a skipped ability; DamageAll
+            // against one enemy is indistinguishable from DamageSingle.
+            if (skill.Effect == SkillEffect.Summon)
+            {
+                plan.Formation = "lone";
+                plan.Notes.Add("one enemy fielded, so the summon has a slot to arrive in");
+            }
+            else if (skill.Effect == SkillEffect.DamageAll || skill.Targeting == SkillTargeting.AllEnemies)
+            {
+                plan.Formation = "full";
+                plan.Notes.Add("three enemies fielded, so an all-target cast has more than one thing to hit");
+            }
+
+            if (skill.Effect == SkillEffect.HealSelf || skill.Effect == SkillEffect.HealParty)
+            {
+                plan.PartyStartsWounded = true;
+                plan.Notes.Add("the party opens at half health, so a heal has something to restore");
+            }
+
+            if (definition.data.UnlockLevel > 1)
+            {
+                plan.Notes.Add($"unlock level {definition.data.UnlockLevel} bypassed for this fight only");
+            }
+
+            if (definition.data.BookOnly)
+            {
+                plan.Notes.Add("book ownership bypassed for this fight only");
+            }
+
+            return plan;
+        }
+
+        // WHO CASTS IT, in the order the author would guess.
+        //
+        // 1. The character the skill is authored against. Anything else would
+        //    be a lie about whose ability this is.
+        // 2. Failing that -- an unowned or book skill -- whoever in the roster
+        //    can actually PAY for it. A skill that spends a signature resource
+        //    is uncastable by a character who has none, and handing it to one
+        //    anyway produces a fight where the row is permanently greyed and
+        //    the author is left guessing why.
+        // 3. Failing that, the roster lead with battle art, because the point
+        //    of the exercise is to look at something.
+        private static string ChooseCaster(ResolvedSkill skill, Plan plan)
+        {
+            if (!string.IsNullOrWhiteSpace(skill.CharacterId))
+            {
+                var owner = ContentDatabase.Characters.FirstOrDefault(c => c != null && c.id == skill.CharacterId);
+                if (owner != null) return owner.id;
+
+                plan.Notes.Add($"'{skill.CharacterId}' is not in the roster, so a stand-in casts it");
+            }
+
+            if (skill.CostsResource)
+            {
+                // WHICH resource: the one the authored owner carries, when
+                // there is an authored owner to ask. A skill costs "resource"
+                // in the abstract -- ResolvedSkill has a cost and no id, since
+                // a character has exactly one -- so the only way to name the
+                // one it means is through whoever it belongs to.
+                string wanted = SignatureIdOf(skill.CharacterId);
+
+                var payer = ContentDatabase.Characters.FirstOrDefault(
+                    c => c != null && c.data.HasSignatureResource &&
+                         (wanted == null || c.data.SignatureId == wanted));
+
+                if (payer != null)
+                {
+                    plan.Notes.Add($"cast by '{payer.id}', who carries the " +
+                                   $"{payer.data.SignatureDisplayName ?? payer.data.SignatureId} it spends");
+                    return payer.id;
+                }
+
+                plan.Refusal = $"no character in content carries resource {wanted ?? "(any signature resource)"}, " +
+                               $"which '{skill.Id}' spends ({skill.ResourceCost} " +
+                               (skill.SpendsAllResource ? "and all of it" : "point(s)") + "). " +
+                               "Author a character with that signature resource, or preview a skill that does " +
+                               "not spend one -- a caster who cannot pay shows a greyed row and nothing else.";
+                return null;
+            }
+
+            var lead = ContentDatabase.Characters.FirstOrDefault(
+                           c => c != null && !string.IsNullOrWhiteSpace(c.data.BattleSpritePath))
+                       ?? ContentDatabase.Characters.FirstOrDefault();
+
+            if (lead == null)
+            {
+                plan.Refusal = "there are no characters in the content database at all, so nothing can cast it.";
+                return null;
+            }
+
+            if (lead.id != skill.CharacterId)
+            {
+                plan.Notes.Add($"cast by the roster lead '{lead.id}' -- the skill names no owner in the roster");
+            }
+
+            return lead.id;
+        }
+
+        private static string SignatureIdOf(string characterId)
+        {
+            if (string.IsNullOrWhiteSpace(characterId)) return null;
+            var definition = ContentDatabase.Characters.FirstOrDefault(c => c != null && c.id == characterId);
+            return definition != null && definition.data.HasSignatureResource ? definition.data.SignatureId : null;
+        }
+
+        // WHO IS ON THE OTHER SIDE. Art-filtered, because a preview exists to
+        // be looked at and a party of fallback plates defeats it; ordered by
+        // sortOrder only as a tie-break, exactly as FightBootstrap's own pick
+        // always did.
+        //
+        // Shared rather than copied so the headless capture and the Editor
+        // route field the SAME monsters. A picture of a fight the author
+        // cannot reproduce by pressing play is not evidence about anything.
+        public static List<string> EnemiesWithArt(int count)
+        {
+            var withArt = ContentDatabase.Enemies
+                .Where(e => e != null && !string.IsNullOrWhiteSpace(e.data.SpritePath))
+                .OrderBy(e => e.SortOrder)
+                .Take(count)
+                .Select(e => e.id)
+                .ToList();
+
+            if (withArt.Count > 0) return withArt;
+
+            return ContentDatabase.Enemies.Take(count).Select(e => e.id).ToList();
+        }
+
+        // How many of them a formation means. FightBootstrap's own vocabulary,
+        // read here so "lone" cannot come to mean one thing on one route and
+        // something else on the other.
+        public static int EnemyCountFor(string formation, int fallback) =>
+            formation == "lone" ? 1 : fallback;
+
+        // ---- standing the fight up -------------------------------------------
+
+        // Everything that has to be true of the built fight before the cast is
+        // worth photographing, applied to the PREVIEW'S OWN CombatantState --
+        // never to a record, an asset or a save.
+        //
+        // Cooldowns need no clearing here and that is worth saying rather than
+        // leaving as an absence: a FightSession opens with an empty cooldown
+        // table, so "cooldowns start clear" is already true of every fight and
+        // a line zeroing them would be a line describing nothing.
+        public static void Prepare(FightEncounterAdapter.BuiltFight built, Plan plan)
+        {
+            if (built?.Session == null || plan == null || !plan.Ok) return;
+
+            var caster = built.Session.Encounter.LivingPlayerParty.FirstOrDefault()
+                         ?? built.Party?.FirstOrDefault();
+            if (caster == null) return;
+
+            // MANA AND RESOURCE FULL. A preview that opens on an unaffordable
+            // row photographs a greyed button, and the author reads it as the
+            // spell being broken rather than the caster being poor.
+            caster.CurrentMana = caster.MaxMana;
+            if (caster.Signature != null)
+            {
+                caster.Signature.Current = caster.Signature.Max;
+                plan.Notes.Add($"{caster.Signature.DisplayName} filled to " +
+                               $"{caster.Signature.Max} for the cast");
+            }
+
+            // REQUIREMENTS WAIVED, ONE SCORE AT A TIME AND ONLY THE UNMET ONES.
+            //
+            // The alternative -- a blanket high block, or a session-wide
+            // "ignore requirements" flag -- would change the damage the popup
+            // shows, because ability scores feed the scaling the cast rides.
+            // Raising exactly the scores the skill demands, to exactly what it
+            // demands, is the smallest lie that lets the row be pressed, and
+            // every point of it is named below.
+            var required = RequirementCurve.Apply(plan.Skill.Requirements);
+            if (!caster.AbilityScores.Meets(required))
+            {
+                var raised = new List<string>();
+                var scores = caster.AbilityScores;
+
+                foreach (AbilityScore score in Domain.Stats.AbilityScores.All)
+                {
+                    if (scores[score] >= required[score]) continue;
+                    raised.Add($"{score} {scores[score]}->{required[score]}");
+                    scores = scores.With(score, required[score]);
+                }
+
+                caster.AbilityScores = scores;
+                plan.Notes.Add("ability requirements waived for the preview cast: " + string.Join(", ", raised) +
+                               " (this raises the scores the cast scales on, so the damage number is the " +
+                               "waived one, not what a real caster would roll)");
+            }
+
+            if (plan.PartyStartsWounded)
+            {
+                foreach (var member in built.Session.Encounter.LivingPlayerParty)
+                {
+                    member.CurrentHealth = Math.Max(1, (int)(member.MaxHealth * WoundedFraction));
+                }
+            }
+        }
+
+        // The one line the author reads back. Kept here rather than at each
+        // call site so the Editor console and the capture log say the same
+        // thing about the same fight.
+        public static string Describe(Plan plan)
+        {
+            if (plan == null) return "no preview plan";
+            if (!plan.Ok) return "REFUSED: " + plan.Refusal;
+
+            string notes = plan.Notes.Count == 0 ? "nothing waived" : string.Join("; ", plan.Notes);
+            return $"'{plan.Skill.Id}' ({plan.Skill.Effect}) cast by '{plan.CasterId}' " +
+                   $"against a {plan.Formation} formation -- {notes}";
+        }
+    }
+}
