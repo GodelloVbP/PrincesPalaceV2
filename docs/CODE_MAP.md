@@ -16,14 +16,12 @@ doc update-rules index.
 Each screen is: a tree in `Domain/UiKit/Screens/` that declares it, a
 controller (+ its own parts, for Fight), its tests, and its content data
 (where applicable). Wiring for every screen goes through `ScreenRegistry.cs`
-(see "The UI construction layer" below) — the `Run Map` row still names v1's
-per-screen `SceneBuilder.*.cs` files, which is a known, deliberately
-unrepaired staleness (see the note further down this file).
+(see "The UI construction layer" below).
 
 | Screen | Screen tree | Controller | Content |
 |---|---|---|---|
 | Main Menu / Save Slots | `Domain/UiKit/Screens/MainMenuScreen.cs` + `MainMenuAmbience.cs` | `MainMenuController.cs`, `SaveSlotController.cs` | `characters.json` |
-| Run Map | `SceneBuilder/SceneBuilder.Map.cs` | `DescentMapView.cs`, `MapController` (see `GameplayManager.cs`) | `enemies.json` (room pools) |
+| Run Map | `Domain/UiKit/Screens/MapScreen.cs` | `MapController.cs` + `MapController.Walk.cs` | `enemies.json` (room pools) |
 | Fight (combat) | `Domain/UiKit/Screens/FightScreen.cs` | `FightController.cs` (root) + its 4 parts, see below | `skills.json`, `spells.json`, `enemies.json`, `weapons.json` |
 | Rewards / Item Choice ("The Reckoning") | `Domain/UiKit/Screens/ReckoningScreen.cs` (wired as `fight.reckoning` inside the Fight scene via `ScreenRegistry.cs`) | `ReckoningController.cs` | `items.json`, `itemsets.json` |
 | Character Dossier (sheet + bag + paperdoll) | `Domain/UiKit/Screens/CharacterDossierScreen.cs` (wired as a System Menu tab via `ScreenRegistry.cs`) | `CharacterDossierController.cs` | `characters.json`, `items.json` |
@@ -112,7 +110,7 @@ EditMode-testable):
 | Folder | Covers |
 |---|---|
 | `Audio/` | Adaptive music: `MusicIntensity` (the four tiers), the `music_layers.json` raw shapes and `MusicLayerResolver`, the resolved `MusicLayerSet`/`MusicLayerLibrary`, and `MusicClock` (bar-boundary arithmetic) |
-| `Combat/` | `CombatMath` (armour is diminishing returns via `Mitigate`, not a subtraction — see its header for the floor-one-boss-took-130-turns bug this replaced), `CombatEncounter`, `CombatantState`, damage/effectiveness formulas, plus the talent-rework additions: `TalentEffect` (the closed rule vocabulary a talent can grant), `TalentEffectSet` (a character's rules, flattened once per fight) and `Transformation`/`TransformGrant` (Black Ram Mode); the balance-pass status/gate primitives `Marks` (spend-on-a-later-hit debuff), `Fear` (Stunned+Vulnerable for a fixed duration), `FallingOffStacks` (a stack pile where every stack carries its own expiry), `Session/CombatLocks` (a once-per-X gate keyed by an arbitrary string) and `Session/ConvergenceGate` (whether a relic wanting "a party member has a convergence ability" should be offered); `Session/FightSession.BalanceRelics.cs`/`.BalanceRelics2.cs` (the two balance passes' own relics' code) |
+| `Combat/` | `CombatMath` (armour is diminishing returns via `Mitigate`, not a subtraction — see its header for the floor-one-boss-took-130-turns bug this replaced), `CombatEncounter`, `CombatantState`, damage/effectiveness formulas, plus the talent-rework additions: `TalentEffect` (the closed rule vocabulary a talent can grant), `TalentEffectSet` (a character's rules, flattened once per fight) and `Transformation`/`TransformGrant` (Black Ram Mode); the balance-pass status/gate primitives `Marks` (spend-on-a-later-hit debuff), `Fear` (Stunned+Vulnerable for a fixed duration), `FallingOffStacks` (a stack pile where every stack carries its own expiry), `Session/CombatLocks` (a once-per-X gate keyed by an arbitrary string) and `Session/ConvergenceGate` (whether a relic wanting "a party member has a convergence ability" should be offered); `Session/FightSession.RelicMechanics.cs` (the non-numeric relic mechanics from both balance passes) |
 | `Content/` | Raw/resolved content shapes + `*EntryResolver`s (validation) for every JSON-authored content type, plus the content enums they parse (`CharacterRole`, `RelicEffect`) |
 | `Dungeon/` | `DifficultyCurve`, room/map generation logic |
 | `Economy/` | `Wallet`, `CurrencyType` |
@@ -628,12 +626,6 @@ Party HP persists in `RunSnapshot.currentHealth`, written by
 `RunEncounter.WriteBackHealth` on the way out of every fight and read by
 `ApplyStartingHealth` on the way into the next. Nothing wrote it before; every
 room opened at full health, which also left Rest with nothing to restore.
-
-> The screen table at the top of this file still names v1's
-> `SceneBuilder.Map.cs`, `DescentMapView.cs` and `GameplayManager.cs`, none of
-> which exist in v2 -- screens are declared in `Domain/UiKit/Screens/` and wired
-> in `ScreenRegistry.cs`. Recorded rather than rewritten here because it is a
-> whole-table job, not a line.
 
 **Frame stepping** closes the last gap. A beat now walks its actor through the
 sheet: frames `[0, impact)` before the blow, `[impact, count)` after, both at the

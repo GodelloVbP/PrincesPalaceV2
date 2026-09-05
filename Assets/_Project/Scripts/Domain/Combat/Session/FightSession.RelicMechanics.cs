@@ -3,17 +3,237 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Combat.Session
 {
-    // The second balance pass's own relics -- Ice Fingernail, Loaded Dice,
-    // Monkey King's Scepter, Sparring Saber, Sparring Buckler, Essence
-    // Siphon, Disgruntled Lackey, Inconspicuous Key, Dancer's Anklet,
-    // Berserker's Vest and Phoenix Egg. (Jo-Sun's Book of Anatomy and
-    // Vampire Dentures have no code here at all -- both are pure
-    // RelicModifier relics, wired at kit-build time exactly like Pointy
-    // Nail on the End of a Stick before them; Monkey King's Scepter's own
-    // one line lives in FightSession.cs's CanMeleeReach, next to the rule
-    // it bypasses, rather than here.)
+    // Relic mechanics that don't reduce to a RelicModifier/ModifierEffectSet
+    // numeric bonus -- each one is a genuinely unrelated piece of behavior,
+    // wired through this session's own hooks (RelicsOnCombatBegin,
+    // RelicsAfterSwing, RelicsOnEachKill, DealDamage) rather than any shared
+    // table. See FightSession.Relics.cs's own header for why that split is a
+    // decision, not an oversight: the WHEN is shared there, the WHAT is not,
+    // and stays C#. Fourteen relics across two balance passes, previously
+    // split across this file and a "BalanceRelics2" sibling by which patch
+    // added them rather than by what they do -- merged here because "when"
+    // is not a topic. Jar of Bear Urine, Magic Marker, World Ender's Crown,
+    // Cursed Idol, Amassing Star, Rampaging Bull's Horn, Ice Fingernail,
+    // Loaded Dice, Sparring Saber, Sparring Buckler, Dancer's Anklet,
+    // Essence Siphon, Disgruntled Lackey, Inconspicuous Key, and Phoenix
+    // Egg (its relic check lives in FightSession.Ledger.cs, next to the
+    // damage funnel it intercepts; the hatch/absorb/tick mechanics are
+    // here). Monkey King's Scepter's one line lives in FightSession.cs's
+    // CanMeleeReach, next to the rule it bypasses. Pointy Nail on the End
+    // of a Stick, Jo-Sun's Book of Anatomy, and Vampire Dentures have no
+    // code here at all -- each is a pure RelicModifier relic, applied at
+    // kit-build time exactly like every other numeric-only relic.
+    //
+    // Each mechanic here that has a reusable shape rides its own Domain
+    // facility (Marks, Fear, FallingOffStacks, RunWideBonusDamagePercent,
+    // CombatantState.ArmorPenetration, ConvergenceGate) rather than being
+    // wired as one-off logic private to the relic -- see each facility's
+    // own header for why, and for the other things it is meant to serve
+    // besides the one relic that happens to be first through it.
     public partial class FightSession
     {
+        // ---- jar of bear urine ----------------------------------------------------
+
+        // Called once from Begin(), before the first GrantTurnStart -- every
+        // enemy on the field is marked from the very first beat, whichever
+        // side acts first.
+        private void RelicsOnCombatBegin()
+        {
+            foreach (var kit in _playerKits)
+            {
+                var actor = kit.Key;
+                if (!HasRelic(actor, RelicEffect.JarOfBearUrine)) continue;
+
+                foreach (var enemy in _encounter.LivingEnemies)
+                {
+                    Marks.Apply(enemy, actor);
+                }
+
+                AppendMessage($"{actor.Name} uncorks the jar - every enemy reeks, and is marked.");
+            }
+
+            LoadedDiceOnCombatBegin();
+        }
+
+        // ---- magic marker -----------------------------------------------------------
+
+        // Every spell that lands marks its target -- called from the same
+        // three call sites the Drowned Lantern's own ApplyMark already uses
+        // (FightSession.Skills.cs), through the SHARED Marks facility
+        // rather than the Lantern's private HashSet. The two marks are
+        // independent: a target can carry both at once, and each is
+        // consumed by its own relic only.
+        private void MagicMarkerApplyMark(CombatantState actor, CombatantState target)
+        {
+            if (actor == null || target == null || !target.IsAlive) return;
+            if (!HasRelic(actor, RelicEffect.MagicMarker)) return;
+
+            Marks.Apply(target, actor);
+        }
+
+        // An ATTACK against a marked target consumes it and refunds 20% of
+        // the actor's own missing primary resource. Hooked from
+        // RelicsAfterSwing, the same funnel Dual Wield's second hit and
+        // Sword in a Box's bonus attack both already pass through -- a
+        // double attack can consume two independent marks (there is only
+        // ever one mark on a given target at a time, so in practice this
+        // means the SECOND swing finds nothing left to consume unless a
+        // fresh cast re-marked the target in between).
+        private void MagicMarkerConsumeOnAttack(CombatantState actor, CombatantState target)
+        {
+            if (actor == null || target == null) return;
+            if (!HasRelic(actor, RelicEffect.MagicMarker)) return;
+            if (!Marks.ConsumeMark(target)) return;
+
+            int restored = RestorePrimaryResource(actor, FightTuning.MagicMarkerRestorePercent);
+            if (restored > 0)
+            {
+                AppendMessage($"{actor.Name}'s mark ignites - {restored} restored!");
+            }
+        }
+
+        // RESOURCE-AGNOSTIC: Shawn's Wool (Signature) if he has one, mana
+        // otherwise -- "primary resource" reads as whichever pool the
+        // actor's own kit actually spends to act, and every combatant has
+        // at most one of the two. Returns how much was actually restored,
+        // so a caller with nothing missing can skip its own message rather
+        // than announcing a zero.
+        private int RestorePrimaryResource(CombatantState actor, int percentOfMissing)
+        {
+            if (actor == null || percentOfMissing <= 0) return 0;
+
+            if (actor.Signature != null)
+            {
+                int missing = actor.Signature.Max - actor.Signature.Current;
+                int restore = missing * percentOfMissing / 100;
+                return restore > 0 ? actor.Signature.Gain(restore) : 0;
+            }
+
+            if (actor.MaxMana > 0)
+            {
+                int missing = actor.MaxMana - actor.CurrentMana;
+                int restore = missing * percentOfMissing / 100;
+                if (restore <= 0) return 0;
+
+                int before = actor.CurrentMana;
+                CombatMath.RestoreMana(actor, restore);
+                return actor.CurrentMana - before;
+            }
+
+            return 0;
+        }
+
+        // ---- world ender's crown -----------------------------------------------------
+
+        // Who has already fired since the last time they were above the
+        // threshold -- the "re-arms above 30%" half of the spec. A
+        // session-scoped set rather than a field on CombatantState: this is
+        // per-FIGHT bookkeeping about a per-fight relic, the same shape
+        // _marked (FightSession.Relics.cs) already uses for the same
+        // reason.
+        private readonly System.Collections.Generic.HashSet<CombatantState> _crownFired =
+            new System.Collections.Generic.HashSet<CombatantState>();
+
+        // Called from DealDamage (FightSession.Ledger.cs) after EVERY hit
+        // that changes a player's health -- the one funnel every damage
+        // path already shares, so a crossing can never be missed because
+        // one of several damage call sites forgot to check for it.
+        private void WorldEndersCrownCheck(CombatantState target)
+        {
+            if (target == null || !target.IsPlayerSide || target.MaxHealth <= 0) return;
+            if (!HasRelic(target, RelicEffect.WorldEndersCrown)) return;
+
+            float fraction = (float)target.CurrentHealth / target.MaxHealth;
+
+            if (fraction >= FightTuning.WorldEndersCrownHealthFraction)
+            {
+                // Back above the line -- re-arm for the next crossing.
+                _crownFired.Remove(target);
+                return;
+            }
+
+            if (!target.IsAlive || !_crownFired.Add(target)) return;
+
+            foreach (var enemy in _encounter.LivingEnemies)
+            {
+                Fear.Apply(enemy, FightTuning.WorldEndersCrownFearTurns, target);
+            }
+
+            AppendMessage($"{target.Name}'s crown flares as they falter - every enemy recoils in fear!");
+        }
+
+        // ---- cursed idol --------------------------------------------------------------
+
+        // Every hit the wearer lands on an enemy adds a stack (mechanic c),
+        // called from DealDamage. AddStack no-ops past the cap on its own.
+        private void CursedIdolOnHit(CombatantState actor, CombatantState target)
+        {
+            if (actor == null || target == null || target.IsPlayerSide) return;
+            if (!HasRelic(actor, RelicEffect.CursedIdol)) return;
+
+            FallingOffStacks.AddStack(target, FightTuning.CursedIdolStackKey,
+                FightTuning.CursedIdolStackTurns, FightTuning.CursedIdolMaxStacks);
+        }
+
+        // The bonus itself, read inside DealDamage (FightSession.Ledger.cs)
+        // rather than TotalDamage -- the stack lives on the TARGET and
+        // DealDamage is the one call site that already has both actor and
+        // target in hand where TotalDamage's own callers do not all carry
+        // one uniformly. "Lowered resistance" is spent as bonus damage on
+        // the SAME hit that is landing, the same "additive bonus folded
+        // into the one funnel" shape NecklaceDamageBonus already uses.
+        private int CursedIdolBonus(CombatantState actor, CombatantState target, int outcomeDamage)
+        {
+            if (actor == null || target == null || outcomeDamage <= 0) return 0;
+            if (!HasRelic(actor, RelicEffect.CursedIdol)) return 0;
+
+            int percent = FallingOffStacks.Magnitude(target, FightTuning.CursedIdolStackKey,
+                FightTuning.CursedIdolPercentPerStack,
+                FightTuning.CursedIdolPercentPerStack * FightTuning.CursedIdolMaxStacks);
+
+            return percent <= 0 ? 0 : outcomeDamage * percent / 100;
+        }
+
+        // ---- amassing star ------------------------------------------------------------
+
+        public int BonusDamagePercentEarned { get; private set; }
+
+        // Called from RelicsOnEachKill (FightSession.Relics.cs), the ONE
+        // per-body hook every other per-kill relic (the Bounty Hunter
+        // Contract) already shares -- a splash that fells two enemies pays
+        // twice, same as the bounty.
+        private void AmassingStarOnKill(CombatantState actor, CombatantState victim)
+        {
+            if (actor == null || victim == null || !actor.IsPlayerSide) return;
+            if (victim.IsSummon) return;
+            if (!HasRelic(actor, RelicEffect.AmassingStar)) return;
+
+            BonusDamagePercentEarned += FightTuning.AmassingStarPercentPerKill;
+            AppendMessage($"{actor.Name}'s star grows brighter - the run itself hits harder now.");
+        }
+
+        // ---- rampaging bull's horn ------------------------------------------------------
+
+        // Called from RelicsAfterCast (FightSession.Relics.cs) with the real
+        // cast skill -- BasicSpell, the free action that never counted as a
+        // convergence ability, is gone (docs/PLAN_SHOP.md §4 Phase E).
+        private void RampagingBullsHornOnConvergence(CombatantState actor, ResolvedSkill skill)
+        {
+            if (actor == null || skill.Effect != SkillEffect.Transform) return;
+            if (!HasRelic(actor, RelicEffect.RampagingBullsHorn)) return;
+
+            // Protect is the existing "incoming damage reduced by Magnitude
+            // percent, decays by turn count" status -- exactly this relic's
+            // shape, so it needs no status of its own. Refresh-not-stack
+            // (StatusEffects.Apply's own rule) means re-casting a
+            // convergence ability while the reduction still stands never
+            // compounds it.
+            StatusEffects.Apply(actor.Statuses, StatusEffectType.Protect,
+                FightTuning.BullsHornReductionPercent, FightTuning.BullsHornDurationTurns, actor);
+
+            AppendMessage($"{actor.Name}'s horn lowers - the next blows land softer.");
+        }
+
         // ---- ice fingernail --------------------------------------------------------
 
         // Every landed attack stacks a slow on the target (FallingOffStacks),
@@ -351,11 +571,18 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // ---- seams for tests -------------------------------------------------
         //
-        // Same reasoning as FightSession.BalanceRelics' own DealDamageForTest/
-        // HealForTest: Phoenix Egg reacts to the raw damage funnel rather
-        // than to one swing, so a literal-pinned test needs to fire it
-        // directly rather than fighting a real attack's own variance and
-        // mitigation to land an exact fatal figure.
+        // World Ender's Crown, Cursed Idol and Phoenix Egg all react to a
+        // raw damage event (DealDamage, FightSession.Ledger.cs) rather than
+        // to a specific attack/cast path, so a test that wants to pin their
+        // arithmetic without fighting a full swing's own variance/scaling
+        // needs a way to fire that event directly -- the same reasoning
+        // FightSession.Relics.LuckyDeckHealForTest and its siblings already
+        // establish for Lucky Deck's own roll.
+        public void DealDamageForTest(CombatantState actor, CombatantState target, int amount, DamageType type) =>
+            DealDamage(actor, target, amount, type);
+
+        public void HealForTest(CombatantState target, int amount) => HealAndCount(target, amount);
+
         public void TickPhoenixEggForTest(CombatantState actor) => TickPhoenixEgg(actor);
 
         // Sparring Saber only ever fires through NotePositionChanged, and
