@@ -134,7 +134,13 @@ does this character actually have right now" family), same
 binding constraint since it's a static class, not a MonoBehaviour),
 `GameplayManager.cs` (run lifecycle, screen switching via `OverlayState`),
 `ItemIcons.cs` (shared id→sprite lookup, also used for portraits — see
-`docs/CODE_STANDARDS.md` §2), `RarityColors.cs`, VFX primitives (`RadialGlowImage`,
+`docs/CODE_STANDARDS.md` §2), `PreviewFight.cs` (everything
+`tools/preview.ps1 -Spell`/`-Character` decides about one throwaway fight —
+who casts it, how many enemies it needs to be visible against, what has to be
+waived and said out loud, and which setups are refused by name rather than
+approximated; read by BOTH routes, the Editor one through `FightBootstrap`'s
+`DevForced*` keys and the headless one through `PreviewCaptureTests`, so a
+photograph is of the fight `-Launch` would field), `RarityColors.cs`, VFX primitives (`RadialGlowImage`,
 `BeaconPulse`, `SolidCircleImage`, `SpellVfxPlayer`), the ambient-motion
 primitives (`StarTwinkle`, `LanternFlicker`, `SlowDrift`, `MoteDrift`,
 `KenBurnsDrift` — see `docs/CODE_STANDARDS.md` §2), and
@@ -168,6 +174,14 @@ usage text in sync with it), `EnemySpriteImportPostprocessor.cs`,
 `StanceSpriteImporter.cs` (forces Sprite import under `Resources/Enemies`,
 `Resources/Characters` AND `Resources/Spells` — anything runtime-loaded as a
 Sprite must be listed there or it silently loads as null),
+`PreviewRequestWatcher.cs` (the open-Editor half of `tools/preview.ps1`:
+Unity locks a project's `Library` exclusively, so batchmode cannot run while
+the Editor is open — this `[InitializeOnLoad]` watcher polls
+`Temp/pp_request.json` on the update tick and answers on
+`Temp/pp_result.json`. Its header carries the whole protocol, request ids and
+the busy/ok/failed states included; it only ever writes `SessionState`, never
+a save), `QuickFightMenu.cs` (one menu click into a fight against the last
+previewed id, or against nothing in particular when the caller passes none),
 `SceneBuilder/SceneBuilder.Typography.cs` (`FontFor`/`MaterialFor`: resolves
 a `TypographyRole` to the generated font/material assets `TmpBootstrap.
 Typography.cs` produced, null on a not-yet-generated asset rather than
@@ -176,6 +190,29 @@ static-weight SDF font assets and per-role TMP material presets themselves).
 
 `tools/` (all PowerShell/Python, see `docs/WORKFLOW.md` §8 for when to use
 which):
+- `preview.ps1` — from an authored row to something you can look at, and the
+  everyday loop. `-Build` regenerates content; `-Enemy <id>` photographs a
+  mob's stances and one frame per turn of its kit; `-Spell <id>` casts one
+  spell and photographs the frame before impact, the impact and the one after
+  (`FightController.ImpactDelayFor` decides when, the damage popup is logged
+  beside it as an independent reading); `-Character <id>` fields them alone
+  and photographs the map figure, the dossier portrait and the fight stage.
+  `-Launch` plays any of them in the Editor instead. It looks at
+  `Temp\UnityLockfile` AND the process table and picks batchmode or the
+  open-Editor watcher itself — which door is not the author's problem.
+  **Never runs the full suite**; verification stays `run_tests_parallel.ps1`
+- `build_content.ps1` — one batchmode Unity against **main**,
+  `-executeMethod GenerationRun.RunAll -ppSteps content`, in place. No runner
+  copies and no sync-back to get wrong. Refuses while the Editor holds the
+  project and says which route to use instead; a lockfile with no Unity
+  behind it is recognised as debris and cleared
+- `unity_lock.ps1` — dot-sourced by both of the above, never run directly.
+  "Is a Unity Editor actually holding this project" answered from the process
+  table rather than from a zero-byte file that outlives a crash
+- `content_schema.ps1` — regenerates `docs/CONTENT_SCHEMA.md` from the
+  `Raw*Entry` types themselves, so the per-field reference cannot drift from
+  the fields. Run it whenever a content field is added or its `[ContentDoc]`
+  changes
 - `run_tests.ps1` — original serial full-suite runner, still works
 - `run_tests_parallel.ps1` — the "before committing" runner (~90-100s), two
   isolated copies in parallel, `-BuildContent`/`-BuildScenes`/`-SkipSync`,
