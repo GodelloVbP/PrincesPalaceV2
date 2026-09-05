@@ -57,6 +57,13 @@ namespace PrincesPalace.Domain.Content
 
         public int SortOrder;
 
+        // Whether a fresh profile fields this character, and where in the
+        // squad. See RawCharacterEntry's own note: exactly three characters
+        // carry the flag and their slots are 1-3 and unique, which
+        // CharacterEntryResolver enforces on the whole file.
+        public bool StartsInSquad;
+        public int SquadSlot;
+
         // Empty id means no resource at all, rather than a zero-capacity one
         // -- see CombatantState.Signature for why that distinction is kept
         // sharp.
@@ -73,7 +80,14 @@ namespace PrincesPalace.Domain.Content
             string portraitPath, string battleSpritePath, SpriteFacing battleSpriteFacing,
             DamageType attackType, string signatureId, string signatureDisplayName,
             int signatureCapacity, int signatureGainPerTurn, int signatureGainOnAttack,
-            int signatureGainOnDamageTaken, bool signatureAbsorbsDamage, int princesFavor, int sortOrder)
+            int signatureGainOnDamageTaken, bool signatureAbsorbsDamage, int princesFavor, int sortOrder,
+            // OPTIONAL, at the end, and that is not laziness about the
+            // eighteen positional arguments above it. Every existing caller --
+            // the resolver, and a dozen fixtures -- is asking about a
+            // character's stats and art, not about who a fresh profile opens
+            // with; making them all pass `false, 0` would be eighteen
+            // arguments of noise for one fact only characters.json has.
+            bool startsInSquad = false, int squadSlot = 0)
         {
             Id = id ?? "";
             DisplayName = displayName ?? "";
@@ -93,6 +107,8 @@ namespace PrincesPalace.Domain.Content
             SignatureAbsorbsDamage = signatureAbsorbsDamage;
             PrincesFavor = princesFavor;
             SortOrder = sortOrder;
+            StartsInSquad = startsInSquad;
+            SquadSlot = squadSlot;
         }
     }
 }

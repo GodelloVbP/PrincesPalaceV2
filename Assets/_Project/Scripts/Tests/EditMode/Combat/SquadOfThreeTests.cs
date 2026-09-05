@@ -10,13 +10,29 @@ using PrincesPalace.Domain.Stats;
 
 namespace PrincesPalace.Domain.Tests
 {
-    // The other two party members (placeholder_brawler, and owl -- Odette,
-    // who replaced placeholder_caster on 2026-09-04 and still wears its kit)
-    // exist so a three-member squad can be tested against Shawn --
-    // see characters.json's own entries. This file covers the two things
-    // that are hard to see from content alone: a fight actually seats three
-    // on the player side without throwing, and SaveData.EffectiveMaxSquadSize
-    // actually returns 3 when the test-only switch is on.
+    // A three-member squad seats and plays. WHICH three is content's business
+    // now -- characters.json flags exactly three with startsInSquad and
+    // CharacterEntryResolver refuses the file otherwise (see
+    // StartingSquadResolverTests) -- and this file deliberately does not
+    // reproduce that list.
+    //
+    // It cannot, in fact, and that is worth stating rather than working
+    // around: this fixture compiles into the engine-free Domain assembly
+    // under `dotnet test`, which cannot see ContentDatabase at all.
+    //
+    // So the dossier-paging case below uses obviously synthetic ids. It used
+    // to carry the real three, which made a modulo test a silent pin on a
+    // file this assembly cannot read -- renaming a character failed an
+    // arithmetic test for reasons that had nothing to do with arithmetic.
+    // (The kit ids in the fight fixture are a different matter: they are
+    // three distinct strings a PlayerKit needs, and nothing asserts against
+    // them.) SaveDataSquadOfThreeTests, which runs under Unity and CAN read
+    // content, is where the real ids are asserted.
+    //
+    // This file covers the two things that are hard to see from content
+    // alone: a fight actually seats three on the player side without
+    // throwing, and SaveData.EffectiveMaxSquadSize returns 3 when the
+    // test-only switch is on.
     //
     // Content RESOLUTION for the two placeholders (ability score budget,
     // required fields, etc.) is covered by CharacterEntryResolver at build
@@ -118,7 +134,13 @@ namespace PrincesPalace.Domain.Tests
             // SaveData.ActiveSquad() -- already fully general over squad
             // size, so this test is pinning that arithmetic directly rather
             // than standing up the MonoBehaviour (which needs a scene).
-            var ids = new List<string> { "sheep", "placeholder_brawler", "owl" };
+            //
+            // SYNTHETIC IDS. These were the three real character ids, which
+            // made a modulo test into a pin on characters.json that this
+            // assembly cannot even read -- so renaming a character failed an
+            // arithmetic test, and the test said nothing about why. The
+            // arithmetic never cared what the ids were.
+            var ids = new List<string> { "first", "second", "third" };
 
             int index = 0;
             var visited = new List<string> { ids[index] };
@@ -131,7 +153,7 @@ namespace PrincesPalace.Domain.Tests
             // Three forward steps from index 0 over 3 members returns to the
             // start -- the same wraparound Step() relies on.
             CollectionAssert.AreEqual(
-                new[] { "sheep", "placeholder_brawler", "owl", "sheep" }, visited);
+                new[] { "first", "second", "third", "first" }, visited);
         }
     }
 }

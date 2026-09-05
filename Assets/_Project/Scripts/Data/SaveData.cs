@@ -64,11 +64,34 @@ namespace PrincesPalace
 
         // Deliberately re-checks content rather than caching: ContentDatabase
         // can be (re)loaded mid-process (Editor domain reload, tests), and a
-        // stale "yes" here would field a placeholder seat content no longer
-        // has.
+        // stale "yes" here would field a seat content no longer has.
+        //
+        // ASKS THE FLAG, NOT TWO IDS. This named placeholder_brawler and owl
+        // literally, which made "can we field three" a question about two
+        // specific characters rather than about the roster -- rename either
+        // and every fresh profile silently drops back to a solo Shawn with
+        // nothing failing. characters.json says who starts now
+        // (RawCharacterEntry.startsInSquad), and CharacterEntryResolver
+        // refuses the file unless exactly three do, so this can simply count.
         private static bool SquadOfThreeReady =>
-            ContentDatabase.Characters.Any(c => c.id == "placeholder_brawler")
-            && ContentDatabase.Characters.Any(c => c.id == "owl");
+            DefaultSquadIds().Count >= TestSquadOfThreeSize;
+
+        // THE STARTING SQUAD, IN ITS AUTHORED ORDER. Empty when content
+        // carries no flags at all -- an unbuilt or half-built catalogue -- and
+        // every caller falls back to roster order there, which is what this
+        // replaced and is still a better answer than an empty party.
+        //
+        // Ordered by squadSlot, then by id so the order is total even in the
+        // impossible case of a duplicate slot reaching a built asset (the
+        // resolver refuses one, but ContentDatabase can be handed assets a
+        // resolver never saw -- CLAUDE.md's [CreateAssetMenu] hazard).
+        internal static List<string> DefaultSquadIds() =>
+            ContentDatabase.Characters
+                .Where(c => c != null && c.data.StartsInSquad)
+                .OrderBy(c => c.data.SquadSlot)
+                .ThenBy(c => c.id, StringComparer.Ordinal)
+                .Select(c => c.id)
+                .ToList();
         // PUBLIC because the squad's ceiling has to be assertable against the
         // stage's slot count, and a test that wrote "extra_recruit_slot" as a
         // literal would be the drift it is meant to catch.
@@ -267,7 +290,31 @@ namespace PrincesPalace
                 data.roster.Add(new Character(definition.id));
             }
 
-            data.selectedCharacterIds = data.roster.Take(data.EffectiveMaxSquadSize()).Select(c => c.definitionId).ToList();
+            // WHO CONTENT SAYS STARTS, not who sorts first.
+            //
+            // This was `roster.Take(EffectiveMaxSquadSize())` over authored
+            // file order, which meant a character appended to the end of
+            // characters.json was in the roster and could never be fielded,
+            // and one inserted at position three silently benched whoever was
+            // there. Neither said anything; the only way to find out was to
+            // read this line. characters.json now flags its three starters
+            // and CharacterEntryResolver refuses the file unless exactly three
+            // do -- so the roster's order is once again just an order.
+            //
+            // Filtered against the roster rather than trusted: a flagged
+            // character with no roster entry is impossible today (the roster
+            // IS every authored character, right above) and would otherwise
+            // select an id ActiveSquad cannot resolve.
+            var starters = DefaultSquadIds()
+                .Where(id => data.roster.Any(c => c.definitionId == id))
+                .ToList();
+
+            if (starters.Count == 0)
+            {
+                starters = data.roster.Select(c => c.definitionId).ToList();
+            }
+
+            data.selectedCharacterIds = starters.Take(data.EffectiveMaxSquadSize()).ToList();
 
             // The starting kit: one of every item flagged startingStock in
             // items.json. Granted HERE and nowhere else — Reconcile
@@ -579,7 +626,17 @@ namespace PrincesPalace
                 // disturbing whatever was already selected — this is what
                 // lets a save transition cleanly instead of only working out
                 // right for a brand new one.
-                foreach (var character in roster)
+                //
+                // EXISTING SAVES KEEP THEIR SQUAD, and this loop is why: it
+                // only ever ADDS, never reorders and never removes anything
+                // the player chose. A profile written before startsInSquad
+                // existed loads with exactly the selection it had.
+                //
+                // The top-up order follows content's starting squad first and
+                // roster order after it, so a save that is short a member
+                // gains the same one a fresh profile would rather than
+                // whichever row sorts first.
+                foreach (var character in TopUpOrder())
                 {
                     if (selectedCharacterIds.Count >= effectiveMax)
                     {
@@ -592,6 +649,27 @@ namespace PrincesPalace
                     }
                 }
             }
+        }
+
+        // The roster, with content's starting squad brought to the front.
+        // Every roster member appears exactly once, so a top-up can still
+        // reach somebody nobody flagged.
+        private List<Character> TopUpOrder()
+        {
+            var order = new List<Character>();
+
+            foreach (string id in DefaultSquadIds())
+            {
+                var character = roster.FirstOrDefault(c => c != null && c.definitionId == id);
+                if (character != null) order.Add(character);
+            }
+
+            foreach (var character in roster)
+            {
+                if (character != null && !order.Contains(character)) order.Add(character);
+            }
+
+            return order;
         }
 
         // THE SHOP SHELF, RECONCILED THE SAME TOLERANT WAY EVERYTHING ELSE

@@ -45,6 +45,8 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `signatureGainOnAttack` | int | `0` | Signature resource gained when this character attacks. |  |
 | `signatureGainOnDamageTaken` | int | `0` | Signature resource gained when this character takes damage. |  |
 | `signatureAbsorbsDamage` | bool | `false` | Whether the signature resource also soaks incoming damage before health. |  |
+| `startsInSquad` | bool | `false` | Whether a fresh profile fields this character; exactly three characters must set it. |  |
+| `squadSlot` | int | `0` | This character's place in the starting squad, 1-3 and unique; only read when startsInSquad is set. |  |
 
 ## enemies.json -- `RawEnemyEntry`
 

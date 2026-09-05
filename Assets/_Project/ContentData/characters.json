@@ -3,6 +3,8 @@
   "characters": [
     {
       "id": "sheep",
+      "startsInSquad": true,
+      "squadSlot": 1,
       "displayName": "Shawn",
       "princesFavor": 4,
       "role": "Utility",
@@ -31,6 +33,8 @@
     },
     {
       "id": "placeholder_brawler",
+      "startsInSquad": true,
+      "squadSlot": 2,
       "displayName": "Placeholder Brawler",
       "role": "Tank",
       "attackType": "Physical",
@@ -51,6 +55,8 @@
     },
     {
       "id": "owl",
+      "startsInSquad": true,
+      "squadSlot": 3,
       "displayName": "Odette",
       "role": "Support",
       "attackType": "Arcane",

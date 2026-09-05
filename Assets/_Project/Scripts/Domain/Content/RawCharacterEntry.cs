@@ -113,6 +113,29 @@ namespace PrincesPalace.Domain.Content
         // character whose resource IS armour should not have to rebuild it.
         [ContentDoc("Whether the signature resource also soaks incoming damage before health.")]
         public bool signatureAbsorbsDamage;
+
+        // WHO A NEW PROFILE OPENS WITH, said out loud in content instead of
+        // falling out of where the row happens to sit in the file.
+        //
+        // It used to be the first three entries, full stop -- SaveData.
+        // CreateNew took `roster.Take(EffectiveMaxSquadSize())` and the roster
+        // is authored order. Nothing said so anywhere an author would look
+        // (the Step 0 baseline found it only by reading CreateNew), and it
+        // meant a character appended to the end of characters.json was in the
+        // roster and could never be fielded, while inserting one at position
+        // three silently benched whoever was there. Both are the trap
+        // CLAUDE.md gotcha 4 names, in the one place a player would notice.
+        //
+        // EXACTLY THREE, EACH WITH A DIFFERENT SLOT, and CharacterEntryResolver
+        // refuses the file otherwise, naming the ids. Two flags rather than one
+        // ordered list because the fact belongs on the character: a roster is
+        // edited a row at a time, and a separate list somewhere else is the
+        // thing that ends up disagreeing with the rows.
+        [ContentDoc("Whether a fresh profile fields this character; exactly three characters must set it.")]
+        public bool startsInSquad;
+
+        [ContentDoc("This character's place in the starting squad, 1-3 and unique; only read when startsInSquad is set.")]
+        public int squadSlot;
     }
 
     // JsonUtility cannot deserialize a bare top-level array.

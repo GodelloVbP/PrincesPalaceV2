@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Stage;
 using PrincesPalace.Domain.Stats;
 
@@ -27,6 +28,12 @@ namespace PrincesPalace.Domain.Content
         // through the [CreateAssetMenu] hazard CLAUDE.md flags, which never
         // passes through this resolver at all.
         public const int AbilityScoreBudget = 60;
+
+        // How many characters a fresh profile fields, and therefore how many
+        // must carry startsInSquad. The stage's own capacity -- there are
+        // three player slots and there is no arrangement in which a fourth
+        // starting member could be drawn.
+        public const int DefaultSquadSize = FightHudSpec.StageSlotsPerSide;
 
         public static bool TryResolveAll(IReadOnlyList<RawCharacterEntry> entries, out List<ResolvedCharacter> resolved, out List<string> errors)
         {
@@ -60,6 +67,32 @@ namespace PrincesPalace.Domain.Content
             {
                 errors.Add($"Characters {string.Join(", ", duplicate.Select(c => c.Id))} all use the signature " +
                            $"resource id '{duplicate.Key}' — one resource per character.");
+            }
+
+            // ---- the starting squad, which is a WHOLE-FILE fact ------------
+            //
+            // Checked here rather than per entry because no single row can be
+            // wrong on its own: a character with startsInSquad is fine, and
+            // four of them are not. Same shape as the duplicate-id and
+            // duplicate-signature rules above it, and reported the same way --
+            // every id named, so an author fixes the file in one pass rather
+            // than one row per build.
+            var starters = resolved.Where(c => c.StartsInSquad).ToList();
+
+            if (starters.Count != DefaultSquadSize)
+            {
+                errors.Add($"{starters.Count} character(s) set startsInSquad and exactly {DefaultSquadSize} must " +
+                           $"({(starters.Count == 0 ? "none" : string.Join(", ", starters.Select(c => c.Id)))}). " +
+                           "That flag is what a fresh profile opens with; without exactly three of them the " +
+                           "starting squad would fall back to whichever rows happen to sit at the top of the " +
+                           "file, which is how appending a character used to make them unfieldable.");
+            }
+
+            foreach (var duplicate in starters.GroupBy(c => c.SquadSlot).Where(g => g.Count() > 1))
+            {
+                errors.Add($"Characters {string.Join(", ", duplicate.Select(c => c.Id))} all claim squadSlot " +
+                           $"{duplicate.Key} -- the slots are the squad's ORDER, so two characters in one slot " +
+                           "leaves the order decided by file position again, which is the thing this replaces.");
             }
 
             if (errors.Count > 0)
@@ -172,6 +205,26 @@ namespace PrincesPalace.Domain.Content
                 }
             }
 
+            // THE PER-ROW HALF of the starting-squad rule. "How many carry
+            // the flag" is a whole-file question and lives in TryResolveAll;
+            // "is this row's slot a legal slot" is answerable here, and saying
+            // so here names the row rather than the collection.
+            if (raw.startsInSquad && (raw.squadSlot < 1 || raw.squadSlot > DefaultSquadSize))
+            {
+                error = $"{label} sets startsInSquad with squadSlot {raw.squadSlot}; it must be 1-" +
+                        $"{DefaultSquadSize}. The slot is the squad's order, so an unset or out-of-range one " +
+                        "would put them nowhere in particular.";
+                return false;
+            }
+
+            if (!raw.startsInSquad && raw.squadSlot != 0)
+            {
+                error = $"{label} sets squadSlot {raw.squadSlot} without startsInSquad. A slot on a character " +
+                        "nobody starts with is a flag somebody meant to set and did not -- refused rather than " +
+                        "ignored, because ignoring it is how the roster quietly loses a member.";
+                return false;
+            }
+
             resolvedCharacter = new ResolvedCharacter(
                 raw.id.Trim(),
                 raw.displayName.Trim(),
@@ -191,7 +244,9 @@ namespace PrincesPalace.Domain.Content
                 hasSignature ? raw.signatureGainOnDamageTaken : 0,
                 hasSignature && raw.signatureAbsorbsDamage,
                 raw.princesFavor < 0 ? 0 : raw.princesFavor,
-                sortOrder);
+                sortOrder,
+                raw.startsInSquad,
+                raw.squadSlot);
             error = null;
             return true;
         }

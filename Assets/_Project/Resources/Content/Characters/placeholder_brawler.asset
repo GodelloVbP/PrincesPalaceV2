@@ -43,3 +43,5 @@ MonoBehaviour:
     SignatureAbsorbsDamage: 0
     PrincesFavor: 0
     SortOrder: 1
+    StartsInSquad: 1
+    SquadSlot: 2
