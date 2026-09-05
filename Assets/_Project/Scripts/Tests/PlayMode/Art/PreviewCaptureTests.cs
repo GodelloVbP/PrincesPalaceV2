@@ -55,7 +55,29 @@ namespace PrincesPalace.PlayModeTests
             Path.GetFullPath(Path.Combine(
                 Directory.GetParent(Application.dataPath).FullName, "tools", "screenshots", "preview"));
 
-        private static string[] RequestedIds() => Requested(IdsVariable);
+        // AN UNASKED-FOR MODE IGNORES, IT DOES NOT FAIL.
+        //
+        // preview.ps1 filters this fixture by CLASS, so every capture in it
+        // runs and exactly one of them has its variable set. The other three
+        // used to fail with "PP_PREVIEW_* is empty" -- three red tests and a
+        // non-zero exit beside three correct pictures, which reads as a broken
+        // preview to anyone who has not read this file. Found the first time
+        // -Spell ran for real.
+        //
+        // Ignore rather than a silent early return: an ignored test is
+        // reported by name, so a preview that photographed nothing because the
+        // variable never reached Unity still says so.
+        private static string[] RequiredIds(string variable, string mode)
+        {
+            var ids = Requested(variable);
+            if (ids.Length == 0)
+            {
+                Assert.Ignore($"{variable} is not set, so this run is not asking for {mode}. " +
+                              $"tools/preview.ps1 {mode} sets it.");
+            }
+
+            return ids;
+        }
 
         private static string[] Requested(string variable)
         {
@@ -87,8 +109,7 @@ namespace PrincesPalace.PlayModeTests
         [Test, Explicit("Written by tools/preview.ps1 -Enemy <id>.")]
         public void CaptureStanceSheets()
         {
-            var ids = RequestedIds();
-            Assert.IsNotEmpty(ids, $"{IdsVariable} is empty; run this through tools/preview.ps1 -Enemy <id>.");
+            var ids = RequiredIds(IdsVariable, "-Enemy <id>");
 
             Directory.CreateDirectory(OutputDir);
 
@@ -123,8 +144,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest, Explicit("Written by tools/preview.ps1 -Enemy <id>.")]
         public IEnumerator CaptureShowcaseTurns()
         {
-            var ids = RequestedIds();
-            Assert.IsNotEmpty(ids, $"{IdsVariable} is empty; run this through tools/preview.ps1 -Enemy <id>.");
+            var ids = RequiredIds(IdsVariable, "-Enemy <id>");
 
             if (!CanvasCapture.IsSupported)
             {
@@ -249,8 +269,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest, Explicit("Written by tools/preview.ps1 -Spell <id>.")]
         public IEnumerator CaptureSpellCast()
         {
-            var ids = Requested(SpellVariable);
-            Assert.IsNotEmpty(ids, SpellVariable + " is empty; run this through tools/preview.ps1 -Spell <id>.");
+            var ids = RequiredIds(SpellVariable, "-Spell <id>");
 
             if (!CanvasCapture.IsSupported)
             {
@@ -435,9 +454,7 @@ namespace PrincesPalace.PlayModeTests
         [UnityTest, Explicit("Written by tools/preview.ps1 -Character <id>.")]
         public IEnumerator CaptureCharacter()
         {
-            var ids = Requested(CharacterVariable);
-            Assert.IsNotEmpty(ids,
-                CharacterVariable + " is empty; run this through tools/preview.ps1 -Character <id>.");
+            var ids = RequiredIds(CharacterVariable, "-Character <id>");
 
             if (!CanvasCapture.IsSupported)
             {
