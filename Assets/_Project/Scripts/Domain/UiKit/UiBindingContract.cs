@@ -54,6 +54,28 @@ namespace PrincesPalace.Domain.UiKit
                    "declared, so that what it points at is checkable at all.";
         }
 
+        // A field whose provenance names a node the emit result has no object
+        // for. Not "wrong node" and not "not from this screen": the value
+        // came through one of the five typed accessors, so it HAS a
+        // provenance -- and the node that provenance names cannot be looked
+        // up, which means the two halves of the emit result disagree with
+        // each other and nothing here can say what the field should have held.
+        //
+        // Reported rather than passed over. The auditor used to return
+        // quietly at exactly this point, so a screen in this state was
+        // audited to zero problems and read as checked; whatever produced the
+        // mismatch (a node dropped from the tree after a Wire line was
+        // recorded against it, an accessor handing back a provenance for a
+        // node it never emitted) went on being invisible.
+        public static string ProvenanceNodeNotEmitted(
+            string controllerType, string fieldName, string expectedNode)
+        {
+            return $"{controllerType}.{fieldName} was assigned from node '{expectedNode}', but this screen's " +
+                   "emit result has no object for that node -- so what the field holds cannot be checked " +
+                   "against what it was supposed to hold. The screen tree and the wiring disagree about " +
+                   "which nodes exist; check that the NodeRef is still in the tree this screen declares.";
+        }
+
         // The header the auditor prints above the collected lines. Here rather
         // than in the auditor so the phrasing and the rule live together.
         public static string Header(string screenName, int problemCount) =>

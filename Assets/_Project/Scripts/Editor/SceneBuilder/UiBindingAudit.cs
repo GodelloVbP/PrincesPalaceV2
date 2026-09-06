@@ -143,7 +143,17 @@ public static class UiBindingAudit
         }
 
         result.Objects.TryGetValue(provenance.Node, out var declared);
-        if (declared == null) return;
+        if (declared == null)
+        {
+            // A PROBLEM, not a pass. This returned quietly, which made the one
+            // case where the emit result contradicts itself -- a provenance
+            // naming a node the result has no object for -- audit as clean.
+            // There is nothing to compare against here, and "no comparison was
+            // possible" is a finding rather than a result.
+            problems.Add(UiBindingContract.ProvenanceNodeNotEmitted(
+                controllerName, path, provenance.Node.Name));
+            return;
+        }
 
         // An exact lookup must BE the node; an opted-in one must be somewhere
         // under it. The second is deliberately the weaker claim -- it is the

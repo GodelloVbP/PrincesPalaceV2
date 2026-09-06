@@ -67,6 +67,31 @@ namespace PrincesPalace.Domain.Tests
             StringAssert.Contains("never emitted", message);
         }
 
+        // The auditor could reach a state where it held a provenance and had
+        // no object to compare against, and it returned as though the field
+        // were fine. The message for that has to say which of the two it could
+        // not do -- name the node it expected, and say plainly that no
+        // comparison happened -- or a reader takes it for a wrong-node finding
+        // and goes hunting a binding that is not the problem.
+        [Test]
+        public void ANodeTheScreenNeverEmittedSaysNoComparisonWasPossible()
+        {
+            string message = UiBindingContract.ProvenanceNodeNotEmitted(Controller, Field, Expected);
+
+            StringAssert.Contains(Controller, message);
+            StringAssert.Contains(Field, message);
+            StringAssert.Contains(Expected, message);
+            StringAssert.Contains("no object for that node", message);
+
+            // And it is neither of the other two, which is the distinction the
+            // reader acts on.
+            Assert.AreNotEqual(
+                UiBindingContract.NotFromThisScreen(Controller, Field, Expected), message);
+            Assert.AreNotEqual(
+                UiBindingContract.WrongNode(Controller, Field, Expected, Actual,
+                    UiBindingContract.Source.Explicit), message);
+        }
+
         [Test]
         public void TheHeaderNamesTheScreenAndHowManyFieldsAreWrong()
         {
