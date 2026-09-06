@@ -897,12 +897,12 @@ namespace PrincesPalace
             {
                 elapsed += Time.unscaledDeltaTime * SpeedMultiplier;
 
-                float k = Smooth(Mathf.Clamp01(elapsed / WipeSeconds));
+                float k = Easing.SmoothStep(Mathf.Clamp01(elapsed / WipeSeconds));
                 SetWipeWidth(ReckoningScreen.PanelWidth * k);
                 frameWipe.anchoredPosition =
                     new Vector2(frameWipe.anchoredPosition.x, Mathf.Lerp(LiftFrom, 0f, k));
 
-                float g = Smooth(Mathf.Clamp01(elapsed / GloomSeconds));
+                float g = Easing.SmoothStep(Mathf.Clamp01(elapsed / GloomSeconds));
                 if (dimmer != null) SetAlpha(dimmer, gloomTarget * g);
                 if (frameGlow != null) SetAlpha(frameGlow, glowTarget * g);
 
@@ -1056,7 +1056,7 @@ namespace PrincesPalace
 
             for (float t = 0f; t < seconds; t += Time.unscaledDeltaTime * SpeedMultiplier)
             {
-                float k = Smooth(Mathf.Clamp01(t / seconds));
+                float k = Easing.SmoothStep(Mathf.Clamp01(t / seconds));
                 SetSpan(rowBarFills[index], from, Mathf.Lerp(from, to, k));
                 CountGain(index, Mathf.RoundToInt(row.ExpGained * Mathf.Lerp(countFrom, countTo, k)));
                 yield return null;
@@ -1080,11 +1080,6 @@ namespace PrincesPalace
 
             fill.color = resting;
         }
-
-        // Smoothstep. One definition, because three animations easing
-        // differently by accident is the sort of thing nobody can name but
-        // everybody feels.
-        private static float Smooth(float k) => k * k * (3f - 2f * k);
 
         // Attached at RUNTIME, the same way HoverIndex and BarSlider are: the
         // tree emits plain rects, and a group that exists only for the duration

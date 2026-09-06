@@ -2,11 +2,16 @@ using UnityEngine;
 
 namespace PrincesPalace
 {
-    // Two easing curves, written out four times across Core before this --
-    // the hub's zoom, the reward track's pulses and its fly-ins, and the
-    // reckoning's sweep -- each its own private static, and not quite the
-    // same contract twice: one of the four clamped its input, the other
-    // three did not.
+    // Two easing curves, written out five times across Core before this --
+    // the hub's zoom, the reward track's pulses and its fly-ins, the
+    // reckoning's card sweep, and the reckoning's wipe-open and exp-bar
+    // sweep -- each its own private static, and not quite the same contract
+    // twice: one of the five clamped its input, the other four did not.
+    //
+    // The reckoning's wipe-open and exp-bar sweep were folded in later than
+    // the rest: both callers already wrapped every call in Mathf.Clamp01 at
+    // the call site, so folding the formula into SmoothStep's own internal
+    // clamp changed nothing about what either animation does.
     //
     // BOTH CLAMP TO [0,1] HERE, because an unclamped smoothstep is not just
     // imprecise past its domain, it is wrong in a way a caller has to know to
