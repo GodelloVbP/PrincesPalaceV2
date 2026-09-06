@@ -7,9 +7,11 @@ using UnityEngine;
 namespace PrincesPalace.Content
 {
     // The single lookup point for all authored content. At runtime it loads
-    // every definition asset out of Resources/Content; tests can bypass that
-    // entirely via Initialize(), so they never depend on what happens to be
-    // sitting in the project's asset folders.
+    // every definition asset out of Resources/Content. Tests substitute
+    // content one layer down, where it is cheaper and engine-free: write real
+    // assets via ContentBuilder and call Reset(), or bypass ContentDatabase
+    // altogether and call a resolver directly against the source JSON (see
+    // EnemyContentPinTests, which never touches this type).
     //
     // Nothing in the game should hard-code a character, talent or upgrade —
     // adding content means adding an asset, not editing code.
@@ -286,35 +288,6 @@ namespace PrincesPalace.Content
                 .OrderBy(s => s.Data.UnlockLevel)
                 .ThenBy(s => s.Data.SortOrder)
                 .ToList();
-        }
-
-        // Injects content directly, skipping Resources. Intended for tests.
-        public static void Initialize(
-            IEnumerable<CharacterDefinition> characters,
-            IEnumerable<TalentDefinition> talents,
-            IEnumerable<UpgradeDefinition> upgrades,
-            IEnumerable<EnemyDefinition> enemies = null,
-            IEnumerable<ItemDefinition> items = null,
-            IEnumerable<SpellTierDefinition> spellTiers = null,
-            IEnumerable<SkillDefinition> skills = null,
-            IEnumerable<RelicDefinition> relics = null,
-            IEnumerable<ModifierDefinition> modifiers = null)
-        {
-            // THROUGH THE SAME ORDERING AS THE REAL LOAD, which it did not used
-            // to be. This held its own copy of all eight sorts, including the
-            // spell tier's by-level special case, so a test's content could
-            // have been ordered differently from the game's with nothing to
-            // say so -- and a test that orders its fixture differently from
-            // production is a test of something else.
-            _characters = Ordered(characters);
-            _talents = Ordered(talents);
-            _upgrades = Ordered(upgrades);
-            _enemies = Ordered(enemies);
-            _items = Ordered(items);
-            _spellTiers = Ordered(spellTiers);
-            _skills = Ordered(skills);
-            _relics = Ordered(relics);
-            _modifiers = Ordered(modifiers);
         }
 
         // Drops the cache so the next access reloads from Resources.
@@ -736,12 +709,10 @@ namespace PrincesPalace.Content
             where T : UnityEngine.Object, IOrderedContent
             => Ordered(Resources.LoadAll<T>(resourcePath));
 
-        // The ordering itself, shared with Initialize's test-injection path so
-        // there is one answer to "what order is this list in" rather than two
-        // that happen to agree.
+        // The ordering itself, the one answer to "what order is this list in".
         //
-        // Null-tolerant because Initialize's later parameters are optional and
-        // a caller passing none of them should get an empty list, not a throw.
+        // Null-tolerant so a caller with nothing to pass gets an empty list,
+        // not a throw.
         private static List<T> Ordered<T>(IEnumerable<T> content) where T : IOrderedContent
             => (content ?? Enumerable.Empty<T>()).OrderBy(x => x.SortOrder).ToList();
     }

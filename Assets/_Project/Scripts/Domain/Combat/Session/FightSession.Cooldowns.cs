@@ -48,9 +48,6 @@ namespace PrincesPalace.Domain.Combat.Session
                 : 0;
         }
 
-        public bool IsOnCooldown(CombatantState actor, string skillId) =>
-            CooldownRemaining(actor, skillId) > 0;
-
         // Put on cooldown by CASTING it, not by resolving it. A cast refused for
         // want of mana never reaches this; a cast that resolves into nothing
         // because every target died first still spent the turn and still spends
