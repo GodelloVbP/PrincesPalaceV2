@@ -179,7 +179,14 @@ $TestClassPattern = '(?m)^\s*(?:\[[^\]]*\]\s*)*public\s+(?:sealed\s+|static\s+|p
 # have been a suite in no area with the gate reporting clean. \b instead of
 # the bracket class is what admits the comma form; the alternation is ordered
 # so [TestFixture] still does not match (Test then \b fails on the F).
-$TestAttrPattern = '\[\s*(Test|UnityTest|TestCase|TestCaseSource|Theory)\b'
+#
+# A FOURTH HOLE: the attribute written out in full. C# is perfectly happy with
+# [NUnit.Framework.Test], and a file using it -- which is what a generated or
+# a using-less test file looks like -- was not a test file here at all. The
+# optional dotted qualifier admits any namespace or alias prefix while the
+# group still captures the bare attribute name, so the Shared/ refusal below
+# keeps reporting "carries a [Test]" rather than the qualified form.
+$TestAttrPattern = '\[\s*(?:[A-Za-z_][\w.]*\.)?(Test|UnityTest|TestCase|TestCaseSource|Theory)\b'
 
 # Every class DECLARATION, wider than $TestClassPattern on purpose: it also
 # sees "internal", which NUnit will not run and discovery therefore does not
@@ -363,11 +370,18 @@ function Get-StructuralViolations {
                 $content = Get-Content $file.FullName -Raw
                 $rel = Get-AreasRelPath $file.FullName
 
-                if ($folder -eq $SharedFolder -and $content -match $TestAttrPattern) {
+                # OVER THE CODE, NOT THE TEXT. A commented-out [Test] -- a
+                # suite disabled while something is investigated, or an
+                # example in a helper's header -- is not a suite in the wrong
+                # folder, and refusing the whole gate over one is a refusal
+                # with no fix. Get-CodeOnly is the same strip the nesting
+                # check below already relied on for exactly this reason.
+                $code = Get-CodeOnly $content
+
+                if ($folder -eq $SharedFolder -and $code -match $TestAttrPattern) {
                     $violations += "$rel carries a [$($Matches[1])]. $SharedFolder is for helpers only -- move it into its area folder."
                 }
 
-                $code = Get-CodeOnly $content
                 foreach ($m in [regex]::Matches($code, $DeclaredClassPattern)) {
                     $name = $m.Groups[1].Value
                     if ($name -like "*TestBase") { continue }
@@ -427,7 +441,13 @@ function Get-DiscoveryBlindSpots {
         if (-not (Test-Path $dir)) { continue }
         foreach ($file in Get-ChildItem $dir -Filter *.cs -File) {
             $content = Get-Content $file.FullName -Raw
-            if ($content -notmatch $TestAttrPattern) { continue }
+            $code = Get-CodeOnly $content
+
+            # THE CODE, not the raw text, for the same reason the Shared/
+            # refusal above reads it: a helper whose header quotes a [Test] in
+            # prose is not a file carrying tests, and treating it as one turns
+            # every internal class beside it into a reported blind spot.
+            if ($code -notmatch $TestAttrPattern) { continue }
 
             # EVERY declared class, not any. "Pass the file if ANY of its
             # classes was discovered" let a file with "public class FooTests"
@@ -436,7 +456,7 @@ function Get-DiscoveryBlindSpots {
             # class further in. $DeclaredClassPattern is wider than the
             # discovery pattern on purpose, so the two disagreeing is what
             # produces a finding.
-            $namesInFile = [regex]::Matches((Get-CodeOnly $content), $DeclaredClassPattern) |
+            $namesInFile = [regex]::Matches($code, $DeclaredClassPattern) |
                 ForEach-Object { $_.Groups[1].Value } |
                 Where-Object { $_ -notlike "*TestBase" }
 
@@ -697,6 +717,13 @@ $PathAreas = @(
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Audio/';     Areas = @('ui') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/Content/';     Areas = @('content') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/Fight';        Areas = @('combat') }
+    # PreviewFight decides who casts a previewed spell and what the stage has
+    # to look like for the cast to be visible. It sorts under the flat
+    # "Core/ -> ui" fallback by name, which would run the ui suite and skip
+    # PreviewFightRefusalTests -- and that fixture sits in Tests/PlayMode/
+    # Combat, beside the fight it stands one up for. Where the fixture sits
+    # wins, so it is rowed here.
+    @{ Pattern = '^Assets/_Project/Scripts/Core/PreviewFight'; Areas = @('combat') }
     # RunManager, RunSettlement and RewardApplier joined this row from the
     # Core/ catch-all, which claimed all three as 'ui' -- and RunManagerTests,
     # RunSettlementTests and RewardApplierTests are all in Tests/*/Run, so the

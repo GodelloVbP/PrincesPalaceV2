@@ -152,6 +152,12 @@ function Invoke-SelfCheck {
            Ok   = { ($structural | Where-Object { $_ -match 'DepthTwoFixtureTests\.cs is more than one folder deep' }).Count -eq 1 } }
         @{ Name = "a [TestCase]-only suite in Shared/ is refused"
            Ok   = { ($structural | Where-Object { $_ -match 'SharedSuiteFixtureTests\.cs carries a \[TestCase\]' }).Count -eq 1 } }
+        @{ Name = "a suite in Shared/ writing [NUnit.Framework.Test] in full is refused"
+           Ok   = { ($structural | Where-Object { $_ -match 'QualifiedAttrFixtureTests\.cs carries a \[Test\]' }).Count -eq 1 } }
+        @{ Name = "a commented-out [Test] in Shared/ is NOT refused"
+           Ok   = { ($structural | Where-Object { $_ -match 'CommentedOutAttrFixtureTests' }).Count -eq 0 } }
+        @{ Name = "the internal helper beside it is NOT a blind spot"
+           Ok   = { ($blindSpots | Where-Object { $_ -match 'CommentedOutAttrFixtureHelpers' }).Count -eq 0 } }
         @{ Name = "a generic fixture is refused"
            Ok   = { ($structural | Where-Object { $_ -match "generic fixture 'class GenericFixtureTests" }).Count -eq 1 } }
         @{ Name = "a public nested fixture is refused"
@@ -164,8 +170,8 @@ function Invoke-SelfCheck {
            Ok   = { ($blindSpots | Where-Object { $_ -match 'class InternalOnlyFixtureTests is declared here' }).Count -eq 1 } }
         @{ Name = "the public fixture beside it is NOT a blind spot"
            Ok   = { ($blindSpots | Where-Object { $_ -match 'class InternalFixtureTests is' }).Count -eq 0 } }
-        @{ Name = "nothing else is refused (5 structural, 1 duplicate, 1 blind spot)"
-           Ok   = { $structural.Count -eq 5 -and $duplicates.Count -eq 1 -and $blindSpots.Count -eq 1 } }
+        @{ Name = "nothing else is refused (6 structural, 1 duplicate, 1 blind spot)"
+           Ok   = { $structural.Count -eq 6 -and $duplicates.Count -eq 1 -and $blindSpots.Count -eq 1 } }
     )
 
     $misses = @()
