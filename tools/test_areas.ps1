@@ -538,7 +538,37 @@ function Get-TestHosts {
 # no arrangement of them can change a test result. The tools/ rule exists for
 # scripts that drive the suite itself, which these do not.
 $ChangedIgnore = '^(docs/|\.claude/|\.gitignore$|\.gitattributes$|tools/githooks/|.*\.md$|.*\.meta$|tools/timings\.json$)'
-$ChangedFullSuite = '^(tools/|Packages/|ProjectSettings/|Assets/_Project/Scripts/[^/]+\.asmdef$|Assets/_Project/Scenes/)'
+
+# The full-suite tier, one alternative per reason:
+#
+#   tools/, Packages/, ProjectSettings/, Scenes/  -- the suite's own plumbing.
+#   Scripts/**/*.asmdef  -- was Scripts/[^/]+.asmdef, which is ONE file
+#     (PrincesPalace.Core.asmdef). The other four -- Domain, Editor and the
+#     two test assemblies -- sit a folder down, matched nothing here, and
+#     matched no $PathAreas row either, so an assembly-definition edit (a new
+#     reference, a changed noEngineReferences, a precompiled-DLL line) came
+#     out UNMAPPED and -Changed refused to run at all. What an asmdef decides
+#     is what COMPILES, which is not a slice of anything.
+#   Tests/**/Shared/  -- the per-platform helpers. These were falling through
+#     to the test-file tier, which maps a test file to the classes it
+#     declares; a Shared helper declares none, so the resolution was empty,
+#     $changedWanted came out empty and test.ps1 printed "Changes map to no
+#     tests" and exited 0. A green exit code over an edit to TestSkills or
+#     StageCaptureRig, which every area's fixtures build on, is the worst
+#     possible answer -- so Shared forces everything.
+#   Domain/CollectionOps.cs  -- the one Domain file with no folder of its own.
+#     It is the shared list/dictionary plumbing under EquipmentLoadout and
+#     InventoryEntry today and under whatever comes next, so it has no
+#     subject; the honest mapping is "all of them".
+#   Editor/(GenerationRun|PipelineBuilder|StanceSpriteImporter|
+#     PreviewRequestWatcher|ContentBuilder)  -- these five GENERATE the
+#     artifacts the suite runs against (the content tree, the scenes, the
+#     sliced stance sprites) or drive the pipeline that does. A slice chosen
+#     by the thing that produced the inputs is a slice validating itself.
+#     ContentBuilder had a row mapping it to 'content', which was the same
+#     mistake in miniature: it writes every Resources/Content asset, and the
+#     combat, run, hub and art suites all read them.
+$ChangedFullSuite = '^(tools/|Packages/|ProjectSettings/|Assets/_Project/Scenes/|Assets/_Project/Scripts/.*\.asmdef$|Assets/_Project/Scripts/Tests/(EditMode|PlayMode)/Shared/|Assets/_Project/Scripts/Domain/CollectionOps\.cs$|Assets/_Project/Scripts/Editor/(GenerationRun|PipelineBuilder|StanceSpriteImporter|PreviewRequestWatcher|ContentBuilder))'
 
 # An ORDERED array, not a hashtable -- @{} enumerates in arbitrary order in
 # PS 5.1, and even [ordered] would bury the first-match-wins contract this
@@ -552,15 +582,50 @@ $ChangedFullSuite = '^(tools/|Packages/|ProjectSettings/|Assets/_Project/Scripts
 # alternative -- no fallback, every new Core file UNMAPPED until someone adds
 # a row -- is more precise but pushes people toward "just run -Full", which
 # defeats the point of this flag.
+#
+# HOW THIS TABLE WAS CHECKED, and how to check it again. For every
+# Tests/**/<X>Tests.cs, find <X>.cs in production, resolve it through the
+# rows below, and compare the answer with the FOLDER the test sits in. A
+# disagreement means the fixture named after a file does not run when that
+# file is edited -- which is the whole failure this table exists to prevent,
+# and it is invisible from either side on its own. The sweep found 19 on
+# 2026-09-06 and every one of them was a real hole, not a mislabelled test:
+# five folders with no row at all (Progression, Ambience, Glossary) and
+# fourteen files claimed by a folder row whose area is not where their
+# fixture lives. All 19 are rowed above; the sweep now reports none. It is
+# ~40 lines of PowerShell and belongs in the scratchpad, not here -- the
+# invariant is worth re-deriving, a fourth script in tools/ is not.
+#
+# The rule the sweep settled arguments with: WHERE THE FIXTURE SITS WINS.
+# A row is not an opinion about which area a subject belongs to, it is a
+# claim about which suites would catch a mistake in it, and the folder is
+# the only evidence of that. This is why CharacterDossierScreen maps to ui
+# and GlossaryScreen to hub+ui, though they are two screens of a kind.
 $PathAreas = @(
+    # TalentEffect sits in Domain/Combat because that is where an effect is
+    # APPLIED, but TalentEffectTests is in Tests/EditMode/Hub with the rest of
+    # the talent tree -- exactly the split the placement guide argues for
+    # above. Both areas, then, or an edit here runs neither the fixture named
+    # after it nor the tree that authors it.
+    @{ Pattern = '^Assets/_Project/Scripts/Domain/Combat/TalentEffect'; Areas = @('combat', 'hub') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Combat/';    Areas = @('combat') }
     # The balance bot's brains -- policies decide over FightSession the same
     # way the fight screen's menu does, so it belongs beside Domain/Combat/.
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Bot/';       Areas = @('combat') }
+    # Two Domain/Content files whose only fixtures are in Tests/*/Combat:
+    # what a spell book grants and how big a modifier rolls are both read as
+    # content and felt only in a fight. Named rather than widening the folder
+    # row to content+combat, which would drag every resolver edit through the
+    # 110s combat area for the sake of two files.
+    @{ Pattern = '^Assets/_Project/Scripts/Domain/Content/(ModifierMagnitude|SpellBooks)\.cs$'; Areas = @('content', 'combat') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Content/';   Areas = @('content') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Dungeon/';   Areas = @('run') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/DebugMenu/'; Areas = @('ui', 'content') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Economy/';   Areas = @('run') }
+    # Same shape as the two Domain/Content names above: the affix LINES an
+    # item modifier renders are content and ui, but the only fixture that
+    # covers them (ModifierAffixLinesTests) is in Tests/EditMode/Combat.
+    @{ Pattern = '^Assets/_Project/Scripts/Domain/Equipment/ModifierAffixLines\.cs$'; Areas = @('content', 'ui', 'combat') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Equipment/'; Areas = @('content', 'ui') }
     # Inventory moved out of Data/ (Core) into Domain so its rules could be
     # EditMode-tested at all -- Data/ compiles into Core and the EditMode suite
@@ -570,24 +635,79 @@ $PathAreas = @(
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Rewards/';   Areas = @('run', 'content') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Rng/';       Areas = @('rng') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Stage/';     Areas = @('combat', 'art') }
+    # Playtime is run state, not a stat curve -- the guide puts it in Run and
+    # PlaytimeFormatTests is the only thing that covers it.
+    @{ Pattern = '^Assets/_Project/Scripts/Domain/Stats/PlaytimeFormat\.cs$'; Areas = @('run') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Stats/';     Areas = @('content') }
     # The UI construction layer lives in Domain (engine-free) so a screen can be
     # built, solved and audited from EditMode in under a second -- see
     # docs/REBUILD.md M4. Talents moves here for TalentLayout's sake.
-    # Hub geometry and the hub's own screen tree live under UiKit, so the
+    # Hub geometry and the hub's own screen trees live under UiKit, so the
     # generic row below would send a hub edit to the 'ui' suite only and never
-    # run the hub tests that exist to catch it. First match wins, so this sits
+    # run the hub tests that exist to catch it. First match wins, so these sit
     # above it deliberately.
-    @{ Pattern = '^Assets/_Project/Scripts/Domain/UiKit/(Hub|Constellation|Screens/Hub)'; Areas = @('hub', 'ui') }
+    #
+    # WHOLE FILENAMES, anchored on \.cs$. The row here used to read
+    # 'UiKit/(Hub|Constellation|Screens/Hub)', which LOOKS like a folder rule
+    # and is a filename-PREFIX rule: it claimed HubAnchors.cs,
+    # ConstellationLayout.cs, Screens/HubScreen.cs and Screens/HubAmbience.cs
+    # by prefix and silently missed every hub screen whose name starts with
+    # something else. GlossaryScreen, TalentScreen and SheetStats all have
+    # their tests in Tests/*/Hub -- so an edit to any of the three ran the ui
+    # suite and skipped the suite that actually covers it. The names are now
+    # listed, and a new hub screen has to be added here; that is one line
+    # against a rule whose failure mode is silence.
+    #
+    # Checked against where the tests actually sit, not against where the
+    # subject sounds like it belongs. That is why CharacterDossierScreen.cs
+    # and DossierLayout.cs are NOT here: the dossier's four fixtures
+    # (CharacterDossierScreen, DossierEquip, DossierPack, DossierXpBar) are
+    # all in Tests/*/Ui, so the generic row below is already right for them.
+    @{ Pattern = '^Assets/_Project/Scripts/Domain/UiKit/(HubAnchors|ConstellationLayout|SheetStats)\.cs$'; Areas = @('hub', 'ui') }
+    # Three more UiKit files whose fixtures are NOT in the ui area, found by
+    # the same sweep as the hub row: MapLayoutTests and RewardTrackLayoutTests
+    # are in Tests/*/Run, FightSubmenuLayoutTests in Tests/*/Combat. The ui
+    # placement rule covers SCREEN-TREE tests; these three cover geometry
+    # whose subject owns it, and they stayed where their subject is.
+    @{ Pattern = '^Assets/_Project/Scripts/Domain/UiKit/(MapLayout|RewardTrackLayout)\.cs$'; Areas = @('ui', 'run') }
+    @{ Pattern = '^Assets/_Project/Scripts/Domain/UiKit/FightSubmenuLayout\.cs$'; Areas = @('ui', 'combat') }
+    @{ Pattern = '^Assets/_Project/Scripts/Domain/UiKit/Screens/(HubScreen|HubAmbience|GlossaryScreen|TalentScreen)\.cs$'; Areas = @('hub', 'ui') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/UiKit/';     Areas = @('ui') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Talents/';   Areas = @('hub') }
+    # What survives a run: LevelCurve, CarriedHealth, RewardTrack and its node
+    # state. Every one of their fixtures is in Tests/*/Run, which is the
+    # placement guide's own reasoning ("character LEVEL is here rather than in
+    # a progression area of its own"). The folder was newer than this table
+    # and matched no row, so a level-curve edit made -Changed refuse outright.
+    @{ Pattern = '^Assets/_Project/Scripts/Domain/Progression/'; Areas = @('run') }
+    # AmbienceCurves and FlickerCurve. 'ui' because AmbienceCurveTests and
+    # FlickerCurveTests are in Tests/EditMode/Ui, 'hub' because
+    # HubBuildingLoopTests asserts over AmbienceCurves directly. NOT 'art':
+    # nothing in the art area touches either curve, despite these being
+    # timing curves for things you look at.
+    @{ Pattern = '^Assets/_Project/Scripts/Domain/Ambience/'; Areas = @('ui', 'hub') }
+    # GlossaryCatalog. 'hub' because both its fixtures are there
+    # (GlossaryScreenTests, GlossaryTests), 'ui' because the entries it holds
+    # become nodes in a screen tree that the three ScreenRegistry-wide sweeps
+    # in the ui area (ButtonFallbackLint, UiBindingNames, ScreenWiring) solve.
+    @{ Pattern = '^Assets/_Project/Scripts/Domain/Glossary/'; Areas = @('hub', 'ui') }
     # Music/audio config. 'ui' rather than a new area of its own: every audio
     # test already sits in Tests/*/Ui, and one more area for two folders would
     # be the kind of over-precision the placement guide above warns about.
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Audio/';     Areas = @('ui') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/Content/';     Areas = @('content') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/Fight';        Areas = @('combat') }
-    @{ Pattern = '^Assets/_Project/Scripts/Core/(GameplayManager|RunState|SaveSystem|SaveSlot)'; Areas = @('run') }
+    # RunManager, RunSettlement and RewardApplier joined this row from the
+    # Core/ catch-all, which claimed all three as 'ui' -- and RunManagerTests,
+    # RunSettlementTests and RewardApplierTests are all in Tests/*/Run, so the
+    # run suite never saw an edit to any of them.
+    @{ Pattern = '^Assets/_Project/Scripts/Core/(GameplayManager|RunState|RunManager|RunSettlement|RewardApplier|SaveSystem|SaveSlot)'; Areas = @('run') }
+    # Prince's Favor feeds the loot roll (ItemOfferRoll.FavorOf), so this one
+    # file is covered from two areas at once: ItemOfferRollTests in content,
+    # ItemOfferFavorTests in run. The colour tables beside it are content
+    # only -- nothing outside Tests/EditMode/Content mentions either.
+    @{ Pattern = '^Assets/_Project/Scripts/Core/ItemOfferRoll'; Areas = @('content', 'run') }
+    @{ Pattern = '^Assets/_Project/Scripts/Core/(RarityColors|RiftTierColors)'; Areas = @('content') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/(Stance|StaticSwing|Stage|Sprite|Procedural)'; Areas = @('art', 'combat') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/(Music|Sound|Audio)'; Areas = @('ui') }
     @{ Pattern = '^Assets/_Project/Scripts/Core/(Hub|Talent|Store|CharacterSheet|CharacterSelect|CharacterTab)'; Areas = @('hub') }
@@ -610,7 +730,10 @@ $PathAreas = @(
     # which exits 2 and runs nothing, on a file whose whole job is the bot.
     @{ Pattern = '^Assets/_Project/Scripts/Editor/Bot/'; Areas = @('combat', 'run') }
     @{ Pattern = '^Assets/_Project/Scripts/Editor/SceneBuilder'; Areas = @('ui', 'hub') }
-    @{ Pattern = '^Assets/_Project/Scripts/Editor/ContentBuilder'; Areas = @('content') }
+    # ContentBuilder used to have a row here mapping it to 'content'. It is in
+    # $ChangedFullSuite now, with GenerationRun and the rest of the generators
+    # -- it writes every asset under Resources/Content, and combat, run, hub
+    # and art all read them.
     # Dev-only menu item that opens Fight.unity and forces FightBootstrap's
     # placeholder-fight enemy pick -- exercises the same combat bootstrap
     # path as everything else under Core/, nothing UI- or content-specific.
@@ -656,7 +779,23 @@ $PathAreas = @(
     # until a whole boss's worth of frames landed at once and -Changed refused;
     # 'art' for the import settings and ground lines, 'combat' because the fight
     # stage is the only thing that loads any of it.
+    # Same reasoning as Enemies|Spells one row down, one folder over: the
+    # playable characters' stance folders, and the two loose vfx sequences
+    # (impact_burst, slash_arc) the fight stage plays that are not a spell's.
+    # Both were UNMAPPED.
+    @{ Pattern = '^Assets/_Project/Resources/(Characters|Vfx)/'; Areas = @('art', 'combat') }
     @{ Pattern = '^Assets/_Project/Resources/(Enemies|Spells)/'; Areas = @('art', 'combat') }
+    # The hub's buildings (gate, principality, talents, character_sheet,
+    # empty_plot). 'hub' for the building loop that places them, 'art' for the
+    # import settings and the sprites themselves.
+    @{ Pattern = '^Assets/_Project/Resources/Hub/'; Areas = @('hub', 'art') }
+    # Runtime-loaded font files, matching the Assets/_Project/Fonts row at the
+    # bottom of this table and for the same reason: what breaks is text
+    # metrics, and it is UiAudit's overflow check in the ui suite that sees it.
+    @{ Pattern = '^Assets/_Project/Resources/Fonts/'; Areas = @('ui') }
+    # The three cursor bitmaps, swapped by CursorController. CursorControllerTests
+    # is in Tests/EditMode/Ui.
+    @{ Pattern = '^Assets/_Project/Resources/Cursors/'; Areas = @('ui') }
     @{ Pattern = '^Assets/_Project/Resources/StanceManifest\.json'; Areas = @('art', 'combat') }
     # Runtime-loaded shaders/materials. Today that is UIHitFlash, the
     # stage's hit reaction, so 'combat'+'art' rather than a bespoke
