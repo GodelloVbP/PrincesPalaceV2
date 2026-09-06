@@ -60,7 +60,7 @@ namespace PrincesPalace
             var leader = squad != null && squad.Count > 0 ? squad[0] : null;
             var definition = leader != null ? ContentDatabase.GetCharacter(leader.definitionId) : null;
 
-            string folder = definition != null ? definition.data.BattleSpritePath : null;
+            string folder = definition != null ? definition.Data.BattleSpritePath : null;
             if (string.IsNullOrWhiteSpace(folder)) return;
 
             var sprite = StanceAnimationLibrary.Resolve(folder, WalkStance);

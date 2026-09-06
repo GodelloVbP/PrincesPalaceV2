@@ -67,7 +67,7 @@ namespace PrincesPalace
                 .Where(m => m != null && !string.IsNullOrEmpty(m.id))
                 .Where(m =>
                 {
-                    var effects = m.data.Effects;
+                    var effects = m.Data.Effects;
                     var type = effects != null && effects.Length > 0
                         ? effects[0].Type
                         : ModifierEffectType.None;
@@ -98,7 +98,7 @@ namespace PrincesPalace
         // equipped still contributes what they were authored with.
         public static int FavorOf(Character character, CharacterDefinition definition)
         {
-            int authored = definition == null ? 0 : definition.data.PrincesFavor;
+            int authored = definition == null ? 0 : definition.Data.PrincesFavor;
             int earned = character == null ? 0 : character.earnedFavor;
             int liveBonus = character == null
                 ? 0

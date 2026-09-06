@@ -303,7 +303,7 @@ namespace PrincesPalace.PlayModeTests
             // so a relic requiring one (Rampaging Bull's Horn) is correctly
             // absent from the pool even though its own unlockedBy is empty.
             int expected = ContentDatabase.Relics.Count(r =>
-                r != null && r.data.IsUnlockedFromTheStart && !r.data.RequiresConvergenceAbility);
+                r != null && r.Data.IsUnlockedFromTheStart && !r.Data.RequiresConvergenceAbility);
             Assert.GreaterOrEqual(seen.Distinct().Count(), expected,
                 $"paging showed {seen.Distinct().Count()} relics but {expected} are unlocked from the start");
         }
@@ -336,7 +336,7 @@ namespace PrincesPalace.PlayModeTests
             Assert.AreEqual(1, RunManager.Run.relicIds.Count,
                 "the selection was lost by paging away and back");
 
-            string takenName = ContentDatabase.Relics.First(r => r.id == RunManager.Run.relicIds[0]).data.DisplayName;
+            string takenName = ContentDatabase.Relics.First(r => r.id == RunManager.Run.relicIds[0]).Data.DisplayName;
             Assert.AreEqual(picked, takenName, "a different relic was taken than the one chosen");
         }
 
@@ -424,7 +424,7 @@ namespace PrincesPalace.PlayModeTests
                     .First(t => t.name.EndsWith("Name")).text)
                 .ToList();
 
-            var takenName = ContentDatabase.Relics.First(r => r.id == taken).data.DisplayName;
+            var takenName = ContentDatabase.Relics.First(r => r.id == taken).Data.DisplayName;
 
             CollectionAssert.DoesNotContain(offered, takenName,
                 "the second round offered the relic the first round just took");

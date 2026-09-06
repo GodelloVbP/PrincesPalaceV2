@@ -89,9 +89,9 @@ namespace PrincesPalace.Content
 
             foreach (var character in _characters)
             {
-                if (character.data.BaseStats.maxHealth <= 0)
+                if (character.Data.BaseStats.maxHealth <= 0)
                 {
-                    errors.Add($"Character '{character.id}' has non-positive baseStats.maxHealth ({character.data.BaseStats.maxHealth}).");
+                    errors.Add($"Character '{character.id}' has non-positive baseStats.maxHealth ({character.Data.BaseStats.maxHealth}).");
                 }
 
                 // Ability scores are a fixed budget, not a free stat line.
@@ -99,7 +99,7 @@ namespace PrincesPalace.Content
                 // without this a new character could be above average at
                 // everything and simply outclass the roster. To be tough
                 // somewhere you have to be feeble somewhere else.
-                var scores = character.data.AbilityScores;
+                var scores = character.Data.AbilityScores;
                 int total = scores.strength + scores.dexterity + scores.constitution
                             + scores.wisdom + scores.intelligence + scores.charisma;
                 if (total != AbilityScoreBudget)
@@ -128,9 +128,9 @@ namespace PrincesPalace.Content
                 // looks like a bug. Named here for the same reason the talent
                 // check below exists, and caught at build time where a typo is
                 // still a typo.
-                if (enemy?.data?.Abilities == null) continue;
+                if (enemy?.Data?.Abilities == null) continue;
 
-                foreach (var ability in enemy.data.Abilities)
+                foreach (var ability in enemy.Data.Abilities)
                 {
                     if (string.IsNullOrEmpty(ability.SkillId)) continue;
 
@@ -150,14 +150,14 @@ namespace PrincesPalace.Content
                 // exactly the same failure mode as grantsStartingItemId
                 // below, and worth the same named check rather than a null
                 // silently reaching FightController's skill strip.
-                if (!string.IsNullOrEmpty(talent.data.GrantsSkillId))
+                if (!string.IsNullOrEmpty(talent.Data.GrantsSkillId))
                 {
-                    var granted = GetSkill(talent.data.GrantsSkillId);
+                    var granted = GetSkill(talent.Data.GrantsSkillId);
                     if (granted == null)
                     {
-                        errors.Add($"Talent '{talent.id}' grants unknown skill id '{talent.data.GrantsSkillId}'.");
+                        errors.Add($"Talent '{talent.id}' grants unknown skill id '{talent.Data.GrantsSkillId}'.");
                     }
-                    else if (!talent.IsSharedByEveryCharacter && granted.data.CharacterId != talent.data.CharacterId)
+                    else if (!talent.IsSharedByEveryCharacter && granted.Data.CharacterId != talent.Data.CharacterId)
                     {
                         // Caught for real: the Fragile Lamb's ward ability was
                         // first authored as "ward", which the OWL already
@@ -168,8 +168,8 @@ namespace PrincesPalace.Content
                         // collision between two characters' kits is a typo,
                         // and it should fail the content build rather than
                         // quietly delete a talent's whole payload.
-                        errors.Add($"Talent '{talent.id}' belongs to '{talent.data.CharacterId}' but grants skill " +
-                                   $"'{talent.data.GrantsSkillId}', which belongs to '{granted.data.CharacterId}'. " +
+                        errors.Add($"Talent '{talent.id}' belongs to '{talent.Data.CharacterId}' but grants skill " +
+                                   $"'{talent.Data.GrantsSkillId}', which belongs to '{granted.Data.CharacterId}'. " +
                                    "A character cannot hand out another character's kit.");
                     }
                 }
@@ -182,24 +182,24 @@ namespace PrincesPalace.Content
                 // the monotonicity the whole algorithm rests on.
                 foreach (AbilityScore score in System.Enum.GetValues(typeof(AbilityScore)))
                 {
-                    if (talent.data.AbilityScoreBonus[score] < 0)
+                    if (talent.Data.AbilityScoreBonus[score] < 0)
                     {
-                        errors.Add($"Talent '{talent.id}' has a negative {score} bonus ({talent.data.AbilityScoreBonus[score]}) — ability-score bonuses must never be negative, or RequirementResolver's fixpoint is no longer guaranteed to converge on the same set regardless of order.");
+                        errors.Add($"Talent '{talent.id}' has a negative {score} bonus ({talent.Data.AbilityScoreBonus[score]}) — ability-score bonuses must never be negative, or RequirementResolver's fixpoint is no longer guaranteed to converge on the same set regardless of order.");
                     }
                 }
 
-                if (!string.IsNullOrEmpty(talent.data.GrantsStartingItemId) && GetItem(talent.data.GrantsStartingItemId) == null)
+                if (!string.IsNullOrEmpty(talent.Data.GrantsStartingItemId) && GetItem(talent.Data.GrantsStartingItemId) == null)
                 {
-                    errors.Add($"Talent '{talent.id}' grants unknown item id '{talent.data.GrantsStartingItemId}'.");
+                    errors.Add($"Talent '{talent.id}' grants unknown item id '{talent.Data.GrantsStartingItemId}'.");
                 }
 
                 // A talent owned by a character who does not exist can never
                 // be taken by anyone, so it is dead content that still shows
                 // up in the global Talents list. Mirrors the same check on
                 // skills and on grantsStartingItemId.
-                if (!talent.IsSharedByEveryCharacter && GetCharacter(talent.data.CharacterId) == null)
+                if (!talent.IsSharedByEveryCharacter && GetCharacter(talent.Data.CharacterId) == null)
                 {
-                    errors.Add($"Talent '{talent.id}' belongs to unknown character id '{talent.data.CharacterId}'.");
+                    errors.Add($"Talent '{talent.id}' belongs to unknown character id '{talent.Data.CharacterId}'.");
                 }
 
                 // The one invariant the talent PANEL depends on: two nodes
@@ -216,14 +216,14 @@ namespace PrincesPalace.Content
 
                     var sameCell = _talents.Where(other =>
                         other != talent
-                        && other.data.Column == talent.data.Column
-                        && other.data.Row == talent.data.Row
+                        && other.Data.Column == talent.Data.Column
+                        && other.Data.Row == talent.Data.Row
                         && other.IsAvailableTo(new Character(character.id))).ToList();
 
                     if (sameCell.Count > 0)
                     {
                         errors.Add($"'{character.id}' sees both '{talent.id}' and '{sameCell[0].id}' at grid cell " +
-                                   $"({talent.data.Column},{talent.data.Row}) — one cell renders one node.");
+                                   $"({talent.Data.Column},{talent.Data.Row}) — one cell renders one node.");
                     }
                 }
             }
@@ -253,7 +253,7 @@ namespace PrincesPalace.Content
 
             foreach (var relic in _relics)
             {
-                if (string.IsNullOrWhiteSpace(relic.data.DisplayName))
+                if (string.IsNullOrWhiteSpace(relic.Data.DisplayName))
                 {
                     errors.Add($"Relic '{relic.id}' has no displayName; the Relics screen would show a blank row.");
                 }
@@ -261,7 +261,7 @@ namespace PrincesPalace.Content
 
             foreach (var modifier in _modifiers)
             {
-                if (string.IsNullOrWhiteSpace(modifier.data.DisplayName))
+                if (string.IsNullOrWhiteSpace(modifier.Data.DisplayName))
                 {
                     errors.Add($"Modifier '{modifier.id}' has no displayName; a tooltip line would show a blank row.");
                 }
@@ -269,16 +269,16 @@ namespace PrincesPalace.Content
 
             foreach (var enemy in _enemies)
             {
-                if (enemy.data.BaseStats.maxHealth <= 0)
+                if (enemy.Data.BaseStats.maxHealth <= 0)
                 {
-                    errors.Add($"Enemy '{enemy.id}' has non-positive baseStats.maxHealth ({enemy.data.BaseStats.maxHealth}).");
+                    errors.Add($"Enemy '{enemy.id}' has non-positive baseStats.maxHealth ({enemy.Data.BaseStats.maxHealth}).");
                 }
 
                 // An element on BOTH lists, now that each is a list. Still an
                 // error rather than a precedence rule: CombatMath scores a
                 // weakness first, so the resistance would be authored, shown in
                 // the glossary, and never once apply.
-                var contradictions = enemy.data.Affinity.Contradictions;
+                var contradictions = enemy.Data.Affinity.Contradictions;
                 if (contradictions.Count > 0)
                 {
                     errors.Add($"Enemy '{enemy.id}' lists {string.Join(" and ", contradictions)} " +
@@ -323,9 +323,9 @@ namespace PrincesPalace.Content
             {
                 foreach (AbilityScore score in System.Enum.GetValues(typeof(AbilityScore)))
                 {
-                    if (talent.data.AbilityScoreBonus[score] > 0)
+                    if (talent.Data.AbilityScoreBonus[score] > 0)
                     {
-                        talentBonusSum = talentBonusSum.With(score, talentBonusSum[score] + talent.data.AbilityScoreBonus[score]);
+                        talentBonusSum = talentBonusSum.With(score, talentBonusSum[score] + talent.Data.AbilityScoreBonus[score]);
                     }
                 }
             }
@@ -404,12 +404,12 @@ namespace PrincesPalace.Content
                 // anything unrecognised: the whole value of this check is that
                 // a typo'd owner is invisible until someone wonders where the
                 // button went, and that is exactly as true for a monster.
-                bool ownedByCharacter = GetCharacter(skill.data.CharacterId) != null;
-                bool ownedByEnemy = GetEnemy(skill.data.CharacterId) != null;
+                bool ownedByCharacter = GetCharacter(skill.Data.CharacterId) != null;
+                bool ownedByEnemy = GetEnemy(skill.Data.CharacterId) != null;
 
                 if (!ownedByCharacter && !ownedByEnemy)
                 {
-                    errors.Add($"Skill '{skill.id}' belongs to unknown owner id '{skill.data.CharacterId}'. " +
+                    errors.Add($"Skill '{skill.id}' belongs to unknown owner id '{skill.Data.CharacterId}'. " +
                                "It must name a character or an enemy.");
                 }
 
@@ -421,15 +421,15 @@ namespace PrincesPalace.Content
                 // skill owned by a monster can never be pressed by anyone, and
                 // a non-selectable one owned by a character is a button the
                 // player has silently lost.
-                else if (skill.data.PlayerSelectable && ownedByEnemy)
+                else if (skill.Data.PlayerSelectable && ownedByEnemy)
                 {
                     errors.Add($"Skill '{skill.id}' is player-selectable but belongs to enemy " +
-                               $"'{skill.data.CharacterId}', so no character can ever be offered it. " +
+                               $"'{skill.Data.CharacterId}', so no character can ever be offered it. " +
                                "Set playerSelectable false, or give it a character owner.");
                 }
-                else if (!skill.data.PlayerSelectable && ownedByCharacter)
+                else if (!skill.Data.PlayerSelectable && ownedByCharacter)
                 {
-                    errors.Add($"Skill '{skill.id}' belongs to character '{skill.data.CharacterId}' but is " +
+                    errors.Add($"Skill '{skill.id}' belongs to character '{skill.Data.CharacterId}' but is " +
                                "not player-selectable, so it will never appear on their strip.");
                 }
 
@@ -440,20 +440,20 @@ namespace PrincesPalace.Content
                 // of the resolver's own authoring-time refusal: content is
                 // checked at both moments, and this is the one that would
                 // catch a hand-edited asset the resolver never saw.
-                if (!skill.data.BookOnly && skill.data.UnlockLevel < 1)
+                if (!skill.Data.BookOnly && skill.Data.UnlockLevel < 1)
                 {
-                    errors.Add($"Skill '{skill.id}' unlocks at level {skill.data.UnlockLevel}; characters start at level 1.");
+                    errors.Add($"Skill '{skill.id}' unlocks at level {skill.Data.UnlockLevel}; characters start at level 1.");
                 }
 
-                if (skill.data.BookOnly && skill.data.UnlockLevel != int.MaxValue)
+                if (skill.Data.BookOnly && skill.Data.UnlockLevel != int.MaxValue)
                 {
-                    errors.Add($"Skill '{skill.id}' is bookOnly but its unlockLevel is {skill.data.UnlockLevel}, not " +
+                    errors.Add($"Skill '{skill.id}' is bookOnly but its unlockLevel is {skill.Data.UnlockLevel}, not " +
                                "int.MaxValue -- bookOnly and unlockLevel cannot both be authored.");
                 }
 
-                if (skill.data.BookTier < 0)
+                if (skill.Data.BookTier < 0)
                 {
-                    errors.Add($"Skill '{skill.id}' has a negative bookTier ({skill.data.BookTier}). 0 means not " +
+                    errors.Add($"Skill '{skill.id}' has a negative bookTier ({skill.Data.BookTier}). 0 means not " +
                                "book-eligible.");
                 }
 
@@ -469,8 +469,8 @@ namespace PrincesPalace.Content
                 // argument is about a player weighing this action against
                 // another; a monster's abilities are drawn by weight and it has
                 // neither mana nor wool to spend either way.
-                if (skill.data.PlayerSelectable && skill.data.ManaCost == 0 && !skill.data.CostsResource
-                    && skill.data.Effect != SkillEffect.Provoke)
+                if (skill.Data.PlayerSelectable && skill.Data.ManaCost == 0 && !skill.Data.CostsResource
+                    && skill.Data.Effect != SkillEffect.Provoke)
                 {
                     errors.Add($"Skill '{skill.id}' costs nothing at all, so it strictly dominates every other action.");
                 }
@@ -478,12 +478,12 @@ namespace PrincesPalace.Content
                 // A character can only spend a resource they have. This is
                 // the cross-content check that catches authoring a Wool cost
                 // onto somebody who has no Wool.
-                if (skill.data.CostsResource)
+                if (skill.Data.CostsResource)
                 {
-                    var owner = GetCharacter(skill.data.CharacterId);
-                    if (owner != null && !owner.data.HasSignatureResource)
+                    var owner = GetCharacter(skill.Data.CharacterId);
+                    if (owner != null && !owner.Data.HasSignatureResource)
                     {
-                        errors.Add($"Skill '{skill.id}' costs a signature resource, but '{skill.data.CharacterId}' has none.");
+                        errors.Add($"Skill '{skill.id}' costs a signature resource, but '{skill.Data.CharacterId}' has none.");
                     }
                 }
             }
@@ -491,28 +491,28 @@ namespace PrincesPalace.Content
             var seenSpellTierLevels = new HashSet<int>();
             foreach (var tier in _spellTiers)
             {
-                if (!seenSpellTierLevels.Add(tier.data.Level))
+                if (!seenSpellTierLevels.Add(tier.Data.Level))
                 {
-                    errors.Add($"Duplicate spell tier for level {tier.data.Level} — every level must appear at most once.");
+                    errors.Add($"Duplicate spell tier for level {tier.Data.Level} — every level must appear at most once.");
                 }
 
-                if (tier.data.ManaCost <= 0)
+                if (tier.Data.ManaCost <= 0)
                 {
-                    errors.Add($"Spell tier level {tier.data.Level} has non-positive manaCost ({tier.data.ManaCost}).");
+                    errors.Add($"Spell tier level {tier.Data.Level} has non-positive manaCost ({tier.Data.ManaCost}).");
                 }
 
-                if (tier.data.PowerMultiplier <= 0f)
+                if (tier.Data.PowerMultiplier <= 0f)
                 {
-                    errors.Add($"Spell tier level {tier.data.Level} has non-positive powerMultiplier ({tier.data.PowerMultiplier}).");
+                    errors.Add($"Spell tier level {tier.Data.Level} has non-positive powerMultiplier ({tier.Data.PowerMultiplier}).");
                 }
 
                 // The level-1 tier is what GetSpellTierForLevel(1) has to
                 // resolve to for a brand new character — gating it on a
                 // requirement would leave Skill with no mana cost or
                 // damage to fall back on for anyone who has not yet met it.
-                if (tier.data.Level == 1 && !tier.data.Requirements.Equals(AbilityScoreBlock.Zero))
+                if (tier.Data.Level == 1 && !tier.Data.Requirements.Equals(AbilityScoreBlock.Zero))
                 {
-                    errors.Add($"Spell tier level 1 has a non-zero requirement ({tier.data.Requirements}) — the level-1 tier must always be usable, since a fresh character has to have SOME spell tier available from the very first fight.");
+                    errors.Add($"Spell tier level 1 has a non-zero requirement ({tier.Data.Requirements}) — the level-1 tier must always be usable, since a fresh character has to have SOME spell tier available from the very first fight.");
                 }
             }
 

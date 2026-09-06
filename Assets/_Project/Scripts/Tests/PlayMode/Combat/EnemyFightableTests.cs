@@ -57,7 +57,7 @@ namespace PrincesPalace.PlayModeTests
 
             var enemies = ContentDatabase.Enemies
                 .Where(e => e != null)
-                .Select(e => (e.id, e.data.IsBoss))
+                .Select(e => (e.id, e.Data.IsBoss))
                 .ToList();
 
             CollectionAssert.IsNotEmpty(enemies, "no active enemies in content");

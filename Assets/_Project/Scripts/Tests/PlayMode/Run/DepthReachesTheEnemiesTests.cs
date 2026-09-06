@@ -89,13 +89,13 @@ namespace PrincesPalace.PlayModeTests
             var definition = ContentDatabase.Enemies.First(e => e.id == OneEnemy()[0]);
             var enemy = Enemy(0);
 
-            Assert.AreEqual(definition.data.BaseStats.maxHealth, enemy.MaxHealth);
-            Assert.AreEqual(definition.data.BaseStats.attack, enemy.Attack);
+            Assert.AreEqual(definition.Data.BaseStats.maxHealth, enemy.MaxHealth);
+            Assert.AreEqual(definition.Data.BaseStats.attack, enemy.Attack);
             // Defenses aren't on the depth curve at all any more (see the
             // next test), so at step 0 this is trivially the authored value
             // -- kept here anyway so this test still fully pins the surface.
-            Assert.AreEqual(definition.data.BaseStats.physicalDefense, enemy.PhysicalDefense);
-            Assert.AreEqual(definition.data.BaseStats.magicalDefense, enemy.MagicalDefense);
+            Assert.AreEqual(definition.Data.BaseStats.physicalDefense, enemy.PhysicalDefense);
+            Assert.AreEqual(definition.Data.BaseStats.magicalDefense, enemy.MagicalDefense);
         }
 
         // PHASE 5B (D6): enemy defenses no longer depth-scale at all -- used

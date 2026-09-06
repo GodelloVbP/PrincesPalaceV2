@@ -71,9 +71,9 @@ namespace PrincesPalace.PlayModeTests
             // level route the book gate exists to close).
             var skill = ContentDatabase.GetSkill(SkillId);
             Assert.IsNotNull(skill, "mud_burst should exist in the built content");
-            Assert.IsTrue(skill.data.BookOnly, "the five spells are learned-only, never levelled into");
-            Assert.Greater(skill.data.BookTier, 0, "and still carry the tier that prices/rolls them in the shop");
-            Assert.AreEqual(int.MaxValue, skill.data.UnlockLevel,
+            Assert.IsTrue(skill.Data.BookOnly, "the five spells are learned-only, never levelled into");
+            Assert.Greater(skill.Data.BookTier, 0, "and still carry the tier that prices/rolls them in the shop");
+            Assert.AreEqual(int.MaxValue, skill.Data.UnlockLevel,
                 "no level should ever grant a book-only skill for free");
         }
 
@@ -122,7 +122,7 @@ namespace PrincesPalace.PlayModeTests
 
             var skill = ContentDatabase.GetSkill(SkillId);
             Assert.IsNotNull(skill);
-            Assert.AreNotEqual(OtherCharacterId, skill.data.CharacterId,
+            Assert.AreNotEqual(OtherCharacterId, skill.Data.CharacterId,
                 "this test is only worth anything if the book is authored against SOMEBODY ELSE");
 
             var odette = new Character { definitionId = OtherCharacterId, level = 9 };

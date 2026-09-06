@@ -117,7 +117,7 @@ namespace PrincesPalace.PlayModeTests
             {
                 var enemy = ContentDatabase.Enemies.FirstOrDefault(e => e != null && e.id == id);
                 Assert.IsNotNull(enemy, $"'{id}' is not in the content database -- rebuild content first.");
-                Assert.IsFalse(string.IsNullOrWhiteSpace(enemy.data.SpritePath),
+                Assert.IsFalse(string.IsNullOrWhiteSpace(enemy.Data.SpritePath),
                     $"'{id}' has no spritePath, so there is nothing to photograph.");
 
                 var stances = EnemyArtCompletenessTests.StancesReachableBy(enemy).OrderBy(s => s).ToList();
@@ -125,7 +125,7 @@ namespace PrincesPalace.PlayModeTests
 
                 foreach (string stance in stances)
                 {
-                    var sprite = Resources.Load<Sprite>($"{enemy.data.SpritePath}/{stance}");
+                    var sprite = Resources.Load<Sprite>($"{enemy.Data.SpritePath}/{stance}");
                     if (sprite != null) sprites.Add((stance, sprite));
                 }
 
@@ -164,7 +164,7 @@ namespace PrincesPalace.PlayModeTests
                 Assert.IsNotNull(fight, "the fight scene has no controller");
 
                 var hero = ContentDatabase.Characters.FirstOrDefault(
-                    c => c != null && !string.IsNullOrWhiteSpace(c.data.BattleSpritePath))
+                    c => c != null && !string.IsNullOrWhiteSpace(c.Data.BattleSpritePath))
                     ?? ContentDatabase.Characters.FirstOrDefault();
                 Assert.IsNotNull(hero, "no characters in content");
 

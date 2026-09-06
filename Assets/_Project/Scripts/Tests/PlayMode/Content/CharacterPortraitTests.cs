@@ -39,7 +39,7 @@ namespace PrincesPalace.PlayModeTests
         public void EveryCharacterThatAuthorsAPortraitPathGetsASprite()
         {
             var authored = ContentDatabase.Characters
-                .Where(c => c != null && c.data != null && !string.IsNullOrWhiteSpace(c.data.PortraitPath))
+                .Where(c => c != null && c.Data != null && !string.IsNullOrWhiteSpace(c.Data.PortraitPath))
                 .ToList();
 
             // VACUITY GUARD. A roster where nobody authored a portrait would
@@ -52,7 +52,7 @@ namespace PrincesPalace.PlayModeTests
             foreach (var character in authored)
             {
                 Assert.IsNotNull(CharacterPortraits.For(character.id),
-                    $"Character '{character.id}' names portraitPath '{character.data.PortraitPath}' and it " +
+                    $"Character '{character.id}' names portraitPath '{character.Data.PortraitPath}' and it " +
                     "loaded nothing. Resources-relative, no extension, and the file has to sit under " +
                     "Assets/_Project/Resources/ -- see PortraitImportPostprocessor for the import settings " +
                     "that make Resources.Load<Sprite> return a Sprite rather than null.");
@@ -66,10 +66,10 @@ namespace PrincesPalace.PlayModeTests
         public void ThePortraitIsTheOneThePathNames()
         {
             var character = ContentDatabase.Characters
-                .FirstOrDefault(c => c != null && c.data != null && !string.IsNullOrWhiteSpace(c.data.PortraitPath));
+                .FirstOrDefault(c => c != null && c.Data != null && !string.IsNullOrWhiteSpace(c.Data.PortraitPath));
             Assert.IsNotNull(character, "fixture: content has at least one character with a portraitPath");
 
-            var direct = Resources.Load<Sprite>(character.data.PortraitPath.Trim());
+            var direct = Resources.Load<Sprite>(character.Data.PortraitPath.Trim());
             Assert.AreSame(direct, CharacterPortraits.For(character.id));
         }
 
@@ -78,7 +78,7 @@ namespace PrincesPalace.PlayModeTests
         public void TheAnswerIsCachedRatherThanReloaded()
         {
             var character = ContentDatabase.Characters
-                .FirstOrDefault(c => c != null && c.data != null && !string.IsNullOrWhiteSpace(c.data.PortraitPath));
+                .FirstOrDefault(c => c != null && c.Data != null && !string.IsNullOrWhiteSpace(c.Data.PortraitPath));
             Assert.IsNotNull(character, "fixture: content has at least one character with a portraitPath");
 
             Assert.AreSame(CharacterPortraits.For(character.id), CharacterPortraits.For(character.id));

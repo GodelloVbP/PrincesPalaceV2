@@ -430,8 +430,8 @@ namespace PrincesPalace
                     learned.Exists(e => e != null && e.characterId == id && e.skillId == skillId));
 
             return ContentDatabase.Skills
-                .Where(s => s != null && s.data.BookTier > 0 && !EveryoneKnows(s.id))
-                .Select(s => new ShopStock.BookCandidate(s.id, s.data.BookTier))
+                .Where(s => s != null && s.Data.BookTier > 0 && !EveryoneKnows(s.id))
+                .Select(s => new ShopStock.BookCandidate(s.id, s.Data.BookTier))
                 .ToList();
         }
     }

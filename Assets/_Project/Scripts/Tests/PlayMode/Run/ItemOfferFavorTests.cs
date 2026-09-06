@@ -43,7 +43,7 @@ namespace PrincesPalace.PlayModeTests
             ContentDatabase.Characters.FirstOrDefault(d => d != null && d.id == character.definitionId);
 
         private static int AuthoredFavorOf(Character character) =>
-            DefinitionFor(character)?.data.PrincesFavor ?? 0;
+            DefinitionFor(character)?.Data.PrincesFavor ?? 0;
 
         [Test]
         public void AuthoredFavorStillCountsWhenNoneHasBeenEarned()

@@ -68,13 +68,13 @@ namespace PrincesPalace
                 .Where(r => r != null)
                 .Select(r =>
                 {
-                    bool locked = !r.data.IsUnlockedFromTheStart && !earned.Contains(r.data.UnlockedBy);
+                    bool locked = !r.Data.IsUnlockedFromTheStart && !earned.Contains(r.Data.UnlockedBy);
                     return new GlossaryEntry(
-                        r.id, r.data.DisplayName,
-                        RelicRarityNames.Of(r.data.Rarity),
-                        r.data.Description,
+                        r.id, r.Data.DisplayName,
+                        RelicRarityNames.Of(r.Data.Rarity),
+                        r.Data.Description,
                         locked,
-                        locked ? AchievementName(r.data.UnlockedBy) : "",
+                        locked ? AchievementName(r.Data.UnlockedBy) : "",
                         r.id);
                 })
                 .ToList();
@@ -84,10 +84,10 @@ namespace PrincesPalace
             ContentDatabase.Enemies
                 .Where(e => e != null)
                 .Select(e => new GlossaryEntry(
-                    e.id, e.data.DisplayName,
+                    e.id, e.Data.DisplayName,
                     // Off BaseStats, which is where an enemy's numbers actually
                     // live -- there are no maxHealth/attack fields beside it.
-                    $"{e.data.BaseStats.maxHealth} HP  ·  {e.data.BaseStats.attack} ATK{(e.data.IsBoss ? "  ·  BOSS" : "")}",
+                    $"{e.Data.BaseStats.maxHealth} HP  ·  {e.Data.BaseStats.attack} ATK{(e.Data.IsBoss ? "  ·  BOSS" : "")}",
                     // Enemies carry no authored prose, so the row says what it
                     // actually knows rather than showing an empty plate.
                     AffinityLine(e),
@@ -103,7 +103,7 @@ namespace PrincesPalace
             // READ ONCE EACH. Weaknesses and Resistances materialise a fresh
             // list on every get (see ElementalAffinity.Listed), so asking twice
             // per half built four lists to print two sentences.
-            var affinity = enemy.data.Affinity;
+            var affinity = enemy.Data.Affinity;
             var weaknesses = affinity.Weaknesses;
             var resistances = affinity.Resistances;
             var parts = new List<string>();
@@ -132,9 +132,9 @@ namespace PrincesPalace
             ContentDatabase.Skills
                 .Where(s => s != null)
                 .Select(s => new GlossaryEntry(
-                    s.id, s.data.DisplayName,
-                    s.data.ManaCost > 0 ? $"{s.data.ManaCost} MANA" : "NO COST",
-                    s.data.Description,
+                    s.id, s.Data.DisplayName,
+                    s.Data.ManaCost > 0 ? $"{s.Data.ManaCost} MANA" : "NO COST",
+                    s.Data.Description,
                     iconId: s.id))
                 .ToList();
 
@@ -152,9 +152,9 @@ namespace PrincesPalace
             ContentDatabase.Talents
                 .Where(t => t != null)
                 .Select(t => new GlossaryEntry(
-                    t.id, t.data.DisplayName,
-                    t.data.CharacterId,
-                    t.data.Description,
+                    t.id, t.Data.DisplayName,
+                    t.Data.CharacterId,
+                    t.Data.Description,
                     iconId: t.id))
                 .ToList();
 
@@ -217,11 +217,11 @@ namespace PrincesPalace
                 .Where(a => a != null)
                 .Select(a =>
                 {
-                    bool earned = AchievementProgress.IsEarned(a.data, facts);
+                    bool earned = AchievementProgress.IsEarned(a.Data, facts);
                     return new GlossaryEntry(
-                        a.id, a.data.DisplayName,
+                        a.id, a.Data.DisplayName,
                         earned ? "EARNED" : "NOT YET",
-                        a.data.Description,
+                        a.Data.Description,
                         locked: !earned,
                         lockedBy: "",
                         iconId: a.id);
@@ -234,7 +234,7 @@ namespace PrincesPalace
             var definition = ContentDatabase.Achievements
                 .FirstOrDefault(a => a != null && a.id == achievementId);
 
-            return definition == null ? achievementId : definition.data.DisplayName;
+            return definition == null ? achievementId : definition.Data.DisplayName;
         }
 
     }

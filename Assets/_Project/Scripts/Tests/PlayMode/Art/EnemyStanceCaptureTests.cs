@@ -69,7 +69,7 @@ namespace PrincesPalace.PlayModeTests
         // sweep checks.
         private static Dictionary<string, string[]> Kits() =>
             ContentDatabase.Enemies
-                .Where(e => e != null && !string.IsNullOrWhiteSpace(e.data.SpritePath))
+                .Where(e => e != null && !string.IsNullOrWhiteSpace(e.Data.SpritePath))
                 .OrderBy(e => e.id, System.StringComparer.Ordinal)
                 .ToDictionary(
                     e => e.id,
@@ -149,7 +149,7 @@ namespace PrincesPalace.PlayModeTests
             // spread so the stage settles in a fixed order -- the same
             // arrangement this fixture always used, now over a variable list.
             var foes = definitions
-                .Select((e, i) => new CombatantState(e.data.DisplayName, false, 5000, 0, 4 + i, 5 - i))
+                .Select((e, i) => new CombatantState(e.Data.DisplayName, false, 5000, 0, 4 + i, 5 - i))
                 .ToList();
 
             var session = new FightSession(

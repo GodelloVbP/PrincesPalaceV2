@@ -72,8 +72,8 @@ namespace PrincesPalace.PlayModeTests
         // of the list.
         private static List<string> FlaggedStarters() =>
             ContentDatabase.Characters
-                .Where(c => c != null && c.data.StartsInSquad)
-                .OrderBy(c => c.data.SquadSlot)
+                .Where(c => c != null && c.Data.StartsInSquad)
+                .OrderBy(c => c.Data.SquadSlot)
                 .Select(c => c.id)
                 .ToList();
 
@@ -86,13 +86,13 @@ namespace PrincesPalace.PlayModeTests
             // without passing through the resolver -- CLAUDE.md's
             // [CreateAssetMenu] hazard, which is exactly the case the
             // resolver cannot see.
-            var starters = ContentDatabase.Characters.Where(c => c != null && c.data.StartsInSquad).ToList();
+            var starters = ContentDatabase.Characters.Where(c => c != null && c.Data.StartsInSquad).ToList();
 
             Assert.AreEqual(3, starters.Count,
                 "characters.json must flag exactly three: " +
                 string.Join(", ", starters.Select(c => c.id)));
 
-            CollectionAssert.AreEquivalent(new[] { 1, 2, 3 }, starters.Select(c => c.data.SquadSlot).ToList(),
+            CollectionAssert.AreEquivalent(new[] { 1, 2, 3 }, starters.Select(c => c.Data.SquadSlot).ToList(),
                 "the three slots are 1, 2 and 3, each used once");
         }
 

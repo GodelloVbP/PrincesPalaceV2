@@ -111,7 +111,7 @@ namespace PrincesPalace
 
             var all = ContentDatabase.Relics
                 .Where(r => r != null)
-                .Select(r => new RelicOption(r.id, r.data.Rarity, r.data.UnlockedBy, r.data.RequiresConvergenceAbility))
+                .Select(r => new RelicOption(r.id, r.Data.Rarity, r.Data.UnlockedBy, r.Data.RequiresConvergenceAbility))
                 .ToList();
 
             // Mechanic (g): does anybody in the squad actually have a
@@ -126,7 +126,7 @@ namespace PrincesPalace
                 if (c == null) continue;
                 foreach (var s in ContentDatabase.AvailableSkillsFor(c))
                 {
-                    if (s != null && ConvergenceGate.IsConvergenceEffect(s.data.Effect))
+                    if (s != null && ConvergenceGate.IsConvergenceEffect(s.Data.Effect))
                     {
                         hasConvergence = true;
                         break;
@@ -485,7 +485,7 @@ namespace PrincesPalace
                 // so the one SaveCurrent() that call already makes is the
                 // save this rides too, rather than a second write.
                 var bookIds = ContentDatabase.Skills
-                    .Where(s => s != null && s.data.BookTier > 0)
+                    .Where(s => s != null && s.Data.BookTier > 0)
                     .Select(s => s.id)
                     .ToList();
                 var spellRng = RngStreams.Open(run.runSeed, RngStreams.SpellDrop, run.step, run.currentNodeId);

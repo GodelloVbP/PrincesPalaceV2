@@ -146,31 +146,34 @@ namespace PrincesPalace.Domain.Content
         // the game, since nothing an enemy did was ever typed.
         public DamageType AttackType = DamageType.Physical;
 
-        // The packed pair every damage call site wants, built once and kept.
+        // The packed pair every damage call site wants, COMPUTED ON EVERY READ.
         //
-        // CACHED because FightSession.AffinityOf asks for it on every packet
-        // of damage in the game and the lists behind it never change after the
-        // resolver hands this over -- the same immutable-by-convention rule
-        // the rest of the type runs on. [NonSerialized] so a freshly
-        // deserialized asset rebuilds it from the arrays that WERE written.
-        [NonSerialized] private ElementalAffinity _affinity;
-        [NonSerialized] private bool _affinityBuilt;
-
-        public ElementalAffinity Affinity
-        {
-            get
-            {
-                if (!_affinityBuilt)
-                {
-                    _affinity = ElementalAffinity.Of(
-                        Weaknesses ?? Array.Empty<DamageType>(),
-                        Resistances ?? Array.Empty<DamageType>());
-                    _affinityBuilt = true;
-                }
-
-                return _affinity;
-            }
-        }
+        // This was a memoised `_affinity`/`_affinityBuilt` pair, and the memo
+        // was a write to a shared object from inside a fight. ResolvedEnemy
+        // instances are the catalogue: ContentDatabase hands the SAME
+        // EnemyDefinition.Data to every encounter, so the first packet of
+        // damage of the first fight of the session mutated an object every
+        // later fight also reads. Nothing observable went wrong -- the value is
+        // a pure function of two arrays that never change -- but "nothing
+        // observable went wrong" is exactly the claim a content-ownership test
+        // has to be able to make about the WHOLE record, and it could not while
+        // this field existed.
+        //
+        // THE OBVIOUS FIX DOES NOT WORK, which is worth writing down because it
+        // is the one that gets tried. Seeding the cache in the constructors
+        // covers the resolver's path and misses the one that matters: Unity
+        // deserialises an asset by running the PARAMETERLESS constructor and
+        // filling the fields afterwards, so at the moment that constructor runs
+        // Weaknesses and Resistances are still empty and there is nothing to
+        // seed from. Every ResolvedEnemy the game actually plays against
+        // arrives that way.
+        //
+        // THE COST IS TWO SIX-BIT MASKS PER READ, over arrays of at most six
+        // elements each, through an array overload of ElementalAffinity.Of that
+        // allocates nothing. FightSession.AffinityOf asks on every damage
+        // packet; that is a dozen array reads beside a damage calculation, and
+        // buying immutability with it is the right trade.
+        public ElementalAffinity Affinity => ElementalAffinity.Of(Weaknesses, Resistances);
 
         // The nullable reading of the Status/StatusAuthored pair, kept because
         // it is the shape every consumer already asks in.
@@ -280,11 +283,9 @@ namespace PrincesPalace.Domain.Content
             Resistances = new DamageType[resistances.Count];
             for (int i = 0; i < resistances.Count; i++) Resistances[i] = resistances[i];
 
-            // Seeded rather than left to the lazy path: the packed value is
-            // already in hand here and rebuilding it from the lists we just
-            // wrote would answer the same question twice.
-            _affinity = affinity;
-            _affinityBuilt = true;
+            // Nothing is cached from here on. The two arrays ARE the state; the
+            // packed value is derived from them on demand. See the Affinity
+            // property for why the cache that used to be seeded here is gone.
         }
 
         private static EnemyAbilityRef[] ToArray(IReadOnlyList<EnemyAbilityRef> abilities)

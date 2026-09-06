@@ -44,7 +44,7 @@ namespace PrincesPalace.PlayModeTests
         // does not animate.
         private static List<SkillDefinition> Animated() =>
             ContentDatabase.Skills
-                .Where(s => s != null && s.data.Vfx != null && !string.IsNullOrEmpty(s.data.Vfx.path))
+                .Where(s => s != null && s.Data.Vfx != null && !string.IsNullOrEmpty(s.Data.Vfx.path))
                 .OrderBy(s => s.id, System.StringComparer.Ordinal)
                 .ToList();
 
@@ -147,7 +147,7 @@ namespace PrincesPalace.PlayModeTests
         {
             var skill = ContentDatabase.Skills.FirstOrDefault(s => s != null && s.id == skillId);
             Assert.IsNotNull(skill, $"'{skillId}' is not in skills.json");
-            Assert.IsFalse(string.IsNullOrEmpty(skill.data.Vfx.path), $"'{skillId}' has no vfx path");
+            Assert.IsFalse(string.IsNullOrEmpty(skill.Data.Vfx.path), $"'{skillId}' has no vfx path");
 
             // SLOWED DOWN FOR THE CAMERA, and it has to be. Writing a 1920x1080
             // PNG takes longer than a frame of the real 0.78s cast, so six shots
@@ -171,7 +171,7 @@ namespace PrincesPalace.PlayModeTests
             // Copy() rather than the asset's own object: a beat holding the
             // catalogue's instance would let this capture edit the content
             // every later test in the process reads.
-            var presentation = skill.data.Vfx.Copy();
+            var presentation = skill.Data.Vfx.Copy();
             presentation.seconds = seconds;
 
             fight.PlaySpellVfxForTest(new CombatBeat

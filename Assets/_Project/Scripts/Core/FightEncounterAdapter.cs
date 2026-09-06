@@ -43,7 +43,7 @@ namespace PrincesPalace
         // type's facts were written on, and the same shape that dropped
         // `transform` and then `bookOnly`/`bookTier` on the skill side. The
         // asset now STORES the ResolvedEnemy, so there is nothing here to drop.
-        public static ResolvedEnemy Resolve(EnemyDefinition definition) => definition.data;
+        public static ResolvedEnemy Resolve(EnemyDefinition definition) => definition.Data;
 
         // PHASE 5B (D6): closes AUDIT #54. An Elite pack's stats used to be
         // the authored baseStats verbatim -- StatBlock.ScaledForElite existed,
@@ -69,7 +69,7 @@ namespace PrincesPalace
         // axes grow at different speeds. See DifficultyCurve.
         private static CombatantState ToCombatant(EnemyDefinition definition, int depthStep, bool isElite)
         {
-            var stats = definition.data.BaseStats;
+            var stats = definition.Data.BaseStats;
             if (isElite)
             {
                 stats = stats.ScaledForElite(EliteHealthMultiplier, EliteDefenseMultiplier, EliteAttackMultiplier);
@@ -86,7 +86,7 @@ namespace PrincesPalace
             // Elite's speed DOES ride the elite multiplier above, same as its
             // health and mana regen -- ScaledForElite's own main `multiplier`
             // parameter, unchanged behaviour from before this phase.)
-            var state = new CombatantState(definition.data.DisplayName, false,
+            var state = new CombatantState(definition.Data.DisplayName, false,
                 DifficultyCurve.ScaleHealth(stats.maxHealth, depthStep),
                 GameplayConstants.DefaultMaxMana,
                 DifficultyCurve.ScaleAttack(stats.attack, depthStep),
@@ -102,10 +102,10 @@ namespace PrincesPalace
             state.PhysicalDefense = stats.physicalDefense;
             state.MagicalDefense = stats.magicalDefense;
 
-            if (definition.data.BreakShieldPoints > 0)
+            if (definition.Data.BreakShieldPoints > 0)
             {
                 state.BreakShield = new BreakShield(
-                    DifficultyCurve.ScaleShield(definition.data.BreakShieldPoints, depthStep));
+                    DifficultyCurve.ScaleShield(definition.Data.BreakShieldPoints, depthStep));
             }
 
             return state;
@@ -129,7 +129,7 @@ namespace PrincesPalace
                 // a ResolvedRelic, with a second hand-written conversion
                 // (ToModifiers) for the modifier list. The asset stores the
                 // resolved value now.
-                resolved.Add(definition.data);
+                resolved.Add(definition.Data);
             }
 
             return resolved;
@@ -166,7 +166,7 @@ namespace PrincesPalace
             // is the one place the two are chosen between.
             int attack = ContentDatabase.EquippedWeaponPower(character) ?? stats.attack;
 
-            var state = new CombatantState(definition.data.DisplayName, true,
+            var state = new CombatantState(definition.Data.DisplayName, true,
                 RelicModifiers.Apply(stats.maxHealth, RelicStat.MaxHealth, modifiers),
                 RelicModifiers.Apply(ContentDatabase.EffectiveMaxMana(character), RelicStat.MaxMana, modifiers),
                 RelicModifiers.Apply(attack, RelicStat.Attack, modifiers),
@@ -281,8 +281,8 @@ namespace PrincesPalace
         private static CombatantState ToCombatant(CharacterDefinition definition,
                                                   IReadOnlyList<RelicModifier> modifiers = null)
         {
-            var stats = definition.data.BaseStats;
-            var scores = definition.data.AbilityScores;
+            var stats = definition.Data.BaseStats;
+            var scores = definition.Data.AbilityScores;
 
             // Health and mana are BASE PLUS DERIVED, because that is what the
             // ability scores are for -- reading the StatBlock alone would give a
@@ -299,7 +299,7 @@ namespace PrincesPalace
             // AbilityDerivation's header); `stats.attack` alone is what this
             // path swings for, same as the save-backed overload's `total`
             // already reflects via DerivedStats.
-            var state = new CombatantState(definition.data.DisplayName, true,
+            var state = new CombatantState(definition.Data.DisplayName, true,
                 RelicModifiers.Apply(maxHealth, RelicStat.MaxHealth, modifiers),
                 RelicModifiers.Apply(maxMana, RelicStat.MaxMana, modifiers),
                 RelicModifiers.Apply(stats.attack, RelicStat.Attack, modifiers),
@@ -338,13 +338,13 @@ namespace PrincesPalace
             // which drafts every relic alone and checks every stat moved.
             state.TypedResistance = RelicModifiers.ApplyResistance(state.TypedResistance, modifiers);
 
-            if (definition.data.HasSignatureResource)
+            if (definition.Data.HasSignatureResource)
             {
                 state.Signature = new SignatureResource(
-                    definition.data.SignatureId, definition.data.SignatureDisplayName,
-                    definition.data.SignatureCapacity, definition.data.SignatureGainPerTurn,
-                    definition.data.SignatureGainOnAttack, definition.data.SignatureGainOnDamageTaken,
-                    absorbsDamage: definition.data.SignatureAbsorbsDamage);
+                    definition.Data.SignatureId, definition.Data.SignatureDisplayName,
+                    definition.Data.SignatureCapacity, definition.Data.SignatureGainPerTurn,
+                    definition.Data.SignatureGainOnAttack, definition.Data.SignatureGainOnDamageTaken,
+                    absorbsDamage: definition.Data.SignatureAbsorbsDamage);
             }
 
             // NO EQUIVALENT ModifierEffects LINE HERE, EXPLICITLY. This
@@ -459,7 +459,7 @@ namespace PrincesPalace
                     kits[0] = WithPreviewSkills(kits[0], previewExtraSkillIds);
                 }
 
-                art.Add(definition.data.BattleSpritePath);
+                art.Add(definition.Data.BattleSpritePath);
             }
 
             var enemies = new List<CombatantState>();
@@ -610,17 +610,17 @@ namespace PrincesPalace
             // no run to ask, so it could never grant a learned book even if
             // the level check somehow let one through.
             var skills = ContentDatabase.Skills
-                .Where(s => s.data.PlayerSelectable
-                            && s.data.CharacterId == definition.id
-                            && s.data.UnlockLevel <= level
-                            && !s.data.BookOnly)
-                .OrderBy(s => s.data.UnlockLevel)
-                .ThenBy(s => s.data.SortOrder)
+                .Where(s => s.Data.PlayerSelectable
+                            && s.Data.CharacterId == definition.id
+                            && s.Data.UnlockLevel <= level
+                            && !s.Data.BookOnly)
+                .OrderBy(s => s.Data.UnlockLevel)
+                .ThenBy(s => s.Data.SortOrder)
                 .Select(Resolve)
                 .ToList();
 
-            return new PlayerKit(definition.id, definition.data.Role, skills, relics,
-                definition.data.AttackType, level, DefinitionOnlySkillPowerMultiplier(level));
+            return new PlayerKit(definition.id, definition.Data.Role, skills, relics,
+                definition.Data.AttackType, level, DefinitionOnlySkillPowerMultiplier(level));
         }
 
         // The IN-RUN kit: the character's own strip PLUS whatever their tree
@@ -654,8 +654,8 @@ namespace PrincesPalace
                 .Select(Resolve)
                 .ToList();
 
-            return new PlayerKit(definition.id, definition.data.Role, skills, relics,
-                definition.data.AttackType, character.level, ContentDatabase.EffectiveSkillPowerMultiplier(character));
+            return new PlayerKit(definition.id, definition.Data.Role, skills, relics,
+                definition.Data.AttackType, character.level, ContentDatabase.EffectiveSkillPowerMultiplier(character));
         }
 
         // THE SPELL TIER'S OWN powerMultiplier, kept even though the tier's
@@ -679,7 +679,7 @@ namespace PrincesPalace
         // it falls back to the level-only GetSpellTierForLevel instead --
         // still one canonical lookup, not a second one.
         private static float DefinitionOnlySkillPowerMultiplier(int level) =>
-            ContentDatabase.GetSpellTierForLevel(level)?.data.PowerMultiplier ?? 1.5f;
+            ContentDatabase.GetSpellTierForLevel(level)?.Data.PowerMultiplier ?? 1.5f;
 
         // The other half of the content conversion, and it is no longer a
         // conversion at all.
@@ -698,6 +698,6 @@ namespace PrincesPalace
         // fields, one level up: the asset now STORES the ResolvedSkill, so
         // there is nothing here to drop. ContentRoundTripTests still guards
         // the journey end to end.
-        public static ResolvedSkill Resolve(SkillDefinition definition) => definition.data;
+        public static ResolvedSkill Resolve(SkillDefinition definition) => definition.Data;
     }
 }

@@ -211,7 +211,7 @@ namespace PrincesPalace.PlayModeTests
                 .Where(m => m != null && !string.IsNullOrEmpty(m.id))
                 .Where(m =>
                 {
-                    var effects = m.data.Effects;
+                    var effects = m.Data.Effects;
                     var type = effects != null && effects.Length > 0 ? effects[0].Type : ModifierEffectType.None;
                     return ModifierTable.IsOffensiveModifier(type) == weapons;
                 })

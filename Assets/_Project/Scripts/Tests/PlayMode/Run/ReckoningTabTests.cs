@@ -218,7 +218,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
 
             Assert.IsTrue(Named("ReckoningRelic0").activeSelf, "the run's relic is not listed");
-            Assert.AreEqual(relic.data.DisplayName, TextOf("ReckoningRelic0Name"));
+            Assert.AreEqual(relic.Data.DisplayName, TextOf("ReckoningRelic0Name"));
             Assert.IsFalse(Named("ReckoningRelicEmpty").activeSelf);
         }
 

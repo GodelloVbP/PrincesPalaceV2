@@ -104,7 +104,7 @@ namespace PrincesPalace
                 return plan;
             }
 
-            var skill = definition.data;
+            var skill = definition.Data;
             plan.Skill = skill;
 
             if (!Supported.Contains(skill.Effect))
@@ -141,12 +141,12 @@ namespace PrincesPalace
                 plan.Notes.Add("the party opens at half health, so a heal has something to restore");
             }
 
-            if (definition.data.UnlockLevel > 1)
+            if (definition.Data.UnlockLevel > 1)
             {
-                plan.Notes.Add($"unlock level {definition.data.UnlockLevel} bypassed for this fight only");
+                plan.Notes.Add($"unlock level {definition.Data.UnlockLevel} bypassed for this fight only");
             }
 
-            if (definition.data.BookOnly)
+            if (definition.Data.BookOnly)
             {
                 plan.Notes.Add("book ownership bypassed for this fight only");
             }
@@ -185,13 +185,13 @@ namespace PrincesPalace
                 string wanted = SignatureIdOf(skill.CharacterId);
 
                 var payer = ContentDatabase.Characters.FirstOrDefault(
-                    c => c != null && c.data.HasSignatureResource &&
-                         (wanted == null || c.data.SignatureId == wanted));
+                    c => c != null && c.Data.HasSignatureResource &&
+                         (wanted == null || c.Data.SignatureId == wanted));
 
                 if (payer != null)
                 {
                     plan.Notes.Add($"cast by '{payer.id}', who carries the " +
-                                   $"{payer.data.SignatureDisplayName ?? payer.data.SignatureId} it spends");
+                                   $"{payer.Data.SignatureDisplayName ?? payer.Data.SignatureId} it spends");
                     return payer.id;
                 }
 
@@ -204,7 +204,7 @@ namespace PrincesPalace
             }
 
             var lead = ContentDatabase.Characters.FirstOrDefault(
-                           c => c != null && !string.IsNullOrWhiteSpace(c.data.BattleSpritePath))
+                           c => c != null && !string.IsNullOrWhiteSpace(c.Data.BattleSpritePath))
                        ?? ContentDatabase.Characters.FirstOrDefault();
 
             if (lead == null)
@@ -225,7 +225,7 @@ namespace PrincesPalace
         {
             if (string.IsNullOrWhiteSpace(characterId)) return null;
             var definition = ContentDatabase.Characters.FirstOrDefault(c => c != null && c.id == characterId);
-            return definition != null && definition.data.HasSignatureResource ? definition.data.SignatureId : null;
+            return definition != null && definition.Data.HasSignatureResource ? definition.Data.SignatureId : null;
         }
 
         // ---- the character plan ----------------------------------------------
@@ -251,12 +251,12 @@ namespace PrincesPalace
             // portrait and a dossier worth looking at, and the fallback plate
             // on the stage IS the report -- refusing would hide the very thing
             // the author most likely wants to see the state of.
-            if (string.IsNullOrWhiteSpace(definition.data.BattleSpritePath))
+            if (string.IsNullOrWhiteSpace(definition.Data.BattleSpritePath))
             {
                 plan.Notes.Add("no battleSpritePath, so the stage shows a fallback plate rather than art");
             }
 
-            if (string.IsNullOrWhiteSpace(definition.data.PortraitPath))
+            if (string.IsNullOrWhiteSpace(definition.Data.PortraitPath))
             {
                 plan.Notes.Add("no portraitPath, so the dossier keeps its armour-stand placeholder");
             }
@@ -269,7 +269,7 @@ namespace PrincesPalace
             else
             {
                 var skill = ContentDatabase.Skills.FirstOrDefault(sk => sk != null && sk.id == opener);
-                plan.Skill = skill?.data;
+                plan.Skill = skill?.Data;
                 plan.Notes.Add($"turn one casts '{opener}', the first row on their own kit");
             }
 
@@ -306,7 +306,7 @@ namespace PrincesPalace
         public static List<string> EnemiesWithArt(int count)
         {
             var withArt = ContentDatabase.Enemies
-                .Where(e => e != null && !string.IsNullOrWhiteSpace(e.data.SpritePath))
+                .Where(e => e != null && !string.IsNullOrWhiteSpace(e.Data.SpritePath))
                 .OrderBy(e => e.SortOrder)
                 .Take(count)
                 .Select(e => e.id)

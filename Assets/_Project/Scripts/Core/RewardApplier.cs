@@ -118,7 +118,7 @@ namespace PrincesPalace
         private static string DisplayNameFor(string definitionId)
         {
             var definition = Content.ContentDatabase.Characters.FirstOrDefault(c => c.id == definitionId);
-            return definition == null ? definitionId : definition.data.DisplayName;
+            return definition == null ? definitionId : definition.Data.DisplayName;
         }
     }
 }

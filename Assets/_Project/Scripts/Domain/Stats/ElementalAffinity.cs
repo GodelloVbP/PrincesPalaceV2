@@ -55,6 +55,15 @@ namespace PrincesPalace.Domain.Stats
             IEnumerable<DamageType> weaknesses, IEnumerable<DamageType> resistances) =>
             new ElementalAffinity(MaskOf(weaknesses), MaskOf(resistances));
 
+        // THE ARRAY OVERLOAD EXISTS TO NOT ALLOCATE, and that is its whole
+        // reason. ResolvedEnemy.Affinity computes this on every read rather
+        // than memoising it into the shared catalogue record, so it is on the
+        // damage path: foreach over an IEnumerable<DamageType> boxes an
+        // enumerator per call, foreach over a DamageType[] does not. Same
+        // masks, same answer.
+        public static ElementalAffinity Of(DamageType[] weaknesses, DamageType[] resistances) =>
+            new ElementalAffinity(MaskOf(weaknesses), MaskOf(resistances));
+
         public bool IsWeakTo(DamageType type) => (_weaknessMask & Bit(type)) != 0;
 
         public bool Resists(DamageType type) => (_resistanceMask & Bit(type)) != 0;
@@ -92,6 +101,15 @@ namespace PrincesPalace.Domain.Stats
 
             int mask = 0;
             foreach (var type in types) mask |= Bit(type);
+            return mask;
+        }
+
+        private static int MaskOf(DamageType[] types)
+        {
+            if (types == null) return 0;
+
+            int mask = 0;
+            for (int i = 0; i < types.Length; i++) mask |= Bit(types[i]);
             return mask;
         }
 

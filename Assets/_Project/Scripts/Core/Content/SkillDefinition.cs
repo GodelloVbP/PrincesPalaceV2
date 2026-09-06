@@ -21,12 +21,32 @@ namespace PrincesPalace.Content
     // The copies dropped fields twice (`transform`, then `bookOnly`/
     // `bookTier`), which is the failure mode a mechanical 34-line copy always
     // has. Now the asset STORES the resolved value and the conversion out is
-    // `definition.data`: one field list, in ResolvedSkill, and adding a field
+    // `definition.Data`: one field list, in ResolvedSkill, and adding a field
     // to skills.json touches RawSkillEntry, SkillEntryResolver and
     // ResolvedSkill only.
     public class SkillDefinition : ScriptableObject, IOrderedContent
     {
-        public ResolvedSkill data = new ResolvedSkill();
+        // THE ONE WAY IN, and it is a setter nothing outside the Editor can
+        // call. `data` was a public field: every one of the ~330 reads across
+        // the tree could equally have been a write, and eight of them being
+        // ContentBuilder was a convention rather than a rule. Private field,
+        // public getter, internal setter -- Core grants InternalsVisibleTo to
+        // PrincesPalace.Editor and to nothing else, so ContentBuilder can still
+        // write it and no runtime or test assembly can.
+        //
+        // WHAT THIS DOES NOT BUY, said plainly because a chokepoint that is
+        // half a chokepoint is worse read as a whole one: the record is a
+        // class with public fields, so `definition.Data.Id = "x"` still compiles.
+        // What is closed is whole-record REPLACEMENT -- swapping the catalogue
+        // entry out from under everyone holding it. Field writes are covered by
+        // ContentIsolationTests (behaviourally, per fight) and flagged by
+        // ContentOwnershipLintTests (textually, as a diagnostic).
+        [SerializeField] private ResolvedSkill data = new ResolvedSkill();
+
+        public ResolvedSkill Data => data;
+
+        // Editor-only, and the only assignment to `data` anywhere.
+        internal void SetData(ResolvedSkill value) => data = value ?? new ResolvedSkill();
 
         // The one field the Get*(id) family and every content check read off
         // the asset itself rather than through `data`, so a skill looks like

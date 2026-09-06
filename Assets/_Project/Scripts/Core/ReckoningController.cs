@@ -820,9 +820,9 @@ namespace PrincesPalace
                 // A relic id naming content that is gone still gets a row: the
                 // player is carrying SOMETHING and a silently shorter list
                 // would be worse than an honest unknown.
-                relicNames[i].SetContent(definition?.data.DisplayName ?? held[i]);
-                relicMetas[i].SetContent(definition == null ? "" : RarityWord(definition.data.Rarity));
-                relicBodies[i].SetContent(definition?.data.Description ?? "");
+                relicNames[i].SetContent(definition?.Data.DisplayName ?? held[i]);
+                relicMetas[i].SetContent(definition == null ? "" : RarityWord(definition.Data.Rarity));
+                relicBodies[i].SetContent(definition?.Data.Description ?? "");
             }
         }
 

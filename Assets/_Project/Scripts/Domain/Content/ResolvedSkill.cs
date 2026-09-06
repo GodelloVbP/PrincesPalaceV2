@@ -20,7 +20,7 @@ namespace PrincesPalace.Domain.Content
     // level up.
     //
     // A ScriptableObject can hold this directly, so SkillDefinition is now
-    // `public ResolvedSkill data;` and the conversion is `definition.data`.
+    // `public ResolvedSkill data;` and the conversion is `definition.Data`.
     // Unity's serialiser needs writable public fields and a parameterless
     // constructor, so this is mutable by construction and treated as immutable
     // by convention — which is what SpellPresentation and every other DTO in

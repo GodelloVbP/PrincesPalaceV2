@@ -24,7 +24,7 @@ namespace PrincesPalace.PlayModeTests
         {
             var definition = ContentDatabase.Characters.FirstOrDefault(c => c != null && c.id == "sheep");
             Assert.IsNotNull(definition, "fixture: content still authors Shawn under id \"sheep\"");
-            Assert.AreEqual(14, definition.data.AbilityScores.wisdom, "fixture check: Shawn's authored WIS, the AbilityDerivationTests spread");
+            Assert.AreEqual(14, definition.Data.AbilityScores.wisdom, "fixture check: Shawn's authored WIS, the AbilityDerivationTests spread");
             return new Character(definition.id);
         }
 

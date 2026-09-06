@@ -76,7 +76,7 @@ namespace PrincesPalace.PlayModeTests
             character.unlockedTalentIds.Clear();
 
             var tree = ContentDatabase.TalentsFor(character)
-                .Where(t => t != null && t.data.Column == 0 && t.data.Row <= 6)
+                .Where(t => t != null && t.Data.Column == 0 && t.Data.Row <= 6)
                 .ToList();
 
             foreach (var talent in tree) character.unlockedTalentIds.Add(talent.id);
@@ -170,9 +170,9 @@ namespace PrincesPalace.PlayModeTests
             {
                 if (talent == null) continue;
 
-                tree.Set(talent.data.Column, talent.data.Row, new TalentSlot(
-                    talent.id, talent.data.DisplayName, talent.data.Description,
-                    ContentDatabase.OrbCost(talent), talent.data.MinSpent));
+                tree.Set(talent.Data.Column, talent.Data.Row, new TalentSlot(
+                    talent.id, talent.Data.DisplayName, talent.Data.Description,
+                    ContentDatabase.OrbCost(talent), talent.Data.MinSpent));
             }
 
             return tree;

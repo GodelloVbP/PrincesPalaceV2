@@ -58,7 +58,7 @@ namespace PrincesPalace.PlayModeTests
         public void EveryRelicWithAnEffectResolvesToThatExactEffectOnTheKit()
         {
             var withEffect = ContentDatabase.Relics
-                .Where(r => r != null && r.data.Effect != RelicEffect.None)
+                .Where(r => r != null && r.Data.Effect != RelicEffect.None)
                 .ToList();
 
             Assert.IsNotEmpty(withEffect, "fixture: content should have at least one effect relic");
@@ -72,9 +72,9 @@ namespace PrincesPalace.PlayModeTests
 
                 var kitRelics = built.Session.KitFor(built.Party[0]).Relics.ToList();
 
-                if (kitRelics.Count != 1 || kitRelics[0].Effect != relic.data.Effect)
+                if (kitRelics.Count != 1 || kitRelics[0].Effect != relic.Data.Effect)
                 {
-                    wrong.Add($"{relic.id} authored as {relic.data.Effect} but the kit carried " +
+                    wrong.Add($"{relic.id} authored as {relic.Data.Effect} but the kit carried " +
                               (kitRelics.Count == 0 ? "nothing" : string.Join(",", kitRelics.Select(r => r.Effect))));
                 }
             }
@@ -92,7 +92,7 @@ namespace PrincesPalace.PlayModeTests
         public void EveryRelicWithModifiersActuallyChangesAStat()
         {
             var withModifiers = ContentDatabase.Relics
-                .Where(r => r != null && r.data.Modifiers != null && r.data.Modifiers.Length > 0)
+                .Where(r => r != null && r.Data.Modifiers != null && r.Data.Modifiers.Length > 0)
                 .ToList();
 
             Assert.IsNotEmpty(withModifiers, "fixture: content should have at least one modifier relic");
@@ -165,7 +165,7 @@ namespace PrincesPalace.PlayModeTests
             // party (finding 6, code review).
             var all = ContentDatabase.Relics
                 .Where(r => r != null)
-                .Select(r => new Domain.Relics.RelicOption(r.id, r.data.Rarity, r.data.UnlockedBy, r.data.RequiresConvergenceAbility))
+                .Select(r => new Domain.Relics.RelicOption(r.id, r.Data.Rarity, r.Data.UnlockedBy, r.Data.RequiresConvergenceAbility))
                 .ToList();
 
             // Every relic unlocked from the start (unlockedBy empty) must
@@ -178,7 +178,7 @@ namespace PrincesPalace.PlayModeTests
                 .ToHashSet();
 
             var stuck = ContentDatabase.Relics
-                .Where(r => r != null && r.data.IsUnlockedFromTheStart && !available.Contains(r.id))
+                .Where(r => r != null && r.Data.IsUnlockedFromTheStart && !available.Contains(r.id))
                 .Select(r => r.id)
                 .ToList();
 
@@ -206,7 +206,7 @@ namespace PrincesPalace.PlayModeTests
             // -- the convergence gate is specific to mechanic (g), not a
             // general filter that happens to catch more than it should.
             var otherUnlocked = ContentDatabase.Relics
-                .Where(r => r != null && r.data.IsUnlockedFromTheStart && r.id != "rampaging_bulls_horn")
+                .Where(r => r != null && r.Data.IsUnlockedFromTheStart && r.id != "rampaging_bulls_horn")
                 .Select(r => r.id)
                 .ToList();
 
@@ -238,7 +238,7 @@ namespace PrincesPalace.PlayModeTests
             // instead, and the fixture below grants it by LEVEL, the same
             // route AvailableSkillsFor itself checks first.
             var convergenceSkill = ContentDatabase.Skills
-                .FirstOrDefault(s => s != null && s.data.Effect == Domain.Combat.SkillEffect.Transform);
+                .FirstOrDefault(s => s != null && s.Data.Effect == Domain.Combat.SkillEffect.Transform);
 
             Assert.IsNotNull(convergenceSkill,
                 "fixture: no Transform skill exists in content -- cannot prove the convergence wiring without one");
@@ -269,8 +269,8 @@ namespace PrincesPalace.PlayModeTests
             // production reads AvailableSkillsFor, which checks exactly
             // that.
             var convergenceCharacter = SaveSlotManager.CurrentSave.roster
-                .First(c => c.definitionId == convergenceSkill.data.CharacterId);
-            convergenceCharacter.level = Mathf.Max(convergenceCharacter.level, convergenceSkill.data.UnlockLevel);
+                .First(c => c.definitionId == convergenceSkill.Data.CharacterId);
+            convergenceCharacter.level = Mathf.Max(convergenceCharacter.level, convergenceSkill.Data.UnlockLevel);
 
             SeenAcrossRounds(new List<string> { convergenceCharacter.definitionId }, out bool seenWithConvergence);
             Assert.IsTrue(seenWithConvergence,

@@ -87,8 +87,8 @@ namespace PrincesPalace
         // resolver never saw -- CLAUDE.md's [CreateAssetMenu] hazard).
         internal static List<string> DefaultSquadIds() =>
             ContentDatabase.Characters
-                .Where(c => c != null && c.data.StartsInSquad)
-                .OrderBy(c => c.data.SquadSlot)
+                .Where(c => c != null && c.Data.StartsInSquad)
+                .OrderBy(c => c.Data.SquadSlot)
                 .ThenBy(c => c.id, StringComparer.Ordinal)
                 .Select(c => c.id)
                 .ToList();
@@ -714,7 +714,7 @@ namespace PrincesPalace
         private static bool IsBookEligible(string skillId)
         {
             var skill = ContentDatabase.GetSkill(skillId);
-            return skill != null && skill.data.BookTier > 0;
+            return skill != null && skill.Data.BookTier > 0;
         }
 
         private static void ReconcileShopStock(RunSnapshot run)

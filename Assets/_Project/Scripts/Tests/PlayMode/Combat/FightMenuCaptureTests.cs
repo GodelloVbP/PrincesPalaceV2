@@ -102,10 +102,10 @@ namespace PrincesPalace.PlayModeTests
             // plate defeats the whole point of a screenshot -- which is exactly
             // what the first version of this fixture produced.
             var party = ContentDatabase.Characters
-                .Where(c => !string.IsNullOrWhiteSpace(c.data.BattleSpritePath))
+                .Where(c => !string.IsNullOrWhiteSpace(c.Data.BattleSpritePath))
                 .Take(1).Select(c => c.id).ToList();
             var enemies = ContentDatabase.Enemies
-                .Where(e => !string.IsNullOrWhiteSpace(e.data.SpritePath))
+                .Where(e => !string.IsNullOrWhiteSpace(e.Data.SpritePath))
                 .Take(3).Select(e => e.id).ToList();
             Assert.AreEqual(1, party.Count, "no character has battle art to capture");
             Assert.AreEqual(3, enemies.Count, "fewer than three enemies have art to capture");
@@ -120,7 +120,7 @@ namespace PrincesPalace.PlayModeTests
             // missing call.
             _fight.BindPartyArt(built.Party,
                 built.Party.Select(p => ContentDatabase.Characters
-                        .FirstOrDefault(c => c.data.DisplayName == p.Name)?.data.BattleSpritePath)
+                        .FirstOrDefault(c => c.Data.DisplayName == p.Name)?.Data.BattleSpritePath)
                     .ToList());
 
             yield return null;
@@ -200,10 +200,10 @@ namespace PrincesPalace.PlayModeTests
             for (int i = 0; i < 240; i++) yield return null;
 
             var party = ContentDatabase.Characters
-                .Where(c => !string.IsNullOrWhiteSpace(c.data.BattleSpritePath))
+                .Where(c => !string.IsNullOrWhiteSpace(c.Data.BattleSpritePath))
                 .Take(1).Select(c => c.id).ToList();
             var enemies = ContentDatabase.Enemies
-                .Where(e => !string.IsNullOrWhiteSpace(e.data.SpritePath))
+                .Where(e => !string.IsNullOrWhiteSpace(e.Data.SpritePath))
                 .Take(3).Select(e => e.id).ToList();
             var built = FightEncounterAdapter.Build(party, enemies, new Domain.Rng.SeededRandom(11));
 
@@ -217,7 +217,7 @@ namespace PrincesPalace.PlayModeTests
             _fight.Bind(built.Session, EncounterClass.Normal, satchel);
             _fight.BindPartyArt(built.Party,
                 built.Party.Select(p => ContentDatabase.Characters
-                        .FirstOrDefault(c => c.data.DisplayName == p.Name)?.data.BattleSpritePath)
+                        .FirstOrDefault(c => c.Data.DisplayName == p.Name)?.Data.BattleSpritePath)
                     .ToList());
 
             yield return null;

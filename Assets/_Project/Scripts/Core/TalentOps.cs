@@ -43,12 +43,12 @@ namespace PrincesPalace
             {
                 if (talent == null) continue;
 
-                tree.Set(talent.data.Column, talent.data.Row, new TalentSlot(
+                tree.Set(talent.Data.Column, talent.Data.Row, new TalentSlot(
                     talent.id,
-                    talent.data.DisplayName,
-                    talent.data.Description,
+                    talent.Data.DisplayName,
+                    talent.Data.Description,
                     ContentDatabase.OrbCost(talent),
-                    talent.data.MinSpent));
+                    talent.Data.MinSpent));
             }
 
             return tree;

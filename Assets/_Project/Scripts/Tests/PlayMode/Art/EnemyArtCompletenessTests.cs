@@ -42,7 +42,7 @@ namespace PrincesPalace.PlayModeTests
         // holding it to an art standard would just make "not drawn yet" a
         // failing test.
         private static IEnumerable<EnemyDefinition> Drawn() =>
-            ContentDatabase.Enemies.Where(e => e != null && !string.IsNullOrWhiteSpace(e.data.SpritePath));
+            ContentDatabase.Enemies.Where(e => e != null && !string.IsNullOrWhiteSpace(e.Data.SpritePath));
 
         // Every pose a monster can REACH, resolved the way the stage resolves
         // it -- "are the animations actually in" asked of content rather than
@@ -70,7 +70,7 @@ namespace PrincesPalace.PlayModeTests
                 foreach (string stance in StancesReachableBy(enemy))
                 {
                     probed++;
-                    if (StanceAnimationLibrary.Resolve(enemy.data.SpritePath, stance) == null)
+                    if (StanceAnimationLibrary.Resolve(enemy.Data.SpritePath, stance) == null)
                     {
                         missing.Add($"{enemy.id}:{stance}");
                     }
@@ -97,7 +97,7 @@ namespace PrincesPalace.PlayModeTests
 
                 foreach (string stance in StancesReachableBy(enemy))
                 {
-                    var sprite = Resources.Load<Sprite>($"{enemy.data.SpritePath}/{stance}");
+                    var sprite = Resources.Load<Sprite>($"{enemy.Data.SpritePath}/{stance}");
                     if (sprite != null) sizes[stance] = sprite.rect.size;
                 }
 
@@ -123,8 +123,8 @@ namespace PrincesPalace.PlayModeTests
         public void EveryEnemyWithArtIsInTheStanceManifest()
         {
             var missing = Drawn()
-                .Where(e => !StanceManifestLoader.Manifest.HasActor(e.data.SpritePath))
-                .Select(e => $"{e.id} ({e.data.SpritePath})")
+                .Where(e => !StanceManifestLoader.Manifest.HasActor(e.Data.SpritePath))
+                .Select(e => $"{e.id} ({e.Data.SpritePath})")
                 .ToList();
 
             Assert.IsNotEmpty(Drawn().ToList(), "no enemy has art, so this rule is vacuous");
@@ -142,7 +142,7 @@ namespace PrincesPalace.PlayModeTests
         {
             var wanted = new HashSet<string> { "idle", "attack", "hurt", "defeated" };
 
-            foreach (var ability in enemy.data.Abilities ?? System.Array.Empty<EnemyAbilityRef>())
+            foreach (var ability in enemy.Data.Abilities ?? System.Array.Empty<EnemyAbilityRef>())
             {
                 if (string.IsNullOrWhiteSpace(ability.SkillId)) continue;
 
@@ -150,11 +150,11 @@ namespace PrincesPalace.PlayModeTests
                 Assert.IsNotNull(skill,
                     $"{enemy.id} draws on skill '{ability.SkillId}', which is not in the catalogue");
 
-                wanted.Add(string.IsNullOrEmpty(skill.data.Stance) ? "cast" : skill.data.Stance);
+                wanted.Add(string.IsNullOrEmpty(skill.Data.Stance) ? "cast" : skill.Data.Stance);
             }
 
             // The legacy single-action trio poses as a cast.
-            if (!string.IsNullOrWhiteSpace(enemy.data.SkillName)) wanted.Add("cast");
+            if (!string.IsNullOrWhiteSpace(enemy.Data.SkillName)) wanted.Add("cast");
 
             return wanted;
         }

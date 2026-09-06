@@ -797,8 +797,8 @@ namespace PrincesPalace.Editor.Bot
             // is noise, and it was burying the player-side gaps that are.
             // This list is what lets the report split the two apart.
             var enemyAbilities = enemies
-                .Where(e => e.data?.Abilities != null)
-                .SelectMany(e => e.data.Abilities)
+                .Where(e => e.Data?.Abilities != null)
+                .SelectMany(e => e.Data.Abilities)
                 .Where(a => !string.IsNullOrEmpty(a.SkillId))
                 .Select(a => a.SkillId)
                 .Distinct()

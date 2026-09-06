@@ -226,14 +226,14 @@ namespace PrincesPalace.PlayModeTests
         public void TheSpellTierNeverOutrunsTheCharactersLevel()
         {
             var definition = FirstCharacter();
-            var tiers = ContentDatabase.SpellTiers.Where(t => t != null).OrderBy(t => t.data.Level).ToList();
+            var tiers = ContentDatabase.SpellTiers.Where(t => t != null).OrderBy(t => t.Data.Level).ToList();
             Assert.GreaterOrEqual(tiers.Count, 2, "this test needs two spell tiers to compare; content has " + tiers.Count);
 
             var character = new Character(definition.id) { level = 1 };
             var built = BuildFor(character);
             var kit = built.Session.KitFor(built.Party[0]);
 
-            Assert.AreEqual(tiers[0].data.PowerMultiplier, kit.SkillPowerMultiplier,
+            Assert.AreEqual(tiers[0].Data.PowerMultiplier, kit.SkillPowerMultiplier,
                 "a level 1 character was handed a higher spell tier's multiplier than they have reached");
         }
 
@@ -243,7 +243,7 @@ namespace PrincesPalace.PlayModeTests
             var definition = FirstCharacter();
             var tiers = ContentDatabase.SpellTiers
                 .Where(t => t != null)
-                .OrderBy(t => t.data.Level)
+                .OrderBy(t => t.Data.Level)
                 .ToList();
 
             // ASSERTED, not skipped. Content ships nine spell tiers, so this
@@ -252,8 +252,8 @@ namespace PrincesPalace.PlayModeTests
             Assert.GreaterOrEqual(tiers.Count, 2,
                 "this test needs two spell tiers to compare; content has " + tiers.Count);
 
-            var low = new Character(definition.id) { level = tiers[0].data.Level };
-            var high = new Character(definition.id) { level = tiers[tiers.Count - 1].data.Level };
+            var low = new Character(definition.id) { level = tiers[0].Data.Level };
+            var high = new Character(definition.id) { level = tiers[tiers.Count - 1].Data.Level };
 
             var lowBuilt = BuildFor(low);
             var highBuilt = BuildFor(high);

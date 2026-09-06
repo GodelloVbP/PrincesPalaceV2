@@ -87,7 +87,7 @@ namespace PrincesPalace.PlayModeTests
         {
             var ward = ContentDatabase.GetSkill(WardSkillId);
             Assert.IsNotNull(ward, "fixture: content still has " + WardSkillId);
-            Assert.AreEqual(2, ward.data.CooldownTurns,
+            Assert.AreEqual(2, ward.Data.CooldownTurns,
                 "Ward is meant to be castable every other turn, not every turn");
         }
 
@@ -107,7 +107,7 @@ namespace PrincesPalace.PlayModeTests
         {
             var talent = ContentDatabase.GetTalent(WardTalentId);
             Assert.IsNotNull(talent, "fixture: content still has " + WardTalentId);
-            Assert.AreEqual(WardSkillId, talent.data.GrantsSkillId,
+            Assert.AreEqual(WardSkillId, talent.Data.GrantsSkillId,
                 "fixture: " + WardTalentId + " is still the node that grants Ward");
 
             var warded = new Character(SheepId);
@@ -123,14 +123,14 @@ namespace PrincesPalace.PlayModeTests
         public void ASkillAboveTheCharactersLevel_IsNotOnTheStrip()
         {
             var early = ContentDatabase.Skills.FirstOrDefault(s =>
-                s != null && s.data.CharacterId == SheepId && s.data.PlayerSelectable
-                && s.data.UnlockLevel > 1 && s.data.UnlockLevel < 999);
+                s != null && s.Data.CharacterId == SheepId && s.Data.PlayerSelectable
+                && s.Data.UnlockLevel > 1 && s.Data.UnlockLevel < 999);
 
             Assert.IsNotNull(early, "fixture: sheep still has a skill unlocked above level 1");
 
             var fresh = new Character(SheepId) { level = 1 };
             CollectionAssert.DoesNotContain(StripOf(fresh), early.id,
-                early.id + " is authored at level " + early.data.UnlockLevel + " and a level 1 "
+                early.id + " is authored at level " + early.Data.UnlockLevel + " and a level 1 "
                 + "character is carrying it");
         }
 
@@ -142,7 +142,7 @@ namespace PrincesPalace.PlayModeTests
         public void NoGrantedSkillReachesACharacterWhoHasBoughtNothing()
         {
             var granted = ContentDatabase.Skills
-                .Where(s => s != null && s.data.CharacterId == SheepId && s.data.UnlockLevel >= 999)
+                .Where(s => s != null && s.Data.CharacterId == SheepId && s.Data.UnlockLevel >= 999)
                 .Select(s => s.id)
                 .ToList();
 

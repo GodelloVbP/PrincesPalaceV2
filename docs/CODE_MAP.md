@@ -166,7 +166,7 @@ them each intensity plays).
 `SceneBuilder.cs` + `SceneBuilder/` (above), `ContentBuilder.cs` (generates
 every ScriptableObject from `ContentData/*.json`; eight of the eleven types go
 through one generic `Build<TRaw, TResolved, TDef>` that reads the file, calls
-the type's resolver and writes `asset.data = record` -- items, weapons and item
+the type's resolver and writes `asset.SetData(record)` -- items, weapons and item
 sets stay bespoke because all three expand into `ItemDefinition` and need their
 own collision checks and sort offsets), `ScreenshotTool.cs`
 (headless panel capture, `KnownPanels` table — keep `tools/screenshot.ps1`'s
@@ -548,11 +548,14 @@ already had.
 **`SkillDefinition -> ResolvedSkill` is no longer a conversion.** It was the
 same 34-line hand copy, and it dropped a field twice -- `transform`, then
 `bookOnly`/`bookTier`. `ResolvedSkill` is now a `[Serializable]` class and
-`SkillDefinition` is `{ ResolvedSkill data; string id; int SortOrder; }`, so
-`Resolve(definition)` returns `definition.data` and adding a field to
+`SkillDefinition` is `{ ResolvedSkill Data; string id; int SortOrder; }`, so
+`Resolve(definition)` returns `definition.Data` and adding a field to
 skills.json touches `RawSkillEntry`, `SkillEntryResolver` and `ResolvedSkill`
-only. The other ten content types still restate their field lists (AUDIT.md
-#60).
+only. Nine types are shaped this way now (upgrades were the last), and on all
+nine the backing field is `[SerializeField] private` behind a `Data` getter and
+an `internal SetData` -- ContentBuilder is the only caller, because Core grants
+`InternalsVisibleTo` to the Editor assembly alone. Items, weapons and item sets
+still restate their field lists, all three being `ItemDefinition`.
 
 One rule worth naming, and still live in the enemy conversion: **`hasStatus` is
 the authoring gate, and it is not the same question as "is a status type set".**

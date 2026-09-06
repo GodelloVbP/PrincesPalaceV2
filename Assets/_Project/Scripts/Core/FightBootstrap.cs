@@ -366,7 +366,7 @@ namespace PrincesPalace
         }
 
         private static bool HasArt(CharacterDefinition definition) =>
-            !string.IsNullOrWhiteSpace(definition.data.BattleSpritePath);
+            !string.IsNullOrWhiteSpace(definition.Data.BattleSpritePath);
 
     
         // Which backdrop and which reward multiplier. Reads the ROOM, so an

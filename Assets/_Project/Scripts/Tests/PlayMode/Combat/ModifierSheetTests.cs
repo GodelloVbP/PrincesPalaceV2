@@ -283,7 +283,7 @@ namespace PrincesPalace.PlayModeTests
             // make this a test of "one rider fires" rather than "three
             // rolled modifiers compose".
             var toughestEnemyId = ContentDatabase.Enemies
-                .OrderByDescending(e => e.data.BaseStats.maxHealth)
+                .OrderByDescending(e => e.Data.BaseStats.maxHealth)
                 .Select(e => e.id)
                 .FirstOrDefault();
             Assert.IsNotNull(toughestEnemyId, "fixture: content has at least one enemy");

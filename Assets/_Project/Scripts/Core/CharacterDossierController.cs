@@ -401,7 +401,7 @@ namespace PrincesPalace
                         else
                         {
                             var definition = ContentDatabase.GetSkill(skillId);
-                            spellSlotNames[i].Set(UiStrings.DossierSlotFilled, definition?.data.DisplayName ?? skillId);
+                            spellSlotNames[i].Set(UiStrings.DossierSlotFilled, definition?.Data.DisplayName ?? skillId);
                         }
                     }
 
@@ -432,7 +432,7 @@ namespace PrincesPalace
                     if (unassignedNames != null && i < unassignedNames.Length)
                     {
                         var definition = ContentDatabase.GetSkill(_unassignedSnapshot[i]);
-                        unassignedNames[i].SetContent(definition?.data.DisplayName ?? _unassignedSnapshot[i]);
+                        unassignedNames[i].SetContent(definition?.Data.DisplayName ?? _unassignedSnapshot[i]);
                     }
 
                     if (unassignedSelections != null && i < unassignedSelections.Length && unassignedSelections[i] != null)
@@ -757,9 +757,9 @@ namespace PrincesPalace
         private void RefreshIdentity(Character character)
         {
             var definition = ContentDatabase.GetCharacter(character.definitionId);
-            string name = definition == null || string.IsNullOrWhiteSpace(definition.data.DisplayName)
+            string name = definition == null || string.IsNullOrWhiteSpace(definition.Data.DisplayName)
                 ? character.definitionId
-                : definition.data.DisplayName;
+                : definition.Data.DisplayName;
 
             if (characterName != null) characterName.SetContent(name);
             if (subLine != null) subLine.SetContent($"Level {character.level}");

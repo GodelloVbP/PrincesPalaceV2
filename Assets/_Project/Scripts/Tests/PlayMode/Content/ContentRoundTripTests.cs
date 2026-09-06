@@ -29,7 +29,7 @@ namespace PrincesPalace.PlayModeTests
         public void ATransformSkillKeepsItsGrantThroughTheAsset()
         {
             var transforms = ContentDatabase.Skills
-                .Where(s => s != null && s.data.Effect == SkillEffect.Transform)
+                .Where(s => s != null && s.Data.Effect == SkillEffect.Transform)
                 .ToList();
 
             Assert.IsNotEmpty(transforms,
@@ -37,7 +37,7 @@ namespace PrincesPalace.PlayModeTests
 
             foreach (var definition in transforms)
             {
-                Assert.IsNotNull(definition.data.Transform,
+                Assert.IsNotNull(definition.Data.Transform,
                     $"'{definition.id}' lost its grant on the way INTO the asset (ContentBuilder).");
 
                 var resolved = FightEncounterAdapter.Resolve(definition);
@@ -60,13 +60,13 @@ namespace PrincesPalace.PlayModeTests
             var golem = ContentDatabase.GetEnemy("golem");
             Assert.IsNotNull(golem, "the golem is gone from content");
 
-            Assert.IsNotEmpty(golem.data.Abilities, "the golem has no abilities authored");
+            Assert.IsNotEmpty(golem.Data.Abilities, "the golem has no abilities authored");
 
-            var named = golem.data.Abilities[0].SkillId;
+            var named = golem.Data.Abilities[0].SkillId;
             var slam = ContentDatabase.GetSkill(named);
 
             Assert.IsNotNull(slam, $"the golem names '{named}', which no skill matches");
-            Assert.IsFalse(slam.data.PlayerSelectable,
+            Assert.IsFalse(slam.Data.PlayerSelectable,
                 "a monster's skill must never be offered on a player's strip");
 
             var resolved = FightEncounterAdapter.Resolve(slam);
@@ -86,7 +86,7 @@ namespace PrincesPalace.PlayModeTests
                 .ToHashSet();
 
             var leaked = ContentDatabase.Skills
-                .Where(s => s != null && s.data.PlayerSelectable && enemyIds.Contains(s.data.CharacterId))
+                .Where(s => s != null && s.Data.PlayerSelectable && enemyIds.Contains(s.Data.CharacterId))
                 .Select(s => s.id)
                 .ToList();
 

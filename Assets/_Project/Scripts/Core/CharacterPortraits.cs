@@ -43,8 +43,8 @@ namespace PrincesPalace
             if (Cache.TryGetValue(characterId, out var cached)) return cached;
 
             var definition = ContentDatabase.GetCharacter(characterId);
-            string path = definition != null && definition.data != null
-                ? definition.data.PortraitPath
+            string path = definition != null && definition.Data != null
+                ? definition.Data.PortraitPath
                 : null;
 
             Sprite sprite = string.IsNullOrWhiteSpace(path)

@@ -96,8 +96,8 @@ namespace PrincesPalace.Content
 
             return _talents
                 .Where(t => t.IsAvailableTo(character))
-                .OrderBy(t => t.data.Row)
-                .ThenBy(t => t.data.Column)
+                .OrderBy(t => t.Data.Row)
+                .ThenBy(t => t.Data.Column)
                 .ToList();
         }
 
@@ -268,7 +268,7 @@ namespace PrincesPalace.Content
             // anything for a book.
             var run = RunManager.Run;
             bool LearnedThisRun(SkillDefinition s) =>
-                s.data.BookOnly && run != null && run.learnedSpells != null
+                s.Data.BookOnly && run != null && run.learnedSpells != null
                 && run.learnedSpells.Exists(e => e.characterId == character.definitionId && e.skillId == s.id);
 
             // TWO ROUTES WITH DIFFERENT OWNERSHIP RULES, so the CharacterId
@@ -277,14 +277,14 @@ namespace PrincesPalace.Content
             // character's; a learned book is available because THIS character
             // learned it.
             return _skills
-                .Where(s => s.data.PlayerSelectable
+                .Where(s => s.Data.PlayerSelectable
                             && (LearnedThisRun(s)
-                                || (s.data.CharacterId == character.definitionId
-                                    && (s.data.UnlockLevel <= character.level
+                                || (s.Data.CharacterId == character.definitionId
+                                    && (s.Data.UnlockLevel <= character.level
                                         || character.unlockedSkillIds.Contains(s.id)
                                         || granted.Contains(s)))))
-                .OrderBy(s => s.data.UnlockLevel)
-                .ThenBy(s => s.data.SortOrder)
+                .OrderBy(s => s.Data.UnlockLevel)
+                .ThenBy(s => s.Data.SortOrder)
                 .ToList();
         }
 
@@ -409,7 +409,7 @@ namespace PrincesPalace.Content
             SpellTierDefinition best = null;
             foreach (var tier in _spellTiers)
             {
-                if (tier.data.Level <= characterLevel)
+                if (tier.Data.Level <= characterLevel)
                 {
                     best = tier;
                 }
@@ -436,12 +436,12 @@ namespace PrincesPalace.Content
             SpellTierDefinition best = null;
             foreach (var tier in _spellTiers)
             {
-                if (tier.data.Level > characterLevel)
+                if (tier.Data.Level > characterLevel)
                 {
                     break;
                 }
 
-                if (scores.Meets(RequirementCurve.Apply(tier.data.Requirements)))
+                if (scores.Meets(RequirementCurve.Apply(tier.Data.Requirements)))
                 {
                     best = tier;
                 }
@@ -458,7 +458,7 @@ namespace PrincesPalace.Content
         // route.
         public static bool PrerequisitesMet(TalentDefinition talent, Character character)
         {
-            var prerequisites = talent.data.Prerequisites;
+            var prerequisites = talent.Data.Prerequisites;
             if (prerequisites == null || prerequisites.Length == 0)
             {
                 return true;
@@ -481,7 +481,7 @@ namespace PrincesPalace.Content
         //
         // A talent's `row` IS its slot index in the skeleton and its `column`
         // IS its path — TalentController reads both that way when it fills the
-        // tree (`tree.Set(talent.data.Column, talent.data.Row, …)`), and
+        // tree (`tree.Set(talent.Data.Column, talent.Data.Row, …)`), and
         // TalentEntryResolver bounds them against TalentPage.PathCount and
         // TalentSkeleton.SlotCount. That is what makes this lookup legitimate
         // rather than a coincidence.
@@ -548,7 +548,7 @@ namespace PrincesPalace.Content
                 return 0;
             }
 
-            int slot = talent.data.Row;
+            int slot = talent.Data.Row;
             if (slot < 0 || slot >= TalentSkeleton.SlotCount)
             {
                 return OrbCostUnplaced;
@@ -636,7 +636,7 @@ namespace PrincesPalace.Content
             }
 
             return TalentsFor(character)
-                .FirstOrDefault(t => t.data.Row == 0 && character.unlockedTalentIds.Contains(t.id));
+                .FirstOrDefault(t => t.Data.Row == 0 && character.unlockedTalentIds.Contains(t.id));
         }
 
         // Whether this specific talent is blocked by an allegiance already
@@ -644,7 +644,7 @@ namespace PrincesPalace.Content
         // root already lit (so the UI can still offer to refund it).
         public static bool IsBlockedByAllegiance(TalentDefinition talent, Character character)
         {
-            if (talent == null || talent.data.Row != 0)
+            if (talent == null || talent.Data.Row != 0)
             {
                 return false;
             }
@@ -660,7 +660,7 @@ namespace PrincesPalace.Content
         public static int SpentInPath(Character character, TalentDefinition talent)
         {
             return TalentsFor(character)
-                .Where(t => t.data.Column == talent.data.Column && character.unlockedTalentIds.Contains(t.id))
+                .Where(t => t.Data.Column == talent.Data.Column && character.unlockedTalentIds.Contains(t.id))
                 .Sum(t => OrbCost(t));
         }
 
@@ -668,7 +668,7 @@ namespace PrincesPalace.Content
         // passes -- most nodes carry no gate at all.
         public static bool MinSpentMet(TalentDefinition talent, Character character)
         {
-            return talent.data.MinSpent <= 0 || SpentInPath(character, talent) >= talent.data.MinSpent;
+            return talent.Data.MinSpent <= 0 || SpentInPath(character, talent) >= talent.Data.MinSpent;
         }
 
         // Every rule about whether a node may be lit, EXCEPT affordability.
