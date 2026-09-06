@@ -69,6 +69,72 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(69f, manifest.GroundLineFor("enemies/GOLEM"), 0.001f);
         }
 
+        // ---- who owns the ground line ------------------------------------------
+
+        // ABSENT MEANS AUTHORED, and this is the test that makes adding the
+        // field a no-op for everything written before it existed. Every entry
+        // in the shipped manifest predates it; if absence read as "slicer" they
+        // would all silently become numbers a tool may overwrite.
+        [Test]
+        public void AnEntryWithNoGroundLineSource_IsAuthored()
+        {
+            var manifest = Build(Actor("Enemies/golem", 69f));
+
+            Assert.AreEqual(StanceManifest.AuthoredSource, manifest.GroundLineSourceFor("Enemies/golem"));
+            Assert.AreEqual(StanceManifest.AuthoredSource, manifest.GroundLineSourceFor("Enemies/nobody"),
+                "an actor with no entry at all is not a number any tool owns either.");
+        }
+
+        [Test]
+        public void ASlicerOwnedGroundLine_SaysSo_RegardlessOfCasing()
+        {
+            var manifest = Build(new RawStanceActor
+            {
+                spritePath = "Enemies/treant",
+                groundLine = 8f,
+                groundLineSource = "  Slicer ",
+            });
+
+            Assert.AreEqual(StanceManifest.SlicerSource, manifest.GroundLineSourceFor("Enemies/treant"),
+                "the value is a word in a hand-edited file, so surrounding space and casing must not decide " +
+                "whether the next re-slice is allowed to update the number.");
+        }
+
+        // The safe direction for a value nobody recognises is "nothing writes
+        // over it". The loud direction -- refusing the typo -- is
+        // StanceManifestValidationTests' job, so the runtime keeps degrading
+        // gracefully and the author still gets told.
+        [Test]
+        public void AnUnrecognisedGroundLineSource_ReadsAsAuthored()
+        {
+            var manifest = Build(new RawStanceActor
+            {
+                spritePath = "Enemies/rat",
+                groundLine = 8f,
+                groundLineSource = "slicerr",
+            });
+
+            Assert.AreEqual(StanceManifest.AuthoredSource, manifest.GroundLineSourceFor("Enemies/rat"));
+        }
+
+        // The runtime does not care who wrote the number -- it stands the
+        // figure on it either way. Pinned so a future change cannot make the
+        // ownership field quietly change where a creature's feet land.
+        [Test]
+        public void TheSourceDoesNotChangeTheGroundLineItself()
+        {
+            var slicer = Build(new RawStanceActor
+            {
+                spritePath = "Enemies/treant",
+                groundLine = 8f,
+                groundLineSource = "slicer",
+            });
+            var authored = Build(Actor("Enemies/treant", 8f));
+
+            Assert.AreEqual(authored.GroundLineFor("Enemies/treant"),
+                slicer.GroundLineFor("Enemies/treant"), 0.001f);
+        }
+
         // ---- how hard an actor breathes ----------------------------------------
 
         // FULL AMPLITUDE UNLESS SOMEBODY SAYS OTHERWISE. Every stance in the

@@ -52,6 +52,32 @@ Optional:
                                folder that this run did not (re)write
     --quiet
 
+## Who owns the ground line
+
+This tool MEASURES a ground line and `Resources/StanceManifest.json` AUTHORS
+one, and before `groundLineSource` existed the handover between those two was
+a human copying a number off a terminal (measured: 2026-09-05 baseline, E1).
+Every actor entry now says which of the two owns its number:
+
+    "groundLineSource": "slicer"     this tool wrote it and may rewrite it
+    "groundLineSource": "authored"   a person decided it; the tool must not
+
+**Absent means "authored"**, so nothing written before the field existed
+changes meaning by gaining it. A new actor's entry is created by the tool as
+`"slicer"`, because a number nobody has looked at yet is the tool's.
+
+When the entry is authored and the measurement disagrees, the run prints the
+computed value and the delta and leaves the file alone -- the disagreement is
+the point (the golem's slam erupts below its feet; Shawn's idle plants a
+staff), and silently overwriting an override is how those figures ended up
+floating in the first place. `breath` and `hover` are never written by any
+tool: how hard a creature breathes and whether it flies are judgements about
+the art, not measurements of it.
+
+Nothing is recorded when `--out-root` points somewhere other than the real
+`Resources` tree: art written to scratch must not record a ground line for
+the actor that ships.
+
 A stance name of "-" or "skip" leaves that grid cell out entirely (a design
 sheet with a dead cell, or a stance the actor doesn't ship).
 
@@ -87,6 +113,8 @@ mismatch on disk silently.
 """
 
 import argparse
+import collections
+import json
 import os
 import sys
 
@@ -136,6 +164,12 @@ RINGING_MIN_BRIGHTNESS = 195
 RINGING_MIN_EXCESS = 40
 
 DEFAULT_OUT_ROOT = "Assets/_Project/Resources"
+STANCE_MANIFEST = "Assets/_Project/Resources/StanceManifest.json"
+
+# The two values groundLineSource may take. Absent is "authored" -- see the
+# module docstring's "Who owns the ground line".
+SOURCE_SLICER = "slicer"
+SOURCE_AUTHORED = "authored"
 
 # Poses whose feet legitimately do not share the standing ground line get
 # no special case here -- everything the actor ships stands on one line by
@@ -494,6 +528,83 @@ def _assert_one_ground_line(actor_label, out_dir, written_names, verbose, max_sp
     )
 
 
+# ---------------------------------------------------------------------------
+# The ground line, handed over instead of read off a terminal
+# ---------------------------------------------------------------------------
+
+def _normalise_actor_path(path):
+    """The same comparison Domain/Stage/StanceManifest.cs makes: stray slashes
+    and casing are the difference between a path typed into JSON and one built
+    by concatenation, and neither decides whether a golem stands on the floor.
+    """
+    return path.replace("\\", "/").strip().strip("/").lower()
+
+
+def update_stance_manifest(actor_label, ground_line, manifest_path=STANCE_MANIFEST, verbose=True):
+    """Record the measured ground line, or explain why it was not recorded.
+
+    Returns one of "written", "created", "unchanged", "authored", "absent" --
+    for the caller's report and for tests.
+
+    READ-MODIFY-WRITE WITH THE KEY ORDER KEPT. The file carries a long
+    `_comment` and per-actor `_groundLineNote`s that are the whole reason
+    anybody trusts the numbers; a rewrite that reordered or dropped them would
+    make every run of this tool a diff nobody wants to read. Entries are
+    mutated in place inside an OrderedDict, so an unchanged actor is
+    byte-unchanged, and a run that changes nothing does not open the file for
+    writing at all.
+    """
+    if not os.path.isfile(manifest_path):
+        print(f"  NOTE: no stance manifest at {manifest_path} -- groundLine {ground_line} not recorded")
+        return "absent"
+
+    with open(manifest_path, encoding="utf-8") as handle:
+        manifest = json.load(handle, object_pairs_hook=collections.OrderedDict)
+
+    wanted = _normalise_actor_path(actor_label)
+    entry = next(
+        (a for a in manifest.get("actors", [])
+         if _normalise_actor_path(str(a.get("spritePath", ""))) == wanted),
+        None,
+    )
+
+    if entry is None:
+        manifest.setdefault("actors", []).append(collections.OrderedDict([
+            ("spritePath", actor_label),
+            ("groundLine", ground_line),
+            ("groundLineSource", SOURCE_SLICER),
+        ]))
+        _write_manifest(manifest_path, manifest)
+        print(f"  StanceManifest.json: added {actor_label} groundLine {ground_line} (groundLineSource slicer)")
+        return "created"
+
+    source = str(entry.get("groundLineSource", SOURCE_AUTHORED)).strip().lower()
+    previous = entry.get("groundLine", 0)
+
+    if source != SOURCE_SLICER:
+        delta = ground_line - previous
+        print(f"  StanceManifest.json: LEFT ALONE. {actor_label} authors groundLine {previous}; "
+              f"this run measures {ground_line} (delta {delta:+}). groundLineSource is "
+              f"'{source}', so the authored number stands -- change it by hand, or set "
+              f"groundLineSource to 'slicer' if the measurement should own it.")
+        return "authored"
+
+    if previous == ground_line:
+        if verbose:
+            print(f"  StanceManifest.json: {actor_label} groundLine {ground_line} unchanged")
+        return "unchanged"
+
+    entry["groundLine"] = ground_line
+    _write_manifest(manifest_path, manifest)
+    print(f"  StanceManifest.json: {actor_label} groundLine {previous} -> {ground_line}")
+    return "written"
+
+
+def _write_manifest(manifest_path, manifest):
+    with open(manifest_path, "w", encoding="utf-8", newline="\n") as handle:
+        handle.write(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
+
+
 def _report_stray_files(out_dir, written_names, prune, verbose):
     existing = [f[:-4] for f in os.listdir(out_dir) if f.lower().endswith(".png")] if os.path.isdir(out_dir) else []
     stray = sorted(set(existing) - written_names)
@@ -641,7 +752,8 @@ def process(sheet_path, actor_arg, stances_arg, grid_arg, key_mode, anchor_mode,
     max_below = max(p.height - 1 - foot_y for _, p, _, foot_y in footed)
     canvas_h = int(max_above + max_below) + PADDING * 2
     ground_y = PADDING + int(max_above)
-    print(f"  groundLine {canvas_h - ground_y}  (StanceManifest.json wants that number)")
+    ground_line = canvas_h - ground_y
+    print(f"  groundLine {ground_line}")
 
     # Pass 2: per-piece horizontal anchor.
     anchored = []
@@ -683,6 +795,15 @@ def process(sheet_path, actor_arg, stances_arg, grid_arg, key_mode, anchor_mode,
 
     _assert_one_ground_line(label, out_dir, written, verbose, max_ground_spread)
     _report_stray_files(out_dir, written, prune, verbose)
+
+    # AFTER the art is on disk and the one-ground-line check has passed, not
+    # before: a run that dies partway must not leave a ground line recorded for
+    # frames that were never written.
+    if os.path.normpath(out_root) == os.path.normpath(DEFAULT_OUT_ROOT):
+        update_stance_manifest(label, ground_line, verbose=verbose)
+    elif verbose:
+        print(f"  (--out-root is not {DEFAULT_OUT_ROOT}; groundLine {ground_line} not recorded)")
+
     return written
 
 

@@ -29,6 +29,31 @@ namespace PrincesPalace.Domain.Stage
         // stop happening by accident.
         public float groundLine;
 
+        // WHO OWNS THE NUMBER ABOVE -- "slicer" or "authored", matched
+        // case-insensitively. Documented here in the same
+        // field-carries-its-own-doc shape [ContentDoc] gives the content
+        // records; this file is not a content entry (it is read at runtime,
+        // never baked) so it says it in a comment rather than an attribute.
+        //
+        // "slicer"   tools/slice_actor_sheet.py measured it and may rewrite it
+        //            on the next slice of that actor.
+        // "authored" a person decided it against the art, and no tool writes
+        //            over it -- the slicer prints its own measurement and the
+        //            delta instead.
+        //
+        // EMPTY MEANS "authored", which is the conservative default and the
+        // reason adding this field changed nothing: every entry written before
+        // it existed was a hand-copied number, so reading absence as "hands
+        // off" preserves exactly what those entries already meant.
+        //
+        // The runtime does not consult this at all -- GroundLineFor returns
+        // the same number either way. It exists for the tools and for
+        // StanceManifestValidationTests, which uses it to decide whether a
+        // ground line that disagrees with the art by more than 8px is a
+        // deliberate override (allowed, if the actor's README says why) or a
+        // stale value left behind by a re-slice (not allowed).
+        public string groundLineSource = "";
+
         // HOW HARD THIS CREATURE BREATHES, as a multiplier on
         // BreathCurve.FullAmplitude. See BreathCurve for the shape and for
         // what it is worth in pixels.

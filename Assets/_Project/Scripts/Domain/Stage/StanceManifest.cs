@@ -28,13 +28,23 @@ namespace PrincesPalace.Domain.Stage
         // with. See BreathCurve.
         public const float DefaultBreath = 1f;
 
+        // Who owns an actor's ground line. See RawStanceActor.groundLineSource
+        // for the whole rule; the short version is that "slicer" is a number a
+        // tool may rewrite and "authored" is one it must not, and ABSENT MEANS
+        // AUTHORED so that entries written before the field existed keep
+        // meaning what they already meant.
+        public const string SlicerSource = "slicer";
+        public const string AuthoredSource = "authored";
+
         private readonly Dictionary<string, float> _groundLines;
+        private readonly Dictionary<string, string> _groundLineSources;
         private readonly Dictionary<string, float> _breaths;
         private readonly Dictionary<string, HoverSpec> _hovers;
 
         public StanceManifest(RawStanceManifest raw)
         {
             _groundLines = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
+            _groundLineSources = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             _breaths = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
             _hovers = new Dictionary<string, HoverSpec>(StringComparer.OrdinalIgnoreCase);
 
@@ -47,6 +57,7 @@ namespace PrincesPalace.Domain.Stage
 
                 string path = Normalise(actor.spritePath);
                 _groundLines[path] = actor.groundLine;
+                _groundLineSources[path] = NormaliseSource(actor.groundLineSource);
                 _breaths[path] = actor.breath;
                 if (actor.hover != null)
                 {
@@ -83,6 +94,39 @@ namespace PrincesPalace.Domain.Stage
             }
 
             return DefaultGroundLine;
+        }
+
+        // WHO OWNS THIS ACTOR'S GROUND LINE. Always one of the two constants
+        // above -- an absent, blank or unrecognised value resolves to
+        // AuthoredSource, which is the answer that stops a tool writing.
+        //
+        // AN UNRECOGNISED VALUE IS NOT AN ERROR HERE and is one in the
+        // validator. Graceful degradation is the house style at runtime, and
+        // the degradation that is safe is "nobody may overwrite it"; a typo
+        // that quietly turned an authored number into a tool-owned one would
+        // be the failure this field exists to prevent, arriving through the
+        // field itself. StanceManifestValidationTests refuses the typo.
+        public string GroundLineSourceFor(string spritePath)
+        {
+            if (string.IsNullOrWhiteSpace(spritePath)
+                || !_groundLineSources.TryGetValue(Normalise(spritePath), out var source))
+            {
+                return AuthoredSource;
+            }
+
+            return source;
+        }
+
+        private static string NormaliseSource(string source)
+        {
+            if (string.IsNullOrWhiteSpace(source))
+            {
+                return AuthoredSource;
+            }
+
+            return source.Trim().Equals(SlicerSource, StringComparison.OrdinalIgnoreCase)
+                ? SlicerSource
+                : AuthoredSource;
         }
 
         // HOW HARD THIS ACTOR BREATHES, as a multiplier on
