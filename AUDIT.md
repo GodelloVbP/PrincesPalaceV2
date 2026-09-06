@@ -598,6 +598,72 @@ and only the kill-credit half should be gated. That changes ledger numbers a
 run and an end-of-fight screen already read, so it is a decision and not a
 drive-by fix.
 
+## Findings from the restatement sweep, 2026-09-06
+
+Searched for one fact typed by hand in two or more places with no single owner and
+nothing that fires when the copies disagree, judged against `docs/CODE_STANDARDS.md`
+§9's T1/T2/T3 ladder, in four read-only sweeps — Domain, Core/Editor, tools/docs/tests,
+and the JSON↔code seam. Thirteen findings came out of it, twelve fixed the same day;
+a fourteenth, `tools/test_areas.ps1`'s hand-maintained `$PathAreas` map, is already a
+decision recorded in that file's own header (lines ~606-617) and gets no entry here.
+
+### ~~66. A `DefeatSpecificBoss` achievement's target enemy was checked by nothing~~ — fixed in `24797a93`: `AchievementProgress.ValidateDefeatSpecificBossParameter` checks the parameter against the enemy catalogue, wired in from `ContentDatabase.ValidateContent`; full reasoning in the commit message
+
+### ~~67. `KitFor(CharacterDefinition)` hand-rolled the skill-unlock filter `AvailableSkillsFor` owns~~ — fixed in `3d2a1de4`: the shared predicate moved into `ContentDatabase.SkillsUnlockedByLevel`, and both call sites go through it; full reasoning in the commit message
+
+### ~~68. `ResistanceByType.WithMagical`/`IsEmpty` hand-listed the `DamageType` members with no completeness test~~ — fixed in `8ae0ee8f`: both now derive from `Enum.GetValues`, pinned by two new completeness tests; full reasoning in the commit message
+
+### ~~69. `TryResolveStatus` was duplicated byte-for-byte across two content resolvers~~ — fixed in `1fcc621e`: moved into `StatusAuthoring.TryResolve`, shared by `SkillEntryResolver` and `EnemyEntryResolver`; full reasoning in the commit message
+
+### ~~70. `tools/bot.ps1` retyped the archetype list `Archetypes.Names` owns~~ — fixed in `a846a972`: the script's `-Archetypes` default is empty and `-botArchetypes` is omitted from argv when empty, so `BalanceBotRunner`'s registry-derived default governs; full reasoning in the commit message
+
+### ~~71. The spell-acquisition metric was computed, rendered nowhere, and absent from the schema doc that claims to be the contract~~ — fixed in `b03fa207` and, for the room-row half, `7975c5a1`: `docs/BOT_SUMMARY_SCHEMA.md` now documents both the `cells[].spellAcquisition` fields and the `RoomTrace` fields, `tools/bot_report.py` renders the metric, and `tools/bot_schema_test.py` checks doc against emitter for both halves; full reasoning in the commit messages
+
+### ~~72. The dossier leader line's vertical anchor was its slot's plus 37, typed seven times~~ — fixed in `f40577dd`: `DossierLayout.SlotGeometry` is the one top/file table now, and `LeaderTop` derives from `SlotTop` plus a named `LeaderVerticalOffset`; full reasoning in the commit message
+
+### ~~73. The stage capacity `3` was typed twice in `FightBootstrap` with comments naming `FightHudSpec.StageSlotsPerSide`, and `"lone"`/`"full"` were literals at six sites~~ — fixed in `cd4c4c2c`: both `FightBootstrap` literals now read `FightHudSpec.StageSlotsPerSide` directly, and `PreviewFight.FormationLone`/`FormationFull` are the one spelling referenced at all six sites; full reasoning in the commit message
+
+### ~~74. `BotPhaseTimers.PhaseCount = 18` hand-counted the `BotPhase` enum~~ — fixed in `3262cc2d`: `PhaseCount` now derives from `Enum.GetValues(typeof(BotPhase)).Length`; full reasoning in the commit message
+
+### ~~75. `CharacterVoice` keyed Shawn's lines on the literal `"sheep"` with no check against `characters.json`~~ — fixed in `8156a4ca`: a PlayMode test asserts every `CharacterVoice` key is a live id `ContentDatabase.GetCharacter` recognises; full reasoning in the commit message
+
+### ~~76. `architecture_audit.md` §7 stated two partial-class line counts as precise numbers, both stale~~ — fixed in `1656372a`: the `FightController` and `ContentDatabase` rows now read approximate, sha-stamped counts, same phrasing as the `FightSession` row fixed the same morning; full reasoning in the commit message
+
+### 77. `ContentDatabase.ValidateContent()`'s six pre-existing whole-catalogue rules have no test
+
+Found while adding the seventh (`24797a93`): grep for `ValidateContent(` in
+`Assets/_Project/Scripts/Tests/` returned nothing. The new rule is tested via a Domain
+predicate (`AchievementProgress.ValidateDefeatSpecificBossParameter`) plus a PlayMode
+check against real content, because Core's `InternalsVisibleTo` names only the Editor
+assembly and no test assembly can construct a synthetic `AchievementDefinition` to
+drive `ValidateContent` directly. The six rules beside it, in
+`Core/Content/ContentDatabase.Validation.cs`, would pass a broken catalogue silently if
+any regressed: the cross-catalogue id-uniqueness sweep (the shared `seen` set walking
+Character/Talent/Upgrade/Relic/Modifier/Enemy/Item/Skill ids, line 84), a talent's
+`GrantsSkillId` naming a real skill owned by the granting character (line 156), a
+talent's `GrantsStartingItemId` naming a real item (line 192), a talent's `CharacterId`
+naming a real character (line 201), a skill's `CharacterId` naming a real character or
+enemy (line 432), and an enemy ability's `SkillId` naming a real skill (line 138). (The
+function's own header comment names "a relic naming an achievement" as an example of
+this class of check — that gate is not one of these six: it is `RelicEntryResolver`'s,
+enforced per-file at authoring time against the known achievement ids `ContentBuilder`
+hands it, not `ValidateContent`'s. The header is describing the class of problem, not
+an accurate list of six live rules.)
+
+The fix is the same shape #66 used: pull each comparison into a pure Domain predicate
+over primitives, EditMode-test the predicate's own branches, and let one PlayMode test
+prove `ValidateContent` actually wires the predicate to real content.
+
+### 78. `docs/BOT_SUMMARY_SCHEMA.md` lists room fields in two places
+
+The `traces.jsonl` `RoomTrace` block is now covered by `tools/bot_schema_test.py`
+(finding #71), but the `runs.jsonl` `rooms[]` prose list — a second, independent
+listing of the same fields inside the same doc — still omits
+`learnedSpellCountAfterRoom`, `unassignedSpellBookCountAfterRoom`, and
+`spellAssignments`. `7975c5a1`'s own commit message flags this exact gap as
+deliberately out of scope. Two listings of one fact inside one doc is the finding; the
+fix is one section pointing at the other, not a second test. ~10 min.
+
 ## Open investigations
 
 ### ~~52. `SystemMenuExitsTests.OnePressOnAnExitDoesNothingButArmIt` flaked once, navigating to `"Hub"` — cause not found~~ — fixed in `58a7f69`: a leftover `HoldToConfirm` was bleeding its `Abandon` navigation into the next test; the fixture's `TearDown` now cancels every live hold; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
