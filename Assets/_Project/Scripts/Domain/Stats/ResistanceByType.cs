@@ -106,28 +106,43 @@ namespace PrincesPalace.Domain.Stats
         // relic offering it is offering four things at once, and saying that
         // once here beats saying it in every relic that offers it.
         //
-        // NOW TEN, not five -- Earth/Water/Wind/Lightning/Void join
-        // Fire/Ice/Nature/Poison/Arcane the moment each has its own field
-        // to add to. Same rule as before: every non-Physical type is
-        // "magical", no exceptions carved out per element.
+        // DERIVED FROM Enum.GetValues rather than hand-listing every
+        // non-Physical field, so a 12th DamageType member is "magical" the
+        // moment it exists instead of silently getting nothing until someone
+        // remembers to add a line here. Both call sites (FightEncounterAdapter's
+        // elemental-family resistance, RelicModifiers.ApplyResistance) run once
+        // per combatant setup, not per frame or per hit, so the enum walk costs
+        // nothing that matters. DamageTypeCompletenessTests.
+        // WithMagicalTouchesEveryNonPhysicalMember pins this.
         public ResistanceByType WithMagical(int amount)
         {
             var copy = this;
-            copy.Fire += amount;
-            copy.Ice += amount;
-            copy.Nature += amount;
-            copy.Poison += amount;
-            copy.Arcane += amount;
-            copy.Earth += amount;
-            copy.Water += amount;
-            copy.Wind += amount;
-            copy.Lightning += amount;
-            copy.Void += amount;
+            foreach (DamageType type in Enum.GetValues(typeof(DamageType)))
+            {
+                if (type == DamageType.Physical) continue;
+                copy = copy.With(type, amount);
+            }
+
             return copy;
         }
 
-        public bool IsEmpty =>
-            Physical == 0 && Fire == 0 && Ice == 0 && Nature == 0 && Poison == 0 && Arcane == 0 &&
-            Earth == 0 && Water == 0 && Wind == 0 && Lightning == 0 && Void == 0;
+        // DERIVED FROM Enum.GetValues for the same reason as WithMagical
+        // above: a hand-listed "&& NewField == 0" is exactly the kind of line
+        // a 12th DamageType member gets silently forgotten. Reads through
+        // For(type) rather than the fields directly, so this and With/For
+        // agree on what "every type" means by construction.
+        // DamageTypeCompletenessTests.IsEmptySeesEveryMember pins this.
+        public bool IsEmpty
+        {
+            get
+            {
+                foreach (DamageType type in Enum.GetValues(typeof(DamageType)))
+                {
+                    if (For(type) != 0) return false;
+                }
+
+                return true;
+            }
+        }
     }
 }

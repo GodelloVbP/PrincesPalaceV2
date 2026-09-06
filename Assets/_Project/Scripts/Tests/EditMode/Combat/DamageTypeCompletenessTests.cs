@@ -53,6 +53,43 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
+        // WithMagical is now derived from AllTypes rather than a hand-listed
+        // sequence of field adds (see ResistanceByType's own header on the
+        // derivation), so this is the guard against the derivation itself
+        // drifting from "every non-Physical type" -- e.g. an accidental
+        // `continue` on the wrong member.
+        [Test]
+        public void WithMagicalTouchesEveryNonPhysicalMember()
+        {
+            var resistance = default(ResistanceByType).WithMagical(25);
+            foreach (var type in AllTypes)
+            {
+                if (type == DamageType.Physical)
+                {
+                    Assert.AreEqual(0, resistance.For(type), "WithMagical must not touch Physical");
+                }
+                else
+                {
+                    Assert.AreEqual(25, resistance.For(type), $"WithMagical did not touch {type}");
+                }
+            }
+        }
+
+        // Same reasoning as above, for IsEmpty: a fresh struct is empty, and
+        // a nonzero slot in ANY single member -- not just the ones that
+        // existed when IsEmpty was first written -- must flip it false.
+        [Test]
+        public void IsEmptySeesEveryMember()
+        {
+            Assert.IsTrue(default(ResistanceByType).IsEmpty, "a fresh ResistanceByType must be empty");
+
+            foreach (var type in AllTypes)
+            {
+                var resistance = default(ResistanceByType).With(type, 1);
+                Assert.IsFalse(resistance.IsEmpty, $"IsEmpty missed a nonzero {type} slot");
+            }
+        }
+
         // GlossaryEntries.Listed and FightHudModel.DamageTypeLabel both
         // print DamageType.ToString() directly rather than through a
         // separate display-name table -- the enum member IS the table.
