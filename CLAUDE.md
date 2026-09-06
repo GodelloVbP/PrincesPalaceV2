@@ -104,6 +104,14 @@ in each area. `-Changed` maps whatever is uncommitted to the areas/classes it
 touches. `-List` shows every class with its area and host. No argument runs
 the full suite.
 
+**To look at ONE thing by id** — `tools/preview.ps1 -Enemy|-Spell|-Character
+<id>` validates the id against its JSON, rebuilds content if it is stale
+(picking batchmode or the open Editor for you), and writes the pictures under
+`tools/screenshots/preview/`; `-Launch` plays it in the Editor instead. **To
+rebuild content and nothing else** — `tools/build_content.ps1`, ~14s, in place.
+Neither is a gate: preview runs one capture fixture and no part of the suite,
+so a green preview says the picture came out, not that anything still passes.
+
 **Before committing** — everything, ~120-130s:
 ```bash
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/run_tests_parallel.ps1

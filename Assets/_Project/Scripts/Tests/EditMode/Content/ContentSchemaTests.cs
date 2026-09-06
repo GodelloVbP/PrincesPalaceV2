@@ -99,6 +99,36 @@ namespace PrincesPalace.Domain.Tests
                 "docs/CONTENT_SCHEMA.md is stale - run tools/content_schema.ps1 to regenerate.");
         }
 
+        // THE ONE NUMBER THE BASELINE HAD TO GO AND LOOK UP.
+        //
+        // docs/CONTENT_SCHEMA.md is the per-field reference an author opens
+        // first, and its six ability-score rows said "the resolver's budget"
+        // and never what the budget was -- so the Step 0 authoring baseline
+        // spent one lookup on characters.json's _readme and another on
+        // CharacterEntryResolver to find the 60 (see
+        // docs/measurements/2026-09-authoring-baseline.md, "Rules that had to
+        // be looked up because nothing enforces or announces them").
+        //
+        // The number is written into those [ContentDoc] strings now, because
+        // an attribute argument has to be a compile-time constant and C# will
+        // not concatenate an int into one. This is what keeps that copy
+        // honest: the EXPECTED value is built from the constant, so changing
+        // AbilityScoreBudget without touching the six strings fails here
+        // rather than leaving the reference quietly wrong.
+        [Test]
+        public void TheSchemaNamesTheAbilityScoreBudget()
+        {
+            string generated = ContentSchema.Generate();
+            string expected = "must total exactly " + CharacterEntryResolver.AbilityScoreBudget;
+
+            int rows = generated.Split(new[] { expected }, StringSplitOptions.None).Length - 1;
+
+            Assert.AreEqual(6, rows,
+                $"docs/CONTENT_SCHEMA.md should say '{expected}' on all six ability-score rows and says it on " +
+                $"{rows}. Either a row lost the number, or AbilityScoreBudget changed and the six [ContentDoc] " +
+                "strings on RawCharacterEntry still name the old one.");
+        }
+
         private static string Normalize(string s) => s.Replace("\r\n", "\n").Replace("\r", "\n");
     }
 }
