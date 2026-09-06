@@ -61,6 +61,12 @@ namespace PrincesPalace
             RefreshInitiative();
             RefreshStage();
             RefreshLowHpVignette();
+
+            // AFTER all three status surfaces have repainted (RefreshStage's
+            // enemy row, RefreshPartyPlate's own row and its RefreshRoster
+            // call) -- see RefreshHoveredStatusTooltip's own comment for why
+            // this cannot just live inside one of the three.
+            RefreshHoveredStatusTooltip();
         }
 
         // HYSTERESIS, not one threshold -- a party sitting right at 25% would
@@ -560,7 +566,7 @@ namespace PrincesPalace
             }
 
             RefreshWool(actor);
-            RefreshPartyBuffs(actor);
+            RefreshPartyStatusRow(actor);
             RefreshTransformStrip(actor);
             RefreshSecondLifeBadge();
             RefreshRoster(actor);
@@ -614,6 +620,16 @@ namespace PrincesPalace
             {
                 bool present = i < others.Count;
                 rosterPlates[i].SetShown(present);
+
+                // ROSTER-MAJOR, matching FightScreen.BuildRosterPlates: slot i's
+                // five badges are RosterStatusBase + i * RosterStatusBadgesPerRow.
+                // A missing member still gets its row painted with an empty list,
+                // which is what deactivates every one of its five badges rather
+                // than leaving them wearing a downed ally's last statuses.
+                var rows = present ? FightHudModel.StatusRowsFor(_session, others[i]) : EmptyStatusRows;
+                PaintStatusRow(RosterStatusBase + i * RosterStatusBadgesPerRow, RosterStatusBadgesPerRow,
+                    EnemyRosterStatusRealCapacity, rows, showCounter: false);
+
                 if (!present) continue;
 
                 var member = others[i];
@@ -626,50 +642,302 @@ namespace PrincesPalace
             }
         }
 
-        // ---- buff badges ------------------------------------------------------
+        // ---- status badges (enemy row, party plate, roster row) ---------------
+        //
+        // PLAN_STATUS_EFFECT_UI.md sections 1, 3, 6 and 7 -- ONE anatomy
+        // (FightScreen.BuildStatusBadge's Glyph/Code/Counter three-child
+        // button), one paint routine (PaintStatusRow), three call sites: the
+        // enemy row from FightController.StageVisuals.cs's RefreshStage,
+        // right beside RefreshIntentIcons so a status and an intent always
+        // paint off the same beat; the roster row from RefreshRoster above;
+        // the party plate from RefreshPartyStatusRow below. Replaces
+        // RefreshPartyBuffs outright -- BuffBadge/BuffBadgesFor/StatusBadge/
+        // PillCode/PillCategory/CategoryOf are gone with it (Package A,
+        // section 4/11).
         //
         // GREEN for something helping the character, RED for something
-        // hurting them -- IntentHeal and IntentWeaken/HpBright, the same two
-        // tokens the enemy-intent badges already use for the identical
-        // helping/hurting split, reused rather than a third palette for one
-        // idea the HUD already has a colour language for.
+        // hurting them -- IntentHeal and HpBright, the same two tokens the
+        // enemy-intent badges already use for the identical helping/hurting
+        // split, reused rather than a third palette for one idea the HUD
+        // already has a colour language for.
         private static readonly Color BuffPositive = Hex(FightHudPalette.IntentHeal);
         private static readonly Color BuffNegative = Hex(FightHudPalette.HpBright);
 
-        private TMPro.TMP_Text[] _partyBuffGlyphs;
-        private Image[] _partyBuffImages;
+        private static readonly List<FightHudModel.StatusRow> EmptyStatusRows =
+            new List<FightHudModel.StatusRow>();
 
-        // The face each button was BUILT with -- SceneBuilder leaves
-        // PartyBuff{i}'s SpriteKey unset, which UiNode's own comment says
-        // means "use the shared button frame", so this is a real sprite
-        // reference, not a blank one. Captured once, before anything ever
-        // swaps `.sprite`, so RefreshPartyBuffs can restore it for the eight
-        // statuses with no icon of their own instead of leaving the Image
-        // with whatever the PREVIOUS badge in that slot happened to be
-        // wearing (or, worse, null -- which paints Unity's default white
-        // square, not this game's button chrome).
-        private Sprite[] _partyBuffDefaultSprites;
+        // Mirrors FightScreen's own EnemyStatusBadgesPerRow/
+        // RosterStatusBadgesPerRow (both private to that class, section 1's
+        // measured table) -- Package C codes against the node NAMES that
+        // registry produces, not against its private layout constants, so
+        // these are a second statement of the same "5 slots per row" fact
+        // rather than a shared one.
+        private const int EnemyStatusBadgesPerRow = 5;
+        private const int RosterStatusBadgesPerRow = 5;
+        private const int EnemyStatusBadgeCount = 15; // 3 stage slots x 5
+        private const int RosterStatusBadgeCount = 10; // 2 roster plates x 5
+        private const int PartyStatusBadgeCount = 6;
+
+        // 4, not 5 -- the 5th of the enemy/roster row's physical badges is
+        // never a REAL status, only ever the "+N" chip or nothing at all
+        // (see PaintStatusRow's own header). The party plate has no
+        // equivalent constant: all 6 of its badges are real capacity, so its
+        // call site below passes PartyStatusBadgeCount for both parameters.
+        private const int EnemyRosterStatusRealCapacity = 4;
+
+        // ONE FLAT INDEX SPACE across all three surfaces (enemy first, then
+        // roster, then party) rather than three separate HoverIndex
+        // handlers -- one OnHoverStatusBadge, one tooltip cache, one
+        // "who is currently hovered" field, instead of three copies of each.
+        private const int EnemyStatusBase = 0;
+        private const int RosterStatusBase = EnemyStatusBadgeCount;
+        private const int PartyStatusBase = RosterStatusBase + RosterStatusBadgeCount;
+        private const int TotalStatusBadges = PartyStatusBase + PartyStatusBadgeCount;
+
+        // One layer per named child BuildStatusBadge actually built (Glyph/
+        // Code/Counter), plus the ROOT's own Image -- every Ui.Button gets
+        // one whether chromeless or not (UiEmitter.EmitButton), and
+        // BuildStatusBadge leaves it fully transparent, which is exactly an
+        // unused Image sitting there for the polarity frame (section 3) to
+        // move into.
+        //
+        // NOT UNIFORM across all three surfaces, and said plainly rather
+        // than papered over: PartyBuff{i} is a plain chromeless Ui.Button
+        // (root Image plus one synthesised caption), never rebuilt through
+        // BuildStatusBadge's three-child anatomy -- the party plate
+        // predates this package and Package B did not revisit it
+        // (PLAN_STATUS_EFFECT_UI.md section 1's party-plate row is new work
+        // here, not there). `UiKitLintTests.OnlyTheEmitterMayCreateGameObjects`
+        // forbids building the missing Glyph/Counter children at runtime the
+        // way HoverIndex gets added, so the party plate genuinely has fewer
+        // layers than the other two: Frame and Counter are null there, Glyph
+        // IS the root's own Image (tinted, doubling as both icon and frame),
+        // and Code carries the counter folded into its own text. See
+        // WirePartyStatusBadge and PaintBadge/PaintOverflowChip's own
+        // comments for exactly where each surface's painting diverges.
+        private struct StatusBadgeParts
+        {
+            public GameObject Root;
+            public Image Frame;
+            public Image Glyph;
+            public TMPro.TMP_Text Code;
+            public TMPro.TMP_Text Counter;
+
+            // Party plate only: the plain face PartyBuff{i} was BUILT with,
+            // restored on an icon miss instead of leaving the Image blank
+            // (which paints Unity's default white square, not this game's
+            // button chrome) -- the exact rule the old RefreshPartyBuffs
+            // enforced via _partyBuffDefaultSprites.
+            public Sprite Fallback;
+        }
+
+        private StatusBadgeParts[] _statusBadgeParts;
+        private readonly string[] _statusBadgeTooltip = new string[TotalStatusBadges];
+
+        // Which flat index currently owns the shared tooltip, or -1. Not
+        // read by the paint routine at all -- only by OnHoverStatusBadge and
+        // RefreshHoveredStatusTooltip, both below.
+        private int _hoveredStatusBadge = -1;
+
+        private void WireAllStatusBadges()
+        {
+            _statusBadgeParts = new StatusBadgeParts[TotalStatusBadges];
+
+            WireStatusBadgeGroup(enemyStatusBadges, EnemyStatusBase, party: false);
+            WireStatusBadgeGroup(rosterStatusBadges, RosterStatusBase, party: false);
+            WireStatusBadgeGroup(partyBuffIcons, PartyStatusBase, party: true);
+
+            if (statusTooltip != null) statusTooltip.SetShown(false);
+
+            // RETIRED, not removed -- FightScreen still builds
+            // PartyBuffTooltip/PartyBuffTooltipText (B owns that tree and
+            // this package does not touch it), but nothing writes to it any
+            // more now that every surface shares StatusTooltip, so it stays
+            // permanently hidden instead of standing dormant with stale text.
+            if (partyBuffTooltip != null) partyBuffTooltip.SetShown(false);
+        }
+
+        private void WireStatusBadgeGroup(GameObject[] badges, int baseIndex, bool party)
+        {
+            if (badges == null) return;
+
+            for (int i = 0; i < badges.Length; i++)
+            {
+                var badge = badges[i];
+                if (badge == null) continue;
+
+                int flat = baseIndex + i;
+                if (flat < 0 || flat >= _statusBadgeParts.Length) continue;
+
+                _statusBadgeParts[flat] = party ? WirePartyStatusBadge(badge) : WireExistingStatusBadge(badge);
+
+                var hover = badge.GetComponent<HoverIndex>();
+                if (hover == null) hover = badge.AddComponent<HoverIndex>();
+                hover.Index = flat;
+                hover.Changed = OnHoverStatusBadge;
+            }
+        }
+
+        // Enemy and roster badges: BuildStatusBadge's own three named
+        // children, found by name rather than GetComponentInChildren so the
+        // button's own synthesised (and otherwise-empty) caption label never
+        // gets mistaken for one of them.
+        private static StatusBadgeParts WireExistingStatusBadge(GameObject badge)
+        {
+            var parts = new StatusBadgeParts { Root = badge, Frame = badge.GetComponent<Image>() };
+
+            var glyph = badge.transform.Find("Glyph");
+            if (glyph != null) parts.Glyph = glyph.GetComponent<Image>();
+
+            var code = badge.transform.Find("Code");
+            if (code != null) parts.Code = code.GetComponent<TMPro.TMP_Text>();
+
+            var counter = badge.transform.Find("Counter");
+            if (counter != null) parts.Counter = counter.GetComponent<TMPro.TMP_Text>();
+
+            return parts;
+        }
+
+        // PartyBuff{i}: a plain chromeless Ui.Button -- root Image plus one
+        // synthesised caption, never rebuilt through BuildStatusBadge's
+        // three-child anatomy (see StatusBadgeParts' own header). No Glyph
+        // or Counter child exists to find, and none is built here either:
+        // `UiKitLintTests.OnlyTheEmitterMayCreateGameObjects` reserves the
+        // rect-preamble GameObject construction UiEmitter does to UiEmitter
+        // alone, so "just add the missing children at runtime" -- the move
+        // this file already makes for HoverIndex, which is a component, not
+        // a GameObject -- is not available here. Frame and Counter are left
+        // null; Glyph is the root's own Image, doing double duty as both the
+        // icon slot and the polarity read the other two surfaces get from a
+        // separate Frame; Code (the one synthesised caption) carries the
+        // counter folded into its own text. PaintBadge and PaintOverflowChip
+        // branch on `Counter == null` for exactly this reason.
+        private static StatusBadgeParts WirePartyStatusBadge(GameObject badge)
+        {
+            var image = badge.GetComponent<Image>();
+            return new StatusBadgeParts
+            {
+                Root = badge,
+                Glyph = image,
+                Fallback = image != null ? image.sprite : null,
+                Code = badge.GetComponentInChildren<TMPro.TMP_Text>(includeInactive: true),
+            };
+        }
+
+        // ---- the polarity frame (section 3) ------------------------------------
+        //
+        // A smooth rounded outline for a benefit, clipped corners with a top
+        // notch for a detriment -- geometry, not colour, so both survive
+        // greyscale. B could not bake a proc: sprite from this worktree
+        // (ProceduralSpriteBaker is an Editor menu item -- see
+        // FightScreen.BuildStatusBadge's own comment), so this bakes the
+        // same idea at RUNTIME instead: once per polarity, ever, cached in
+        // these two statics -- never per badge, never per repaint. Neither
+        // rotates the glyph's RectTransform -- B suggested that as a
+        // stopgap and section 3 rejects it; this is a separate Image
+        // instead.
+        private const int FrameTextureSize = 36;
+        private const float FrameRingThickness = 2f;
+
+        private static Sprite _positiveFrameSprite;
+        private static Sprite _negativeFrameSprite;
+
+        private static Sprite PositiveFrameSprite => _positiveFrameSprite ??= BuildFrameSprite(detriment: false);
+        private static Sprite NegativeFrameSprite => _negativeFrameSprite ??= BuildFrameSprite(detriment: true);
+
+        private static Sprite BuildFrameSprite(bool detriment)
+        {
+            var texture = new Texture2D(FrameTextureSize, FrameTextureSize, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp,
+            };
+
+            float half = FrameTextureSize * 0.5f;
+            var pixels = new Color32[FrameTextureSize * FrameTextureSize];
+            for (int y = 0; y < FrameTextureSize; y++)
+            {
+                for (int x = 0; x < FrameTextureSize; x++)
+                {
+                    float px = x + 0.5f - half;
+                    float py = y + 0.5f - half;
+                    bool onRing = detriment ? OnClippedRing(px, py, half) : OnRoundedRing(px, py, half);
+                    pixels[y * FrameTextureSize + x] = onRing
+                        ? new Color32(255, 255, 255, 255)
+                        : new Color32(255, 255, 255, 0);
+                }
+            }
+
+            texture.SetPixels32(pixels);
+            texture.Apply(false, true);
+
+            return Sprite.Create(texture, new Rect(0f, 0f, FrameTextureSize, FrameTextureSize),
+                new Vector2(0.5f, 0.5f), 100f);
+        }
+
+        // Rounded-rectangle signed distance: <= 0 is inside. The ring is
+        // between the outer boundary and one inset by FrameRingThickness.
+        private static bool OnRoundedRing(float x, float y, float half)
+        {
+            const float margin = 1.5f;
+            const float radius = 8f;
+            float outer = RoundedRectSdf(x, y, half - margin, radius);
+            float inner = RoundedRectSdf(x, y, half - margin - FrameRingThickness,
+                Mathf.Max(radius - FrameRingThickness, 0f));
+            return outer <= 0f && inner > 0f;
+        }
+
+        private static float RoundedRectSdf(float x, float y, float halfExtent, float radius)
+        {
+            float qx = Mathf.Abs(x) - (halfExtent - radius);
+            float qy = Mathf.Abs(y) - (halfExtent - radius);
+            return Mathf.Sqrt(Mathf.Max(qx, 0f) * Mathf.Max(qx, 0f) + Mathf.Max(qy, 0f) * Mathf.Max(qy, 0f))
+                + Mathf.Min(Mathf.Max(qx, qy), 0f) - radius;
+        }
+
+        // Four straight corner cuts plus a small rectangular bite out of the
+        // top edge -- the detriment shape section 3 asks for, drawn as a
+        // ring the same way OnRoundedRing is.
+        private static bool OnClippedRing(float x, float y, float half)
+        {
+            const float margin = 1.5f;
+            const float cut = 7f;
+            const float notchHalfWidth = 3f;
+            const float notchDepth = 4f;
+
+            bool outer = InsideClippedRect(x, y, half - margin, cut);
+            bool inner = InsideClippedRect(x, y, half - margin - FrameRingThickness,
+                Mathf.Max(cut - FrameRingThickness, 0f));
+            bool inNotch = Mathf.Abs(x) <= notchHalfWidth && y >= half - margin - notchDepth;
+            return outer && !inner && !inNotch;
+        }
+
+        private static bool InsideClippedRect(float x, float y, float halfExtent, float cut)
+        {
+            if (Mathf.Abs(x) > halfExtent || Mathf.Abs(y) > halfExtent) return false;
+            float cx = Mathf.Abs(x) - (halfExtent - cut);
+            float cy = Mathf.Abs(y) - (halfExtent - cut);
+            return cx <= 0f || cy <= 0f || (cx + cy) <= cut;
+        }
 
         // ---- shared icon cache --------------------------------------------------
         //
-        // The exact same system twice: a sprite resolved once per enum kind
-        // via Resources.Load and kept in a dictionary that only ever grows,
-        // with a MISS cached right alongside a HIT so a kind with no
-        // authored art stops asking Resources for a file that will never
-        // exist. StatusSprites below and IntentSprites in
-        // FightController.StageVisuals.cs used to each hand-roll this; both
-        // now go through one instance of this generic cache instead.
+        // The exact same system twice: a sprite resolved once per key via
+        // Resources.Load and kept in a dictionary that only ever grows, with
+        // a MISS cached right alongside a HIT so a key with no authored art
+        // stops asking Resources for a file that will never exist.
+        // StatusRowSprites below and IntentSprites in
+        // FightController.StageVisuals.cs both go through one instance of
+        // this generic cache.
         //
         // Applying the result to an Image is the ONE place the two systems
         // still deliberately disagree, so that stays a parameter rather
-        // than getting folded in here too: an enemy-intent badge with no
-        // art is a BUG and disables its Image outright (a blank slot beats
-        // a filled white rectangle -- see RefreshIntentIcons' own comment),
-        // where eight of ten status kinds having no art is that badge's
-        // INTENDED steady state and restores whatever sprite the button was
-        // built with instead (see RefreshPartyBuffs' own comment). Neither
-        // caller's colour or glyph-fallback logic belongs here either --
-        // those differ per system and are not the part that was duplicated.
+        // than getting folded in here too: an enemy-intent badge with no art
+        // is a BUG and disables its Image outright (a blank slot beats a
+        // filled white rectangle -- see RefreshIntentIcons' own comment); a
+        // status badge with no art (twelve of fourteen entries today) is
+        // that badge's INTENDED steady state and falls back to Code instead
+        // -- see PaintBadge.
         private class IconCache<TKind>
         {
             private readonly Dictionary<TKind, Sprite> _sprites = new Dictionary<TKind, Sprite>();
@@ -699,109 +967,314 @@ namespace PrincesPalace
             }
         }
 
-        // Resolved once per status kind, through the SAME cache shape
-        // IntentSprites in FightController.StageVisuals.cs uses -- see
-        // IconCache<TKind>'s own header just above for the one deliberate
-        // behavioural difference between the two systems.
-        private static readonly IconCache<StatusEffectType> StatusSprites = new IconCache<StatusEffectType>();
+        // Keyed by SLUG rather than by the whole StatusRow -- a row's
+        // Tooltip and Counter change every tick, and a struct key would mint
+        // a new dictionary entry (and a new Resources.Load) every turn a
+        // status counts down, when the art behind it never does. The two
+        // speed presentations have no StatusEffectType to key on instead
+        // (section 4), which is exactly why this is slug-keyed and the old
+        // StatusEffectType-keyed cache is gone -- every caller now holds a
+        // StatusRow already.
+        private static readonly IconCache<string> StatusRowSprites = new IconCache<string>();
 
-        private static Sprite StatusSpriteFor(StatusEffectType kind) =>
-            StatusSprites.Resolve(kind, FightHudModel.StatusBadgeIcons.ResourceFor);
+        private static Sprite StatusSpriteFor(FightHudModel.StatusRow row) =>
+            StatusRowSprites.Resolve(row.Slug, _ => FightHudModel.StatusBadgeIcons.ResourceFor(row));
 
-        private void WirePartyBuffIcons()
+        // ---- painting one row ---------------------------------------------------
+
+        // Fills up to `realCapacity` slots from `rows`, in order. Once rows
+        // outgrow that capacity, the LAST of the `slotCount` physical slots
+        // becomes the "+N" chip (section 6). The two are the same number on
+        // the party plate (6 physical slots, all 6 usable, the 6th doubling
+        // as the chip "at 7+") but NOT on the enemy row or roster row (5
+        // physical slots, only 4 ever show a real status -- FightScreen.
+        // BuildStatusBadge's own comment: "4 statuses plus the +N overflow
+        // chip is 5 nodes per row", section 1's "Slots: 4" against a 5-node
+        // build). Passing them separately is what lets one routine serve
+        // both shapes instead of guessing at "5" or "6" meaning "capacity"
+        // sometimes and "physical count" others.
+        //
+        // Deactivates every unused slot, which is what section 7's "a row
+        // with no statuses renders nothing" reduces to when `rows` is
+        // empty: every slot in range hits the i >= rows.Count branch below.
+        private void PaintStatusRow(int baseIndex, int slotCount, int realCapacity,
+            IReadOnlyList<FightHudModel.StatusRow> rows, bool showCounter)
         {
-            if (partyBuffIcons == null) return;
+            if (_statusBadgeParts == null) WireAllStatusBadges();
+            if (_statusBadgeParts == null) return;
 
-            _partyBuffGlyphs = new TMPro.TMP_Text[partyBuffIcons.Length];
-            _partyBuffImages = new Image[partyBuffIcons.Length];
-            _partyBuffDefaultSprites = new Sprite[partyBuffIcons.Length];
-            for (int i = 0; i < partyBuffIcons.Length; i++)
+            int overflowSlot = rows.Count > realCapacity ? slotCount - 1 : -1;
+
+            for (int i = 0; i < slotCount; i++)
             {
-                var icon = partyBuffIcons[i];
-                if (icon == null) continue;
+                int flat = baseIndex + i;
+                if (flat < 0 || flat >= _statusBadgeParts.Length) continue;
 
-                _partyBuffGlyphs[i] = icon.GetComponentInChildren<TMPro.TMP_Text>(includeInactive: true);
-                _partyBuffImages[i] = icon.GetComponent<Image>();
-                _partyBuffDefaultSprites[i] = _partyBuffImages[i] != null ? _partyBuffImages[i].sprite : null;
+                var parts = _statusBadgeParts[flat];
+                if (parts.Root == null) continue;
 
-                var hover = icon.GetComponent<HoverIndex>();
-                if (hover == null) hover = icon.AddComponent<HoverIndex>();
-                hover.Index = i;
-                hover.Changed = OnHoverPartyBuff;
+                if (i == overflowSlot)
+                {
+                    PaintOverflowChip(parts, rows, overflowSlot, flat);
+                    continue;
+                }
+
+                if (i >= rows.Count)
+                {
+                    parts.Root.SetShown(false);
+                    _statusBadgeTooltip[flat] = null;
+                    continue;
+                }
+
+                PaintBadge(parts, rows[i], showCounter, flat);
             }
-
-            if (partyBuffTooltip != null) partyBuffTooltip.SetShown(false);
         }
 
-        private List<FightHudModel.BuffBadge> _currentPartyBuffs = new List<FightHudModel.BuffBadge>();
+        private void PaintBadge(StatusBadgeParts parts, FightHudModel.StatusRow row, bool showCounter, int flat)
+        {
+            parts.Root.SetShown(true);
 
-        private void RefreshPartyBuffs(CombatantState actor)
+            // A DEDICATED Counter node is what tells enemy/roster badges
+            // apart from the party plate's (see StatusBadgeParts' own
+            // header) -- the two surfaces paint the same information into a
+            // genuinely different number of layers.
+            bool hasDedicatedFrame = parts.Frame != null;
+            var polarity = row.IsPositive ? BuffPositive : BuffNegative;
+
+            if (hasDedicatedFrame)
+            {
+                // POLARITY paints the frame and the Code text -- never the
+                // glyph (section 3: glyph art is untinted, so Chilled and
+                // Rooted's own painted colours are never fought by a tint on
+                // top of them).
+                parts.Frame.sprite = row.IsPositive ? PositiveFrameSprite : NegativeFrameSprite;
+                parts.Frame.enabled = parts.Frame.sprite != null;
+                parts.Frame.color = polarity;
+            }
+
+            // ICON FIRST, same priority RefreshIntentIcons and the old
+            // RefreshPartyBuffs both already used. Chilled and Rooted are
+            // the only two statuses with real art today
+            // (StatusBadgeIconTests), so this is the fallback path in
+            // practice for the other twelve entries plus both speed rows.
+            var art = StatusSpriteFor(row);
+            if (parts.Glyph != null)
+            {
+                if (hasDedicatedFrame)
+                {
+                    parts.Glyph.color = Color.white;
+                    parts.Glyph.sprite = art;
+                    parts.Glyph.enabled = art != null;
+                }
+                else
+                {
+                    // Party plate: this Image IS the frame (no separate
+                    // child exists -- WirePartyStatusBadge), so it stays
+                    // tinted the way the old RefreshPartyBuffs always tinted
+                    // it, and a miss restores the plain button face instead
+                    // of disabling the Image outright.
+                    parts.Glyph.sprite = art != null ? art : parts.Fallback;
+                    parts.Glyph.enabled = true;
+                    parts.Glyph.color = polarity;
+                }
+            }
+
+            bool showNumber = showCounter && row.Counter >= 0;
+            if (parts.Counter != null)
+            {
+                if (parts.Code != null)
+                {
+                    parts.Code.color = polarity;
+                    parts.Code.SetContent(art == null ? row.Code : "");
+                }
+                parts.Counter.SetContent(showNumber ? row.Counter.ToString() : "");
+            }
+            else if (parts.Code != null)
+            {
+                // Party plate: ONE text node for both -- never blanked on an
+                // icon hit the way enemy/roster's Code is, because that
+                // would drop the counter outright and section 2's counter
+                // rule applies here too.
+                parts.Code.color = polarity;
+                parts.Code.SetContent(showNumber ? $"{row.Code}·{row.Counter}" : row.Code);
+            }
+
+            _statusBadgeTooltip[flat] = row.Tooltip;
+        }
+
+        // Section 6's whole overflow feature: the chip carries no polarity
+        // of its own (it is a mixed bag by definition) and hovering it
+        // lists every hidden entry, one per line, rather than opening a
+        // second, scrollable inspector.
+        private void PaintOverflowChip(StatusBadgeParts parts, IReadOnlyList<FightHudModel.StatusRow> rows,
+            int chipIndex, int flat)
+        {
+            parts.Root.SetShown(true);
+
+            if (parts.Frame != null) parts.Frame.enabled = false;
+
+            if (parts.Counter != null)
+            {
+                // Enemy/roster: a dedicated Glyph to clear and a dedicated
+                // Counter to blank.
+                if (parts.Glyph != null) parts.Glyph.enabled = false;
+                parts.Counter.SetContent("");
+            }
+            else if (parts.Glyph != null)
+            {
+                // Party plate: the Image is the frame/icon slot with no
+                // "+N" art of its own, so it falls back to the plain button
+                // face, uncoloured -- the chip has no polarity to tint it
+                // with.
+                parts.Glyph.sprite = parts.Fallback;
+                parts.Glyph.color = Color.white;
+                parts.Glyph.enabled = parts.Fallback != null;
+            }
+
+            int hidden = rows.Count - chipIndex;
+            if (parts.Code != null)
+            {
+                parts.Code.color = Hex(FightHudPalette.TextPrimary);
+                parts.Code.SetContent($"+{hidden}");
+            }
+
+            var lines = new List<string>(hidden);
+            for (int i = chipIndex; i < rows.Count; i++) lines.Add($"{rows[i].Code} · {rows[i].Tooltip}");
+            _statusBadgeTooltip[flat] = string.Join("\n", lines);
+        }
+
+        // ---- the three call sites -----------------------------------------------
+
+        private void RefreshPartyStatusRow(CombatantState actor)
         {
             if (partyBuffIcons == null || _session == null) return;
-            if (_partyBuffGlyphs == null) WirePartyBuffIcons();
 
-            _currentPartyBuffs = FightHudModel.BuffBadgesFor(_session, actor);
+            var rows = FightHudModel.StatusRowsFor(_session, actor);
+            PaintStatusRow(PartyStatusBase, PartyStatusBadgeCount, PartyStatusBadgeCount, rows, showCounter: true);
+        }
 
-            for (int i = 0; i < partyBuffIcons.Length; i++)
+        // Called from FightController.StageVisuals.cs's RefreshStage, right
+        // beside RefreshIntentIcons, so a status row and an intent badge
+        // always paint off the same beat.
+        private void RefreshEnemyStatusRows()
+        {
+            if (enemyStatusBadges == null || _session == null) return;
+
+            var enemies = _session.Encounter.Enemies;
+            int slots = enemyStatusStrips != null ? enemyStatusStrips.Length : 0;
+
+            for (int slot = 0; slot < slots; slot++)
             {
-                bool shown = i < _currentPartyBuffs.Count;
-                partyBuffIcons[i].SetShown(shown);
-                if (!shown) continue;
+                var enemy = slot < enemies.Count && enemies[slot].IsAlive && IsOnStage(enemies[slot])
+                    ? enemies[slot]
+                    : null;
+                var rows = enemy != null ? FightHudModel.StatusRowsFor(_session, enemy) : EmptyStatusRows;
 
-                var badge = _currentPartyBuffs[i];
+                // Section 7: a row with no statuses renders nothing at all,
+                // backing strip included -- the common case on most opening
+                // turns.
+                if (Has(enemyStatusStrips, slot)) enemyStatusStrips[slot].SetShown(rows.Count > 0);
 
-                // ICON FIRST. badge.Kind is null for the generic "SPD" relic
-                // badge and for every status StatusBadgeIcons has no art
-                // for, so `art` stays null for all of those.
-                Sprite art = badge.Kind.HasValue ? StatusSpriteFor(badge.Kind.Value) : null;
-
-                var image = _partyBuffImages != null ? _partyBuffImages[i] : partyBuffIcons[i].GetComponent<Image>();
-                if (image != null)
-                {
-                    // Unlike RefreshIntentIcons, a null `art` here does NOT
-                    // mean "disable the Image" -- an enemy-intent badge with
-                    // no art is a BUG (every kind is meant to load one
-                    // eventually) and degrades to bare text over a blank; a
-                    // buff badge with no art is eight statuses' EXISTING,
-                    // intended look, a plain tinted button face, so the
-                    // fallback restores the SAME sprite the button was built
-                    // with (_partyBuffDefaultSprites) rather than clearing
-                    // it to null, which would strip the shared button frame
-                    // and paint Unity's default white square instead. See
-                    // IconCache<TKind>.Apply's own header for how this
-                    // `disableOnMiss: false` reads against RefreshIntentIcons'
-                    // `true`.
-                    Sprite fallback = _partyBuffDefaultSprites != null ? _partyBuffDefaultSprites[i] : null;
-                    IconCache<StatusEffectType>.Apply(image, art, disableOnMiss: false, fallback);
-                    image.color = badge.IsPositive ? BuffPositive : BuffNegative;
-                }
-
-                if (_partyBuffGlyphs != null && _partyBuffGlyphs[i] != null)
-                {
-                    // The glyph only when the art did not load, same
-                    // icon-first/glyph-fallback priority RefreshIntentIcons
-                    // uses for enemy intents.
-                    _partyBuffGlyphs[i].SetContent(art == null ? badge.Glyph : "");
-                }
+                PaintStatusRow(EnemyStatusBase + slot * EnemyStatusBadgesPerRow, EnemyStatusBadgesPerRow,
+                    EnemyRosterStatusRealCapacity, rows, showCounter: true);
             }
         }
 
-        private void OnHoverPartyBuff(int index, bool entered)
-        {
-            if (partyBuffTooltip == null) return;
+        // ---- hover ----------------------------------------------------------------
 
-            if (!entered || index < 0 || index >= _currentPartyBuffs.Count)
+        private void OnHoverStatusBadge(int flat, bool entered)
+        {
+            if (entered)
             {
-                partyBuffTooltip.SetShown(false);
+                _hoveredStatusBadge = flat;
+                ShowStatusTooltip(flat);
                 return;
             }
 
-            if (partyBuffTooltipText != null)
+            // Only the badge CURRENTLY showing the tooltip gets to close it.
+            // Every refresh calls SetShown(false) on every badge with
+            // nothing to draw, which fires HoverIndex.OnDisable
+            // unconditionally (see its own comment) -- an unrelated badge
+            // two slots over deactivating must not swallow the tooltip that
+            // belongs to the one still under the pointer.
+            if (flat == _hoveredStatusBadge)
             {
-                partyBuffTooltipText.SetContent(_currentPartyBuffs[index].Tooltip);
+                _hoveredStatusBadge = -1;
+                if (statusTooltip != null) statusTooltip.SetShown(false);
+            }
+        }
+
+        // Re-validates the open tooltip against this refresh's freshly
+        // painted text -- called once from RefreshUi, after all three
+        // surfaces have repainted. Covers the case HoverIndex's own exit
+        // event does not: a badge that STAYS active but now shows a
+        // DIFFERENT row (a re-sort, an expiring status handing its slot to
+        // the next one) fires no enter/exit at all, and a stale tooltip
+        // would otherwise keep reading the previous occupant's text.
+        private void RefreshHoveredStatusTooltip()
+        {
+            if (_hoveredStatusBadge >= 0) ShowStatusTooltip(_hoveredStatusBadge);
+        }
+
+        private void ShowStatusTooltip(int flat)
+        {
+            if (statusTooltip == null || _statusBadgeParts == null) return;
+            if (flat < 0 || flat >= _statusBadgeTooltip.Length) return;
+
+            string text = _statusBadgeTooltip[flat];
+            if (string.IsNullOrEmpty(text))
+            {
+                // The row this badge was showing is gone -- hide, rather
+                // than show whatever the same index now holds instead.
+                _hoveredStatusBadge = -1;
+                statusTooltip.SetShown(false);
+                return;
             }
 
-            partyBuffTooltip.SetShown(true);
+            if (statusTooltipText != null) statusTooltipText.SetContent(text);
+            statusTooltip.SetShown(true);
+
+            var anchor = flat < _statusBadgeParts.Length && _statusBadgeParts[flat].Root != null
+                ? _statusBadgeParts[flat].Root.transform as RectTransform
+                : null;
+            PlaceStatusTooltip(anchor);
+        }
+
+        // TooltipPlacement.Beside works in ONE local coordinate space; the
+        // anchor and the tooltip do not share one here -- the enemy row
+        // sits under the stage panel, the roster row under a roster plate,
+        // the party row under the party plate, and StatusTooltip is a
+        // top-level HUD child. The anchor's centre is carried through WORLD
+        // space first, the one conversion that is correct regardless of how
+        // deep the anchor happens to be nested.
+        private void PlaceStatusTooltip(RectTransform anchor)
+        {
+            var tooltipRect = statusTooltip != null ? statusTooltip.transform as RectTransform : null;
+            if (tooltipRect == null || anchor == null) return;
+
+            var parent = tooltipRect.parent as RectTransform;
+            if (parent == null) return;
+
+            var canvas = statusTooltip.GetComponentInParent<Canvas>();
+            var camera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
+                ? canvas.worldCamera
+                : null;
+
+            Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(camera, anchor.position);
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, screenPoint, camera, out var anchorLocal))
+            {
+                return;
+            }
+
+            const float Margin = 8f;
+            var interior = parent.rect;
+            var at = TooltipPlacement.Beside(
+                anchorLocal.x, anchorLocal.y, anchor.rect.width,
+                tooltipRect.rect.width, tooltipRect.rect.height,
+                interiorLeft: interior.xMin + Margin, interiorRight: interior.xMax - Margin,
+                interiorBottom: interior.yMin + Margin, interiorTop: interior.yMax - Margin);
+
+            tooltipRect.anchoredPosition = new Vector2(at.X, at.Y);
         }
 
         private void RefreshWool(CombatantState actor)

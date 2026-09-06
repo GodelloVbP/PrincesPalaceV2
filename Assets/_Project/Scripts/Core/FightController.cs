@@ -108,6 +108,34 @@ namespace PrincesPalace
         [SerializeField] internal GameObject[] partyBuffIcons;
         [SerializeField] internal GameObject partyBuffTooltip;
         [SerializeField] internal TMP_Text partyBuffTooltipText;
+
+        // The enemy row (3 stage slots x 5 badges, slot-major) and roster
+        // row (2 plates x 5 badges, roster-major) FightScreen.
+        // BuildEnemyStatusRows/BuildRosterPlates declared -- see
+        // FightController.Hud.cs's RefreshEnemyStatusRows/RefreshRoster for
+        // how the flat index into each maps back to a stage slot or roster
+        // plate.
+        [SerializeField] internal GameObject[] enemyStatusBadges;
+
+        // One backing strip per enemy stage slot, hidden outright when that
+        // slot's row has nothing to show (PLAN_STATUS_EFFECT_UI.md section
+        // 7) -- the roster and party surfaces sit on their own painted
+        // plates already and were never given a strip of their own.
+        [SerializeField] internal GameObject[] enemyStatusStrips;
+
+        [SerializeField] internal GameObject[] rosterStatusBadges;
+
+        // The ONE hover tooltip every status badge on every surface shares
+        // (enemy row, party plate, roster row) -- repositioned per hover
+        // through Domain/UiKit/TooltipPlacement.cs's Beside rather than
+        // sitting at a fixed spot the way PartyBuffTooltip above still does.
+        // PartyBuffTooltip/PartyBuffTooltipText stay wired (FightScreen
+        // still builds them and this file does not touch that tree) but are
+        // never shown again -- see FightController.Hud.cs's
+        // WireAllStatusBadges.
+        [SerializeField] internal GameObject statusTooltip;
+        [SerializeField] internal TMP_Text statusTooltipText;
+
         [SerializeField] internal Image[] woolPips;
         [SerializeField] internal TMP_Text woolValue;
 
@@ -365,7 +393,7 @@ namespace PrincesPalace
             // Once, here rather than per refresh: attaching a hover handler
             // every frame would stack them.
             WireIntentIcons();
-            WirePartyBuffIcons();
+            WireAllStatusBadges();
             WireSubmenuScroll();
         }
 
