@@ -33,6 +33,18 @@ namespace PrincesPalace
     // DevForced* block for the session-state half.
     public static class PreviewFight
     {
+        // THE FORMATION VOCABULARY, owned here and named rather than typed.
+        // "lone" and "full" used to be typed out at every site that reads or
+        // writes FightBootstrap.DevForcedFormation (this file, FightBootstrap
+        // itself, and PreviewRequestWatcher) -- a typo at any one of them
+        // silently falls through to the lone branch, since nothing there is
+        // an enum with a default case to refuse it. tools/preview.ps1 sends
+        // this over SessionState as plain text (it is PowerShell; it cannot
+        // reference a C# const), so the literals stay pinned at the wire in
+        // DevForcedPreviewKeyTests rather than disappearing entirely.
+        public const string FormationLone = "lone";
+        public const string FormationFull = "full";
+
         // Which SkillEffects the preview knows how to stand a fight up for.
         //
         // Deliberately a short list, and deliberately not "everything the
@@ -73,7 +85,7 @@ namespace PrincesPalace
             // DamageAll needs more than one thing to hit, so the formation is
             // derived from the effect rather than left to the author to get
             // right.
-            public string Formation = "lone";
+            public string Formation = FormationLone;
 
             // HealSelf/HealParty need something to heal. Half, not a sliver:
             // a heal capped by missing health shows its real number, and a
@@ -126,12 +138,12 @@ namespace PrincesPalace
             // against one enemy is indistinguishable from DamageSingle.
             if (skill.Effect == SkillEffect.Summon)
             {
-                plan.Formation = "lone";
+                plan.Formation = FormationLone;
                 plan.Notes.Add("one enemy fielded, so the summon has a slot to arrive in");
             }
             else if (skill.Effect == SkillEffect.DamageAll || skill.Targeting == SkillTargeting.AllEnemies)
             {
-                plan.Formation = "full";
+                plan.Formation = FormationFull;
                 plan.Notes.Add("three enemies fielded, so an all-target cast has more than one thing to hit");
             }
 
@@ -339,11 +351,11 @@ namespace PrincesPalace
             return ContentDatabase.Enemies.Take(count).Select(e => e.id).ToList();
         }
 
-        // How many of them a formation means. FightBootstrap's own vocabulary,
-        // read here so "lone" cannot come to mean one thing on one route and
-        // something else on the other.
+        // How many of them a formation means. This file's own vocabulary
+        // (FormationLone/FormationFull above), read here so "lone" cannot
+        // come to mean one thing on one route and something else on another.
         public static int EnemyCountFor(string formation, int fallback) =>
-            formation == "lone" ? 1 : fallback;
+            formation == FormationLone ? 1 : fallback;
 
         // ---- standing the fight up -------------------------------------------
 

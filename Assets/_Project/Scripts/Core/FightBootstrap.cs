@@ -31,10 +31,16 @@ namespace PrincesPalace
         // screen is verified by looking at it. Used by the NO-RUN path only.
         [SerializeField] internal int seed = 20260810;
 
-        // How many monsters to field. Three is the stage's own capacity
-        // (FightHudSpec.StageSlotsPerSide) and shows every slot at once.
-        // No-run path only; in a run the count comes from the room.
-        [SerializeField] internal int enemyCount = 3;
+        // How many monsters to field. FightHudSpec.StageSlotsPerSide is the
+        // stage's own capacity and shows every slot at once. No-run path
+        // only; in a run the count comes from the room.
+        //
+        // This is a [SerializeField] default -- the value SceneBuilder bakes
+        // into every scene's YAML is still the literal 3, a const can only
+        // ever be a compile-time initializer -- but the SOURCE no longer
+        // states that 3 by hand, so a change to StageSlotsPerSide recompiles
+        // this to match rather than leaving it to drift unnoticed.
+        [SerializeField] internal int enemyCount = FightHudSpec.StageSlotsPerSide;
 
         // EDITOR/DEV ONLY -- set by QuickFightMenu just before it opens the
         // Fight scene in Play mode, never by ScreenRegistry/SceneBuilder and
@@ -146,7 +152,7 @@ namespace PrincesPalace
 
         // How many copies of a forced mob "-Formation full" fields. The stage's
         // own capacity, so every slot is occupied and nothing is hidden.
-        private const int FullFormationCount = 3;
+        private const int FullFormationCount = FightHudSpec.StageSlotsPerSide;
 
         // What one preview asked for, read off SessionState once.
         //
@@ -380,7 +386,7 @@ namespace PrincesPalace
 
             if (!string.IsNullOrEmpty(forcedId) && ContentDatabase.Enemies.Any(e => e.id == forcedId))
             {
-                int copies = formation == "full" ? FullFormationCount : 1;
+                int copies = formation == PreviewFight.FormationFull ? FullFormationCount : 1;
                 enemies = Enumerable.Repeat(forcedId, copies).ToList();
             }
             else

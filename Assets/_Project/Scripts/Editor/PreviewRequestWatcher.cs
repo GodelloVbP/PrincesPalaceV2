@@ -214,7 +214,7 @@ public static class PreviewRequestWatcher
             FightBootstrap.DevForcedEnemyScript = true;
 
             WriteResult(request.requestId, PreviewProtocol.StateOk,
-                $"entering Play mode against '{id}' ({(request.formation == "full" ? "full formation" : "lone")}), " +
+                $"entering Play mode against '{id}' ({(request.formation == PreviewFight.FormationFull ? "full formation" : "lone")}), " +
                 "showcasing its abilities in authored order");
 
             QuickFightMenu.StartPlaceholderFight(id);

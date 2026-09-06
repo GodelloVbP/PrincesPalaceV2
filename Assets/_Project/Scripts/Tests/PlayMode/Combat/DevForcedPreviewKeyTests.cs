@@ -78,7 +78,7 @@ namespace PrincesPalace.PlayModeTests
         {
             FightBootstrap.DevForcedSkillId = UnknownSkill;
             FightBootstrap.DevForcedFirstAction = UnknownSkill;
-            FightBootstrap.DevForcedFormation = "full";
+            FightBootstrap.DevForcedFormation = PreviewFight.FormationFull;
 
             yield return OpenTheFightScene();
 
@@ -99,11 +99,23 @@ namespace PrincesPalace.PlayModeTests
 
             FightBootstrap.DevForcedEnemyId = mob.id;
             FightBootstrap.DevForcedEnemyScript = true;
-            FightBootstrap.DevForcedFormation = "lone";
+            FightBootstrap.DevForcedFormation = PreviewFight.FormationLone;
 
             yield return OpenTheFightScene();
 
             AssertNothingIsStillSet("a preview that built its fight");
+        }
+
+        // THE WIRE VALUE, PINNED. Everything above compares DevForcedFormation
+        // against PreviewFight's own consts, which would still pass if both
+        // silently changed together -- tools/preview.ps1 sets this key with a
+        // plain string literal (it is PowerShell; it cannot reference a C#
+        // const), so one side of that handshake has to be a literal or a
+        // rename on this side breaks -Formation full without any test noticing.
+        [Test]
+        public void TheFullFormationConstIsTheStringToolsPreviewPs1ActuallySends()
+        {
+            Assert.AreEqual("full", PreviewFight.FormationFull);
         }
     }
 }
