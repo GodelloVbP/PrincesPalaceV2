@@ -56,8 +56,8 @@
 
     <!--
       EXCLUSION POLICY, in one line: a test stays Unity-only when it needs
-      the ENGINE, not merely when it mentions it. Four files qualify, all
-      four for a reason no shim can honestly stand in for. Adding to this
+      the ENGINE, not merely when it mentions it. Three files qualify, all
+      three for a reason no shim can honestly stand in for. Adding to this
       list costs coverage in the fast loop, so justify each one here.
       Paths carry the AREA FOLDER now (Tests/EditMode/<Area>/<File>.cs) -
       a test's area is the folder it sits in, so an exclusion follows the
@@ -86,8 +86,14 @@
          assertion is on what Unity's parser makes of enemies.json. -->
     <Compile Remove="..\..\..\Assets\_Project\Scripts\Tests\EditMode\Combat\ForestWardenTests.cs" />
 
-    <!-- Application.dataPath, and it reads committed art off disk. -->
-    <Compile Remove="..\..\..\Assets\_Project\Scripts\Tests\EditMode\Art\HandAssembledArtTests.cs" />
+    <!--
+      HandAssembledArtTests was a fourth, for Application.dataPath. It reads
+      committed art off disk, which is fine here - what was not fine was
+      asking the ENGINE where the project is. RepoTree.Root() answers that for
+      both hosts and already existed for exactly this, so the exclusion went
+      when the fixture grew its actor half: a register that says which art is
+      irreplaceable is worth more in a 5s loop than in a 20s one.
+    -->
 
     <!-- The Mathf stand-in for RewardTrackLayoutTests. See its own header. -->
     <Compile Include="MathfShim.cs" />

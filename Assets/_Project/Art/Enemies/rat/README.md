@@ -10,6 +10,25 @@ Delivered id: `rat`. Content id and art folder agree, unlike the troll.
 > record at `Art/Enemies/<actor>/README.md`; do not move the sheets to match it
 > without re-pointing `tools/slice_actor_sheet.py`'s `rat` entry.
 
+## Provenance
+
+**Protected legacy — see `Art/Sheets/hand_assembled.json`'s `actors` block.**
+No `recipe.json`, and there cannot be one for this delivery: `idle` is `f0` of
+the 12-frame idle sheet and `attack` is `f5` of the 12-frame attack sheet (the
+peak of the leap), chosen by eye off the QA contact sheets in `48131f4`, with
+the remaining stances taken as single cells of `Giant_rat_sheet.png`. That was
+a judgement against pictures, not an invocation.
+
+`HandAssembledArtTests` pins all seven stills by content hash. Two of them,
+`guard.png` and `extra.png`, are byte-identical to each other — recorded here
+because a future reader will otherwise take it for a copy-paste mistake in the
+pin.
+
+Everything below is the regeneration brief, and it is still live: if the rat is
+re-commissioned, it goes through `tools/slice_actor_sheet.py` like any new
+actor, a `recipe.json` lands beside this file, and the register entry and the
+hashes come out in the same commit as the new art.
+
 ## Status against `docs/STANCE_SHEET_SPEC.md`
 
 | stance | source | frames | verdict |

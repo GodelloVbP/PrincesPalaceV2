@@ -33,6 +33,24 @@ Victory sits over the 1.10 band on filled area and it is the spread wings,
 not body scale: plumage pixels rise with it and the head is idle-sized. Not
 resized. Defeated legitimately loses mass.
 
+## Provenance
+
+**Reproducible — `recipe.json`, beside this file.** Replay it with:
+
+```bash
+python tools/slice_actor_sheet.py --recipe Assets/_Project/Art/Characters/owl/recipe.json
+```
+
+Verified 2026-09-06: the replay writes all six committed stills byte for byte,
+which is what earned this actor `groundLineSource: "slicer"` in
+`Resources/StanceManifest.json`. The `hover` block beside it is NOT the
+slicer's and never will be — where Odette rests in the air is a judgement, and
+no tool writes it.
+
+The command below is the one the recipe carries, with the defaults it leaves
+implicit (`--grid 3x2 --anchor ground_band --delivery-scale 1.0
+--max-ground-spread 6`) written out in the file.
+
 ## Delivery
 
 ```

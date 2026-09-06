@@ -1,6 +1,51 @@
 {
-  "_readme": "Spell frame sequences that were assembled BY HAND and are not reproducible from their source sheet. Re-running tools/slice_spell_sheet.py does not restore these -- only git does. The slicer reads this file and refuses to write over anything named here; HandAssembledArtTests reads the same file and pins every listed sequence by content hash, so a clobber fails the suite whatever caused it. Lives under Assets/ rather than beside the tool because the headless TestRunner mirrors Assets and nothing else, and a register only one side can read is a register the other side cannot enforce.",
+  "_readme": "ART THE TOOLS CANNOT REMAKE, in two registers. `sequences` names spell frame sequences that were assembled BY HAND and are not reproducible from their source sheet; `actors` names combat actors whose stance stills predate tools/slice_actor_sheet.py's recipes and cannot be regenerated from a recorded invocation. Re-running the tools does not restore either -- only git does. slice_spell_sheet.py reads `sequences` and refuses to write over anything named there; HandAssembledArtTests reads both and pins every listed file by content hash, so a clobber fails the suite whatever caused it. Lives under Assets/ rather than beside the tools because the headless TestRunner mirrors Assets and nothing else, and a register only one side can read is a register the other side cannot enforce.",
+  "_categories": "EVERY actor under Resources/Enemies and Resources/Characters is in EXACTLY ONE category, and EveryDeliveredActorIsInExactlyOneCategory refuses any other arrangement. REPRODUCIBLE: a recipe.json beside its source art under Art/, proved by replaying it and getting the committed bytes back (treant, owl, and every actor sliced from now on). PROTECTED LEGACY: listed below, hash-pinned, source sheet and chosen frames named as far as they are known, explicitly NOT reproducible. An actor in neither category is one whose origin nobody wrote down, and a silent gap reads as 'nothing to see here' -- which is exactly the state golem_boulder was in when a scaffold run cut over all six of its frames.",
   "sequences": {
     "golem_boulder": "f2==f3 (held peak), f4/f5 are a stepped alpha fade-out, f0 is an intentional blank wind-up frame. Do not regenerate from golem_sheet_attack_rock.png -- the grid does not match and the post-steps are not reproducible here."
-  }
+  },
+  "actors": [
+    {
+      "actor": "Enemies/rat",
+      "status": "protected legacy: not reproducible",
+      "source": "Art/Enemies/Giant_rat_sheet.png (the house-style reference and the six-pose original), Giant_rat_idle_sheet_12_frame.png, Giant_rat_attack_sheet_12_frame.png -- the sheets sit directly in Art/Enemies/ rather than in Art/Enemies/rat/, which holds only the README.",
+      "frames": "idle is f0 of the 12-frame idle sheet; attack is f5 of the 12-frame attack sheet, the peak of the leap; cast, hurt, defeated, guard and extra are single cells of Giant_rat_sheet.png. Chosen by eye off the QA contact sheets in 48131f4.",
+      "why": "The stills were PICKED from frame sheets that no longer drive anything, then re-composited; which cell became which stance was a judgement made against contact sheets and never written as an invocation. There is no argv that reproduces this."
+    },
+    {
+      "actor": "Enemies/golem",
+      "status": "protected legacy: not reproducible",
+      "source": "Art/Enemies/golem_sheet.png, golem_sheet_attack.png, golem_sheet_attack_rock.png",
+      "frames": "attack and cast are both f2 of the attack sheet -- the same slam, deliberately. idle, guard, hurt and defeated came off the other sheets. Chosen in 48131f4.",
+      "why": "Same as the rat: hand-picked cells, no recorded invocation. Its groundLine 69 is also the roster's one large override -- the slam erupts an earth spike ~50px below the golem's own feet, so a scan measures the spike."
+    },
+    {
+      "actor": "Enemies/bog_witch",
+      "status": "protected legacy: not reproducible",
+      "source": "Art/Enemies/bog_witch_sheet.png",
+      "frames": "idle, attack, cast, taunt, hurt, defeated. The cell-to-stance mapping was not recorded.",
+      "why": "The source sheet carries baked captions, a background and floor shadows -- all three now prohibited by docs/STANCE_SHEET_SPEC.md -- so whatever removed them was not this pipeline. Re-slicing that sheet today would bring the captions with it."
+    },
+    {
+      "actor": "Enemies/beetle",
+      "status": "protected legacy: not reproducible",
+      "source": "Art/Enemies/beetle/sheet_poses.png, via the per-stance sheets sheet_idle.png ... sheet_defeated.png and the pose_*.png crops",
+      "frames": "idle f0, attack f2, turtle_up f3, shell_closed f5, hurt f2, defeated f5 -- one chosen frame per stance sheet, named in 48131f4.",
+      "why": "The delivered kit was six six-frame animation sheets under the pre-2026-09-04 policy; the stills are one chosen frame out of each. sheet_poses.png is still committed, so a FRESH slice is possible -- but it would be a different delivery, not a reproduction of this one, and delivery_scale 0.972 was measured against art that no longer exists in that form."
+    },
+    {
+      "actor": "Enemies/forest_warden",
+      "status": "protected legacy: not reproducible",
+      "source": "Art/Enemies/forest_troll/ -- the art folder and the delivered id disagree and always have. _sheet_source.png plus the six 01_idle.png ... 06_defeated.png singles and their <stance>_frames/ folders.",
+      "frames": "One chosen frame per stance, then RE-COMPOSITED onto one 741x499 canvas through slice_actor_sheet.py's ground_band anchor (48131f4). That pass is why its groundLine is a measured 8 rather than the old 14, which was never a foot position at all -- it was the uniform pad around six independently cropped frames.",
+      "why": "The recompositing step took already-cropped PNGs as input, not a design sheet, so it is not an invocation of the tool this project ships. Reproducing it would mean recovering which frame of which folder was chosen six times over."
+    },
+    {
+      "actor": "Characters/sheep",
+      "status": "protected legacy: not reproducible",
+      "source": "Not committed under Art/. Shawn has no design sheet in the tree -- only his portraits, under Art/Portraits/Sheep/, which are a different kit and are themselves marked non-reproducing (see docs/ART_PIPELINE.md's reproducibility section).",
+      "frames": "attack is f2 of the old attack sheet, named in 48131f4; the other five stances predate that commit and their source is not recorded anywhere in the tree.",
+      "why": "The strongest case in this register: there is no source sheet to slice. Only Shawn is a real character (the rest of the roster is placeholder), so this is also the art least safe to experiment on."
+    }
+  ]
 }

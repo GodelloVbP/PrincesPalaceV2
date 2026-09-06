@@ -84,6 +84,59 @@ namespace PrincesPalace.Domain.Tests
             return blocks;
         }
 
+        // The keys of the object at `key`, at ITS OWN depth only.
+        //
+        // Depth matters here rather than being pedantry: hand_assembled.json
+        // holds two blocks side by side, and a scan that ran to the end of the
+        // file would read the second block's field names as the first block's
+        // ids. That is not hypothetical -- it is what the regex this replaced
+        // would have done the moment a second block was added below it.
+        internal static List<string> KeysOfObject(string body, string key)
+        {
+            var keys = new List<string>();
+            string block = ObjectFor(body, key);
+            if (block == null)
+            {
+                return keys;
+            }
+
+            int depth = 0;
+            bool inString = false;
+            bool escaped = false;
+            int stringStart = -1;
+
+            for (int i = 0; i < block.Length; i++)
+            {
+                char c = block[i];
+
+                if (inString)
+                {
+                    if (escaped) { escaped = false; continue; }
+                    if (c == '\\') { escaped = true; continue; }
+                    if (c != '"') continue;
+
+                    inString = false;
+                    if (depth != 1) continue;
+
+                    // A string at depth 1 is a key only if a colon follows it.
+                    int after = i + 1;
+                    while (after < block.Length && char.IsWhiteSpace(block[after])) after++;
+                    if (after < block.Length && block[after] == ':')
+                    {
+                        keys.Add(block.Substring(stringStart + 1, i - stringStart - 1));
+                    }
+
+                    continue;
+                }
+
+                if (c == '"') { inString = true; stringStart = i; }
+                else if (c == '{' || c == '[') depth++;
+                else if (c == '}' || c == ']') depth--;
+            }
+
+            return keys;
+        }
+
         // The {...} value of `key` inside `block`, or null when the key is absent.
         internal static string ObjectFor(string block, string key)
         {

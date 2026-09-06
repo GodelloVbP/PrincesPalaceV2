@@ -3,6 +3,26 @@
 Process: `docs/STANCE_SHEET_SPEC.md`. Model: ChatGPT (gpt-image-1), via the
 Prince's Palace project, 2026-08-25.
 
+## Provenance
+
+**Protected legacy — see `Art/Sheets/hand_assembled.json`'s `actors` block.**
+No `recipe.json`. The delivered kit was six six-frame animation sheets under
+the pre-2026-09-04 policy, and the shipped stills are one chosen frame out of
+each: idle `f0`, attack `f2`, turtle_up `f3`, shell_closed `f5`, hurt `f2`,
+defeated `f5` (`48131f4`).
+
+`sheet_poses.png` IS still committed, so a fresh slice is possible — but it
+would be a different delivery rather than a reproduction of this one, and the
+`delivery_scale 0.972` recorded below was measured against art that no longer
+exists in that form. `HandAssembledArtTests` pins all six stills by content
+hash; a re-slice that intends to replace them updates the register, the hashes
+and the art in one commit, and gains a `recipe.json` on the way.
+
+Everything below documents the Stage-1 sheet and the animation kit it was
+commissioned for. The Stage-2 section describes a pipeline this project no
+longer ships (`docs/STANCE_SHEET_SPEC.md` §0) and is kept as the record of
+where the frames the stills were picked from came from.
+
 ## Stage 1 — design sheet
 
 **Status: accepted.** `sheet_poses.png`, 1536x1024, six poses, generated

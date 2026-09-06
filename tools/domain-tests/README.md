@@ -44,18 +44,20 @@ edited for one host is edited for both, because there is only one of it.
 ## The exclusion policy
 
 **A test stays Unity-only when it needs the ENGINE, not merely when it
-mentions one.** Four files qualify today:
+mentions one.** Three files qualify today:
 
 | File | Why |
 |---|---|
 | `EditMode/Content/EnemyContentPinTests.cs` | `JsonUtility` over the real `enemies.json` |
 | `EditMode/Combat/ForestWardenTests.cs` | `UnityEngine.JsonUtility`, fully qualified rather than through a `using` |
 | `EditMode/Content/ItemModifierStorageTests.cs` | `JsonUtility` save-compat — the thing under test *is* Unity's serializer |
-| `EditMode/Art/HandAssembledArtTests.cs` | `Application.dataPath`, and it reads committed art off disk |
 
 (A fifth, `RigAnimationContentTests.cs`, was deleted with the rig pipeline in
 `a9c0d49`; its exclusion and its row here outlived the file by four months and
-went with the folder-per-area move.)
+went with the folder-per-area move. A fourth, `EditMode/Art/HandAssembledArtTests.cs`,
+was excluded for `Application.dataPath` — reading committed art off disk is
+fine here; asking the *engine* where the project is was the problem, and
+`Shared/RepoTree.cs` already answered it for both hosts.)
 
 `tools/test.ps1 -List` marks every class `[D]` or `[U]`. That marking is read
 out of `PrincesPalace.Domain.Tests.csproj`, not maintained separately, so the

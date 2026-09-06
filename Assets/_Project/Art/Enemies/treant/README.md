@@ -29,6 +29,27 @@ Cells, row-major: idle, attack, trunk_slam, cast, hurt, defeated.
 | sliced sqrt(area)/median: idle / attack / trunk_slam / cast / hurt / defeated | 1.03 / 1.01 / 1.00 / 0.99 / 0.97 / 0.89 | 0.90–1.10; defeated legitimately loses mass |
 | ground line agreement across the six | 0px | — |
 
+## Provenance
+
+**Reproducible — `recipe.json`, beside this file.** Replay it with:
+
+```bash
+python tools/slice_actor_sheet.py --recipe Assets/_Project/Art/Enemies/treant/recipe.json
+```
+
+Verified 2026-09-06: the replay writes all six committed stills byte for byte.
+`groundLineSource` for this actor is therefore `slicer` in
+`Resources/StanceManifest.json` — a measurement a tool can reproduce is a
+measurement that tool should own, and the next re-slice updates the number
+without anybody copying it off a terminal.
+
+**The recipe is what the README could not be.** This file recorded
+`delivery_scale 1.05`, `white_flood`, and "a raised `pocket_max_area`".
+Reconstructing the run from that meant guessing the raised value and testing
+candidates against the committed bytes; 2000 and 4000 both reproduce, 1600
+does not, and 2000 is what the recipe now records. Prose is where the
+reasoning belongs. The argv belongs in a file.
+
 ## Delivery
 
 - `slice_actor_sheet.py` entry `treant`: `delivery_scale 1.05` = 441 /

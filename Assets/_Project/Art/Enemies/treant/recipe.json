@@ -1,0 +1,34 @@
+{
+  "_readme": "How this actor's stance stills were produced. Replay with `python tools/slice_actor_sheet.py --recipe Assets/_Project/Art/Enemies/treant/recipe.json`; a replay that does not reproduce the committed PNGs byte for byte means the tool, its libraries or the source sheet moved under it. The recipe describes how the frames are MADE -- how they are used is content, in ContentData/.",
+  "tool": "tools/slice_actor_sheet.py",
+  "toolSha256": "27d94ecabe1753f31242cbba4b197b7b09b2e341cb396ea9c9b62861b98d627f",
+  "sheet": "Assets/_Project/Art/Enemies/treant/sheet_poses.png",
+  "argv": [
+    "--sheet",
+    "Assets/_Project/Art/Enemies/treant/sheet_poses.png",
+    "--actor",
+    "Enemies/treant",
+    "--stances",
+    "idle,attack,trunk_slam,cast,hurt,defeated",
+    "--grid",
+    "3x2",
+    "--key",
+    "white_flood",
+    "--anchor",
+    "ground_band",
+    "--delivery-scale",
+    "1.05",
+    "--pocket-max-area",
+    "2000",
+    "--max-ground-spread",
+    "6"
+  ],
+  "outputFolder": "Assets/_Project/Resources/Enemies/treant",
+  "groundLine": 8,
+  "versions": {
+    "python": "3.14.5",
+    "pillow": "12.3.0",
+    "numpy": "2.5.1"
+  },
+  "generatedAt": "2026-09-06T02:19:50+02:00"
+}
