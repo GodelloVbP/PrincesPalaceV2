@@ -94,11 +94,15 @@ Fuzzy class name, comma-separated list, or a named area (`combat`, `hub`,
 in** — `Tests/EditMode/<Area>/` and `Tests/PlayMode/<Area>/`, with a `Shared/`
 beside them for helpers that carry no tests. There is no pattern to keep in
 sync: `run_tests_parallel.ps1` refuses to run at all while any test file sits
-outside an area folder (or a testable file sits in `Shared/`), and the fix is
-a `git mv`. `tools/test_areas.ps1`'s header says what belongs in each area.
-`-Changed` maps whatever is uncommitted to the areas/classes it touches.
-`-List` shows every class with its area and host. No argument runs the full
-suite.
+outside an area folder or deeper than one folder inside it, while a testable
+file sits in `Shared/`, while two files declare the same class name, or while
+a test file declares a class discovery never saw — the fix for most of them is
+a `git mv`, and `tools/test.ps1 -List -SelfCheck` proves those refusals still
+fire by running them against a deliberately broken tree under
+`tools/test_areas_fixture/`. `tools/test_areas.ps1`'s header says what belongs
+in each area. `-Changed` maps whatever is uncommitted to the areas/classes it
+touches. `-List` shows every class with its area and host. No argument runs
+the full suite.
 
 **Before committing** — everything, ~120-130s:
 ```bash
