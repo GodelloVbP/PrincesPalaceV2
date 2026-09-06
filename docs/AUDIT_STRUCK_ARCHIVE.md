@@ -462,3 +462,50 @@ both sides rather than each deriving it from the other.
 Not urgent: no shipped enemy pairs flat art with a charge today (the Beetle's
 Barrel Roll, the approach's own reason for existing, is a six-frame sheet). It
 becomes visible the moment one does.
+
+---
+
+### ~~61. `SpellVfxTests` flakes between runs on an identical tree — cause not found~~ — fixed in `c9afc22`
+Seen 2026-09-05 during the folder-per-area move (`4367eed`), on a tree with no
+source change between runs: pass, then `ALoneEnemyGetsOneEruptionAndStillOneFault`
+failing, then `AFullFormationGetsThreeEruptionsAndExactlyOneFault` failing, then
+pass. A different test each time, both counting eruption/fault layers after a
+Cinderfault cast. That shape (order-sensitive, count-off-by-one, PlayMode) matches
+#52's leftover-state cause more than a timing race; the pooled ground node added
+in `7504ea3` is the first suspect, since it is the one thing those two tests share
+that the rest of `SpellVfxTests` does not. Not reproduced under a debugger; three
+consecutive full gates after this pass were green. Filed so the next flake has a
+starting point rather than a shrug.
+
+**Closed 2026-09-06 in `c9afc22`.** It was a timing race after all, and the guess above
+sent the wrong way: **the pooled ground node is not implicated, and neither is
+leftover state.** `SpellVfxTests.PlayFast` sets `BeatSpeedMultiplier = 60`, so the
+whole real-time budget of a 0.78s cinderfault is `FightBeatPlayer.Scaled(0.78)` =
+**13ms**, and both tests cast, wait ONE frame, then count which layers still have
+`Image.enabled`. A batchmode frame right after `LoadSceneAsync` was measured at
+24ms and 57ms.
+
+Instrumented `SpellVfxPlayer.PlayRoutine` and the two tests, five runs of the
+fixture: **fail, pass, pass, fail, fail.** Every failing run logged `iters=1` with
+`elapsed` past `total` (0.0568 / 0.0236 / 0.0135 against `total=0.0130`); both
+passing runs logged `iters=2`, `elapsed` 0.0163 and 0.0179 — surviving by a single
+tick. On the tightest failure the ground coroutine stamped `started` at 5.578244
+and the test read its own clock at 5.595784: 17.5ms of the 13ms budget was already
+spent *inside `PlaySpellVfx`*, loading the three eruption sheets after the ground
+layer's clock had started.
+
+That is also what produced the shape this finding could not explain. The fault and
+the three eruptions are four independent coroutines losing that race separately, so
+a slow frame killed the fault while the eruptions lived — "the fault was never
+drawn" with `DrawnEruptions()` still returning 3. Different test each run, no source
+change. Cross-fixture bleed of `BeatSpeedMultiplier` was ruled out by the same
+probes: the fixture's own `[SetUp]` writes it unconditionally, and every reading was
+`mult=60`, `total=0.013000`.
+
+Fixed by making playback observable instead of raced: `SpellVfxPlayer.ClockOverride`
+(null in the game) is held at the instant of the cast, applied to all six tests in
+the fixture that read what is drawn a frame later — the four beyond the two that
+failed race the same clock at 8.7ms. Advancing it past the end made the cleanup half
+assertable for the first time, and
+`EveryLayerIsDrawnAtTheImpactInstantAndNoneSurvivesTheBeat` is the only test in the
+suite that fails when `PlayRoutine`'s `image.enabled = false` is deleted.

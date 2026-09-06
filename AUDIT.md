@@ -478,18 +478,7 @@ Relics reach it through a local function that closes over the achievement ids th
 takes as a second argument; enemies through an `include` predicate that keeps benched monsters
 validated but unwritten. Items, weapons and item sets stay bespoke for the reason above.
 
-### 61. `SpellVfxTests` flakes between runs on an identical tree — cause not found
-
-Seen 2026-09-05 during the folder-per-area move (`4367eed`), on a tree with no
-source change between runs: pass, then `ALoneEnemyGetsOneEruptionAndStillOneFault`
-failing, then `AFullFormationGetsThreeEruptionsAndExactlyOneFault` failing, then
-pass. A different test each time, both counting eruption/fault layers after a
-Cinderfault cast. That shape (order-sensitive, count-off-by-one, PlayMode) matches
-#52's leftover-state cause more than a timing race; the pooled ground node added
-in `7504ea3` is the first suspect, since it is the one thing those two tests share
-that the rest of `SpellVfxTests` does not. Not reproduced under a debugger; three
-consecutive full gates after this pass were green. Filed so the next flake has a
-starting point rather than a shrug.
+### ~~61. `SpellVfxTests` flakes between runs on an identical tree — cause not found~~ — fixed in `c9afc22`: a frame-duration race, NOT the pooled ground node — the whole cast is 13ms of real time at 60x and the tests counted a frame later; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
 
 ## Open investigations
 
