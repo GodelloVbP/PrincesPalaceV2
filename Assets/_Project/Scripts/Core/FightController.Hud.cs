@@ -1315,7 +1315,34 @@ namespace PrincesPalace
             var anchor = flat < _statusBadgeParts.Length && _statusBadgeParts[flat].Root != null
                 ? _statusBadgeParts[flat].Root.transform as RectTransform
                 : null;
-            PlaceStatusTooltip(anchor);
+            PlaceStatusTooltip(flat, anchor);
+        }
+
+        // Which physical badge slots share a row with `flat` -- the enemy and
+        // roster surfaces are several independent rows of
+        // EnemyStatusBadgesPerRow/RosterStatusBadgesPerRow each, the party
+        // plate is one row of PartyStatusBadgeCount. PlaceStatusTooltip needs
+        // this to widen its anchor past the single hovered badge to the
+        // whole row it sits in.
+        private static void GetStatusRowRange(int flat, out int start, out int count)
+        {
+            if (flat < RosterStatusBase)
+            {
+                int slot = flat / EnemyStatusBadgesPerRow;
+                start = slot * EnemyStatusBadgesPerRow;
+                count = EnemyStatusBadgesPerRow;
+            }
+            else if (flat < PartyStatusBase)
+            {
+                int local = (flat - RosterStatusBase) / RosterStatusBadgesPerRow;
+                start = RosterStatusBase + local * RosterStatusBadgesPerRow;
+                count = RosterStatusBadgesPerRow;
+            }
+            else
+            {
+                start = PartyStatusBase;
+                count = PartyStatusBadgeCount;
+            }
         }
 
         // TooltipPlacement.Beside works in ONE local coordinate space; the
@@ -1342,7 +1369,7 @@ namespace PrincesPalace
         // conservative than the true edge, never past it, and it stops this
         // placement depending on a rect this call site does not actually
         // need to trust.
-        private void PlaceStatusTooltip(RectTransform anchor)
+        private void PlaceStatusTooltip(int flat, RectTransform anchor)
         {
             var tooltipRect = statusTooltip != null ? statusTooltip.transform as RectTransform : null;
             if (tooltipRect == null || anchor == null) return;
@@ -1361,11 +1388,60 @@ namespace PrincesPalace
                 return;
             }
 
+            // Widen past the single hovered badge to the WHOLE row it shares
+            // a parent with -- Beside only ever sees one anchor width, and
+            // every one of the three surfaces places several badges under
+            // one parent (the enemy strip, the roster plate, the party
+            // plate). Without this, flipping beside the first of several
+            // badges lands the tooltip on top of the second rather than
+            // beside the row (caught in this gate's own capture: the
+            // Regen/Protect pair on the far enemy slot).
+            GetStatusRowRange(flat, out int rowStart, out int rowCount);
+            var rowParent = anchor.parent as RectTransform;
+            float leftLocal = anchor.anchoredPosition.x - anchor.rect.width * 0.5f;
+            float rightLocal = anchor.anchoredPosition.x + anchor.rect.width * 0.5f;
+            float rowY = anchor.anchoredPosition.y;
+
+            if (rowParent != null && _statusBadgeParts != null)
+            {
+                int end = Mathf.Min(rowStart + rowCount, _statusBadgeParts.Length);
+                for (int i = rowStart; i < end; i++)
+                {
+                    var root = _statusBadgeParts[i].Root;
+                    if (root == null || !root.activeSelf) continue;
+                    var rt = root.transform as RectTransform;
+                    if (rt == null || rt.parent != rowParent) continue;
+
+                    float half = rt.rect.width * 0.5f;
+                    leftLocal = Mathf.Min(leftLocal, rt.anchoredPosition.x - half);
+                    rightLocal = Mathf.Max(rightLocal, rt.anchoredPosition.x + half);
+                }
+            }
+
+            float anchorWidth = anchor.rect.width;
+            float anchorXInParent = anchorLocal.x;
+
+            if (rowParent != null && rightLocal > leftLocal)
+            {
+                Vector3 leftWorld = rowParent.TransformPoint(new Vector3(leftLocal, rowY, 0f));
+                Vector3 rightWorld = rowParent.TransformPoint(new Vector3(rightLocal, rowY, 0f));
+
+                Vector2 leftScreen = RectTransformUtility.WorldToScreenPoint(camera, leftWorld);
+                Vector2 rightScreen = RectTransformUtility.WorldToScreenPoint(camera, rightWorld);
+
+                if (RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, leftScreen, camera, out var leftInParent) &&
+                    RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, rightScreen, camera, out var rightInParent))
+                {
+                    anchorWidth = Mathf.Abs(rightInParent.x - leftInParent.x);
+                    anchorXInParent = (leftInParent.x + rightInParent.x) * 0.5f;
+                }
+            }
+
             const float Margin = 8f;
             float halfW = UiFrames.Reference.X * 0.5f;
             float halfH = UiFrames.Reference.Y * 0.5f;
             var at = TooltipPlacement.Beside(
-                anchorLocal.x, anchorLocal.y, anchor.rect.width,
+                anchorXInParent, anchorLocal.y, anchorWidth,
                 tooltipRect.rect.width, tooltipRect.rect.height,
                 interiorLeft: -halfW + Margin, interiorRight: halfW - Margin,
                 interiorBottom: -halfH + Margin, interiorTop: halfH - Margin);
