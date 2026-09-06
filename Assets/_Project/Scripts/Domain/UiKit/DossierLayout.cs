@@ -496,28 +496,26 @@ namespace PrincesPalace.Domain.UiKit
         public const float FileLeftX = 56f;
         public const float FileRightX = 424f;
 
-        public static UiVec SlotAt(EquipmentSlot slot)
+        // A LEADER'S TOP IS ITS SLOT'S TOP PLUS THIS, always -- it used to be
+        // an independent literal in LeaderAt's own switch (187, 285, 387,
+        // 489...) that happened to equal SlotAt's top + 37 for every slot,
+        // which meant moving a slot in SlotAt without touching LeaderAt left
+        // a leader pointing at the old position. SlotGeometry below is now
+        // the one table both methods read a slot's top and file from, so
+        // there is nothing left to drift out of step.
+        private const float LeaderVerticalOffset = 37f;
+
+        // top + file for every slot except Head, which both SlotAt and
+        // LeaderAt special-case on their own (see each method's own comment
+        // on why Head has no leader and needs no file). One switch, read by
+        // both methods, so a slot cannot be moved by editing one copy of its
+        // top and leaving the other at the old value.
+        private static void SlotGeometry(EquipmentSlot slot, out float top, out bool left)
         {
-            float top;
-            bool left = true;
+            left = true;
 
             switch (slot)
             {
-                // HEAD IS ON THE CENTRE LINE, directly above the figure's
-                // head, and needs no leader: being right above the thing it
-                // belongs to says it better than a hairline can. In the left
-                // file it was the slot that looked most stranded, since the
-                // head sits centre-top and the leader had to run most of the
-                // way across the figure to reach it.
-                //
-                // SHOES DOES NOT GET THE SAME TREATMENT, and it was tried:
-                // centred below the feet it landed on the figure's shins,
-                // because the legs reach within a few units of the stage floor
-                // and there is no room under them. It sits at the foot of the
-                // right file instead, level with LEGS on the left, which at
-                // least makes the two files balance.
-                case EquipmentSlot.Head: return OnBodyFromStage(CentreFileX, 0f, SlotSize, SlotSize);
-
                 case EquipmentSlot.Necklace: top = 150f; break;
                 case EquipmentSlot.Torso: top = 248f; break;
                 case EquipmentSlot.Gloves: top = 350f; break;
@@ -526,7 +524,52 @@ namespace PrincesPalace.Domain.UiKit
                 case EquipmentSlot.Weapon2: top = 350f; left = false; break;
                 default: top = 452f; left = false; break;  // Shoes
             }
+        }
 
+        // The raw top SlotAt hands to OnBodyFromStage for `slot`, in the
+        // handover's stage coordinates -- before StageScale or OnBody bend it
+        // onto the drawn figure. Head has no such top of its own (it is
+        // pinned to the centre line at authored y 0, see SlotAt's own
+        // comment); returning 0f for it keeps this total rather than partial,
+        // which is what lets DossierLayoutTests assert LeaderTop's offset
+        // for every OTHER slot without a special case of its own.
+        //
+        // Exposed (rather than folded back into SlotAt) so a test can compare
+        // it against LeaderTop without inverting OnBodyFromStage's transform
+        // -- the two box heights involved (a slot icon vs. a 1px hairline)
+        // make the transform's OUTPUT differ by more than just this offset,
+        // so the offset can only be checked before the transform runs.
+        public static float SlotTop(EquipmentSlot slot)
+        {
+            if (slot == EquipmentSlot.Head) return 0f;
+            SlotGeometry(slot, out float top, out _);
+            return top;
+        }
+
+        // As SlotTop, but LeaderAt's own top -- always exactly SlotTop plus
+        // LeaderVerticalOffset, which is the fact this whole refactor exists
+        // to guarantee. DossierLayoutTests.LeaderTopTracksItsSlotTopByOffset
+        // pins the 37 as a literal against this.
+        public static float LeaderTop(EquipmentSlot slot) => SlotTop(slot) + LeaderVerticalOffset;
+
+        public static UiVec SlotAt(EquipmentSlot slot)
+        {
+            // HEAD IS ON THE CENTRE LINE, directly above the figure's
+            // head, and needs no leader: being right above the thing it
+            // belongs to says it better than a hairline can. In the left
+            // file it was the slot that looked most stranded, since the
+            // head sits centre-top and the leader had to run most of the
+            // way across the figure to reach it.
+            //
+            // SHOES DOES NOT GET THE SAME TREATMENT, and it was tried:
+            // centred below the feet it landed on the figure's shins,
+            // because the legs reach within a few units of the stage floor
+            // and there is no room under them. It sits at the foot of the
+            // right file instead, level with LEGS on the left, which at
+            // least makes the two files balance.
+            if (slot == EquipmentSlot.Head) return OnBodyFromStage(CentreFileX, 0f, SlotSize, SlotSize);
+
+            SlotGeometry(slot, out float top, out bool left);
             return OnBodyFromStage(left ? FileLeftX : FileRightX, top, SlotSize, SlotSize);
         }
 
@@ -539,39 +582,43 @@ namespace PrincesPalace.Domain.UiKit
         // the body it is supposed to tie the slot to, which reads as eight
         // hairlines pointing at nothing.
         //
-        // One table and one scale point: the cases set the handover's numbers
-        // and everything after the switch is common, so a slot cannot be scaled
-        // by being edited and another missed.
+        // One table and one scale point: SlotGeometry sets the handover's
+        // top/file numbers -- the same table SlotAt reads -- and everything
+        // after is common, so a slot cannot be scaled or moved by editing one
+        // copy and missing the other.
         public static UiVec LeaderAt(EquipmentSlot slot, out float width)
         {
-            // ONLY THE BODY END IS AUTHORED. Where a leader stops is anatomy --
-            // it reaches into the figure at the part its slot names, which is
-            // why these numbers are not round. Where it STARTS is wherever the
-            // box happens to be, so it is derived from the file rather than
-            // authored beside it: the pair used to be two numbers that had to be
-            // edited together, and moving a slot without its leader leaves a
-            // hairline pointing at nothing.
+            // NO LEADER for the centred slot. Width 0 is the signal, and
+            // BuildSlot skips the hairline rather than emitting a zero-wide
+            // graphic -- which UiAudit's A6 would refuse anyway, correctly.
+            if (slot == EquipmentSlot.Head)
+            {
+                width = 0f;
+                return UiVec.Zero;
+            }
+
+            // ONLY THE BODY END IS AUTHORED here. Where a leader stops is
+            // anatomy -- it reaches into the figure at the part its slot
+            // names, which is why these numbers are not round. Where it
+            // STARTS is wherever the box happens to be, so it is derived from
+            // the file rather than authored beside it, and where its TOP sits
+            // is LeaderTop -- the slot's own SlotGeometry top plus
+            // LeaderVerticalOffset, not a second independent literal.
             float bodyEnd;
-            float top;
-            bool left = true;
 
             switch (slot)
             {
-                // NO LEADER for the centred slot. Width 0 is the signal, and
-                // BuildSlot skips the hairline rather than emitting a zero-wide
-                // graphic -- which UiAudit's A6 would refuse anyway, correctly.
-                case EquipmentSlot.Head:
-                    width = 0f;
-                    return UiVec.Zero;
-
-                case EquipmentSlot.Necklace: bodyEnd = 262f; top = 187f; break;
-                case EquipmentSlot.Torso: bodyEnd = 238f; top = 285f; break;
-                case EquipmentSlot.Gloves: bodyEnd = 212f; top = 387f; break;
-                case EquipmentSlot.Legs: bodyEnd = 242f; top = 489f; break;
-                case EquipmentSlot.Weapon1: bodyEnd = 348f; top = 285f; left = false; break;
-                case EquipmentSlot.Weapon2: bodyEnd = 348f; top = 387f; left = false; break;
-                default: bodyEnd = 330f; top = 489f; left = false; break;  // Shoes
+                case EquipmentSlot.Necklace: bodyEnd = 262f; break;
+                case EquipmentSlot.Torso: bodyEnd = 238f; break;
+                case EquipmentSlot.Gloves: bodyEnd = 212f; break;
+                case EquipmentSlot.Legs: bodyEnd = 242f; break;
+                case EquipmentSlot.Weapon1: bodyEnd = 348f; break;
+                case EquipmentSlot.Weapon2: bodyEnd = 348f; break;
+                default: bodyEnd = 330f; break;  // Shoes
             }
+
+            SlotGeometry(slot, out _, out bool left);
+            float top = LeaderTop(slot);
 
             float boxEdge = left ? FileLeftX + 86f : FileRightX;
             float from = left ? boxEdge : bodyEnd;
