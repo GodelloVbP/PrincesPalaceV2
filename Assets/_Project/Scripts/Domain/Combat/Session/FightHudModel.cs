@@ -465,152 +465,116 @@ namespace PrincesPalace.Domain.Combat.Session
             return panel;
         }
 
-        // ---- buff badges -----------------------------------------------------
+        // ---- status rows -------------------------------------------------------
         //
-        // What the icon row above a character reads on hover -- the party
-        // portrait had NOTHING before this (TagLineFor is enemy-only text, no
-        // icon at all), so a player could not tell Ballerina's Slippers had
-        // fired without opening a menu that says nothing about it either.
+        // What the badge row above a character (and the enemy plate's own
+        // text line) reads on hover -- the party portrait had NOTHING before
+        // this (TagLineFor is enemy-only text, no icon at all), so a player
+        // could not tell Ballerina's Slippers had fired without opening a
+        // menu that says nothing about it either.
         //
-        // A GLYPH short enough for a small circle, a TOOLTIP sentence with the
-        // real numbers, and whether it reads as helping or hurting -- that is
-        // everything the badge needs to know; the icon's actual art (or its
-        // fallback tint) is a painting decision, made by whoever reads this.
-        public readonly struct BuffBadge
+        // ONE STRUCT for every surface, replacing the BuffBadge/StatusBadge
+        // pair this used to be split across -- see PLAN_STATUS_EFFECT_UI.md
+        // section 4/11. Code, Slug, Tooltip and IsPositive are the badge's
+        // whole vocabulary; Counter and SortKey are the two facts that used
+        // to live only in the caller's head (a -1 meant "draw nothing" in
+        // three different ways across BuffBadge/PillCode/EnemyStatusLine,
+        // never spelled the same way twice).
+        public readonly struct StatusRow
         {
-            public readonly string Glyph;
+            public readonly string Code;
+            public readonly string Slug;
             public readonly string Tooltip;
             public readonly bool IsPositive;
 
-            // Null for badges with no status behind them at all (the relic
-            // speed-buff "SPD" entry below) and for every status that has no
-            // authored icon -- StatusBadgeIcons.ResourceFor resolves to a
-            // real sprite only for Chilled and Rooted today, and
-            // Resources.Load returning null for the rest is exactly the
-            // icon-first/glyph-fallback path this field exists to drive, the
-            // same way EnemyIntentIcons drives the enemy telegraph badges.
-            public readonly StatusEffectType? Kind;
+            // -1 means "draw no number" -- a sentinel-duration status
+            // (Shielded, Empowered, Marked) or a permanent speed grant
+            // (TurnsLeft < 0). See StatusHud.SentinelTurns for the rule.
+            public readonly int Counter;
 
-            public BuffBadge(string glyph, string tooltip, bool isPositive, StatusEffectType? kind = null)
+            // Lower sorts first. See StatusHud.SortKeyFor/SpeedSortKey for
+            // the tiering this encodes: action restrictions, then immediate-
+            // exchange statuses, then everything else by harm/control/
+            // benefit bucket and a fixed table position.
+            public readonly int SortKey;
+
+            public StatusRow(string code, string slug, string tooltip, bool isPositive, int counter, int sortKey)
             {
-                Glyph = glyph;
+                Code = code;
+                Slug = slug;
                 Tooltip = tooltip;
                 IsPositive = isPositive;
-                Kind = kind;
+                Counter = counter;
+                SortKey = sortKey;
             }
         }
 
         // Every status effect and every relic-granted speed buff/malus
-        // currently on ONE combatant, as badges. Two different stores
-        // (CombatantState.Statuses, FightSession's private speed-buff
-        // dictionary) because that split is real -- see FightSession.
-        // SpeedBuffs's own header -- so this is where they finally become one
-        // list, for the one place a player actually looks: the character
-        // they are about to act with.
-        public static List<BuffBadge> BuffBadgesFor(FightSession session, CombatantState actor)
+        // currently on ONE combatant, as rows, in section 5's display order.
+        // Two different stores (CombatantState.Statuses, FightSession's
+        // private speed-buff dictionary) because that split is real -- see
+        // FightSession.SpeedBuffs's own header -- so this is where they
+        // finally become one list, for the one place a player actually
+        // looks: the character they are about to act with. Replaces
+        // BuffBadgesFor.
+        //
+        // SESSION IS OPTIONAL, actor is not. A null session only costs the
+        // speed-buff half -- actor.Statuses needs no session to read at all,
+        // and EnemyStatusLine calls this with session == null wherever no
+        // FightSession is in scope (a preview render, say), the same
+        // graceful-degradation contract EnemyStatusLine itself always had.
+        public static List<StatusRow> StatusRowsFor(FightSession session, CombatantState actor)
         {
-            var badges = new List<BuffBadge>();
-            if (session == null || actor == null) return badges;
+            var rows = new List<StatusRow>();
+            if (actor == null) return rows;
 
             foreach (var status in actor.Statuses)
             {
-                badges.Add(StatusBadge(status));
+                rows.Add(StatusHud.RowFor(status));
             }
 
-            var kit = session.KitFor(actor);
-            foreach (var buff in session.ActiveSpeedBuffs(actor))
+            if (session != null)
             {
-                // A STATUS-DRIVEN entry (Chilled, as of Phase D2) is already
-                // shown by the `foreach (var status in actor.Statuses)` loop
-                // above -- StatusBadge prints its own "Chilled: ..." tooltip
-                // straight off the ActiveStatus. Showing it again here as a
-                // second, generic "SPD" badge would be the same fact twice;
-                // this dictionary entry exists so the SPEED NUMBER stays
-                // correct (TrueBaseSpeed composes it with every relic buff),
-                // not so it gets its own badge on top of the status's own.
-                if (buff.Source is StatusEffectType) continue;
-
-                string name = null;
-                if (kit != null && buff.Source is RelicEffect relicSource)
+                var kit = session.KitFor(actor);
+                foreach (var buff in session.ActiveSpeedBuffs(actor))
                 {
-                    foreach (var relic in kit.Relics)
+                    // A STATUS-DRIVEN entry (Chilled, as of Phase D2) is
+                    // already shown by the `foreach (var status in actor.
+                    // Statuses)` loop above -- StatusHud.RowFor prints its
+                    // own Chilled row straight off the ActiveStatus. Showing
+                    // it again here as a second, generic speed row would be
+                    // the same fact twice; this dictionary entry exists so
+                    // the SPEED NUMBER stays correct (TrueBaseSpeed composes
+                    // it with every relic buff), not so it gets its own row
+                    // on top of the status's own.
+                    if (buff.Source is StatusEffectType) continue;
+
+                    string name = null;
+                    if (kit != null && buff.Source is RelicEffect relicSource)
                     {
-                        // Equals(...), not ==, now that Source is `object` --
-                        // see FightSession.SpeedBuffs.ActiveSpeedBuffs' own
-                        // comment on why `==` between a boxed enum and
-                        // `object` would silently compare by reference
-                        // instead of by value.
-                        if (relic.Effect == relicSource) { name = relic.DisplayName; break; }
+                        foreach (var relic in kit.Relics)
+                        {
+                            // Equals(...), not ==, now that Source is
+                            // `object` -- see FightSession.SpeedBuffs.
+                            // ActiveSpeedBuffs' own comment on why `==`
+                            // between a boxed enum and `object` would
+                            // silently compare by reference instead of by
+                            // value.
+                            if (relic.Effect == relicSource) { name = relic.DisplayName; break; }
+                        }
                     }
+                    name ??= buff.Source.ToString();
+
+                    rows.Add(StatusHud.SpeedRow(name, buff.Granted, buff.TurnsLeft));
                 }
-                name ??= buff.Source.ToString();
-
-                bool positive = buff.Granted > 0;
-                string turns = buff.TurnsLeft < 0 ? "for the rest of the fight" : Plural(buff.TurnsLeft, "turn");
-                string tooltip = $"{name}: {(positive ? "+" : "")}{buff.Granted} speed, {turns}.";
-                badges.Add(new BuffBadge("SPD", tooltip, positive));
             }
 
-            return badges;
+            // OrderBy, not List.Sort -- Sort is not stable, and two rows
+            // sharing a SortKey (two different speed sources, say) must keep
+            // the order they were added in rather than swap places on every
+            // repaint.
+            return rows.OrderBy(r => r.SortKey).ToList();
         }
-
-        private static BuffBadge StatusBadge(ActiveStatus status)
-        {
-            string turns = Plural(status.TurnsRemaining, "turn");
-            switch (status.Type)
-            {
-                case StatusEffectType.Poison:
-                    return new BuffBadge("PSN", $"Poison: {status.Magnitude} damage at the start of your turn, {turns}.", false);
-                case StatusEffectType.Regen:
-                    return new BuffBadge("RGN", $"Regen: {status.Magnitude} healing at the start of your turn, {turns}.", true);
-                case StatusEffectType.Protect:
-                    return new BuffBadge("PRT", $"Protect: incoming damage reduced {status.Magnitude}%, {turns}.", true);
-                case StatusEffectType.Vulnerable:
-                    return new BuffBadge("VLN", $"Vulnerable: incoming damage increased {status.Magnitude}%, {turns}.", false);
-                case StatusEffectType.Stun:
-                    return new BuffBadge("STN", "Stunned: this turn is skipped.", false);
-                case StatusEffectType.Shielded:
-                    return new BuffBadge("SHD", $"Shielded: the next hit taken is reduced {status.Magnitude}%.", true);
-                case StatusEffectType.Provoked:
-                    return new BuffBadge("PRV", $"Provoked: the next attack must target whoever provoked it, for {status.Magnitude}% less damage to them.", false);
-                case StatusEffectType.Empowered:
-                    return new BuffBadge("EMP", $"Empowered: the next attack deals {status.Magnitude}% more damage, then it's spent.", true);
-
-                // KEYWORDS, not sentences -- the two statuses with real icon
-                // art (StatusBadgeIcons.ResourceFor) also get the terse
-                // hover text the designer actually asked for: "a symbol
-                // under a character... hovering over this symbol shows what
-                // it does (again, in keywords)". The other statuses above
-                // keep their existing sentence tooltips; retexting all eight
-                // is out of scope for this change.
-                //
-                // The number is coloured with the SAME hex the affix-text
-                // rewrite uses for a stat loss (ItemStatLines.LossHex) --
-                // the one rich-text precedent this codebase has, so a
-                // player who has already learned "red numbers are bad" from
-                // gear tooltips reads the same colour the same way here.
-                case StatusEffectType.Chilled:
-                    return new BuffBadge("CHL",
-                        $"Chilled -- {ItemStatLines.Coloured(ItemStatLines.LossHex, $"-{status.Magnitude}% Speed")}, {PluralTerse(status.TurnsRemaining, "turn")}",
-                        false, StatusEffectType.Chilled);
-                case StatusEffectType.Rooted:
-                    return new BuffBadge("ROT",
-                        $"Rooted -- {ItemStatLines.Coloured(ItemStatLines.LossHex, "Skill Only")}, {PluralTerse(status.TurnsRemaining, "turn")}",
-                        false, StatusEffectType.Rooted);
-                case StatusEffectType.Feared:
-                    return new BuffBadge("FR", $"Feared: cannot act as normal, {turns}.", false);
-                case StatusEffectType.Marked:
-                    return new BuffBadge("MK", $"Marked: takes increased damage from focused attacks, {turns}.", false);
-                default:
-                    return new BuffBadge("?", status.Type.ToString(), true);
-            }
-        }
-
-        private static string Plural(int count, string noun) => $"{count} {noun}{(count == 1 ? "" : "s")} left";
-
-        // Same count/pluralisation as Plural, without the trailing "left" --
-        // a keyword tooltip reads "2 turns", not "2 turns left, full stop".
-        private static string PluralTerse(int count, string noun) => $"{count} {noun}{(count == 1 ? "" : "s")}";
 
         // Real artwork for a status badge, exactly EnemyIntentIcons' shape
         // one shelf over -- ResourceFor is RESOURCES-relative and
@@ -620,37 +584,25 @@ namespace PrincesPalace.Domain.Combat.Session
         //
         // Only Chilled and Rooted have art today (Status/chilled.png,
         // Status/rooted.png -- see tools/art/make_status_icons.py). Every
-        // other status deliberately has NO slug below, so ResourceFor for
-        // e.g. Poison resolves to "Status/poison" -- a path nothing on disk
-        // answers to -- and Resources.Load returns null for it exactly like
-        // it would for a typo. That null IS the fallback mechanism: the
-        // caller (FightController.Hud's RefreshPartyBuffs) already has an
-        // icon-first/glyph-fallback-if-null priority, the same one
-        // StageVisuals uses for enemy intents, so a status with no art on
-        // disk degrades to its three-letter glyph with no special-casing
-        // anywhere -- the glyph was always the fallback, adding an icon for
-        // two kinds just gives the fallback something to fall back FROM.
+        // other status resolves to a path nothing on disk answers to yet
+        // (Status/poison, etc.), and Resources.Load returns null for it
+        // exactly like it would for a typo. That null IS the fallback
+        // mechanism: the caller (FightController.Hud's RefreshPartyBuffs)
+        // already has an icon-first/glyph-fallback-if-null priority, the
+        // same one StageVisuals uses for enemy intents, so a status with no
+        // art on disk degrades to its three-letter code with no special-
+        // casing anywhere.
         public static class StatusBadgeIcons
         {
-            public static string ResourceFor(StatusEffectType kind) => "Status/" + Slug(kind);
+            public static string ResourceFor(StatusEffectType kind) => "Status/" + StatusHud.SlugFor(kind);
 
-            private static string Slug(StatusEffectType kind)
-            {
-                switch (kind)
-                {
-                    case StatusEffectType.Chilled: return "chilled";
-                    case StatusEffectType.Rooted: return "rooted";
-
-                    // No art authored for anything else. The slug still has
-                    // to be SOME string (ResourceFor is unconditional so the
-                    // caller never has to ask "does this kind even have a
-                    // resource path" before loading), but it must never
-                    // collide with a real file -- lower-casing the enum name
-                    // keeps every future status equally not-found until art
-                    // actually lands for it.
-                    default: return kind.ToString().ToLowerInvariant();
-                }
-            }
+            // The two speed presentations have no StatusEffectType member
+            // (PLAN_STATUS_EFFECT_UI.md section 4 -- a presentation id, not
+            // a thirteenth enum member), so they resolve off the row's own
+            // Slug instead of a kind. Works for any row, not only speed's:
+            // Resources-relative and extension-free the same way the
+            // StatusEffectType overload above is.
+            public static string ResourceFor(StatusRow row) => "Status/" + row.Slug;
         }
 
         // ---- enemy plate status line (v2 rework) ----------------------------
@@ -668,52 +620,6 @@ namespace PrincesPalace.Domain.Combat.Session
         // push it into the "+N" overflow -- the one state that must never
         // hide. It is a distinct, always-shown prefix instead, so it can
         // never lose its place to a status.
-        private enum PillCategory { Harm, Control, Special, Benefit }
-
-        private static PillCategory CategoryOf(StatusEffectType type)
-        {
-            switch (type)
-            {
-                case StatusEffectType.Poison:
-                case StatusEffectType.Vulnerable:
-                case StatusEffectType.Stun:
-                case StatusEffectType.Feared:
-                case StatusEffectType.Marked:
-                    return PillCategory.Harm;
-                case StatusEffectType.Provoked:
-                case StatusEffectType.Chilled:
-                case StatusEffectType.Rooted:
-                    return PillCategory.Control;
-                case StatusEffectType.Regen:
-                case StatusEffectType.Protect:
-                case StatusEffectType.Shielded:
-                case StatusEffectType.Empowered:
-                    return PillCategory.Benefit;
-                default:
-                    return PillCategory.Special;
-            }
-        }
-
-        private static string PillCode(StatusEffectType type)
-        {
-            switch (type)
-            {
-                case StatusEffectType.Poison: return "PO";
-                case StatusEffectType.Regen: return "RG";
-                case StatusEffectType.Protect: return "PR";
-                case StatusEffectType.Vulnerable: return "VU";
-                case StatusEffectType.Stun: return "ST";
-                case StatusEffectType.Shielded: return "SH";
-                case StatusEffectType.Provoked: return "PV";
-                case StatusEffectType.Empowered: return "EM";
-                case StatusEffectType.Chilled: return "CH";
-                case StatusEffectType.Rooted: return "RO";
-                case StatusEffectType.Feared: return "FR";
-                case StatusEffectType.Marked: return "MK";
-                default: return "??";
-            }
-        }
-
         private const int EnemyPillCap = 3;
 
         // The same amber FightHudPalette.TargetAmber already carries, repeated
@@ -721,6 +627,10 @@ namespace PrincesPalace.Domain.Combat.Session
         // file for one hex string.
         private const string BrokenHex = "#FFC45A";
 
+        // Rebuilt on StatusRowsFor rather than its own switch statements, so
+        // this line and the badge row always agree on codes and order --
+        // the two tables that used to disagree (StatusBadge's three letters,
+        // PillCode's two) are one table now (StatusHud, section 4).
         public static string EnemyStatusLine(CombatantState enemy, FightSession session)
         {
             if (enemy == null) return "";
@@ -729,25 +639,25 @@ namespace PrincesPalace.Domain.Combat.Session
                 ? ItemStatLines.Coloured(BrokenHex, "BRK") + "  ·  "
                 : "";
 
-            var pills = new List<(string Code, int Turns, PillCategory Category)>();
-            foreach (var status in enemy.Statuses)
+            var rows = StatusRowsFor(session, enemy);
+
+            // Drowned Lantern's own mark (FightSession.Relics._marked) is a
+            // SEPARATE mechanic from StatusEffectType.Marked (Marks.cs) --
+            // see Marks' own header, it predates Marks and the two do not
+            // interact. Both read as "Marked" to the player, so only add a
+            // second pill when StatusRowsFor did not already contribute one
+            // off an actual Marked status -- an enemy carrying both used to
+            // show MK twice.
+            bool alreadyMarked = rows.Any(r => r.Code == StatusHud.CodeFor(StatusEffectType.Marked));
+            if (session != null && session.IsMarked(enemy) && !alreadyMarked)
             {
-                pills.Add((PillCode(status.Type), status.TurnsRemaining, CategoryOf(status.Type)));
+                rows.Add(StatusHud.RowFor(new ActiveStatus(StatusEffectType.Marked, 0, Marks.MarkDurationTurns)));
+                rows = rows.OrderBy(r => r.SortKey).ToList();
             }
 
-            // MARKED is not a StatusEffectType entry -- see
-            // FightSession.Relics.ApplyMark for why it stays outside that
-            // system. Turns 0 suppresses the "·N" suffix, the same way BRK's
-            // own prefix carries none -- a mark has no ticking duration.
-            if (session != null && session.IsMarked(enemy))
-            {
-                pills.Add(("MK", 0, PillCategory.Special));
-            }
-
-            var ordered = pills.OrderBy(p => p.Category).ToList();
-            int overflow = ordered.Count - EnemyPillCap;
-            var shown = ordered.Take(EnemyPillCap)
-                .Select(p => p.Turns > 0 ? $"{p.Code}·{p.Turns}" : p.Code);
+            int overflow = rows.Count - EnemyPillCap;
+            var shown = rows.Take(EnemyPillCap)
+                .Select(r => r.Counter >= 0 ? $"{r.Code}·{r.Counter}" : r.Code);
 
             string line = broken + string.Join("  ·  ", shown);
             if (overflow > 0) line += $"  ·  +{overflow}";
