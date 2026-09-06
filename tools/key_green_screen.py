@@ -214,7 +214,17 @@ def greenness(r, g, b):
 
 
 def key_out_green(image):
-    """RGB on flat green -> RGBA, with a soft edge and the spill suppressed."""
+    """RGB on flat green -> RGBA, with a soft edge and the spill suppressed.
+
+    Output alpha is min(input alpha, computed key alpha). A source delivered
+    on flat green with no real alpha channel comes in fully opaque (255)
+    everywhere, so the min is a no-op there and this behaves exactly as
+    before for every existing kit. A source delivered WITH real alpha (the
+    status masters) already carries (0,0,0,0) under its transparent corners;
+    those pixels have dominance 0 (black is nobody's green) and would
+    otherwise key to alpha 255, painting the transparent corners solid
+    black. Taking the min keeps them at 0.
+    """
     rgba = image.convert("RGBA")
     pixels = rgba.load()
     width, height = rgba.size
@@ -222,7 +232,7 @@ def key_out_green(image):
 
     for y in range(height):
         for x in range(width):
-            r, g, b, _ = pixels[x, y]
+            r, g, b, input_alpha = pixels[x, y]
             dominance = greenness(r, g, b)
 
             if dominance >= FULLY_TRANSPARENT_ABOVE:
@@ -230,11 +240,13 @@ def key_out_green(image):
                 continue
 
             if dominance <= FULLY_OPAQUE_BELOW:
-                alpha = 255
+                keyed_alpha = 255
             else:
                 # Linear ramp across the band, so antialiased edges keep a
                 # soft falloff instead of turning into a hard jagged cut.
-                alpha = 255 - int(255 * (dominance - FULLY_OPAQUE_BELOW) / span)
+                keyed_alpha = 255 - int(255 * (dominance - FULLY_OPAQUE_BELOW) / span)
+
+            alpha = min(input_alpha, keyed_alpha)
 
             # Spill suppression. Any green still dominating on a kept pixel is
             # backdrop bounced onto the subject's edge -- pulling it down to

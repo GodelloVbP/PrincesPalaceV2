@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
@@ -7,19 +9,18 @@ using PrincesPalace.Domain.Combat.Session;
 namespace PrincesPalace.PlayModeTests
 {
     // The status-badge counterpart of EnemyIntentIconTests, one folder over
-    // (Resources/Status/ instead of Resources/Intent/). Chilled and Rooted
-    // are the only two statuses with real artwork today -- see
-    // tools/art/make_status_icons.py and FightHudModel.StatusBadgeIcons.
+    // (Resources/Status/ instead of Resources/Intent/). All fourteen
+    // presentations -- every StatusEffectType plus the two speed
+    // presentations (StatusHud.SpeedUpSlug/SpeedDownSlug, which have no enum
+    // member on purpose -- section 4) now carry real generated artwork; see
+    // CREDITS.md's "Status badge icons" entry and
+    // docs/STATUS_ICON_PROMPTS.md, the frozen art contract they were
+    // generated from.
     //
-    // NARROWED DELIBERATELY to the two that already have art -- Package C of
-    // PLAN_STATUS_EFFECT_UI.md. Section 10 wants this widened to all
-    // fourteen entries (twelve statuses plus the two speed presentations)
-    // and left red until the art lands; CLAUDE.md's "commit only
-    // test-passing checkpoints" rule means that widening ships in the same
-    // commit as the art itself (phase 2), not here. The EditMode half of the
-    // completeness test (StatusHudCoverageTests) already covers the other
-    // twelve's code/slug/tooltip, so nothing about them goes unchecked in
-    // the meantime -- only "does a PNG actually exist for it" is deferred.
+    // WIDENED from two entries (Chilled, Rooted) to all fourteen in phase 2
+    // of PLAN_STATUS_EFFECT_UI.md (section 10), in the same commit that
+    // landed the art: the plan is explicit that this test sits red between
+    // the widening and the art landing, never skipped or [Ignore]d.
     //
     // The negative half this file used to run
     // (EveryOtherStatusStillFallsBackToTextWithNoSpriteFound, asserting the
@@ -36,31 +37,59 @@ namespace PrincesPalace.PlayModeTests
     // (a status row is a fixed strip, not stage-placed).
     public class StatusBadgeIconTests
     {
-        private static readonly StatusEffectType[] IconisedStatuses =
+        // Every resource path a badge can ever ask Resources.Load for: the
+        // twelve StatusEffectType members through StatusBadgeIcons.ResourceFor,
+        // plus the two speed presentations, which have no enum member to
+        // iterate and so are named explicitly here the same way
+        // StatusHudCoverageTests does.
+        private static IEnumerable<string> AllResourcePaths()
         {
-            StatusEffectType.Chilled,
-            StatusEffectType.Rooted,
-        };
+            foreach (StatusEffectType type in Enum.GetValues(typeof(StatusEffectType)))
+                yield return FightHudModel.StatusBadgeIcons.ResourceFor(type);
 
-        // THIS is the guarantee that matters: Chilled and Rooted must each
-        // resolve to a real sprite. Resources.Load returns null silently for
-        // a missing file, a wrong path, or a PNG that imported as a plain
-        // Texture rather than a Sprite -- three separate ways to end up with
-        // an invisible badge and nothing in the log, the exact trap
-        // EnemyIntentIconTests' own version of this test exists to catch.
+            yield return "Status/" + StatusHud.SpeedUpSlug;
+            yield return "Status/" + StatusHud.SpeedDownSlug;
+        }
+
+        // THIS is the guarantee that matters: every one of the fourteen must
+        // resolve to a real, correctly-sized sprite. Resources.Load returns
+        // null silently for a missing file, a wrong path, or a PNG that
+        // imported as a plain Texture rather than a Sprite -- three separate
+        // ways to end up with an invisible badge and nothing in the log, the
+        // exact trap EnemyIntentIconTests' own version of this test exists
+        // to catch. The 256x256 check catches a fourth: a master dropped in
+        // unresized, which would blow out every badge's layout math.
         [Test]
         public void EveryStatusIconResolvesToArtworkThatActuallyLoaded()
         {
-            var missing = IconisedStatuses
-                .Where(k => Resources.Load<Sprite>(FightHudModel.StatusBadgeIcons.ResourceFor(k)) == null)
-                .Select(k => $"{k} -> {FightHudModel.StatusBadgeIcons.ResourceFor(k)}")
-                .ToList();
+            var paths = AllResourcePaths().ToList();
+            Assert.AreEqual(14, paths.Count, "expected twelve statuses plus two speed presentations");
+
+            var missing = new List<string>();
+            var wrongSize = new List<string>();
+
+            foreach (var path in paths)
+            {
+                var sprite = Resources.Load<Sprite>(path);
+                if (sprite == null)
+                {
+                    missing.Add(path);
+                    continue;
+                }
+
+                if (sprite.rect.width != 256 || sprite.rect.height != 256)
+                    wrongSize.Add($"{path} ({sprite.rect.width}x{sprite.rect.height})");
+            }
 
             Assert.IsEmpty(missing,
-                "these status kinds have no loadable sprite, so their badge renders as nothing: " +
+                "these paths have no loadable sprite, so their badge renders as nothing: " +
                 string.Join(", ", missing) +
                 ". Check the file exists under Assets/_Project/Resources/Status/ and that " +
                 "StatusIconImportPostprocessor gave it textureType Sprite.");
+
+            Assert.IsEmpty(wrongSize,
+                "these sprites are not the 256x256 delivery size the layout code expects: " +
+                string.Join(", ", wrongSize));
         }
 
         // The path convention, asserted rather than assumed -- same reason
