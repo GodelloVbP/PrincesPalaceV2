@@ -6,6 +6,7 @@ using UnityEngine.UI;
 using PrincesPalace.Domain.Combat;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Rewards;
+using PrincesPalace.Domain.Stage;
 using PrincesPalace.Domain.Stats;
 using PrincesPalace.Domain.UiKit;
 
@@ -739,6 +740,19 @@ namespace PrincesPalace
         // RefreshHoveredStatusTooltip, both below.
         private int _hoveredStatusBadge = -1;
 
+        // BUILD-TIME positions, captured once and never overwritten --
+        // RefreshEnemyStatusRows re-derives each refresh's position as
+        // home + delta, never by reading back wherever the row is CURRENTLY
+        // sitting (which may already be shifted from a previous refresh at
+        // a different enemy count). Same "compare against the recorded
+        // home, not the live rect" rule AnchorStageSlots' own comment gives
+        // for why StageActorAnimator keeps a Home instead of reading the
+        // rect back. Null-safe throughout: a screen with no status rows at
+        // all (an older build, a test double) leaves these null and
+        // RefreshEnemyStatusRows simply skips repositioning.
+        private Vector2[] _enemyStatusStripHome;
+        private Vector2[] _enemyStatusBadgeHome;
+
         private void WireAllStatusBadges()
         {
             _statusBadgeParts = new StatusBadgeParts[TotalStatusBadges];
@@ -746,6 +760,7 @@ namespace PrincesPalace
             WireStatusBadgeGroup(enemyStatusBadges, EnemyStatusBase, party: false);
             WireStatusBadgeGroup(rosterStatusBadges, RosterStatusBase, party: false);
             WireStatusBadgeGroup(partyBuffIcons, PartyStatusBase, party: true);
+            CaptureEnemyStatusRowHomePositions();
 
             if (statusTooltip != null) statusTooltip.SetShown(false);
 
@@ -755,6 +770,17 @@ namespace PrincesPalace
             // more now that every surface shares StatusTooltip, so it stays
             // permanently hidden instead of standing dormant with stale text.
             if (partyBuffTooltip != null) partyBuffTooltip.SetShown(false);
+        }
+
+        private void CaptureEnemyStatusRowHomePositions()
+        {
+            _enemyStatusStripHome = enemyStatusStrips?
+                .Select(s => s != null ? ((RectTransform)s.transform).anchoredPosition : Vector2.zero)
+                .ToArray();
+
+            _enemyStatusBadgeHome = enemyStatusBadges?
+                .Select(b => b != null ? ((RectTransform)b.transform).anchoredPosition : Vector2.zero)
+                .ToArray();
         }
 
         private void WireStatusBadgeGroup(GameObject[] badges, int baseIndex, bool party)
@@ -1155,8 +1181,10 @@ namespace PrincesPalace
 
         // Called from FightController.StageVisuals.cs's RefreshStage, right
         // beside RefreshIntentIcons, so a status row and an intent badge
-        // always paint off the same beat.
-        private void RefreshEnemyStatusRows()
+        // always paint off the same beat. `onStage` is RefreshStage's own
+        // count of enemies actually shown -- see the reposition comment
+        // below for why this method needs it too.
+        private void RefreshEnemyStatusRows(int onStage)
         {
             if (enemyStatusBadges == null || _session == null) return;
 
@@ -1175,8 +1203,54 @@ namespace PrincesPalace
                 // turns.
                 if (Has(enemyStatusStrips, slot)) enemyStatusStrips[slot].SetShown(rows.Count > 0);
 
+                // RE-SPREAD, the same way AnchorStageSlots re-spreads the
+                // FIGURE itself. FightScreen.BuildEnemyStatusRows baked this
+                // row's position against the FIXED FightHudSpec.
+                // StageSlotsPerSide slot geometry (it has to: it runs at
+                // build time, before any encounter exists to count), but
+                // AnchorStageSlots "spreads however many actors are
+                // ACTUALLY on this side across the whole depth range,
+                // instead of filling the first N of three fixed slots" (its
+                // own header). With fewer than three enemies those two
+                // disagree about where slot 1 sits, and a row left at its
+                // baked position draws over whichever OTHER row the spread
+                // happens to have moved there -- found by capturing this
+                // fixture's own screenshot with two enemies and watching
+                // the second one's row land on the first one's figure.
+                if (enemy != null && onStage > 0)
+                {
+                    var staticOffset = FightStageAnchors.SlotOffset(slot, FightHudSpec.StageSlotsPerSide, mirrored: false);
+                    var dynamicOffset = FightStageAnchors.SlotOffset(slot, onStage, mirrored: false);
+                    var delta = new Vector2(dynamicOffset.X - staticOffset.X, dynamicOffset.Y - staticOffset.Y);
+                    RepositionEnemyStatusRow(slot, delta);
+                }
+
                 PaintStatusRow(EnemyStatusBase + slot * EnemyStatusBadgesPerRow, EnemyStatusBadgesPerRow,
                     EnemyRosterStatusRealCapacity, rows, showCounter: true);
+            }
+        }
+
+        // From the CAPTURED build-time position, always -- never from
+        // wherever the row is sitting right now. See
+        // _enemyStatusStripHome/_enemyStatusBadgeHome's own comment.
+        private void RepositionEnemyStatusRow(int slot, Vector2 delta)
+        {
+            if (Has(enemyStatusStrips, slot) && _enemyStatusStripHome != null && slot < _enemyStatusStripHome.Length)
+            {
+                ((RectTransform)enemyStatusStrips[slot].transform).anchoredPosition =
+                    _enemyStatusStripHome[slot] + delta;
+            }
+
+            if (enemyStatusBadges == null || _enemyStatusBadgeHome == null) return;
+
+            int first = slot * EnemyStatusBadgesPerRow;
+            for (int i = 0; i < EnemyStatusBadgesPerRow; i++)
+            {
+                int flat = first + i;
+                if (!Has(enemyStatusBadges, flat) || flat >= _enemyStatusBadgeHome.Length) continue;
+
+                ((RectTransform)enemyStatusBadges[flat].transform).anchoredPosition =
+                    _enemyStatusBadgeHome[flat] + delta;
             }
         }
 

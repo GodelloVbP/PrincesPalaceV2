@@ -109,7 +109,7 @@ namespace PrincesPalace
             }
 
             RefreshIntentIcons();
-            RefreshEnemyStatusRows();
+            RefreshEnemyStatusRows(onStage);
 
             var party = _session.Encounter.PlayerParty;
             AnchorStageSlots(partySlots, partyActorAnimators, party.Count, mirrored: true);
