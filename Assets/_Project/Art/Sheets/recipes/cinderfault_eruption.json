@@ -1,0 +1,87 @@
+{
+  "_notes": [
+    "The other half of the Cinderfault pair -- see cinderfault_ground.json for",
+    "the shared-timeline rule the two are held to.",
+    "",
+    "NO base_align, and that is a measurement rather than an omission: this",
+    "sheet's six cells already sit on 446 / 446 / 446 / 446 / 445 / 445, so the",
+    "pass would shift five of them by a pixel and the sixth by nothing. Declared",
+    "absent so the difference from the ground sheet is legible.",
+    "",
+    "THE PEAK IS DRAWING 3, not 4 -- cell f2 carries 17.5% coverage against f3's",
+    "14.0% and reaches 149px up the cell against f3's 186. So the anticipation",
+    "gets FOUR slots and the peak lands on index 4, which is where the ground",
+    "sheet's rupture lands. Trimming the anticipation instead would have been the",
+    "other way to satisfy the timing contract, and it throws away the two",
+    "drawings that make the eruption read as coming out of the ground rather than",
+    "appearing on top of it.",
+    "",
+    "Grown about (256, 446) -- its own base -- so the shards rise instead of the",
+    "whole burst inflating around its middle."
+  ],
+  "sheet": "Spells/cinderfault_eruption/cinderfault_eruption_6frame_sheet.png",
+  "grid": [
+    2,
+    3
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3",
+    "f4",
+    "f5"
+  ],
+  "keyed": false,
+  "base_align": false,
+  "content_crop": false,
+  "sequence": [
+    {
+      "from": "f0",
+      "scale": [
+        0.85,
+        0.85
+      ],
+      "pivot": [
+        256,
+        446
+      ]
+    },
+    {
+      "from": "f0"
+    },
+    {
+      "from": "f1",
+      "hold": 2,
+      "scale": [
+        0.96,
+        1.0
+      ],
+      "pivot": [
+        256,
+        446
+      ]
+    },
+    {
+      "from": "f2",
+      "hold": 2,
+      "scale": [
+        1.0,
+        1.06
+      ],
+      "pivot": [
+        256,
+        446
+      ]
+    },
+    {
+      "from": "f3"
+    },
+    {
+      "from": "f4"
+    },
+    {
+      "from": "f5"
+    }
+  ]
+}

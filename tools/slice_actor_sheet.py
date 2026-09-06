@@ -23,6 +23,11 @@ every pose the actor has.
         --stances idle,attack,turtle_up,shell_closed,hurt,defeated
 
 Optional:
+    --recipe PATH            replay the recipe.json a previous run wrote --
+                             every other argument comes out of the file, so
+                             what runs is the invocation that produced the
+                             committed art rather than a reconstruction of it.
+                             See "Recipes" below.
     --grid COLSxROWS         default 3x2 (six cells, row-major top-left first)
     --key alpha|white_flood|green   default alpha (real transparency)
     --anchor ground_band|centroid   default ground_band (see below)
@@ -51,6 +56,39 @@ Optional:
     --prune                    delete stance PNGs already in the output
                                folder that this run did not (re)write
     --quiet
+
+## Recipes
+
+Every run against the real `Resources` tree writes
+`Assets/_Project/Art/<Enemies|Characters>/<id>/recipe.json`: the source sheet,
+the FULL argument list with every default made explicit, this file's sha256,
+the Pillow / numpy / Python versions, the output folder, the ground line it
+measured, and when. `--recipe <path>` replays it.
+
+WHY A FILE AND NOT THE README. The README is prose a person wrote and is
+still where the reasoning belongs -- but the treant's said `delivery_scale
+1.05`, `white_flood`, and "a raised pocket_max_area", and reconstructing the
+run from it meant guessing the raised value and testing three candidates
+against the committed bytes. A recipe is the argv, so there is nothing to
+reconstruct.
+
+**The recipe describes how the frames are PRODUCED. Content describes how
+they PLAY.** Which stance a skill poses, how long a beat takes, how big the
+figure stands on the stage -- all of that is `ContentData/`, and content may
+override a recipe's intent deliberately. The same split
+`slice_spell_sheet.py`'s recipes have with the `vfx` block they are
+deliberately not allowed to own.
+
+A replay never rewrites the recipe: the argv it would write is the argv it
+just read, so the only thing that could change is the timestamp, and a
+verification run that dirties the tree is a verification nobody runs twice. It
+reports whether this file's hash still matches the one recorded, which is the
+warning that a byte-identical result is no longer guaranteed.
+
+It never writes `.meta` files either. Unity generates those on import and
+`Editor/StanceSpriteImporter.cs` sets the importer settings a stance PNG
+needs; a tool copying a `.meta` alongside a regenerated PNG is how a duplicated
+asset ends up with a duplicated GUID (measured, 2026-09-05 baseline, E1).
 
 ## Who owns the ground line
 
@@ -114,8 +152,11 @@ mismatch on disk silently.
 
 import argparse
 import collections
+import datetime
+import hashlib
 import json
 import os
+import platform
 import sys
 
 try:
@@ -529,6 +570,131 @@ def _assert_one_ground_line(actor_label, out_dir, written_names, verbose, max_sp
 
 
 # ---------------------------------------------------------------------------
+# Recipes -- the argv that made the art, beside the art
+# ---------------------------------------------------------------------------
+
+ART_ROOT = "Assets/_Project/Art"
+RECIPE_NAME = "recipe.json"
+
+
+def recipe_path(actor_arg):
+    """Beside the actor's own source material, by DELIVERED id.
+
+    The art folder and the content id can disagree -- the troll's sheet lives
+    in Art/Enemies/forest_troll/ and ships as `forest_warden` -- and the id is
+    the half everything else keys on, so it is the half this is filed under.
+    """
+    parts = actor_arg.replace("\\", "/").strip("/").split("/")
+    return os.path.join(ART_ROOT, parts[0], parts[1], RECIPE_NAME)
+
+
+def canonical_argv(args):
+    """The run, with every default made explicit.
+
+    EXPLICIT DEFAULTS ON PURPOSE. A recipe recording only what was typed would
+    change meaning the day a default changes -- silently, and only for the
+    actors sliced before the change. Writing them all out costs eight lines of
+    JSON and makes the file a description of the run rather than of the
+    keystrokes.
+    """
+    argv = [
+        "--sheet", args.sheet.replace("\\", "/"),
+        "--actor", args.actor,
+        "--stances", args.stances,
+        "--grid", args.grid,
+        "--key", args.key,
+        "--anchor", args.anchor,
+        "--delivery-scale", repr(float(args.delivery_scale)),
+        "--pocket-max-area", str(args.pocket_max_area),
+        "--max-ground-spread", str(args.max_ground_spread),
+    ]
+    for nudge in args.nudge or []:
+        argv += ["--nudge", nudge]
+    if args.drop_far_components_px is not None:
+        argv += ["--drop-far-components-px", str(args.drop_far_components_px)]
+    if args.prune:
+        argv.append("--prune")
+    return argv
+
+
+def _sha256(path):
+    with open(path, "rb") as handle:
+        return hashlib.sha256(handle.read()).hexdigest()
+
+
+def _versions():
+    try:
+        import PIL
+        pillow = PIL.__version__
+    except Exception:  # pragma: no cover - a run without Pillow never gets here
+        pillow = "unknown"
+    return collections.OrderedDict([
+        ("python", platform.python_version()),
+        ("pillow", pillow),
+        ("numpy", np.__version__),
+    ])
+
+
+def write_recipe(args, ground_line, out_dir):
+    path = recipe_path(args.actor)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+
+    recipe = collections.OrderedDict()
+    recipe["_readme"] = (
+        "How this actor's stance stills were produced. Replay with "
+        "`python tools/slice_actor_sheet.py --recipe " + path.replace("\\", "/") + "`; "
+        "a replay that does not reproduce the committed PNGs byte for byte means the "
+        "tool, its libraries or the source sheet moved under it. The recipe describes "
+        "how the frames are MADE -- how they are used is content, in ContentData/."
+    )
+    recipe["tool"] = "tools/slice_actor_sheet.py"
+    recipe["toolSha256"] = _sha256(os.path.abspath(__file__))
+    recipe["sheet"] = args.sheet.replace("\\", "/")
+    recipe["argv"] = canonical_argv(args)
+    recipe["outputFolder"] = out_dir.replace("\\", "/")
+    recipe["groundLine"] = ground_line
+    recipe["versions"] = _versions()
+    recipe["generatedAt"] = datetime.datetime.now().astimezone().replace(microsecond=0).isoformat()
+
+    with open(path, "w", encoding="utf-8", newline="\n") as handle:
+        handle.write(json.dumps(recipe, indent=2, ensure_ascii=False) + "\n")
+    print(f"  recipe: {path}")
+    return path
+
+
+def load_recipe(path):
+    """Returns (argv, recipe). Refuses a recipe whose source sheet is gone."""
+    if not os.path.isfile(path):
+        sys.exit(f"No recipe at {path}")
+
+    try:
+        with open(path, encoding="utf-8") as handle:
+            recipe = json.load(handle)
+    except ValueError as problem:
+        sys.exit(f"cannot read recipe {path}: {problem}")
+
+    argv = recipe.get("argv")
+    if not argv:
+        sys.exit(f"{path} has no argv -- there is nothing to replay.")
+
+    sheet = recipe.get("sheet", "")
+    if not os.path.isfile(sheet):
+        sys.exit(
+            f"{path} was cut from '{sheet}', and that file is not there. "
+            "A recipe without its source sheet cannot be replayed -- recover the sheet "
+            "from git rather than slicing something else under the same id."
+        )
+
+    recorded = recipe.get("toolSha256")
+    if recorded and recorded != _sha256(os.path.abspath(__file__)):
+        print(f"  NOTE: {os.path.basename(path)} was written by a different version of this tool "
+              f"({recorded[:12]} vs {_sha256(os.path.abspath(__file__))[:12]}). "
+              "A byte-identical result is no longer guaranteed.")
+
+    return argv, recipe
+
+
+# ---------------------------------------------------------------------------
 # The ground line, handed over instead of read off a terminal
 # ---------------------------------------------------------------------------
 
@@ -804,14 +970,19 @@ def process(sheet_path, actor_arg, stances_arg, grid_arg, key_mode, anchor_mode,
     elif verbose:
         print(f"  (--out-root is not {DEFAULT_OUT_ROOT}; groundLine {ground_line} not recorded)")
 
-    return written
+    return written, ground_line, out_dir
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--sheet", required=True, help="Path to the Stage-1 design sheet")
-    ap.add_argument("--actor", required=True, help="'Enemies/<id>' or 'Characters/<id>'")
-    ap.add_argument("--stances", required=True,
+    ap.add_argument("--recipe", default=None, metavar="PATH",
+                    help="Replay a recipe.json this tool wrote. Every other argument comes from "
+                         "the file, so what runs is the invocation that produced the committed "
+                         "art rather than a reconstruction of it. Refuses if the source sheet "
+                         "named in the recipe is missing.")
+    ap.add_argument("--sheet", help="Path to the Stage-1 design sheet")
+    ap.add_argument("--actor", help="'Enemies/<id>' or 'Characters/<id>'")
+    ap.add_argument("--stances",
                     help="Comma-separated stance names, row-major, one per grid cell. "
                          "Use '-' to skip a cell.")
     ap.add_argument("--grid", default="3x2", help="COLSxROWS, default 3x2 (six cells)")
@@ -835,7 +1006,21 @@ def main():
     ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args()
 
-    process(
+    # A REPLAY IS THE RECORDED RUN, not a run that borrows some of it. Every
+    # argument is re-parsed out of the recipe, so nothing typed alongside
+    # --recipe can quietly change what the recipe claims to reproduce.
+    replaying = False
+    if args.recipe:
+        argv, _ = load_recipe(args.recipe)
+        print(f"[replay] {args.recipe}")
+        args = ap.parse_args(argv)
+        replaying = True
+
+    for required in ("sheet", "actor", "stances"):
+        if not getattr(args, required):
+            ap.error(f"--{required} is required (or give --recipe, which carries it)")
+
+    _, ground_line, out_dir = process(
         sheet_path=args.sheet,
         actor_arg=args.actor,
         stances_arg=args.stances,
@@ -851,6 +1036,16 @@ def main():
         prune=args.prune,
         verbose=not args.quiet,
     )
+
+    # Not on a replay (the argv it would write is the argv it just read, so the
+    # only change would be the timestamp -- a verification run that dirties the
+    # tree is one nobody runs twice), and not for art written to scratch.
+    if replaying:
+        print("  recipe: unchanged (this was a replay)")
+    elif os.path.normpath(args.out_root) == os.path.normpath(DEFAULT_OUT_ROOT):
+        write_recipe(args, ground_line, out_dir)
+    else:
+        print(f"  (--out-root is not {DEFAULT_OUT_ROOT}; no recipe written)")
 
 
 if __name__ == "__main__":

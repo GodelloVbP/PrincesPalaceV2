@@ -1,0 +1,82 @@
+{
+  "_notes": [
+    "VERIFIED FOR EIGHT OF NINE FRAMES, measured 2026-09-06. Re-running this",
+    "regenerates f0-f4 and f6-f8 byte-identical; the committed f5 -- cell f3 at",
+    "1.08 scale, the held strike -- differs from what this recipe produces in 906",
+    "pixels of 262144, at full channel range rather than by rounding. Twice in a",
+    "row the tool produces the same bytes, so the drift is in the COMMITTED file:",
+    "it came from an older version of the tool or from a hand edit nobody",
+    "recorded. frost_flare composes the identical sequence and reproduces all",
+    "nine, so this is not a scaling path that has quietly changed under both.",
+    "",
+    "LEFT ALONE RATHER THAN CORRECTED. Overwriting f5 would change how a shipped",
+    "spell looks, which is an owner's call and not a side effect of writing this",
+    "file down. It is NOT in hand_assembled.json either -- that register refuses",
+    "an id wholesale, and eight ninths of this one is reproducible. Running",
+    "`slice_spell_sheet.py lightning_bolt` WILL rewrite f5; that is the thing to",
+    "know before doing it.",
+    "",
+    "THE SAME STRIKE RECIPE as frost_flare, and for the same reason: the two",
+    "sheets are the same drawing in different colours -- a gather, a bolt, a",
+    "ground burst, embers. Written out rather than shared, because a shared",
+    "constant would claim the two must always agree, and the moment one of them",
+    "is redrawn they will not."
+  ],
+  "sheet": "lightning_bolt.png",
+  "grid": [
+    2,
+    3
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3",
+    "f4",
+    "f5"
+  ],
+  "keyed": true,
+  "base_align": false,
+  "content_crop": false,
+  "sequence": [
+    {
+      "from": "f0",
+      "scale": [
+        0.88,
+        0.88
+      ]
+    },
+    {
+      "from": "f0"
+    },
+    {
+      "from": "f1"
+    },
+    {
+      "from": "f2"
+    },
+    {
+      "from": "f3"
+    },
+    {
+      "from": "f3",
+      "scale": [
+        1.08,
+        1.08
+      ]
+    },
+    {
+      "from": "f4"
+    },
+    {
+      "from": "f5"
+    },
+    {
+      "from": "f5",
+      "scale": [
+        1.06,
+        1.06
+      ]
+    }
+  ]
+}

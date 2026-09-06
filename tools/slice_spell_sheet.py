@@ -28,6 +28,26 @@ Two things it does do:
    that spans essentially the entire image is never art, so it is removed
    before keying.
 
+## Who owns what
+
+**The recipe describes how the frames are PRODUCED. The skill's `vfx` block
+describes how they PLAY.**
+
+A recipe (`Assets/_Project/Art/Sheets/recipes/<id>.json`) says which sheet,
+which grid, which cells and how they compose into a sequence. `skills.json`
+says how long that sequence takes, which frame the blow lands on, where it is
+anchored, how big it is drawn. The two never have to agree, and a skill may
+override a recipe's intent deliberately: two skills can point at one frame
+folder with different timing and both be right (`mud_burst` and
+`bog_mud_burst` share `Spells/mud_burst` today). The ONE thing that has to
+hold is arithmetic -- a skill cannot land its impact on a frame the folder
+does not have -- and that is all `SpellVfxRecipeDriftTests` checks.
+
+So `--new` writes the recipe and PRINTS the `skills.json` block. Pasting the
+second by hand is accepted friction: it is content, its numbers are
+judgements, and a tool that edited it would turn a review of five lines into
+a review of a diff nobody asked for.
+
 Usage:
     python tools/slice_spell_sheet.py                 # every entry in VFX
     python tools/slice_spell_sheet.py frost_flare     # one entry
@@ -36,6 +56,7 @@ Usage:
 """
 
 import argparse
+import collections
 import json
 import math
 import os
@@ -49,205 +70,74 @@ except ImportError:
 SOURCE_DIR = "Assets/_Project/Art/Sheets"
 OUTPUT_ROOT = "Assets/_Project/Resources/Spells"
 
-# Which sheet each shipped VFX came from, and how it was cut.
+# WHICH SHEET EACH SHIPPED VFX CAME FROM, AND HOW IT WAS CUT -- one file per
+# id under Assets/_Project/Art/Sheets/recipes/, loaded here into the same dict
+# shape the rest of this file has always read.
 #
-# Before this existed the answer lived only in shell history: every
-# parameter, including the frame names, came from argv. Both entries below
-# are verified -- re-running them regenerates the committed PNGs
-# BYTE-IDENTICAL, which is the proof the recipe is the real one rather than
-# a plausible-looking guess.
-VFX = {
-    "frost_flare": {
-        "sheet": "frost_flare.png",
-        "grid": (2, 3),
-        "names": ["f0", "f1", "f2", "f3", "f4", "f5"],
+# Before any of this the answer lived only in shell history: every parameter,
+# including the frame names, came from argv. It then lived in a dict in this
+# file, which was the same fix the hand-assembled register needed and got --
+# a record only the tool can read is invisible to the C# suite, which runs
+# against a headless copy mirroring Assets and nothing else. These are under
+# Assets for exactly that reason, and SpellVfxRecipeDriftTests reads them.
+#
+# THE RECIPE DESCRIBES HOW FRAMES ARE PRODUCED. THE SKILL'S vfx BLOCK
+# DESCRIBES HOW THEY PLAY. A recipe says which sheet, which grid, which cells
+# and how they are composed into a sequence; skills.json says how long that
+# sequence takes, which frame the blow lands on, where it is anchored and how
+# big it is drawn. Two skills may point at one frame folder with different
+# timing and both be right (mud_burst and bog_mud_burst share Spells/mud_burst
+# today), so a skill NEVER has to match a recipe's defaults -- it may override
+# them deliberately. The only thing that must agree is arithmetic: a skill
+# cannot land its impact on a frame the folder does not have.
+#
+# Every entry here is VERIFIED unless its own _notes say otherwise: re-running
+# it regenerates the committed PNGs byte-identical, which is the proof the
+# recipe is the real one rather than a plausible-looking guess.
+RECIPE_DIR = os.path.join(SOURCE_DIR, "recipes")
 
-        # A STRIKE, NOT A SWIRL, so the recipe is a different shape from
-        # mud_burst's. There is nothing to spin: the sequence is a gathering,
-        # a bolt coming down, the ground taking it, and embers. What it wants
-        # is WEIGHT at the moment of contact and a wind-up that is more than
-        # one flicker.
-        #
-        #   the gather, twice and growing -- one frame of sparks is a
-        #     dropped frame rather than a warning;
-        #   the descent, unchanged, because a bolt is meant to be sudden;
-        #   the strike HELD, the second 8% larger, which is the whole trick:
-        #     a peak that lasts two frames and grows into the second reads as
-        #     a blow landing rather than as a frame going past;
-        #   the fade, unchanged.
-        #
-        # Nine frames out of six drawings. The dissolve in SpellVfxPlayer does
-        # the rest -- see its DissolveFraction.
-        "sequence": [
-            {"from": "f0", "scale": (0.88, 0.88)},
-            {"from": "f0"},
-            {"from": "f1"},
-            {"from": "f2"},
-            {"from": "f3"},
-            {"from": "f3", "scale": (1.08, 1.08)},
-            {"from": "f4"},
-            {"from": "f5"},
-            {"from": "f5", "scale": (1.06, 1.06)},
-        ],
-    },
-    "lightning_bolt": {
-        "sheet": "lightning_bolt.png",
-        "grid": (2, 3),
-        "names": ["f0", "f1", "f2", "f3", "f4", "f5"],
 
-        # THE SAME STRIKE RECIPE as frost_flare above, and for the same reason:
-        # the two sheets are the same drawing in different colours -- a gather,
-        # a bolt, a ground burst, embers. Written out rather than shared,
-        # because a shared constant would claim the two must always agree, and
-        # the moment one of them is redrawn they will not.
-        "sequence": [
-            {"from": "f0", "scale": (0.88, 0.88)},
-            {"from": "f0"},
-            {"from": "f1"},
-            {"from": "f2"},
-            {"from": "f3"},
-            {"from": "f3", "scale": (1.08, 1.08)},
-            {"from": "f4"},
-            {"from": "f5"},
-            {"from": "f5", "scale": (1.06, 1.06)},
-        ],
-    },
-    # DELIVERED WITH ITS OWN ALPHA, so this one is cut and nothing else --
-    # see the `keyed` flag below.
-    #
-    # It is also the sheet that proves the luminance key is not universal.
-    # Mud is dark: a brown splat against black differs from the background by
-    # very little luminance, so keying it would hand most of the effect an
-    # alpha in the twenties and the spell would play as a stain. Every sheet
-    # keyed before this one was a bright effect on black, where luminance and
-    # coverage happen to agree.
-    #
-    # NOTE THE ID IS NOT THE FILENAME. The spell is mud_burst; the sheet
-    # arrived as mud_blast.png. The id is what skills.json and the enemy
-    # table reference, so it is the id that has to be right.
-    "mud_burst": {
-        "sheet": "mud_blast.png",
-        "grid": (2, 3),
-        "names": ["f0", "f1", "f2", "f3", "f4", "f5"],
-        "keyed": False,
+def _load_recipes():
+    """Every recipe file, as {id: spec}. A recipe that will not parse is fatal
+    rather than skipped: a tool that writes frames and cannot read how the
+    other frames were made is not in a state to run.
+    """
+    recipes = {}
+    if not os.path.isdir(RECIPE_DIR):
+        return recipes
 
-        # A FAST CHARGE, THEN A THROW. Six cells become twenty-six frames.
-        #
-        # The first cut gave the spin eight frames of fourteen -- over half the
-        # spell -- so the glyph turned lazily and the burst was over before it
-        # registered. The frame rate is uniform (SpellVfxPlayer divides
-        # vfxSeconds by the count), so the only way to make one phase quick and
-        # another slow is to give the slow one MORE SLOTS. That is what the
-        # holds below are for: the spin keeps its eight frames and the tail
-        # grows to eighteen, so the same eight turns now occupy 8/26 of the
-        # runtime instead of 8/14.
-        #
-        # Eight turns of 45 degrees, growing 12%, about the glyph's own centre
-        # -- measured off f0 at (140, 240) of a 512 square, because the right
-        # two thirds of every cell is reserved for the beam it fires. Then the
-        # lance twice, the impact held four times and growing, and a spray and
-        # debris held five each so the burst has weight rather than flicking
-        # past.
-        "sequence": [
-            {"from": "f0", "spin": 8, "pivot": (140, 240), "mask": 150, "scale": (1.0, 1.12)},
-            {"from": "f1", "hold": 2},
-            {"from": "f2", "hold": 2},
-            {"from": "f3", "hold": 4, "scale": (1.0, 1.08)},
-            {"from": "f4", "hold": 5, "scale": (1.0, 1.05)},
-            {"from": "f5", "hold": 5, "scale": (1.0, 1.04)},
-        ],
-    },
+    for name in sorted(os.listdir(RECIPE_DIR)):
+        if not name.endswith(".json"):
+            continue
+        path = os.path.join(RECIPE_DIR, name)
+        try:
+            with open(path, encoding="utf-8") as handle:
+                spec = json.load(handle)
+        except (OSError, ValueError) as problem:
+            sys.exit(f"cannot read recipe {path}: {problem}")
 
-    # ---- Cinderfault: two sheets, one timeline ------------------------------
-    #
-    # The spell is a shared ground fault plus one eruption per living enemy, and
-    # the two have to peak on the SAME frame index or the damage lands on one of
-    # them and not the other. Both recipes below therefore compose NINE frames
-    # with their peak at index 4 -- 1-based frame 5, which is the single
-    # impactFrame skills.json authors for both layers. A change to either
-    # sequence's length is a change to the other's; CinderfaultSpellTests pins
-    # the pair.
-    "cinderfault_ground": {
-        "sheet": "Spells/cinderfault_ground/cinderfault_ground_6frame_sheet.png",
-        "grid": (2, 3),
-        "names": ["f0", "f1", "f2", "f3", "f4", "f5"],
+        spec["grid"] = tuple(spec["grid"])
+        recipes[name[:-5]] = spec
 
-        # AUTHORED ALPHA, and keying it would be actively wrong here rather
-        # than merely unnecessary: the fault is black basalt with molten seams
-        # through it, so luminance and coverage disagree by the whole width of
-        # the drawing. Keyed, the rock would vanish and leave the lava floating.
-        "keyed": False,
+    return recipes
 
-        # THE SHEET IS DRAWN ON TWO DIFFERENT FLOORS. Measured, cell by cell,
-        # the lowest substantially-opaque row runs 441 / 458 / 458 across the
-        # top row and 294 / 290 / 285 across the bottom one -- so at the exact
-        # moment the fault ruptures it also jumps 164px (a third of the cell)
-        # up the screen. That is a delivery inconsistency, not animation: a
-        # crack in the floor does not change where the floor is. See base_align.
-        "base_align": True,
 
-        # EVERY 512x512 CELL HOLDS A WIDE, SHORT CRACK, and GroundBoxFor's
-        # fallback aspect is the sprite's OWN canvas -- so an uncropped square
-        # canvas asked for a square box. Spanning a three-enemy formation that
-        # box came out roughly 670 units on a side, half of it above the
-        # crack's own content, which read as the fault erupting around the
-        # enemies' shoulders instead of at their feet (photographed,
-        # tools/screenshots/runtime/cinderfault/unlabelled/f6.png and f10.png,
-        # 2026-09-05). See crop_to_shared_content's own header for the fix and
-        # why it is a crop rather than a GroundBoxFor change.
-        "content_crop": True,
+def write_recipe(vfx_id, spec):
+    """Record a recipe, in the same key order the migration wrote."""
+    os.makedirs(RECIPE_DIR, exist_ok=True)
+    ordered = collections.OrderedDict()
+    for key in ("_notes", "sheet", "grid", "names", "keyed", "base_align", "content_crop", "sequence"):
+        if key in spec:
+            value = spec[key]
+            ordered[key] = list(value) if isinstance(value, tuple) else value
 
-        # A GATHERING, A RUPTURE, A COOLING. Nine frames from six drawings.
-        #
-        # The rupture is HELD for two and grows 5% into the second, the same
-        # trick frost_flare's strike uses and for the same reason: a peak that
-        # lasts one frame reads as a dropped frame rather than as the ground
-        # opening. Grown about the fault's own ground line (256, 458) rather
-        # than the cell's centre, so it spreads where it stands instead of
-        # sliding down the screen as it swells.
-        "sequence": [
-            {"from": "f0", "scale": (0.92, 0.92), "pivot": (256, 458)},
-            {"from": "f0"},
-            {"from": "f1"},
-            {"from": "f2"},
-            {"from": "f3", "hold": 2, "scale": (1.0, 1.05), "pivot": (256, 458)},
-            {"from": "f4"},
-            {"from": "f5"},
-            {"from": "f5", "scale": (0.98, 0.98), "pivot": (256, 458)},
-        ],
-    },
-    "cinderfault_eruption": {
-        "sheet": "Spells/cinderfault_eruption/cinderfault_eruption_6frame_sheet.png",
-        "grid": (2, 3),
-        "names": ["f0", "f1", "f2", "f3", "f4", "f5"],
-        "keyed": False,
+    path = os.path.join(RECIPE_DIR, vfx_id + ".json")
+    with open(path, "w", encoding="utf-8", newline="\n") as handle:
+        handle.write(json.dumps(ordered, indent=2, ensure_ascii=False) + "\n")
+    return path
 
-        # NO base_align, and that is a measurement rather than an omission: this
-        # sheet's six cells already sit on 446 / 446 / 446 / 446 / 445 / 445, so
-        # the pass would shift five of them by a pixel and the sixth by nothing.
-        # Declared absent so the difference from the ground sheet is legible.
 
-        # THE PEAK IS DRAWING 3, not 4 -- cell f2 carries 17.5% coverage against
-        # f3's 14.0% and reaches 149px up the cell against f3's 186. So the
-        # anticipation gets FOUR slots and the peak lands on index 4, which is
-        # where the ground sheet's rupture lands. Trimming the anticipation
-        # instead would have been the other way to satisfy the timing contract,
-        # and it throws away the two drawings that make the eruption read as
-        # coming out of the ground rather than appearing on top of it.
-        #
-        # Grown about (256, 446) -- its own base -- so the shards rise instead
-        # of the whole burst inflating around its middle.
-        "sequence": [
-            {"from": "f0", "scale": (0.85, 0.85), "pivot": (256, 446)},
-            {"from": "f0"},
-            {"from": "f1", "hold": 2, "scale": (0.96, 1.0), "pivot": (256, 446)},
-            {"from": "f2", "hold": 2, "scale": (1.0, 1.06), "pivot": (256, 446)},
-            {"from": "f3"},
-            {"from": "f4"},
-            {"from": "f5"},
-        ],
-    },
-}
+VFX = _load_recipes()
 
 # VFX that exist on disk but that this tool did NOT produce and cannot
 # reproduce. Recorded rather than omitted: "we don't know" is worth
@@ -1022,30 +912,44 @@ def peak_frame(frames):
     return at
 
 
-def scaffold(vfx_id, sheet, rows, cols, frames):
-    names = ", ".join(f'"f{i}"' for i in range(rows * cols))
+def scaffold(vfx_id, sheet, rows, cols, frames, keyed):
     impact = peak_frame(frames)
+
+    # ONE BLOCK IS WRITTEN, THE OTHER IS PRINTED, and the split is ownership.
+    # The recipe is a description of what this tool just did -- it has no
+    # judgement in it and nobody should be retyping it. The skills.json block
+    # is content a person owns: how long the beat runs, which frame the blow
+    # lands on, where it is anchored. A tool that reached into skills.json
+    # would turn a review of five lines into a review of a diff nobody asked
+    # for, and the numbers below are guesses anyway.
+    written = write_recipe(vfx_id, {
+        "_notes": [
+            "SCAFFOLDED, NOT YET TUNED. Everything below is what the tool did; nothing",
+            "in it is a judgement yet. Say WHY here -- which drawing the peak is, what",
+            "the sequence is doing and why, whether the sheet's alpha was authored --",
+            "because the geometry is the part anybody could guess and the reasoning is",
+            "not. Verify it: delete the frames, re-run, and check the bytes come back.",
+        ],
+        "sheet": sheet,
+        "grid": [rows, cols],
+        "names": [f"f{i}" for i in range(rows * cols)],
+        "keyed": keyed,
+        "base_align": False,
+        "content_crop": False,
+    })
 
     print()
     print("-" * 72)
-    print(f"  {vfx_id}: {len(frames)} frames cut. Two blocks to paste, then tune.")
+    print(f"  {vfx_id}: {len(frames)} frames cut.")
     print("-" * 72)
     print()
-    print("  1. tools/slice_spell_sheet.py, in VFX:")
+    print(f"  1. Recipe WRITTEN to {written}. Add the reasoning to its _notes;")
+    print('     set "keyed" false if the sheet already carries the alpha the artist')
+    print('     intended, and add a "sequence" to compose frames out of the cells')
+    print("     (spin, hold, scale). Left out, the cells ARE the frames one for one.")
     print()
-    print(f'    "{vfx_id}": {{')
-    print(f'        "sheet": "{sheet}",')
-    print(f'        "grid": ({rows}, {cols}),')
-    print(f'        "names": [{names}],')
-    print('        # keyed=False if the sheet already carries the alpha the artist')
-    print('        # intended; leave it out for RGB-on-black that needs the key.')
-    print('        #')
-    print('        # "sequence" composes frames from these cells -- spin, hold and')
-    print('        # scale. Left out, the cells ARE the frames one for one, which')
-    print('        # is what every sheet shipped as before mud_blast.')
-    print("    },")
-    print()
-    print("  2. Assets/_Project/ContentData/skills.json, on the skill that casts it:")
+    print("  2. Assets/_Project/ContentData/skills.json, on the skill that casts it")
+    print("     -- STILL BY HAND, because this is content and the numbers are yours:")
     print()
     print('      "vfx": {')
     print(f'        "path": "Spells/{vfx_id}",')
@@ -1110,7 +1014,7 @@ def main():
         frames = slice_sheet(os.path.join(SOURCE_DIR, args.sheet), out_dir,
                              args.rows, args.cols, names, keyed=args.keyed, preview=True,
                              vfx_id=vfx_id)
-        scaffold(vfx_id, args.sheet, args.rows, args.cols, frames)
+        scaffold(vfx_id, args.sheet, args.rows, args.cols, frames, args.keyed)
         return
 
     if args.sheet:

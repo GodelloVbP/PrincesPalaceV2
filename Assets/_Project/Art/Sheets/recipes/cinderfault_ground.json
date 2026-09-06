@@ -1,0 +1,107 @@
+{
+  "_notes": [
+    "CINDERFAULT IS TWO SHEETS ON ONE TIMELINE. The spell is a shared ground",
+    "fault plus one eruption per living enemy, and the two have to peak on the",
+    "SAME frame index or the damage lands on one of them and not the other. This",
+    "recipe and cinderfault_eruption.json therefore both compose NINE frames with",
+    "their peak at index 4 -- 1-based frame 5, which is the single impactFrame",
+    "skills.json authors for both layers. A change to either sequence's length is",
+    "a change to the other's; CinderfaultSpellTests pins the pair.",
+    "",
+    "AUTHORED ALPHA, and keying it would be actively wrong here rather than",
+    "merely unnecessary: the fault is black basalt with molten seams through it,",
+    "so luminance and coverage disagree by the whole width of the drawing. Keyed,",
+    "the rock would vanish and leave the lava floating.",
+    "",
+    "THE SHEET IS DRAWN ON TWO DIFFERENT FLOORS. Measured, cell by cell, the",
+    "lowest substantially-opaque row runs 441 / 458 / 458 across the top row and",
+    "294 / 290 / 285 across the bottom one -- so at the exact moment the fault",
+    "ruptures it also jumps 164px (a third of the cell) up the screen. That is a",
+    "delivery inconsistency, not animation: a crack in the floor does not change",
+    "where the floor is. See base_align.",
+    "",
+    "EVERY 512x512 CELL HOLDS A WIDE, SHORT CRACK, and GroundBoxFor's fallback",
+    "aspect is the sprite's OWN canvas -- so an uncropped square canvas asked for",
+    "a square box. Spanning a three-enemy formation that box came out roughly 670",
+    "units on a side, half of it above the crack's own content, which read as the",
+    "fault erupting around the enemies' shoulders instead of at their feet",
+    "(photographed, tools/screenshots/runtime/cinderfault/unlabelled/f6.png and",
+    "f10.png, 2026-09-05). See crop_to_shared_content's own header for the fix",
+    "and why it is a crop rather than a GroundBoxFor change.",
+    "",
+    "A GATHERING, A RUPTURE, A COOLING. Nine frames from six drawings. The",
+    "rupture is HELD for two and grows 5% into the second, the same trick",
+    "frost_flare's strike uses and for the same reason: a peak that lasts one",
+    "frame reads as a dropped frame rather than as the ground opening. Grown",
+    "about the fault's own ground line (256, 458) rather than the cell's centre,",
+    "so it spreads where it stands instead of sliding down the screen as it",
+    "swells."
+  ],
+  "sheet": "Spells/cinderfault_ground/cinderfault_ground_6frame_sheet.png",
+  "grid": [
+    2,
+    3
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3",
+    "f4",
+    "f5"
+  ],
+  "keyed": false,
+  "base_align": true,
+  "content_crop": true,
+  "sequence": [
+    {
+      "from": "f0",
+      "scale": [
+        0.92,
+        0.92
+      ],
+      "pivot": [
+        256,
+        458
+      ]
+    },
+    {
+      "from": "f0"
+    },
+    {
+      "from": "f1"
+    },
+    {
+      "from": "f2"
+    },
+    {
+      "from": "f3",
+      "hold": 2,
+      "scale": [
+        1.0,
+        1.05
+      ],
+      "pivot": [
+        256,
+        458
+      ]
+    },
+    {
+      "from": "f4"
+    },
+    {
+      "from": "f5"
+    },
+    {
+      "from": "f5",
+      "scale": [
+        0.98,
+        0.98
+      ],
+      "pivot": [
+        256,
+        458
+      ]
+    }
+  ]
+}

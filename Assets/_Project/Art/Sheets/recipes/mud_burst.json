@@ -1,0 +1,96 @@
+{
+  "_notes": [
+    "DELIVERED WITH ITS OWN ALPHA, so this one is cut and nothing else -- see",
+    "the keyed flag.",
+    "",
+    "It is also the sheet that proves the luminance key is not universal. Mud is",
+    "dark: a brown splat against black differs from the background by very little",
+    "luminance, so keying it would hand most of the effect an alpha in the",
+    "twenties and the spell would play as a stain. Every sheet keyed before this",
+    "one was a bright effect on black, where luminance and coverage happen to",
+    "agree.",
+    "",
+    "NOTE THE ID IS NOT THE FILENAME. The spell is mud_burst; the sheet arrived",
+    "as mud_blast.png. The id is what skills.json and the enemy table reference,",
+    "so it is the id that has to be right.",
+    "",
+    "A FAST CHARGE, THEN A THROW. Six cells become twenty-six frames.",
+    "",
+    "The first cut gave the spin eight frames of fourteen -- over half the spell",
+    "-- so the glyph turned lazily and the burst was over before it registered.",
+    "The frame rate is uniform (SpellVfxPlayer divides vfxSeconds by the count),",
+    "so the only way to make one phase quick and another slow is to give the slow",
+    "one MORE SLOTS. That is what the holds are for: the spin keeps its eight",
+    "frames and the tail grows to eighteen, so the same eight turns now occupy",
+    "8/26 of the runtime instead of 8/14.",
+    "",
+    "Eight turns of 45 degrees, growing 12%, about the glyph's own centre --",
+    "measured off f0 at (140, 240) of a 512 square, because the right two thirds",
+    "of every cell is reserved for the beam it fires. Then the lance twice, the",
+    "impact held four times and growing, and a spray and debris held five each so",
+    "the burst has weight rather than flicking past."
+  ],
+  "sheet": "mud_blast.png",
+  "grid": [
+    2,
+    3
+  ],
+  "names": [
+    "f0",
+    "f1",
+    "f2",
+    "f3",
+    "f4",
+    "f5"
+  ],
+  "keyed": false,
+  "base_align": false,
+  "content_crop": false,
+  "sequence": [
+    {
+      "from": "f0",
+      "spin": 8,
+      "pivot": [
+        140,
+        240
+      ],
+      "mask": 150,
+      "scale": [
+        1.0,
+        1.12
+      ]
+    },
+    {
+      "from": "f1",
+      "hold": 2
+    },
+    {
+      "from": "f2",
+      "hold": 2
+    },
+    {
+      "from": "f3",
+      "hold": 4,
+      "scale": [
+        1.0,
+        1.08
+      ]
+    },
+    {
+      "from": "f4",
+      "hold": 5,
+      "scale": [
+        1.0,
+        1.05
+      ]
+    },
+    {
+      "from": "f5",
+      "hold": 5,
+      "scale": [
+        1.0,
+        1.04
+      ]
+    }
+  ]
+}
