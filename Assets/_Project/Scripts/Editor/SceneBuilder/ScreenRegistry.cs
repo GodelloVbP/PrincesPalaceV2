@@ -826,10 +826,14 @@ public static class ScreenRegistry
         var controller = result.Attach<ExitsController>(exits.Root);
         UiAutoBind.Bind(result, controller, exits);
 
-        // The label is a CHILD of the button, which result.Tmp already looks
-        // down one level for -- so the same NodeRef serves both the click and
-        // the text swap, and there is no second handle to keep in step.
-        controller.exitLabels = exits.ExitButtons.Select(result.Tmp).ToArray();
+        // The label is a CHILD of the button, so the same NodeRef serves both
+        // the click and the text swap and there is no second handle to keep in
+        // step. `searchChildren: true` is what says so out loud: descending was
+        // the unconditional behaviour of every typed lookup until F9, which
+        // meant any of them could quietly return a component from a different
+        // object than the node named. Two sites want it; this is one.
+        controller.exitLabels = exits.ExitButtons
+            .Select(button => result.Tmp(button, searchChildren: true)).ToArray();
 
         controller.menu = menu;
 
@@ -973,9 +977,10 @@ public static class ScreenRegistry
             .ToArray();
 
         controller.offerRects = screen.OfferButtons.Select(result.Rect).ToArray();
-        // Require<T> looks one level down, which is where a button keeps its
-        // caption -- so the label needs no NodeRef of its own.
-        controller.rerollLabel = result.Tmp(screen.RerollButton);
+        // A button keeps its caption on a generated child, so the label needs
+        // no NodeRef of its own -- but the descent is opted into rather than
+        // assumed. See ExitsController's exitLabels, the other of the two.
+        controller.rerollLabel = result.Tmp(screen.RerollButton, searchChildren: true);
 
         return controller;
     }

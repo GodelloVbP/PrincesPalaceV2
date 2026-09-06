@@ -1,0 +1,79 @@
+using NUnit.Framework;
+using PrincesPalace.Domain.UiKit;
+
+namespace PrincesPalace.Domain.Tests
+{
+    // What a wrong binding SAYS, pinned where it can be read without a scene.
+    //
+    // The message is the whole deliverable of the binding audit. A build-time
+    // check that refuses correctly and reports "1 problem" costs its reader
+    // the same hunt the check was built to remove -- which controller, which
+    // field, what it should have been, what it was. So the four facts are the
+    // thing under test, by content and not by shape: each assertion below
+    // names a fact, so dropping one fails on that fact rather than on a
+    // formatting change.
+    //
+    // The comparison itself lives in Editor's UiBindingAudit, because "is
+    // this the same GameObject" needs an engine. This file covers the half
+    // that can be reached from here; the audit's own half is proved by
+    // deliberately mis-binding a real screen and reading the build's refusal.
+    public class UiBindingContractTests
+    {
+        private const string Controller = "MapController";
+        private const string Field = "floorLabel";
+        private const string Expected = "FloorLabel";
+        private const string Actual = "SeedLabel";
+
+        [Test]
+        public void AWrongNodeNamesTheControllerTheFieldTheExpectedNodeAndTheActualOne()
+        {
+            string message = UiBindingContract.WrongNode(
+                Controller, Field, Expected, Actual, UiBindingContract.Source.AutoBound);
+
+            StringAssert.Contains(Controller, message);
+            StringAssert.Contains(Field, message);
+            StringAssert.Contains(Expected, message);
+            StringAssert.Contains(Actual, message);
+        }
+
+        // The fix differs by route -- an auto-bound field that landed wrong
+        // means the name rule matched something unintended, an explicit one
+        // means the Wire line names the wrong NodeRef -- so a reader must be
+        // able to tell them apart without opening ScreenRegistry.
+        [Test]
+        public void TheTwoRoutesReadDifferently()
+        {
+            string auto = UiBindingContract.WrongNode(
+                Controller, Field, Expected, Actual, UiBindingContract.Source.AutoBound);
+            string explicitLine = UiBindingContract.WrongNode(
+                Controller, Field, Expected, Actual, UiBindingContract.Source.Explicit);
+
+            Assert.AreNotEqual(auto, explicitLine);
+            StringAssert.Contains("auto-bound", auto);
+            StringAssert.Contains("explicit", explicitLine);
+        }
+
+        // A component from outside the emitted tree is a different fault from
+        // a wrong node, and saying "wrong node" about it would send the
+        // reader looking for a node that does not exist.
+        [Test]
+        public void AComponentFromOutsideTheScreenSaysSoRatherThanNamingANode()
+        {
+            string message = UiBindingContract.NotFromThisScreen(Controller, Field, Actual);
+
+            StringAssert.Contains(Controller, message);
+            StringAssert.Contains(Field, message);
+            StringAssert.Contains(Actual, message);
+            StringAssert.Contains("never emitted", message);
+        }
+
+        [Test]
+        public void TheHeaderNamesTheScreenAndHowManyFieldsAreWrong()
+        {
+            string header = UiBindingContract.Header("Map", 3);
+
+            StringAssert.Contains("Map", header);
+            StringAssert.Contains("3", header);
+        }
+    }
+}

@@ -108,12 +108,18 @@ public static partial class SceneBuilder
 
             screen.Wire?.Invoke(result);
 
-            // E1, E4 and E3: measured text, declared-vs-bound counts, and
-            // non-null wiring. All run per screen, so a failure names the screen
+            // E1, E4, E3 and F9: measured text, declared-vs-bound counts,
+            // non-null wiring, and each reference pointing at the node it was
+            // supposed to. All run per screen, so a failure names the screen
             // rather than the build.
+            //
+            // The binding audit runs LAST of the four, after the sweep, so a
+            // field nobody filled is reported as null once by the sweep rather
+            // than twice -- as null there and as "not from this screen" here.
             UiTextFitAudit.Run(screen.PanelName, tree, result);
             UiCountAudit.Run(screen.PanelName, screen.CountBindings?.Invoke());
             UiWiringSweep.Run(screen.PanelName, result);
+            UiBindingAudit.Run(screen.PanelName, result);
         }
 
         EditorSceneManager.SaveScene(scene, scenePath);

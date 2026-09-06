@@ -37,13 +37,16 @@ public static class UiAutoBind
     private const BindingFlags DeclaredInstanceFields =
         BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
 
-    // Returns the field names it bound, in walk order. Nothing in the build
-    // consumes that today; it is what a caller would assert on, and it makes a
-    // binder that quietly matched nothing visible to a test rather than only to
-    // the sweep's failure message.
-    public static List<string> Bind(UiEmitResult result, Component controller, object screen)
+    // Returns what it bound, in walk order: the field, and the NODE the name
+    // rule chose for it. The node is the half that matters -- a list of field
+    // NAMES only ever supported "how many did it fill", which is a measure of
+    // effort and not of correctness, and would pass for a screen whose every
+    // field landed on the wrong object. Recorded onto the result as well, so
+    // UiBindingAudit can check each one against the node it was supposed to
+    // reach without SceneBuilder having to be handed the screen.
+    public static List<UiEmitResult.AutoBound> Bind(UiEmitResult result, Component controller, object screen)
     {
-        var bound = new List<string>();
+        var bound = new List<UiEmitResult.AutoBound>();
         if (result == null || controller == null || screen == null) return bound;
 
         var screenType = screen.GetType();
@@ -77,16 +80,34 @@ public static class UiAutoBind
 
                 if (values == null) continue;
                 field.SetValue(controller, values);
+
+                for (int i = 0; i < refs.Count; i++)
+                {
+                    bound.Add(new UiEmitResult.AutoBound
+                    {
+                        Controller = controller,
+                        FieldName = field.Name,
+                        Index = i,
+                        Node = refs[i].Node,
+                    });
+                }
             }
             else
             {
                 if (!(declared is NodeRef reference) || !reference.IsValid) continue;
                 field.SetValue(controller, Lookup(result, elementType, reference));
-            }
 
-            bound.Add(field.Name);
+                bound.Add(new UiEmitResult.AutoBound
+                {
+                    Controller = controller,
+                    FieldName = field.Name,
+                    Index = -1,
+                    Node = reference.Node,
+                });
+            }
         }
 
+        result.AutoBoundFields.AddRange(bound);
         return bound;
     }
 
