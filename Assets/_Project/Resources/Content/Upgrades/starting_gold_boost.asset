@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 53b7599c10f2f2a4a935fc681fe2a355, type: 3}
   m_Name: starting_gold_boost
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.UpgradeDefinition
-  id: starting_gold_boost
-  displayName: Starting Gold Boost
-  description: Begin each run with extra gold.
-  cost: 30
-  sortOrder: 1
-  startingGoldBonus: 50
+  data:
+    Id: starting_gold_boost
+    DisplayName: Starting Gold Boost
+    Description: Begin each run with extra gold.
+    Cost: 30
+    StartingGoldBonus: 50
+    SortOrder: 1

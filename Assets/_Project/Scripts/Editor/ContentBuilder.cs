@@ -250,12 +250,12 @@ public static class ContentBuilder
         return resolved;
     }
 
-    // Characters were the last content type still written as C# object
-    // initializers (Upgrades is the only one left), which meant the roster
-    // could not be touched without a recompile and its design rationale
-    // lived in code comments rather than beside the data. That prose moved
-    // to characters.json's _readme, where the person editing the numbers is
-    // actually looking.
+    // Characters were the second-to-last content type still written as C#
+    // object initializers, which meant the roster could not be touched without
+    // a recompile and its design rationale lived in code comments rather than
+    // beside the data. That prose moved to characters.json's _readme, where the
+    // person editing the numbers is actually looking. Upgrades were the last
+    // and went the same way; every type is a JSON file now.
     private static void BuildCharacters() =>
         Build<RawCharacterEntry, ResolvedCharacter, CharacterDefinition>(
             "BuildCharacters", "Assets/_Project/ContentData/characters.json", CharactersPath, "characters",
@@ -308,23 +308,20 @@ public static class ContentBuilder
         .Select(achievement => achievement.Id)
         .ToList();
 
-    private static void BuildUpgrades()
-    {
-        CreateUpgrade("extra_recruit_slot", "Extra Recruit Slot", "Bring an additional character on every run.", 50, 0);
-        CreateUpgrade("starting_gold_boost", "Starting Gold Boost", "Begin each run with extra gold.", 30, 1, startingGoldBonus: 50);
-    }
-
-    private static void CreateUpgrade(string id, string displayName, string description, int cost, int sortOrder, int startingGoldBonus = 0)
-    {
-        var asset = ScriptableObject.CreateInstance<UpgradeDefinition>();
-        asset.id = id;
-        asset.displayName = displayName;
-        asset.description = description;
-        asset.cost = cost;
-        asset.sortOrder = sortOrder;
-        asset.startingGoldBonus = startingGoldBonus;
-        CreateContentAsset(asset, $"{UpgradesPath}/{id}.asset");
-    }
+    // The last content type written as C# object initialisers, and the reason
+    // it took until now is that it was small enough to keep getting away with
+    // it: two rows, six fields, no validation of any of them, and a sortOrder
+    // typed by hand as a positional argument next to a cost. Small is what made
+    // it the easiest one to leave -- and it still meant the Principality
+    // economy could not be touched without a recompile, and that nothing said
+    // why 50 and 30.
+    private static void BuildUpgrades() =>
+        Build<RawUpgradeEntry, ResolvedUpgrade, UpgradeDefinition>(
+            "BuildUpgrades", "Assets/_Project/ContentData/upgrades.json", UpgradesPath, "upgrades",
+            json => JsonUtility.FromJson<RawUpgradeFile>(json).upgrades,
+            UpgradeEntryResolver.TryResolveAll,
+            (asset, upgrade) => asset.data = upgrade,
+            upgrade => upgrade.Id);
 
     // Weakness/resistance pairs, chosen so every one of the 5 characters'
     // attackType (see BuildCharacters) has at least one enemy it's strong

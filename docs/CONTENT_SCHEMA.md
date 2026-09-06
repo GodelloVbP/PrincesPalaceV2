@@ -214,6 +214,16 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `grantsSkillId` | string | `""` | A skills.json id this talent adds to the owner's combat strip. |  |
 | `iconPath` | string | `""` | Editor-time path to this talent's archetype glyph; empty is a supported state, most talents share a small set of archetype icons. |  |
 
+## upgrades.json -- `RawUpgradeEntry`
+
+| Field | Type | Default | Description | Values |
+|---|---|---|---|---|
+| `id` | string | (none -- required) | Stable identifier; written into save data as a purchase, so never rename it after a save exists. |  |
+| `displayName` | string | (none -- required) | The name shown in the Principality shop. |  |
+| `description` | string | `""` | Flavor text shown under the name; empty is allowed but reads as an unfinished row. |  |
+| `cost` | int | `50` | Cost in Principality currency; must not be negative, and 0 means free rather than unbuyable. |  |
+| `startingGoldBonus` | int | `0` | In-run currency granted at the start of every run, if this upgrade grants that; 0 for upgrades that do not. |  |
+
 ## weapons.json -- `RawWeaponEntry`
 
 | Field | Type | Default | Description | Values |

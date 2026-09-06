@@ -40,6 +40,7 @@ namespace PrincesPalace.Domain.Content
             ("skills.json", typeof(RawSkillEntry)),
             ("spells.json", typeof(RawSpellTierEntry)),
             ("talents.json", typeof(RawTalentEntry)),
+            ("upgrades.json", typeof(RawUpgradeEntry)),
             ("weapons.json", typeof(RawWeaponEntry)),
         };
 

@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 53b7599c10f2f2a4a935fc681fe2a355, type: 3}
   m_Name: extra_recruit_slot
   m_EditorClassIdentifier: PrincesPalace.Core::PrincesPalace.Content.UpgradeDefinition
-  id: extra_recruit_slot
-  displayName: Extra Recruit Slot
-  description: Bring an additional character on every run.
-  cost: 50
-  sortOrder: 0
-  startingGoldBonus: 0
+  data:
+    Id: extra_recruit_slot
+    DisplayName: Extra Recruit Slot
+    Description: Bring an additional character on every run.
+    Cost: 50
+    StartingGoldBonus: 0
+    SortOrder: 0
