@@ -403,43 +403,13 @@ namespace PrincesPalace.Domain.Content
         // cross-field rule in this file. Stun's magnitude is unused by
         // StatusEffects itself but still has to be a real positive number
         // here, so an author who leaves it blank gets a clear error rather
-        // than a status that silently never lands.
+        // than a status that silently never lands. The rule itself lives in
+        // StatusAuthoring.TryResolve, shared with EnemyEntryResolver's own
+        // appliesStatus field — this is just the RawSkillEntry-shaped call.
         private static bool TryResolveStatus(RawSkillEntry raw, string label,
-            out StatusEffectType? appliesStatus, out int magnitude, out int duration, out string error)
-        {
-            appliesStatus = null;
-            magnitude = 0;
-            duration = 0;
-            error = null;
-
-            if (string.IsNullOrWhiteSpace(raw.appliesStatus))
-            {
-                return true;
-            }
-
-            if (!Enum.TryParse<StatusEffectType>(raw.appliesStatus.Trim(), ignoreCase: true, out var parsed))
-            {
-                error = $"{label}: appliesStatus '{raw.appliesStatus}' isn't valid. Valid options: {string.Join(", ", Enum.GetNames(typeof(StatusEffectType)))}.";
-                return false;
-            }
-
-            if (raw.statusMagnitude <= 0)
-            {
-                error = $"{label}: appliesStatus is set to {parsed}, so statusMagnitude is required and must be positive.";
-                return false;
-            }
-
-            if (raw.statusDuration <= 0)
-            {
-                error = $"{label}: appliesStatus is set to {parsed}, so statusDuration is required and must be positive.";
-                return false;
-            }
-
-            appliesStatus = parsed;
-            magnitude = raw.statusMagnitude;
-            duration = raw.statusDuration;
-            return true;
-        }
+            out StatusEffectType? appliesStatus, out int magnitude, out int duration, out string error) =>
+            StatusAuthoring.TryResolve(raw.appliesStatus, raw.statusMagnitude, raw.statusDuration, label,
+                out appliesStatus, out magnitude, out duration, out error);
 
 
         // Long enough to read as a spell rather than a flicker, short enough

@@ -287,46 +287,16 @@ namespace PrincesPalace.Domain.Content
         private const int DefaultVfxImpactFrame = 3;
 
         // appliesStatus is entirely optional, but once authored, magnitude
-        // and duration are both required — mirrors SkillEntryResolver's own
-        // TryResolveStatus exactly (see its comment); duplicated rather
-        // than shared because each resolver is deliberately self-contained
-        // and engine-free, and the two Raw types are unrelated classes.
+        // and duration are both required. Used to be a byte-for-byte copy of
+        // SkillEntryResolver's own TryResolveStatus, hand-duplicated rather
+        // than shared; now both resolvers call the one rule in
+        // StatusAuthoring.TryResolve, so a change to the rule can no longer
+        // leave one resolver silently on the old behaviour. This is just the
+        // RawEnemyEntry-shaped call.
         private static bool TryResolveStatus(RawEnemyEntry raw, string label,
-            out StatusEffectType? appliesStatus, out int magnitude, out int duration, out string error)
-        {
-            appliesStatus = null;
-            magnitude = 0;
-            duration = 0;
-            error = null;
-
-            if (string.IsNullOrWhiteSpace(raw.appliesStatus))
-            {
-                return true;
-            }
-
-            if (!Enum.TryParse<StatusEffectType>(raw.appliesStatus.Trim(), ignoreCase: true, out var parsed))
-            {
-                error = $"{label}: appliesStatus '{raw.appliesStatus}' isn't valid. Valid options: {string.Join(", ", Enum.GetNames(typeof(StatusEffectType)))}.";
-                return false;
-            }
-
-            if (raw.statusMagnitude <= 0)
-            {
-                error = $"{label}: appliesStatus is set to {parsed}, so statusMagnitude is required and must be positive.";
-                return false;
-            }
-
-            if (raw.statusDuration <= 0)
-            {
-                error = $"{label}: appliesStatus is set to {parsed}, so statusDuration is required and must be positive.";
-                return false;
-            }
-
-            appliesStatus = parsed;
-            magnitude = raw.statusMagnitude;
-            duration = raw.statusDuration;
-            return true;
-        }
+            out StatusEffectType? appliesStatus, out int magnitude, out int duration, out string error) =>
+            StatusAuthoring.TryResolve(raw.appliesStatus, raw.statusMagnitude, raw.statusDuration, label,
+                out appliesStatus, out magnitude, out duration, out error);
 
         // The keyword for "this monster genuinely has none", as against a blank
         // field meaning "I did not say". See RawEnemyEntry.weakness.
