@@ -663,20 +663,33 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // Bottom-right corner, pulled 1px inward so its own footprint
             // stays inside the 1px-rounded badge box rather than riding the
             // exact edge.
-            var counter = Ui.Label("Counter", UiString.Runtime, new UiVec(size * 0.5f, size * 0.4f),
-                counterFontSize, FightHudPalette.TextPrimary,
-                Place.Pin(new UiVec(1f, 0f), new UiVec(1f, 0f), new UiVec(-1f, 1f)));
+            var counterPin = Place.Pin(new UiVec(1f, 0f), new UiVec(1f, 0f), new UiVec(-1f, 1f));
 
-            // ONE BADGE, three layers -- same shape as the initiative badge's
+            // A SMALL DARK PATCH BEHIND THE DIGIT, same corner pin as Counter
+            // itself -- section 2's last-tick emphasis (PLAN_STATUS_EFFECT_UI.md
+            // section 3/9 Phase 3) needs somewhere to grow when a counter
+            // reaches 1, and a bare digit floating over the glyph's own art
+            // has no floor under it to grow at all. AsDecor: it must never
+            // steal the badge Button's own click/hover, which is how
+            // Core/HoverIndex.cs finds this badge in the first place.
+            var counterPatch = Ui.Solid("CounterPatch", "#0A0611CC", new UiVec(size * 0.34f, size * 0.34f),
+                    counterPin)
+                .AsDecor();
+
+            var counter = Ui.Label("Counter", UiString.Runtime, new UiVec(size * 0.5f, size * 0.4f),
+                counterFontSize, FightHudPalette.TextPrimary, counterPin);
+
+            // ONE BADGE, four layers -- same shape as the initiative badge's
             // ring/portrait/initial stack above: exempt from each other,
             // still checked against every other sibling.
-            Ui.Layered(glyph, code, counter);
+            Ui.Layered(glyph, code, counterPatch, counter);
 
             var badge = Ui.Button(name, UiString.Runtime, new UiVec(size, size), 1, Place.At(x, y))
                 .NoChrome()
                 .Inactive();
             badge.Children.Add(glyph);
             badge.Children.Add(code);
+            badge.Children.Add(counterPatch);
             badge.Children.Add(counter);
             return badge;
         }
@@ -1996,21 +2009,33 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // Only, 2 turns", and Beside's own reach (gap + half the badge +
         // half the tooltip) grows with this box, which is what pushed the
         // computed position far enough from the badge to read as
-        // unrelated. Height (130) is sized for the ONE case that actually
-        // needs several lines -- section 6's "+N" chip, whose tooltip lists
-        // every hidden entry one per line, up to five short lines at this
-        // font -- not for the common one-or-two-line case, which sits with
-        // room to spare inside the same box rather than getting its own
-        // smaller one (a size that changes with content is a second layout
-        // system Beside would have to re-solve per hover).
+        // unrelated.
+        //
+        // PHASE 3: HEIGHT NO LONGER BAKED FOR THE FIVE-LINE CASE. The build-
+        // time size only has to survive UiAudit, which solves this screen
+        // with no real hover text in hand -- so it is built at ONE LINE tall
+        // (StatusTooltipOneLineHeight) and Core/FightController.Hud.cs's
+        // FitStatusTooltipToBody grows it at runtime for section 6's "+N"
+        // chip (up to five lines, StatusTooltipMaxHeight -- the old fixed
+        // 130 the second capture actually needed). A build-time 130 sat as
+        // ~74px of empty violet under the common one-line case, which was
+        // this screen's own second capture defect -- see PlaceStatusTooltip's
+        // header for the first.
+        public const float StatusTooltipWidth = 300f;
+        public const float StatusTooltipPad = 10f;
+        public const float StatusTooltipOneLineHeight = 56f;
+        public const float StatusTooltipMaxHeight = 130f;
+
         private UiNode BuildStatusTooltip()
         {
-            var label = Ui.Label("StatusTooltipText", UiString.Runtime, new UiVec(280f, 110f), 13,
+            float labelW = StatusTooltipWidth - StatusTooltipPad * 2f;
+            float labelH = StatusTooltipOneLineHeight - StatusTooltipPad * 2f;
+            var label = Ui.Label("StatusTooltipText", UiString.Runtime, new UiVec(labelW, labelH), 13,
                 FightHudPalette.GoldText, Place.At(0f, 0f));
             StatusTooltipText = label;
 
             var panel = Ui.Tooltip("StatusTooltip", PanelViolet, null, Place.At(-330f, -60f),
-                UiSize.Fixed(300f, 130f), label);
+                UiSize.Fixed(StatusTooltipWidth, StatusTooltipOneLineHeight), label);
             StatusTooltip = panel;
             return panel;
         }

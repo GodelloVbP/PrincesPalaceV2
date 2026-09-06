@@ -105,7 +105,11 @@ namespace PrincesPalace.PlayModeTests
             // 5th tips it into the chip.
             var enemy0 = session.Encounter.Enemies[0];
             StatusEffects.Apply(enemy0.Statuses, StatusEffectType.Poison, 5, 3);
-            StatusEffects.Apply(enemy0.Statuses, StatusEffectType.Vulnerable, 25, 2);
+
+            // 1 TURN LEFT ON PURPOSE -- Phase 3's last-tick emphasis (section
+            // 2/9) only lights up at Counter == 1, and nothing else in this
+            // fixture ever counts down that far on its own.
+            StatusEffects.Apply(enemy0.Statuses, StatusEffectType.Vulnerable, 25, 1);
             session.ApplyChilledForTest(enemy0, 20, 2);
             StatusEffects.Apply(enemy0.Statuses, StatusEffectType.Rooted, 0, 2);
             StatusEffects.Apply(enemy0.Statuses, StatusEffectType.Marked, 0, Marks.MarkDurationTurns);

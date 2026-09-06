@@ -178,8 +178,8 @@ below the sentinel and `"until it is used"` at or above it.
 
 | Entry | Tooltip |
 |---|---|
-| Poison | `Poison -- N damage at your turn start, K turns` |
-| Regen | `Regen -- N healing at your turn start, K turns` |
+| Poison | `Poison -- N damage each turn start, K turns` |
+| Regen | `Regen -- N healing each turn start, K turns` |
 | Protect | `Protect -- N% less damage taken, K turns` |
 | Vulnerable | `Vulnerable -- N% more damage taken, K turns` |
 | Stun | `Stunned -- turn skipped, K turns` |

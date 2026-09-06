@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -9,6 +10,7 @@ using PrincesPalace.Domain.Rewards;
 using PrincesPalace.Domain.Stage;
 using PrincesPalace.Domain.Stats;
 using PrincesPalace.Domain.UiKit;
+using PrincesPalace.Domain.UiKit.Screens;
 
 namespace PrincesPalace
 {
@@ -669,6 +671,30 @@ namespace PrincesPalace
         // why TextSecondary is the token used.
         private static readonly Color ChipNeutral = Hex(FightHudPalette.TextSecondary);
 
+        // ---- last-tick emphasis (PLAN_STATUS_EFFECT_UI.md section 3/9 Phase 3) --
+        //
+        // STATIC, on purpose -- the plan asks for "a static emphasised counter
+        // patch at 1 remaining, no pulse". A badge whose own status is about
+        // to expire gets a brighter, bolder digit and a slightly bigger patch
+        // behind it; every other count keeps the ordinary TextPrimary digit
+        // this badge always drew, no separate "emphasised" palette needed for
+        // any other value.
+        private static readonly Color CounterDefault = Hex(FightHudPalette.TextPrimary);
+        private static readonly Color CounterEmphasis = Hex(FightHudPalette.HpBright);
+        private const float CounterPatchEmphasisScale = 1.3f;
+
+        // ---- the appearance pop (PLAN_STATUS_EFFECT_UI.md section 6/D7 lineage) --
+        //
+        // GameSettings (checked before adding this) carries no reduced-motion
+        // switch -- display and audio only. Rather than invent a setting
+        // nobody can reach from the Options screen yet, this is the literal
+        // "gate it behind a single const bool" the plan asks for instead:
+        // flip to false to turn the pop off project-wide with no other code
+        // touched. Restrained on purpose -- 150ms, one shrink, no bounce.
+        private const bool StatusBadgeAppearancePopEnabled = true;
+        private const float StatusBadgePopFromScale = 1.3f;
+        private const float StatusBadgePopSeconds = 0.15f;
+
         private static readonly List<FightHudModel.StatusRow> EmptyStatusRows =
             new List<FightHudModel.StatusRow>();
 
@@ -734,10 +760,27 @@ namespace PrincesPalace
             public Image Glyph;
             public TMPro.TMP_Text Code;
             public TMPro.TMP_Text Counter;
+            public Image CounterPatch;
         }
 
         private StatusBadgeParts[] _statusBadgeParts;
         private readonly string[] _statusBadgeTooltip = new string[TotalStatusBadges];
+
+        // Which CODES were actually painted onto each physical ROW last
+        // refresh, keyed by that row's own baseIndex (EnemyStatusBase +
+        // slot*5, RosterStatusBase + i*5, or PartyStatusBase -- one entry per
+        // holder, never per individual badge slot). A code appearing this
+        // refresh that was NOT in last refresh's set for the same row is what
+        // "a badge slot goes from inactive to active" (section 6/D7) means in
+        // practice: a status genuinely newly applied to that holder, not one
+        // that merely slid to a different slot because a higher-tier status
+        // sorted ahead of it this repaint.
+        private readonly Dictionary<int, HashSet<string>> _statusRowActiveCodes = new Dictionary<int, HashSet<string>>();
+
+        // One appearance-pop coroutine per physical badge SLOT (flat index),
+        // since the pop animates the slot's own RectTransform and two
+        // overlapping tweens on the same node would fight over its scale.
+        private readonly Dictionary<int, Coroutine> _statusBadgePopRoutines = new Dictionary<int, Coroutine>();
 
         // Which flat index currently owns the shared tooltip, or -1. Not
         // read by the paint routine at all -- only by OnHoverStatusBadge and
@@ -827,6 +870,9 @@ namespace PrincesPalace
 
             var counter = badge.transform.Find("Counter");
             if (counter != null) parts.Counter = counter.GetComponent<TMPro.TMP_Text>();
+
+            var counterPatch = badge.transform.Find("CounterPatch");
+            if (counterPatch != null) parts.CounterPatch = counterPatch.GetComponent<Image>();
 
             return parts;
         }
@@ -1012,6 +1058,14 @@ namespace PrincesPalace
 
             int overflowSlot = rows.Count > realCapacity ? slotCount - 1 : -1;
 
+            // The set this ROW showed as of last refresh -- see
+            // _statusRowActiveCodes' own header. Missing entirely on the
+            // first paint (a fresh WireAllStatusBadges), which is correct:
+            // every badge that row shows for the first time really is going
+            // from inactive to active.
+            _statusRowActiveCodes.TryGetValue(baseIndex, out var previousCodes);
+            var currentCodes = new HashSet<string>();
+
             for (int i = 0; i < slotCount; i++)
             {
                 int flat = baseIndex + i;
@@ -1022,19 +1076,27 @@ namespace PrincesPalace
 
                 if (i == overflowSlot)
                 {
+                    ResetBadgeMotion(flat, parts.Root);
                     PaintOverflowChip(parts, rows, overflowSlot, flat);
                     continue;
                 }
 
                 if (i >= rows.Count)
                 {
+                    ResetBadgeMotion(flat, parts.Root);
                     parts.Root.SetShown(false);
                     _statusBadgeTooltip[flat] = null;
                     continue;
                 }
 
-                PaintBadge(parts, rows[i], showCounter, flat);
+                var row = rows[i];
+                currentCodes.Add(row.Code);
+                bool popIn = StatusBadgeAppearancePopEnabled
+                    && (previousCodes == null || !previousCodes.Contains(row.Code));
+                PaintBadge(parts, row, showCounter, flat, popIn);
             }
+
+            _statusRowActiveCodes[baseIndex] = currentCodes;
         }
 
         // ONE PATH for all three surfaces -- enemy, roster and party alike
@@ -1047,7 +1109,7 @@ namespace PrincesPalace
         // Counter carries the number on its own dedicated node -- the party
         // plate no longer folds it into "PSN·2" text, because it has a real
         // Counter node to write to like everything else.
-        private void PaintBadge(StatusBadgeParts parts, FightHudModel.StatusRow row, bool showCounter, int flat)
+        private void PaintBadge(StatusBadgeParts parts, FightHudModel.StatusRow row, bool showCounter, int flat, bool popIn)
         {
             parts.Root.SetShown(true);
 
@@ -1074,14 +1136,89 @@ namespace PrincesPalace
             }
 
             bool showNumber = showCounter && row.Counter >= 0;
+
+            // LAST-TICK EMPHASIS, static -- section 2/9 Phase 3. Only the
+            // exact value 1 gets the brighter/bolder digit and the bigger
+            // patch; every other count (including "no counter drawn at all")
+            // falls through to the ordinary look, so a status ticking from 3
+            // to 2 to 1 changes on the one frame that matters and nowhere else.
+            bool emphasise = showNumber && row.Counter == 1;
             if (parts.Code != null)
             {
                 parts.Code.color = polarity;
                 parts.Code.SetContent(art == null ? row.Code : "");
             }
-            if (parts.Counter != null) parts.Counter.SetContent(showNumber ? row.Counter.ToString() : "");
+            if (parts.Counter != null)
+            {
+                parts.Counter.SetContent(showNumber ? row.Counter.ToString() : "");
+                parts.Counter.color = emphasise ? CounterEmphasis : CounterDefault;
+                parts.Counter.fontStyle = emphasise ? TMPro.FontStyles.Bold : TMPro.FontStyles.Normal;
+            }
+            if (parts.CounterPatch != null)
+            {
+                parts.CounterPatch.gameObject.SetShown(showNumber);
+                ((RectTransform)parts.CounterPatch.transform).localScale =
+                    Vector3.one * (emphasise ? CounterPatchEmphasisScale : 1f);
+            }
 
             _statusBadgeTooltip[flat] = row.Tooltip;
+
+            // THE POP, LAST -- after everything else about this badge is
+            // already painted, so a pop that starts mid-way through a
+            // repaint never races the very values it is popping in.
+            if (popIn) BeginAppearancePop(flat, parts.Root);
+            else ResetBadgeMotion(flat, parts.Root);
+        }
+
+        // ---- the appearance pop --------------------------------------------------
+
+        private void ResetBadgeMotion(int flat, GameObject root)
+        {
+            if (_statusBadgePopRoutines.TryGetValue(flat, out var running) && running != null)
+            {
+                StopCoroutine(running);
+            }
+            _statusBadgePopRoutines[flat] = null;
+
+            if (root != null) ((RectTransform)root.transform).localScale = Vector3.one;
+        }
+
+        private void BeginAppearancePop(int flat, GameObject root)
+        {
+            if (root == null) return;
+
+            if (_statusBadgePopRoutines.TryGetValue(flat, out var running) && running != null)
+            {
+                StopCoroutine(running);
+            }
+            _statusBadgePopRoutines[flat] = StartCoroutine(AppearancePopRoutine((RectTransform)root.transform));
+        }
+
+        // Scaled by FightBeatPlayer.BeatSpeedMultiplier, the same test seam
+        // every other fight-HUD animation already answers to -- a PlayMode
+        // capture that runs the fight at 60x would otherwise sit through a
+        // real 150ms per badge for no reason a screenshot can see.
+        private IEnumerator AppearancePopRoutine(RectTransform rect)
+        {
+            rect.localScale = Vector3.one * StatusBadgePopFromScale;
+
+            float duration = FightBeatPlayer.Scaled(StatusBadgePopSeconds);
+            if (duration <= 0f)
+            {
+                rect.localScale = Vector3.one;
+                yield break;
+            }
+
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                yield return null;
+                elapsed += Time.unscaledDeltaTime;
+                float t = Easing.OutCubic(Mathf.Clamp01(elapsed / duration));
+                rect.localScale = Vector3.one * Mathf.Lerp(StatusBadgePopFromScale, 1f, t);
+            }
+
+            rect.localScale = Vector3.one;
         }
 
         // Section 6's whole overflow feature: the chip carries no polarity
@@ -1115,6 +1252,7 @@ namespace PrincesPalace
 
             if (parts.Glyph != null) parts.Glyph.enabled = false;
             if (parts.Counter != null) parts.Counter.SetContent("");
+            if (parts.CounterPatch != null) parts.CounterPatch.gameObject.SetShown(false);
 
             int hidden = rows.Count - chipIndex;
             if (parts.Code != null)
@@ -1311,11 +1449,44 @@ namespace PrincesPalace
 
             if (statusTooltipText != null) statusTooltipText.SetContent(text);
             statusTooltip.SetShown(true);
+            FitStatusTooltipToBody(text);
 
             var anchor = flat < _statusBadgeParts.Length && _statusBadgeParts[flat].Root != null
                 ? _statusBadgeParts[flat].Root.transform as RectTransform
                 : null;
             PlaceStatusTooltip(flat, anchor);
+        }
+
+        // Grows the ONE shared tooltip past its build-time one-line height
+        // for the "+N" chip's multi-line body (section 6) -- same shape as
+        // ReckoningController.FitTooltipToBody, GetPreferredValues rather
+        // than preferredHeight because this runs the SAME frame the text was
+        // just set, and preferredHeight would still be answering for
+        // whatever body was in the box before this hover.
+        //
+        // MUST RUN BEFORE PlaceStatusTooltip, which reads tooltipRect.rect.
+        // height to clamp inside the canvas -- sizing after placing would
+        // place against the wrong box.
+        private void FitStatusTooltipToBody(string body)
+        {
+            var self = statusTooltip == null ? null : statusTooltip.transform as RectTransform;
+            if (self == null) return;
+
+            float height = FightScreen.StatusTooltipOneLineHeight;
+
+            if (statusTooltipText != null)
+            {
+                float wanted = statusTooltipText.GetPreferredValues(
+                    body, FightScreen.StatusTooltipWidth - FightScreen.StatusTooltipPad * 2f, 0f).y;
+
+                height = Mathf.Clamp(wanted + FightScreen.StatusTooltipPad * 2f,
+                    FightScreen.StatusTooltipOneLineHeight, FightScreen.StatusTooltipMaxHeight);
+
+                var textRect = statusTooltipText.rectTransform;
+                textRect.sizeDelta = new Vector2(textRect.sizeDelta.x, height - FightScreen.StatusTooltipPad * 2f);
+            }
+
+            self.sizeDelta = new Vector2(FightScreen.StatusTooltipWidth, height);
         }
 
         // Which physical badge slots share a row with `flat` -- the enemy and

@@ -583,7 +583,9 @@ namespace PrincesPalace.Domain.Combat.Session
         // these are swapped at runtime as a combatant's statuses change.
         //
         // Only Chilled and Rooted have art today (Status/chilled.png,
-        // Status/rooted.png -- see tools/art/make_status_icons.py). Every
+        // Status/rooted.png -- commissioned from docs/STATUS_ICON_PROMPTS.md
+        // and keyed by tools/key_green_screen.py --kit status;
+        // make_status_icons.py, the old producer, is retired). Every
         // other status resolves to a path nothing on disk answers to yet
         // (Status/poison, etc.), and Resources.Load returns null for it
         // exactly like it would for a typo. That null IS the fallback
@@ -605,63 +607,38 @@ namespace PrincesPalace.Domain.Combat.Session
             public static string ResourceFor(StatusRow row) => "Status/" + row.Slug;
         }
 
-        // ---- enemy plate status line (v2 rework) ----------------------------
+        // ---- enemy plate status line (Phase 3: retired to BRK only) --------
         //
-        // Replaces a flat "REELING · POISON · CHILLED · MARKED" join that was
-        // never tested against a real fight's worth of statuses -- an elite
-        // carrying four statuses plus a break meter had no wrap rule and no
-        // reading order. Two fixes: a CAP (three codes, the rest folds into a
-        // "+N"), and a PRIORITY order -- harm first, since that is what
-        // changes whether the target is worth worrying about.
+        // Used to join every status into a "PSN·3  ·  VLN·2  ·  +1" line
+        // squeezed under the HP bar in 8pt text -- PLAN_STATUS_EFFECT_UI.md
+        // section 9 (Phase 3) retires that: the same statuses already read,
+        // full-size, off the enemy's own stage row (BuildEnemyStatusRows,
+        // FightController.RefreshEnemyStatusRows), and a plate line
+        // repeating them was "two surfaces for one fact on a 200x64 card",
+        // the plate's own comment's own warning turned against itself.
         //
-        // BROKEN IS NOT ONE OF THE THREE. An earlier draft of this pass added
-        // it to the same list and let it sort by category with everything
-        // else, which meant an ordinary Poison/Vulnerable/Chilled trio could
-        // push it into the "+N" overflow -- the one state that must never
-        // hide. It is a distinct, always-shown prefix instead, so it can
-        // never lose its place to a status.
-        private const int EnemyPillCap = 3;
-
-        // The same amber FightHudPalette.TargetAmber already carries, repeated
-        // as a literal rather than reaching into UiKit from this Session-layer
-        // file for one hex string.
+        // BRK SURVIVES because it has no other surface. BreakShield is not a
+        // StatusEffectType -- StatusRowsFor never sees it, so no badge in the
+        // stage row represents it -- and it is the one always-shown fact this
+        // line used to guarantee could never be bumped into a "+N" overflow.
+        // The Tags node this writes into stays in the screen tree for exactly
+        // this prefix; see FightScreen.BuildEnemyPlates.
+        //
+        // `session` is unread now that the status list is gone (Drowned
+        // Lantern's own mark, and the Marked-vs-Marked de-duplication it
+        // needed, moved with the deleted line -- the stage row already shows
+        // Marked via StatusRowsFor, and IsMarked alone was never surfaced
+        // anywhere the badge row does not already cover). Kept as a
+        // parameter rather than dropped: the call site still has a session
+        // in scope, and losing the parameter now would just have to come
+        // back the day this line grows a second always-shown fact.
         private const string BrokenHex = "#FFC45A";
 
-        // Rebuilt on StatusRowsFor rather than its own switch statements, so
-        // this line and the badge row always agree on codes and order --
-        // the two tables that used to disagree (StatusBadge's three letters,
-        // PillCode's two) are one table now (StatusHud, section 4).
         public static string EnemyStatusLine(CombatantState enemy, FightSession session)
         {
-            if (enemy == null) return "";
+            if (enemy == null || enemy.BreakShield == null || !enemy.BreakShield.IsBroken) return "";
 
-            string broken = enemy.BreakShield != null && enemy.BreakShield.IsBroken
-                ? ItemStatLines.Coloured(BrokenHex, "BRK") + "  ·  "
-                : "";
-
-            var rows = StatusRowsFor(session, enemy);
-
-            // Drowned Lantern's own mark (FightSession.Relics._marked) is a
-            // SEPARATE mechanic from StatusEffectType.Marked (Marks.cs) --
-            // see Marks' own header, it predates Marks and the two do not
-            // interact. Both read as "Marked" to the player, so only add a
-            // second pill when StatusRowsFor did not already contribute one
-            // off an actual Marked status -- an enemy carrying both used to
-            // show MK twice.
-            bool alreadyMarked = rows.Any(r => r.Code == StatusHud.CodeFor(StatusEffectType.Marked));
-            if (session != null && session.IsMarked(enemy) && !alreadyMarked)
-            {
-                rows.Add(StatusHud.RowFor(new ActiveStatus(StatusEffectType.Marked, 0, Marks.MarkDurationTurns)));
-                rows = rows.OrderBy(r => r.SortKey).ToList();
-            }
-
-            int overflow = rows.Count - EnemyPillCap;
-            var shown = rows.Take(EnemyPillCap)
-                .Select(r => r.Counter >= 0 ? $"{r.Code}·{r.Counter}" : r.Code);
-
-            string line = broken + string.Join("  ·  ", shown);
-            if (overflow > 0) line += $"  ·  +{overflow}";
-            return line;
+            return ItemStatLines.Coloured(BrokenHex, "BRK");
         }
 
         public static DetailPanel DetailForItem(SatchelStack stack)

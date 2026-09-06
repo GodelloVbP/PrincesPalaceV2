@@ -208,9 +208,9 @@ namespace PrincesPalace.Domain.Combat.Session
             switch (status.Type)
             {
                 case StatusEffectType.Poison:
-                    return $"Poison -- {Wrap(positive, $"{status.Magnitude} damage at your turn start")}, {duration}";
+                    return $"Poison -- {Wrap(positive, $"{status.Magnitude} damage each turn start")}, {duration}";
                 case StatusEffectType.Regen:
-                    return $"Regen -- {Wrap(positive, $"{status.Magnitude} healing at your turn start")}, {duration}";
+                    return $"Regen -- {Wrap(positive, $"{status.Magnitude} healing each turn start")}, {duration}";
                 case StatusEffectType.Protect:
                     return $"Protect -- {Wrap(positive, $"{status.Magnitude}% less damage taken")}, {duration}";
                 case StatusEffectType.Vulnerable:

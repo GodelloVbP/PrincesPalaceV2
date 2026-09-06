@@ -48,21 +48,6 @@ namespace PrincesPalace.Domain.Tests
             return session;
         }
 
-        // Reaches FightSession's private Drowned Lantern mark set directly
-        // rather than casting a real spell through a relic-carrying kit --
-        // the fact under test is EnemyStatusLine's de-duplication, not the
-        // Lantern's own application path, which SkillDamageTypeReachesHudTests
-        // and friends already exercise. Same reflection idiom
-        // StatusBadgeIconTests already uses to reach FightHudModel's own
-        // private members for the identical reason.
-        private static void ForceLanternMark(FightSession session, CombatantState target)
-        {
-            var field = typeof(FightSession).GetField("_marked", BindingFlags.NonPublic | BindingFlags.Instance);
-            Assert.IsNotNull(field, "FightSession._marked was not found by reflection -- has it been renamed?");
-            var marked = (HashSet<CombatantState>)field.GetValue(session);
-            marked.Add(target);
-        }
-
         // ---- codes -------------------------------------------------------------
 
         // Every status must produce a real three-letter code, and the
@@ -286,59 +271,48 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(StatusHud.CodeFor(StatusEffectType.Poison), rows[1].Code);
         }
 
-        // ---- the enemy plate's text line -------------------------------------------
+        // ---- the enemy plate's text line (Phase 3: retired to BRK only) -----------
+        //
+        // PLAN_STATUS_EFFECT_UI.md section 9, Phase 3: "two surfaces for one
+        // fact" on the enemy plate is retired -- every status now reads only
+        // off the enemy's own stage row (BuildEnemyStatusRows), and this line
+        // keeps just the one fact with no other surface, the break prefix.
+        // The doubly-marked-pill and Lantern-only-mark coverage this section
+        // used to pin no longer applies: EnemyStatusLine does not walk
+        // StatusRowsFor (or IsMarked) at all any more.
 
-        // The doubly-marked bug the plan found: Drowned Lantern's own mark
-        // (FightSession.Relics._marked) and StatusEffectType.Marked
-        // (Marks.cs) are independent mechanics that both read as "Marked" to
-        // a player. An enemy carrying both used to print MK twice.
+        // A broken enemy still shows BRK -- the one always-shown fact this
+        // line exists to guarantee, since no badge in the stage row
+        // represents BreakShield at all (StatusRowsFor never reads it).
         [Test]
-        public void EnemyStatusLineNeverPrintsMarkedTwice()
+        public void BrokenEnemyStillShowsBrkOnThePlate()
         {
-            var session = Session();
-            var enemy = Combatant("DoublyMarked");
-            StatusEffects.Apply(enemy.Statuses, StatusEffectType.Marked, 0, 3);
-            ForceLanternMark(session, enemy);
+            var enemy = Combatant("Reeling");
+            enemy.BreakShield = new BreakShield(10) { IsBroken = true };
 
-            string line = FightHudModel.EnemyStatusLine(enemy, session);
+            string line = FightHudModel.EnemyStatusLine(enemy, null);
 
-            int occurrences = line.Split(new[] { "  ·  " }, StringSplitOptions.None)
-                .Count(pill => pill.StartsWith(StatusHud.CodeFor(StatusEffectType.Marked)));
-            Assert.AreEqual(1, occurrences, $"'{line}' shows Marked {occurrences} times, not once");
+            StringAssert.Contains("BRK", line);
         }
 
-        // The Lantern's own mark still shows up on an enemy that has NO
-        // StatusEffectType.Marked entry at all -- the fix above must not
-        // have quietly dropped the mechanic it used to always add a pill for.
+        // An unbroken enemy carrying a full house -- more than the stage
+        // row's own real capacity of four -- shows NOTHING on the plate.
+        // This used to be the case that filled the line with three pills and
+        // a "+2" chip; now every one of those five statuses reads only off
+        // the badge row standing under the enemy's own figure.
         [Test]
-        public void EnemyStatusLineStillShowsALanternOnlyMark()
+        public void NonBrokenEnemyWithFiveStatusesShowsNothingOnThePlate()
         {
-            var session = Session();
-            var enemy = Combatant("LanternOnly");
-            ForceLanternMark(session, enemy);
+            var enemy = Combatant("Overloaded");
+            StatusEffects.Apply(enemy.Statuses, StatusEffectType.Poison, 5, 3);
+            StatusEffects.Apply(enemy.Statuses, StatusEffectType.Vulnerable, 25, 2);
+            StatusEffects.Apply(enemy.Statuses, StatusEffectType.Rooted, 0, 2);
+            StatusEffects.Apply(enemy.Statuses, StatusEffectType.Marked, 0, Marks.MarkDurationTurns);
+            StatusEffects.Apply(enemy.Statuses, StatusEffectType.Feared, 25, 2);
 
-            string line = FightHudModel.EnemyStatusLine(enemy, session);
+            string line = FightHudModel.EnemyStatusLine(enemy, null);
 
-            StringAssert.Contains(StatusHud.CodeFor(StatusEffectType.Marked), line);
-        }
-
-        // Every status must still produce a pill with no "??" fallback
-        // through the rebuilt EnemyStatusLine -- the coverage this file
-        // always carried, now against StatusRowsFor/StatusHud instead of
-        // the deleted PillCode switch.
-        [Test]
-        public void EveryStatusGetsAnEnemyPillWithNoFallbackCode()
-        {
-            foreach (var type in AllStatusTypes)
-            {
-                var enemy = Combatant(type.ToString());
-                StatusEffects.Apply(enemy.Statuses, type, 5, 3);
-
-                string line = FightHudModel.EnemyStatusLine(enemy, null);
-
-                StringAssert.DoesNotContain("??", line, $"{type} fell through to an unhandled default: '{line}'");
-                StringAssert.Contains(StatusHud.CodeFor(type), line, $"{type}'s own code missing from '{line}'");
-            }
+            Assert.AreEqual("", line);
         }
 
         // ---- enemy intent (untouched by Package A, still covered) ------------------
