@@ -90,11 +90,17 @@ namespace PrincesPalace.PlayModeTests
             var party = ContentDatabase.Characters
                 .Where(c => !string.IsNullOrWhiteSpace(c.Data.BattleSpritePath))
                 .Select(c => c.id).ToList();
-            var enemies = ContentDatabase.Enemies
-                .Where(e => !string.IsNullOrWhiteSpace(e.Data.SpritePath))
-                .Take(2).Select(e => e.id).ToList();
+            // BEETLE FIRST, DELIBERATELY -- not just any two enemies with art.
+            // "Ironback Beetle" is one of C3's own measured overflow cases
+            // (~79px against the 72px name box at 11pt), so this fixture
+            // doubles as the render check for that fix: Shoot("rest") below
+            // must show it on one line, not wrapped onto a second the box
+            // has no height for. "beetle"/"treant" both carry battle art.
+            var enemies = new[] { "beetle", "treant" }
+                .Where(id => ContentDatabase.Enemies.Any(e => e.id == id && !string.IsNullOrWhiteSpace(e.Data.SpritePath)))
+                .ToList();
             Assert.GreaterOrEqual(party.Count, 1, "no character has battle art to capture");
-            Assert.AreEqual(2, enemies.Count, "fewer than two enemies have art to capture");
+            Assert.AreEqual(2, enemies.Count, "beetle/treant are missing or lack battle art -- needed for C3's long-name check");
 
             var built = FightEncounterAdapter.Build(party, enemies, new Domain.Rng.SeededRandom(11));
             var session = built.Session;

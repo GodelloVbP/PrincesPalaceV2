@@ -271,6 +271,55 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(StatusHud.CodeFor(StatusEffectType.Poison), rows[1].Code);
         }
 
+        // ---- the Drowned Lantern's mark (C2) --------------------------------------
+        //
+        // Same reflection idiom StatusBadgeIconTests already uses to reach
+        // FightHudModel's own private members for the identical reason: the
+        // fact under test is StatusRowsFor's de-duplication, not the
+        // Lantern's own application path, which SkillDamageTypeReachesHudTests
+        // and friends already exercise.
+        private static void ForceLanternMark(FightSession session, CombatantState target)
+        {
+            var field = typeof(FightSession).GetField("_marked", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.IsNotNull(field, "FightSession._marked was not found by reflection -- has it been renamed?");
+            var marked = (HashSet<CombatantState>)field.GetValue(session);
+            marked.Add(target);
+        }
+
+        // The mark has no StatusEffectType.Marked entry behind it at all --
+        // StatusRowsFor must still surface exactly one MRK row for it, not
+        // silently show nothing the way it did before C2.
+        [Test]
+        public void StatusRowsForShowsALanternOnlyMark()
+        {
+            var session = Session();
+            var enemy = Combatant("LanternOnly");
+            ForceLanternMark(session, enemy);
+
+            var rows = FightHudModel.StatusRowsFor(session, enemy);
+
+            Assert.AreEqual(1, rows.Count(r => r.Code == StatusHud.CodeFor(StatusEffectType.Marked)),
+                "a Lantern-only mark must show exactly one MRK row");
+        }
+
+        // Both mechanics at once must still read as ONE badge -- the doubly-
+        // marked bug the plan originally found for the (now-retired)
+        // EnemyStatusLine, reproduced here against StatusRowsFor since that
+        // is where the mechanic lives now.
+        [Test]
+        public void StatusRowsForDoesNotDoubleUpADoublyMarkedEnemy()
+        {
+            var session = Session();
+            var enemy = Combatant("DoublyMarked");
+            StatusEffects.Apply(enemy.Statuses, StatusEffectType.Marked, 0, 3);
+            ForceLanternMark(session, enemy);
+
+            var rows = FightHudModel.StatusRowsFor(session, enemy);
+
+            Assert.AreEqual(1, rows.Count(r => r.Code == StatusHud.CodeFor(StatusEffectType.Marked)),
+                $"expected exactly one MRK row, found {rows.Count(r => r.Code == StatusHud.CodeFor(StatusEffectType.Marked))}");
+        }
+
         // ---- the enemy plate's text line (Phase 3: retired to BRK only) -----------
         //
         // PLAN_STATUS_EFFECT_UI.md section 9, Phase 3: "two surfaces for one

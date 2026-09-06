@@ -105,6 +105,25 @@ namespace PrincesPalace.Domain.Tests
                 s.PartyNameplates, s.PartyFootShadows);
         }
 
+        // C3's review: a runtime enemy name (the box is a fixed 72x20, UiString.
+        // Runtime, so no authored string exists for UiTextFitAudit to measure
+        // against) must never be allowed to wrap onto a second line the box
+        // has no height for. Truncated() is the fix -- pinned here rather than
+        // only by the render capture, because the capture can only show that
+        // ONE particular name happened to fit; this proves every plate's name
+        // label carries the setting regardless of what content lands in it.
+        [Test]
+        public void EveryEnemyPlateNameIsTruncatedNotWrapped()
+        {
+            var s = Screen();
+
+            foreach (var nameRef in s.EnemyPlateNames)
+            {
+                Assert.IsTrue(nameRef.Node.Truncates,
+                    $"'{nameRef.Node.Name}' can still word-wrap a long runtime name onto a second line");
+            }
+        }
+
         [Test]
         public void EveryBoundRefResolvedToARealNode()
         {

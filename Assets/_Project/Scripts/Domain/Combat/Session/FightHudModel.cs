@@ -567,6 +567,33 @@ namespace PrincesPalace.Domain.Combat.Session
 
                     rows.Add(StatusHud.SpeedRow(name, buff.Granted, buff.TurnsLeft));
                 }
+
+                // THE DROWNED LANTERN'S OWN MARK (C2's review). This is
+                // FightSession.Relics._marked/IsMarked, a completely separate
+                // mechanic from StatusEffectType.Marked (Marks.cs) that
+                // happens to read as the same word to a player -- see
+                // FightSession.Relics.cs's own header on why it is tracked by
+                // target rather than as a status. Nothing above this line
+                // ever sees it: actor.Statuses has no entry for it at all, so
+                // an enemy carrying only a Lantern mark and no Marked status
+                // would otherwise show nothing here -- which is exactly the
+                // "MK" pill the old EnemyStatusLine used to guarantee, but
+                // the badge row's own de-duplication now has to give it a
+                // home instead. Skipped when a real StatusEffectType.Marked
+                // row already exists (the loop above already added it),
+                // since both read as one "Marked" badge to a player and a
+                // holder carrying both mechanics at once must never show it
+                // twice -- StatusHudCoverageTests pins that exact case.
+                bool alreadyMarked = rows.Any(r => r.Slug == StatusHud.SlugFor(StatusEffectType.Marked));
+                if (!alreadyMarked && session.IsMarked(actor))
+                {
+                    // Built from the same StatusHud code/slug/tooltip/sort
+                    // key as the status-backed row -- a synthetic ActiveStatus
+                    // at the sentinel duration reads as "until it is used",
+                    // which is exactly right: a Lantern mark is spent by the
+                    // wearer's next attack (MarkBonus), never counted down.
+                    rows.Add(StatusHud.RowFor(new ActiveStatus(StatusEffectType.Marked, 0, StatusHud.SentinelTurns)));
+                }
             }
 
             // OrderBy, not List.Sort -- Sort is not stable, and two rows
@@ -624,11 +651,14 @@ namespace PrincesPalace.Domain.Combat.Session
         // The Tags node this writes into stays in the screen tree for exactly
         // this prefix; see FightScreen.BuildEnemyPlates.
         //
-        // `session` is unread now that the status list is gone (Drowned
-        // Lantern's own mark, and the Marked-vs-Marked de-duplication it
-        // needed, moved with the deleted line -- the stage row already shows
-        // Marked via StatusRowsFor, and IsMarked alone was never surfaced
-        // anywhere the badge row does not already cover). Kept as a
+        // `session` is unread now that the status list is gone from THIS
+        // line -- it moved, not disappeared. C2's review found the Marked-
+        // vs-Marked de-duplication had actually been dropped, not relocated:
+        // StatusRowsFor read only actor.Statuses, so an enemy carrying a
+        // Drowned Lantern mark and no StatusEffectType.Marked entry showed
+        // nothing anywhere at all. StatusRowsFor now reads session.IsMarked
+        // itself and appends the row there, which is what makes `session`
+        // unread here rather than merely redundant. Kept as a
         // parameter rather than dropped: the call site still has a session
         // in scope, and losing the parameter now would just have to come
         // back the day this line grows a second always-shown fact.

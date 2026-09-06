@@ -210,6 +210,16 @@ public static class UiEmitter
         text.color = SceneBuilder.ParseHex(node.ColorHex, Color.white);
         text.raycastTarget = false; // a label is never the click target
         if (decor) text.raycastTarget = false;
+
+        // Truncated() -- see UiNode.Truncates' own comment. Word wrap off
+        // and Ellipsis overflow together are what keep a too-long runtime
+        // string on ONE line inside its box instead of wrapping onto a
+        // second the box has no height for.
+        if (node.Truncates)
+        {
+            text.enableWordWrapping = false;
+            text.overflowMode = TextOverflowModes.Ellipsis;
+        }
     }
 
     // THE single resolution point for a label's typographic dressing: font

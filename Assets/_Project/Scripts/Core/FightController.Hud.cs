@@ -629,13 +629,13 @@ namespace PrincesPalace
                 // A missing member still gets its row painted with an empty list,
                 // which is what deactivates every one of its five badges rather
                 // than leaving them wearing a downed ally's last statuses.
-                var rows = present ? FightHudModel.StatusRowsFor(_session, others[i]) : EmptyStatusRows;
+                var member = present ? others[i] : null;
+                var rows = present ? FightHudModel.StatusRowsFor(_session, member) : EmptyStatusRows;
                 PaintStatusRow(RosterStatusBase + i * RosterStatusBadgesPerRow, RosterStatusBadgesPerRow,
-                    EnemyRosterStatusRealCapacity, rows, showCounter: false);
+                    EnemyRosterStatusRealCapacity, member, rows, showCounter: false);
 
                 if (!present) continue;
 
-                var member = others[i];
                 if (Has(rosterNames, i)) rosterNames[i].SetContent(member.Name);
                 if (Has(rosterHpValues, i))
                 {
@@ -766,16 +766,28 @@ namespace PrincesPalace
         private StatusBadgeParts[] _statusBadgeParts;
         private readonly string[] _statusBadgeTooltip = new string[TotalStatusBadges];
 
-        // Which CODES were actually painted onto each physical ROW last
-        // refresh, keyed by that row's own baseIndex (EnemyStatusBase +
-        // slot*5, RosterStatusBase + i*5, or PartyStatusBase -- one entry per
-        // holder, never per individual badge slot). A code appearing this
-        // refresh that was NOT in last refresh's set for the same row is what
-        // "a badge slot goes from inactive to active" (section 6/D7) means in
-        // practice: a status genuinely newly applied to that holder, not one
-        // that merely slid to a different slot because a higher-tier status
-        // sorted ahead of it this repaint.
-        private readonly Dictionary<int, HashSet<string>> _statusRowActiveCodes = new Dictionary<int, HashSet<string>>();
+        // Which CODES were actually painted for each HOLDER last refresh --
+        // keyed by the CombatantState itself, not by the physical row's
+        // baseIndex (C4's review). The party plate and roster rows change
+        // OCCUPANT every turn (whoever is acting swaps out of the roster and
+        // into the plate), so a row-keyed set called a status "new" every
+        // time its holder changed seats even though nothing about the status
+        // itself changed -- a long-standing Regen popped its appearance
+        // animation on every single turn transition. Keying by holder instead
+        // means "new" only ever means what section 6/D7 actually asks for: a
+        // status genuinely newly applied to THIS combatant, never a seat
+        // change. Cleared in ResetStagePresentation, once per Bind -- a
+        // holder from a PREVIOUS fight can never come back to be compared
+        // against, so a fresh fight starts every combatant's set empty, same
+        // as a fresh WireAllStatusBadges always did for a baseIndex.
+        private readonly Dictionary<CombatantState, HashSet<string>> _statusRowActiveCodes =
+            new Dictionary<CombatantState, HashSet<string>>();
+
+        // C4/S5: the one scratch buffer PaintStatusRow fills a holder's
+        // CURRENT codes into before comparing/committing, so no call
+        // allocates a fresh HashSet<string> just to throw it away next
+        // refresh -- see PaintStatusRow's own comment for how it's reused.
+        private readonly HashSet<string> _statusRowScratchCodes = new HashSet<string>();
 
         // One appearance-pop coroutine per physical badge SLOT (flat index),
         // since the pop animates the slot's own RectTransform and two
@@ -1050,7 +1062,14 @@ namespace PrincesPalace
         // Deactivates every unused slot, which is what section 7's "a row
         // with no statuses renders nothing" reduces to when `rows` is
         // empty: every slot in range hits the i >= rows.Count branch below.
-        private void PaintStatusRow(int baseIndex, int slotCount, int realCapacity,
+        //
+        // `holder` is who this physical row currently shows -- null for a
+        // roster/enemy slot with nobody in it this refresh. The appearance
+        // pop is keyed off THIS, not off baseIndex (C4's review): a null
+        // holder paints no rows worth popping anyway, and a real one carries
+        // its own remembered code set across whichever seat it occupies from
+        // one refresh to the next.
+        private void PaintStatusRow(int baseIndex, int slotCount, int realCapacity, CombatantState holder,
             IReadOnlyList<FightHudModel.StatusRow> rows, bool showCounter)
         {
             if (_statusBadgeParts == null) WireAllStatusBadges();
@@ -1058,13 +1077,25 @@ namespace PrincesPalace
 
             int overflowSlot = rows.Count > realCapacity ? slotCount - 1 : -1;
 
-            // The set this ROW showed as of last refresh -- see
-            // _statusRowActiveCodes' own header. Missing entirely on the
-            // first paint (a fresh WireAllStatusBadges), which is correct:
-            // every badge that row shows for the first time really is going
-            // from inactive to active.
-            _statusRowActiveCodes.TryGetValue(baseIndex, out var previousCodes);
-            var currentCodes = new HashSet<string>();
+            // The set THIS HOLDER showed as of last refresh -- see
+            // _statusRowActiveCodes' own header. Missing entirely on a
+            // holder's first paint (a fresh WireAllStatusBadges, or a
+            // combatant appearing for the first time this fight), which is
+            // correct: every badge shown for the first time really is going
+            // from inactive to active. Read BEFORE the scratch buffer below
+            // touches anything, and never mutated here -- PaintBadge's popIn
+            // check below has to compare against what this holder showed
+            // last time, not against whatever this same call has painted so
+            // far.
+            HashSet<string> previousCodes = holder != null && _statusRowActiveCodes.TryGetValue(holder, out var found)
+                ? found
+                : null;
+
+            // C4/S5: ONE scratch set, reused every call rather than a fresh
+            // HashSet<string> allocated and thrown away each refresh. Safe
+            // because painting is synchronous and single-threaded -- nothing
+            // else can be mid-fill of this buffer at the same time.
+            _statusRowScratchCodes.Clear();
 
             for (int i = 0; i < slotCount; i++)
             {
@@ -1090,13 +1121,27 @@ namespace PrincesPalace
                 }
 
                 var row = rows[i];
-                currentCodes.Add(row.Code);
-                bool popIn = StatusBadgeAppearancePopEnabled
+                _statusRowScratchCodes.Add(row.Code);
+                bool popIn = StatusBadgeAppearancePopEnabled && holder != null
                     && (previousCodes == null || !previousCodes.Contains(row.Code));
                 PaintBadge(parts, row, showCounter, flat, popIn);
             }
 
-            _statusRowActiveCodes[baseIndex] = currentCodes;
+            if (holder == null) return;
+
+            // COMMIT, reusing the holder's own stored set rather than handing
+            // it a new one -- the only allocation left is the one-time `new
+            // HashSet<string>` the first time THIS holder is ever painted,
+            // exactly like any other dictionary entry's first insert.
+            if (previousCodes != null)
+            {
+                previousCodes.Clear();
+                previousCodes.UnionWith(_statusRowScratchCodes);
+            }
+            else
+            {
+                _statusRowActiveCodes[holder] = new HashSet<string>(_statusRowScratchCodes);
+            }
         }
 
         // ONE PATH for all three surfaces -- enemy, roster and party alike
@@ -1273,7 +1318,7 @@ namespace PrincesPalace
             if (partyBuffIcons == null || _session == null) return;
 
             var rows = FightHudModel.StatusRowsFor(_session, actor);
-            PaintStatusRow(PartyStatusBase, PartyStatusBadgeCount, PartyStatusBadgeCount, rows, showCounter: true);
+            PaintStatusRow(PartyStatusBase, PartyStatusBadgeCount, PartyStatusBadgeCount, actor, rows, showCounter: true);
         }
 
         // Called from FightController.StageVisuals.cs's RefreshStage, right
@@ -1290,9 +1335,18 @@ namespace PrincesPalace
 
             for (int slot = 0; slot < slots; slot++)
             {
-                var enemy = slot < enemies.Count && enemies[slot].IsAlive && IsOnStage(enemies[slot])
-                    ? enemies[slot]
-                    : null;
+                // BUSY-AWARE ALIVE, mirroring StanceOf's own `defeated` check
+                // (FightController.StageVisuals.cs) rather than reading
+                // IsAlive straight -- C1's review. FightSession resolves a
+                // whole round before any beat plays, so live IsAlive already
+                // reflects a kill from LATER in the round while this refresh
+                // is only allowed to know about beats already painted; this
+                // is what stopped the row from going blank the instant a
+                // later beat's kill lands in the model, several beats before
+                // the death animation the player is actually watching plays.
+                bool alive = slot < enemies.Count &&
+                    (_isBusy ? !_confirmedDefeated.Contains(enemies[slot]) : enemies[slot].IsAlive);
+                var enemy = alive && IsOnStage(enemies[slot]) ? enemies[slot] : null;
                 var rows = enemy != null ? FightHudModel.StatusRowsFor(_session, enemy) : EmptyStatusRows;
 
                 // Section 7: a row with no statuses renders nothing at all,
@@ -1328,7 +1382,7 @@ namespace PrincesPalace
                 FitEnemyStatusRow(slot, rows.Count);
 
                 PaintStatusRow(EnemyStatusBase + slot * EnemyStatusBadgesPerRow, EnemyStatusBadgesPerRow,
-                    EnemyRosterStatusRealCapacity, rows, showCounter: true);
+                    EnemyRosterStatusRealCapacity, enemy, rows, showCounter: true);
             }
         }
 

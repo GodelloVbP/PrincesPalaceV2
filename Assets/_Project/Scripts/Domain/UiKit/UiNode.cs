@@ -198,6 +198,19 @@ namespace PrincesPalace.Domain.UiKit
         // for a themed button's own <name>Label.
         public TypographyRole? Role;
 
+        // A label that must never wrap or spill outside its own box, whatever
+        // content lands in it at runtime -- set through Truncated() below.
+        // False (the untouched path) leaves TMP's own defaults, word-wrap on
+        // and Overflow, exactly as every label emitted before this existed.
+        // Content that outgrows the box word-wraps onto a second line by
+        // default, which a short, fixed-height box (a plate's name row) has
+        // no room to show -- see EnemyPlate{i}Name's own comment (C3's
+        // review). UiTextFitAudit cannot catch this itself: it
+        // measures AUTHORED strings against their box, and a runtime name like
+        // a monster's display name (UiString.Runtime) has no fixed text to
+        // measure at build time.
+        public bool Truncates;
+
         // Escape hatches. Both REQUIRE a reason, so every exemption is greppable
         // and reviewable -- in v1 everything was an escape hatch and none of them
         // were enumerable.
@@ -324,6 +337,12 @@ namespace PrincesPalace.Domain.UiKit
         // Named Styled, not Role -- a field and a method cannot share a name
         // in C#, and the field is the one every reader looks for first.
         public UiNode Styled(TypographyRole role) { Role = role; return this; }
+
+        // Single line, ellipsised rather than wrapped -- see Truncates' own
+        // comment. The same TextOverflowModes.Ellipsis a themed button's
+        // caption already gets (UiEmitter.WireThemedButton), exposed on the
+        // plain Label path for a runtime string with no authored ceiling.
+        public UiNode Truncated() { Truncates = true; return this; }
 
         // Containers default to FromChildren, which is right almost always. A
         // Fixed size is what a container needs before any child can Fill it --

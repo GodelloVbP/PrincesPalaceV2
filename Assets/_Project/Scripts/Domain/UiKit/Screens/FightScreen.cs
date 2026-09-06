@@ -1025,18 +1025,27 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 //
                 // NOT AUTOSIZED: this label has no Role, so ApplyTypography's
                 // no-role branch sets a literal fontSize and returns without
-                // touching enableAutoSizing -- unlike a Role-bearing label, a
-                // name too wide for its box WORD-WRAPS instead of shrinking.
-                // The old 86/13pt box had no slack to give: cutting the box
-                // to 72 at 13pt wrapped "Stone Golem" onto two lines (caught
-                // by capture, both empirically against tools/screenshots/
-                // runtime/status_rows_rest.png -- Domain has no font metric
-                // to derive this from, see UiTextFitAudit's own header on
-                // why), so the font dropped to 11pt with it, which is what
-                // actually buys the box back its headroom.
+                // touching enableAutoSizing. The old 86/13pt box had no slack
+                // to give: cutting the box to 72 at 13pt wrapped "Stone Golem"
+                // onto two lines (caught by capture, both empirically against
+                // tools/screenshots/runtime/status_rows_rest.png -- Domain has
+                // no font metric to derive this from, see UiTextFitAudit's own
+                // header on why), so the font dropped to 11pt with it, which
+                // bought the box back its headroom for that case.
+                //
+                // Still not enough for a long boss name -- "The Hollow Choir"
+                // measures ~83px and "Ironback Beetle" ~79px at 11pt against
+                // this 72px box, and FightHudModel.DisplayNames appends " 2"
+                // onto a duplicate, widening it further. Truncated()
+                // (C3's review) turns off word-wrap and switches to Ellipsis
+                // overflow, the same fallback a themed button's caption
+                // already gets, so a name that still doesn't fit clips to
+                // "The Hollow Cho..." on ONE line instead of wrapping a
+                // second line the 20px-tall box has no room to show.
                 var name = Ui.Label($"EnemyPlate{i}Name", UiString.Runtime, new UiVec(72f, 20f), 11,
                     FightHudPalette.EnemyName, Place.At(textLeft, topY, new UiVec(0f, 0.5f)))
-                    .TextAligned(UiTextAlign.Left);
+                    .TextAligned(UiTextAlign.Left)
+                    .Truncated();
 
                 // 27 tall for a 10pt line: the audit measures "9999/9999" at
                 // 26 there, and a box that cannot hold it clips the descenders

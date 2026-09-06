@@ -109,7 +109,18 @@ namespace PrincesPalace
             }
 
             RefreshIntentIcons();
-            RefreshEnemyStatusRows(onStage);
+
+            // NOT WHILE BUSY (C1's review). This method is reached from
+            // PaintVitals on every beat of a round, and CombatBeat carries no
+            // status snapshot -- painting the status row off LIVE state here
+            // would show a status a LATER beat in the same round already
+            // applied, several beats before the one actually landing it has
+            // played. RefreshUi (called once at OnPlaybackFinished, and on
+            // every input event -- both always with _isBusy already false) is
+            // the only path allowed to repaint this row; while busy it simply
+            // keeps showing whatever it last painted, exactly like the
+            // plates/verbs/submenu already do for the same reason.
+            if (!_isBusy) RefreshEnemyStatusRows(onStage);
 
             var party = _session.Encounter.PlayerParty;
             AnchorStageSlots(partySlots, partyActorAnimators, party.Count, mirrored: true);
@@ -864,6 +875,13 @@ namespace PrincesPalace
             ContentTopCache.Clear();
 
             _confirmedDefeated.Clear();
+
+            // C4: no holder from a fight that just ended can ever be
+            // compared against again -- a fresh Bind means every combatant's
+            // remembered status-code set starts empty, exactly as a fresh
+            // WireAllStatusBadges always left the (then row-keyed) dictionary
+            // for a new fight anyway.
+            _statusRowActiveCodes.Clear();
 
             // SEEDED WITH WHOEVER IS ALREADY HERE. The reveal rule only ever
             // has to hold back a monster that arrives DURING a round; the
