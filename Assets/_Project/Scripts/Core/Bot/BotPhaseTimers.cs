@@ -88,7 +88,21 @@ namespace PrincesPalace
 
     public static class BotPhaseTimers
     {
-        private const int PhaseCount = 18;
+        // DERIVED, not hand-counted. A hand-counted 18 agreed with BotPhase
+        // only until the next member was added to it without also touching
+        // this line -- Add() below indexes straight into Elapsed/Calls by
+        // (int)phase, so a phase at or past a stale count throws
+        // IndexOutOfRangeException the first time anything measures it, and
+        // Report (further down) silently omits any phase past the count
+        // instead of throwing at all. Walking the enum itself is what makes
+        // "add a BotPhase member" the only edit a new phase needs.
+        private static readonly int PhaseCount = Enum.GetValues(typeof(BotPhase)).Length;
+
+        // Test-only door to PhaseCount, named ...ForTest per house convention
+        // (FightBeatPlayer.WireStageForTest, FightController.
+        // StageShakesForTest) since Core's InternalsVisibleTo names only the
+        // Editor assembly and a PlayMode test sits outside that grant.
+        public static int PhaseCountForTest => PhaseCount;
 
         private static readonly long[] Elapsed = new long[PhaseCount];
         private static readonly long[] Calls = new long[PhaseCount];
