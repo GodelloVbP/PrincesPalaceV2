@@ -132,6 +132,19 @@ namespace PrincesPalace.PlayModeTests
             StatusEffects.Apply(actor.Statuses, StatusEffectType.Vulnerable, 15, 2);
             session.GrantSpeedPercentForTest(actor, RelicEffect.SparringSaber, 30, 1);
 
+            // ---- one OFF-TURN party member carries three statuses, so the
+            // roster mini-plate's own row (RosterStatusBadges, 20px, no
+            // counter -- section 1's table) is actually exercised by this
+            // capture too, rather than only the enemy row and the acting
+            // party plate. Mixed polarity (one benefit, two detriments) for
+            // the same reason enemy1 above is all-benefit: prove both frame
+            // colours render, not just whichever one the acting member's own
+            // six statuses happen to lean toward.
+            var offTurn = session.Encounter.PlayerParty.First(c => c != actor);
+            StatusEffects.Apply(offTurn.Statuses, StatusEffectType.Regen, 5, 3);
+            StatusEffects.Apply(offTurn.Statuses, StatusEffectType.Vulnerable, 15, 2);
+            session.ApplyChilledForTest(offTurn, 20, 2);
+
             _fight.Bind(session, EncounterClass.Normal);
             _fight.BindPartyArt(built.Party,
                 built.Party.Select(p => ContentDatabase.Characters
@@ -144,17 +157,25 @@ namespace PrincesPalace.PlayModeTests
 
             yield return Shoot("rest");
 
-            // ---- one enemy badge, hovered -- proves the shared tooltip and
-            // its TooltipPlacement.Beside positioning actually work, not
-            // merely that a badge is drawn. Driven through the component
-            // rather than a synthetic pointer, same reasoning FightMenuCapture-
-            // Tests' own intent-hover shot gives (no real cursor exists in a
-            // capture, and a fake EventSystem raycast would test Unity, not
-            // this feature).
-            var badge = Named("EnemyStatusBadge0_0");
-            Assert.IsNotNull(badge, "enemy slot 0's first status badge was not found");
+            // ---- the FAR slot's enemy badge, hovered -- not the near one.
+            // With two enemies on stage, AnchorStageSlots spreads them to
+            // the two ENDS of the depth range (FightController.StageVisuals.
+            // cs's own header), so slot 1 (enemy1, the second enemy above)
+            // lands at the far end -- the rightmost badge row this screen
+            // ever draws. Proves the shared tooltip's TooltipPlacement.
+            // Beside positioning actually clamps inside the canvas rather
+            // than merely landing "beside" a badge with room to spare on
+            // every side, which the near slot's own badge would not have
+            // caught (see PlaceStatusTooltip's own comment on the first
+            // capture's defect). Driven through the component rather than a
+            // synthetic pointer, same reasoning FightMenuCaptureTests' own
+            // intent-hover shot gives (no real cursor exists in a capture,
+            // and a fake EventSystem raycast would test Unity, not this
+            // feature).
+            var badge = Named("EnemyStatusBadge1_0");
+            Assert.IsNotNull(badge, "enemy slot 1's first status badge was not found");
             var hover = badge.GetComponent<HoverIndex>();
-            Assert.IsNotNull(hover, "no HoverIndex was attached to EnemyStatusBadge0_0");
+            Assert.IsNotNull(hover, "no HoverIndex was attached to EnemyStatusBadge1_0");
             hover.OnPointerEnter(null);
             yield return Shoot("hover");
         }

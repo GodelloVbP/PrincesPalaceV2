@@ -664,6 +664,11 @@ namespace PrincesPalace
         private static readonly Color BuffPositive = Hex(FightHudPalette.IntentHeal);
         private static readonly Color BuffNegative = Hex(FightHudPalette.HpBright);
 
+        // The "+N" overflow chip's tint -- neither polarity, since it is a
+        // mixed bag by definition. See PaintOverflowChip's own comment for
+        // why TextSecondary is the token used.
+        private static readonly Color ChipNeutral = Hex(FightHudPalette.TextSecondary);
+
         private static readonly List<FightHudModel.StatusRow> EmptyStatusRows =
             new List<FightHudModel.StatusRow>();
 
@@ -686,6 +691,16 @@ namespace PrincesPalace
         // call site below passes PartyStatusBadgeCount for both parameters.
         private const int EnemyRosterStatusRealCapacity = 4;
 
+        // Mirrors FightScreen's own EnemyStatusBadgeSize/EnemyStatusPitch/
+        // EnemyStatusStripPadX, same reasoning as EnemyStatusBadgesPerRow
+        // above -- needed here because FitEnemyStatusRow re-derives the
+        // strip's RUNTIME width from however many badges are actually
+        // shown, rather than the fixed 5-slot width UiAudit checks at build
+        // time (section 1/3: FightScreen.BuildEnemyStatusRows' own header).
+        private const float EnemyStatusBadgeSize = 36f;
+        private const float EnemyStatusPitch = 40f;
+        private const float EnemyStatusStripPadX = 12f;
+
         // ONE FLAT INDEX SPACE across all three surfaces (enemy first, then
         // roster, then party) rather than three separate HoverIndex
         // handlers -- one OnHoverStatusBadge, one tooltip cache, one
@@ -702,20 +717,16 @@ namespace PrincesPalace
         // unused Image sitting there for the polarity frame (section 3) to
         // move into.
         //
-        // NOT UNIFORM across all three surfaces, and said plainly rather
-        // than papered over: PartyBuff{i} is a plain chromeless Ui.Button
-        // (root Image plus one synthesised caption), never rebuilt through
-        // BuildStatusBadge's three-child anatomy -- the party plate
-        // predates this package and Package B did not revisit it
-        // (PLAN_STATUS_EFFECT_UI.md section 1's party-plate row is new work
-        // here, not there). `UiKitLintTests.OnlyTheEmitterMayCreateGameObjects`
-        // forbids building the missing Glyph/Counter children at runtime the
-        // way HoverIndex gets added, so the party plate genuinely has fewer
-        // layers than the other two: Frame and Counter are null there, Glyph
-        // IS the root's own Image (tinted, doubling as both icon and frame),
-        // and Code carries the counter folded into its own text. See
-        // WirePartyStatusBadge and PaintBadge/PaintOverflowChip's own
-        // comments for exactly where each surface's painting diverges.
+        // UNIFORM ACROSS ALL THREE SURFACES, as of the fix for the first
+        // capture's worst defect: PartyBuff{i} used to be a plain chromeless
+        // Ui.Button (root Image doubling as both frame and glyph, Code
+        // carrying the counter folded into its own text, "PSN·2") because
+        // package B's original pass left the party plate predating this
+        // feature untouched. That workaround is what the capture showed as
+        // six tinted smudges with text stacked on top -- FightScreen now
+        // rebuilds PartyBuff{i} through BuildStatusBadge's own three-child
+        // anatomy, so all three surfaces wire and paint the same way and
+        // this struct needs no fallback-sprite field or party-only branch.
         private struct StatusBadgeParts
         {
             public GameObject Root;
@@ -723,13 +734,6 @@ namespace PrincesPalace
             public Image Glyph;
             public TMPro.TMP_Text Code;
             public TMPro.TMP_Text Counter;
-
-            // Party plate only: the plain face PartyBuff{i} was BUILT with,
-            // restored on an icon miss instead of leaving the Image blank
-            // (which paints Unity's default white square, not this game's
-            // button chrome) -- the exact rule the old RefreshPartyBuffs
-            // enforced via _partyBuffDefaultSprites.
-            public Sprite Fallback;
         }
 
         private StatusBadgeParts[] _statusBadgeParts;
@@ -757,9 +761,9 @@ namespace PrincesPalace
         {
             _statusBadgeParts = new StatusBadgeParts[TotalStatusBadges];
 
-            WireStatusBadgeGroup(enemyStatusBadges, EnemyStatusBase, party: false);
-            WireStatusBadgeGroup(rosterStatusBadges, RosterStatusBase, party: false);
-            WireStatusBadgeGroup(partyBuffIcons, PartyStatusBase, party: true);
+            WireStatusBadgeGroup(enemyStatusBadges, EnemyStatusBase);
+            WireStatusBadgeGroup(rosterStatusBadges, RosterStatusBase);
+            WireStatusBadgeGroup(partyBuffIcons, PartyStatusBase);
             CaptureEnemyStatusRowHomePositions();
 
             if (statusTooltip != null) statusTooltip.SetShown(false);
@@ -783,7 +787,7 @@ namespace PrincesPalace
                 .ToArray();
         }
 
-        private void WireStatusBadgeGroup(GameObject[] badges, int baseIndex, bool party)
+        private void WireStatusBadgeGroup(GameObject[] badges, int baseIndex)
         {
             if (badges == null) return;
 
@@ -795,7 +799,7 @@ namespace PrincesPalace
                 int flat = baseIndex + i;
                 if (flat < 0 || flat >= _statusBadgeParts.Length) continue;
 
-                _statusBadgeParts[flat] = party ? WirePartyStatusBadge(badge) : WireExistingStatusBadge(badge);
+                _statusBadgeParts[flat] = WireExistingStatusBadge(badge);
 
                 var hover = badge.GetComponent<HoverIndex>();
                 if (hover == null) hover = badge.AddComponent<HoverIndex>();
@@ -804,10 +808,13 @@ namespace PrincesPalace
             }
         }
 
-        // Enemy and roster badges: BuildStatusBadge's own three named
+        // Every surface's badges: BuildStatusBadge's own three named
         // children, found by name rather than GetComponentInChildren so the
         // button's own synthesised (and otherwise-empty) caption label never
-        // gets mistaken for one of them.
+        // gets mistaken for one of them. PartyBuff{i} is built through the
+        // same BuildStatusBadge call the enemy and roster rows use (see
+        // FightScreen.BuildPartyBuffIcons), so this one wiring path now
+        // serves all three.
         private static StatusBadgeParts WireExistingStatusBadge(GameObject badge)
         {
             var parts = new StatusBadgeParts { Root = badge, Frame = badge.GetComponent<Image>() };
@@ -822,32 +829,6 @@ namespace PrincesPalace
             if (counter != null) parts.Counter = counter.GetComponent<TMPro.TMP_Text>();
 
             return parts;
-        }
-
-        // PartyBuff{i}: a plain chromeless Ui.Button -- root Image plus one
-        // synthesised caption, never rebuilt through BuildStatusBadge's
-        // three-child anatomy (see StatusBadgeParts' own header). No Glyph
-        // or Counter child exists to find, and none is built here either:
-        // `UiKitLintTests.OnlyTheEmitterMayCreateGameObjects` reserves the
-        // rect-preamble GameObject construction UiEmitter does to UiEmitter
-        // alone, so "just add the missing children at runtime" -- the move
-        // this file already makes for HoverIndex, which is a component, not
-        // a GameObject -- is not available here. Frame and Counter are left
-        // null; Glyph is the root's own Image, doing double duty as both the
-        // icon slot and the polarity read the other two surfaces get from a
-        // separate Frame; Code (the one synthesised caption) carries the
-        // counter folded into its own text. PaintBadge and PaintOverflowChip
-        // branch on `Counter == null` for exactly this reason.
-        private static StatusBadgeParts WirePartyStatusBadge(GameObject badge)
-        {
-            var image = badge.GetComponent<Image>();
-            return new StatusBadgeParts
-            {
-                Root = badge,
-                Glyph = image,
-                Fallback = image != null ? image.sprite : null,
-                Code = badge.GetComponentInChildren<TMPro.TMP_Text>(includeInactive: true),
-            };
         }
 
         // ---- the polarity frame (section 3) ------------------------------------
@@ -1056,23 +1037,24 @@ namespace PrincesPalace
             }
         }
 
+        // ONE PATH for all three surfaces -- enemy, roster and party alike
+        // now share BuildStatusBadge's Glyph/Code/Counter anatomy (see
+        // StatusBadgeParts' own header), so there is no longer a dedicated-
+        // frame-or-not branch here. Glyph stays untinted (section 3: art is
+        // painted, not recoloured, so Chilled and Rooted's own colours are
+        // never fought by a tint on top of them); polarity paints the Frame
+        // and the Code text instead. Code is blanked on an icon hit and the
+        // Counter carries the number on its own dedicated node -- the party
+        // plate no longer folds it into "PSN·2" text, because it has a real
+        // Counter node to write to like everything else.
         private void PaintBadge(StatusBadgeParts parts, FightHudModel.StatusRow row, bool showCounter, int flat)
         {
             parts.Root.SetShown(true);
 
-            // A DEDICATED Counter node is what tells enemy/roster badges
-            // apart from the party plate's (see StatusBadgeParts' own
-            // header) -- the two surfaces paint the same information into a
-            // genuinely different number of layers.
-            bool hasDedicatedFrame = parts.Frame != null;
             var polarity = row.IsPositive ? BuffPositive : BuffNegative;
 
-            if (hasDedicatedFrame)
+            if (parts.Frame != null)
             {
-                // POLARITY paints the frame and the Code text -- never the
-                // glyph (section 3: glyph art is untinted, so Chilled and
-                // Rooted's own painted colours are never fought by a tint on
-                // top of them).
                 parts.Frame.sprite = row.IsPositive ? PositiveFrameSprite : NegativeFrameSprite;
                 parts.Frame.enabled = parts.Frame.sprite != null;
                 parts.Frame.color = polarity;
@@ -1086,44 +1068,18 @@ namespace PrincesPalace
             var art = StatusSpriteFor(row);
             if (parts.Glyph != null)
             {
-                if (hasDedicatedFrame)
-                {
-                    parts.Glyph.color = Color.white;
-                    parts.Glyph.sprite = art;
-                    parts.Glyph.enabled = art != null;
-                }
-                else
-                {
-                    // Party plate: this Image IS the frame (no separate
-                    // child exists -- WirePartyStatusBadge), so it stays
-                    // tinted the way the old RefreshPartyBuffs always tinted
-                    // it, and a miss restores the plain button face instead
-                    // of disabling the Image outright.
-                    parts.Glyph.sprite = art != null ? art : parts.Fallback;
-                    parts.Glyph.enabled = true;
-                    parts.Glyph.color = polarity;
-                }
+                parts.Glyph.color = Color.white;
+                parts.Glyph.sprite = art;
+                parts.Glyph.enabled = art != null;
             }
 
             bool showNumber = showCounter && row.Counter >= 0;
-            if (parts.Counter != null)
+            if (parts.Code != null)
             {
-                if (parts.Code != null)
-                {
-                    parts.Code.color = polarity;
-                    parts.Code.SetContent(art == null ? row.Code : "");
-                }
-                parts.Counter.SetContent(showNumber ? row.Counter.ToString() : "");
-            }
-            else if (parts.Code != null)
-            {
-                // Party plate: ONE text node for both -- never blanked on an
-                // icon hit the way enemy/roster's Code is, because that
-                // would drop the counter outright and section 2's counter
-                // rule applies here too.
                 parts.Code.color = polarity;
-                parts.Code.SetContent(showNumber ? $"{row.Code}·{row.Counter}" : row.Code);
+                parts.Code.SetContent(art == null ? row.Code : "");
             }
+            if (parts.Counter != null) parts.Counter.SetContent(showNumber ? row.Counter.ToString() : "");
 
             _statusBadgeTooltip[flat] = row.Tooltip;
         }
@@ -1132,35 +1088,38 @@ namespace PrincesPalace
         // of its own (it is a mixed bag by definition) and hovering it
         // lists every hidden entry, one per line, rather than opening a
         // second, scrollable inspector.
+        //
+        // THE FRAME STAYS ON, tinted NEUTRAL rather than either polarity --
+        // the first capture shipped this chip with no frame at all
+        // (`Frame.enabled = false`), which is what made it read as loose
+        // text floating beside the real badges instead of a badge itself.
+        // ChipNeutral is FightHudPalette.TextSecondary: the archived
+        // battle_ui spec (docs/handoffs/archive/battle_ui/README.md) named
+        // this exact chip "neutral violet border, no category colour", and
+        // TextSecondary (#BFB0D4) is the one token in this palette that
+        // already reads as a muted violet-grey rather than a hue with its
+        // own meaning -- the rounded (benefit) frame shape is used rather
+        // than the clipped-detriment one arbitrarily, since neither shape
+        // says "mixed bag" more than the other.
         private void PaintOverflowChip(StatusBadgeParts parts, IReadOnlyList<FightHudModel.StatusRow> rows,
             int chipIndex, int flat)
         {
             parts.Root.SetShown(true);
 
-            if (parts.Frame != null) parts.Frame.enabled = false;
+            if (parts.Frame != null)
+            {
+                parts.Frame.sprite = PositiveFrameSprite;
+                parts.Frame.enabled = parts.Frame.sprite != null;
+                parts.Frame.color = ChipNeutral;
+            }
 
-            if (parts.Counter != null)
-            {
-                // Enemy/roster: a dedicated Glyph to clear and a dedicated
-                // Counter to blank.
-                if (parts.Glyph != null) parts.Glyph.enabled = false;
-                parts.Counter.SetContent("");
-            }
-            else if (parts.Glyph != null)
-            {
-                // Party plate: the Image is the frame/icon slot with no
-                // "+N" art of its own, so it falls back to the plain button
-                // face, uncoloured -- the chip has no polarity to tint it
-                // with.
-                parts.Glyph.sprite = parts.Fallback;
-                parts.Glyph.color = Color.white;
-                parts.Glyph.enabled = parts.Fallback != null;
-            }
+            if (parts.Glyph != null) parts.Glyph.enabled = false;
+            if (parts.Counter != null) parts.Counter.SetContent("");
 
             int hidden = rows.Count - chipIndex;
             if (parts.Code != null)
             {
-                parts.Code.color = Hex(FightHudPalette.TextPrimary);
+                parts.Code.color = ChipNeutral;
                 parts.Code.SetContent($"+{hidden}");
             }
 
@@ -1225,8 +1184,53 @@ namespace PrincesPalace
                     RepositionEnemyStatusRow(slot, delta);
                 }
 
+                // AFTER the re-spread, so it starts from the row's correct
+                // slot-X for this refresh rather than the stale one from
+                // last refresh's enemy count.
+                FitEnemyStatusRow(slot, rows.Count);
+
                 PaintStatusRow(EnemyStatusBase + slot * EnemyStatusBadgesPerRow, EnemyStatusBadgesPerRow,
                     EnemyRosterStatusRealCapacity, rows, showCounter: true);
+            }
+        }
+
+        // Section 3's fix: the build-time strip is always the full 196px
+        // (4 badges + the "+N" chip, all five physical slots) because
+        // UiAudit solves the screen once, before any encounter exists to
+        // say how many statuses a given enemy will actually carry -- see
+        // FightScreen.BuildEnemyStatusRows' own header, "the audited layout
+        // is the full 5-node row and stays as is". At RUNTIME the strip
+        // shrinks to however many badges this refresh actually shows,
+        // centred on the same slot X the full-width row was built around
+        // (read back from the strip's OWN current position, already
+        // resolved by RepositionEnemyStatusRow above), so two badges on a
+        // golem no longer leave the strip's other three slots' worth of
+        // empty backing hanging off to their right.
+        private void FitEnemyStatusRow(int slot, int rowCount)
+        {
+            if (!Has(enemyStatusStrips, slot)) return;
+
+            int visible = rowCount <= EnemyRosterStatusRealCapacity
+                ? rowCount
+                : EnemyStatusBadgesPerRow; // the "+N" chip takes the row's last physical slot
+
+            if (visible <= 0) return; // the strip is hidden -- nothing to size
+
+            var stripRect = (RectTransform)enemyStatusStrips[slot].transform;
+            float centreX = stripRect.anchoredPosition.x;
+
+            float rowWidth = (visible - 1) * EnemyStatusPitch + EnemyStatusBadgeSize;
+            stripRect.sizeDelta = new Vector2(rowWidth + EnemyStatusStripPadX * 2f, stripRect.sizeDelta.y);
+
+            int first = slot * EnemyStatusBadgesPerRow;
+            for (int i = 0; i < visible; i++)
+            {
+                int flat = first + i;
+                if (!Has(enemyStatusBadges, flat)) continue;
+
+                float x = centreX + (i - (visible - 1) * 0.5f) * EnemyStatusPitch;
+                var badgeRect = (RectTransform)enemyStatusBadges[flat].transform;
+                badgeRect.anchoredPosition = new Vector2(x, badgeRect.anchoredPosition.y);
             }
         }
 
@@ -1321,6 +1325,23 @@ namespace PrincesPalace
         // top-level HUD child. The anchor's centre is carried through WORLD
         // space first, the one conversion that is correct regardless of how
         // deep the anchor happens to be nested.
+        //
+        // THE INTERIOR BOX IS THE CANVAS'S OWN REFERENCE FRAME
+        // (UiFrames.Reference), NOT tooltipRect.parent.rect. The first
+        // capture's defect: reading the interior off `parent.rect` (FightHud,
+        // a NestedCanvas meant to fill the whole screen) let Beside's own
+        // flip-then-clamp fold the tooltip into a box far smaller than the
+        // canvas -- landing it mid-stage, nowhere near the badge that opened
+        // it, rather than beside it. UiFrames.cs states "authored ==
+        // rendered": 1920x1080 canvas units are screen pixels, and section 1
+        // of PLAN_STATUS_EFFECT_UI.md pins 1920x1080 as the SMALLEST canvas
+        // this screen is ever audited at in EITHER axis (21:9 only adds
+        // width, 4:3/16:10 only add height). Clamping to the reference frame
+        // instead of whatever a given ancestor's rect reports is therefore
+        // never wrong -- on a wider or taller real canvas it is merely more
+        // conservative than the true edge, never past it, and it stops this
+        // placement depending on a rect this call site does not actually
+        // need to trust.
         private void PlaceStatusTooltip(RectTransform anchor)
         {
             var tooltipRect = statusTooltip != null ? statusTooltip.transform as RectTransform : null;
@@ -1341,12 +1362,13 @@ namespace PrincesPalace
             }
 
             const float Margin = 8f;
-            var interior = parent.rect;
+            float halfW = UiFrames.Reference.X * 0.5f;
+            float halfH = UiFrames.Reference.Y * 0.5f;
             var at = TooltipPlacement.Beside(
                 anchorLocal.x, anchorLocal.y, anchor.rect.width,
                 tooltipRect.rect.width, tooltipRect.rect.height,
-                interiorLeft: interior.xMin + Margin, interiorRight: interior.xMax - Margin,
-                interiorBottom: interior.yMin + Margin, interiorTop: interior.yMax - Margin);
+                interiorLeft: -halfW + Margin, interiorRight: halfW - Margin,
+                interiorBottom: -halfH + Margin, interiorTop: halfH - Margin);
 
             tooltipRect.anchoredPosition = new Vector2(at.X, at.Y);
         }
