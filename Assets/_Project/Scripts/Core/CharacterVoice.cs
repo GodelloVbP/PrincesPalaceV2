@@ -106,6 +106,16 @@ namespace PrincesPalace
             return lines.TryGetValue(line, out var takes) && takes.Length > 0 ? takes : null;
         }
 
+        // Test-only door to the voice table's own keys, named ...ForTest per
+        // house convention (FightBeatPlayer.WireStageForTest, FightController.
+        // StageShakesForTest) since Core's InternalsVisibleTo names only the
+        // Editor assembly and checking a key against ContentDatabase.Characters
+        // needs PlayMode plus real content. Takes(characterId, line) already
+        // degrades a miss to null silently -- by design, per this file's own
+        // header -- which is exactly why nothing else would ever notice a key
+        // going stale.
+        public static IReadOnlyCollection<string> VoiceKeysForTest => Voices.Keys;
+
         public static void Play(string characterId, Line line)
         {
             var takes = Takes(characterId, line);
