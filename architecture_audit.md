@@ -297,8 +297,8 @@ files that name them:
 
 | Refs | Type | Home |
 |---:|---|---|
-| 49 | `FightController` | `Core/` (5 partial files, 2,216 lines) |
-| 45 | `ContentDatabase` | `Core/Content/` (3 partial files, 1,532 lines) |
+| 49 | `FightController` | `Core/` (≈4,500 lines across 5 files, as of `b03fa207` — a precise count in prose drifts every time the class is touched, so this is deliberately approximate) |
+| 45 | `ContentDatabase` | `Core/Content/` (≈1,900 lines across 3 files, as of `b03fa207` — same reasoning) |
 | 37 | `Character` | `Data/` |
 | 37 | `SceneBuilder` | `Editor/SceneBuilder/` |
 | 36 | `AbilityScoreBlock`, `UiVec` | `Domain/Stats`, `Domain/UiKit` |
