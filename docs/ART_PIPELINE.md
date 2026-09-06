@@ -16,6 +16,7 @@ project, and where each kit's pieces actually live.
 | Backgrounds | `Art/Backgrounds/` | none — full-frame opaque | same folder | ongoing, one outstanding: `Relics.png` |
 | Map icons | raw | flood-fill (`process_map_icons.py`) | `Art/Backgrounds/Processed/` | delivered |
 | Six-theme UI kit | `Art/UI/Buttons/` sheets (button plates legacy/3x1/5x1, row 6x1, containers 3x4/9x16/3x2/2x1, flag banners 3x4/9x16), one set per theme (Gold/Crimson/Violet/Blue/Green/Silver) | grid slice (`tools/splice_ui_kit.py`), nominal filenames but measured aspect — see `ButtonPlateArt`/`ContainerArt`'s own headers for the per-shape numbers | `Art/UI/Buttons/Processed/` | delivered |
+| Status icons | `Art/UI/Status/Raw` | direct, green `#00FF00`, hue-dominance, 1024px master keyed then resized to 256 (`status` kit, alpha-aware resample — see the tool's module docstring) | `Resources/Status/<slug>.png`, slugs from `docs/STATUS_ICON_PROMPTS.md`'s headings | pending art delivery — see `docs/PLAN_STATUS_EFFECT_UI.md` phase 2 |
 
 ## 2. Keying conventions
 
