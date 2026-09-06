@@ -280,7 +280,16 @@ namespace PrincesPalace.Domain.Tests
         {
             var root = Solve();
             var stage = Find(root, "EnemyStage");
-            var order = stage.Children.Select(c => c.Name).ToList();
+
+            // FILTERED TO SLOT NODES, not stage.Children as a whole: the
+            // status rows (PLAN_STATUS_EFFECT_UI) are appended after all
+            // three slots, so "last child of the stage" no longer means
+            // "nearest slot" -- it means the last status row. The claim this
+            // test actually makes is about SLOTS painting over each other,
+            // which the status rows do not participate in at all (they sit
+            // below every slot's feet, on clear floor -- see
+            // NoAlwaysVisiblePanelStandsInFrontOfAFigureSFeet).
+            var order = stage.Children.Where(c => c.Name.EndsWith("Slot")).Select(c => c.Name).ToList();
 
             // Declaration order IS the painter's algorithm: uGUI draws later
             // siblings on top, so the nearest slot must be declared LAST.
@@ -827,6 +836,205 @@ namespace PrincesPalace.Domain.Tests
                 "the element tag reaches back into the POWER key's own box");
             Assert.LessOrEqual(tagRect.Right, valueRect.Left,
                 "the element tag reaches into the POWER value's own box");
+        }
+
+        // ---- status badges (PLAN_STATUS_EFFECT_UI, package B) -----------------
+
+        [Test]
+        public void StatusBadgeListsAreSizedAndNamedAsThePlanFixes()
+        {
+            var screen = Screen();
+            var root = UiSolver.Solve(screen.Root, UiFrames.Reference);
+
+            // 3 slots x 5 (4 statuses + the "+N" overflow chip), flattened
+            // slot-major; 2 roster rows x 5, flattened roster-major; the
+            // party plate raised 4 -> 6 with no new list.
+            Assert.AreEqual(15, screen.EnemyStatusBadges.Count);
+            Assert.AreEqual(3, screen.EnemyStatusStrips.Count);
+            Assert.AreEqual(10, screen.RosterStatusBadges.Count);
+            Assert.AreEqual(6, screen.PartyBuffIcons.Count);
+
+            for (int slot = 0; slot < FightHudSpec.StageSlotsPerSide; slot++)
+            {
+                Assert.IsNotNull(Find(root, $"EnemyStatusStrip{slot}"), $"missing EnemyStatusStrip{slot}");
+
+                for (int i = 0; i < 5; i++)
+                {
+                    var name = $"EnemyStatusBadge{slot}_{i}";
+                    var badge = Find(root, name);
+                    Assert.IsNotNull(badge, $"missing {name}");
+                    Assert.IsNotNull(Find(badge, "Glyph"), $"{name} has no Glyph child");
+                    Assert.IsNotNull(Find(badge, "Code"), $"{name} has no Code child");
+                    Assert.IsNotNull(Find(badge, "Counter"), $"{name} has no Counter child");
+                }
+            }
+
+            for (int r = 0; r < 2; r++)
+            {
+                for (int i = 0; i < 5; i++)
+                {
+                    var name = $"RosterStatusBadge{r}_{i}";
+                    var badge = Find(root, name);
+                    Assert.IsNotNull(badge, $"missing {name}");
+                    Assert.IsNotNull(Find(badge, "Glyph"), $"{name} has no Glyph child");
+                    Assert.IsNotNull(Find(badge, "Code"), $"{name} has no Code child");
+                    Assert.IsNotNull(Find(badge, "Counter"), $"{name} has no Counter child");
+                }
+            }
+
+            Assert.IsNotNull(Find(root, "StatusTooltip"));
+            Assert.IsNotNull(Find(root, "StatusTooltipText"));
+
+            // PartyBuffTooltip is left exactly as it was -- Package C
+            // migrates the party plate onto the shared tooltip, this screen
+            // does not retire the old one out from under it.
+            Assert.IsNotNull(Find(root, "PartyBuffTooltip"));
+        }
+
+        [Test]
+        public void EmptyStatusRowsAndBadgesStartInactive()
+        {
+            var root = Solve();
+
+            for (int slot = 0; slot < FightHudSpec.StageSlotsPerSide; slot++)
+            {
+                Assert.IsTrue(Find(root, $"EnemyStatusStrip{slot}").Source.StartInactive,
+                    $"EnemyStatusStrip{slot} must start inactive - an empty row renders nothing (section 7)");
+
+                for (int i = 0; i < 5; i++)
+                {
+                    var name = $"EnemyStatusBadge{slot}_{i}";
+                    Assert.IsTrue(Find(root, name).Source.StartInactive, $"{name} must start inactive");
+                }
+            }
+
+            for (int r = 0; r < 2; r++)
+            {
+                for (int i = 0; i < 5; i++)
+                {
+                    var name = $"RosterStatusBadge{r}_{i}";
+                    Assert.IsTrue(Find(root, name).Source.StartInactive, $"{name} must start inactive");
+                }
+            }
+        }
+
+        [Test]
+        public void EnemyStatusRowCentresSitSixtyBelowTheirSlotSGroundLine()
+        {
+            var root = Solve();
+            int count = FightHudSpec.StageSlotsPerSide;
+
+            for (int slot = 0; slot < count; slot++)
+            {
+                var offset = FightStageAnchors.SlotOffset(slot, count, mirrored: false);
+                var strip = RectOf($"EnemyStatusStrip{slot}");
+
+                Assert.AreEqual(offset.X, strip.Centre.X, 0.01f, $"slot {slot} row x");
+                Assert.AreEqual(offset.Y - 60f, strip.Centre.Y, 0.01f, $"slot {slot} row y");
+            }
+        }
+
+        // How far below its own ground line the nameplate hangs, in REAL
+        // (rendered) pixels: (|NameplateOffset| + half its height) * the
+        // slot's own depth scale.
+        //
+        // NOT RectOf("Enemy{slot}Nameplate").Bottom. The nameplate is a
+        // child of a WithScale slot, and UiSolver -- like Unity's own
+        // RectTransform -- does not cascade an ancestor's scale into a
+        // descendant's own Rect: that is a render-time transform, not a
+        // second layout pass, so the solved Rect is the UNSCALED 48px
+        // number, not the 48*scale one this row's own drop was measured
+        // against (section 1). Comparing against the solved Rect directly
+        // overstates the real on-screen collision by exactly that scale
+        // factor -- caught the hard way, as a failing test, before this
+        // helper existed.
+        private static float RealNameplateReach(int slot, int count) =>
+            (34f + 14f) * FightStageAnchors.SlotScale(slot, count);
+
+        [Test]
+        public void EnemyStatusRowsClearTheirOwnNameplateAndStayAboveTheCanvasFloor()
+        {
+            var root = Solve();
+            int count = FightHudSpec.StageSlotsPerSide;
+
+            for (int slot = 0; slot < count; slot++)
+            {
+                var offset = FightStageAnchors.SlotOffset(slot, count, mirrored: false);
+                var strip = RectOf($"EnemyStatusStrip{slot}");
+                float nameplateBottom = offset.Y - RealNameplateReach(slot, count);
+
+                // Thin at the near slot (section 1's own "23.5px" is a
+                // centre-to-reach distance, not edge-to-edge; the real
+                // margin here is close to 5.5px) but must stay positive.
+                Assert.Less(strip.Top, nameplateBottom,
+                    $"slot {slot}'s status row reaches up into its own nameplate's real (scaled) band");
+
+                // Comfortably inside the canvas at every audited aspect -
+                // UiFrames.Reference is the smallest of them (section 1).
+                Assert.Greater(strip.Bottom, -(UiFrames.Reference.Y * 0.5f),
+                    $"slot {slot}'s status row falls off the bottom of the canvas");
+            }
+        }
+
+        [Test]
+        public void EnemyStatusRowsDoNotOverlapEachOtherVertically()
+        {
+            var root = Solve();
+            int count = FightHudSpec.StageSlotsPerSide;
+            var rows = Enumerable.Range(0, count).Select(slot => RectOf($"EnemyStatusStrip{slot}")).ToList();
+
+            for (int a = 0; a < count; a++)
+            {
+                for (int b = a + 1; b < count; b++)
+                {
+                    Assert.IsFalse(rows[a].Overlaps(rows[b]),
+                        $"enemy status rows {a} and {b} overlap - see FightStageAnchors.SlotOffset");
+                }
+            }
+        }
+
+        // NOT 40px, as section 1's prose ("row centres land at -278, -231.5
+        // and -185, spans 40px apart") could be misread to claim: 40 is the
+        // BADGE pitch within one row. The measured row-to-row distance is the
+        // slots' own ground-line spacing, 46.5px here, comfortably more than
+        // the 36px badge height so the rows never collide vertically even
+        // where their x-ranges do (see the far slot's row, which reaches
+        // further right than the near one's).
+        [Test]
+        public void EnemyStatusBadgesWithinARowSitFortyPixelsApart()
+        {
+            for (int slot = 0; slot < FightHudSpec.StageSlotsPerSide; slot++)
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    var a = RectOf($"EnemyStatusBadge{slot}_{i}");
+                    var b = RectOf($"EnemyStatusBadge{slot}_{i + 1}");
+                    Assert.AreEqual(40f, b.Centre.X - a.Centre.X, 0.01f, $"slot {slot} badge {i}->{i + 1} pitch");
+                }
+            }
+        }
+
+        [Test]
+        public void RosterStatusRowsSitBetweenTheNameAndTheHpValueWithNoOverlap()
+        {
+            for (int r = 0; r < 2; r++)
+            {
+                var name = RectOf($"Roster{r}Name");
+                var hpValue = RectOf($"Roster{r}HpValue");
+                var hpBar = RectOf($"Roster{r}HpBar");
+
+                for (int i = 0; i < 5; i++)
+                {
+                    var badge = RectOf($"RosterStatusBadge{r}_{i}");
+
+                    Assert.LessOrEqual(name.Right, badge.Left,
+                        $"roster {r} badge {i} reaches back into the name box");
+                    Assert.LessOrEqual(badge.Right, hpValue.Left,
+                        $"roster {r} badge {i} reaches into the hp-value box");
+                    Assert.IsFalse(badge.Overlaps(hpBar),
+                        $"roster {r} badge {i} overlaps the hp bar below it");
+                }
+            }
         }
 
         private static IEnumerable<UiNode> Walk(UiNode node)
