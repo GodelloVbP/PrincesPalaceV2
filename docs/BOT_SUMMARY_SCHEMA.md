@@ -239,6 +239,18 @@ RoomTrace
   Equipped      EquipTrace[] -- what the equip pass after this room put on.
                         Empty for most rooms, which is the honest answer: a
                         player does not re-dress after every fight either.
+  LearnedSpellCountAfterRoom int -- fielded characters that have learned a
+                        first spell, read AFTER this room's pending spell
+                        assignments resolve (docs/PLAN_SHOP.md 1g/2g, gate
+                        3). Recorded for EVERY room, not only ones with a
+                        book offer, for the same reason GoldOnArrival is:
+                        gate 3's numbers ask about a specific step, and a
+                        single end-of-run reading cannot answer that.
+  UnassignedSpellBookCountAfterRoom int -- pending books still unassigned
+                        at the same point.
+  SpellAssignments SpellAssignmentTrace[] -- every ChooseSpellAssignment
+                        answer this room, in order -- the acquisition-loop
+                        analogue of RoomTrace.ShopChoices.
 
 OfferEntry
   ItemId        string
@@ -246,6 +258,17 @@ OfferEntry
   Plus          int
   RiftTier      int    -- (int)Domain.Content.RiftTier, 0..3
   ModifierCount int
+
+SpellAssignmentTrace
+  SkillId       string
+  Assigned      bool
+  CharacterId   string -- "" when Assigned is false
+  Slot          int    -- -1 when Assigned is false
+  Outcome       string -- ShopResult.Outcome's name when Assigned is true;
+                          "Skip" otherwise -- a policy declining is not a
+                          refusal, so it gets its own word rather than
+                          borrowing ShopOutcome.Refused for a choice nothing
+                          refused.
 
 EquipTrace
   CharacterId   string -- CharacterDefinition.id it was worn by
@@ -328,6 +351,18 @@ how the old fields are appended.
           "4": { "p10": 8, "p25": 16, "median": 33, "n": 3812 },
           "8": null
         }
+      },
+      "spellAcquisition": {
+        "learnedFirstSpellByStep": {
+          "8": { "share": 0.12, "n": 190 },
+          "16": null,
+          "24": null,
+          "32": null
+        },
+        "slotsFilledPerLegMean": 0.31,
+        "depthZeroBooksAtLeg2": 9,
+        "depthSomeBooksAtLeg2": 14,
+        "shopVisitsShowingUnaffordableBookShare": 0.18
       }
     }
   ],
@@ -588,6 +623,39 @@ map is keyed `gear` / `books` / `relics` in `ShopStock`'s own order.
   `n` (rooms measured). **This replaces §2a's cumulative-won-gold table.**
   `null` for a step nobody in the cell reached — "never got there" and "got
   there broke" are different findings.
+
+**`cells[].spellAcquisition`** — gate 3's own exit numbers (`PLAN_SHOP.md`
+§7.3, Phase D 1-3): whether the acquisition loop is putting first spells on
+fielded characters at the depths gate 3 asks about, computed from
+`RoomTrace.LearnedSpellCountAfterRoom` / `.UnassignedSpellBookCountAfterRoom`
+(both bookOnly-inert during Phase A — this measures ACQUISITION, not combat
+impact, which is the point of shipping the loop before the flip).
+
+- `learnedFirstSpellByStep`: keyed `"8"` / `"16"` / `"24"` / `"32"` (one
+  entry per boss). Each value is `null` when no run in the cell reached that
+  step (**reached** means the run's own depth got there, not merely "has a
+  room recorded before this step" — a run that died at step 5 still has a
+  step-4 room, and counting it toward "reached step 8" would read as the
+  depth-of-8 share reading as depth-of-4), otherwise
+  `{ "share": <n>, "n": <reached> }`: `share` is the fraction of runs that
+  reached the step whose deepest room at or before it already shows
+  `LearnedSpellCountAfterRoom > 0`.
+- `slotsFilledPerLegMean`: mean, across the cell's runs, of that run's final
+  `LearnedSpellCountAfterRoom` divided by `depth / 8` legs (floored at one
+  leg, so a run that died on step 3 is not divided by a fraction). `null`
+  when the cell has no runs with a recorded room.
+- `depthZeroBooksAtLeg2` / `depthSomeBooksAtLeg2`: median `DeathStep`/cap
+  depth of runs split by whether, at leg 2 (step 8), the deepest room
+  reached by then shows zero or at least one book ACQUIRED — learned or
+  still unassigned either counts, since a book sitting unassigned still
+  says the loop found something. `null` for whichever side has no runs; a
+  run that recorded no room by step 8 counts toward neither.
+- `shopVisitsShowingUnaffordableBookShare`: of every shop visit in the cell,
+  the share whose shelf showed at least one `Book` card priced above
+  `goldOnArrival` — the shelf's own roll already excludes a book every
+  fielded character knows, so a shown-but-unaffordable book is the honest
+  "wanted it, could not pay" reading without replaying per-character
+  eligibility here. `null` when the cell had no shop visits.
 
 **`shopVsNoShop`** — the matched-seed comparison (§7.1 point 1), or `null`.
 

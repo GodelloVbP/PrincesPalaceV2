@@ -443,6 +443,54 @@ def render_arrival_gold(shop, prev):
     return "".join(out)
 
 
+def render_spell_acquisition(cell, prev_cell):
+    """Gate 3's own exit numbers (docs/PLAN_SHOP.md 7.3, Phase D 1-3).
+
+    Same "not reached" posture as render_arrival_gold: a step nobody in the
+    cell got to is a different finding from a step everybody got to with
+    nothing learned, so it renders as its own row rather than a zero.
+    """
+    acq = cell.get("spellAcquisition") or {}
+    prev = (prev_cell or {}).get("spellAcquisition") or {}
+
+    by_step = acq.get("learnedFirstSpellByStep") or {}
+    prev_by_step = (prev or {}).get("learnedFirstSpellByStep") or {}
+    steps = sorted(by_step, key=lambda k: int(k))
+
+    out = ["<h3>spell acquisition</h3>"]
+
+    if steps:
+        out.append('<table class="sortable"><thead><tr><th>step</th>'
+                   '<th data-numeric="1">share with a first spell</th>'
+                   '<th data-numeric="1">n</th><th>delta</th></tr></thead><tbody>')
+        for step in steps:
+            row = by_step.get(step)
+            if row is None:
+                out.append('<tr><td>{}</td><td colspan="3" class="empty">not reached</td></tr>'.format(esc(step)))
+                continue
+            old = (prev_by_step.get(step) or {}).get("share") if prev_by_step.get(step) else None
+            out.append("<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>".format(
+                esc(step), fmt_num(row.get("share")), fmt_num(row.get("n")),
+                delta_html(old, row.get("share")) if prev_cell else ""))
+        out.append("</tbody></table>")
+
+    rows = [
+        ("slotsFilledPerLegMean", "spell slots filled per leg (mean)"),
+        ("depthZeroBooksAtLeg2", "median depth, zero books acquired by leg 2"),
+        ("depthSomeBooksAtLeg2", "median depth, at least one book acquired by leg 2"),
+        ("shopVisitsShowingUnaffordableBookShare", "shop visits showing an unaffordable book"),
+    ]
+    out.append('<table class="sortable"><thead><tr><th>metric</th>'
+               '<th data-numeric="1">value</th><th>delta</th></tr></thead><tbody>')
+    for key, label in rows:
+        new = acq.get(key)
+        old = prev.get(key) if prev_cell else None
+        d = delta_html(old, new) if prev_cell else ""
+        out.append("<tr><td>{}</td><td>{}</td><td>{}</td></tr>".format(esc(label), fmt_num(new), d))
+    out.append("</tbody></table>")
+    return "".join(out)
+
+
 def render_shop_vs_no_shop(summary):
     """The matched-seed comparison (docs/PLAN_SHOP.md 7.1 point 1).
 
@@ -695,6 +743,7 @@ def render_html(summary, previous, batch_dir, previous_dir):
         parts.append('<h2 class="cell-header">{} / {}</h2>'.format(esc(key[0]), esc(key[1])))
         parts.append(render_cell_table(cell, prev_cell))
         parts.append(render_shop(cell, prev_cell))
+        parts.append(render_spell_acquisition(cell, prev_cell))
         parts.append(render_death_causes(cell))
         parts.append(
             render_keyed_table(
