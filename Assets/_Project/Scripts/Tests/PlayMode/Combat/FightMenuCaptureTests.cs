@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
@@ -27,9 +26,12 @@ namespace PrincesPalace.PlayModeTests
     {
         private FightController _fight;
 
-        private static string OutputDir =>
-            Path.GetFullPath(Path.Combine(
-                Directory.GetParent(Application.dataPath).FullName, "tools", "screenshots", "runtime"));
+        // OutputDir/Named/RootCanvas/Shoot moved to Tests/PlayMode/Shared/
+        // HudCaptureRig.cs (S12's review) -- byte-for-byte duplicated in
+        // StatusRowCaptureTests before this. Built fresh per test, right
+        // after _fight is assigned, since the rig needs a real FightController
+        // to walk.
+        private HudCaptureRig _rig;
 
         [SetUp]
         public void PlayFast() => FightBeatPlayer.BeatSpeedMultiplier = 60f;
@@ -41,36 +43,11 @@ namespace PrincesPalace.PlayModeTests
             Time.captureFramerate = 0;
         }
 
-        private GameObject Named(string name) =>
-            _fight.GetComponentsInChildren<Transform>(includeInactive: true)
-                  .FirstOrDefault(t => t.name == name)?.gameObject;
-
         private void Click(string name)
         {
-            var go = Named(name);
+            var go = _rig.Named(name);
             Assert.IsNotNull(go, $"no object named '{name}'");
             go.GetComponent<Button>().onClick.Invoke();
-        }
-
-        private static Canvas RootCanvas() =>
-            Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude).FirstOrDefault(c => c.isRootCanvas);
-
-        private IEnumerator Shoot(string label)
-        {
-            // Two frames: one for the click's state change to apply, one for
-            // the open animation to have started drawing. Without the second,
-            // every column captures at alpha 0 and the shot looks like the
-            // panel never opened.
-            yield return null;
-            yield return null;
-
-            var canvas = RootCanvas();
-            Assert.IsNotNull(canvas, "the Fight scene has no root Canvas");
-            Directory.CreateDirectory(OutputDir);
-            string path = Path.Combine(OutputDir, $"FightMenu_{label}.png");
-            CanvasCapture.RenderToFile(canvas, path);
-            Assert.IsTrue(File.Exists(path), $"capture '{label}' was not written");
-            Debug.Log($"[FightMenuCapture] wrote {path}");
         }
 
         [UnityTest]
@@ -87,6 +64,7 @@ namespace PrincesPalace.PlayModeTests
 
             _fight = Object.FindAnyObjectByType<FightController>();
             Assert.IsNotNull(_fight, "the Fight scene has no FightController");
+            _rig = new HudCaptureRig(_fight, "FightMenu_", "FightMenuCapture");
 
             // Let the opening beats drain so the capture is of a settled menu
             // waiting on the player, not of the fight's first animation.
@@ -126,11 +104,11 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             yield return null;
 
-            yield return Shoot("1_resting");
+            yield return _rig.Shoot("1_resting");
 
             // SKILL is Verb1 (0=ATTACK, 1=SKILL, 2=ITEM, 3=RUN, 4=HOLD BACK).
             Click("Verb1");
-            yield return Shoot("2_skill_submenu");
+            yield return _rig.Shoot("2_skill_submenu");
 
             // The first skill row THE ACTOR CAN ACTUALLY CAST, which puts the
             // fight into target selection and raises the detail column and the
@@ -148,11 +126,11 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsNotNull(castable, "the actor has no castable skill to open targeting with");
             castable.onClick.Invoke();
             yield return null;
-            yield return Shoot("3_targeting");
+            yield return _rig.Shoot("3_targeting");
 
             // ITEM, the other submenu, to see whether the two are consistent.
             Click("Verb2");
-            yield return Shoot("4_item_submenu");
+            yield return _rig.Shoot("4_item_submenu");
 
             // Back out to the root so the stage is unobscured, then hover the
             // first enemy's intent icon. Driven through the component rather
@@ -165,7 +143,7 @@ namespace PrincesPalace.PlayModeTests
             var hover = _fight.GetComponentsInChildren<HoverIndex>(includeInactive: true).FirstOrDefault();
             Assert.IsNotNull(hover, "no HoverIndex was attached to any enemy intent icon");
             hover.OnPointerEnter(null);
-            yield return Shoot("5_intent_hover");
+            yield return _rig.Shoot("5_intent_hover");
         }
 
         // THE ONE STATE NOTHING ELSE CAN SHOW: a list too long for its window,
@@ -196,6 +174,7 @@ namespace PrincesPalace.PlayModeTests
 
             _fight = Object.FindAnyObjectByType<FightController>();
             Assert.IsNotNull(_fight, "the Fight scene has no FightController");
+            _rig = new HudCaptureRig(_fight, "FightMenu_", "FightMenuCapture");
 
             for (int i = 0; i < 240; i++) yield return null;
 
@@ -236,7 +215,7 @@ namespace PrincesPalace.PlayModeTests
             // list AFTER that repaint, which is the whole claim.
             _fight.RefreshUi();
 
-            yield return Shoot("6_long_list_scrolled");
+            yield return _rig.Shoot("6_long_list_scrolled");
         }
     }
 }

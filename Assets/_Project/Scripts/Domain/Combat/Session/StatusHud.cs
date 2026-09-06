@@ -18,6 +18,14 @@ namespace PrincesPalace.Domain.Combat.Session
     // FightHudModel regardless -- the plan's package contract (section 11)
     // fixes those two names, so the other packages compile against
     // FightHudModel, never against this file.
+    //
+    // PUBLIC SURFACE IS SentinelTurns, CodeFor, SlugFor, SortKeyFor, RowFor
+    // and SpeedRow (S6's review) -- every one of those has a real caller
+    // outside this file (FightHudModel.StatusRowsFor, the icon resource
+    // lookups, StatusHudCoverageTests' own CodeFor/SortKeyFor coverage).
+    // CounterFor, IsPositive, SpeedSortKey and TooltipFor are composition
+    // steps RowFor/SpeedRow assemble from -- nothing outside this file has
+    // ever called one of those four directly, so they stay private.
     public static class StatusHud
     {
         // At or above this many of the holder's own turns remaining, a
@@ -33,7 +41,7 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // -1 is "draw no number" -- the one convention every surface that
         // reads a StatusRow.Counter shares.
-        public static int CounterFor(int turnsRemaining) =>
+        private static int CounterFor(int turnsRemaining) =>
             turnsRemaining < SentinelTurns ? turnsRemaining : -1;
 
         private static string DurationPhrase(int turnsRemaining) =>
@@ -97,7 +105,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // for each of the twelve -- no per-type table entry needed here.
         public static string SlugFor(StatusEffectType type) => type.ToString().ToLowerInvariant();
 
-        public static bool IsPositive(StatusEffectType type)
+        private static bool IsPositive(StatusEffectType type)
         {
             switch (type)
             {
@@ -187,7 +195,7 @@ namespace PrincesPalace.Domain.Combat.Session
         public static int SortKeyFor(StatusEffectType type) =>
             ((int)TierOf(type) * 10 + (int)BucketOf(type)) * 100 + TableIndex(type);
 
-        public static int SpeedSortKey(bool positive) =>
+        private static int SpeedSortKey(bool positive) =>
             ((int)Tier.Rest * 10 + (int)(positive ? Bucket.Benefit : Bucket.Harm)) * 100
                 + (positive ? SpeedUpTableIndex : SpeedDownTableIndex);
 
@@ -200,7 +208,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // still a detriment badge even though the player is pleased about
         // it, which is why this reads IsPositive(status.Type) rather than
         // anything about who currently holds the status.
-        public static string TooltipFor(ActiveStatus status)
+        private static string TooltipFor(ActiveStatus status)
         {
             bool positive = IsPositive(status.Type);
             string duration = DurationPhrase(status.TurnsRemaining);

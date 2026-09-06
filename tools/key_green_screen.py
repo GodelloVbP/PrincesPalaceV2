@@ -210,7 +210,7 @@ FULLY_OPAQUE_BELOW = 18
 
 
 def greenness(r, g, b):
-    return g - max(r, b)
+    return g - np.maximum(r, b)
 
 
 def key_out_green(image):
@@ -224,71 +224,80 @@ def key_out_green(image):
     those pixels have dominance 0 (black is nobody's green) and would
     otherwise key to alpha 255, painting the transparent corners solid
     black. Taking the min keeps them at 0.
+
+    VECTORISED with numpy (S13's review) -- the per-pixel Python loop this
+    replaced took noticeably longer per master the bigger the source got,
+    for arithmetic that has no actual per-pixel dependency (every pixel's
+    result depends only on that same pixel's own r/g/b/a). Equivalence
+    against the old loop is checked directly, not just argued: run both
+    against a flat-green master with an outlined shape and a real-alpha
+    master and diff the output arrays -- see the S13 commit message for
+    that result. Every rule the loop enforced is preserved exactly:
+    FULLY_OPAQUE_BELOW/FULLY_TRANSPARENT_ABOVE, the same linear ramp
+    (computed the same order -- 255 * numerator, THEN divided, THEN
+    truncated -- so no float rounding differs from the original int(...)
+    call), the min(input_alpha, keyed_alpha) rule, and spill suppression
+    (g = max(r, b) wherever dominance > 0) applied before the fully-
+    transparent pixels are forced back to (0, 0, 0, 0) -- the loop's own
+    `continue` skipped spill suppression for those pixels, but their RGB is
+    thrown away by the zeroing either way, so the order cannot be observed.
     """
     rgba = image.convert("RGBA")
-    pixels = rgba.load()
-    width, height = rgba.size
+    arr = np.asarray(rgba).astype(np.int32)
+    r, g, b, input_alpha = arr[..., 0], arr[..., 1], arr[..., 2], arr[..., 3]
+
     span = FULLY_TRANSPARENT_ABOVE - FULLY_OPAQUE_BELOW
+    dominance = greenness(r, g, b)
 
-    for y in range(height):
-        for x in range(width):
-            r, g, b, input_alpha = pixels[x, y]
-            dominance = greenness(r, g, b)
+    # Linear ramp across the band, so antialiased edges keep a soft falloff
+    # instead of turning into a hard jagged cut. Computed for every pixel
+    # (including ones the two np.where calls below will overwrite) since
+    # that is cheaper than masking the array twice.
+    ramp = 255 - np.trunc(255 * (dominance - FULLY_OPAQUE_BELOW) / span).astype(np.int32)
+    keyed_alpha = np.where(dominance <= FULLY_OPAQUE_BELOW, 255, ramp)
 
-            if dominance >= FULLY_TRANSPARENT_ABOVE:
-                pixels[x, y] = (0, 0, 0, 0)
-                continue
+    alpha = np.minimum(input_alpha, keyed_alpha)
 
-            if dominance <= FULLY_OPAQUE_BELOW:
-                keyed_alpha = 255
-            else:
-                # Linear ramp across the band, so antialiased edges keep a
-                # soft falloff instead of turning into a hard jagged cut.
-                keyed_alpha = 255 - int(255 * (dominance - FULLY_OPAQUE_BELOW) / span)
+    # Spill suppression. Any green still dominating on a kept pixel is
+    # backdrop bounced onto the subject's edge -- pulling it down to its own
+    # red/blue removes the lime fringe that would otherwise glow against a
+    # near-black nebula.
+    suppressed_g = np.where(dominance > 0, np.maximum(r, b), g)
 
-            alpha = min(input_alpha, keyed_alpha)
+    transparent = dominance >= FULLY_TRANSPARENT_ABOVE
+    out_r = np.where(transparent, 0, r)
+    out_g = np.where(transparent, 0, suppressed_g)
+    out_b = np.where(transparent, 0, b)
+    out_a = np.where(transparent, 0, alpha)
 
-            # Spill suppression. Any green still dominating on a kept pixel is
-            # backdrop bounced onto the subject's edge -- pulling it down to
-            # its own red/blue removes the lime fringe that would otherwise
-            # glow against a near-black nebula.
-            if dominance > 0:
-                g = max(r, b)
-
-            pixels[x, y] = (r, g, b, alpha)
-
-    return rgba
+    out = np.stack([out_r, out_g, out_b, out_a], axis=-1).astype(np.uint8)
+    return Image.fromarray(out, mode="RGBA")
 
 
-def resize_alpha_aware(rgba, size):
-    """Downsample a keyed RGBA image without dark fringe at its edges.
-
-    A plain `Image.resize` on RGBA blends each output pixel's colour from its
-    neighbours' raw RGB, weighted only by the resample kernel -- a fully
-    transparent neighbour's leftover colour (background bleed the keyer
-    didn't fully suppress, typically dark) still contributes at full
-    strength. Premultiplying by alpha first makes that same neighbour
-    contribute black at weight (alpha * kernel) instead, i.e. effectively
-    nothing; un-premultiplying after restores real colour to the pixels that
-    still have any.
-    """
-    arr = np.asarray(rgba, dtype=np.float32) / 255.0
-    rgb, alpha = arr[..., :3], arr[..., 3]
-
-    premultiplied = rgb * alpha[..., None]
-    premult_img = Image.fromarray(np.clip(premultiplied * 255.0 + 0.5, 0, 255).astype(np.uint8), mode="RGB")
-    alpha_img = Image.fromarray(np.clip(alpha * 255.0 + 0.5, 0, 255).astype(np.uint8), mode="L")
-
-    resized_rgb = np.asarray(premult_img.resize((size, size), Image.LANCZOS), dtype=np.float32) / 255.0
-    resized_alpha = np.asarray(alpha_img.resize((size, size), Image.LANCZOS), dtype=np.float32) / 255.0
-
-    # Anywhere fully transparent, dividing back out would be 0/0 -- feed it a
-    # safe divisor of 1 since the result is discarded (alpha is 0) anyway.
-    safe_alpha = np.where(resized_alpha > 1e-4, resized_alpha, 1.0)
-    unpremultiplied = np.clip(resized_rgb / safe_alpha[..., None], 0.0, 1.0)
-
-    out = np.dstack([unpremultiplied * 255.0, resized_alpha * 255.0])
-    return Image.fromarray(np.clip(out + 0.5, 0, 255).astype(np.uint8), mode="RGBA")
+# Moved here VERBATIM from tools/slice_actor_sheet.py (~508, S13's review),
+# under its own existing name -- it duplicated this module's own (now
+# deleted) resize_alpha_aware almost line for line, and slice_actor_sheet.py
+# already imports key_out_green from this module, so this is the one shared
+# home rather than two hand-copies drifting apart. slice_actor_sheet.py's
+# own byte-identical output (HandAssembledArtTests, the recipe replay) is
+# unaffected: it is the exact same code, only relocated, and only imported
+# back where it used to be defined.
+def resize_premultiplied(image, new_size):
+    """LANCZOS resize with alpha premultiplied first, so a transparent
+    pixel's own RGB cannot bleed a dark fringe into the resized edge."""
+    if image.size == tuple(new_size):
+        return image
+    arr = np.asarray(image.convert("RGBA"), dtype=np.float32)
+    alpha = arr[:, :, 3:4]
+    premult_rgb = arr[:, :, :3] * (alpha / 255.0)
+    premult_img = Image.fromarray(np.concatenate([premult_rgb, alpha], axis=2).astype(np.uint8), "RGBA")
+    resized = np.asarray(premult_img.resize(tuple(new_size), Image.LANCZOS), dtype=np.float32)
+    out_alpha = resized[:, :, 3:4]
+    safe_alpha = np.where(out_alpha > 0.5, out_alpha, 1.0)
+    out_rgb = np.clip(resized[:, :, :3] * 255.0 / safe_alpha, 0, 255)
+    out_rgb = np.where(out_alpha > 0.5, out_rgb, 0)
+    out = np.concatenate([out_rgb, out_alpha], axis=2).astype(np.uint8)
+    return Image.fromarray(out, "RGBA")
 
 
 def content_bounds(rgba):
@@ -396,7 +405,7 @@ def process_kit(kit, only=None):
             # NOT re-cropped or re-centred, even when resized -- see the
             # module docstring: a badge/building's canvas has to stay
             # registered the way the layout code that loads it expects.
-            output = resize_alpha_aware(keyed, size) if size else keyed
+            output = resize_premultiplied(keyed, (size, size)) if size else keyed
             out_name = f"f{index}.png" if kit["grouped"] else f"{item}.png"
             out_path = os.path.join(out_dir, out_name)
             output.save(out_path)

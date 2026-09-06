@@ -106,8 +106,6 @@ namespace PrincesPalace
         // enemyIntentIcons below -- each badge's Image and TMP glyph are both
         // resolved at Start.
         [SerializeField] internal GameObject[] partyBuffIcons;
-        [SerializeField] internal GameObject partyBuffTooltip;
-        [SerializeField] internal TMP_Text partyBuffTooltipText;
 
         // The enemy row (3 stage slots x 5 badges, slot-major) and roster
         // row (2 plates x 5 badges, roster-major) FightScreen.
@@ -128,13 +126,94 @@ namespace PrincesPalace
         // The ONE hover tooltip every status badge on every surface shares
         // (enemy row, party plate, roster row) -- repositioned per hover
         // through Domain/UiKit/TooltipPlacement.cs's Beside rather than
-        // sitting at a fixed spot the way PartyBuffTooltip above still does.
-        // PartyBuffTooltip/PartyBuffTooltipText stay wired (FightScreen
-        // still builds them and this file does not touch that tree) but are
-        // never shown again -- see FightController.Hud.cs's
-        // WireAllStatusBadges.
+        // sitting at a fixed spot. PartyBuffTooltip/PartyBuffTooltipText,
+        // the fixed-spot tooltip this one replaced, were removed outright
+        // (S4's review): dead since this shared tooltip shipped, never shown
+        // again by anything.
         [SerializeField] internal GameObject statusTooltip;
         [SerializeField] internal TMP_Text statusTooltipText;
+
+        // ---- status badges: consts and runtime state (S9's review) ---------------
+        //
+        // Moved here from FightController.Hud.cs, which built and paints
+        // this system but is a PART file -- CODE_STANDARDS.md section 4
+        // reserves consts and runtime state for the root file of a
+        // MonoBehaviour partial class, methods only for its parts, because
+        // the scene/inspector GUID binding is anchored to this file alone.
+        // See FightController.Hud.cs for how every one of these is used.
+
+        // Mirrors FightScreen's own EnemyStatusBadgesPerRow/
+        // RosterStatusBadgesPerRow (both private to that class, section 1's
+        // measured table) -- Package C codes against the node NAMES that
+        // registry produces, not against its private layout constants, so
+        // these are a second statement of the same "5 slots per row" fact
+        // rather than a shared one.
+        private const int EnemyStatusBadgesPerRow = 5;
+        private const int RosterStatusBadgesPerRow = 5;
+        private const int EnemyStatusBadgeCount = 15; // 3 stage slots x 5
+        private const int RosterStatusBadgeCount = 10; // 2 roster plates x 5
+        private const int PartyStatusBadgeCount = 6;
+
+        private StatusBadgeParts[] _statusBadgeParts;
+        private readonly string[] _statusBadgeTooltip = new string[TotalStatusBadges];
+
+        // Which CODES were actually painted for each HOLDER last refresh --
+        // keyed by the CombatantState itself, not by the physical row's
+        // baseIndex (C4's review). The party plate and roster rows change
+        // OCCUPANT every turn (whoever is acting swaps out of the roster and
+        // into the plate), so a row-keyed set called a status "new" every
+        // time its holder changed seats even though nothing about the status
+        // itself changed -- a long-standing Regen popped its appearance
+        // animation on every single turn transition. Keying by holder instead
+        // means "new" only ever means what section 6/D7 actually asks for: a
+        // status newly applied to THIS combatant, never a seat
+        // change (S10's review deletes "genuinely" from this line). Cleared
+        // in ResetStagePresentation, once per Bind -- a
+        // holder from a PREVIOUS fight can never come back to be compared
+        // against, so a fresh fight starts every combatant's set empty, same
+        // as a fresh WireAllStatusBadges always did for a baseIndex.
+        private readonly Dictionary<CombatantState, HashSet<string>> _statusRowActiveCodes =
+            new Dictionary<CombatantState, HashSet<string>>();
+
+        // C4/S5: the one scratch buffer PaintStatusRow fills a holder's
+        // CURRENT codes into before comparing/committing, so no call
+        // allocates a fresh HashSet<string> just to throw it away next
+        // refresh -- see PaintStatusRow's own comment for how it's reused.
+        private readonly HashSet<string> _statusRowScratchCodes = new HashSet<string>();
+
+        // One appearance-pop coroutine per physical badge SLOT (flat index),
+        // since the pop animates the slot's own RectTransform and two
+        // overlapping tweens on the same node would fight over its scale.
+        // A flat array, sized like its two siblings (_statusBadgeParts,
+        // _statusBadgeTooltip) rather than a Dictionary<int, Coroutine>
+        // (S7's review) -- flat is a dense 0..TotalStatusBadges-1 range by
+        // construction, so a Dictionary was paying hashing/boxing for what
+        // is really just indexed storage every other per-badge array here
+        // already uses.
+        private readonly Coroutine[] _statusBadgePopRoutines = new Coroutine[TotalStatusBadges];
+
+        // Which flat index currently owns the shared tooltip, or -1. Not
+        // read by the paint routine at all -- only by OnHoverStatusBadge and
+        // RefreshHoveredStatusTooltip, both in FightController.Hud.cs.
+        private int _hoveredStatusBadge = -1;
+
+        // The Canvas statusTooltip sits under, resolved once by
+        // WireAllStatusBadges rather than per hover -- see that method's own
+        // comment (S8's review).
+        private Canvas _statusTooltipCanvas;
+
+        // BUILD-TIME positions, captured once and never overwritten --
+        // RefreshEnemyStatusRows re-derives each refresh's position as
+        // home + delta, never by reading back wherever the row is CURRENTLY
+        // sitting (which may already be shifted from a previous refresh at
+        // a different enemy count). Same "compare against the recorded
+        // home, not the live rect" rule AnchorStageSlots' own comment gives
+        // for why StageActorAnimator keeps a Home instead of reading the
+        // rect back. Null-safe throughout: a screen with no status rows at
+        // all (an older build, a test double) leaves these null and
+        // RefreshEnemyStatusRows simply skips repositioning.
+        private Vector2[] _enemyStatusStripHome;
+        private Vector2[] _enemyStatusBadgeHome;
 
         [SerializeField] internal Image[] woolPips;
         [SerializeField] internal TMP_Text woolValue;

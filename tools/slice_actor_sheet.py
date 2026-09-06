@@ -167,7 +167,7 @@ except ImportError:
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from remove_portrait_backgrounds import flood_fill_background_mask
-from key_green_screen import key_out_green
+from key_green_screen import key_out_green, resize_premultiplied
 # Cell-cutting geometry, shared with slice_item_sheet.py -- see that
 # module's own header for why it exists.
 from sheet_slicing import (
@@ -505,22 +505,10 @@ def despeckle_resample_ringing(image):
     return Image.fromarray(arr, "RGBA")
 
 
-def resize_premultiplied(image, new_size):
-    """LANCZOS resize with alpha premultiplied first, so a transparent
-    pixel's own RGB cannot bleed a dark fringe into the resized edge."""
-    if image.size == tuple(new_size):
-        return image
-    arr = np.asarray(image.convert("RGBA"), dtype=np.float32)
-    alpha = arr[:, :, 3:4]
-    premult_rgb = arr[:, :, :3] * (alpha / 255.0)
-    premult_img = Image.fromarray(np.concatenate([premult_rgb, alpha], axis=2).astype(np.uint8), "RGBA")
-    resized = np.asarray(premult_img.resize(tuple(new_size), Image.LANCZOS), dtype=np.float32)
-    out_alpha = resized[:, :, 3:4]
-    safe_alpha = np.where(out_alpha > 0.5, out_alpha, 1.0)
-    out_rgb = np.clip(resized[:, :, :3] * 255.0 / safe_alpha, 0, 255)
-    out_rgb = np.where(out_alpha > 0.5, out_rgb, 0)
-    out = np.concatenate([out_rgb, out_alpha], axis=2).astype(np.uint8)
-    return Image.fromarray(out, "RGBA")
+# resize_premultiplied moved to key_green_screen.py (S13's review): it
+# duplicated that module's own resize_alpha_aware almost line for line, and
+# key_green_screen.py already supplies key_out_green to this file, so it is
+# the one shared home now. Imported above, verbatim, under its own name.
 
 
 # ---------------------------------------------------------------------------

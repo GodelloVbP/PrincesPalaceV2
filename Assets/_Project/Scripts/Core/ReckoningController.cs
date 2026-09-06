@@ -274,7 +274,10 @@ namespace PrincesPalace
             }
 
             if (offerTooltipText != null) offerTooltipText.SetContent(body);
-            FitTooltipToBody(body);
+            var offerTooltipRect = offerTooltip == null ? null : offerTooltip.transform as RectTransform;
+            TooltipFit.ToBody(offerTooltipRect, offerTooltipText,
+                ReckoningScreen.TooltipWidth, ReckoningScreen.TooltipPad,
+                ReckoningScreen.TooltipMinHeight, ReckoningScreen.TooltipHeight);
             PlaceTooltipBeside(index);
             offerTooltip.SetShown(true);
         }
@@ -295,35 +298,18 @@ namespace PrincesPalace
         // has to solve the case that can fail. A squad of one produces three
         // lines, and leaving the box at its emitted height put 200px of empty
         // violet over the item next door.
-        private void FitTooltipToBody(string body)
-        {
-            var self = offerTooltip == null ? null : offerTooltip.transform as RectTransform;
-            if (self == null) return;
-
-            float height = ReckoningScreen.TooltipHeight;
-
-            if (offerTooltipText != null)
-            {
-                // GetPreferredValues rather than preferredHeight: the latter
-                // reads the last laid-out mesh, and this is called in the same
-                // frame the content was set -- so it would answer for the
-                // PREVIOUS card's text, which is a stale box on every hover but
-                // the first.
-                float wanted = offerTooltipText.GetPreferredValues(
-                    body, ReckoningScreen.TooltipWidth - ReckoningScreen.TooltipPad * 2f, 0f).y;
-
-                height = Mathf.Clamp(wanted + ReckoningScreen.TooltipPad * 2f,
-                                     ReckoningScreen.TooltipMinHeight, ReckoningScreen.TooltipHeight);
-
-                var text = offerTooltipText.rectTransform;
-                text.sizeDelta = new Vector2(text.sizeDelta.x, height - ReckoningScreen.TooltipPad * 2f);
-            }
-
-            self.sizeDelta = new Vector2(ReckoningScreen.TooltipWidth, height);
-        }
+        //
+        // S1's review: the actual fitting arithmetic moved to TooltipFit.ToBody
+        // (Core/TooltipFit.cs), shared with FightController.Hud's identical
+        // status-tooltip version. One behaviour note from the extraction: the
+        // old fallback height for a null offerTooltipText was TooltipHeight
+        // (the max); the shared helper's fallback is always its minHeight
+        // parameter instead, to keep one signature for both callers. Dead
+        // either way in practice -- offerTooltipText is a wired SerializeField,
+        // never actually null at runtime.
 
         // Reads the height off the rect rather than taking it as an argument:
-        // FitTooltipToBody has already written it, and threading it back
+        // TooltipFit.ToBody has already written it, and threading it back
         // through the call was a second copy of a number the object holds.
         private void PlaceTooltipBeside(int index)
         {

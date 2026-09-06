@@ -518,11 +518,15 @@ namespace PrincesPalace.Domain.Combat.Session
         // looks: the character they are about to act with. Replaces
         // BuffBadgesFor.
         //
-        // SESSION IS OPTIONAL, actor is not. A null session only costs the
-        // speed-buff half -- actor.Statuses needs no session to read at all,
-        // and EnemyStatusLine calls this with session == null wherever no
-        // FightSession is in scope (a preview render, say), the same
-        // graceful-degradation contract EnemyStatusLine itself always had.
+        // SESSION IS OPTIONAL, actor is not (S3's review corrects the old
+        // claim here: EnemyStatusLine does not call this at all any more --
+        // Phase 3 retired its own status list to BRK only, see that
+        // method's own header -- and nothing in this tree currently calls
+        // StatusRowsFor with session == null). Kept optional anyway: a null
+        // session still costs only the speed-buff half and, as of C2, the
+        // Drowned Lantern's own mark below -- actor.Statuses needs no
+        // session to read at all -- so a future no-session caller (a
+        // preview render, a design tool) degrades rather than throws.
         public static List<StatusRow> StatusRowsFor(FightSession session, CombatantState actor)
         {
             var rows = new List<StatusRow>();
@@ -609,14 +613,16 @@ namespace PrincesPalace.Domain.Combat.Session
         // null (silently) for an Assets/ path or one carrying ".png", and
         // these are swapped at runtime as a combatant's statuses change.
         //
-        // Only Chilled and Rooted have art today (Status/chilled.png,
-        // Status/rooted.png -- commissioned from docs/STATUS_ICON_PROMPTS.md
-        // and keyed by tools/key_green_screen.py --kit status;
-        // make_status_icons.py, the old producer, is retired). Every
-        // other status resolves to a path nothing on disk answers to yet
-        // (Status/poison, etc.), and Resources.Load returns null for it
-        // exactly like it would for a typo. That null IS the fallback
-        // mechanism: the caller (FightController.Hud's RefreshPartyBuffs)
+        // ALL FOURTEEN ship today (S3's review corrects this: the twelve
+        // StatusEffectType slugs plus speed/speed_down, every one of them
+        // under Assets/_Project/Resources/Status/ -- commissioned from
+        // docs/STATUS_ICON_PROMPTS.md and keyed by tools/key_green_screen.py
+        // --kit status; make_status_icons.py, the old producer, is retired).
+        // The text CODE stays the fallback path regardless -- a future
+        // fifteenth status/presentation with no art on disk yet still
+        // resolves to a path nothing answers to, and Resources.Load returns
+        // null for it exactly like it would for a typo. That null IS the
+        // fallback mechanism: the caller (FightController.Hud's PaintBadge)
         // already has an icon-first/glyph-fallback-if-null priority, the
         // same one StageVisuals uses for enemy intents, so a status with no
         // art on disk degrades to its three-letter code with no special-

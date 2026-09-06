@@ -124,16 +124,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef PartyMpFill;
         public NodeRef PartyMpValue;
         public List<NodeRef> PartyBuffIcons = new List<NodeRef>();
-        public NodeRef PartyBuffTooltip;
-        public NodeRef PartyBuffTooltipText;
 
         // The one tooltip every status badge on every surface shares --
         // enemy row, party plate and roster row alike -- repositioned per
         // hover through TooltipPlacement.Beside rather than each surface
-        // keeping its own copy the way PartyBuffTooltip does today.
-        // PartyBuffTooltip/PartyBuffTooltipText are left exactly as they
-        // were so Package C can migrate the party plate onto this one
-        // without this screen changing shape under it.
+        // keeping its own copy. Replaces PartyBuffTooltip/PartyBuffTooltipText
+        // outright (S4's review): those were left standing, wired but
+        // permanently hidden, through the package that built this shared
+        // tooltip, and nothing ever needed them again.
         public NodeRef StatusTooltip;
         public NodeRef StatusTooltipText;
         public NodeRef WoolRow;
@@ -284,7 +282,6 @@ namespace PrincesPalace.Domain.UiKit.Screens
             hud.Add(s.BuildDetailColumn());
             hud.Add(s.BuildTargetPrompt());
             hud.Add(s.BuildIntentTooltip());
-            hud.Add(s.BuildPartyBuffTooltip());
             hud.Add(s.BuildStatusTooltip());
             hud.Add(s.BuildSpellVfx());
             hud.Add(s.BuildDamagePopups());
@@ -2057,29 +2054,15 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return panel;
         }
 
-        // The party buff row's own tooltip -- same one-runtime-label shape as
-        // IntentTooltip and for the same reason, just anchored near the party
-        // plate instead of floating over the stage, since that is where the
-        // icons it explains actually sit.
-        private UiNode BuildPartyBuffTooltip()
-        {
-            var label = Ui.Label("PartyBuffTooltipText", UiString.Runtime, new UiVec(360f, 100f), 15,
-                FightHudPalette.GoldText, Place.At(0f, 0f));
-            PartyBuffTooltipText = label;
-
-            var panel = Ui.Tooltip("PartyBuffTooltip", PanelViolet, null, Place.At(-540f, -250f),
-                UiSize.Fixed(380f, 120f), label);
-            PartyBuffTooltip = panel;
-            return panel;
-        }
-
         // The ONE tooltip every status badge on every surface shares --
         // enemy row, party plate and roster row alike (PLAN_STATUS_EFFECT_UI
         // section 11's fixed contract). Repositioned per hover through
         // Domain/UiKit/TooltipPlacement.cs's Beside, so its build-time
         // position here is only a placeholder that never has to be reached
-        // -- unlike IntentTooltip/PartyBuffTooltip above, whose fixed spot IS
-        // where they are read.
+        // -- unlike IntentTooltip above, whose fixed spot IS where it is
+        // read. (PartyBuffTooltip, the party plate's own former fixed-spot
+        // tooltip, was removed outright rather than left as a second example
+        // here -- S4's review: dead the moment this shared tooltip shipped.)
         //
         // 300 WIDE, DOWN FROM 400 -- the first capture's defect: a
         // ~380x160 panel is sized for a paragraph, not "Rooted -- Skill
@@ -2091,10 +2074,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // PHASE 3: HEIGHT NO LONGER BAKED FOR THE FIVE-LINE CASE. The build-
         // time size only has to survive UiAudit, which solves this screen
         // with no real hover text in hand -- so it is built at ONE LINE tall
-        // (StatusTooltipOneLineHeight) and Core/FightController.Hud.cs's
-        // FitStatusTooltipToBody grows it at runtime for section 6's "+N"
-        // chip (up to five lines, StatusTooltipMaxHeight -- the old fixed
-        // 130 the second capture actually needed). A build-time 130 sat as
+        // (StatusTooltipOneLineHeight) and Core/TooltipFit.ToBody grows it at
+        // runtime for section 6's "+N" chip (up to five lines,
+        // StatusTooltipMaxHeight -- the old fixed 130 the second capture
+        // actually needed). A build-time 130 sat as
         // ~74px of empty violet under the common one-line case, which was
         // this screen's own second capture defect -- see PlaceStatusTooltip's
         // header for the first.

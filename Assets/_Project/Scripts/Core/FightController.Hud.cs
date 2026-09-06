@@ -632,7 +632,7 @@ namespace PrincesPalace
                 var member = present ? others[i] : null;
                 var rows = present ? FightHudModel.StatusRowsFor(_session, member) : EmptyStatusRows;
                 PaintStatusRow(RosterStatusBase + i * RosterStatusBadgesPerRow, RosterStatusBadgesPerRow,
-                    EnemyRosterStatusRealCapacity, member, rows, showCounter: false);
+                    reserveOverflowSlot: true, member, rows, showCounter: false);
 
                 if (!present) continue;
 
@@ -698,24 +698,11 @@ namespace PrincesPalace
         private static readonly List<FightHudModel.StatusRow> EmptyStatusRows =
             new List<FightHudModel.StatusRow>();
 
-        // Mirrors FightScreen's own EnemyStatusBadgesPerRow/
-        // RosterStatusBadgesPerRow (both private to that class, section 1's
-        // measured table) -- Package C codes against the node NAMES that
-        // registry produces, not against its private layout constants, so
-        // these are a second statement of the same "5 slots per row" fact
-        // rather than a shared one.
-        private const int EnemyStatusBadgesPerRow = 5;
-        private const int RosterStatusBadgesPerRow = 5;
-        private const int EnemyStatusBadgeCount = 15; // 3 stage slots x 5
-        private const int RosterStatusBadgeCount = 10; // 2 roster plates x 5
-        private const int PartyStatusBadgeCount = 6;
-
-        // 4, not 5 -- the 5th of the enemy/roster row's physical badges is
-        // never a REAL status, only ever the "+N" chip or nothing at all
-        // (see PaintStatusRow's own header). The party plate has no
-        // equivalent constant: all 6 of its badges are real capacity, so its
-        // call site below passes PartyStatusBadgeCount for both parameters.
-        private const int EnemyRosterStatusRealCapacity = 4;
+        // EnemyStatusBadgesPerRow/RosterStatusBadgesPerRow/EnemyStatusBadgeCount/
+        // RosterStatusBadgeCount/PartyStatusBadgeCount moved to the root
+        // FightController.cs (S9's review, CODE_STANDARDS.md section 4: a
+        // MonoBehaviour's consts and runtime state fields belong on the root
+        // partial-class file, methods only here).
 
         // Mirrors FightScreen's own EnemyStatusBadgeSize/EnemyStatusPitch/
         // EnemyStatusStripPadX, same reasoning as EnemyStatusBadgesPerRow
@@ -763,54 +750,11 @@ namespace PrincesPalace
             public Image CounterPatch;
         }
 
-        private StatusBadgeParts[] _statusBadgeParts;
-        private readonly string[] _statusBadgeTooltip = new string[TotalStatusBadges];
-
-        // Which CODES were actually painted for each HOLDER last refresh --
-        // keyed by the CombatantState itself, not by the physical row's
-        // baseIndex (C4's review). The party plate and roster rows change
-        // OCCUPANT every turn (whoever is acting swaps out of the roster and
-        // into the plate), so a row-keyed set called a status "new" every
-        // time its holder changed seats even though nothing about the status
-        // itself changed -- a long-standing Regen popped its appearance
-        // animation on every single turn transition. Keying by holder instead
-        // means "new" only ever means what section 6/D7 actually asks for: a
-        // status genuinely newly applied to THIS combatant, never a seat
-        // change. Cleared in ResetStagePresentation, once per Bind -- a
-        // holder from a PREVIOUS fight can never come back to be compared
-        // against, so a fresh fight starts every combatant's set empty, same
-        // as a fresh WireAllStatusBadges always did for a baseIndex.
-        private readonly Dictionary<CombatantState, HashSet<string>> _statusRowActiveCodes =
-            new Dictionary<CombatantState, HashSet<string>>();
-
-        // C4/S5: the one scratch buffer PaintStatusRow fills a holder's
-        // CURRENT codes into before comparing/committing, so no call
-        // allocates a fresh HashSet<string> just to throw it away next
-        // refresh -- see PaintStatusRow's own comment for how it's reused.
-        private readonly HashSet<string> _statusRowScratchCodes = new HashSet<string>();
-
-        // One appearance-pop coroutine per physical badge SLOT (flat index),
-        // since the pop animates the slot's own RectTransform and two
-        // overlapping tweens on the same node would fight over its scale.
-        private readonly Dictionary<int, Coroutine> _statusBadgePopRoutines = new Dictionary<int, Coroutine>();
-
-        // Which flat index currently owns the shared tooltip, or -1. Not
-        // read by the paint routine at all -- only by OnHoverStatusBadge and
-        // RefreshHoveredStatusTooltip, both below.
-        private int _hoveredStatusBadge = -1;
-
-        // BUILD-TIME positions, captured once and never overwritten --
-        // RefreshEnemyStatusRows re-derives each refresh's position as
-        // home + delta, never by reading back wherever the row is CURRENTLY
-        // sitting (which may already be shifted from a previous refresh at
-        // a different enemy count). Same "compare against the recorded
-        // home, not the live rect" rule AnchorStageSlots' own comment gives
-        // for why StageActorAnimator keeps a Home instead of reading the
-        // rect back. Null-safe throughout: a screen with no status rows at
-        // all (an older build, a test double) leaves these null and
-        // RefreshEnemyStatusRows simply skips repositioning.
-        private Vector2[] _enemyStatusStripHome;
-        private Vector2[] _enemyStatusBadgeHome;
+        // _statusBadgeParts, _statusBadgeTooltip, _statusRowActiveCodes,
+        // _statusRowScratchCodes, _statusBadgePopRoutines, _hoveredStatusBadge,
+        // _statusTooltipCanvas, _enemyStatusStripHome and _enemyStatusBadgeHome
+        // all moved to the root FightController.cs (S9's review) -- see them
+        // there for what each one is and why.
 
         private void WireAllStatusBadges()
         {
@@ -821,14 +765,14 @@ namespace PrincesPalace
             WireStatusBadgeGroup(partyBuffIcons, PartyStatusBase);
             CaptureEnemyStatusRowHomePositions();
 
-            if (statusTooltip != null) statusTooltip.SetShown(false);
+            // CACHED ONCE HERE (S8's review), not re-fetched by
+            // PlaceStatusTooltip on every single hover -- the ancestor
+            // chain a GetComponentInParent walk climbs never changes after
+            // the scene is built, so paying that walk per hover bought
+            // nothing a one-time lookup at wiring time doesn't already have.
+            _statusTooltipCanvas = statusTooltip != null ? statusTooltip.GetComponentInParent<Canvas>() : null;
 
-            // RETIRED, not removed -- FightScreen still builds
-            // PartyBuffTooltip/PartyBuffTooltipText (B owns that tree and
-            // this package does not touch it), but nothing writes to it any
-            // more now that every surface shares StatusTooltip, so it stays
-            // permanently hidden instead of standing dormant with stale text.
-            if (partyBuffTooltip != null) partyBuffTooltip.SetShown(false);
+            if (statusTooltip != null) statusTooltip.SetShown(false);
         }
 
         private void CaptureEnemyStatusRowHomePositions()
@@ -1049,15 +993,18 @@ namespace PrincesPalace
 
         // Fills up to `realCapacity` slots from `rows`, in order. Once rows
         // outgrow that capacity, the LAST of the `slotCount` physical slots
-        // becomes the "+N" chip (section 6). The two are the same number on
-        // the party plate (6 physical slots, all 6 usable, the 6th doubling
-        // as the chip "at 7+") but NOT on the enemy row or roster row (5
-        // physical slots, only 4 ever show a real status -- FightScreen.
-        // BuildStatusBadge's own comment: "4 statuses plus the +N overflow
-        // chip is 5 nodes per row", section 1's "Slots: 4" against a 5-node
-        // build). Passing them separately is what lets one routine serve
-        // both shapes instead of guessing at "5" or "6" meaning "capacity"
-        // sometimes and "physical count" others.
+        // becomes the "+N" chip (section 6). `reserveOverflowSlot` is what
+        // decides whether that capacity is `slotCount - 1` (the enemy and
+        // roster rows: 5 physical slots, only 4 ever show a real status --
+        // FightScreen.BuildStatusBadge's own comment: "4 statuses plus the
+        // +N overflow chip is 5 nodes per row", section 1's "Slots: 4"
+        // against a 5-node build) or `slotCount` itself (the party plate: 6
+        // physical slots, all 6 usable, the 6th doubling as the chip "at
+        // 7+" the moment a 7th status arrives). One bool rather than a
+        // second explicit int (S5's review) -- the derived capacity is
+        // always one of exactly these two shapes, never an arbitrary third
+        // number, so there was nothing the extra parameter could say that
+        // "does this row reserve a slot for overflow" doesn't already.
         //
         // Deactivates every unused slot, which is what section 7's "a row
         // with no statuses renders nothing" reduces to when `rows` is
@@ -1069,12 +1016,13 @@ namespace PrincesPalace
         // holder paints no rows worth popping anyway, and a real one carries
         // its own remembered code set across whichever seat it occupies from
         // one refresh to the next.
-        private void PaintStatusRow(int baseIndex, int slotCount, int realCapacity, CombatantState holder,
+        private void PaintStatusRow(int baseIndex, int slotCount, bool reserveOverflowSlot, CombatantState holder,
             IReadOnlyList<FightHudModel.StatusRow> rows, bool showCounter)
         {
             if (_statusBadgeParts == null) WireAllStatusBadges();
             if (_statusBadgeParts == null) return;
 
+            int realCapacity = reserveOverflowSlot ? slotCount - 1 : slotCount;
             int overflowSlot = rows.Count > realCapacity ? slotCount - 1 : -1;
 
             // The set THIS HOLDER showed as of last refresh -- see
@@ -1167,11 +1115,13 @@ namespace PrincesPalace
                 parts.Frame.color = polarity;
             }
 
-            // ICON FIRST, same priority RefreshIntentIcons and the old
-            // RefreshPartyBuffs both already used. Chilled and Rooted are
-            // the only two statuses with real art today
-            // (StatusBadgeIconTests), so this is the fallback path in
-            // practice for the other twelve entries plus both speed rows.
+            // ICON FIRST, same priority RefreshIntentIcons already uses (and
+            // the retired RefreshPartyBuffs used before this replaced it).
+            // All fourteen (twelve statuses plus both speed presentations)
+            // ship real art today under Resources/Status/ (S3's review --
+            // StatusBadgeIconTests), so the three-letter Code fallback below
+            // is now only for a future status/presentation added before its
+            // own art lands.
             var art = StatusSpriteFor(row);
             if (parts.Glyph != null)
             {
@@ -1219,23 +1169,20 @@ namespace PrincesPalace
 
         private void ResetBadgeMotion(int flat, GameObject root)
         {
-            if (_statusBadgePopRoutines.TryGetValue(flat, out var running) && running != null)
+            if (flat >= 0 && flat < _statusBadgePopRoutines.Length && _statusBadgePopRoutines[flat] != null)
             {
-                StopCoroutine(running);
+                StopCoroutine(_statusBadgePopRoutines[flat]);
+                _statusBadgePopRoutines[flat] = null;
             }
-            _statusBadgePopRoutines[flat] = null;
 
             if (root != null) ((RectTransform)root.transform).localScale = Vector3.one;
         }
 
         private void BeginAppearancePop(int flat, GameObject root)
         {
-            if (root == null) return;
+            if (root == null || flat < 0 || flat >= _statusBadgePopRoutines.Length) return;
 
-            if (_statusBadgePopRoutines.TryGetValue(flat, out var running) && running != null)
-            {
-                StopCoroutine(running);
-            }
+            if (_statusBadgePopRoutines[flat] != null) StopCoroutine(_statusBadgePopRoutines[flat]);
             _statusBadgePopRoutines[flat] = StartCoroutine(AppearancePopRoutine((RectTransform)root.transform));
         }
 
@@ -1318,7 +1265,7 @@ namespace PrincesPalace
             if (partyBuffIcons == null || _session == null) return;
 
             var rows = FightHudModel.StatusRowsFor(_session, actor);
-            PaintStatusRow(PartyStatusBase, PartyStatusBadgeCount, PartyStatusBadgeCount, actor, rows, showCounter: true);
+            PaintStatusRow(PartyStatusBase, PartyStatusBadgeCount, reserveOverflowSlot: false, actor, rows, showCounter: true);
         }
 
         // Called from FightController.StageVisuals.cs's RefreshStage, right
@@ -1382,7 +1329,7 @@ namespace PrincesPalace
                 FitEnemyStatusRow(slot, rows.Count);
 
                 PaintStatusRow(EnemyStatusBase + slot * EnemyStatusBadgesPerRow, EnemyStatusBadgesPerRow,
-                    EnemyRosterStatusRealCapacity, enemy, rows, showCounter: true);
+                    reserveOverflowSlot: true, enemy, rows, showCounter: true);
             }
         }
 
@@ -1402,7 +1349,7 @@ namespace PrincesPalace
         {
             if (!Has(enemyStatusStrips, slot)) return;
 
-            int visible = rowCount <= EnemyRosterStatusRealCapacity
+            int visible = rowCount <= EnemyStatusBadgesPerRow - 1
                 ? rowCount
                 : EnemyStatusBadgesPerRow; // the "+N" chip takes the row's last physical slot
 
@@ -1503,44 +1450,23 @@ namespace PrincesPalace
 
             if (statusTooltipText != null) statusTooltipText.SetContent(text);
             statusTooltip.SetShown(true);
-            FitStatusTooltipToBody(text);
+
+            // Grows the ONE shared tooltip past its build-time one-line
+            // height for the "+N" chip's multi-line body (section 6) --
+            // TooltipFit.ToBody (Core/TooltipFit.cs), shared with
+            // ReckoningController's identical offer-card version (S1's
+            // review). MUST RUN BEFORE PlaceStatusTooltip, which reads
+            // tooltipRect.rect.height to clamp inside the canvas -- sizing
+            // after placing would place against the wrong box.
+            var statusTooltipRect = statusTooltip == null ? null : statusTooltip.transform as RectTransform;
+            TooltipFit.ToBody(statusTooltipRect, statusTooltipText,
+                FightScreen.StatusTooltipWidth, FightScreen.StatusTooltipPad,
+                FightScreen.StatusTooltipOneLineHeight, FightScreen.StatusTooltipMaxHeight);
 
             var anchor = flat < _statusBadgeParts.Length && _statusBadgeParts[flat].Root != null
                 ? _statusBadgeParts[flat].Root.transform as RectTransform
                 : null;
             PlaceStatusTooltip(flat, anchor);
-        }
-
-        // Grows the ONE shared tooltip past its build-time one-line height
-        // for the "+N" chip's multi-line body (section 6) -- same shape as
-        // ReckoningController.FitTooltipToBody, GetPreferredValues rather
-        // than preferredHeight because this runs the SAME frame the text was
-        // just set, and preferredHeight would still be answering for
-        // whatever body was in the box before this hover.
-        //
-        // MUST RUN BEFORE PlaceStatusTooltip, which reads tooltipRect.rect.
-        // height to clamp inside the canvas -- sizing after placing would
-        // place against the wrong box.
-        private void FitStatusTooltipToBody(string body)
-        {
-            var self = statusTooltip == null ? null : statusTooltip.transform as RectTransform;
-            if (self == null) return;
-
-            float height = FightScreen.StatusTooltipOneLineHeight;
-
-            if (statusTooltipText != null)
-            {
-                float wanted = statusTooltipText.GetPreferredValues(
-                    body, FightScreen.StatusTooltipWidth - FightScreen.StatusTooltipPad * 2f, 0f).y;
-
-                height = Mathf.Clamp(wanted + FightScreen.StatusTooltipPad * 2f,
-                    FightScreen.StatusTooltipOneLineHeight, FightScreen.StatusTooltipMaxHeight);
-
-                var textRect = statusTooltipText.rectTransform;
-                textRect.sizeDelta = new Vector2(textRect.sizeDelta.x, height - FightScreen.StatusTooltipPad * 2f);
-            }
-
-            self.sizeDelta = new Vector2(FightScreen.StatusTooltipWidth, height);
         }
 
         // Which physical badge slots share a row with `flat` -- the enemy and
@@ -1578,22 +1504,19 @@ namespace PrincesPalace
         // space first, the one conversion that is correct regardless of how
         // deep the anchor happens to be nested.
         //
-        // THE INTERIOR BOX IS THE CANVAS'S OWN REFERENCE FRAME
-        // (UiFrames.Reference), NOT tooltipRect.parent.rect. The first
-        // capture's defect: reading the interior off `parent.rect` (FightHud,
-        // a NestedCanvas meant to fill the whole screen) let Beside's own
-        // flip-then-clamp fold the tooltip into a box far smaller than the
-        // canvas -- landing it mid-stage, nowhere near the badge that opened
-        // it, rather than beside it. UiFrames.cs states "authored ==
-        // rendered": 1920x1080 canvas units are screen pixels, and section 1
-        // of PLAN_STATUS_EFFECT_UI.md pins 1920x1080 as the SMALLEST canvas
-        // this screen is ever audited at in EITHER axis (21:9 only adds
-        // width, 4:3/16:10 only add height). Clamping to the reference frame
-        // instead of whatever a given ancestor's rect reports is therefore
-        // never wrong -- on a wider or taller real canvas it is merely more
-        // conservative than the true edge, never past it, and it stops this
-        // placement depending on a rect this call site does not actually
-        // need to trust.
+        // THE INTERIOR BOX IS tooltipRect.parent.rect ITSELF (S2's review
+        // reverses the earlier workaround). The first capture's defect really
+        // did look like "parent.rect (FightHud, a NestedCanvas meant to fill
+        // the whole screen) is far smaller than the canvas", which is what
+        // the original fix clamped against UiFrames.Reference instead to
+        // dodge -- but the actual cause was reading the rect on the SAME
+        // FRAME SetShown(true) ran, before layout had caught up to it, not
+        // the rect itself being wrong. Forcing a canvas rebuild first
+        // (immediately above) and then reading parent.rect measured (1920,
+        // 1440) at a 4:3 capture -- matching the real canvas, not a
+        // degenerate box -- so the fixed 1920x1080 reference frame is deleted
+        // in favour of the actual one, which is only ever as-or-more generous
+        // than the reference on any wider or taller real canvas.
         private void PlaceStatusTooltip(int flat, RectTransform anchor)
         {
             var tooltipRect = statusTooltip != null ? statusTooltip.transform as RectTransform : null;
@@ -1602,7 +1525,16 @@ namespace PrincesPalace
             var parent = tooltipRect.parent as RectTransform;
             if (parent == null) return;
 
-            var canvas = statusTooltip.GetComponentInParent<Canvas>();
+            // FORCED BEFORE READING parent.rect (S2's review). Without this,
+            // reading the rect on the same frame SetShown(true) ran measured
+            // whatever the layout last happened to be, not what it is now --
+            // the original bug this method's own header used to blame on
+            // parent.rect itself. Measured directly: at a 4:3 capture,
+            // parent.rect.size read (1920, 1440) once forced, matching the
+            // real canvas rather than "far smaller" than it.
+            Canvas.ForceUpdateCanvases();
+
+            var canvas = _statusTooltipCanvas;
             var camera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
                 ? canvas.worldCamera
                 : null;
@@ -1663,13 +1595,12 @@ namespace PrincesPalace
             }
 
             const float Margin = 8f;
-            float halfW = UiFrames.Reference.X * 0.5f;
-            float halfH = UiFrames.Reference.Y * 0.5f;
+            var interior = parent.rect;
             var at = TooltipPlacement.Beside(
                 anchorXInParent, anchorLocal.y, anchorWidth,
                 tooltipRect.rect.width, tooltipRect.rect.height,
-                interiorLeft: -halfW + Margin, interiorRight: halfW - Margin,
-                interiorBottom: -halfH + Margin, interiorTop: halfH - Margin);
+                interiorLeft: interior.xMin + Margin, interiorRight: interior.xMax - Margin,
+                interiorBottom: interior.yMin + Margin, interiorTop: interior.yMax - Margin);
 
             tooltipRect.anchoredPosition = new Vector2(at.X, at.Y);
         }

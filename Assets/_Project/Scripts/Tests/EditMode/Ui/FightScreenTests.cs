@@ -957,10 +957,10 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsNotNull(Find(root, "StatusTooltip"));
             Assert.IsNotNull(Find(root, "StatusTooltipText"));
 
-            // PartyBuffTooltip is left exactly as it was -- Package C
-            // migrates the party plate onto the shared tooltip, this screen
-            // does not retire the old one out from under it.
-            Assert.IsNotNull(Find(root, "PartyBuffTooltip"));
+            // PartyBuffTooltip is GONE (S4's review) -- the party plate
+            // migrated onto the shared StatusTooltip above and nothing was
+            // ever wired to the old fixed-spot one again.
+            Assert.IsNull(Find(root, "PartyBuffTooltip"));
         }
 
         [Test]
@@ -990,19 +990,36 @@ namespace PrincesPalace.Domain.Tests
             }
         }
 
+        // PINNED LITERALS (S11's review), not FightStageAnchors.SlotOffset --
+        // a test recomputing the production formula to build its own
+        // expected value is a tautology (CLAUDE.md's gotcha 5): it can only
+        // ever catch a hand-typed mistake in THIS test, never a real
+        // regression in SlotOffset itself. Values are docs/
+        // PLAN_STATUS_EFFECT_UI.md section 1's own table -- X is each slot's
+        // ground position (Near 300, mid 432.5, Far 565), Y is offset.Y - 60
+        // worked out there once (-278, -231.5, -185) and never recomputed
+        // again after this.
+        private static readonly (float X, float Y)[] EnemyStatusRowCentres =
+        {
+            (300f, -278f),
+            (432.5f, -231.5f),
+            (565f, -185f),
+        };
+
         [Test]
         public void EnemyStatusRowCentresSitSixtyBelowTheirSlotSGroundLine()
         {
             var root = Solve();
-            int count = FightHudSpec.StageSlotsPerSide;
+            Assert.AreEqual(FightHudSpec.StageSlotsPerSide, EnemyStatusRowCentres.Length,
+                "pinned centres no longer match the number of stage slots -- see this test's own header");
 
-            for (int slot = 0; slot < count; slot++)
+            for (int slot = 0; slot < EnemyStatusRowCentres.Length; slot++)
             {
-                var offset = FightStageAnchors.SlotOffset(slot, count, mirrored: false);
+                var expected = EnemyStatusRowCentres[slot];
                 var strip = RectOf($"EnemyStatusStrip{slot}");
 
-                Assert.AreEqual(offset.X, strip.Centre.X, 0.01f, $"slot {slot} row x");
-                Assert.AreEqual(offset.Y - 60f, strip.Centre.Y, 0.01f, $"slot {slot} row y");
+                Assert.AreEqual(expected.X, strip.Centre.X, 0.01f, $"slot {slot} row x");
+                Assert.AreEqual(expected.Y, strip.Centre.Y, 0.01f, $"slot {slot} row y");
             }
         }
 

@@ -1,5 +1,4 @@
 using System.Collections;
-using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
@@ -32,38 +31,19 @@ namespace PrincesPalace.PlayModeTests
     {
         private FightController _fight;
 
-        private static string OutputDir =>
-            Path.GetFullPath(Path.Combine(
-                Directory.GetParent(Application.dataPath).FullName, "tools", "screenshots", "runtime"));
+        // OutputDir/Named/RootCanvas/Shoot moved to Tests/PlayMode/Shared/
+        // HudCaptureRig.cs (S12's review) -- byte-for-byte duplicated from
+        // FightMenuCaptureTests before this. "status_rows_" is this
+        // fixture's own filename prefix, per this package's own instructions
+        // -- the one detail that ties a written file back to this fixture
+        // without opening it.
+        private HudCaptureRig _rig;
 
         [SetUp]
         public void PlayFast() => FightBeatPlayer.BeatSpeedMultiplier = 60f;
 
         [TearDown]
         public void Restore() => FightBeatPlayer.BeatSpeedMultiplier = 1f;
-
-        private GameObject Named(string name) =>
-            _fight.GetComponentsInChildren<Transform>(includeInactive: true)
-                  .FirstOrDefault(t => t.name == name)?.gameObject;
-
-        private static Canvas RootCanvas() =>
-            Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude).FirstOrDefault(c => c.isRootCanvas);
-
-        // NAMED status_rows_*, per this package's own instructions -- the one
-        // detail that ties the file back to this fixture without opening it.
-        private IEnumerator Shoot(string label)
-        {
-            yield return null;
-            yield return null;
-
-            var canvas = RootCanvas();
-            Assert.IsNotNull(canvas, "the Fight scene has no root Canvas");
-            Directory.CreateDirectory(OutputDir);
-            string path = Path.Combine(OutputDir, $"status_rows_{label}.png");
-            CanvasCapture.RenderToFile(canvas, path);
-            Assert.IsTrue(File.Exists(path), $"capture '{label}' was not written");
-            Debug.Log($"[StatusRowCapture] wrote {path}");
-        }
 
         [UnityTest]
         public IEnumerator EveryStatusRowSurfaceShowsAtOnce()
@@ -80,6 +60,7 @@ namespace PrincesPalace.PlayModeTests
 
             _fight = Object.FindAnyObjectByType<FightController>();
             Assert.IsNotNull(_fight, "the Fight scene has no FightController");
+            _rig = new HudCaptureRig(_fight, "status_rows_", "StatusRowCapture");
 
             for (int i = 0; i < 240; i++) yield return null;
 
@@ -174,7 +155,7 @@ namespace PrincesPalace.PlayModeTests
             yield return null;
             _fight.RefreshUi();
 
-            yield return Shoot("rest");
+            yield return _rig.Shoot("rest");
 
             // ---- the FAR slot's enemy badge, hovered -- not the near one.
             // With two enemies on stage, AnchorStageSlots spreads them to
@@ -191,12 +172,12 @@ namespace PrincesPalace.PlayModeTests
             // intent-hover shot gives (no real cursor exists in a capture,
             // and a fake EventSystem raycast would test Unity, not this
             // feature).
-            var badge = Named("EnemyStatusBadge1_0");
+            var badge = _rig.Named("EnemyStatusBadge1_0");
             Assert.IsNotNull(badge, "enemy slot 1's first status badge was not found");
             var hover = badge.GetComponent<HoverIndex>();
             Assert.IsNotNull(hover, "no HoverIndex was attached to EnemyStatusBadge1_0");
             hover.OnPointerEnter(null);
-            yield return Shoot("hover");
+            yield return _rig.Shoot("hover");
         }
     }
 }
