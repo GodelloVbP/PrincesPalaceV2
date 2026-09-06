@@ -596,32 +596,39 @@ namespace PrincesPalace
             // level grants. Both are looked up here rather than carried on the
             // definition, so adding a skill stays a line in skills.json.
             //
-            // FILTERED BY UNLOCK LEVEL, which it was not. This took every skill
-            // authored against the character id and handed the lot over, so
-            // unlockLevel was a number nothing in a fight ever read -- see the
-            // Character overload below for what that cost.
-            // !s.bookOnly is belt and braces, not the thing that actually
-            // excludes a book-only skill here -- a book-only entry's
-            // unlockLevel is int.MaxValue by construction, so `unlockLevel
-            // <= level` already refuses it for any level that will ever
-            // exist. Stated anyway: a filter that reads as "levelled skills
-            // only" should say so rather than lean on a sentinel two files
-            // away (docs/PLAN_SHOP.md §1a point 3) -- and this overload has
-            // no run to ask, so it could never grant a learned book even if
-            // the level check somehow let one through.
-            var skills = ContentDatabase.Skills
-                .Where(s => s.Data.PlayerSelectable
-                            && s.Data.CharacterId == definition.id
-                            && s.Data.UnlockLevel <= level
-                            && !s.Data.BookOnly)
-                .OrderBy(s => s.Data.UnlockLevel)
-                .ThenBy(s => s.Data.SortOrder)
+            // THROUGH ContentDatabase.SkillsUnlockedByLevel now, not a second
+            // hand-rolled copy of it. This used to restate the predicate
+            // itself, with its own "!s.bookOnly is belt and braces" line
+            // explaining why a book-only entry's unlockLevel of int.MaxValue
+            // already excluded it without that extra clause -- true, but it
+            // was still a second copy of a rule one place should own. One
+            // hand-rolled copy of this predicate already dropped the level
+            // filter entirely once (see the Character overload below for what
+            // that cost); the shared function is what stops the next copy
+            // from being able to.
+            //
+            // No run and no talent list here (no Character record to read
+            // them off), so this is the base predicate alone -- the
+            // Character overload below unions it with what a talent, a book,
+            // or an Event room's teaching adds on top.
+            var skills = ContentDatabase.SkillsUnlockedByLevel(definition.id, level)
                 .Select(Resolve)
                 .ToList();
 
             return new PlayerKit(definition.id, definition.Data.Role, skills, relics,
                 definition.Data.AttackType, level, DefinitionOnlySkillPowerMultiplier(level));
         }
+
+        // Test-only door to the overload above, named ...ForTest per house
+        // convention (FightBeatPlayer.WireStageForTest, FightController.
+        // StageShakesForTest) since Core's InternalsVisibleTo names only the
+        // Editor assembly and a PlayMode test sits outside that grant. Skill
+        // ids only, rather than the whole PlayerKit: that is the one thing
+        // commit 2 is actually about, and it is what a caller can compare
+        // against ContentDatabase.SkillsUnlockedByLevel without also having
+        // to fake a relic list.
+        public static IReadOnlyList<string> SkillIdsForDefinitionForTest(CharacterDefinition definition, int level) =>
+            KitFor(definition, System.Array.Empty<ResolvedRelic>(), level).Skills.Select(s => s.Id).ToList();
 
         // The IN-RUN kit: the character's own strip PLUS whatever their tree
         // granted them, at their real level.

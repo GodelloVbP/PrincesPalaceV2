@@ -198,6 +198,33 @@ namespace PrincesPalace.Content
             get { EnsureLoaded(); return _skills; }
         }
 
+        // THE BASE PREDICATE two call sites used to restate by hand: owned by
+        // this character, player-selectable, and reachable by level alone --
+        // no talents, no books, no Event-room grants. AvailableSkillsFor
+        // unions this with the three routes only a real Character record can
+        // supply; FightEncounterAdapter.KitFor's no-Character-record overload
+        // (dev-forced/preview fights, which have neither a talent list nor a
+        // run to check learnedSpells against) has nothing to union it with,
+        // so this is the whole of what it needs. One hand-rolled copy of this
+        // already dropped the level filter entirely and handed a level-2 run
+        // the whole talent tree (see that overload's own header) -- this is
+        // the fix for there being two places the drop could happen at all.
+        //
+        // Ordered UnlockLevel then SortOrder: the same order the fight strip
+        // and this file's other skill listing have always used.
+        public static IReadOnlyList<SkillDefinition> SkillsUnlockedByLevel(string characterId, int level)
+        {
+            EnsureLoaded();
+
+            return _skills
+                .Where(s => s.Data.PlayerSelectable
+                            && s.Data.CharacterId == characterId
+                            && s.Data.UnlockLevel <= level)
+                .OrderBy(s => s.Data.UnlockLevel)
+                .ThenBy(s => s.Data.SortOrder)
+                .ToList();
+        }
+
         // THE question the fight UI asks: what can this character actually
         // press right now? Owned by them, and unlocked by their level.
         //
@@ -273,6 +300,10 @@ namespace PrincesPalace.Content
                 s.Data.BookOnly && run != null && run.learnedSpells != null
                 && run.learnedSpells.Exists(e => e.characterId == character.definitionId && e.skillId == s.id);
 
+            // THE SAME BASE PREDICATE the no-Character-record route uses,
+            // through SkillsUnlockedByLevel rather than a second copy of it.
+            var byLevel = SkillsUnlockedByLevel(character.definitionId, character.level);
+
             // TWO ROUTES WITH DIFFERENT OWNERSHIP RULES, so the CharacterId
             // check sits inside the levelled branch rather than in front of
             // both. A levelled/granted skill is available because it is THIS
@@ -281,9 +312,9 @@ namespace PrincesPalace.Content
             return _skills
                 .Where(s => s.Data.PlayerSelectable
                             && (LearnedThisRun(s)
+                                || byLevel.Contains(s)
                                 || (s.Data.CharacterId == character.definitionId
-                                    && (s.Data.UnlockLevel <= character.level
-                                        || character.unlockedSkillIds.Contains(s.id)
+                                    && (character.unlockedSkillIds.Contains(s.id)
                                         || granted.Contains(s)))))
                 .OrderBy(s => s.Data.UnlockLevel)
                 .ThenBy(s => s.Data.SortOrder)
