@@ -80,7 +80,12 @@ because the only way to regenerate content was `run_tests_parallel.ps1
 -BuildContent`, which mirrors the runner's whole content tree over main's. The
 new route builds in place.
 
-| ISO timestamp | what | measured |
+**Every number in the table below is COMMAND-ONLY** -- the wall clock of one
+`preview.ps1` invocation, first keystroke to last line of its output. That is
+not what the baseline's headline measures, and the two must not be read side by
+side without saying so; see "Beside the baseline" for the correction.
+
+| ISO timestamp | what | measured (command only) |
 |---|---|---|
 | 2026-09-06T00:45:25 -> 00:46:06 | `preview.ps1 -Enemy baseline_treant`, **cold** (no Editor on the project) | **41s.** Content built by batchmode (16.1s wall, `ContentBuilder` 5.2s), main mirrored into the runner copy, `PreviewCaptureTests` run with a graphics device, three PNGs copied back |
 | 2026-09-06T00:47:45 -> 00:47:51 | `preview.ps1 -Build`, **warm** (Editor open on main, watcher route) | **6s** |
@@ -102,9 +107,32 @@ plain swing.
 
 ### Beside the baseline
 
+**THE HEADLINE ROW WAS NOT LIKE FOR LIKE, and this is the correction.** The
+baseline's 6m00s is EDIT TO VIEW: its log stamps the first content edit
+(23:13:10, the six stills copied) and the moment the PNG was looked at
+(23:19:10), and everything between -- the lookups, the two content cycles, the
+test edit, the wrong capture class -- is inside it. The 41s and 26s above are
+one command's wall clock and nothing else. Quoting them against 6m00s credits
+this step with removing work the 41s never contained.
+
+What the honest comparison would need is an edit-to-view span for THIS run, and
+**this log does not carry one**: the exercise's edits ("six treant stills
+copied... one `enemies.json` row, one `skills.json` row, one
+`StanceManifest.json` entry") are described with no timestamp, and neither is
+the look at the PNG -- only "correct on the first look both times". The earliest
+stamp in the run is the command itself, so the span can only be bounded below,
+at ">= 41s", which is not a measurement. No new measurement is invented here to
+close the gap.
+
+The number that DOES exist for the same exercise, stamped at both ends, is Step
+3's (`2026-09-step3-recipes.md`): **1m33s**, 02:34:17 (the slicer, the first art
+action, matching the baseline's `cp` at 23:13:10) to 02:35:50 (the PNG viewed).
+It is the row below, and it is what 6m00s should be read against.
+
 | | baseline, 2026-09-05 | Step 1, 2026-09-06 |
 |---|---|---|
-| time to first correct preview (mob) | **6m00s** (23:13:10 -> 23:19:10) | **41s** cold, **26s** warm |
+| time to first correct preview (mob), **command only** | not measured this way -- the baseline never timed a command in isolation | **41s** cold, **26s** warm |
+| time to first correct preview (mob), **edit to view** | **6m00s** (23:13:10 -> 23:19:10) | **not stamped in this log.** The comparable measured span is Step 3's 1m33s (02:34:17 -> 02:35:50) |
 | content step, warm | 75.4s wall / `ContentBuilder` 64.8s | 13-16s wall / `ContentBuilder` 4-5s (6s through an open Editor) |
 | C# files the author had to edit | **1** (`EnemyStanceCaptureTests.cs`, three substitutions, because the capture named its two enemies literally) | **0** |
 | where the work happened | an isolated copy, because the only rebuild route mirrored a whole content tree over main | main, in place |

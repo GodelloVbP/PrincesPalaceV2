@@ -33,7 +33,8 @@ own 0.52 / 5).
 | 01:46:53 | error | same run's console | **TOOL BUG 2.** Three of the four `PreviewCaptureTests` captures failed with "PP_PREVIEW_* is empty" -- `preview.ps1` filters the fixture by CLASS, so every mode runs and exactly one has its variable set. Three red tests, three stack traces and a non-zero exit sat beside three perfectly correct PNGs. They ignore by name now (`a9f6d19`) |
 | 01:47:29 -> 01:47:50 | wait | `preview.ps1 -Spell baseline_flare -NoBuild` | **21.0s wall**, clean output: one `Passed`, three `Skipped` naming the mode each was not asked for, then the three file paths |
 | 01:47:55 | lookup | viewed `spell_baseline_flare_impact.png` | **CORRECT first look.** Shawn mid-cast, the frost_flare sequence playing ON the Giant Rat rather than beside it, "Shawn uses Baseline Flare on Giant Rat for 7 damage!" in the log, MP 32/38 (the 6 it costs, spent), Wool 10/10 with the preview's own note -- "Shawn's Wool is as full as it will get" -- printed into the fight log where the author reads it |
-| | | **E2 time to first correct preview** | **43s** for the command that produced them (`01:46:10 -> 01:46:53`), against the baseline's **4m31s**. Raw wall clock including finding and fixing both tool bugs: 2m27s (`01:45:28 -> 01:47:55`) |
+| | | **E2, command only** | **43s** -- the one invocation that produced the pictures (`01:46:10 -> 01:46:53`). Not comparable to the baseline's headline, which is an edit-to-view span |
+| | | **E2 time to first correct preview (EDIT TO VIEW)** | **2m27s** (`01:45:28`, the `skills.json` row -> `01:47:55`, the PNG viewed), against the baseline's **4m31s** (`23:19:59 -> 23:24:30`), which is measured the same way. Both tool bugs are inside this span, exactly as the baseline's flake rerun is inside its own |
 
 ### Code edits
 
@@ -83,7 +84,8 @@ so the row was simply appended.
 | 01:49:10 | lookup | viewed `..._map.png` | **CORRECT.** The owl walker on the real Descent map at the START node, at its own aspect ratio, not Shawn |
 | 01:49:20 | lookup | viewed `..._fight_cast.png` | **CORRECT.** "Baseline Odette", LV1 SUPPORT, owl art on the stage against the three-mob line-up, MP 45/50 -- the 5 the bolt costs, spent -- and a `-16` on the Giant Rat |
 | 01:49:28 | lookup | viewed `..._dossier.png` | **PARTLY CORRECT, and this is the finding.** The dossier renders her name, level, all six attributes and every derived stat. The portrait plate is EMPTY -- see below |
-| | | **E3 time to first correct preview** | **42s**, one command, first try, against the baseline's **5m24s** |
+| | | **E3, command only** | **42s**, one command, first try |
+| | | **E3 time to first correct preview (EDIT TO VIEW)** | **58s** (`01:48:12`, the two rows -> `01:49:10`, the map PNG viewed), against the baseline's **5m24s** (`23:24:46 -> 23:30:10`), measured the same way. The two later lookups (`01:49:20` fight_cast, `01:49:28` dossier) sit outside it: the first CORRECT picture is where both logs stop the clock |
 
 ### Code edits
 
@@ -116,11 +118,13 @@ missing portrait asset and the cause is a stale scene.
 
 | | Step 0 baseline (2026-09-05) | Step 2 (2026-09-06) |
 |---|---|---|
-| E2 spell -- time to first correct preview | **4m31s** | **43s** (21s with `-NoBuild`) |
+| E2 spell -- time to first correct preview, **edit to view** | **4m31s** (23:19:59 -> 23:24:30) | **2m27s** (01:45:28 -> 01:47:55) |
+| E2 spell -- the previewing command alone | not measured in isolation | **43s** (21s with `-NoBuild`) |
 | E2 -- code edits demanded by the row | 1 (`SpellCastCaptureTests` literal list) | **0** |
 | E2 -- content rebuild cycles | 2 (78.5s each) | 1 (17.5s) |
 | E2 -- unrelated failures to diagnose | 1 (the AUDIT #61 `SpellVfxTests` flake, +29.6s rerun and a lookup to learn it was not mine) | 0 |
-| E3 character -- time to first correct preview | **5m24s** | **42s** |
+| E3 character -- time to first correct preview, **edit to view** | **5m24s** (23:24:46 -> 23:30:10) | **58s** (01:48:12 -> 01:49:10) |
+| E3 character -- the previewing command alone | not measured in isolation | **42s** |
 | E3 -- code edits demanded by the row | 2 (`SaveDataSquadOfThreeTests`, `PartyFormationCaptureTests`) | **0** |
 | E3 -- time lost picking a capture class | ~2 min (three candidates by name, only one fields a real squad) | 0 |
 | E3 -- roster-position constraint | had to displace a top-three character | none |
@@ -167,13 +171,16 @@ the change.
 
 | | Step 0 baseline (2026-09-05) | Step 2 (2026-09-06 01:48) | Step 2 + runtime portraits (2026-09-06 03:11) |
 |---|---|---|---|
-| time to first correct preview | 5m24s | 42s | **48s warm** (83s on the first run after the art moved) |
+| time to first correct preview, **edit to view** | 5m24s (23:24:46 -> 23:30:10) | 58s (01:48:12 -> 01:49:10) | **2m40s** (03:11:18 -> 03:13:58), which spans two runs: the correct pictures existed at 03:12:47 and were looked at after a second run taken for the warm timing |
+| the previewing command alone | not measured in isolation | 42s | **48s warm** (83s on the first run after the art moved) |
 | code edits demanded by the row | 2 | 0 | **0** |
 | dossier portrait | n/a | **empty plate** | **the portrait** |
 | manual prerequisite | roster position | a scene build for the portrait | **none** |
 
 The 48s is not an improvement on 42s and was not meant to be: this closed a
-correctness gap, not a timing one. What changed is the last row -- Step 2's claim
+correctness gap, not a timing one. (Nor is the 2m40s a regression on the 58s:
+the second run in the middle of it was taken to time the warm case, not because
+anything needed doing twice.) What changed is the last row -- Step 2's claim
 that "a character can be seen without a code edit or a manual prerequisite" was
 true except for the portrait, and it is now true without the exception.
 
