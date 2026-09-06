@@ -197,10 +197,10 @@ namespace PrincesPalace.Domain.Tests
             foe1.CurrentHealth = 1;
 
             // A REAL kill, through ExecuteAttack -- RelicsOnEachKill (and so
-            // AmassingStarOnKill) only fires from the actual kill-recording
-            // path (ApplyFinalDamage -> RecordKill), which the
-            // DealDamageForTest seam deliberately bypasses (it exists to
-            // test the DAMAGE funnel alone, not the kill funnel).
+            // AmassingStarOnKill) only fires from the actual kill-settling
+            // path (DealDamage -> SettleDeath), which the DealDamageForTest
+            // seam deliberately bypasses by passing KillCredit.Nobody (it
+            // exists to test the DAMAGE funnel alone, not the kill funnel).
             session.ExecuteAttack(foe1);
 
             Assert.AreEqual(2, session.BonusDamagePercentEarned, "one real kill = +2%");

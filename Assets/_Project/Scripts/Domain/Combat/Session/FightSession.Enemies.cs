@@ -717,7 +717,16 @@ namespace PrincesPalace.Domain.Combat.Session
             // party while every other column was correct. An untyped monster
             // swing counts as Physical, which is what AttackTypeOf already
             // answers for anything without a player kit.
-            var landed = DealDamage(enemy, target, damage, AttackTypeOf(enemy));
+            // KillCredit.Nobody, which is what this path has always done
+            // rather than what it obviously should do: a monster felling a
+            // party member records no kill row today. Raising the flag here
+            // would be worse than the gap -- an enemy turn resolves INSIDE
+            // AdvanceAfterAction, after that method has already read and reset
+            // _killedThisAction, so the flag would survive to the player's
+            // next action and hand them a Trample the enemy earned. Crediting
+            // the ledger without the flag is a real question and a balance
+            // one; it is not a refactor's to answer. See AUDIT.md #62.
+            var landed = DealDamage(enemy, target, damage, AttackTypeOf(enemy), KillCredit.Nobody);
 
             // A fleece thickens in a hard winter: being ground down is itself a
             // way to build. Granted per HIT rather than per point, so a swarm of

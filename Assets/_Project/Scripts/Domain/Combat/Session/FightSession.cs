@@ -404,14 +404,16 @@ namespace PrincesPalace.Domain.Combat.Session
 
         // The part that never differs once a damage figure and its own message
         // are already settled: apply it, show it on the beat, pose the target,
-        // and flag a kill.
+        // and pay out whatever a kill owes on top of the ledger's own row.
+        // The row and the rider flag are DealDamage's, not this method's --
+        // see SettleDeath (FightSession.Ledger.cs) for why they moved.
         private void ApplyFinalDamage(CombatantState actor, CombatantState target, int damage)
         {
             // Read once and reused below for the modifier riders -- see
             // ApplyModifierOnHitRiders' own header on why a rider needs to
             // know what element THIS hit already was.
             var hitType = AttackTypeOf(actor);
-            DealDamage(actor, target, damage, hitType);
+            DealDamage(actor, target, damage, hitType, KillCredit.Attacker);
             RecordBeatAmount(damage);
             SetStance(target, target.IsAlive ? Stances.Hurt : Stances.Defeated);
 
@@ -433,8 +435,6 @@ namespace PrincesPalace.Domain.Combat.Session
             if (!target.IsAlive)
             {
                 AppendMessage($"{target.Name} is defeated!");
-                _killedThisAction = true;
-                RecordKill(actor, target);
 
                 // Everything the Black Ram gets FOR a kill, in the one place
                 // that knows a kill just happened on the player's action.
@@ -512,7 +512,7 @@ namespace PrincesPalace.Domain.Combat.Session
                     int matchingBonus = Rounding.AwayFromZero(damage * effect.Magnitude / 100f);
                     if (matchingBonus > 0)
                     {
-                        DealDamage(actor, target, matchingBonus, hitType);
+                        DealDamage(actor, target, matchingBonus, hitType, KillCredit.Attacker);
                         AppendMessage($"{target.Name} takes {matchingBonus} bonus {hitType} damage!");
                         if (!target.IsAlive) break;
                     }
@@ -567,7 +567,7 @@ namespace PrincesPalace.Domain.Combat.Session
                 int elementalDamage = elementalOutcome.Damage;
                 if (elementalDamage <= 0) continue;
 
-                DealDamage(actor, target, elementalDamage, effect.Against.Value);
+                DealDamage(actor, target, elementalDamage, effect.Against.Value, KillCredit.Attacker);
                 AppendMessage($"{target.Name} takes {elementalDamage} bonus {effect.Against.Value} damage!");
 
                 if (!target.IsAlive) break;

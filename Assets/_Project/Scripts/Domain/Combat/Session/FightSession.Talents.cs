@@ -321,7 +321,7 @@ namespace PrincesPalace.Domain.Combat.Session
                                                && ReferenceEquals(s.Source, caster));
 
                 int damage = CombatMath.Scale(caster.Attack * share / 100);
-                DealDamage(caster, enemy, damage, AttackTypeOf(caster));
+                DealDamage(caster, enemy, damage, AttackTypeOf(caster), KillCredit.Attacker);
                 RecordBeatAmount(System.Math.Max(damage, LargestAmountSoFar));
                 SetStance(enemy, enemy.IsAlive ? Stances.Hurt : Stances.Defeated);
                 summary.Append($" {enemy.Name} takes {damage}.");
@@ -329,8 +329,6 @@ namespace PrincesPalace.Domain.Combat.Session
                 if (!enemy.IsAlive)
                 {
                     summary.Append($" {enemy.Name} is defeated!");
-                    _killedThisAction = true;
-                    RecordKill(caster, enemy);
                 }
                 else if (appliesVulnerable)
                 {
@@ -533,14 +531,13 @@ namespace PrincesPalace.Domain.Combat.Session
                 var bystander = enemies[neighbour];
                 if (bystander == null || !bystander.IsAlive) continue;
 
-                DealDamage(source, bystander, splash, AttackTypeOf(source));
+                DealDamage(source, bystander, splash, AttackTypeOf(source), KillCredit.Attacker);
                 SetStance(bystander, bystander.IsAlive ? Stances.Hurt : Stances.Defeated);
                 AppendMessage($"{cause} - {bystander.Name} takes {splash} from it!");
 
                 if (!bystander.IsAlive)
                 {
                     AppendMessage($"{bystander.Name} is defeated!");
-                    RecordKill(source, bystander);
                 }
             }
         }

@@ -409,15 +409,13 @@ namespace PrincesPalace.Domain.Combat.Session
             if (holder == null) return;
 
             int damage = System.Math.Max(1, holder.MaxHealth);
-            DealDamage(holder, summoner, damage, AttackTypeOf(holder));
+            DealDamage(holder, summoner, damage, AttackTypeOf(holder), KillCredit.Attacker);
             SetStance(summoner, summoner.IsAlive ? Stances.Hurt : Stances.Defeated);
             AppendMessage($"{holder.Name}'s grudge answers the summons - {summoner.Name} takes {damage}!");
 
             if (!summoner.IsAlive)
             {
                 AppendMessage($"{summoner.Name} is defeated!");
-                _killedThisAction = true;
-                RecordKill(holder, summoner);
             }
         }
 
@@ -451,15 +449,13 @@ namespace PrincesPalace.Domain.Combat.Session
             if (target == null) return;
 
             int damage = System.Math.Max(1, victim.Attack);
-            DealDamage(actor, target, damage, AttackTypeOf(victim));
+            DealDamage(actor, target, damage, AttackTypeOf(victim), KillCredit.Attacker);
             SetStance(target, target.IsAlive ? Stances.Hurt : Stances.Defeated);
             AppendMessage($"{victim.Name} answers the key's call one last time - {target.Name} takes {damage}!");
 
             if (!target.IsAlive)
             {
                 AppendMessage($"{target.Name} is defeated!");
-                _killedThisAction = true;
-                RecordKill(actor, target);
             }
         }
 
@@ -511,10 +507,13 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 // The egg's own HP reached 0 -- the wearer dies outright.
                 // CurrentHealth was pinned at 1 since the hatch; dropping it
-                // to 0 here is what makes the caller's own `!target.IsAlive`
-                // check (ApplyFinalDamage) run the ordinary defeat flow
-                // (the message, RecordKill) exactly as it would for anyone
-                // else -- no duplicate bookkeeping needed here.
+                // to 0 here is what makes the ordinary defeat flow run for
+                // the wearer exactly as it would for anyone else -- the kill
+                // row and the rider flag from the DealDamage this call is
+                // nested inside (SettleDeath sees a target that was alive on
+                // the way in and is not on the way out), the message from
+                // ApplyFinalDamage's own `!target.IsAlive` check above it. No
+                // duplicate bookkeeping needed here.
                 target.IsPhoenixEgg = false;
                 target.CurrentHealth = 0;
                 AppendMessage($"{target.Name}'s egg shatters. There is nothing left to hatch.");
@@ -578,8 +577,13 @@ namespace PrincesPalace.Domain.Combat.Session
         // needs a way to fire that event directly -- the same reasoning
         // FightSession.Relics.LuckyDeckHealForTest and its siblings already
         // establish for Lucky Deck's own roll.
+        //
+        // KillCredit.Nobody, deliberately: this seam exists to fire the DAMAGE
+        // event alone, and ARealKillGrantsTwoPercentRunWideDamage
+        // (RelicMechanicsTests) pins that a relic keyed to kills is NOT reached
+        // through it. A test that wants the kill funnel fights a real swing.
         public void DealDamageForTest(CombatantState actor, CombatantState target, int amount, DamageType type) =>
-            DealDamage(actor, target, amount, type);
+            DealDamage(actor, target, amount, type, KillCredit.Nobody);
 
         public void HealForTest(CombatantState target, int amount) => HealAndCount(target, amount);
 

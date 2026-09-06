@@ -39,11 +39,42 @@ namespace PrincesPalace.Domain.Combat.Session
             return combatant.Name;
         }
 
-        // Applies damage AND counts it. Every in-session call site that used to
-        // reach for CombatMath.ApplyDamage goes through here instead, so the
-        // ledger cannot fall behind by someone adding a seventh damage path and
-        // not knowing about this file.
+        // Applies damage, counts it, AND settles the death it may have caused.
+        // Every in-session call site that used to reach for
+        // CombatMath.ApplyDamage goes through here instead, so the ledger
+        // cannot fall behind by someone adding a seventh damage path and not
+        // knowing about this file -- and since 2026-09-06 the kill bookkeeping
+        // rides along, so that seventh path cannot drop half of it either.
+        //
+        // `credit` has no default on purpose: a caller must say whether its
+        // damage scores a kill. See KillCredit for what the two answers cost.
         private CombatMath.DamageResult DealDamage(
+            CombatantState actor, CombatantState target, int amount, DamageType type, KillCredit credit)
+        {
+            // Measured ACROSS the call rather than read after it, so one body
+            // can only be settled once. ApplyFinalDamage's elemental and
+            // matching-type riders deal their own figures through here after
+            // the main hit may already have felled the target, and a second
+            // kill row for the same corpse would out-count the fight.
+            bool wasAlive = target != null && target.IsAlive;
+
+            var result = ApplyAndCountDamage(actor, target, amount, type);
+
+            if (wasAlive && target != null && !target.IsAlive)
+            {
+                SettleDeath(actor, target, credit);
+            }
+
+            return result;
+        }
+
+        // The arithmetic and the counting, with nothing to say about who scored
+        // what. Split out of DealDamage only so the alive-before/dead-after
+        // check above can wrap every path through it, the two Phoenix Egg
+        // early-returns included -- an egg whose own pool reaches zero kills
+        // its wearer from inside this method and must settle like any other
+        // death.
+        private CombatMath.DamageResult ApplyAndCountDamage(
             CombatantState actor, CombatantState target, int amount, DamageType type)
         {
             // Phoenix Egg, already hatched: every further hit eats the
@@ -143,14 +174,33 @@ namespace PrincesPalace.Domain.Combat.Session
             Ledger.Restored(LedgerIdOf(target), target.CurrentHealth - before);
         }
 
-        // THE ONE PLACE A KILL IS RECORDED, from all four call sites: a plain
-        // swing, an all-enemies cast, Shatter's chain, and a transform's splash.
-        // Anything that has to happen once per body rather than once per action
-        // belongs HERE rather than at whichever of the four happened to be
-        // written most recently -- see FightSession.Relics.RelicsOnEachKill for
-        // what already learned that lesson once, on the sweep.
-        private void RecordKill(CombatantState actor, CombatantState target)
+        // THE ONE PLACE A DEATH IS SETTLED, and the reason the pairing it
+        // performs can no longer be half-typed.
+        //
+        // Two things have to happen together when a combatant goes down: the
+        // rider block's own flag (read once in AdvanceAfterAction, which is
+        // what makes Trample and Bloodlust eligible for the kill) and the
+        // ledger's kill row. Until 2026-09-06 both were typed by hand at five
+        // separate call sites after five separate DealDamage calls, and one of
+        // them -- SplashOntoNeighbours -- had already lost the flag half
+        // without anything noticing. Nothing can lose it now: DealDamage is
+        // the only damage funnel in the session and it calls this itself.
+        //
+        // Anything that has to happen once per BODY rather than once per
+        // action belongs here rather than at whichever call site happened to
+        // be written most recently -- see FightSession.Relics.RelicsOnEachKill
+        // for what already learned that lesson once, on the sweep.
+        private void SettleDeath(CombatantState actor, CombatantState target, KillCredit credit)
         {
+            if (target == null || target.IsAlive) return;
+
+            // Credited to nobody: no kill row, and no rider eligibility. The
+            // poison tick in TickStatuses is the one caller that asks for
+            // this, and it asks in writing -- an omission there would be
+            // indistinguishable from the bug this method exists to kill.
+            if (credit == KillCredit.Nobody) return;
+
+            _killedThisAction = true;
             Ledger.ScoredKill(LedgerIdOf(actor));
             Ledger.WentDown(LedgerIdOf(target));
             RelicsOnEachKill(actor, target);

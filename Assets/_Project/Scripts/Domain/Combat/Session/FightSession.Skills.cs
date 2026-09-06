@@ -575,9 +575,10 @@ namespace PrincesPalace.Domain.Combat.Session
                 // Magic Marker (mechanic a). Independent of the line above.
                 MagicMarkerApplyMark(actor, enemy);
 
-                // The kill message, _killedThisAction and RecordKill all now
-                // happen INSIDE ApplyFinalDamage -- this only still needs its
-                // own AOE-specific call, the status a SURVIVOR takes.
+                // The kill message happens inside ApplyFinalDamage, and the
+                // rider flag and the ledger's kill row deeper still, inside
+                // the DealDamage it calls -- this only needs its own
+                // AOE-specific call, the status a SURVIVOR takes.
                 if (enemy.IsAlive)
                 {
                     ApplySkillStatus(skill, enemy, actor);

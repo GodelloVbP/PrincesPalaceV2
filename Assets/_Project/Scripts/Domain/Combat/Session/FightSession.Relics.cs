@@ -297,11 +297,13 @@ namespace PrincesPalace.Domain.Combat.Session
         // second full typed resolution per victim would be a different,
         // heavier attack wearing a light relic's name.
         //
-        // DealDamage/SetStance/RecordKill is the fourth appearance of this
-        // exact shape in the file family (the sweep, Shatter's chain, and
-        // Transform splash all do the same three calls in the same order) --
-        // worth collapsing the day a fifth shows up and actually causes a gap
-        // the way the damage-bonus duplication did, not before.
+        // DealDamage/SetStance/kill-bookkeeping was the fourth appearance of
+        // this exact shape in the file family (the sweep, Shatter's chain and
+        // Transform splash all did the same three calls in the same order),
+        // held off "until a fifth shows up and actually causes a gap". It had
+        // already caused one, in Transform splash, which had lost the rider
+        // flag -- so the third of the three now lives inside DealDamage. See
+        // SettleDeath (FightSession.Ledger.cs).
         private void LuckyDeckSplash(CombatantState actor, CombatantState primary, int damage)
         {
             int splash = damage * FightTuning.LuckyDeckSplashPercent / 100;
@@ -313,15 +315,9 @@ namespace PrincesPalace.Domain.Combat.Session
             {
                 if (ReferenceEquals(other, primary) || !other.IsAlive) continue;
 
-                DealDamage(actor, other, splash, AttackTypeOf(actor));
+                DealDamage(actor, other, splash, AttackTypeOf(actor), KillCredit.Attacker);
                 SetStance(other, other.IsAlive ? Stances.Hurt : Stances.Defeated);
                 hitAnyone = true;
-
-                if (!other.IsAlive)
-                {
-                    _killedThisAction = true;
-                    RecordKill(actor, other);
-                }
             }
 
             if (hitAnyone)

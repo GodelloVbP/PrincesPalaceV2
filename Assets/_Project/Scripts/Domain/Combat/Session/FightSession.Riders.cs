@@ -14,6 +14,9 @@ namespace PrincesPalace.Domain.Combat.Session
     public sealed partial class FightSession
     {
         // Set by an action that killed something, read once by the rider block.
+        // WRITTEN IN EXACTLY ONE PLACE -- SettleDeath (FightSession.Ledger.cs),
+        // which DealDamage calls for every death it causes. It was assigned at
+        // five call sites until 2026-09-06 and one of them had already stopped.
         private bool _killedThisAction;
 
         // Set when an action is eligible to cash in a banked turn. False for
@@ -365,6 +368,17 @@ namespace PrincesPalace.Domain.Combat.Session
                 // back-crediting it would put points in a column the player
                 // cannot account for against any blow they watched land.
                 RecordUnattributedDamage(actor, report.PoisonDamage);
+
+                // And if the tick killed, that death is settled with the same
+                // KillCredit.Nobody the comment above argues for -- WRITTEN
+                // DOWN rather than left as a missing call. This is the one
+                // deliberate exception to "a death raises the rider flag and
+                // takes a kill row", and an exception spelled as an absence is
+                // indistinguishable from the bug SettleDeath exists to kill.
+                // The call is a no-op on the Nobody branch by design; what it
+                // buys is that `grep SettleDeath` finds every death decision
+                // in the file family, this one included.
+                SettleDeath(actor: null, target: actor, credit: KillCredit.Nobody);
             }
 
             if (report.RegenHealed > 0)
