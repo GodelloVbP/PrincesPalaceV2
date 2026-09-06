@@ -174,14 +174,29 @@ never quietly reach into controller state to make itself pass.
 
 - Naming: `ClassName.Topic.cs`, one topic per file.
 - The **root file** (same name as the class) owns the class declaration, all
-  `[SerializeField]` fields, all consts, and any runtime state fields. Parts
-  contain only methods (and, where genuinely private to one topic, private
-  nested types).
+  `[SerializeField]` fields, all consts, and any runtime state fields — for a
+  **MonoBehaviour**. Parts contain only methods (and, where genuinely private
+  to one topic, private nested types). Reason is the GUID binding in the next
+  bullet: Unity's scene reference is anchored to the file that declares the
+  class, so everything the scene or the inspector can reach has to live there
+  too.
 - For a **MonoBehaviour**, the root file's name must stay exactly the class
   name — Unity binds a component to a scene through the MonoScript asset
   whose GUID the scene references, and that GUID is tied to the file
   Unity first imported under that class name. Moving the declaration to a
   different file breaks every scene reference to it.
+- For an **engine-free class split by topic** — no MonoBehaviour, nothing for
+  a GUID to anchor — the rule above doesn't hold, and shouldn't: each part
+  owns the runtime state its own topic needs, declared beside the comment
+  that explains the invariant it serves. `FightSession`
+  (`Domain/Combat/Session/`) is the worked example: `FightSession.Beats.cs:14-16`
+  (`_beats`, `_immediateMessages`, `_recordingBeat`),
+  `FightSession.Enemies.cs:31` (`_intents`), `FightSession.Talents.cs:82`
+  (`_wardPayoutsThisTurn`, under the paragraph explaining the once-per-turn
+  cap). The root file still owns the class declaration, the constructor, and
+  state that genuinely spans topics (`_encounter`, `_locks`). Reason:
+  locality — the invariant and the field that holds it stay in the same
+  file, next to the comment that explains both.
 - A part belonging to a namespaced class repeats the same `namespace { }`
   wrapper. A part belonging to a namespace-less class (like `SceneBuilder`)
   stays namespace-less too — they must match exactly.

@@ -313,6 +313,14 @@ milliseconds rather than by loading a scene.
 | `FightSession.Enemies.cs` | intents, the telegraph, the two skip paths, taunt redirection, the status rider |
 | `FightSession.Skills.cs` | the fourteen-effect dispatch, role riders, the queue push |
 | `FightSession.Talents.cs` | wool engines, wards, Shatter, Gifts, splash, the transform, Provoke |
+| `FightSession.Cooldowns.cs` | skill cooldowns, counted in the caster's own turns rather than rounds |
+| `FightSession.Items.cs` | using something out of the satchel |
+| `FightSession.Ledger.cs` | damage and kill attribution, settling a death |
+| `FightSession.Outcome.cs` | the payout on a win, what a loss says |
+| `FightSession.Potency.cs` | the every-Nth-action bonus, and what "harder" is measured against |
+| `FightSession.Relics.cs` | WHEN a relic gets to act — the hooks, in one place |
+| `FightSession.RelicMechanics.cs` | WHAT each relic does — fourteen effects too specific for a shared table |
+| `FightSession.SpeedBuffs.cs` | speed changes mid-fight, kept honest with the turn order |
 | `DamagePipeline.cs` | the damage funnel, and the only place its composition order is stated |
 | `VictoryRewards.cs` | the payout arithmetic (elite × depth), drop rolls, who earns what |
 | `FightHudSpec.cs` | HUD capacities both the tree and the session read |
