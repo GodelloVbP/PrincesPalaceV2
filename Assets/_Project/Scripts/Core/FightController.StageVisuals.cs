@@ -95,7 +95,7 @@ namespace PrincesPalace
                 if (IsOnStage(enemies[i])) onStage++;
             }
 
-            AnchorStageSlots(enemySlots, onStage, mirrored: false, StageScaleForSlot);
+            AnchorStageSlots(enemySlots, enemyActorAnimators, onStage, mirrored: false, StageScaleForSlot);
 
             for (int i = 0; i < enemySprites.Length; i++)
             {
@@ -103,14 +103,15 @@ namespace PrincesPalace
                 enemySlots[i].gameObject.SetShown(enemy != null);
                 if (enemy == null) continue;
 
-                RefreshCombatantSprite(enemySprites[i], enemy, StageSide.Right, StanceOf(enemy));
+                RefreshCombatantSprite(enemySprites[i], enemy, StageSide.Right, StanceOf(enemy),
+                    enemyActorAnimators[i], enemyHitFlashes[i]);
                 RefreshNameplate(enemyNameplates[i], enemy);
             }
 
             RefreshIntentIcons();
 
             var party = _session.Encounter.PlayerParty;
-            AnchorStageSlots(partySlots, party.Count, mirrored: true);
+            AnchorStageSlots(partySlots, partyActorAnimators, party.Count, mirrored: true);
 
             for (int i = 0; i < partySprites.Length; i++)
             {
@@ -118,7 +119,8 @@ namespace PrincesPalace
                 partySlots[i].gameObject.SetShown(member != null);
                 if (member == null) continue;
 
-                RefreshCombatantSprite(partySprites[i], member, StageSide.Left, StanceOf(member));
+                RefreshCombatantSprite(partySprites[i], member, StageSide.Left, StanceOf(member),
+                    partyActorAnimators[i], partyHitFlashes[i]);
                 RefreshNameplate(partyNameplates[i], member);
             }
         }
@@ -168,7 +170,8 @@ namespace PrincesPalace
         // Applies to the PARTY too. A squad of two had exactly the same problem
         // and nobody had noticed, because two sheep overlapping reads as two
         // sheep standing close together rather than as a layout fault.
-        private static void AnchorStageSlots(RectTransform[] slots, int liveCount, bool mirrored,
+        private static void AnchorStageSlots(RectTransform[] slots, StageActorAnimator[] animators,
+                                            int liveCount, bool mirrored,
                                             System.Func<int, float> presence = null)
         {
             if (slots == null || liveCount <= 0) return;
@@ -193,7 +196,11 @@ namespace PrincesPalace
                 float scale = FightStageAnchors.SlotScale(i, shown) * (presence?.Invoke(i) ?? 1f);
                 var baseScale = new Vector3(scale, scale, 1f);
 
-                var animator = slots[i].GetComponent<StageActorAnimator>();
+                // HANDED IN, NOT LOOKED UP -- the array ScreenRegistry
+                // populated one-to-one with `slots`, so an index into one is
+                // an index into the other and there is nothing here left to
+                // GetComponent for.
+                var animator = animators != null && i < animators.Length ? animators[i] : null;
 
                 // ONLY WHEN IT ACTUALLY MOVED, and that guard is the whole of
                 // this function's correctness.
@@ -439,7 +446,8 @@ namespace PrincesPalace
 
         // ---- one combatant ----------------------------------------------------
 
-        private void RefreshCombatantSprite(Image image, CombatantState combatant, StageSide side, string stance)
+        private void RefreshCombatantSprite(Image image, CombatantState combatant, StageSide side, string stance,
+                                            StageActorAnimator animator, StageHitFlash hitFlash)
         {
             if (image == null) return;
 
@@ -449,7 +457,7 @@ namespace PrincesPalace
 
             if (sprite == null)
             {
-                ShowFallbackPlate(image, slotRect);
+                ShowFallbackPlate(image, slotRect, hitFlash);
                 return;
             }
 
@@ -472,13 +480,15 @@ namespace PrincesPalace
             // silhouette faced the opposite way to the figure -- invisible on
             // anything unmirrored (Shawn faces right and stands left, so he
             // looked correct by luck) and obvious on every enemy.
-            SyncHitFlash(image, sprite, mirror);
+            SyncHitFlash(image, sprite, mirror, hitFlash);
 
             // The afterimage copies this exact Image, so the animator is handed
             // it through the same door -- once bound it clones the live node
             // whenever it trails, picking up the current drawing and flip for
-            // free. Same-sprite rebinds are cheap and idempotent.
-            slotRect?.GetComponent<StageActorAnimator>()?.BindSprite(image);
+            // free. Same-sprite rebinds are cheap and idempotent. HANDED IN
+            // rather than GetComponent'd off slotRect -- the same array
+            // ScreenRegistry populated for AnchorStageSlots.
+            animator?.BindSprite(image);
 
             // ACTIVATED, not merely enabled. The sprite node is built inactive
             // (it has no art until a fight exists), and enabling a Graphic whose
@@ -491,7 +501,7 @@ namespace PrincesPalace
 
         // No authored art: fall back to the plain plate so the slot still reads
         // as a real combatant rather than vanishing or showing a white box.
-        private void ShowFallbackPlate(Image image, RectTransform slotRect)
+        private void ShowFallbackPlate(Image image, RectTransform slotRect, StageHitFlash hitFlash)
         {
             image.sprite = enemyFallbackSprite;
             image.preserveAspect = false;
@@ -507,7 +517,7 @@ namespace PrincesPalace
             // Never mirrored: it is a UI frame, not a character, and flipping it
             // would just reverse its bevel lighting for no gain.
             image.rectTransform.localScale = Vector3.one;
-            SyncHitFlash(image, enemyFallbackSprite, 1f);
+            SyncHitFlash(image, enemyFallbackSprite, 1f, hitFlash);
 
             // Stays off if even the fallback is missing -- an invisible slot
             // beats a solid white rectangle.
@@ -574,12 +584,12 @@ namespace PrincesPalace
             shadowRect.anchoredPosition = new Vector2(centre * slotRect.sizeDelta.x * mirror, 0f);
         }
 
-        private static void SyncHitFlash(Image sprite, Sprite art, float mirror)
+        // HANDED IN rather than found with GetComponentInChildren off the
+        // slot -- the array ScreenRegistry populated one-to-one with the
+        // slots is the same lookup, done once at build time instead of once
+        // per repaint.
+        private static void SyncHitFlash(Image sprite, Sprite art, float mirror, StageHitFlash flash)
         {
-            var slot = sprite.transform.parent;
-            if (slot == null) return;
-
-            var flash = slot.GetComponentInChildren<StageHitFlash>(includeInactive: true);
             if (flash == null) return;
 
             flash.SetSprite(art);
@@ -640,13 +650,10 @@ namespace PrincesPalace
                 // repeatedly.
                 _confirmedDefeated.Add(pair.Key);
 
-                var slot = SlotFor(pair.Key);
-                var fade = slot == null ? null : slot.GetComponent<StageDeathFade>();
-
                 // PlayIfNotAlready, not Play: a corpse is in the snapshot of
                 // every beat after the one that killed it, so this is asked
                 // repeatedly and must only ever fade once.
-                fade?.PlayIfNotAlready();
+                DeathFadeFor(pair.Key)?.PlayIfNotAlready();
             }
         }
 
@@ -740,8 +747,7 @@ namespace PrincesPalace
         // nothing to breathe, and that is not an error worth a branch upstream.
         private void BreatheFigure(CombatantState combatant, float amount)
         {
-            var slot = SlotFor(combatant);
-            if (slot != null) slot.GetComponent<StageActorAnimator>()?.SetBreath(amount);
+            AnimatorFor(combatant)?.SetBreath(amount);
         }
 
         // A flyer's own clock, separate from the breath's because it does not
@@ -828,8 +834,7 @@ namespace PrincesPalace
 
         private void HoverFigure(CombatantState combatant, float pixels)
         {
-            var slot = SlotFor(combatant);
-            if (slot != null) slot.GetComponent<StageActorAnimator>()?.SetHover(pixels);
+            AnimatorFor(combatant)?.SetHover(pixels);
         }
 
         // Puts every figure back for a fresh encounter. The fade is the reason
@@ -873,12 +878,8 @@ namespace PrincesPalace
 
             StartIdleBreathing();
 
-            foreach (var slot in enemySlots.Concat(partySlots))
-            {
-                if (slot == null) continue;
-                slot.GetComponent<StageDeathFade>()?.ResetToVisible();
-                slot.GetComponent<StageActorAnimator>()?.ResetToHome();
-            }
+            foreach (var fade in enemyDeathFades.Concat(partyDeathFades)) fade?.ResetToVisible();
+            foreach (var animator in enemyActorAnimators.Concat(partyActorAnimators)) animator?.ResetToHome();
 
             // The racks too, for the same reason the figures are: a kick
             // interrupted by a fight ending would leave the whole stage parked
@@ -921,10 +922,7 @@ namespace PrincesPalace
         // plays, live health has already moved through the rest of the round.
         private void FlashOne(CombatBeat beat, CombatantState target)
         {
-            var slot = SlotFor(target);
-            if (slot == null) return;
-
-            var flash = slot.GetComponentInChildren<StageHitFlash>(includeInactive: true);
+            var flash = HitFlashFor(target);
             if (flash == null) return;
 
             if (beat.IsHealing) flash.FlashHeal();

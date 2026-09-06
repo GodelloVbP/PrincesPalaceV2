@@ -193,14 +193,18 @@ public static class ScreenRegistry
                 // the ONE committed material. Sharing it matters -- a material
                 // per slot would be six identical assets and six draw-call
                 // batches where one will do.
+                //
+                // STORED ON THE CONTROLLER, not just attached and left for a
+                // GetComponentInChildren to rediscover per beat -- the two
+                // fields these fill (enemyHitFlashes/partyHitFlashes) used to
+                // be a dead Image[] pair UiAutoBind wired to the raw overlay
+                // graphic and nothing ever read; they now carry the
+                // StageHitFlash itself, the same seam stageShakes uses.
                 var flashMaterial = AssetDatabase.LoadAssetAtPath<Material>(PipelineBuilder.HitFlashMaterialPath);
-                foreach (var flashRef in screen.EnemyHitFlashes.Concat(screen.PartyHitFlashes))
-                {
-                    var flash = result.Attach<StageHitFlash>(flashRef);
-                    flash.image = result.Image(flashRef);
-                    flash.image.material = flashMaterial;
-                    flash.image.raycastTarget = false;
-                }
+                fight.enemyHitFlashes = screen.EnemyHitFlashes
+                    .Select(flashRef => AttachHitFlash(result, flashMaterial, flashRef)).ToArray();
+                fight.partyHitFlashes = screen.PartyHitFlashes
+                    .Select(flashRef => AttachHitFlash(result, flashMaterial, flashRef)).ToArray();
 
                 // The plate a combatant with no battle art falls back to. Loaded
                 // through the same LoadSprite the tree uses, so the importer
@@ -215,33 +219,50 @@ public static class ScreenRegistry
                 var bootstrap = result.Attach<FightBootstrap>(screen.Root);
                 bootstrap.fight = fight;
 
-                // The lunge/recoil animator, one per stage slot.
+                // The lunge/recoil animator, one per stage slot -- stored on
+                // the controller now, the same shape stageShakes and
+                // spellVfxPlayers above already use.
                 //
-                // WITHOUT THIS NOTHING MOVES. FightBeatPlayer.Lunge does a
-                // GetComponent on the slot and returns silently when it finds
-                // nothing, so the whole feature was a no-op that no test noticed:
-                // the class existed, the call site existed, and the two were
-                // never introduced.
-                foreach (var slotRef in screen.EnemySlots.Concat(screen.PartySlots))
-                {
-                    result.Attach<StageActorAnimator>(slotRef);
-                }
+                // WITHOUT A REFERENCE HELD SOMEWHERE NOTHING MOVES. This used
+                // to attach a StageActorAnimator to every slot and discard the
+                // return outright: FightBeatPlayer.Lunge found its way back to
+                // one with a GetComponent on the slot and returned silently
+                // when it found nothing, so the whole feature was a no-op that
+                // no test noticed -- the class existed, the call site existed,
+                // and the two were never introduced. Handing the array to the
+                // controller instead means a PlayMode test can inject its own
+                // stand-in animators with no scene at all, and E3
+                // (UiWiringSweep) now refuses the build outright if either
+                // array comes back with a null element or shorter than the
+                // slots it was built from -- these two fields carry no
+                // [UiOptional], so that failure mode fails loudly instead of
+                // shipping quietly a second time.
+                fight.enemyActorAnimators = screen.EnemySlots.Select(result.Attach<StageActorAnimator>).ToArray();
+                fight.partyActorAnimators = screen.PartySlots.Select(result.Attach<StageActorAnimator>).ToArray();
 
                 // The death fade reaches TWO sibling images -- the figure and
                 // its ground shadow -- because a corpse whose shadow stayed put
                 // reads as the sprite failing to draw rather than as a death.
+                // Stored on the controller for the same reason the animator
+                // above now is: FadeTheFallen used to re-derive this with
+                // SlotFor(combatant).GetComponent<StageDeathFade>() every time
+                // a beat's snapshot mentioned a corpse.
+                fight.enemyDeathFades = new StageDeathFade[screen.EnemySlots.Count];
                 for (int i = 0; i < screen.EnemySlots.Count; i++)
                 {
                     var fade = result.Attach<StageDeathFade>(screen.EnemySlots[i]);
                     fade.sprite = result.Image(screen.EnemySprites[i]);
                     fade.shadow = result.Image(screen.EnemyFootShadows[i]);
+                    fight.enemyDeathFades[i] = fade;
                 }
 
+                fight.partyDeathFades = new StageDeathFade[screen.PartySlots.Count];
                 for (int i = 0; i < screen.PartySlots.Count; i++)
                 {
                     var fade = result.Attach<StageDeathFade>(screen.PartySlots[i]);
                     fade.sprite = result.Image(screen.PartySprites[i]);
                     fade.shadow = result.Image(screen.PartyFootShadows[i]);
+                    fight.partyDeathFades[i] = fade;
                 }
 
                 var player = result.Attach<FightBeatPlayer>(screen.DamagePopupPool);
@@ -270,6 +291,18 @@ public static class ScreenRegistry
 
     private static UiCountAudit.Binding Count(string label, IReadOnlyList<NodeRef> declared, Func<int> bound) =>
         new UiCountAudit.Binding { Label = label, Declared = declared, BoundLength = bound };
+
+    // Attaches one hit-flash overlay and hands it the shared material -- the
+    // same three lines for an enemy slot or a party slot, so the two Select
+    // calls in Fight()'s Wire step cannot drift apart on what they set.
+    private static StageHitFlash AttachHitFlash(UiEmitResult result, Material material, NodeRef flashRef)
+    {
+        var flash = result.Attach<StageHitFlash>(flashRef);
+        flash.image = result.Image(flashRef);
+        flash.image.material = material;
+        flash.image.raycastTarget = false;
+        return flash;
+    }
 
     private static ScreenDef Hub()
     {

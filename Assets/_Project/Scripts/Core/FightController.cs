@@ -31,9 +31,18 @@ namespace PrincesPalace
 
         [SerializeField] internal RectTransform[] enemySlots;
         [SerializeField] internal Image[] enemySprites;
-        [SerializeField] internal Image[] enemyHitFlashes;
+        [SerializeField] internal StageHitFlash[] enemyHitFlashes;
         [SerializeField] internal TMP_Text[] enemyNameplates;
         [SerializeField] internal Image[] enemyFootShadows;
+
+        // The per-slot lunge/recoil animator and death fade -- the same shape
+        // stageShakes and spellVfxPlayers below already use: attached and
+        // stored here at scene-build time (ScreenRegistry.Fight) rather than
+        // resolved with GetComponent at the point of use. SlotFor's own
+        // comment explains why the view owns this mapping; AnimatorFor and
+        // DeathFadeFor below are its exact twins for these two components.
+        [SerializeField] internal StageActorAnimator[] enemyActorAnimators;
+        [SerializeField] internal StageDeathFade[] enemyDeathFades;
 
         [SerializeField] internal RectTransform[] partySlots;
 
@@ -42,8 +51,10 @@ namespace PrincesPalace
         // jolting while the other holds still reads as a bug in the layout.
         [SerializeField] internal StageShake[] stageShakes;
         [SerializeField] internal Image[] partySprites;
-        [SerializeField] internal Image[] partyHitFlashes;
+        [SerializeField] internal StageHitFlash[] partyHitFlashes;
         [SerializeField] internal TMP_Text[] partyNameplates;
+        [SerializeField] internal StageActorAnimator[] partyActorAnimators;
+        [SerializeField] internal StageDeathFade[] partyDeathFades;
         [SerializeField] internal Image[] partyFootShadows;
 
         // ---- the HUD -----------------------------------------------------------
@@ -399,6 +410,7 @@ namespace PrincesPalace
             if (beatPlayer == null) return;
 
             beatPlayer.SlotFor = SlotFor;
+            beatPlayer.AnimatorFor = AnimatorFor;
             beatPlayer.PaintVitals = PaintVitals;
             beatPlayer.PushLine = PushLogLine;
             beatPlayer.SetStance = PoseCombatant;
@@ -437,6 +449,75 @@ namespace PrincesPalace
             for (int i = 0; i < party.Count && i < partySlots.Length; i++)
             {
                 if (ReferenceEquals(party[i], combatant)) return partySlots[i];
+            }
+
+            return null;
+        }
+
+        // SlotFor's exact twin for the animator that lives on that same slot.
+        // Playback (FightBeatPlayer.TravelFor/RecoilOne/Punch) used to walk
+        // SlotFor and then GetComponent<StageActorAnimator> on what came back;
+        // this returns the component directly from the array ScreenRegistry
+        // populated, so nothing downstream of the controller ever calls
+        // GetComponent to find one.
+        private StageActorAnimator AnimatorFor(CombatantState combatant)
+        {
+            if (_session == null || combatant == null) return null;
+
+            var enemies = _session.Encounter.Enemies;
+            for (int i = 0; i < enemies.Count && i < enemyActorAnimators.Length; i++)
+            {
+                if (ReferenceEquals(enemies[i], combatant)) return enemyActorAnimators[i];
+            }
+
+            var party = _session.Encounter.PlayerParty;
+            for (int i = 0; i < party.Count && i < partyActorAnimators.Length; i++)
+            {
+                if (ReferenceEquals(party[i], combatant)) return partyActorAnimators[i];
+            }
+
+            return null;
+        }
+
+        // SlotFor's twin for the hit-flash silhouette. Used by FlashOne, which
+        // used to reach it through SlotFor(target).GetComponentInChildren --
+        // the same GetComponent-at-point-of-use shape this whole change
+        // replaces.
+        private StageHitFlash HitFlashFor(CombatantState combatant)
+        {
+            if (_session == null || combatant == null) return null;
+
+            var enemies = _session.Encounter.Enemies;
+            for (int i = 0; i < enemies.Count && i < enemyHitFlashes.Length; i++)
+            {
+                if (ReferenceEquals(enemies[i], combatant)) return enemyHitFlashes[i];
+            }
+
+            var party = _session.Encounter.PlayerParty;
+            for (int i = 0; i < party.Count && i < partyHitFlashes.Length; i++)
+            {
+                if (ReferenceEquals(party[i], combatant)) return partyHitFlashes[i];
+            }
+
+            return null;
+        }
+
+        // SlotFor's twin for the death fade. Used by FadeTheFallen, which used
+        // to reach it through SlotFor(target).GetComponent.
+        private StageDeathFade DeathFadeFor(CombatantState combatant)
+        {
+            if (_session == null || combatant == null) return null;
+
+            var enemies = _session.Encounter.Enemies;
+            for (int i = 0; i < enemies.Count && i < enemyDeathFades.Length; i++)
+            {
+                if (ReferenceEquals(enemies[i], combatant)) return enemyDeathFades[i];
+            }
+
+            var party = _session.Encounter.PlayerParty;
+            for (int i = 0; i < party.Count && i < partyDeathFades.Length; i++)
+            {
+                if (ReferenceEquals(party[i], combatant)) return partyDeathFades[i];
             }
 
             return null;

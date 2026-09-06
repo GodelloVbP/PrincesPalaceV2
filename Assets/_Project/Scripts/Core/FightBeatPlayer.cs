@@ -120,6 +120,14 @@ namespace PrincesPalace
         // standing without knowing anything about stages or slots.
         internal Func<CombatantState, RectTransform> SlotFor;
 
+        // SlotFor's twin for the animator that lives on that slot. Lunge,
+        // RecoilOne and Punch used to call SlotFor and then GetComponent
+        // the result to find one -- the view already knows which array
+        // holds it (ScreenRegistry populated it at build time), so this
+        // hands it over the same door SlotFor uses rather than making
+        // playback re-derive it through the transform.
+        internal Func<CombatantState, StageActorAnimator> AnimatorFor;
+
         // Paints a set of vitals. Called TWICE per beat -- once with what stood
         // before the blow, once with what stood after.
         internal Action<IReadOnlyDictionary<CombatantState, Vitals>> PaintVitals;
@@ -156,7 +164,7 @@ namespace PrincesPalace
         // inside a method whose whole job is playing the spell it authored.
         internal Action<CombatBeat> PlayContactFx;
 
-        // THE WIRING SEAM FOR A PLAYMODE TEST, and the only public door onto
+        // THE WIRING SEAMS FOR A PLAYMODE TEST, and the only public doors onto
         // any of the delegates above.
         //
         // Every one of them is internal and Core grants InternalsVisibleTo to
@@ -174,6 +182,22 @@ namespace PrincesPalace
         public void WireContactFxForTest(Action<CombatBeat> playContactFx)
         {
             PlayContactFx = playContactFx;
+        }
+
+        // THE SECOND DOOR, for SlotFor/AnimatorFor rather than PlayContactFx.
+        //
+        // Without this, proving that Lunge/RecoilOne/Punch reach a real
+        // StageActorAnimator through AnimatorFor -- rather than through a
+        // GetComponent this change removed -- would still mean loading the
+        // whole Fight scene, because a real FightController is otherwise the
+        // only thing that ever assigns these two fields. A fixture of a few
+        // bare RectTransform/StageActorAnimator GameObjects can hand in its
+        // own pair instead, with no scene at all.
+        public void WireStageForTest(Func<CombatantState, RectTransform> slotFor,
+                                     Func<CombatantState, StageActorAnimator> animatorFor)
+        {
+            SlotFor = slotFor;
+            AnimatorFor = animatorFor;
         }
 
         public void Play(IReadOnlyList<CombatBeat> beats, Action onFinished)
@@ -693,7 +717,7 @@ namespace PrincesPalace
             var to = SlotFor?.Invoke(beat.Target);
             if (from == null || to == null) return (null, Vector2.zero);
 
-            var animator = from.GetComponent<StageActorAnimator>();
+            var animator = AnimatorFor?.Invoke(beat.Actor);
             if (animator == null) return (null, Vector2.zero);
 
             // A fraction of the way, not all of it: the figures are meant to
@@ -750,8 +774,7 @@ namespace PrincesPalace
             // number, just no recoil.
             if (ReferenceEquals(target, beat.Actor)) return;
 
-            var slot = SlotFor?.Invoke(target);
-            var animator = slot == null ? null : slot.GetComponent<StageActorAnimator>();
+            var animator = AnimatorFor?.Invoke(target);
             if (animator == null) return;
 
             float dx = target.IsPlayerSide ? -RecoilDistance : RecoilDistance;
@@ -860,8 +883,7 @@ namespace PrincesPalace
             float strength = Strength(beat);
             if (strength <= 0f) return;
 
-            var slot = SlotFor?.Invoke(beat.Target);
-            var animator = slot == null ? null : slot.GetComponent<StageActorAnimator>();
+            var animator = AnimatorFor?.Invoke(beat.Target);
 
             // A FLOOR UNDER THE STRENGTH, unlike the shake. A shake that is
             // barely there is honest about a small hit; a squash that is

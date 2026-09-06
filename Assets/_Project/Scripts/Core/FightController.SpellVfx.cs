@@ -343,7 +343,7 @@ namespace PrincesPalace
             // centre of the frame (tools/make_contact_fx.py), so the aim point
             // IS the box centre and there is no offset to cancel.
             var aim = AimPoint(parent, targetRect, centred: true);
-            var box = ContactBoxFor(targetRect);
+            var box = ContactBoxFor(targetRect, AnimatorFor(beat.Target));
 
             bool wantsArc = beat.Approach != StageApproach.Charge;
 
@@ -383,9 +383,11 @@ namespace PrincesPalace
         // own size per skill and a caster tunes it against what they see. This
         // one has no authored size to tune, so the depth has to come from
         // somewhere.
-        private static Vector2 ContactBoxFor(RectTransform slot)
+        // HANDED THE ANIMATOR rather than GetComponent'ing it off the slot --
+        // the caller already has the combatant and asks AnimatorFor the same
+        // way SlotFor is asked for the rect.
+        private static Vector2 ContactBoxFor(RectTransform slot, StageActorAnimator animator)
         {
-            var animator = slot.GetComponent<StageActorAnimator>();
             float depth = animator != null
                 ? Mathf.Abs(animator.BaseScale.x)
                 : Mathf.Abs(slot.localScale.x);
