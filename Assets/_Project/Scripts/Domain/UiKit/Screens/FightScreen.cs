@@ -892,12 +892,17 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // buys goes back to the battlefield they are describing.
         private const float PlateW = 200f;
 
-        // 64 RATHER THAN THE 52 THAT WOULD BE EXACTLY HALF, and the twelve is
-        // the status line. A plate is three rows -- name and HP, the bar, and
-        // whatever the monster is currently suffering -- and "9999/9999" at
-        // 11pt measures 28.6 tall on its own, which UiTextFitAudit refuses to
-        // put in a box that cannot hold it. Halving the height exactly means
-        // dropping the status row, and an enemy's Vulnerable is not decoration.
+        // 64 RATHER THAN THE 52 THAT WOULD BE EXACTLY HALF. That twelve
+        // originally bought a third row for the status line; Phase 3
+        // (EnemyStatusLine's own header) retired that row to BRK alone,
+        // folded into the name row instead of kept as its own line (see
+        // BuildEnemyPlates' tag comment) -- but PlateH stayed 64 rather than
+        // shrinking back toward 52, because PlatePitch, PlateFirstY's own
+        // headroom margin against the stage anchors, and every test pinned
+        // against them (TheEnemyPlatesFillTwoColumnsBeforeStartingASecondRow)
+        // are tuned against this number, and the two remaining rows read
+        // comfortably with 11px of margin above and below rather than
+        // cramped -- not visibly too tall for what they now hold.
         private const float PlateH = 64f;
         private const float PlateGap = 16f;
         private const int PlateColumns = 2;
@@ -915,7 +920,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // the name is read. The actor's own idle sprite, fitted -- no new art,
         // and it cannot disagree with the figure on the stage because it IS the
         // figure on the stage.
-        private const float PlateIconSize = 40f;
+        //
+        // 34 RATHER THAN 40: BRK folding into the name row (see BuildEnemy-
+        // Plates' tag comment) needed width the icon column had to give back.
+        // 6px off the icon plus 4px off the right margin (PlateW*0.5f minus
+        // 4f rather than 8f, below) buys the 12px the name/tag/HP row needed
+        // without touching PlateW, PlatePitch or anything a test pins.
+        private const float PlateIconSize = 34f;
         // 332 until the stage came up out of the HUD. The anchors' ceiling is
         // this plate stack: the tallest actor needs 300 units above the front
         // slot's ground line, so at Near.Y -228 its head reaches 72, and this
@@ -981,41 +992,96 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .Inactive()
                     .AsDecor();
 
-                // Everything else starts to the right of the icon.
-                float textLeft = left + 8f + PlateIconSize;
+                // Everything else starts to the right of the icon. 6px rather
+                // than the old 8: see PlateIconSize's own comment for where
+                // the reclaimed width goes.
+                float textLeft = left + 6f + PlateIconSize;
 
-                var name = Ui.Label($"EnemyPlate{i}Name", UiString.Runtime, new UiVec(86f, 20f), 13,
-                    FightHudPalette.EnemyName, Place.At(textLeft, 17f, new UiVec(0f, 0.5f)))
+                // The right edge of the row, matching hp's own Place.At
+                // below -- named once so the tag can be pinned off it without
+                // restating the margin. 4px rather than the old 8: same
+                // reclaim as textLeft above.
+                float rowRight = PlateW * 0.5f - 4f;
+
+                // TWO ROWS, NOT THREE. The status line that used to sit
+                // between these retired to the stage rows under each figure
+                // (see EnemyStatusLine's own header) and left a blank 12px
+                // band where it had been. The name/HP row and the bar are
+                // now centred as a block in the full 64px -- 11px of margin
+                // above and below -- rather than sitting where the old
+                // three-row split left them.
+                //
+                // TopY/BarY are load-bearing together: TopY - 13.5 (half the
+                // HP box's 27-tall height) must equal BarY + 3.5 + 8, an 8px
+                // gap, for the block to stay centred. Solve them together if
+                // either box's height ever changes.
+                const float topY = 7.5f;
+                const float barY = -17.5f;
+
+                // 72 WIDE, 11PT RATHER THAN THE OLD 86/13PT: BRK now lives
+                // INSIDE this row (see the tag below), and the row has to
+                // share its 100px of free width (textLeft..hpLeft) between
+                // the name, the tag and two 2px gaps.
+                //
+                // NOT AUTOSIZED: this label has no Role, so ApplyTypography's
+                // no-role branch sets a literal fontSize and returns without
+                // touching enableAutoSizing -- unlike a Role-bearing label, a
+                // name too wide for its box WORD-WRAPS instead of shrinking.
+                // The old 86/13pt box had no slack to give: cutting the box
+                // to 72 at 13pt wrapped "Stone Golem" onto two lines (caught
+                // by capture, both empirically against tools/screenshots/
+                // runtime/status_rows_rest.png -- Domain has no font metric
+                // to derive this from, see UiTextFitAudit's own header on
+                // why), so the font dropped to 11pt with it, which is what
+                // actually buys the box back its headroom.
+                var name = Ui.Label($"EnemyPlate{i}Name", UiString.Runtime, new UiVec(72f, 20f), 11,
+                    FightHudPalette.EnemyName, Place.At(textLeft, topY, new UiVec(0f, 0.5f)))
                     .TextAligned(UiTextAlign.Left);
 
                 // 27 tall for a 10pt line: the audit measures "9999/9999" at
                 // 26 there, and a box that cannot hold it clips the descenders
-                // off the number the plate exists for. 10 rather than 11
-                // because the status line moved above the bar and the three
-                // rows now have to share 64px.
+                // off the number the plate exists for. Width and font size are
+                // both audit-pinned (UiStrings.HealthValue is measured, unlike
+                // the runtime name/tag either side of it), so neither moved --
+                // only Y did, to the shared topY above, and the row's right
+                // edge moved 4px in with it (rowRight, from the reclaimed
+                // icon-column width -- see PlateIconSize's own comment).
                 var hp = Ui.Label($"EnemyPlate{i}Hp", UiStrings.HealthValue, new UiVec(56f, 27f), 10,
-                    FightHudPalette.EnemyHpText, Place.At(PlateW * 0.5f - 8f, 17f, new UiVec(1f, 0.5f)))
+                    FightHudPalette.EnemyHpText, Place.At(rowRight, topY, new UiVec(1f, 0.5f)))
                     .TextAligned(UiTextAlign.Right);
 
                 var fill = Ui.Solid($"EnemyPlate{i}HpFill", FightHudPalette.HpBright, Place.Stretch(), UiSize.Fill);
-                // ---- ABOVE THE BAR, NOT BELOW IT ---------------------------
-                //
-                // The order on the plate is now name, what is wrong with them,
-                // then how much of them is left. Underneath, the status line sat
-                // in the plate's bottom margin against its border and read as a
-                // footnote to the bar rather than as a fact about the monster --
-                // and the bar, which is the thing being watched, had text on
-                // both sides of it.
-                //
-                // 8pt in a 12-tall box: it is a word or two of shorthand, and
-                // the row it is squeezing into came out of the space the old
-                // one had.
-                var tags = Ui.Label($"EnemyPlate{i}Tags", UiString.Runtime, new UiVec(142f, 12f), 8,
-                    FightHudPalette.TextSecondary, Place.At(textLeft, -4f, new UiVec(0f, 0.5f)))
-                    .TextAligned(UiTextAlign.Left);
+
+                // BRK'S ONLY REMAINING HOME. Phase 3 (EnemyStatusLine's own
+                // header) retired every other status to the stage rows and
+                // left this node carrying nothing but the break tag, so it
+                // moved OFF its own row and INTO the name row's right end,
+                // between the name and the HP value -- the row the old
+                // 12px-tall middle line existed to avoid crowding. 24 wide is
+                // room enough for "BRK" at 8pt with margin either side; the
+                // 2px gaps to the name box and the HP box on either side hold
+                // at all four audited aspects because none of the three boxes
+                // repositions between them. SetContent("") when the enemy is
+                // not broken (EnemyStatusLine's normal case) renders nothing,
+                // so the tag needs no separate active/inactive toggle.
+                var tags = Ui.Label($"EnemyPlate{i}Tags", UiString.Runtime, new UiVec(24f, 14f), 8,
+                    FightHudPalette.TextSecondary,
+                    Place.At(rowRight - 56f - 2f, topY, new UiVec(1f, 0.5f)))
+                    .TextAligned(UiTextAlign.Right);
+
+                // Hugs the same two edges the name/HP row does (textLeft on
+                // the left, a 2px margin inside rowRight on the right) rather
+                // than keeping its own pre-reclaim width -- otherwise the bar
+                // would stop 12px short of the row above it, which reads as
+                // the bar shrinking rather than as the row it never belonged
+                // to changing shape.
+                float barLeft = textLeft;
+                float barRight = rowRight - 2f;
+                float barCentreX = (barLeft + barRight) * 0.5f;
+                float barWidth = barRight - barLeft;
 
                 var bar = Ui.Panel($"EnemyPlate{i}Bar",
-                        Place.At(textLeft + 71f, -18f), UiSize.Fixed(142f, 7f), fill)
+                        Place.At(barCentreX, barY), UiSize.Fixed(barWidth, 7f), fill)
                     .Coloured(FightHudPalette.Track);
 
                 // A 12px square rotated 45 degrees, pinned just outside the
@@ -1027,10 +1093,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     .AllowOverflow("the reticle is deliberately OUTSIDE the plate - a marker in the margin, not a badge on the card");
 
                 // THE BREAK METER, hanging BELOW the plate rather than inside
-                // it. There is no room left in 64px -- three rows already
-                // share it (see PlateH's own comment) -- but the 12px gap
-                // PlatePitch leaves before the next row down is real, unused
-                // space, and a 6px bar fits it with margin either side. Same
+                // it. The two rows above now sit centred with 11px of margin
+                // on both edges (see topY/barY), so there IS free space inside
+                // the plate again -- but the meter stays outside it anyway:
+                // the 12px gap PlatePitch leaves before the next row down is
+                // real, unused space, and a 6px bar fits it with margin
+                // either side without reopening the vertical layout. Same
                 // fill mechanism the HP bar already uses (SetFill), same
                 // width and x-position, one row lower. Only an elite or boss
                 // carries a BreakShield at all, so this stays hidden for
@@ -1038,7 +1106,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 var breakFill = Ui.Solid($"EnemyPlate{i}BreakFill", FightHudPalette.TargetAmber,
                     Place.Stretch(), UiSize.Fill);
                 var breakTrack = Ui.Panel($"EnemyPlate{i}BreakTrack",
-                        Place.At(textLeft + 71f, -PlateH * 0.5f - 6f), UiSize.Fixed(142f, 6f), breakFill)
+                        Place.At(barCentreX, -PlateH * 0.5f - 6f), UiSize.Fixed(barWidth, 6f), breakFill)
                     .Coloured(FightHudPalette.Track)
                     .Inactive()
                     .AllowOverflow("the break meter hangs in the 12px row gap below the plate, not inside it - see PlatePitch");

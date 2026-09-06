@@ -219,6 +219,44 @@ namespace PrincesPalace.Domain.Tests
                 "the bottom plate has dropped back onto an actor's head - see tools/measure_stage.py");
         }
 
+        // Regression for the blank 12px band Phase 3 left behind: retiring
+        // EnemyStatusLine to BRK-only (FightHudModel.EnemyStatusLine's own
+        // header) freed the middle row, and the fix folds Tags INTO the name
+        // row rather than leaving the gap where the status line used to sit.
+        [Test]
+        public void TheEnemyPlateTopRowAndBarAreCentredWithNoBlankBand()
+        {
+            var plate = RectOf("EnemyPlate0");
+            var name = RectOf("EnemyPlate0Name");
+            var hp = RectOf("EnemyPlate0Hp");
+            var tags = RectOf("EnemyPlate0Tags");
+            var bar = RectOf("EnemyPlate0Bar");
+
+            // Name, HP and the BRK tag are one row now, not three.
+            Assert.AreEqual(name.Centre.Y, hp.Centre.Y, 0.01f, "name and HP share the top row");
+            Assert.AreEqual(name.Centre.Y, tags.Centre.Y, 0.01f,
+                "BRK now lives IN the name row - it is not a row of its own any more");
+
+            // Symmetric margins to the plate's own top/bottom edges is what
+            // "no blank band" actually means: the old layout left an unequal
+            // gap where the status line used to sit. hp is the taller of the
+            // two top-row boxes, so its edge is the row's real top edge.
+            float topMargin = plate.Top - hp.Top;
+            float bottomMargin = bar.Bottom - plate.Bottom;
+            Assert.AreEqual(topMargin, bottomMargin, 0.01f,
+                "the top row and the bar should be centred as one block, not offset toward one edge");
+            Assert.AreEqual(11f, topMargin, 0.01f);
+
+            // A deliberate small gap between the two rows, not the old blank
+            // band (which was the full retired status line's own height).
+            Assert.AreEqual(8f, hp.Bottom - bar.Top, 0.01f);
+
+            // The tag sits strictly between the name and the HP value at
+            // every audited aspect - it cannot collide with either.
+            Assert.LessOrEqual(name.Right, tags.Left, "BRK must not overlap the name");
+            Assert.LessOrEqual(tags.Right, hp.Left, "BRK must not overlap the HP value");
+        }
+
         [Test]
         public void TheVerbsRunBottomUpFromTheCommandLine()
         {

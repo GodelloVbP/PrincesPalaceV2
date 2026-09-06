@@ -104,6 +104,15 @@ namespace PrincesPalace.PlayModeTests
             // statuses plus the +N overflow chip is 5 nodes per row"), so a
             // 5th tips it into the chip.
             var enemy0 = session.Encounter.Enemies[0];
+
+            // A NORMAL encounter never builds a BreakShield (see
+            // FightSession.Enemies.cs's own comment) so BRK never has
+            // anything to show here on its own. It is the enemy plate's tag
+            // node's ONLY remaining content (FightHudModel.EnemyStatusLine),
+            // so forcing one broken cheaply here is what lets this capture
+            // prove the tag actually renders instead of always shooting "".
+            enemy0.BreakShield = new BreakShield(1) { Current = 0, IsBroken = true };
+
             StatusEffects.Apply(enemy0.Statuses, StatusEffectType.Poison, 5, 3);
 
             // 1 TURN LEFT ON PURPOSE -- Phase 3's last-tick emphasis (section
