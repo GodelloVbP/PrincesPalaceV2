@@ -43,9 +43,9 @@ namespace PrincesPalace
         // which is how "hop straight into a fight against just the giant
         // rat" works without a second generated scene (a full SceneBuilder
         // rebuild reassigns every scene's fileIDs -- too much for a dev
-        // convenience). Consumed (cleared) the moment BuildPlaceholderFight
-        // reads it, so a forced fight can never survive a scene reload or
-        // leak into a normal no-run placeholder.
+        // convenience). Consumed (cleared) by Start before it tries to build
+        // anything -- see ConsumeDevForced -- so a forced fight can never
+        // survive a scene reload or leak into a normal no-run placeholder.
         //
         // Backed by SessionState, not a plain static field -- entering Play
         // mode runs a domain reload (by default) that resets every static
@@ -58,7 +58,7 @@ namespace PrincesPalace
         //
         // TWO MORE KEYS BESIDE IT, and they belong here rather than anywhere
         // nearer the content because they are the same kind of thing: a
-        // preview's opinion about ONE fight, consumed the instant it is read,
+        // preview's opinion about ONE fight, consumed together with it and
         // never written to a record, a save or an asset. tools/preview.ps1 sets
         // them through Editor/PreviewRequestWatcher.cs.
         //
@@ -82,6 +82,16 @@ namespace PrincesPalace
         //     (FightController.ForceFirstAction). Separate from
         //     DevForcedSkillId because character mode sets it to a skill the
         //     kit already has, and spell mode sets both to the same id.
+        //
+        // PUBLIC, not internal, and only these six. Core grants
+        // InternalsVisibleTo to the Editor assembly alone and deliberately not
+        // to the PlayMode tests (see Core/AssemblyInfo.cs -- a test that can
+        // reach into controller state can make itself pass). That rule is
+        // about a screen's private wiring; this is a tooling CHANNEL that
+        // already crosses an assembly boundary in both directions, and
+        // "consumed exactly once, whatever happens next" is a rule worth a
+        // test rather than worth trusting. Widening these six by name is a
+        // smaller hole than handing the whole assembly's internals over.
 #if UNITY_EDITOR
         private const string DevForcedEnemyIdKey = "PrincesPalace.Dev.ForcedEnemyId";
         private const string DevForcedFormationKey = "PrincesPalace.Dev.ForcedFormation";
@@ -90,66 +100,134 @@ namespace PrincesPalace
         private const string DevForcedSquadKey = "PrincesPalace.Dev.ForcedSquad";
         private const string DevForcedFirstActionKey = "PrincesPalace.Dev.ForcedFirstAction";
 
-        internal static string DevForcedEnemyId
+        public static string DevForcedEnemyId
         {
             get => UnityEditor.SessionState.GetString(DevForcedEnemyIdKey, "");
             set => UnityEditor.SessionState.SetString(DevForcedEnemyIdKey, value ?? "");
         }
 
-        internal static string DevForcedFormation
+        public static string DevForcedFormation
         {
             get => UnityEditor.SessionState.GetString(DevForcedFormationKey, "");
             set => UnityEditor.SessionState.SetString(DevForcedFormationKey, value ?? "");
         }
 
-        internal static bool DevForcedEnemyScript
+        public static bool DevForcedEnemyScript
         {
             get => UnityEditor.SessionState.GetBool(DevForcedEnemyScriptKey, false);
             set => UnityEditor.SessionState.SetBool(DevForcedEnemyScriptKey, value);
         }
 
-        internal static string DevForcedSkillId
+        public static string DevForcedSkillId
         {
             get => UnityEditor.SessionState.GetString(DevForcedSkillIdKey, "");
             set => UnityEditor.SessionState.SetString(DevForcedSkillIdKey, value ?? "");
         }
 
-        internal static string DevForcedSquad
+        public static string DevForcedSquad
         {
             get => UnityEditor.SessionState.GetString(DevForcedSquadKey, "");
             set => UnityEditor.SessionState.SetString(DevForcedSquadKey, value ?? "");
         }
 
-        internal static string DevForcedFirstAction
+        public static string DevForcedFirstAction
         {
             get => UnityEditor.SessionState.GetString(DevForcedFirstActionKey, "");
             set => UnityEditor.SessionState.SetString(DevForcedFirstActionKey, value ?? "");
         }
 #else
-        internal static string DevForcedEnemyId;
-        internal static string DevForcedFormation;
-        internal static bool DevForcedEnemyScript;
-        internal static string DevForcedSkillId;
-        internal static string DevForcedSquad;
-        internal static string DevForcedFirstAction;
+        public static string DevForcedEnemyId;
+        public static string DevForcedFormation;
+        public static bool DevForcedEnemyScript;
+        public static string DevForcedSkillId;
+        public static string DevForcedSquad;
+        public static string DevForcedFirstAction;
 #endif
 
         // How many copies of a forced mob "-Formation full" fields. The stage's
         // own capacity, so every slot is occupied and nothing is hidden.
         private const int FullFormationCount = 3;
 
+        // What one preview asked for, read off SessionState once.
+        //
+        // A CLASS RATHER THAN SIX LOCALS because the six have to be cleared
+        // together and read after the clear -- see ConsumeDevForced. Nothing
+        // outside this file constructs one.
+        internal sealed class DevForcedPreview
+        {
+            public string EnemyId;
+            public string Formation;
+            public bool Showcase;
+            public string SkillId;
+            public string Squad;
+            public string FirstAction;
+        }
+
+        // ALL SIX KEYS, READ AND CLEARED IN ONE ACT, BEFORE ANYTHING CAN
+        // REFUSE OR RETURN.
+        //
+        // Five of them used to be consumed inside BuildPlaceholderFight and
+        // the sixth -- DevForcedFirstAction -- after the null check on what
+        // that returned. So a spell preview whose plan was REFUSED (an
+        // unsupported effect, no character carrying the resource it spends)
+        // returned null from there, took the early return in Start, and left
+        // ForcedFirstAction set: the next fight opened in that Editor session
+        // force-cast a skill nobody had asked for, with nothing on screen
+        // saying why. The refusal had been reported correctly and then leaked
+        // anyway.
+        //
+        // Two more holes closed by the same move. The placeholder path was the
+        // only one that consumed anything, so a key set while a RUN was in
+        // progress (RunOrchestrator.BuildFight, not BuildPlaceholderFight)
+        // survived every fight until the Editor was closed; and a throw
+        // anywhere in the build left the keys behind too.
+        //
+        // "One preview, one fight" is the rule, and it is now true whatever
+        // happens next.
+        private static DevForcedPreview ConsumeDevForced()
+        {
+            var asked = new DevForcedPreview
+            {
+                EnemyId = DevForcedEnemyId,
+                Formation = DevForcedFormation,
+                Showcase = DevForcedEnemyScript,
+                SkillId = DevForcedSkillId,
+                Squad = DevForcedSquad,
+                FirstAction = DevForcedFirstAction,
+            };
+
+            DevForcedEnemyId = null;
+            DevForcedFormation = null;
+            DevForcedEnemyScript = false;
+            DevForcedSkillId = null;
+            DevForcedSquad = null;
+            DevForcedFirstAction = null;
+
+            return asked;
+        }
+
         private void Start()
         {
             if (fight == null) fight = GetComponent<FightController>();
             if (fight == null || fight.HasSession) return;
 
-            var built = BuildOpeningFight();
+            // BEFORE THE BUILD, so no path out of it can leave a key set. The
+            // scene has a fight controller and is about to try to open a
+            // fight; whether that succeeds is exactly what must not decide
+            // whether the preview's keys are still there afterwards.
+            var asked = ConsumeDevForced();
+
+            var built = BuildOpeningFight(asked);
             if (built == null)
             {
-                // No content: the scene still loads and the HUD still paints its
-                // static half. Graceful degradation, house style -- an empty
-                // stage beats a scene that throws on open.
-                Debug.LogWarning("[FightBootstrap] No characters or enemies in content; the stage stays empty.");
+                // No content, or a preview that refused: the scene still loads
+                // and the HUD still paints its static half. Graceful
+                // degradation, house style -- an empty stage beats a scene that
+                // throws on open. Which of the two it was is on the line above
+                // this one, because a refusal prints itself.
+                Debug.LogWarning("[FightBootstrap] No fight was built, so the stage stays empty -- either " +
+                                 "content has no characters or enemies, or a preview refused (its REFUSED " +
+                                 "line is just above this one).");
                 return;
             }
 
@@ -192,11 +270,10 @@ namespace PrincesPalace
 
             // AFTER Bind, because the controller resets its menu inside it and
             // a queued action set beforehand would be thrown away with the rest
-            // of the previous fight's state. Consumed on read, like every other
-            // DevForced key -- one preview, one fight.
-            string firstAction = DevForcedFirstAction;
-            DevForcedFirstAction = null;
-            if (!string.IsNullOrEmpty(firstAction)) fight.ForceFirstAction(firstAction);
+            // of the previous fight's state. Already CONSUMED, up at the top of
+            // this method with the other five -- what is applied here is the
+            // snapshot, not the key.
+            if (!string.IsNullOrEmpty(asked.FirstAction)) fight.ForceFirstAction(asked.FirstAction);
 
             // Banked the moment the last beat has PLAYED, not when the player
             // dismisses the screen.
@@ -221,13 +298,13 @@ namespace PrincesPalace
         // PLAN_BALANCE_BOT.md F2). What stays here is the half that is only
         // ever a screen's: the placeholder stage, the art filtering, and the
         // wiring in Start above.
-        internal FightEncounterAdapter.BuiltFight BuildOpeningFight() =>
-            RunManager.HasRun ? RunOrchestrator.BuildFight() : BuildPlaceholderFight();
+        internal FightEncounterAdapter.BuiltFight BuildOpeningFight(DevForcedPreview asked) =>
+            RunManager.HasRun ? RunOrchestrator.BuildFight() : BuildPlaceholderFight(asked);
 
         // The tooling's fight. Unchanged, and deliberately still art-filtered:
         // its whole purpose is a stage that can be LOOKED at, which a party of
         // fallback plates defeats.
-        private FightEncounterAdapter.BuiltFight BuildPlaceholderFight()
+        private FightEncounterAdapter.BuiltFight BuildPlaceholderFight(DevForcedPreview asked)
         {
             // The first character WITH BATTLE ART, not simply the first. Most of
             // the roster has no sprite authored yet, and this bootstrap exists so
@@ -254,21 +331,17 @@ namespace PrincesPalace
             // DevForcedEnemyId overrides all of that with exactly one named
             // enemy -- see its own field comment. Consumed here, not left for
             // next time.
+            // ALREADY CONSUMED, by Start, before this was called -- see
+            // ConsumeDevForced. They are one preview's opinion about one
+            // fight; a leftover key is a scene reload later showing a fight
+            // nobody asked for, and reading them HERE is what let a refusal
+            // below leave one behind.
             List<string> enemies;
-            string forcedId = DevForcedEnemyId;
-            string formation = DevForcedFormation;
-            bool showcase = DevForcedEnemyScript;
-            string forcedSkill = DevForcedSkillId;
-            string forcedSquad = DevForcedSquad;
-
-            // ALL FIVE CONSUMED TOGETHER, and before anything can throw. They
-            // are one preview's opinion about one fight; a leftover key is a
-            // scene reload later showing a fight nobody asked for.
-            DevForcedEnemyId = null;
-            DevForcedFormation = null;
-            DevForcedEnemyScript = false;
-            DevForcedSkillId = null;
-            DevForcedSquad = null;
+            string forcedId = asked.EnemyId;
+            string formation = asked.Formation;
+            bool showcase = asked.Showcase;
+            string forcedSkill = asked.SkillId;
+            string forcedSquad = asked.Squad;
 
             // THE SPELL PREVIEW DECIDES THE REST OF THE FIGHT, not the author.
             // Who can cast it, how many enemies it needs to be visible against,
