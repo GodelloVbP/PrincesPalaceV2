@@ -211,5 +211,49 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.DoesNotThrow(() => AchievementProgress.IsEarned(achievement, new AchievementFacts()));
         }
+
+        // ---- the whole-catalogue check no resolver can make -----------------------
+        //
+        // AchievementEntryResolver only sees achievements.json, so the checks
+        // above stop at "is parameter non-blank". Whether that id names a real
+        // enemy, and whether that enemy is a boss, needs the enemy catalogue too
+        // -- ContentDatabase.ValidateContent is the only reader that has both,
+        // and it delegates the actual comparison here so it stays testable with
+        // literals instead of through Resources-loaded content. The real-content
+        // path (does achievements.json actually only name real bosses today) is
+        // covered separately, in PlayMode: AchievementBossValidationTests.
+
+        [Test]
+        public void DefeatSpecificBossValidationPassesARealBoss()
+        {
+            var enemies = new Dictionary<string, bool> { ["forest_warden"] = true };
+
+            Assert.IsNull(AchievementProgress.ValidateDefeatSpecificBossParameter(
+                "first_forest_boss", "forest_warden", enemies));
+        }
+
+        [Test]
+        public void DefeatSpecificBossValidationRefusesAMissingEnemyId()
+        {
+            var enemies = new Dictionary<string, bool> { ["forest_warden"] = true };
+
+            string error = AchievementProgress.ValidateDefeatSpecificBossParameter(
+                "typo_achievement", "forest_wardn", enemies);
+
+            Assert.IsNotNull(error, "a boss id absent from the enemy catalogue must be refused");
+            StringAssert.Contains("unknown enemy id", error);
+        }
+
+        [Test]
+        public void DefeatSpecificBossValidationRefusesANonBossEnemy()
+        {
+            var enemies = new Dictionary<string, bool> { ["rat"] = false };
+
+            string error = AchievementProgress.ValidateDefeatSpecificBossParameter(
+                "rat_achievement", "rat", enemies);
+
+            Assert.IsNotNull(error, "an enemy that exists but is not a boss must be refused too");
+            StringAssert.Contains("not a boss", error);
+        }
     }
 }

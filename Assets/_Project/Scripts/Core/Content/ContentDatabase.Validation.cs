@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using PrincesPalace.Domain.Combat;
+using PrincesPalace.Domain.Content;
 using PrincesPalace.Domain.Equipment;
 using PrincesPalace.Domain.Stats;
 
@@ -283,6 +284,30 @@ namespace PrincesPalace.Content
                 {
                     errors.Add($"Enemy '{enemy.id}' lists {string.Join(" and ", contradictions)} " +
                                "as both a weakness and a resistance.");
+                }
+            }
+
+            // AN ACHIEVEMENT'S BOSS PARAMETER, CHECKED AGAINST THE ENEMY
+            // CATALOGUE. AchievementEntryResolver already refused a blank
+            // parameter on DefeatSpecificBoss; what it cannot do is know
+            // whether the id it was handed is a real enemy, let alone one
+            // flagged isBoss -- it sees achievements.json alone. The actual
+            // comparison lives in AchievementProgress so it stays a pure,
+            // literal-testable function; this is only the wiring that hands
+            // it the real catalogue.
+            var enemyIsBossById = _enemies.ToDictionary(e => e.id, e => e.Data.IsBoss);
+            foreach (var achievement in _achievements)
+            {
+                if (achievement.Data.Condition != AchievementCondition.DefeatSpecificBoss)
+                {
+                    continue;
+                }
+
+                string error = AchievementProgress.ValidateDefeatSpecificBossParameter(
+                    achievement.id, achievement.Data.Parameter, enemyIsBossById);
+                if (error != null)
+                {
+                    errors.Add(error);
                 }
             }
 

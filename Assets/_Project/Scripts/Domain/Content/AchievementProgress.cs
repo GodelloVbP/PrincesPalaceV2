@@ -102,6 +102,37 @@ namespace PrincesPalace.Domain.Content
         public static bool NeedsParameter(AchievementCondition condition) =>
             condition == AchievementCondition.DefeatSpecificBoss;
 
+        // THE CHECK NO SINGLE RESOLVER CAN MAKE. AchievementEntryResolver sees
+        // only achievements.json, so it can refuse a blank parameter and
+        // nothing more -- it has no way to know whether "forest_warden" is a
+        // real enemy id, let alone one flagged isBoss. DefeatedBossIds
+        // (RunLedger/EmberPayout/RunSettlement) is populated only from
+        // enemies with isBoss true, so a typo'd or de-bossed parameter is
+        // silently, permanently unearnable and nothing else in the pipeline
+        // says so.
+        //
+        // Pure function of plain values rather than a walk over
+        // ContentDatabase's Resources-loaded catalogue, so it stays testable
+        // with literals the way the rest of this class is -- the caller
+        // (ContentDatabase.ValidateContent) is the one place that has to
+        // touch real content, since it is the only reader that sees the
+        // whole catalogue at once.
+        public static string ValidateDefeatSpecificBossParameter(
+            string achievementId, string parameter, IReadOnlyDictionary<string, bool> enemyIsBossById)
+        {
+            if (enemyIsBossById == null || !enemyIsBossById.TryGetValue(parameter, out bool isBoss))
+            {
+                return $"Achievement '{achievementId}' has condition DefeatSpecificBoss naming unknown enemy id '{parameter}'.";
+            }
+
+            if (!isBoss)
+            {
+                return $"Achievement '{achievementId}' has condition DefeatSpecificBoss naming enemy '{parameter}', which is not a boss (isBoss is false).";
+            }
+
+            return null;
+        }
+
         private static bool Contains(IReadOnlyCollection<string> ids, string id)
         {
             foreach (string candidate in ids)
