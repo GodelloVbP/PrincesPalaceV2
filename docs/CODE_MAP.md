@@ -118,7 +118,7 @@ EditMode-testable):
 | `Relics/` | `RelicLoadout` (party-wide relic ownership/assignment) |
 | `Rewards/` | `CombatReward`, `CharacterReward`, offer tables |
 | `Rng/` | `SeededRandom` (built, not yet wired — see `AUDIT.md`) |
-| `Stage/` | Stage-side/depth/layout pure geometry, `SpriteFacing`, `StanceManifest` (authored ground line + breath, one row per actor — no per-stance timing, because a stance is one drawing), `BreathCurve` (the continuous scale transform every idle figure gets, and the only thing that moves a figure between blows — see its own header), `HoverCurve` + `HoverSpec` (the altitude an airborne actor rides at and bobs around, authored per actor as the manifest's `hover` block; Odette is the one flyer) |
+| `Stage/` | Stage-side/depth/layout pure geometry, `SpriteFacing`, `StanceManifest` (ground line + breath + hover, one row per actor — no per-stance timing, because a stance is one drawing; `groundLineSource` says whether the slicer or a person owns the number, absent meaning authored, and `StanceManifestValidationTests` re-measures the committed stills against it), `BreathCurve` (the continuous scale transform every idle figure gets, and the only thing that moves a figure between blows — see its own header), `HoverCurve` + `HoverSpec` (the altitude an airborne actor rides at and bobs around, authored per actor as the manifest's `hover` block; Odette is the one flyer) |
 | `Stats/` | `StatBlock`, `StatType`, `AbilityDerivation` |
 
 ## Core map
@@ -239,8 +239,16 @@ which):
   `slice_actor_sheet.py`, `slice_item_sheet.py`, `slice_spell_sheet.py` —
   art-pipeline slicers/keyers, one per asset category. `slice_actor_sheet.py`
   covers BOTH sides of the fight stage (`Resources/Enemies/<id>` and
-  `Resources/Characters/<id>`) from one `ACTORS` manifest, since both resolve
-  through one runtime path
+  `Resources/Characters/<id>`), since both resolve through one runtime path;
+  it writes `Art/<Enemies|Characters>/<id>/recipe.json` (the full argv, the
+  tool hash, the library versions, the measured ground line) and `--recipe`
+  replays it. It also owns `Resources/StanceManifest.json`'s `groundLine` for
+  any actor whose entry is absent or says `groundLineSource: "slicer"`, and
+  leaves an `authored` one alone with the delta printed.
+  `slice_spell_sheet.py`'s recipes live under `Art/Sheets/recipes/<id>.json`
+  — the recipe says how frames are PRODUCED, the skill's `vfx` block says how
+  they PLAY, and `SpellVfxRecipeDriftTests` checks only the arithmetic
+  between them
 - `sheet_slicing.py` — cell-cutting geometry shared by the two grid slicers
   (not run directly)
 - `actor_stance_qa.py` — visual QA contact sheets for actor stance STILLS,

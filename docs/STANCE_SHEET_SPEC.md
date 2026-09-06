@@ -72,9 +72,10 @@ One supporting rule, learned the hard way and still true here:
 
 | actor | Art folder | delivered id | stances | status |
 |---|---|---|---|---|
-| beetle | `Art/Enemies/beetle/` | `beetle` | idle, attack, turtle_up, shell_closed, hurt, defeated | design sheet needed (regenerate as stills — the delivered kit predates this policy) |
-| treant | `Art/Enemies/treant/` | `treant` | idle, attack, trunk_slam, cast, hurt, defeated | **delivered as six stills, 2026-09-04** — one Stage-1 pose sheet sliced straight to `Resources/`, no Stage 2; see `Art/Enemies/treant/README.md` |
-| forest troll | `Art/Enemies/forest_troll/` | `forest_warden` | idle, attack, attack_roar, attack_charge, hurt, defeated | not started |
+| beetle | `Art/Enemies/beetle/` | `beetle` | idle, attack, turtle_up, shell_closed, hurt, defeated | design sheet needed (regenerate as stills — the delivered kit predates this policy). Protected legacy until then: registered in `hand_assembled.json`, bytes pinned |
+| treant | `Art/Enemies/treant/` | `treant` | idle, attack, trunk_slam, cast, hurt, defeated | **delivered as six stills, 2026-09-04** — one Stage-1 pose sheet sliced straight to `Resources/`, no Stage 2. **Reproducible:** `Art/Enemies/treant/recipe.json` replays it byte-identical |
+| forest troll | `Art/Enemies/forest_troll/` | `forest_warden` | idle, attack, attack_roar, attack_charge, hurt, defeated | not started. Protected legacy until then — its current stills were recomposited from hand-picked crops, see `Art/Enemies/forest_troll/README.md` |
+| owl | `Art/Characters/owl/` | `owl` | idle, attack, cast, hurt, defeated, victory | **delivered 2026-09-04**, the first kit commissioned under this policy. **Reproducible:** `Art/Characters/owl/recipe.json` |
 
 > **The troll's delivered id is `forest_warden`, not `forest_troll`.** The
 > art folder and the content id disagree and always have. Do not rename
@@ -278,28 +279,51 @@ for the sheet again, not a patched cell.
    `docs/ART_PIPELINE.md`'s sizing note for the measurement command and the
    incident that made this rule explicit: a stale hardcoded target in that
    note nearly shrank a correctly-sized enemy by a fifth.
-3. **`Resources/StanceManifest.json`.** Set `groundLine` from the value the
-   slicer prints. This file now carries only `groundLine` (feet position,
-   per actor) and `breath` (idle sway amplitude) — the frame-indexed timing
-   fields (`secondsPerFrame`, `impactFrame`, `soundFrame`) that used to live
-   here belonged to multi-frame stances and have no meaning for a still.
-4. **`Art/Enemies/<actor>/README.md`** (with its `.meta`) recording the
-   accepted design-sheet prompt, the Detail Inventory verbatim, the model
-   and date, `delivery_scale`, `groundLine`, and the exact
-   `slice_actor_sheet.py` command used (including any `--nudge` or
-   `--drop-far-components-px`) — this is what makes the next kit cheap and
-   the next session possible, and it is the record §6's provenance rule
-   below asks for.
-5. **Delete the superseded files** with their `.meta`s — old
+3. **`Resources/StanceManifest.json` — the slicer writes it.** Nothing to
+   copy off the terminal. A new actor gets an entry with
+   `groundLineSource: "slicer"`; an entry already marked `slicer` is updated
+   in place; an entry marked `authored` (which is what an absent field means,
+   so every entry predating the field) is **left alone** and the run prints
+   the measurement and the delta instead. A no-op run leaves `git diff` empty.
+   `breath` and `hover` are never written by any tool — they are judgements
+   about the art, not measurements of it. The frame-indexed timing fields
+   (`secondsPerFrame`, `impactFrame`, `soundFrame`) that used to live here
+   belonged to multi-frame stances and have no meaning for a still.
+4. **`Art/<Enemies|Characters>/<actor>/recipe.json` — the slicer writes this
+   too** (with its `.meta`, which Unity generates on import). It carries the
+   source sheet, the full argv with every default made explicit, the tool's
+   sha256, the library versions, the output folder and the measured ground
+   line. **Verify it before calling the kit delivered:**
+
+   ```bash
+   python tools/slice_actor_sheet.py --recipe Assets/_Project/Art/Enemies/<actor>/recipe.json
+   git status --short Assets/_Project/Resources/
+   ```
+
+   Clean means the recipe reproduces the committed art byte for byte, which
+   is what puts the actor in the *reproducible* category. Not clean means it
+   does not, and the actor belongs in `Art/Sheets/hand_assembled.json`'s
+   `actors` block with its bytes pinned in `HandAssembledArtTests` instead —
+   claiming a recipe that does not replay is worse than claiming none.
+5. **`Art/<Enemies|Characters>/<actor>/README.md`** (with its `.meta`)
+   recording the accepted design-sheet prompt, the Detail Inventory verbatim,
+   the model and date, `delivery_scale`, the accepted metrics, and a
+   **provenance line** pointing at `recipe.json` or at the register. The
+   README is where the REASONING lives now; the argv lives in the recipe. If
+   the ground line is an authored override more than 8px from what the art
+   measures, this is also where the reason goes, in a line naming
+   `groundLine` — `StanceManifestValidationTests` greps for exactly that and
+   fails naming the actor if it is not there.
+6. **Delete the superseded files** with their `.meta`s — old
    `<stance>/f0..fN/` frame folders, `NN_<stance>.png` singles,
    `_*sheet_source*.png`, `_contact_sheet_preview.png`, `_base_poses/`. Git
    history is the archive, and leaving off-style sheets or stale frame
    folders around is how the wrong style (or the wrong pipeline) gets
    referenced next time.
-6. `powershell -NoProfile -ExecutionPolicy Bypass -File tools/run_tests_parallel.ps1 -BuildContent`
-7. Commit assets **and** their `.meta` files together, staged by explicit
+7. `powershell -NoProfile -ExecutionPolicy Bypass -File tools/run_tests_parallel.ps1 -BuildContent`
+8. Commit assets **and** their `.meta` files together, staged by explicit
    path. Never `git add -A`.
-8. Visual QA before calling it done:
+9. Visual QA before calling it done:
    ```bash
    python tools/actor_stance_qa.py --report Assets/_Project/Resources/Enemies --only <id>
    ```
@@ -310,15 +334,29 @@ for the sheet again, not a patched cell.
 
 ### Provenance rule
 
-> **No still reaches `Resources/Enemies/` unless its source design sheet is
-> committed under `Art/` and its actor's README records the exact
-> `slice_actor_sheet.py` command that produced it.**
+> **No still reaches `Resources/Enemies/` or `Resources/Characters/` unless
+> its source design sheet is committed under `Art/` and a `recipe.json`
+> beside that sheet replays the exact invocation that produced it.**
+
+The recipe is the record now, and the README is where the reasoning around it
+goes. `HandAssembledArtTests.EveryDeliveredActorIsInExactlyOneCategory`
+enforces the rule from the other end: every folder under
+`Resources/Enemies/` and `Resources/Characters/` has either a `recipe.json`
+or an entry in `Art/Sheets/hand_assembled.json`'s `actors` block, never both
+and never neither. The six actors delivered before recipes existed are in the
+register, each saying what is actually known about where its stills came
+from; Shawn is the case that shows why the register has to exist at all, since
+no design sheet for him is committed anywhere.
 
 The old multi-sheet `ACTORS` manifest served this purpose when the tool
-processed several committed sheets per actor; the new CLI takes its
-arguments on the command line instead, so the README is now the only
-record — losing it loses the recipe just as surely as the old manifest
-being wrong did.
+processed several committed sheets per actor; the CLI that replaced it took
+its arguments on the command line instead, which made the README the only
+record and made losing it lose the recipe. That lasted until somebody had to
+replay one: the treant's README said `delivery_scale 1.05`, `white_flood` and
+"a raised `pocket_max_area`", and getting the committed bytes back meant
+guessing the raised value and testing candidates. Prose is right about
+everything a person needs and one number short of what a machine needs, which
+is why both exist now.
 
 ---
 

@@ -135,9 +135,27 @@ One authored number per actor, checked against the art, replaced the guess:
   not move relative to their own art — only the effects drawn around them
   do. One value per actor is what makes "the figure cannot jump between
   poses" true by construction.
+- **`groundLineSource` says who owns the number** — `"slicer"` or
+  `"authored"`, **absent meaning authored**. The slicer writes `groundLine`
+  only when the entry is absent (a new actor) or the source is `slicer`;
+  against an authored entry it prints its own measurement and the delta and
+  leaves the file closed. `breath` and `hover` are never written by any tool
+  at all — how hard a creature breathes and whether it flies are judgements
+  about the art rather than measurements of it.
 - **Re-slicing a sheet can invalidate it.** `StanceManifestValidationTests`
-  re-measures the art and fails if an authored ground line has drifted more
-  than 8px from it, naming the actor and both numbers.
+  re-measures every actor's committed stills and fails if the number has
+  drifted more than 8px, naming the actor and both numbers. A `slicer` value
+  beyond the band is stale and fails outright; an `authored` value beyond it
+  is an **override**, which passes only if the actor's `Art/**/README.md`
+  says why in a line naming `groundLine`. An override nobody wrote a reason
+  for is indistinguishable from a number a re-slice left behind.
+- **The re-measurement is a MEDIAN across an actor's stances**, and that is
+  the load-bearing choice rather than a detail. The minimum is what a naive
+  scan takes, and it reads the golem's earth spike (attack and cast measure
+  20 against the other four stances' 64) and Shawn's staff (idle 9 against
+  the other five's 41) — the exact two cases this file exists to stop the
+  runtime guessing at. An actor's feet are where MOST of its drawings put
+  them.
 - **There is no per-stance timing left to author.** `secondsPerFrame`,
   `impactFrame` and `soundFrame` belonged to multi-frame stances and have
   no meaning for a still. A monster's `vfxSeconds`/`vfxImpactFrame` (in
@@ -170,9 +188,31 @@ python tools/slice_actor_sheet.py \
     --stances idle,attack,<ability_pose>,hurt,defeated
 ```
 
-Arguments on the command line, not a committed manifest — each actor's
-`README.md` is what records the recipe (see the spec's own provenance
-rule). **"Actor", not "enemy": this covers both sides of the fight stage.**
+**Every run writes `Art/<Enemies|Characters>/<id>/recipe.json`** — the source
+sheet, the full argv with every default made explicit, the tool's sha256, the
+Pillow/numpy/Python versions, the output folder, the measured ground line and
+a timestamp. `--recipe <path>` replays it:
+
+```bash
+python tools/slice_actor_sheet.py --recipe Assets/_Project/Art/Enemies/treant/recipe.json
+```
+
+A replay re-parses every argument out of the file, so nothing typed alongside
+can quietly change what it claims to reproduce; it refuses by name if the
+source sheet is gone; it never rewrites the recipe (the argv it would write is
+the argv it just read) and never writes a `.meta` (Unity generates those on
+import — a tool copying one alongside a regenerated PNG is how a duplicated
+asset gets a duplicated GUID). Defaults are written out rather than omitted,
+so a recipe does not change meaning the day a default does.
+
+The README is still where the *reasoning* belongs and is no longer where the
+recipe lives. The treant's said `delivery_scale 1.05`, `white_flood` and "a
+raised `pocket_max_area`", and reconstructing the run from that meant guessing
+the raised value and testing candidates against the committed bytes — 2000 and
+4000 reproduce, 1600 does not. Prose is right about everything a person needs
+and one number short of what a machine needs.
+
+**"Actor", not "enemy": this covers both sides of the fight stage.**
 A party member's stance art (`Resources/Characters/<id>/`) and a monster's
 (`Resources/Enemies/<id>/`) are resolved by one runtime path and held to
 one set of invariants, so one tool produces both — `--actor Characters/sheep`
@@ -260,13 +300,34 @@ skipped with a one-line notice rather than guessed at. `--report` has no
 dependency on the slicer, so it can render today's *committed* art as a
 "before" picture, turning a re-slice into a demonstrable before/after.
 
-### `slice_spell_sheet.py`'s `VFX` manifest
+### `slice_spell_sheet.py`'s recipes
 
-Same idea as `ACTORS`, for spell/ability effects — and it exists because
-every parameter used to come from argv, including the frame names, so how
-the three shipped effects were cut survived nowhere. `frost_flare` and
-`lightning_bolt` are verified entries: re-running them regenerates the
-committed PNGs byte-identical.
+One file per effect under `Art/Sheets/recipes/<id>.json`, loaded into the
+`VFX` dict the tool has always read. It exists because every parameter used to
+come from argv, including the frame names, so how the shipped effects were cut
+survived nowhere; it lives **under `Assets/`** for the same reason
+`hand_assembled.json` moved there — the headless runner mirrors `Assets` and
+nothing else, so a record beside the tool is invisible to the C# suite.
+`--new <id> --sheet <p.png>` writes the recipe and prints the `skills.json`
+block.
+
+> **The recipe describes how frames are PRODUCED. The skill's `vfx` block
+> describes how they PLAY.** A skill may override a recipe's intent
+> deliberately, and two skills may share one frame folder with different
+> timing — `mud_burst` and `bog_mud_burst` share `Spells/mud_burst` today. So
+> `SpellVfxRecipeDriftTests` checks only what is arithmetic rather than
+> judgement: every folder a skill plays was produced by a recipe or is named
+> in `hand_assembled.json`, and no skill times a beat to a frame its folder
+> does not have.
+
+`frost_flare`, `mud_burst`, `cinderfault_ground` and `cinderfault_eruption`
+are verified: re-running them regenerates the committed PNGs byte-identical.
+**`lightning_bolt` is verified for eight of its nine frames** — the committed
+`f5` (cell `f3` at 1.08 scale) differs from what its recipe produces in 906
+pixels at full channel range, and the tool is deterministic across runs, so
+the drift is in the committed file rather than in a scaling path that moved.
+Left alone rather than corrected: overwriting it changes how a shipped spell
+looks. Running the tool on that id **will** rewrite it; its `_notes` say so.
 
 **A VFX is NOT held to the actor rules, and must not be.** Two of them
 invert:
@@ -304,20 +365,45 @@ overwriting.
 
 ### Reproducibility is recorded, including where it fails
 
-Several of the art tools carry a committed manifest (`VFX`, `PORTRAITS`)
-alongside `key_green_screen.py`'s `KITS` and `slice_item_sheet.py`'s
-`SHEETS` — where an entry has been **verified**, re-running it regenerates
-the committed PNGs byte-identical, which is the proof the recipe is the
-real one rather than a plausible guess. `slice_actor_sheet.py` takes its
-arguments on the command line instead (see §4b) — for that tool the same
-proof lives in each actor's own `README.md`, which records the exact
-invocation that produced the committed art.
+Several of the art tools carry a committed manifest (`PORTRAITS`,
+`key_green_screen.py`'s `KITS`, `slice_item_sheet.py`'s `SHEETS`) and the two
+slicers carry recipe files. Where an entry has been **verified**, re-running
+it regenerates the committed PNGs byte-identical, which is the proof the
+recipe is the real one rather than a plausible guess.
 
-Where it has *not*, that is recorded too rather than left blank, because a
-silent gap reads as "nothing to see here":
+**Every combat actor is in exactly one of two categories, and
+`HandAssembledArtTests.EveryDeliveredActorIsInExactlyOneCategory` refuses any
+other arrangement:**
 
-- **`golem_boulder`** is in `slice_spell_sheet.py`'s `HAND_ASSEMBLED`. The
-  tool refuses to regenerate it.
+| category | means | today |
+|---|---|---|
+| reproducible | a `recipe.json` beside its source art that `--recipe` replays byte-identical | treant, owl, and every actor sliced from now on |
+| protected legacy | an entry in `hand_assembled.json`'s `actors` block, hash-pinned, source and chosen frames named, explicitly not reproducible | rat, golem, bog_witch, beetle, forest_warden, sheep |
+
+An actor in **neither** is the state that matters, because it is invisible: it
+reads exactly like one somebody wrote down, right up until the sheet is needed
+and is not there. An actor in **both** is a contradiction — it claims the art
+is reproducible and also that nothing can remake it — and usually means an
+actor gained a recipe and was never taken out of the register.
+
+Where reproducibility has *not* been established, that is recorded rather than
+left blank, because a silent gap reads as "nothing to see here":
+
+- **`golem_boulder`** is in `hand_assembled.json`'s `sequences`. The tool
+  refuses to regenerate it.
+- **`lightning_bolt`'s `f5`** does not come back from its recipe. Eight of
+  nine frames do; see the recipes section above.
+- **The six protected-legacy actors.** Each entry says what is actually known:
+  the rat's `idle` is `f0` of the 12-frame idle sheet and its `attack` is
+  `f5`, the peak of the leap; the golem's `attack` and `cast` are both `f2` of
+  the attack sheet, the same slam deliberately (their hashes agree, which is
+  the register's claim confirmed by the pin); the bog witch's source sheet
+  carries baked captions, a background and floor shadows, so whatever removed
+  them was not this pipeline; the forest warden's stills went through
+  `slice_actor_sheet.py`'s anchor but with already-cropped PNGs as input
+  rather than a design sheet; the beetle's `sheet_poses.png` survives, so a
+  fresh slice is possible but would be a different delivery. **Shawn has no
+  design sheet anywhere under `Art/`** — there is nothing to slice.
 - **`Sheep`'s portraits** are marked `reproduces: False`. A fresh run
   produces a 1122×1360 crop where the committed `Shawn_neutral.png` is
   1122×1402 — so the shipped art came from different settings, an older
@@ -341,6 +427,44 @@ silent gap reads as "nothing to see here":
    a fresh `.meta` for anything newly referenced, and if that diff doesn't
    sync back, the committed scene ends up pointing at a Sprite sub-asset
    that doesn't exist in main's copy of the file.
+
+### 5a. Delivering a combat actor's stances
+
+The stance kit has its own checklist, because two of its steps used to be a
+person retyping a number and the rest of this section does not cover them.
+`docs/STANCE_SHEET_SPEC.md` §6 is the full work order; this is what the
+delivery actually consists of now:
+
+1. **One `slice_actor_sheet.py` invocation, all stances at once.** Two
+   invocations for one actor produce two different shared canvases, which
+   makes the figure visibly resize the moment a stance changes.
+2. **Sizing:** slice once at `--delivery-scale 1.0`, measure the written
+   `idle.png` alpha bbox height, re-slice at `target/measured`. Measure the
+   target off the *currently delivered* roster, never a number copied out of
+   a doc — see the sizing note in §4b.
+3. **`Resources/StanceManifest.json` is written by the tool, not by you.** A
+   new actor gets an entry with `groundLineSource: "slicer"`; an existing
+   slicer-owned entry is updated in place; an authored one is left alone with
+   the delta printed. Nothing to copy, and a no-op run leaves `git diff`
+   empty.
+4. **`recipe.json` is written by the tool too**, beside the source sheet.
+   Verify it: `--recipe <path>` and check `git status` is clean under
+   `Resources/`. If the replay is not byte-identical, the actor is protected
+   legacy rather than reproducible — register it in `hand_assembled.json`'s
+   `actors` block and pin its bytes in `HandAssembledArtTests`.
+5. **`README.md` records the reasoning** — the accepted prompt, the Detail
+   Inventory, the model and date, the accepted metrics, and a provenance line
+   pointing at the recipe or the register. Plus, if the ground line is an
+   authored override more than 8px off what the art measures, a line saying
+   why, naming `groundLine`; the validator greps for exactly that.
+6. **Delete the superseded files with their `.meta`s** — old `<stance>/f0..fN/`
+   frame folders, `NN_<stance>.png` singles, `_*sheet_source*.png`,
+   `_contact_sheet_preview.png`, `_base_poses/`. Git history is the archive,
+   and a stale off-style sheet is what gets referenced next time.
+7. `run_tests_parallel.ps1 -BuildContent`, then visual QA:
+   `python tools/actor_stance_qa.py --report Assets/_Project/Resources/Enemies --only <id>`.
+8. Commit assets **and** their `.meta` files together, staged by explicit
+   path.
 
 ## 5b. Spell effects (`Resources/Spells/{id}/f0..fN`)
 
@@ -498,11 +622,14 @@ in content asks for it, because "this skill hits everything" is already said by
 
 ### Art that is NOT reproducible
 
-`Assets/_Project/Art/Sheets/hand_assembled.json` names sequences the slicer must
-never write over — hand-cut frames with held duplicates or stepped fades that
-re-running the tool does not restore. The slicer refuses them, and
-`HandAssembledArtTests` pins their bytes so a clobber from any direction fails
-the suite. See `docs/INCIDENTS.md`.
+`Assets/_Project/Art/Sheets/hand_assembled.json` carries two registers.
+`sequences` names spell frames the slicer must never write over — hand-cut
+frames with held duplicates or stepped fades that re-running the tool does not
+restore; the slicer refuses those ids outright. `actors` names combat actors
+whose stance stills predate recipes and cannot be regenerated from a recorded
+invocation. `HandAssembledArtTests` pins both by content hash so a clobber from
+any direction fails the suite, and refuses an actor that is in neither category
+or in both. See `docs/INCIDENTS.md`.
 
 
 ## 5c. Melee contact effects (`Resources/Vfx/{name}/f0..fN`)
