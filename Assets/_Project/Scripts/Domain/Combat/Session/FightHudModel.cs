@@ -212,7 +212,19 @@ namespace PrincesPalace.Domain.Combat.Session
             };
         }
 
-        private static string VerbFor(SkillEffect effect)
+        // The EFFECT row on the skill card, and the reach line beside it.
+        //
+        // EXHAUSTIVE, with no ToString() fallback. The fallback read fine for
+        // half the enum and badly for the rest -- a Gift printed "GIFTMANA"
+        // and the Lamb's Wail printed "BUFFPARTY", two identifiers leaking
+        // into a player-facing card. Worse, it made the omission invisible:
+        // an effect nobody wrote a verb for still rendered something. Throwing
+        // is what turns "nobody chose a word for this" into a build the tests
+        // stop, which is the only reason every member below has one.
+        //
+        // Public because SkillEffectBehaviourTests asks it the same question
+        // per member that it asks the resolver and the intent badge.
+        public static string VerbFor(SkillEffect effect)
         {
             switch (effect)
             {
@@ -222,7 +234,18 @@ namespace PrincesPalace.Domain.Combat.Session
                 case SkillEffect.HealParty: return "HEAL";
                 case SkillEffect.RestorePartyMana: return "RESTORE";
                 case SkillEffect.Provoke: return "TAUNT";
-                default: return effect.ToString().ToUpperInvariant();
+                case SkillEffect.Transform: return "TRANSFORM";
+                case SkillEffect.Ward: return "WARD";
+                case SkillEffect.Shatter: return "SHATTER";
+                case SkillEffect.BuffParty: return "BUFF";
+                case SkillEffect.GiftMana:
+                case SkillEffect.GiftFury:
+                case SkillEffect.GiftHaste: return "GIFT";
+                case SkillEffect.Summon: return "SUMMON";
+                default:
+                    throw new System.ArgumentOutOfRangeException(nameof(effect), effect,
+                        "FightHudModel has no EFFECT verb for this effect. Add one -- the card would " +
+                        "otherwise print the enum identifier at the player.");
             }
         }
 

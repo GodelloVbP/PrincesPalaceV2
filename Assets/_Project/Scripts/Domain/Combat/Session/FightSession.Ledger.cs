@@ -161,6 +161,6 @@ namespace PrincesPalace.Domain.Combat.Session
         // attackType (see ActorAttackType's own comment, FightSession.
         // Skills.cs) and anything with neither is swinging a weapon.
         private DamageType AttackTypeOf(CombatantState actor) =>
-            KitFor(actor)?.AttackType ?? SourceFor(actor)?.Source.AttackType ?? DamageType.Physical;
+            KitFor(actor)?.AttackType ?? SourceFor(actor)?.Source?.AttackType ?? DamageType.Physical;
     }
 }

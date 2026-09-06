@@ -520,8 +520,16 @@ namespace PrincesPalace.Domain.Combat.Session
             // say) rather than re-rolling, which would make the shown intent a
             // lie after the fact.
             var kit = SourceFor(enemy);
-            bool hasSource = kit != null;
+
+            // THE KIT EXISTING IS NOT THE SOURCE EXISTING, and this read
+            // `kit != null` while all three uses below dereference `source`.
+            // EnemyKit's own constructor is deliberately null-source-tolerant
+            // ("a kit built without a source still fields a plain attack
+            // rather than throwing"), so the one shape it promises to
+            // survive -- a summon handed a kit with no resolved record -- was
+            // the one shape that threw here on that combatant's first turn.
             var source = kit?.Source;
+            bool hasSource = source != null;
 
             // BY INDEX, not by comparing the label back to a name.
             //

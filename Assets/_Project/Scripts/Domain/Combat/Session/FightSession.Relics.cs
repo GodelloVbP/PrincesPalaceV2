@@ -514,7 +514,7 @@ namespace PrincesPalace.Domain.Combat.Session
             if (actor == null || victim == null || !actor.IsPlayerSide) return;
             if (!HasRelic(actor, RelicEffect.BountyHunterContract)) return;
 
-            int worth = SourceFor(victim)?.Source.ExpReward ?? 0;
+            int worth = SourceFor(victim)?.Source?.ExpReward ?? 0;
             int paid = worth * FightTuning.BountyPerLevel / 10;
             if (paid <= 0) paid = 1;
 

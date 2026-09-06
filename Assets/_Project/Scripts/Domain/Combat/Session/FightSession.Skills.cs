@@ -258,6 +258,18 @@ namespace PrincesPalace.Domain.Combat.Session
                     ResolveSummon(actor, skill);
                     break;
                 }
+
+                // MATCHING SkillResolution.Amount's own default, and for the
+                // same reason. Falling through here was the quietest failure
+                // in the file: the cast had already charged its mana, spent
+                // its cooldown and committed the turn by the time it arrived,
+                // so a member added without a branch produced a skill that
+                // cost everything and did nothing, with no exception, no
+                // message and no beat -- indistinguishable from a resolution
+                // that legitimately landed on nobody.
+                default:
+                    throw new System.ArgumentOutOfRangeException(nameof(skill), skill.Effect,
+                        "FightSession has no resolution branch for this skill effect.");
             }
         }
 
@@ -765,8 +777,14 @@ namespace PrincesPalace.Domain.Combat.Session
         // MagicalDefense was consequently a dead stat against every monster
         // in the game. See ResolvedEnemy.AttackType and RawEnemyEntry's own
         // comment on the field.
+        //
+        // `?.Source?.` and not `?.Source.`: EnemyKit is deliberately
+        // null-source-tolerant (see its constructor), so a combatant holding
+        // a kit with no resolved record -- a summon built without one -- must
+        // fall through to "no authored type" here rather than throw on its
+        // first swing.
         public DamageType? ActorAttackType(CombatantState actor) =>
-            KitFor(actor)?.AttackType ?? SourceFor(actor)?.Source.AttackType;
+            KitFor(actor)?.AttackType ?? SourceFor(actor)?.Source?.AttackType;
 
         // THE ONE PLACE mana is charged for a skill cast, which is what lets
         // Runic's one-shot discount live in a single spot rather than being

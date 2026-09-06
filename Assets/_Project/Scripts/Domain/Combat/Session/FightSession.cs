@@ -164,7 +164,7 @@ namespace PrincesPalace.Domain.Combat.Session
         // EXPRESSION was not, and the two copies were free to drift into
         // disagreeing about what "still standing" counts as.
         private int LivingCountOf(string enemyId) =>
-            _encounter.LivingEnemies.Count(e => SourceFor(e)?.Source.Id == enemyId);
+            _encounter.LivingEnemies.Count(e => SourceFor(e)?.Source?.Id == enemyId);
 
         public IReadOnlyList<ResolvedSkillOption> SkillOptionsFor(CombatantState actor)
         {
