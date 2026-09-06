@@ -77,6 +77,21 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // detail behind it.
         public List<NodeRef> EnemyIntentIcons = new List<NodeRef>();
         public List<NodeRef> EnemyFootShadows = new List<NodeRef>();
+
+        // The status row hanging under each enemy figure -- see BuildEnemy-
+        // StatusRows. Flattened SLOT-MAJOR (slot 0's five badges, then slot
+        // 1's, then slot 2's), matching every other per-slot list on this
+        // screen, so FightController can index it the same way it indexes
+        // EnemyNameplates or EnemyIntentIcons. Index 4 of every five is the
+        // overflow "+N" chip, not a fourth status -- see PLAN_STATUS_EFFECT_UI
+        // section 6.
+        public List<NodeRef> EnemyStatusBadges = new List<NodeRef>();
+
+        // One backing strip per enemy row (not per badge -- see the plan's
+        // "sludge" section): a single translucent plate behind all five
+        // badges, AsDecor so it takes no clicks.
+        public List<NodeRef> EnemyStatusStrips = new List<NodeRef>();
+
         public List<NodeRef> PartySlots = new List<NodeRef>();
         public List<NodeRef> PartySprites = new List<NodeRef>();
         public List<NodeRef> PartyHitFlashes = new List<NodeRef>();
@@ -111,6 +126,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> PartyBuffIcons = new List<NodeRef>();
         public NodeRef PartyBuffTooltip;
         public NodeRef PartyBuffTooltipText;
+
+        // The one tooltip every status badge on every surface shares --
+        // enemy row, party plate and roster row alike -- repositioned per
+        // hover through TooltipPlacement.Beside rather than each surface
+        // keeping its own copy the way PartyBuffTooltip does today.
+        // PartyBuffTooltip/PartyBuffTooltipText are left exactly as they
+        // were so Package C can migrate the party plate onto this one
+        // without this screen changing shape under it.
+        public NodeRef StatusTooltip;
+        public NodeRef StatusTooltipText;
         public NodeRef WoolRow;
         public NodeRef WoolValue;
         public List<NodeRef> WoolPips = new List<NodeRef>();
@@ -121,6 +146,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> RosterNames = new List<NodeRef>();
         public List<NodeRef> RosterHpValues = new List<NodeRef>();
         public List<NodeRef> RosterHpFills = new List<NodeRef>();
+
+        // One status row per roster mini-plate, flattened ROSTER-MAJOR (r0's
+        // five badges, then r1's), same convention as EnemyStatusBadges.
+        public List<NodeRef> RosterStatusBadges = new List<NodeRef>();
 
         public List<NodeRef> VerbButtons = new List<NodeRef>();
         public List<NodeRef> VerbLabels = new List<NodeRef>();
@@ -231,6 +260,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
             s.EnemyStage = enemyStage;
             hud.Add(partyStage);
             hud.Add(enemyStage);
+
+            // A CHILD OF THE STAGE PANEL, appended after BuildStage returns
+            // it -- never of the scaled slot node inside it. The slot carries
+            // WithScale (see BuildStage), so a row nested there would shrink
+            // to 56% size in the back slot; the stage panel itself carries no
+            // scale, so a row parented directly to it draws at one size in
+            // every slot. See PLAN_STATUS_EFFECT_UI section 1.
+            enemyStage.Children.AddRange(s.BuildEnemyStatusRows());
             hud.Add(s.BuildLowHpVignette());
 
             hud.Add(s.BuildInitiativeTracker());
@@ -248,6 +285,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             hud.Add(s.BuildTargetPrompt());
             hud.Add(s.BuildIntentTooltip());
             hud.Add(s.BuildPartyBuffTooltip());
+            hud.Add(s.BuildStatusTooltip());
             hud.Add(s.BuildSpellVfx());
             hud.Add(s.BuildDamagePopups());
 
@@ -587,6 +625,144 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 // cover, and FightScreenTests.NoAlwaysVisiblePanelStandsInFront-
                 // OfAFigureSFeet is now that check.
                 .AllowOverlap("the party and enemy stages share one centred frame, and the HUD is drawn over both - a stage is a transparent coordinate frame, never a surface. This covers the FRAME only: figures standing in it are checked by NoAlwaysVisiblePanelStandsInFrontOfAFigureSFeet, because A1 cannot tell the two apart");
+        }
+
+        // ---- status badges (enemy row, party plate, roster row) --------------
+        //
+        // PLAN_STATUS_EFFECT_UI.md sections 1, 3 and 7. Three surfaces, one
+        // anatomy: a hoverable button (so Core/HoverIndex.cs can attach at
+        // runtime exactly as WirePartyBuffIcons already does) carrying three
+        // children -- Glyph, Code, Counter -- named so Package C can find
+        // them without this screen handing out a second set of NodeRefs for
+        // parts nobody outside the badge needs addressed individually.
+        //
+        // FRAME SHAPE, AND WHAT THIS PACKAGE DID NOT BUILD. Section 3 wants a
+        // smooth rounded outline for a benefit and clipped corners with a top
+        // notch for a detriment, drawn as UI geometry. This worktree cannot
+        // boot the Editor to bake a new proc: shape (ProceduralSpriteBaker is
+        // a menu item), and no shipped sprite already draws a clipped-corner
+        // badge frame, so no THIRD child was added here for it. Glyph is the
+        // one visible layer in Phase 1 (no status art has landed yet -- see
+        // the plan's section 9) and stays that way once art lands, so it is
+        // also where the frame belongs: Package C can tint Glyph by holder
+        // polarity (FightHudPalette.IntentHeal / HpBright, already used
+        // elsewhere on this controller) and, for the geometry half, rotate
+        // Glyph's own RectTransform -- an ordinary runtime call, not a DSL
+        // feature -- rather than the whole badge, which would tilt Code and
+        // Counter with it. Said here rather than guessed at silently: this is
+        // the smallest thing that survives UiAudit with the tree as declared,
+        // not a claim that it is the final visual.
+        private UiNode BuildStatusBadge(string name, float x, float y, float size,
+            int codeFontSize, int counterFontSize)
+        {
+            var glyph = Ui.Sprite("Glyph", null, new UiVec(size * 0.72f, size * 0.72f), Place.At(0f, 0f));
+
+            var code = Ui.Label("Code", UiString.Runtime, new UiVec(size - 4f, size * 0.5f), codeFontSize,
+                FightHudPalette.TextPrimary, Place.At(0f, 0f));
+
+            // Bottom-right corner, pulled 1px inward so its own footprint
+            // stays inside the 1px-rounded badge box rather than riding the
+            // exact edge.
+            var counter = Ui.Label("Counter", UiString.Runtime, new UiVec(size * 0.5f, size * 0.4f),
+                counterFontSize, FightHudPalette.TextPrimary,
+                Place.Pin(new UiVec(1f, 0f), new UiVec(1f, 0f), new UiVec(-1f, 1f)));
+
+            // ONE BADGE, three layers -- same shape as the initiative badge's
+            // ring/portrait/initial stack above: exempt from each other,
+            // still checked against every other sibling.
+            Ui.Layered(glyph, code, counter);
+
+            var badge = Ui.Button(name, UiString.Runtime, new UiVec(size, size), 1, Place.At(x, y))
+                .NoChrome()
+                .Inactive();
+            badge.Children.Add(glyph);
+            badge.Children.Add(code);
+            badge.Children.Add(counter);
+            return badge;
+        }
+
+        // 36/40, per section 1's measured table. 4 statuses plus the "+N"
+        // overflow chip (section 6) is 5 nodes per row.
+        private const float EnemyStatusBadgeSize = 36f;
+        private const float EnemyStatusPitch = 40f;
+        private const int EnemyStatusBadgesPerRow = 5;
+
+        // offset.Y - 60, unscaled -- section 1's number. WORTH RESTATING
+        // PRECISELY, because the plan's own "23.5px clearance at the near
+        // slot" is a CENTRE-to-reach distance (Drop 60 minus the nameplate's
+        // scaled reach 36.5), not edge-to-edge. Accounting for the row's own
+        // half-height (18, badge size 36) the real edge clearance is 60 - 18
+        // - 36.48 = 5.5px at the near slot (more at the far two, since a
+        // smaller SlotScale shrinks the nameplate's reach faster than it
+        // shrinks anything of this row's, which is not scaled at all) --
+        // thin, but positive; see EnemyStatusRowsClearTheirOwnNameplateAnd-
+        // StayAboveTheCanvasFloor in FightScreenTests, which pins it against
+        // the same FightStageAnchors.SlotScale math rather than the solver's
+        // own nameplate Rect (that Rect is UNSCALED, because UiSolver does
+        // not cascade an ancestor's WithScale into a descendant's own
+        // layout numbers -- Unity's real localScale doesn't either, it is a
+        // render-time transform, not a second layout pass -- so comparing
+        // this row against it directly overstates the collision by exactly
+        // the scale factor and was caught failing before this comment
+        // existed).
+        private const float EnemyStatusRowDrop = 60f;
+
+        // NO VERTICAL PADDING. The margin above is already down to 5.5px at
+        // the near slot; a taller strip than the badges it backs eats that
+        // margin directly; and it also closed the 10.5px gap BETWEEN rows
+        // to nothing before this comment did (row Y drop compounds with a
+        // taller strip at both ends). Horizontal padding costs nothing here
+        // -- the enemy plates and verb column are nowhere near this x range
+        // at this y (section 1) -- so only that axis gets any.
+        private const float EnemyStatusStripPadX = 12f;
+        private const float EnemyStatusStripPadY = 0f;
+
+        // ONLY THE FAR SLOT ACTUALLY OVERFLOWS StageSize.X (565 + 98 = 663
+        // against a 600px half-width), but the reason is declared uniformly
+        // across all three rows rather than conditionally on the far one --
+        // the slot node right above this method makes the same call for the
+        // same reason: a future depth-curve change should not have to
+        // remember which row silently needed this.
+        private const string EnemyStatusOverflowReason =
+            "the far slot's status row and strip run past FightStageAnchors.StageSize.X the same way the " +
+            "slot node above already does - StageSize is a coordinate reference for the depth curve, not a clip region";
+
+        // A CHILD OF THE STAGE PANEL. See the AllowOverlap comment on the
+        // slot node above for why this cannot be a child of the slot instead
+        // -- WithScale would draw it at 56% size in the back slot.
+        private IEnumerable<UiNode> BuildEnemyStatusRows()
+        {
+            int count = FightHudSpec.StageSlotsPerSide;
+            float rowWidth = (EnemyStatusBadgesPerRow - 1) * EnemyStatusPitch + EnemyStatusBadgeSize;
+
+            for (int slot = 0; slot < count; slot++)
+            {
+                var offset = FightStageAnchors.SlotOffset(slot, count, mirrored: false);
+                float y = offset.Y - EnemyStatusRowDrop;
+
+                // ONE STRIP PER ROW, not one per badge -- section 7's sludge
+                // budget. Reuses the same painted panel the tooltips on this
+                // screen already load, tinted dark rather than drawn from a
+                // fresh asset: a real (rounded) panel, not a flat Solid rect.
+                var strip = Ui.Sprite($"EnemyStatusStrip{slot}", PanelViolet, Place.At(offset.X, y),
+                        UiSize.Fixed(rowWidth + EnemyStatusStripPadX * 2f,
+                            EnemyStatusBadgeSize + EnemyStatusStripPadY * 2f))
+                    .Coloured("#140A10CC")
+                    .AsDecor()
+                    .Inactive()
+                    .AllowOverflow(EnemyStatusOverflowReason);
+                EnemyStatusStrips.Add(strip);
+                yield return strip;
+
+                for (int i = 0; i < EnemyStatusBadgesPerRow; i++)
+                {
+                    float x = offset.X + (i - EnemyStatusBadgesPerRow / 2) * EnemyStatusPitch;
+                    var badge = BuildStatusBadge($"EnemyStatusBadge{slot}_{i}", x, y, EnemyStatusBadgeSize, 11, 9)
+                        .AllowOverflow(EnemyStatusOverflowReason);
+                    EnemyStatusBadges.Add(badge);
+                    yield return badge;
+                }
+            }
         }
 
         // ---- initiative -------------------------------------------------------
@@ -1049,6 +1225,20 @@ namespace PrincesPalace.Domain.UiKit.Screens
             PartyPlateTopY + TransformStripH + RosterGap + RosterPlateH * 0.5f;
         private const float RosterPitchY = RosterPlateH + RosterGap;
 
+        // 20/24, per section 1's measured table -- the gap between Name's
+        // right edge (-66) and HpValue's left edge (136), 202px wide, at the
+        // same y9 those two share. 4 statuses plus the "+N" chip, same as the
+        // enemy row; no counter is shown here (the tooltip carries duration
+        // instead), but the Counter node is still declared for anatomy
+        // parity with EnemyStatusBadge -- Package C simply never writes to
+        // it on this surface.
+        private const float RosterStatusBadgeSize = 20f;
+        private const float RosterStatusPitch = 24f;
+        private const int RosterStatusBadgesPerRow = 5;
+
+        // Midpoint of the -66..136 clear band.
+        private const float RosterStatusX0 = 35f;
+
         private IEnumerable<UiNode> BuildRosterPlates()
         {
             return Ui.Each(Enumerable.Range(0, RosterSlots).ToList(), (_, i) =>
@@ -1078,6 +1268,18 @@ namespace PrincesPalace.Domain.UiKit.Screens
                         UiSize.Fixed(RosterPlateW, RosterPlateH), name, hpValue, hpBar)
                     .Coloured(FightHudPalette.PanelPrimary)
                     .Inactive();
+
+                // No backing strip here -- the plate itself is the painted
+                // surface the strip exists to provide on bare stage floor
+                // (section 7).
+                for (int k = 0; k < RosterStatusBadgesPerRow; k++)
+                {
+                    float x = RosterStatusX0 + (k - RosterStatusBadgesPerRow / 2) * RosterStatusPitch;
+                    var badge = BuildStatusBadge($"RosterStatusBadge{i}_{k}", x, 9f, RosterStatusBadgeSize, 8, 7);
+                    RosterStatusBadges.Add(badge);
+                    plate.Children.Add(badge);
+                }
+
                 RosterPlates.Add(plate);
                 return plate;
             });
@@ -1097,10 +1299,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // switching sprites. RefreshPartyBuffs decides per-badge which one
         // applies; no structural change was needed here to carry a sprite,
         // because Ui.Button already gives this node the same Image + synthesised
-        // TMP caption pairing the enemy-intent badges use. Four is a guess
-        // at how many a character plausibly carries at once, not a measured
-        // limit.
-        private const int PartyBuffSlots = 4;
+        // TMP caption pairing the enemy-intent badges use.
+        //
+        // 6, UP FROM 4 (PLAN_STATUS_EFFECT_UI section 1) -- section 6 found
+        // the realistic worst case for a party member (Poison, Vulnerable,
+        // Shielded, Regen, Protect, one speed entry) is exactly 6, so the
+        // party plate's own slots cover it with no overflow chip needed in
+        // practice; the 6th slot doubles as the "+N" chip on the rare 7th.
+        // Size/pitch/X0 below are UNCHANGED -- six badges at this pitch end
+        // at x67.5, inside the x100 where PartyClass begins.
+        private const int PartyBuffSlots = 6;
 
         // 27x27, UP FROM 18x18 (x1.5, debuff/buff icon pass, balance-bot
         // 2026-09-02) -- pitch scaled with it, 33 up from 22, so the gap
@@ -1764,6 +1972,29 @@ namespace PrincesPalace.Domain.UiKit.Screens
             var panel = Ui.Tooltip("PartyBuffTooltip", PanelViolet, null, Place.At(-540f, -250f),
                 UiSize.Fixed(380f, 120f), label);
             PartyBuffTooltip = panel;
+            return panel;
+        }
+
+        // The ONE tooltip every status badge on every surface shares --
+        // enemy row, party plate and roster row alike (PLAN_STATUS_EFFECT_UI
+        // section 11's fixed contract). Repositioned per hover through
+        // Domain/UiKit/TooltipPlacement.cs's Beside, so its build-time
+        // position here is only a placeholder that never has to be reached
+        // -- unlike IntentTooltip/PartyBuffTooltip above, whose fixed spot IS
+        // where they are read.
+        //
+        // Sized for a 5-line overflow list (section 6's "+N" chip hovers to
+        // list every hidden entry, one per line): 5 lines of PartyBuffTooltip's
+        // own font leave less headroom than they need, so this one is taller.
+        private UiNode BuildStatusTooltip()
+        {
+            var label = Ui.Label("StatusTooltipText", UiString.Runtime, new UiVec(360f, 170f), 14,
+                FightHudPalette.GoldText, Place.At(0f, 0f));
+            StatusTooltipText = label;
+
+            var panel = Ui.Tooltip("StatusTooltip", PanelViolet, null, Place.At(-330f, -60f),
+                UiSize.Fixed(400f, 190f), label);
+            StatusTooltip = panel;
             return panel;
         }
 
