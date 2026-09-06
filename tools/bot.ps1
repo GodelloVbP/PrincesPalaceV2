@@ -1,7 +1,13 @@
 param(
     [int]$Runs = 200,
     [int]$Seed = 1,
-    [string]$Archetypes = "RandomLegal,GreedyAggressive,GreedyDefensive,Lookahead2",
+    # Empty means "let BalanceBotRunner decide": Arg(args, "-botArchetypes", ...)
+    # only falls back to BotRunDriver.Archetypes (Domain.Bot.Archetypes.Names)
+    # when -botArchetypes is ABSENT from argv, so a hand-typed default here
+    # would retype that C# list and go stale the moment a fifth archetype
+    # were added there -- same failure shape as register #43 and F1. Pass an
+    # explicit comma-separated list to run a subset instead.
+    [string]$Archetypes = "",
     [string]$Profiles = "Fresh",
     [int]$DepthCap = 40,
     [double]$ReplayShare = 0.1,
@@ -245,7 +251,8 @@ $MainOutDir = Join-Path $SourceProject "reports\bot\$timestamp"
 New-Item -ItemType Directory -Path $MainOutDir -Force | Out-Null
 
 Write-Host ""
-Write-Host "Running balance bot: $Runs runs/cell, seed $Seed, archetypes [$Archetypes], profiles [$Profiles],"
+$ArchetypesLabel = if ($Archetypes) { $Archetypes } else { "C# default (BotRunDriver.Archetypes)" }
+Write-Host "Running balance bot: $Runs runs/cell, seed $Seed, archetypes [$ArchetypesLabel], profiles [$Profiles],"
 Write-Host "depth cap $DepthCap steps, replay share $ReplayShare, shop policy $ShopPolicy, across $($shardList.Count) shard(s)."
 
 # ---- launch ------------------------------------------------------------------
@@ -264,8 +271,17 @@ foreach ($shard in $shardList) {
         "-projectPath", "`"$($shard.Path)`"",
         "-executeMethod", "PrincesPalace.Editor.Bot.BalanceBotRunner.RunFromCommandLine",
         "-botRuns", $shard.Runs,
-        "-botSeed", $shard.Seed,
-        "-botArchetypes", $Archetypes,
+        "-botSeed", $shard.Seed
+    )
+
+    # Omitted entirely when empty, not passed as "" -- BalanceBotRunner's own
+    # Arg() only falls back to BotRunDriver.Archetypes when the flag is ABSENT
+    # from argv, and an empty ArgumentList element shifts every argument after
+    # it by one (see the -botCommit guard above), so "" would be worse than
+    # just retyping the list again.
+    if ($Archetypes) { $unityArgs += @("-botArchetypes", $Archetypes) }
+
+    $unityArgs += @(
         "-botProfiles", $Profiles,
         "-botDepthCap", $DepthCap,
         "-botReplayShare", $ReplayShare,
