@@ -26,18 +26,34 @@ resampled to that building's DELIVERY_SIZE. That grouping is what lets
 HubBuildingAnimator find extra frames to cycle at runtime.
 
 **Every other kit uses "direct" mode**: one source file in, one keyed file of
-the same name out, no resampling, written to a `Processed/` sibling of the
-source folder -- the same raw-folder-plus-Processed-subfolder convention
-`Portraits/` and `Backgrounds/` already use for editor-time-loaded sprites
-(these are baked into the scene once by SceneBuilder's own `LoadSprite`,
-never `Resources.Load`ed at runtime, so they don't belong under
-`Resources/` the way the animated Hub buildings do). Several of these
-pieces (the talent tree's branch segment) are deliberately non-square --
-forcing a square resample would distort them. Ask for exactly the delivery
-resolution in the prompt instead (see each kit's README) and the source IS
-the output size.
+the same name out, written to a `Processed/` (or `Resources/`) sibling of the
+source folder -- the same raw-folder-plus-output-subfolder convention
+`Portraits/` and `Backgrounds/` already use for editor-time-loaded sprites.
+Most direct-mode kits also skip resampling entirely (`default_delivery_size:
+None`): these are baked into the scene once by SceneBuilder's own
+`LoadSprite`, never `Resources.Load`ed at runtime, so the source resolution
+IS the delivery resolution, and several pieces (the talent tree's branch
+segment) are deliberately non-square -- forcing a square resample would
+distort them. Ask for exactly the delivery resolution in the prompt instead
+(see each kit's README).
+
+A direct-mode kit CAN still set a `default_delivery_size` (the `status` kit
+does, at 256) when its output IS `Resources.Load`ed at runtime and therefore
+does need a fixed delivery size -- "direct" only ever meant "no grouping into
+animation frames", never "no resize". What direct mode skips either way is
+the re-crop/re-centre step: a resized direct-mode file keeps its full canvas,
+letters and background alike, so a badge glyph stays registered inside its
+own 1024/256 frame the way the game's layout code expects.
+
+Any resize -- grouped or direct -- runs on the ALREADY-KEYED image and uses
+premultiplied alpha, not a plain RGBA resample: a plain resize blends a
+transparent edge pixel's leftover colour (background bleed the keyer didn't
+fully suppress) into its opaque neighbours at full weight, which shows up as
+a faint dark ring. Premultiplying first makes a fully transparent pixel
+contribute pure black at weight zero instead.
 """
 
+import argparse
 import io
 import os
 import sys
@@ -46,6 +62,11 @@ try:
     from PIL import Image
 except ImportError:
     sys.exit("Pillow is required: pip install Pillow")
+
+try:
+    import numpy as np
+except ImportError:
+    sys.exit("numpy is required: pip install numpy")
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -152,6 +173,31 @@ KITS = [
         "delivery_size": {},
         "default_delivery_size": None,
     },
+    {
+        # Status-effect badge glyphs (docs/PLAN_STATUS_EFFECT_UI.md, package
+        # D). Painted objects on flat green like every other kit here, keyed
+        # on hue-dominance -- these are small icons with genuine dark detail
+        # (outlines, shadowed folds) that brightness-keying would eat.
+        # Unlike the other direct-mode kits, this one DOES resize: the output
+        # lands under Resources/ and is Resources.Load<Sprite>'d at runtime
+        # (FightHudModel), not baked into a scene once, so a fixed delivery
+        # size matters. 1024px masters are keyed first, THEN downsampled to
+        # 256 -- see the module docstring for why that resize is alpha-aware
+        # rather than a plain RGBA resample.
+        #
+        # force_sprite_import only patches a .meta that already exists. A
+        # brand-new PNG has none yet, so the FIRST run after dropping a new
+        # file here will report nothing fixed; let Unity import it once, then
+        # re-run to get the Sprite/alphaIsTransparency fix-up. The Relics
+        # README (Assets/_Project/Art/Items/Relics/README.md) hit the same
+        # gotcha on its own first delivery batch.
+        "name": "status",
+        "source": "Assets/_Project/Art/UI/Status/Raw",
+        "output": "Assets/_Project/Resources/Status",
+        "grouped": False,
+        "delivery_size": {},
+        "default_delivery_size": 256,
+    },
 ]
 
 # How green a pixel has to be, relative to its own red and blue, before it
@@ -200,6 +246,37 @@ def key_out_green(image):
             pixels[x, y] = (r, g, b, alpha)
 
     return rgba
+
+
+def resize_alpha_aware(rgba, size):
+    """Downsample a keyed RGBA image without dark fringe at its edges.
+
+    A plain `Image.resize` on RGBA blends each output pixel's colour from its
+    neighbours' raw RGB, weighted only by the resample kernel -- a fully
+    transparent neighbour's leftover colour (background bleed the keyer
+    didn't fully suppress, typically dark) still contributes at full
+    strength. Premultiplying by alpha first makes that same neighbour
+    contribute black at weight (alpha * kernel) instead, i.e. effectively
+    nothing; un-premultiplying after restores real colour to the pixels that
+    still have any.
+    """
+    arr = np.asarray(rgba, dtype=np.float32) / 255.0
+    rgb, alpha = arr[..., :3], arr[..., 3]
+
+    premultiplied = rgb * alpha[..., None]
+    premult_img = Image.fromarray(np.clip(premultiplied * 255.0 + 0.5, 0, 255).astype(np.uint8), mode="RGB")
+    alpha_img = Image.fromarray(np.clip(alpha * 255.0 + 0.5, 0, 255).astype(np.uint8), mode="L")
+
+    resized_rgb = np.asarray(premult_img.resize((size, size), Image.LANCZOS), dtype=np.float32) / 255.0
+    resized_alpha = np.asarray(alpha_img.resize((size, size), Image.LANCZOS), dtype=np.float32) / 255.0
+
+    # Anywhere fully transparent, dividing back out would be 0/0 -- feed it a
+    # safe divisor of 1 since the result is discarded (alpha is 0) anyway.
+    safe_alpha = np.where(resized_alpha > 1e-4, resized_alpha, 1.0)
+    unpremultiplied = np.clip(resized_rgb / safe_alpha[..., None], 0.0, 1.0)
+
+    out = np.dstack([unpremultiplied * 255.0, resized_alpha * 255.0])
+    return Image.fromarray(np.clip(out + 0.5, 0, 255).astype(np.uint8), mode="RGBA")
 
 
 def content_bounds(rgba):
@@ -270,13 +347,20 @@ def force_sprite_import(png_path):
     return True
 
 
-def process_kit(kit):
+def process_kit(kit, only=None):
     source_dir = kit["source"]
     if not os.path.isdir(source_dir):
         print(f"[{kit['name']}] no source directory at {source_dir} -- skipped")
         return
 
     groups = group_sources(source_dir) if kit["grouped"] else direct_sources(source_dir)
+
+    if only is not None:
+        groups = {item: paths for item, paths in groups.items() if item == only}
+        if not groups:
+            print(f"[{kit['name']}] --only {only!r} matched nothing in {source_dir} -- skipped")
+            return
+
     if not groups:
         print(f"[{kit['name']}] no PNGs in {source_dir} -- skipped")
         return
@@ -297,9 +381,10 @@ def process_kit(kit):
                         .convert("L").getdata())
             visible = sum(1 for a in coverage if a) * 100 // (64 * 64)
 
-            # NOT re-cropped or re-centred -- see the module docstring on why
-            # a forced resize is skipped entirely for non-grouped kits.
-            output = keyed.resize((size, size), Image.LANCZOS) if size else keyed
+            # NOT re-cropped or re-centred, even when resized -- see the
+            # module docstring: a badge/building's canvas has to stay
+            # registered the way the layout code that loads it expects.
+            output = resize_alpha_aware(keyed, size) if size else keyed
             out_name = f"f{index}.png" if kit["grouped"] else f"{item}.png"
             out_path = os.path.join(out_dir, out_name)
             output.save(out_path)
@@ -310,9 +395,59 @@ def process_kit(kit):
                   f"{'  [import fixed to Sprite]' if fixed else ''}")
 
 
+def build_arg_parser():
+    parser = argparse.ArgumentParser(
+        description="Key green-screen source art into game-ready sprites, "
+                     "one kit (or all of KITS) at a time.",
+    )
+    parser.add_argument(
+        "--kit", metavar="NAME",
+        help="Process only the kit with this 'name' from KITS instead of all "
+             "of them. Required alongside --source/--output.",
+    )
+    parser.add_argument(
+        "--only", metavar="ITEM",
+        help="Within the kit(s) processed, key only this one item -- the "
+             "group name for a grouped kit, or the filename without its "
+             "extension for a direct kit (e.g. 'chilled') -- instead of "
+             "every file present. Lets a single file be re-keyed without "
+             "touching the rest.",
+    )
+    parser.add_argument(
+        "--source", metavar="PATH",
+        help="Override the kit's source directory for this run. Requires "
+             "--kit, so it is unambiguous which kit's path is being "
+             "redirected. Meant for pointing a test fixture at the keyer "
+             "without touching the real Art/ tree.",
+    )
+    parser.add_argument(
+        "--output", metavar="PATH",
+        help="Override the kit's output directory for this run. Requires "
+             "--kit, same reasoning as --source.",
+    )
+    return parser
+
+
 def main():
-    for kit in KITS:
-        process_kit(kit)
+    args = build_arg_parser().parse_args()
+
+    if (args.source or args.output) and not args.kit:
+        sys.exit("--source/--output need --kit to say which kit's path they override")
+
+    kits = KITS
+    if args.kit:
+        kits = [kit for kit in KITS if kit["name"] == args.kit]
+        if not kits:
+            known = ", ".join(kit["name"] for kit in KITS)
+            sys.exit(f"no kit named {args.kit!r} -- known kits: {known}")
+
+    for kit in kits:
+        run_kit = dict(kit)
+        if args.source:
+            run_kit["source"] = args.source
+        if args.output:
+            run_kit["output"] = args.output
+        process_kit(run_kit, only=args.only)
 
     print("\nIf any .meta was missing above, Unity has not imported these yet: "
           "let it import once, re-run this, and the import settings will be corrected.")
