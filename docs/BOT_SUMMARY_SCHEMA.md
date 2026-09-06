@@ -239,6 +239,42 @@ RoomTrace
   Equipped      EquipTrace[] -- what the equip pass after this room put on.
                         Empty for most rooms, which is the honest answer: a
                         player does not re-dress after every fight either.
+  GoldOnArrival int    -- gold the party holds arriving at this room, read
+                        BEFORE the room resolves (so a treasure room's
+                        stash is not already in it). Recorded for EVERY
+                        room, not only shops -- §2a priced the shop off
+                        medians over won fights and lifetime cumulative
+                        gold, and neither is what a player actually holds
+                        when a door opens (§7.1 point 1); capturing it at
+                        every step answers that at every depth instead of
+                        only where a shop happened to generate.
+  GoldSpent     int    -- zero for every room that is not a shop. What
+                        left the purse here -- purchases and rerolls both.
+  GoldOnLeave   int    -- zero for every room that is not a shop. What
+                        remained. Kept as its own number rather than
+                        folded into GoldSpent as one difference, so a
+                        sale, which moves gold the other way, cannot hide
+                        inside a subtraction.
+  PurchasesBySection int[] -- indexed by ShopStock's section constants.
+                        Sized by the runner, so a section added later
+                        widens this without a shape change here.
+  RerollsBySection int[] -- same indexing as PurchasesBySection.
+  ShopOffers    ShopOfferTrace[] -- the shelf as it stood when the visit
+                        ENDED: what was offered and what was taken.
+                        "Rerolls followed by no purchase in that section"
+                        and "arrived with less than the cheapest card" are
+                        both read off this plus the counters above.
+  ShopChoices   ShopChoiceTrace[] -- every choice the policy made, in
+                        order, including the ones that were refused and
+                        the leave that ended the visit. The counters above
+                        cannot express order ("sold a duplicate, then
+                        bought the helm it was worse than" and the reverse
+                        are the same two counters and two different
+                        decisions) or a refusal at all -- a purchase the
+                        purse turned down leaves no mark on
+                        PurchasesBySection, so a policy repeatedly asking
+                        for something it cannot have would read as a quiet
+                        visit.
   LearnedSpellCountAfterRoom int -- fielded characters that have learned a
                         first spell, read AFTER this room's pending spell
                         assignments resolve (docs/PLAN_SHOP.md 1g/2g, gate
@@ -258,6 +294,26 @@ OfferEntry
   Plus          int
   RiftTier      int    -- (int)Domain.Content.RiftTier, 0..3
   ModifierCount int
+
+ShopOfferTrace
+  Kind          string
+  ContentId     string
+  Price         int
+  Sold          bool
+
+ShopChoiceTrace
+  Kind          string -- ShopChoiceKind's name
+  Section       int    -- -1 where the kind does not use it
+  Index         int    -- -1 where the kind does not use it
+  GoldDelta     int    -- signed the way the purse moved, straight off
+                        ShopResult: negative for a purchase or a reroll,
+                        positive for a sale, zero for a refusal or a leave
+  Outcome       string -- ShopOutcome's name, or "Leave". A visit that
+                        ended because the shelf refused reads differently
+                        from one that ended because the policy was done,
+                        and only this column can tell them apart.
+  Refusal       string -- ShopRefusal's name, "None" when nothing was
+                        refused
 
 SpellAssignmentTrace
   SkillId       string
