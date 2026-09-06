@@ -200,7 +200,12 @@ function Sync-Runner {
 # test class has to get caught -- an area-based tools/test.ps1 slice can only
 # ever be as trustworthy as the class list behind it.
 #
-# The two checks partition every .cs under Tests/ rather than overlapping:
+# The duplicate-name check runs first because it is the one failure the other
+# two cannot see: both classes are discovered, both are in an area, and the
+# index simply keeps one of them. Nothing downstream reports anything odd --
+# a run named for the loser boots the winner's platform and passes.
+#
+# The other two checks partition every .cs under Tests/ rather than overlapping:
 # blind spots cover the files inside the eight folders (a [Test] whose class
 # discovery could not see), structure covers everything outside them. Neither
 # can report clean over what the other is looking at, which is the property
@@ -216,9 +221,17 @@ function Sync-Runner {
 # No bypass flag, and none is planned. The fix is a git mv.
 $discoveredIndex = Get-TestIndex
 
+$duplicates = Get-DuplicateClassNames -Index $discoveredIndex
+if ($duplicates.Count -gt 0) {
+    Write-Host "DUPLICATE TEST CLASS NAME ($($duplicates.Count)) -- discovery is keyed by name, so one of these never runs under its own entry:"
+    foreach ($d in $duplicates) { Write-Host "  $d" }
+    Write-Host "`nRename one of the two. Every filter this repo builds -- Unity's -testFilter and dotnet's FullyQualifiedName -- is the bare class name and cannot tell them apart."
+    exit 1
+}
+
 $blindSpots = Get-DiscoveryBlindSpots -Index $discoveredIndex
 if ($blindSpots.Count -gt 0) {
-    Write-Host "TEST DISCOVERY BLIND SPOT ($($blindSpots.Count) file(s)) -- a [Test]/[UnityTest] exists here but its class was never discovered:"
+    Write-Host "TEST DISCOVERY BLIND SPOT ($($blindSpots.Count)) -- a test file declares a class discovery never saw:"
     foreach ($b in $blindSpots) { Write-Host "  $b" }
     Write-Host "`nFix the class declaration, or widen the regex in tools/test_areas.ps1's Get-TestIndex if this is a legitimate new shape."
     exit 1

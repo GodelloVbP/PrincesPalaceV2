@@ -31,8 +31,16 @@ $AreasTestsRoot = Join-Path $AreasProjectRoot "Assets\_Project\Scripts\Tests"
 # The gate is still mechanised and still unbypassable, it just checks a
 # different thing: run_tests_parallel.ps1 refuses to run while any .cs file
 # sits DIRECTLY in Tests/EditMode or Tests/PlayMode rather than in one of the
-# eight folders, while any other folder exists beside them, and while anything
-# under Shared/ carries a [Test] or [UnityTest]. See Get-StructuralViolations.
+# eight folders, while any other folder exists beside them, while anything
+# sits DEEPER than one folder inside an area, while anything under Shared/
+# carries a test attribute, and while two files declare the same class name.
+# See Get-StructuralViolations and Get-DuplicateClassNames.
+#
+# The gate checks itself, too: tools/test.ps1 -List -SelfCheck points
+# discovery at tools/test_areas_fixture/ -- a tree that is deliberately wrong
+# in six ways, outside Assets/ so Unity never compiles it and the real gate
+# never sees it -- and asserts each function reports the violation it is for.
+# A refusal nobody has watched fire is a refusal nobody knows still works.
 #
 # ---------------------------------------------------------------------------
 # WHERE A NEW TEST GOES. One paragraph per area. These carry the reasoning the
@@ -158,12 +166,43 @@ $AreaNames = @("combat", "hub", "content", "run", "ui", "art", "rng")
 # have reported a clean run while quietly never running FooTests at all.
 # "abstract" stays excluded: NUnit cannot instantiate an abstract fixture.
 $TestClassPattern = '(?m)^\s*(?:\[[^\]]*\]\s*)*public\s+(?:sealed\s+|static\s+|partial\s+)*class\s+(\w+)'
-$TestAttrPattern = '\[\s*(Test|UnityTest)\s*[\(\]]'
+
+# What marks a file as CARRYING TESTS. Used by the Shared/ refusal and by the
+# blind-spot scan, never by discovery itself (discovery reads declarations).
+#
+# It used to be '\[\s*(Test|UnityTest)\s*[\(\]]', which is three holes at once:
+# a fixture whose every method is [TestCase]/[TestCaseSource] was not a test
+# file (KitContainerPlacementTests and TypographyAssetTests, 2 files and 22
+# cases between them), nor was one written "[Test, Explicit(...)]" with the
+# comma the old trailing "[\(\]]" could not see (PreviewCaptureTests), and
+# [Theory] was never covered at all. Any of the three parked in Shared/ would
+# have been a suite in no area with the gate reporting clean. \b instead of
+# the bracket class is what admits the comma form; the alternation is ordered
+# so [TestFixture] still does not match (Test then \b fails on the F).
+$TestAttrPattern = '\[\s*(Test|UnityTest|TestCase|TestCaseSource|Theory)\b'
+
+# Every class DECLARATION, wider than $TestClassPattern on purpose: it also
+# sees "internal", which NUnit will not run and discovery therefore does not
+# index. That gap is the whole point -- see Get-DiscoveryBlindSpots. Abstract
+# stays unmatched (no "abstract" alternative here), because an abstract
+# fixture is not a suite.
+$DeclaredClassPattern = '(?m)^\s*(?:\[[^\]]*\]\s*)*(?:public|internal)\s+(?:sealed\s+|static\s+|partial\s+)*class\s+(\w+)\s*(<)?'
+
+# Strips string literals and comments so brace counting means something. A
+# "{" inside a verbatim string or a commented-out block is not nesting, and
+# the depth check below would read it as a nested class if it counted raw.
+$CodeOnlyPattern = '@"(?:[^"]|"")*"|"(?:\\.|[^"\\\r\n])*"|''(?:\\.|[^''\\\r\n])*''|//[^\r\n]*|/\*[\s\S]*?\*/'
+
+function Get-CodeOnly {
+    param([string]$Text)
+    return [regex]::Replace($Text, $CodeOnlyPattern, '')
+}
 
 # Cached because -List calls into this four times and a cold pass reads 272
 # files. $script: scope in a DOT-SOURCED file is the calling script's scope,
 # which is exactly the lifetime wanted: one process, one discovery.
 $script:TestIndexCache = $null
+$script:TestSiteCache = $null
 
 # name -> PSCustomObject { Platform; Area; File; RelPath }
 function Get-TestIndex {
@@ -171,22 +210,32 @@ function Get-TestIndex {
     if ($script:TestIndexCache -and -not $Fresh) { return $script:TestIndexCache }
 
     $found = @{}
+    # name -> every file that declares it. The index above can only hold one
+    # entry per name, so this is where a collision survives long enough to be
+    # reported. See Get-DuplicateClassNames.
+    $sites = @{}
     foreach ($platform in @("EditMode", "PlayMode")) {
         foreach ($folder in ($AreaFolders + $SharedFolder)) {
             $dir = Join-Path (Join-Path $AreasTestsRoot $platform) $folder
             if (-not (Test-Path $dir)) { continue }
             $area = if ($folder -eq $SharedFolder) { $SharedFolder.ToLower() } else { $folder.ToLower() }
+            # NOT -Recurse: a folder nested inside an area folder is refused
+            # by Get-StructuralViolations, not quietly adopted into the area
+            # above it. Discovering it here would make the refusal advisory.
             foreach ($file in Get-ChildItem $dir -Filter *.cs -File) {
                 $content = Get-Content $file.FullName -Raw
+                $rel = Get-AreasRelPath $file.FullName
                 foreach ($match in [regex]::Matches($content, $TestClassPattern)) {
                     $name = $match.Groups[1].Value
                     # A base class is not a suite; it has no tests of its own.
                     if ($name -like "*TestBase") { continue }
+                    if (-not $sites.ContainsKey($name)) { $sites[$name] = @() }
+                    if ($sites[$name] -notcontains $rel) { $sites[$name] += $rel }
                     $found[$name] = [PSCustomObject]@{
                         Platform = $platform
                         Area     = $area
                         File     = $file.Name
-                        RelPath  = "Assets/_Project/Scripts/Tests/$platform/$folder/$($file.Name)"
+                        RelPath  = $rel
                     }
                 }
             }
@@ -194,7 +243,32 @@ function Get-TestIndex {
     }
 
     $script:TestIndexCache = $found
+    $script:TestSiteCache = $sites
     return $found
+}
+
+# ---------------------------------------------------------------------------
+# One class name declared by two files. The index is keyed by NAME, so the
+# second declaration silently overwrote the first: the loser's platform, area
+# and host were whatever the winner's were, so an area run could hand a
+# PlayMode class to the EditMode runner (which finds nothing and passes), and
+# -testFilter ".*\.(Name)\..*" cannot separate them anyway -- it is a name,
+# and both classes have it.
+#
+# Refused rather than disambiguated. Two suites with one name is a naming
+# accident every time; the fix is a rename, and it is cheaper than teaching
+# every downstream filter to carry a namespace.
+function Get-DuplicateClassNames {
+    param([hashtable]$Index = (Get-TestIndex))
+
+    $dupes = @()
+    if (-not $script:TestSiteCache) { return $dupes }
+    foreach ($name in ($script:TestSiteCache.Keys | Sort-Object)) {
+        $sites = @($script:TestSiteCache[$name])
+        if ($sites.Count -lt 2) { continue }
+        $dupes += "$name is declared by $($sites.Count) files -- $($sites -join ' and ') -- so discovery keeps only one of them and a run named for it may test the other. Rename one."
+    }
+    return $dupes
 }
 
 # class name -> "EditMode"/"PlayMode". The shape callers had before areas
@@ -229,6 +303,24 @@ function Get-TestAreas {
 #      not something to discover from a run that quietly skipped it.
 #   3. A [Test] or [UnityTest] under Shared/. Shared is for helpers; a suite
 #      parked there is a suite in no area.
+#   4. Anything DEEPER than one folder: Tests/<Platform>/<Area>/<Sub>/. The
+#      comment at the top of this file argues an area cannot drift because it
+#      is a folder; a sub-folder is exactly how that stops being true, and it
+#      is invisible rather than merely misfiled, because Get-TestIndex does
+#      not recurse. Refused, not recursed into -- adopting it into the area
+#      above would make "an area is a folder" mean "an area is a subtree",
+#      and the placement guide would have nothing to say about where its
+#      files belong.
+#   5. A generic fixture (class Foo<T>) or a PUBLIC NESTED fixture. Neither
+#      is refused for being bad C#; both are refused because the name the
+#      test runners filter on is not the name written here. NUnit reports
+#      them as "Foo<Int32>" and "Outer+Inner", and both selection paths --
+#      Unity's -testFilter ".*\.(Foo)\..*" and dotnet's
+#      "FullyQualifiedName~.Foo." -- are built from the declared name in
+#      test.ps1. Refusing is a dozen lines; supporting them means a per-shape
+#      filter form in two hosts, a way to know the closed type arguments
+#      ahead of the run, and the same in Resolve-ChangedPaths. There are none
+#      today, so the cheap half is the whole answer until there is one.
 #
 # No bypass flag, and none is planned. The fix is a git mv.
 function Get-StructuralViolations {
@@ -241,21 +333,54 @@ function Get-StructuralViolations {
         if (-not (Test-Path $dir)) { continue }
 
         foreach ($file in Get-ChildItem $dir -Filter *.cs -File) {
-            $violations += "Assets/_Project/Scripts/Tests/$platform/$($file.Name) is not in an area folder. Move it into one of: $folderList"
+            $violations += "$(Get-AreasRelPath $file.FullName) is not in an area folder. Move it into one of: $folderList"
         }
 
         foreach ($sub in Get-ChildItem $dir -Directory) {
             if ($allowed -notcontains $sub.Name) {
-                $violations += "Assets/_Project/Scripts/Tests/$platform/$($sub.Name)/ is not an area folder. The areas are: $folderList"
+                $violations += "$(Get-AreasRelPath $sub.FullName)/ is not an area folder. The areas are: $folderList"
             }
         }
 
-        $sharedDir = Join-Path $dir $SharedFolder
-        if (Test-Path $sharedDir) {
-            foreach ($file in Get-ChildItem $sharedDir -Filter *.cs -File) {
+        foreach ($folder in $allowed) {
+            $areaDir = Join-Path $dir $folder
+            if (-not (Test-Path $areaDir)) { continue }
+            $areaDirFull = (Resolve-Path $areaDir).ProviderPath
+
+            foreach ($sub in Get-ChildItem $areaDir -Directory) {
+                $violations += "$(Get-AreasRelPath $sub.FullName)/ is nested inside an area folder. An area is exactly ONE folder deep (Tests/$platform/<Area>/), and nothing below that is discovered or run -- move its files up into $folder/, or make it an area of its own in tools/test_areas.ps1."
+            }
+
+            # Recursed only to NAME the files, never to adopt them: the depth
+            # is the violation, so a file at depth 2 is reported whether or
+            # not its folder was reported above it.
+            foreach ($file in Get-ChildItem $areaDir -Recurse -Filter *.cs -File) {
+                if ($file.DirectoryName -ieq $areaDirFull) { continue }
+                $violations += "$(Get-AreasRelPath $file.FullName) is more than one folder deep. An area is exactly ONE folder deep (Tests/$platform/<Area>/), so this file is in no area and discovery never sees it."
+            }
+
+            foreach ($file in Get-ChildItem $areaDir -Filter *.cs -File) {
                 $content = Get-Content $file.FullName -Raw
-                if ($content -match $TestAttrPattern) {
-                    $violations += "Assets/_Project/Scripts/Tests/$platform/$SharedFolder/$($file.Name) carries a [Test]/[UnityTest]. $SharedFolder is for helpers only -- move it into its area folder."
+                $rel = Get-AreasRelPath $file.FullName
+
+                if ($folder -eq $SharedFolder -and $content -match $TestAttrPattern) {
+                    $violations += "$rel carries a [$($Matches[1])]. $SharedFolder is for helpers only -- move it into its area folder."
+                }
+
+                $code = Get-CodeOnly $content
+                foreach ($m in [regex]::Matches($code, $DeclaredClassPattern)) {
+                    $name = $m.Groups[1].Value
+                    if ($name -like "*TestBase") { continue }
+
+                    if ($m.Groups[2].Success) {
+                        $violations += "$rel declares a generic fixture 'class $name<...>'. NUnit names it '$name<T>' at run time and every filter this repo builds is the bare name, so no area run, class run or -Changed run can select it. Make it non-generic."
+                    }
+
+                    $before = $code.Substring(0, $m.Index)
+                    $depth = ([regex]::Matches($before, '\{')).Count - ([regex]::Matches($before, '\}')).Count
+                    if ($depth -ge 2) {
+                        $violations += "$rel declares '$name' nested inside another type. NUnit names it 'Outer+$name' and every filter this repo builds is the bare name, so no run can select it. Lift it to namespace level."
+                    }
                 }
             }
         }
@@ -264,10 +389,21 @@ function Get-StructuralViolations {
     return $violations
 }
 
+# Repo-relative, forward slashes. One helper so a message reads the same
+# whether the caller is pointed at Assets/.../Tests or at the -SelfCheck
+# fixture under tools/.
+function Get-AreasRelPath {
+    param([string]$FullPath)
+    if ($FullPath.StartsWith($AreasProjectRoot, [StringComparison]::OrdinalIgnoreCase)) {
+        return ($FullPath.Substring($AreasProjectRoot.Length + 1)) -replace '\\', '/'
+    }
+    return $FullPath -replace '\\', '/'
+}
+
 # ---------------------------------------------------------------------------
-# Files that carry a real [Test]/[UnityTest] but whose class(es)
-# Get-TestIndex missed entirely -- an "internal class", or any declaration
-# shape the widened regex above still does not cover. Kept because a class
+# Classes declared in a file that carries tests but that Get-TestIndex never
+# indexed -- an "internal class", or any declaration shape the widened regex
+# above still does not cover. Reported per CLASS, not per file. Kept because a class
 # invisible to discovery is invisible to everything built on discovery,
 # including the structural gate's Shared check, and a suite that never runs
 # reports as a clean run.
@@ -293,18 +429,22 @@ function Get-DiscoveryBlindSpots {
             $content = Get-Content $file.FullName -Raw
             if ($content -notmatch $TestAttrPattern) { continue }
 
-            $namesInFile = [regex]::Matches($content, $TestClassPattern) |
+            # EVERY declared class, not any. "Pass the file if ANY of its
+            # classes was discovered" let a file with "public class FooTests"
+            # beside "internal class BarTests" report clean while BarTests
+            # never ran -- the exact hole this check exists to close, one
+            # class further in. $DeclaredClassPattern is wider than the
+            # discovery pattern on purpose, so the two disagreeing is what
+            # produces a finding.
+            $namesInFile = [regex]::Matches((Get-CodeOnly $content), $DeclaredClassPattern) |
                 ForEach-Object { $_.Groups[1].Value } |
                 Where-Object { $_ -notlike "*TestBase" }
 
-            $anyDiscovered = $false
-            foreach ($n in $namesInFile) {
-                if ($discoveredNames.Contains($n)) { $anyDiscovered = $true; break }
-            }
-
-            if (-not $anyDiscovered) {
-                $rel = $file.FullName.Substring($AreasProjectRoot.Length + 1) -replace '\\', '/'
-                $blindSpots += $rel
+            $rel = Get-AreasRelPath $file.FullName
+            foreach ($n in ($namesInFile | Sort-Object -Unique)) {
+                if (-not $discoveredNames.Contains($n)) {
+                    $blindSpots += "${rel}: class $n is declared here but discovery never saw it (internal, or a shape Get-TestIndex's regex does not cover). A helper with no tests belongs in $SharedFolder/."
+                }
             }
         }
       }

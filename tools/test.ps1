@@ -128,7 +128,7 @@ if ($List) {
     # check itself. -List stays report-only and exits 0 even when either list
     # is non-empty; it is the diagnosis, not the enforcement.
     $violations = Get-StructuralViolations
-    Write-Host "Structure (every test file in an area folder; nothing testable in Shared):"
+    Write-Host "Structure (every test file exactly one folder deep in an area; nothing testable in Shared):"
     if ($violations) {
         foreach ($v in $violations) { Write-Host "  $v" }
     } else {
@@ -136,8 +136,17 @@ if ($List) {
     }
     Write-Host ""
 
+    $duplicates = Get-DuplicateClassNames -Index $testIndex
+    Write-Host "Duplicate class names (two files, one name -- discovery keeps one):"
+    if ($duplicates) {
+        foreach ($d in $duplicates) { Write-Host "  $d" }
+    } else {
+        Write-Host "  (none)"
+    }
+    Write-Host ""
+
     $blindSpots = Get-DiscoveryBlindSpots -Index $testIndex
-    Write-Host "Discovery blind spots (a [Test]/[UnityTest] file whose class was never discovered):"
+    Write-Host "Discovery blind spots (a test file declaring a class discovery never saw):"
     if ($blindSpots) {
         foreach ($b in $blindSpots) { Write-Host "  $b" }
     } else {
