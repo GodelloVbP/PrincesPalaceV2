@@ -725,7 +725,7 @@ namespace PrincesPalace.Domain.Combat.Session
             // _killedThisAction, so the flag would survive to the player's
             // next action and hand them a Trample the enemy earned. Crediting
             // the ledger without the flag is a real question and a balance
-            // one; it is not a refactor's to answer. See AUDIT.md #62.
+            // one; it is not a refactor's to answer. See AUDIT.md #63.
             var landed = DealDamage(enemy, target, damage, AttackTypeOf(enemy), KillCredit.Nobody);
 
             // A fleece thickens in a hard winter: being ground down is itself a
