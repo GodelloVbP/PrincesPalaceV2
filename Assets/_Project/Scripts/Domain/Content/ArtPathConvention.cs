@@ -46,7 +46,6 @@ namespace PrincesPalace.Domain.Content
             {
                 // Drawn by SceneBuilder into a scene at build time.
                 { "iconPath", ArtPathKind.EditorBaked },
-                { "portraitPath", ArtPathKind.EditorBaked },
 
                 // A FOLDER of per-level icons rather than one file, which is why
                 // it is a "Sheet" and not a "Path" -- ItemSetEntryResolver.
@@ -58,6 +57,16 @@ namespace PrincesPalace.Domain.Content
                 // Loaded at runtime, off Resources.
                 { "spritePath", ArtPathKind.RuntimeLoaded },
                 { "battleSpritePath", ArtPathKind.RuntimeLoaded },
+
+                // RUNTIME SINCE 2026-09-06, and it was EditorBaked before.
+                // Baked meant the Character pane's scene held the sprite, so a
+                // character authored after the last scene build had a correct
+                // name, correct attributes and an empty portrait plate that no
+                // amount of content rebuilding could fill -- measured at
+                // docs/measurements/2026-09-step2-spell-character.md. The
+                // dossier loads it through CharacterPortraits now, which is
+                // Resources, which is this convention.
+                { "portraitPath", ArtPathKind.RuntimeLoaded },
                 // DOTTED, because the field moved inside a nested block and the
                 // key is what an author types. A spell's presentation is one
                 // "vfx" object now -- see SpellPresentation -- so the JSON reads

@@ -923,17 +923,12 @@ public static class ScreenRegistry
 
         controller.packSortTabs = dossier.PackFilterTabs.Select(result.Button).ToArray();
 
-        // Every character with an authored portrait. portraitPath is
-        // Assets-relative by convention (ArtPathConvention), which is exactly
-        // what LoadSpriteByKey takes, so these bake into the scene like every
-        // other piece of menu art rather than loading at runtime.
-        var faces = ContentDatabase.Characters
-            .Where(c => c != null && !string.IsNullOrWhiteSpace(c.portraitPath))
-            .ToList();
-        controller.portraits = faces
-            .Select(c => new IconEntry(c.id, SceneBuilder.LoadSpriteByKey(c.portraitPath)))
-            .ToArray();
-
+        // NO PORTRAIT ARRAY, and its absence is the point. Every character with
+        // a portraitPath used to be baked here as an IconEntry, which made the
+        // scene a photograph of the roster: a character authored after the last
+        // scene build had an empty plate and nothing short of -BuildScenes
+        // filled it. portraitPath is Resources-relative now and
+        // CharacterPortraits loads it by id at the moment the dossier draws.
         var withArt = ContentDatabase.Items
             .Where(i => i != null && !string.IsNullOrWhiteSpace(i.iconPath))
             .ToList();

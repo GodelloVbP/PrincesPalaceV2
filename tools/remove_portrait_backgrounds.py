@@ -58,6 +58,13 @@ SOURCE_ROOT = "Assets/_Project/Art/Portraits"
 # Left alone deliberately rather than "fixed" by regenerating: the committed
 # art is what ships and looks right. Run --check before ever running this
 # over Sheep.
+#
+# AND SHAWN'S NEUTRAL PORTRAIT IS NO LONGER IN Processed/. The dossier loads
+# portraits off Resources now (characters.json portraitPath, Resources-relative),
+# so that one file moved to Assets/_Project/Resources/Portraits/sheep.png and a
+# run of this tool will happily rebuild a Processed/Shawn_neutral.png that
+# nothing consumes. The output that ships is the one under Resources; copy it
+# there deliberately, do not assume Processed/ is what the game reads.
 PORTRAITS = {
     "Sheep": {"tolerance": DEFAULT_TOLERANCE, "reproduces": False},
 }

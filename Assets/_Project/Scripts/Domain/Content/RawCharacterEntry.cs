@@ -59,13 +59,15 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Base Charisma; the six ability scores must total exactly the resolver's budget.")]
         public int charisma = 10;
 
-        // Optional art. portraitPath is an ASSETS-relative path to a
-        // head-and-shoulders portrait baked into the scene at build time;
-        // battleSpritePath is a RESOURCES-relative folder of full-body stance
-        // art loaded at runtime. The two conventions are different on
-        // purpose and the resolver checks each against its own — see
-        // docs/ART_PIPELINE.md. Empty means no art yet, which degrades to a
-        // blank portrait slot and a plain stage plate respectively.
+        // Optional art, both RESOURCES-relative and without an extension:
+        // portraitPath names one head-and-shoulders PNG under
+        // Resources/Portraits/, battleSpritePath a folder of full-body stance
+        // art. Both are loaded at runtime, so a character authored today has
+        // both the moment the content is rebuilt — portraitPath was baked into
+        // the scene until 2026-09-06 and a new character's plate stayed empty
+        // until somebody ran a scene build. Empty means no art yet, which
+        // degrades to the armour-stand placeholder and a plain stage plate
+        // respectively. See docs/ART_PIPELINE.md.
         // PRINCE'S FAVOR: this character's luck.
         //
         // Not an ability score, deliberately. The six scores spend a fixed
@@ -75,7 +77,7 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("This character's luck stat; a separate axis from the six ability scores, 0 is the honest default.")]
         public int princesFavor;
 
-        [ContentDoc("Assets-relative path to a head-and-shoulders portrait baked into the scene at build time; empty means no art yet.")]
+        [ContentDoc("Resources-relative path (no extension) to a head-and-shoulders portrait loaded at runtime, e.g. 'Portraits/sheep'; empty means no art yet and the dossier keeps its armour-stand placeholder.")]
         public string portraitPath = "";
         [ContentDoc("Resources-relative folder of full-body stance art loaded at runtime; empty means no art yet.")]
         public string battleSpritePath = "";

@@ -258,7 +258,7 @@ namespace PrincesPalace
 
             if (string.IsNullOrWhiteSpace(definition.data.PortraitPath))
             {
-                plan.Notes.Add("no portraitPath, so the dossier shows whatever it falls back to");
+                plan.Notes.Add("no portraitPath, so the dossier keeps its armour-stand placeholder");
             }
 
             string opener = FirstSelectableSkillFor(definition.id);

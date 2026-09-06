@@ -330,6 +330,12 @@ namespace PrincesPalace.Content
             _relics = null;
             _achievements = null;
             _modifiers = null;
+
+            // Portraits are keyed by character id and resolved through the
+            // roster above, so a swapped roster has to drop them too -- a test
+            // that installs its own characters would otherwise see the last
+            // one's face.
+            CharacterPortraits.Reset();
         }
 
         public static CharacterDefinition GetCharacter(string id)

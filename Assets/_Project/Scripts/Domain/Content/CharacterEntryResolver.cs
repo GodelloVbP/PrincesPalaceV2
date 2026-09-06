@@ -166,10 +166,14 @@ namespace PrincesPalace.Domain.Content
             }
 
             // Two path conventions coexist in this project and they are not
-            // interchangeable: portraitPath is baked into a scene at build
-            // time by AssetDatabase (Assets-relative), battleSpritePath is
-            // Resources.Load'ed at runtime (Resources-relative, no extension).
-            // Swapping them fails SILENTLY — the loader just returns null.
+            // interchangeable, so both of these are checked even though a
+            // character's two art fields now happen to share one convention:
+            // an Assets-relative path is baked into a scene at build time by
+            // AssetDatabase, a Resources-relative one (no extension) is
+            // Resources.Load'ed at runtime. Swapping them fails SILENTLY — the
+            // loader just returns null. portraitPath was the baked kind until
+            // 2026-09-06 and is RuntimeLoaded now, which is why the rule lives
+            // in a table and not in a sentence here.
             //
             // These two checks used to be written out here, and were the ONLY
             // ones in the codebase: the other seven art fields across six

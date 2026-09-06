@@ -117,16 +117,15 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text[] statPreviews;
         [SerializeField] internal GameObject[] statHighlights;
 
-        // Item art, bound at build time from every ItemDefinition with an icon.
-        // The portrait, keyed by character id rather than by roster position.
-        //
-        // The squad is a SUBSET of the roster in save order, so indexing these
-        // by the dossier's own _index would put the wrong face on the wrong
-        // sheet the moment a squad is anything other than the first N
-        // characters. Same id-paired shape the item icons below use.
+        // The portrait slot. The FACES ARE NOT BOUND HERE any more: they were
+        // an IconEntry[] baked by ScreenRegistry from every character with a
+        // portraitPath, which meant the scene held a photograph of the roster
+        // taken at scene-build time and a character authored afterwards showed
+        // an empty plate no content rebuild could fill. CharacterPortraits
+        // loads them off Resources by id instead.
         [SerializeField] internal Image portrait;
-        [SerializeField] internal IconEntry[] portraits;
 
+        // Item art, bound at build time from every ItemDefinition with an icon.
         [SerializeField] internal IconEntry[] icons;
 
         private static readonly Color Neutral = Hex(Domain.UiKit.Screens.CharacterDossierScreen.Text);
@@ -767,13 +766,12 @@ namespace PrincesPalace
 
             // The face, not a mannequin.
             //
-            // NOT through ItemIcons.Apply, which is right for item cells and
-            // wrong here: it DISABLES the Image when there is no art, and the
-            // tree has already put an armour stand in this slot as the
-            // placeholder. Applying would blank a character without a portrait
-            // instead of leaving them the stand, turning graceful degradation
-            // into a hole in the layout.
-            var face = ItemIcons.Find(portraits, character.definitionId);
+            // A MISS LEAVES THE STAND STANDING. The tree has already put an
+            // armour stand in this slot as the placeholder, so blanking or
+            // disabling the Image (what ItemIcons.Apply would do, correctly,
+            // for an item cell) would turn graceful degradation into a hole in
+            // the layout.
+            var face = CharacterPortraits.For(character.definitionId);
             if (portrait != null && face != null)
             {
                 portrait.sprite = face;

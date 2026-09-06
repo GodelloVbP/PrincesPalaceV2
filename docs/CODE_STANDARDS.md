@@ -52,7 +52,14 @@ is the signal to promote it here instead of a third.
   dictionaries") is true and stopped one option short, because Unity serialises
   an array of a `[Serializable]` struct perfectly well.
   `PortraitIcons` is listed here no longer — it does not exist and had not for
-  some time; character portraits go through `ItemIcons` like everything else.
+  some time.
+- `CharacterPortraits.For(characterId)` — the dossier plate, `Resources.Load`ed
+  by id off the character's `portraitPath` and cached, misses included. Not an
+  `IconEntry[]` and not `ItemIcons`, and the difference is the point: a baked
+  array is a photograph of the roster taken at scene-build time, so a character
+  authored afterwards showed an empty plate until somebody ran `-BuildScenes`.
+  It also has no `Apply(Image, ...)`, because a miss here must leave the tree's
+  armour-stand placeholder standing rather than disable the `Image`.
 - `RadialGlowImage`, `BeaconPulse` — the soft-glow-behind-an-icon and
   pulsing-highlight primitives (see the Relics, Talent Tree, and reward
   screens for the pattern: beacon built as a sibling *before* the element it

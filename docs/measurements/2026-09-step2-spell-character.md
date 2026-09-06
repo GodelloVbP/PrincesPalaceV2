@@ -141,3 +141,55 @@ without saying so.
   way; they are left in place as the evidence for the readings above.
 - `git status` carries only the paths that were already there at session start, plus this
   session's own commits.
+
+---
+
+## The E3 caveat, closed (2026-09-06T03:11-03:14)
+
+The finding above -- "a new character has no dossier portrait" -- is fixed and the
+exercise was repeated to see it. `portraitPath` is Resources-relative now and the
+dossier loads it through `CharacterPortraits.For(characterId)` at the moment it
+draws; `ScreenRegistry` bakes no `IconEntry[]` of faces into the scene any more.
+
+Same inputs as before: `baseline_owl2` on the owl's spread, one skill row,
+appended rather than inserted. The one authored difference is that
+`portraitPath` reads `"Portraits/sheep"` instead of an `Assets/` path, which is
+the change.
+
+| ISO timestamp | cat | command / file | what happened |
+|---|---|---|---|
+| 2026-09-06T03:11:18+02:00 | edit | `ContentData/characters.json` + `skills.json` | two rows, one each |
+| 03:11:24 -> 03:12:47 | wait | `preview.ps1 -Character baseline_owl2` | **83.0s wall**, green first try. Content build 17.0s of it; the extra over the run below is the runner copy importing the relocated 2 MB portrait for the first time |
+| 03:13:07 -> 03:13:55 | wait | same command again | **48.0s wall**, warm |
+| 03:13:58 | lookup | viewed `character_baseline_owl2_dossier.png` | **CORRECT, and this is the point.** Shawn's painted face on the plate above "Baseline Odette", Level 1, WIS 20 / INT 16 -- **against scenes last built before this character existed**. No `-BuildScenes`, no scene in the process at all on the content side |
+
+### Side by side, E3 only
+
+| | Step 0 baseline (2026-09-05) | Step 2 (2026-09-06 01:48) | Step 2 + runtime portraits (2026-09-06 03:11) |
+|---|---|---|---|
+| time to first correct preview | 5m24s | 42s | **48s warm** (83s on the first run after the art moved) |
+| code edits demanded by the row | 2 | 0 | **0** |
+| dossier portrait | n/a | **empty plate** | **the portrait** |
+| manual prerequisite | roster position | a scene build for the portrait | **none** |
+
+The 48s is not an improvement on 42s and was not meant to be: this closed a
+correctness gap, not a timing one. What changed is the last row -- Step 2's claim
+that "a character can be seen without a code edit or a manual prerequisite" was
+true except for the portrait, and it is now true without the exception.
+
+### What is NOT closed
+
+The portrait plate degrades to the armour stand when a character authors no
+`portraitPath`, unchanged and deliberate. And the three characters in content all
+name the same file: `placeholder_brawler` and `owl` wear Shawn's face because
+theirs have not been drawn. That is a content gap and it looks exactly like a bug
+in this picture, which is worth saying out loud beside a screenshot of Odette
+wearing a sheep's head.
+
+### Cleanup (verified 2026-09-06T03:14)
+
+- Both JSON files restored from the copies taken before the exercise; `git diff`
+  on `skills.json` is empty and on `characters.json` shows only this session's
+  own `portraitPath` change.
+- Content rebuilt from the restored files: no `baseline_*` asset under
+  `Resources/Content`, and `content_stamp.json` matches the committed inputs.

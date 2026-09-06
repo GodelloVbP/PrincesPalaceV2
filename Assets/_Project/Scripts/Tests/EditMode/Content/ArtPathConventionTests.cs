@@ -163,6 +163,7 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsTrue(ArtPathConvention.Check("x", "spritePath", "Enemies/rat", out _));
             Assert.IsTrue(ArtPathConvention.Check("x", "vfx.sfxPath", "Audio/Sfx/frost_flare", out _));
             Assert.IsTrue(ArtPathConvention.Check("x", "battleSpritePath", "Characters/sheep", out _));
+            Assert.IsTrue(ArtPathConvention.Check("x", "portraitPath", "Portraits/sheep", out _));
             Assert.IsTrue(ArtPathConvention.Check("x", "iconPath",
                 "Assets/_Project/Art/Items/helmets_str/level_1.png", out _));
             Assert.IsTrue(ArtPathConvention.Check("x", "iconSheet",
@@ -254,8 +255,13 @@ namespace PrincesPalace.Domain.Tests
             // These two were the only guarded fields in the codebase before the
             // rule was shared. Re-asserted here so routing them through
             // ArtPathConvention cannot have quietly loosened either.
+            //
+            // BOTH ARE RuntimeLoaded NOW, so both reject an Assets/ path --
+            // portraitPath was the baked one until 2026-09-06 and this case was
+            // its mirror image. Sharing a convention is not the same as being
+            // unchecked, which is the thing this test is here to notice.
             var portrait = MinimalCharacter();
-            portrait.portraitPath = "Portraits/sheep";
+            portrait.portraitPath = "Assets/_Project/Resources/Portraits/sheep.png";
             var battle = MinimalCharacter();
             battle.battleSpritePath = "Assets/_Project/Art/Characters/sheep.png";
 

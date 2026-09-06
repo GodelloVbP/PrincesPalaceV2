@@ -30,7 +30,7 @@ MonoBehaviour:
       wisdom: 20
       intelligence: 16
       charisma: 6
-    PortraitPath: Assets/_Project/Art/Portraits/Sheep/Processed/Shawn_neutral.png
+    PortraitPath: Portraits/sheep
     BattleSpritePath: Characters/owl
     BattleSpriteFacing: 1
     AttackType: 5

@@ -35,7 +35,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `intelligence` | int | `10` | Base Intelligence; the six ability scores must total exactly the resolver's budget. |  |
 | `charisma` | int | `10` | Base Charisma; the six ability scores must total exactly the resolver's budget. |  |
 | `princesFavor` | int | `0` | This character's luck stat; a separate axis from the six ability scores, 0 is the honest default. |  |
-| `portraitPath` | string | `""` | Assets-relative path to a head-and-shoulders portrait baked into the scene at build time; empty means no art yet. |  |
+| `portraitPath` | string | `""` | Resources-relative path (no extension) to a head-and-shoulders portrait loaded at runtime, e.g. 'Portraits/sheep'; empty means no art yet and the dossier keeps its armour-stand placeholder. |  |
 | `battleSpritePath` | string | `""` | Resources-relative folder of full-body stance art loaded at runtime; empty means no art yet. |  |
 | `battleSpriteFacing` | string | `""` | Which way the battle art is drawn in its source file: 'Right' or 'Left'. | Left, Right |
 | `signatureId` | string | `""` | The id of this character's private signature resource; empty means the character has none. |  |

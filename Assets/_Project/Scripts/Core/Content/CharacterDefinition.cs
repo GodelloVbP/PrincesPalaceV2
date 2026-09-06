@@ -21,10 +21,12 @@ namespace PrincesPalace.Content
         // the asset itself rather than through `data`.
         public string id => data != null ? data.Id : "";
 
-        // FORWARDED, not stored. ScreenRegistry reads this off the definition
-        // while walking ContentDatabase.Characters; a property keeps that call
-        // shape without putting the string on the asset twice.
-        public string portraitPath => data != null ? data.PortraitPath : "";
+        // A `portraitPath` forwarder used to sit here for ScreenRegistry, which
+        // walked ContentDatabase.Characters and baked every face into the
+        // scene. Nothing bakes portraits now -- CharacterPortraits loads them
+        // off Resources by id -- and its one caller is gone with it. Removed
+        // rather than left: a forwarder nobody calls reads as a supported way
+        // in.
 
         // Listed by the authored order ContentBuilder stamped on it.
         //
