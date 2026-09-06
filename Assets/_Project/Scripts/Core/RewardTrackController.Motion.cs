@@ -140,7 +140,7 @@ namespace PrincesPalace
             int i = 0;
             foreach (int level in RewardTrackLayout.MilestoneLevels())
             {
-                float phase = EaseInOut(PingPong(t / AuraLoop + i * 0.618f));
+                float phase = Easing.SmoothStep(PingPong(t / AuraLoop + i * 0.618f));
                 float fade = FadeAt(level - RewardTrackLayout.FirstLevel);
                 var state = RewardTrack.StateOf(level, _level, _claimed);
 
@@ -200,7 +200,7 @@ namespace PrincesPalace
         {
             if (collectPip == null || !collectPip.gameObject.activeInHierarchy) return;
 
-            float phase = EaseInOut(PingPong(t / PipLoop));
+            float phase = Easing.SmoothStep(PingPong(t / PipLoop));
 
             collectPip.color = WithAlpha(Gold, Mathf.Lerp(0.55f, 1f, phase));
             collectPip.rectTransform.localScale = Vector3.one * Mathf.Lerp(1f, 1.13f, phase);
@@ -247,7 +247,7 @@ namespace PrincesPalace
             if (hereHaloRect == null || hereHalo == null) return;
             if (!hereHaloRect.gameObject.activeSelf) return;
 
-            float phase = EaseInOut(PingPong(t / BreatheLoop));
+            float phase = Easing.SmoothStep(PingPong(t / BreatheLoop));
 
             hereHaloRect.localScale = Vector3.one * Mathf.Lerp(1f, 1.5f, phase);
 
@@ -289,7 +289,7 @@ namespace PrincesPalace
         {
             if (nextMark == null || !nextMark.gameObject.activeSelf) return;
 
-            float phase = EaseInOut(PingPong(t / BobLoop));
+            float phase = Easing.SmoothStep(PingPong(t / BobLoop));
 
             nextMark.anchoredPosition = new Vector2(
                 nextMark.anchoredPosition.x,
@@ -373,7 +373,7 @@ namespace PrincesPalace
                 if (elapsed >= 0f)
                 {
                     SetScroll(Mathf.Lerp(from, target,
-                        EaseOutCubic(Mathf.Clamp01(elapsed / FlyInSeconds))));
+                        Easing.OutCubic(Mathf.Clamp01(elapsed / FlyInSeconds))));
                 }
 
                 yield return null;
@@ -407,7 +407,7 @@ namespace PrincesPalace
             while (elapsed < seconds)
             {
                 elapsed += Time.unscaledDeltaTime * SpeedMultiplier;
-                SetScroll(Mathf.Lerp(from, target, EaseOutCubic(Mathf.Clamp01(elapsed / seconds))));
+                SetScroll(Mathf.Lerp(from, target, Easing.OutCubic(Mathf.Clamp01(elapsed / seconds))));
                 yield return null;
             }
 
@@ -528,9 +528,9 @@ namespace PrincesPalace
             {
                 float u = Mathf.Clamp01(t / 0.6f);
 
-                core.rectTransform.localScale = Vector3.one * Mathf.Lerp(0.35f, 2.1f, EaseOutCubic(u));
+                core.rectTransform.localScale = Vector3.one * Mathf.Lerp(0.35f, 2.1f, Easing.OutCubic(u));
                 core.color = WithAlpha(
-                    Color.Lerp(Color.white, Gold, EaseOutCubic(u)),
+                    Color.Lerp(Color.white, Gold, Easing.OutCubic(u)),
                     (1f - u) * (1f - u));
             }
 
@@ -540,7 +540,7 @@ namespace PrincesPalace
             var ring = Rig(burstRings, rig);
             if (ring != null)
             {
-                ring.rectTransform.localScale = Vector3.one * Mathf.Lerp(0.3f, 3.4f, EaseOutCubic(t));
+                ring.rectTransform.localScale = Vector3.one * Mathf.Lerp(0.3f, 3.4f, Easing.OutCubic(t));
                 ring.color = WithAlpha(Gold, 0.95f * Mathf.Pow(1f - t, 1.6f));
             }
 
@@ -552,7 +552,7 @@ namespace PrincesPalace
             {
                 float u = Mathf.Clamp01(t / 0.8f);
 
-                rays.rectTransform.localScale = Vector3.one * Mathf.Lerp(0.45f, 1.55f, EaseOutCubic(u));
+                rays.rectTransform.localScale = Vector3.one * Mathf.Lerp(0.45f, 1.55f, Easing.OutCubic(u));
                 rays.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -22f * u);
                 rays.color = WithAlpha(Gold, 0.85f * (1f - u) * (1f - u));
             }
@@ -596,7 +596,7 @@ namespace PrincesPalace
                 float u = Mathf.Clamp01((t - delay) / (1f - delay));
 
                 var direction = SparkDirections[s % SparkDirections.Length];
-                float reach = RewardTrackLayout.BurstSparkReach * EaseOutCubic(u);
+                float reach = RewardTrackLayout.BurstSparkReach * Easing.OutCubic(u);
 
                 // Gravity, as the square of the time it has been in the air.
                 // Sparks that fly in straight lines are a firework; sparks that
@@ -659,7 +659,7 @@ namespace PrincesPalace
             while (elapsed < CardSwapSeconds)
             {
                 elapsed += Time.unscaledDeltaTime * SpeedMultiplier;
-                float t = EaseOutCubic(Mathf.Clamp01(elapsed / CardSwapSeconds));
+                float t = Easing.OutCubic(Mathf.Clamp01(elapsed / CardSwapSeconds));
 
                 cardRect.anchoredPosition =
                     new Vector2(cardRect.anchoredPosition.x, baseY - CardRisePixels * (1f - t));
@@ -715,7 +715,7 @@ namespace PrincesPalace
             while (elapsed < AdvanceSeconds)
             {
                 elapsed += Time.unscaledDeltaTime * SpeedMultiplier;
-                float t = EaseOutCubic(Mathf.Clamp01(elapsed / AdvanceSeconds));
+                float t = Easing.OutCubic(Mathf.Clamp01(elapsed / AdvanceSeconds));
 
                 railFill.sizeDelta = new Vector2(Mathf.Lerp(from, target, t), railFill.sizeDelta.y);
                 yield return null;
@@ -785,14 +785,6 @@ namespace PrincesPalace
             _fade == null || i >= _fade.Length ? 1f : _fade[i] / 31f;
 
         // ---- easing ------------------------------------------------------------------
-
-        private static float EaseOutCubic(float t)
-        {
-            float inverse = 1f - t;
-            return 1f - inverse * inverse * inverse;
-        }
-
-        private static float EaseInOut(float t) => t * t * (3f - 2f * t);
 
         // Overshoots its target and settles back, which is what makes a stamp
         // land rather than arrive. The 1.70158 is the standard back-ease

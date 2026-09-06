@@ -316,7 +316,7 @@ namespace PrincesPalace
                 RectTransformUtility.ScreenPointToLocalPointInRectangle(panel, screenPoint, null, out gateLocal);
             }
 
-            yield return AnimateZoom(panel, 1f, ZoomOutScale, ZoomOutSeconds, EaseInOut, startPos, gateLocal);
+            yield return AnimateZoom(panel, 1f, ZoomOutScale, ZoomOutSeconds, Easing.SmoothStep, startPos, gateLocal);
             yield return AnimateZoom(panel, ZoomOutScale, ZoomInScale, ZoomInSeconds, EaseIn, startPos, gateLocal);
             yield return FadeToBlack(panel, FadeSeconds);
 
@@ -406,12 +406,6 @@ namespace PrincesPalace
             }
 
             group.alpha = 0f;
-        }
-
-        private static float EaseInOut(float t)
-        {
-            t = Mathf.Clamp01(t);
-            return t * t * (3f - 2f * t);
         }
 
         private static float EaseIn(float t)

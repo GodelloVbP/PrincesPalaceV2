@@ -951,7 +951,7 @@ namespace PrincesPalace
 
             for (float t = 0f; t < SweepSeconds; t += Time.unscaledDeltaTime * SpeedMultiplier)
             {
-                float k = EaseOut(Mathf.Clamp01(t / SweepSeconds));
+                float k = Easing.OutCubic(Mathf.Clamp01(t / SweepSeconds));
 
                 offerPhase.anchoredPosition = new Vector2(Mathf.Lerp(0f, -width, k), 0f);
                 summaryPhase.anchoredPosition = new Vector2(Mathf.Lerp(width, 0f, k), 0f);
@@ -1085,16 +1085,6 @@ namespace PrincesPalace
         // differently by accident is the sort of thing nobody can name but
         // everybody feels.
         private static float Smooth(float k) => k * k * (3f - 2f * k);
-
-        // Cubic out: leaves at full speed and settles. Smooth() eases in as
-        // well, which is right for a reveal and wrong for a shove -- and the
-        // quartic this started as was so front-loaded that the move was
-        // effectively over in its first third.
-        private static float EaseOut(float k)
-        {
-            float inv = 1f - k;
-            return 1f - inv * inv * inv;
-        }
 
         // Attached at RUNTIME, the same way HoverIndex and BarSlider are: the
         // tree emits plain rects, and a group that exists only for the duration
