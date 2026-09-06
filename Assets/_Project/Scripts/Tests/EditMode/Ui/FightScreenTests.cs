@@ -882,6 +882,21 @@ namespace PrincesPalace.Domain.Tests
                 }
             }
 
+            // PartyBuff{i} is rebuilt through the same BuildStatusBadge
+            // anatomy as the enemy and roster rows above -- the first
+            // capture's worst defect was this row NOT having its own Glyph/
+            // Counter children, which forced a tinted root Image to double
+            // as the glyph and Code to carry a folded "CODE·N" caption.
+            for (int i = 0; i < 6; i++)
+            {
+                var name = $"PartyBuff{i}";
+                var badge = Find(root, name);
+                Assert.IsNotNull(badge, $"missing {name}");
+                Assert.IsNotNull(Find(badge, "Glyph"), $"{name} has no Glyph child");
+                Assert.IsNotNull(Find(badge, "Code"), $"{name} has no Code child");
+                Assert.IsNotNull(Find(badge, "Counter"), $"{name} has no Counter child");
+            }
+
             Assert.IsNotNull(Find(root, "StatusTooltip"));
             Assert.IsNotNull(Find(root, "StatusTooltipText"));
 

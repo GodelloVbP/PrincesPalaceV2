@@ -1285,21 +1285,24 @@ namespace PrincesPalace.Domain.UiKit.Screens
             });
         }
 
-        // Up to four badges in a row above the portrait, reading whatever
-        // FightHudModel.BuffBadgesFor says is currently on the acting
-        // character. The portrait had nothing here before this -- a buff a
-        // relic granted was visible nowhere except a menu that does not even
-        // say it fired (see FightHudModel's BuffBadge comment).
+        // Six badges above the portrait, reading whatever
+        // FightHudModel.StatusRowsFor says is currently on the acting
+        // character. The portrait had nothing here before the original
+        // status-effect UI pass -- a buff a relic granted was visible
+        // nowhere except a menu that does not even say it fired.
         //
-        // Two of these ten statuses have real icon art now (Chilled, Rooted
-        // -- see FightHudModel.StatusBadgeIcons and
-        // tools/art/make_status_icons.py); the rest are still the same
-        // "no art authored" shape the rest of this project already uses for
-        // that state -- a plain button face, tinted at runtime rather than
-        // switching sprites. RefreshPartyBuffs decides per-badge which one
-        // applies; no structural change was needed here to carry a sprite,
-        // because Ui.Button already gives this node the same Image + synthesised
-        // TMP caption pairing the enemy-intent badges use.
+        // REBUILT THROUGH BuildStatusBadge, same Glyph/Code/Counter anatomy
+        // as the enemy and roster rows -- PLAN_STATUS_EFFECT_UI's own defect
+        // list, package B's first pass left this one as a plain chromeless
+        // Ui.Button (root Image doubling as both frame and glyph, Code
+        // carrying the counter folded into its own text: "PSN·2"), which is
+        // what made the first capture's party badges unreadable tinted
+        // smudges with text stacked on top. There is no structural reason
+        // for the party plate to be the one surface with fewer layers than
+        // the other two; BuildStatusBadge already builds a hoverable button
+        // with a dedicated Frame (the root Image), Glyph, Code and Counter,
+        // so this just calls it at the party's own size/pitch instead of
+        // hand-rolling a shorter anatomy.
         //
         // 6, UP FROM 4 (PLAN_STATUS_EFFECT_UI section 1) -- section 6 found
         // the realistic worst case for a party member (Poison, Vulnerable,
@@ -1332,6 +1335,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // the same x1.5 as the icon itself.
         private const float PartyBuffX0 = -111f;
 
+        // 9/8 -- interpolated between the enemy row's 11/9 at 36px and the
+        // roster row's 8/7 at 20px for this row's own 27px, the same way the
+        // three rows already scale everything else (badge size, pitch) with
+        // their own footprint rather than sharing one font size across three
+        // different physical sizes.
+        private const int PartyBuffCodeFontSize = 9;
+        private const int PartyBuffCounterFontSize = 8;
+
         private IEnumerable<UiNode> BuildPartyBuffIcons()
         {
             PartyBuffIcons.Clear();
@@ -1339,11 +1350,8 @@ namespace PrincesPalace.Domain.UiKit.Screens
             for (int i = 0; i < PartyBuffSlots; i++)
             {
                 float x = PartyBuffX0 + i * PartyBuffPitch;
-                var icon = Ui.Button($"PartyBuff{i}", UiString.Runtime,
-                        new UiVec(PartyBuffIconSize, PartyBuffIconSize), 11,
-                        Place.At(x, PartyBuffY))
-                    .NoChrome()
-                    .Inactive();
+                var icon = BuildStatusBadge($"PartyBuff{i}", x, PartyBuffY, PartyBuffIconSize,
+                    PartyBuffCodeFontSize, PartyBuffCounterFontSize);
 
                 PartyBuffIcons.Add(icon);
                 yield return icon;
@@ -1983,17 +1991,26 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // -- unlike IntentTooltip/PartyBuffTooltip above, whose fixed spot IS
         // where they are read.
         //
-        // Sized for a 5-line overflow list (section 6's "+N" chip hovers to
-        // list every hidden entry, one per line): 5 lines of PartyBuffTooltip's
-        // own font leave less headroom than they need, so this one is taller.
+        // 300 WIDE, DOWN FROM 400 -- the first capture's defect: a
+        // ~380x160 panel is sized for a paragraph, not "Rooted -- Skill
+        // Only, 2 turns", and Beside's own reach (gap + half the badge +
+        // half the tooltip) grows with this box, which is what pushed the
+        // computed position far enough from the badge to read as
+        // unrelated. Height (130) is sized for the ONE case that actually
+        // needs several lines -- section 6's "+N" chip, whose tooltip lists
+        // every hidden entry one per line, up to five short lines at this
+        // font -- not for the common one-or-two-line case, which sits with
+        // room to spare inside the same box rather than getting its own
+        // smaller one (a size that changes with content is a second layout
+        // system Beside would have to re-solve per hover).
         private UiNode BuildStatusTooltip()
         {
-            var label = Ui.Label("StatusTooltipText", UiString.Runtime, new UiVec(360f, 170f), 14,
+            var label = Ui.Label("StatusTooltipText", UiString.Runtime, new UiVec(280f, 110f), 13,
                 FightHudPalette.GoldText, Place.At(0f, 0f));
             StatusTooltipText = label;
 
             var panel = Ui.Tooltip("StatusTooltip", PanelViolet, null, Place.At(-330f, -60f),
-                UiSize.Fixed(400f, 190f), label);
+                UiSize.Fixed(300f, 130f), label);
             StatusTooltip = panel;
             return panel;
         }
