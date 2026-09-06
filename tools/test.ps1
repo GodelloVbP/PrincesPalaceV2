@@ -5,7 +5,8 @@ param(
     [switch]$List,
     [switch]$Full,
     [switch]$Changed,
-    [switch]$Unity
+    [switch]$Unity,
+    [switch]$SelfCheck
 )
 
 # The FAST path. Runs a slice of the suite instead of all of it, and where it
@@ -73,8 +74,16 @@ param(
 #                                    host -- the answer to "is the fast host
 #                                    lying to me?"
 #     tools/test.ps1 -List           what is available (classes with their
-#                                    host, areas, ORPHANS, discovery blind
-#                                    spots)
+#                                    host, areas, structure violations,
+#                                    duplicate names, discovery blind spots)
+#     tools/test.ps1 -List -SelfCheck
+#                                    does the gate still refuse what it claims
+#                                    to? Points discovery at
+#                                    tools/test_areas_fixture -- a tree broken
+#                                    six ways on purpose, outside Assets/ so
+#                                    Unity never compiles it -- and asserts
+#                                    each refusal fires. Prints SELF-CHECK: ok
+#                                    or names every miss, and exits non-zero.
 #     tools/test.ps1 -Full           everything, same as run_tests_parallel
 
 # Derived, not hardcoded - see the same block in run_tests_parallel.ps1 for
@@ -96,10 +105,100 @@ $RunnerFor = @{
 # knows what an "area" is. An area is the folder a test file sits in.
 . (Join-Path $PSScriptRoot "test_areas.ps1")
 
+# -SelfCheck points discovery at tools/test_areas_fixture/ instead of the real
+# Tests tree and asserts each refusal fires on the case built for it. Set
+# BEFORE the discovery calls below, and it works because a dot-sourced
+# function resolves $AreasTestsRoot through the caller's scope at CALL time --
+# the same PS 5.1 scoping note the top of test_areas.ps1 makes for
+# $PSScriptRoot, used deliberately here.
+#
+# Why a fixture rather than a unit test over the real tree: every one of these
+# refusals is about a tree that is WRONG, and the real tree is (and must stay)
+# right. Provoking one in place means editing Assets/, which the gate would
+# then refuse for real, in a way that outlives the check if anything goes
+# sideways. The fixture is the only tree that can safely be broken.
+if ($SelfCheck) {
+    $AreasTestsRoot = Join-Path $PSScriptRoot "test_areas_fixture"
+}
+
 $testIndex = Get-TestIndex
 $classes = Get-TestClasses -Index $testIndex
 $testAreas = Get-TestAreas -Index $testIndex
 $testHosts = Get-TestHosts -Index $testIndex
+
+# --- -List -SelfCheck: does the gate still refuse what it claims to? --------
+#
+# No Pester, no assertion library: one table of expectations, each a name and
+# a predicate over the three lists the gate produces. It reports every miss,
+# not the first, because a regex change usually breaks more than one at once
+# and one refusal at a time is a slow way to find that out.
+#
+# The counts are asserted alongside the contents so an over-firing refusal
+# fails here too -- a check that only ever asks "did it complain about X"
+# passes a function that complains about everything.
+function Invoke-SelfCheck {
+    param([hashtable]$Index)
+
+    $structural = @(Get-StructuralViolations)
+    $duplicates = @(Get-DuplicateClassNames -Index $Index)
+    $blindSpots = @(Get-DiscoveryBlindSpots -Index $Index)
+
+    $expectations = @(
+        @{ Name = "[TestCase]-only fixture is discovered"
+           Ok   = { $Index.ContainsKey("TestCaseOnlyFixtureTests") } }
+        @{ Name = "a folder nested in an area folder is refused"
+           Ok   = { ($structural | Where-Object { $_ -match 'Run/Nested/ is nested inside an area folder' }).Count -eq 1 } }
+        @{ Name = "a .cs file two folders deep is refused"
+           Ok   = { ($structural | Where-Object { $_ -match 'DepthTwoFixtureTests\.cs is more than one folder deep' }).Count -eq 1 } }
+        @{ Name = "a [TestCase]-only suite in Shared/ is refused"
+           Ok   = { ($structural | Where-Object { $_ -match 'SharedSuiteFixtureTests\.cs carries a \[TestCase\]' }).Count -eq 1 } }
+        @{ Name = "a generic fixture is refused"
+           Ok   = { ($structural | Where-Object { $_ -match "generic fixture 'class GenericFixtureTests" }).Count -eq 1 } }
+        @{ Name = "a public nested fixture is refused"
+           Ok   = { ($structural | Where-Object { $_ -match "'NestedInnerFixtureTests' nested inside another type" }).Count -eq 1 } }
+        @{ Name = "a brace inside a string literal is not nesting"
+           Ok   = { ($structural | Where-Object { $_ -match "'OuterFixtureTests' nested" }).Count -eq 0 } }
+        @{ Name = "one class name in two files is refused"
+           Ok   = { ($duplicates | Where-Object { $_ -match '^DuplicatedFixtureTests is declared by 2 files' }).Count -eq 1 } }
+        @{ Name = "an internal fixture beside a public one is a blind spot"
+           Ok   = { ($blindSpots | Where-Object { $_ -match 'class InternalOnlyFixtureTests is declared here' }).Count -eq 1 } }
+        @{ Name = "the public fixture beside it is NOT a blind spot"
+           Ok   = { ($blindSpots | Where-Object { $_ -match 'class InternalFixtureTests is' }).Count -eq 0 } }
+        @{ Name = "nothing else is refused (5 structural, 1 duplicate, 1 blind spot)"
+           Ok   = { $structural.Count -eq 5 -and $duplicates.Count -eq 1 -and $blindSpots.Count -eq 1 } }
+    )
+
+    $misses = @()
+    foreach ($e in $expectations) {
+        if (-not (& $e.Ok)) { $misses += $e.Name }
+    }
+
+    if ($misses.Count -eq 0) {
+        Write-Host "SELF-CHECK: ok ($($expectations.Count) expectations over tools/test_areas_fixture)"
+        return 0
+    }
+
+    Write-Host "SELF-CHECK FAILED ($($misses.Count) of $($expectations.Count)) -- the gate no longer refuses what it claims to:"
+    foreach ($m in $misses) { Write-Host "  MISS: $m" }
+    Write-Host "`nWhat the fixture produced:"
+    Write-Host "  structural ($($structural.Count)):"
+    foreach ($v in $structural) { Write-Host "    $v" }
+    Write-Host "  duplicates ($($duplicates.Count)):"
+    foreach ($v in $duplicates) { Write-Host "    $v" }
+    Write-Host "  blind spots ($($blindSpots.Count)):"
+    foreach ($v in $blindSpots) { Write-Host "    $v" }
+    Write-Host "`nEither a refusal in tools/test_areas.ps1 stopped working, or a case in"
+    Write-Host "tools/test_areas_fixture/ was changed without its expectation here."
+    return 1
+}
+
+if ($SelfCheck) {
+    if (-not $List) {
+        Write-Host "-SelfCheck is a -List mode. Run: tools/test.ps1 -List -SelfCheck"
+        exit 1
+    }
+    exit (Invoke-SelfCheck -Index $testIndex)
+}
 
 if ($List) {
     Write-Host "`nTest classes by platform. [D] runs under dotnet (tools/domain-tests,"
