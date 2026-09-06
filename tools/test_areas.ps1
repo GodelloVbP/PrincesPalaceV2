@@ -651,6 +651,10 @@ $PathAreas = @(
     # EditMode-tested at all -- Data/ compiles into Core and the EditMode suite
     # is Domain-only, so InventoryOps was unreachable by any test where it lived.
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Inventory/'; Areas = @('ui', 'run') }
+    # The preview request/result protocol. Its one fixture is
+    # Tests/EditMode/Content/PreviewProtocolTests.cs, and the loop it serves is
+    # the content-authoring one -- its 'build' action IS a content rebuild.
+    @{ Pattern = '^Assets/_Project/Scripts/Domain/Preview/'; Areas = @('content') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Relics/';    Areas = @('content') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Rewards/';   Areas = @('run', 'content') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Rng/';       Areas = @('rng') }

@@ -178,9 +178,13 @@ Sprite must be listed there or it silently loads as null),
 Unity locks a project's `Library` exclusively, so batchmode cannot run while
 the Editor is open — this `[InitializeOnLoad]` watcher polls
 `Temp/pp_request.json` on the update tick and answers on
-`Temp/pp_result.json`. Its header carries the whole protocol, request ids and
-the busy/ok/failed states included; it only ever writes `SessionState`, never
-a save), `QuickFightMenu.cs` (one menu click into a fight against the last
+`Temp/pp_result.json`. A thin shell: the documents themselves -- which
+actions exist, which id each needs, what a result carries, the
+busy/ok/failed states -- live in `Domain/Preview/PreviewProtocol.cs`, where
+`PreviewProtocolTests` can reach them without an Editor. What stays here is
+the poll, the two files, the two questions about Editor state, and the four
+pieces of work; it only ever writes `SessionState`, never a save),
+`QuickFightMenu.cs` (one menu click into a fight against the last
 previewed id, or against nothing in particular when the caller passes none),
 `SceneBuilder/SceneBuilder.Typography.cs` (`FontFor`/`MaterialFor`: resolves
 a `TypographyRole` to the generated font/material assets `TmpBootstrap.

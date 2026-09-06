@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using PrincesPalace;
+using PrincesPalace.Domain.Preview;
 using UnityEditor;
 using UnityEngine;
 
@@ -35,6 +36,13 @@ using UnityEngine;
 //     watcher never stops Play itself. An author who left a fight running has
 //     unsaved state in front of them and a tool that yanks it is a tool they
 //     stop running.
+//
+// THE DOCUMENTS THEMSELVES LIVE IN Domain/Preview/PreviewProtocol.cs. What
+// stays here is everything that needs an editor: the poll, the two files, the
+// two questions about Editor state (compiling, playing), and the four pieces
+// of work. Which actions exist, which id each needs, what a result carries and
+// the three state names are decisions over strings, and they were untestable
+// while they sat inside this [InitializeOnLoad] class.
 //
 // STATE IS PREVIEW-OWNED. The only thing this writes outside Temp/ is
 // SessionState, which is Editor-process-local and dies with the Editor. It
@@ -74,37 +82,6 @@ public static class PreviewRequestWatcher
         EditorApplication.update += Tick;
     }
 
-    [Serializable]
-    private class Request
-    {
-        public string requestId;
-
-        // What to do: "build" regenerates the content assets in this Editor,
-        // "preview" opens the Fight scene against one mob and enters Play. An
-        // unknown action is `failed` with the name in the message rather than
-        // ignored -- a preview.ps1 from a newer checkout talking to an older
-        // Editor should say so.
-        public string action;
-        public string enemyId;
-
-        // tools/preview.ps1 -Spell / -Character. Both end in the same
-        // placeholder fight the enemy route uses; what differs is which
-        // DevForced* keys are set before Play starts.
-        public string skillId;
-        public string characterId;
-
-        public string formation;
-        public bool launch;
-    }
-
-    [Serializable]
-    private class Result
-    {
-        public string requestId;
-        public string state;
-        public string message;
-    }
-
     private static void Tick()
     {
         if (EditorApplication.timeSinceStartup < _nextPoll)
@@ -119,10 +96,10 @@ public static class PreviewRequestWatcher
             return;
         }
 
-        Request request;
+        PreviewRequest request;
         try
         {
-            request = JsonUtility.FromJson<Request>(File.ReadAllText(RequestFile));
+            request = JsonUtility.FromJson<PreviewRequest>(File.ReadAllText(RequestFile));
         }
         catch (Exception e)
         {
@@ -135,9 +112,13 @@ public static class PreviewRequestWatcher
             return;
         }
 
-        if (request == null || string.IsNullOrEmpty(request.requestId))
+        if (!PreviewProtocol.IsAnswerable(request))
         {
-            Debug.LogWarning("[PreviewRequestWatcher] request file carries no requestId, discarding it.");
+            // Not written out as a result file: with no requestId to echo,
+            // every caller including the one that sent it would ignore it.
+            // PreviewProtocol.Unanswerable says the same thing where a test can
+            // read it.
+            Debug.LogWarning("[PreviewRequestWatcher] " + PreviewProtocol.Unanswerable(request).message);
             TryDelete(RequestFile);
             return;
         }
@@ -147,14 +128,14 @@ public static class PreviewRequestWatcher
         // request file is the only thing that carries the ask across.
         if (EditorApplication.isCompiling || EditorApplication.isUpdating)
         {
-            WriteResult(request.requestId, "busy", "the Editor is compiling or importing; waiting for it to settle");
+            Write(PreviewProtocol.Busy(request));
             return;
         }
 
         if (EditorApplication.isPlaying || EditorApplication.isPlayingOrWillChangePlaymode)
         {
             TryDelete(RequestFile);
-            WriteResult(request.requestId, "failed", "the Editor is in Play mode -- exit Play mode first, then re-run preview.ps1");
+            Write(PreviewProtocol.InPlayMode(request));
             return;
         }
 
@@ -165,35 +146,42 @@ public static class PreviewRequestWatcher
         Handle(request);
     }
 
-    private static void Handle(Request request)
+    // ROUTING ONLY. Everything refusable about the document itself -- an
+    // action this Editor does not implement, an action whose id is missing --
+    // is decided by PreviewProtocol.Screen, so the four methods below start
+    // from a request that is already known to be actionable.
+    private static void Handle(PreviewRequest request)
     {
-        switch (request.action)
+        var refusal = PreviewProtocol.Screen(request);
+        if (refusal != null)
         {
-            case "build":
+            Write(refusal);
+            return;
+        }
+
+        switch (PreviewProtocol.ActionOf(request.action))
+        {
+            case PreviewAction.Build:
                 Build(request);
                 return;
-            case "preview":
+            case PreviewAction.Preview:
                 Preview(request);
                 return;
-            case "spell":
+            case PreviewAction.Spell:
                 Spell(request);
                 return;
-            case "character":
+            case PreviewAction.Character:
                 CharacterPreview(request);
-                return;
-            default:
-                WriteResult(request.requestId, "failed",
-                    $"unknown action '{request.action}' -- this Editor's PreviewRequestWatcher does not implement it");
                 return;
         }
     }
 
-    private static void Build(Request request)
+    private static void Build(PreviewRequest request)
     {
         try
         {
             ContentBuilder.BuildDefaultContent();
-            WriteResult(request.requestId, "ok", "content rebuilt in the open Editor");
+            WriteResult(request.requestId, PreviewProtocol.StateOk, "content rebuilt in the open Editor");
         }
         catch (Exception e)
         {
@@ -201,7 +189,7 @@ public static class PreviewRequestWatcher
             // the author, and a resolver error already names the offending
             // entry. The stack is in the Editor console for whoever needs it.
             Debug.LogException(e);
-            WriteResult(request.requestId, "failed", e.Message);
+            WriteResult(request.requestId, PreviewProtocol.StateFailed, e.Message);
         }
     }
 
@@ -212,14 +200,9 @@ public static class PreviewRequestWatcher
     // in this class -- including the fact that a request was being handled --
     // is gone on the other side of it. A result written afterwards would be
     // written by nobody.
-    private static void Preview(Request request)
+    private static void Preview(PreviewRequest request)
     {
         string id = request.enemyId;
-        if (string.IsNullOrEmpty(id))
-        {
-            WriteResult(request.requestId, "failed", "no enemyId in the request");
-            return;
-        }
 
         try
         {
@@ -230,7 +213,7 @@ public static class PreviewRequestWatcher
             FightBootstrap.DevForcedFormation = request.formation;
             FightBootstrap.DevForcedEnemyScript = true;
 
-            WriteResult(request.requestId, "ok",
+            WriteResult(request.requestId, PreviewProtocol.StateOk,
                 $"entering Play mode against '{id}' ({(request.formation == "full" ? "full formation" : "lone")}), " +
                 "showcasing its abilities in authored order");
 
@@ -239,7 +222,7 @@ public static class PreviewRequestWatcher
         catch (Exception e)
         {
             Debug.LogException(e);
-            WriteResult(request.requestId, "failed", e.Message);
+            WriteResult(request.requestId, PreviewProtocol.StateFailed, e.Message);
         }
     }
 
@@ -252,21 +235,16 @@ public static class PreviewRequestWatcher
     // warning buried in a console they would have to go and open, behind a
     // Play mode they did not want to enter. PreviewFight.ForSpell touches
     // nothing; it only answers.
-    private static void Spell(Request request)
+    private static void Spell(PreviewRequest request)
     {
         string id = request.skillId;
-        if (string.IsNullOrEmpty(id))
-        {
-            WriteResult(request.requestId, "failed", "no skillId in the request");
-            return;
-        }
 
         try
         {
             var plan = PreviewFight.ForSpell(id);
             if (!plan.Ok)
             {
-                WriteResult(request.requestId, "failed", plan.Refusal);
+                WriteResult(request.requestId, PreviewProtocol.StateFailed, plan.Refusal);
                 return;
             }
 
@@ -274,7 +252,7 @@ public static class PreviewRequestWatcher
             FightBootstrap.DevForcedFirstAction = id;
             FightBootstrap.DevForcedFormation = plan.Formation;
 
-            WriteResult(request.requestId, "ok", "entering Play mode: " + PreviewFight.Describe(plan));
+            WriteResult(request.requestId, PreviewProtocol.StateOk, "entering Play mode: " + PreviewFight.Describe(plan));
 
             // No enemy id: the spell preview is about the caster, and the
             // placeholder's own art-filtered pick is a perfectly good thing to
@@ -284,7 +262,7 @@ public static class PreviewRequestWatcher
         catch (Exception e)
         {
             Debug.LogException(e);
-            WriteResult(request.requestId, "failed", e.Message);
+            WriteResult(request.requestId, PreviewProtocol.StateFailed, e.Message);
         }
     }
 
@@ -295,45 +273,41 @@ public static class PreviewRequestWatcher
     // whatever their own kit puts first, through the same ForceFirstAction
     // seam the spell route uses. Nothing is granted here: the opener is a row
     // they already have, so what is on screen is the character as authored.
-    private static void CharacterPreview(Request request)
+    private static void CharacterPreview(PreviewRequest request)
     {
         string id = request.characterId;
-        if (string.IsNullOrEmpty(id))
-        {
-            WriteResult(request.requestId, "failed", "no characterId in the request");
-            return;
-        }
 
         try
         {
             var plan = PreviewFight.ForCharacter(id);
             if (!plan.Ok)
             {
-                WriteResult(request.requestId, "failed", plan.Refusal);
+                WriteResult(request.requestId, PreviewProtocol.StateFailed, plan.Refusal);
                 return;
             }
 
             FightBootstrap.DevForcedSquad = id;
             if (plan.Skill != null) FightBootstrap.DevForcedFirstAction = plan.Skill.Id;
 
-            WriteResult(request.requestId, "ok", "entering Play mode: " + PreviewFight.Describe(plan));
+            WriteResult(request.requestId, PreviewProtocol.StateOk, "entering Play mode: " + PreviewFight.Describe(plan));
 
             QuickFightMenu.StartPlaceholderFight(null);
         }
         catch (Exception e)
         {
             Debug.LogException(e);
-            WriteResult(request.requestId, "failed", e.Message);
+            WriteResult(request.requestId, PreviewProtocol.StateFailed, e.Message);
         }
     }
 
     // Temp-then-replace, so a reader polling this file every 300ms can never
     // catch it half written. File.Replace rather than Move because Move onto
     // an existing path throws on Windows.
-    private static void WriteResult(string requestId, string state, string message)
-    {
-        var result = new Result { requestId = requestId, state = state, message = message };
+    private static void WriteResult(string requestId, string state, string message) =>
+        Write(PreviewProtocol.Result(requestId, state, message));
 
+    private static void Write(PreviewResult result)
+    {
         try
         {
             Directory.CreateDirectory("Temp");
