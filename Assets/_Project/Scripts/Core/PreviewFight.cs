@@ -118,7 +118,7 @@ namespace PrincesPalace
                 return plan;
             }
 
-            plan.CasterId = ChooseCaster(skill, plan);
+            plan.CasterId = ChooseCaster(skill, Roster(), plan);
             if (plan.CasterId == null) return plan;
 
             // THE FORMATION IS THE EFFECT'S, not the author's. A Summon into a
@@ -154,6 +154,15 @@ namespace PrincesPalace
             return plan;
         }
 
+        // THE ROSTER, as records. The catalogue is asked for its characters
+        // exactly here, so every decision below is made over data rather than
+        // over the content database.
+        private static IReadOnlyList<ResolvedCharacter> Roster() =>
+            ContentDatabase.Characters
+                .Where(c => c != null && c.Data != null)
+                .Select(c => c.Data)
+                .ToList();
+
         // WHO CASTS IT, in the order the author would guess.
         //
         // 1. The character the skill is authored against. Anything else would
@@ -165,12 +174,25 @@ namespace PrincesPalace
         //    the author is left guessing why.
         // 3. Failing that, the roster lead with battle art, because the point
         //    of the exercise is to look at something.
-        private static string ChooseCaster(ResolvedSkill skill, Plan plan)
+        //
+        // PUBLIC, AND THE ROSTER IS AN ARGUMENT. Both refusals this ladder can
+        // reach -- "no character in content carries resource X" and "there are
+        // no characters at all" -- are UNREACHABLE against the content in this
+        // repo: Shawn carries Wool and the roster is never empty. A refusal
+        // nothing can provoke is a refusal nobody has read, and the message IS
+        // the deliverable here (an author's whole experience of a refused
+        // preview is the sentence it prints). Taking the roster as a parameter
+        // is what lets PreviewFightRefusalTests walk every rung with a
+        // hand-built one; it costs exactly one call site, ForSpell above.
+        public static string ChooseCaster(
+            ResolvedSkill skill, IReadOnlyList<ResolvedCharacter> roster, Plan plan)
         {
+            roster = roster ?? Array.Empty<ResolvedCharacter>();
+
             if (!string.IsNullOrWhiteSpace(skill.CharacterId))
             {
-                var owner = ContentDatabase.Characters.FirstOrDefault(c => c != null && c.id == skill.CharacterId);
-                if (owner != null) return owner.id;
+                var owner = roster.FirstOrDefault(c => c != null && c.Id == skill.CharacterId);
+                if (owner != null) return owner.Id;
 
                 plan.Notes.Add($"'{skill.CharacterId}' is not in the roster, so a stand-in casts it");
             }
@@ -182,17 +204,17 @@ namespace PrincesPalace
                 // in the abstract -- ResolvedSkill has a cost and no id, since
                 // a character has exactly one -- so the only way to name the
                 // one it means is through whoever it belongs to.
-                string wanted = SignatureIdOf(skill.CharacterId);
+                string wanted = SignatureIdOf(roster, skill.CharacterId);
 
-                var payer = ContentDatabase.Characters.FirstOrDefault(
-                    c => c != null && c.Data.HasSignatureResource &&
-                         (wanted == null || c.Data.SignatureId == wanted));
+                var payer = roster.FirstOrDefault(
+                    c => c != null && c.HasSignatureResource &&
+                         (wanted == null || c.SignatureId == wanted));
 
                 if (payer != null)
                 {
-                    plan.Notes.Add($"cast by '{payer.id}', who carries the " +
-                                   $"{payer.Data.SignatureDisplayName ?? payer.Data.SignatureId} it spends");
-                    return payer.id;
+                    plan.Notes.Add($"cast by '{payer.Id}', who carries the " +
+                                   $"{payer.SignatureDisplayName ?? payer.SignatureId} it spends");
+                    return payer.Id;
                 }
 
                 plan.Refusal = $"no character in content carries resource {wanted ?? "(any signature resource)"}, " +
@@ -203,9 +225,9 @@ namespace PrincesPalace
                 return null;
             }
 
-            var lead = ContentDatabase.Characters.FirstOrDefault(
-                           c => c != null && !string.IsNullOrWhiteSpace(c.Data.BattleSpritePath))
-                       ?? ContentDatabase.Characters.FirstOrDefault();
+            var lead = roster.FirstOrDefault(
+                           c => c != null && !string.IsNullOrWhiteSpace(c.BattleSpritePath))
+                       ?? roster.FirstOrDefault(c => c != null);
 
             if (lead == null)
             {
@@ -213,19 +235,19 @@ namespace PrincesPalace
                 return null;
             }
 
-            if (lead.id != skill.CharacterId)
+            if (lead.Id != skill.CharacterId)
             {
-                plan.Notes.Add($"cast by the roster lead '{lead.id}' -- the skill names no owner in the roster");
+                plan.Notes.Add($"cast by the roster lead '{lead.Id}' -- the skill names no owner in the roster");
             }
 
-            return lead.id;
+            return lead.Id;
         }
 
-        private static string SignatureIdOf(string characterId)
+        private static string SignatureIdOf(IReadOnlyList<ResolvedCharacter> roster, string characterId)
         {
             if (string.IsNullOrWhiteSpace(characterId)) return null;
-            var definition = ContentDatabase.Characters.FirstOrDefault(c => c != null && c.id == characterId);
-            return definition != null && definition.Data.HasSignatureResource ? definition.Data.SignatureId : null;
+            var definition = roster.FirstOrDefault(c => c != null && c.Id == characterId);
+            return definition != null && definition.HasSignatureResource ? definition.SignatureId : null;
         }
 
         // ---- the character plan ----------------------------------------------
