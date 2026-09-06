@@ -38,6 +38,44 @@ namespace PrincesPalace.PlayModeTests
         public void Restore()
         {
             FightBeatPlayer.BeatSpeedMultiplier = 1f;
+            SpellVfxPlayer.ClockOverride = null;
+        }
+
+        // ---- seeing an effect that lasts 13ms ------------------------------------
+        //
+        // WHY EVERY "IS IT DRAWN" TEST BELOW HOLDS THE CLOCK.
+        //
+        // PlayFast runs the fight at 60x, so a cast's whole real-time budget is
+        // FightBeatPlayer.Scaled(seconds) -- 13ms for the 0.78s cinderfault
+        // below, 8.7ms for a 0.52s flare. A batchmode frame right after a scene
+        // load was measured at 24ms and 57ms. So `cast; yield return null;
+        // count what is enabled` does not ask "did the cast draw one layer per
+        // enemy"; it asks "did the next frame come back inside 13ms", and the
+        // answer varies run to run. That is AUDIT.md #61 -- three runs on an
+        // unchanged tree, a different test failing each time, because the four
+        // coroutines (one fault, three eruptions) each lose that race
+        // independently.
+        //
+        // Holding SpellVfxPlayer's clock at the cast makes elapsed stay zero,
+        // so the effect is still mid-playback however long the frame takes.
+        // Nothing else about the cast changes: image.enabled, the pool walk and
+        // the placement arithmetic all run exactly as they do in a fight.
+        private static void HoldTheClockAtTheCast()
+        {
+            float instant = Time.realtimeSinceStartup;
+            SpellVfxPlayer.ClockOverride = () => instant;
+        }
+
+        // The other half of the same seam: jump the clock well past any budget
+        // a spell in this file authors, so the next tick of each coroutine runs
+        // its own cleanup. TWO frames are waited after this, not one -- the
+        // test runner's enumerator and a MonoBehaviour's coroutine resume at
+        // different points in a frame, and only the second frame is guaranteed
+        // to have a full coroutine tick behind it.
+        private static void RunTheClockPastTheEnd()
+        {
+            float past = Time.realtimeSinceStartup + 600f;
+            SpellVfxPlayer.ClockOverride = () => past;
         }
 
         // A sheet of a given aspect with a given transparent margin along the
@@ -704,6 +742,7 @@ namespace PrincesPalace.PlayModeTests
 
             var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
 
+            HoldTheClockAtTheCast();
             _fight.PlaySpellVfxForTest(new CombatBeat
             {
                 Actor = hero,
@@ -742,6 +781,7 @@ namespace PrincesPalace.PlayModeTests
             var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
             var foe = _fight.SessionForTest.Encounter.Enemies.First(c => c != null);
 
+            HoldTheClockAtTheCast();
             _fight.PlaySpellVfxForTest(new CombatBeat
             {
                 Actor = hero,
@@ -1086,6 +1126,7 @@ namespace PrincesPalace.PlayModeTests
                 "the fixture did not field a full stage, so this would prove nothing about a formation");
 
             var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
+            HoldTheClockAtTheCast();
             _fight.PlaySpellVfxForTest(TwoLayerBeat(hero, enemies));
             yield return null;
 
@@ -1106,12 +1147,53 @@ namespace PrincesPalace.PlayModeTests
             var enemies = _fight.SessionForTest.Encounter.Enemies.Where(e => e != null && e.IsAlive).ToList();
             var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
 
+            HoldTheClockAtTheCast();
             _fight.PlaySpellVfxForTest(TwoLayerBeat(hero, new List<CombatantState> { enemies[0] }));
             yield return null;
 
             Assert.AreEqual(1, DrawnEruptions().Count,
                 "two empty slots must not be given eruptions of their own");
             Assert.IsTrue(Ground.Image.enabled, "one enemy is still standing on a fault");
+        }
+
+        // THE OTHER HALF OF THE SAME GUARANTEE, and the test AUDIT.md #61 was
+        // missing: the two above prove N eruptions and one fault are drawn AT
+        // THE IMPACT INSTANT, and nothing proved they all go away again.
+        //
+        // Both halves are asserted here against the same cast, which is what
+        // makes this the regression test for #61 rather than a new feature
+        // test. The count is a function of WHERE THE CLOCK IS -- three drawn
+        // while it is held at the cast, none once it is past the end. A test
+        // that waits a frame instead of holding the clock is sampling that same
+        // function at an instant it does not control, which is why one run
+        // counted three eruptions and a fault, and the next counted three
+        // eruptions and no fault on identical source.
+        [UnityTest]
+        public IEnumerator EveryLayerIsDrawnAtTheImpactInstantAndNoneSurvivesTheBeat()
+        {
+            yield return LoadFight(FightHudSpec.StageSlotsPerSide);
+
+            var enemies = _fight.SessionForTest.Encounter.Enemies.Where(e => e != null && e.IsAlive).ToList();
+            var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
+
+            HoldTheClockAtTheCast();
+            _fight.PlaySpellVfxForTest(TwoLayerBeat(hero, enemies));
+            yield return null;
+
+            Assert.AreEqual(enemies.Count, DrawnEruptions().Count,
+                "held at the cast, one eruption per enemy has to be on screen");
+            Assert.IsTrue(Ground.Image.enabled, "held at the cast, the fault has to be on screen");
+
+            RunTheClockPastTheEnd();
+            yield return null;
+            yield return null;
+
+            Assert.IsEmpty(DrawnEruptions(),
+                "an eruption is still drawn after its own sequence ended");
+            Assert.IsFalse(Ground.Image.enabled,
+                "the fault is still drawn after its own sequence ended");
+            Assert.IsFalse(Ground.IsPlaying,
+                "the ground layer's coroutine outlived the beat it was started for");
         }
 
         // THE FAULT IS SIZED TO THE FORMATION, not to a slot and not to a
@@ -1210,6 +1292,9 @@ namespace PrincesPalace.PlayModeTests
             var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
             var foe = _fight.SessionForTest.Encounter.Enemies.First(c => c != null);
 
+            // HELD, so "no ground layer" is proven rather than inferred from
+            // an effect that had already finished by the time anyone looked.
+            HoldTheClockAtTheCast();
             _fight.PlaySpellVfxForTest(new CombatBeat
             {
                 Actor = hero,
@@ -1257,6 +1342,7 @@ namespace PrincesPalace.PlayModeTests
             var enemies = _fight.SessionForTest.Encounter.Enemies.Where(e => e != null && e.IsAlive).ToList();
             var hero = _fight.SessionForTest.Encounter.PlayerParty.First(c => c != null);
 
+            HoldTheClockAtTheCast();
             _fight.PlaySpellVfxForTest(TwoLayerBeat(hero, enemies));
             yield return null;
 

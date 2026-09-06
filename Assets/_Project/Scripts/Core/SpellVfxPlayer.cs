@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
@@ -31,6 +32,32 @@ namespace PrincesPalace
         // dissolving over the last 45% keeps every frame readable and removes
         // the step between them, which is the whole complaint.
         private const float DissolveFraction = 0.45f;
+
+        // THE CLOCK PLAYBACK IS MEASURED AGAINST, and the only reason it is a
+        // seam at all: null in the game, where it reads the wall clock.
+        //
+        // A cast's whole budget is FightBeatPlayer.Scaled(seconds), and a test
+        // runs the fight at BeatSpeedMultiplier 60 -- so a 0.78s cinderfault is
+        // 13 MILLISECONDS of real time end to end. A batchmode frame right
+        // after a scene load was measured at 24ms and 57ms. A test that casts,
+        // waits one frame and then counts the layers on screen is therefore
+        // counting AFTER the effect tore itself down, and which of the four
+        // coroutines it still catches depends on how long that one frame
+        // happened to take. That is AUDIT.md #61: three runs on an unchanged
+        // tree, a different test failing each time.
+        //
+        // Holding this still turns "what is drawn at the impact instant" from a
+        // race into a question with an answer -- and advancing it past the end
+        // makes the cleanup half assertable, which waiting on real time never
+        // could at 13ms of resolution.
+        //
+        // Public rather than internal because InternalsVisibleTo names the
+        // EDITOR assembly only; a PlayMode test reaches this or reaches
+        // nothing. Reset by TestGlobals.ResetAll and policed by
+        // GlobalStateLintTests like every other global a test can flip.
+        public static Func<float> ClockOverride;
+
+        private static float Now() => ClockOverride != null ? ClockOverride() : Time.realtimeSinceStartup;
 
         private Coroutine _playing;
 
@@ -174,7 +201,7 @@ namespace PrincesPalace
             // the sequence never had, spent before its first drawing is seen.
             // It also drifts: twenty-six additions of a float are not the sum
             // anyone intended.
-            float started = Time.realtimeSinceStartup;
+            float started = Now();
 
             float elapsed = 0f;
             while (elapsed < total)
@@ -215,7 +242,7 @@ namespace PrincesPalace
                 }
 
                 yield return null;
-                elapsed = Time.realtimeSinceStartup - started;
+                elapsed = Now() - started;
             }
 
             if (arrival > 0) rect.anchoredPosition = to;

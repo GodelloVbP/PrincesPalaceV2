@@ -68,6 +68,7 @@ namespace PrincesPalace.PlayModeTests
             TalentController.MotionSpeedMultiplier = 1f;
             HubController.MotionSpeedMultiplier = 1f;
             FightController.BreathSpeedMultiplier = 1f;
+            SpellVfxPlayer.ClockOverride = null;
             RequirementCurve.Percent = RequirementCurve.DefaultPercent;
             RequirementCurve.GearRequirementsEnabled = false;
         }

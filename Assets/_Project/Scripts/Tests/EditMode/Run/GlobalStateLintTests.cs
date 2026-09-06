@@ -85,6 +85,14 @@ namespace PrincesPalace.Domain.Tests
                 @"Time\.timeScale\s*=",
                 @"Time\.timeScale\s*=\s*1f"),
 
+            // A spell effect's whole scaled lifetime is 13ms at test speed, so
+            // a test that wants to see one on screen holds this rather than
+            // racing a frame against it. Left held, every later test in the
+            // process gets a spell that never finishes.
+            ("SpellVfxPlayer.ClockOverride",
+                @"SpellVfxPlayer\.ClockOverride\s*=",
+                @"SpellVfxPlayer\.ClockOverride\s*=\s*null"),
+
             ("RequirementCurve.GearRequirementsEnabled",
                 @"GearRequirementsEnabled\s*=",
                 @"GearRequirementsEnabled\s*=\s*false"),
