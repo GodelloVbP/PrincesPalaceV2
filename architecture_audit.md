@@ -308,7 +308,9 @@ files that name them:
 `FightController` at 49 looks like a god object and is not one. Its own header
 states what is *not* in it — no damage funnel, no enemy AI, no turn riders, no
 skill dispatch, no talent rules, no reward assembly — all of which resolved into
-Domain's `FightSession` (5,981 lines across 14 files). The controller holds
+Domain's `FightSession` (≈6,000 lines across 14 files, as of `f93bbee8` — a
+precise count in prose drifts every time the class is touched, so this is
+deliberately approximate). The controller holds
 references, paints them from session queries, and forwards clicks. That is why
 v1's 7,073-line ten-partial controller did not need reproducing. The 49 is a
 *fan-in of view components*, which is the correct shape for a screen this size.

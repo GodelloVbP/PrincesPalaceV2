@@ -116,16 +116,18 @@ so a green preview says the picture came out, not that anything still passes.
 ```bash
 powershell -NoProfile -ExecutionPolicy Bypass -File tools/run_tests_parallel.ps1
 ```
-**This builds the scenes.** They are generated artifacts, so a run against
-whatever is on disk tests whatever the source looked like last time someone
-remembered a flag — and it skips `UiAudit`, the only check that sees overlap,
-overflow and duplicate names in what was actually emitted. `-NoScenes` opts out
-and saves ~25s.
-
-It does **not** write them back to main, because a rebuild with no source
-change still reassigns every `fileID`. Add `-BuildScenes` when you intend to
-**commit** the scenes — that is what syncs them (and `-BuildContent` likewise
-for content).
+**By default this does not build the scenes.** They are generated artifacts —
+a rebuild with no source change still reassigns every `fileID` — so building
+them on every run was tried and dropped: the per-screen EditMode tests already
+exercise `UiAudit` against a freshly solved layout, which is most of what a
+rebuild would have bought. What the default run skips is auditing the actual
+`Scenes/*.unity` files SceneBuilder emits, and writing anything back to main.
+Add `-BuildScenes` whenever a `[SerializeField]` or a screen tree under
+`Domain/UiKit/Screens/` changed, and again before you **commit** such a
+change: it builds the scenes, runs `UiAudit` against what was actually
+emitted, and syncs them back to main in one go (`-BuildContent` likewise for
+content). `-NoScenes` is gone — nothing built by default means nothing to opt
+out of.
 
 **Keep the PowerShell scripts pure ASCII.** No BOM means PowerShell 5.1 reads
 them as Windows-1252, and a UTF-8 em-dash inside a string produces a parse

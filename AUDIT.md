@@ -563,6 +563,41 @@ test that pins the flag staying down.
 Left open because it is a balance and presentation decision, not a refactor's
 to make.
 
+### ~~64. `ContentDatabase.Initialize` and `FightSession.IsOnCooldown` had no live reader~~ — fixed in `ab4a0ba5`: both deleted
+
+Same shape as #41/#50/#54: a member declared for a purpose that never grew a
+caller. `ContentDatabase.Initialize` (`Core/Content/ContentDatabase.cs`) was a
+seam meant to let tests inject content directly, skipping Resources — its own
+comment said as much — but no test ever grew the adapter that would have
+called it. Zero call sites in the tree. Tests substitute content one layer
+down instead, where it is cheaper and engine-free: `ContentBuilder` writes
+real assets and `Reset()` drops the cache (`CharacterPortraitTests`,
+`ContentIsolationTests`, `TestGlobals`), or a test bypasses `ContentDatabase`
+altogether and resolves straight from the source JSON (`EnemyContentPinTests`).
+A seam with zero adapters is not a seam, it is dead code with a comment
+explaining what it was for.
+
+`FightSession.IsOnCooldown` (`FightSession.Cooldowns.cs`) was smaller but the
+same story: a public one-line wrapper over `CooldownRemaining` that nothing
+ever called. `CooldownRemaining` stays — it has the real callers.
+
+### 65. A poison death records no `Ledger.WentDown`
+
+Surfaced by the same `SettleDeath` (`FightSession.Ledger.cs`) that fixed #62.
+`TickStatuses` (`FightSession.Riders.cs:381`) kills via `StatusEffects.Tick`
+and calls `SettleDeath(actor: null, target: actor, credit: KillCredit.Nobody)`
+on purpose — the poison was applied turns ago by someone who may now be dead,
+and back-crediting the kill would put points in a column the player cannot
+account for. But `SettleDeath` returns on `KillCredit.Nobody` *before*
+`Ledger.WentDown(LedgerIdOf(target))` runs, so the victim's own down-count is
+skipped along with the attacker's kill credit — a body that went down did go
+down regardless of who is credited for it.
+
+Arguably `WentDown` should fire on every `SettleDeath` call, `Nobody` included,
+and only the kill-credit half should be gated. That changes ledger numbers a
+run and an end-of-fight screen already read, so it is a decision and not a
+drive-by fix.
+
 ## Open investigations
 
 ### ~~52. `SystemMenuExitsTests.OnePressOnAnExitDoesNothingButArmIt` flaked once, navigating to `"Hub"` — cause not found~~ — fixed in `58a7f69`: a leftover `HoldToConfirm` was bleeding its `Abandon` navigation into the next test; the fixture's `TearDown` now cancels every live hold; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
