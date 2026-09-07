@@ -143,6 +143,13 @@ namespace PrincesPalace.Domain.Party
             // the seat would show a pill promising a swap-with-self.
             if (_selectedFrom.IsSeat && _selectedFrom.SeatIndex == i) return PartySeatBadge.None;
 
+            // A locked ORIGIN has no legal destination at all, so no seat may
+            // advertise one -- ClickSeat refuses the whole move (see its own
+            // origin-lock step). Without this the badge promises a swap the
+            // model then declines, which is the same mismatch the
+            // selected-seat case above exists to avoid.
+            if (_selectedFrom.IsSeat && IsSeatLocked(_selectedFrom.SeatIndex)) return PartySeatBadge.None;
+
             if (IsSeatClosed(i) || IsSeatLocked(i)) return PartySeatBadge.None;
 
             if (_seats[i] == null) return PartySeatBadge.PlaceHere;
@@ -216,6 +223,25 @@ namespace PrincesPalace.Domain.Party
             {
                 string occupantName = _seats[i] != null ? DisplayNameOf(_seats[i]) : null;
                 return PartyOutcome.Blocked(PartyToastKind.SeatLocked, actor: occupantName, seat: i);
+            }
+
+            // THE ORIGIN'S LOCK, not just the destination's. A seat-sourced
+            // move or swap VACATES the origin, which is the thing a lock
+            // forbids -- "locked rejects any placement, and its occupant
+            // can't be moved out either" (docs/handoffs/party_screen/
+            // GAP_AUDIT.md row 37). SendToBench already refuses on exactly
+            // this ground; without the same step here the identical
+            // sequence commits through the other gesture.
+            //
+            // Only reachable when the predicate's answer changes after the
+            // selection -- selecting a locked seat is refused by ClickCard
+            // and TrySelectSeat -- which is the run-modifier case the
+            // predicate seam exists for, and the same one
+            // SendToBenchOnASeatThatLockedAfterSelectionRefuses covers.
+            if (_selectedFrom.IsSeat && IsSeatLocked(_selectedFrom.SeatIndex))
+            {
+                return PartyOutcome.Blocked(PartyToastKind.SeatLocked,
+                    actor: DisplayNameOf(_selectedId), seat: _selectedFrom.SeatIndex);
             }
 
             string selectedId = _selectedId;

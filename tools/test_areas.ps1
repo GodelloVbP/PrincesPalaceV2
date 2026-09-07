@@ -655,6 +655,13 @@ $PathAreas = @(
     # Tests/EditMode/Content/PreviewProtocolTests.cs, and the loop it serves is
     # the content-authoring one -- its 'build' action IS a content rebuild.
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Preview/'; Areas = @('content') }
+    # The Party screen's seating model. Its own fixtures sit in Tests/EditMode/
+    # Run (PartyFormationTests, PartyFormationSeatLockTests) because a squad is
+    # what survives a run; 'ui' as well because PartyScreen and PartyArtScale
+    # read this model and PartyScreenTests solves the tree over it. Without a
+    # row here an edit to Domain/Party was UNMAPPED and -Changed refused
+    # outright, which is loud but is not coverage.
+    @{ Pattern = '^Assets/_Project/Scripts/Domain/Party/';     Areas = @('run', 'ui') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Relics/';    Areas = @('content') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Rewards/';   Areas = @('run', 'content') }
     @{ Pattern = '^Assets/_Project/Scripts/Domain/Rng/';       Areas = @('rng') }
