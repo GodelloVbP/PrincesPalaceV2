@@ -195,6 +195,42 @@ namespace PrincesPalace.Domain.Tests
                 "a card monogram letter starts hidden");
         }
 
+        // ---- P4: the drag ghost and the roster drop zone ----------------------------
+
+        [Test]
+        public void TheDragGhostExistsHiddenByDefault()
+        {
+            var screen = PartyScreen.Build(new PartyInputs(3));
+
+            Assert.IsTrue(screen.DragGhost.IsValid, "no drag ghost node was declared");
+            Assert.IsTrue(screen.DragGhost.Node.StartInactive, "the drag ghost starts shown");
+            Assert.IsTrue(screen.DragGhostArt.IsValid, "the ghost's art node was not declared");
+            Assert.IsTrue(screen.DragGhostMonogramPlate.IsValid, "the ghost's monogram plate was not declared");
+            Assert.IsTrue(screen.DragGhostMonogramLetter.IsValid, "the ghost's monogram letter was not declared");
+        }
+
+        [Test]
+        public void TheRosterDropZoneExistsBehindEveryCardInDrawOrder()
+        {
+            var screen = PartyScreen.Build(new PartyInputs(3));
+            Assert.IsTrue(screen.RosterDropZone.IsValid, "no roster drop zone node was declared");
+
+            var order = DrawOrder(screen.Root);
+            int zoneIndex = order.IndexOf("PartyRosterDropZone");
+            Assert.AreNotEqual(-1, zoneIndex, "the roster drop zone is not in the tree");
+
+            for (int i = 0; i < 3; i++)
+            {
+                string cardName = $"PartyCard{i}Button";
+                int cardIndex = order.IndexOf(cardName);
+                Assert.AreNotEqual(-1, cardIndex, $"{cardName} is not in the tree");
+
+                // uGUI draws later siblings on top -- an earlier index in
+                // preorder draw order is what "behind" means here.
+                Assert.Less(zoneIndex, cardIndex, $"the roster drop zone should draw BEHIND {cardName}");
+            }
+        }
+
         // ---- the tab strip still fits with Party present -----------------------------
 
         [Test]
@@ -219,5 +255,24 @@ namespace PrincesPalace.Domain.Tests
 
         private static SolvedNode Find(SolvedNode root, string name) =>
             root.Name == name ? root : root.Descendants().FirstOrDefault(n => n.Name == name);
+
+        // Preorder over the DECLARED tree (not the solved one): a parent's
+        // own draw order is its Children list order, and preorder visits a
+        // sibling before any of a LATER sibling's own descendants -- exactly
+        // what "does A draw behind B" needs to compare two names by index.
+        private static List<string> DrawOrder(UiNode root)
+        {
+            var order = new List<string>();
+
+            void Walk(UiNode node)
+            {
+                order.Add(node.Name);
+                if (node.Children == null) return;
+                foreach (var child in node.Children) Walk(child);
+            }
+
+            Walk(root);
+            return order;
+        }
     }
 }

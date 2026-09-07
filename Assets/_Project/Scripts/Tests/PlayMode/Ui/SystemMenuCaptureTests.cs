@@ -365,6 +365,14 @@ namespace PrincesPalace.PlayModeTests
             party.Cancel();
             yield return null;
 
+            // STATE 4 (P4): right after a committed swap -- the toast, at
+            // full alpha before its fade begins (PartyToast.Show holds full
+            // alpha for its first HoldSeconds).
+            party.ClickSeat(PartySeat.Front);
+            party.ClickSeat(PartySeat.Middle);
+            yield return null;
+            yield return Capture("SystemMenu_party_toast.png", canvas);
+
             // STATE 3: in a run -- reposition only, captured from the map so
             // the five-tab bar and the in-run lintel are in shot with it.
             yield return SceneManager.LoadSceneAsync("Map", LoadSceneMode.Single);

@@ -889,6 +889,19 @@ public static class ScreenRegistry
         controller.lockedForFight = lockedForFight;
         controller.seatBadgeTexts = party.SeatBadges.Select(badge => result.Tmp(badge, searchChildren: true)).ToArray();
 
+        // P4: one drag surface per seat/card button. Attached here so
+        // UiWiringSweep sees the arrays (the same shape as FightController.
+        // partyActorAnimators); WHAT each one does is a per-index closure
+        // PartyController.Wire assigns at runtime -- see PartyDragSource's
+        // own header for why that split, not UiAutoBind, owns the delegates.
+        controller.seatDragSources = party.SeatButtons.Select(result.Attach<PartyDragSource>).ToArray();
+        controller.cardDragSources = party.CardButtons.Select(result.Attach<PartyDragSource>).ToArray();
+
+        // The toast's own fader (P4). [RequireComponent(CanvasGroup)] on
+        // PartyToast adds the CanvasGroup as a side effect of this one
+        // Attach -- see PartyToast's own header.
+        controller.toastFader = result.Attach<PartyToast>(party.Toast);
+
         return controller;
     }
 

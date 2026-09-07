@@ -5,8 +5,10 @@ using System.Linq;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 using PrincesPalace;
 using PrincesPalace.Domain.Party;
 using PrincesPalace.Domain.UiKit;
@@ -230,6 +232,247 @@ namespace PrincesPalace.PlayModeTests
             }
         }
 
+        // ---- P4: drag-and-drop, the second input path ---------------------------
+        //
+        // Driven through PartyDragSource's own PUBLIC IBeginDragHandler/
+        // IEndDragHandler methods, reached off the scene the same way TextOf/
+        // IsActive already reach a node -- CODE_STANDARDS SS4a's own rule
+        // ("PlayMode tests drive the UI through scenes and public API like a
+        // player does") is why this cannot reach PartyController's internal
+        // seatDragSources/cardDragSources arrays directly.
+
+        [UnityTest]
+        public IEnumerator DraggingASeatOntoAnotherSeatSwapsAndPersists()
+        {
+            yield return LoadScene("Hub");
+
+            var save = SaveSlotManager.CurrentSave;
+            save.selectedCharacterIds = new List<string> { "sheep", "placeholder_brawler", "owl" };
+            SaveSlotManager.SaveCurrent();
+
+            OpenParty();
+            var party = Party();
+            yield return null;
+
+            var fromGo = NodeOf("PartySeat0Button");
+            var toGo = NodeOf("PartySeat2Button");
+            var drag = DragSourceOf(fromGo);
+
+            drag.OnBeginDrag(FakePointer(fromGo));
+            drag.OnEndDrag(FakePointer(toGo));
+            yield return null;
+
+            Assert.AreEqual("owl", party.Formation.SeatIds[PartySeat.Front]);
+            Assert.AreEqual("placeholder_brawler", party.Formation.SeatIds[PartySeat.Middle]);
+            Assert.AreEqual("sheep", party.Formation.SeatIds[PartySeat.Rear]);
+
+            SaveSlotManager.Forget();
+            var reloaded = SaveSlotManager.CurrentSave;
+            CollectionAssert.AreEqual(
+                new[] { "owl", "placeholder_brawler", "sheep" }, reloaded.selectedCharacterIds,
+                "the dragged swap did not reach disk");
+        }
+
+        [UnityTest]
+        public IEnumerator DraggingARosterCardOntoASeatCommitsThroughTheSameContract()
+        {
+            yield return LoadScene("Hub");
+
+            var save = SaveSlotManager.CurrentSave;
+            save.selectedCharacterIds = new List<string> { "sheep", "placeholder_brawler", "owl" };
+            SaveSlotManager.SaveCurrent();
+
+            OpenParty();
+            var party = Party();
+            yield return null;
+
+            // owl is PartyCard2 (characters.json's own order: sheep,
+            // placeholder_brawler, owl) and, per this file's own header,
+            // always also a seat with today's 3-of-3 content -- this drives
+            // the CARD drag source's own entry point (BeginCardDragAt)
+            // rather than the seat's, landing on the front seat.
+            var cardGo = NodeOf("PartyCard2Button");
+            var seatGo = NodeOf("PartySeat0Button");
+            var drag = DragSourceOf(cardGo);
+
+            drag.OnBeginDrag(FakePointer(cardGo));
+            drag.OnEndDrag(FakePointer(seatGo));
+            yield return null;
+
+            Assert.AreEqual("owl", party.Formation.SeatIds[PartySeat.Front]);
+            Assert.AreEqual("placeholder_brawler", party.Formation.SeatIds[PartySeat.Middle]);
+            Assert.AreEqual("sheep", party.Formation.SeatIds[PartySeat.Rear]);
+
+            SaveSlotManager.Forget();
+            var reloaded = SaveSlotManager.CurrentSave;
+            CollectionAssert.AreEqual(
+                new[] { "owl", "placeholder_brawler", "sheep" }, reloaded.selectedCharacterIds,
+                "the dragged placement did not reach disk");
+        }
+
+        [UnityTest]
+        public IEnumerator DraggingASeatAndReleasingOverNothingCancels()
+        {
+            yield return LoadScene("Hub");
+
+            var save = SaveSlotManager.CurrentSave;
+            save.selectedCharacterIds = new List<string> { "sheep", "placeholder_brawler", "owl" };
+            SaveSlotManager.SaveCurrent();
+
+            OpenParty();
+            var party = Party();
+            yield return null;
+
+            var before = SaveSlotManager.CurrentSave.selectedCharacterIds.ToList();
+
+            var seatGo = NodeOf("PartySeat0Button");
+            var drag = DragSourceOf(seatGo);
+
+            drag.OnBeginDrag(FakePointer(seatGo));
+            drag.OnEndDrag(FakePointer(null));
+            yield return null;
+
+            Assert.IsNull(party.Formation.SelectedId, "a cancelled drag left a selection behind");
+            CollectionAssert.AreEqual(before, SaveSlotManager.CurrentSave.selectedCharacterIds,
+                "a drag that landed nowhere still changed the seating");
+        }
+
+        [UnityTest]
+        public IEnumerator DraggingASeatOntoTheRosterZoneInARunIsRefusedWithTheToast()
+        {
+            yield return LoadScene("Map");
+
+            OpenParty();
+            var party = Party();
+            yield return null;
+
+            Assert.AreEqual(PartyMode.Run, party.Formation.Mode, "the map's copy of the pane did not read as a run");
+
+            var before = SaveSlotManager.CurrentSave.selectedCharacterIds.ToList();
+
+            var seatGo = NodeOf("PartySeat0Button");
+            var zoneGo = NodeOf("PartyRosterDropZone");
+            Assert.IsNotNull(zoneGo, "the party pane has no roster drop zone");
+            var drag = DragSourceOf(seatGo);
+
+            drag.OnBeginDrag(FakePointer(seatGo));
+            drag.OnEndDrag(FakePointer(zoneGo));
+            yield return null;
+
+            Assert.AreEqual("Mid-run you can only reposition.", TextOf("PartyToastText"),
+                "the refusal toast did not reach the pane");
+            CollectionAssert.AreEqual(before, SaveSlotManager.CurrentSave.selectedCharacterIds,
+                "a refused roster drop still changed the seating");
+        }
+
+        [UnityTest]
+        public IEnumerator ACompletedDragDoesNotAlsoFireTheButtonsClick()
+        {
+            yield return LoadScene("Hub");
+
+            var save = SaveSlotManager.CurrentSave;
+            save.selectedCharacterIds = new List<string> { "sheep", "placeholder_brawler", "owl" };
+            SaveSlotManager.SaveCurrent();
+
+            OpenParty();
+            var party = Party();
+            yield return null;
+
+            var fromGo = NodeOf("PartySeat0Button");
+            var toGo = NodeOf("PartySeat2Button");
+            var drag = DragSourceOf(fromGo);
+            var toButton = toGo.GetComponent<Button>();
+
+            drag.OnBeginDrag(FakePointer(fromGo));
+            drag.OnEndDrag(FakePointer(toGo));
+
+            // uGUI is documented to still raise a Button's own onClick on the
+            // pointer-up that ends a drag over it when the drag handler sits
+            // on that same object -- PartyController.Wire's own per-frame
+            // suppression (_dragResolvedFrame) is what has to eat this, not
+            // luck. Invoking the destination's click explicitly, in the SAME
+            // frame EndDrag just resolved in, is the worst case that
+            // suppression exists to cover.
+            toButton.onClick.Invoke();
+            yield return null;
+
+            Assert.IsNull(party.Formation.SelectedId,
+                "a click on the drag's own destination, in the same frame, re-selected its new occupant");
+            Assert.AreEqual("owl", party.Formation.SeatIds[PartySeat.Front], "the swap itself should still stand");
+        }
+
+        // ---- P4: the toast fades rather than hard-cutting ------------------------
+
+        [UnityTest]
+        public IEnumerator TheToastFadesOutOverTime()
+        {
+            yield return LoadScene("Hub");
+
+            var save = SaveSlotManager.CurrentSave;
+            save.selectedCharacterIds = new List<string> { "sheep", "placeholder_brawler", "owl" };
+
+            OpenParty();
+            yield return null;
+
+            var party = Party();
+            party.ClickSeat(PartySeat.Front);
+            party.ClickSeat(PartySeat.Rear);
+            yield return null;
+
+            var toastGo = NodeOf("PartyToast");
+            var group = toastGo.GetComponent<CanvasGroup>();
+            Assert.IsNotNull(group, "the toast carries no CanvasGroup");
+            Assert.AreEqual(1f, group.alpha, 0.01f, "the toast should show at full alpha right after a commit");
+
+            yield return new WaitForSecondsRealtime(2.5f);
+
+            Assert.IsTrue(group.alpha <= 0.01f || !toastGo.activeSelf,
+                "the toast should have faded out (or deactivated) after 2.5s");
+        }
+
+        // ---- P4: the ground line, pinned against Shawn's own manifest entry -----
+
+        [UnityTest]
+        public IEnumerator ShawnsSeatArtSitsAboveTheSlotFloorByHisManifestGroundLine()
+        {
+            yield return LoadScene("Hub");
+
+            var save = SaveSlotManager.CurrentSave;
+            save.selectedCharacterIds = new List<string> { "sheep", "placeholder_brawler", "owl" };
+
+            OpenParty();
+            yield return null;
+
+            var artGo = NodeOf("PartySeat0Art");
+            var image = artGo.GetComponent<Image>();
+            Assert.IsNotNull(image, "PartySeat0Art carries no Image");
+            Assert.IsNotNull(image.sprite, "Shawn's own idle art did not resolve -- nothing to ground");
+
+            var rect = image.rectTransform;
+
+            // PartyLayout.FeetLine is the shared bottom line every seat's art
+            // slot pins to, in PANEL-local space; ColumnButtonCentreY converts
+            // it into the seat BUTTON's own local space, which is what the
+            // art node's anchoredPosition is actually measured in (it is a
+            // child of the button) -- see PartyScreen.BuildSeat's own LocalY.
+            float floorY = PartyLayout.FeetLine - PartyLayout.ColumnButtonCentreY;
+
+            // Resources/StanceManifest.json's own "Characters/sheep" entry --
+            // pinned as a literal per CODE_STANDARDS SS5 rather than re-read
+            // from the asset, so this cannot become a tautology against the
+            // very file it is checking.
+            const float shawnGroundLine = 43f;
+
+            float scale = Mathf.Min(
+                rect.rect.width / image.sprite.rect.width, rect.rect.height / image.sprite.rect.height);
+            float expected = floorY - shawnGroundLine * scale;
+
+            Assert.AreEqual(expected, rect.anchoredPosition.y, 1.5f,
+                "Shawn's seat art is not shifted off the slot floor by his own manifest ground line");
+            Assert.Less(rect.anchoredPosition.y, floorY,
+                "the ground-line shift should sit BELOW plain canvas-bottom, not above it");
+        }
+
         // ---- fixture --------------------------------------------------------------
 
         private static IEnumerator LoadScene(string name)
@@ -270,6 +513,24 @@ namespace PrincesPalace.PlayModeTests
             var go = NodeOf(nodeName);
             Assert.IsNotNull(go, $"the Party pane has no '{nodeName}'");
             return go.activeSelf;
+        }
+
+        private static PartyDragSource DragSourceOf(GameObject go)
+        {
+            var drag = go.GetComponent<PartyDragSource>();
+            Assert.IsNotNull(drag, $"'{go.name}' carries no PartyDragSource");
+            return drag;
+        }
+
+        // `target == null` fabricates a drag that ends over nothing -- the
+        // default RaycastResult's own gameObject is null, so EndDrag's hit
+        // test reads it as DragTargetNone the same as a real pointer release
+        // over open space would.
+        private static PointerEventData FakePointer(GameObject target)
+        {
+            var data = new PointerEventData(EventSystem.current);
+            if (target != null) data.pointerCurrentRaycast = new RaycastResult { gameObject = target };
+            return data;
         }
     }
 }

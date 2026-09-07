@@ -109,24 +109,41 @@ something already decided above.
   the rest unchanged) rather than `role.ToString()`. If a real role-display
   convention shows up elsewhere later, this should move to wherever that
   lives instead of staying a Party-local switch.
-- **The toast is a hard show/hide, not a fade.** The design's own copy says
+- **RESOLVED (P4).** The toast now fades: a `CanvasGroup` (added via
+  `[RequireComponent]` on the new `PartyToast`, attached at wire time in
+  `ScreenRegistry.WireParty`) holds full alpha for 2.0s then fades to 0 over
+  0.4s before deactivating, matching the design's "~2.4s" copy. `PartyToast`
+  is a small local component rather than `BeaconPulse`/`StageDeathFade` --
+  see its own header for why neither reuse-first candidate fit (an unbounded
+  loop vs. a fight-beat-scaled, three-image fade tied to a combat slot).
+  ~~The toast is a hard show/hide, not a fade.~~ The design's own copy says
   "fades after ~2.4s", but the toast node carries no `CanvasGroup` and
   nothing in `CODE_STANDARDS.md` SS2's reuse-first registry is a drop-in
   "fade this out" primitive that doesn't already assume a battle-stage
   component (`BeaconPulse`, `StageDeathFade`). Scoped down to show/hide on a
   timer; a real fade is a small follow-up if the design still wants one.
-- **Seat/card art is bottom-aligned to the SLOT's floor, not to each actor's
-  FEET.** `FightController.StageVisuals.cs` grounds a stage figure against a
+- **RESOLVED (P4).** `PartyController` now reads the same manifest the fight
+  stage does: `AlignArtSlots` still pins each slot's own canvas-bottom to
+  the slot floor once, at wire time, but every repaint (`GroundArt`) shifts
+  that baseline down by the occupant's `StanceManifest.GroundLineFor` entry,
+  scaled from the sprite's own source pixels to however large
+  `preserveAspect` actually draws it inside the slot's fixed box (the slot
+  never shows a sprite at native size, unlike the fight stage's own
+  anchor-stretched figure). A missing manifest entry still falls back to
+  plain canvas-bottom (`GroundLineFor` already returns 0 on a miss). Two
+  actors with different headroom under their feet now share one foot line
+  here the same way they do on the fight stage.
+  ~~Seat/card art is bottom-aligned to the SLOT's floor, not to each actor's
+  FEET.~~ `FightController.StageVisuals.cs` grounds a stage figure against a
   per-actor manifest offset (`StanceManifestLoader.Manifest.GroundLineFor`)
   because delivered art does not put its own feet on its own canvas edge —
-  the golem's is 52px off, Shawn's 33px. `PartyController.AlignArtSlots`
-  does not read that manifest; it pins each sprite's own canvas bottom to
-  the slot's floor once, at wire time. That is a real gap: with more than
-  sheep/owl in play, two actors whose canvases carry different amounts of
-  headroom under their feet will NOT show their feet on the same line here,
-  even though they do on the fight stage. Worth revisiting if a screenshot
-  of a taller/shorter pair shows it — today's content (sheep, owl, and
-  placeholder_brawler wearing sheep's own sprite) cannot exercise the gap.
+  the golem's is 52px off, Shawn's 43px per `Resources/StanceManifest.json`.
+  `PartyController.AlignArtSlots` used to not read that manifest; it pinned
+  each sprite's own canvas bottom to the slot's floor once, at wire time,
+  which was a real gap: with more than sheep/owl in play, two actors whose
+  canvases carry different amounts of headroom under their feet would NOT
+  have shown their feet on the same line here, even though they do on the
+  fight stage.
 - **`placeholder_brawler` resolves real art today.** `characters.json` points
   its `battleSpritePath` at `Characters/sheep` (the same reuse-Shawn's-face
   move already made for `portraitPath`), so with today's content every

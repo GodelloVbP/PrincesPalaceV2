@@ -83,6 +83,11 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         private const string DimWash = "#0A0614B0";
 
+        // The drag ghost's art tint (P4): ~0.8 alpha over whatever sprite
+        // loads at runtime, per the handoff's own "the dragged card, ~0.8
+        // alpha, following the pointer" copy.
+        private const string GhostArtTint = "#FFFFFFCC";
+
         public UiNode Root;
 
         // ---- singles ----------------------------------------------------------
@@ -94,6 +99,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef FilledCount;
         public NodeRef Toast;
         public NodeRef ToastText;
+
+        // ---- P4: drag-and-drop ------------------------------------------------------
+
+        // The reusable drag ghost -- ONE node, re-skinned per drag rather than
+        // one per seat/card. See BuildDragGhost.
+        public NodeRef DragGhost;
+        public NodeRef DragGhostArt;
+        public NodeRef DragGhostMonogramPlate;
+        public NodeRef DragGhostMonogramLetter;
+
+        // The roster's own raycastable hit-region, behind every card -- see
+        // BuildRosterDropZone.
+        public NodeRef RosterDropZone;
 
         // ---- per seat, in FRONT-FIRST (seat-index) order, length SeatCount ------
         public List<NodeRef> SeatButtons = new List<NodeRef>();
@@ -149,6 +167,10 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor());
             children.AddRange(BuildRoster(screen, rosterCount));
             children.Add(BuildToast(screen));
+
+            // APPENDED LAST, so it draws over every other node on the pane,
+            // toast included -- "top-most" per the P4 brief.
+            children.Add(BuildDragGhost(screen));
 
             // A SILVER 2:1 CONTAINER, the same hosted-pane shape every other
             // system menu tab uses -- see RunStatsScreen's own comment on why
@@ -420,10 +442,36 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .TextAligned(UiTextAlign.Left)
                 .Styled(TypographyRole.FunctionalHeading);
 
+            // BEFORE the cards, so it draws BEHIND them (uGUI draws later
+            // siblings on top) -- a card ends the drag on top of it, and the
+            // gap between cards ends the drag directly on it. Both count as
+            // a roster drop; PartyController.EndDrag treats landing on a
+            // card the same as landing on this zone, so this node only has
+            // to cover the gaps, not steal the cards' own raycasts.
+            yield return BuildRosterDropZone(screen, count);
+
             for (int i = 0; i < count; i++)
             {
                 yield return BuildCard(screen, i, count);
             }
+        }
+
+        private static UiNode BuildRosterDropZone(PartyScreen screen, int count)
+        {
+            var size = new UiVec(PartyLayout.RosterRowWidth(count), PartyLayout.RosterDropZoneHeight);
+
+            var zone = Ui.Solid("PartyRosterDropZone", "#00000000", size,
+                Place.At(0f, PartyLayout.RosterRowCentreY));
+
+            // NOT AsDecor -- decor forces raycastTarget off (UiEmitter), and
+            // being a real raycast target is this node's entire job. It
+            // deliberately covers the same ground every card in the row
+            // does, which is what AllowOverlap states rather than hides.
+            zone.AllowOverlap("the roster's own raycastable hit-region, behind every card in the row -- " +
+                "a drag ending in the gap between two cards has to land on SOMETHING, and every card ending " +
+                "the same drag is handled separately by PartyController.EndDrag");
+            screen.RosterDropZone = zone;
+            return zone;
         }
 
         private static UiNode BuildCard(PartyScreen screen, int index, int count)
@@ -534,6 +582,44 @@ namespace PrincesPalace.Domain.UiKit.Screens
             screen.Toast = toast;
             screen.ToastText = text;
             return toast;
+        }
+
+        // ---- the drag ghost (P4): one reusable floating overlay --------------------
+
+        // ONE node, re-skinned per drag rather than one ghost per seat/card --
+        // the controller shows the dragged actor's own sprite (or its
+        // monogram, the same either/or every art slot already carries) at
+        // ~0.8 alpha and repositions this single node to the pointer in
+        // OnDrag. Hidden and non-raycastable by default (AsDecor -- see
+        // BuildToast's own comment on why that also waives the sibling-
+        // overlap check A1 would otherwise want for a floating overlay).
+        private static UiNode BuildDragGhost(PartyScreen screen)
+        {
+            float w = PartyLayout.GhostArtWidth;
+            float h = PartyLayout.GhostArtHeight;
+
+            var art = Ui.Sprite("PartyDragGhostArt", null, Place.At(0f, 0f), UiSize.Fixed(w, h))
+                .Coloured(GhostArtTint)
+                .Inactive()
+                .AsDecor();
+            screen.DragGhostArt = art;
+
+            float monogramSize = h * 0.58f;
+            var plate = Ui.OutlineBox("PartyDragGhostMonogramPlate", Place.At(0f, 0f),
+                new UiVec(monogramSize, monogramSize), MonogramFill, MonogramRim);
+            plate.AsDecor();
+            screen.DragGhostMonogramPlate = plate;
+
+            var letter = Ui.Label("PartyDragGhostMonogramLetter", UiString.Runtime,
+                    new UiVec(monogramSize, monogramSize), 40, MonogramLetter, Place.At(0f, 0f))
+                .AsDecor();
+            screen.DragGhostMonogramLetter = letter;
+
+            var ghost = Ui.Panel("PartyDragGhost", Place.At(0f, 0f), UiSize.Fixed(w, h),
+                new[] { art, plate, letter });
+            ghost.AsDecor().Inactive();
+            screen.DragGhost = ghost;
+            return ghost;
         }
     }
 }

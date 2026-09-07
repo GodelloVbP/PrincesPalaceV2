@@ -1,8 +1,8 @@
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using PrincesPalace.Content;
 using PrincesPalace.Domain.Combat.Session;
@@ -20,8 +20,9 @@ namespace PrincesPalace
     //
     // NAMES MIRROR PartyScreen's OWN FIELD NAMES so UiAutoBind can bind them
     // (see ScreenRegistry.WireParty for the residual it cannot see: the menu
-    // reference, the lock flag, and each seat badge's own text label, which
-    // PartyScreen never captured a NodeRef for).
+    // reference, the lock flag, each seat badge's own text label, the drag
+    // sources and the toast's own fader, none of which UiAutoBind's five
+    // typed lookups can reach).
     public class PartyController : MonoBehaviour
     {
         // ---- header -----------------------------------------------------------
@@ -32,6 +33,13 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text filledCount;
         [SerializeField] internal GameObject toast;
         [SerializeField] internal TMP_Text toastText;
+
+        // The toast's own fader (P4) -- a CanvasGroup lives on the same node
+        // ([RequireComponent] on PartyToast adds it, so nothing else here
+        // has to). Replaces P3's hard show/hide; see PartyToast's own header
+        // for why it is a small local component rather than an existing
+        // reuse-first primitive.
+        [SerializeField] internal PartyToast toastFader;
 
         // ---- seats, front-first (index 0 = front), length PartySeat.Count -----
         [SerializeField] internal Button[] seatButtons;
@@ -54,6 +62,11 @@ namespace PrincesPalace
         // ExitsController.exitLabels reaches a button's child label.
         [SerializeField] internal TMP_Text[] seatBadgeTexts;
 
+        // One drag surface per seat, attached at build time (ScreenRegistry.
+        // WireParty) but configured here at runtime -- see PartyDragSource's
+        // own header for why the delegates cannot be baked into the scene.
+        [SerializeField] internal PartyDragSource[] seatDragSources;
+
         // ---- roster cards, in save.roster order, length RosterCardCount -------
         [SerializeField] internal Button[] cardButtons;
         [SerializeField] internal Image[] cardArts;
@@ -65,6 +78,14 @@ namespace PrincesPalace
         [SerializeField] internal GameObject[] cardRings;
         [SerializeField] internal GameObject[] cardSelectedTags;
         [SerializeField] internal GameObject[] cardWashes;
+        [SerializeField] internal PartyDragSource[] cardDragSources;
+
+        // ---- P4: the one reusable drag ghost, and the roster's own drop zone ----
+        [SerializeField] internal GameObject dragGhost;
+        [SerializeField] internal Image dragGhostArt;
+        [SerializeField] internal GameObject dragGhostMonogramPlate;
+        [SerializeField] internal TMP_Text dragGhostMonogramLetter;
+        [SerializeField] internal GameObject rosterDropZone;
 
         // The menu this pane lives in -- same shape as ExitsController.menu
         // and CharacterDossierController.menu, and for the same reason: mode
@@ -91,13 +112,42 @@ namespace PrincesPalace
         private const string GlowOccupied = "#5FE07A8C";    // rgba(95,224,122,.55)
         private const string GlowHighlighted = "#E8C07AB3"; // rgba(232,192,122,.70)
 
-        private const float ToastSeconds = 2.4f;
-
         private static readonly string[] SeatWords = { "front", "middle", "rear" };
 
         private bool _wired;
         private List<string> _rosterIds = new List<string>();
-        private Coroutine _toastFade;
+
+        // Each art slot's own canvas-bottom baseline, captured once by
+        // AlignArtSlots at wire time -- the ground-line shift (GroundArt)
+        // moves a slot's anchoredPosition away from this every repaint, so
+        // the baseline has to live somewhere that shift cannot drift.
+        private float[] _seatArtFloorY;
+        private float[] _cardArtFloorY;
+
+        // ---- P4: drag session state ---------------------------------------------
+
+        // Whether THIS controller's own BeginDrag accepted the gesture that
+        // is currently in flight -- distinct from whatever uGUI itself
+        // thinks is dragging, because a refused begin (a locked seat, a
+        // benched card in a Run) must still let OnDrag/OnEndDrag fire
+        // harmlessly with no ghost to move and nothing to commit.
+        private bool _dragging;
+        private RectTransform _dragGhostRect;
+        private RectTransform _dragGhostParentRect;
+
+        // THE CLICK-SUPPRESSION SEAM. uGUI is documented to skip a Button's
+        // own onClick on the pointer-up that ends a drag when the drag
+        // handler lives on that Button's own object (see PartyDragSource's
+        // header) -- but that guarantee lives entirely in the input module,
+        // not in anything this class controls, and a synthetic PlayMode test
+        // has no real pointer to drive it with. So EndDrag stamps the frame
+        // a drag actually resolved on, and every click listener below skips
+        // itself for that one frame -- deterministic, testable without a
+        // real mouse, and correct however uGUI's own suppression behaves.
+        private int _dragResolvedFrame = -1;
+
+        private const int DragTargetNone = -2;
+        private const int DragTargetRoster = -1;
 
         // The live model, read-only -- so a PlayMode test can assert against
         // it directly instead of reverse-engineering state from which nodes
@@ -121,7 +171,11 @@ namespace PrincesPalace
                 {
                     if (seatButtons[i] == null) continue;
                     int seat = i;
-                    seatButtons[i].onClick.AddListener(() => ClickSeat(seat));
+                    seatButtons[i].onClick.AddListener(() =>
+                    {
+                        if (Time.frameCount == _dragResolvedFrame) return;
+                        ClickSeat(seat);
+                    });
                 }
             }
 
@@ -131,12 +185,24 @@ namespace PrincesPalace
                 {
                     if (cardButtons[i] == null) continue;
                     int index = i;
-                    cardButtons[i].onClick.AddListener(() => ClickCardAt(index));
+                    cardButtons[i].onClick.AddListener(() =>
+                    {
+                        if (Time.frameCount == _dragResolvedFrame) return;
+                        ClickCardAt(index);
+                    });
                 }
             }
 
             if (cancelLink != null) cancelLink.onClick.AddListener(Cancel);
             if (benchLink != null) benchLink.onClick.AddListener(SendToBench);
+
+            WireDragSources();
+
+            if (dragGhost != null)
+            {
+                _dragGhostRect = dragGhost.transform as RectTransform;
+                _dragGhostParentRect = _dragGhostRect != null ? _dragGhostRect.parent as RectTransform : null;
+            }
 
             // BOTTOM-ALIGNED ONCE, not on every repaint. Each slot's
             // RectTransform is authored centre-pivoted at a fixed size;
@@ -144,37 +210,63 @@ namespace PrincesPalace
             // compensating anchoredPosition by half the slot's own height,
             // which must happen exactly once or a second Paint would shift
             // it again by the same amount. What changes on every repaint is
-            // only which sprite (if any) fills the slot -- see Paint*.
-            //
-            // THIS PINS THE SLOT'S FLOOR, NOT EACH ACTOR'S FEET. The fight
-            // stage's own grounding (FightController.StageVisuals.cs,
-            // GroundTheFigure) reads a per-actor manifest offset because
-            // delivered art does not put its feet on its own canvas edge --
-            // the golem's is 52px off, Shawn's 33px. Reproducing that here
-            // would need the same manifest on a menu screen that only ever
-              // shows an idle pose, which is not attempted; this aligns each
-            // canvas's own bottom edge to the slot floor, which is close but
-            // not exact for actors whose canvas has followed space under the
-            // feet. Worth a second look once real art exists for more than
-            // sheep/owl -- see the report on this package for the honest
-            // version of this note.
-            AlignArtSlots(seatArts);
-            AlignArtSlots(cardArts);
+            // only which sprite (if any) fills the slot, and (P4) how far
+            // GroundArt shifts it off this baseline for that sprite's own
+            // manifest ground line -- see Paint*/GroundArt.
+            _seatArtFloorY = AlignArtSlots(seatArts);
+            _cardArtFloorY = AlignArtSlots(cardArts);
         }
 
-        private static void AlignArtSlots(Image[] slots)
+        // One drag surface per seat/card button, configured with a per-index
+        // closure -- PartyDragSource itself carries no index or id, only the
+        // three delegates a drag needs (see its own header).
+        private void WireDragSources()
         {
-            if (slots == null) return;
-            foreach (var image in slots)
+            if (seatDragSources != null)
             {
+                for (int i = 0; i < seatDragSources.Length; i++)
+                {
+                    if (seatDragSources[i] == null) continue;
+                    int seat = i;
+                    seatDragSources[i].Begin = e => BeginSeatDrag(seat, e);
+                    seatDragSources[i].Dragging = OnGhostDrag;
+                    seatDragSources[i].End = EndDrag;
+                }
+            }
+
+            if (cardDragSources != null)
+            {
+                for (int i = 0; i < cardDragSources.Length; i++)
+                {
+                    if (cardDragSources[i] == null) continue;
+                    int index = i;
+                    cardDragSources[i].Begin = e => BeginCardDragAt(index, e);
+                    cardDragSources[i].Dragging = OnGhostDrag;
+                    cardDragSources[i].End = EndDrag;
+                }
+            }
+        }
+
+        private static float[] AlignArtSlots(Image[] slots)
+        {
+            if (slots == null) return null;
+
+            var floors = new float[slots.Length];
+            for (int i = 0; i < slots.Length; i++)
+            {
+                var image = slots[i];
                 if (image == null) continue;
+
                 image.preserveAspect = true;
 
                 var rect = image.rectTransform;
                 float bottom = rect.anchoredPosition.y - rect.rect.height * 0.5f;
                 rect.pivot = new Vector2(0.5f, 0f);
                 rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, bottom);
+                floors[i] = bottom;
             }
+
+            return floors;
         }
 
         // ---- building the model off the save -----------------------------------
@@ -263,6 +355,11 @@ namespace PrincesPalace
             ClickCard(_rosterIds[index]);
         }
 
+        // THE ONE APPLY STEP -- click and drag share it. A click reaches it
+        // through ClickSeat/ClickCard/Cancel/SendToBench above; a drag
+        // reaches it through EndDrag below, which computes the very same
+        // PartyOutcome (Drop/DropOnRoster/Cancel) and hands it here rather
+        // than duplicating the persist-then-paint-then-toast sequence.
         private void Apply(PartyOutcome outcome)
         {
             if (outcome.Changed) Persist();
@@ -284,6 +381,149 @@ namespace PrincesPalace
 
             save.selectedCharacterIds = Formation.SeatIds.Where(id => id != null).ToList();
             SaveSlotManager.SaveCurrent();
+        }
+
+        // ---- P4: drag-and-drop ---------------------------------------------------
+        //
+        // BEGIN calls straight through ClickSeat/ClickCard -- "the controller,
+        // which asks the model" -- rather than re-deriving selectability by
+        // hand: a locked/closed seat or a ViewOnly/benched-in-Run card is
+        // refused (and toasted) exactly as a click would refuse it, and
+        // Cancel() first means the model holds no stale selection to leak
+        // into a refused drag. The ghost only appears once the resulting
+        // selection actually matches the id being dragged -- a refusal
+        // leaves Formation.SelectedId null, so no ghost, no further state.
+
+        private void BeginSeatDrag(int seat, PointerEventData eventData)
+        {
+            if (Formation == null) return;
+
+            Cancel();
+            ClickSeat(seat);
+
+            bool accepted = Formation.SelectedId != null
+                && Formation.SelectedFrom.IsSeat && Formation.SelectedFrom.SeatIndex == seat;
+
+            _dragging = accepted;
+            if (accepted) ShowGhost(Formation.SelectedId, eventData);
+        }
+
+        private void BeginCardDragAt(int index, PointerEventData eventData)
+        {
+            if (Formation == null || index < 0 || index >= _rosterIds.Count) return;
+
+            string id = _rosterIds[index];
+            Cancel();
+            ClickCard(id);
+
+            bool accepted = Formation.SelectedId == id;
+
+            _dragging = accepted;
+            if (accepted) ShowGhost(id, eventData);
+        }
+
+        private void OnGhostDrag(PointerEventData eventData)
+        {
+            if (!_dragging) return;
+            MoveGhostTo(eventData);
+        }
+
+        // END hit-tests the pointer and turns what it lands on into the same
+        // three outcomes the model already knows (Drop onto a seat,
+        // DropOnRoster, or Cancel), then applies through the shared Apply
+        // step above -- a drag never talks to Persist/Paint/ShowToast
+        // directly.
+        private void EndDrag(PointerEventData eventData)
+        {
+            HideGhost();
+
+            bool wasDragging = _dragging;
+            _dragging = false;
+            if (!wasDragging) return;
+
+            // Stamped even when nothing was selected to drop (shouldn't
+            // happen once wasDragging is true, but costs nothing to be
+            // certain) -- ANY resolved drag suppresses this frame's click,
+            // regardless of outcome.
+            _dragResolvedFrame = Time.frameCount;
+
+            if (Formation == null || Formation.SelectedId == null) return;
+
+            int target = HitTestSeatOrRoster(eventData);
+            if (target >= 0) Apply(Formation.Drop(Formation.SelectedFrom, target));
+            else if (target == DragTargetRoster) Apply(Formation.DropOnRoster());
+            else Apply(Formation.Cancel());
+        }
+
+        // >= 0 is a seat index, DragTargetRoster is the roster (a card or the
+        // gap between cards), DragTargetNone is neither -- a Cancel().
+        //
+        // A CARD counts as a roster drop too, not just the drop zone behind
+        // it: the drop zone only has to cover the GAPS between cards
+        // (PartyScreen.BuildRosterDropZone's own comment), because landing
+        // squarely on a card is caught here first.
+        private int HitTestSeatOrRoster(PointerEventData eventData)
+        {
+            var go = eventData.pointerCurrentRaycast.gameObject;
+            if (go == null) return DragTargetNone;
+
+            int seat = IndexOfButton(seatButtons, go);
+            if (seat >= 0) return seat;
+
+            if (IndexOfButton(cardButtons, go) >= 0) return DragTargetRoster;
+            if (rosterDropZone != null && go == rosterDropZone) return DragTargetRoster;
+
+            return DragTargetNone;
+        }
+
+        private static int IndexOfButton(Button[] buttons, GameObject go)
+        {
+            if (buttons == null) return -1;
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                if (buttons[i] != null && buttons[i].gameObject == go) return i;
+            }
+
+            return -1;
+        }
+
+        // ---- the ghost: one reusable node, re-skinned and repositioned ----------
+
+        private void ShowGhost(string id, PointerEventData eventData)
+        {
+            if (dragGhost == null) return;
+
+            var art = ArtFor(id);
+            bool hasArt = art != null;
+
+            if (dragGhostArt != null)
+            {
+                dragGhostArt.sprite = art;
+                dragGhostArt.SetShown(hasArt);
+            }
+
+            dragGhostMonogramPlate?.SetShown(!hasArt);
+            if (dragGhostMonogramLetter != null)
+            {
+                dragGhostMonogramLetter.gameObject.SetShown(!hasArt);
+                if (!hasArt) dragGhostMonogramLetter.SetContent(MonogramFor(id));
+            }
+
+            dragGhost.SetShown(true);
+            MoveGhostTo(eventData);
+        }
+
+        private void HideGhost() => dragGhost?.SetShown(false);
+
+        private void MoveGhostTo(PointerEventData eventData)
+        {
+            if (_dragGhostRect == null || _dragGhostParentRect == null) return;
+
+            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                    _dragGhostParentRect, eventData.position, eventData.pressEventCamera, out var local))
+            {
+                _dragGhostRect.anchoredPosition = local;
+            }
         }
 
         // ---- painting -------------------------------------------------------------
@@ -350,6 +590,8 @@ namespace PrincesPalace
             var art = occupantId != null ? ArtFor(occupantId) : null;
             bool hasArt = art != null;
             SetArt(seatArts, seat, art);
+            GroundArt(At(seatArts, seat), FloorYAt(_seatArtFloorY, seat), art,
+                occupantId != null ? BattleSpritePathFor(occupantId) : null);
             SetShown(seatMonogramPlates, seat, occupantId != null && !hasArt);
             SetMonogram(seatMonogramLetters, seat, occupantId != null && !hasArt, occupantId);
 
@@ -397,6 +639,7 @@ namespace PrincesPalace
             var art = ArtFor(id);
             bool hasArt = art != null;
             SetArt(cardArts, index, art);
+            GroundArt(At(cardArts, index), FloorYAt(_cardArtFloorY, index), art, BattleSpritePathFor(id));
             SetShown(cardMonogramPlates, index, !hasArt);
             SetMonogram(cardMonogramLetters, index, !hasArt, id);
 
@@ -442,6 +685,7 @@ namespace PrincesPalace
         private void HideCard(int index)
         {
             SetArt(cardArts, index, null);
+            GroundArt(At(cardArts, index), FloorYAt(_cardArtFloorY, index), null, null);
             SetShown(cardMonogramPlates, index, false);
             SetMonogram(cardMonogramLetters, index, false, null);
             SetContent(cardNames, index, "");
@@ -459,11 +703,67 @@ namespace PrincesPalace
             SetShown(cardWashes, index, false);
         }
 
+        // ---- ground line (P4) ------------------------------------------------------
+        //
+        // The fight stage grounds a figure against its stance manifest's own
+        // ground line (FightController.StageVisuals.GroundTheFigure) because
+        // delivered art does not put its feet on its own canvas edge --
+        // Shawn's idle plants a staff 43px below his own feet
+        // (Resources/StanceManifest.json's "Characters/sheep" entry). P3's
+        // AlignArtSlots pinned every slot's canvas-bottom to the slot floor
+        // instead, which DECISIONS.md flagged as a known gap. This closes it
+        // the same way the stage does, adapted for a slot that draws with
+        // preserveAspect inside a FIXED box rather than at native size:
+        //
+        //   1. AlignArtSlots already pinned the UNSHIFTED canvas-bottom to
+        //      the slot floor -- _seatArtFloorY/_cardArtFloorY remember that
+        //      anchoredPosition.y so repeated repaints (a different occupant
+        //      each time) always shift from the same baseline rather than
+        //      compounding.
+        //   2. preserveAspect draws the sprite at MIN(box-width/sprite-width,
+        //      box-height/sprite-height) of its own source size -- the same
+        //      scale a shifted offset has to travel through, since the
+        //      manifest speaks in the sprite's own source pixels and this
+        //      slot never shows the sprite at that size.
+        //   3. The shift is the manifest's ground line, scaled by exactly
+        //      that factor (equivalently "drawn height / source height",
+        //      since drawnHeight = sourceHeight * scale by construction).
+        //
+        // FALLS BACK TO CANVAS-BOTTOM (no shift) for any actor with no
+        // manifest entry -- StanceManifest.GroundLineFor already returns
+        // DefaultGroundLine (0) on a miss, so a missing entry needs no
+        // separate branch here, only this comment saying so.
+        //
+        // NO HOVER. Odette flies on the fight stage (HoverSpec, "on this
+        // screen she stands on her ground line -- no hover" per the P4
+        // brief) -- only GroundLineFor is ever read here, never HoverFor.
+        private static void GroundArt(Image image, float floorY, Sprite sprite, string battleSpritePath)
+        {
+            if (image == null) return;
+
+            var rect = image.rectTransform;
+            float x = rect.anchoredPosition.x;
+
+            if (sprite == null || string.IsNullOrEmpty(battleSpritePath) || sprite.rect.height <= 0f)
+            {
+                rect.anchoredPosition = new Vector2(x, floorY);
+                return;
+            }
+
+            float scale = Mathf.Min(rect.rect.width / sprite.rect.width, rect.rect.height / sprite.rect.height);
+            float groundLine = StanceManifestLoader.Manifest.GroundLineFor(battleSpritePath);
+
+            rect.anchoredPosition = new Vector2(x, floorY - groundLine * scale);
+        }
+
+        private static float FloorYAt(float[] array, int index) =>
+            array != null && index >= 0 && index < array.Length ? array[index] : 0f;
+
         // ---- toast ------------------------------------------------------------------
 
         private void ShowToast(PartyOutcome outcome)
         {
-            if (toastText == null || toast == null) return;
+            if (toastText == null) return;
             if (outcome.Toast == PartyToastKind.None) return;
 
             switch (outcome.Toast)
@@ -505,28 +805,8 @@ namespace PrincesPalace
                     return;
             }
 
-            toast.SetShown(true);
-
-            if (_toastFade != null) StopCoroutine(_toastFade);
-            if (isActiveAndEnabled) _toastFade = StartCoroutine(FadeToastAfter(ToastSeconds));
-        }
-
-        // UNSCALED, like every other clock the system menu hosts (see
-        // ExitsController.ArmSeconds's own comment) -- this pane only ever
-        // runs while the menu has paused the game at timeScale 0.
-        //
-        // A HARD CUT, not an alpha fade. The toast node carries no
-        // CanvasGroup and nothing in the reuse-first registry (CODE_
-        // STANDARDS SS2) is a drop-in "fade this out after N seconds"
-        // primitive -- BeaconPulse and StageDeathFade both drive a component
-        // this node does not have. Show/hide is a smaller, honest scope for
-        // this package; a later polish pass can add a real fade if the
-        // design still wants one.
-        private IEnumerator FadeToastAfter(float seconds)
-        {
-            yield return new WaitForSecondsRealtime(seconds);
-            toast.SetShown(false);
-            _toastFade = null;
+            if (toastFader != null) toastFader.Show();
+            else toast?.SetShown(true);
         }
 
         // ---- content lookups --------------------------------------------------------
@@ -576,6 +856,14 @@ namespace PrincesPalace
         }
 
         private static bool HasArt(string id) => ArtFor(id) != null;
+
+        // The manifest's own key for an actor -- "Characters/sheep", the
+        // same string ArtFor hands StanceAnimationLibrary.Resolve.
+        private static string BattleSpritePathFor(string id)
+        {
+            var definition = ContentDatabase.GetCharacter(id);
+            return definition == null ? null : definition.Data.BattleSpritePath;
+        }
 
         private static string MonogramFor(string id)
         {

@@ -271,5 +271,19 @@ namespace PrincesPalace.Domain.UiKit
         public const float ToastBottomInset = 10f;
 
         public static float ToastCentreY => ContentBottom + ToastBottomInset + ToastHeight * 0.5f;
+
+        // ---- the drag ghost (P4): one reusable floating preview, not a fifth section
+
+        // Sized off the SEAT column's own art proportions (the taller of the
+        // two art slots) rather than the card's smaller one -- a preview that
+        // shrinks when picked up off a card and grows when picked up off a
+        // seat would read as two different ghosts rather than one reused node
+        // following the pointer.
+        public static float GhostArtWidth => ColumnWidth * 0.7f;
+        public const float GhostArtHeight = ArtHeight;
+
+        // ---- the roster drop zone (P4): a raycastable hit-region behind every card --
+
+        public static float RosterDropZoneHeight => CardHeight;
     }
 }
