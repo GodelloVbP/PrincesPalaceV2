@@ -205,6 +205,12 @@ namespace PrincesPalace.Domain.UiKit
             float required = 0f;
             foreach (var child in node.Children)
             {
+                // Flow children only, matching what UiSolver.ArrangeFlow
+                // actually stacks and spaces. A pinned glow inside a Fixed
+                // row occupies none of its flow extent, and counting it here
+                // reported an overflow for a container that fits.
+                if (child.Source != null && !child.Source.Place.IsFlow) continue;
+
                 required += vertical ? child.Rect.Height : child.Rect.Width;
                 count++;
             }
