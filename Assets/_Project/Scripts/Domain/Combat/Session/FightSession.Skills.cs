@@ -395,7 +395,8 @@ namespace PrincesPalace.Domain.Combat.Session
                     varianceRange: DamageVarianceRange,
                     rng: _rng,
                     resolveWard: ResolveWard,
-                    ignoresDefense: skill.IgnoresDefense);
+                    ignoresDefense: skill.IgnoresDefense,
+                    resolveDetonation: ResolveDetonation);
 
                 if (outcome.IsMiss)
                 {
@@ -534,7 +535,8 @@ namespace PrincesPalace.Domain.Combat.Session
                     varianceRange: DamageVarianceRange,
                     rng: _rng,
                     resolveWard: ResolveWard,
-                    ignoresDefense: skill.IgnoresDefense);
+                    ignoresDefense: skill.IgnoresDefense,
+                    resolveDetonation: ResolveDetonation);
 
                 // Swift: EACH enemy in an AOE independently rolls its own
                 // dodge -- it is a genuinely separate target reacting to the
@@ -675,7 +677,8 @@ namespace PrincesPalace.Domain.Combat.Session
                     rng: _rng,
                     resolveWard: ResolveWard,
                     attacker: actor,
-                    dodgeAlreadyResolved: true);
+                    dodgeAlreadyResolved: true,
+                    resolveDetonation: ResolveDetonation);
 
                 DepleteBreakShield(target, outcome.Effectiveness);
                 total += outcome.Damage;

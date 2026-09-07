@@ -828,7 +828,8 @@ namespace PrincesPalace.Domain.Combat.Session
                 attackType: ActorAttackType(enemy), affinity: ElementalAffinity.Neutral,
                 varianceRange: DamageVarianceRange,
                 rng: _rng,
-                resolveWard: ResolveWard);
+                resolveWard: ResolveWard,
+                resolveDetonation: ResolveDetonation);
 
             // The enemy's own pose (and cast VFX) is recorded regardless of
             // whether the blow connects -- the monster still visibly swings

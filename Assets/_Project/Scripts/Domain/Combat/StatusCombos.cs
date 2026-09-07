@@ -21,11 +21,26 @@ namespace PrincesPalace.Domain.Combat
     // something to speculatively wire ahead of the content that would use it.
     public static class StatusCombos
     {
-        // Returns how much bonus damage was dealt (0 if nothing detonated),
-        // and applies it directly through CombatMath.ApplyDamage — same as
-        // every other source of damage in the game, not a special case the
-        // caller has to know how to apply.
-        public static int DetonatePoisonIfMatched(CombatantState target, DamageType incomingType)
+        // Spends the Poison and reports what its remaining ticks are WORTH.
+        // Deals nothing.
+        //
+        // IT USED TO DEAL IT, straight through CombatMath.ApplyDamage, and
+        // that was the whole bug: this is called from inside
+        // DamagePipeline.AfterDefences, which is also what every TELEGRAPH
+        // preview runs through. A preview passes rng: null and
+        // resolveWard: null so it cannot consume a draw or spend a ward --
+        // and the combo had no such collaborator to leave out, so preparing
+        // an intent for a Poison-typed monster spent a party member's Poison
+        // and took the health for it before anything had swung. The damage
+        // also never reached FightSession.DealDamage, so it was missing from
+        // the ledger and a detonation that felled its target settled no
+        // death: no kill row, no rider eligibility.
+        //
+        // Splitting the two halves is what fixes both at once. The SPEND
+        // stays here, where the rule lives; the DAMAGE belongs to whoever
+        // owns a damage funnel, which is the session (see
+        // FightSession.ResolveDetonation).
+        public static int SpendPoisonIfMatched(CombatantState target, DamageType incomingType)
         {
             if (target == null || (incomingType != DamageType.Nature && incomingType != DamageType.Poison))
             {
@@ -40,12 +55,6 @@ namespace PrincesPalace.Domain.Combat
 
             int bonus = poison.Magnitude * poison.TurnsRemaining;
             target.Statuses.Remove(poison);
-
-            if (bonus > 0)
-            {
-                CombatMath.ApplyDamage(target, bonus);
-            }
-
             return bonus;
         }
     }

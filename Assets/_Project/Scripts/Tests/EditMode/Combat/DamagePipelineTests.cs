@@ -23,11 +23,21 @@ namespace PrincesPalace.Domain.Tests
         // own behaviour is pinned separately.
         private const float NoVariance = 0f;
 
+        // THE COMBO'S SPEND HALF, handed in the way every real damage path
+        // hands FightSession.ResolveDetonation in. It is a parameter and not a
+        // hardcoded call precisely so a TELEGRAPH can leave it out -- a
+        // preview that spends a status is the bug this shape closes -- which
+        // means a test that leaves it out is asserting about a preview, not
+        // about a hit. Every case below that is about a real hit passes it.
+        private static readonly System.Func<CombatantState, CombatantState, DamageType, int> Detonate =
+            (attacker, target, type) => StatusCombos.SpendPoisonIfMatched(target, type);
+
         private static DamagePipeline.Outcome Typed(
             int raw, DamageType type, CombatantState target,
             ElementalAffinity affinity = default,
             System.Func<CombatantState, int, int> ward = null) =>
-            DamagePipeline.AfterDefences(raw, type, target, affinity, NoVariance, null, ward);
+            DamagePipeline.AfterDefences(raw, type, target, affinity, NoVariance, null, ward,
+                resolveDetonation: Detonate);
 
         [Test]
         public void WithNoDefencesAtAll_TheRawFigureSurvives()
@@ -151,6 +161,30 @@ namespace PrincesPalace.Domain.Tests
         }
 
         [Test]
+        public void WithNoDetonationResolver_APoisonIsNeitherSpentNorReported()
+        {
+            // THE TELEGRAPH'S GUARANTEE, at the level it is actually made.
+            // PreviewDamage and PreviewSkill leave rng, resolveWard and this
+            // null so a preview cannot spend anything the player still holds.
+            // Before the combo became a handed-in collaborator it fired
+            // unconditionally from inside this method, so preparing an intent
+            // for a Poison-typed monster really did set off a party member's
+            // Poison and take the health for it.
+            var target = Fighter("Target", false);
+            StatusEffects.Apply(target.Statuses, StatusEffectType.Poison, 20, 3);
+            int before = target.CurrentHealth;
+
+            var outcome = DamagePipeline.AfterDefences(
+                20, DamageType.Nature, target, ElementalAffinity.Neutral,
+                NoVariance, rng: null, resolveWard: null);
+
+            Assert.AreEqual(0, outcome.PoisonDetonation);
+            Assert.AreEqual(before, target.CurrentHealth);
+            Assert.IsTrue(target.Statuses.Exists(st => st.Type == StatusEffectType.Poison),
+                "a preview must leave the status exactly where it found it");
+        }
+
+        [Test]
         public void TheUntypedPath_NeverDetonatesAPoison()
         {
             // A monster's own claws are untyped and never reach the typed
@@ -161,10 +195,13 @@ namespace PrincesPalace.Domain.Tests
 
             var outcome = DamagePipeline.AfterDefences(
                 20, actor, target, attackType: null, affinity: ElementalAffinity.Neutral,
-                varianceRange: NoVariance, rng: null, resolveWard: null);
+                varianceRange: NoVariance, rng: null, resolveWard: null,
+                resolveDetonation: Detonate);
 
             Assert.AreEqual(0, outcome.PoisonDetonation);
             Assert.AreEqual(1f, outcome.Effectiveness, 0.0001f);
+            Assert.IsTrue(target.Statuses.Exists(st => st.Type == StatusEffectType.Poison),
+                "and the Poison is still standing -- an untyped hit does not even reach the combo");
         }
 
         [Test]
@@ -453,7 +490,8 @@ namespace PrincesPalace.Domain.Tests
             var outcome = DamagePipeline.AfterDefences(
                 100, DamageType.Nature, target, ElementalAffinity.Neutral,
                 varianceRange: 0.2f, rng: new PrincesPalace.Domain.Rng.SeededRandom(1),
-                resolveWard: (t, dmg) => { wardWasAsked = true; return dmg; });
+                resolveWard: (t, dmg) => { wardWasAsked = true; return dmg; },
+                resolveDetonation: Detonate);
 
             Assert.IsTrue(outcome.IsMiss);
             Assert.AreEqual(0, outcome.Damage);
