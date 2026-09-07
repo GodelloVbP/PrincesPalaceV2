@@ -179,17 +179,26 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void ThePartyPlateSitsWhereV1PutIt()
         {
-            // Width and the bottom edge (the canvas's own 40px HUD margin,
-            // -540 + 40) are v1's; the height moved from 216 (aspect 2.09) to
-            // 452/1.98 = 228.28 to clear the Blue 2:1 container kit's own 5%
-            // aspect band, and the centre moved with it -- see
-            // FightScreen.BuildPartyPlate's own header.
+            // Width and height are v1's/section-1's own numbers, unmoved by
+            // B1 (452 wide, 452/1.98 = 228.28 tall -- see
+            // FightScreen.BuildPartyPlate's own header). The BOTTOM EDGE
+            // moved, deliberately: it used to be a flat -500 (the canvas's
+            // own 40px HUD margin, with no reference to the verb column at
+            // all), and is now solved so the plate's own VISIBLE bottom
+            // (rect bottom + height * the 2:1 art's own halo) lands flush
+            // with the verb column's visible bottom instead -- see
+            // FightSubmenuLayout.VisibleBottomLine's header. OLD -500 (rect)
+            // / -385.858 (centre); NEW -486.972 (rect) / -372.830 (centre),
+            // 13.03px higher -- the old rect bottom sat 14px BELOW the verb
+            // column's own line, invisible only because -500's own comment
+            // never compared the two.
             var rect = RectOf("PartyPlate");
             Assert.AreEqual(-694f, rect.Centre.X, 0.01f);
-            Assert.AreEqual(-385.858f, rect.Centre.Y, 0.01f);
+            Assert.AreEqual(-372.830f, rect.Centre.Y, 0.01f);
             Assert.AreEqual(452f, rect.Width, 0.01f);
             Assert.AreEqual(228.283f, rect.Height, 0.01f);
-            Assert.AreEqual(-500f, rect.Centre.Y - rect.Height * 0.5f, 0.01f, "the bottom edge must not move");
+            Assert.AreEqual(-486.972f, rect.Centre.Y - rect.Height * 0.5f, 0.01f,
+                "the bottom edge is now solved from FightSubmenuLayout.VisibleBottomLine, not a flat -500");
         }
 
         // The party plate's container theme/ratio and content inset are
@@ -773,24 +782,37 @@ namespace PrincesPalace.Domain.Tests
         //
         // The skill panel floated 36px above the verb column beside it, which
         // reads as a panel that missed rather than as two halves of one
-        // control. Both edges are derived from CommandBottom now, so they
-        // cannot drift apart -- and this is what says so, because nothing else
-        // compares them: UiAudit checks siblings against each other and these
-        // two are in different branches of the tree.
+        // control. B1 found a second, smaller version of the same defect
+        // one layer down: every kit PNG carries a transparent halo outside
+        // its own painted border (tools/measure_ui_kit.py measures it), so
+        // even rects that agree on CommandBottom exactly show two DIFFERENT
+        // painted edges -- a rect-flush is not a paint-flush. This now
+        // checks the VISIBLE bottoms (rect bottom + height * that art's own
+        // measured pad, the same arithmetic FightSubmenuLayout.
+        // VisibleBottomLine and FightScreen.BuildPartyPlate both place
+        // against) of all three surfaces that share this line: the verb
+        // column, the skill panel frame, and the party plate.
         [Test]
         public void TheSkillPanelEndsOnTheSameLineAsTheVerbColumn()
         {
             var attack = RectOf("Verb0");
             var panel = RectOf("SubmenuContainer");
+            var partyPlate = RectOf("PartyPlate");
 
-            float verbBottom = attack.Centre.Y - attack.Height * 0.5f;
-            float panelBottom = panel.Centre.Y - panel.Height * 0.5f;
+            float verbVisibleBottom = VisibleBottom(attack, Ui.PlateVisiblePad(Ui.PlateShapeFor(attack.Width, attack.Height)));
+            float panelVisibleBottom = VisibleBottom(panel, Ui.ContainerVisiblePad(ContainerRatio.ThreeByFour));
+            float plateVisibleBottom = VisibleBottom(partyPlate, Ui.ContainerVisiblePad(ContainerRatio.TwoByOne));
 
-            Assert.AreEqual(verbBottom, panelBottom, 0.01f,
-                "the skill panel and the verb column no longer end on the same line");
-            Assert.AreEqual(FightSubmenuLayout.CommandBottom, panelBottom, 0.01f,
-                "and that line is CommandBottom, which is what both are measured from");
+            Assert.AreEqual(verbVisibleBottom, panelVisibleBottom, 0.01f,
+                "the skill panel and the verb column no longer end on the same VISIBLE line");
+            Assert.AreEqual(verbVisibleBottom, plateVisibleBottom, 0.01f,
+                "the party plate and the verb column no longer end on the same VISIBLE line");
+            Assert.AreEqual(FightSubmenuLayout.VisibleBottomLine, verbVisibleBottom, 0.01f,
+                "and that line is FightSubmenuLayout.VisibleBottomLine, which is what all three are measured from");
         }
+
+        private static float VisibleBottom(UiRect rect, ContentInsetFrac pad) =>
+            (rect.Centre.Y - rect.Height * 0.5f) + rect.Height * pad.Bottom;
 
         // ---- the submenu's Violet 3:4 container ------------------------------------
         //

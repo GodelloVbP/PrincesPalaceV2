@@ -293,6 +293,34 @@ namespace PrincesPalace.Domain.UiKit
         public static ContentInsetFrac FlagBannerContentInset(ContainerRatio ratio) =>
             ContentInset(ContainerKind.FlagBanner, ratio);
 
+        // The measured VISIBLE-EDGE pad (the transparent halo outside the
+        // painted border, distinct from the content inset above) -- see
+        // ContainerArt.VisiblePad's own comment for where the numbers come
+        // from. Exposed the same way ContainerContentInset/
+        // FlagBannerContentInset expose Inset: ContainerArt itself is
+        // internal to this assembly.
+        public static ContentInsetFrac ContainerVisiblePad(ContainerRatio ratio) =>
+            ContainerArt.VisiblePad(ContainerKind.Container, ratio);
+
+        public static ContentInsetFrac FlagBannerVisiblePad(ContainerRatio ratio) =>
+            ContainerArt.VisiblePad(ContainerKind.FlagBanner, ratio);
+
+        // Same idea, for a themed button's plate art -- see
+        // ButtonPlateArt.VisiblePad's own comment.
+        public static ContentInsetFrac PlateVisiblePad(ButtonPlateShape shape) =>
+            ButtonPlateArt.VisiblePad(shape);
+
+        // Where a rect's CENTRE has to sit so that its VISIBLE bottom edge
+        // (rect bottom + height * the art's own bottom VisiblePad fraction)
+        // lands exactly on `visibleBottomLine`. One line, but it is the one
+        // line FightSubmenuLayout's frame and FightScreen's party plate both
+        // solve -- named so neither restates the algebra
+        // (visibleBottomLine + height * (0.5 - pad) falls out of "rect
+        // bottom = centre - height*0.5" and "visible bottom = rect bottom +
+        // height*pad" but is not obviously either of those by itself).
+        public static float CentreYForVisibleBottom(float visibleBottomLine, float height, float bottomPadFraction) =>
+            visibleBottomLine + height * (0.5f - bottomPadFraction);
+
         public static UiNode Solid(string name, string colorHex, UiVec size, Place? place = null)
         {
             var node = Node(name, UiNodeKind.Solid, place ?? Place.Flow, UiSize.Fixed(size));

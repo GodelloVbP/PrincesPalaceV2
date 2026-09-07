@@ -68,6 +68,35 @@ namespace PrincesPalace.Domain.UiKit
             }
         }
 
+        // THE VISIBLE EDGE, not the rect edge -- see ContainerArt.VisiblePad's
+        // own header for why this exists and reuses ContentInsetFrac's shape
+        // rather than a dedicated type. Measured by tools/measure_ui_kit.py
+        // at alpha >= 32, fraction averaged across the six themes; all four
+        // shapes agreed within 1px across every theme on every edge (unlike
+        // two of ContainerArt's groups -- see its own note).
+        //
+        // Row6x1.Bottom is the one this phase actually reads:
+        // FightSubmenuLayout.VisibleBottomLine is built from the verb row's
+        // own visible bottom, and the verb row (300x52) resolves to Row6x1
+        // via ShapeFor below.
+        //
+        // RE-MEASURE: `py tools/measure_ui_kit.py`, re-paste its
+        // "C#-PASTEABLE, threshold 32" block.
+        internal static ContentInsetFrac VisiblePad(ButtonPlateShape shape)
+        {
+            switch (shape)
+            {
+                case ButtonPlateShape.ThreeByOne:
+                    return new ContentInsetFrac(left: 0.0043f, right: 0.0043f, top: 0.0135f, bottom: 0.0135f);
+                case ButtonPlateShape.FiveByOne:
+                    return new ContentInsetFrac(left: 0.0021f, right: 0.0021f, top: 0.0103f, bottom: 0.0103f);
+                case ButtonPlateShape.Row6x1:
+                    return new ContentInsetFrac(left: 0.0023f, right: 0.0023f, top: 0.0138f, bottom: 0.0138f);
+                default:
+                    return new ContentInsetFrac(left: 0.0263f, right: 0.0256f, top: 0.0694f, bottom: 0.0703f);
+            }
+        }
+
         // Selection rule: the shape whose measured aspect is nearest the
         // declared rect's aspect, by RATIO distance (min |ln(rect/plate)|)
         // rather than absolute difference -- a button that misses every

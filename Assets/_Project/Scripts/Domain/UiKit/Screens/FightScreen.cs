@@ -1163,19 +1163,29 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // (1.98, see ContainerArt.ContainerAspect2x1) -- outside the 5% band
         // Ui.Container refuses. WIDTH STAYS 452 (FightScreenTests pins it);
         // the nudge is entirely in HEIGHT, 216 -> 452/1.98 = 228.28.
-        //
-        // THE BOTTOM EDGE IS THE ANCHOR, not the centre: -500 was already the
-        // canvas's own 40px HUD margin above the floor (UiFrames.Reference.Y
-        // * -0.5 + 40). Growing the plate by keeping its old centre Y would
-        // have moved that margin; growing it from the bottom up keeps the
-        // margin and pushes the top edge up by the same 12.28px instead.
         // Public: FightScreenTests (a separate assembly, no InternalsVisibleTo
         // grant to it) reads these rather than restating the numbers.
         public const float PartyPlateWidth = 452f;
         public const float PartyPlateHeight = PartyPlateWidth / ContainerArt.ContainerAspect2x1; // 228.28, was 216
         private const float PartyPlateCentreX = -694f;
-        private const float PartyPlateBottomY = -500f; // -392 - 108: the old plate's bottom edge, preserved
-        private const float PartyPlateCentreY = PartyPlateBottomY + PartyPlateHeight * 0.5f; // -385.86, was -392
+
+        // VISIBLE-BOTTOM FLUSH NOW (B1), not the fixed -500 HUD margin it
+        // used to be: -500 WAS the canvas's own 40px margin above the floor
+        // (UiFrames.Reference.Y * -0.5 + 40), chosen with no reference to the
+        // verb column at all, which is why the plate's own visible bottom
+        // used to sit ~14px below the verb column's -- two rects that agreed
+        // on nothing lined up by coincidence or not at all. It is now placed
+        // exactly like FightSubmenuLayout's own frame (see
+        // FightSubmenuLayout.VisibleBottomLine's comment for the halo this
+        // corrects for): the CENTRE that puts the plate's own visible bottom
+        // (rect bottom + height * its 2:1 art's own bottom VisiblePad) on
+        // the same line the verb column's visible bottom sits on. Computed,
+        // not const, because Ui.PlateVisiblePad/ContainerVisiblePad are
+        // ordinary (non-const) static methods -- see PartyPlateWidth/Height's
+        // own note for why the two consts above stay literal.
+        private static float PartyPlateCentreY =>
+            Ui.CentreYForVisibleBottom(FightSubmenuLayout.VisibleBottomLine, PartyPlateHeight,
+                Ui.ContainerVisiblePad(ContainerRatio.TwoByOne).Bottom);
 
         private UiNode BuildPartyPlate()
         {
@@ -1260,11 +1270,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return plate;
         }
 
-        // The party plate's own top edge in world Y -- its bottom edge
-        // (PartyPlateBottomY) plus its own height. Both the transformation
+        // The party plate's own top edge in world Y. Both the transformation
         // strip and the roster stack build off this rather than off a
-        // restated number, so moving the plate moves them with it.
-        private const float PartyPlateTopY = PartyPlateBottomY + PartyPlateHeight;
+        // restated number, so moving the plate moves them with it. Computed
+        // rather than const now that PartyPlateCentreY is (see its own
+        // note) -- and computed as Centre + Height*0.5f, THE SAME EXPRESSION
+        // UiRect.Top itself uses, rather than (Centre - Height*0.5f) + Height
+        // (algebraically equal, but a different float instruction sequence
+        // that rounded to a different last bit here): TransformStrip is
+        // placed flush against this value, and UiAudit's SiblingOverlap
+        // check is a strict `>`, so an ULP of drift between "the plate's own
+        // solved Top" and "the Y this constant claims that Top is" reads as
+        // a genuine (if 0px-wide) overlap rather than the two edges touching.
+        private static float PartyPlateTopY => PartyPlateCentreY + PartyPlateHeight * 0.5f;
 
         // FUSED TO THE PLATE'S TOP EDGE, not inside it -- the header row two
         // labels above already leaves a 2px gap between PartyName and
@@ -1308,7 +1326,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float RosterPlateW = 452f;
         private const float RosterPlateH = 44f;
         private const float RosterGap = 6f;
-        private const float RosterFirstY =
+
+        // Computed, not const, now that PartyPlateTopY is (see its own note).
+        private static float RosterFirstY =>
             PartyPlateTopY + TransformStripH + RosterGap + RosterPlateH * 0.5f;
         private const float RosterPitchY = RosterPlateH + RosterGap;
 
@@ -1491,8 +1511,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // ---- column A: the verbs -------------------------------------------------
 
         private const float VerbColumnX = -286f;
-        private const float VerbRowW = 300f;
-        private const float VerbRowH = 52f;
+
+        // Reads FightSubmenuLayout.VerbRowW/VerbRowH rather than restating
+        // 300/52 -- FightSubmenuLayout.VisibleBottomLine has to pick the
+        // SAME plate shape these rows actually build at (see its own
+        // comment), so there is one copy of the row's own size, not two that
+        // could drift.
+        private const float VerbRowW = FightSubmenuLayout.VerbRowW;
+        private const float VerbRowH = FightSubmenuLayout.VerbRowH;
         private const float VerbPitch = 62f;
 
         // Rendered BOTTOM-UP so ATTACK sits nearest the cursor, and tiered so
