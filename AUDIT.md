@@ -983,6 +983,28 @@ different, still-plausible-looking wrong number.
 an unmeasured cell — fail the splice, flag it for manual review, fall back to a default inset — is
 a tooling-workflow call about how strict `splice_ui_kit.py` should be, not a pure bug fix.
 
+### 97. A summoned body pays its own full reward, with no cap on how many times
+
+`FightSession.Outcome.cs:93` — `ResolveOutcome` pays `VictoryRewards.For(_enemyKits.Values,
+IsEliteFight, DepthStep)`, and `_enemyKits` gets a summon's kit filed into it the moment it is
+summoned (`ResolveSummon`) and never removes a dead one — so every rat the Forest Warden's Roar
+calls in is worth its full authored experience and gold at payout, on top of the enemies actually
+fielded. `SummonCap` (`FightSession.Skills.cs:316`, mirrored at `FightSession.Enemies.cs:136`)
+counts only the LIVING against the cap, not the total ever summoned, so a player willing to stall
+in that one room and let each rat die before the next is cast has an unbounded exp/gold faucet:
+the cap bounds concurrent adds, not lifetime payout.
+
+The rest of the kill funnel already answers this question the other way — `EssenceSiphonOnKill`
+and `InconspicuousKeyOnKill` both bail on `victim.IsSummon`, on the stated reasoning that a
+called-in body is not a body worth paying for. `ResolveOutcome`'s payout is the one place in the
+funnel that never asks the same question.
+
+**Why it is the owner's:** every available fix is a balance number, not a wiring one — exclude
+summons from the payout entirely (drops reward for a boss room that is genuinely harder for
+having adds), pay a summon once regardless of how many are cast, or pay a flat fraction of a
+summon's authored reward. `FightOutcomeTests.ASummonedBodyDoesNotPayItsOwnReward` (`[Ignore]`,
+`6cdd8678`) pins today's behaviour and turns red the moment one of those is picked.
+
 ## Open investigations
 
 ### ~~52. `SystemMenuExitsTests.OnePressOnAnExitDoesNothingButArmIt` flaked once, navigating to `"Hub"` — cause not found~~ — fixed in `58a7f69`: a leftover `HoldToConfirm` was bleeding its `Abandon` navigation into the next test; the fixture's `TearDown` now cancels every live hold; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`
