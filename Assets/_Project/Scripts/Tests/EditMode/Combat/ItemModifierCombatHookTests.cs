@@ -158,6 +158,47 @@ namespace PrincesPalace.Domain.Tests
             Assert.AreEqual(0, session.Ledger.For("Hero").OtherDealt);
         }
 
+        // ---- ElementalDamagePercent (P4b's packet hook -- reads the SPELL's
+        // own instance.type inside ResolveDamageInstances, not the caster's
+        // attackType the way the rider above does; see that member's own
+        // header, ModifierEffect.cs) ---------------------------------------
+
+        private static ResolvedSkill FireBolt() =>
+            new ResolvedSkill("firebolt_fixture", "Firebolt", "", "hero", 1, SkillEffect.DamageSingle,
+                SkillTargeting.SingleEnemy, 0, 0, false, 0, 0, false,
+                new[] { new DamageInstance(DamageType.Fire, 20) },
+                SpellPresentation.None, 0);
+
+        [Test]
+        public void AFireSpellWithTenPercentFireOnTheCasterDealsTwentyTwoNotTwenty()
+        {
+            var hero = Fighter("Hero", true, attack: 20, speed: 10);
+            var foe = Fighter("Foe", false, maxHealth: 100, speed: 1);
+            Give(hero, new ModifierEffect(ModifierEffectType.ElementalDamagePercent, 10, against: DamageType.Fire));
+
+            var session = Session(new CombatEncounter(new[] { hero }, new[] { foe }));
+            Assert.IsTrue(session.CastSkill(FireBolt(), foe));
+
+            // 20 base * (1.0 skill/scaling multiplier) * 1.10 Fire bonus = 22,
+            // Rounding.AwayFromZero, unmitigated against a target with no Fire
+            // resistance/defense and DamageVarianceRange 0.
+            Assert.AreEqual(100 - 22, foe.CurrentHealth);
+        }
+
+        [Test]
+        public void AFireSpellWithTenPercentIceDealsTheUnmodifiedTwenty()
+        {
+            var hero = Fighter("Hero", true, attack: 20, speed: 10);
+            var foe = Fighter("Foe", false, maxHealth: 100, speed: 1);
+            Give(hero, new ModifierEffect(ModifierEffectType.ElementalDamagePercent, 10, against: DamageType.Ice));
+
+            var session = Session(new CombatEncounter(new[] { hero }, new[] { foe }));
+            Assert.IsTrue(session.CastSkill(FireBolt(), foe));
+
+            // the Ice bonus does not apply to a Fire packet -- unmodified 20.
+            Assert.AreEqual(100 - 20, foe.CurrentHealth);
+        }
+
         // ---- TypedResistanceFlat (read directly through DamagePipeline, the
         // one hook every source -- relic or modifier -- shares) -----------------
 

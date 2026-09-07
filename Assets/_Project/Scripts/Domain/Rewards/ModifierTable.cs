@@ -177,6 +177,14 @@ namespace PrincesPalace.Domain.Rewards
         private static readonly HashSet<ModifierEffectType> OffensiveEffects = new HashSet<ModifierEffectType>
         {
             ModifierEffectType.ElementalDamageOnHitPercent,
+            // Never actually authored via modifiers.json -- only the reward
+            // track appends it (see docs/PLAN_REWARD_TRACKS.md P4), so
+            // IsOffensiveModifier is never called on it in production today.
+            // Classified anyway so the vocabulary stays honest if a future
+            // modifier ever wants the same combat hook, and because
+            // ModifierTableTests' exhaustiveness guard requires SOME answer
+            // for every member of the closed enum.
+            ModifierEffectType.ElementalDamagePercent,
             ModifierEffectType.FlatSpeedBonus,
             ModifierEffectType.LifestealPercent,
             ModifierEffectType.GuaranteedFirstAction,
