@@ -46,26 +46,39 @@ namespace PrincesPalace.Domain.Rewards
         //   Normal            4   .128     87.2%    11.16%    1.43%    0.21%
         //   Normal           10   .140     86.0%    12.04%    1.69%    0.27%
         //   Normal           20   .160     84.0%    13.44%    2.15%    0.41%
-        //   Normal      55 (cap)  .220     78.0%    17.16%    3.78%    1.06%
+        //   Normal      50 (cap)  .220     78.0%    17.16%    3.78%    1.06%
         //   Elite             0   .150     85.0%    12.75%    1.91%    0.34%
         //   Elite             4   .158     84.2%    13.30%    2.10%    0.39%
         //   Elite            10   .170     83.0%    14.11%    2.40%    0.49%
         //   Elite            20   .190     81.0%    15.39%    2.92%    0.69%
-        //   Elite       55 (cap)  .220     78.0%    17.16%    3.78%    1.06%
+        //   Elite       35 (cap)  .220     78.0%    17.16%    3.78%    1.06%
         //   Boss              0   .180     82.0%    14.76%    2.66%    0.58%
         //   Boss              4   .188     81.2%    15.27%    2.87%    0.66%
         //   Boss             10   .200     80.0%    16.00%    3.20%    0.80%
         //   Boss        20 (cap)  .220     78.0%    17.16%    3.78%    1.06%
         //
-        // favor=55 is not an arbitrary stress value -- it is the highest
-        // Favor a real save can carry: Shawn's authored 4 (characters.json,
-        // the only authored princesFavor) plus the full reward track's 51
-        // (RewardTrack.cs's Favor milestone at 10 plus its 23-node filler
-        // mix; see that file's own FillerMix comment, which derives the same
-        // 55 for the exact same reason). It is the same ceiling RarityTable's
-        // header cites for LootLadder.MaxStep, because it is the actual
-        // number a completed save reaches, not a round figure picked for
-        // this comment.
+        // THE CEILING ROW IS THE STEP CAP, NOT A REACHABLE FAVOR. It used to
+        // read "55 (cap)" on the claim that 55 was the highest Favor a real
+        // save could carry -- Shawn's authored 4 plus 51 off the reward
+        // track. THE TRACK NO LONGER GRANTS FAVOR AT ALL: TrackReward has no
+        // Favor member, and ItemOfferRoll.FavorOf states the surviving rule
+        // as "TWO SOURCES ONLY ... authored-plus-live, full stop".
+        //
+        // What a save can actually reach today is Shawn's authored 4
+        // (characters.json, still the only authored princesFavor) plus the
+        // single best worn Fortunate -- .Best, not a sum. Fortunate's base
+        // magnitude is 2, scaled by ModifierMagnitude.Scale, so it is 6 on a
+        // mid-ladder tier-5 Ordinary piece and 37 at the very top of both
+        // axes (tier 10, Convergent): a realistic ceiling near 10 and an
+        // absolute one of 41, both well under the old 55.
+        //
+        // The per-row arithmetic below is unchanged and still exact -- each
+        // row is P(k) at that step chance. What moved is only which rows a
+        // player can stand on, and the cap rows are now labelled with the
+        // Favor at which each class first reaches MaxStep rather than with a
+        // ceiling that no longer exists. Worth a designer's eye before the
+        // next retune of MaxStep: at 41 Boss and Elite still reach the cap,
+        // Normal (0.12 + 41 x 0.002 = 0.202) never does.
         //
         // 1-affix reads UNCOMMON: 8-12% at favor 0 across encounter classes,
         // climbing to a still-modest ~17% only at the realistic ceiling.
@@ -98,7 +111,7 @@ namespace PrincesPalace.Domain.Rewards
         // has (Normal/Elite/Boss all top out at MaxStep=0.55 there too, just
         // at different Favor values). Boss reaches this cap at favor 20,
         // Elite at 35, Normal at 50 -- so most of a completed save's Favor
-        // range (up to 55) sees Boss and Elite already flat, exactly the
+        // range (see the ceiling note above) sees Boss already flat, exactly the
         // "cannot fill up however generous Favor gets" property LootLadder's
         // header calls the whole point of a ladder over a table.
         public const float FavorPerPoint = 0.002f;

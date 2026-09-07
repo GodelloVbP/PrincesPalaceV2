@@ -254,8 +254,37 @@ namespace PrincesPalace.Domain.Dungeon
             return absoluteStep % StepsPerBoss == EliteOffsetInLeg ? RoomType.EliteFight : (RoomType?)null;
         }
 
+        // ONE LEG OF ONE RUN, seeded from where in the run it is.
+        //
+        // THE PRODUCTION ENTRY POINT. Everything below takes a generator that
+        // is already open, which is right for a test wanting a particular
+        // draw sequence and wrong for a caller that has only a run: nothing
+        // in GenerateLeg varies with `startStep` except ForcedTypeAt, which
+        // is periodic mod StepsPerBoss, and legs are aligned to that grid.
+        // So a caller handing it `new SeededRandom(runSeed)` gets the
+        // IDENTICAL map for every leg of the descent -- same widths, same
+        // links, same room types -- and RunManager did exactly that, which is
+        // what DescentLegSeedingTests.EachLegOfOneDescentIsItsOwnMap pins.
+        //
+        // The derivation lives here rather than at the call site so it cannot
+        // be forgotten again: RngStreams.Leg keyed to legStartStep is what
+        // "position carries the state" means for the map (see RngStreams'
+        // own header), and it is also what makes resuming a run regenerate
+        // the leg it left rather than a fresh one.
+        public static DescentMap GenerateLegFor(ulong runSeed, int startStep,
+            int legLength = DefaultLegLength, bool restBeforeBoss = false)
+        {
+            return GenerateLeg(RngStreams.Open(runSeed, RngStreams.Leg, startStep),
+                startStep, legLength, restBeforeBoss);
+        }
+
         // One leg of the descent: an entry column, then `legLength` columns
         // of rooms whose absolute steps run startStep+1 .. startStep+legLength.
+        //
+        // Takes an already-open generator, so a caller holding only a run
+        // seed wants GenerateLegFor above -- see its header for why passing
+        // `new SeededRandom(runSeed)` here repeats one map for the whole
+        // descent.
         //
         // The map is generated a leg at a time rather than a floor at a time
         // because the descent no longer ends — there is always another leg,

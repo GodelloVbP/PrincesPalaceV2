@@ -24,7 +24,9 @@ namespace PrincesPalace.Domain.Stats
         // "+0 tier 10" are the two opposite corners of the same square.
         public const int MaxPlus = 10;
 
-        // 4% per plus, so a fully honed item is worth 1.40x its tier.
+        // 15% per plus, so a fully honed item is worth 2.5x its tier. (This
+        // line read "4% ... 1.40x" long after the constant below became 15,
+        // contradicting the very next paragraph, which explains the move.)
         //
         // WAS 4%, and 4% was right for the curve it was written against: tier
         // was a straight line worth about 10% a step, so a 40% plus sat neatly
