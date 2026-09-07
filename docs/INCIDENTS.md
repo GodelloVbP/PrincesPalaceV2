@@ -400,3 +400,65 @@ recording because the two-sessions-one-tree hazard has cost real work before
 (see "`git add -A` deleted another session's work (once)", above) and will
 again the next time a session assumes it has the tree to itself without
 checking.
+
+## The ring at canvas centre (2026-09-07)
+
+The party stage's foot-shadow ring sat at canvas centre under every figure
+although the compensation code that was supposed to move it existed and ran
+without error. Cause, in `FightController.StageVisuals.cs`: stance PNGs
+import with Mesh Type Tight, so `sprite.textureRect` is a trimmed, OFFSET
+sub-window of the authored canvas rather than the whole thing starting at
+(0,0). The old measurement called `sprite.texture.GetPixels(textureRect.x,
+textureRect.y, ...)`, got back pixel coordinates that were already relative
+to the crop, and then divided by the crop's own width -- dropping the crop's
+offset entirely. For any tight crop that division is ~0 by construction:
+whatever the true silhouette centre was, the arithmetic could only ever
+report "centred," and every stance on every actor looked plausible because
+every ring rendered at the same wrong place.
+
+It survived because nothing compared the ring's rendered position against a
+literal expectation -- the code ran, produced a number, and the number never
+looked obviously broken; a ring at canvas centre is a valid position for a
+ring to be at, just not the right one for this pose. Found by re-deriving
+the transform by hand against a raw `GetPixels` dump of the real imported
+asset, not by a test catching a mismatch, because no test asserted where the
+ring should land.
+
+The rule: **a `GetPixels` coordinate is in crop space, and has to be mapped
+back into canvas space (`+ textureRect.x` / `.y`) before it is compared
+against or divided by anything measured in canvas units (`sprite.rect.width`,
+never `textureRect.width`).** `FootBandCentreFraction` does this now, and
+also narrowed its scan from the whole silhouette to the 24-row foot band
+above the authored ground line, so an outstretched staff or wing cannot drag
+the ring sideways. Pinned by a PlayMode assertion on every slot plus a
+literal guard so "expected" and "actual" cannot both be computed the same
+wrong way again. `ContentTop` (`FightController.StageVisuals.cs`) has the
+identical crop-offset bug and was deliberately left for its own pass --
+tracked in `AUDIT.md`.
+
+## A readonly struct that serialises as its default (2026-09-07)
+
+`Reach` (`Domain/Combat/Reach.cs`) was sketched as a `readonly struct` in the
+positions plan. Written that way, it would have shipped a bug invisible to
+the whole EditMode suite: Unity's serializer skips `readonly` fields
+outright, and `Reach` lives inside `ResolvedSkill`, which is stored on a
+`SkillDefinition` `ScriptableObject`. A readonly `Reach` round-trips through
+that generated content tree as `default(Reach)`, which reads as
+`Reach.Any` -- every melee restriction and every authored rank restriction
+(`reachSlots` in `skills.json`) would silently disappear at runtime, and
+every skill would become legal to aim anywhere. EditMode tests would not
+catch it: they build a `Reach` in memory and assert against it directly,
+never going through `ContentBuilder`'s asset-generation step, so the readonly
+version and the working version return identical answers to every test that
+exists.
+
+The rule, already stated once for `ResolvedSkill` and now restated here
+because it nearly got relearned the hard way: **a Domain record that gets
+stored inside a `ScriptableObject` is mutable by construction and immutable
+only by convention** -- `readonly` is not available as a real guarantee for
+anything Unity has to serialize, so the discipline has to be "nothing after
+the resolver writes it," enforced by review and by the type only ever being
+constructed once per resolve, not by the compiler. `Reach` shipped as a
+plain mutable `struct` with that comment inline, the same bargain
+`ResolvedSkill.cs:25` and `SpellPresentation.cs:29` already document for
+themselves.

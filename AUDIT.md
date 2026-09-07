@@ -664,6 +664,86 @@ listing of the same fields inside the same doc — still omits
 deliberately out of scope. Two listings of one fact inside one doc is the finding; the
 fix is one section pointing at the other, not a second test. ~10 min.
 
+## Findings from the positions pass, 2026-09-07
+
+### 79. `ContentTop` has the same crop-offset bug the ring measurement had
+
+`FightController.StageVisuals.cs:1403-1420`. `ContentTop(sprite)` calls
+`sprite.texture.GetPixels((int)rect.x, (int)rect.y, ...)` against
+`sprite.textureRect` -- a Tight-mesh crop, offset from the authored canvas --
+and then returns the first opaque row it finds (`y + 1`, line 1418) with no
+`+ rect.y` added back. That return value is in CROP space; every caller that
+compares it against a canvas-space measurement is reading a wrong number by
+exactly the crop's own Y offset, the identical class of bug
+`FootBandCentreFraction` had until `2026-09-07` (see `docs/INCIDENTS.md`,
+"The ring at canvas centre"). `ContentTopForActor` feeds the intent badge's
+vertical placement; it was flagged and deliberately left for its own pass
+when the ring fix landed rather than folded in as a drive-by. Same fix
+shape: map the returned row back into canvas space before anything divides
+or compares it.
+
+### 80. The six-theme container kit's LEFT pad is asymmetric on two ratios
+
+`Assets/_Project/Scripts/Tests/EditMode/Ui/UiKitVisiblePadTests.cs:41` --
+`KnownLeftAsymmetryBandPx = 4f` -- and lines 83-95, where the ThreeByFour and
+NineBySixteen `Container` groups both carry `LeftEdgeKnownAsymmetric = true`.
+`tools/measure_ui_kit.py`'s per-edge scan found silver and violet spliced
+with 3-4px less left padding than the other four themes on exactly these two
+ratios (confirmed on raw alpha, not a threshold artifact — the column jumps
+0→255 at a different column per theme); every other edge of both groups, and
+every edge of the other eight ratio groups, agrees within 1px. The test
+widens its own tolerance on this one known edge rather than asserting a
+wrong number; nothing in the emitted screens currently depends on the
+disagreeing edge, but the asymmetry itself is unfixed art, flagged for
+whoever next touches the container kit's silver/violet 3x4 and 9x16 sheets.
+
+### 81. The Skill submenu frame is locked to the container kit's 3x4 aspect, with 9-slice off
+
+`FightSubmenuLayout.FrameHeight` (`Domain/UiKit/FightSubmenuLayout.cs:196-198`)
+derives the frame's height from `ContainerRatio.ThreeByFour` at the frame's
+own width via `Ui.ContainerSizeForWidth`, so the frame can only ever be as
+tall as a 3:4 container scales to at that width. `UiEmitter.cs:353-357`
+renders every container sprite `Image.Type.Simple`, not `Sliced` --
+deliberately, per its own comment ("v1 shipped an invisible button on every
+screen through Sliced and never found a fix") -- so there is no 9-slice
+available to decouple the frame's height from its width even if a taller
+ratio were picked. The skill list wants more vertical room than 3:4 gives it
+at the submenu's width; the fix needs a ~4:5 container variant added at the
+next kit regeneration (or working 9-slice, which is the larger, unscheduled
+fix), not a `FrameHeight` rewrite against the ratios the kit currently ships.
+
+### 82. `ProtectTheFrontPolicy` loses to both greedy archetypes, not just fails to beat them
+
+`reports/bot/20260907-114015` (gitignored — 200 runs/cell, `f2945c1b`,
+`Fresh` profile, `WhenOffered` shop policy). `ProtectTheFrontPolicy`: 35
+deaths, `doomedShare` 0.2188. `GreedyAggressivePolicy`: 30 deaths,
+`doomedShare` 0.0714. `GreedyDefensivePolicy`: 13 deaths, `doomedShare`
+0.0769. `ProtectTheFront` has more deaths than either greedy archetype and
+roughly 3x `GreedyAggressive`'s doomed share (0.2188 / 0.0714 ≈ 3.06x; ≈2.85x
+against `GreedyDefensive`). A policy built to protect the front rank is
+currently the worst of the three greedy-family archetypes on the metric it
+was meant to improve. Whether the policy's move heuristic needs rework or
+this is a legitimate finding about the front-rank rule itself is a design
+call, not something to fix by tuning the bot; recorded here per
+`docs/WORKFLOW.md` §11 ("change what a balance batch writes, or what a
+metric means" belongs in `docs/BOT_SUMMARY_SCHEMA.md` — this is the batch's
+numbers changing, not its schema, so it lands here instead).
+
+### 83. `bog_mud_burst`'s `reachSlots: [2, 3]` is a balance change awaiting the owner's call
+
+`Assets/_Project/ContentData/skills.json:429`. Authored as demonstration
+content for the Reach system (`f2945c1b`'s own commit message: "the one
+authored ability in the roster whose fiction already says 'not the thing
+right in front of me'"), exercising the resolver conversion, the
+zero-weighting of an ability with nothing in reach, and the Bog Witch's
+fall-back to her plain swing when the back rank is empty. It is a live
+change to an existing enemy's kit, not a no-op demonstration: Mud Burst now
+lands on ranks 2-3 only instead of anywhere, which changes what
+`bog_witch` fights actually do. Content is generated, never hand-edited
+(`CLAUDE.md` rule 2) — reverting or keeping this is a balance decision for
+the owner, not something to resolve by editing `skills.json` further without
+asking.
+
 ## Open investigations
 
 ### ~~52. `SystemMenuExitsTests.OnePressOnAnExitDoesNothingButArmIt` flaked once, navigating to `"Hub"` — cause not found~~ — fixed in `58a7f69`: a leftover `HoldToConfirm` was bleeding its `Abandon` navigation into the next test; the fixture's `TearDown` now cancels every live hold; full write-up in `docs/AUDIT_STRUCK_ARCHIVE.md`

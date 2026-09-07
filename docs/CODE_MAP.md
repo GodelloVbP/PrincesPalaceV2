@@ -46,11 +46,24 @@ living at construction sites. There are no construction sites now.
 
 `UiVec` · `UiRect` · `Place` · `UiSize` · `UiPad` · `UiAlign` · `UiTextAlign` ·
 `UiNode` ·
-`NodeRef` · `Ui` (the factories) · `UiString` · `UiStrings` · `UiSolver` ·
-`SolvedNode` · `UiAudit` · `UiAuditError` · `UiFrames` · `FightSubmenuLayout` ·
-`ButtonPlateArt` (the button-plate kit's measured shape/selection rule) ·
+`NodeRef` · `Ui` (the factories — `ContainerKey(theme, ratio)` is the one place
+the kit's `container_<theme>_<ratio>` path format lives, so a party-plate theme
+swap is one call rather than a restated string) · `UiString` · `UiStrings` ·
+`UiSolver` ·
+`SolvedNode` · `UiAudit` · `UiAuditError` · `UiFrames` · `FightSubmenuLayout`
+(`VisibleBottomLine` — `CommandBottom` plus the verb row's own bottom PAINT
+pad, not its rect — is what the submenu frame and the party plate both
+bottom-anchor against, because every `Processed/` kit PNG carries a
+transparent halo outside its painted border and a rect-to-rect flush reads as
+misaligned even when the rects agree exactly) ·
+`ButtonPlateArt` (the button-plate kit's measured shape/selection rule;
+`VisiblePad(shape)` is the measured paint-vs-rect fraction on each edge) ·
 `ContainerArt` (the container/flag-banner kit's measured aspect/inset,
-one `ContainerSpec` table keyed on kind+ratio) ·
+one `ContainerSpec` table keyed on kind+ratio; `VisiblePad(kind, ratio)` is
+`ButtonPlateArt.VisiblePad`'s counterpart, both fed by `tools/measure_ui_kit.py`
+— it scans every `Processed/` PNG per edge at alpha thresholds 8/32/128,
+asserts the six themes agree within 1px at 32, and prints a C#-pasteable
+threshold-32 block) ·
 `Typography` (the `TypographyRole` vocabulary and each role's
 `TypographySpec`, including `ResolveSizeRange` — the explicit-literal-vs-
 role-band autosize precedence `UiEmitter.ApplyTypography` calls into)
@@ -110,8 +123,8 @@ EditMode-testable):
 | Folder | Covers |
 |---|---|
 | `Audio/` | Adaptive music: `MusicIntensity` (the four tiers), the `music_layers.json` raw shapes and `MusicLayerResolver`, the resolved `MusicLayerSet`/`MusicLayerLibrary`, and `MusicClock` (bar-boundary arithmetic) |
-| `Combat/` | `CombatMath` (armour is diminishing returns via `Mitigate`, not a subtraction — see its header for the floor-one-boss-took-130-turns bug this replaced), `CombatEncounter`, `CombatantState`, damage/effectiveness formulas, plus the talent-rework additions: `TalentEffect` (the closed rule vocabulary a talent can grant), `TalentEffectSet` (a character's rules, flattened once per fight) and `Transformation`/`TransformGrant` (Black Ram Mode); the balance-pass status/gate primitives `Marks` (spend-on-a-later-hit debuff), `Fear` (Stunned+Vulnerable for a fixed duration), `FallingOffStacks` (a stack pile where every stack carries its own expiry), `Session/CombatLocks` (a once-per-X gate keyed by an arbitrary string) and `Session/ConvergenceGate` (whether a relic wanting "a party member has a convergence ability" should be offered); `Session/FightSession.RelicMechanics.cs` (the non-numeric relic mechanics from both balance passes) |
-| `Content/` | Raw/resolved content shapes + `*EntryResolver`s (validation) for every JSON-authored content type, plus the content enums they parse (`CharacterRole`, `RelicEffect`); `ContentDocAttribute` + `ContentSchema` (reflects over every `Raw*Entry` to generate `docs/CONTENT_SCHEMA.md` — see `ContentSchemaTests.cs`) |
+| `Combat/` | `Reach.cs` (`ReachKind` — `Any`/`Melee`/`ExplicitRanks` — plus a rank mask; the KIND is load-bearing, not just the mask: an authored front-only restriction, `Reach.FromContent`/`Reach.Ranks`, carries the same mask as `Melee` but is deliberately a different kind, because a relic that lifts the front-rank RULE — striking past a bodyguard — must not also unlock an authored aim restriction. `Reach` is a mutable struct on purpose: it lives inside `ResolvedSkill`, which is serialized onto a `ScriptableObject`, and Unity's serializer skips `readonly` fields — a `readonly Reach` would round-trip as `default` = `Any`, silently dropping every restriction while EditMode stayed green, since tests never cross the asset boundary); `CombatMath` (armour is diminishing returns via `Mitigate`, not a subtraction — see its header for the floor-one-boss-took-130-turns bug this replaced), `CombatEncounter`, `CombatantState`, damage/effectiveness formulas, plus the talent-rework additions: `TalentEffect` (the closed rule vocabulary a talent can grant), `TalentEffectSet` (a character's rules, flattened once per fight) and `Transformation`/`TransformGrant` (Black Ram Mode); the balance-pass status/gate primitives `Marks` (spend-on-a-later-hit debuff), `Fear` (Stunned+Vulnerable for a fixed duration), `FallingOffStacks` (a stack pile where every stack carries its own expiry), `Session/CombatLocks` (a once-per-X gate keyed by an arbitrary string) and `Session/ConvergenceGate` (whether a relic wanting "a party member has a convergence ability" should be offered); `Session/FightSession.RelicMechanics.cs` (the non-numeric relic mechanics from both balance passes — `NoteDeliberateMove` is the field-position half, fired only by `Move`, twice per call (the mover and the partner it displaced), separate from the turn-order sites that used to share its old name) |
+| `Content/` | Raw/resolved content shapes + `*EntryResolver`s (validation) for every JSON-authored content type, plus the content enums they parse (`CharacterRole`, `RelicEffect`); `ContentDocAttribute` + `ContentSchema` (reflects over every `Raw*Entry` to generate `docs/CONTENT_SCHEMA.md` — see `ContentSchemaTests.cs`); `ResolvedCharacter.PlateTheme` (the fight party-plate's frame colour, `characters.json`'s `plateTheme` parsed case-insensitively against `UiKit.ButtonTheme` by `CharacterEntryResolver.TryResolveOne` the same way `battleSpriteFacing` is — empty defaults to Blue, an unknown name refuses the build naming the character and the six valid theme names; pinned by `CharacterEntryResolverTests`) |
 | `Dungeon/` | `DifficultyCurve`, room/map generation logic |
 | `Economy/` | `Wallet`, `CurrencyType` |
 | `Equipment/` | `EquipmentSlot(s)`, `EquipmentLoadout` |
@@ -307,7 +320,7 @@ milliseconds rather than by loading a scene.
 
 | File | What it owns |
 |---|---|
-| `FightSession.cs` | the session: kits, reach queries (`CanReach`/`EligibleTargets`), the plain attack, Move |
+| `FightSession.cs` | the session: kits, reach queries (`CanReach`/`EligibleTargets`), the plain attack, Move/`CanMove` (a solo party has nowhere to step and a rooted character cannot step at all — the never-empty-legal-actions guarantee moved to Attack because of this) |
 | `FightSession.Beats.cs` | beat RECORDING, the retro-attach rule (AUDIT #13), stance and voice capture |
 | `FightSession.Riders.cs` | Brave / Trample / Bloodlust, turn-start bookkeeping, victory resolution |
 | `FightSession.Enemies.cs` | intents, the telegraph, the two skip paths, taunt redirection, the status rider |
@@ -325,11 +338,14 @@ milliseconds rather than by loading a scene.
 | `VictoryRewards.cs` | the payout arithmetic (elite × depth), drop rolls, who earns what |
 | `FightHudSpec.cs` | HUD capacities both the tree and the session read |
 | `FightTuning.cs` | balance constants, out of the controller |
-| `CombatBeat.cs` / `Vitals.cs` / `VoiceLine.cs` / `CombatantKit.cs` | the engine-free beat vocabulary |
+| `CombatBeat.cs` (`Formation` records list ORDER — copied with `ToArray` at `CommitBeat`, not `BeginBeat`, because a `Move` writes the swap between the two — so the view, not `CombatEncounter.LivingRankOf`, decides who still occupies a rank; a formation of the living alone would compact the line the instant a kill lands, before the corpse's own death fade has started) / `Vitals.cs` / `VoiceLine.cs` / `CombatantKit.cs` | the engine-free beat vocabulary |
 
 `Domain/Stage/FightStageAnchors.cs` holds the stage's pixel anchors, and
 **formally supersedes** `StageLayout`'s header note that anchors stay in
 SceneBuilder — that note predates screen trees living in Domain.
+`PartyRetreat` (60px) pushes the party side out on the mirrored X only,
+paired with `StageSize` widening 1200 → 1260 so the far slot still fits —
+room made for the Move cross-tween without crowding the two sides together.
 
 ### Domain — the screen tree
 
@@ -347,12 +363,41 @@ paint, and `AnchorSubmenuRows`, which re-anchors an open submenu through the
 **same** `FightSubmenuLayout.RowY` the build used. v1 kept a second copy of
 those constants in Core and its design preview drew rows at 8-slot positions.
 
+**Stable slot identity.** Where a figure STANDS (rank) and WHICH figure it is
+(slot) are two different facts, kept apart on purpose after a bug shipped
+from conflating them: `SlotFor`/`AnimatorFor`/`HitFlashFor`/`DeathFadeFor` used
+to scan `Encounter.PlayerParty` for the combatant and return the handle at the
+same list INDEX, correct only while the party never moved — a `Move` swaps two
+members' list positions and swapped their sprites, nameplates, hit flashes,
+death fades and animators along with their places. `_slotOf`, seeded once per
+fight from the opening lists (and extended for a summon, which appends and so
+is still its own list index), is the one map every per-combatant handle reads
+through `HandleFor<T>`/`SlotIndexOf`; `RefreshStage` walks RANK for position
+and SLOT for everything else. `GlideTo` writes only a figure's mark over
+0.35s scaled on the beat clock, deliberately not authoritative the way
+`Rehome` is (`Rehome` stops in-flight travel, hover, stretch and breath — a
+corpse finishing its fade three slots away would cancel the swing that killed
+it if it used `Rehome`). `_enemyMarks` is the enemy-side counterpart the
+status strip nudges itself against, reading the mark a repaint actually used
+rather than the slot index that used to double as the rank.
+
 ### Tests
 
 `FightSessionTests`, `TurnRiderTests`, `EnemyAiTests`, `EnemyIntentTests`,
 `SkillDispatchTests`, `FightTalentTests`, `FightRewardsTests`,
 `DamagePipelineTests`, `CombatBeatTests`, `FightScreenTests`,
-`FightCapacityPinTests` — all EditMode, all sub-second.
+`FightCapacityPinTests`, `ReachTests` (the `ReachKind`/mask primitives),
+`MoveCommandTests` (`CanMove`/`Move`, the front-rank rule), `EnemyReachTests`
+(the enemy side of the same rule, plus the no-committed-intent fallback) —
+all EditMode, all sub-second. `StageFormationTests` (PlayMode — `Formation`
+holding a rank through a corpse's fade, the slide waiting on `HoldsRank`) is
+the one presentation test in this list that needs the player loop, so it is
+not sub-second. `UiKitVisiblePadTests.cs` (`Tests/EditMode/Ui/`, `[D]`) is
+measured-vs-literal: it re-scans the committed kit PNGs independently of the
+C# literals in `ContainerArt`/`ButtonPlateArt` and is expected to go red on
+the next kit regeneration, same as `StanceManifestValidationTests`;
+`Tests/EditMode/Shared/ButtonPlateArtProbe.cs` is its (and other UI-kit
+tests') internals-visible probe, not a test itself.
 
 ### The runtime view (steps 11-13)
 
@@ -658,14 +703,24 @@ Pinned by the characterization tests that already drove the real screens:
 
 ### The balance bot (`Domain/Bot`, `Core/Bot`, `Editor/Bot`)
 
-`Domain/Bot` -- engine-free brains: `IFightPolicy`/`IRunPolicy` and the four
+`Domain/Bot` -- engine-free brains: `IFightPolicy`/`IRunPolicy` and the
 archetypes (`RandomLegalPolicy`, `GreedyAggressivePolicy`,
-`GreedyDefensivePolicy`, `Lookahead2Policy`, registered in `Archetypes.cs`),
-`FightRunner` (plays one `FightSession` to its end with one policy),
-`FightInvariants`/`InvariantHit` (the fight-level half of the plan's bug list),
-`RunTrace`, and `GearWeights`/`StatDeltas`/`StatOption`/`TalentOption` -- the
-archetype's out-of-fight PREFERENCES, as a weight vector, because Domain cannot
-resolve an item id into what wearing it would do.
+`GreedyDefensivePolicy`, `Lookahead2Policy`, `ProtectTheFrontPolicy` (moves a
+threatened front-rank member back before falling to greedy) and
+`MoveThenGreedyPolicy`, registered in `Archetypes.cs`),
+`FightRunner` (plays one `FightSession` to its end with one policy;
+`PartyOrderIntact` is one of `FightInvariants`' checks, asserting a policy's
+`Move` never leaves `Encounter.PlayerParty` in a shape the slot-identity map
+cannot account for), `FightInvariants`/`InvariantHit` (the fight-level half of
+the plan's bug list), `RunTrace`, and
+`GearWeights`/`StatDeltas`/`StatOption`/`TalentOption` -- the archetype's
+out-of-fight PREFERENCES, as a weight vector, because Domain cannot resolve an
+item id into what wearing it would do. A 200-run/cell batch on `f2945c1b`
+(`reports/bot/20260907-114015`, gitignored) found `ProtectTheFrontPolicy`
+losing to both greedy archetypes rather than beating them -- 35 deaths and a
+0.2188 `doomedShare` against `GreedyAggressive`'s 30/0.0714 and
+`GreedyDefensive`'s 13/0.0769, roughly 3x the doomed share of the aggressive
+baseline it was meant to improve on. See `AUDIT.md`.
 
 `Core/Bot/GearEvaluator.cs` is the other side of that wall: it applies an
 archetype's weights to the character sheet's own numbers
