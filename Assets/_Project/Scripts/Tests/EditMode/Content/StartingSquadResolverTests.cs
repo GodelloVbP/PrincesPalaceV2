@@ -22,9 +22,12 @@ namespace PrincesPalace.Domain.Tests
     // is wrong" leaves an author diffing a file against itself.
     public class StartingSquadResolverTests
     {
-        // Ability scores must total exactly the resolver's budget, or a case
-        // here could pass for the wrong reason -- a squad rejection that is
-        // really an arithmetic rejection proves nothing about the squad.
+        // Ability scores are all a plain 10 here -- there is no total budget
+        // to satisfy any more (removed 2026-09-07, see
+        // CharacterEntryResolver's header), but each score still has to sit
+        // in the 1-30 sanity range, or a case here could fail for the wrong
+        // reason -- a squad rejection that is really a range rejection
+        // proves nothing about the squad.
         private static RawCharacterEntry Character(string id, bool starts, int slot)
         {
             return new RawCharacterEntry

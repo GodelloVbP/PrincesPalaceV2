@@ -24,12 +24,12 @@ MonoBehaviour:
       physicalDefense: 12
       magicalDefense: 30
     AbilityScores:
-      strength: 4
-      dexterity: 6
+      strength: 8
+      dexterity: 12
       constitution: 8
-      wisdom: 20
-      intelligence: 16
-      charisma: 6
+      wisdom: 12
+      intelligence: 14
+      charisma: 8
     PortraitPath: Portraits/sheep
     BattleSpritePath: Characters/owl
     BattleSpriteFacing: 1

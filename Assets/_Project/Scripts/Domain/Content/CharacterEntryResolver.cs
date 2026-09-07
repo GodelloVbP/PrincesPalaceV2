@@ -13,22 +13,27 @@ namespace PrincesPalace.Domain.Content
     // file, rather than one problem per run.
     public static class CharacterEntryResolver
     {
-        // Every character's six ability scores must total exactly this. It is
-        // 6 x the neutral score, so an unauthored character (a flat 10 across
-        // the board) already satisfies it and derives nothing — which is what
-        // lets exactly one character be designed at a time without touching
-        // the others.
+        // Every character's six ability scores used to have to total exactly
+        // 60 (6 x the neutral score) — a budget, not a floor, so
+        // differentiation was REDISTRIBUTION rather than growth: a character
+        // could not be quietly stronger than the roster by being above
+        // average at everything, because to be tough somewhere it had to be
+        // feeble somewhere else.
         //
-        // A budget rather than a floor, deliberately: differentiation here is
-        // REDISTRIBUTION, not growth. A new character cannot be quietly
-        // stronger than the roster by being above average at everything; to
-        // be tough it has to be feeble somewhere else.
+        // REMOVED 2026-09-07 ON THE OWNER'S CALL: Shawn/Bjorn/Odette shipped
+        // with totals of 66/64/62 as authored, and the owner chose to ship
+        // them rather than trim them back onto the old budget. See
+        // characters.json's _readme for the full record. If a future
+        // character turns out to be a flatly stronger pick than the roster
+        // for having no real weakness, that is the failure mode the budget
+        // existed to prevent — restoring a `total == 60` check here and in
+        // ContentDatabase.ValidateContent is the fix.
         //
-        // ContentDatabase.ValidateContent asserts the same total against the
-        // BUILT assets, which is not redundant — it catches an asset created
-        // through the [CreateAssetMenu] hazard CLAUDE.md flags, which never
-        // passes through this resolver at all.
-        public const int AbilityScoreBudget = 60;
+        // Each score alone is still checked below (1-30, refusing 0 or
+        // negative) — that sanity floor is independent of any budget and
+        // stayed.
+        public const int MinAbilityScore = 1;
+        public const int MaxAbilityScore = 30;
 
         // How many characters a fresh profile fields, and therefore how many
         // must carry startsInSquad. The stage's own capacity -- there are
@@ -163,14 +168,30 @@ namespace PrincesPalace.Domain.Content
 
             var scores = new AbilityScoreBlock(raw.strength, raw.dexterity, raw.constitution,
                 raw.wisdom, raw.intelligence, raw.charisma);
-            int total = raw.strength + raw.dexterity + raw.constitution + raw.wisdom + raw.intelligence + raw.charisma;
-            if (total != AbilityScoreBudget)
+
+            // No total-budget check any more (see the header comment above),
+            // but a score still has to be a plausible number on its own.
+            // AbilityDerivation never divides BY a score (only by fixed
+            // constants), so 0 or a negative score would not throw — it
+            // would quietly derive a large negative bonus (e.g. CON 0 is
+            // (0-10)*20 = -200 max health) that ContentDatabase.Effective.cs
+            // then floors to 1 HP / 0 defense / 0 mana rather than crashing.
+            // That is a character silently reduced to barely-functional
+            // rather than a caught authoring mistake, which is exactly the
+            // failure mode this refuses instead.
+            foreach (var (name, value) in new (string, int)[]
+                     {
+                         ("strength", raw.strength), ("dexterity", raw.dexterity),
+                         ("constitution", raw.constitution), ("wisdom", raw.wisdom),
+                         ("intelligence", raw.intelligence), ("charisma", raw.charisma),
+                     })
             {
-                error = $"{label}: ability scores total {total}, but every character must spend exactly " +
-                        $"{AbilityScoreBudget} (STR {raw.strength}, DEX {raw.dexterity}, CON {raw.constitution}, " +
-                        $"WIS {raw.wisdom}, INT {raw.intelligence}, CHA {raw.charisma}). Differentiation is " +
-                        "redistribution, not growth — to be strong somewhere, be weak somewhere else.";
-                return false;
+                if (value < MinAbilityScore || value > MaxAbilityScore)
+                {
+                    error = $"{label}: {name} is {value}, outside the authorable range " +
+                            $"{MinAbilityScore}-{MaxAbilityScore}.";
+                    return false;
+                }
             }
 
             // Two path conventions coexist in this project and they are not

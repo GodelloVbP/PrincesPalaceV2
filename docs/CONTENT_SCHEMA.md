@@ -28,12 +28,12 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `attack` | int | `5` | Base attack, before talents. |  |
 | `physicalDefense` | int | `24` | Base flat reduction against Physical damage, before talents. |  |
 | `magicalDefense` | int | `12` | Base flat reduction against non-Physical damage, before talents. |  |
-| `strength` | int | `10` | Base Strength; the six ability scores must total exactly 60 (CharacterEntryResolver.AbilityScoreBudget). |  |
-| `dexterity` | int | `10` | Base Dexterity; the six ability scores must total exactly 60 (CharacterEntryResolver.AbilityScoreBudget). |  |
-| `constitution` | int | `10` | Base Constitution; the six ability scores must total exactly 60 (CharacterEntryResolver.AbilityScoreBudget). |  |
-| `wisdom` | int | `10` | Base Wisdom; the six ability scores must total exactly 60 (CharacterEntryResolver.AbilityScoreBudget). |  |
-| `intelligence` | int | `10` | Base Intelligence; the six ability scores must total exactly 60 (CharacterEntryResolver.AbilityScoreBudget). |  |
-| `charisma` | int | `10` | Base Charisma; the six ability scores must total exactly 60 (CharacterEntryResolver.AbilityScoreBudget). |  |
+| `strength` | int | `10` | Base Strength; must be 1-30 (CharacterEntryResolver.MinAbilityScore/MaxAbilityScore). |  |
+| `dexterity` | int | `10` | Base Dexterity; must be 1-30 (CharacterEntryResolver.MinAbilityScore/MaxAbilityScore). |  |
+| `constitution` | int | `10` | Base Constitution; must be 1-30 (CharacterEntryResolver.MinAbilityScore/MaxAbilityScore). |  |
+| `wisdom` | int | `10` | Base Wisdom; must be 1-30 (CharacterEntryResolver.MinAbilityScore/MaxAbilityScore). |  |
+| `intelligence` | int | `10` | Base Intelligence; must be 1-30 (CharacterEntryResolver.MinAbilityScore/MaxAbilityScore). |  |
+| `charisma` | int | `10` | Base Charisma; must be 1-30 (CharacterEntryResolver.MinAbilityScore/MaxAbilityScore). |  |
 | `princesFavor` | int | `0` | This character's luck stat; a separate axis from the six ability scores, 0 is the honest default. |  |
 | `portraitPath` | string | `""` | Resources-relative path (no extension) to a head-and-shoulders portrait loaded at runtime, e.g. 'Portraits/sheep'; empty means no art yet and the dossier keeps its armour-stand placeholder. |  |
 | `battleSpritePath` | string | `""` | Resources-relative folder of full-body stance art loaded at runtime; empty means no art yet. |  |

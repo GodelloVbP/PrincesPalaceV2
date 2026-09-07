@@ -10,22 +10,15 @@ namespace PrincesPalace.Content
 {
     public static partial class ContentDatabase
     {
-        // Referenced, not re-declared: this used to be a second literal 60
-        // with a "must match ContentBuilder.AbilityScoreBudget" comment
-        // holding the two together by hand. Now that characters are authored
-        // in characters.json, the resolver that validates that file owns the
-        // number and this reads it.
+        // The exact-total ability-score budget (used to be 60, asserted here
+        // as well as in CharacterEntryResolver because this sees the WHOLE
+        // catalogue at once where the resolver sees one file) was REMOVED
+        // 2026-09-07 on the owner's call — Shawn/Bjorn/Odette shipped at
+        // 66/64/62 as authored. See characters.json's _readme and
+        // CharacterEntryResolver's header for the full record; restoring
+        // `total == 60` in both places is how the rule comes back if a
+        // future character turns out to need it.
         //
-        // Still asserted here as well as in the resolver, and the reason is
-        // now the only reason left: this sees the WHOLE catalogue at once,
-        // where the resolver sees one file. The justification this comment
-        // used to give -- "an asset created through the [CreateAssetMenu]
-        // hazard never passes through the resolver" -- named a hazard that
-        // does not exist in this tree: there is no [CreateAssetMenu] anywhere,
-        // and ScriptableObject.CreateInstance<*Definition> appears in exactly
-        // one file, ContentBuilder.
-        private const int AbilityScoreBudget = Domain.Content.CharacterEntryResolver.AbilityScoreBudget;
-
         // Wide enough for real characterisation, narrow enough that the
         // derived bonuses stay inside sane ranges. A 0 would mean a
         // character with negative Attack before gear.
@@ -96,19 +89,14 @@ namespace PrincesPalace.Content
                     errors.Add($"Character '{character.id}' has non-positive baseStats.maxHealth ({character.Data.BaseStats.maxHealth}).");
                 }
 
-                // Ability scores are a fixed budget, not a free stat line.
-                // AbilityDerivation turns them into real combat numbers, so
-                // without this a new character could be above average at
-                // everything and simply outclass the roster. To be tough
-                // somewhere you have to be feeble somewhere else.
+                // No total-budget check any more (see the header comment
+                // above) -- what is left is the per-score sanity floor,
+                // which is independent of any budget and never depended on
+                // one: AbilityDerivation never divides BY a score, so a
+                // score of 0 would not throw, it would just derive a large
+                // negative bonus that ContentDatabase.Effective.cs then
+                // floors rather than crashing on.
                 var scores = character.Data.AbilityScores;
-                int total = scores.strength + scores.dexterity + scores.constitution
-                            + scores.wisdom + scores.intelligence + scores.charisma;
-                if (total != AbilityScoreBudget)
-                {
-                    errors.Add($"Character '{character.id}' ability scores total {total}, but every character must spend exactly {AbilityScoreBudget} ({scores}).");
-                }
-
                 foreach (AbilityScore score in System.Enum.GetValues(typeof(AbilityScore)))
                 {
                     int value = scores[score];

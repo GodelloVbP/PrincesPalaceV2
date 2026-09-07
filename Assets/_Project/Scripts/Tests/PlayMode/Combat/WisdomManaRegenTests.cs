@@ -14,17 +14,25 @@ namespace PrincesPalace.PlayModeTests
     // content-authored character's combat stats and an actual fight's
     // turn-start mana tick -- not a hand-built CombatantState fixture the
     // way TurnRiderTests.TheTurnOpensWithManaRegenerated already covers the
-    // mechanism in isolation. "sheep" is Shawn -- the only real authored
-    // character (see characters.json), WIS 14, no authored base manaRegen
-    // and no talents unlocked by default, so his EffectiveStats.manaRegen is
-    // the WIS-derived figure alone, nothing else summed in.
+    // mechanism in isolation. "sheep" is Shawn -- WIS 12 as of the 2026-09-07
+    // ability-score rewrite (characters.json; the exact-total budget that
+    // used to constrain this number is gone, see CharacterEntryResolver's
+    // header), no authored base manaRegen and no talents unlocked by
+    // default, so his EffectiveStats.manaRegen is the WIS-derived figure
+    // alone, nothing else summed in. floor(12 / 4) is still 3, same as the
+    // old WIS 14 spread's floor(14 / 4) -- the regen number below did not
+    // move, only the fixture check on WIS itself did.
     public class WisdomManaRegenTests
     {
         private static Character FreshShawn()
         {
             var definition = ContentDatabase.Characters.FirstOrDefault(c => c != null && c.id == "sheep");
             Assert.IsNotNull(definition, "fixture: content still authors Shawn under id \"sheep\"");
-            Assert.AreEqual(14, definition.Data.AbilityScores.wisdom, "fixture check: Shawn's authored WIS, the AbilityDerivationTests spread");
+            // Was 14 pre-2026-09-07; the ability-score rewrite that day
+            // (owner's call, exact-total budget dropped) moved Shawn to
+            // WIS 12 -- updated here rather than recomputed, per this
+            // project's rule against a test deriving its own expected value.
+            Assert.AreEqual(12, definition.Data.AbilityScores.wisdom, "fixture check: Shawn's authored WIS as of the 2026-09-07 ability-score rewrite");
             return new Character(definition.id);
         }
 
@@ -35,10 +43,10 @@ namespace PrincesPalace.PlayModeTests
 
             var stats = ContentDatabase.EffectiveStats(shawn);
 
-            // floor(14 / 4) = 3, matching AbilityDerivationTests.ShawnsSpread
-            // and the plan's own worked example -- nothing else (no gear, no
-            // talents) contributes to manaRegen for a fresh character.
-            Assert.AreEqual(3, stats.manaRegen, "WIS 14: floor(14 / 4) = 3");
+            // floor(12 / 4) = 3 (WIS 12 as of 2026-09-07) -- nothing else
+            // (no gear, no talents) contributes to manaRegen for a fresh
+            // character.
+            Assert.AreEqual(3, stats.manaRegen, "WIS 12: floor(12 / 4) = 3");
         }
 
         [Test]

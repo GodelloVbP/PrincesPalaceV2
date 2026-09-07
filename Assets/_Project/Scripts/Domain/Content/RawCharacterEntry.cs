@@ -43,32 +43,22 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Base flat reduction against non-Physical damage, before talents.")]
         public int magicalDefense = 12;
 
-        // The six ability scores. They must total exactly
-        // CharacterEntryResolver.AbilityScoreBudget -- 60 -- and see its
-        // comment for why that is a budget rather than a floor.
-        //
-        // THE NUMBER IS WRITTEN OUT in the six [ContentDoc] strings below,
-        // which is not a duplication anybody enjoys. An attribute argument
-        // must be a compile-time constant and C# has no constant int-to-string
-        // conversion, so "must total exactly " + AbilityScoreBudget does not
-        // compile. The Step 0 authoring baseline recorded the cost of the
-        // alternative: the budget was in this file's prose and in
-        // characters.json's _readme, and the generated schema -- the reference
-        // an author actually opens -- said "the resolver's budget" and never
-        // the number, so it had to be found by reading the resolver.
-        // ContentSchemaTests.TheSchemaNamesTheAbilityScoreBudget compares the
-        // generated text against the constant, so the two cannot drift.
-        [ContentDoc("Base Strength; the six ability scores must total exactly 60 (CharacterEntryResolver.AbilityScoreBudget).")]
+        // The six ability scores. There is no total budget any more (removed
+        // 2026-09-07 on the owner's call -- see characters.json's _readme and
+        // CharacterEntryResolver's header for the full record); each score
+        // alone still has to sit in CharacterEntryResolver.MinAbilityScore..
+        // MaxAbilityScore (1-30).
+        [ContentDoc("Base Strength; must be 1-30 (CharacterEntryResolver.MinAbilityScore/MaxAbilityScore).")]
         public int strength = 10;
-        [ContentDoc("Base Dexterity; the six ability scores must total exactly 60 (CharacterEntryResolver.AbilityScoreBudget).")]
+        [ContentDoc("Base Dexterity; must be 1-30 (CharacterEntryResolver.MinAbilityScore/MaxAbilityScore).")]
         public int dexterity = 10;
-        [ContentDoc("Base Constitution; the six ability scores must total exactly 60 (CharacterEntryResolver.AbilityScoreBudget).")]
+        [ContentDoc("Base Constitution; must be 1-30 (CharacterEntryResolver.MinAbilityScore/MaxAbilityScore).")]
         public int constitution = 10;
-        [ContentDoc("Base Wisdom; the six ability scores must total exactly 60 (CharacterEntryResolver.AbilityScoreBudget).")]
+        [ContentDoc("Base Wisdom; must be 1-30 (CharacterEntryResolver.MinAbilityScore/MaxAbilityScore).")]
         public int wisdom = 10;
-        [ContentDoc("Base Intelligence; the six ability scores must total exactly 60 (CharacterEntryResolver.AbilityScoreBudget).")]
+        [ContentDoc("Base Intelligence; must be 1-30 (CharacterEntryResolver.MinAbilityScore/MaxAbilityScore).")]
         public int intelligence = 10;
-        [ContentDoc("Base Charisma; the six ability scores must total exactly 60 (CharacterEntryResolver.AbilityScoreBudget).")]
+        [ContentDoc("Base Charisma; must be 1-30 (CharacterEntryResolver.MinAbilityScore/MaxAbilityScore).")]
         public int charisma = 10;
 
         // Optional art, both RESOURCES-relative and without an extension:

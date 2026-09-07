@@ -24,12 +24,12 @@ MonoBehaviour:
       physicalDefense: 40
       magicalDefense: 12
     AbilityScores:
-      strength: 18
-      dexterity: 6
-      constitution: 18
-      wisdom: 6
-      intelligence: 4
-      charisma: 8
+      strength: 12
+      dexterity: 12
+      constitution: 14
+      wisdom: 8
+      intelligence: 8
+      charisma: 10
     PortraitPath: Portraits/bear
     BattleSpritePath: Characters/bear
     BattleSpriteFacing: 1
