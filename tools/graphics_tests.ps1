@@ -50,8 +50,13 @@ if (Test-Path $lock) {
     Remove-Item $lock -Force -ErrorAction SilentlyContinue
 }
 
-$results = Join-Path $env:TEMP "pp-gfx-results.xml"
-$log = Join-Path $env:TEMP "pp-gfx.log"
+# Keyed by this checkout, same as test.ps1's dotnet transcript: %TEMP% is per
+# USER, so two worktrees sharing one fixed name silently swap results files.
+# See tools/temp_paths.ps1.
+. (Join-Path $PSScriptRoot "temp_paths.ps1")
+
+$results = Get-ProjectTempPath "pp-gfx-results.xml"
+$log = Get-ProjectTempPath "pp-gfx.log"
 if (Test-Path $results) { Remove-Item $results }
 
 # Every path QUOTED, as run_tests_parallel.ps1 quotes its own. Start-Process

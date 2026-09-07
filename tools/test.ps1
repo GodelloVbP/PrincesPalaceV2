@@ -105,6 +105,11 @@ $RunnerFor = @{
 # knows what an "area" is. An area is the folder a test file sits in.
 . (Join-Path $PSScriptRoot "test_areas.ps1")
 
+# The dotnet transcript's name, keyed by this checkout so a second worktree
+# running at the same time cannot clobber it -- see tools/temp_paths.ps1 for
+# the failure that bought this.
+. (Join-Path $PSScriptRoot "temp_paths.ps1")
+
 # -SelfCheck points discovery at tools/test_areas_fixture/ instead of the real
 # Tests tree and asserts each refusal fires on the case built for it. Set
 # BEFORE the discovery calls below, and it works because a dot-sourced
@@ -407,7 +412,7 @@ Write-Host ""
 # VSTest's filter is substring-based, so ".<Class>." is the same anchoring
 # trick the Unity regex below uses, for the same reason.
 $dotnetJob = $null
-$dotnetLog = Join-Path $env:TEMP "domain-tests-run.log"
+$dotnetLog = Get-ProjectTempPath "domain-tests-run.log"
 if ($dotnetWanted) {
     $dotnetFilter = ($dotnetWanted | ForEach-Object { "FullyQualifiedName~.$_." }) -join "|"
     $solutionDir = Join-Path $PSScriptRoot "domain-tests"
