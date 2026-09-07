@@ -58,12 +58,16 @@ namespace PrincesPalace
         [SerializeField] internal TMP_Text cardState;
         [SerializeField] internal Image cardStateDot;
 
-        // The painted medallion the card shows, one entry per level in rail
-        // order. Twelve distinct sprites across ninety-nine entries, because
-        // the map is by reward KIND and the index is by level -- which keeps
-        // the lookup a subscript rather than a switch the controller has to
-        // carry a second copy of.
-        [SerializeField] internal Sprite[] cardArtByLevel;
+        // The painted medallion the card shows, and the rail's own mark --
+        // ONE ENTRY PER REWARD KIND now, not per level (docs/PLAN_REWARD_
+        // TRACKS.md §1: "the three things that DO become runtime"). Both are
+        // Enum.GetValues(typeof(TrackReward))-sized and indexed by
+        // (int)TrackReward, so a level's art is a subscript on whatever the
+        // SELECTED CHARACTER's own track says is at that level (_track.At),
+        // rather than a lookup baked in when the scene did not yet know who
+        // would be looking at it.
+        [SerializeField] internal Sprite[] cardArtByReward;
+        [SerializeField] internal Sprite[] markByReward;
 
         [SerializeField] internal RectTransform ribbon;
         [SerializeField] internal RectTransform ribbonFill;
@@ -98,6 +102,21 @@ namespace PrincesPalace
         // Whether anything has been painted since this panel was last opened.
         // The guard that keeps the first Refresh from reading as a level-up.
         private bool _painted;
+
+        // WHICH CHARACTER this panel is showing. Set by ShowFor, called by
+        // CharacterDossierController.ShowTrack() before this panel's own
+        // SetActive(true) -- so OnEnable's first Refresh already has it
+        // (docs/PLAN_REWARD_TRACKS.md §8). Never resolved to a Character and
+        // held: the save can be replaced by a slot load while this panel is
+        // open, so every Refresh re-resolves the id fresh rather than trusting
+        // a reference that might now point at nothing.
+        private string _characterId;
+
+        // The selected character's OWN track, re-resolved every Refresh
+        // alongside _level/_claimed below -- RewardTracks.For(character) is a
+        // cache keyed by character id, so this is not re-deriving the
+        // hundred-entry table, only re-reading which one applies.
+        private RewardTrackDefinition _track;
 
         // What the last Refresh painted. Held so the motion pass can ask what
         // state a node is in without re-deriving it from the save sixty times a
@@ -138,6 +157,14 @@ namespace PrincesPalace
         private static readonly Color RibbonTickToCome = Hex(RewardTrackScreen.RibbonTickToCome);
         private static readonly Color RibbonTickReached = Hex(RewardTrackScreen.RibbonTickReached);
         private static readonly Color RibbonDotToCome = Hex(RewardTrackScreen.RibbonDotToCome);
+
+        // Which character this panel shows, next time it opens. Stores only
+        // the id -- CharacterDossierController.ShowTrack() calls this BEFORE
+        // SetActive(true), so OnEnable's first Refresh already has it
+        // (docs/PLAN_REWARD_TRACKS.md §8) -- and Refresh is what resolves it
+        // against the save, every time, rather than this holding a Character
+        // reference that a slot load could leave pointing at nothing.
+        public void ShowFor(string characterId) => _characterId = characterId;
 
         private void OnEnable()
         {
@@ -181,8 +208,16 @@ namespace PrincesPalace
             bool first = !_painted;
             _painted = true;
 
-            _level = SquadTrack.BestLevel();
-            _claimed = ClaimedLevel();
+            // ONE CHARACTER, resolved once and read for everything below --
+            // the level, the watermark, and which reward sits at which level
+            // (docs/PLAN_REWARD_TRACKS.md §8). ResolveCharacter and Claim()'s
+            // own resolve (RewardTrackController.Input.cs) have to agree on
+            // who that is, or a claim could pay one character while this
+            // screen goes on showing another's watermark as unpaid.
+            var character = ResolveCharacter();
+            _track = RewardTracks.For(character);
+            _level = character?.level ?? RewardTrack.StartingLevel;
+            _claimed = character?.claimedTrackLevel ?? 0;
 
             // The fade cache is filled BEFORE the nodes are painted, because
             // PaintNode multiplies by it. PaintDepthOfField is the scroll-time
@@ -205,37 +240,35 @@ namespace PrincesPalace
             if (!first && _level > before) OnLevelGained(_level);
         }
 
-        // How far the track has actually PAID the best-levelled character.
+        // THE SELECTED CHARACTER, resolved against the CURRENT save every
+        // call rather than cached -- the save can be replaced by a slot load
+        // while this panel sits open, and a stale reference would go on
+        // painting a character who is no longer there.
         //
-        // Read off the same character BestLevel picked, not off the whole
-        // squad: a watermark from one character against a level from another
-        // would show rewards as collected that nobody has had.
-        //
-        // STABLE ON A TIE, matching RewardTrackController.Input's
-        // BestCharacter() exactly (`<`, not `<=`, below -- inverted from
-        // that method's `<=` because this loop's condition is the SKIP
-        // test, keep-first either way): the two have to agree on which
-        // character a tie resolves to, or Claim() could pay one character
-        // while this reads the watermark off another.
-        private static int ClaimedLevel()
+        // NO ID SET falls back to the first fielded squad member: a
+        // screenshot fixture or a test that calls SetActive directly, with
+        // no dossier in between to call ShowFor, still gets a character
+        // rather than a blank screen -- graceful degradation, and the reason
+        // SystemMenuCaptureTests needs no fixture change (plan §8).
+        private Character ResolveCharacter()
         {
             var save = SaveSlotManager.CurrentSave;
-            if (save == null) return 0;
+            if (save == null) return null;
 
-            int best = RewardTrack.StartingLevel;
-            int claimed = 0;
-            bool any = false;
-            foreach (var character in save.ActiveSquad())
+            if (!string.IsNullOrEmpty(_characterId))
             {
-                if (character == null) continue;
-                if (any && character.level <= best) continue;
-
-                any = true;
-                best = character.level;
-                claimed = character.claimedTrackLevel;
+                foreach (var character in save.ActiveSquad())
+                {
+                    if (character != null && character.definitionId == _characterId) return character;
+                }
             }
 
-            return claimed;
+            foreach (var character in save.ActiveSquad())
+            {
+                if (character != null) return character;
+            }
+
+            return null;
         }
 
         // ---- the rail -------------------------------------------------------
@@ -261,6 +294,7 @@ namespace PrincesPalace
         // state machine.
         private void PaintNode(int i, int nodeLevel)
         {
+            var entry = _track.At(nodeLevel);
             var state = RewardTrack.StateOf(nodeLevel, _level, _claimed);
             bool waiting = RewardTrack.IsWaiting(nodeLevel, _level, _claimed);
             bool milestone = RewardTrackLayout.IsMilestone(nodeLevel);
@@ -285,14 +319,29 @@ namespace PrincesPalace
             // The mark inside the disc, tinted so it reads AGAINST the disc
             // rather than with it: dark ink on a lit node, gold on a dark one.
             // A single colour would vanish on one half of the rail.
-            if (Has(icons, i)) icons[i].color = Faded(lit ? MarkInk : Gold, fade);
+            //
+            // THE SPRITE ITSELF is written here too, from the SELECTED
+            // CHARACTER's own resolved entry -- markByReward, subscripted by
+            // kind rather than by level (docs/PLAN_REWARD_TRACKS.md §1). The
+            // tree bakes a neutral ring in every one of these slots because
+            // which kind belongs here was not known at build time; a miss
+            // (an unmapped kind, or a still-loading array) leaves that ring
+            // showing instead of clearing to nothing, which is the same
+            // graceful-degradation posture MarkFor's own null check is for.
+            if (Has(icons, i))
+            {
+                icons[i].color = Faded(lit ? MarkInk : Gold, fade);
+
+                var mark = MarkFor(entry.Reward);
+                if (mark != null) icons[i].sprite = mark;
+            }
 
             // The art slot's mat carries the reward-kind hue, and ONLY on an
             // unreached node -- a tint laid over gold metal reads as tarnish.
             if (Has(mats, i))
             {
                 mats[i].color = Faded(
-                    lit ? Clear : Hex(RewardTrackLayout.MatTintFor(nodeLevel)), fade);
+                    lit ? Clear : Hex(RewardTrackLayout.MatTintFor(entry.Reward)), fade);
             }
 
             // COLLECTED, which is not the same question as reached.
@@ -320,7 +369,7 @@ namespace PrincesPalace
 
             if (captions != null && i < captions.Length && captions[i] != null)
             {
-                captions[i].SetContent(RewardTrackNames.Of(RewardTrack.At(nodeLevel)));
+                captions[i].SetContent(RewardTrackNames.Of(entry));
                 captions[i].color = Faded(CaptionColour(state), fade);
             }
 
@@ -391,7 +440,7 @@ namespace PrincesPalace
         {
             if (summaryLevel != null) summaryLevel.SetContent(_level.ToString());
 
-            int next = RewardTrack.NextRewardLevel(_level);
+            int next = _track.NextRewardLevel(_level);
             bool complete = next <= 0;
 
             // A FINISHED TRACK SAYS SO IN THE REWARD'S SLOT, not in the one
@@ -414,7 +463,7 @@ namespace PrincesPalace
             if (summaryReward != null)
             {
                 if (complete) summaryReward.Set(UiStrings.TrackNextAtComplete);
-                else summaryReward.SetContent(RewardTrackNames.Of(RewardTrack.At(next)));
+                else summaryReward.SetContent(RewardTrackNames.Of(_track.At(next)));
             }
 
             PaintCollectButton();
@@ -468,7 +517,7 @@ namespace PrincesPalace
         {
             var state = RewardTrack.StateOf(level, _level, _claimed);
             bool waiting = RewardTrack.IsWaiting(level, _level, _claimed);
-            var entry = RewardTrack.At(level);
+            var entry = _track.At(level);
 
             if (cardArt != null)
             {
@@ -477,17 +526,15 @@ namespace PrincesPalace
                 // read literally: the same Sprite object, not a second lookup
                 // that could resolve to something else.
                 //
-                // The tree keys this slot to a placeholder at build time and
-                // that is ALL it can do -- which the first capture showed as a
-                // card that drew a ring for a stat point, for Favor, and for
-                // everything else, because nothing ever changed the sprite. The
-                // rail's own marks are already loaded and already bound; this
-                // is the seam that was missing rather than a lookup that was
-                // wrong.
+                // SUBSCRIPTED BY KIND, not by level -- cardArtByReward is
+                // ScreenRegistry's per-TrackReward array (docs/PLAN_REWARD_
+                // TRACKS.md §1), because which reward this level holds is a
+                // per-character question the tree cannot bake by level any
+                // more. The rail's own marks are already loaded and already
+                // bound; this is the seam that was missing rather than a
+                // lookup that was wrong.
                 int i = level - RewardTrackLayout.FirstLevel;
-                var painted = i >= 0 && cardArtByLevel != null && i < cardArtByLevel.Length
-                    ? cardArtByLevel[i]
-                    : null;
+                var painted = CardArtFor(entry.Reward);
 
                 if (painted != null)
                 {
@@ -526,7 +573,7 @@ namespace PrincesPalace
             // a tint to turn into tarnish.
             if (cardMat != null)
             {
-                cardMat.color = Hex(RewardTrackLayout.MatTintFor(level));
+                cardMat.color = Hex(RewardTrackLayout.MatTintFor(entry.Reward));
             }
 
             if (cardKicker != null)
@@ -756,6 +803,28 @@ namespace PrincesPalace
         }
 
         // ---- helpers ---------------------------------------------------------
+
+        // THE RAIL MARK for a reward kind. markByReward is ScreenRegistry's
+        // Enum.GetValues(typeof(TrackReward))-sized array, subscripted by
+        // (int)reward -- null for an out-of-range index (a stale build) or an
+        // unmapped kind, same graceful-degradation posture as CardArtFor.
+        private Sprite MarkFor(TrackReward reward)
+        {
+            int index = (int)reward;
+            return markByReward != null && index >= 0 && index < markByReward.Length
+                ? markByReward[index]
+                : null;
+        }
+
+        // THE CARD'S PAINTED MEDALLION for a reward kind, the card's own
+        // read of the same per-kind array cardArtByReward -- see MarkFor.
+        private Sprite CardArtFor(TrackReward reward)
+        {
+            int index = (int)reward;
+            return cardArtByReward != null && index >= 0 && index < cardArtByReward.Length
+                ? cardArtByReward[index]
+                : null;
+        }
 
         private static bool Has(Image[] array, int i) =>
             array != null && i < array.Length && array[i] != null;

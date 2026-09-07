@@ -38,6 +38,15 @@ namespace PrincesPalace
         // below: a nav row and a panel that closes on its own button.
         [SerializeField] internal Button trackRow;
         [SerializeField] internal GameObject trackPanel;
+
+        // THE PANEL'S OWN CONTROLLER, not just the GameObject it lives on --
+        // so ShowTrack can tell it WHICH character to paint before it opens
+        // (docs/PLAN_REWARD_TRACKS.md §8). Assigned by ScreenRegistry
+        // (ScreenRegistry.WireSystemMenu), which is the one place that has
+        // both wiring calls' return values in hand; not auto-bound, because
+        // it is a controller reference rather than one of UiAutoBind's five
+        // node types.
+        [SerializeField] internal RewardTrackController trackScreen;
         [SerializeField] internal TMP_Text packChevron;
         [SerializeField] internal GameObject packPanel;
         [SerializeField] internal Button packCloseButton;
@@ -826,6 +835,21 @@ namespace PrincesPalace
         {
             if (trackPanel == null) return;
 
+            // TOLD WHICH CHARACTER BEFORE IT OPENS. ShowFor only stores the
+            // id; the panel's own OnEnable->Refresh is what resolves it
+            // against the save, so calling this before SetActive is what
+            // makes that first Refresh already correct (docs/PLAN_REWARD_
+            // TRACKS.md §8) rather than one frame of showing whoever the
+            // panel last painted.
+            if (trackScreen != null)
+            {
+                var squad = Squad();
+                if (_index >= 0 && _index < squad.Count && squad[_index] != null)
+                {
+                    trackScreen.ShowFor(squad[_index].definitionId);
+                }
+            }
+
             // SetActive rather than a toggle: the row is a door in, and the
             // panel's own CLOSE is the way out. A row that also closed it would
             // be a second control for one state, hidden behind the panel that
@@ -915,7 +939,8 @@ namespace PrincesPalace
         {
             if (trackNext == null) return;
 
-            int next = RewardTrack.NextRewardLevel(character.level);
+            var track = RewardTracks.For(character);
+            int next = track.NextRewardLevel(character.level);
             if (next <= 0)
             {
                 // The end of the track is a real state, not an empty one. A
@@ -924,7 +949,7 @@ namespace PrincesPalace
                 return;
             }
 
-            string reward = RewardTrackNames.Of(RewardTrack.At(next));
+            string reward = RewardTrackNames.Of(track.At(next));
             if (string.IsNullOrEmpty(reward))
             {
                 // A reward kind with no name is a content-shaped gap rather

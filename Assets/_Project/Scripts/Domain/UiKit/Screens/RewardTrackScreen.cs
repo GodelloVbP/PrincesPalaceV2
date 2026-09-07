@@ -724,19 +724,34 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // slot for painted art; until that art lands the slot draws its
             // ghost glyph over a mat tinted by reward kind -- at 2E alpha and
             // only on an unreached node, because a tint over gold is tarnish.
+            //
+            // UNTINTED at build time. Which reward kind (and so which hue) a
+            // level holds is per-character now (docs/PLAN_REWARD_TRACKS.md
+            // §1, §8) -- this tree is shared by every save and every selected
+            // character, so there is no kind to tint against yet. The
+            // controller writes the real tint every Refresh
+            // (RewardTrackController.PaintNode); what is baked here is only
+            // the fallback an unmapped kind would draw, the same neutral
+            // MatTintFor(TrackReward) already falls back to for a reward it
+            // does not recognise.
             var mat = Ui.Sprite($"TrackMat{level}", "proc:solid_circle",
                     new UiVec(diameter, diameter), Place.At(0f, 0f))
-                .Coloured(RewardTrackLayout.MatTintFor(level))
+                .Coloured(RewardTrackLayout.MatTintFor(TrackReward.None))
                 .AsDecor();
             Mats.Add(mat);
             dot.Children.Add(mat);
 
-            // The reward's mark, inside the disc. Keyed at BUILD time because
-            // the track is static -- level 40 is an offer reroll in every save
-            // there will ever be, so there is nothing here for a controller to
-            // decide.
-            string icon = RewardTrackLayout.IconFor(level) ?? "proc:ring_outline";
-            var mark = Ui.Sprite($"TrackIcon{level}", icon,
+            // The reward's mark, inside the disc. NEUTRAL at build time, for
+            // the same reason the mat above is untinted: which reward kind
+            // sits at this level is a per-character, per-save question since
+            // P3/P4, so the tree that is shared by every character cannot
+            // pick a mark for it. RewardTrackController.PaintNode writes the
+            // real one every Refresh, from the selected character's own
+            // track (a per-kind sprite array, ScreenRegistry.markByReward) --
+            // this ring is what an unrecognised or not-yet-resolved kind
+            // would show either way, so it is not a placeholder so much as
+            // the mark's own fallback baked in up front.
+            var mark = Ui.Sprite($"TrackIcon{level}", "proc:ring_outline",
                     new UiVec(RewardTrackLayout.IconSizeOf(level),
                               RewardTrackLayout.IconSizeOf(level)),
                     Place.At(0f, 0f))

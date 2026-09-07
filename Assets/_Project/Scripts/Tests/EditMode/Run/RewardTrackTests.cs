@@ -5,6 +5,18 @@ namespace PrincesPalace.Domain.Tests
 {
     public class RewardTrackTests
     {
+        // THE GENERATED DEFAULT. RewardTrack.cs used to carry two level-keyed
+        // statics, At(int) and NextRewardLevel(int), that forwarded onto
+        // exactly this instance -- a P5 compile-boundary shim
+        // (docs/PLAN_REWARD_TRACKS.md) kept for the screen layer's benefit
+        // after P3 moved WHICH REWARD SITS AT WHICH LEVEL onto
+        // RewardTrackDefinition. P5 rewired the screen's own reads to
+        // RewardTracks.For(character) and deleted the shim with them, so
+        // every test below that is really about the default table's
+        // arithmetic (not about a specific character's authored track) names
+        // it directly instead.
+        private static readonly RewardTrackDefinition Default = RewardTrackDefinition.Default("");
+
         // ---- the milestones -----------------------------------------------------
         //
         // Pinned by level, because a milestone is a promise about a NUMBER the
@@ -29,7 +41,7 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(100, TrackReward.MaxHealth, 15)]
         public void AMilestoneLandsOnItsLevel(int level, TrackReward reward, int amount)
         {
-            var entry = RewardTrack.At(level);
+            var entry = Default.At(level);
 
             Assert.AreEqual(reward, entry.Reward, $"level {level} does not hold the milestone it should");
             Assert.AreEqual(amount, entry.Amount, $"level {level}'s milestone has the wrong amount");
@@ -40,7 +52,7 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheTrackPaysNothingForLevelOne()
         {
-            Assert.IsFalse(RewardTrack.At(1).IsSomething);
+            Assert.IsFalse(Default.At(1).IsSomething);
         }
 
         [TestCase(0)]
@@ -49,7 +61,7 @@ namespace PrincesPalace.Domain.Tests
         [TestCase(int.MaxValue)]
         public void LevelsOffTheTrackPayNothingRatherThanThrowing(int level)
         {
-            Assert.IsFalse(RewardTrack.At(level).IsSomething);
+            Assert.IsFalse(Default.At(level).IsSomething);
         }
 
         // THE REASON Spread() exists rather than filling from level 2 upward.
@@ -64,7 +76,7 @@ namespace PrincesPalace.Domain.Tests
             int inTheBackHalf = 0;
             for (int level = 51; level <= RewardTrack.MaxLevel; level++)
             {
-                if (RewardTrack.At(level).IsSomething) inTheBackHalf++;
+                if (Default.At(level).IsSomething) inTheBackHalf++;
             }
 
             Assert.Greater(inTheBackHalf, 20,
@@ -97,16 +109,6 @@ namespace PrincesPalace.Domain.Tests
             Assert.IsFalse(RewardTrack.IsGrant(TrackReward.None));
             Assert.IsFalse(RewardTrack.IsUnlock(TrackReward.None));
         }
-
-        // THE GENERATED DEFAULT, which is what the level-keyed statics on
-        // RewardTrack used to forward onto. P4 deleted the GrantedBetween /
-        // HasUnlocked / UnlockedAmount forwards along with the production call
-        // sites that needed them (every one of those now asks
-        // RewardTracks.For(character) for the character's OWN track), so the
-        // handful of tests below that were really about the default table's
-        // arithmetic name it directly rather than through a shim that no
-        // longer exists.
-        private static readonly RewardTrackDefinition Default = RewardTrackDefinition.Default("");
 
         // A watermark is half-open at the bottom: everything up to and
         // including `afterLevel` has already been paid.
@@ -169,8 +171,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheLevelEightyGrantIsTenPoints_AndEveryPointIsWorthTheSameFlatAmount()
         {
-            Assert.AreEqual(TrackReward.StatPoint, RewardTrack.At(80).Reward);
-            Assert.AreEqual(10, RewardTrack.At(80).Amount);
+            Assert.AreEqual(TrackReward.StatPoint, Default.At(80).Reward);
+            Assert.AreEqual(10, Default.At(80).Amount);
 
             int firstStep = HealthAt(1) - HealthAt(0);
             int tenthStep = HealthAt(10) - HealthAt(9);
@@ -240,15 +242,15 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheNextRewardSkipsLevelsThatPayNothing()
         {
-            int next = RewardTrack.NextRewardLevel(1);
+            int next = Default.NextRewardLevel(1);
 
             Assert.Greater(next, 1);
-            Assert.IsTrue(RewardTrack.At(next).IsSomething,
+            Assert.IsTrue(Default.At(next).IsSomething,
                 "the next reward level does not actually hold a reward");
 
             for (int level = 2; level < next; level++)
             {
-                Assert.IsFalse(RewardTrack.At(level).IsSomething,
+                Assert.IsFalse(Default.At(level).IsSomething,
                     $"level {level} pays something but was skipped over");
             }
         }
@@ -259,7 +261,7 @@ namespace PrincesPalace.Domain.Tests
             // Walking the track by NextRewardLevel has to visit every reward.
             // Off-by-one here would hide a milestone from the player entirely.
             int visited = 0;
-            for (int level = RewardTrack.NextRewardLevel(0); level > 0; level = RewardTrack.NextRewardLevel(level))
+            for (int level = Default.NextRewardLevel(0); level > 0; level = Default.NextRewardLevel(level))
             {
                 visited++;
             }
@@ -267,7 +269,7 @@ namespace PrincesPalace.Domain.Tests
             int actual = 0;
             for (int level = 1; level <= RewardTrack.MaxLevel; level++)
             {
-                if (RewardTrack.At(level).IsSomething) actual++;
+                if (Default.At(level).IsSomething) actual++;
             }
 
             Assert.AreEqual(actual, visited, "walking the track skipped or repeated a reward");
@@ -276,8 +278,8 @@ namespace PrincesPalace.Domain.Tests
         [Test]
         public void TheEndOfTheTrackHasNoNext()
         {
-            Assert.AreEqual(0, RewardTrack.NextRewardLevel(RewardTrack.MaxLevel));
-            Assert.AreEqual(0, RewardTrack.NextRewardLevel(RewardTrack.MaxLevel + 50));
+            Assert.AreEqual(0, Default.NextRewardLevel(RewardTrack.MaxLevel));
+            Assert.AreEqual(0, Default.NextRewardLevel(RewardTrack.MaxLevel + 50));
         }
 
         // EVERY REWARD KIND THE ENUM KNOWS ABOUT IS ACTUALLY GRANTED used to
@@ -316,7 +318,7 @@ namespace PrincesPalace.Domain.Tests
         {
             for (int level = 2; level <= RewardTrack.MaxLevel; level++)
             {
-                Assert.IsTrue(RewardTrack.At(level).IsSomething, $"level {level} pays nothing");
+                Assert.IsTrue(Default.At(level).IsSomething, $"level {level} pays nothing");
             }
         }
 

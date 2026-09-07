@@ -953,16 +953,6 @@ namespace PrincesPalace.Domain.UiKit
             }
         }
 
-        // P5 shim: RewardTrackScreen.cs:723 still bakes the rail's icon at
-        // BUILD TIME per level ("the track is static", its own comment says),
-        // which stays true until P5 wires the controller to write
-        // icons[i].sprite from a per-kind array at runtime instead (plan §1,
-        // "the three things that DO become runtime"). Resolves through the
-        // generated default so a Domain file P3 is not allowed to rewire
-        // (RewardTrackScreen.cs's tree-building block) keeps compiling and
-        // keeps drawing the same interim icons it always has.
-        public static string IconFor(int level) => IconFor(DefaultShimTrack.At(level).Reward);
-
         // WHICH PAINTED MEDALLION THE CARD SHOWS for a reward.
         //
         // Keyed off the reward KIND rather than the level, so the twelve
@@ -996,15 +986,6 @@ namespace PrincesPalace.Domain.UiKit
             }
         }
 
-        // P5 shim: ScreenRegistry.cs:927 still keys `cardArtByLevel`, 99
-        // sprites indexed by level, at SCENE-BUILD TIME -- Editor code P3 may
-        // not touch. P5 replaces that with `cardArtByReward`, one sprite per
-        // TrackReward (plan §1). Kept under its old name, CardArtFor, because
-        // that is the literal method ScreenRegistry.cs already calls; renaming
-        // it here would be renaming an Editor call site P3 is not allowed to
-        // edit.
-        public static string CardArtFor(int level) => CardArtKeyFor(DefaultShimTrack.At(level).Reward);
-
         // The hue a reward kind tints its art-slot mat with.
         //
         // THE MAT ONLY, at 2E alpha or below, and only on an unreached node --
@@ -1023,18 +1004,6 @@ namespace PrincesPalace.Domain.UiKit
                 default: return "#C8B4DE1F";
             }
         }
-
-        // P5 shim: RewardTrackController.cs:295, 529 still paints this per
-        // level at runtime (the mat tint IS already a runtime write today,
-        // unlike the icon/card art above -- see plan §1's table -- so this one
-        // only needs its argument re-typed once Core is allowed to change).
-        // Resolves through the generated default, same as IconFor(int) above.
-        public static string MatTintFor(int level) => MatTintFor(DefaultShimTrack.At(level).Reward);
-
-        // Backing the three level-keyed shims above. A single cached instance
-        // rather than rebuilding RewardTrackDefinition.Default on every node
-        // paint -- the rail repaints up to 99 nodes a frame while scrolling.
-        private static readonly RewardTrackDefinition DefaultShimTrack = RewardTrackDefinition.Default("");
 
         // The twelve landmarks, in rail order.
         //

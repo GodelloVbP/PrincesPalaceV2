@@ -1,5 +1,5 @@
 {
-  "inputHash": "fd81542807d2eb7a3d6ee7d9a16146406003995db44dfc5181a1dee7f35d9c27",
+  "inputHash": "753b997849fa70bc4c9efe0383f00bb4a02b1f1723466935b7193f24af2f278c",
   "types": {
     "Achievements": ["character_level_30", "depth_forty", "first_forest_boss", "hundred_rooms", "million_damage", "three_bosses"],
     "Characters": ["owl", "placeholder_brawler", "sheep"],

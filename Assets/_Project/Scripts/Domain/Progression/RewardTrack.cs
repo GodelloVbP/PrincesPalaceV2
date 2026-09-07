@@ -219,34 +219,5 @@ namespace PrincesPalace.Domain.Progression
             int owed = playerLevel - claimedLevel;
             return owed < 0 ? 0 : owed;
         }
-
-        // ---- P5 compile-boundary shims ------------------------------------------
-        //
-        // docs/PLAN_REWARD_TRACKS.md's P3 moved WHICH REWARD SITS AT WHICH
-        // LEVEL onto RewardTrackDefinition, one instance per character, and
-        // P4 rewired every read site that had a Character in hand to ask
-        // RewardTracks.For(character) for its own track. What is left below is
-        // the remainder: two level-keyed forwards onto the GENERATED DEFAULT
-        // track, still called by the screen layer, which P5 rewires and this
-        // block dies with.
-        //
-        // The four remaining callers, all of them painting the reward rail or
-        // the dossier's next-reward line:
-        //   Core/RewardTrackController.cs (At at :323, :417, :471;
-        //     NextRewardLevel at :394)
-        //   Core/CharacterDossierController.cs (NextRewardLevel :918, At :927)
-        //
-        // WHAT THAT MEANS TODAY, said plainly rather than left to be
-        // discovered: the reward SCREEN paints the default track's captions
-        // whoever is selected, while every place the reward is actually PAID
-        // reads the selected character's own. P5 is what closes that, by
-        // giving the controller a definition to paint from; the deleted shims
-        // (GrantedBetween, HasUnlocked, UnlockedAmount) went with the call
-        // sites P4 rewrote, and none of them had a screen caller.
-        private static readonly RewardTrackDefinition DefaultShimTrack = RewardTrackDefinition.Default("");
-
-        public static TrackEntry At(int level) => DefaultShimTrack.At(level);
-
-        public static int NextRewardLevel(int level) => DefaultShimTrack.NextRewardLevel(level);
     }
 }

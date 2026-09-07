@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using PrincesPalace;
 using PrincesPalace.Content;
+using PrincesPalace.Domain.Progression;
 using PrincesPalace.Domain.UiKit;
 using PrincesPalace.Domain.UiKit.Screens;
 
@@ -807,21 +808,24 @@ public static class ScreenRegistry
         // descent, and no state can make it one.
         controller.inDescent = inDescent;
 
-        if (menu.Dossier != null) WireDossier(result, menu.Dossier, lockedForFight);
+        CharacterDossierController dossierController = null;
+        if (menu.Dossier != null) dossierController = WireDossier(result, menu.Dossier, lockedForFight);
+
         if (menu.RewardTrack != null)
         {
-            WireRewardTrack(result, menu.RewardTrack);
+            var trackController = WireRewardTrack(result, menu.RewardTrack);
 
-            // The dossier's door into it. Bound here rather than in WireDossier
-            // because it is the one thing the dossier needs that lives on
-            // another screen.
-            if (menu.Dossier != null)
+            // The dossier's door into it, and the typed handle ShowTrack()
+            // calls ShowFor on. Bound here rather than in WireDossier because
+            // both are the one thing the dossier needs that lives on another
+            // screen -- WireDossier's own signature does not carry the
+            // RewardTrack screen to reach for. Both wiring calls above already
+            // return their controller, so this is a straight field assignment
+            // rather than the GetComponent re-find it used to be.
+            if (dossierController != null)
             {
-                var dossierController = result.Go(menu.Dossier.Root).GetComponent<CharacterDossierController>();
-                if (dossierController != null)
-                {
-                    dossierController.trackPanel = result.Go(menu.RewardTrack.Root);
-                }
+                dossierController.trackPanel = result.Go(menu.RewardTrack.Root);
+                dossierController.trackScreen = trackController;
             }
         }
         if (menu.Options != null) WireOptions(result, menu.Options);
@@ -917,14 +921,41 @@ public static class ScreenRegistry
 
         controller.cardRect = result.Rect(track.Card);
 
-        // ONE ENTRY PER LEVEL, resolved here rather than at runtime: the
-        // controller lives in the runtime assembly and LoadSpriteByKey is
-        // editor-only, so these bake into the scene like every other art
-        // reference. LoadSpriteByKey caches, so ninety-nine calls are twelve
-        // loads and eighty-seven dictionary hits.
-        controller.cardArtByLevel = Enumerable
-            .Range(RewardTrackLayout.FirstLevel, RewardTrackLayout.NodeCount)
-            .Select(level => SceneBuilder.LoadSpriteByKey(RewardTrackLayout.CardArtFor(level)))
+        // ONE ENTRY PER REWARD KIND, not per level -- docs/PLAN_REWARD_
+        // TRACKS.md §1's "the three things that DO become runtime": which
+        // reward sits at which level is a per-character, runtime question
+        // since P3/P4, so the art can no longer be baked by level. It is
+        // still resolved HERE rather than at runtime, because the controller
+        // lives in the runtime assembly and LoadSpriteByKey is editor-only --
+        // only the KEY it is indexed by moved, from level to kind. Sized off
+        // the enum itself so a thirteenth reward kind is a longer array
+        // rather than a silent miss, and index (int)TrackReward.X is the
+        // controller's own lookup (RewardTrackController.MarkFor/CardArtFor).
+        var rewardKinds = (TrackReward[])Enum.GetValues(typeof(TrackReward));
+
+        // INDEX 0 IS TrackReward.None, and both IconFor and CardArtKeyFor
+        // return null for it by design (their own None case/default) -- the
+        // reward a level has NOT been authored with yet has no art. A null
+        // Sprite in a SerializeField array fails UiWiringSweep's E3 check
+        // regardless of [UiOptional], which only excuses an array being
+        // EMPTY, never half-wired. Filled with the same neutral ring the
+        // tree bakes into every mark slot before a controller ever runs
+        // (RewardTrackScreen.cs's TrackIcon{level}) -- it is never actually
+        // read: a well-formed track never resolves a level to None
+        // (RewardTrackTests.NoLevelOfTheTrackPaysNothing), so this is
+        // satisfying the sweep rather than standing in for missing art.
+        var neutralMark = SceneBuilder.LoadSpriteByKey("proc:ring_outline");
+
+        controller.markByReward = rewardKinds
+            .Select(reward => reward == TrackReward.None
+                ? neutralMark
+                : SceneBuilder.LoadSpriteByKey(RewardTrackLayout.IconFor(reward)))
+            .ToArray();
+
+        controller.cardArtByReward = rewardKinds
+            .Select(reward => reward == TrackReward.None
+                ? neutralMark
+                : SceneBuilder.LoadSpriteByKey(RewardTrackLayout.CardArtKeyFor(reward)))
             .ToArray();
 
         // The disc is bound as BOTH the Button that takes the click and the
