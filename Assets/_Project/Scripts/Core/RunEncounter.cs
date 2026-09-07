@@ -235,16 +235,34 @@ namespace PrincesPalace
             entry.hp = Domain.Progression.CarriedHealth.Rescaled(entry.hp, previousMax, newMax);
         }
 
+        // TAKES THE BUILT FIGHT, not a party and a list of ids, and that is the
+        // whole of the fix rather than a tidy-up.
+        //
+        // This used to be handed the ids the ROLL produced and zip them against
+        // the combatants the ADAPTER produced. Those two lists are the same
+        // length only while every id resolves: Build skips an unknown id in
+        // place, so one squad member whose content was renamed shifts every
+        // combatant after them one position left, and the next character walks
+        // into the room on the missing one's carried health. Clamping to the
+        // shorter list -- which is what the old code did, and what its comment
+        // claimed prevented exactly this -- only stops the overrun, not the
+        // transposition.
+        //
+        // Since BuiltFight.PartyIds is built in the same loop as Party, there is
+        // no longer a mismatched pair a caller could hand over.
         public static void ApplyStartingHealth(
-            IReadOnlyList<CombatantState> party,
-            IReadOnlyList<string> partyIds,
+            FightEncounterAdapter.BuiltFight built,
             IReadOnlyDictionary<string, int> startingHealth)
         {
-            if (party == null || partyIds == null || startingHealth == null) return;
+            if (built?.Party == null || built.PartyIds == null || startingHealth == null) return;
 
-            // The adapter skips ids it cannot resolve, so the two lists agree
-            // only when every id resolved. Zipping the shorter of the two keeps
-            // a content gap from writing one character's health onto another.
+            var party = built.Party;
+            var partyIds = built.PartyIds;
+
+            // Still the shorter of the two, as a guard rather than as the
+            // correctness argument: the two are built together and cannot
+            // disagree, and an index out of range here would be a crash rather
+            // than a wrong health bar.
             int count = party.Count < partyIds.Count ? party.Count : partyIds.Count;
 
             for (int i = 0; i < count; i++)

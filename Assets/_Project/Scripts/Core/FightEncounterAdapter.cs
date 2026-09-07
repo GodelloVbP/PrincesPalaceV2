@@ -31,6 +31,19 @@ namespace PrincesPalace
             public FightSession Session;
             public IReadOnlyList<CombatantState> Party;
             public IReadOnlyList<string> PartyArt;
+
+            // WHO EACH COMBATANT IN Party ACTUALLY IS, parallel to it and to
+            // PartyArt, and the only list anything downstream may index against
+            // Party.
+            //
+            // Build SKIPS an id naming no content, in place, so the ids it was
+            // HANDED stop lining up with the combatants it produced the moment
+            // one of them fails to resolve -- and a squad id outliving its
+            // content is an ordinary rename, not an exotic save. Carrying the
+            // built ids here is what makes the correspondence a fact of the
+            // build rather than something each caller has to reconstruct
+            // correctly.
+            public IReadOnlyList<string> PartyIds;
         }
 
         // ---- content -> Domain ------------------------------------------------
@@ -416,6 +429,7 @@ namespace PrincesPalace
             var party = new List<CombatantState>();
             var kits = new List<PlayerKit>();
             var art = new List<string>();
+            var builtPartyIds = new List<string>();
 
             // THE RUN'S RELICS, resolved once and given to the whole party.
             //
@@ -460,6 +474,7 @@ namespace PrincesPalace
                 }
 
                 art.Add(definition.Data.BattleSpritePath);
+                builtPartyIds.Add(definition.id);
             }
 
             var enemies = new List<CombatantState>();
@@ -506,7 +521,10 @@ namespace PrincesPalace
             // kill that earned it.
             session.RunWideBonusDamagePercent = RunManager.Run?.bonusDamagePercent ?? 0;
 
-            return new BuiltFight { Session = session, Party = party, PartyArt = art };
+            return new BuiltFight
+            {
+                Session = session, Party = party, PartyArt = art, PartyIds = builtPartyIds,
+            };
         }
 
         // A MONSTER'S KIT, with its abilities looked up.

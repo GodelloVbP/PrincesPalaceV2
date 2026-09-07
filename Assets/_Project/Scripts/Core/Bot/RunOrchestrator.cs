@@ -308,7 +308,7 @@ namespace PrincesPalace
             // Damage taken in earlier rooms, carried in. Applied after the
             // build because the adapter constructs from definitions and knows
             // nothing about a descent.
-            RunEncounter.ApplyStartingHealth(built.Party, roster.PartyIds, roster.StartingHealth);
+            RunEncounter.ApplyStartingHealth(built, roster.StartingHealth);
             return built;
         }
 
