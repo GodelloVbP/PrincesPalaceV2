@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace PrincesPalace.Domain.Audio
@@ -23,6 +24,25 @@ namespace PrincesPalace.Domain.Audio
         public static readonly MusicLayerLibrary Empty =
             new MusicLayerLibrary(new List<MusicLayerSet>(), new Dictionary<int, string>(), null, null);
 
+        // HOW A SET ID IS COMPARED, and there is exactly one answer.
+        //
+        // MusicLayerResolver validates every reference -- fallbackSet, hub,
+        // each floor's set -- against the ids it resolved; this dictionary is
+        // what turns those same references back into sets. When the two used
+        // different comparers (the resolver ignoring case, this dictionary
+        // not) a reference differing only in case validated clean and then
+        // resolved to NULL, which is exactly what the resolver's own header
+        // rules out: "a floor pointing at a set that does not exist is a
+        // TYPO, and gets an error". Worse, the null is indistinguishable from
+        // "no layered music authored", so MusicController drops to the
+        // pre-layering path and the manifest plays none of the song it
+        // declares.
+        //
+        // Ignore-case is the half to keep: an id is a hand-typed key in a
+        // hand-edited JSON file, and every other such key in this file
+        // (`tier`, the stem duplicate check) is already matched that way.
+        public static readonly StringComparer IdComparer = StringComparer.OrdinalIgnoreCase;
+
         private readonly Dictionary<string, MusicLayerSet> _byId;
         private readonly Dictionary<int, string> _floors;
         private readonly string _hubId;
@@ -31,7 +51,7 @@ namespace PrincesPalace.Domain.Audio
         public MusicLayerLibrary(IReadOnlyList<MusicLayerSet> sets, Dictionary<int, string> floors,
             string hubId, string fallbackId)
         {
-            _byId = new Dictionary<string, MusicLayerSet>();
+            _byId = new Dictionary<string, MusicLayerSet>(IdComparer);
             Sets = sets;
             foreach (var set in sets)
             {
