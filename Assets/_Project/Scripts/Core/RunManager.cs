@@ -177,6 +177,27 @@ namespace PrincesPalace
         // the return value costs nothing.
         public static RunSettlement.Result EndRun()
         {
+            // NOTHING TO END IS NOT THE SAME AS A RUN THAT EARNED NOTHING,
+            // and everything below this line treats them alike.
+            //
+            // Five buttons call this and only two of them stand on a descent
+            // (the map's abandon, the defeat screen). The main menu's Exit,
+            // the hub's Main Menu button and both of ExitsController's call it
+            // flat -- and the hub between runs is precisely where a player
+            // equips what they just bought.
+            //
+            // RunSettlement guards on `run == null`, which never fires:
+            // activeRun is always non-null, which is the whole reason hasRun
+            // is an in-band flag (see RunSnapshot's header). So the settlement
+            // ran against an empty snapshot, counted a lifetimeRunsEnded that
+            // never happened, and the two clears below stripped every roster
+            // character's equipment and the whole pack.
+            //
+            // HERE rather than at each caller: five call sites is five chances
+            // to forget, and "gear does not survive a run" is meaningless
+            // where there is no run for it to not survive.
+            if (!HasRun) return new RunSettlement.Result();
+
             var save = Save;
             if (save == null) return new RunSettlement.Result();
 

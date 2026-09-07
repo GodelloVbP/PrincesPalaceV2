@@ -282,5 +282,50 @@ namespace PrincesPalace.PlayModeTests
             Assert.IsFalse(RunManager.Run.relicDrafted, "a new descent drafts again");
         }
 
+
+        // ---- ending nothing --------------------------------------------------
+        //
+        // EndRun is wired to five buttons, and only two of them are on a path
+        // that guarantees a descent: the map's abandon and the defeat screen.
+        // The main menu's Exit, the hub's Main Menu button and the two in
+        // ExitsController all call it flat -- and the hub between runs is
+        // exactly where a player equips what they just bought.
+        //
+        // Nothing inside EndRun asked whether there WAS a run. RunSettlement
+        // guards on `run == null`, which is never true (RunSnapshot's own
+        // header explains why hasRun is an in-band flag rather than a null
+        // check), so the whole settlement ran against an empty snapshot and
+        // the two clears after it ran unconditionally: every roster
+        // character's equipment, the whole stockpile, and lifetimeRunsEnded
+        // counted one more run that never happened.
+        //
+        // "Gear does not survive a run" cannot apply where there is no run to
+        // not survive it.
+
+        [Test]
+        public void EndingWithNoRunAtAll_LeavesTheGearAndThePackAlone()
+        {
+            Assert.IsFalse(RunManager.HasRun,
+                "fixture: this test is about the no-run path, and the save has a run");
+
+            var character = Save.roster.FirstOrDefault();
+            Assert.IsNotNull(character, "fixture: the save has nobody to equip");
+
+            character.equipment.Set(Domain.Equipment.EquipmentSlot.Weapon1, "health_potion", plus: 3);
+
+            Save.stockpiledItems.Clear();
+            Save.stockpiledItems.Add(new InventoryEntry("health_potion", 2));
+
+            int endedBefore = Save.lifetimeRunsEnded;
+
+            RunManager.EndRun();
+
+            Assert.IsFalse(character.equipment.IsEmpty(Domain.Equipment.EquipmentSlot.Weapon1),
+                "the hub stripped what the player was wearing on the way to the main menu");
+            Assert.AreEqual(1, Save.stockpiledItems.Count,
+                "the pack was emptied by ending a run that was never started");
+            Assert.AreEqual(endedBefore, Save.lifetimeRunsEnded,
+                "a run that never happened was counted as one that ended");
+        }
     }
 }
