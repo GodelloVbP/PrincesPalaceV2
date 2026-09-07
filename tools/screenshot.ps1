@@ -160,6 +160,32 @@ if ($Runtime) {
         exit 1
     }
 
+    # THE RESULTS FILE, WHICH THIS BRANCH ALREADY DELETES AND USED TO NEVER
+    # READ. -Runtime does not render screens directly; it drives a PlayMode
+    # test class that renders them, so "did any png appear" is the weaker
+    # question here than it is anywhere else in this script -- a fixture that
+    # captured three shots and then threw on the fourth leaves three files
+    # behind, and three is not zero. That is the exact argument AUDIT #43
+    # settled for -Panel and -All (see this file's header), applied to the
+    # branch it was not applied to.
+    #
+    # Deliberately one-directional: a missing results file is NOT a failure
+    # here, because the png check below is what has always governed and a
+    # -runTests run that wrote no XML at all already fails on it. This can
+    # only add a refusal where NUnit recorded one.
+    if (Test-Path $resultsPath) {
+        [xml]$runtimeResults = Get-Content $resultsPath
+        $failedCount = [int]$runtimeResults.'test-run'.failed
+        if ($failedCount -ne 0) {
+            Write-Host "$failedCount runtime capture test(s) FAILED -- the pictures below, if any, are from a run that did not finish:"
+            foreach ($f in $runtimeResults.SelectNodes("//test-case[@result='Failed']")) {
+                Write-Host "  FAILED: $($f.fullname)"
+                if ($f.failure -and $f.failure.message) { Write-Host "    $($f.failure.message.InnerText)" }
+            }
+            exit 1
+        }
+    }
+
     $produced = Get-ChildItem $runnerOut -Filter *.png -ErrorAction SilentlyContinue
     if (-not $produced -or $produced.Count -eq 0) {
         Write-Host "No runtime captures were produced. Tail of log:"
