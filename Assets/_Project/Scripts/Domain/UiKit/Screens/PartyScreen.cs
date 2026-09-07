@@ -556,7 +556,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return button;
         }
 
-        // ---- the toast: a floating overlay over whatever is beneath it -------------
+        // ---- the toast: pinned into the ROSTER heading row's own empty space -------
 
         private static UiNode BuildToast(PartyScreen screen)
         {
@@ -566,18 +566,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
                 .AsDecor()
                 .Styled(TypographyRole.Body);
 
-            var toast = Ui.OutlineBox("PartyToast", Place.At(0f, PartyLayout.ToastCentreY),
+            var toast = Ui.OutlineBox("PartyToast",
+                Place.At(PartyLayout.ToastCentreX, PartyLayout.ToastCentreY),
                 new UiVec(PartyLayout.ToastWidth, PartyLayout.ToastHeight), "#12091CF2", BadgeRim,
                 new[] { text });
 
             // A TOAST IS A FLOATING OVERLAY, hidden by default and shown only
-            // for its ~2.4s. Anchoring it to the pane's own floor puts it over
-            // the bottom of the roster row rather than in dead space below it
-            // -- the same trade every toast/snackbar makes. AsDecor is the
-            // whole exemption A1 needs (either side being Decor waives sibling
-            // overlap outright) -- an AllowOverlap here as well would be dead
-            // weight A7 refuses: the reason would read as the mechanism, and
-            // AsDecor is what is actually doing the work.
+            // for its ~2.4s -- but it used to float over the bottom of the
+            // card row, hiding exactly the role/tag lines a swap just changed.
+            // It now shares the ROSTER heading row instead, right-aligned into
+            // that row's own empty space, so it never sits over a card. AsDecor
+            // still does the only job it needs to here: non-interactive and
+            // hidden by default. It no longer needs to waive a sibling-overlap
+            // check (A1) -- this position has nothing left to overlap.
             toast.AsDecor().Inactive();
             screen.Toast = toast;
             screen.ToastText = text;
