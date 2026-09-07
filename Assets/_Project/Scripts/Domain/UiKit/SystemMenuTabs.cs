@@ -24,6 +24,14 @@ namespace PrincesPalace.Domain.UiKit
         // showed the same pane. C and I both still work; they are keys onto
         // this tab now.
         CharacterInventory,
+
+        // NOT RunOnly, unlike FloorMap/RunStats -- Party is meaningful in all
+        // three of its own modes (Camp/Run/ViewOnly, see
+        // docs/handoffs/party_screen/DECISIONS.md), and Camp IS the
+        // out-of-run context. Placed here, right after CharacterInventory and
+        // before the run-only pair, so its relative order survives the
+        // Visible(inRun) filter unchanged in both sets.
+        Party,
         FloorMap,
         RunStats,
         Options,
@@ -88,6 +96,17 @@ namespace PrincesPalace.Domain.UiKit
         {
             new SystemMenuTabDef(SystemMenuTab.CharacterInventory, "CharacterInventory",
                 UiStrings.SystemTabCharacterInventory, labelWidth: 272f, built: true),
+
+            // labelWidth ESTIMATED from the neighbours' own measured ratio --
+            // "OPTIONS" is 92px for 7 chars (13.14px/char) and "MAIN MENU" is
+            // 119px for 9 chars (13.22px/char); averaged, 13.18px/char, times
+            // "PARTY"'s 5 chars is 65.9, rounded to 66. Same status as every
+            // other authored figure in this table: a build-time approximation
+            // SystemMenuLabelWidthTests corrects against the real TMP metrics
+            // the moment the menu opens (that test is PlayMode-only and out
+            // of reach from a worktree -- see this package's own report).
+            new SystemMenuTabDef(SystemMenuTab.Party, "Party",
+                UiStrings.SystemTabParty, labelWidth: 66f, built: true),
             new SystemMenuTabDef(SystemMenuTab.FloorMap, "FloorMap",
                 UiStrings.SystemTabFloorMap, labelWidth: 120f, runOnly: true),
             new SystemMenuTabDef(SystemMenuTab.RunStats, "RunStats",

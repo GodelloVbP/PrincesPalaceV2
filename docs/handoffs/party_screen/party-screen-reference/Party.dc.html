@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap');
+    @keyframes partyToastIn { from { opacity:0; transform:translate(-50%,10px); } to { opacity:1; transform:translate(-50%,0); } }
+    body { margin:0; background:#0a0812; }
+  </style>
+</helmet>
+<div style="min-height:100vh;font-family:'Source Sans 3',system-ui,sans-serif;color:#d9d3c9;background:radial-gradient(ellipse 900px 500px at 50% -8%, #26193a 0%, #150f22 45%, #0a0812 100%);">
+
+  <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:7px 20px;background:#050509;border-bottom:1px solid rgba(255,255,255,0.08);">
+    <span style="font-family:ui-monospace,Menlo,monospace;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,0.35);">Prototype controls</span>
+    <div style="display:flex;gap:6px;">
+      <button type="button" onClick="{{ setCamp }}" style="padding:5px 12px;border-radius:3px;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;background:{{ campBg }};border:1px solid {{ campBorder }};color:{{ campColor }};">Camp</button>
+      <button type="button" onClick="{{ setRun }}" style="padding:5px 12px;border-radius:3px;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;background:{{ runBg }};border:1px solid {{ runBorder }};color:{{ runColor }};">In a Run</button>
+    </div>
+    <label style="display:inline-flex;align-items:center;gap:6px;font-size:10.5px;color:rgba(255,255,255,0.45);cursor:pointer;">
+      <input type="checkbox" checked="{{ backLocked }}" onChange="{{ toggleLock }}" style="width:12px;height:12px;accent-color:#888;">
+      Lock Position 3 (run curse)
+    </label>
+  </div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:16px 32px;border-bottom:1px solid rgba(201,162,74,0.22);">
+    <button type="button" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;background:#0d0c11;border:1.5px solid rgba(201,162,74,0.5);border-radius:4px;color:#d9ae55;font-family:'Cinzel',serif;font-weight:600;font-size:11px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;">&lsaquo; Hub</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="#" style="display:inline-flex;align-items:center;padding:9px 16px;background:#0d0c11;border:1.5px solid rgba(201,162,74,0.35);border-radius:4px;color:#b8ab8a;font-family:'Cinzel',serif;font-weight:600;font-size:11px;letter-spacing:.08em;text-transform:uppercase;text-decoration:none;">Character</a>
+      <a href="#" style="display:inline-flex;align-items:center;padding:9px 16px;background:#0d0c11;border:1.5px solid rgba(201,162,74,0.35);border-radius:4px;color:#b8ab8a;font-family:'Cinzel',serif;font-weight:600;font-size:11px;letter-spacing:.08em;text-transform:uppercase;text-decoration:none;">Inventory</a>
+      <a href="#" aria-current="page" style="display:inline-flex;align-items:center;padding:9px 16px;background:rgba(201,162,74,0.14);border:1.5px solid #e8c07a;border-radius:4px;color:#f0d28c;font-family:'Cinzel',serif;font-weight:600;font-size:11px;letter-spacing:.08em;text-transform:uppercase;text-decoration:none;">Party</a>
+      <a href="#" style="display:inline-flex;align-items:center;padding:9px 16px;background:#0d0c11;border:1.5px solid rgba(201,162,74,0.35);border-radius:4px;color:#b8ab8a;font-family:'Cinzel',serif;font-weight:600;font-size:11px;letter-spacing:.08em;text-transform:uppercase;text-decoration:none;">Run Stats</a>
+    </div>
+  </div>
+
+  <div style="max-width:1080px;margin:0 auto;padding:28px 32px 0;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
+      <div style="font-family:'Cinzel',serif;font-weight:700;font-size:38px;letter-spacing:.03em;color:#e8c07a;text-shadow:0 0 22px rgba(201,162,74,0.22);">Party</div>
+      <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:20px;background:rgba(255,255,255,0.04);border:1px solid rgba(201,162,74,0.25);">
+        <span style="width:6px;height:6px;border-radius:50%;background:#c9a24a;display:inline-block;"></span>
+        <span style="font-family:'Cinzel',serif;font-weight:600;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:#e8c07a;">{{ statusLabel }}</span>
+        <span style="font-size:11px;color:rgba(217,211,201,0.55);">&mdash; {{ statusSub }}</span>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:11px 16px;border-radius:6px;background:rgba(232,192,122,0.06);border:1px solid rgba(232,192,122,0.18);margin-bottom:20px;">
+      <span style="font-size:13px;color:#e0d3ad;">{{ instructionText }}</span>
+      <sc-if value="{{ somethingSelected }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;gap:14px;">
+          <sc-if value="{{ selectedFromIsSlot }}" hint-placeholder-val="{{ false }}">
+            <span onClick="{{ sendToBench }}" style="font-size:12px;color:#c9a24a;cursor:pointer;text-decoration:underline;text-underline-offset:2px;">Send to bench</span>
+          </sc-if>
+          <span onClick="{{ cancelSelection }}" style="font-size:12px;color:rgba(217,211,201,0.6);cursor:pointer;text-decoration:underline;text-underline-offset:2px;">Cancel</span>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+
+  <div style="max-width:1080px;margin:0 auto;padding:0 32px;">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:2px;">
+      <span style="font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#c9a24a;">Formation</span>
+      <span style="font-size:12px;color:rgba(217,211,201,0.5);">{{ assignedCount }}/3 positions filled</span>
+    </div>
+    <div style="font-size:11px;color:rgba(217,211,201,0.4);margin-bottom:12px;">Order only &mdash; every position fights the same.</div>
+
+    <div style="border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(10,9,14,0.55));border:1px solid rgba(201,162,74,0.22);overflow:hidden;">
+      <div style="padding:6px 16px;border-bottom:1px solid rgba(201,162,74,0.12);text-align:center;font-family:'Cinzel',serif;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:rgba(201,162,74,0.5);">Facing the Enemy &rarr;</div>
+
+      <div style="display:flex;">
+
+        <div onClick="{{ frontClick }}" onDragOver="{{ allowDrop }}" onDrop="{{ dropOnFront }}" onDragEnter="{{ enterFront }}" onDragLeave="{{ leaveTarget }}"
+          style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px 14px 18px;border-right:1px solid rgba(201,162,74,0.14);cursor:{{ front.cursor }};background:{{ front.colBg }};box-shadow:{{ front.ring }};">
+          <span style="font-family:'Cinzel',serif;font-weight:600;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#c9a24a;">Position 1</span>
+          <sc-if value="{{ front.destinationLabel }}" hint-placeholder-val="{{ false }}">
+            <span style="font-size:11px;font-family:'Cinzel',serif;font-weight:700;padding:3px 9px;border-radius:3px;background:rgba(232,192,122,0.18);border:1px solid #e8c07a;color:#e8c07a;">{{ front.destinationLabel }}</span>
+          </sc-if>
+          <sc-if value="{{ front.locked }}" hint-placeholder-val="{{ false }}"><span style="font-size:9px;letter-spacing:.05em;padding:2px 7px;border:1px solid rgba(201,162,74,0.5);border-radius:3px;color:#c9a24a;">Locked</span></sc-if>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <sc-if value="{{ front.occupant }}" hint-placeholder-val="{{ true }}">
+              <div draggable="{{ front.draggable }}" onDragStart="{{ front.onDragStart }}" onDragEnd="{{ onDragEnd }}" style="display:flex;flex-direction:column;align-items:center;">
+                <div style="height:150px;display:flex;align-items:flex-end;justify-content:center;">
+                  <sc-if value="{{ front.occupant.isShawn }}" hint-placeholder-val="{{ false }}"><img src="sprites/sheep.png" alt="{{ front.occupant.name }}" style="height:150px;width:auto;object-fit:contain;filter:drop-shadow(0 6px 8px rgba(0,0,0,.55));"></sc-if>
+                  <sc-if value="{{ front.occupant.isOdette }}" hint-placeholder-val="{{ false }}"><img src="sprites/owl.png" alt="{{ front.occupant.name }}" style="height:150px;width:auto;object-fit:contain;filter:drop-shadow(0 6px 8px rgba(0,0,0,.55));"></sc-if>
+                  <sc-if value="{{ front.occupant.noArt }}" hint-placeholder-val="{{ false }}">
+                    <div style="width:104px;height:150px;border-radius:8px;background:#141019;border:1px solid rgba(201,162,74,0.3);display:flex;align-items:center;justify-content:center;">
+                      <span style="font-family:'Cinzel',serif;font-weight:700;font-size:44px;color:rgba(201,162,74,0.45);">{{ front.occupant.initial }}</span>
+                    </div>
+                  </sc-if>
+                </div>
+                <div style="width:110px;height:14px;border-radius:50%;margin-top:-8px;background:{{ front.glow }};"></div>
+                <div style="font-family:'Cinzel',serif;font-weight:700;font-size:20px;color:#efe4c8;margin-top:6px;">{{ front.occupant.name }}</div>
+                <span style="font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:rgba(217,211,201,0.65);">{{ front.occupant.role }}</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ front.empty }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;align-items:center;">
+                <div style="height:150px;display:flex;align-items:flex-end;justify-content:center;opacity:.4;">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                </div>
+                <div style="width:90px;height:12px;border-radius:50%;margin-top:-6px;background:{{ front.glow }};"></div>
+                <span style="margin-top:8px;font-size:12px;opacity:.5;">Empty position</span>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+
+        <div onClick="{{ midClick }}" onDragOver="{{ allowDrop }}" onDrop="{{ dropOnMid }}" onDragEnter="{{ enterMid }}" onDragLeave="{{ leaveTarget }}"
+          style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px 14px 18px;border-right:1px solid rgba(201,162,74,0.14);cursor:{{ mid.cursor }};background:{{ mid.colBg }};box-shadow:{{ mid.ring }};">
+          <span style="font-family:'Cinzel',serif;font-weight:600;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#c9a24a;">Position 2</span>
+          <sc-if value="{{ mid.destinationLabel }}" hint-placeholder-val="{{ false }}">
+            <span style="font-size:11px;font-family:'Cinzel',serif;font-weight:700;padding:3px 9px;border-radius:3px;background:rgba(232,192,122,0.18);border:1px solid #e8c07a;color:#e8c07a;">{{ mid.destinationLabel }}</span>
+          </sc-if>
+          <sc-if value="{{ mid.locked }}" hint-placeholder-val="{{ false }}"><span style="font-size:9px;letter-spacing:.05em;padding:2px 7px;border:1px solid rgba(201,162,74,0.5);border-radius:3px;color:#c9a24a;">Locked</span></sc-if>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <sc-if value="{{ mid.occupant }}" hint-placeholder-val="{{ true }}">
+              <div draggable="{{ mid.draggable }}" onDragStart="{{ mid.onDragStart }}" onDragEnd="{{ onDragEnd }}" style="display:flex;flex-direction:column;align-items:center;">
+                <div style="height:150px;display:flex;align-items:flex-end;justify-content:center;">
+                  <sc-if value="{{ mid.occupant.isShawn }}" hint-placeholder-val="{{ false }}"><img src="sprites/sheep.png" alt="{{ mid.occupant.name }}" style="height:150px;width:auto;object-fit:contain;filter:drop-shadow(0 6px 8px rgba(0,0,0,.55));"></sc-if>
+                  <sc-if value="{{ mid.occupant.isOdette }}" hint-placeholder-val="{{ false }}"><img src="sprites/owl.png" alt="{{ mid.occupant.name }}" style="height:150px;width:auto;object-fit:contain;filter:drop-shadow(0 6px 8px rgba(0,0,0,.55));"></sc-if>
+                  <sc-if value="{{ mid.occupant.noArt }}" hint-placeholder-val="{{ true }}">
+                    <div style="width:104px;height:150px;border-radius:8px;background:#141019;border:1px solid rgba(201,162,74,0.3);display:flex;align-items:center;justify-content:center;">
+                      <span style="font-family:'Cinzel',serif;font-weight:700;font-size:44px;color:rgba(201,162,74,0.45);">{{ mid.occupant.initial }}</span>
+                    </div>
+                  </sc-if>
+                </div>
+                <div style="width:110px;height:14px;border-radius:50%;margin-top:-8px;background:{{ mid.glow }};"></div>
+                <div style="font-family:'Cinzel',serif;font-weight:700;font-size:20px;color:#efe4c8;margin-top:6px;">{{ mid.occupant.name }}</div>
+                <span style="font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:rgba(217,211,201,0.65);">{{ mid.occupant.role }}</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ mid.empty }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;align-items:center;">
+                <div style="height:150px;display:flex;align-items:flex-end;justify-content:center;opacity:.4;">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                </div>
+                <div style="width:90px;height:12px;border-radius:50%;margin-top:-6px;background:{{ mid.glow }};"></div>
+                <span style="margin-top:8px;font-size:12px;opacity:.5;">Empty position</span>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+
+        <div onClick="{{ backClick }}" onDragOver="{{ allowDrop }}" onDrop="{{ dropOnBack }}" onDragEnter="{{ enterBack }}" onDragLeave="{{ leaveTarget }}"
+          style="flex:1;position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px 14px 18px;cursor:{{ back.cursor }};background:{{ back.colBg }};box-shadow:{{ back.ring }};">
+          <span style="font-family:'Cinzel',serif;font-weight:600;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#c9a24a;">Position 3</span>
+          <sc-if value="{{ back.destinationLabel }}" hint-placeholder-val="{{ false }}">
+            <span style="font-size:11px;font-family:'Cinzel',serif;font-weight:700;padding:3px 9px;border-radius:3px;background:rgba(232,192,122,0.18);border:1px solid #e8c07a;color:#e8c07a;">{{ back.destinationLabel }}</span>
+          </sc-if>
+          <sc-if value="{{ back.locked }}" hint-placeholder-val="{{ false }}"><span style="font-size:9px;letter-spacing:.05em;padding:2px 7px;border:1px solid rgba(201,162,74,0.5);border-radius:3px;color:#c9a24a;">Locked</span></sc-if>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <sc-if value="{{ back.occupant }}" hint-placeholder-val="{{ true }}">
+              <div draggable="{{ back.draggable }}" onDragStart="{{ back.onDragStart }}" onDragEnd="{{ onDragEnd }}" style="display:flex;flex-direction:column;align-items:center;">
+                <div style="height:150px;display:flex;align-items:flex-end;justify-content:center;">
+                  <sc-if value="{{ back.occupant.isShawn }}" hint-placeholder-val="{{ false }}"><img src="sprites/sheep.png" alt="{{ back.occupant.name }}" style="height:150px;width:auto;object-fit:contain;filter:drop-shadow(0 6px 8px rgba(0,0,0,.55));"></sc-if>
+                  <sc-if value="{{ back.occupant.isOdette }}" hint-placeholder-val="{{ true }}"><img src="sprites/owl.png" alt="{{ back.occupant.name }}" style="height:150px;width:auto;object-fit:contain;filter:drop-shadow(0 6px 8px rgba(0,0,0,.55));"></sc-if>
+                  <sc-if value="{{ back.occupant.noArt }}" hint-placeholder-val="{{ false }}">
+                    <div style="width:104px;height:150px;border-radius:8px;background:#141019;border:1px solid rgba(201,162,74,0.3);display:flex;align-items:center;justify-content:center;">
+                      <span style="font-family:'Cinzel',serif;font-weight:700;font-size:44px;color:rgba(201,162,74,0.45);">{{ back.occupant.initial }}</span>
+                    </div>
+                  </sc-if>
+                </div>
+                <div style="width:110px;height:14px;border-radius:50%;margin-top:-8px;background:{{ back.glow }};"></div>
+                <div style="font-family:'Cinzel',serif;font-weight:700;font-size:20px;color:#efe4c8;margin-top:6px;">{{ back.occupant.name }}</div>
+                <span style="font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:rgba(217,211,201,0.65);">{{ back.occupant.role }}</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ back.empty }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;align-items:center;">
+                <div style="height:150px;display:flex;align-items:flex-end;justify-content:center;opacity:.4;">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                </div>
+                <div style="width:90px;height:12px;border-radius:50%;margin-top:-6px;background:{{ back.glow }};"></div>
+                <span style="margin-top:8px;font-size:12px;opacity:.5;">Empty position</span>
+              </div>
+            </sc-if>
+          </div>
+          <sc-if value="{{ back.lockedOverlay }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:rgba(8,7,12,0.9);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c9a24a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10V8a6 6 0 1 1 12 0v2"/><rect x="4" y="10" width="16" height="10" rx="2"/></svg>
+              <span style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border:1px solid rgba(201,162,74,0.5);border-radius:3px;color:#c9a24a;">Locked this run</span>
+            </div>
+          </sc-if>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div style="max-width:1080px;margin:28px auto 0;padding:0 32px;"><div style="height:1px;background:rgba(201,162,74,0.16);"></div></div>
+
+  <div style="max-width:1080px;margin:0 auto;padding:22px 32px 40px;">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px;">
+      <span style="font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#c9a24a;">Roster</span>
+      <span style="font-size:12px;color:rgba(217,211,201,0.5);">{{ rosterCount }} companions</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px;" onDragOver="{{ allowDrop }}" onDrop="{{ onDropRoster }}">
+      <sc-for list="{{ rosterList }}" as="item" hint-placeholder-count="6">
+        <div draggable="{{ item.canDrag }}" onDragStart="{{ item.onDragStart }}" onDragEnd="{{ onDragEnd }}" onClick="{{ item.onClick }}"
+          style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px 10px;border-radius:6px;background:{{ item.cardBg }};border:{{ item.cardBorderWidth }} solid {{ item.cardBorder }};box-shadow:{{ item.cardShadow }};opacity:{{ item.opacity }};cursor:{{ item.cursor }};transform:{{ item.lift }};transition:transform .1s,border-color .1s;">
+          <div style="height:76px;display:flex;align-items:flex-end;justify-content:center;">
+            <sc-if value="{{ item.isShawn }}" hint-placeholder-val="{{ false }}"><img src="sprites/sheep.png" alt="{{ item.name }}" style="height:72px;width:auto;object-fit:contain;filter:drop-shadow(0 3px 4px rgba(0,0,0,.5));"></sc-if>
+            <sc-if value="{{ item.isOdette }}" hint-placeholder-val="{{ false }}"><img src="sprites/owl.png" alt="{{ item.name }}" style="height:72px;width:auto;object-fit:contain;filter:drop-shadow(0 3px 4px rgba(0,0,0,.5));"></sc-if>
+            <sc-if value="{{ item.noArt }}" hint-placeholder-val="{{ true }}">
+              <div style="width:60px;height:72px;border-radius:6px;background:#181320;border:1px solid rgba(201,162,74,0.25);display:flex;align-items:center;justify-content:center;">
+                <span style="font-family:'Cinzel',serif;font-weight:700;font-size:22px;color:rgba(201,162,74,0.45);">{{ item.initial }}</span>
+              </div>
+            </sc-if>
+          </div>
+          <span style="font-family:'Cinzel',serif;font-weight:600;font-size:14px;text-align:center;line-height:1.2;color:#e7ddc8;margin-top:2px;">{{ item.name }}</span>
+          <span style="font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:rgba(217,211,201,0.6);">{{ item.role }}</span>
+          <sc-if value="{{ item.active }}" hint-placeholder-val="{{ true }}">
+            <span style="font-size:10.5px;letter-spacing:.03em;color:#c9a24a;">In Party &middot; {{ item.slotLabel }}</span>
+          </sc-if>
+          <sc-if value="{{ item.noArt }}" hint-placeholder-val="{{ true }}">
+            <span style="font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:rgba(217,211,201,0.5);">Art pending</span>
+          </sc-if>
+          <sc-if value="{{ item.benchedInRun }}" hint-placeholder-val="{{ false }}">
+            <span style="font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:rgba(217,211,201,0.5);">Benched</span>
+          </sc-if>
+          <sc-if value="{{ item.selected }}" hint-placeholder-val="{{ false }}">
+            <span style="font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:3px;background:#e8c07a;color:#1a1408;font-family:'Cinzel',serif;font-weight:700;">Selected</span>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#14111c;color:#e8c07a;border:1px solid rgba(201,162,74,0.5);padding:10px 18px;border-radius:4px;font-family:'Cinzel',serif;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.5);animation:partyToastIn .2s ease-out;">{{ toast }}</div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;initialMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;camp&quot;,&quot;options&quot;:[&quot;camp&quot;,&quot;run&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Behavior&quot;},&quot;demoLockedSlot&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Behavior&quot;}}">
+const SLOT_LABEL = { front: 'Position 1', mid: 'Position 2', back: 'Position 3' };
+const GLOW = {
+  green: 'radial-gradient(ellipse at center, rgba(95,224,122,.55), rgba(95,224,122,0) 72%)',
+  gold: 'radial-gradient(ellipse at center, rgba(232,192,122,.75), rgba(232,192,122,0) 72%)',
+  faint: 'radial-gradient(ellipse at center, rgba(180,170,150,.16), rgba(180,170,150,0) 72%)',
+  none: 'transparent',
+};
+
+class Component extends DCLogic {
+  state = {
+    mode: 'camp',
+    backLocked: false,
+    dragId: null,
+    dragFrom: null,
+    overTarget: null,
+    selectedId: null,
+    selectedFrom: null,
+    toast: null,
+    roster: [
+      { id: 'shawn', name: 'Shawn', role: 'Utility', sprite: 'sheep', slot: 'front' },
+      { id: 'brawler', name: 'Placeholder Brawler', role: 'Tank', sprite: null, slot: 'mid' },
+      { id: 'odette', name: 'Odette', role: 'Support', sprite: 'owl', slot: 'back' },
+      { id: 'turtle', name: 'Turtle', role: 'Tank', sprite: null, slot: null },
+      { id: 'fly', name: 'Fly', role: 'Attacker', sprite: null, slot: null },
+      { id: 'dog', name: 'Dog', role: 'Hunter', sprite: null, slot: null },
+    ],
+  };
+
+  componentDidMount() {
+    const initialMode = this.props.initialMode ?? 'camp';
+    const demoLock = this.props.demoLockedSlot ?? false;
+    if (initialMode !== this.state.mode || demoLock !== this.state.backLocked) {
+      this.setState({ mode: initialMode, backLocked: demoLock });
+    }
+  }
+
+  showToast(msg) {
+    clearTimeout(this._toastTimer);
+    this.setState({ toast: msg });
+    this._toastTimer = setTimeout(() => this.setState({ toast: null }), 2400);
+  }
+
+  countAssigned() { return this.state.roster.filter(c => c.slot).length; }
+
+  attemptMove(id, from, to) {
+    if (!id || from === to) return false;
+    const lockedTarget = to === 'back' && this.state.backLocked;
+    if (lockedTarget) { this.showToast('That position is locked this run.'); return false; }
+    const roster = this.state.roster.map(c => ({ ...c }));
+    const dragged = roster.find(c => c.id === id);
+    if (!dragged) return false;
+
+    if (to === 'roster') {
+      if (this.state.mode === 'run') { this.showToast('Positions can only be swapped between runs.'); return false; }
+      if (this.countAssigned() <= 1) { this.showToast('At least one companion must stay in the party.'); return false; }
+      dragged.slot = null;
+      this.setState({ roster });
+      this.showToast(`${dragged.name} sent to the roster.`);
+      return true;
+    }
+
+    if (from === 'roster' && this.state.mode === 'run') { this.showToast('New companions can only join between runs.'); return false; }
+    const occupant = roster.find(c => c.slot === to && c.id !== id);
+    const fromSlot = dragged.slot;
+    dragged.slot = to;
+    let msg;
+    if (occupant) {
+      occupant.slot = fromSlot;
+      msg = from === 'roster' ? `${occupant.name} steps aside for ${dragged.name}.` : `Swapped ${dragged.name} and ${occupant.name}.`;
+    } else {
+      msg = `${dragged.name} takes ${SLOT_LABEL[to]}.`;
+    }
+    this.setState({ roster });
+    this.showToast(msg);
+    return true;
+  }
+
+  allowDrop = (e) => { e.preventDefault(); };
+  leaveTarget = () => { this.setState({ overTarget: null }); };
+  enter = (target) => (e) => { e.preventDefault(); this.setState({ overTarget: target }); };
+  dragStart = (id, from) => (e) => {
+    e.dataTransfer.setData('text/plain', id);
+    e.dataTransfer.effectAllowed = 'move';
+    this.setState({ dragId: id, dragFrom: from, selectedId: null, selectedFrom: null });
+  };
+  dragEnd = () => { this.setState({ dragId: null, dragFrom: null, overTarget: null }); };
+
+  dropOnSlot = (slotId) => (e) => {
+    e.preventDefault();
+    const { dragId, dragFrom } = this.state;
+    this.setState({ overTarget: null });
+    if (!dragId) return;
+    this.attemptMove(dragId, dragFrom, slotId);
+    this.setState({ dragId: null, dragFrom: null });
+  };
+
+  dropOnRoster = (e) => {
+    e.preventDefault();
+    const { dragId, dragFrom } = this.state;
+    this.setState({ overTarget: null });
+    if (!dragId || dragFrom === 'roster') return;
+    this.attemptMove(dragId, dragFrom, 'roster');
+    this.setState({ dragId: null, dragFrom: null });
+  };
+
+  selectCard = (id, from) => () => {
+    if (this.state.selectedId === id) { this.setState({ selectedId: null, selectedFrom: null }); return; }
+    this.setState({ selectedId: id, selectedFrom: from });
+  };
+
+  slotClick = (slotId) => () => {
+    const { selectedId, selectedFrom, backLocked, roster } = this.state;
+    const locked = slotId === 'back' && backLocked;
+    const occ = roster.find(c => c.slot === slotId);
+    if (!selectedId) {
+      if (occ) { this.setState({ selectedId: occ.id, selectedFrom: slotId }); }
+      else if (locked) { this.showToast('That position is locked this run.'); }
+      else { this.showToast('Select a companion first.'); }
+      return;
+    }
+    if (selectedFrom === slotId) { this.setState({ selectedId: null, selectedFrom: null }); return; }
+    this.attemptMove(selectedId, selectedFrom, slotId);
+    this.setState({ selectedId: null, selectedFrom: null });
+  };
+
+  cancelSelection = () => this.setState({ selectedId: null, selectedFrom: null });
+  sendToBench = () => {
+    const { selectedId, selectedFrom } = this.state;
+    this.attemptMove(selectedId, selectedFrom, 'roster');
+    this.setState({ selectedId: null, selectedFrom: null });
+  };
+
+  setCamp = () => this.setState({ mode: 'camp' });
+  setRun = () => this.setState({ mode: 'run' });
+  toggleLock = (e) => this.setState({ backLocked: e.target.checked });
+
+  renderVals() {
+    const { roster, mode, dragId, selectedId, selectedFrom, toast, backLocked } = this.state;
+    const isCamp = mode === 'camp';
+    const somethingSelected = !!selectedId;
+    const selectedChar = somethingSelected ? roster.find(c => c.id === selectedId) : null;
+    const selectedName = selectedChar ? selectedChar.name : '';
+    const selectedFromIsSlot = somethingSelected && selectedFrom !== 'roster';
+
+    const withArt = (c) => ({ ...c, isShawn: c.sprite === 'sheep', isOdette: c.sprite === 'owl', noArt: !c.sprite, initial: c.name.charAt(0) });
+
+    const rosterList = roster.map(c => {
+      const benchedInRun = mode === 'run' && !c.slot;
+      const canDrag = !benchedInRun;
+      const isSelected = selectedId === c.id;
+      return {
+        ...withArt(c),
+        active: !!c.slot,
+        slotLabel: c.slot ? SLOT_LABEL[c.slot] : null,
+        benchedInRun, canDrag, selected: isSelected,
+        opacity: dragId === c.id ? 0.35 : (benchedInRun ? 0.4 : 1),
+        cursor: canDrag ? 'pointer' : 'not-allowed',
+        cardBg: isSelected ? 'rgba(232,192,122,0.08)' : '#100e16',
+        cardBorderWidth: isSelected ? '2px' : '1px',
+        cardBorder: isSelected ? '#e8c07a' : 'rgba(201,162,74,0.2)',
+        cardShadow: isSelected ? '0 0 0 3px rgba(232,192,122,0.15)' : 'none',
+        lift: isSelected ? 'translateY(-3px)' : 'none',
+        onDragStart: canDrag ? this.dragStart(c.id, 'roster') : undefined,
+        onClick: canDrag ? this.selectCard(c.id, 'roster') : undefined,
+      };
+    });
+
+    const slotMeta = (id) => {
+      const occ = roster.find(c => c.slot === id) || null;
+      const locked = id === 'back' && backLocked;
+      const isSelected = selectedFrom === id;
+      const draggable = !!occ && !locked;
+      const destinationLabel = (!somethingSelected || isSelected || locked) ? null
+        : (occ ? (selectedFrom === 'roster' ? `Replace ${occ.name}` : `Swap with ${occ.name}`) : `Place ${selectedName} here`);
+      let glow = GLOW.faint;
+      if (locked) glow = GLOW.none;
+      else if (isSelected) glow = GLOW.gold;
+      else if (occ) glow = GLOW.green;
+      else if (destinationLabel) glow = GLOW.gold;
+      return {
+        occupant: occ ? withArt(occ) : null,
+        empty: !occ && !locked,
+        lockedOverlay: locked,
+        locked,
+        destinationLabel,
+        glow,
+        colBg: destinationLabel ? 'rgba(232,192,122,0.06)' : 'transparent',
+        ring: destinationLabel ? 'inset 0 0 0 2px rgba(232,192,122,0.5)' : 'none',
+        cursor: locked ? 'not-allowed' : 'pointer',
+        draggable,
+        onDragStart: draggable ? this.dragStart(occ.id, id) : undefined,
+      };
+    };
+
+    const gbtn = (active) => ({
+      Bg: active ? '#1a1a1a' : '#111',
+      Border: active ? '#777' : '#2e2e2e',
+      Color: active ? '#eee' : '#999',
+    });
+    const campS = gbtn(isCamp);
+    const runS = gbtn(!isCamp);
+
+    return {
+      isCamp, isRun: !isCamp, toast, backLocked,
+      campBg: campS.Bg, campBorder: campS.Border, campColor: campS.Color,
+      runBg: runS.Bg, runBorder: runS.Border, runColor: runS.Color,
+      statusLabel: isCamp ? 'At Camp' : 'In a Run',
+      statusSub: isCamp ? 'Swap freely.' : 'Reposition only.',
+      somethingSelected, selectedFromIsSlot,
+      instructionText: somethingSelected ? `${selectedName} selected — choose a position.` : 'Select a companion, then choose a position.',
+      cancelSelection: this.cancelSelection, sendToBench: this.sendToBench,
+      rosterList,
+      assignedCount: this.countAssigned(),
+      rosterCount: roster.length,
+      allowDrop: this.allowDrop,
+      onDragEnd: this.dragEnd,
+      onDropRoster: this.dropOnRoster,
+      dropOnFront: this.dropOnSlot('front'),
+      dropOnMid: this.dropOnSlot('mid'),
+      dropOnBack: this.dropOnSlot('back'),
+      frontClick: this.slotClick('front'), midClick: this.slotClick('mid'), backClick: this.slotClick('back'),
+      enterFront: this.enter('front'), enterMid: this.enter('mid'), enterBack: this.enter('back'),
+      leaveTarget: this.leaveTarget,
+      setCamp: this.setCamp, setRun: this.setRun,
+      toggleLock: this.toggleLock,
+      front: slotMeta('front'), mid: slotMeta('mid'), back: slotMeta('back'),
+    };
+  }
+}
+</script>
+</body>
+</html>

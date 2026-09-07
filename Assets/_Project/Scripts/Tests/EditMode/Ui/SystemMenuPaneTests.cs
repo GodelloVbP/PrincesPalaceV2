@@ -41,6 +41,9 @@ namespace PrincesPalace.Domain.Tests
 
             Assert.AreEqual(width, ExitsLayout.PaneWidth, 0.001f, "the Main menu pane is not the pane's width");
             Assert.AreEqual(height, ExitsLayout.PaneHeight, 0.001f, "the Main menu pane is not the pane's height");
+
+            Assert.AreEqual(width, PartyLayout.PaneWidth, 0.001f, "Party is not the pane's width");
+            Assert.AreEqual(height, PartyLayout.PaneHeight, 0.001f, "Party is not the pane's height");
         }
 
         // And their contents reach the floor rather than stopping in the middle
@@ -51,6 +54,7 @@ namespace PrincesPalace.Domain.Tests
         [TestCase("options")]
         [TestCase("runstats")]
         [TestCase("exits")]
+        [TestCase("party")]
         public void EveryPaneUsesMostOfItsHeight(string pane)
         {
             float used;
@@ -82,6 +86,16 @@ namespace PrincesPalace.Domain.Tests
                 case "runstats":
                     usable = RunStatsLayout.UsableHeight;
                     used = RunStatsLayout.TallestCard(RunStatRows.Groups);
+                    break;
+
+                case "party":
+                    // The roster row is the last structural content down the
+                    // pane (the toast is a transient overlay, not part of the
+                    // stack -- see PartyScreen.BuildToast's own comment), so
+                    // its own bottom edge is what "used" measures against.
+                    usable = PartyLayout.UsableHeight;
+                    used = PartyLayout.ContentTop
+                           - (PartyLayout.RosterRowCentreY - PartyLayout.CardHeight * 0.5f);
                     break;
 
                 default:
@@ -341,6 +355,7 @@ namespace PrincesPalace.Domain.Tests
             var hosted = new Dictionary<SystemMenuTab, bool>
             {
                 { SystemMenuTab.CharacterInventory, screen.Dossier != null },
+                { SystemMenuTab.Party, screen.Party != null },
                 { SystemMenuTab.Options, screen.Options != null },
                 { SystemMenuTab.RunStats, screen.RunStats != null },
                 { SystemMenuTab.MainMenu, screen.Exits != null },

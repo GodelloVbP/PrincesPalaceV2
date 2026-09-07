@@ -40,6 +40,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
         public CharacterDossierScreen Dossier;
         public RewardTrackScreen RewardTrack;
+        public PartyScreen Party;
         public OptionsScreen Options;
         public RunStatsScreen RunStats;
         public ExitsScreen Exits;
@@ -65,7 +66,16 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public List<NodeRef> Panes = new List<NodeRef>();
         public List<NodeRef> PanePlaceholders = new List<NodeRef>();
 
-        public static SystemMenuScreen Build()
+        // partyRosterCardCount defaults to 3, matching how many characters
+        // characters.json authors today -- a COMPATIBILITY default, not a
+        // design choice (CODE_STANDARDS.md 5): ScreenRegistry, which builds
+        // this with no argument, is out of scope for the package that added
+        // the parameter (see docs/handoffs/party_screen/DECISIONS.md), so the
+        // default keeps every existing caller compiling. Wiring the REAL
+        // count (ContentDatabase.LoadOrdered<CharacterDefinition>().Count) is
+        // that later package's job, the same way MainMenuScreen.Build reads
+        // SaveSystem.SlotCount from ScreenRegistry rather than Domain.
+        public static SystemMenuScreen Build(int partyRosterCardCount = 3)
         {
             var screen = new SystemMenuScreen();
             var tabs = SystemMenuTabs.All;
@@ -235,6 +245,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
                     var track = RewardTrackScreen.Build();
                     screen.RewardTrack = track;
                     contents.Add(track.Root);
+                }
+                else if (def.Tab == SystemMenuTab.Party)
+                {
+                    var party = PartyScreen.Build(new PartyInputs(partyRosterCardCount));
+                    screen.Party = party;
+                    contents.Add(party.Root);
+                    placeholder.Inactive();
                 }
                 else if (def.Tab == SystemMenuTab.Options)
                 {
