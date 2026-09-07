@@ -100,6 +100,13 @@ namespace PrincesPalace.Domain.Content
         [ContentDoc("Which way the battle art is drawn in its source file: 'Right' or 'Left'.")]
         public string battleSpriteFacing = "";
 
+        // Which of the kit's six themes the fight HUD's party plate wears
+        // for this character. Parsed the same way battleSpriteFacing is
+        // (case-insensitive, empty means the sensible default) against
+        // UiKit.ButtonTheme, in CharacterEntryResolver.
+        [ContentDoc("Which UiKit.ButtonTheme the fight HUD's party plate wears for this character, matched case-insensitively; empty means Blue.")]
+        public string plateTheme = "";
+
         // Optional private combat resource. An empty signatureId means the
         // character has none — that is the meaningful distinction, not a
         // zero capacity (see CombatantState.Signature).

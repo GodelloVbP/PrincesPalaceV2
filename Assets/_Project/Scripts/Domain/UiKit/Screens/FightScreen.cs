@@ -118,7 +118,12 @@ namespace PrincesPalace.Domain.UiKit.Screens
         public NodeRef PartyPlate;
         public NodeRef PartyPortrait;
         public NodeRef PartyName;
-        public NodeRef PartyClass;
+        // PartyClass ("LV1 UTILITY") is GONE, B2 (balance-bot pass) -- see
+        // BuildPartyPlate's own note. Removed here only: FightController.
+        // Hud.cs:568 (`partyClass.Set(...)`) and the `partyClass`
+        // [SerializeField] on FightController still exist on the main tree
+        // and are Phase C's job, not this worktree's -- Core is off-limits
+        // here (CLAUDE.md/docs/CODE_STANDARDS.md layering).
         public NodeRef PartyHpFill;
         public NodeRef PartyHpValue;
         public NodeRef PartyMpFill;
@@ -1159,70 +1164,111 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // tokens are HP/MP/text roles, not a per-plate theme -- so there was
         // nothing here to defer to.
         //
-        // 452x216 (aspect 2.09) was 5.6% off the kit's measured 2:1 aspect
-        // (1.98, see ContainerArt.ContainerAspect2x1) -- outside the 5% band
-        // Ui.Container refuses. WIDTH STAYS 452 (FightScreenTests pins it);
-        // the nudge is entirely in HEIGHT, 216 -> 452/1.98 = 228.28.
-        //
-        // THE BOTTOM EDGE IS THE ANCHOR, not the centre: -500 was already the
-        // canvas's own 40px HUD margin above the floor (UiFrames.Reference.Y
-        // * -0.5 + 40). Growing the plate by keeping its old centre Y would
-        // have moved that margin; growing it from the bottom up keeps the
-        // margin and pushes the top edge up by the same 12.28px instead.
+        // COZY, B2 (balance-bot pass): 452x228 was sized for a header row
+        // (name + "LV1 UTILITY") that no longer exists -- PartyClass is gone
+        // below, see its own note -- and left the HP/MP rows and the wool
+        // meter floating in a card built for a fourth fact it no longer
+        // states. 380 keeps the 2:1 aspect (380/1.98 = 191.92, well inside
+        // Ui.Container's 5% band); the height derives from it rather than
+        // being pinned separately, same discipline the old 452/1.98 used.
         // Public: FightScreenTests (a separate assembly, no InternalsVisibleTo
         // grant to it) reads these rather than restating the numbers.
-        public const float PartyPlateWidth = 452f;
-        public const float PartyPlateHeight = PartyPlateWidth / ContainerArt.ContainerAspect2x1; // 228.28, was 216
-        private const float PartyPlateCentreX = -694f;
-        private const float PartyPlateBottomY = -500f; // -392 - 108: the old plate's bottom edge, preserved
-        private const float PartyPlateCentreY = PartyPlateBottomY + PartyPlateHeight * 0.5f; // -385.86, was -392
+        public const float PartyPlateWidth = 380f;
+        public const float PartyPlateHeight = PartyPlateWidth / ContainerArt.ContainerAspect2x1; // 191.92, was 228.28
+        private const float PartyPlateCentreX = -730f; // LEFT EDGE STAYS AT -920 -- see BuildPartyPlate's own note
 
+        // VISIBLE-BOTTOM FLUSH NOW (B1), not the fixed -500 HUD margin it
+        // used to be: -500 WAS the canvas's own 40px margin above the floor
+        // (UiFrames.Reference.Y * -0.5 + 40), chosen with no reference to the
+        // verb column at all, which is why the plate's own visible bottom
+        // used to sit ~14px below the verb column's -- two rects that agreed
+        // on nothing lined up by coincidence or not at all. It is now placed
+        // exactly like FightSubmenuLayout's own frame (see
+        // FightSubmenuLayout.VisibleBottomLine's comment for the halo this
+        // corrects for): the CENTRE that puts the plate's own visible bottom
+        // (rect bottom + height * its 2:1 art's own bottom VisiblePad) on
+        // the same line the verb column's visible bottom sits on. Computed,
+        // not const, because Ui.PlateVisiblePad/ContainerVisiblePad are
+        // ordinary (non-const) static methods -- see PartyPlateWidth/Height's
+        // own note for why the two consts above stay literal.
+        private static float PartyPlateCentreY =>
+            Ui.CentreYForVisibleBottom(FightSubmenuLayout.VisibleBottomLine, PartyPlateHeight,
+                Ui.ContainerVisiblePad(ContainerRatio.TwoByOne).Bottom);
+
+        // EVERY LOCAL NUMBER BELOW IS THE OLD 452-WIDE LAYOUT SCALED BY
+        // PartyPlateWidth / 452f (0.8407) -- a uniform shrink, not a
+        // redesign from scratch. That is deliberate: the old layout was
+        // already audited clean (no overlaps, E1 text-fit passing), and a
+        // uniform scale of a non-overlapping layout is STILL non-overlapping
+        // -- every gap shrinks by the same factor a rect does, so nothing
+        // that cleared its neighbour before can now cross into it. The one
+        // thing that changes shape rather than just size is PartyClass,
+        // which is gone outright (see its own note below) rather than
+        // scaled down with everything else. Every number below is therefore
+        // its old value times PartyPlateWidth / 452f (0.8407), pre-computed
+        // rather than written as a live expression: the numbers are
+        // PLACEMENT, the same reason every other rect on this screen is a
+        // literal with a comment rather than a formula, and the E1/UiAudit
+        // pins below check the RESULT, not that any particular arithmetic
+        // produced it.
         private UiNode BuildPartyPlate()
         {
-            var portrait = Ui.Sprite("PartyPortrait", null, new UiVec(64f, 64f), Place.At(-170f, 54f)).Inactive();
+            // 54x54, not v1/A1's 64x64 -- 64 * 0.8407 = 53.8, which is the
+            // "portrait ~56px" the brief asked for (rounded to the nearest
+            // whole px the scale itself lands on, not a second, independently
+            // chosen number that could disagree with everything scaled off
+            // it).
+            var portrait = Ui.Sprite("PartyPortrait", null, new UiVec(54f, 54f), Place.At(-143f, 45.4f)).Inactive();
 
             // A CHILD of the portrait, not a sibling of the plate -- nesting it
             // here means A1 never has to reason about it (a child overlapping
             // its own parent on purpose is not the case that check exists to
-            // catch), and it stays inside the portrait's own 64x64 box with
-            // room either side, so it needs no AllowOverflow either. Shown only
+            // catch), and it stays inside the portrait's own box with room
+            // either side, so it needs no AllowOverflow either. Shown only
             // while the acting character still has an unspent Second Life --
             // the one domain state this whole pass adds that was previously
             // invisible end to end (RunSettlement's own revive, not shown
             // anywhere before this).
             var secondLife = Ui.Solid("SecondLifeBadge", FightHudPalette.TargetAmber,
-                    new UiVec(11f, 11f), Place.At(26f, -26f))
+                    new UiVec(9.25f, 9.25f), Place.At(21.9f, -21.9f))
                 .Inactive();
             SecondLifeBadge = secondLife;
             portrait.Children.Add(secondLife);
 
-            var name = Ui.Label("PartyName", UiString.Runtime, new UiVec(220f, 32f), 24,
-                FightHudPalette.PartyNameText, Place.At(-122f, 62f, new UiVec(0f, 0.5f)));
+            // WIDE ENOUGH TO USE THE ROOM PartyClass GAVE BACK -- 185 (the
+            // scaled figure) would still end well short of the freed span,
+            // but there is nothing else on this row to align against any
+            // more, so widening it further would only be guessing at how
+            // much of a long name actually needs it. 185 is what a uniform
+            // shrink of the old 220 gives, and it is not the bottleneck: a
+            // runtime name this box cannot hold already truncates via TMP's
+            // own overflow, same as every other UiString.Runtime label on
+            // this screen.
+            var name = Ui.Label("PartyName", UiString.Runtime, new UiVec(185f, 26.9f), 20,
+                FightHudPalette.PartyNameText, Place.At(-102.6f, 52.1f, new UiVec(0f, 0.5f)));
 
-            // 94 wide, not v1's 240: v1's box ran from x -46 straight through
-            // the name's, which reaches 98. Right-aligned, so the text still
-            // ends exactly where it always did.
-            var cls = Ui.Label("PartyClass", UiStrings.LevelAndRole, new UiVec(94f, 34f), 13,
-                FightHudPalette.PartyClassText, Place.At(194f, 62f, new UiVec(1f, 0.5f)));
-
-            // 22 wide, not v1's 30: the bar begins at x -170.
-            var hpTag = Ui.Label("PartyHpTag", UiStrings.HpTag, new UiVec(22f, 20f), 12,
-                FightHudPalette.HpBright, Place.At(-194f, 4f, new UiVec(0f, 0.5f)));
+            // PartyClass ("LV1 UTILITY") IS GONE -- balance-bot's cozy-plate
+            // pass. It repeated a fact the dossier already states in full
+            // sentences, and its own removal is most of where this card's
+            // 452 -> 380 shrink comes from: the header row now needs to fit
+            // only a portrait and a name, not a portrait, a name AND a
+            // right-aligned second label competing for the same 32px row.
+            var hpTag = Ui.Label("PartyHpTag", UiStrings.HpTag, new UiVec(18.5f, 16.8f), 10,
+                FightHudPalette.HpBright, Place.At(-163.1f, 3.36f, new UiVec(0f, 0.5f)));
             var hpFill = Ui.Solid("PartyHpFill", FightHudPalette.HpBright, Place.Stretch(), UiSize.Fill);
-            var hpBar = Ui.Panel("PartyHpBar", Place.At(-24f, 4f), UiSize.Fixed(292f, 16f), hpFill)
+            var hpBar = Ui.Panel("PartyHpBar", Place.At(-20.18f, 3.36f), UiSize.Fixed(245.5f, 13.45f), hpFill)
                 .Coloured(FightHudPalette.Track);
 
-            // 70 wide, not v1's 100: the bar ends at x 122. And 12pt, not v1's
-            // 14: at 14 TMP needs 78px for "9999/9999" and wraps it to two
-            // lines inside 70, which E1 catches and a screenshot would only
-            // show as a value mysteriously sitting half outside its row. TMP
-            // renders crisper than uGUI at the same nominal size, so 12 here
-            // reads about as large as v1's 14 did.
-            var hpValue = Ui.Label("PartyHpValue", UiStrings.HealthValue, new UiVec(70f, 20f), 12,
-                FightHudPalette.HpText, Place.At(194f, 4f, new UiVec(1f, 0.5f)));
+            // 10pt, scaled down from 12 -- the box shrank with it (58.85,
+            // from 70), so the "9999/9999 at 70/12 fits, do not grow past
+            // it" relationship A1 pinned is preserved by the SAME ratio
+            // rather than re-derived; E1 (this screen's own text-fit audit)
+            // is the check that actually proves it still holds.
+            var hpValue = Ui.Label("PartyHpValue", UiStrings.HealthValue, new UiVec(58.85f, 16.8f), 10,
+                FightHudPalette.HpText, Place.At(163.1f, 3.36f, new UiVec(1f, 0.5f)));
 
-            var mpTag = Ui.Label("PartyMpTag", UiStrings.MpTag, new UiVec(22f, 20f), 12,
-                FightHudPalette.MpBright, Place.At(-194f, -22f, new UiVec(0f, 0.5f)));
+            var mpTag = Ui.Label("PartyMpTag", UiStrings.MpTag, new UiVec(18.5f, 16.8f), 10,
+                FightHudPalette.MpBright, Place.At(-163.1f, -18.5f, new UiVec(0f, 0.5f)));
             var mpFill = Ui.Solid("PartyMpFill", FightHudPalette.MpBright, Place.Stretch(), UiSize.Fill);
 
             // THE MANA-COST OVERLAY (PartyMpPreview) IS GONE, balance-bot
@@ -1232,14 +1278,13 @@ namespace PrincesPalace.Domain.UiKit.Screens
             // and it stayed live even while the player was casting, tracking
             // a cost that no longer meant "if you pick this". The numeric
             // cost is the one source of truth now.
-            var mpBar = Ui.Panel("PartyMpBar", Place.At(-24f, -22f), UiSize.Fixed(292f, 16f), mpFill)
+            var mpBar = Ui.Panel("PartyMpBar", Place.At(-20.18f, -18.5f), UiSize.Fixed(245.5f, 13.45f), mpFill)
                 .Coloured(FightHudPalette.TrackMp);
-            var mpValue = Ui.Label("PartyMpValue", UiStrings.HealthValue, new UiVec(70f, 20f), 12,
-                FightHudPalette.MpText, Place.At(194f, -22f, new UiVec(1f, 0.5f)));
+            var mpValue = Ui.Label("PartyMpValue", UiStrings.HealthValue, new UiVec(58.85f, 16.8f), 10,
+                FightHudPalette.MpText, Place.At(163.1f, -18.5f, new UiVec(1f, 0.5f)));
 
             PartyPortrait = portrait;
             PartyName = name;
-            PartyClass = cls;
             PartyHpFill = hpFill;
             PartyHpValue = hpValue;
             PartyMpFill = mpFill;
@@ -1251,7 +1296,7 @@ namespace PrincesPalace.Domain.UiKit.Screens
 
             var content = new List<UiNode>
             {
-                portrait, name, cls, hpTag, hpBar, hpValue, mpTag, mpBar, mpValue, BuildWoolRow(),
+                portrait, name, hpTag, hpBar, hpValue, mpTag, mpBar, mpValue, BuildWoolRow(),
             };
             content.AddRange(BuildPartyBuffIcons());
             Ui.ContainerContent(plate, ContainerRatio.TwoByOne, "PartyPlateContent", content.ToArray());
@@ -1260,11 +1305,19 @@ namespace PrincesPalace.Domain.UiKit.Screens
             return plate;
         }
 
-        // The party plate's own top edge in world Y -- its bottom edge
-        // (PartyPlateBottomY) plus its own height. Both the transformation
+        // The party plate's own top edge in world Y. Both the transformation
         // strip and the roster stack build off this rather than off a
-        // restated number, so moving the plate moves them with it.
-        private const float PartyPlateTopY = PartyPlateBottomY + PartyPlateHeight;
+        // restated number, so moving the plate moves them with it. Computed
+        // rather than const now that PartyPlateCentreY is (see its own
+        // note) -- and computed as Centre + Height*0.5f, THE SAME EXPRESSION
+        // UiRect.Top itself uses, rather than (Centre - Height*0.5f) + Height
+        // (algebraically equal, but a different float instruction sequence
+        // that rounded to a different last bit here): TransformStrip is
+        // placed flush against this value, and UiAudit's SiblingOverlap
+        // check is a strict `>`, so an ULP of drift between "the plate's own
+        // solved Top" and "the Y this constant claims that Top is" reads as
+        // a genuine (if 0px-wide) overlap rather than the two edges touching.
+        private static float PartyPlateTopY => PartyPlateCentreY + PartyPlateHeight * 0.5f;
 
         // FUSED TO THE PLATE'S TOP EDGE, not inside it -- the header row two
         // labels above already leaves a 2px gap between PartyName and
@@ -1308,7 +1361,9 @@ namespace PrincesPalace.Domain.UiKit.Screens
         private const float RosterPlateW = 452f;
         private const float RosterPlateH = 44f;
         private const float RosterGap = 6f;
-        private const float RosterFirstY =
+
+        // Computed, not const, now that PartyPlateTopY is (see its own note).
+        private static float RosterFirstY =>
             PartyPlateTopY + TransformStripH + RosterGap + RosterPlateH * 0.5f;
         private const float RosterPitchY = RosterPlateH + RosterGap;
 
@@ -1396,39 +1451,35 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // Shielded, Regen, Protect, one speed entry) is exactly 6, so the
         // party plate's own slots cover it with no overflow chip needed in
         // practice; the 6th slot doubles as the "+N" chip on the rare 7th.
-        // Size/pitch/X0 below are UNCHANGED -- six badges at this pitch end
-        // at x67.5, inside the x100 where PartyClass begins.
+        // Unchanged by the B2 shrink -- the row scales with the plate, not
+        // the slot count.
         private const int PartyBuffSlots = 6;
 
-        // 27x27, UP FROM 18x18 (x1.5, debuff/buff icon pass, balance-bot
-        // 2026-09-02) -- pitch scaled with it, 33 up from 22, so the gap
-        // between badges (pitch minus size) grows in the same proportion
-        // rather than shrinking toward a collision.
-        private const float PartyBuffIconSize = 27f;
-        private const float PartyBuffPitch = 33f;
+        // 22.7x22.7, DOWN FROM 27x27 -- the B2 cozy-plate shrink
+        // (PartyPlateWidth 452 -> 380) scaled the whole row by the same
+        // 0.8407 the rest of BuildPartyPlate is scaled by (see its own
+        // header); pitch scaled with it, 27.74 down from 33, so the gap
+        // between badges shrinks by the same proportion rather than toward
+        // a collision.
+        private const float PartyBuffIconSize = 22.7f;
+        private const float PartyBuffPitch = 27.74f;
 
-        // Y MOVED, 90 -> 30, because 90 no longer fits. The old row's band
-        // (above the header, below the container's own top inset -- see the
-        // comment this replaced) is 101.59 - 78 = 23.58px tall, and a 27px
-        // icon does not fit inside it at any Y. The header row (PartyName,
-        // y46-78) and the HP row (PartyHpBar/PartyHpValue, top edge 14) leave
-        // a second, wider band between them -- y14 to y46, 32px tall, clear of
-        // both -- and portrait's own right edge (-138) still bounds it on the
-        // left, so the badges still cannot land on the portrait.
-        private const float PartyBuffY = 30f;
+        // Y scaled with the row (30 -> 25.22): the header row (PartyName)
+        // and the HP row below it both moved with the same shrink, so the
+        // clear band between them scaled too rather than needing to be
+        // re-found by hand.
+        private const float PartyBuffY = 25.22f;
 
-        // Left edge of PartyBuff0 clears the portrait's right edge (-138) by
-        // 13.5px, scaled up from the old row's 9px clearance (-129 - -138) by
-        // the same x1.5 as the icon itself.
-        private const float PartyBuffX0 = -111f;
+        // X0 scaled with the row (-111 -> -93.32): still clear of the
+        // portrait's own (now smaller) right edge by the same proportion.
+        private const float PartyBuffX0 = -93.32f;
 
-        // 9/8 -- interpolated between the enemy row's 11/9 at 36px and the
-        // roster row's 8/7 at 20px for this row's own 27px, the same way the
-        // three rows already scale everything else (badge size, pitch) with
-        // their own footprint rather than sharing one font size across three
-        // different physical sizes.
-        private const int PartyBuffCodeFontSize = 9;
-        private const int PartyBuffCounterFontSize = 8;
+        // 8/7, scaled down from 9/8 (a 27px icon's own font size, x0.8407)
+        // -- the enemy row's 11/9 at 36px and the roster row's 8/7 at 20px
+        // are the two ends this row already sat between; scaling down with
+        // the icon keeps it there rather than picking a third number.
+        private const int PartyBuffCodeFontSize = 8;
+        private const int PartyBuffCounterFontSize = 7;
 
         private IEnumerable<UiNode> BuildPartyBuffIcons()
         {
@@ -1450,40 +1501,42 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // "3/16" label.
         private UiNode BuildWoolRow()
         {
-            var divider = Ui.Solid("WoolDivider", FightHudPalette.Hairline, new UiVec(404f, 1f), Place.At(0f, 22f))
+            // Every number in this method is the old 410-wide row's own
+            // number times PartyPlateWidth / 452f (0.8407) -- see
+            // BuildPartyPlate's own header for why a uniform scale, not a
+            // redesign, is what B2's shrink applies here too. WoolPips
+            // (16) is untouched: it is a display reservation for a gameplay
+            // number (FightHudSpec.WoolPips), not a layout choice this pass
+            // gets to make smaller.
+            var divider = Ui.Solid("WoolDivider", FightHudPalette.Hairline, new UiVec(339.65f, 0.84f), Place.At(0f, 18.5f))
                 .AllowOverflow("the divider sits ON the row's top edge, marking where the wool block begins");
 
-            // 60 wide, not v1's 70: at 70 this box reached x -132 and the first
-            // pip's box begins at -140.5.
-            var tag = Ui.Label("WoolTag", UiStrings.WoolHeading, new UiVec(60f, 20f), 12,
-                FightHudPalette.TextMuted, Place.At(-202f, 0f, new UiVec(0f, 0.5f)));
+            var tag = Ui.Label("WoolTag", UiStrings.WoolHeading, new UiVec(50.44f, 16.8f), 10,
+                FightHudPalette.TextMuted, Place.At(-169.82f, 0f, new UiVec(0f, 0.5f)));
 
             var pips = Ui.Each(Enumerable.Range(0, FightHudSpec.WoolPips).ToList(), (_, i) =>
             {
-                var pip = Ui.Solid($"WoolPip{i}", FightHudPalette.PipEmpty, new UiVec(13f, 20f),
-                    Place.At(-134f + i * 18f, 0f));
+                var pip = Ui.Solid($"WoolPip{i}", FightHudPalette.PipEmpty, new UiVec(10.93f, 16.8f),
+                    Place.At(-112.66f + i * 15.13f, 0f));
                 WoolPips.Add(pip);
                 return pip;
             });
 
-            // 55 wide, not v1's 80: at 80 this reached x 122 and the sixteenth
-            // pip ends at 142.5.
-            var value = Ui.Label("WoolValue", UiStrings.SignatureValue, new UiVec(55f, 20f), 15,
-                FightHudPalette.TextPrimary, Place.At(202f, 0f, new UiVec(1f, 0.5f)));
+            var value = Ui.Label("WoolValue", UiStrings.SignatureValue, new UiVec(46.24f, 16.8f), 13,
+                FightHudPalette.TextPrimary, Place.At(169.82f, 0f, new UiVec(1f, 0.5f)));
             WoolValue = value;
 
             var children = new List<UiNode> { divider, tag };
             children.AddRange(pips);
             children.Add(value);
 
-            // 410 wide, not the plate's own 452: the row's actual content
-            // (divider/tag/pips/value) already tops out at +-202, but the
-            // PANEL's own declared box is what A2 checks against the
-            // container's inset, and the full 452 span (+-226) sat 15.82px
-            // past the container's left/right content bound (+-210.18).
-            // 410 (+-205) clears both: 3px inside its own content, 5.18px
-            // inside the container.
-            var row = Ui.Panel("WoolRow", Place.At(0f, -66f), UiSize.Fixed(410f, 40f), children);
+            // 344.69 wide, not the plate's own 380: same reasoning the old
+            // 410-vs-452 gap documented, scaled down with it -- the row's
+            // actual content already tops out at +-169.82, and the panel's
+            // own declared box (what A2 checks against the container's
+            // inset) has to clear both its own content and the container's
+            // left/right bound (+-176.7 at this plate size).
+            var row = Ui.Panel("WoolRow", Place.At(0f, -55.49f), UiSize.Fixed(344.69f, 33.63f), children);
             WoolRow = row;
             return row;
         }
@@ -1491,8 +1544,14 @@ namespace PrincesPalace.Domain.UiKit.Screens
         // ---- column A: the verbs -------------------------------------------------
 
         private const float VerbColumnX = -286f;
-        private const float VerbRowW = 300f;
-        private const float VerbRowH = 52f;
+
+        // Reads FightSubmenuLayout.VerbRowW/VerbRowH rather than restating
+        // 300/52 -- FightSubmenuLayout.VisibleBottomLine has to pick the
+        // SAME plate shape these rows actually build at (see its own
+        // comment), so there is one copy of the row's own size, not two that
+        // could drift.
+        private const float VerbRowW = FightSubmenuLayout.VerbRowW;
+        private const float VerbRowH = FightSubmenuLayout.VerbRowH;
         private const float VerbPitch = 62f;
 
         // Rendered BOTTOM-UP so ATTACK sits nearest the cursor, and tiered so

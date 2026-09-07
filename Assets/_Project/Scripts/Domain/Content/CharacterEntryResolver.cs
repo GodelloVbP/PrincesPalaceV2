@@ -4,6 +4,7 @@ using System.Linq;
 using PrincesPalace.Domain.Combat.Session;
 using PrincesPalace.Domain.Stage;
 using PrincesPalace.Domain.Stats;
+using PrincesPalace.Domain.UiKit;
 
 namespace PrincesPalace.Domain.Content
 {
@@ -140,6 +141,13 @@ namespace PrincesPalace.Domain.Content
                 return false;
             }
 
+            if (!TryParseEnum(raw.plateTheme, out ButtonTheme plateTheme, ButtonTheme.Blue))
+            {
+                error = $"{label}: plateTheme '{raw.plateTheme}' is not a ButtonTheme. " +
+                        $"Valid: {NamesOf<ButtonTheme>()}.";
+                return false;
+            }
+
             if (raw.maxHealth <= 0)
             {
                 error = $"{label}: maxHealth must be positive (got {raw.maxHealth}) — a character that starts dead " +
@@ -250,7 +258,8 @@ namespace PrincesPalace.Domain.Content
                 raw.princesFavor < 0 ? 0 : raw.princesFavor,
                 sortOrder,
                 raw.startsInSquad,
-                raw.squadSlot);
+                raw.squadSlot,
+                plateTheme);
             error = null;
             return true;
         }

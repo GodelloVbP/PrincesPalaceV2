@@ -31,6 +31,34 @@ namespace PrincesPalace.Domain.UiKit
 
         public const float CommandBottom = -486f;
 
+        // The verb column's own row size -- moved here from FightScreen so
+        // VisibleBottomLine below and FightScreen's own verb rows read the
+        // SAME 300x52, the same reason RowWidth lives here rather than being
+        // restated at the submenu frame's build site.
+        public const float VerbRowW = 300f;
+        public const float VerbRowH = 52f;
+
+        // FLUSH WITH THE VERB COLUMN'S VISIBLE BOTTOM EDGE -- not
+        // CommandBottom itself. CommandBottom is the Attack row's RECT
+        // bottom; every button-plate/container PNG in the kit carries a
+        // transparent halo outside its own painted border (tools/
+        // measure_ui_kit.py measures it), so the paint actually stops a few
+        // pixels short of the rect on every side. Two rects with equal
+        // bottoms therefore show two DIFFERENT painted edges, which is
+        // exactly the "rect-flush reads as misaligned" defect this line
+        // exists to close: the frame and the party plate are placed (via
+        // Ui.CentreYForVisibleBottom) so their own visible bottoms land HERE
+        // instead of on CommandBottom directly.
+        //
+        // ButtonPlateArt.ShapeFor(VerbRowW, VerbRowH), not a guessed shape --
+        // the verb row is 300x52, which is what the emitter's own
+        // ThemedPlate()/Plate() selection actually resolves to (Row6x1, per
+        // ButtonPlateArtTests.VerbRow_300x52_PicksRow6x1); asking for that
+        // shape's own pad is what keeps this in sync if the row ever changes
+        // size and picks a different plate.
+        public static float VisibleBottomLine =>
+            CommandBottom + VerbRowH * Ui.PlateVisiblePad(Ui.PlateShapeFor(VerbRowW, VerbRowH)).Bottom;
+
         // ---- BACK IS A ROW NOW, AND IT IS INSIDE THE FRAME -----------------------
         //
         // It used to be a 404-wide button floating BELOW the container, in the
@@ -168,11 +196,16 @@ namespace PrincesPalace.Domain.UiKit
         public static float FrameHeight =>
             Ui.ContainerSizeForWidth(ContainerRatio.ThreeByFour, FrameWidth).Y;
 
-        // BOTTOM-ANCHORED AT THE FRAME'S OWN TRUE EDGE, not its inset -- this
-        // is what keeps FightScreenTests.TheSkillPanelEndsOnTheSameLineAsThe
-        // VerbColumn true: the frame, not the content inside it, is what has
-        // to end on the same line as the verb column.
-        public static float FrameCentreY => ContainerBottom + FrameHeight * 0.5f;
+        // BOTTOM-ANCHORED AT THE FRAME'S OWN VISIBLE EDGE now, not its rect
+        // edge -- this is what keeps FightScreenTests.TheSkillPanelEndsOnThe
+        // SameLineAsTheVerbColumn true: the frame's PAINTED bottom, not its
+        // rect (which would still equal ContainerBottom/CommandBottom, and
+        // did until the halo pad above was measured), is what has to end on
+        // the same line as the verb column's own painted bottom. See
+        // VisibleBottomLine's own comment for why a rect-to-rect flush was
+        // wrong in the first place.
+        public static float FrameCentreY =>
+            Ui.CentreYForVisibleBottom(VisibleBottomLine, FrameHeight, Ui.ContainerVisiblePad(ContainerRatio.ThreeByFour).Bottom);
 
         public static float FrameTop => FrameCentreY + FrameHeight * 0.5f;
 

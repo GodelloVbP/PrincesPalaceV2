@@ -115,6 +115,42 @@ namespace PrincesPalace.Domain.UiKit
         // stay comfortably safe rather than needing to shrink.
         internal static ContentInsetFrac Inset(ContainerKind kind, ContainerRatio ratio) => Spec(kind, ratio).Inset;
 
+        // THE VISIBLE EDGE, not the rect edge -- every one of these PNGs
+        // carries a transparent halo outside its own painted border (a
+        // leftover of the sheet-splicing pass, unrelated to Inset above,
+        // which is the SAFE INTERIOR the painted border itself leaves).
+        // A screen that flushes two rects' bottom edges against each other
+        // (FightSubmenuLayout.CommandBottom, the party plate) reads as
+        // misaligned even though the rects agree exactly, because the paint
+        // stops short of the rect by a different amount on each asset.
+        //
+        // REUSES ContentInsetFrac rather than a dedicated struct -- same
+        // shape (four fractions of the container's own declared width/
+        // height), and a second four-float type naming the same thing would
+        // only be able to disagree with the first one. "Pad" here reads
+        // exactly like "inset": both are "how far in from the declared
+        // edge", they just measure two different edges (the border's inner
+        // face vs. the halo's outer face).
+        //
+        // MEASURED BY tools/measure_ui_kit.py AT ALPHA >= 32 (the threshold
+        // decided on the main tree -- see the script's own header for why),
+        // one fraction per edge, AVERAGED across the six themes -- same
+        // discipline ContainerArt.Aspect already uses (a canonical number
+        // per (kind, ratio), not a per-theme table), because this pad exists
+        // for FLUSH PLACEMENT, not as a safety margin the way Inset's own
+        // "worst raw fraction" choice is (Inset guards against a label
+        // reaching the border; this guards against a rect edge reading as
+        // "off" beside a neighbour's visible edge).
+        //
+        // RE-MEASURE: `py tools/measure_ui_kit.py` after any Processed/
+        // regeneration and re-paste its "C#-PASTEABLE, threshold 32" block
+        // below. It also asserts the six themes agree within 1px per edge
+        // and exits 1 naming the file when they do not -- which is exactly
+        // what happened for THIS delivery on two groups, noted where they
+        // are pinned below, so the averages there are a known approximation
+        // rather than a clean six-way agreement.
+        internal static ContentInsetFrac VisiblePad(ContainerKind kind, ContainerRatio ratio) => Spec(kind, ratio).VisiblePad;
+
         internal static string Key(ContainerKind kind, ButtonTheme theme, ContainerRatio ratio)
         {
             string stem = kind == ContainerKind.Container ? "container" : "banner_flag";
@@ -126,21 +162,40 @@ namespace PrincesPalace.Domain.UiKit
         // the kind/ratio switch three times. A combination this kit never
         // shipped art for (FlagBanner + ThreeByTwo/TwoByOne) is simply absent
         // from the dictionary, so the lookup itself is the one throw.
+        // VisiblePad, per group -- tools/measure_ui_kit.py output at alpha
+        // >= 32, fraction averaged across the six themes. Two callouts:
+        //
+        //   (Container, ThreeByFour) and (Container, NineBySixteen) FAILED
+        //   the script's own six-theme agreement check on their LEFT edge --
+        //   silver/violet's cells were spliced with 3-4px less left padding
+        //   than the other four themes (confirmed on the raw alpha, not a
+        //   threshold artifact: the column jumps 0 -> 255 at col 8-9 for
+        //   those two PNGs and at col 12 for the rest). Every OTHER edge of
+        //   both groups agrees within 1px, and BOTTOM -- the only edge B1
+        //   actually places anything against -- is exact. Left/Top/Right
+        //   have no reader yet; the averages below are the honest number for
+        //   when one arrives, not a claim the six themes agree on it.
         private static readonly Dictionary<(ContainerKind, ContainerRatio), ContainerSpec> Specs =
             new Dictionary<(ContainerKind, ContainerRatio), ContainerSpec>
         {
             [(ContainerKind.Container, ContainerRatio.ThreeByFour)] = new ContainerSpec(
-                ContainerAspect3x4, new ContentInsetFrac(left: 0.065f, right: 0.065f, top: 0.045f, bottom: 0.04f), "3x4"),
+                ContainerAspect3x4, new ContentInsetFrac(left: 0.065f, right: 0.065f, top: 0.045f, bottom: 0.04f),
+                new ContentInsetFrac(left: 0.0324f, right: 0.0359f, top: 0.0211f, bottom: 0.0211f), "3x4"),
             [(ContainerKind.Container, ContainerRatio.NineBySixteen)] = new ContainerSpec(
-                ContainerAspect9x16, new ContentInsetFrac(left: 0.08f, right: 0.08f, top: 0.04f, bottom: 0.04f), "9x16"),
+                ContainerAspect9x16, new ContentInsetFrac(left: 0.08f, right: 0.08f, top: 0.04f, bottom: 0.04f),
+                new ContentInsetFrac(left: 0.0397f, right: 0.0421f, top: 0.0172f, bottom: 0.0174f), "9x16"),
             [(ContainerKind.Container, ContainerRatio.ThreeByTwo)] = new ContainerSpec(
-                ContainerAspect3x2, new ContentInsetFrac(left: 0.035f, right: 0.035f, top: 0.04f, bottom: 0.045f), "3x2"),
+                ContainerAspect3x2, new ContentInsetFrac(left: 0.035f, right: 0.035f, top: 0.04f, bottom: 0.045f),
+                new ContentInsetFrac(left: 0.0040f, right: 0.0040f, top: 0.0059f, bottom: 0.0059f), "3x2"),
             [(ContainerKind.Container, ContainerRatio.TwoByOne)] = new ContainerSpec(
-                ContainerAspect2x1, new ContentInsetFrac(left: 0.035f, right: 0.035f, top: 0.055f, bottom: 0.055f), "2x1"),
+                ContainerAspect2x1, new ContentInsetFrac(left: 0.035f, right: 0.035f, top: 0.055f, bottom: 0.055f),
+                new ContentInsetFrac(left: 0.0037f, right: 0.0037f, top: 0.0074f, bottom: 0.0074f), "2x1"),
             [(ContainerKind.FlagBanner, ContainerRatio.ThreeByFour)] = new ContainerSpec(
-                BannerAspect3x4, new ContentInsetFrac(left: 0.075f, right: 0.075f, top: 0.04f, bottom: 0.18f), "3x4"),
+                BannerAspect3x4, new ContentInsetFrac(left: 0.075f, right: 0.075f, top: 0.04f, bottom: 0.18f),
+                new ContentInsetFrac(left: 0.0364f, right: 0.0364f, top: 0.0190f, bottom: 0.0187f), "3x4"),
             [(ContainerKind.FlagBanner, ContainerRatio.NineBySixteen)] = new ContainerSpec(
-                BannerAspect9x16, new ContentInsetFrac(left: 0.09f, right: 0.09f, top: 0.035f, bottom: 0.15f), "9x16"),
+                BannerAspect9x16, new ContentInsetFrac(left: 0.09f, right: 0.09f, top: 0.035f, bottom: 0.15f),
+                new ContentInsetFrac(left: 0.0496f, right: 0.0496f, top: 0.0149f, bottom: 0.0149f), "9x16"),
         };
 
         private static ContainerSpec Spec(ContainerKind kind, ContainerRatio ratio)
@@ -168,12 +223,14 @@ namespace PrincesPalace.Domain.UiKit
     {
         internal readonly float Aspect;
         internal readonly ContentInsetFrac Inset;
+        internal readonly ContentInsetFrac VisiblePad;
         internal readonly string FileSuffix;
 
-        internal ContainerSpec(float aspect, ContentInsetFrac inset, string fileSuffix)
+        internal ContainerSpec(float aspect, ContentInsetFrac inset, ContentInsetFrac visiblePad, string fileSuffix)
         {
             Aspect = aspect;
             Inset = inset;
+            VisiblePad = visiblePad;
             FileSuffix = fileSuffix;
         }
     }

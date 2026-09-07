@@ -38,6 +38,7 @@ Each table is one JSON file under Assets/_Project/ContentData/. `Default` is the
 | `portraitPath` | string | `""` | Resources-relative path (no extension) to a head-and-shoulders portrait loaded at runtime, e.g. 'Portraits/sheep'; empty means no art yet and the dossier keeps its armour-stand placeholder. |  |
 | `battleSpritePath` | string | `""` | Resources-relative folder of full-body stance art loaded at runtime; empty means no art yet. |  |
 | `battleSpriteFacing` | string | `""` | Which way the battle art is drawn in its source file: 'Right' or 'Left'. | Left, Right |
+| `plateTheme` | string | `""` | Which UiKit.ButtonTheme the fight HUD's party plate wears for this character, matched case-insensitively; empty means Blue. | Gold, Crimson, Violet, Blue, Green, Silver |
 | `signatureId` | string | `""` | The id of this character's private signature resource; empty means the character has none. |  |
 | `signatureDisplayName` | string | `""` | The name shown for the signature resource, e.g. 'Wool'. |  |
 | `signatureCapacity` | int | `0` | How much signature resource this character can hold. |  |
