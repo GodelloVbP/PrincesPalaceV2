@@ -1,0 +1,118 @@
+using System;
+using PrincesPalace.Domain.Progression;
+using PrincesPalace.Domain.Stats;
+
+namespace PrincesPalace.Domain.Content
+{
+    // One milestone entry, resolved: the reward's kind and magnitude plus
+    // the two selectors and two captions RewardTrackEntryResolver bakes on
+    // -- see docs/PLAN_REWARD_TRACKS.md §4, "the two display names the
+    // captions need".
+    [Serializable]
+    public sealed class ResolvedTrackMilestone
+    {
+        public int Level;
+        public TrackReward Reward;
+        public int Amount;
+
+        // THE PAIR THAT REPLACES A NULLABLE. Unity does not serialize
+        // DamageType?, and Physical has a valid zero -- the same trade
+        // ResolvedSkill's Status/HasStatus pair already makes. Against below
+        // is the nullable reading every consumer should use.
+        public DamageType AgainstType;
+        public bool HasAgainst;
+
+        // Empty except for UnlockSkill.
+        public string SkillId = "";
+        public string SkillDisplayName = "";
+
+        // Empty except for the four signature-resource kinds.
+        public string ResourceDisplayName = "";
+
+        public DamageType? Against => HasAgainst ? (DamageType?)AgainstType : null;
+
+        // For the serializer only.
+        public ResolvedTrackMilestone()
+        {
+        }
+
+        public ResolvedTrackMilestone(int level, TrackReward reward, int amount, DamageType? against,
+            string skillId, string skillDisplayName, string resourceDisplayName)
+        {
+            Level = level;
+            Reward = reward;
+            Amount = amount;
+            HasAgainst = against.HasValue;
+            AgainstType = against ?? default;
+            SkillId = skillId ?? "";
+            SkillDisplayName = skillDisplayName ?? "";
+            ResourceDisplayName = resourceDisplayName ?? "";
+        }
+    }
+
+    // One filler mix row, resolved -- a kind, a magnitude and a count, never
+    // a level (see RawTrackFiller).
+    [Serializable]
+    public sealed class ResolvedTrackFiller
+    {
+        public TrackReward Reward;
+        public int Amount;
+        public DamageType AgainstType;
+        public bool HasAgainst;
+        public int Count;
+
+        public DamageType? Against => HasAgainst ? (DamageType?)AgainstType : null;
+
+        // For the serializer only.
+        public ResolvedTrackFiller()
+        {
+        }
+
+        public ResolvedTrackFiller(TrackReward reward, int amount, DamageType? against, int count)
+        {
+            Reward = reward;
+            Amount = amount;
+            HasAgainst = against.HasValue;
+            AgainstType = against ?? default;
+            Count = count;
+        }
+    }
+
+    // One character's reward track, resolved -- the shape
+    // RewardTrackDefinitionAsset stores.
+    //
+    // DELIBERATELY NOT `TrackEntry`/`RewardTrack` from Domain/Progression.
+    // docs/PLAN_REWARD_TRACKS.md's P3, running concurrently in a sibling
+    // worktree, rewrites that file into a RewardTrackDefinition and grows
+    // TrackEntry with the same extra fields ResolvedTrackMilestone already
+    // carries here -- referencing it from this package would hand P2 and P3
+    // a shared file to fight over. This record is P2's own resolved shape;
+    // P3/P4 are what turn it into a RewardTrackDefinition. Nothing reads it
+    // yet.
+    [Serializable]
+    public sealed class ResolvedRewardTrack
+    {
+        public string CharacterId = "";
+        public ResolvedTrackMilestone[] Milestones = Array.Empty<ResolvedTrackMilestone>();
+        public ResolvedTrackFiller[] Filler = Array.Empty<ResolvedTrackFiller>();
+
+        // Listed by the character's own roster order -- see
+        // RewardTrackDefinitionAsset.SortOrder and
+        // docs/PLAN_REWARD_TRACKS.md §4's touch-point table.
+        public int SortOrder;
+
+        // For the serializer only.
+        public ResolvedRewardTrack()
+        {
+        }
+
+        public ResolvedRewardTrack(string characterId, ResolvedTrackMilestone[] milestones,
+            ResolvedTrackFiller[] filler, int sortOrder)
+        {
+            CharacterId = characterId ?? "";
+            Milestones = milestones ?? Array.Empty<ResolvedTrackMilestone>();
+            Filler = filler ?? Array.Empty<ResolvedTrackFiller>();
+            SortOrder = sortOrder;
+        }
+    }
+}

@@ -33,6 +33,7 @@ namespace PrincesPalace.Content
         private const string RelicResourcePath = "Content/Relics";
         private const string AchievementResourcePath = "Content/Achievements";
         private const string ModifierResourcePath = "Content/Modifiers";
+        private const string RewardTrackResourcePath = "Content/RewardTracks";
 
         private static List<CharacterDefinition> _characters;
         private static List<TalentDefinition> _talents;
@@ -44,6 +45,7 @@ namespace PrincesPalace.Content
         private static List<RelicDefinition> _relics;
         private static List<AchievementDefinition> _achievements;
         private static List<ModifierDefinition> _modifiers;
+        private static List<RewardTrackDefinitionAsset> _rewardTracks;
 
         // Characters in authored roster order.
         public static IReadOnlyList<CharacterDefinition> Characters
@@ -78,6 +80,16 @@ namespace PrincesPalace.Content
         public static IReadOnlyList<ModifierDefinition> Modifiers
         {
             get { EnsureLoaded(); return _modifiers; }
+        }
+
+        // Every character's reward track, authored order. NOTHING READS THIS
+        // YET -- docs/PLAN_REWARD_TRACKS.md's P2 lands the loading seam in
+        // isolation from the packages (P3/P4/P6) that turn it into gameplay.
+        // reward_tracks.json ships with zero tracks until P6 authors real
+        // content, so this is legitimately empty today.
+        public static IReadOnlyList<RewardTrackDefinitionAsset> RewardTracks
+        {
+            get { EnsureLoaded(); return _rewardTracks; }
         }
 
         // The talents a given character can actually see and take: their own
@@ -334,6 +346,7 @@ namespace PrincesPalace.Content
             _relics = null;
             _achievements = null;
             _modifiers = null;
+            _rewardTracks = null;
 
             // Portraits are keyed by character id and resolved through the
             // roster above, so a swapped roster has to drop them too -- a test
@@ -719,6 +732,15 @@ namespace PrincesPalace.Content
             _achievements = LoadOrdered<AchievementDefinition>(AchievementResourcePath);
             _relics = LoadOrdered<RelicDefinition>(RelicResourcePath);
             _modifiers = LoadOrdered<ModifierDefinition>(ModifierResourcePath);
+
+            // Loaded HERE, not lazily off the RewardTracks property: a lazy
+            // load re-entered from a future per-character read (the way
+            // AvailableSkillsFor calls EnsureLoaded() at :238 above and reads
+            // a track) would find _characters already non-null at the guard
+            // on this method's first line and return before ever assigning
+            // this field. See docs/PLAN_REWARD_TRACKS.md §4's touch-point
+            // table for the citation this mirrors.
+            _rewardTracks = LoadOrdered<RewardTrackDefinitionAsset>(RewardTrackResourcePath);
         }
 
         // THE ONLY PLACE CONTENT IS LOADED, and the constraint is what makes

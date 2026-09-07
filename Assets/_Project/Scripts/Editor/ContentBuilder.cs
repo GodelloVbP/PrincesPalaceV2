@@ -24,6 +24,7 @@ public static class ContentBuilder
     private const string RelicsPath = ContentRoot + "/Relics";
     private const string AchievementsPath = ContentRoot + "/Achievements";
     private const string ModifiersPath = ContentRoot + "/Modifiers";
+    private const string RewardTracksPath = ContentRoot + "/RewardTracks";
 
     // The talent grid's shape is not declared here, and must not be written
     // out here either. The tree's size has one home -- TalentPage.PathCount
@@ -88,6 +89,7 @@ public static class ContentBuilder
         EnsureFolder(RelicsPath);
         EnsureFolder(AchievementsPath);
         EnsureFolder(ModifiersPath);
+        EnsureFolder(RewardTracksPath);
         Mark("folders");
 
         // ONE IMPORT PASS FOR THE WHOLE CATALOGUE, not one per asset.
@@ -114,13 +116,13 @@ public static class ContentBuilder
         AssetDatabase.StartAssetEditing();
         try
         {
-            BuildCharacters();
+            var characters = BuildCharacters();
             BuildTalents();
             BuildUpgrades();
             BuildEnemies();
             BuildItems();
             BuildSpellTiers();
-            BuildSkills();
+            var skills = BuildSkills();
             BuildModifiers();
 
             // ACHIEVEMENTS BEFORE RELICS, and the order is load-bearing: relics
@@ -129,6 +131,12 @@ public static class ContentBuilder
             // typo'd gate through.
             var achievementIds = BuildAchievements();
             BuildRelics(achievementIds);
+
+            // REWARD TRACKS AFTER CHARACTERS AND SKILLS, same reason: a
+            // track's rules 4/5 and its UnlockSkill/signature captions are
+            // validated against what those two already resolved -- see
+            // docs/PLAN_REWARD_TRACKS.md §4's touch-point table.
+            BuildRewardTracks(characters, skills);
         }
         finally
         {
@@ -256,7 +264,11 @@ public static class ContentBuilder
     // beside the data. That prose moved to characters.json's _readme, where the
     // person editing the numbers is actually looking. Upgrades were the last
     // and went the same way; every type is a JSON file now.
-    private static void BuildCharacters() =>
+    // Returns the resolved roster, the way BuildAchievements already does
+    // for its own caller -- BuildRewardTracks needs each character's
+    // AttackType, signature resource and authored roster order to validate
+    // and caption a track against.
+    private static IReadOnlyList<ResolvedCharacter> BuildCharacters() =>
         Build<RawCharacterEntry, ResolvedCharacter, CharacterDefinition>(
             "BuildCharacters", "Assets/_Project/ContentData/characters.json", CharactersPath, "characters",
             json => JsonUtility.FromJson<RawCharacterFile>(json).characters,
@@ -295,6 +307,57 @@ public static class ContentBuilder
             Resolve,
             (asset, relic) => asset.SetData(relic),
             relic => relic.Id);
+    }
+
+    // docs/PLAN_REWARD_TRACKS.md P2: the content type only -- nothing reads
+    // a RewardTrackDefinitionAsset yet. reward_tracks.json ships with an
+    // empty "tracks" array until P6 authors the real Shawn/Odette content,
+    // so this legitimately writes zero assets today; Build<>'s own
+    // written-count log line says so rather than treating it as a failure.
+    //
+    // Assembles the per-character cross-catalogue context
+    // RewardTrackEntryResolver validates rules 4/5 and captions UnlockSkill
+    // against, from the characters and skills this same build already
+    // resolved -- see RewardTrackCharacterContext's own header for why nothing
+    // here re-reads characters.json or skills.json.
+    private static void BuildRewardTracks(IReadOnlyList<ResolvedCharacter> characters, IReadOnlyList<ResolvedSkill> skills)
+    {
+        var contexts = new Dictionary<string, RewardTrackCharacterContext>();
+
+        foreach (var character in characters)
+        {
+            var ownSkills = skills.Where(s => s.CharacterId == character.Id).ToList();
+
+            var level1Types = new HashSet<DamageType> { character.AttackType };
+            foreach (var skill in ownSkills)
+            {
+                if (skill.UnlockLevel > 1) continue;
+                foreach (var instance in skill.DamageInstances) level1Types.Add(instance.type);
+            }
+
+            contexts[character.Id] = new RewardTrackCharacterContext
+            {
+                SortOrder = character.SortOrder,
+                AttackType = character.AttackType,
+                HasSignatureResource = character.HasSignatureResource,
+                SignatureDisplayName = character.SignatureDisplayName,
+                Level1DamageTypes = level1Types,
+                SkillDisplayNames = ownSkills.ToDictionary(s => s.Id, s => s.DisplayName),
+            };
+        }
+
+        // A LOCAL FUNCTION, the same shape BuildRelics uses to close over a
+        // second resolver argument -- here the per-character context map
+        // rather than a flat id set.
+        bool Resolve(IReadOnlyList<RawRewardTrackEntry> entries, out List<ResolvedRewardTrack> resolved, out List<string> errors) =>
+            RewardTrackEntryResolver.TryResolveAll(entries, contexts, out resolved, out errors);
+
+        Build<RawRewardTrackEntry, ResolvedRewardTrack, RewardTrackDefinitionAsset>(
+            "BuildRewardTracks", "Assets/_Project/ContentData/reward_tracks.json", RewardTracksPath, "reward tracks",
+            json => JsonUtility.FromJson<RawRewardTrackFile>(json).tracks,
+            Resolve,
+            (asset, track) => asset.SetData(track),
+            track => track.CharacterId);
     }
 
     // Returns the ids it created, because BuildRelics validates against them.
@@ -378,7 +441,12 @@ public static class ContentBuilder
 
     // No enum mapping step here, unlike BuildItems: SkillEffect and
     // SkillTargeting live in Domain and are used directly on both sides.
-    private static void BuildSkills() =>
+    //
+    // Returns the resolved skills -- BuildRewardTracks needs each
+    // character's owned skills (id, displayName, unlockLevel,
+    // damageInstances) to validate UnlockSkill and rule 4's level-1 element
+    // set against.
+    private static IReadOnlyList<ResolvedSkill> BuildSkills() =>
         Build<RawSkillEntry, ResolvedSkill, SkillDefinition>(
             "BuildSkills", "Assets/_Project/ContentData/skills.json", SkillsPath, "skills",
             json => JsonUtility.FromJson<RawSkillFile>(json).skills,

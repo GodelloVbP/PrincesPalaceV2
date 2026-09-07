@@ -46,7 +46,7 @@ namespace PrincesPalace.Domain.Tests
             "\n\nRun: powershell -NoProfile -ExecutionPolicy Bypass -File tools/build_content.ps1" +
             "\n(or tools/preview.ps1 -Build, which picks that route or the open-Editor one for you).";
 
-        // Ten folders today. Eight is the same floor ContentFreshnessTests
+        // Eleven folders today. Eight is the same floor ContentFreshnessTests
         // uses: below it, the comparison is describing something other than
         // this catalogue and every agreement it reports is an accident.
         private const int MinimumTypesCompared = 8;
@@ -175,6 +175,24 @@ namespace PrincesPalace.Domain.Tests
                 Resolver, relic => relic.Id);
         }
 
+        // reward_tracks.json ships with an empty "tracks" array until P6
+        // authors the real Shawn/Odette content (docs/PLAN_REWARD_TRACKS.md
+        // P2/P6), so an empty context map is correct here -- there is
+        // nothing yet for rules 4/5's cross-catalogue checks to run against,
+        // and nothing authored that would need them.
+        private static List<string> RewardTrackIds()
+        {
+            var contexts = new Dictionary<string, RewardTrackCharacterContext>();
+
+            bool Resolver(IReadOnlyList<RawRewardTrackEntry> entries, out List<ResolvedRewardTrack> resolved,
+                          out List<string> errors) =>
+                RewardTrackEntryResolver.TryResolveAll(entries, contexts, out resolved, out errors);
+
+            return Resolve<RawRewardTrackEntry, ResolvedRewardTrack>(
+                "reward_tracks.json", ParseFile<RawRewardTrackFile>(DataPath("reward_tracks.json")).tracks,
+                Resolver, track => track.CharacterId);
+        }
+
         private static Dictionary<string, List<string>> ResolvedByFolder() =>
             new Dictionary<string, List<string>>(StringComparer.Ordinal)
             {
@@ -217,6 +235,7 @@ namespace PrincesPalace.Domain.Tests
 
                 ["Achievements"] = AchievementIds(),
                 ["Relics"] = RelicIds(),
+                ["RewardTracks"] = RewardTrackIds(),
             };
 
         [Test]
@@ -284,7 +303,7 @@ namespace PrincesPalace.Domain.Tests
                 "the stamp says -- " + string.Join(", ", empty));
         }
 
-        // Ten folders are mirrored above and a build writes ten. A type added
+        // Eleven folders are mirrored above and a build writes eleven. A type added
         // to ContentBuilder without a row here would be a type this check
         // silently stops covering, and the stamp is the only place that says
         // how many there are.

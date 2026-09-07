@@ -37,6 +37,7 @@ namespace PrincesPalace.Domain.Content
             ("itemsets.json", typeof(RawItemSetEntry)),
             ("modifiers.json", typeof(RawModifierEntry)),
             ("relics.json", typeof(RawRelicEntry)),
+            ("reward_tracks.json", typeof(RawRewardTrackEntry)),
             ("skills.json", typeof(RawSkillEntry)),
             ("spells.json", typeof(RawSpellTierEntry)),
             ("talents.json", typeof(RawTalentEntry)),
@@ -82,6 +83,10 @@ namespace PrincesPalace.Domain.Content
                 [(typeof(RawModifierEffect), nameof(RawModifierEffect.damageType))] = typeof(Stats.DamageType),
                 [(typeof(RawTalentEffect), nameof(RawTalentEffect.type))] = typeof(Combat.TalentEffectType),
                 [(typeof(RawAchievementEntry), nameof(RawAchievementEntry.condition))] = typeof(AchievementCondition),
+                [(typeof(RawTrackMilestone), nameof(RawTrackMilestone.reward))] = typeof(Progression.TrackReward),
+                [(typeof(RawTrackMilestone), nameof(RawTrackMilestone.against))] = typeof(Stats.DamageType),
+                [(typeof(RawTrackFiller), nameof(RawTrackFiller.reward))] = typeof(Progression.TrackReward),
+                [(typeof(RawTrackFiller), nameof(RawTrackFiller.against))] = typeof(Stats.DamageType),
             };
 
         private static readonly StringComparer NameOrder = StringComparer.Ordinal;
